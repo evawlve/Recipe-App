@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  role        String       @default("user")
+  createdAt   DateTime     @default(now())
+  recipes     Recipe[]
+  comments    Comment[]
+  likes       Like[]
+  collections Collection[] // <-- now valid (model defined below)
+}
+
+model Recipe {
+  id          String             @id @default(cuid())
+  author      User               @relation(fields: [authorId], references: [id])
+  authorId    String
+  title       String
+  bodyMd      String
+  servings    Int                @default(1)
+  parentId    String?
+  parent      Recipe?            @relation("Forks", fields: [parentId], references: [id])
+  forks       Recipe[]           @relation("Forks")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  ingredients Ingredient[]
+  photos      Photo[]
+  nutrition   Nutrition?
+  tags        RecipeTag[]
+  comments    Comment[]
+  likes       Like[]
+  collections CollectionRecipe[] // <-- link to collections via join table
+}
+
+model Ingredient {
+  id       String @id @default(cuid())
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  recipeId String
+  name     String
+  qty      Float
+  unit     String
+}
+
+model Nutrition {
+  recipeId   String   @id
+  recipe     Recipe   @relation(fields: [recipeId], references: [id])
+  calories   Int
+  proteinG   Float
+  carbsG     Float
+  fatG       Float
+  computedAt DateTime @default(now())
+}
+
+model Photo {
+  id       String @id @default(cuid())
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  recipeId String
+  s3Key    String
+  width    Int
+  height   Int
+}
+
+model Tag {
+  id      String      @id @default(cuid())
+  slug    String      @unique
+  label   String
+  recipes RecipeTag[]
+}
+
+model RecipeTag {
+  recipeId String
+  tagId    String
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  tag      Tag    @relation(fields: [tagId], references: [id])
+
+  @@id([recipeId, tagId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Like {
+  userId    String
+  recipeId  String
+  user      User     @relation(fields: [userId], references: [id])
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@id([userId, recipeId])
+}
+
+//
+// NEW: Collections + join table
+//
+model Collection {
+  id        String             @id @default(cuid())
+  user      User               @relation(fields: [userId], references: [id])
+  userId    String
+  name      String
+  createdAt DateTime           @default(now())
+  recipes   CollectionRecipe[]
+}
+
+model CollectionRecipe {
+  collectionId String
+  recipeId     String
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  addedAt      DateTime   @default(now())
+
+  @@id([collectionId, recipeId])
+}

@@ -1,0 +1,5 @@
+Use RSC where possible; client components only for interactive bits.
+
+Validate all forms with Zod.
+
+Prefer shadcn/ui primitives; no inline styles.
