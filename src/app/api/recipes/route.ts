@@ -6,6 +6,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Debug logging
+    console.log('Received photos in API:', body.photos);
+    console.log('Number of photos received:', body.photos?.length || 0);
+    
     // Validate the request body
     const validatedData = recipeApiSchema.parse(body);
     

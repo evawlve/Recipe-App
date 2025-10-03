@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { imageSrcForKey } from "@/lib/images";
+import { PhotoGallery } from "@/components/recipe/PhotoGallery";
 
 interface RecipePageProps {
   params: Promise<{
@@ -55,6 +56,10 @@ export default async function RecipePage({ params }: RecipePageProps) {
     notFound();
   }
 
+  // Debug logging
+  console.log('Recipe photos:', recipe.photos);
+  console.log('Number of photos:', recipe.photos.length);
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
@@ -93,19 +98,7 @@ export default async function RecipePage({ params }: RecipePageProps) {
                 <CardTitle>Photos</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recipe.photos.map((photo) => (
-                    <div key={photo.id} className="relative aspect-video">
-                      <Image
-                        src={imageSrcForKey(photo.s3Key)}
-                        alt={recipe.title}
-                        fill
-                        className="object-cover rounded-lg"
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                      />
-                    </div>
-                  ))}
-                </div>
+                <PhotoGallery photos={recipe.photos} recipeTitle={recipe.title} />
               </CardContent>
             </Card>
           )}

@@ -1,32 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client } from '@aws-sdk/client-s3';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
+import { randomBytes } from 'crypto';
 
 const region = process.env.AWS_REGION;
 const bucket = process.env.S3_BUCKET;
 
 const s3 = new S3Client({ region });
 
+// Allowed image content types
+const ALLOWED_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png', 
+  'image/webp',
+  'image/avif'
+] as const;
+
+// Sanitize filename to prevent path traversal and remove unsafe characters
+function sanitizeFilename(filename: string): string {
+  return filename
+    .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace unsafe chars with underscore
+    .replace(/\.{2,}/g, '.') // Replace multiple dots with single dot
+    .replace(/^\.+|\.+$/g, '') // Remove leading/trailing dots
+    .substring(0, 100); // Limit length
+}
+
+// Generate crypto-random ID
+function generateRandomId(): string {
+  return randomBytes(8).toString('hex');
+}
+
+// Build S3 key with timestamp, random ID, and sanitized filename
+function buildS3Key(filename: string): string {
+  const sanitized = sanitizeFilename(filename);
+  const randomId = generateRandomId();
+  return `uploads/${Date.now()}-${randomId}-${sanitized}`;
+}
+
 export async function POST(req: NextRequest) {
   if (!region || !bucket) {
     return NextResponse.json({ error: 'Missing AWS_REGION or S3_BUCKET' }, { status: 500 });
   }
-  const { filename, contentType, maxSizeMB = 10 } = await req.json();
-  const key = `uploads/${Date.now()}-${filename}`;
 
-  const { url, fields } = await createPresignedPost(s3, {
-    Bucket: bucket,
-    Key: key,
-    Conditions: [
-      ["content-length-range", 0, maxSizeMB * 1024 * 1024],
-      ["starts-with", "$Content-Type", ""],
-    ],
-    Fields: { "Content-Type": contentType },
-    Expires: 60, // seconds
-  });
+  try {
+    const body = await req.json();
+    const { filename, contentType, maxSizeMB = 10 } = body;
 
-  const publicBase = process.env.S3_PUBLIC_BASE_URL;
-  const publicUrl = publicBase ? `${publicBase}/${key}` : null;
+    // Validate required fields
+    if (!filename || !contentType) {
+      return NextResponse.json({ error: 'Missing filename or contentType' }, { status: 400 });
+    }
 
-  return NextResponse.json({ url, fields, key, publicUrl });
+    // Validate content type
+    if (!ALLOWED_CONTENT_TYPES.includes(contentType as any)) {
+      return NextResponse.json({ 
+        error: 'Invalid content type. Allowed: image/jpeg, image/png, image/webp, image/avif' 
+      }, { status: 400 });
+    }
+
+    // Build S3 key
+    const key = buildS3Key(filename);
+
+    const { url, fields } = await createPresignedPost(s3, {
+      Bucket: bucket,
+      Key: key,
+      Conditions: [
+        ["content-length-range", 0, maxSizeMB * 1024 * 1024],
+        ["eq", "$Content-Type", contentType],
+      ],
+      Fields: { "Content-Type": contentType },
+      Expires: 60, // 60 seconds
+    });
+
+    return NextResponse.json({ 
+      url, 
+      fields, 
+      key, 
+      publicUrl: null 
+    });
+
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid JSON or server error' }, { status: 400 });
+  }
 }

@@ -7,8 +7,9 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**' }
     ],
-    // Disable image optimization for local API routes to avoid conflicts
-    unoptimized: true
+    // Enable image optimization for /api/image/... proxy routes
+    domains: ['localhost'],
+    unoptimized: false
   }
 };
 export default nextConfig;

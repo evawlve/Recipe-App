@@ -13,15 +13,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
 import { ImageUploader } from "@/components/recipe/ImageUploader";
-import { uploadFilesToS3 } from "@/lib/s3-upload";
+import { FileState } from "@/types/file-state";
 import Link from "next/link";
 
 export default function NewRecipePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fileStates, setFileStates] = useState<FileState[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [uploadingCount, setUploadingCount] = useState(0);
   
   const form = useForm<RecipeCreateInput>({
     resolver: zodResolver(recipeCreateSchema),
@@ -30,7 +30,6 @@ export default function NewRecipePage() {
       servings: 1,
       bodyMd: "",
       ingredients: [{ name: "", qty: 1, unit: "" }],
-      localFiles: [],
     },
   });
 
@@ -45,40 +44,36 @@ export default function NewRecipePage() {
   const { clearDraft } = useFormDraft(form, isSubmitting);
   useFocusManagement(errors);
 
-  // Watch localFiles for the ImageUploader
-  const localFiles = watch("localFiles") || [];
+  // Check if any files are uploading
+  const hasUploadingFiles = fileStates.some(fs => fs.status === "uploading");
 
   const onSubmit = async (data: RecipeCreateInput) => {
     setIsSubmitting(true);
     setSubmitError(null);
     
     try {
-      let photos: Array<{ s3Key: string; width: number; height: number }> = [];
-      
-      // Handle image uploads if there are any files
-      if (data.localFiles && data.localFiles.length > 0) {
-        setIsUploadingImages(true);
-        setUploadingCount(data.localFiles.length);
-        
-        try {
-          photos = await uploadFilesToS3(data.localFiles);
-        } catch (uploadError) {
-          console.error("Error uploading images:", uploadError);
-          const errorMessage = uploadError instanceof Error 
-            ? `Failed to upload images: ${uploadError.message}`
-            : "Failed to upload images. Please try again.";
-          setSubmitError(errorMessage);
-          return;
-        } finally {
-          setIsUploadingImages(false);
-          setUploadingCount(0);
-        }
-      }
+      // Get photos from successfully uploaded files
+      const photos = fileStates
+        .filter(fs => fs.status === "done" && fs.s3Key && fs.dims)
+        .map(fs => ({
+          s3Key: fs.s3Key!,
+          width: fs.dims!.width,
+          height: fs.dims!.height
+        }));
 
-      // Remove localFiles from the payload and add photos
-      const { localFiles, ...recipeData } = data;
+      // Debug logging
+      console.log('File states:', fileStates);
+      console.log('File states details:', fileStates.map(fs => ({
+        name: fs.file.name,
+        status: fs.status,
+        hasS3Key: !!fs.s3Key,
+        hasDims: !!fs.dims
+      })));
+      console.log('Filtered photos:', photos);
+      console.log('Number of photos being sent:', photos.length);
+
       const payload = {
-        ...recipeData,
+        ...data,
         photos,
       };
 
@@ -128,10 +123,10 @@ export default function NewRecipePage() {
       )}
 
       {/* Uploading Progress */}
-      {isUploadingImages && (
+      {hasUploadingFiles && (
         <Alert className="mb-6">
           <AlertDescription>
-            Uploading {uploadingCount} file{uploadingCount !== 1 ? 's' : ''}...
+            Uploading images... Please wait.
           </AlertDescription>
         </Alert>
       )}
@@ -292,9 +287,11 @@ export default function NewRecipePage() {
 
         {/* Image Uploader */}
         <ImageUploader
-          files={localFiles}
-          onFilesChange={(files) => setValue("localFiles", files)}
-          disabled={isSubmitting || isUploadingImages}
+          fileStates={fileStates}
+          onFileStatesChange={setFileStates}
+          disabled={isSubmitting}
+          onUploadStart={() => setIsUploadingImages(true)}
+          onUploadComplete={() => setIsUploadingImages(false)}
         />
 
         {/* Submit Button */}
@@ -309,10 +306,10 @@ export default function NewRecipePage() {
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasUploadingFiles}
             className="flex-1"
           >
-            {isSubmitting ? "Creating…" : "Create Recipe"}
+            {isSubmitting ? "Creating…" : hasUploadingFiles ? "Uploading…" : "Create Recipe"}
           </Button>
         </div>
       </form>

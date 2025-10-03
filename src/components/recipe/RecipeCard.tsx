@@ -31,27 +31,25 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const nutrition = recipe.nutrition;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <Link href={`/recipes/${recipe.id}`}>
-        <div className="relative">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+      <Link href={`/recipes/${recipe.id}`} className="flex flex-col h-full">
+        <div className="relative w-full h-48 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
           {primaryImageUrl ? (
-            <div className="relative h-48 w-full">
-              <Image
-                src={primaryImageUrl}
-                alt={recipe.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-            </div>
+            <Image
+              src={primaryImageUrl}
+              alt={recipe.title}
+              width={400}
+              height={192}
+              priority={true}
+              className="object-cover w-full h-full"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
           ) : (
-            <div className="h-48 w-full bg-muted flex items-center justify-center">
-              <span className="text-muted-foreground">No image</span>
-            </div>
+            <div className="h-full w-full grid place-items-center text-muted">No image</div>
           )}
         </div>
         
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="line-clamp-2 text-lg">{recipe.title}</CardTitle>
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>By {recipe.author.name || "Anonymous"}</span>
@@ -59,7 +57,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           </div>
         </CardHeader>
         
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
             {nutrition && (

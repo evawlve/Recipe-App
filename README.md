@@ -55,7 +55,7 @@ Create `.env` file with:
 # Database
 DATABASE_URL="postgresql://username:password@localhost:5432/recipe_app"
 
-# AWS S3 Configuration
+# AWS S3 Configuration (Required)
 AWS_REGION="us-east-2"
 S3_BUCKET="your-bucket-name"
 AWS_ACCESS_KEY_ID="your-access-key"
@@ -65,18 +65,31 @@ AWS_SECRET_ACCESS_KEY="your-secret-key"
 # S3_PUBLIC_BASE_URL="https://your-cloudfront-domain.com"
 ```
 
-3) **Database setup**
+3) **S3 Bucket Setup**
+Configure CORS for localhost development:
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "POST", "PUT"],
+    "AllowedOrigins": ["http://localhost:3000"],
+    "ExposeHeaders": ["ETag"]
+  }
+]
+```
+
+4) **Database setup**
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
 ```
 
-4) **Start development server**
+5) **Start development server**
 ```bash
 npm run dev
 ```
 
-5) **Open your browser**
+6) **Open your browser**
 Visit `http://localhost:3000` to start creating recipes!
 
 ## 🏗️ Architecture
@@ -94,9 +107,10 @@ Visit `http://localhost:3000` to start creating recipes!
 - **AWS S3** for secure file storage
 - **Next.js API Routes** for serverless functions
 
-### **Image Handling**
-- **Presigned S3 uploads** for secure file uploads
-- **API proxy** (`/api/image/[...key]`) for private image serving
+### **S3 Image Flow**
+- **Private S3 bucket** - images not publicly accessible
+- **Presigned POST uploads** via `/api/upload` endpoint
+- **API proxy serving** via `/api/image/[...key]` for private access
 - **Automatic dimension detection** for responsive images
 - **Next.js Image optimization** for performance
 
@@ -189,7 +203,7 @@ npm run prisma:migrate   # Run database migrations
 4. **Start the server**: `npm run start`
 
 ### **AWS S3 Permissions**
-Your AWS user needs these permissions:
+Minimal IAM policy for S3 access:
 ```json
 {
   "Version": "2012-10-17",
@@ -204,6 +218,23 @@ Your AWS user needs these permissions:
     }
   ]
 }
+```
+
+## 🧪 Smoke Tests
+
+PowerShell tests for API endpoints:
+```powershell
+# Test upload endpoint
+$uploadBody = @{
+    filename = "test.jpg"
+    contentType = "image/jpeg"
+    maxSizeMB = 10
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/upload" -Method POST -Body $uploadBody -ContentType "application/json"
+
+# Test recipes endpoint
+Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 ```
 
 ## 📝 Notes
