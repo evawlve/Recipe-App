@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { RecipeCard } from "@/components/recipe/RecipeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RecipesListWithBulkDelete } from "@/components/recipe/RecipesListWithBulkDelete";
+import { getCurrentUser } from "@/lib/auth";
 import Link from "next/link";
 
 interface RecipesPageProps {
@@ -17,6 +19,9 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const currentPage = parseInt(resolvedSearchParams.page || "1", 10);
   const itemsPerPage = 12;
   const skip = (currentPage - 1) * itemsPerPage;
+
+  // Get current user for bulk delete functionality
+  const currentUser = await getCurrentUser();
 
   // Build the where clause for search
   const whereClause = searchQuery
@@ -98,11 +103,10 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-            {recipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} />
-            ))}
-          </div>
+          <RecipesListWithBulkDelete 
+            recipes={recipes} 
+            currentUserId={currentUser.id} 
+          />
 
           {/* Pagination */}
           {totalPages > 1 && (
