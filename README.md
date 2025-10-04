@@ -18,6 +18,8 @@ A full-featured recipe management application with:
 - ✅ **Ingredient management** with add/remove functionality
 - ✅ **Recipe listing** with search and pagination
 - ✅ **Recipe details** with full image gallery
+- ✅ **Delete recipes** with secure ownership validation
+- ✅ **Bulk delete** multiple recipes at once
 
 ### **Form Experience**
 - ✅ **React Hook Form + Zod** validation
@@ -33,16 +35,15 @@ A full-featured recipe management application with:
 - ✅ **Multiple image support** per recipe
 - ✅ **Automatic dimension detection**
 
+### **Security & Data Protection**
+- ✅ **Row Level Security (RLS)** - Database-level security policies
+- ✅ **User authentication** with Supabase Auth
+- ✅ **Owner-only access** - Users can only modify their own content
+- ✅ **Public read access** - Anyone can view recipes (social features)
+- ✅ **Secure S3 operations** - Automatic cleanup of deleted images
+- ✅ **Transaction safety** - Atomic operations for data consistency
+
 ### **Technical Features**
-- ✅ **TypeScript** throughout
-- ✅ **Server-side rendering** with Next.js 15
-- ✅ **Database migrations** with Prisma
-- ✅ **Responsive design** with Tailwind CSS
-- ✅ **Modern UI components** with shadcn/ui
-
-## 🛠️ Quickstart
-
-1) **Clone & install**
 ```bash
 git clone <your-repo-url>
 cd recipe-app
@@ -63,6 +64,12 @@ AWS_SECRET_ACCESS_KEY="your-secret-key"
 
 # Optional: CDN URL (leave empty for API proxy)
 # S3_PUBLIC_BASE_URL="https://your-cloudfront-domain.com"
+
+# Supabase Configuration (Required for RLS testing)
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 ```
 
 3) **S3 Bucket Setup**
@@ -114,6 +121,80 @@ Visit `http://localhost:3000` to start creating recipes!
 - **Automatic dimension detection** for responsive images
 - **Next.js Image optimization** for performance
 
+## 🔒 Security Implementation
+
+### **Row Level Security (RLS)**
+This app implements comprehensive database security using Supabase Row Level Security:
+
+#### **Security Model:**
+- **Public Read Access** - Anyone can view recipes, ingredients, photos, comments
+- **Owner-Only Write Access** - Users can only create/modify their own content
+- **Authentication Required** - All write operations require valid user sessions
+- **Automatic Authorization** - RLS policies enforce permissions at the database level
+
+#### **Protected Operations:**
+```sql
+-- Users can only modify their own recipes
+"authorId" = public.current_app_user_id()
+
+-- Users can only modify their own comments
+"userId" = public.current_app_user_id()
+
+-- Users can only access their own collections
+"userId" = public.current_app_user_id()
+```
+
+#### **RLS Policies Applied To:**
+- ✅ **User** - Self-access only
+- ✅ **Recipe** - Public read, owner-only write
+- ✅ **Ingredient** - Public read, owner-only write (via recipe)
+- ✅ **Photo** - Public read, owner-only write (via recipe)
+- ✅ **Nutrition** - Public read, owner-only write (via recipe)
+- ✅ **Comment** - Public read, user-owned write
+- ✅ **Like** - Public read, user-owned write
+- ✅ **Collection** - User-owned read/write
+- ✅ **CollectionRecipe** - User-owned read/write (via collection)
+
+### **Recipe Deletion System**
+
+#### **Single Recipe Deletion:**
+- **Owner validation** - Only recipe authors can delete
+- **Cascade cleanup** - Removes all related data (ingredients, photos, nutrition, etc.)
+- **S3 cleanup** - Automatically deletes associated images from S3
+- **Transaction safety** - Atomic operation ensures data consistency
+
+#### **Bulk Deletion:**
+- **Batch processing** - Delete multiple recipes efficiently
+- **Owner validation** - Only deletes recipes owned by the user
+- **Selective UI** - Users can choose which recipes to delete
+- **Confirmation dialog** - Prevents accidental deletions
+
+#### **Deletion Flow:**
+```typescript
+// 1. Validate ownership
+if (recipe.authorId !== user.id) {
+  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+}
+
+// 2. Delete S3 images
+await s3.send(new DeleteObjectsCommand({
+  Bucket: bucket,
+  Delete: { Objects: recipe.photos.map(p => ({ Key: p.s3Key })) }
+}));
+
+// 3. Delete database records (atomic transaction)
+await prisma.$transaction([
+  prisma.photo.deleteMany({ where: { recipeId: id } }),
+  prisma.ingredient.deleteMany({ where: { recipeId: id } }),
+  prisma.comment.deleteMany({ where: { recipeId: id } }),
+  prisma.like.deleteMany({ where: { recipeId: id } }),
+  prisma.recipeTag.deleteMany({ where: { recipeId: id } }),
+  prisma.collectionRecipe.deleteMany({ where: { recipeId: id } }),
+  prisma.nutrition.deleteMany({ where: { recipeId: id } }),
+  prisma.recipe.delete({ where: { id } })
+]);
+```
+
 ## 🧪 API Endpoints
 
 ### **Recipe Management**
@@ -138,6 +219,15 @@ GET /api/recipes
 
 # Get recipe details
 GET /api/recipes/[id]
+
+# Delete a recipe (owner only)
+DELETE /api/recipes/[id]
+
+# Bulk delete recipes (owner only)
+DELETE /api/recipes/bulk-delete
+{
+  "recipeIds": ["recipe1", "recipe2", "recipe3"]
+}
 ```
 
 ### **Image Upload**
@@ -187,6 +277,10 @@ npm run prisma:migrate   # Run database migrations
 | `S3_BUCKET` | S3 bucket name | ✅ |
 | `AWS_ACCESS_KEY_ID` | AWS access key | ✅ |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key | ✅ |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
+| `SUPABASE_URL` | Supabase project URL (server) | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
 | `S3_PUBLIC_BASE_URL` | CDN URL (optional) | ❌ |
 
 ## 🚀 Deployment
@@ -212,13 +306,16 @@ Minimal IAM policy for S3 access:
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
-        "s3:PutObject"
+        "s3:PutObject",
+        "s3:DeleteObject"
       ],
       "Resource": "arn:aws:s3:::your-bucket-name/*"
     }
   ]
 }
 ```
+
+**Note:** The `s3:DeleteObject` permission is required for recipe deletion functionality.
 
 ## 🧪 Smoke Tests
 
@@ -237,8 +334,31 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/upload" -Method POST -Body $up
 Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 ```
 
+## 🔐 Security Benefits
+
+### **Database Security:**
+- **Row Level Security** prevents unauthorized data access
+- **Automatic permission enforcement** at the database level
+- **No application-level security bypasses** possible
+- **Audit trail** of all database operations
+
+### **Data Protection:**
+- **User data isolation** - Users can only access their own content
+- **Public content sharing** - Recipes are viewable by everyone (social features)
+- **Secure deletion** - Complete cleanup of user data and associated files
+- **Transaction safety** - Atomic operations prevent data corruption
+
+### **Authentication Ready:**
+- **Supabase Auth integration** - Ready for OAuth providers (Google, GitHub, etc.)
+- **JWT-based security** - Stateless authentication
+- **Session management** - Automatic token refresh and validation
+- **Multi-provider support** - Easy to add social login options
+
 ## 📝 Notes
 - Images are served through a secure API proxy to keep S3 private
 - Form drafts are automatically saved to localStorage
 - The nutrition API is a stub - replace with your preferred data source
 - For production, consider using CloudFront with `S3_PUBLIC_BASE_URL`
+- **RLS policies** are automatically applied to all database operations
+- **S3 cleanup** happens automatically when recipes are deleted
+- **User authentication** is handled by Supabase Auth (OAuth-ready)

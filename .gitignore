@@ -70,3 +70,7 @@ prisma/migrations/dev.db*
 # Temporary files
 *.tmp
 *.temp
+
+# Cusor
+.cursorrules
+.cursorignore
