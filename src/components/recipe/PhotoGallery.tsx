@@ -15,9 +15,10 @@ interface Photo {
 interface PhotoGalleryProps {
   photos: Photo[];
   recipeTitle: string;
+  canDelete?: boolean;
 }
 
-export function PhotoGallery({ photos: initialPhotos, recipeTitle }: PhotoGalleryProps) {
+export function PhotoGallery({ photos: initialPhotos, recipeTitle, canDelete = false }: PhotoGalleryProps) {
   const [photos, setPhotos] = useState(initialPhotos);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
@@ -72,21 +73,23 @@ export function PhotoGallery({ photos: initialPhotos, recipeTitle }: PhotoGaller
           />
           
           {/* Remove button overlay */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => handleRemovePhoto(photo.id)}
-              disabled={removingIds.has(photo.id)}
-              className="h-8 w-8 p-0"
-            >
-              {removingIds.has(photo.id) ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                "×"
-              )}
-            </Button>
-          </div>
+          {canDelete && (
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleRemovePhoto(photo.id)}
+                disabled={removingIds.has(photo.id)}
+                className="h-8 w-8 p-0"
+              >
+                {removingIds.has(photo.id) ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  "×"
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       ))}
     </div>

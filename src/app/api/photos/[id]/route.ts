@@ -1,61 +1,35 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
-const region = process.env.AWS_REGION;
-const bucket = process.env.S3_BUCKET;
-
-const s3 = new S3Client({ region });
+export const runtime = "nodejs";
 
 export async function DELETE(
-  request: NextRequest,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const resolvedParams = await params;
+  const photoId = resolvedParams.id;
+  const user = await getCurrentUser();
+  const region = process.env.AWS_REGION;
+  const bucket = process.env.S3_BUCKET;
+  if (!region || !bucket) return NextResponse.json({ error: "Server misconfig" }, { status: 500 });
+
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+    include: { recipe: { select: { authorId: true } } },
+  });
+  if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (photo.recipe.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   try {
-    const { id } = await params;
-    
-    if (!region || !bucket) {
-      return NextResponse.json(
-        { error: "Missing AWS_REGION or S3_BUCKET" },
-        { status: 500 }
-      );
-    }
-
-    // Look up the photo by id
-    const photo = await prisma.photo.findUnique({
-      where: { id },
-    });
-
-    if (!photo) {
-      return NextResponse.json(
-        { error: "Photo not found" },
-        { status: 404 }
-      );
-    }
-
-    // Delete object from S3 first
-    try {
-      await s3.send(new DeleteObjectCommand({
-        Bucket: bucket,
-        Key: photo.s3Key,
-      }));
-    } catch (s3Error) {
-      console.error("Failed to delete from S3:", s3Error);
-      // Continue with DB deletion even if S3 deletion fails
-    }
-
-    // Delete photo from database
-    await prisma.photo.delete({
-      where: { id },
-    });
-
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    console.error("Error deleting photo:", error);
-    return NextResponse.json(
-      { error: "Failed to delete photo" },
-      { status: 500 }
-    );
+    const s3 = new S3Client({ region });
+    await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: photo.s3Key }));
+  } catch {
+    // ignore S3 delete failures (object may already be gone)
   }
-}
 
+  await prisma.photo.delete({ where: { id: photoId } });
+  return new NextResponse(null, { status: 204 });
+}
