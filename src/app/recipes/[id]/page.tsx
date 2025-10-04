@@ -6,6 +6,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { imageSrcForKey } from "@/lib/images";
 import { PhotoGallery } from "@/components/recipe/PhotoGallery";
+import { getCurrentUser } from "@/lib/auth";
+import DeleteRecipeButton from "@/components/recipe/DeleteRecipeButton";
 
 interface RecipePageProps {
   params: Promise<{
@@ -56,6 +58,9 @@ export default async function RecipePage({ params }: RecipePageProps) {
     notFound();
   }
 
+  const current = await getCurrentUser();
+  const canDelete = current.id === recipe.authorId;
+
   // Debug logging
   console.log('Recipe photos:', recipe.photos);
   console.log('Number of photos:', recipe.photos.length);
@@ -76,6 +81,9 @@ export default async function RecipePage({ params }: RecipePageProps) {
           <Button variant="outline" asChild>
             <Link href="/recipes">← Back to Recipes</Link>
           </Button>
+          {canDelete && (
+            <DeleteRecipeButton recipeId={recipe.id} />
+          )}
         </div>
         
         <h1 className="text-4xl font-bold text-text mb-2">{recipe.title}</h1>
@@ -98,7 +106,7 @@ export default async function RecipePage({ params }: RecipePageProps) {
                 <CardTitle>Photos</CardTitle>
               </CardHeader>
               <CardContent>
-                <PhotoGallery photos={recipe.photos} recipeTitle={recipe.title} />
+                <PhotoGallery photos={recipe.photos} recipeTitle={recipe.title} canDelete={canDelete} />
               </CardContent>
             </Card>
           )}
