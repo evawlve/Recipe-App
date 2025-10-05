@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 
 interface RecipesListWithBulkDeleteProps {
   recipes: any[];
-  currentUserId: string;
+  currentUserId: string | null;
 }
 
 export function RecipesListWithBulkDelete({ recipes, currentUserId }: RecipesListWithBulkDeleteProps) {
@@ -15,7 +15,7 @@ export function RecipesListWithBulkDelete({ recipes, currentUserId }: RecipesLis
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   // Only show recipes that belong to the current user for bulk delete
-  const userRecipes = recipes.filter(recipe => recipe.authorId === currentUserId);
+  const userRecipes = currentUserId ? recipes.filter(recipe => recipe.authorId === currentUserId) : [];
   const canSelect = userRecipes.length > 0;
 
   const handleSelectionChange = (recipeId: string, selected: boolean) => {
@@ -84,7 +84,7 @@ export function RecipesListWithBulkDelete({ recipes, currentUserId }: RecipesLis
             recipe={recipe}
             isSelected={selectedRecipes.includes(recipe.id)}
             onSelectionChange={handleSelectionChange}
-            canSelect={isSelectionMode && recipe.authorId === currentUserId}
+            canSelect={isSelectionMode && currentUserId && recipe.authorId === currentUserId}
           />
         ))}
       </div>

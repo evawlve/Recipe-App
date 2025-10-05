@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { recipeApiSchema } from "@/lib/validation";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,19 +14,14 @@ export async function POST(request: NextRequest) {
     // Validate the request body
     const validatedData = recipeApiSchema.parse(body);
     
-    // Create or find a default user for demo purposes
-    // In a real app, you'd get this from the authenticated user session
-    let author = await prisma.user.findFirst({
-      where: { email: "demo@example.com" }
-    });
+    // Get the authenticated user
+    const author = await getCurrentUser();
     
     if (!author) {
-      author = await prisma.user.create({
-        data: {
-          email: "demo@example.com",
-          name: "Demo User",
-        },
-      });
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      );
     }
     
     // Create the recipe with ingredients and photos

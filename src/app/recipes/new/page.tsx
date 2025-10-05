@@ -14,9 +14,10 @@ import { useFormDraft } from "@/hooks/useFormDraft";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
 import { ImageUploader } from "@/components/recipe/ImageUploader";
 import { FileState } from "@/types/file-state";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import Link from "next/link";
 
-export default function NewRecipePage() {
+function NewRecipeForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -314,5 +315,13 @@ export default function NewRecipePage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewRecipePage() {
+  return (
+    <AuthGuard>
+      <NewRecipeForm />
+    </AuthGuard>
   );
 }

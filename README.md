@@ -1,14 +1,16 @@
-# Recipe App (Next.js + Prisma + PostgreSQL + S3)
+# Recipe App (Next.js + Prisma + PostgreSQL + S3 + Supabase Auth)
 
 A full-featured recipe management application with:
 - **Next.js 15** (App Router, TypeScript)
 - **Prisma + PostgreSQL** for data persistence
 - **AWS S3** for secure image storage with API proxy
+- **Supabase Auth** for secure authentication (Email + Google OAuth)
 - **React Hook Form + Zod** for form validation
 - **Tailwind CSS + shadcn/ui** for modern UI
 - **Image upload with drag & drop** functionality
 - **Draft persistence** with localStorage
 - **Responsive design** with mobile-first approach
+- **Row Level Security (RLS)** for database-level security
 
 ## 🚀 Features
 
@@ -35,15 +37,21 @@ A full-featured recipe management application with:
 - ✅ **Multiple image support** per recipe
 - ✅ **Automatic dimension detection**
 
-### **Security & Data Protection**
+### **Authentication & Security**
+- ✅ **Supabase Auth** - Email/password and Google OAuth authentication
 - ✅ **Row Level Security (RLS)** - Database-level security policies
-- ✅ **User authentication** with Supabase Auth
 - ✅ **Owner-only access** - Users can only modify their own content
 - ✅ **Public read access** - Anyone can view recipes (social features)
 - ✅ **Secure S3 operations** - Automatic cleanup of deleted images
 - ✅ **Transaction safety** - Atomic operations for data consistency
+- ✅ **Session management** - Secure server-side session validation
+- ✅ **OAuth callback handling** - Proper Google OAuth flow
+- ✅ **Page guards** - Protected routes redirect to signin
+- ✅ **Auth state display** - Header shows user info and sign out
 
-### **Technical Features**
+## 🚀 Quick Start
+
+1) **Clone and install**
 ```bash
 git clone <your-repo-url>
 cd recipe-app
@@ -65,7 +73,7 @@ AWS_SECRET_ACCESS_KEY="your-secret-key"
 # Optional: CDN URL (leave empty for API proxy)
 # S3_PUBLIC_BASE_URL="https://your-cloudfront-domain.com"
 
-# Supabase Configuration (Required for RLS testing)
+# Supabase Configuration (Required for Authentication & RLS)
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 SUPABASE_URL="https://your-project.supabase.co"
@@ -91,13 +99,21 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
-5) **Start development server**
+5) **Set up Supabase Auth**
+- Enable Email authentication in your Supabase dashboard
+- Configure Google OAuth provider (optional)
+- Apply RLS policies from `supabase-rls-policies.sql`
+
+6) **Start development server**
 ```bash
 npm run dev
 ```
 
-6) **Open your browser**
+7) **Open your browser**
 Visit `http://localhost:3000` to start creating recipes!
+- Sign in with email/password or Google OAuth
+- Create your first recipe
+- Test authentication with `/api/whoami`
 
 ## 🏗️ Architecture
 
@@ -111,8 +127,10 @@ Visit `http://localhost:3000` to start creating recipes!
 ### **Backend**
 - **Prisma ORM** for type-safe database operations
 - **PostgreSQL** for data persistence
+- **Supabase Auth** for secure authentication
 - **AWS S3** for secure file storage
 - **Next.js API Routes** for serverless functions
+- **Row Level Security (RLS)** for database-level security
 
 ### **S3 Image Flow**
 - **Private S3 bucket** - images not publicly accessible
@@ -193,6 +211,33 @@ await prisma.$transaction([
   prisma.nutrition.deleteMany({ where: { recipeId: id } }),
   prisma.recipe.delete({ where: { id } })
 ]);
+```
+
+## 🔐 Authentication Features
+
+### **Sign In Options**
+- **Email/Password** - Traditional authentication with automatic signup
+- **Google OAuth** - One-click sign in with Google account
+- **Session Management** - Secure server-side session validation
+- **Auto-redirect** - Seamless flow to intended pages after signin
+
+### **Security Features**
+- **Row Level Security (RLS)** - Database-level access control
+- **Owner-only operations** - Users can only modify their own content
+- **Public recipe viewing** - Anyone can browse recipes (social features)
+- **Protected routes** - Automatic redirect to signin for protected pages
+- **Auth state display** - Real-time authentication status in header
+
+### **API Authentication**
+```bash
+# Check authentication status
+GET /api/whoami
+# Returns: { id, email, name } or 401 if not authenticated
+
+# All recipe operations require authentication
+POST /api/recipes          # Create recipe (auth required)
+DELETE /api/recipes/[id]   # Delete recipe (owner only)
+DELETE /api/recipes/bulk-delete  # Bulk delete (owner only)
 ```
 
 ## 🧪 API Endpoints
@@ -348,11 +393,14 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Secure deletion** - Complete cleanup of user data and associated files
 - **Transaction safety** - Atomic operations prevent data corruption
 
-### **Authentication Ready:**
-- **Supabase Auth integration** - Ready for OAuth providers (Google, GitHub, etc.)
-- **JWT-based security** - Stateless authentication
-- **Session management** - Automatic token refresh and validation
-- **Multi-provider support** - Easy to add social login options
+### **Authentication & Authorization:**
+- **Supabase Auth integration** - Email/password and Google OAuth
+- **JWT-based security** - Stateless authentication with secure validation
+- **Session management** - Server-side session validation for security
+- **OAuth callback handling** - Proper Google OAuth flow implementation
+- **Page guards** - Protected routes with automatic redirects
+- **Auth state display** - Real-time authentication status in header
+- **Multi-provider support** - Easy to add more OAuth providers
 
 ## 📝 Notes
 - Images are served through a secure API proxy to keep S3 private
@@ -361,4 +409,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - For production, consider using CloudFront with `S3_PUBLIC_BASE_URL`
 - **RLS policies** are automatically applied to all database operations
 - **S3 cleanup** happens automatically when recipes are deleted
-- **User authentication** is handled by Supabase Auth (OAuth-ready)
+- **User authentication** is handled by Supabase Auth with OAuth support
+- **Google OAuth** requires proper callback URL configuration in Supabase
+- **Session security** uses server-side validation for maximum security
+- **Protected routes** automatically redirect unauthenticated users to signin
