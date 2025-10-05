@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <title>Mealspire Logo</title>
+  <desc>Minimal chef hat above a dumbbell silhouette</desc>
+  <g fill="#2F3336">
+    <!-- Chef hat -->
+    <path d="M256,420
+             C256,330 330,260 420,260
+             C455,220 510,200 560,200
+             C650,200 720,270 720,350
+             C780,360 824,410 824,470
+             C824,540 766,592 698,600
+             L326,600
+             C292,600 264,572 264,538
+             L264,520
+             C274,520 282,520 292,520
+             C270,500 256,462 256,420 Z" />
+    <!-- Hat band -->
+    <rect x="320" y="600" width="384" height="80" rx="16" ry="16"/>
+    <!-- Dumbbell bar -->
+    <rect x="320" y="740" width="384" height="56" rx="12" ry="12"/>
+    <!-- Left plate -->
+    <rect x="250" y="712" width="54" height="112" rx="12" ry="12"/>
+    <rect x="210" y="730" width="30" height="76" rx="10" ry="10"/>
+    <!-- Right plate -->
+    <rect x="720" y="712" width="54" height="112" rx="12" ry="12"/>
+    <rect x="784" y="730" width="30" height="76" rx="10" ry="10"/>
+  </g>
+</svg>

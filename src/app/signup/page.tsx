@@ -1,11 +1,15 @@
-import SignUpFormClient from "./sign-up-form-client";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import AuthCard from "@/components/auth/AuthCard";
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect("/recipes");
+
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <h1 className="text-2xl font-semibold">Sign Up</h1>
-      <p className="text-sm text-muted-foreground">Create your account to continue.</p>
-      <SignUpFormClient />
+    <div className="min-h-screen grid place-items-center bg-[var(--bg)] px-4">
+      <AuthCard title="Create account" mode="signup" />
     </div>
   );
 }
