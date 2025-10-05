@@ -105,7 +105,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         <>
           <RecipesListWithBulkDelete 
             recipes={recipes} 
-            currentUserId={currentUser.id} 
+            currentUserId={currentUser?.id || null} 
           />
 
           {/* Pagination */}

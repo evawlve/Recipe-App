@@ -59,7 +59,7 @@ export default async function RecipePage({ params }: RecipePageProps) {
   }
 
   const current = await getCurrentUser();
-  const canDelete = current.id === recipe.authorId;
+  const canDelete = current?.id === recipe.authorId;
 
   // Debug logging
   console.log('Recipe photos:', recipe.photos);

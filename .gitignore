@@ -74,3 +74,5 @@ prisma/migrations/dev.db*
 # Cusor
 .cursorrules
 .cursorignore
+
+client_secret.json
