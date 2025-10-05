@@ -1,24 +1,25 @@
 :root {
-  --bg: 0 0% 100%;
+  /* FitFuel light tokens derived from Figma */
+  --bg: 180 29% 98%;            /* #F7FAFA / #F8FBFA */
   --card: 0 0% 100%;
   --popover: 0 0% 100%;
-  --text: 222 47% 11%;
-  --muted: 215 16% 47%;
-  --primary: 221 83% 53%;
+  --text: 150 30% 8%;            /* #0D1A12 */
+  --muted: 143 29% 45%;          /* #52946B */
+  --primary: 144 73% 55%;        /* #38E07B */
   --primary-foreground: 0 0% 100%;
-  --secondary: 215 16% 92%;
-  --secondary-foreground: 222 47% 11%;
-  --accent: 142 71% 45%;
+  --secondary: 150 20% 94%;      /* light mint grays (e8f2ed/e5e8eb) */
+  --secondary-foreground: 150 30% 8%;
+  --accent: 144 73% 55%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 214 32% 91%;
-  --ring: 221 83% 53%;
-  --radius-xl: 1.5rem;
+  --border: 147 28% 86%;         /* #D1E5D9 */
+  --ring: 144 73% 55%;           /* match primary */
+  --radius-xl: 1.25rem;          /* ~20px for inputs */
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
   --radius-sm: 0.5rem;
-  --shadow: 220 3% 15%;
+  --shadow: 150 3% 30%;
 }
 
 .dark {

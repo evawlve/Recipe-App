@@ -5,7 +5,7 @@ import { AuthHeader } from '@/components/auth/AuthHeader';
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-bg text-text">
+      <body className="min-h-screen bg-background text-foreground">
         <AuthHeader />
         <main className="min-h-screen">{children}</main>
       </body>
