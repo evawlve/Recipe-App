@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface AuthGuardProps {
@@ -13,6 +13,7 @@ export function AuthGuard({ children, redirectTo = '/signin' }: AuthGuardProps) 
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     async function checkAuth() {
@@ -36,6 +37,21 @@ export function AuthGuard({ children, redirectTo = '/signin' }: AuthGuardProps) 
 
     checkAuth();
   }, [router, redirectTo]);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        if (pathname === '/recipes/new') {
+          router.replace('/');
+        }
+      }
+    });
+
+    return () => {
+      subscription.subscription.unsubscribe();
+    };
+  }, [router, pathname]);
 
   if (isLoading) {
     return (
