@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Mail, User } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 // Step 1: Email and Password
 const emailPasswordSchema = z.object({
@@ -189,10 +191,46 @@ export default function SignUpFormClient() {
   const firstNameError = nameForm.formState.errors.firstName?.message;
   const lastNameError = nameForm.formState.errors.lastName?.message;
 
+  // Check if user has started filling out the form
+  const hasFormData = () => {
+    return signupData.email || 
+           signupData.password || 
+           signupData.firstName || 
+           signupData.lastName ||
+           emailPasswordForm.watch("email") ||
+           emailPasswordForm.watch("password") ||
+           emailConfirmationForm.watch("confirmEmail") ||
+           passwordConfirmationForm.watch("confirmPassword") ||
+           nameForm.watch("firstName") ||
+           nameForm.watch("lastName");
+  };
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (hasFormData()) {
+      const confirmed = window.confirm(
+        "You've started filling out the signup form. Are you sure you want to leave and go to the home page? Your progress will be lost."
+      );
+      if (!confirmed) {
+        e.preventDefault();
+      }
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* Logo */}
+      <div className="flex justify-center mb-4 -mt-8">
+        <Link 
+          href="/" 
+          onClick={handleLogoClick}
+          className="h-32 w-32 overflow-hidden flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <Image src="/logo.svg" alt="Mealspire Logo" width={160} height={160} className="object-contain" priority />
+        </Link>
+      </div>
+      
       {/* Progress indicator */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-6">
         <div className="flex items-center space-x-2">
           <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
             currentStep === "email-password" ? "bg-primary text-primary-foreground" : 

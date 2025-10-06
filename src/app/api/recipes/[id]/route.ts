@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { recipeUpdateSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
@@ -59,4 +60,117 @@ export async function DELETE(
   ]);
 
   return new NextResponse(null, { status: 204 });
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+  
+  // Get current user
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Load recipe and check ownership
+  const recipe = await prisma.recipe.findUnique({
+    where: { id },
+    include: { ingredients: true, tags: true }
+  });
+
+  if (!recipe) {
+    return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+  }
+
+  if (recipe.authorId !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    // Parse and validate request body
+    const body = await req.json();
+    const validatedData = recipeUpdateSchema.parse(body);
+
+    // Update recipe fields
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    if (validatedData.title !== undefined) updateData.title = validatedData.title;
+    if (validatedData.servings !== undefined) updateData.servings = validatedData.servings;
+    if (validatedData.bodyMd !== undefined) updateData.bodyMd = validatedData.bodyMd;
+
+    // Update recipe
+    const updatedRecipe = await prisma.recipe.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // Handle ingredients update if provided
+    if (validatedData.ingredients !== undefined) {
+      // Delete existing ingredients
+      await prisma.ingredient.deleteMany({
+        where: { recipeId: id }
+      });
+
+      // Create new ingredients
+      await prisma.ingredient.createMany({
+        data: validatedData.ingredients.map(ingredient => ({
+          recipeId: id,
+          name: ingredient.name,
+          qty: ingredient.qty,
+          unit: ingredient.unit,
+        }))
+      });
+    }
+
+    // Handle tags update if provided
+    if (validatedData.tags !== undefined) {
+      // Delete existing recipe tags
+      await prisma.recipeTag.deleteMany({
+        where: { recipeId: id }
+      });
+
+      // Upsert tags and create recipe tag links
+      for (const tagLabel of validatedData.tags) {
+        const tag = await prisma.tag.upsert({
+          where: { slug: tagLabel.toLowerCase().replace(/\s+/g, '-') },
+          update: {},
+          create: { 
+            slug: tagLabel.toLowerCase().replace(/\s+/g, '-'),
+            label: tagLabel 
+          },
+        });
+
+        await prisma.recipeTag.create({
+          data: {
+            recipeId: id,
+            tagId: tag.id,
+          }
+        });
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      recipe: { id: updatedRecipe.id } 
+    });
+
+  } catch (error) {
+    console.error("Error updating recipe:", error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: "Validation error", 
+        details: error.errors 
+      }, { status: 400 });
+    }
+
+    return NextResponse.json({ 
+      error: "Failed to update recipe" 
+    }, { status: 500 });
+  }
 }
