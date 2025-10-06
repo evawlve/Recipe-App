@@ -36,3 +36,21 @@ export const recipeApiSchema = z.object({
 });
 
 export type RecipeCreateInput = z.infer<typeof recipeCreateSchema>;
+
+// Schema for recipe updates
+export const recipeUpdateSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200, "Title must be less than 200 characters").optional(),
+  servings: z.number().int().min(1, "Servings must be at least 1").max(100, "Servings must be less than 100").optional(),
+  bodyMd: z.string().min(1, "Instructions are required").optional(),
+  ingredients: z.array(
+    z.object({
+      id: z.string().optional(),
+      name: z.string().min(1, "Ingredient name is required"),
+      qty: z.number().positive("Quantity must be positive"),
+      unit: z.string().min(1, "Unit is required"),
+    })
+  ).min(1, "At least one ingredient is required").optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export type RecipeUpdateInput = z.infer<typeof recipeUpdateSchema>;

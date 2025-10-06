@@ -1,4 +1,4 @@
-# Recipe App (Next.js + Prisma + PostgreSQL + S3 + Supabase Auth)
+# Mealspire (Next.js + Prisma + PostgreSQL + S3 + Supabase Auth)
 
 A full-featured recipe management application with:
 - **Next.js 15** (App Router, TypeScript)
@@ -11,12 +11,16 @@ A full-featured recipe management application with:
 - **Draft persistence** with localStorage
 - **Responsive design** with mobile-first approach
 - **Row Level Security (RLS)** for database-level security
+- **Recipe editing** with ownership validation
+- **Modern UI/UX** with consistent branding
 
 ## 🚀 Features
 
 ### **Recipe Management**
 - ✅ **Create recipes** with title, servings, ingredients, and instructions
+- ✅ **Edit recipes** with full ownership validation and secure updates
 - ✅ **Image upload** with drag & drop interface
+- ✅ **Existing photo management** with individual removal capability
 - ✅ **Ingredient management** with add/remove functionality
 - ✅ **Recipe listing** with search and pagination
 - ✅ **Recipe details** with full image gallery
@@ -48,6 +52,15 @@ A full-featured recipe management application with:
 - ✅ **OAuth callback handling** - Proper Google OAuth flow
 - ✅ **Page guards** - Protected routes redirect to signin
 - ✅ **Auth state display** - Header shows user info and sign out
+
+### **User Interface & Experience**
+- ✅ **Modern branding** - "Mealspire" with custom logo
+- ✅ **Responsive navigation** - Mobile hamburger menu with desktop layout
+- ✅ **Consistent color scheme** - Green primary buttons throughout
+- ✅ **Logo integration** - Clickable logo linking to home page
+- ✅ **Form confirmation dialogs** - Prevent accidental data loss
+- ✅ **Mobile-first design** - Optimized for all screen sizes
+- ✅ **Accessible components** - Built with shadcn/ui primitives
 
 ## 🚀 Quick Start
 
@@ -239,6 +252,7 @@ GET /api/whoami
 
 # All recipe operations require authentication
 POST /api/recipes          # Create recipe (auth required)
+PATCH /api/recipes/[id]    # Update recipe (owner only)
 DELETE /api/recipes/[id]   # Delete recipe (owner only)
 DELETE /api/recipes/bulk-delete  # Bulk delete (owner only)
 ```
@@ -267,6 +281,18 @@ GET /api/recipes
 
 # Get recipe details
 GET /api/recipes/[id]
+
+# Update a recipe (owner only)
+PATCH /api/recipes/[id]
+{
+  "title": "Updated Recipe Title",
+  "servings": 4,
+  "bodyMd": "Updated instructions...",
+  "ingredients": [
+    {"name": "updated ingredient", "qty": 2, "unit": "cups"}
+  ],
+  "tags": ["updated", "tags"]
+}
 
 # Delete a recipe (owner only)
 DELETE /api/recipes/[id]
@@ -426,3 +452,7 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Google OAuth** requires proper callback URL configuration in Supabase
 - **Session security** uses server-side validation for maximum security
 - **Protected routes** automatically redirect unauthenticated users to signin
+- **Recipe editing** includes ownership validation and secure updates
+- **Modern UI** features responsive navigation and consistent branding
+- **Form validation** uses Zod schemas for both create and update operations
+- **Photo management** allows individual photo removal during editing

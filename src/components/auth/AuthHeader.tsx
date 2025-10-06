@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Menu, X } from 'lucide-react';
 
 interface User {
   id: string;
@@ -14,6 +16,7 @@ interface User {
 export function AuthHeader() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function getUser() {
@@ -71,16 +74,24 @@ export function AuthHeader() {
     <header className="border-b border-border">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-text hover:text-primary transition-colors">
-            Recipe App
+          <Link href="/" className="flex items-center gap-1 text-3xl font-bold text-text hover:text-primary transition-colors">
+            <div className="h-14 w-14 overflow-hidden flex items-center justify-center">
+              <Image 
+                src="/logo-noLetters.svg" 
+                alt="Mealspire Logo" 
+                width={180} 
+                height={180} 
+                className="h-36 w-36 object-contain translate-y-1"
+              />
+            </div>
+            <span>Mealspire</span>
           </Link>
-          <nav className="flex items-center gap-4">
-            <Link 
-              href="/recipes" 
-              className="text-text hover:text-primary transition-colors"
-            >
-              Recipes
-            </Link>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-4">
+            <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+              <Link href="/recipes">Recipes</Link>
+            </Button>
             
             {isLoading ? (
               <div className="animate-pulse bg-muted h-8 w-20 rounded"></div>
@@ -98,16 +109,59 @@ export function AuthHeader() {
               </div>
             ) : (
               <div className="flex items-center gap-4">
-                <Button asChild>
-                  <Link href="/recipes/new">New Recipe</Link>
-                </Button>
-                <Button asChild>
+                <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
                   <Link href="/signin">Sign In</Link>
                 </Button>
               </div>
             )}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-md hover:bg-muted transition-colors"
+            aria-label="Toggle mobile menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </button>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden mt-4 pb-4 border-t border-border pt-4">
+            <nav className="flex flex-col space-y-4">
+              <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white">
+                <Link href="/recipes" onClick={() => setIsMobileMenuOpen(false)}>Recipes</Link>
+              </Button>
+              
+              {isLoading ? (
+                <div className="animate-pulse bg-muted h-8 w-20 rounded"></div>
+              ) : user ? (
+                <div className="flex flex-col space-y-4">
+                  <span className="text-sm text-muted-foreground py-2">
+                    {user.name || user.email}
+                  </span>
+                  <Button asChild className="w-full">
+                    <Link href="/recipes/new" onClick={() => setIsMobileMenuOpen(false)}>New Recipe</Link>
+                  </Button>
+                  <Button variant="outline" onClick={handleSignOut} className="w-full">
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col space-y-4">
+                  <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white">
+                    <Link href="/signin" onClick={() => setIsMobileMenuOpen(false)}>Sign In</Link>
+                  </Button>
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );

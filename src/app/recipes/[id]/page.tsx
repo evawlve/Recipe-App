@@ -82,7 +82,12 @@ export default async function RecipePage({ params }: RecipePageProps) {
             <Link href="/recipes">← Back to Recipes</Link>
           </Button>
           {canDelete && (
-            <DeleteRecipeButton recipeId={recipe.id} />
+            <>
+              <Button variant="outline" asChild>
+                <Link href={`/recipes/${recipe.id}/edit`}>Edit Recipe</Link>
+              </Button>
+              <DeleteRecipeButton recipeId={recipe.id} />
+            </>
           )}
         </div>
         
