@@ -56,6 +56,9 @@ A full-featured recipe management application with:
 git clone <your-repo-url>
 cd recipe-app
 npm install
+
+# Install additional dependencies for shadcn/ui components
+npm install @radix-ui/react-slot @radix-ui/react-checkbox class-variance-authority clsx tailwind-merge @tailwindcss/line-clamp react-hook-form lucide-react
 ```
 
 2) **Configure environment**
@@ -302,6 +305,16 @@ POST /api/nutrition
 ```
 
 ## 🔧 Development
+
+### **Dependencies**
+This project uses shadcn/ui components which require additional dependencies:
+- `@radix-ui/react-slot` - For component composition
+- `@radix-ui/react-checkbox` - For checkbox components
+- `class-variance-authority` - For component variants
+- `clsx` & `tailwind-merge` - For conditional styling
+- `@tailwindcss/line-clamp` - Tailwind plugin for text truncation
+- `react-hook-form` - Form handling
+- `lucide-react` - Icon library
 
 ### **Available Scripts**
 ```bash
