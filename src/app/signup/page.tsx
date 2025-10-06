@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import AuthCard from "@/components/auth/AuthCard";
+import SignUpFormClient from "./sign-up-form-client";
 
 export default async function SignUpPage() {
   const supabase = await createSupabaseServerClient();
@@ -9,7 +9,7 @@ export default async function SignUpPage() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg)] px-4">
-      <AuthCard title="Create account" mode="signup" />
+      <SignUpFormClient />
     </div>
   );
 }
