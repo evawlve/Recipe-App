@@ -10,5 +10,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export function createSupabaseBrowserClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient(supabaseUrl!, supabaseAnonKey!);
 }
