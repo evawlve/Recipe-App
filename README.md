@@ -62,6 +62,12 @@ A full-featured recipe management application with:
 - ✅ **Mobile-first design** - Optimized for all screen sizes
 - ✅ **Accessible components** - Built with shadcn/ui primitives
 
+### **Social Interactions**
+- ✅ **Likes** - Users can like/unlike recipes with optimistic UI
+- ✅ **Comments** - Users can post, edit (own), and delete (own or recipe author)
+- ✅ **Counts** - Recipe cards display like and comment counts
+- ✅ **Auth-aware UX** - Unauthenticated likes show a sign-in notice
+
 ## 🚀 Quick Start
 
 1) **Clone and install**
@@ -303,6 +309,39 @@ DELETE /api/recipes/bulk-delete
   "recipeIds": ["recipe1", "recipe2", "recipe3"]
 }
 ```
+
+### **Likes & Comments**
+```bash
+# Like a recipe (auth required)
+POST /api/recipes/[id]/like
+# Response: { "liked": true, "count": number }
+
+# Unlike a recipe (auth required)
+DELETE /api/recipes/[id]/like
+# Response: { "liked": false, "count": number }
+
+# Create a comment (auth required)
+POST /api/recipes/[id]/comments
+Body: { "body": string }  # Zod-validated: 1..500 chars
+# Response: { id, body, createdAt, user: { id, name } }
+
+# Delete a comment (author or recipe author)
+DELETE /api/comments/[id]
+# Response: 204 No Content
+
+# Edit a comment (author only)
+PATCH /api/comments/[id]
+Body: { "body": string }  # Zod-validated: 1..500 chars
+# Response: { id, body, createdAt, user: { id, name } }
+```
+
+#### Permissions & Behavior
+- Never trust client `userId`; the server uses the authenticated user.
+- Like actions are idempotent; duplicate likes are ignored server-side.
+- Comment create/edit uses `commentBodySchema` (Zod) for validation.
+- Delete comment is allowed by comment author or the recipe author.
+- Edit comment is allowed only by the comment author.
+- Unauthenticated like attempts return 401; the UI displays a sign-in notice.
 
 ### **Image Upload**
 ```bash
