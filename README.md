@@ -62,6 +62,14 @@ A full-featured recipe management application with:
 - ✅ **Mobile-first design** - Optimized for all screen sizes
 - ✅ **Accessible components** - Built with shadcn/ui primitives
 
+### **Social Interactions**
+- ✅ **Likes** - Users can like/unlike recipes with optimistic UI
+- ✅ **Comments** - Users can post, edit (own), and delete (own or recipe author)
+- ✅ **Counts** - Recipe cards display like and comment counts
+- ✅ **Auth-aware UX** - Unauthenticated likes show a sign-in notice
+- ✅ **Real-time updates** - Optimistic UI with rollback on errors
+- ✅ **Permission-based actions** - Edit only for comment authors, delete for authors or recipe owners
+
 ## 🚀 Quick Start
 
 1) **Clone and install**
@@ -304,6 +312,39 @@ DELETE /api/recipes/bulk-delete
 }
 ```
 
+### **Likes & Comments**
+```bash
+# Like a recipe (auth required)
+POST /api/recipes/[id]/like
+# Response: { "liked": true, "count": number }
+
+# Unlike a recipe (auth required)
+DELETE /api/recipes/[id]/like
+# Response: { "liked": false, "count": number }
+
+# Create a comment (auth required)
+POST /api/recipes/[id]/comments
+Body: { "body": string }  # Zod-validated: 1..500 chars
+# Response: { id, body, createdAt, user: { id, name } }
+
+# Delete a comment (author or recipe author)
+DELETE /api/comments/[id]
+# Response: 204 No Content
+
+# Edit a comment (author only)
+PATCH /api/comments/[id]
+Body: { "body": string }  # Zod-validated: 1..500 chars
+# Response: { id, body, createdAt, user: { id, name } }
+```
+
+#### Permissions & Behavior
+- Never trust client `userId`; the server uses the authenticated user.
+- Like actions are idempotent; duplicate likes are ignored server-side.
+- Comment create/edit uses `commentBodySchema` (Zod) for validation.
+- Delete comment is allowed by comment author or the recipe author.
+- Edit comment is allowed only by the comment author.
+- Unauthenticated like attempts return 401; the UI displays a sign-in notice.
+
 ### **Image Upload**
 ```bash
 # Get presigned upload URL
@@ -341,6 +382,8 @@ This project uses shadcn/ui components which require additional dependencies:
 - `@tailwindcss/line-clamp` - Tailwind plugin for text truncation
 - `react-hook-form` - Form handling
 - `lucide-react` - Icon library
+- `nanoid` - For generating unique IDs
+- `zod` - Runtime type validation
 
 ### **Available Scripts**
 ```bash
@@ -456,3 +499,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Modern UI** features responsive navigation and consistent branding
 - **Form validation** uses Zod schemas for both create and update operations
 - **Photo management** allows individual photo removal during editing
+- **Social features** include likes and comments with proper permission controls
+- **Optimistic UI** provides instant feedback for likes and comments
+- **Comment editing** is restricted to comment authors only
+- **Comment deletion** is allowed for comment authors or recipe owners
+- **Like counts** and **comment counts** are displayed on recipe cards
+- **Unauthenticated users** see sign-in prompts when trying to like recipes

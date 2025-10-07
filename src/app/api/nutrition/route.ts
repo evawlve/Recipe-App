@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const items = Array.isArray(body?.items) ? body.items : [];
 
-  const totals = items.reduce((acc, it) => {
+  const totals = items.reduce((acc: { calories: number; proteinG: number; carbsG: number; fatG: number }, it: any) => {
     const row = findRow(String(it.name || ''));
     if (!row) return acc;
     const factor = it.unit === row.basis.unit

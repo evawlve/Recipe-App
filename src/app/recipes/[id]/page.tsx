@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import { imageSrcForKey } from "@/lib/images";
 import { PhotoGallery } from "@/components/recipe/PhotoGallery";
 import { getCurrentUser } from "@/lib/auth";
+import LikeButton from "@/components/recipe/LikeButton";
+import Comments from "@/components/recipe/Comments";
 import DeleteRecipeButton from "@/components/recipe/DeleteRecipeButton";
 
 interface RecipePageProps {
@@ -61,6 +63,17 @@ export default async function RecipePage({ params }: RecipePageProps) {
   const current = await getCurrentUser();
   const canDelete = current?.id === recipe.authorId;
 
+  const [likeCount, likedByMe, comments] = await Promise.all([
+    prisma.like.count({ where: { recipeId: recipe.id } }),
+    current ? prisma.like.findUnique({ where: { userId_recipeId: { userId: current.id, recipeId: recipe.id } } }).then(Boolean) : Promise.resolve(false),
+    prisma.comment.findMany({
+      where: { recipeId: recipe.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, body: true, createdAt: true, user: { select: { id: true, name: true } } },
+    }),
+  ]);
+
   // Debug logging
   console.log('Recipe photos:', recipe.photos);
   console.log('Number of photos:', recipe.photos.length);
@@ -98,6 +111,8 @@ export default async function RecipePage({ params }: RecipePageProps) {
           <span>{formatDate(recipe.createdAt)}</span>
           <span>•</span>
           <span>{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
+          <span>•</span>
+          <LikeButton recipeId={recipe.id} initialCount={likeCount} initiallyLiked={Boolean(likedByMe)} />
         </div>
       </div>
 
@@ -149,6 +164,15 @@ export default async function RecipePage({ params }: RecipePageProps) {
                   __html: recipe.bodyMd.replace(/\n/g, '<br>') 
                 }} 
               />
+              <div className="mt-8">
+                <Comments
+                  recipeId={recipe.id}
+                  initial={comments as any}
+                  canPost={Boolean(current)}
+                  currentUserId={current?.id ?? null}
+                  recipeAuthorId={recipe.authorId}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

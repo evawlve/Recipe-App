@@ -114,11 +114,9 @@ export function ImageUploader({
     console.log(`Starting upload for ${fileState.file.name} at index ${index}`);
     
     // Update status to uploading
-    onFileStatesChange(prevStates => {
-      const newStates = [...prevStates];
-      newStates[index] = { ...fileState, status: "uploading" };
-      return newStates;
-    });
+    const newStates = [...fileStates];
+    newStates[index] = { ...fileState, status: "uploading" };
+    onFileStatesChange(newStates);
     
     if (onUploadStart) onUploadStart();
 
@@ -131,30 +129,26 @@ export function ImageUploader({
       
       // Update status to done
       console.log(`Upload completed for ${fileState.file.name} with s3Key: ${s3Key}`);
-      onFileStatesChange(prevStates => {
-        const newStates = [...prevStates];
-        newStates[index] = { 
-          ...fileState, 
-          status: "done", 
-          s3Key, 
-          dims 
-        };
-        return newStates;
-      });
+      const newStates = [...fileStates];
+      newStates[index] = { 
+        ...fileState, 
+        status: "done", 
+        s3Key, 
+        dims 
+      };
+      onFileStatesChange(newStates);
       
     } catch (error) {
       console.error(`Upload failed for ${fileState.file.name}:`, error);
       
       // Update status to error
-      onFileStatesChange(prevStates => {
-        const newStates = [...prevStates];
-        newStates[index] = { 
-          ...fileState, 
-          status: "error", 
-          error: error instanceof Error ? error.message : "Upload failed"
-        };
-        return newStates;
-      });
+      const newStates = [...fileStates];
+      newStates[index] = { 
+        ...fileState, 
+        status: "error", 
+        error: error instanceof Error ? error.message : "Upload failed"
+      };
+      onFileStatesChange(newStates);
     }
   };
 

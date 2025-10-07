@@ -20,6 +20,7 @@ interface RecipeWithRelations extends Recipe {
   author: {
     name: string | null;
   };
+  _count?: { likes: number; comments: number };
 }
 
 interface RecipeCardProps {
@@ -60,13 +61,21 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <CardContent className="pt-0 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
-            {nutrition && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span>{nutrition.calories} cal</span>
-                <span>•</span>
-                <span>{nutrition.proteinG.toFixed(1)}g protein</span>
-              </div>
-            )}
+            <div className="flex items-center gap-3 text-muted-foreground">
+              {nutrition && (
+                <div className="flex items-center gap-2">
+                  <span>{nutrition.calories} cal</span>
+                  <span>•</span>
+                  <span>{nutrition.proteinG.toFixed(1)}g protein</span>
+                </div>
+              )}
+              {typeof recipe._count?.likes === 'number' && (
+                <span>❤ {recipe._count.likes}</span>
+              )}
+              {typeof recipe._count?.comments === 'number' && (
+                <span>💬 {recipe._count.comments}</span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Link>

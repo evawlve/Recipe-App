@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { recipeUpdateSchema } from "@/lib/validation";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ export async function DELETE(
   });
 
   if (!recipe) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (recipe.authorId !== user.id) {
+  if (!user || recipe.authorId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

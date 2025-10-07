@@ -41,23 +41,33 @@ export function AuthHeader() {
       }
     }
 
-    getUser();
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      getUser();
 
-    // Listen for auth changes
-    const supabase = createSupabaseBrowserClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email || 'User',
+      // Listen for auth changes
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (session?.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email || 'User',
+            });
+          } else {
+            setUser(null);
+          }
         });
-      } else {
-        setUser(null);
-      }
-    });
 
-    return () => subscription.unsubscribe();
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error('Error setting up auth listener:', error);
+        setIsLoading(false);
+      }
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   const handleSignOut = async () => {

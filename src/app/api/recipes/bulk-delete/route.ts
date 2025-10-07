@@ -15,6 +15,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
     const region = process.env.AWS_REGION;
     const bucket = process.env.S3_BUCKET;
     
