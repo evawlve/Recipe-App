@@ -67,6 +67,8 @@ A full-featured recipe management application with:
 - ✅ **Comments** - Users can post, edit (own), and delete (own or recipe author)
 - ✅ **Counts** - Recipe cards display like and comment counts
 - ✅ **Auth-aware UX** - Unauthenticated likes show a sign-in notice
+- ✅ **Real-time updates** - Optimistic UI with rollback on errors
+- ✅ **Permission-based actions** - Edit only for comment authors, delete for authors or recipe owners
 
 ## 🚀 Quick Start
 
@@ -380,6 +382,8 @@ This project uses shadcn/ui components which require additional dependencies:
 - `@tailwindcss/line-clamp` - Tailwind plugin for text truncation
 - `react-hook-form` - Form handling
 - `lucide-react` - Icon library
+- `nanoid` - For generating unique IDs
+- `zod` - Runtime type validation
 
 ### **Available Scripts**
 ```bash
@@ -495,3 +499,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Modern UI** features responsive navigation and consistent branding
 - **Form validation** uses Zod schemas for both create and update operations
 - **Photo management** allows individual photo removal during editing
+- **Social features** include likes and comments with proper permission controls
+- **Optimistic UI** provides instant feedback for likes and comments
+- **Comment editing** is restricted to comment authors only
+- **Comment deletion** is allowed for comment authors or recipe owners
+- **Like counts** and **comment counts** are displayed on recipe cards
+- **Unauthenticated users** see sign-in prompts when trying to like recipes

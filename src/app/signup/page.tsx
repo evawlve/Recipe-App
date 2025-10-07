@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import SignUpFormClient from "./sign-up-form-client";
+import { Suspense } from "react";
 
 export default async function SignUpPage() {
   const supabase = await createSupabaseServerClient();
@@ -9,7 +10,9 @@ export default async function SignUpPage() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg)] px-4">
-      <SignUpFormClient />
+      <Suspense fallback={<div>Loading...</div>}>
+        <SignUpFormClient />
+      </Suspense>
     </div>
   );
 }
