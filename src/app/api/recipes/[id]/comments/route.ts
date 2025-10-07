@@ -4,11 +4,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { commentBodySchema } from "@/lib/validation/comment";
 import { nanoid } from "nanoid";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+	const resolvedParams = await params;
 	const user = await getCurrentUser();
 	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-	const recipe = await prisma.recipe.findUnique({ where: { id: params.id }, select: { id: true } });
+	const recipe = await prisma.recipe.findUnique({ where: { id: resolvedParams.id }, select: { id: true } });
 	if (!recipe) return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
 
 	const json = await req.json().catch(() => ({}));
