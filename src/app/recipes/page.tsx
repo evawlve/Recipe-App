@@ -59,6 +59,9 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
             name: true,
           },
         },
+        _count: {
+          select: { likes: true, comments: true },
+        },
       },
       orderBy: {
         createdAt: "desc",

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AuthCard from "@/components/auth/AuthCard";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 export default async function SignInPage() {
   const supabase = await createSupabaseServerClient();
@@ -9,7 +10,9 @@ export default async function SignInPage() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg)] px-4">
-      <AuthCard title="Sign in" mode="signin" showForgot />
+      <Suspense fallback={<div>Loading...</div>}>
+        <AuthCard title="Sign in" mode="signin" showForgot />
+      </Suspense>
     </div>
   );
 }
