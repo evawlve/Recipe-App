@@ -21,7 +21,7 @@ export async function DELETE(
     include: { recipe: { select: { authorId: true } } },
   });
   if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (photo.recipe.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user || photo.recipe.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     const s3 = new S3Client({ region });
