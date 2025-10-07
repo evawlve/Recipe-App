@@ -1,6 +1,9 @@
 require('@rushstack/eslint-patch/modern-module-resolution');
 
-const next = require('eslint-config-next');
+const nextConfig = require('eslint-config-next');
+const nextFlat = Array.isArray(nextConfig)
+	? nextConfig
+	: (nextConfig && nextConfig.default ? nextConfig.default : []);
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 module.exports = [
@@ -17,7 +20,7 @@ module.exports = [
 			'tsconfig.tsbuildinfo',
 		],
 	},
-	...next,
+	...nextFlat,
 	{
 		rules: {
 			'no-console': ['warn', { allow: ['warn', 'error'] }],
