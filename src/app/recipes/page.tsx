@@ -30,6 +30,17 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
 
   // Get current user for bulk delete functionality
   const currentUser = await getCurrentUser();
+  
+  // Get saved collection for current user if signed in
+  let savedCollectionId: string | null = null;
+  if (currentUser) {
+    try {
+      const { ensureSavedCollection } = await import("@/lib/collections");
+      savedCollectionId = await ensureSavedCollection(currentUser.id);
+    } catch (error) {
+      console.error("Error getting saved collection:", error);
+    }
+  }
 
   // Build the where clause for search and tags
   const whereClause = {
@@ -108,6 +119,16 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         _count: {
           select: { likes: true, comments: true },
         },
+        ...(savedCollectionId ? {
+          collections: {
+            where: {
+              collectionId: savedCollectionId
+            },
+            select: {
+              collectionId: true
+            }
+          }
+        } : {}),
       },
       orderBy: {
         createdAt: "desc",
@@ -119,6 +140,12 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       where: whereClause,
     }),
   ]);
+
+  // Process recipes to add saved state
+  const recipesWithSavedState = recipes.map(recipe => ({
+    ...recipe,
+    savedByMe: savedCollectionId ? recipe.collections?.length > 0 : false
+  }));
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const hasNextPage = currentPage < totalPages;
@@ -160,7 +187,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       ) : (
         <>
           <RecipesListWithBulkDelete 
-            recipes={recipes} 
+            recipes={recipesWithSavedState} 
             currentUserId={currentUser?.id || null} 
           />
 

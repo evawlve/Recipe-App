@@ -8,13 +8,15 @@ interface SelectableRecipeCardProps {
   isSelected: boolean;
   onSelectionChange: (recipeId: string, selected: boolean) => void;
   canSelect: boolean;
+  currentUserId?: string | null;
 }
 
 export function SelectableRecipeCard({ 
   recipe, 
   isSelected, 
   onSelectionChange, 
-  canSelect 
+  canSelect,
+  currentUserId 
 }: SelectableRecipeCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -23,7 +25,7 @@ export function SelectableRecipeCard({
   };
 
   if (!canSelect) {
-    return <RecipeCard recipe={recipe} />;
+    return <RecipeCard recipe={recipe} currentUserId={currentUserId} />;
   }
 
   return (
@@ -52,7 +54,7 @@ export function SelectableRecipeCard({
 
       {/* Recipe card */}
       <div className={isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}>
-        <RecipeCard recipe={recipe} />
+        <RecipeCard recipe={recipe} currentUserId={currentUserId} />
       </div>
     </div>
   );

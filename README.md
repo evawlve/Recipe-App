@@ -73,6 +73,14 @@ A full-featured recipe management application with:
 - ✅ **Real-time updates** - Optimistic UI with rollback on errors
 - ✅ **Permission-based actions** - Edit only for comment authors, delete for authors or recipe owners
 
+### **Collections & Saved Recipes**
+- ✅ **Saved Collections** - Automatic "Saved" collection created per user
+- ✅ **Save/Unsave Recipes** - Toggle save status with optimistic UI updates
+- ✅ **Saved Recipes Page** - Dedicated `/saved` page to view all saved recipes
+- ✅ **Recipe Card Integration** - Save buttons on recipe cards and detail pages
+- ✅ **Auth-aware Save UI** - Unauthenticated users see sign-in prompts
+- ✅ **Smart Popup Positioning** - Responsive popups that work on all screen sizes
+- ✅ **Collection Management** - Server-side collection creation and management
 ### **Tag System & Search**
 - ✅ **Tag input** with autocomplete suggestions from existing tags
 - ✅ **Tag chips** with visual display and easy removal
@@ -207,8 +215,15 @@ This app implements comprehensive database security using Supabase Row Level Sec
 - ✅ **Nutrition** - Public read, owner-only write (via recipe)
 - ✅ **Comment** - Public read, user-owned write
 - ✅ **Like** - Public read, user-owned write
-- ✅ **Collection** - User-owned read/write
+- ✅ **Collection** - User-owned read/write with unique constraint (userId, name)
 - ✅ **CollectionRecipe** - User-owned read/write (via collection)
+
+#### **Database Schema Updates:**
+- ✅ **Collection Model** - Stores user collections with unique constraint on (userId, name)
+- ✅ **CollectionRecipe Model** - Junction table linking collections to recipes
+- ✅ **Unique Constraints** - Prevents duplicate collections per user
+- ✅ **Automatic Collection Creation** - "Saved" collection created per user on first save
+- ✅ **Cascade Deletion** - CollectionRecipe entries cleaned up when recipes are deleted
 
 ### **Recipe Deletion System**
 
@@ -350,6 +365,21 @@ Body: { "body": string }  # Zod-validated: 1..500 chars
 # Response: { id, body, createdAt, user: { id, name } }
 ```
 
+### **Saved Collections**
+```bash
+# Save a recipe to user's "Saved" collection (auth required)
+POST /api/recipes/[id]/save
+# Response: { "saved": true, "count": number }
+
+# Remove a recipe from user's "Saved" collection (auth required)
+DELETE /api/recipes/[id]/save
+# Response: { "saved": false, "count": number }
+
+# Get user's saved recipes (auth required)
+GET /saved
+# Returns: Saved recipes page with user's saved collection
+```
+
 #### Permissions & Behavior
 - Never trust client `userId`; the server uses the authenticated user.
 - Like actions are idempotent; duplicate likes are ignored server-side.
@@ -357,6 +387,10 @@ Body: { "body": string }  # Zod-validated: 1..500 chars
 - Delete comment is allowed by comment author or the recipe author.
 - Edit comment is allowed only by the comment author.
 - Unauthenticated like attempts return 401; the UI displays a sign-in notice.
+- Save actions are idempotent; duplicate saves are ignored server-side.
+- Each user gets an automatic "Saved" collection created on first save.
+- Unauthenticated save attempts show popup prompts instead of API calls.
+- Saved recipes are displayed on dedicated `/saved` page with authentication required.
 
 ### **Image Upload**
 ```bash
@@ -533,6 +567,13 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Comment deletion** is allowed for comment authors or recipe owners
 - **Like counts** and **comment counts** are displayed on recipe cards
 - **Unauthenticated users** see sign-in prompts when trying to like recipes
+- **Saved Collections** feature with automatic "Saved" collection per user
+- **Save/Unsave functionality** with optimistic UI updates on recipe cards and detail pages
+- **Dedicated /saved page** for viewing all saved recipes (authentication required)
+- **Smart popup positioning** - Responsive popups that work on all screen sizes without overflow
+- **Improved comment UX** - Clean "Sign in to comment" button for unauthenticated users
+- **"No comments yet" placeholder** - Clear indication when no comments exist
+- **Separated Comments section** - Comments now have their own dedicated Card section
 - **Tag system** provides comprehensive recipe categorization and discovery
 - **Advanced search** enables finding recipes by title, instructions, or tags
 - **Tag filtering** allows users to browse recipes by specific categories

@@ -63,51 +63,78 @@ export default function Comments({ recipeId, initial, canPost, currentUserId, re
 
 	return (
 		<div className="space-y-4">
-			{canPost && (
-				<div className="space-y-2">
-					<textarea value={body} onChange={(e)=>setBody(e.target.value)}
-						placeholder="Add a comment…" className="w-full resize-y min-h-[96px] rounded-md border border-border p-3"/>
-					{err && <p className="text-sm text-red-600">{err}</p>}
-					<button onClick={submit} className="rounded-md bg-primary text-primary-foreground px-3 py-1.5">Post</button>
+			<div className="relative">
+				{canPost ? (
+					<div className="space-y-2">
+						<textarea 
+							value={body} 
+							onChange={(e)=>setBody(e.target.value)}
+							placeholder="Add a comment…" 
+							className="w-full resize-y min-h-[96px] rounded-md border border-border p-3"
+						/>
+						{err && <p className="text-sm text-red-600">{err}</p>}
+						<button 
+							onClick={submit} 
+							className="rounded-md bg-primary text-primary-foreground px-3 py-1.5"
+						>
+							Post
+						</button>
+					</div>
+				) : (
+					<div className="space-y-2">
+						<button 
+							onClick={() => window.location.href = '/signin'} 
+							className="rounded-md bg-primary text-primary-foreground px-3 py-1.5"
+						>
+							Sign in to comment
+						</button>
+					</div>
+				)}
+				
+			</div>
+			{items.length === 0 ? (
+				<div className="text-center py-8 text-muted-foreground">
+					No comments yet
 				</div>
-			)}
-			<ul className="space-y-3">
-				{items.map((c)=>(
-					<li key={c.id} className="rounded-md border border-border p-3 space-y-2">
-						<div className="flex items-center justify-between">
-							<div>
-								<div className="text-sm font-medium">{c.user?.name ?? "User"}</div>
-								<div className="text-sm text-muted">{new Date(c.createdAt).toLocaleString()}</div>
+			) : (
+				<ul className="space-y-3">
+					{items.map((c)=>(
+						<li key={c.id} className="rounded-md border border-border p-3 space-y-2">
+							<div className="flex items-center justify-between">
+								<div>
+									<div className="text-sm font-medium">{c.user?.name ?? "User"}</div>
+									<div className="text-sm text-muted">{new Date(c.createdAt).toLocaleString()}</div>
+								</div>
+							{/* Action buttons: Edit only for comment author; Delete for comment author or recipe author */}
+							<div className="flex gap-2">
+								{currentUserId === c.user?.id && editingId === c.id && (
+									<>
+										<button onClick={()=>saveEdit(c.id)} className="text-xs px-2 py-1 rounded-md border">Save</button>
+										<button onClick={()=>{ setEditingId(null); setEditBody(""); }} className="text-xs px-2 py-1 rounded-md border">Cancel</button>
+									</>
+								)}
+								{editingId !== c.id && (
+									<>
+										{currentUserId === c.user?.id && (
+											<button onClick={()=>beginEdit(c)} className="text-xs px-2 py-1 rounded-md border">Edit</button>
+										)}
+										{(currentUserId === c.user?.id || currentUserId === recipeAuthorId) && (
+											<button onClick={()=>remove(c.id)} className="text-xs px-2 py-1 rounded-md border text-red-600">Delete</button>
+										)}
+									</>
+								)}
 							</div>
-						{/* Action buttons: Edit only for comment author; Delete for comment author or recipe author */}
-						<div className="flex gap-2">
-							{currentUserId === c.user?.id && editingId === c.id && (
-								<>
-									<button onClick={()=>saveEdit(c.id)} className="text-xs px-2 py-1 rounded-md border">Save</button>
-									<button onClick={()=>{ setEditingId(null); setEditBody(""); }} className="text-xs px-2 py-1 rounded-md border">Cancel</button>
-								</>
-							)}
-							{editingId !== c.id && (
-								<>
-									{currentUserId === c.user?.id && (
-										<button onClick={()=>beginEdit(c)} className="text-xs px-2 py-1 rounded-md border">Edit</button>
-									)}
-									{(currentUserId === c.user?.id || currentUserId === recipeAuthorId) && (
-										<button onClick={()=>remove(c.id)} className="text-xs px-2 py-1 rounded-md border text-red-600">Delete</button>
-									)}
-								</>
-							)}
-						</div>
-						</div>
+							</div>
 
-						{(editingId === c.id && currentUserId === c.user?.id) ? (
-							<textarea value={editBody} onChange={(e)=>setEditBody(e.target.value)} className="w-full resize-y min-h-[72px] rounded-md border border-border p-2" />
-						) : (
-							<p className="mt-1 whitespace-pre-wrap">{c.body}</p>
-						)}
-					</li>
-				))}
-			</ul>
+							{(editingId === c.id && currentUserId === c.user?.id) ? (
+								<textarea value={editBody} onChange={(e)=>setEditBody(e.target.value)} className="w-full resize-y min-h-[72px] rounded-md border border-border p-2" />
+							) : (
+								<p className="mt-1 whitespace-pre-wrap">{c.body}</p>
+							)}
+						</li>
+					))}
+				</ul>
+			)}
 		</div>
 	);
 }
