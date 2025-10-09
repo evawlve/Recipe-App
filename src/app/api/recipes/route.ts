@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create the recipe with ingredients and photos
+    // Create the recipe with ingredients, photos, and tags
     const recipe = await prisma.recipe.create({
       data: {
         title: validatedData.title,
@@ -54,6 +54,32 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Handle tags if provided
+    if (validatedData.tags && validatedData.tags.length > 0) {
+      for (const tagLabel of validatedData.tags) {
+        const slug = tagLabel.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const humanizedLabel = tagLabel.trim();
+        
+        // Upsert tag
+        const tag = await prisma.tag.upsert({
+          where: { slug },
+          update: {},
+          create: { 
+            slug,
+            label: humanizedLabel 
+          },
+        });
+
+        // Create recipe tag link
+        await prisma.recipeTag.create({
+          data: {
+            recipeId: recipe.id,
+            tagId: tag.id,
+          }
+        });
+      }
+    }
     
     return NextResponse.json({ 
       success: true, 
