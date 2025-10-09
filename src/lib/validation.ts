@@ -12,6 +12,7 @@ export const recipeCreateSchema = z.object({
     })
   ).min(1, "At least one ingredient is required"),
   localFiles: z.array(z.instanceof(File)).optional().default([]),
+  tags: z.array(z.string().min(1).max(24)).max(10).default([]),
 });
 
 // Schema for API requests (without File objects)
@@ -33,6 +34,7 @@ export const recipeApiSchema = z.object({
       height: z.number().int().positive(),
     })
   ).optional().default([]),
+  tags: z.array(z.string().min(1).max(24)).max(10).default([]),
 });
 
 export type RecipeCreateInput = z.infer<typeof recipeCreateSchema>;
@@ -50,7 +52,7 @@ export const recipeUpdateSchema = z.object({
       unit: z.string().min(1, "Unit is required"),
     })
   ).min(1, "At least one ingredient is required").optional(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string().min(1).max(24)).max(10).optional(),
 });
 
 export type RecipeUpdateInput = z.infer<typeof recipeUpdateSchema>;
