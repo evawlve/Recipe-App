@@ -103,6 +103,12 @@ export function AuthHeader() {
               <Link href="/recipes">Recipes</Link>
             </Button>
             
+            {user && (
+              <Button asChild variant="outline">
+                <Link href="/saved">Saved</Link>
+              </Button>
+            )}
+            
             {isLoading ? (
               <div className="animate-pulse bg-muted h-8 w-20 rounded"></div>
             ) : user ? (
@@ -147,6 +153,12 @@ export function AuthHeader() {
               <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white">
                 <Link href="/recipes" onClick={() => setIsMobileMenuOpen(false)}>Recipes</Link>
               </Button>
+              
+              {user && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/saved" onClick={() => setIsMobileMenuOpen(false)}>Saved</Link>
+                </Button>
+              )}
               
               {isLoading ? (
                 <div className="animate-pulse bg-muted h-8 w-20 rounded"></div>

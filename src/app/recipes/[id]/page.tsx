@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import LikeButton from "@/components/recipe/LikeButton";
 import Comments from "@/components/recipe/Comments";
 import DeleteRecipeButton from "@/components/recipe/DeleteRecipeButton";
+import SaveButton from "@/components/recipe/SaveButton";
 
 interface RecipePageProps {
   params: Promise<{
@@ -62,6 +63,26 @@ export default async function RecipePage({ params }: RecipePageProps) {
 
   const current = await getCurrentUser();
   const canDelete = current?.id === recipe.authorId;
+  
+  // Get saved state for current user if signed in
+  let savedByMe = false;
+  if (current) {
+    try {
+      const { ensureSavedCollection } = await import("@/lib/collections");
+      const savedCollectionId = await ensureSavedCollection(current.id);
+      const savedRecipe = await prisma.collectionRecipe.findUnique({
+        where: {
+          collectionId_recipeId: {
+            collectionId: savedCollectionId,
+            recipeId: recipe.id
+          }
+        }
+      });
+      savedByMe = Boolean(savedRecipe);
+    } catch (error) {
+      console.error("Error checking saved state:", error);
+    }
+  }
 
   const [likeCount, likedByMe, comments] = await Promise.all([
     prisma.like.count({ where: { recipeId: recipe.id } }),
@@ -113,6 +134,12 @@ export default async function RecipePage({ params }: RecipePageProps) {
           <span>{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
           <span>•</span>
           <LikeButton recipeId={recipe.id} initialCount={likeCount} initiallyLiked={Boolean(likedByMe)} />
+          <span>•</span>
+          <SaveButton 
+            recipeId={recipe.id} 
+            initiallySaved={savedByMe} 
+            isAuthenticated={Boolean(current)}
+          />
         </div>
       </div>
 
@@ -164,15 +191,22 @@ export default async function RecipePage({ params }: RecipePageProps) {
                   __html: recipe.bodyMd.replace(/\n/g, '<br>') 
                 }} 
               />
-              <div className="mt-8">
-                <Comments
-                  recipeId={recipe.id}
-                  initial={comments as any}
-                  canPost={Boolean(current)}
-                  currentUserId={current?.id ?? null}
-                  recipeAuthorId={recipe.authorId}
-                />
-              </div>
+            </CardContent>
+          </Card>
+
+          {/* Comments Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Comments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Comments
+                recipeId={recipe.id}
+                initial={comments as any}
+                canPost={Boolean(current)}
+                currentUserId={current?.id ?? null}
+                recipeAuthorId={recipe.authorId}
+              />
             </CardContent>
           </Card>
         </div>
