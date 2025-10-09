@@ -4,5 +4,13 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  return NextResponse.json({ id: user.id, email: user.email, name: user.name ?? null });
+  return NextResponse.json({ 
+    id: user.id, 
+    email: user.email, 
+    name: user.name ?? null,
+    firstName: user.firstName ?? null,
+    lastName: user.lastName ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+    avatarKey: user.avatarKey ?? null
+  });
 }

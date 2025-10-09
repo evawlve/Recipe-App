@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isTokenError } from "@/lib/auth-utils";
 
 export async function getCurrentUser() {
   try {
@@ -8,8 +9,19 @@ export async function getCurrentUser() {
     // Get the user from the server (more secure than getSession)
     const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
     
-    if (userError || !authUser) {
-      console.log('No valid session found:', userError?.message);
+    if (userError) {
+      // Handle specific auth errors
+      if (isTokenError(userError)) {
+        console.log('Invalid refresh token, clearing session');
+        await supabase.auth.signOut();
+        return null;
+      }
+      console.log('Auth error:', userError?.message);
+      return null;
+    }
+    
+    if (!authUser) {
+      console.log('No valid session found');
       return null;
     }
     console.log('Found authenticated user:', authUser.email);
@@ -23,14 +35,17 @@ export async function getCurrentUser() {
       });
 
       if (user) {
-        // Update existing user with latest metadata
+        // Update existing user with latest metadata, but preserve custom name
         user = await prisma.user.update({
           where: { id: authUser.id },
           data: {
             email: authUser.email || '',
-            name: authUser.user_metadata?.name || 
-                  `${authUser.user_metadata?.first_name || ''} ${authUser.user_metadata?.last_name || ''}`.trim() ||
-                  authUser.email || 'User',
+            // Only update name if it's empty or null (first time setup)
+            ...(user.name ? {} : {
+              name: authUser.user_metadata?.name || 
+                    `${authUser.user_metadata?.first_name || ''} ${authUser.user_metadata?.last_name || ''}`.trim() ||
+                    authUser.email || 'User',
+            }),
           },
         });
         console.log('Updated existing user:', user.email);

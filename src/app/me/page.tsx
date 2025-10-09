@@ -1,0 +1,67 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { ensureSavedCollection } from "@/lib/collections";
+import { prisma } from "@/lib/db";
+import ProfileHeader from "@/components/account/ProfileHeader";
+import TabNav from "@/components/account/TabNav";
+import RecipeGrid from "@/components/account/RecipeGrid";
+import SettingsPanel from "@/components/account/SettingsPanel";
+import { MePageClient } from "./MePageClient";
+
+interface MePageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function MePage({ searchParams }: MePageProps) {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    redirect("/signin");
+  }
+
+  const { tab = "saved" } = await searchParams;
+  
+  // Ensure we have a "Saved" collection for this user
+  const savedCollectionId = await ensureSavedCollection(user.id);
+  
+  // Fetch data in parallel
+  const [uploaded, saved, uploadedCount, savedCount] = await Promise.all([
+    prisma.recipe.findMany({
+      where: { authorId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 24,
+      select: { 
+        id: true, 
+        title: true, 
+        createdAt: true, 
+        author: { select: { name: true }}, 
+        photos: { select: { id: true, s3Key: true, width: true, height: true }, take: 1 } 
+      }
+    }),
+    prisma.recipe.findMany({
+      where: { collections: { some: { collectionId: savedCollectionId } } },
+      orderBy: { createdAt: "desc" },
+      take: 24,
+      select: { 
+        id: true, 
+        title: true, 
+        createdAt: true, 
+        author: { select: { name: true }}, 
+        photos: { select: { id: true, s3Key: true, width: true, height: true }, take: 1 } 
+      }
+    }),
+    prisma.recipe.count({ where: { authorId: user.id } }),
+    prisma.collectionRecipe.count({ where: { collectionId: savedCollectionId } }),
+  ]);
+
+  return (
+    <MePageClient
+      user={user}
+      uploaded={uploaded}
+      saved={saved}
+      uploadedCount={uploadedCount}
+      savedCount={savedCount}
+      tab={tab}
+    />
+  );
+}

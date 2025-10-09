@@ -1,20 +1,20 @@
 import { prisma } from "@/lib/db";
 
 export async function ensureSavedCollection(userId: string) {
-  // Find or create the "Saved" collection for the user
-  const collection = await prisma.collection.upsert({
-    where: {
-      userId_name: {
-        userId,
-        name: "Saved"
-      }
-    },
-    update: {},
-    create: {
-      userId,
+  const found = await prisma.collection.findFirst({ 
+    where: { userId, name: "Saved" }, 
+    select: { id: true }
+  });
+  
+  if (found) return found.id;
+  
+  const created = await prisma.collection.create({ 
+    data: { 
+      id: crypto.randomUUID(), 
+      userId, 
       name: "Saved"
     }
   });
-
-  return collection.id;
+  
+  return created.id;
 }
