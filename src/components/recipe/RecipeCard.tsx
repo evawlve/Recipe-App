@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Recipe } from "@prisma/client";
 import { imageSrcForKey } from "@/lib/images";
+import SaveButton from "./SaveButton";
 
 interface RecipeWithRelations extends Recipe {
   photos: Array<{
@@ -25,14 +26,15 @@ interface RecipeWithRelations extends Recipe {
 
 interface RecipeCardProps {
   recipe: RecipeWithRelations;
+  currentUserId?: string | null;
 }
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
   const primaryImageUrl = recipe.photos.length > 0 ? imageSrcForKey(recipe.photos[0].s3Key) : null;
   const nutrition = recipe.nutrition;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
       <Link href={`/recipes/${recipe.id}`} className="flex flex-col h-full">
         <div className="relative w-full h-48 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
           {primaryImageUrl ? (
@@ -77,8 +79,19 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               )}
             </div>
           </div>
+          
         </CardContent>
       </Link>
+      
+      {/* Save button outside of Link to prevent navigation */}
+      <div className="mt-3 flex justify-end px-6 pb-4">
+        <SaveButton 
+          recipeId={recipe.id} 
+          initiallySaved={recipe.savedByMe || false} 
+          variant="small"
+          isAuthenticated={Boolean(currentUserId)}
+        />
+      </div>
     </Card>
   );
 }

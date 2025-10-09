@@ -85,6 +85,7 @@ export function RecipesListWithBulkDelete({ recipes, currentUserId }: RecipesLis
             isSelected={selectedRecipes.includes(recipe.id)}
             onSelectionChange={handleSelectionChange}
             canSelect={isSelectionMode && Boolean(currentUserId) && recipe.authorId === currentUserId}
+            currentUserId={currentUserId}
           />
         ))}
       </div>
