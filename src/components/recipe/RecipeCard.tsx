@@ -18,6 +18,7 @@ interface RecipeWithRelations extends Recipe {
     carbsG: number;
     fatG: number;
   } | null;
+  savedByMe?: boolean;
   author: {
     name: string | null;
   };
