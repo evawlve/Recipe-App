@@ -137,12 +137,15 @@ export async function PATCH(
 
       // Upsert tags and create recipe tag links
       for (const tagLabel of validatedData.tags) {
+        const slug = tagLabel.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const humanizedLabel = tagLabel.trim();
+        
         const tag = await prisma.tag.upsert({
-          where: { slug: tagLabel.toLowerCase().replace(/\s+/g, '-') },
+          where: { slug },
           update: {},
           create: { 
-            slug: tagLabel.toLowerCase().replace(/\s+/g, '-'),
-            label: tagLabel 
+            slug,
+            label: humanizedLabel 
           },
         });
 
