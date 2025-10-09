@@ -3,12 +3,15 @@ import { RecipeCard } from "@/components/recipe/RecipeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RecipesListWithBulkDelete } from "@/components/recipe/RecipesListWithBulkDelete";
+import { SearchBox } from "@/components/recipes/SearchBox";
+import { TagFilters } from "@/components/recipes/TagFilters";
 import { getCurrentUser } from "@/lib/auth";
 import Link from "next/link";
 
 interface RecipesPageProps {
   searchParams: Promise<{
     q?: string;
+    tags?: string | string[];
     page?: string;
   }>;
 }
@@ -16,6 +19,11 @@ interface RecipesPageProps {
 export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const resolvedSearchParams = await searchParams;
   const searchQuery = resolvedSearchParams.q || "";
+  const selectedTags = Array.isArray(resolvedSearchParams.tags) 
+    ? resolvedSearchParams.tags 
+    : resolvedSearchParams.tags 
+    ? [resolvedSearchParams.tags] 
+    : [];
   const currentPage = parseInt(resolvedSearchParams.page || "1", 10);
   const itemsPerPage = 12;
   const skip = (currentPage - 1) * itemsPerPage;
@@ -34,15 +42,42 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
     }
   }
 
-  // Build the where clause for search
-  const whereClause = searchQuery
-    ? {
-        OR: [
-          { title: { contains: searchQuery, mode: "insensitive" as const } },
-          { bodyMd: { contains: searchQuery, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  // Build the where clause for search and tags
+  const whereClause = {
+    AND: [
+      searchQuery
+        ? {
+            OR: [
+              { title: { contains: searchQuery, mode: "insensitive" as const } },
+              { bodyMd: { contains: searchQuery, mode: "insensitive" as const } },
+              {
+                tags: {
+                  some: {
+                    tag: {
+                      OR: [
+                        { label: { contains: searchQuery, mode: "insensitive" as const } },
+                        { slug: { contains: searchQuery, mode: "insensitive" as const } },
+                      ],
+                    },
+                  },
+                },
+              },
+            ],
+          }
+        : {},
+      selectedTags.length > 0
+        ? {
+            tags: {
+              some: {
+                tag: {
+                  slug: { in: selectedTags },
+                },
+              },
+            },
+          }
+        : {},
+    ],
+  };
 
   // Fetch recipes with relations
   const [recipes, totalCount] = await Promise.all([
@@ -68,6 +103,17 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         author: {
           select: {
             name: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                slug: true,
+                label: true,
+              },
+            },
           },
         },
         _count: {
@@ -112,7 +158,14 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         <p className="text-muted-foreground">
           {totalCount} recipe{totalCount !== 1 ? "s" : ""} found
           {searchQuery && ` for "${searchQuery}"`}
+          {selectedTags.length > 0 && ` with tags: ${selectedTags.join(", ")}`}
         </p>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="mb-8 space-y-6">
+        <SearchBox initialQuery={searchQuery} />
+        <TagFilters selectedTags={selectedTags} />
       </div>
 
       {recipes.length === 0 ? (
@@ -148,10 +201,15 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
               >
                 {hasPrevPage ? (
                   <Link
-                    href={`/recipes?${new URLSearchParams({
-                      ...(searchQuery && { q: searchQuery }),
-                      page: (currentPage - 1).toString(),
-                    })}`}
+                    href={`/recipes?${(() => {
+                      const params = new URLSearchParams();
+                      if (searchQuery) params.set("q", searchQuery);
+                      if (selectedTags.length > 0) {
+                        selectedTags.forEach(tag => params.append("tags", tag));
+                      }
+                      params.set("page", (currentPage - 1).toString());
+                      return params.toString();
+                    })()}`}
                   >
                     Previous
                   </Link>
@@ -184,10 +242,15 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
                         pageNum
                       ) : (
                         <Link
-                          href={`/recipes?${new URLSearchParams({
-                            ...(searchQuery && { q: searchQuery }),
-                            page: pageNum.toString(),
-                          })}`}
+                          href={`/recipes?${(() => {
+                            const params = new URLSearchParams();
+                            if (searchQuery) params.set("q", searchQuery);
+                            if (selectedTags.length > 0) {
+                              selectedTags.forEach(tag => params.append("tags", tag));
+                            }
+                            params.set("page", pageNum.toString());
+                            return params.toString();
+                          })()}`}
                         >
                           {pageNum}
                         </Link>
@@ -204,10 +267,15 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
               >
                 {hasNextPage ? (
                   <Link
-                    href={`/recipes?${new URLSearchParams({
-                      ...(searchQuery && { q: searchQuery }),
-                      page: (currentPage + 1).toString(),
-                    })}`}
+                    href={`/recipes?${(() => {
+                      const params = new URLSearchParams();
+                      if (searchQuery) params.set("q", searchQuery);
+                      if (selectedTags.length > 0) {
+                        selectedTags.forEach(tag => params.append("tags", tag));
+                      }
+                      params.set("page", (currentPage + 1).toString());
+                      return params.toString();
+                    })()}`}
                   >
                     Next
                   </Link>
