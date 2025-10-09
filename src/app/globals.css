@@ -8,3 +8,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .filter {
+    filter: invert(1) brightness(2);
+    transition: filter 0.3s ease-in-out;
+  }
+  
+  .logo-transition {
+    transition: filter 0.3s ease-in-out;
+  }
+  
+  /* Dark mode logo filter using CSS custom properties */
+  .dark .logo-dark-mode {
+    filter: invert(1) brightness(2);
+  }
+  
+  /* Ensure smooth transitions */
+  .logo-dark-mode {
+    transition: filter 0.3s ease-in-out;
+  }
+}

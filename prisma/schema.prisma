@@ -8,64 +8,69 @@ datasource db {
 }
 
 model User {
-  id          String       @id // Use Supabase user ID directly
+  id          String       @id
   email       String       @unique
   name        String?
   role        String       @default("user")
   createdAt   DateTime     @default(now())
-  recipes     Recipe[]
+  avatarUrl   String?
+  avatarKey   String?
+  firstName   String?
+  lastName    String?
+  collections Collection[]
   comments    Comment[]
   likes       Like[]
-  collections Collection[] // <-- now valid (model defined below)
+  recipes     Recipe[]
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model Recipe {
   id          String             @id @default(cuid())
-  author      User               @relation(fields: [authorId], references: [id])
   authorId    String
   title       String
   bodyMd      String
   servings    Int                @default(1)
   parentId    String?
-  parent      Recipe?            @relation("Forks", fields: [parentId], references: [id])
-  forks       Recipe[]           @relation("Forks")
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
-  ingredients Ingredient[]
-  photos      Photo[]
-  nutrition   Nutrition?
-  tags        RecipeTag[]
+  collections CollectionRecipe[]
   comments    Comment[]
+  ingredients Ingredient[]
   likes       Like[]
-  collections CollectionRecipe[] // <-- link to collections via join table
+  nutrition   Nutrition?
+  photos      Photo[]
+  author      User               @relation(fields: [authorId], references: [id])
+  parent      Recipe?            @relation("Forks", fields: [parentId], references: [id])
+  forks       Recipe[]           @relation("Forks")
+  tags        RecipeTag[]
 }
 
 model Ingredient {
   id       String @id @default(cuid())
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
   recipeId String
   name     String
   qty      Float
   unit     String
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
 }
 
 model Nutrition {
   recipeId   String   @id
-  recipe     Recipe   @relation(fields: [recipeId], references: [id])
   calories   Int
   proteinG   Float
   carbsG     Float
   fatG       Float
   computedAt DateTime @default(now())
+  recipe     Recipe   @relation(fields: [recipeId], references: [id])
 }
 
 model Photo {
   id       String @id @default(cuid())
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
   recipeId String
   s3Key    String
   width    Int
   height   Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
 }
 
 model Tag {
@@ -86,33 +91,30 @@ model RecipeTag {
 
 model Comment {
   id        String   @id @default(cuid())
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
   recipeId  String
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
   body      String
   createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Like {
   userId    String
   recipeId  String
-  user      User     @relation(fields: [userId], references: [id])
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
   createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@id([userId, recipeId])
 }
 
-//
-// NEW: Collections + join table
-//
 model Collection {
   id        String             @id @default(cuid())
-  user      User               @relation(fields: [userId], references: [id])
   userId    String
   name      String
   createdAt DateTime           @default(now())
+  user      User               @relation(fields: [userId], references: [id])
   recipes   CollectionRecipe[]
 
   @@unique([userId, name])
@@ -121,9 +123,9 @@ model Collection {
 model CollectionRecipe {
   collectionId String
   recipeId     String
+  addedAt      DateTime   @default(now())
   collection   Collection @relation(fields: [collectionId], references: [id])
   recipe       Recipe     @relation(fields: [recipeId], references: [id])
-  addedAt      DateTime   @default(now())
 
   @@id([collectionId, recipeId])
 }

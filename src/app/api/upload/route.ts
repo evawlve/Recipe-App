@@ -31,9 +31,14 @@ function generateRandomId(): string {
 }
 
 // Build S3 key with timestamp, random ID, and sanitized filename
-function buildS3Key(filename: string): string {
+function buildS3Key(filename: string, type: 'avatar' | 'recipe' = 'uploads'): string {
   const sanitized = sanitizeFilename(filename);
   const randomId = generateRandomId();
+  
+  if (type === 'avatar') {
+    return `avatars/${Date.now()}-${randomId}-${sanitized}`;
+  }
+  
   return `uploads/${Date.now()}-${randomId}-${sanitized}`;
 }
 
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { filename, contentType, maxSizeMB = 10 } = body;
+    const { filename, contentType, maxSizeMB = 10, type = 'uploads' } = body;
 
     // Validate required fields
     if (!filename || !contentType) {
@@ -59,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build S3 key
-    const key = buildS3Key(filename);
+    const key = buildS3Key(filename, type as 'avatar' | 'recipe');
 
     const { url, fields } = await createPresignedPost(s3, {
       Bucket: bucket,
@@ -72,11 +77,18 @@ export async function POST(req: NextRequest) {
       Expires: 60, // 60 seconds
     });
 
+    // Construct the proxy URL instead of direct S3 URL
+    const proxyUrl = `/api/image/${encodeURIComponent(key)}`;
+    
+    console.log("Generated proxy URL:", proxyUrl);
+    console.log("S3 Key:", key);
+    console.log("✅ Using secure proxy instead of direct S3 access");
+
     return NextResponse.json({ 
       url, 
       fields, 
       key, 
-      publicUrl: null 
+      publicUrl: proxyUrl 
     });
 
   } catch (error) {

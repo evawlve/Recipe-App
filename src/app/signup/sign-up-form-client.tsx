@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Mail, User } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 // Step 1: Email and Password
 const emailPasswordSchema = z.object({
@@ -223,9 +223,9 @@ export default function SignUpFormClient() {
         <Link 
           href="/" 
           onClick={handleLogoClick}
-          className="h-32 w-32 overflow-hidden flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer"
+          className="hover:opacity-80 transition-opacity cursor-pointer"
         >
-          <Image src="/logo.svg" alt="Mealspire Logo" width={160} height={160} className="object-contain" priority />
+          <Logo withText size="lg" />
         </Link>
       </div>
       

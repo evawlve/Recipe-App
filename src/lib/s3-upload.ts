@@ -12,6 +12,7 @@ export async function uploadFileToS3(file: File): Promise<{ s3Key: string; publi
       filename: file.name,
       contentType: file.type,
       maxSizeMB: 10, // 10MB max per file
+      type: 'avatar', // Specify this is an avatar upload
     }),
   });
 
