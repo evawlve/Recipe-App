@@ -114,6 +114,8 @@ model Collection {
   name      String
   createdAt DateTime           @default(now())
   recipes   CollectionRecipe[]
+
+  @@unique([userId, name])
 }
 
 model CollectionRecipe {
