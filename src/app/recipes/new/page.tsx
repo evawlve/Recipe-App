@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFormDraft } from "@/hooks/useFormDraft";
 import { useFocusManagement } from "@/hooks/useFocusManagement";
 import { ImageUploader } from "@/components/recipe/ImageUploader";
+import { TagsInput } from "@/components/form/TagsInput";
 import { FileState } from "@/types/file-state";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import Link from "next/link";
@@ -31,6 +32,7 @@ function NewRecipeForm() {
       servings: 1,
       bodyMd: "",
       ingredients: [{ name: "", qty: 1, unit: "" }],
+      tags: [],
     },
   });
 
@@ -259,6 +261,29 @@ function NewRecipeForm() {
                 {errors.ingredients.message}
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Tags */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tags</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <label htmlFor="tags" className="block text-sm font-medium text-text mb-2">
+                Recipe Tags
+              </label>
+              <TagsInput
+                value={watch("tags") || []}
+                onChange={(tags) => setValue("tags", tags)}
+                placeholder="Add tags like 'vegetarian', 'quick', 'dessert'..."
+                maxTags={10}
+              />
+              {errors.tags && (
+                <p className="text-sm text-destructive mt-1">{errors.tags.message}</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 

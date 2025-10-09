@@ -26,6 +26,9 @@ A full-featured recipe management application with:
 - ✅ **Recipe details** with full image gallery
 - ✅ **Delete recipes** with secure ownership validation
 - ✅ **Bulk delete** multiple recipes at once
+- ✅ **Tag system** with autocomplete and filtering
+- ✅ **Advanced search** across titles, instructions, and tags
+- ✅ **Tag-based filtering** with popular tags display
 
 ### **Form Experience**
 - ✅ **React Hook Form + Zod** validation
@@ -69,6 +72,16 @@ A full-featured recipe management application with:
 - ✅ **Auth-aware UX** - Unauthenticated likes show a sign-in notice
 - ✅ **Real-time updates** - Optimistic UI with rollback on errors
 - ✅ **Permission-based actions** - Edit only for comment authors, delete for authors or recipe owners
+
+### **Tag System & Search**
+- ✅ **Tag input** with autocomplete suggestions from existing tags
+- ✅ **Tag chips** with visual display and easy removal
+- ✅ **Tag normalization** - automatic slug generation and duplicate prevention
+- ✅ **Popular tags** display with usage counts
+- ✅ **Tag-based filtering** - filter recipes by one or multiple tags
+- ✅ **Advanced search** - search across recipe titles, instructions, and tag labels
+- ✅ **Search persistence** - URL state management for search and filters
+- ✅ **Quick navigation** - "View All Recipes" button to clear filters
 
 ## 🚀 Quick Start
 
@@ -359,6 +372,21 @@ POST /api/upload
 GET /api/image/uploads/filename.jpg
 ```
 
+### **Tags & Search**
+```bash
+# Get popular tags for autocomplete
+GET /api/tags
+# Response: [{ id, slug, label, count }]
+
+# Search tags with query
+GET /api/tags?s=dessert
+# Response: [{ id, slug, label, count }] (filtered by search term)
+
+# Recipe search with tags
+GET /recipes?q=chocolate&tags=dessert&tags=quick
+# Searches across title, instructions, and tag labels
+```
+
 ### **Nutrition (Stub)**
 ```bash
 # Calculate nutrition (placeholder)
@@ -505,3 +533,8 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Comment deletion** is allowed for comment authors or recipe owners
 - **Like counts** and **comment counts** are displayed on recipe cards
 - **Unauthenticated users** see sign-in prompts when trying to like recipes
+- **Tag system** provides comprehensive recipe categorization and discovery
+- **Advanced search** enables finding recipes by title, instructions, or tags
+- **Tag filtering** allows users to browse recipes by specific categories
+- **Autocomplete suggestions** help users discover existing tags
+- **URL state management** preserves search and filter states for sharing
