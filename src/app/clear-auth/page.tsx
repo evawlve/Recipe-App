@@ -1,48 +1,42 @@
-"use client";
+'use client';
 
 import { useEffect } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 export default function ClearAuthPage() {
+  const router = useRouter();
+
   useEffect(() => {
-    // Auto-clear auth on page load
     const clearAuth = async () => {
       try {
         const supabase = createSupabaseBrowserClient();
         await supabase.auth.signOut();
         
-        // Clear local storage
-        if (typeof window !== 'undefined') {
-          localStorage.clear();
-          sessionStorage.clear();
-        }
+        // Clear all storage
+        localStorage.clear();
+        sessionStorage.clear();
         
-        // Redirect after a short delay
-        setTimeout(() => {
-          window.location.href = '/signin';
-        }, 2000);
+        console.log('Auth cleared successfully');
+        
+        // Redirect to home
+        router.push('/');
       } catch (error) {
         console.error('Error clearing auth:', error);
+        // Still redirect even if there's an error
+        router.push('/');
       }
     };
-    
+
     clearAuth();
-  }, []);
+  }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-6 text-center">
-        <h2 className="text-xl font-semibold mb-4">Clearing Authentication</h2>
-        <p className="text-muted-foreground mb-4">
-          Please wait while we clear your authentication data...
-        </p>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        <p className="text-sm text-muted-foreground mt-4">
-          You will be redirected to the sign-in page shortly.
-        </p>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Clearing Authentication...</h1>
+        <p className="text-muted-foreground">Redirecting to home page...</p>
+      </div>
     </div>
   );
 }

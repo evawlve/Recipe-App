@@ -6,6 +6,7 @@ import { RecipesListWithBulkDelete } from "@/components/recipe/RecipesListWithBu
 import { SearchBox } from "@/components/recipes/SearchBox";
 import { TagFilters } from "@/components/recipes/TagFilters";
 import { getCurrentUser } from "@/lib/auth";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import Link from "next/link";
 
 interface RecipesPageProps {
@@ -152,7 +153,9 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const hasPrevPage = currentPage > 1;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
+      <ScrollToTop />
+      <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-text mb-4">Recipes</h1>
         <p className="text-muted-foreground">
@@ -287,6 +290,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -17,6 +17,16 @@ model User {
   avatarKey   String?
   firstName   String?
   lastName    String?
+  
+  // NEW
+  username     String?  @unique   // lowercase, 3-20, a-z0-9_
+  displayName  String?           // pretty name for UI
+  bio          String?
+
+  // relations
+  followedBy   Follow[] @relation("FollowedBy") // users who follow me
+  following    Follow[] @relation("Following")  // users I follow
+  
   collections Collection[]
   comments    Comment[]
   likes       Like[]
@@ -128,4 +138,17 @@ model CollectionRecipe {
   recipe       Recipe     @relation(fields: [recipeId], references: [id])
 
   @@id([collectionId, recipeId])
+}
+
+model Follow {
+  followerId String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  following User @relation("FollowedBy", fields: [followingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
