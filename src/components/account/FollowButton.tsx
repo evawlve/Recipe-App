@@ -1,21 +1,30 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 interface FollowButtonProps {
   userId: string;
   initialFollowing: boolean;
   initialFollowersCount: number;
+  isLoggedIn?: boolean;
 }
 
-export function FollowButton({ userId, initialFollowing, initialFollowersCount }: FollowButtonProps) {
+export function FollowButton({ userId, initialFollowing, initialFollowersCount, isLoggedIn = true }: FollowButtonProps) {
   const [following, setFollowing] = useState(initialFollowing);
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleFollow = async () => {
     if (isLoading) return;
+
+    // If not logged in, redirect to login page
+    if (!isLoggedIn) {
+      router.push('/signin');
+      return;
+    }
 
     setIsLoading(true);
     const previousFollowing = following;
@@ -53,6 +62,7 @@ export function FollowButton({ userId, initialFollowing, initialFollowersCount }
       disabled={isLoading}
       variant={following ? 'outline' : 'default'}
       className="min-w-[100px]"
+      title={!isLoggedIn ? 'Sign in to follow this user' : undefined}
     >
       {isLoading ? '...' : following ? 'Following' : 'Follow'}
     </Button>

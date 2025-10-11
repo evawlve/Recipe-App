@@ -45,7 +45,7 @@ export default async function MePage({ searchParams }: MePageProps) {
   const savedCollectionId = await ensureSavedCollection(user.id);
   
   // Fetch data in parallel
-  const [uploaded, saved, uploadedCount, savedCount] = await Promise.all([
+  const [uploaded, saved, uploadedCount, savedCount, followersCount, followingCount] = await Promise.all([
     prisma.recipe.findMany({
       where: { authorId: user.id },
       orderBy: { createdAt: "desc" },
@@ -72,6 +72,8 @@ export default async function MePage({ searchParams }: MePageProps) {
     }),
     prisma.recipe.count({ where: { authorId: user.id } }),
     prisma.collectionRecipe.count({ where: { collectionId: savedCollectionId } }),
+    prisma.follow.count({ where: { followingId: user.id } }),
+    prisma.follow.count({ where: { followerId: user.id } }),
   ]);
 
   return (
@@ -81,6 +83,8 @@ export default async function MePage({ searchParams }: MePageProps) {
       saved={saved}
       uploadedCount={uploadedCount}
       savedCount={savedCount}
+      followersCount={followersCount}
+      followingCount={followingCount}
       tab={tab}
     />
   );

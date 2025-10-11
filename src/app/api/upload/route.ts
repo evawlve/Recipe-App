@@ -31,7 +31,7 @@ function generateRandomId(): string {
 }
 
 // Build S3 key with timestamp, random ID, and sanitized filename
-function buildS3Key(filename: string, type: 'avatar' | 'recipe' = 'uploads'): string {
+function buildS3Key(filename: string, type: 'avatar' | 'recipe' = 'recipe'): string {
   const sanitized = sanitizeFilename(filename);
   const randomId = generateRandomId();
   
