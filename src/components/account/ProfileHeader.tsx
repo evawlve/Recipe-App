@@ -13,6 +13,8 @@ interface ProfileHeaderProps {
   bio?: string | null;
   uploadedCount: number;
   savedCount: number;
+  followersCount?: number;
+  followingCount?: number;
   avatarUrl?: string | null;
   onAvatarUpdate?: (newAvatarUrl: string) => void;
 }
@@ -24,6 +26,8 @@ export default function ProfileHeader({
   bio,
   uploadedCount, 
   savedCount,
+  followersCount,
+  followingCount,
   avatarUrl,
   onAvatarUpdate
 }: ProfileHeaderProps) {
@@ -164,6 +168,18 @@ export default function ProfileHeader({
             <div className="text-2xl font-bold text-foreground">{savedCount}</div>
             <div className="text-sm text-muted-foreground">Saved</div>
           </div>
+          {followersCount !== undefined && (
+            <div className="text-center">
+              <div className="text-2xl font-bold text-foreground">{followersCount}</div>
+              <div className="text-sm text-muted-foreground">Followers</div>
+            </div>
+          )}
+          {followingCount !== undefined && (
+            <div className="text-center">
+              <div className="text-2xl font-bold text-foreground">{followingCount}</div>
+              <div className="text-sm text-muted-foreground">Following</div>
+            </div>
+          )}
         </div>
       </div>
     </Card>

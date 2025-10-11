@@ -22,6 +22,8 @@ interface MePageClientProps {
   saved: any[];
   uploadedCount: number;
   savedCount: number;
+  followersCount: number;
+  followingCount: number;
   tab: string;
 }
 
@@ -31,6 +33,8 @@ export function MePageClient({
   saved, 
   uploadedCount, 
   savedCount, 
+  followersCount,
+  followingCount,
   tab 
 }: MePageClientProps) {
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(user.avatarUrl);
@@ -56,6 +60,8 @@ export function MePageClient({
         bio={currentUser.bio}
         uploadedCount={uploadedCount} 
         savedCount={savedCount}
+        followersCount={followersCount}
+        followingCount={followingCount}
         avatarUrl={currentAvatarUrl}
         onAvatarUpdate={handleAvatarUpdate}
       />

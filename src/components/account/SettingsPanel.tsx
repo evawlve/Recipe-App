@@ -217,6 +217,47 @@ export default function SettingsPanel({
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your recipes, comments, and other data.')) {
+      return;
+    }
+
+    if (!confirm('This will permanently delete your account and ALL associated data. Are you absolutely sure?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        // Account deleted successfully, force sign out and redirect
+        try {
+          const supabase = createSupabaseBrowserClient();
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error('Error signing out after account deletion:', signOutError);
+          // Continue with redirect even if sign out fails
+        }
+        
+        // Force redirect to home page
+        window.location.href = '/?message=' + encodeURIComponent('Your account has been deleted successfully.');
+      } else {
+        const errorData = await response.json();
+        setMessage({ type: "error", text: errorData.error || "Failed to delete account" });
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Network error. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!isDirty || usernameError) return;
     
@@ -383,7 +424,7 @@ export default function SettingsPanel({
                 </Button>
                 <Button 
                   onClick={handleSaveChanges}
-                  disabled={!isDirty || isLoading || isUploadingAvatar || usernameError || isCheckingUsername}
+                  disabled={!isDirty || isLoading || isUploadingAvatar || !!usernameError || isCheckingUsername}
                   className="rounded-xl"
                 >
                   {isLoading ? "Saving..." : "Save Changes"}
@@ -442,9 +483,10 @@ export default function SettingsPanel({
             <Button 
               variant="destructive" 
               className="w-full rounded-xl"
-              disabled
+              onClick={handleDeleteAccount}
+              disabled={isLoading}
             >
-              Delete Account
+              {isLoading ? "Deleting..." : "Delete Account"}
             </Button>
           </CardContent>
         </Card>

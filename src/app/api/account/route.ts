@@ -82,10 +82,23 @@ export async function PATCH(req: Request) {
     if (avatarKey !== undefined) updateData.avatarKey = avatarKey;
 
     console.log("Updating user with data:", updateData);
+    console.log("Current user before update:", user);
     
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: updateData
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        avatarKey: true,
+      }
     });
 
     console.log("User updated successfully:", updatedUser);
