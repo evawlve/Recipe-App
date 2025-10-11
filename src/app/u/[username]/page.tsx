@@ -1,16 +1,18 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { optionalUser } from '@/lib/auth';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { FollowButton } from '@/components/account/FollowButton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { User, Users, BookOpen, Heart, MessageCircle } from 'lucide-react';
 
 interface UserProfilePageProps {
-  params: {
+  params: Promise<{
     username: string;
-  };
+  }>;
 }
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
@@ -38,6 +40,11 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const me = await optionalUser();
   const isMe = me?.id === user.id;
   
+  // If user is trying to access their own profile, redirect to /me
+  if (isMe) {
+    redirect('/me');
+  }
+  
   // Check if current user is following this user
   const followingMe = me ? Boolean(await prisma.follow.findUnique({ 
     where: { 
@@ -60,8 +67,7 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
     where: { authorId: user.id },
     include: {
       photos: {
-        take: 1,
-        orderBy: { createdAt: 'asc' }
+        take: 1
       },
       author: {
         select: {
@@ -77,7 +83,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
           likes: true,
           comments: true
         }
-      }
+      },
+      nutrition: true
     },
     orderBy: { createdAt: 'desc' },
     take: 12
@@ -86,78 +93,110 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const displayName = user.displayName || user.name || user.username;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Profile Header */}
-      <Card className="mb-8">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            {/* Avatar */}
-            <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100">
-              {user.avatarKey ? (
-                <Image
-                  src={`/api/image/${user.avatarKey}`}
-                  alt={displayName}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-green-100 flex items-center justify-center text-2xl font-bold text-green-600">
-                  {displayName.charAt(0).toUpperCase()}
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Profile Header */}
+        <Card className="mb-8 rounded-2xl border border-border bg-card shadow-sm">
+          <CardContent className="p-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
+              {/* Avatar */}
+              <div className="relative w-32 h-32 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                {user.avatarKey ? (
+                  <Image
+                    src={`/api/image/${user.avatarKey}`}
+                    alt={displayName || user.username || 'User'}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-primary/10 flex items-center justify-center text-4xl font-bold text-primary">
+                    {(displayName || user.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+
+              {/* User Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                  <h1 className="text-3xl font-bold text-foreground truncate">
+                    {displayName}
+                  </h1>
+                  <Badge variant="secondary" className="w-fit text-sm">
+                    @{user.username}
+                  </Badge>
+                </div>
+                
+                {user.bio && (
+                  <p className="text-muted-foreground mb-6 max-w-2xl">{user.bio}</p>
+                )}
+
+                {/* Stats */}
+                <div className="flex gap-8 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-semibold text-foreground">{followers}</span>
+                    <span className="text-muted-foreground">Followers</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-semibold text-foreground">{following}</span>
+                    <span className="text-muted-foreground">Following</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-semibold text-foreground">{recipes}</span>
+                    <span className="text-muted-foreground">Recipes</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Follow Button */}
+              {!isMe && (
+                <div className="flex-shrink-0">
+                  <FollowButton 
+                    userId={user.id} 
+                    initialFollowing={followingMe} 
+                    initialFollowersCount={followers}
+                    isLoggedIn={!!me}
+                  />
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* User Info */}
-            <div className="flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {displayName}
-                </h1>
-                <Badge variant="secondary" className="w-fit">
-                  @{user.username}
-                </Badge>
-              </div>
-              
-              {user.bio && (
-                <p className="text-gray-600 mb-4">{user.bio}</p>
-              )}
-
-              {/* Stats */}
-              <div className="flex gap-6 text-sm text-gray-600">
-                <span><strong>{followers}</strong> Followers</span>
-                <span><strong>{following}</strong> Following</span>
-                <span><strong>{recipes}</strong> Recipes</span>
-              </div>
-            </div>
-
-            {/* Follow Button */}
-            {!isMe && me && (
-              <div className="mt-4 md:mt-0">
-                <FollowButton 
-                  userId={user.id} 
-                  initialFollowing={followingMe} 
-                  initialFollowersCount={followers}
-                />
-              </div>
+        {/* Recipes Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <BookOpen className="w-6 h-6" />
+              Recipes
+            </h2>
+            {userRecipes.length > 0 && (
+              <Badge variant="outline" className="text-sm">
+                {userRecipes.length} recipe{userRecipes.length !== 1 ? 's' : ''}
+              </Badge>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Recipes Grid */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Recipes</h2>
-        {userRecipes.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {userRecipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-gray-500">
-            <p>No recipes yet</p>
-          </div>
-        )}
+          
+          {userRecipes.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {userRecipes.map((recipe) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))}
+            </div>
+          ) : (
+            <Card className="rounded-2xl border border-border bg-card">
+              <CardContent className="p-12 text-center">
+                <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No recipes yet</h3>
+                <p className="text-muted-foreground">
+                  {isMe ? "Start sharing your favorite recipes!" : `${displayName} hasn't shared any recipes yet.`}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

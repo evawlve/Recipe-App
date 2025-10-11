@@ -45,7 +45,7 @@ export function EnhancedSearchBox({ className }: EnhancedSearchBoxProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchUsers = useCallback(async (searchTerm: string) => {
     if (!searchTerm.trim()) {

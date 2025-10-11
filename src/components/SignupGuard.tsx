@@ -31,13 +31,15 @@ export function SignupGuard({ children }: SignupGuardProps) {
         const response = await fetch('/api/whoami');
         if (response.ok) {
           const userData = await response.json();
+          console.log('SignupGuard: User data from whoami:', userData);
           
           if (userData.username) {
             // User has completed signup, allow access
+            console.log('SignupGuard: User has username, allowing access');
             setIsAllowed(true);
           } else {
             // User is authenticated but hasn't completed signup
-            // Redirect to signup page
+            console.log('SignupGuard: User missing username, redirecting to signup');
             router.push('/signup?verified=true&email=' + encodeURIComponent(user.email || ''));
             return;
           }

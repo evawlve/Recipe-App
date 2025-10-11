@@ -56,7 +56,7 @@ export function SimpleAvatarUploader({
     setIsUploading(true);
     
     try {
-      const { s3Key, publicUrl } = await uploadFileToS3(file, uploadPath);
+      const { s3Key, publicUrl } = await uploadFileToS3(file);
       console.log("S3 upload successful, s3Key:", s3Key, "publicUrl:", publicUrl);
       
       onImageChange(publicUrl);

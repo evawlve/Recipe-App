@@ -89,6 +89,9 @@ A full-featured recipe management application with:
 - ✅ **Follow System** - Follow/unfollow other users with real-time updates
 - ✅ **User Discovery** - Enhanced search with user suggestions
 - ✅ **Profile Statistics** - Display follower count, following count, and recipe count
+- ✅ **Follow Button for All Users** - Visible follow button for non-logged-in users (redirects to login)
+- ✅ **Smart Profile Redirects** - Users accessing their own profile are redirected to /me page
+- ✅ **Enhanced /me Page** - Personal dashboard with follower/following counts and complete stats
 
 ### **Collections & Saved Recipes**
 - ✅ **Saved Collections** - Automatic "Saved" collection created per user
@@ -121,6 +124,13 @@ A full-featured recipe management application with:
 - ✅ **Enhanced Search Box** - Search both users and recipes with suggestions
 - ✅ **Profile Management** - Real-time profile updates without page refresh
 - ✅ **Avatar Management** - Upload and crop avatars with preview functionality
+- ✅ **Smart Profile Navigation** - Users accessing their own profile are redirected to /me
+- ✅ **Enhanced Personal Dashboard** - /me page shows complete social stats (followers/following)
+- ✅ **Universal Follow Button** - Follow button visible to all users (redirects non-logged-in users to login)
+- ✅ **Complete Account Deletion** - Delete account with full data cleanup and auth removal
+- ✅ **Username Persistence** - Usernames preserved across sign-ins and OAuth flows
+- ✅ **Orphaned Data Cleanup** - Scripts to clean up orphaned user data
+- ✅ **JWT Token Management** - Proper session cleanup after account deletion
 
 ## 🚀 Quick Start
 
@@ -448,6 +458,20 @@ PATCH /api/account
 # Check username availability
 GET /api/users/search?exact=username
 # Response: [] (empty if available) or [{ username, ... }] (if taken)
+
+# Delete user account (auth required)
+DELETE /api/account/delete
+# Response: { success: true, message: "Account and all associated data deleted successfully" }
+# Note: This deletes ALL user data including recipes, comments, likes, collections, follows, etc.
+
+# Get user profile by username (public)
+GET /u/[username]
+# Returns: User profile page with recipes, stats, and follow button
+# Note: Users accessing their own profile are redirected to /me
+
+# Enhanced /me page with social stats
+GET /me
+# Returns: Personal dashboard with followers, following, uploaded, and saved counts
 ```
 
 #### Permissions & Behavior
@@ -461,6 +485,10 @@ GET /api/users/search?exact=username
 - Each user gets an automatic "Saved" collection created on first save.
 - Unauthenticated save attempts show popup prompts instead of API calls.
 - Saved recipes are displayed on dedicated `/saved` page with authentication required.
+- Follow button is visible to all users; non-logged-in users are redirected to login.
+- Users accessing their own profile (`/u/username`) are automatically redirected to `/me`.
+- Follow actions are idempotent; duplicate follows are ignored server-side.
+- Follow button shows helpful tooltip for non-logged-in users: "Sign in to follow this user".
 
 ### **Image Upload**
 ```bash
@@ -514,6 +542,19 @@ This project uses shadcn/ui components which require additional dependencies:
 - `@tailwindcss/line-clamp` - Tailwind plugin for text truncation
 - `react-hook-form` - Form handling
 - `lucide-react` - Icon library
+
+### **Account Deletion & Cleanup**
+```bash
+# Clean up orphaned user data (users deleted from Supabase Auth but still in database)
+node cleanup-orphaned-users.js
+
+# This script will:
+# 1. Find users in database that don't exist in Supabase Auth
+# 2. Show you the list of orphaned users
+# 3. Optionally delete them with all associated data
+```
+
+Additional dependencies:
 - `nanoid` - For generating unique IDs
 - `zod` - Runtime type validation
 
@@ -668,6 +709,19 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Signup Guards** - Automatic redirect to complete profile setup before accessing main app
 - ✅ **Enhanced Search Box** - Search both users and recipes with dropdown suggestions
 - ✅ **Disabled UI During Signup** - Navigation and search disabled with helpful tooltips during setup
+- ✅ **Complete Account Deletion** - Full user data cleanup with database and auth removal
+- ✅ **Username Persistence Fix** - Resolved OAuth callback overwriting usernames
+- ✅ **JWT Token Management** - Proper session cleanup after account deletion
+- ✅ **Orphaned Data Cleanup** - Scripts to identify and clean up orphaned user data
+
+### **Profile & Social System Enhancements**
+- ✅ **Smart Profile Redirects** - Users accessing their own profile (`/u/username`) are automatically redirected to `/me`
+- ✅ **Enhanced /me Page** - Personal dashboard now displays complete social statistics (followers, following, uploaded, saved)
+- ✅ **Universal Follow Button** - Follow button is now visible to all users, including non-logged-in users
+- ✅ **Login Redirect for Follow** - Non-logged-in users clicking follow are redirected to login page with helpful tooltip
+- ✅ **Complete Social Stats** - /me page shows follower count, following count, uploaded recipes, and saved recipes
+- ✅ **Improved User Discovery** - Better user experience for discovering and following other users
+- ✅ **Seamless Navigation** - Users always see the appropriate version of their profile (public vs. personal dashboard)
 
 ### **Technical Improvements**
 - ✅ **Database Schema Updates** - Added firstName, lastName, username, displayName, bio, avatarUrl, avatarKey fields to User model
