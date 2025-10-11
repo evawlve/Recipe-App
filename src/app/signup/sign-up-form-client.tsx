@@ -111,7 +111,7 @@ export default function SignUpFormClient() {
 
   const profileForm = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { username: "", bio: "" },
+    defaultValues: { bio: "" },
   });
 
   const supabase = createSupabaseBrowserClient();
@@ -126,7 +126,7 @@ export default function SignUpFormClient() {
           setIsAuthenticated(true);
           
           // If user is authenticated but doesn't have a username, go to appropriate step
-          if (!user.user_metadata?.username) {
+          if (!(user as any).user_metadata?.username) {
             // For Google OAuth users, start with name confirmation
             // For regular users, go directly to profile setup
             if (isGoogle) {
@@ -137,8 +137,8 @@ export default function SignUpFormClient() {
             }
             setSignupData(prev => ({
               ...prev,
-              firstName: user.user_metadata?.first_name || "",
-              lastName: user.user_metadata?.last_name || "",
+              firstName: (user as any).user_metadata?.first_name || "",
+              lastName: (user as any).user_metadata?.last_name || "",
               email: user.email || "",
             }));
           } else {
@@ -153,12 +153,12 @@ export default function SignUpFormClient() {
             setCurrentStep("name");
             setIsGoogleUser(true);
             // Pre-populate with Google data if available
-            if (user?.user_metadata) {
+            if ((user as any)?.user_metadata) {
               setSignupData(prev => ({
                 ...prev,
-                firstName: user.user_metadata?.first_name || "",
-                lastName: user.user_metadata?.last_name || "",
-                email: user.email || "",
+                firstName: (user as any).user_metadata?.first_name || "",
+                lastName: (user as any).user_metadata?.last_name || "",
+                email: (user as any)?.email || "",
               }));
             }
           } else {
@@ -213,8 +213,8 @@ export default function SignUpFormClient() {
           if (user) {
             setSignupData(prev => ({
               ...prev,
-              firstName: user.user_metadata?.first_name || "",
-              lastName: user.user_metadata?.last_name || "",
+              firstName: (user as any).user_metadata?.first_name || "",
+              lastName: (user as any).user_metadata?.last_name || "",
               email: user.email || verifiedEmail || "",
             }));
           }
@@ -544,7 +544,6 @@ export default function SignUpFormClient() {
            emailForm.watch("confirmEmail") ||
            passwordForm.watch("password") ||
            passwordForm.watch("confirmPassword") ||
-           profileForm.watch("username") ||
            profileForm.watch("bio");
   };
 
@@ -1092,7 +1091,7 @@ export default function SignUpFormClient() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={loading || usernameError || isCheckingUsername} 
+                    disabled={loading || !!usernameError || isCheckingUsername} 
                     className="flex-1"
                   >
                     {loading 

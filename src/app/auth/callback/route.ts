@@ -35,15 +35,15 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error && data.user) {
+      // Detect if user signed up with Google OAuth
+      const isGoogleOAuth = data.user.app_metadata?.provider === 'google';
+      
       try {
         console.log('=== USER METADATA DEBUG ===');
         console.log('User metadata:', data.user.user_metadata);
         console.log('Username from metadata:', data.user.user_metadata?.username);
         console.log('Provider:', data.user.app_metadata?.provider);
         console.log('===========================');
-        
-        // Detect if user signed up with Google OAuth
-        const isGoogleOAuth = data.user.app_metadata?.provider === 'google';
         
         // Ensure user record exists in our database with proper error handling
         let user;
@@ -54,21 +54,35 @@ export async function GET(request: NextRequest) {
           });
 
           if (user) {
-            // Update existing user with latest metadata
+            // Update existing user with latest metadata, but preserve existing username
+            const updateData: any = {
+              email: data.user.email || '',
+              name: data.user.user_metadata?.name || 
+                    `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
+                    data.user.email || 'User',
+            };
+
+            // Only update firstName/lastName if they're empty and we have them from OAuth
+            if (!user.firstName && data.user.user_metadata?.first_name) {
+              updateData.firstName = data.user.user_metadata.first_name;
+            }
+            if (!user.lastName && data.user.user_metadata?.last_name) {
+              updateData.lastName = data.user.user_metadata.last_name;
+            }
+
+            // Only update bio if it's empty and we have it from OAuth
+            if (!user.bio && data.user.user_metadata?.bio) {
+              updateData.bio = data.user.user_metadata.bio;
+            }
+
+            // NEVER update username from OAuth metadata - preserve existing username
+            console.log('Preserving existing username:', user.username);
+
             user = await prisma.user.update({
               where: { id: data.user.id },
-              data: {
-                email: data.user.email || '',
-                name: data.user.user_metadata?.name || 
-                      `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
-                      data.user.email || 'User',
-                firstName: data.user.user_metadata?.first_name || null,
-                lastName: data.user.user_metadata?.last_name || null,
-                username: data.user.user_metadata?.username || null,
-                bio: data.user.user_metadata?.bio || null,
-              },
+              data: updateData,
             });
-            console.log('Updated existing user in callback:', user.email);
+            console.log('Updated existing user in callback:', user.email, 'username:', user.username);
           } else {
             // Check if user exists with same email but different ID
             const existingUser = await prisma.user.findUnique({
@@ -76,23 +90,37 @@ export async function GET(request: NextRequest) {
             });
 
             if (existingUser) {
-              // Update the existing user's ID to match Supabase
+              // Update the existing user's ID to match Supabase, preserve existing username
+              const updateData: any = {
+                id: data.user.id,
+                name: data.user.user_metadata?.name || 
+                      `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
+                      data.user.email || 'User',
+              };
+
+              // Only update firstName/lastName if they're empty and we have them from OAuth
+              if (!existingUser.firstName && data.user.user_metadata?.first_name) {
+                updateData.firstName = data.user.user_metadata.first_name;
+              }
+              if (!existingUser.lastName && data.user.user_metadata?.last_name) {
+                updateData.lastName = data.user.user_metadata.last_name;
+              }
+
+              // Only update bio if it's empty and we have it from OAuth
+              if (!existingUser.bio && data.user.user_metadata?.bio) {
+                updateData.bio = data.user.user_metadata.bio;
+              }
+
+              // NEVER update username from OAuth metadata - preserve existing username
+              console.log('Preserving existing username for email fallback:', existingUser.username);
+
               user = await prisma.user.update({
                 where: { email: data.user.email || '' },
-                data: {
-                  id: data.user.id,
-                  name: data.user.user_metadata?.name || 
-                        `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
-                        data.user.email || 'User',
-                  firstName: data.user.user_metadata?.first_name || null,
-                  lastName: data.user.user_metadata?.last_name || null,
-                  username: data.user.user_metadata?.username || null,
-                  bio: data.user.user_metadata?.bio || null,
-                },
+                data: updateData,
               });
-              console.log('Updated user ID for existing email in callback:', user.email);
+              console.log('Updated user ID for existing email in callback:', user.email, 'username:', user.username);
             } else {
-              // Create new user
+              // Create new user (username will be null initially, user will set it during signup)
               user = await prisma.user.create({
                 data: {
                   id: data.user.id,
@@ -102,11 +130,11 @@ export async function GET(request: NextRequest) {
                         data.user.email || 'User',
                   firstName: data.user.user_metadata?.first_name || null,
                   lastName: data.user.user_metadata?.last_name || null,
-                  username: data.user.user_metadata?.username || null,
+                  // Don't set username from OAuth - user will set it during signup
                   bio: data.user.user_metadata?.bio || null,
                 },
               });
-              console.log('Created new user in callback:', user.email);
+              console.log('Created new user in callback:', user.email, 'username:', user.username);
             }
           }
         } catch (userError) {
