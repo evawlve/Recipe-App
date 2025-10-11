@@ -9,7 +9,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, firstName, lastName, avatarUrl, avatarKey } = await req.json().catch(() => ({}));
+    const { name, firstName, lastName, username, bio, avatarUrl, avatarKey } = await req.json().catch(() => ({}));
     
     // Validate name if provided
     if (name !== undefined && (!name || typeof name !== "string" || name.length > 80)) {
@@ -24,6 +24,35 @@ export async function PATCH(req: Request) {
     // Validate lastName if provided
     if (lastName !== undefined && (typeof lastName !== "string" || lastName.length > 50)) {
       return NextResponse.json({ error: "Invalid last name" }, { status: 400 });
+    }
+
+    // Validate username if provided
+    if (username !== undefined) {
+      if (typeof username !== "string" || username.length < 3 || username.length > 20) {
+        return NextResponse.json({ error: "Username must be 3-20 characters" }, { status: 400 });
+      }
+      if (!/^[a-z0-9_]+$/.test(username)) {
+        return NextResponse.json({ error: "Username can only contain lowercase letters, numbers, and underscores" }, { status: 400 });
+      }
+      
+      // Check if username is already taken (case-insensitive)
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          username: {
+            equals: username,
+            mode: 'insensitive'
+          }
+        }
+      });
+
+      if (existingUser && existingUser.id !== user.id) {
+        return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+      }
+    }
+
+    // Validate bio if provided
+    if (bio !== undefined && (typeof bio !== "string" || bio.length > 500)) {
+      return NextResponse.json({ error: "Bio must be 500 characters or less" }, { status: 400 });
     }
 
     // Validate avatarUrl if provided
@@ -47,6 +76,8 @@ export async function PATCH(req: Request) {
     if (name !== undefined) updateData.name = name;
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
+    if (username !== undefined) updateData.username = username.toLowerCase();
+    if (bio !== undefined) updateData.bio = bio;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
     if (avatarKey !== undefined) updateData.avatarKey = avatarKey;
 

@@ -17,25 +17,40 @@ interface SettingsPanelProps {
   email: string;
   firstName?: string | null;
   lastName?: string | null;
+  username?: string | null;
+  bio?: string | null;
   avatarUrl?: string | null;
   avatarKey?: string | null;
   onAvatarUpdate?: (newAvatarUrl: string) => void;
+  onProfileUpdate?: (updatedUser: Partial<{
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    username: string | null;
+    bio: string | null;
+  }>) => void;
 }
 
 export default function SettingsPanel({ 
   name, 
   email, 
   firstName: initialFirstName, 
-  lastName: initialLastName, 
+  lastName: initialLastName,
+  username: initialUsername,
+  bio: initialBio,
   avatarUrl: initialAvatarUrl,
   avatarKey: initialAvatarKey,
-  onAvatarUpdate
+  onAvatarUpdate,
+  onProfileUpdate
 }: SettingsPanelProps) {
   // Form state
   const [firstName, setFirstName] = useState(initialFirstName || "");
   const [lastName, setLastName] = useState(initialLastName || "");
-  const [displayName, setDisplayName] = useState(name || "");
+  const [username, setUsername] = useState(initialUsername || "");
+  const [bio, setBio] = useState(initialBio || "");
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl || "");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   
   // UI state
   const [isEditMode, setIsEditMode] = useState(false);
@@ -65,11 +80,65 @@ export default function SettingsPanel({
     const hasChanges = 
       firstName !== (initialFirstName || "") ||
       lastName !== (initialLastName || "") ||
-      displayName !== (name || "") ||
+      username !== (initialUsername || "") ||
+      bio !== (initialBio || "") ||
       avatarUrl !== (initialAvatarUrl || "");
     setIsDirty(hasChanges);
-  }, [firstName, lastName, displayName, avatarUrl, initialFirstName, initialLastName, name, initialAvatarUrl, isEditMode]);
+  }, [firstName, lastName, username, bio, avatarUrl, initialFirstName, initialLastName, initialUsername, initialBio, initialAvatarUrl, isEditMode]);
 
+  // Username validation
+  const validateUsername = async (value: string) => {
+    if (!value.trim()) {
+      setUsernameError(null);
+      return;
+    }
+
+    // Basic regex validation
+    if (!/^[a-z0-9_]+$/.test(value)) {
+      setUsernameError('Username can only contain lowercase letters, numbers, and underscores');
+      return;
+    }
+
+    if (value.length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      return;
+    }
+
+    if (value.length > 20) {
+      setUsernameError('Username must be at most 20 characters');
+      return;
+    }
+
+    // Check uniqueness
+    setIsCheckingUsername(true);
+    try {
+      const response = await fetch(`/api/users/search?exact=${encodeURIComponent(value)}`);
+      if (response.ok) {
+        const users = await response.json();
+        if (users.length > 0 && users[0].username !== initialUsername) {
+          setUsernameError('Username is already taken');
+        } else {
+          setUsernameError(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value.toLowerCase());
+    setUsernameError(null);
+    
+    // Debounce validation
+    const timeoutId = setTimeout(() => {
+      validateUsername(value.toLowerCase());
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  };
 
   const handleAvatarUpload = async (file: File) => {
     if (!file) return;
@@ -126,8 +195,10 @@ export default function SettingsPanel({
       // Cancel edit mode - reset to original values
       setFirstName(initialFirstName || "");
       setLastName(initialLastName || "");
-      setDisplayName(name || "");
+      setUsername(initialUsername || "");
+      setBio(initialBio || "");
       setAvatarUrl(initialAvatarUrl || "");
+      setUsernameError(null);
       setMessage(null);
     }
     setIsEditMode(!isEditMode);
@@ -147,19 +218,22 @@ export default function SettingsPanel({
   };
 
   const handleSaveChanges = async () => {
-    if (!isDirty) return;
+    if (!isDirty || usernameError) return;
     
     setIsLoading(true);
     setMessage(null);
     
     try {
+      // Save all profile fields including username in one request
       const response = await fetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           firstName: firstName || undefined,
           lastName: lastName || undefined,
-          name: displayName || undefined,
+          name: `${firstName} ${lastName}`.trim() || undefined,
+          username: username || undefined,
+          bio: bio || undefined,
           avatarUrl: avatarUrl || undefined,
         }),
       });
@@ -167,8 +241,15 @@ export default function SettingsPanel({
       if (response.ok) {
         setMessage({ type: "success", text: "Profile updated successfully!" });
         setIsDirty(false);
-        // Update the initial values to reflect the changes
-        // This will be handled by the parent component refreshing
+        
+        // Update the parent component with the new values
+        onProfileUpdate?.({
+          name: `${firstName} ${lastName}`.trim() || undefined,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          username: username || undefined,
+          bio: bio || undefined,
+        });
       } else {
         const error = await response.json();
         setMessage({ type: "error", text: error.error || "Failed to update profile" });
@@ -223,12 +304,37 @@ export default function SettingsPanel({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
+            <Label htmlFor="username">Username</Label>
+            <div className="relative">
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => handleUsernameChange(e.target.value)}
+                placeholder="Enter your username"
+                className="rounded-xl"
+                disabled={!isEditMode}
+              />
+              {isCheckingUsername && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                </div>
+              )}
+            </div>
+            {usernameError && (
+              <p className="text-sm text-red-600">{usernameError}</p>
+            )}
+            {username && !usernameError && (
+              <p className="text-sm text-green-600">@{username}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio">Bio</Label>
             <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Enter your display name"
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell us about yourself"
               className="rounded-xl"
               disabled={!isEditMode}
             />
@@ -277,7 +383,7 @@ export default function SettingsPanel({
                 </Button>
                 <Button 
                   onClick={handleSaveChanges}
-                  disabled={!isDirty || isLoading || isUploadingAvatar}
+                  disabled={!isDirty || isLoading || isUploadingAvatar || usernameError || isCheckingUsername}
                   className="rounded-xl"
                 >
                   {isLoading ? "Saving..." : "Save Changes"}
@@ -325,13 +431,20 @@ export default function SettingsPanel({
           <CardHeader>
             <CardTitle>Account</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <Button 
-              variant="destructive" 
+              variant="outline" 
               onClick={handleSignOut}
-              className="w-full rounded-xl"
+              className="w-full rounded-xl bg-muted hover:bg-muted/80 border-green-500 text-foreground"
             >
               Sign Out
+            </Button>
+            <Button 
+              variant="destructive" 
+              className="w-full rounded-xl"
+              disabled
+            >
+              Delete Account
             </Button>
           </CardContent>
         </Card>

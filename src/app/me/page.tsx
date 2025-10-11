@@ -19,6 +19,26 @@ export default async function MePage({ searchParams }: MePageProps) {
     redirect("/signin");
   }
 
+  // Fetch the complete user data with new fields
+  const fullUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      bio: true,
+      avatarUrl: true,
+      avatarKey: true,
+    }
+  });
+
+  if (!fullUser) {
+    redirect("/signin");
+  }
+
   const { tab = "saved" } = await searchParams;
   
   // Ensure we have a "Saved" collection for this user
@@ -56,7 +76,7 @@ export default async function MePage({ searchParams }: MePageProps) {
 
   return (
     <MePageClient
-      user={user}
+      user={fullUser}
       uploaded={uploaded}
       saved={saved}
       uploadedCount={uploadedCount}

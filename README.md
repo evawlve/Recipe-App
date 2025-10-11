@@ -59,6 +59,10 @@ A full-featured recipe management application with:
 - ✅ **Secure image proxy** - Private S3 images served through API proxy
 - ✅ **Avatar management** - Upload, crop, and manage user avatars
 - ✅ **Profile editing** - Edit mode with form validation and save functionality
+- ✅ **Enhanced Signup Flow** - Guided username setup with validation and redirects
+- ✅ **Username Validation** - Real-time username availability checking
+- ✅ **Signup Guards** - Automatic redirect to complete profile setup
+- ✅ **Real-time Profile Updates** - Instant UI updates after profile changes
 
 ### **User Interface & Experience**
 - ✅ **Modern branding** - "Mealspire" with custom logo
@@ -80,6 +84,11 @@ A full-featured recipe management application with:
 - ✅ **Auth-aware UX** - Unauthenticated likes show a sign-in notice
 - ✅ **Real-time updates** - Optimistic UI with rollback on errors
 - ✅ **Permission-based actions** - Edit only for comment authors, delete for authors or recipe owners
+- ✅ **User Search** - Search for users by username or display name
+- ✅ **User Profiles** - Public user profile pages with recipes and stats
+- ✅ **Follow System** - Follow/unfollow other users with real-time updates
+- ✅ **User Discovery** - Enhanced search with user suggestions
+- ✅ **Profile Statistics** - Display follower count, following count, and recipe count
 
 ### **Collections & Saved Recipes**
 - ✅ **Saved Collections** - Automatic "Saved" collection created per user
@@ -98,6 +107,20 @@ A full-featured recipe management application with:
 - ✅ **Advanced search** - search across recipe titles, instructions, and tag labels
 - ✅ **Search persistence** - URL state management for search and filters
 - ✅ **Quick navigation** - "View All Recipes" button to clear filters
+
+### **User Management & Discovery**
+- ✅ **Enhanced Signup Process** - Guided username setup with real-time validation
+- ✅ **Username Requirements** - 3-20 characters, lowercase letters, numbers, underscores only
+- ✅ **Real-time Username Validation** - Instant availability checking with debouncing
+- ✅ **Signup Guards** - Automatic redirect to complete profile setup before accessing app
+- ✅ **Profile Completion Flow** - Users must set username before accessing main features
+- ✅ **User Search API** - Search users by username or display name with pagination
+- ✅ **User Profile Pages** - Public profiles at `/u/[username]` with recipes and stats
+- ✅ **Follow System** - Follow/unfollow users with optimistic UI updates
+- ✅ **User Statistics** - Display follower count, following count, and recipe count
+- ✅ **Enhanced Search Box** - Search both users and recipes with suggestions
+- ✅ **Profile Management** - Real-time profile updates without page refresh
+- ✅ **Avatar Management** - Upload and crop avatars with preview functionality
 
 ## 🚀 Quick Start
 
@@ -388,6 +411,45 @@ GET /saved
 # Returns: Saved recipes page with user's saved collection
 ```
 
+### **User Management & Social Features**
+```bash
+# Search users by username or display name
+GET /api/users/search?q=username
+# Response: [{ id, username, displayName, avatarKey }]
+
+# Get user profile by username
+GET /api/users/[username]
+# Response: { id, username, displayName, bio, avatarKey, counts: { followers, following, recipes, likesReceived } }
+
+# Follow a user (auth required)
+POST /api/follow/[userId]
+# Response: { "following": true, "followersCount": number }
+
+# Unfollow a user (auth required)
+DELETE /api/follow/[userId]
+# Response: { "following": false, "followersCount": number }
+
+# Check follow status (auth required)
+GET /api/follow/state?userId=[userId]
+# Response: { "following": boolean, "followersCount": number }
+
+# Update user profile (auth required)
+PATCH /api/account
+{
+  "firstName": "John",
+  "lastName": "Doe", 
+  "username": "johndoe",
+  "bio": "Food enthusiast",
+  "avatarUrl": "https://...",
+  "avatarKey": "uploads/avatar.jpg"
+}
+# Response: { "success": true }
+
+# Check username availability
+GET /api/users/search?exact=username
+# Response: [] (empty if available) or [{ username, ... }] (if taken)
+```
+
 #### Permissions & Behavior
 - Never trust client `userId`; the server uses the authenticated user.
 - Like actions are idempotent; duplicate likes are ignored server-side.
@@ -598,28 +660,29 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Secure Image Proxy** - Private S3 images served through secure API proxy
 - ✅ **Enhanced Authentication** - Improved sign-out flow with proper error handling
 - ✅ **Mobile-Responsive Design** - Optimized navigation and components for all screen sizes
+- ✅ **Enhanced Signup Flow** - Guided username setup with real-time validation and redirects
+- ✅ **User Search & Discovery** - Search for users by username or display name with suggestions
+- ✅ **Follow System** - Follow/unfollow other users with real-time UI updates
+- ✅ **User Profile Pages** - Public user profiles with recipes, stats, and follow functionality
+- ✅ **Real-time Profile Updates** - Instant UI updates after profile changes without page refresh
+- ✅ **Signup Guards** - Automatic redirect to complete profile setup before accessing main app
+- ✅ **Enhanced Search Box** - Search both users and recipes with dropdown suggestions
+- ✅ **Disabled UI During Signup** - Navigation and search disabled with helpful tooltips during setup
 
 ### **Technical Improvements**
-- ✅ **Database Schema Updates** - Added firstName, lastName, avatarUrl, avatarKey fields to User model
-- ✅ **API Enhancements** - New account management endpoints with validation
+- ✅ **Database Schema Updates** - Added firstName, lastName, username, displayName, bio, avatarUrl, avatarKey fields to User model
+- ✅ **API Enhancements** - New user management, follow system, and account management endpoints
 - ✅ **Image Upload System** - Secure S3 uploads with presigned URLs and API proxy serving
 - ✅ **Form Validation** - Enhanced form handling with Zod schemas and error states
 - ✅ **Theme Integration** - Consistent theme-aware styling throughout the application
+- ✅ **User Search API** - Search users by username or display name with pagination
+- ✅ **Follow System API** - Complete follow/unfollow functionality with optimistic UI
+- ✅ **Profile Management API** - Real-time profile updates with instant UI feedback
+- ✅ **Username Validation** - Real-time username availability checking with debouncing
+- ✅ **Signup Flow Guards** - Automatic redirect system for incomplete profiles
+- ✅ **Enhanced Authentication** - Improved user session management and profile completion flow
 
 ## 📋 TODO - Next Development Phase
-
-### **User Management & Social Features**
-- 🔲 **Unique Display Names** - Implement unique display name validation with @username format
-- 🔲 **User Search** - Add user search functionality to the navbar search bar
-- 🔲 **User Profiles** - Display unique display names with @ symbol (e.g., @username)
-- 🔲 **Follow System** - Implement user following/followers functionality
-- 🔲 **User Analytics** - Show like counts, comment counts, and engagement metrics on user profiles
-
-### **Search & Discovery**
-- 🔲 **Advanced Search** - Implement search functionality for both users and recipes
-- 🔲 **Search Results** - Create dedicated search results page with filtering
-- 🔲 **Search Suggestions** - Add autocomplete and search suggestions
-- 🔲 **Search History** - Track and display recent searches
 
 ### **Notifications System**
 - 🔲 **Notification Center** - Wire up the notifications button in the navbar
@@ -628,7 +691,26 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - 🔲 **Notification Settings** - Allow users to customize notification preferences
 
 ### **Enhanced Social Features**
-- 🔲 **User Following** - Follow/unfollow other users
 - 🔲 **Activity Feed** - Show activity from followed users
 - 🔲 **User Recommendations** - Suggest users to follow based on interests
 - 🔲 **Social Analytics** - Enhanced user profile analytics and engagement metrics
+- 🔲 **User Mentions** - @username mentions in comments and recipes
+- 🔲 **Social Sharing** - Share recipes on social media platforms
+
+### **Advanced Search & Discovery**
+- 🔲 **Search Results Page** - Dedicated search results page with filtering
+- 🔲 **Search History** - Track and display recent searches
+- 🔲 **Advanced Filters** - Filter by date, popularity, user, etc.
+- 🔲 **Search Analytics** - Track popular searches and trending content
+
+### **Content Management**
+- 🔲 **Recipe Collections** - User-created collections beyond "Saved"
+- 🔲 **Recipe Forks** - Fork and modify existing recipes
+- 🔲 **Recipe Versioning** - Track changes and history of recipes
+- 🔲 **Content Moderation** - Report and moderate inappropriate content
+
+### **Performance & Analytics**
+- 🔲 **Performance Monitoring** - Track page load times and user interactions
+- 🔲 **User Analytics Dashboard** - Detailed analytics for recipe creators
+- 🔲 **Search Analytics** - Track search patterns and popular content
+- 🔲 **Engagement Metrics** - Like rates, comment rates, and user engagement

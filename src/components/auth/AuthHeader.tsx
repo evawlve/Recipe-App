@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { isTokenError } from '@/lib/auth-utils';
+import { EnhancedSearchBox } from '@/components/recipes/EnhancedSearchBox';
 import Logo from '@/components/Logo';
 import { Menu, X, Search, Bell } from 'lucide-react';
 
@@ -17,9 +19,39 @@ interface User {
 }
 
 export function AuthHeader() {
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  
+  // Check if we're on signup page
+  const isSignupPage = pathname === '/signup';
+
+  // Smart sticky navbar scroll detection
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show navbar when scrolling up or at the top
+      if (currentScrollY < lastScrollY || currentScrollY < 10) {
+        setIsNavbarVisible(true);
+      } 
+      // Hide navbar when scrolling down (but only after scrolling past 100px)
+      else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsNavbarVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    // Only add scroll listener on client side
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [lastScrollY]);
 
   useEffect(() => {
     async function getUser() {
@@ -157,79 +189,147 @@ export function AuthHeader() {
   };
 
   return (
-    <header className="bg-background border-b border-border">
+    <header 
+      className={`fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border transition-transform duration-300 ${
+        isNavbarVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Left side - Logo and Navigation */}
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <Logo size="md" />
-              <span className="text-2xl font-bold text-foreground">Mealspire</span>
-            </Link>
+            {isSignupPage ? (
+              <div className="flex items-center gap-2 cursor-not-allowed opacity-50 relative group">
+                <Logo size="md" />
+                <span className="text-2xl font-bold text-foreground">Mealspire</span>
+                {/* Tooltip */}
+                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  Complete setup to access home
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
+              </div>
+            ) : (
+              <Link href="/" className="flex items-center gap-2">
+                <Logo size="md" />
+                <span className="text-2xl font-bold text-foreground">Mealspire</span>
+              </Link>
+            )}
             
             {/* Navigation Links */}
             <nav className="hidden md:flex items-center gap-6">
-              <Link 
-                href="/" 
-                className="text-muted-foreground hover:text-foreground font-medium transition-colors"
-              >
-                Home
-              </Link>
-              <Link 
-                href="/recipes" 
-                className="text-muted-foreground hover:text-foreground font-medium transition-colors"
-              >
-                Explore
-              </Link>
-              <Link 
-                href="/recipes/new" 
-                className="text-muted-foreground hover:text-foreground font-medium transition-colors"
-              >
-                Create
-              </Link>
+              {isSignupPage ? (
+                // Disabled navigation during signup
+                <>
+                  <span className="text-muted-foreground/50 font-medium cursor-not-allowed">
+                    Home
+                  </span>
+                  <span className="text-muted-foreground/50 font-medium cursor-not-allowed">
+                    Explore
+                  </span>
+                  <span className="text-muted-foreground/50 font-medium cursor-not-allowed">
+                    Create
+                  </span>
+                </>
+              ) : (
+                // Normal navigation
+                <>
+                  <Link 
+                    href="/" 
+                    className="text-muted-foreground hover:text-foreground font-medium transition-colors"
+                  >
+                    Home
+                  </Link>
+                  <Link 
+                    href="/recipes" 
+                    className="text-muted-foreground hover:text-foreground font-medium transition-colors"
+                  >
+                    Explore
+                  </Link>
+                  <Link 
+                    href="/recipes/new" 
+                    className="text-muted-foreground hover:text-foreground font-medium transition-colors"
+                  >
+                    Create
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
 
           {/* Right side - Search, Notifications, Avatar */}
           <div className="flex items-center gap-4">
             {/* Search Bar */}
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Search"
-                className="pl-10 pr-4 py-2 w-64 bg-muted border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
+            <div className="hidden md:block">
+              {isSignupPage ? (
+                <div className="relative">
+                  <div className="w-64 h-10 bg-muted/50 border border-border/50 rounded-lg flex items-center px-3 text-muted-foreground/50 cursor-not-allowed">
+                    <Search className="h-4 w-4 mr-2" />
+                    <span className="text-sm">Complete setup to search...</span>
+                  </div>
+                </div>
+              ) : (
+                <EnhancedSearchBox />
+              )}
             </div>
 
             {/* Notifications Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden md:flex h-10 w-10 p-0 bg-muted hover:bg-muted/80 rounded-lg"
-            >
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </Button>
+            {isSignupPage ? (
+              <div className="hidden md:flex h-10 w-10 p-0 bg-muted/50 rounded-lg cursor-not-allowed opacity-50 relative group items-center justify-center">
+                <Bell className="h-4 w-4 text-muted-foreground/50" />
+                {/* Tooltip */}
+                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  Complete setup to access notifications
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden md:flex h-10 w-10 p-0 bg-muted hover:bg-muted/80 rounded-lg"
+              >
+                <Bell className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            )}
 
             {/* User Avatar or Sign In */}
             {isLoading ? (
               <div className="animate-pulse bg-muted h-10 w-10 rounded-full"></div>
             ) : user ? (
-              <Link href="/me" className="flex items-center">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name || user.email}
-                    className="h-10 w-10 rounded-full object-cover border-2 border-border"
-                  />
-                ) : (
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {(user.name || user.email)[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
-              </Link>
+              isSignupPage ? (
+                // Disabled avatar during signup
+                <div className="flex items-center cursor-not-allowed opacity-50">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name || user.email}
+                      className="h-10 w-10 rounded-full object-cover border-2 border-border"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {(user.name || user.email)[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link href="/me" className="flex items-center">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name || user.email}
+                      className="h-10 w-10 rounded-full object-cover border-2 border-border"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {(user.name || user.email)[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </Link>
+              )
             ) : (
               <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Link href="/signin">Sign In</Link>
@@ -278,13 +378,15 @@ export function AuthHeader() {
               </Link>
               
               {/* Mobile Search */}
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Search"
-                  className="pl-10 pr-4 py-2 w-full bg-muted border-border rounded-lg"
-                />
+              <div className="mt-4">
+                {isSignupPage ? (
+                  <div className="w-full h-10 bg-muted/50 border border-border/50 rounded-lg flex items-center px-3 text-muted-foreground/50 cursor-not-allowed">
+                    <Search className="h-4 w-4 mr-2" />
+                    <span className="text-sm">Complete setup to search...</span>
+                  </div>
+                ) : (
+                  <EnhancedSearchBox className="w-full" />
+                )}
               </div>
               
               {user && (

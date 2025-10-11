@@ -103,3 +103,11 @@ export async function getCurrentUser() {
     return null;
   }
 }
+
+export async function optionalUser() {
+  try {
+    return await getCurrentUser();
+  } catch (error) {
+    return null;
+  }
+}

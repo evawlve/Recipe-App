@@ -6,8 +6,11 @@ import { prisma } from '@/lib/db';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const redirectTo = searchParams.get('redirectTo') || '/recipes';
+  const redirectTo = searchParams.get('redirectTo');
   const isNewUser = searchParams.get('newUser') === 'true';
+  
+  console.log('Auth callback called with URL:', request.url);
+  console.log('Auth callback - redirectTo:', redirectTo);
 
   if (code) {
     const cookieStore = await cookies();
@@ -33,6 +36,15 @@ export async function GET(request: NextRequest) {
     
     if (!error && data.user) {
       try {
+        console.log('=== USER METADATA DEBUG ===');
+        console.log('User metadata:', data.user.user_metadata);
+        console.log('Username from metadata:', data.user.user_metadata?.username);
+        console.log('Provider:', data.user.app_metadata?.provider);
+        console.log('===========================');
+        
+        // Detect if user signed up with Google OAuth
+        const isGoogleOAuth = data.user.app_metadata?.provider === 'google';
+        
         // Ensure user record exists in our database with proper error handling
         let user;
         try {
@@ -50,6 +62,10 @@ export async function GET(request: NextRequest) {
                 name: data.user.user_metadata?.name || 
                       `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
                       data.user.email || 'User',
+                firstName: data.user.user_metadata?.first_name || null,
+                lastName: data.user.user_metadata?.last_name || null,
+                username: data.user.user_metadata?.username || null,
+                bio: data.user.user_metadata?.bio || null,
               },
             });
             console.log('Updated existing user in callback:', user.email);
@@ -68,6 +84,10 @@ export async function GET(request: NextRequest) {
                   name: data.user.user_metadata?.name || 
                         `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
                         data.user.email || 'User',
+                  firstName: data.user.user_metadata?.first_name || null,
+                  lastName: data.user.user_metadata?.last_name || null,
+                  username: data.user.user_metadata?.username || null,
+                  bio: data.user.user_metadata?.bio || null,
                 },
               });
               console.log('Updated user ID for existing email in callback:', user.email);
@@ -80,6 +100,10 @@ export async function GET(request: NextRequest) {
                   name: data.user.user_metadata?.name || 
                         `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
                         data.user.email || 'User',
+                  firstName: data.user.user_metadata?.first_name || null,
+                  lastName: data.user.user_metadata?.last_name || null,
+                  username: data.user.user_metadata?.username || null,
+                  bio: data.user.user_metadata?.bio || null,
                 },
               });
               console.log('Created new user in callback:', user.email);
@@ -102,16 +126,35 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Redirect with success message for new users
-        if (isNewUser) {
-          return NextResponse.redirect(`${origin}${redirectTo}?welcome=true&message=${encodeURIComponent('Account verified successfully! Welcome to Recipe App!')}`);
+        // Check if user has completed profile setup (has username)
+        const needsProfileSetup = !user?.username;
+        console.log('=== AUTH CALLBACK DEBUG ===');
+        console.log('User ID:', user?.id);
+        console.log('User email:', user?.email);
+        console.log('User username:', user?.username);
+        console.log('User firstName:', user?.firstName);
+        console.log('User lastName:', user?.lastName);
+        console.log('Needs profile setup:', needsProfileSetup);
+        console.log('========================');
+
+        // Redirect based on profile completion status
+        if (needsProfileSetup) {
+          // User needs to complete profile setup
+          console.log('Redirecting user to signup profile setup');
+          const googleParam = isGoogleOAuth ? '&google=true' : '';
+          return NextResponse.redirect(`${origin}/signup?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}`);
         } else {
-          return NextResponse.redirect(`${origin}${redirectTo}`);
+          // User has completed profile setup, redirect to app
+          const finalRedirectTo = redirectTo || '/recipes';
+          console.log('Redirecting user to app:', finalRedirectTo);
+          return NextResponse.redirect(`${origin}${finalRedirectTo}`);
         }
       } catch (dbError) {
         console.error('Database error during user creation:', dbError);
-        // Still redirect to the app even if user creation fails
-        return NextResponse.redirect(`${origin}${redirectTo}?welcome=true&message=${encodeURIComponent('Account verified successfully!')}`);
+        // If there's a database error, assume user needs profile setup
+        console.log('Database error, redirecting to profile setup');
+        const googleParam = isGoogleOAuth ? '&google=true' : '';
+        return NextResponse.redirect(`${origin}/signup?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}`);
       }
     } else {
       console.error('OAuth callback error:', error);

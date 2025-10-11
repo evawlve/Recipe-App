@@ -10,6 +10,8 @@ export async function GET() {
     name: user.name ?? null,
     firstName: user.firstName ?? null,
     lastName: user.lastName ?? null,
+    username: user.username ?? null,
+    displayName: user.displayName ?? null,
     avatarUrl: user.avatarUrl ?? null,
     avatarKey: user.avatarKey ?? null
   });

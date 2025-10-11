@@ -9,6 +9,8 @@ import { AvatarPreviewModal } from "./AvatarPreviewModal";
 interface ProfileHeaderProps {
   name?: string | null;
   email: string;
+  username?: string | null;
+  bio?: string | null;
   uploadedCount: number;
   savedCount: number;
   avatarUrl?: string | null;
@@ -18,6 +20,8 @@ interface ProfileHeaderProps {
 export default function ProfileHeader({ 
   name, 
   email, 
+  username,
+  bio,
   uploadedCount, 
   savedCount,
   avatarUrl,
@@ -136,12 +140,17 @@ export default function ProfileHeader({
           isUploading={isUploading}
         />
         
-        {/* Name and Email */}
-        <div className="space-y-1">
+        {/* Name, Username and Bio */}
+        <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">
             {name || "User"}
           </h1>
-          <p className="text-muted-foreground">{email}</p>
+          {username && (
+            <p className="text-muted-foreground">@{username}</p>
+          )}
+          {bio && (
+            <p className="text-muted-foreground text-sm max-w-md">{bio}</p>
+          )}
         </div>
         
         
