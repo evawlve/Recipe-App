@@ -40,11 +40,6 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const me = await optionalUser();
   const isMe = me?.id === user.id;
   
-  // If user is trying to access their own profile, redirect to /me
-  if (isMe) {
-    redirect('/me');
-  }
-  
   // Check if current user is following this user
   const followingMe = me ? Boolean(await prisma.follow.findUnique({ 
     where: { 

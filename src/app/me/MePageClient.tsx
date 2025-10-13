@@ -69,8 +69,8 @@ export function MePageClient({
       <TabNav tab={tab as "saved" | "uploaded" | "settings"} />
       
       <div className="mt-6">
-        {tab === "saved" && <RecipeGrid items={saved} />}
-        {tab === "uploaded" && <RecipeGrid items={uploaded} />}
+        {tab === "saved" && <RecipeGrid items={saved} currentUserId={user.id} />}
+        {tab === "uploaded" && <RecipeGrid items={uploaded} currentUserId={user.id} />}
         {tab === "settings" && (
           <SettingsPanel 
             name={currentUser.name} 

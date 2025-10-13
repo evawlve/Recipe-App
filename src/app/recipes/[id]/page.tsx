@@ -11,6 +11,7 @@ import LikeButton from "@/components/recipe/LikeButton";
 import Comments from "@/components/recipe/Comments";
 import DeleteRecipeButton from "@/components/recipe/DeleteRecipeButton";
 import SaveButton from "@/components/recipe/SaveButton";
+import { AuthorLink } from "@/components/recipe/AuthorLink";
 
 interface RecipePageProps {
   params: Promise<{
@@ -43,7 +44,11 @@ export default async function RecipePage({ params }: RecipePageProps) {
       },
       author: {
         select: {
+          id: true,
           name: true,
+          username: true,
+          displayName: true,
+          avatarKey: true,
         },
       },
       ingredients: {
@@ -127,7 +132,12 @@ export default async function RecipePage({ params }: RecipePageProps) {
         
         <h1 className="text-4xl font-bold text-text mb-2">{recipe.title}</h1>
         <div className="flex items-center gap-4 text-muted-foreground">
-          <span>By {recipe.author.name || "Anonymous"}</span>
+          <AuthorLink 
+            author={recipe.author} 
+            currentUserId={current?.id}
+            size="md"
+            showAvatar={true}
+          />
           <span>•</span>
           <span>{formatDate(recipe.createdAt)}</span>
           <span>•</span>

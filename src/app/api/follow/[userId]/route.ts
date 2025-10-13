@@ -44,6 +44,15 @@ export async function POST(
       }
     });
 
+    // Create notification for the followed user
+    await prisma.notification.create({
+      data: {
+        userId: targetUserId,
+        actorId: user.id,
+        type: 'follow'
+      }
+    });
+
     // Get updated follower count
     const followersCount = await prisma.follow.count({
       where: { followingId: targetUserId }
