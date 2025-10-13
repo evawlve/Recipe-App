@@ -10,6 +10,7 @@ import { isTokenError } from '@/lib/auth-utils';
 import { EnhancedSearchBox } from '@/components/recipes/EnhancedSearchBox';
 import Logo from '@/components/Logo';
 import { Menu, X, Search, Bell } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 
 interface User {
   id: string;
@@ -282,15 +283,11 @@ export function AuthHeader() {
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>
               </div>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden md:flex h-10 w-10 p-0 bg-muted hover:bg-muted/80 rounded-lg"
-              >
-                <Bell className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            )}
+            ) : user ? (
+              <div className="hidden md:flex">
+                <NotificationBell />
+              </div>
+            ) : null}
 
             {/* User Avatar or Sign In */}
             {isLoading ? (

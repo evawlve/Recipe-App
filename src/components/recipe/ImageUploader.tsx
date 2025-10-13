@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Image as ImageIcon, RotateCcw, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { FileState, FileStatus } from "@/types/file-state";
-import { uploadFileToS3, getImageDimensions } from "@/lib/s3-upload";
+import { uploadFileToS3 } from "@/lib/s3-upload";
+import { compressImage, generateCompressedFilename } from "@/lib/image-ops";
 
 interface ImageUploaderProps {
   fileStates: FileState[];
@@ -88,7 +89,10 @@ export function ImageUploader({
     onDragEnter: () => setIsDragActive(true),
     onDragLeave: () => setIsDragActive(false),
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+      'image/jpeg': ['.jpeg', '.jpg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+      'image/heic': ['.heic', '.heif']
     },
     multiple: true,
     disabled: disabled || fileStates.length >= MAX_FILES
@@ -121,11 +125,31 @@ export function ImageUploader({
     if (onUploadStart) onUploadStart();
 
     try {
-      // Get image dimensions
-      const dims = await getImageDimensions(fileState.file);
+      // Compress the image for recipe photos
+      console.log('Compressing image for recipe photo...');
+      const { blob, width, height, ext } = await compressImage(fileState.file, {
+        maxDim: 2048,
+        quality: 0.82,
+        type: "image/webp",
+        squareCrop: false
+      });
       
-      // Upload to S3
-      const { s3Key } = await uploadFileToS3(fileState.file);
+      // Create a new File object from the compressed blob
+      const compressedFilename = generateCompressedFilename(fileState.file.name, ext);
+      const compressedFile = new File([blob], compressedFilename, { 
+        type: "image/webp",
+        lastModified: Date.now()
+      });
+      
+      console.log('Compression complete:', {
+        originalSize: fileState.file.size,
+        compressedSize: blob.size,
+        dimensions: { width, height },
+        filename: compressedFilename
+      });
+      
+      // Upload compressed file to S3
+      const { s3Key } = await uploadFileToS3(compressedFile);
       
       // Update status to done
       console.log(`Upload completed for ${fileState.file.name} with s3Key: ${s3Key}`);
@@ -134,7 +158,7 @@ export function ImageUploader({
         ...fileState, 
         status: "done", 
         s3Key, 
-        dims 
+        dims: { width, height }
       };
       onFileStatesChange(newStates);
       
@@ -246,7 +270,7 @@ export function ImageUploader({
                     Drag & drop images here, or <span className="text-primary underline">browse</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Images will upload automatically • Supports: JPEG, PNG, GIF, WebP (Max {MAX_FILES} files)
+                    Images will compress and upload automatically • Supports: JPEG, PNG, WebP, HEIC (Max {MAX_FILES} files)
                   </p>
                 </div>
               )}

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { uploadFileToS3 } from "@/lib/s3-upload";
+import { compressImage, generateCompressedFilename } from "@/lib/image-ops";
 import { Camera, X } from "lucide-react";
 import { AvatarPreviewModal } from "./AvatarPreviewModal";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -147,16 +148,41 @@ export default function SettingsPanel({
     setMessage(null);
     
     try {
-      const { s3Key, publicUrl } = await uploadFileToS3(file);
+      // Compress the image for avatar (square crop, 1024px max)
+      console.log('Compressing image for avatar...');
+      const { blob, width, height, ext } = await compressImage(file, {
+        maxDim: 1024,
+        quality: 0.85,
+        type: "image/webp",
+        squareCrop: true
+      });
+      
+      // Create a new File object from the compressed blob
+      const compressedFilename = generateCompressedFilename(file.name, ext);
+      const compressedFile = new File([blob], compressedFilename, { 
+        type: "image/webp",
+        lastModified: Date.now()
+      });
+      
+      console.log('Avatar compression complete:', {
+        originalSize: file.size,
+        compressedSize: blob.size,
+        dimensions: { width, height },
+        filename: compressedFilename
+      });
+      
+      const { s3Key, publicUrl } = await uploadFileToS3(compressedFile);
       console.log("S3 upload successful, s3Key:", s3Key, "proxyUrl:", publicUrl);
       
-      // Save to database
+      // Save to database with dimensions
       const response = await fetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           avatarKey: s3Key,
-          avatarUrl: publicUrl 
+          avatarUrl: publicUrl,
+          avatarWidth: width,
+          avatarHeight: height
         }),
       });
       

@@ -43,13 +43,24 @@ function buildS3Key(filename: string, type: 'avatar' | 'recipe' = 'recipe'): str
 }
 
 export async function POST(req: NextRequest) {
+  console.log('Upload API called');
+  
   if (!region || !bucket) {
+    console.error('Missing AWS configuration:', { region, bucket });
     return NextResponse.json({ error: 'Missing AWS_REGION or S3_BUCKET' }, { status: 500 });
   }
 
+  console.log('AWS configuration:', { region, bucket });
+
   try {
     const body = await req.json();
-    const { filename, contentType, maxSizeMB = 10, type = 'uploads' } = body;
+    console.log('Upload request body:', body);
+    
+    const { filename, contentType, maxSizeMB = 15, type = 'uploads' } = body;
+    
+    // Use 15MB limit for all uploads (recipes and avatars)
+    const effectiveMaxSizeMB = 15;
+    console.log(`File size limit: ${effectiveMaxSizeMB}MB (type: ${type})`);
 
     // Validate required fields
     if (!filename || !contentType) {
@@ -65,17 +76,31 @@ export async function POST(req: NextRequest) {
 
     // Build S3 key
     const key = buildS3Key(filename, type as 'avatar' | 'recipe');
+    console.log('Generated S3 key:', key);
 
-    const { url, fields } = await createPresignedPost(s3, {
-      Bucket: bucket,
-      Key: key,
-      Conditions: [
-        ["content-length-range", 0, maxSizeMB * 1024 * 1024],
-        ["eq", "$Content-Type", contentType],
-      ],
-      Fields: { "Content-Type": contentType },
-      Expires: 60, // 60 seconds
-    });
+    let url, fields;
+    try {
+      const presignedResult = await createPresignedPost(s3, {
+        Bucket: bucket,
+        Key: key,
+        Conditions: [
+          ["content-length-range", 0, effectiveMaxSizeMB * 1024 * 1024],
+          ["eq", "$Content-Type", contentType],
+        ],
+        Fields: { "Content-Type": contentType },
+        Expires: 60, // 60 seconds
+      });
+      
+      url = presignedResult.url;
+      fields = presignedResult.fields;
+      console.log('Generated presigned post successfully');
+    } catch (presignError) {
+      console.error('Error creating presigned post:', presignError);
+      return NextResponse.json({ 
+        error: 'Failed to create presigned post', 
+        details: presignError instanceof Error ? presignError.message : 'Unknown error'
+      }, { status: 500 });
+    }
 
     // Construct the proxy URL instead of direct S3 URL
     const proxyUrl = `/api/image/${encodeURIComponent(key)}`;

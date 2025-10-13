@@ -5,7 +5,13 @@ interface RecipeItem {
   id: string;
   title: string;
   createdAt: Date;
-  author: { name: string | null };
+  author: { 
+    id: string;
+    name: string | null; 
+    username: string | null; 
+    displayName: string | null; 
+    avatarKey: string | null; 
+  };
   photos: Array<{
     id: string;
     s3Key: string;
@@ -16,9 +22,10 @@ interface RecipeItem {
 
 interface RecipeGridProps {
   items: RecipeItem[];
+  currentUserId?: string | null;
 }
 
-export default function RecipeGrid({ items }: RecipeGridProps) {
+export default function RecipeGrid({ items, currentUserId }: RecipeGridProps) {
   if (items.length === 0) {
     return (
       <Card className="rounded-2xl border border-border bg-card shadow-sm p-12">
@@ -43,7 +50,7 @@ export default function RecipeGrid({ items }: RecipeGridProps) {
             title: item.title,
             bodyMd: "",
             servings: 1,
-            authorId: "",
+            authorId: item.author.id,
             createdAt: item.createdAt,
             updatedAt: item.createdAt,
             parentId: null,
@@ -52,7 +59,7 @@ export default function RecipeGrid({ items }: RecipeGridProps) {
             author: item.author,
             _count: { likes: 0, comments: 0 }
           }}
-          currentUserId={null}
+          currentUserId={currentUserId}
         />
       ))}
     </div>

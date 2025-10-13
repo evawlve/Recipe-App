@@ -43,9 +43,26 @@ export function EnhancedSearchBox({ className }: EnhancedSearchBoxProps) {
   }>({ users: [], recipes: [] });
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get current user information
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await fetch('/api/whoami');
+        if (response.ok) {
+          const user = await response.json();
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        console.error('Error getting current user:', error);
+      }
+    };
+    getCurrentUser();
+  }, []);
 
   const searchUsers = useCallback(async (searchTerm: string) => {
     if (!searchTerm.trim()) {
@@ -83,10 +100,15 @@ export function EnhancedSearchBox({ className }: EnhancedSearchBoxProps) {
   }, [searchUsers]);
 
   const handleUserClick = useCallback((user: UserSuggestion) => {
-    router.push(`/u/${user.username}`);
+    // Check if the clicked user is the current user
+    if (currentUser && (currentUser.id === user.id || currentUser.username === user.username)) {
+      router.push('/me');
+    } else {
+      router.push(`/u/${user.username}`);
+    }
     setIsOpen(false);
     setQuery('');
-  }, [router]);
+  }, [router, currentUser]);
 
   const handleRecipeClick = useCallback((recipe: RecipeSuggestion) => {
     router.push(`/recipes/${recipe.id}`);

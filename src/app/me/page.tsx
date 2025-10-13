@@ -54,7 +54,15 @@ export default async function MePage({ searchParams }: MePageProps) {
         id: true, 
         title: true, 
         createdAt: true, 
-        author: { select: { name: true }}, 
+        author: { 
+          select: { 
+            id: true,
+            name: true, 
+            username: true, 
+            displayName: true, 
+            avatarKey: true 
+          }
+        }, 
         photos: { select: { id: true, s3Key: true, width: true, height: true }, take: 1 } 
       }
     }),
@@ -66,7 +74,15 @@ export default async function MePage({ searchParams }: MePageProps) {
         id: true, 
         title: true, 
         createdAt: true, 
-        author: { select: { name: true }}, 
+        author: { 
+          select: { 
+            id: true,
+            name: true, 
+            username: true, 
+            displayName: true, 
+            avatarKey: true 
+          }
+        }, 
         photos: { select: { id: true, s3Key: true, width: true, height: true }, take: 1 } 
       }
     }),
