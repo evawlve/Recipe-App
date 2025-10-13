@@ -50,7 +50,14 @@ export default async function NotificationsPage() {
         <p className="text-gray-600">Stay updated with your activity</p>
       </div>
       
-      <NotificationsList initialNotifications={notifications} />
+      <NotificationsList initialNotifications={notifications.map(notification => ({
+        ...notification,
+        type: notification.type as 'follow' | 'like' | 'comment' | 'save',
+        createdAt: notification.createdAt.toISOString(),
+        readAt: notification.readAt?.toISOString() || null,
+        recipe: notification.recipe || undefined,
+        comment: notification.comment || undefined,
+      }))} />
     </div>
   );
 }

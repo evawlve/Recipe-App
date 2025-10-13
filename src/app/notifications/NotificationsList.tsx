@@ -140,7 +140,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
   };
 
   const getAvatarUrl = (avatarKey: string | null) => {
-    if (!avatarKey) return null;
+    if (!avatarKey) return undefined;
     return `/api/image/${avatarKey}`;
   };
 
