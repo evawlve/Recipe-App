@@ -31,6 +31,8 @@ model User {
   comments    Comment[]
   likes       Like[]
   recipes     Recipe[]
+  notifications Notification[] @relation("NotificationUser")
+  notificationsActed Notification[] @relation("NotificationActor")
 }
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
@@ -53,6 +55,7 @@ model Recipe {
   parent      Recipe?            @relation("Forks", fields: [parentId], references: [id])
   forks       Recipe[]           @relation("Forks")
   tags        RecipeTag[]
+  notifications Notification[]
 }
 
 model Ingredient {
@@ -107,6 +110,7 @@ model Comment {
   createdAt DateTime @default(now())
   recipe    Recipe   @relation(fields: [recipeId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+  notifications Notification[]
 }
 
 model Like {
@@ -151,4 +155,23 @@ model Follow {
   @@id([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String   // receiver
+  actorId     String   // who triggered it
+  type        String   // "follow" | "like" | "comment"
+  recipeId    String?
+  commentId   String?
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  // relations
+  user   User @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor  User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }

@@ -20,9 +20,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const recipeId = resolvedParams.id;
     
-    // Ensure the recipe exists
+    // Ensure the recipe exists and get author info
     const recipe = await prisma.recipe.findUnique({
-      where: { id: recipeId }
+      where: { id: recipeId },
+      select: { id: true, authorId: true, title: true }
     });
     
     if (!recipe) {
@@ -46,6 +47,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         recipeId
       }
     });
+
+    // Create notification for recipe author if they're not the one saving
+    if (recipe.authorId !== user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: recipe.authorId,
+          actorId: user.id,
+          type: 'save',
+          recipeId: recipe.id
+        }
+      });
+    }
 
     // Get the count of saved recipes for this user
     const count = await prisma.collectionRecipe.count({

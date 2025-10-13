@@ -103,7 +103,11 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         },
         author: {
           select: {
+            id: true,
             name: true,
+            username: true,
+            displayName: true,
+            avatarKey: true,
           },
         },
         tags: {

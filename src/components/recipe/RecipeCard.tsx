@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Recipe } from "@prisma/client";
 import { imageSrcForKey } from "@/lib/images";
 import SaveButton from "./SaveButton";
+import { AuthorLink } from "./AuthorLink";
 
 interface RecipeWithRelations extends Recipe {
   photos: Array<{
@@ -20,7 +21,11 @@ interface RecipeWithRelations extends Recipe {
   } | null;
   savedByMe?: boolean;
   author: {
+    id: string;
     name: string | null;
+    username: string | null;
+    displayName: string | null;
+    avatarKey: string | null;
   };
   _count?: { likes: number; comments: number };
 }
@@ -56,7 +61,13 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
         <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="line-clamp-2 text-lg">{recipe.title}</CardTitle>
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>By {recipe.author.name || "Anonymous"}</span>
+            <AuthorLink 
+              author={recipe.author} 
+              currentUserId={currentUserId}
+              size="sm"
+              showAvatar={true}
+              useButton={true}
+            />
             <span>{new Date(recipe.createdAt).toLocaleDateString()}</span>
           </div>
         </CardHeader>

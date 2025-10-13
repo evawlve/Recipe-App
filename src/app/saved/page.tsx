@@ -45,7 +45,11 @@ export default async function SavedPage() {
       },
       author: {
         select: {
+          id: true,
           name: true,
+          username: true,
+          displayName: true,
+          avatarKey: true,
         },
       },
       _count: {
