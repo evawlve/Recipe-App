@@ -18,6 +18,7 @@ module.exports = [
 			'**/*.min.*',
 			'package-lock.json',
 			'tsconfig.tsbuildinfo',
+			'cleanup-orphaned-users.js',
 		],
 	},
 	...nextFlat,
