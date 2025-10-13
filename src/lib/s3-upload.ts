@@ -2,7 +2,19 @@
  * Upload a single file to S3 using presigned POST
  */
 export async function uploadFileToS3(file: File): Promise<{ s3Key: string; publicUrl: string }> {
+  // Check file size before attempting upload
+  const maxSizeBytes = 15 * 1024 * 1024; // 15MB in bytes
+  if (file.size > maxSizeBytes) {
+    throw new Error(`File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the maximum allowed size of 15MB`);
+  }
+  
   // Get presigned POST data from our API
+  console.log('Requesting presigned URL for avatar upload:', {
+    filename: file.name,
+    contentType: file.type,
+    size: file.size
+  });
+  
   const presignResponse = await fetch('/api/upload', {
     method: 'POST',
     headers: {
@@ -11,16 +23,21 @@ export async function uploadFileToS3(file: File): Promise<{ s3Key: string; publi
     body: JSON.stringify({
       filename: file.name,
       contentType: file.type,
-      maxSizeMB: 10, // 10MB max per file
+      maxSizeMB: 15, // 15MB max per file
       type: 'avatar', // Specify this is an avatar upload
     }),
   });
 
+  console.log('Presigned URL response status:', presignResponse.status);
+  
   if (!presignResponse.ok) {
-    throw new Error(`Failed to get presigned URL: ${presignResponse.statusText}`);
+    const errorText = await presignResponse.text();
+    console.error('Presigned URL error response:', errorText);
+    throw new Error(`Failed to get presigned URL: ${presignResponse.status} ${presignResponse.statusText} - ${errorText}`);
   }
 
   const { url, fields, key, publicUrl } = await presignResponse.json();
+  console.log('Received presigned URL data:', { url, key, publicUrl });
 
   // Create FormData for S3 upload
   const formData = new FormData();
@@ -34,13 +51,24 @@ export async function uploadFileToS3(file: File): Promise<{ s3Key: string; publi
   formData.append('file', file);
 
   // Upload to S3
+  console.log('Uploading to S3 URL:', url);
+  console.log('FormData entries:');
+  for (const [key, value] of formData.entries()) {
+    console.log(`${key}:`, value);
+  }
+  
   const uploadResponse = await fetch(url, {
     method: 'POST',
     body: formData,
   });
 
+  console.log('S3 upload response status:', uploadResponse.status);
+  console.log('S3 upload response statusText:', uploadResponse.statusText);
+  
   if (!uploadResponse.ok) {
-    throw new Error(`Failed to upload to S3: ${uploadResponse.statusText}`);
+    const errorText = await uploadResponse.text();
+    console.error('S3 upload error response:', errorText);
+    throw new Error(`Failed to upload to S3: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`);
   }
 
   return { s3Key: key, publicUrl };

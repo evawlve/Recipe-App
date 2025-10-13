@@ -54,13 +54,17 @@ export async function GET(request: NextRequest) {
           });
 
           if (user) {
-            // Update existing user with latest metadata, but preserve existing username
+            // Update existing user with latest metadata, but preserve existing username and custom name
             const updateData: any = {
               email: data.user.email || '',
-              name: data.user.user_metadata?.name || 
-                    `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
-                    data.user.email || 'User',
             };
+
+            // Only update name if it's empty or null (first time setup)
+            if (!user.name) {
+              updateData.name = data.user.user_metadata?.name || 
+                    `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
+                    data.user.email || 'User';
+            }
 
             // Only update firstName/lastName if they're empty and we have them from OAuth
             if (!user.firstName && data.user.user_metadata?.first_name) {
@@ -90,13 +94,17 @@ export async function GET(request: NextRequest) {
             });
 
             if (existingUser) {
-              // Update the existing user's ID to match Supabase, preserve existing username
+              // Update the existing user's ID to match Supabase, preserve existing username and custom name
               const updateData: any = {
                 id: data.user.id,
-                name: data.user.user_metadata?.name || 
-                      `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
-                      data.user.email || 'User',
               };
+
+              // Only update name if it's empty or null (first time setup)
+              if (!existingUser.name) {
+                updateData.name = data.user.user_metadata?.name || 
+                      `${data.user.user_metadata?.first_name || ''} ${data.user.user_metadata?.last_name || ''}`.trim() ||
+                      data.user.email || 'User';
+              }
 
               // Only update firstName/lastName if they're empty and we have them from OAuth
               if (!existingUser.firstName && data.user.user_metadata?.first_name) {

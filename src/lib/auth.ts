@@ -58,6 +58,7 @@ export async function getCurrentUser() {
         };
 
         // Only update name if it's empty or null (first time setup)
+        // This preserves any custom display name the user has set
         if (!user.name) {
           updateData.name = authUser.user_metadata?.name || 
                 `${authUser.user_metadata?.first_name || ''} ${authUser.user_metadata?.last_name || ''}`.trim() ||

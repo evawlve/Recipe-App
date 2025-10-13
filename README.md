@@ -19,7 +19,7 @@ A full-featured recipe management application with:
 ### **Recipe Management**
 - ✅ **Create recipes** with title, servings, ingredients, and instructions
 - ✅ **Edit recipes** with full ownership validation and secure updates
-- ✅ **Image upload** with drag & drop interface
+- ✅ **Image upload** with drag & drop interface and automatic compression
 - ✅ **Existing photo management** with individual removal capability
 - ✅ **Ingredient management** with add/remove functionality
 - ✅ **Recipe listing** with search and pagination
@@ -29,6 +29,7 @@ A full-featured recipe management application with:
 - ✅ **Tag system** with autocomplete and filtering
 - ✅ **Advanced search** across titles, instructions, and tags
 - ✅ **Tag-based filtering** with popular tags display
+- ✅ **Author discovery** - Clickable author avatars and names for user discovery
 
 ### **Form Experience**
 - ✅ **React Hook Form + Zod** validation
@@ -43,6 +44,11 @@ A full-featured recipe management application with:
 - ✅ **Image optimization** with Next.js Image component
 - ✅ **Multiple image support** per recipe
 - ✅ **Automatic dimension detection**
+- ✅ **Client-side image compression** - Automatic compression before upload
+- ✅ **WebP conversion** - Convert all images to WebP format for optimal size
+- ✅ **EXIF orientation support** - Proper image orientation handling
+- ✅ **Avatar square cropping** - Automatic square cropping for profile pictures
+- ✅ **15MB file size limit** - Increased limit for all uploads (recipes and avatars)
 
 ### **Authentication & Security**
 - ✅ **Supabase Auth** - Email/password and Google OAuth authentication
@@ -93,6 +99,18 @@ A full-featured recipe management application with:
 - ✅ **Smart Profile Redirects** - Users accessing their own profile are redirected to /me page
 - ✅ **Enhanced /me Page** - Personal dashboard with follower/following counts and complete stats
 
+### **Notifications System**
+- ✅ **Bell Icon with Unread Count** - Real-time notification count in navbar with polling
+- ✅ **Notification Types** - Follow, like, comment, and save notifications
+- ✅ **Auto-Read Functionality** - Notifications automatically marked as read when viewing page
+- ✅ **User Discovery** - Clickable user avatars and names for profile discovery
+- ✅ **Smart Navigation** - Click notifications to navigate to relevant content
+- ✅ **Dark Mode Support** - Proper text readability in both light and dark themes
+- ✅ **Responsive Design** - Works seamlessly on all screen sizes
+- ✅ **Real-time Polling** - Bell icon polls every 30 seconds for unread count
+- ✅ **Notification Creation** - Automatic notifications when users interact with content
+- ✅ **Database Schema** - Complete notification model with proper relations and indexes
+
 ### **Collections & Saved Recipes**
 - ✅ **Saved Collections** - Automatic "Saved" collection created per user
 - ✅ **Save/Unsave Recipes** - Toggle save status with optimistic UI updates
@@ -123,7 +141,7 @@ A full-featured recipe management application with:
 - ✅ **User Statistics** - Display follower count, following count, and recipe count
 - ✅ **Enhanced Search Box** - Search both users and recipes with suggestions
 - ✅ **Profile Management** - Real-time profile updates without page refresh
-- ✅ **Avatar Management** - Upload and crop avatars with preview functionality
+- ✅ **Avatar Management** - Upload and crop avatars with automatic compression and square cropping
 - ✅ **Smart Profile Navigation** - Users accessing their own profile are redirected to /me
 - ✅ **Enhanced Personal Dashboard** - /me page shows complete social stats (followers/following)
 - ✅ **Universal Follow Button** - Follow button visible to all users (redirects non-logged-in users to login)
@@ -131,6 +149,8 @@ A full-featured recipe management application with:
 - ✅ **Username Persistence** - Usernames preserved across sign-ins and OAuth flows
 - ✅ **Orphaned Data Cleanup** - Scripts to clean up orphaned user data
 - ✅ **JWT Token Management** - Proper session cleanup after account deletion
+- ✅ **Author Discovery** - Clickable author information in recipe cards and pages
+- ✅ **Enhanced User Search** - Search results redirect to /me for current user, /u/[username] for others
 
 ## 🚀 Quick Start
 
@@ -474,6 +494,28 @@ GET /me
 # Returns: Personal dashboard with followers, following, uploaded, and saved counts
 ```
 
+### **Notifications**
+```bash
+# Get notifications with pagination (auth required)
+GET /api/notifications?after=2023-01-01T00:00:00Z&limit=20
+# Response: [{ id, type, createdAt, readAt, actor: { id, username, displayName, avatarKey }, recipe: { id, title }, comment: { id, body } }]
+
+# Mark notifications as read (auth required)
+POST /api/notifications/read
+{
+  "ids": ["notif1", "notif2"]  # Optional: specific notification IDs
+}
+# Response: { "ok": true, "unread": number }
+
+# Get unread notification count (auth required)
+GET /api/notifications/unread-count
+# Response: { "unread": number }
+
+# Notifications page
+GET /notifications
+# Returns: Notifications page with server-side rendering and auto-read functionality
+```
+
 #### Permissions & Behavior
 - Never trust client `userId`; the server uses the authenticated user.
 - Like actions are idempotent; duplicate likes are ignored server-side.
@@ -489,6 +531,10 @@ GET /me
 - Users accessing their own profile (`/u/username`) are automatically redirected to `/me`.
 - Follow actions are idempotent; duplicate follows are ignored server-side.
 - Follow button shows helpful tooltip for non-logged-in users: "Sign in to follow this user".
+- Notifications are automatically created when users interact with content (follow, like, comment, save).
+- Notification creation is idempotent; duplicate notifications are prevented server-side.
+- Notifications are automatically marked as read when viewing the notifications page.
+- Bell icon polls every 30 seconds for unread count updates.
 
 ### **Image Upload**
 ```bash
@@ -497,12 +543,21 @@ POST /api/upload
 {
   "filename": "photo.jpg",
   "contentType": "image/jpeg",
-  "maxSizeMB": 10
+  "maxSizeMB": 15,
+  "type": "recipe"  # or "avatar"
 }
 
 # Serve images (private)
-GET /api/image/uploads/filename.jpg
+GET /api/image/uploads/filename.webp
 ```
+
+**Image Compression Features:**
+- **Automatic compression** - All images are compressed before upload
+- **WebP conversion** - Images converted to WebP format for optimal size
+- **Recipe photos** - Compressed to 2048px max dimension, 82% quality
+- **Avatar images** - Square cropped and compressed to 1024px, 85% quality
+- **EXIF orientation** - Proper handling of image orientation
+- **15MB limit** - Increased file size limit for all uploads
 
 ### **Tags & Search**
 ```bash
@@ -690,6 +745,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - **Tag filtering** allows users to browse recipes by specific categories
 - **Autocomplete suggestions** help users discover existing tags
 - **URL state management** preserves search and filter states for sharing
+- **Google OAuth display name preservation** ensures custom names aren't overridden by OAuth metadata
+- **Recipe navigation fixes** resolve NEXT_NOT_FOUND errors and avatar display issues in recipe cards
+- **Complete data structure** ensures all recipe components receive proper data for navigation and display
 
 ## 🆕 Recent Updates
 
@@ -714,6 +772,27 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **JWT Token Management** - Proper session cleanup after account deletion
 - ✅ **Orphaned Data Cleanup** - Scripts to identify and clean up orphaned user data
 
+### **Authentication & Display Name Fixes**
+- ✅ **Google OAuth Display Name Preservation** - Fixed issue where Google OAuth was overriding custom display names
+- ✅ **Custom Name Protection** - Users' custom display names are now preserved across Google OAuth sign-ins
+- ✅ **OAuth Metadata Handling** - Improved OAuth callback to only update empty fields, not override existing user data
+- ✅ **Profile Data Integrity** - Ensured user profile data remains consistent across authentication methods
+
+### **Recipe Navigation & UI Fixes**
+- ✅ **Recipe Card Navigation Fix** - Resolved NEXT_NOT_FOUND errors when clicking recipes from /me page
+- ✅ **Complete Recipe Data Structure** - Fixed incomplete recipe objects that were causing navigation failures
+- ✅ **Avatar Display in Recipe Cards** - Fixed avatar display issues in recipe cards by including complete author data
+- ✅ **Enhanced Recipe Grid Component** - Updated RecipeGrid to pass complete author data and current user context
+- ✅ **Improved Recipe Card Data Flow** - Ensured recipe cards receive all required data for proper navigation and display
+
+### **User Discovery & Navigation Enhancements**
+- ✅ **Clickable Author Information** - Author avatars, names, and usernames are now clickable in recipe cards and pages
+- ✅ **Smart Profile Navigation** - Clicking on your own author info redirects to /me, others redirect to their profile
+- ✅ **Enhanced Author Display** - Author avatars and usernames are visible and clickable for better user discovery
+- ✅ **Fallback Avatar System** - Users without avatars see colored circles with their initials
+- ✅ **Consistent Author Data** - All recipe displays now include complete author information (id, username, displayName, avatarKey)
+- ✅ **Server Component Compliance** - Fixed nested anchor tag issues by using client components for clickable author links
+
 ### **Profile & Social System Enhancements**
 - ✅ **Smart Profile Redirects** - Users accessing their own profile (`/u/username`) are automatically redirected to `/me`
 - ✅ **Enhanced /me Page** - Personal dashboard now displays complete social statistics (followers, following, uploaded, saved)
@@ -736,13 +815,41 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Signup Flow Guards** - Automatic redirect system for incomplete profiles
 - ✅ **Enhanced Authentication** - Improved user session management and profile completion flow
 
+### **Image Compression & Optimization**
+- ✅ **Client-side Image Compression** - Automatic compression before upload using Canvas API
+- ✅ **WebP Conversion** - All images converted to WebP format for optimal file size
+- ✅ **EXIF Orientation Support** - Proper handling of image orientation using createImageBitmap
+- ✅ **Avatar Square Cropping** - Automatic square cropping for profile pictures
+- ✅ **Quality Optimization** - Different compression settings for recipes (82% quality) vs avatars (85% quality)
+- ✅ **File Size Reduction** - Typical 80-90% size reduction (20MB → 1-2MB)
+- ✅ **15MB Upload Limit** - Increased file size limit for all uploads (recipes and avatars)
+- ✅ **Enhanced File Support** - Support for JPEG, PNG, WebP, and HEIC formats
+- ✅ **Automatic Dimension Detection** - Compressed images include accurate width/height metadata
+
+### **Notifications System MVP**
+- ✅ **Complete Notifications Infrastructure** - Full notification system with database schema, API routes, and UI components
+- ✅ **Bell Icon with Unread Count** - Real-time notification count in navbar with 30-second polling
+- ✅ **Notification Types** - Follow, like, comment, and save notifications automatically created
+- ✅ **Smart Navigation** - Click notifications to navigate to relevant content (follow → /me, like/comment/save → recipe)
+- ✅ **User Discovery** - Clickable user avatars and names for profile discovery
+- ✅ **Auto-Read Functionality** - Notifications automatically marked as read when viewing page
+- ✅ **Dark Mode Support** - Proper text readability in both light and dark themes
+- ✅ **Responsive Design** - Works seamlessly on all screen sizes
+- ✅ **Database Schema** - Complete notification model with proper relations and indexes
+- ✅ **API Endpoints** - GET /api/notifications, POST /api/notifications/read, GET /api/notifications/unread-count
+- ✅ **Server-Side Rendering** - Notifications page with server-side data fetching
+- ✅ **Real-time Polling** - Bell icon polls every 30 seconds and on window focus
+- ✅ **Notification Creation** - Automatic notifications when users interact with content
+- ✅ **Proper Avatar Display** - User avatars display correctly using /api/image/ route
+- ✅ **No Nested Links** - Fixed HTML validation issues with proper click handlers
+
 ## 📋 TODO - Next Development Phase
 
-### **Notifications System**
-- 🔲 **Notification Center** - Wire up the notifications button in the navbar
-- 🔲 **Real-time Notifications** - Implement real-time notification system
-- 🔲 **Notification Types** - Like notifications, comment notifications, follow notifications
+### **Enhanced Notifications**
+- 🔲 **Real-time Notifications** - Implement WebSocket or Server-Sent Events for instant notifications
 - 🔲 **Notification Settings** - Allow users to customize notification preferences
+- 🔲 **Email Notifications** - Optional email notifications for important events
+- 🔲 **Push Notifications** - Browser push notifications for real-time updates
 
 ### **Enhanced Social Features**
 - 🔲 **Activity Feed** - Show activity from followed users

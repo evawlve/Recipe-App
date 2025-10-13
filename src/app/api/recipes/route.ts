@@ -49,7 +49,11 @@ export async function POST(request: NextRequest) {
       include: {
         author: {
           select: {
+            id: true,
             name: true,
+            username: true,
+            displayName: true,
+            avatarKey: true,
           },
         },
       },
