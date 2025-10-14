@@ -32,8 +32,8 @@ export function kjToKcal(kj: number): number {
 }
 
 const DENSITY = {
-  tsp: { oil: 4.5, water: 4.9 },
-  tbsp:{ oil: 13.6, water: 14.7 },
+  tsp: { oil: 4.5, water: 5 },
+  tbsp: { oil: 13.6, water: 15 },
   cup: { oil: 216, water: 240, flour: 120, sugar: 200, rice: 185, oats: 90 },
 };
 
@@ -45,7 +45,15 @@ export function servingToGrams(raw: RawFood): number | null {
   if (!n || n <= 0) return null;
 
   if (unit === "g" || unit === "gram" || unit === "grams") return n;
-  if (unit === "ml") return n; // water-like default
+
+  const isLiquid = (raw.categoryHint || "").toLowerCase().includes("liquid") ||
+    (raw.categoryHint || "").toLowerCase().includes("water") ||
+    (raw.categoryHint || "").toLowerCase().includes("milk") ||
+    (raw.categoryHint || "").toLowerCase().includes("broth") ||
+    (raw.categoryHint || "").toLowerCase().includes("stock") ||
+    (raw.categoryHint || "").toLowerCase().includes("juice");
+
+  if ((unit === "ml" || unit === "milliliter" || unit === "milliliters") && isLiquid) return n; // water-like default
 
   // household measures via density table
   const cat = (raw.categoryHint || "").toLowerCase();
@@ -60,15 +68,24 @@ export function servingToGrams(raw: RawFood): number | null {
     return null;
   }
 
-  if (unit === "tsp") {
+  const normalizeUnit = (value: string) => {
+    if (["tsp", "teaspoon", "teaspoons"].includes(value)) return "tsp";
+    if (["tbsp", "tablespoon", "tablespoons"].includes(value)) return "tbsp";
+    if (["cup", "cups"].includes(value)) return "cup";
+    return value;
+  };
+
+  const normalizedUnit = normalizeUnit(unit);
+
+  if (normalizedUnit === "tsp") {
     const g = pick(DENSITY.tsp);
     return g ? n * g : null;
   }
-  if (unit === "tbsp") {
+  if (normalizedUnit === "tbsp") {
     const g = pick(DENSITY.tbsp);
     return g ? n * g : null;
   }
-  if (unit === "cup") {
+  if (normalizedUnit === "cup") {
     const g = pick(DENSITY.cup);
     return g ? n * g : null;
   }

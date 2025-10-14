@@ -34,6 +34,21 @@ export interface FDCSearchResult {
   }>;
   servingSize?: number;
   servingSizeUnit?: string;
+  labelNutrients?: {
+    calories?: { value?: number | null };
+    fat?: { value?: number | null };
+    carbohydrates?: { value?: number | null };
+    protein?: { value?: number | null };
+    fiber?: { value?: number | null };
+    sugars?: { value?: number | null };
+  };
+  foodPortions?: Array<{
+    gramWeight?: number | null;
+    modifier?: string | null;
+    portionDescription?: string | null;
+    measureUnit?: { name?: string | null } | null;
+  }>;
+  householdServingFullText?: string | null;
 }
 
 export interface FDCSearchResponse {
@@ -142,15 +157,19 @@ async function searchFDCFoods(query: string, dataType: string, apiKey: string): 
 async function normalizeFDCFood(food: FDCSearchResult): Promise<FDCFood | null> {
   try {
     // Extract nutrition data
-    const nutrients = extractNutrients(food.foodNutrients || []);
-    
+    const nutrients = extractNutrients(food);
+
     // Clean up name and brand
     const name = cleanFoodName(food.description);
     const brand = food.brandOwner || food.brandName || undefined;
-    
+
     // Extract category hint for density calculations
     const categoryHint = extractCategoryHint(name, brand);
-    
+
+    const servingSize = coerceToNumber(food.servingSize);
+    const servingSizeUnit = food.servingSizeUnit || undefined;
+    const gramWeight = resolveGramWeight(food, categoryHint);
+
     // Create RawFood object for normalizer
     const rawFood: RawFood = {
       name,
@@ -162,10 +181,10 @@ async function normalizeFDCFood(food: FDCSearchResult): Promise<FDCFood | null> 
       fatG: nutrients.fatG,
       fiberG: nutrients.fiberG,
       sugarG: nutrients.sugarG,
-      servingSize: food.servingSize,
-      servingSizeUnit: food.servingSizeUnit,
-      gramWeight: getServingSizeInGrams(food),
-      categoryHint
+      servingSize: servingSize ?? undefined,
+      servingSizeUnit,
+      gramWeight: gramWeight ?? undefined,
+      categoryHint,
     };
     
     // Use robust normalizer
@@ -212,9 +231,9 @@ async function normalizeFDCFood(food: FDCSearchResult): Promise<FDCFood | null> 
 }
 
 /**
- * Extract nutrition values from FDC food nutrients array
+ * Extract nutrition values from an FDC search result
  */
-function extractNutrients(foodNutrients: Array<{ nutrientId: number; nutrientName: string; value: number }>) {
+function extractNutrients(food: FDCSearchResult) {
   const nutrients: {
     calories?: number;
     energyKj?: number;
@@ -225,32 +244,42 @@ function extractNutrients(foodNutrients: Array<{ nutrientId: number; nutrientNam
     sugarG?: number;
   } = {};
 
-  for (const fn of foodNutrients) {
-    const nutrientId = fn.nutrientId;
-    const amount = fn.value || 0;
+  const label = food.labelNutrients;
+  if (label) {
+    if (label.calories?.value != null) nutrients.calories = label.calories.value;
+    if (label.protein?.value != null) nutrients.proteinG = label.protein.value;
+    if (label.carbohydrates?.value != null) nutrients.carbsG = label.carbohydrates.value;
+    if (label.fat?.value != null) nutrients.fatG = label.fat.value;
+    if (label.fiber?.value != null) nutrients.fiberG = label.fiber.value;
+    if (label.sugars?.value != null) nutrients.sugarG = label.sugars.value;
+  }
 
-    // FDC nutrient IDs (these are the standard ones)
+  for (const fn of food.foodNutrients || []) {
+    const nutrientId = fn.nutrientId;
+    const amount = fn.value ?? null;
+    if (amount == null) continue;
+
     switch (nutrientId) {
       case 1008: // Energy (kcal)
-        nutrients.calories = amount;
+        if (nutrients.calories == null) nutrients.calories = amount;
         break;
       case 1062: // Energy (kJ)
-        nutrients.energyKj = amount;
+        if (nutrients.energyKj == null) nutrients.energyKj = amount;
         break;
       case 1003: // Protein (g)
-        nutrients.proteinG = amount;
+        if (nutrients.proteinG == null) nutrients.proteinG = amount;
         break;
       case 1005: // Carbohydrate, by difference (g)
-        nutrients.carbsG = amount;
+        if (nutrients.carbsG == null) nutrients.carbsG = amount;
         break;
       case 1004: // Total lipid (fat) (g)
-        nutrients.fatG = amount;
+        if (nutrients.fatG == null) nutrients.fatG = amount;
         break;
       case 1079: // Fiber, total dietary (g)
-        nutrients.fiberG = amount;
+        if (nutrients.fiberG == null) nutrients.fiberG = amount;
         break;
       case 2000: // Sugars, total including NLEA (g)
-        nutrients.sugarG = amount;
+        if (nutrients.sugarG == null) nutrients.sugarG = amount;
         break;
     }
   }
@@ -258,63 +287,89 @@ function extractNutrients(foodNutrients: Array<{ nutrientId: number; nutrientNam
   return nutrients;
 }
 
-/**
- * Convert serving size to grams
- */
-function getServingSizeInGrams(food: FDCSearchResult): number | null {
-  const servingSize = food.servingSize;
-  const servingSizeUnit = food.servingSizeUnit;
+function coerceToNumber(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
-  if (!servingSize || !servingSizeUnit) {
-    return null;
+function resolveGramWeight(food: FDCSearchResult, categoryHint?: string | null): number | null {
+  const portionGram = pickPortionGramWeight(food);
+  if (portionGram != null && portionGram > 0) {
+    if (Math.abs(portionGram - 100) <= 0.5) return 100;
+    return portionGram;
   }
 
-  // Convert to grams based on unit
-  const unit = servingSizeUnit.toLowerCase();
-  const size = parseFloat(servingSize.toString());
-
-  switch (unit) {
-    case 'g':
-    case 'gram':
-    case 'grams':
-      return size;
-    case 'kg':
-    case 'kilogram':
-    case 'kilograms':
-      return size * 1000;
-    case 'oz':
-    case 'ounce':
-    case 'ounces':
-      return size * 28.3495;
-    case 'lb':
-    case 'pound':
-    case 'pounds':
-      return size * 453.592;
-    case 'ml':
-    case 'milliliter':
-    case 'milliliters':
-      // Assume 1ml = 1g for liquids (approximation)
-      return size;
-    case 'l':
-    case 'liter':
-    case 'liters':
-      return size * 1000;
-    case 'cup':
-    case 'cups':
-      // Assume 1 cup = 240ml = 240g (approximation)
-      return size * 240;
-    case 'tbsp':
-    case 'tablespoon':
-    case 'tablespoons':
-      return size * 15; // 1 tbsp = 15ml
-    case 'tsp':
-    case 'teaspoon':
-    case 'teaspoons':
-      return size * 5; // 1 tsp = 5ml
-    default:
-      console.warn(`Unknown serving size unit: ${servingSizeUnit}`);
-      return null;
+  const textGram = extractGramWeightFromText(food.householdServingFullText);
+  if (textGram != null && textGram > 0) {
+    if (Math.abs(textGram - 100) <= 0.5) return 100;
+    return textGram;
   }
+
+  const servingSize = coerceToNumber(food.servingSize);
+  if (!servingSize || servingSize <= 0) return null;
+
+  const unit = (food.servingSizeUnit || '').toLowerCase().trim();
+  if (!unit) return null;
+
+  if (['g', 'gram', 'grams'].includes(unit)) {
+    if (Math.abs(servingSize - 100) <= 0.5) return 100;
+    return servingSize;
+  }
+
+  // let the density table handle household measures based on category hints
+  if (['ml', 'milliliter', 'milliliters'].includes(unit)) {
+    const hint = (categoryHint || '').toLowerCase();
+    if (
+      hint.includes('liquid') ||
+      hint.includes('water') ||
+      hint.includes('milk') ||
+      hint.includes('broth') ||
+      hint.includes('stock') ||
+      hint.includes('juice')
+    ) {
+      return servingSize;
+    }
+  }
+
+  return null;
+}
+
+function pickPortionGramWeight(food: FDCSearchResult): number | null {
+  if (!food.foodPortions || food.foodPortions.length === 0) return null;
+
+  let best: { gram: number; score: number } | null = null;
+
+  for (const portion of food.foodPortions) {
+    const gram = coerceToNumber(portion.gramWeight);
+    if (!gram || gram <= 0) continue;
+
+    const modifier = (portion.modifier || '').toLowerCase();
+    const description = (portion.portionDescription || '').toLowerCase();
+    const measureName = (portion.measureUnit?.name || '').toLowerCase();
+
+    let score = 1;
+    if (Math.abs(gram - 100) <= 0.5) score += 5;
+    if (modifier.includes('100 g') || description.includes('100 g')) score += 5;
+    if (measureName === 'g' || measureName === 'gram' || measureName === 'grams') score += 4;
+    if (modifier.includes('serving') || description.includes('serving')) score += 2;
+    if (modifier.includes('tbsp') || description.includes('tbsp')) score += 1;
+
+    if (!best || score > best.score) {
+      best = { gram, score };
+    }
+  }
+
+  return best?.gram ?? null;
+}
+
+function extractGramWeightFromText(text?: string | null): number | null {
+  if (!text) return null;
+  const match = text.match(/([\d.]+)\s*g/i);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 /**
