@@ -40,6 +40,11 @@ export default async function RecipePage({ params }: RecipePageProps) {
           proteinG: true,
           carbsG: true,
           fatG: true,
+          fiberG: true,
+          sugarG: true,
+          healthScore: true,
+          goal: true,
+          computedAt: true,
         },
       },
       author: {
@@ -229,6 +234,16 @@ export default async function RecipePage({ params }: RecipePageProps) {
                 <CardTitle>Nutrition Facts</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Health Score */}
+                {recipe.nutrition.healthScore && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-text">
+                      {recipe.nutrition.healthScore}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Health Score</div>
+                  </div>
+                )}
+                
                 <div className="text-center">
                   <div className="text-2xl font-bold text-text">
                     {recipe.nutrition.calories}
@@ -255,6 +270,22 @@ export default async function RecipePage({ params }: RecipePageProps) {
                       {recipe.nutrition.fatG.toFixed(1)}g
                     </span>
                   </div>
+                  {recipe.nutrition.fiberG && recipe.nutrition.fiberG > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Fiber</span>
+                      <span className="text-sm font-medium text-text">
+                        {recipe.nutrition.fiberG.toFixed(1)}g
+                      </span>
+                    </div>
+                  )}
+                  {recipe.nutrition.sugarG && recipe.nutrition.sugarG > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Sugar</span>
+                      <span className="text-sm font-medium text-text">
+                        {recipe.nutrition.sugarG.toFixed(1)}g
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="pt-4 border-t border-border">

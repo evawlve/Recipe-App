@@ -65,6 +65,7 @@ model Ingredient {
   qty      Float
   unit     String
   recipe   Recipe @relation(fields: [recipeId], references: [id])
+  foodMaps IngredientFoodMap[]
 }
 
 model Nutrition {
@@ -73,6 +74,10 @@ model Nutrition {
   proteinG   Float
   carbsG     Float
   fatG       Float
+  fiberG     Float?   @default(0)
+  sugarG     Float?   @default(0)
+  healthScore Float?  @default(0)
+  goal       String?  @default("general") // "general" | "weight_loss" | "muscle_gain" | "maintenance"
   computedAt DateTime @default(now())
   recipe     Recipe   @relation(fields: [recipeId], references: [id])
 }
@@ -174,4 +179,56 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+}
+
+enum FoodSource {
+  SEED
+  FDC_BRANDED
+  FDC_FOUNDATION
+  FDC_SR_LEGACY
+  MANUAL
+}
+
+model Food {
+  id          String   @id @default(cuid())
+  name        String
+  brand       String?
+  source      FoodSource @default(SEED)
+  
+  // Per 100g nutrition values
+  calories    Float
+  proteinG    Float
+  carbsG      Float
+  fatG        Float
+  fiberG      Float    @default(0)
+  sugarG      Float    @default(0)
+  
+  // Metadata
+  fdcId       String?  @unique // USDA FoodData Central ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  ingredientMaps IngredientFoodMap[]
+  
+  @@index([name])
+  @@index([brand])
+  @@index([source])
+  @@unique([name, brand])
+}
+
+model IngredientFoodMap {
+  id           String   @id @default(cuid())
+  ingredientId String
+  foodId       String
+  confidence   Float?   @default(1.0) // 0-1 confidence score
+  createdAt    DateTime @default(now())
+  
+  // Relations
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  food         Food       @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  
+  @@unique([ingredientId, foodId])
+  @@index([ingredientId])
+  @@index([foodId])
 }

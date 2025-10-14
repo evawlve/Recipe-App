@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { recipeUpdateSchema } from "@/lib/validation";
 import { z } from "zod";
+import { autoMapIngredients } from "@/lib/nutrition/auto-map";
+import { computeRecipeNutrition } from "@/lib/nutrition/compute";
 
 export const runtime = "nodejs";
 
@@ -156,6 +158,19 @@ export async function PATCH(
           }
         });
       }
+    }
+
+    // Auto-map any new ingredients to foods and compute nutrition
+    try {
+      const mappedCount = await autoMapIngredients(id);
+      console.log(`Auto-mapped ${mappedCount} ingredients for recipe ${id}`);
+      
+      // Always compute nutrition after ingredient changes
+      await computeRecipeNutrition(id, 'general');
+      console.log(`Computed nutrition for recipe ${id}`);
+    } catch (error) {
+      console.error('Error auto-mapping ingredients or computing nutrition:', error);
+      // Don't fail the recipe update if auto-mapping fails
     }
 
     return NextResponse.json({ 

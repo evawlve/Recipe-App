@@ -92,6 +92,8 @@ function NewRecipeForm() {
 
       if (result.success) {
         clearDraft(); // Clear the draft on successful submission
+        // Show success message with auto-mapping info
+        console.log('Recipe created successfully! Ingredients have been automatically mapped for nutrition calculation.');
         router.push(`/recipes/${result.recipe.id}`);
       } else {
         setSubmitError(result.error || "Failed to create recipe. Please try again.");

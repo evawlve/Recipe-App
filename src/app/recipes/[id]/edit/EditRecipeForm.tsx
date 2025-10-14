@@ -19,6 +19,8 @@ import { X, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { imageSrcForKey } from "@/lib/images";
 import { recipeUpdateSchema, RecipeUpdateInput } from "@/lib/validation";
+import { NutritionSidebar } from "@/components/recipe/NutritionSidebar";
+import { IngredientMappingModal } from "@/components/recipe/IngredientMappingModal";
 
 interface EditRecipeFormProps {
   recipeId: string;
@@ -49,6 +51,9 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
   const [fileStates, setFileStates] = useState<FileState[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [existingPhotos, setExistingPhotos] = useState(initialData.photos);
+  const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
+  const [isSavingIngredients, setIsSavingIngredients] = useState(false);
+  const [ingredientsSaved, setIngredientsSaved] = useState(false);
   
   const form = useForm<RecipeUpdateInput>({
     resolver: zodResolver(recipeUpdateSchema),
@@ -133,8 +138,44 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
     }
   };
 
+  const saveIngredients = async () => {
+    setIsSavingIngredients(true);
+    setSubmitError(null);
+    
+    try {
+      const currentData = form.getValues();
+      
+      const payload = {
+        ingredients: currentData.ingredients,
+      };
+
+      const response = await fetch(`/api/recipes/${recipeId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setIngredientsSaved(true);
+        // Hide success message after 3 seconds
+        setTimeout(() => setIngredientsSaved(false), 3000);
+      } else {
+        setSubmitError(result.error || "Failed to save ingredients. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error saving ingredients:", error);
+      setSubmitError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsSavingIngredients(false);
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
           <Button variant="outline" asChild>
@@ -146,6 +187,10 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
           Update your recipe details below
         </p>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Form */}
+        <div className="lg:col-span-2">
 
       {/* Error Alert */}
       {submitError && (
@@ -275,15 +320,34 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
               </div>
             ))}
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => append({ name: "", qty: 1, unit: "" })}
-              disabled={isSubmitting}
-              className="w-full"
-            >
-              + Add Ingredient
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => append({ name: "", qty: 1, unit: "" })}
+                disabled={isSubmitting || isSavingIngredients}
+                className="flex-1"
+              >
+                + Add Ingredient
+              </Button>
+              
+              <Button
+                type="button"
+                onClick={saveIngredients}
+                disabled={isSubmitting || isSavingIngredients}
+                className="flex-1"
+              >
+                {isSavingIngredients ? "Saving..." : "Save Ingredients"}
+              </Button>
+            </div>
+
+            {ingredientsSaved && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  ✅ Ingredients saved successfully!
+                </p>
+              </div>
+            )}
 
             {errors.ingredients && (
               <p className="text-sm text-destructive">
@@ -405,6 +469,29 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
           </div>
         </div>
       </form>
+        </div>
+
+        {/* Nutrition Sidebar */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-8">
+            <NutritionSidebar 
+              recipeId={recipeId}
+              onOpenMappingModal={() => setIsMappingModalOpen(true)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Ingredient Mapping Modal */}
+      <IngredientMappingModal
+        isOpen={isMappingModalOpen}
+        onClose={() => setIsMappingModalOpen(false)}
+        recipeId={recipeId}
+        onMappingComplete={() => {
+          // Refresh the nutrition sidebar
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }
