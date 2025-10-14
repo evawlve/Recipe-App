@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { recipeApiSchema } from "@/lib/validation";
 import { getCurrentUser } from "@/lib/auth";
+import { autoMapIngredients } from "@/lib/nutrition/auto-map";
+import { computeRecipeNutrition } from "@/lib/nutrition/compute";
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,6 +85,19 @@ export async function POST(request: NextRequest) {
           }
         });
       }
+    }
+
+    // Auto-map ingredients to foods and compute nutrition
+    try {
+      const mappedCount = await autoMapIngredients(recipe.id);
+      console.log(`Auto-mapped ${mappedCount} ingredients for recipe ${recipe.id}`);
+      
+      // Compute nutrition after mapping ingredients
+      await computeRecipeNutrition(recipe.id, 'general');
+      console.log(`Computed nutrition for recipe ${recipe.id}`);
+    } catch (error) {
+      console.error('Error auto-mapping ingredients or computing nutrition:', error);
+      // Don't fail the recipe creation if auto-mapping fails
     }
     
     return NextResponse.json({ 

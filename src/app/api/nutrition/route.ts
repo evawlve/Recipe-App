@@ -1,49 +1,113 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { computeRecipeNutrition, getUnmappedIngredients } from '@/lib/nutrition/compute';
+import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 /**
- * Very small nutrition calculator stub.
- * Input: { items: [{ name: string, qty: number, unit: string }] }
- * Output: totals (calories, proteinG, carbsG, fatG)
- *
- * NOTE: This uses a tiny hardcoded table for demo purposes.
- * Replace with a real datasource later.
+ * Compute nutrition for a recipe
+ * POST /api/nutrition
+ * Body: { recipeId: string, goal?: string }
  */
-const table = [
-  { key: 'chicken breast', calories: 165, proteinG: 31, carbsG: 0, fatG: 3.6, basis: { qty: 100, unit: 'g' } },
-  { key: 'egg', calories: 72, proteinG: 6.3, carbsG: 0.4, fatG: 4.8, basis: { qty: 1, unit: 'unit' } },
-  { key: 'rolled oats', calories: 389, proteinG: 16.9, carbsG: 66.3, fatG: 6.9, basis: { qty: 100, unit: 'g' } },
-  { key: 'banana', calories: 105, proteinG: 1.3, carbsG: 27, fatG: 0.4, basis: { qty: 1, unit: 'unit' } },
-];
+export async function POST(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-function findRow(name: string) {
-  const n = name.toLowerCase().trim();
-  return table.find(r => n.includes(r.key));
+    const { recipeId, goal = 'general' } = await req.json();
+    
+    if (!recipeId) {
+      return NextResponse.json({ error: 'Recipe ID is required' }, { status: 400 });
+    }
+
+    // Verify user owns the recipe
+    const recipe = await prisma.recipe.findFirst({
+      where: { id: recipeId, authorId: user.id }
+    });
+
+    if (!recipe) {
+      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+    }
+
+    const result = await computeRecipeNutrition(recipeId, goal as any);
+    
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Nutrition computation error:', error);
+    return NextResponse.json(
+      { error: 'Failed to compute nutrition' },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const items = Array.isArray(body?.items) ? body.items : [];
-
-  const totals = items.reduce((acc: { calories: number; proteinG: number; carbsG: number; fatG: number }, it: any) => {
-    const row = findRow(String(it.name || ''));
-    if (!row) return acc;
-    const factor = it.unit === row.basis.unit
-      ? Number(it.qty) / row.basis.qty
-      : 0; // simplistic; add conversions later
-
-    acc.calories += row.calories * factor;
-    acc.proteinG += row.proteinG * factor;
-    acc.carbsG += row.carbsG * factor;
-    acc.fatG += row.fatG * factor;
-    return acc;
-  }, { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 });
-
-  return NextResponse.json({
-    totals: {
-      calories: Math.round(totals.calories),
-      proteinG: Number(totals.proteinG.toFixed(1)),
-      carbsG: Number(totals.carbsG.toFixed(1)),
-      fatG: Number(totals.fatG.toFixed(1)),
+/**
+ * Get unmapped ingredients for a recipe
+ * GET /api/nutrition?recipeId=...
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-  });
+
+    const { searchParams } = new URL(req.url);
+    const recipeId = searchParams.get('recipeId');
+    
+    if (!recipeId) {
+      return NextResponse.json({ error: 'Recipe ID is required' }, { status: 400 });
+    }
+
+    // Verify user owns the recipe
+    const recipe = await prisma.recipe.findFirst({
+      where: { id: recipeId, authorId: user.id }
+    });
+
+    if (!recipe) {
+      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+    }
+
+    const unmappedIngredients = await getUnmappedIngredients(recipeId);
+    
+    // Also get existing nutrition data if it exists
+    const existingNutrition = await prisma.nutrition.findUnique({
+      where: { recipeId }
+    });
+    
+    let nutritionData = null;
+    if (existingNutrition) {
+      // If nutrition exists, compute the current totals and score
+      const { computeTotals, scoreV1 } = await import('@/lib/nutrition/compute');
+      const totals = await computeTotals(recipeId);
+      const score = scoreV1(totals, existingNutrition.goal as any);
+      
+      nutritionData = {
+        totals,
+        score,
+        unmappedIngredients
+      };
+    } else {
+      nutritionData = {
+        totals: null,
+        score: null,
+        unmappedIngredients
+      };
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: nutritionData
+    });
+  } catch (error) {
+    console.error('Get unmapped ingredients error:', error);
+    return NextResponse.json(
+      { error: 'Failed to get unmapped ingredients' },
+      { status: 500 }
+    );
+  }
 }
