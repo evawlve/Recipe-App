@@ -1,6 +1,9 @@
 import { prisma } from '../db';
 import { FoodSource } from '@prisma/client';
 import { servingToGrams, extractCategoryHint } from './normalize';
+import { logger } from '../logger';
+import { HEALTH_SCORE_V2 } from '../flags';
+import { scoreV2 } from './score-v2';
 
 export interface NutritionTotals {
   calories: number;
@@ -12,14 +15,25 @@ export interface NutritionTotals {
 }
 
 export interface NutritionScore {
-  score: number;
+  value: number;
+  label: string;
   breakdown: {
-    proteinScore: number;
-    carbScore: number;
-    fatScore: number;
-    fiberScore: number;
-    sugarScore: number;
+    proteinDensity?: number;
+    macroBalance?: number;
+    fiber?: number;
+    sugar?: number;
+    // Legacy v1 breakdown fields
+    proteinScore?: number;
+    carbScore?: number;
+    fatScore?: number;
+    fiberScore?: number;
+    sugarScore?: number;
   };
+}
+
+export interface ProvisionalInfo {
+  provisional: boolean;
+  provisionalReasons: string[];
 }
 
 export type NutritionGoal = 'general' | 'weight_loss' | 'muscle_gain' | 'maintenance';
@@ -61,6 +75,8 @@ const UNIT_CONVERSIONS: Record<string, number> = {
   'pieces': 50,
   'slice': 25, // average slice weight
   'slices': 25,
+  'scoop': 30, // typical protein powder scoop
+  'scoops': 30, // typical protein powder scoop
   'medium': 150, // average medium item
   'large': 200, // average large item
   'small': 100, // average small item
@@ -101,9 +117,9 @@ export function convertUnit(qty: number, unit: string, ingredientName?: string):
 }
 
 /**
- * Compute nutrition totals for a recipe
+ * Compute nutrition totals for a recipe with provisional tracking
  */
-export async function computeTotals(recipeId: string): Promise<NutritionTotals> {
+export async function computeTotals(recipeId: string): Promise<NutritionTotals & { provisional: ProvisionalInfo } & { lowConfidenceShare: number; unmappedCount: number }> {
   const ingredients = await prisma.ingredient.findMany({
     where: { recipeId },
     include: {
@@ -124,6 +140,10 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals> 
     sugarG: 0
   };
 
+  let totalCal = 0;
+  let lowConfCal = 0;
+  let unmappedCount = 0;
+
   for (const ingredient of ingredients) {
     // Convert ingredient quantity to grams using robust normalizer
     const grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
@@ -136,13 +156,39 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals> 
       const food = bestMapping.food;
       const multiplier = grams / 100; // Convert to per-100g basis
       
-      totals.calories += food.calories * multiplier;
-      totals.proteinG += food.proteinG * multiplier;
-      totals.carbsG += food.carbsG * multiplier;
-      totals.fatG += food.fatG * multiplier;
-      totals.fiberG += food.fiberG * multiplier;
-      totals.sugarG += food.sugarG * multiplier;
+      const ingredientCalories = food.kcal100 * multiplier;
+      totals.calories += ingredientCalories;
+      totals.proteinG += food.protein100 * multiplier;
+      totals.carbsG += food.carbs100 * multiplier;
+      totals.fatG += food.fat100 * multiplier;
+      totals.fiberG += (food.fiber100 || 0) * multiplier;
+      totals.sugarG += (food.sugar100 || 0) * multiplier;
+
+      // Track calories for provisional calculation
+      totalCal += ingredientCalories;
+      
+      // Check if this mapping is low confidence or use-once
+      const isLowConfidence = (bestMapping.confidence || 0) < 0.5;
+      const isUseOnce = bestMapping.useOnce || false;
+      
+      if (isLowConfidence || isUseOnce) {
+        lowConfCal += ingredientCalories;
+      }
+    } else {
+      unmappedCount++;
     }
+  }
+
+  // Calculate provisional status
+  const lowShare = totalCal > 0 ? lowConfCal / totalCal : 0;
+  const provisional = (unmappedCount > 0) || (lowShare >= 0.30);
+  
+  const provisionalReasons: string[] = [];
+  if (unmappedCount > 0) {
+    provisionalReasons.push(`${unmappedCount} unmapped ingredient${unmappedCount > 1 ? 's' : ''}`);
+  }
+  if (lowShare >= 0.30) {
+    provisionalReasons.push(`${Math.round(lowShare * 100)}% from low-confidence mappings`);
   }
 
   // Round to reasonable precision
@@ -153,6 +199,12 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals> 
     fatG: Math.round(totals.fatG * 10) / 10,
     fiberG: Math.round(totals.fiberG * 10) / 10,
     sugarG: Math.round(totals.sugarG * 10) / 10,
+    provisional: {
+      provisional,
+      provisionalReasons
+    },
+    lowConfidenceShare: Number(lowShare.toFixed(3)),
+    unmappedCount
   };
 }
 
@@ -205,7 +257,7 @@ export function scoreV1(totals: NutritionTotals, goal: NutritionGoal = 'general'
     breakdown.sugarScore * weights.sugar
   );
   
-  return { score, breakdown };
+  return { value: score, breakdown };
 }
 
 /**
@@ -214,53 +266,96 @@ export function scoreV1(totals: NutritionTotals, goal: NutritionGoal = 'general'
 export async function computeRecipeNutrition(
   recipeId: string, 
   goal: NutritionGoal = 'general'
-): Promise<{ totals: NutritionTotals; score: NutritionScore; unmappedIngredients: string[] }> {
-  // Get all ingredients to check for unmapped ones
-  const ingredients = await prisma.ingredient.findMany({
-    where: { recipeId },
-    include: {
-      foodMaps: true
-    }
-  });
+): Promise<{ 
+  totals: NutritionTotals; 
+  score: NutritionScore; 
+  provisional: ProvisionalInfo;
+  unmappedIngredients: string[] 
+}> {
+  try {
+    console.log('Starting nutrition computation for recipe:', recipeId);
+    // Get all ingredients to check for unmapped ones
+    const ingredients = await prisma.ingredient.findMany({
+      where: { recipeId },
+      include: {
+        foodMaps: true
+      }
+    });
+    console.log('Found', ingredients.length, 'ingredients');
   
   const unmappedIngredients = ingredients
     .filter(ing => ing.foodMaps.length === 0)
     .map(ing => ing.name);
   
-  // Compute totals
-  const totals = await computeTotals(recipeId);
+  // Compute totals with provisional tracking
+  const result = await computeTotals(recipeId);
+  const { provisional, lowConfidenceShare, unmappedCount, ...totals } = result;
   
   // Calculate health score
-  const score = scoreV1(totals, goal);
+  let score: NutritionScore;
+  if (HEALTH_SCORE_V2) {
+    const scoreV2Result = scoreV2({
+      calories: totals.calories,
+      protein: totals.proteinG,
+      carbs: totals.carbsG,
+      fat: totals.fatG,
+      fiber: totals.fiberG,
+      sugar: totals.sugarG
+    }, goal);
+    score = scoreV2Result;
+  } else {
+    score = scoreV1(totals, goal);
+    // Add label for v1 compatibility
+    score.label = score.value >= 80 ? 'great' : score.value >= 60 ? 'good' : score.value >= 40 ? 'ok' : 'poor';
+  }
+  
+  // Log provisional computation
+  logger.info({
+    feature: 'mapping_v2',
+    step: 'compute_provisional',
+    recipeId,
+    lowConfidenceShare,
+    provisional: provisional.provisional,
+    unmappedCount
+  });
   
   // Save to database
+  // Guard against NaN/Infinity values and ensure relation is satisfied on create
+  const sanitize = (n: number) => (Number.isFinite(n) ? n : 0);
+
+    console.log('Saving nutrition to database...');
   await prisma.nutrition.upsert({
     where: { recipeId },
     update: {
-      calories: totals.calories,
-      proteinG: totals.proteinG,
-      carbsG: totals.carbsG,
-      fatG: totals.fatG,
-      fiberG: totals.fiberG,
-      sugarG: totals.sugarG,
-      healthScore: score.score,
+      calories: sanitize(totals.calories),
+      proteinG: sanitize(totals.proteinG),
+      carbsG: sanitize(totals.carbsG),
+      fatG: sanitize(totals.fatG),
+      fiberG: sanitize(totals.fiberG),
+      sugarG: sanitize(totals.sugarG),
+      healthScore: score.value,
       goal,
       computedAt: new Date()
     },
     create: {
       recipeId,
-      calories: totals.calories,
-      proteinG: totals.proteinG,
-      carbsG: totals.carbsG,
-      fatG: totals.fatG,
-      fiberG: totals.fiberG,
-      sugarG: totals.sugarG,
-      healthScore: score.score,
+      calories: sanitize(totals.calories),
+      proteinG: sanitize(totals.proteinG),
+      carbsG: sanitize(totals.carbsG),
+      fatG: sanitize(totals.fatG),
+      fiberG: sanitize(totals.fiberG),
+      sugarG: sanitize(totals.sugarG),
+      healthScore: score.value,
       goal
     }
   });
+    console.log('Nutrition saved successfully');
   
-  return { totals, score, unmappedIngredients };
+  return { totals, score, provisional, unmappedIngredients };
+  } catch (error) {
+    console.error('Error in computeRecipeNutrition:', error);
+    throw error;
+  }
 }
 
 /**

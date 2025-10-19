@@ -1,17 +1,27 @@
 import { prisma } from '../db';
+import { FOOD_MAPPING_V2 } from '../flags';
+import { logger } from '../logger';
 
 /**
  * Automatically map ingredients to foods based on name matching
  */
 export async function autoMapIngredients(recipeId: string): Promise<number> {
-  // Get all ingredients for this recipe
+  logger.info('autoMap:start', { recipeId, v2: FOOD_MAPPING_V2 });
+  // Get all ingredients for this recipe with their existing mappings
   const ingredients = await prisma.ingredient.findMany({
-    where: { recipeId }
+    where: { recipeId },
+    include: {
+      foodMaps: true
+    }
   });
 
   let mappedCount = 0;
 
   for (const ingredient of ingredients) {
+    // Skip if ingredient already has a mapping
+    if (ingredient.foodMaps.length > 0) {
+      continue;
+    }
     // Search for matching foods
     const matchingFoods = await prisma.food.findMany({
       where: {
@@ -27,28 +37,45 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
     const bestMatch = findBestMatch(ingredient.name, matchingFoods);
     
     if (bestMatch) {
-      // Create the mapping
-      await prisma.ingredientFoodMap.upsert({
-        where: {
-          ingredientId_foodId: {
-            ingredientId: ingredient.id,
-            foodId: bestMatch.id
-          }
-        },
-        update: {
-          confidence: calculateConfidence(ingredient.name, bestMatch.name)
-        },
-        create: {
-          ingredientId: ingredient.id,
-          foodId: bestMatch.id,
-          confidence: calculateConfidence(ingredient.name, bestMatch.name)
+      const confidence = calculateConfidence(ingredient.name, bestMatch.name);
+      try {
+        if (FOOD_MAPPING_V2) {
+          await prisma.ingredientFoodMap.create({
+            data: {
+              ingredientId: ingredient.id,
+              foodId: bestMatch.id,
+              mappedBy: 'auto',
+              confidence,
+              useOnce: false,
+              isActive: true,
+            },
+          });
+        } else {
+          // Legacy behavior maintains idempotency via upsert on unique pair
+          await prisma.ingredientFoodMap.upsert({
+            where: {
+              ingredientId_foodId: {
+                ingredientId: ingredient.id,
+                foodId: bestMatch.id,
+              },
+            },
+            update: { confidence },
+            create: {
+              ingredientId: ingredient.id,
+              foodId: bestMatch.id,
+              confidence,
+            },
+          });
         }
-      });
-      
-      mappedCount++;
+        logger.info('autoMap:mapped', { ingredientId: ingredient.id, foodId: bestMatch.id, confidence });
+        mappedCount++;
+      } catch (err) {
+        logger.warn('autoMap:error-map', { ingredientId: ingredient.id, err: (err as Error).message });
+      }
     }
   }
 
+  logger.info('autoMap:done', { recipeId, mappedCount });
   return mappedCount;
 }
 
