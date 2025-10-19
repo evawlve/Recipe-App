@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 /**
  * Map an ingredient to a food
  * POST /api/foods/map
- * Body: { ingredientId: string, foodId: string, confidence?: number }
+ * Body: { ingredientId: string, foodId: string, confidence?: number, useOnce?: boolean }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { ingredientId, foodId, confidence = 1.0 } = await req.json();
+    const { ingredientId, foodId, confidence = 0.5, useOnce = false } = await req.json();
     
     if (!ingredientId || !foodId) {
       return NextResponse.json({ error: 'Ingredient ID and Food ID are required' }, { status: 400 });
@@ -41,22 +41,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Food not found' }, { status: 404 });
     }
 
-    // Upsert the mapping
-    const mapping = await prisma.ingredientFoodMap.upsert({
-      where: {
-        ingredientId_foodId: {
-          ingredientId,
-          foodId
-        }
-      },
-      update: {
-        confidence,
-        createdAt: new Date()
-      },
-      create: {
+    // Create the mapping (no upsert since we removed the unique constraint)
+    const mapping = await prisma.ingredientFoodMap.create({
+      data: {
         ingredientId,
         foodId,
-        confidence
+        mappedBy: user.id,
+        confidence,
+        useOnce,
+        isActive: true,
       }
     });
     

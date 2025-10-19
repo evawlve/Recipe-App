@@ -217,7 +217,7 @@ export function AuthHeader() {
             )}
             
             {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden lg:flex items-center gap-6">
               {isSignupPage ? (
                 // Disabled navigation during signup
                 <>
@@ -260,7 +260,7 @@ export function AuthHeader() {
           {/* Right side - Search, Notifications, Avatar */}
           <div className="flex items-center gap-4">
             {/* Search Bar */}
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               {isSignupPage ? (
                 <div className="relative">
                   <div className="w-64 h-10 bg-muted/50 border border-border/50 rounded-lg flex items-center px-3 text-muted-foreground/50 cursor-not-allowed">
@@ -275,7 +275,7 @@ export function AuthHeader() {
 
             {/* Notifications Button */}
             {isSignupPage ? (
-              <div className="hidden md:flex h-10 w-10 p-0 bg-muted/50 rounded-lg cursor-not-allowed opacity-50 relative group items-center justify-center">
+              <div className="hidden lg:flex h-10 w-10 p-0 bg-muted/50 rounded-lg cursor-not-allowed opacity-50 relative group items-center justify-center">
                 <Bell className="h-4 w-4 text-muted-foreground/50" />
                 {/* Tooltip */}
                 <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
@@ -284,7 +284,7 @@ export function AuthHeader() {
                 </div>
               </div>
             ) : user ? (
-              <div className="hidden md:flex">
+              <div className="hidden lg:flex">
                 <NotificationBell />
               </div>
             ) : null}
@@ -336,7 +336,7 @@ export function AuthHeader() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-md hover:bg-muted transition-colors"
+              className="lg:hidden p-2 rounded-md hover:bg-muted transition-colors"
               aria-label="Toggle mobile menu"
             >
               {isMobileMenuOpen ? (
@@ -350,7 +350,7 @@ export function AuthHeader() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-border pt-4">
+          <div className="lg:hidden mt-4 pb-4 border-t border-border pt-4">
             <nav className="flex flex-col space-y-4">
               <Link 
                 href="/" 
@@ -385,6 +385,13 @@ export function AuthHeader() {
                   <EnhancedSearchBox className="w-full" />
                 )}
               </div>
+              
+              {/* Mobile Notifications */}
+              {user && !isSignupPage && (
+                <div className="mt-4">
+                  <NotificationBell />
+                </div>
+              )}
               
               {user && (
                 <div className="flex flex-col space-y-4 pt-4 border-t border-border">
