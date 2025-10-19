@@ -51,21 +51,31 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
             },
           });
         } else {
-          // Legacy behavior maintains idempotency via upsert on unique pair
-          await prisma.ingredientFoodMap.upsert({
+          // Check if mapping already exists
+          const existingMapping = await prisma.ingredientFoodMap.findFirst({
             where: {
-              ingredientId_foodId: {
-                ingredientId: ingredient.id,
-                foodId: bestMatch.id,
-              },
-            },
-            update: { confidence },
-            create: {
               ingredientId: ingredient.id,
               foodId: bestMatch.id,
-              confidence,
             },
           });
+
+          if (existingMapping) {
+            // Update existing mapping
+            await prisma.ingredientFoodMap.update({
+              where: { id: existingMapping.id },
+              data: { confidence },
+            });
+          } else {
+            // Create new mapping
+            await prisma.ingredientFoodMap.create({
+              data: {
+                ingredientId: ingredient.id,
+                foodId: bestMatch.id,
+                confidence,
+                mappedBy: 'auto',
+              },
+            });
+          }
         }
         logger.info('autoMap:mapped', { ingredientId: ingredient.id, foodId: bestMatch.id, confidence });
         mappedCount++;

@@ -41,9 +41,9 @@ interface RecipeNutritionDisplayProps {
     proteinG: number;
     carbsG: number;
     fatG: number;
-    fiberG: number;
-    sugarG: number;
-    healthScore: number;
+    fiberG: number | null;
+    sugarG: number | null;
+    healthScore: number | null;
   } | null;
 }
 
@@ -183,11 +183,11 @@ export function RecipeNutritionDisplay({
           </div>
           <div className="flex justify-between">
             <span className="text-sm font-medium">Fiber</span>
-            <span className="text-sm">{displayNutrition.fiberG.toFixed(1)}g</span>
+            <span className="text-sm">{displayNutrition.fiberG?.toFixed(1) ?? 'N/A'}g</span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm font-medium">Sugar</span>
-            <span className="text-sm">{displayNutrition.sugarG.toFixed(1)}g</span>
+            <span className="text-sm">{displayNutrition.sugarG?.toFixed(1) ?? 'N/A'}g</span>
           </div>
         </div>
         

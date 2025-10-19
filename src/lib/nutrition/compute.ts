@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { FoodSource } from '@prisma/client';
+// import { FoodSource } from '@prisma/client'; // Not needed - source is just a string
 import { servingToGrams, extractCategoryHint } from './normalize';
 import { logger } from '../logger';
 import { HEALTH_SCORE_V2 } from '../flags';
@@ -257,7 +257,7 @@ export function scoreV1(totals: NutritionTotals, goal: NutritionGoal = 'general'
     breakdown.sugarScore * weights.sugar
   );
   
-  return { value: score, breakdown };
+  return { value: score, label: 'Health Score', breakdown };
 }
 
 /**
@@ -310,7 +310,7 @@ export async function computeRecipeNutrition(
   }
   
   // Log provisional computation
-  logger.info({
+  logger.info('compute_provisional', {
     feature: 'mapping_v2',
     step: 'compute_provisional',
     recipeId,

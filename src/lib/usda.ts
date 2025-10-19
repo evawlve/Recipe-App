@@ -3,7 +3,7 @@
  * Handles searching and normalizing food data from the FDC API
  */
 
-import { FoodSource } from '@prisma/client';
+// import { FoodSource } from '@prisma/client'; // Not needed - source is just a string
 import { RawFood, toPer100g, validatePer100g, DEBUG } from './nutrition/normalize';
 import { extractCategoryHint } from './nutrition/serving';
 
@@ -69,7 +69,7 @@ export interface FDCFood {
     sugarG: number;
   };
   fdcId: string;
-  source: FoodSource;
+  source: string;
 }
 
 export interface FDCSearchResult {
@@ -368,19 +368,19 @@ async function normalizeFDCFood(food: FDCSearchResult): Promise<FDCFood | null> 
     }
 
     // Determine source
-    let source: FoodSource;
+    let source: string;
     switch (food.dataType) {
       case 'Branded':
-        source = 'FDC_BRANDED' as FoodSource;
+        source = 'FDC_BRANDED';
         break;
       case 'Foundation':
-        source = 'FDC_FOUNDATION' as FoodSource;
+        source = 'FDC_FOUNDATION';
         break;
       case 'SR Legacy':
-        source = 'FDC_SR_LEGACY' as FoodSource;
+        source = 'FDC_SR_LEGACY';
         break;
       default:
-        source = 'FDC_FOUNDATION' as FoodSource;
+        source = 'FDC_FOUNDATION';
     }
 
     return {

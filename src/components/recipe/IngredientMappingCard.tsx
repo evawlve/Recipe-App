@@ -21,6 +21,12 @@ export function IngredientMappingCard({
     brand?:string|null; 
     confidence:number; 
     servingOptions: ServingOption[];
+    kcal100: number;
+    protein100: number;
+    carbs100: number;
+    fat100: number;
+    fiber100?: number | null;
+    sugar100?: number | null;
     impact?: {
       perServing: any;
       deltas: any;
@@ -46,18 +52,18 @@ export function IngredientMappingCard({
   const perServing = (() => {
     const g = effectiveGrams ?? (manualGrams ? parseFloat(manualGrams) : null);
     if (!g || Number.isNaN(g)) return null;
-    const kcal = Math.round((candidate.kcal100 as any as number) * g / 100);
-    const P = (candidate.protein100 as any as number) * g / 100;
-    const C = (candidate.carbs100 as any as number) * g / 100;
-    const F = (candidate.fat100 as any as number) * g / 100;
-    const Fi = candidate.fiber100 != null ? (candidate.fiber100 as any as number) * g / 100 : null;
-    const Su = candidate.sugar100 != null ? (candidate.sugar100 as any as number) * g / 100 : null;
+    const kcal = Math.round(candidate.kcal100 * g / 100);
+    const P = candidate.protein100 * g / 100;
+    const C = candidate.carbs100 * g / 100;
+    const F = candidate.fat100 * g / 100;
+    const Fi = candidate.fiber100 != null ? candidate.fiber100 * g / 100 : null;
+    const Su = candidate.sugar100 != null ? candidate.sugar100 * g / 100 : null;
     return { g, kcal, P, C, F, Fi, Su };
   })();
 
   const proteinDensity = (() => {
-    const kcal100 = (candidate.kcal100 as any as number) || 0;
-    const protein100 = (candidate.protein100 as any as number) || 0;
+    const kcal100 = candidate.kcal100 || 0;
+    const protein100 = candidate.protein100 || 0;
     if (!kcal100) return 0;
     return (protein100 / kcal100) * 100;
   })();

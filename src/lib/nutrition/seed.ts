@@ -1,257 +1,257 @@
 import { prisma } from '../db';
-import { FoodSource } from '@prisma/client';
+// import { FoodSource } from '@prisma/client'; // Not needed - source is just a string
 
 const initialFoods = [
   // Proteins
   {
     name: 'Chicken Breast',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 165,
-    proteinG: 31,
-    carbsG: 0,
-    fatG: 3.6,
-    fiberG: 0,
-    sugarG: 0
+    source: 'seed',
+    kcal100: 165,
+    protein100: 31,
+    carbs100: 0,
+    fat100: 3.6,
+    fiber100: 0,
+    sugar100: 0
   },
   {
     name: 'Ground Turkey',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 189,
-    proteinG: 27.4,
-    carbsG: 0,
-    fatG: 8.2,
-    fiberG: 0,
-    sugarG: 0
+    source: 'seed',
+    kcal100: 189,
+    protein100: 27.4,
+    carbs100: 0,
+    fat100: 8.2,
+    fiber100: 0,
+    sugar100: 0
   },
   {
     name: 'Salmon',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 208,
-    proteinG: 25.4,
-    carbsG: 0,
-    fatG: 12.4,
-    fiberG: 0,
-    sugarG: 0
+    source: 'seed',
+    kcal100: 208,
+    protein100: 25.4,
+    carbs100: 0,
+    fat100: 12.4,
+    fiber100: 0,
+    sugar100: 0
   },
   {
     name: 'Eggs',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 155,
-    proteinG: 13,
-    carbsG: 1.1,
-    fatG: 11,
-    fiberG: 0,
-    sugarG: 1.1
+    source: 'seed',
+    kcal100: 155,
+    protein100: 13,
+    carbs100: 1.1,
+    fat100: 11,
+    fiber100: 0,
+    sugar100: 1.1
   },
   {
     name: 'Greek Yogurt',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 59,
-    proteinG: 10,
-    carbsG: 3.6,
-    fatG: 0.4,
-    fiberG: 0,
-    sugarG: 3.6
+    source: 'seed',
+    kcal100: 59,
+    protein100: 10,
+    carbs100: 3.6,
+    fat100: 0.4,
+    fiber100: 0,
+    sugar100: 3.6
   },
   {
     name: 'Cottage Cheese',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 98,
-    proteinG: 11,
-    carbsG: 3.4,
-    fatG: 4.3,
-    fiberG: 0,
-    sugarG: 2.7
+    source: 'seed',
+    kcal100: 98,
+    protein100: 11,
+    carbs100: 3.4,
+    fat100: 4.3,
+    fiber100: 0,
+    sugar100: 2.7
   },
   {
     name: 'Whey Protein Isolate',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 370,
-    proteinG: 90,
-    carbsG: 1,
-    fatG: 1,
-    fiberG: 0,
-    sugarG: 1
+    source: 'seed',
+    kcal100: 370,
+    protein100: 90,
+    carbs100: 1,
+    fat100: 1,
+    fiber100: 0,
+    sugar100: 1
   },
 
   // Carbs
   {
     name: 'Oats',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 389,
-    proteinG: 16.9,
-    carbsG: 66.3,
-    fatG: 6.9,
-    fiberG: 10.6,
-    sugarG: 0
+    source: 'seed',
+    kcal100: 389,
+    protein100: 16.9,
+    carbs100: 66.3,
+    fat100: 6.9,
+    fiber100: 10.6,
+    sugar100: 0
   },
   {
     name: 'Brown Rice',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 111,
-    proteinG: 2.6,
-    carbsG: 23,
-    fatG: 0.9,
-    fiberG: 1.8,
-    sugarG: 0.4
+    source: 'seed',
+    kcal100: 111,
+    protein100: 2.6,
+    carbs100: 23,
+    fat100: 0.9,
+    fiber100: 1.8,
+    sugar100: 0.4
   },
   {
     name: 'White Rice',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 130,
-    proteinG: 2.7,
-    carbsG: 28,
-    fatG: 0.3,
-    fiberG: 0.4,
-    sugarG: 0.1
+    source: 'seed',
+    kcal100: 130,
+    protein100: 2.7,
+    carbs100: 28,
+    fat100: 0.3,
+    fiber100: 0.4,
+    sugar100: 0.1
   },
   {
     name: 'Sweet Potato',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 86,
-    proteinG: 1.6,
-    carbsG: 20.1,
-    fatG: 0.1,
-    fiberG: 3,
-    sugarG: 4.2
+    source: 'seed',
+    kcal100: 86,
+    protein100: 1.6,
+    carbs100: 20.1,
+    fat100: 0.1,
+    fiber100: 3,
+    sugar100: 4.2
   },
   {
     name: 'Quinoa',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 120,
-    proteinG: 4.4,
-    carbsG: 22,
-    fatG: 1.9,
-    fiberG: 2.8,
-    sugarG: 0.9
+    source: 'seed',
+    kcal100: 120,
+    protein100: 4.4,
+    carbs100: 22,
+    fat100: 1.9,
+    fiber100: 2.8,
+    sugar100: 0.9
   },
   {
     name: 'Banana',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 89,
-    proteinG: 1.1,
-    carbsG: 23,
-    fatG: 0.3,
-    fiberG: 2.6,
-    sugarG: 12.2
+    source: 'seed',
+    kcal100: 89,
+    protein100: 1.1,
+    carbs100: 23,
+    fat100: 0.3,
+    fiber100: 2.6,
+    sugar100: 12.2
   },
 
   // Fats
   {
     name: 'Avocado',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 160,
-    proteinG: 2,
-    carbsG: 8.5,
-    fatG: 14.7,
-    fiberG: 6.7,
-    sugarG: 0.7
+    source: 'seed',
+    kcal100: 160,
+    protein100: 2,
+    carbs100: 8.5,
+    fat100: 14.7,
+    fiber100: 6.7,
+    sugar100: 0.7
   },
   {
     name: 'Almonds',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 579,
-    proteinG: 21.2,
-    carbsG: 21.6,
-    fatG: 49.9,
-    fiberG: 12.5,
-    sugarG: 4.4
+    source: 'seed',
+    kcal100: 579,
+    protein100: 21.2,
+    carbs100: 21.6,
+    fat100: 49.9,
+    fiber100: 12.5,
+    sugar100: 4.4
   },
   {
     name: 'Olive Oil',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 884,
-    proteinG: 0,
-    carbsG: 0,
-    fatG: 100,
-    fiberG: 0,
-    sugarG: 0
+    source: 'seed',
+    kcal100: 884,
+    protein100: 0,
+    carbs100: 0,
+    fat100: 100,
+    fiber100: 0,
+    sugar100: 0
   },
   {
     name: 'Coconut Oil',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 862,
-    proteinG: 0,
-    carbsG: 0,
-    fatG: 100,
-    fiberG: 0,
-    sugarG: 0
+    source: 'seed',
+    kcal100: 862,
+    protein100: 0,
+    carbs100: 0,
+    fat100: 100,
+    fiber100: 0,
+    sugar100: 0
   },
 
   // Vegetables
   {
     name: 'Broccoli',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 34,
-    proteinG: 2.8,
-    carbsG: 6.6,
-    fatG: 0.4,
-    fiberG: 2.6,
-    sugarG: 1.5
+    source: 'seed',
+    kcal100: 34,
+    protein100: 2.8,
+    carbs100: 6.6,
+    fat100: 0.4,
+    fiber100: 2.6,
+    sugar100: 1.5
   },
   {
     name: 'Spinach',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 23,
-    proteinG: 2.9,
-    carbsG: 3.6,
-    fatG: 0.4,
-    fiberG: 2.2,
-    sugarG: 0.4
+    source: 'seed',
+    kcal100: 23,
+    protein100: 2.9,
+    carbs100: 3.6,
+    fat100: 0.4,
+    fiber100: 2.2,
+    sugar100: 0.4
   },
   {
     name: 'Carrots',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 41,
-    proteinG: 0.9,
-    carbsG: 9.6,
-    fatG: 0.2,
-    fiberG: 2.8,
-    sugarG: 4.7
+    source: 'seed',
+    kcal100: 41,
+    protein100: 0.9,
+    carbs100: 9.6,
+    fat100: 0.2,
+    fiber100: 2.8,
+    sugar100: 4.7
   },
 
   // Dairy
   {
     name: 'Milk',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 42,
-    proteinG: 3.4,
-    carbsG: 5,
-    fatG: 1,
-    fiberG: 0,
-    sugarG: 5
+    source: 'seed',
+    kcal100: 42,
+    protein100: 3.4,
+    carbs100: 5,
+    fat100: 1,
+    fiber100: 0,
+    sugar100: 5
   },
   {
     name: 'Cheddar Cheese',
     brand: null,
-    source: FoodSource.SEED,
-    calories: 403,
-    proteinG: 25,
-    carbsG: 1.3,
-    fatG: 33,
-    fiberG: 0,
-    sugarG: 0.5
+    source: 'seed',
+    kcal100: 403,
+    protein100: 25,
+    carbs100: 1.3,
+    fat100: 33,
+    fiber100: 0,
+    sugar100: 0.5
   }
 ];
 

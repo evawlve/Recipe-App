@@ -10,7 +10,7 @@ const Body = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -27,9 +27,11 @@ export async function POST(
     }
     const { label, grams } = parse.data;
 
+    const { id } = await params;
+
     // Verify the food exists
     const food = await prisma.food.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!food) {
@@ -39,7 +41,7 @@ export async function POST(
     // Create the FoodUnit
     const foodUnit = await prisma.foodUnit.create({
       data: {
-        foodId: params.id,
+        foodId: id,
         label,
         grams,
       }
