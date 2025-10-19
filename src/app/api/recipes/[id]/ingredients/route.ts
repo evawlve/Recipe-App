@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { convertUnit } from '@/lib/nutrition/compute';
 
 /**
  * Get all ingredients for a recipe (both mapped and unmapped)
@@ -44,19 +45,43 @@ export async function GET(
       }
     });
 
-    // Transform the data to include mapping status
-    const ingredientsWithMapping = ingredients.map(ingredient => ({
-      id: ingredient.id,
-      name: ingredient.name,
-      qty: ingredient.qty,
-      unit: ingredient.unit,
-      currentMapping: ingredient.foodMaps.length > 0 ? {
-        foodId: ingredient.foodMaps[0].foodId,
-        foodName: ingredient.foodMaps[0].food.name,
-        foodBrand: ingredient.foodMaps[0].food.brand,
-        confidence: ingredient.foodMaps[0].confidence
-      } : null
-    }));
+    // Transform the data to include mapping status and nutrition
+    const ingredientsWithMapping = ingredients.map(ingredient => {
+      // Get the best mapping (highest confidence, active)
+      const bestMapping = ingredient.foodMaps
+        .filter(m => m.isActive)
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+      
+      // Calculate nutrition if mapped
+      let nutrition = null;
+      if (bestMapping?.food) {
+        const grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
+        const multiplier = grams / 100; // Convert to per-100g basis
+        
+        nutrition = {
+          calories: Math.round(bestMapping.food.kcal100 * multiplier),
+          proteinG: bestMapping.food.protein100 * multiplier,
+          carbsG: bestMapping.food.carbs100 * multiplier,
+          fatG: bestMapping.food.fat100 * multiplier,
+          fiberG: (bestMapping.food.fiber100 || 0) * multiplier,
+          sugarG: (bestMapping.food.sugar100 || 0) * multiplier,
+        };
+      }
+      
+      return {
+        id: ingredient.id,
+        name: ingredient.name,
+        qty: ingredient.qty,
+        unit: ingredient.unit,
+        currentMapping: bestMapping ? {
+          foodId: bestMapping.foodId,
+          foodName: bestMapping.food.name,
+          foodBrand: bestMapping.food.brand,
+          confidence: bestMapping.confidence
+        } : null,
+        nutrition
+      };
+    });
     
     return NextResponse.json({
       success: true,

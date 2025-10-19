@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Calculator, AlertTriangle, CheckCircle } from "lucide-react";
+import { ProvisionalHint } from "./ProvisionalHint";
 
 interface NutritionData {
   totals: {
@@ -17,15 +18,19 @@ interface NutritionData {
     sugarG: number;
   } | null;
   score: {
-    score: number;
+    value: number;
+    label: string;
     breakdown: {
-      proteinScore: number;
-      carbScore: number;
-      fatScore: number;
-      fiberScore: number;
-      sugarScore: number;
+      proteinDensity: number;
+      macroBalance: number;
+      fiber: number;
+      sugar: number;
     };
   } | null;
+  provisional?: {
+    provisional: boolean;
+    provisionalReasons: string[];
+  };
   unmappedIngredients: Array<{ id: string; name: string; qty: number; unit: string }>;
 }
 
@@ -171,12 +176,12 @@ export function NutritionSidebar({ recipeId, onOpenMappingModal }: NutritionSide
             {nutritionData.score && (
               <div className="text-center">
                 <div className="text-2xl font-bold mb-1">
-                  <span className={getScoreColor(nutritionData.score.score)}>
-                    {nutritionData.score.score}
+                  <span className={getScoreColor(nutritionData.score.value)}>
+                    {nutritionData.score.value}
                   </span>
                   <span className="text-muted-foreground text-sm ml-1">/100</span>
                 </div>
-                <Badge variant={getScoreBadgeVariant(nutritionData.score.score)}>
+                <Badge variant={getScoreBadgeVariant(nutritionData.score.value)}>
                   Health Score
                 </Badge>
               </div>
@@ -212,37 +217,39 @@ export function NutritionSidebar({ recipeId, onOpenMappingModal }: NutritionSide
               </div>
             )}
 
+            {/* Provisional Hint */}
+            {nutritionData.provisional && (
+              <ProvisionalHint 
+                provisional={nutritionData.provisional.provisional}
+                provisionalReasons={nutritionData.provisional.provisionalReasons}
+              />
+            )}
+
             {/* Score Breakdown */}
             {nutritionData.score && nutritionData.score.breakdown && (
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span>Protein Score</span>
-                  <span className={getScoreColor(nutritionData.score.breakdown.proteinScore)}>
-                    {nutritionData.score.breakdown.proteinScore}
+                  <span>Protein Density</span>
+                  <span className={getScoreColor(nutritionData.score.breakdown.proteinDensity)}>
+                    {nutritionData.score.breakdown.proteinDensity}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Carb Score</span>
-                  <span className={getScoreColor(nutritionData.score.breakdown.carbScore)}>
-                    {nutritionData.score.breakdown.carbScore}
+                  <span>Macro Balance</span>
+                  <span className={getScoreColor(nutritionData.score.breakdown.macroBalance)}>
+                    {nutritionData.score.breakdown.macroBalance}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Fat Score</span>
-                  <span className={getScoreColor(nutritionData.score.breakdown.fatScore)}>
-                    {nutritionData.score.breakdown.fatScore}
+                  <span>Fiber</span>
+                  <span className={getScoreColor(nutritionData.score.breakdown.fiber)}>
+                    {nutritionData.score.breakdown.fiber}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Fiber Score</span>
-                  <span className={getScoreColor(nutritionData.score.breakdown.fiberScore)}>
-                    {nutritionData.score.breakdown.fiberScore}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Sugar Score</span>
-                  <span className={getScoreColor(nutritionData.score.breakdown.sugarScore)}>
-                    {nutritionData.score.breakdown.sugarScore}
+                  <span>Sugar</span>
+                  <span className={getScoreColor(nutritionData.score.breakdown.sugar)}>
+                    {nutritionData.score.breakdown.sugar}
                   </span>
                 </div>
               </div>

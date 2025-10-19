@@ -12,6 +12,7 @@ import Comments from "@/components/recipe/Comments";
 import DeleteRecipeButton from "@/components/recipe/DeleteRecipeButton";
 import SaveButton from "@/components/recipe/SaveButton";
 import { AuthorLink } from "@/components/recipe/AuthorLink";
+import { RecipeNutritionDisplay } from "@/components/recipe/RecipeNutritionDisplay";
 
 interface RecipePageProps {
   params: Promise<{
@@ -158,9 +159,9 @@ export default async function RecipePage({ params }: RecipePageProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="xl:col-span-2 space-y-8">
           {/* Photos Grid */}
           {recipe.photos.length > 0 && (
             <Card>
@@ -172,6 +173,16 @@ export default async function RecipePage({ params }: RecipePageProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Nutrition Breakdown - Mobile/Tablet (shown after photos) */}
+          <div className="xl:hidden">
+            <RecipeNutritionDisplay 
+              recipeId={recipe.id}
+              servings={recipe.servings}
+              isAuthor={canDelete}
+              fallbackNutrition={recipe.nutrition}
+            />
+          </div>
 
           {/* Ingredients */}
           {recipe.ingredients.length > 0 && (
@@ -226,76 +237,14 @@ export default async function RecipePage({ params }: RecipePageProps) {
           </Card>
         </div>
 
-        {/* Nutrition Sidebar */}
-        <div className="lg:col-span-1">
-          {recipe.nutrition && (
-            <Card className="sticky top-8">
-              <CardHeader>
-                <CardTitle>Nutrition Facts</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Health Score */}
-                {recipe.nutrition.healthScore && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-text">
-                      {recipe.nutrition.healthScore}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Health Score</div>
-                  </div>
-                )}
-                
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-text">
-                    {recipe.nutrition.calories}
-                  </div>
-                  <div className="text-sm text-muted-foreground">calories</div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Protein</span>
-                    <span className="text-sm font-medium text-text">
-                      {recipe.nutrition.proteinG.toFixed(1)}g
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Carbs</span>
-                    <span className="text-sm font-medium text-text">
-                      {recipe.nutrition.carbsG.toFixed(1)}g
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Fat</span>
-                    <span className="text-sm font-medium text-text">
-                      {recipe.nutrition.fatG.toFixed(1)}g
-                    </span>
-                  </div>
-                  {recipe.nutrition.fiberG && recipe.nutrition.fiberG > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Fiber</span>
-                      <span className="text-sm font-medium text-text">
-                        {recipe.nutrition.fiberG.toFixed(1)}g
-                      </span>
-                    </div>
-                  )}
-                  {recipe.nutrition.sugarG && recipe.nutrition.sugarG > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Sugar</span>
-                      <span className="text-sm font-medium text-text">
-                        {recipe.nutrition.sugarG.toFixed(1)}g
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="pt-4 border-t border-border">
-                  <div className="text-xs text-muted-foreground">
-                    Per serving • {recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* Nutrition Sidebar - Desktop only */}
+        <div className="hidden xl:block xl:col-span-1">
+          <RecipeNutritionDisplay 
+            recipeId={recipe.id}
+            servings={recipe.servings}
+            isAuthor={canDelete}
+            fallbackNutrition={recipe.nutrition}
+          />
         </div>
       </div>
     </div>

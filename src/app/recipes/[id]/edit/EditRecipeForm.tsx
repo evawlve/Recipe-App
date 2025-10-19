@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,7 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
   const [isSavingIngredients, setIsSavingIngredients] = useState(false);
   const [ingredientsSaved, setIngredientsSaved] = useState(false);
+  const searchParams = useSearchParams();
   
   const form = useForm<RecipeUpdateInput>({
     resolver: zodResolver(recipeUpdateSchema),
@@ -75,6 +76,13 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
 
   // Custom hooks for UX improvements
   useFocusManagement(errors);
+
+  // Check for openMapping query parameter
+  useEffect(() => {
+    if (searchParams.get('openMapping') === 'true') {
+      setIsMappingModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Check if any files are uploading
   const hasUploadingFiles = fileStates.some(fs => fs.status === "uploading");

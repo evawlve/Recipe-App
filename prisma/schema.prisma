@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Configure Prisma to use the seed script
+// See https://www.prisma.io/docs/orm/prisma-migrate/workflows/seeding#seed-with-ts-node-or-tsx
+// prisma {
+//   seed = "ts-node prisma/seed.ts"
+// }
+
 model User {
   id          String       @id
   email       String       @unique
@@ -181,35 +187,33 @@ model Notification {
   @@index([userId, readAt])
 }
 
-enum FoodSource {
-  SEED
-  FDC_BRANDED
-  FDC_FOUNDATION
-  FDC_SR_LEGACY
-  MANUAL
-}
-
 model Food {
-  id          String   @id @default(cuid())
-  name        String
-  brand       String?
-  source      FoodSource @default(SEED)
+  id              String   @id @default(cuid())
+  name            String
+  brand           String?  @db.VarChar(120)
+  categoryId      String?
+  source          String   @default("usda") // 'usda' | 'brand' | 'community' | 'template'
+  verification    String   @default("unverified") // 'verified' | 'unverified' | 'suspect'
+  densityGml      Float?   // g per ml
   
   // Per 100g nutrition values
-  calories    Float
-  proteinG    Float
-  carbsG      Float
-  fatG        Float
-  fiberG      Float    @default(0)
-  sugarG      Float    @default(0)
+  kcal100         Float
+  protein100      Float
+  carbs100        Float
+  fat100          Float
+  fiber100        Float?
+  sugar100        Float?
   
-  // Metadata
-  fdcId       String?  @unique // USDA FoodData Central ID
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  popularity      Int      @default(0)
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
   // Relations
-  ingredientMaps IngredientFoodMap[]
+  ingredientMaps  IngredientFoodMap[]
+  units           FoodUnit[]
+  barcodes        Barcode[]
+  aliases         FoodAlias[]
   
   @@index([name])
   @@index([brand])
@@ -217,18 +221,47 @@ model Food {
   @@unique([name, brand])
 }
 
+model FoodUnit {
+  id      String  @id @default(cuid())
+  foodId  String
+  label   String       // e.g. "1 scoop", "1 slice"
+  grams   Float        // anchor to grams
+  Food    Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+}
+
+model Barcode {
+  id      String  @id @default(cuid())
+  gtin    String  @unique
+  foodId  String
+  Food    Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+}
+
 model IngredientFoodMap {
   id           String   @id @default(cuid())
   ingredientId String
   foodId       String
-  confidence   Float?   @default(1.0) // 0-1 confidence score
+  mappedBy     String  // user id or 'auto'
+  confidence   Float   @default(0.0)
+  useOnce      Boolean @default(false)
+  isActive     Boolean @default(true)
   createdAt    DateTime @default(now())
   
   // Relations
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   food         Food       @relation(fields: [foodId], references: [id], onDelete: Cascade)
   
-  @@unique([ingredientId, foodId])
   @@index([ingredientId])
   @@index([foodId])
+}
+
+model FoodAlias {
+  id     String @id @default(cuid())
+  foodId String
+  alias  String
+  
+  // Relations
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  
+  @@unique([foodId, alias])
+  @@index([alias])
 }

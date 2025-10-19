@@ -114,20 +114,70 @@ export async function PATCH(
 
     // Handle ingredients update if provided
     if (validatedData.ingredients !== undefined) {
-      // Delete existing ingredients
-      await prisma.ingredient.deleteMany({
-        where: { recipeId: id }
+      // Get existing ingredients to compare
+      const existingIngredients = await prisma.ingredient.findMany({
+        where: { recipeId: id },
+        include: { foodMaps: true }
       });
 
-      // Create new ingredients
-      await prisma.ingredient.createMany({
-        data: validatedData.ingredients.map(ingredient => ({
-          recipeId: id,
-          name: ingredient.name,
-          qty: ingredient.qty,
-          unit: ingredient.unit,
-        }))
-      });
+      // Create a map of existing ingredients by unique key (name + qty + unit)
+      const existingByKey = new Map(
+        existingIngredients.map(ing => [`${ing.name}|${ing.qty}|${ing.unit}`, ing])
+      );
+
+      // Track which existing ingredients have been processed
+      const processedExistingIds = new Set<string>();
+
+      // Process each ingredient in the update
+      for (const ingredient of validatedData.ingredients) {
+        const key = `${ingredient.name}|${ingredient.qty}|${ingredient.unit}`;
+        const existing = existingByKey.get(key);
+        
+        if (existing) {
+          // This ingredient already exists with the same values, just mark as processed
+          processedExistingIds.add(existing.id);
+        } else {
+          // Check if there's an existing ingredient with the same name but different qty/unit
+          const existingWithSameName = existingIngredients.find(
+            ing => ing.name === ingredient.name && !processedExistingIds.has(ing.id)
+          );
+          
+          if (existingWithSameName) {
+            // Update the existing ingredient
+            await prisma.ingredient.update({
+              where: { id: existingWithSameName.id },
+              data: {
+                qty: ingredient.qty,
+                unit: ingredient.unit,
+              }
+            });
+            processedExistingIds.add(existingWithSameName.id);
+          } else {
+            // Create new ingredient
+            await prisma.ingredient.create({
+              data: {
+                recipeId: id,
+                name: ingredient.name,
+                qty: ingredient.qty,
+                unit: ingredient.unit,
+              }
+            });
+          }
+        }
+      }
+
+      // Delete any remaining ingredients that weren't processed
+      const ingredientsToDelete = existingIngredients.filter(
+        ing => !processedExistingIds.has(ing.id)
+      );
+      
+      if (ingredientsToDelete.length > 0) {
+        await prisma.ingredient.deleteMany({
+          where: {
+            id: { in: ingredientsToDelete.map(ing => ing.id) }
+          }
+        });
+      }
     }
 
     // Handle tags update if provided
@@ -161,16 +211,27 @@ export async function PATCH(
     }
 
     // Auto-map any new ingredients to foods and compute nutrition
-    try {
-      const mappedCount = await autoMapIngredients(id);
-      console.log(`Auto-mapped ${mappedCount} ingredients for recipe ${id}`);
-      
-      // Always compute nutrition after ingredient changes
-      await computeRecipeNutrition(id, 'general');
-      console.log(`Computed nutrition for recipe ${id}`);
-    } catch (error) {
-      console.error('Error auto-mapping ingredients or computing nutrition:', error);
-      // Don't fail the recipe update if auto-mapping fails
+    // Only run auto-mapping if ingredients were actually changed
+    if (validatedData.ingredients !== undefined) {
+      try {
+        const mappedCount = await autoMapIngredients(id);
+        console.log(`Auto-mapped ${mappedCount} ingredients for recipe ${id}`);
+        
+        // Always compute nutrition after ingredient changes
+        await computeRecipeNutrition(id, 'general');
+        console.log(`Computed nutrition for recipe ${id}`);
+      } catch (error) {
+        console.error('Error auto-mapping ingredients or computing nutrition:', error);
+        // Don't fail the recipe update if auto-mapping fails
+      }
+    } else {
+      // If no ingredients changed, just compute nutrition for existing mappings
+      try {
+        await computeRecipeNutrition(id, 'general');
+        console.log(`Computed nutrition for recipe ${id}`);
+      } catch (error) {
+        console.error('Error computing nutrition:', error);
+      }
     }
 
     return NextResponse.json({ 
