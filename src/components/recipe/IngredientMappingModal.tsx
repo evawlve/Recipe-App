@@ -330,7 +330,7 @@ export function IngredientMappingModal({
                   currentMapping: { 
                     foodId: food.id, 
                     foodName: food.name, 
-                    foodBrand: food.brand,
+                    foodBrand: food.brand ?? undefined,
                     confidence: opts.confidence 
                   } 
                 }
@@ -500,7 +500,7 @@ export function IngredientMappingModal({
                               
                               // Resolve grams using the new adapter
                               const gramsResolved = resolveGramsAdapter({
-                                parsed,
+                                parsed: parsed ?? undefined,
                                 densityGml: food.densityGml,
                                 servingOptions: food.servingOptions
                               });
@@ -516,11 +516,11 @@ export function IngredientMappingModal({
                                 <IngredientMappingCard
                                   key={food.id}
                                   ingredientName={ingredient.name}
-                                  parsed={parsed}
+                                  parsed={parsed ?? undefined}
                                   candidate={food}
                                   onMap={(opts) => mapIngredient(opts, ingredient.id)}
                                   gramsResolved={gramsResolved}
-                                  usedFallbackServing={usedFallbackServing}
+                                  usedFallbackServing={usedFallbackServing ? true : undefined}
                                   isMapped={mappedFoodIds[ingredient.id] === food.id}
                                 />
                               );

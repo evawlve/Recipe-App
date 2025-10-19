@@ -19,12 +19,12 @@ interface NutritionData {
   } | null;
   score: {
     value: number;
+    label: string;
     breakdown: {
-      proteinScore: number;
-      carbScore: number;
-      fatScore: number;
-      fiberScore: number;
-      sugarScore: number;
+      proteinDensity: number;
+      macroBalance: number;
+      fiber: number;
+      sugar: number;
     };
   } | null;
   provisional?: {

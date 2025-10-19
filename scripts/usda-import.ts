@@ -74,7 +74,7 @@ async function loadData(filePath: string): Promise<any[]> {
       process.exit(1);
     }
   } catch (error) {
-    console.error('❌ Failed to parse file:', error.message);
+    console.error('❌ Failed to parse file:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 
@@ -160,7 +160,7 @@ async function main() {
     }
 
   } catch (error) {
-    console.error('❌ Import failed:', error.message);
+    console.error('❌ Import failed:', error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

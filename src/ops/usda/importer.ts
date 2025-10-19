@@ -23,7 +23,7 @@ export async function importUsdaGenerics(
     errors: 0
   };
 
-  logger.info({
+  logger.info('usda_import_start', {
     feature: 'usda_import',
     step: 'start',
     totalRows: rows.length,
@@ -42,7 +42,7 @@ export async function importUsdaGenerics(
 
     // Log progress
     if (i % (batchSize * 10) === 0) {
-      logger.info({
+      logger.info('usda_import_progress', {
         feature: 'usda_import',
         step: 'progress',
         processed: i,
@@ -54,7 +54,7 @@ export async function importUsdaGenerics(
     }
   }
 
-  logger.info({
+  logger.info('usda_import_complete', {
     feature: 'usda_import',
     step: 'complete',
     created: result.created,
@@ -151,8 +151,8 @@ async function processBatch(
             });
           } catch (error) {
             // Ignore duplicate alias errors
-            if (!error.message?.includes('Unique constraint')) {
-              console.warn('Failed to create alias:', alias, error.message);
+            if (!(error instanceof Error && error.message?.includes('Unique constraint'))) {
+              console.warn('Failed to create alias:', alias, error instanceof Error ? error.message : String(error));
             }
           }
         }
@@ -163,7 +163,7 @@ async function processBatch(
 
       result.created++;
     } catch (error: any) {
-      logger.warn({
+      logger.warn('usda_import_row_error', {
         feature: 'usda_import',
         step: 'row_error',
         id: row.id,
@@ -235,8 +235,8 @@ async function addAutoUnits(foodId: string, categoryId?: string): Promise<void> 
       });
     } catch (error) {
       // Ignore duplicate unit errors
-      if (!error.message?.includes('Unique constraint')) {
-        console.warn('Failed to create unit:', unit.label, error.message);
+      if (!(error instanceof Error && error.message?.includes('Unique constraint'))) {
+        console.warn('Failed to create unit:', unit.label, error instanceof Error ? error.message : String(error));
       }
     }
   }
@@ -251,7 +251,7 @@ export async function importFromFdcApi(
 ): Promise<ImportResult> {
   // This would implement API-based import
   // For now, return empty result
-  logger.info({
+  logger.info('usda_import_fdc_api_not_implemented', {
     feature: 'usda_import',
     step: 'fdc_api_not_implemented',
     queries: queries.length

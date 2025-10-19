@@ -96,7 +96,7 @@ export function resolveGramsAdapter(input: {
   logger.info('mapping_v2', {
     feature: 'mapping_v2',
     step: 'grams_adapter_null',
-    ingredient: parsed?.name || 'unknown'
+    ingredient: 'no_valid_input'
   });
   
   return null;
