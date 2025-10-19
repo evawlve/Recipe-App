@@ -119,6 +119,24 @@ A full-featured recipe management application with:
 - ✅ **Auth-aware Save UI** - Unauthenticated users see sign-in prompts
 - ✅ **Smart Popup Positioning** - Responsive popups that work on all screen sizes
 - ✅ **Collection Management** - Server-side collection creation and management
+
+### **Advanced Nutrition & Health Scoring**
+- ✅ **Comprehensive Nutrition Database** - USDA food database with 300,000+ food items
+- ✅ **Health Score V2 Algorithm** - Advanced scoring based on protein density, macro balance, fiber bonus, and sugar penalty
+- ✅ **Feature Flagging** - Environment-controlled switching between scoring algorithms
+- ✅ **Automatic Ingredient Mapping** - AI-powered ingredient-to-food matching with confidence scores
+- ✅ **Manual Ingredient Mapping** - User-controlled ingredient mapping with search and selection
+- ✅ **Real-time Impact Preview** - Shows how ingredient changes affect nutrition and health score
+- ✅ **Nutrition Breakdown Modal** - Detailed per-ingredient nutrition display with badges
+- ✅ **Protein Density Tracking** - Calculates protein density per 100 calories
+- ✅ **Macro Balance Analysis** - Evaluates carbohydrate, protein, and fat ratios
+- ✅ **Fiber & Sugar Scoring** - Bonus points for fiber, penalty for excess sugar
+- ✅ **Unit Conversion System** - Automatic conversion between units (cups, tablespoons, grams, etc.)
+- ✅ **Per-Serving Calculations** - Accurate nutrition scaling based on recipe servings
+- ✅ **Color-coded Health Scores** - Visual indicators for health score components
+- ✅ **Ingredient Mapping Persistence** - Mappings preserved across recipe saves
+- ✅ **Edit Mappings from Recipe Page** - Direct navigation from nutrition breakdown to edit page
+- ✅ **Mobile-Responsive Nutrition Display** - Optimized nutrition display for all screen sizes
 ### **Tag System & Search**
 - ✅ **Tag input** with autocomplete suggestions from existing tags
 - ✅ **Tag chips** with visual display and easy removal
@@ -285,6 +303,11 @@ This app implements comprehensive database security using Supabase Row Level Sec
 - ✅ **Unique Constraints** - Prevents duplicate collections per user
 - ✅ **Automatic Collection Creation** - "Saved" collection created per user on first save
 - ✅ **Cascade Deletion** - CollectionRecipe entries cleaned up when recipes are deleted
+- ✅ **Food Model** - USDA food database with nutrition data (kcal100, protein100, carbs100, fat100, fiber100, sugar100)
+- ✅ **IngredientFoodMap Model** - Links ingredients to foods with confidence scores
+- ✅ **Nutrition Model** - Stores computed nutrition data per recipe with health scores
+- ✅ **Food Aliases** - Alternative names for foods to improve ingredient mapping
+- ✅ **Enhanced Nutrition Fields** - Added fiberG, sugarG, healthScore to nutrition calculations
 
 ### **Recipe Deletion System**
 
@@ -574,16 +597,36 @@ GET /recipes?q=chocolate&tags=dessert&tags=quick
 # Searches across title, instructions, and tag labels
 ```
 
-### **Nutrition (Stub)**
+### **Advanced Nutrition System**
 ```bash
-# Calculate nutrition (placeholder)
-POST /api/nutrition
+# Get nutrition data for a recipe
+GET /api/nutrition?recipeId=[id]
+# Response: { calories, proteinG, carbsG, fatG, fiberG, sugarG, healthScore, score: { label, breakdown: { proteinDensity, macroBalance, fiber, sugar } } }
+
+# Compute nutrition for a recipe (auth required)
+POST /api/recipes/[id]/compute-nutrition
+# Response: { success: true, nutrition: { ... } }
+
+# Auto-map ingredients to food database (auth required)
+POST /api/recipes/[id]/auto-map
+# Response: { success: true, mapped: number }
+
+# Get ingredients with nutrition data
+GET /api/recipes/[id]/ingredients
+# Response: [{ id, name, qty, unit, currentMapping: { food: { name, brand }, confidence, nutrition: { calories, proteinG, carbsG, fatG, fiberG, sugarG } } }]
+
+# Search foods with nutrition data
+GET /api/foods/search?q=whey&withImpact=true&recipeId=[id]
+# Response: [{ id, name, brand, nutrition: { ... }, impact: { deltaCalories, deltaProtein, deltaCarbs, deltaFat, deltaFiber, deltaSugar, scoreChange } }]
+
+# Map ingredient to food (auth required)
+POST /api/foods/map
 {
-  "items": [
-    {"name": "rolled oats", "qty": 100, "unit": "g"},
-    {"name": "banana", "qty": 1, "unit": "unit"}
-  ]
+  "ingredientId": "ingredient_id",
+  "foodId": "food_id",
+  "confidence": 0.95
 }
+# Response: { success: true }
 ```
 
 ## 🔧 Development
@@ -637,6 +680,8 @@ npm run prisma:migrate   # Run database migrations
 | `SUPABASE_URL` | Supabase project URL (server) | ✅ |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
 | `S3_PUBLIC_BASE_URL` | CDN URL (optional) | ❌ |
+| `HEALTH_SCORE_V2` | Enable Health Score V2 algorithm (0/1) | ❌ |
+| `DEV_API_KEY` | Development API key for bypassing auth | ❌ |
 
 ## 🚀 Deployment
 
@@ -825,6 +870,37 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **15MB Upload Limit** - Increased file size limit for all uploads (recipes and avatars)
 - ✅ **Enhanced File Support** - Support for JPEG, PNG, WebP, and HEIC formats
 - ✅ **Automatic Dimension Detection** - Compressed images include accurate width/height metadata
+
+### **Advanced Nutrition & Health Scoring System**
+- ✅ **Health Score V2 Implementation** - Revolutionary nutrition scoring algorithm with protein density, macro balance, fiber bonus, and sugar penalty
+- ✅ **Feature Flag System** - Environment-controlled switching between scoring algorithms (HEALTH_SCORE_V2 flag)
+- ✅ **USDA Food Database Integration** - Comprehensive nutrition database with 300,000+ food items
+- ✅ **Automatic Ingredient Mapping** - AI-powered ingredient-to-food matching with confidence scoring
+- ✅ **Manual Ingredient Mapping** - User-controlled ingredient mapping with search and selection interface
+- ✅ **Real-time Impact Preview** - Live calculation of how ingredient changes affect nutrition and health score
+- ✅ **Nutrition Breakdown Modal** - Detailed per-ingredient nutrition display with health badges
+- ✅ **Protein Density Analysis** - Calculates protein density per 100 calories for health optimization
+- ✅ **Macro Balance Evaluation** - Analyzes carbohydrate, protein, and fat ratios for balanced nutrition
+- ✅ **Fiber & Sugar Scoring** - Bonus points for fiber content, penalty for excess sugar
+- ✅ **Comprehensive Unit Conversion** - Automatic conversion between cups, tablespoons, grams, scoops, etc.
+- ✅ **Per-Serving Nutrition Scaling** - Accurate nutrition calculations based on recipe serving sizes
+- ✅ **Color-coded Health Indicators** - Visual health score components with green/yellow/red coding
+- ✅ **Ingredient Mapping Persistence** - Mappings preserved across recipe saves and updates
+- ✅ **Edit Mappings from Recipe Page** - Direct navigation from nutrition breakdown to edit page with auto-opened mapping modal
+- ✅ **Mobile-Responsive Nutrition Display** - Optimized nutrition display for all screen sizes (768px+ breakpoints)
+- ✅ **Nutrition API Endpoints** - Complete API for nutrition computation, ingredient mapping, and food search
+- ✅ **Unit Tests for Scoring** - Comprehensive test coverage for health scoring algorithms
+- ✅ **Impact Preview API** - Real-time impact calculation for ingredient changes
+- ✅ **Food Search with Impact** - Search foods with real-time impact preview on recipe nutrition
+
+### **Responsive Design & Mobile Optimization**
+- ✅ **Mobile-First Recipe Layout** - Optimized recipe page layout for mobile devices (768px+ breakpoints)
+- ✅ **Responsive Navigation** - Hamburger menu for screens 768px-1024px, desktop navigation for larger screens
+- ✅ **Mobile Nutrition Display** - Nutrition breakdown shown after photos on mobile/tablet screens
+- ✅ **Desktop Sidebar Layout** - Nutrition sidebar for desktop screens (1280px+)
+- ✅ **Adaptive Component Sizing** - Components automatically adjust to screen size
+- ✅ **Touch-Friendly Interface** - Optimized button sizes and spacing for mobile interaction
+- ✅ **Flexible Grid Layouts** - Responsive grid systems that work across all device sizes
 
 ### **Notifications System MVP**
 - ✅ **Complete Notifications Infrastructure** - Full notification system with database schema, API routes, and UI components

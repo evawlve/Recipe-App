@@ -83,12 +83,33 @@ export async function GET(req: NextRequest) {
     if (existingNutrition) {
       // If nutrition exists, compute the current totals and score
       const { computeTotals, scoreV1 } = await import('@/lib/nutrition/compute');
-      const totals = await computeTotals(recipeId);
-      const score = scoreV1(totals, existingNutrition.goal as any);
+      const { HEALTH_SCORE_V2 } = await import('@/lib/flags');
+      const { scoreV2 } = await import('@/lib/nutrition/score-v2');
+      
+      const result = await computeTotals(recipeId);
+      const { provisional, ...totals } = result;
+      
+      let score;
+      if (HEALTH_SCORE_V2) {
+        const scoreV2Result = scoreV2({
+          calories: totals.calories,
+          protein: totals.proteinG,
+          carbs: totals.carbsG,
+          fat: totals.fatG,
+          fiber: totals.fiberG,
+          sugar: totals.sugarG
+        }, existingNutrition.goal as any);
+        score = scoreV2Result;
+      } else {
+        score = scoreV1(totals, existingNutrition.goal as any);
+        // Add label for v1 compatibility
+        score.label = score.value >= 80 ? 'great' : score.value >= 60 ? 'good' : score.value >= 40 ? 'ok' : 'poor';
+      }
       
       nutritionData = {
         totals,
         score,
+        provisional,
         unmappedIngredients
       };
     } else {
