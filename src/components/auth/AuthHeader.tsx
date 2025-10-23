@@ -126,7 +126,7 @@ export function AuthHeader() {
       // Listen for auth changes
       try {
         const supabase = createSupabaseBrowserClient();
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
           try {
             if (event === 'SIGNED_OUT' || !session?.user) {
               setUser(null);

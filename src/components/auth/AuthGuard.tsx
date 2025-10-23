@@ -40,7 +40,7 @@ export function AuthGuard({ children, redirectTo = '/signin' }: AuthGuardProps) 
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event: any) => {
       if (event === 'SIGNED_OUT') {
         if (pathname === '/recipes/new') {
           router.replace('/');
