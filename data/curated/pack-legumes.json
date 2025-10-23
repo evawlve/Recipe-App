@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "name": "pack-legumes",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_black_beans_cooked",
+      "name": "Black Beans",
+      "brand": " Cooked",
+      "categoryId": "legume",
+      "densityGml": 1,
+      "kcal100": 132,
+      "protein100": 8.9,
+      "carbs100": 23.7,
+      "fat100": 0.5,
+      "fiber100": 8.7,
+      "sugar100": 0.3,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 172
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 60
+    },
+    {
+      "id": "seed_chickpeas_cooked",
+      "name": "Chickpeas",
+      "brand": " Cooked",
+      "categoryId": "legume",
+      "densityGml": 1,
+      "kcal100": 164,
+      "protein100": 8.9,
+      "carbs100": 27.4,
+      "fat100": 2.6,
+      "fiber100": 7.6,
+      "sugar100": 4.8,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 164
+        }
+      ],
+      "aliases": [
+        "garbanzo"
+      ],
+      "verification": "verified",
+      "popularity": 60
+    }
+  ]
+}

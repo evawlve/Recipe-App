@@ -16,6 +16,17 @@ export function canonicalizeName(name: string): string {
 }
 
 /**
+ * Canonical name for stronger deduplication (matches the new saturation system)
+ */
+export function canonicalName(s: string): string {
+  return s.toLowerCase()
+    .replace(/\(.*?\)/g,'')
+    .replace(/[^a-z0-9 ]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+/**
  * Create macro fingerprint for deduplication
  * Buckets values to handle small variations in nutrition data
  */
@@ -30,6 +41,19 @@ export function macroFingerprint(kcal100: number, protein: number, carbs: number
   
   const key = `${kcalBucket}|${proteinBucket}|${carbsBucket}|${fatBucket}`;
   return crypto.createHash('md5').update(key).digest('hex').slice(0, 10);
+}
+
+/**
+ * Round macros into buckets to detect near-duplicates (for saturation system)
+ */
+export function macroFingerprintSaturation(per100: {kcal100:number; protein100:number; carbs100:number; fat100:number}): string {
+  const r = (n:number, step:number)=>Math.round(n/step)*step;
+  return [
+    r(per100.kcal100, 5),
+    r(per100.protein100, 1),
+    r(per100.carbs100, 1),
+    r(per100.fat100, 1)
+  ].join('|');
 }
 
 /**

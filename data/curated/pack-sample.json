@@ -1,0 +1,293 @@
+{
+  "meta": {
+    "name": "pack-sample",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_avocado_oil",
+      "name": "Avocado Oil",
+      "brand": "",
+      "categoryId": "oil",
+      "densityGml": 0.92,
+      "kcal100": 884,
+      "protein100": 0,
+      "carbs100": 0,
+      "fat100": 100,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 13.6
+        },
+        {
+          "label": "1 tsp",
+          "grams": 4.5
+        }
+      ],
+      "aliases": [
+        "avocado oil",
+        "avocado-oil"
+      ],
+      "verification": "verified",
+      "popularity": 85
+    },
+    {
+      "id": "seed_coconut_oil",
+      "name": "Coconut Oil",
+      "brand": "",
+      "categoryId": "oil",
+      "densityGml": 0.92,
+      "kcal100": 862,
+      "protein100": 0,
+      "carbs100": 0,
+      "fat100": 100,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 13.6
+        },
+        {
+          "label": "1 tsp",
+          "grams": 4.5
+        }
+      ],
+      "aliases": [
+        "coconut oil",
+        "virgin coconut oil"
+      ],
+      "verification": "verified",
+      "popularity": 80
+    },
+    {
+      "id": "seed_almond_flour",
+      "name": "Almond Flour",
+      "brand": "",
+      "categoryId": "flour",
+      "densityGml": 0.4,
+      "kcal100": 579,
+      "protein100": 21,
+      "carbs100": 22,
+      "fat100": 50,
+      "fiber100": 12,
+      "sugar100": 4,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 120
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 8
+        }
+      ],
+      "aliases": [
+        "almond meal",
+        "ground almonds"
+      ],
+      "verification": "verified",
+      "popularity": 75
+    },
+    {
+      "id": "seed_coconut_flour",
+      "name": "Coconut Flour",
+      "brand": "",
+      "categoryId": "flour",
+      "densityGml": 0.3,
+      "kcal100": 400,
+      "protein100": 20,
+      "carbs100": 60,
+      "fat100": 15,
+      "fiber100": 40,
+      "sugar100": 20,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 120
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 8
+        }
+      ],
+      "aliases": [
+        "coconut meal"
+      ],
+      "verification": "verified",
+      "popularity": 70
+    },
+    {
+      "id": "seed_quinoa_uncooked",
+      "name": "Quinoa Uncooked",
+      "brand": "",
+      "categoryId": "grain",
+      "densityGml": 0.7,
+      "kcal100": 368,
+      "protein100": 14,
+      "carbs100": 64,
+      "fat100": 6,
+      "fiber100": 7,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 185
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 12
+        }
+      ],
+      "aliases": [
+        "quinoa seeds",
+        "white quinoa"
+      ],
+      "verification": "verified",
+      "popularity": 85
+    },
+    {
+      "id": "seed_brown_rice_uncooked",
+      "name": "Brown Rice Uncooked",
+      "brand": "",
+      "categoryId": "rice_uncooked",
+      "densityGml": 0.85,
+      "kcal100": 370,
+      "protein100": 8,
+      "carbs100": 77,
+      "fat100": 4,
+      "fiber100": 1,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 185
+        }
+      ],
+      "aliases": [
+        "brown rice",
+        "whole grain rice"
+      ],
+      "verification": "verified",
+      "popularity": 90
+    },
+    {
+      "id": "seed_black_beans_canned",
+      "name": "Black Beans Canned",
+      "brand": "",
+      "categoryId": "legume",
+      "densityGml": 1,
+      "kcal100": 132,
+      "protein100": 8,
+      "carbs100": 24,
+      "fat100": 7,
+      "fiber100": 1,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 240
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 15
+        }
+      ],
+      "aliases": [
+        "black beans",
+        "canned black beans"
+      ],
+      "verification": "verified",
+      "popularity": 80
+    },
+    {
+      "id": "seed_chickpeas_canned",
+      "name": "Chickpeas Canned",
+      "brand": "",
+      "categoryId": "legume",
+      "densityGml": 1,
+      "kcal100": 164,
+      "protein100": 9,
+      "carbs100": 27,
+      "fat100": 8,
+      "fiber100": 5,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 240
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 15
+        }
+      ],
+      "aliases": [
+        "garbanzo beans",
+        "canned chickpeas"
+      ],
+      "verification": "verified",
+      "popularity": 85
+    },
+    {
+      "id": "seed_almond_butter",
+      "name": "Almond Butter",
+      "brand": "",
+      "categoryId": "nut_butter",
+      "densityGml": 1,
+      "kcal100": 614,
+      "protein100": 21,
+      "carbs100": 19,
+      "fat100": 55,
+      "fiber100": 12,
+      "sugar100": 4,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 16
+        },
+        {
+          "label": "1 tsp",
+          "grams": 5
+        }
+      ],
+      "aliases": [
+        "natural almond butter",
+        "unsweetened almond butter"
+      ],
+      "verification": "verified",
+      "popularity": 75
+    },
+    {
+      "id": "seed_peanut_butter",
+      "name": "Peanut Butter",
+      "brand": "",
+      "categoryId": "nut_butter",
+      "densityGml": 1,
+      "kcal100": 588,
+      "protein100": 25,
+      "carbs100": 20,
+      "fat100": 50,
+      "fiber100": 8,
+      "sugar100": 9,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 16
+        },
+        {
+          "label": "1 tsp",
+          "grams": 5
+        }
+      ],
+      "aliases": [
+        "natural peanut butter",
+        "unsweetened peanut butter"
+      ],
+      "verification": "verified",
+      "popularity": 90
+    }
+  ]
+}

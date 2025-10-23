@@ -6,6 +6,11 @@ export async function getCurrentUser() {
   try {
     const supabase = await createSupabaseServerClient();
     
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return null;
+    }
+    
     // Get the user from the server (more secure than getSession)
     const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
     

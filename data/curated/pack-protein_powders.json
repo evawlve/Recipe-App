@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "name": "pack-protein_powders",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_whey_concentrate_generic",
+      "name": "Whey Protein Concentrate (Generic)",
+      "brand": "",
+      "categoryId": "whey",
+      "densityGml": 0.5,
+      "kcal100": 410,
+      "protein100": 80,
+      "carbs100": 8,
+      "fat100": 7,
+      "fiber100": 1,
+      "sugar100": 4,
+      "units": [
+        {
+          "label": "1 scoop",
+          "grams": 34
+        }
+      ],
+      "aliases": [
+        "whey concentrate"
+      ],
+      "verification": "verified",
+      "popularity": 70
+    }
+  ]
+}

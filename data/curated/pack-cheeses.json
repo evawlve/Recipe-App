@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "name": "pack-cheeses",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_mozzarella_part_skim",
+      "name": "Mozzarella Part-Skim",
+      "brand": "",
+      "categoryId": "cheese",
+      "densityGml": 1.1,
+      "kcal100": 300,
+      "protein100": 24,
+      "carbs100": 3,
+      "fat100": 20,
+      "fiber100": 0,
+      "sugar100": 2,
+      "units": [
+        {
+          "label": "1 cup, shredded",
+          "grams": 112
+        }
+      ],
+      "aliases": [
+        "mozz"
+      ],
+      "verification": "verified",
+      "popularity": 50
+    },
+    {
+      "id": "seed_cheddar",
+      "name": "Cheddar Cheese",
+      "brand": "",
+      "categoryId": "cheese",
+      "densityGml": 1.1,
+      "kcal100": 403,
+      "protein100": 25,
+      "carbs100": 1.3,
+      "fat100": 33,
+      "fiber100": 0,
+      "sugar100": 0.5,
+      "units": [
+        {
+          "label": "1 slice",
+          "grams": 28
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 55
+    }
+  ]
+}

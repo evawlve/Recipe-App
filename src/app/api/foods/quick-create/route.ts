@@ -1,6 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
+
+function generateAutoAliases(name: string): string[] {
+  const aliases: string[] = [];
+  const lowerName = name.toLowerCase();
+  
+  // Fat-related terms and their aliases
+  const fatTerms = [
+    { patterns: ['nonfat', 'no fat', '0% fat'], aliases: ['fat free', 'zero fat', 'no fat', 'nonfat'] },
+    { patterns: ['low fat', 'lowfat', 'low-fat'], aliases: ['low fat', 'lowfat', 'reduced fat', 'light'] },
+    { patterns: ['fat reduced', 'reduced fat'], aliases: ['reduced fat', 'fat reduced', 'low fat', 'light'] },
+    { patterns: ['light'], aliases: ['light', 'low fat', 'reduced fat'] },
+    { patterns: ['lean'], aliases: ['lean', 'low fat'] }
+  ];
+  
+  for (const term of fatTerms) {
+    for (const pattern of term.patterns) {
+      if (lowerName.includes(pattern)) {
+        aliases.push(...term.aliases);
+        break; // Only add aliases for the first matching pattern
+      }
+    }
+  }
+  
+  // Remove duplicates and the original name
+  return [...new Set(aliases)].filter(alias => alias.toLowerCase() !== lowerName);
+}
 
 const Body = z.object({
   name: z.string().min(2),
@@ -48,7 +75,8 @@ export async function POST(req: NextRequest) {
       }, { status: 422 });
     }
 
-    const userId = req.headers.get('x-user-id') || null;
+    const user = await getCurrentUser();
+    const userId = user?.id || null;
 
     const food = await prisma.food.create({
       data: {
@@ -70,6 +98,23 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true },
     });
+
+    // Auto-create aliases for fat-related terms
+    const autoAliases = generateAutoAliases(b.name);
+    if (autoAliases.length > 0) {
+      try {
+        await prisma.foodAlias.createMany({
+          data: autoAliases.map(alias => ({
+            foodId: food.id,
+            alias: alias
+          })),
+          skipDuplicates: true
+        });
+      } catch (error) {
+        console.warn('Failed to create auto-aliases:', error);
+        // Don't fail the food creation if aliases fail
+      }
+    }
 
     return NextResponse.json({ success: true, foodId: food.id }, { status: 201 });
   } catch (error) {

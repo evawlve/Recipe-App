@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "name": "pack-fruit",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_banana_raw",
+      "name": "Banana",
+      "brand": " Raw",
+      "categoryId": "fruit",
+      "densityGml": 1,
+      "kcal100": 89,
+      "protein100": 1.1,
+      "carbs100": 23,
+      "fat100": 0.3,
+      "fiber100": 2.6,
+      "sugar100": 12,
+      "units": [
+        {
+          "label": "1 medium",
+          "grams": 118
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 60
+    },
+    {
+      "id": "seed_avocado_raw",
+      "name": "Avocado",
+      "brand": " Raw",
+      "categoryId": "fruit",
+      "densityGml": 1,
+      "kcal100": 160,
+      "protein100": 2,
+      "carbs100": 9,
+      "fat100": 15,
+      "fiber100": 7,
+      "sugar100": 0.7,
+      "units": [
+        {
+          "label": "1 cup, diced",
+          "grams": 150
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 75
+    }
+  ]
+}
