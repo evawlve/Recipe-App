@@ -3,10 +3,8 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import { randomBytes } from 'crypto';
 
-const region = process.env.AWS_REGION;
+const region = process.env.AWS_REGION || 'us-east-2';
 const bucket = process.env.S3_BUCKET;
-
-const s3 = new S3Client({ region });
 
 // Allowed image content types
 const ALLOWED_CONTENT_TYPES = [
@@ -49,6 +47,15 @@ export async function POST(req: NextRequest) {
     console.error('Missing AWS configuration:', { region, bucket });
     return NextResponse.json({ error: 'Missing AWS_REGION or S3_BUCKET' }, { status: 500 });
   }
+
+  // Create S3Client inside the function to avoid build-time errors
+  const s3 = new S3Client({ 
+    region,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    }
+  });
 
   console.log('AWS configuration:', { region, bucket });
 

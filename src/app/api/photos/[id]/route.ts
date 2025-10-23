@@ -24,7 +24,13 @@ export async function DELETE(
   if (!user || photo.recipe.authorId !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const s3 = new S3Client({ region });
+    const s3 = new S3Client({ 
+      region,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      }
+    });
     await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: photo.s3Key }));
   } catch {
     // ignore S3 delete failures (object may already be gone)

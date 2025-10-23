@@ -35,7 +35,13 @@ export async function DELETE(
   // Attempt S3 delete for all photo keys
   try {
     if (recipe.photos.length) {
-      const s3 = new S3Client({ region });
+      const s3 = new S3Client({ 
+        region,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        }
+      });
       await s3.send(
         new DeleteObjectsCommand({
           Bucket: bucket,

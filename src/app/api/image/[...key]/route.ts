@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
-const s3 = new S3Client({ region: process.env.AWS_REGION });
-
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ key: string[] }> }
 ) {
   const { key: keyArray } = await params;
   const key = keyArray.join("/"); // avatars/...
+  
+  // Create S3Client inside the function to avoid build-time errors
+  const s3 = new S3Client({ 
+    region: process.env.AWS_REGION || 'us-east-2',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    }
+  });
   
   try {
     const cmd = new GetObjectCommand({
