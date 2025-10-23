@@ -80,8 +80,8 @@ prisma/migrations/dev.db*
 client_secret.json
 
 # Large datasets (not committed)
-data/usda/**
-!data/usda/.keep
+src/data/usda/**
+!src/data/usda/.keep
 
 # Local CSV exports you don't want to commit accidentally
 data/curated/tmp/**
