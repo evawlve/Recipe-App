@@ -41,7 +41,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Food not found' }, { status: 404 });
     }
 
-    // Create the mapping (no upsert since we removed the unique constraint)
+    // Deactivate any existing mappings for this ingredient
+    await prisma.ingredientFoodMap.updateMany({
+      where: {
+        ingredientId,
+        isActive: true
+      },
+      data: {
+        isActive: false
+      }
+    });
+
+    // Create the new mapping
     const mapping = await prisma.ingredientFoodMap.create({
       data: {
         ingredientId,
@@ -51,6 +62,13 @@ export async function POST(req: NextRequest) {
         useOnce,
         isActive: true,
       }
+    });
+
+    console.log('Created mapping:', {
+      ingredientId,
+      foodId,
+      mappedBy: user.id,
+      mappingId: mapping.id
     });
     
     return NextResponse.json({

@@ -1,0 +1,11 @@
+id,name,brand,categoryId,densityGml,kcal100,protein100,carbs100,fat100,fiber100,sugar100,aliases,verification,popularity,units
+seed_avocado_oil,Avocado Oil,,oil,0.92,884,0,0,100,0,0,avocado oil;avocado-oil,verified,85,
+seed_coconut_oil,Coconut Oil,,oil,0.92,862,0,0,100,0,0,coconut oil;virgin coconut oil,verified,80,
+seed_almond_flour,Almond Flour,,flour,0.4,579,21,22,50,12,4,almond meal;ground almonds,verified,75,
+seed_coconut_flour,Coconut Flour,,flour,0.3,400,20,60,15,40,20,coconut meal,verified,70,
+seed_quinoa_uncooked,Quinoa Uncooked,,grain,0.7,368,14,64,6,7,0,quinoa seeds;white quinoa,verified,85,
+seed_brown_rice_uncooked,Brown Rice Uncooked,,rice_uncooked,0.85,370,8,77,4,1,0,brown rice;whole grain rice,verified,90,
+seed_black_beans_canned,Black Beans Canned,,legume,1.0,132,8,24,7,1,0,black beans;canned black beans,verified,80,
+seed_chickpeas_canned,Chickpeas Canned,,legume,1.0,164,9,27,8,5,0,garbanzo beans;canned chickpeas,verified,85,
+seed_almond_butter,Almond Butter,,nut_butter,1.0,614,21,19,55,12,4,natural almond butter;unsweetened almond butter,verified,75,
+seed_peanut_butter,Peanut Butter,,nut_butter,1.0,588,25,20,50,8,9,natural peanut butter;unsweetened peanut butter,verified,90,

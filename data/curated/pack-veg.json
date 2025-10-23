@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "name": "pack-veg",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_spinach_raw",
+      "name": "Spinach",
+      "brand": " Raw",
+      "categoryId": "veg",
+      "densityGml": 1,
+      "kcal100": 23,
+      "protein100": 2.9,
+      "carbs100": 3.6,
+      "fat100": 0.4,
+      "fiber100": 2.2,
+      "sugar100": 0.4,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 30
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 40
+    },
+    {
+      "id": "seed_broccoli_raw",
+      "name": "Broccoli",
+      "brand": " Raw",
+      "categoryId": "veg",
+      "densityGml": 1,
+      "kcal100": 34,
+      "protein100": 2.8,
+      "carbs100": 7,
+      "fat100": 0.4,
+      "fiber100": 2.6,
+      "sugar100": 1.7,
+      "units": [
+        {
+          "label": "1 cup, chopped",
+          "grams": 91
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 45
+    }
+  ]
+}

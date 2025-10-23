@@ -1,0 +1,4 @@
+id,name,brand,categoryId,densityGml,kcal100,protein100,carbs100,fat100,fiber100,sugar100,aliases,verification,popularity,units
+seed_chicken_breast_raw,Chicken Breast Raw (Skinless),,meat,1.0,120,22.5,0,2.6,0,0,"chicken breast",verified,80,"[{""label"":""1 cup, diced"",""grams"":140}]"
+seed_egg_whites_raw,Egg Whites Raw,,meat,1.0,52,11,0.7,0.2,0,0,"egg white; whites",verified,75,"[{""label"":""1 large white"",""grams"":33}]"
+seed_whey_isolate_generic,Whey Protein Isolate (Generic),,whey,0.5,380,85,5,2,0,2,"whey isolate; protein powder isolate",verified,85,"[{""label"":""1 scoop"",""grams"":32}]"

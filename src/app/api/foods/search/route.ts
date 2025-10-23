@@ -6,6 +6,7 @@ import { rankCandidates } from '@/lib/foods/rank';
 import { kcalBandForQuery } from '@/lib/foods/plausibility';
 import { computeTotals } from '@/lib/nutrition/compute';
 import { computeImpactPreview } from '@/lib/nutrition/impact';
+import { tokens, normalizeQuery } from '@/lib/search/normalize';
 
 /**
  * Search foods by name or brand from local database only
@@ -21,6 +22,8 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get('s');
     const withImpact = searchParams.get('withImpact') === '1';
     const recipeId = searchParams.get('recipeId');
+    const verification = searchParams.get('verification');
+    const source = searchParams.get('source');
     
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ error: 'Search query must be at least 2 characters' }, { status: 400 });
@@ -55,14 +58,34 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Search local database with units and barcodes included
+    // Normalize query for better matching
+    const qn = normalizeQuery(q);
+    const toks = tokens(qn);
+
+    // Search local database with normalized tokens
+    const andORs = toks.map(t => ({
+      OR: [
+        { name: { contains: t, mode: 'insensitive' } },
+        { brand: { contains: t, mode: 'insensitive' } },
+        { aliases: { some: { alias: { contains: t, mode: 'insensitive' } } } },
+      ]
+    }));
+
+    const whereClause: any = {
+      AND: andORs
+    };
+
+    // Add filters
+    if (verification) {
+      whereClause.verification = verification;
+    }
+    
+    if (source) {
+      whereClause.source = source;
+    }
+
     const foods = await prisma.food.findMany({
-      where: {
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { brand: { contains: q, mode: 'insensitive' } }
-        ]
-      },
+      where: whereClause,
       include: {
         units: true,
         barcodes: true,

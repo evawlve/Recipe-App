@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import ConfidenceBadge from './ConfidenceBadge';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 type ServingOption = { label: string; grams: number };
 
@@ -12,6 +14,8 @@ export function IngredientMappingCard({
   gramsResolved,        // number | null (result of resolveGramsAdapter)
   usedFallbackServing,  // boolean (you can pass true when adapter fell back to first serving)
   isMapped = false,     // whether this ingredient is already mapped
+  canDelete = false,    // whether this ingredient can be deleted
+  onDelete,             // function to call when delete is clicked
 }: {
   ingredientName: string;
   parsed?: { qty:number; multiplier:number; unit?:string|null; rawUnit?:string|null; name:string };
@@ -39,6 +43,8 @@ export function IngredientMappingCard({
   gramsResolved: number | null;
   usedFallbackServing?: boolean;
   isMapped?: boolean;
+  canDelete?: boolean;
+  onDelete?: () => void;
 }) {
   const [selected, setSelected] = useState<ServingOption | null>(null);
   const [manualGrams, setManualGrams] = useState<string>('');
@@ -99,6 +105,19 @@ export function IngredientMappingCard({
           <ConfidenceBadge value={candidate.confidence} />
           {isMapped && (
             <div className="text-green-600 dark:text-green-400 text-sm font-medium">✓ Mapped</div>
+          )}
+          {canDelete && onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </div>

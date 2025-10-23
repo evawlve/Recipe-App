@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "name": "pack-sauces",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_sriracha",
+      "name": "Sriracha",
+      "brand": " Sauce",
+      "categoryId": "sauce",
+      "densityGml": 1.2,
+      "kcal100": 93,
+      "protein100": 1.5,
+      "carbs100": 20,
+      "fat100": 0.7,
+      "fiber100": 1.9,
+      "sugar100": 16,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 17
+        }
+      ],
+      "aliases": [
+        "chili sauce"
+      ],
+      "verification": "verified",
+      "popularity": 35
+    },
+    {
+      "id": "seed_ketchup",
+      "name": "Ketchup",
+      "brand": "",
+      "categoryId": "sauce",
+      "densityGml": 1.2,
+      "kcal100": 112,
+      "protein100": 1.3,
+      "carbs100": 26,
+      "fat100": 0.2,
+      "fiber100": 0.3,
+      "sugar100": 22,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 17
+        }
+      ],
+      "aliases": [
+        "tomato ketchup"
+      ],
+      "verification": "verified",
+      "popularity": 40
+    }
+  ]
+}

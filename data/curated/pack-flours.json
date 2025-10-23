@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "name": "pack-flours",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_ap_flour",
+      "name": "All-Purpose Flour",
+      "brand": "",
+      "categoryId": "flour",
+      "densityGml": 0.53,
+      "kcal100": 364,
+      "protein100": 10,
+      "carbs100": 76,
+      "fat100": 1,
+      "fiber100": 3,
+      "sugar100": 0.3,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 120
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 8
+        }
+      ],
+      "aliases": [
+        "ap flour",
+        "wheat flour"
+      ],
+      "verification": "verified",
+      "popularity": 75
+    },
+    {
+      "id": "seed_whole_wheat_flour",
+      "name": "Whole Wheat Flour",
+      "brand": "",
+      "categoryId": "flour",
+      "densityGml": 0.53,
+      "kcal100": 340,
+      "protein100": 13,
+      "carbs100": 72,
+      "fat100": 2,
+      "fiber100": 11,
+      "sugar100": 0.4,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 120
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 8
+        }
+      ],
+      "aliases": [
+        "ww flour"
+      ],
+      "verification": "verified",
+      "popularity": 65
+    },
+    {
+      "id": "seed_oat_flour",
+      "name": "Oat Flour",
+      "brand": "",
+      "categoryId": "flour",
+      "densityGml": 0.53,
+      "kcal100": 404,
+      "protein100": 14,
+      "carbs100": 66,
+      "fat100": 9,
+      "fiber100": 7,
+      "sugar100": 1,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 120
+        },
+        {
+          "label": "1 tbsp",
+          "grams": 8
+        }
+      ],
+      "aliases": [
+        "ground oats",
+        "oat-flour"
+      ],
+      "verification": "verified",
+      "popularity": 65
+    }
+  ]
+}

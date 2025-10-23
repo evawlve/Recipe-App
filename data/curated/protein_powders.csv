@@ -1,0 +1,2 @@
+id,name,brand,categoryId,densityGml,kcal100,protein100,carbs100,fat100,fiber100,sugar100,aliases,verification,popularity,units
+seed_whey_concentrate_generic,Whey Protein Concentrate (Generic),,whey,0.5,410,80,8,7,1,4,"whey concentrate",verified,70,"[{""label"":""1 scoop"",""grams"":34}]"

@@ -3,7 +3,7 @@ module.exports = {
     {
       displayName: 'api',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/src/app/**/*.test.ts', '<rootDir>/src/lib/**/*.test.ts'],
+      testMatch: ['<rootDir>/src/app/**/*.test.ts', '<rootDir>/src/lib/**/*.test.ts', '<rootDir>/src/ops/**/*.test.ts'],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }],
       },

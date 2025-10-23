@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "name": "pack-oils",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_olive_oil_curated",
+      "name": "Olive Oil",
+      "brand": "",
+      "categoryId": "oil",
+      "densityGml": 0.91,
+      "kcal100": 884,
+      "protein100": 0,
+      "carbs100": 0,
+      "fat100": 100,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 13.6
+        },
+        {
+          "label": "1 tsp",
+          "grams": 4.5
+        }
+      ],
+      "aliases": [
+        "evoo",
+        "extra virgin olive oil"
+      ],
+      "verification": "verified",
+      "popularity": 90
+    },
+    {
+      "id": "seed_avocado_oil_curated",
+      "name": "Avocado Oil",
+      "brand": "",
+      "categoryId": "oil",
+      "densityGml": 0.91,
+      "kcal100": 884,
+      "protein100": 0,
+      "carbs100": 0,
+      "fat100": 100,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 13.6
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 85
+    },
+    {
+      "id": "seed_canola_oil_curated",
+      "name": "Canola Oil",
+      "brand": "",
+      "categoryId": "oil",
+      "densityGml": 0.92,
+      "kcal100": 884,
+      "protein100": 0,
+      "carbs100": 0,
+      "fat100": 100,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 tbsp",
+          "grams": 13.6
+        },
+        {
+          "label": "1 tsp",
+          "grams": 4.5
+        }
+      ],
+      "aliases": [
+        "rapeseed oil"
+      ],
+      "verification": "verified",
+      "popularity": 70
+    }
+  ]
+}

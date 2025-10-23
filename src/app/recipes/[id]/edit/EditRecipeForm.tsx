@@ -496,8 +496,10 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
         onClose={() => setIsMappingModalOpen(false)}
         recipeId={recipeId}
         onMappingComplete={() => {
-          // Refresh the nutrition sidebar
-          window.location.reload();
+          // Close the modal after successful mapping
+          setIsMappingModalOpen(false);
+          // Note: The nutrition sidebar should refresh automatically
+          // No need to reload the entire page
         }}
       />
     </div>

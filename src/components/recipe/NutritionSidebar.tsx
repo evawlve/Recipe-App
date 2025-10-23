@@ -151,10 +151,10 @@ export function NutritionSidebar({ recipeId, onOpenMappingModal }: NutritionSide
                 <p>Some ingredients need to be mapped to nutrition data:</p>
                 <ul className="text-sm list-disc list-inside">
                   {nutritionData.unmappedIngredients.slice(0, 3).map((ingredient, index) => (
-                    <li key={ingredient.id}>{ingredient.name}</li>
+                    <li key={ingredient.id || `ingredient-${index}`}>{ingredient.name}</li>
                   ))}
                   {nutritionData.unmappedIngredients.length > 3 && (
-                    <li key="more">...and {nutritionData.unmappedIngredients.length - 3} more</li>
+                    <li key="more-ingredients">...and {nutritionData.unmappedIngredients.length - 3} more</li>
                   )}
                 </ul>
               </div>

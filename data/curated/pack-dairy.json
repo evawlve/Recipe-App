@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "name": "pack-dairy",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_whole_milk",
+      "name": "Whole Milk",
+      "brand": "",
+      "categoryId": "dairy",
+      "densityGml": 1.03,
+      "kcal100": 61,
+      "protein100": 3.2,
+      "carbs100": 4.8,
+      "fat100": 3.3,
+      "fiber100": 0,
+      "sugar100": 5,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 244
+        }
+      ],
+      "aliases": [
+        "milk whole"
+      ],
+      "verification": "verified",
+      "popularity": 55
+    },
+    {
+      "id": "seed_greek_yogurt_0",
+      "name": "Greek Yogurt",
+      "brand": " Nonfat",
+      "categoryId": "dairy",
+      "densityGml": 1,
+      "kcal100": 59,
+      "protein100": 10,
+      "carbs100": 3.6,
+      "fat100": 0.4,
+      "fiber100": 0,
+      "sugar100": 3.2,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 245
+        }
+      ],
+      "aliases": [
+        "yogurt greek 0%"
+      ],
+      "verification": "verified",
+      "popularity": 70
+    }
+  ]
+}

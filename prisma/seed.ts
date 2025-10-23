@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { seedCuratedFromFile } from '@/ops/curated/seed-curated';
 const prisma = new PrismaClient();
 
 async function upsertFood(args: any) {
@@ -64,4 +65,12 @@ async function main() {
 main().finally(async () => {
   await prisma.$disconnect();
 });
+
+// Curated seed packs integration
+if (process.env.CURATED_SEED_PACKS) {
+  const packs = process.env.CURATED_SEED_PACKS.split(',').map(s => s.trim());
+  for (const p of packs) {
+    await seedCuratedFromFile(p, { dryRun: false });
+  }
+}
 

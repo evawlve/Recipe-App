@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "name": "pack-grains",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_rice_white_uncooked",
+      "name": "Rice",
+      "brand": " White (Uncooked)",
+      "categoryId": "rice_uncooked",
+      "densityGml": 0.85,
+      "kcal100": 365,
+      "protein100": 7,
+      "carbs100": 80,
+      "fat100": 0.6,
+      "fiber100": 1.3,
+      "sugar100": 0.1,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 185
+        }
+      ],
+      "aliases": [
+        "white rice",
+        "rice dry"
+      ],
+      "verification": "verified",
+      "popularity": 70
+    },
+    {
+      "id": "seed_quinoa_dry",
+      "name": "Quinoa",
+      "brand": " Dry",
+      "categoryId": "grain",
+      "densityGml": 0.9,
+      "kcal100": 368,
+      "protein100": 14,
+      "carbs100": 64,
+      "fat100": 6,
+      "fiber100": 7,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 170
+        }
+      ],
+      "aliases": [],
+      "verification": "verified",
+      "popularity": 60
+    },
+    {
+      "id": "seed_oats_rolled_dry",
+      "name": "Oats",
+      "brand": " Rolled (Dry)",
+      "categoryId": "oats",
+      "densityGml": 0.4,
+      "kcal100": 379,
+      "protein100": 13,
+      "carbs100": 67,
+      "fat100": 7,
+      "fiber100": 10,
+      "sugar100": 0.9,
+      "units": [
+        {
+          "label": "1 cup",
+          "grams": 90
+        }
+      ],
+      "aliases": [
+        "rolled oats",
+        "old fashioned oats"
+      ],
+      "verification": "verified",
+      "popularity": 70
+    }
+  ]
+}

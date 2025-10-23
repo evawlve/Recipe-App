@@ -137,6 +137,51 @@ A full-featured recipe management application with:
 - ✅ **Ingredient Mapping Persistence** - Mappings preserved across recipe saves
 - ✅ **Edit Mappings from Recipe Page** - Direct navigation from nutrition breakdown to edit page
 - ✅ **Mobile-Responsive Nutrition Display** - Optimized nutrition display for all screen sizes
+
+### **USDA Food Database Saturation System**
+- ✅ **USDA Data Import** - Automated import of USDA FoodData Central datasets (Foundation, SR Legacy, FNDDS)
+- ✅ **Smart Filtering** - Intelligent filtering to include only generic foods (excludes branded, baby, supplement items)
+- ✅ **Category Mapping** - Automatic mapping of USDA foods to internal categories (dairy, meat, oil, flour, etc.)
+- ✅ **Deduplication System** - Advanced deduplication using canonical names and macro fingerprints
+- ✅ **Bulk Import Process** - Efficient bulk import with progress tracking and error handling
+- ✅ **Data Normalization** - Standardized nutrition data per 100g across all food items
+- ✅ **Keyword-Focused Imports** - Targeted imports for specific food categories (cheese, milk, whey, etc.)
+- ✅ **Import Statistics** - Detailed reporting of imported foods by source and category
+- ✅ **Smoke Testing** - Comprehensive test suite for deduplication and category mapping
+- ✅ **Data Quality Validation** - Plausibility checks for nutritional data (calorie ranges, macro ratios)
+
+### **Advanced Food Search & Alias System**
+- ✅ **Intelligent Alias Generation** - Automatic generation of food aliases for better searchability
+- ✅ **Fat Modifier Aliases** - Smart aliases for fat-related terms (nonfat, fat-free, part-skim, reduced fat, light, etc.)
+- ✅ **Cheese & Dairy Aliases** - Comprehensive alias system for cheese and dairy products with modifier permutations
+- ✅ **Milk Product Aliases** - Specific aliases for milk products (nonfat milk, skim milk, 2% milk, etc.)
+- ✅ **Whey & Protein Aliases** - Protein powder aliases (whey protein, protein powder, whey isolate, etc.)
+- ✅ **Flour & Starch Aliases** - Powder synonyms for flour and starch products
+- ✅ **Query Normalization** - Smart query normalization that collapses synonyms (fat-free → nonfat, part-skim → part skim)
+- ✅ **Enhanced Search Ranking** - Advanced ranking algorithm with exact alias matching and category boosts
+- ✅ **Processed Food De-ranking** - Intelligent de-ranking of processed foods when searching for basic ingredients
+- ✅ **Basic Ingredient Prioritization** - Raw and fresh ingredients rank higher than processed alternatives
+- ✅ **Bulk Alias Backfill** - Efficient bulk alias generation for existing foods with pagination and skipDuplicates
+- ✅ **Search Race Condition Fixes** - Resolved search result flickering with proper timeout management
+- ✅ **Category-Based Ranking** - Category hints boost relevant foods (cheese queries prefer cheese category)
+- ✅ **Composite Dish De-ranking** - Mixed dishes rank lower unless specifically requested
+- ✅ **Exact Alias Matching** - Hard promotion for exact normalized alias matches
+- ✅ **Modifier-Head Coverage** - Medium boost for modifier + head-noun combinations (nonfat + cheese)
+
+### **Community Ingredient Creation & Management**
+- ✅ **Create New Ingredient Button** - Users can create custom ingredients directly from the mapping modal
+- ✅ **Ingredient Creation Form** - Comprehensive form with required fields (name, serving size, calories, protein, carbs, fats) and optional fields (fiber, sugar)
+- ✅ **Auto-mapping on Creation** - Newly created ingredients are automatically mapped to the source ingredient
+- ✅ **Community Labeling** - All user-created ingredients are tagged with "community" source
+- ✅ **Auto-aliases Generation** - Automatic alias creation for fat-related terms (nonfat, low fat, reduced fat, etc.)
+- ✅ **Ingredient Deletion** - Users can delete ingredients they created themselves
+- ✅ **Deletion Authorization** - Only community ingredients created by the user can be deleted
+- ✅ **Mapping Validation** - Prevents deletion of ingredients mapped to other users' recipes
+- ✅ **Legacy Data Support** - Handles legacy community ingredients with proper deletion permissions
+- ✅ **Nutrition Auto-computation** - Automatic nutrition recomputation after ingredient mappings are saved
+- ✅ **Persistent Mappings** - Ingredient mappings are properly saved and persist across modal sessions
+- ✅ **Enhanced UX** - Improved input field handling with easy placeholder deletion
+- ✅ **Database Schema Updates** - Enhanced Food model with createdById, source, and verification fields
 ### **Tag System & Search**
 - ✅ **Tag input** with autocomplete suggestions from existing tags
 - ✅ **Tag chips** with visual display and easy removal
@@ -308,6 +353,23 @@ This app implements comprehensive database security using Supabase Row Level Sec
 - ✅ **Nutrition Model** - Stores computed nutrition data per recipe with health scores
 - ✅ **Food Aliases** - Alternative names for foods to improve ingredient mapping
 - ✅ **Enhanced Nutrition Fields** - Added fiberG, sugarG, healthScore to nutrition calculations
+- ✅ **Community Food Support** - Enhanced Food model with createdById, source, and verification fields
+- ✅ **Food Deletion System** - Proper authorization for community ingredient deletion
+- ✅ **Legacy Data Handling** - Support for legacy community ingredients with null createdById
+- ✅ **Auto-alias Generation** - Automatic alias creation based on ingredient name patterns
+- ✅ **Mapping Persistence** - Enhanced mapping system with proper state management
+- ✅ **Error Handling Improvements** - Enhanced Supabase server client with fallback mechanisms and comprehensive error handling
+- ✅ **React Component Stability** - Fixed unique key prop issues in ingredient mapping components
+
+#### **USDA Database Schema:**
+- ✅ **Food Model Enhancements** - Added source field (usda, community, template) and verification field
+- ✅ **FoodAlias Model** - New model for food aliases with unique constraint on (foodId, alias) and index on alias
+- ✅ **USDA Data Fields** - Added fdcId, dataType, and category fields for USDA data tracking
+- ✅ **Deduplication Support** - Canonical name and macro fingerprint fields for deduplication
+- ✅ **Category Mapping** - Automatic category assignment based on USDA food descriptions
+- ✅ **Bulk Import Optimization** - Database indexes optimized for bulk insert operations
+- ✅ **Alias Performance** - Indexed alias field for fast search operations
+- ✅ **Data Integrity** - Unique constraints prevent duplicate aliases and ensure data consistency
 
 ### **Recipe Deletion System**
 
@@ -627,6 +689,49 @@ POST /api/foods/map
   "confidence": 0.95
 }
 # Response: { success: true }
+
+# Create new community ingredient (auth required)
+POST /api/foods/quick-create
+{
+  "name": "Low Fat Ricotta Cheese",
+  "brand": "Brand Name",
+  "servingLabel": "1 cup",
+  "grams": 250,
+  "calories": 200,
+  "protein": 15,
+  "carbs": 8,
+  "fat": 8,
+  "fiber": 0,
+  "sugar": 2
+}
+# Response: { success: true, foodId: "food_id" }
+
+# Delete community ingredient (auth required, owner only)
+DELETE /api/foods/[id]?recipeId=[recipeId]
+# Response: { success: true, message: "Ingredient deleted successfully" }
+
+# Add aliases to food (auth required)
+POST /api/foods/[id]/aliases
+{
+  "aliases": ["fat free", "low fat", "reduced fat"]
+}
+# Response: { success: true }
+```
+
+### **USDA Data Import & Management**
+```bash
+# Import USDA Foundation dataset
+npm run usda:saturate -- --file=./data/usda/fdc.jsonl
+
+# Import specific food categories
+npm run usda:saturate -- --file=./data/usda/fdc.jsonl --keywords="cheese,milk,whey,oil,flour"
+
+# Generate aliases for all foods
+npm run aliases:backfill:fast
+
+# Get food statistics by source
+GET /api/admin/food-stats
+# Response: { usda: 15000, community: 500, template: 100, byCategory: { dairy: 2000, meat: 1500, ... } }
 ```
 
 ## 🔧 Development
@@ -661,10 +766,22 @@ Additional dependencies:
 npm run dev          # Start development server
 npm run build        # Build for production
 npm run start        # Start production server
-npm run lint         # Run ESLint
+npm run lint          # Run ESLint
 npm run typecheck    # Run TypeScript checks
 npm run prisma:generate  # Generate Prisma client
 npm run prisma:migrate   # Run database migrations
+
+# USDA Data Import
+npm run usda:saturate     # Import USDA food database
+npm run usda:keywords     # Import specific food categories
+npm run usda:smoke-test   # Run deduplication and category mapping tests
+
+# Alias Management
+npm run aliases:backfill      # Generate aliases for all foods (slower)
+npm run aliases:backfill:fast # Generate aliases with bulk operations (faster)
+
+# Data Management
+npm run cleanup-orphaned-users  # Clean up orphaned user data
 ```
 
 ### **Environment Variables**
@@ -796,6 +913,22 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 
 ## 🆕 Recent Updates
 
+### **USDA Food Database & Advanced Search System**
+- ✅ **USDA Data Saturation** - Complete import system for USDA FoodData Central datasets with smart filtering and deduplication
+- ✅ **Intelligent Alias System** - Advanced alias generation for fat modifiers, cheese/dairy products, and protein powders
+- ✅ **Query Normalization** - Smart query processing that collapses synonyms (fat-free → nonfat, part-skim → part skim)
+- ✅ **Enhanced Search Ranking** - Sophisticated ranking algorithm with exact alias matching and category boosts
+- ✅ **Processed Food De-ranking** - Intelligent de-ranking of processed foods when searching for basic ingredients
+- ✅ **Bulk Alias Backfill** - Efficient bulk alias generation with pagination and skipDuplicates optimization
+- ✅ **Search Race Condition Fixes** - Resolved search result flickering with proper timeout management
+- ✅ **Category-Based Ranking** - Category hints boost relevant foods (cheese queries prefer cheese category)
+- ✅ **Composite Dish De-ranking** - Mixed dishes rank lower unless specifically requested
+- ✅ **Exact Alias Matching** - Hard promotion for exact normalized alias matches
+- ✅ **Modifier-Head Coverage** - Medium boost for modifier + head-noun combinations (nonfat + cheese)
+- ✅ **Data Quality Validation** - Plausibility checks for nutritional data and macro ratios
+- ✅ **Import Statistics** - Detailed reporting of imported foods by source and category
+- ✅ **Smoke Testing** - Comprehensive test suite for deduplication and category mapping
+
 ### **Enhanced User Experience**
 - ✅ **Modern Navbar Design** - Clean, Figma-inspired navigation with search bar, notifications, and user avatar
 - ✅ **Theme Support** - Full light/dark mode support with automatic theme switching
@@ -859,6 +992,20 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Username Validation** - Real-time username availability checking with debouncing
 - ✅ **Signup Flow Guards** - Automatic redirect system for incomplete profiles
 - ✅ **Enhanced Authentication** - Improved user session management and profile completion flow
+- ✅ **Supabase Server Client Fixes** - Resolved server-side client initialization errors with proper error handling and fallback mechanisms
+- ✅ **React Key Prop Fixes** - Fixed unique key prop warnings in ingredient mapping lists with fallback key generation
+
+### **Search & Alias System Architecture**
+- ✅ **Query Normalization Engine** - Smart query processing with synonym collapsing and punctuation simplification
+- ✅ **Alias Generation Rules** - Comprehensive rule system for fat modifiers, cheese/dairy, and protein products
+- ✅ **Bulk Alias Backfill** - Optimized bulk alias generation with pagination and skipDuplicates
+- ✅ **Search Ranking Algorithm** - Advanced ranking with exact alias matching, category boosts, and processed food de-ranking
+- ✅ **Race Condition Resolution** - Proper timeout management for debounced search operations
+- ✅ **Database Indexing** - Optimized indexes for alias search performance
+- ✅ **Data Integrity** - Unique constraints and proper error handling for alias operations
+- ✅ **Performance Optimization** - Efficient bulk operations and pagination for large datasets
+- ✅ **Test Coverage** - Comprehensive test suite for alias generation and search ranking
+- ✅ **Error Handling** - Robust error handling for Supabase server-side client initialization
 
 ### **Image Compression & Optimization**
 - ✅ **Client-side Image Compression** - Automatic compression before upload using Canvas API
@@ -918,6 +1065,34 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Notification Creation** - Automatic notifications when users interact with content
 - ✅ **Proper Avatar Display** - User avatars display correctly using /api/image/ route
 - ✅ **No Nested Links** - Fixed HTML validation issues with proper click handlers
+
+### **Community Ingredient Creation & Management System**
+- ✅ **Create New Ingredient Feature** - Users can create custom ingredients directly from the ingredient mapping modal
+- ✅ **Comprehensive Creation Form** - Form with required fields (name, serving size, calories, protein, carbs, fats) and optional fields (fiber, sugar)
+- ✅ **Auto-mapping Integration** - Newly created ingredients are automatically mapped to the source ingredient
+- ✅ **Community Labeling System** - All user-created ingredients are tagged with "community" source for identification
+- ✅ **Smart Auto-aliases** - Automatic alias generation for fat-related terms (nonfat, low fat, reduced fat, light, lean)
+- ✅ **Ingredient Deletion System** - Users can delete ingredients they created with proper authorization
+- ✅ **Deletion Authorization** - Only community ingredients created by the user can be deleted
+- ✅ **Mapping Validation** - Prevents deletion of ingredients mapped to other users' recipes
+- ✅ **Legacy Data Support** - Handles legacy community ingredients with null createdById
+- ✅ **Nutrition Auto-computation** - Automatic nutrition recomputation after ingredient mappings are saved
+- ✅ **Persistent Mappings** - Ingredient mappings are properly saved and persist across modal sessions
+- ✅ **Enhanced UX** - Improved input field handling with easy placeholder deletion for numeric fields
+- ✅ **Database Schema Updates** - Enhanced Food model with createdById, source, and verification fields
+- ✅ **API Endpoints** - New endpoints for ingredient creation, deletion, and alias management
+- ✅ **Authorization System** - Proper user ownership validation for community ingredient management
+- ✅ **Auto-alias Patterns** - Smart pattern matching for fat-related terms with comprehensive alias generation
+
+### **Recent Bug Fixes & Stability Improvements**
+- ✅ **Supabase Server Client Error Resolution** - Fixed "Cannot read properties of undefined (reading 'call')" errors in server-side Supabase client initialization
+- ✅ **Enhanced Error Handling** - Added comprehensive error handling and fallback mechanisms for Supabase server client creation
+- ✅ **Cookie Operation Safety** - Added try-catch blocks around all cookie operations to prevent server crashes
+- ✅ **Environment Variable Validation** - Added proper validation for Supabase environment variables with clear error messages
+- ✅ **React Key Prop Warnings** - Fixed "Each child in a list should have a unique key prop" warnings in ingredient mapping lists
+- ✅ **Fallback Key Generation** - Implemented fallback key generation using array index when ingredient IDs are missing or duplicate
+- ✅ **Development Server Stability** - Improved server restart process with cache clearing for clean module loading
+- ✅ **Module Loading Optimization** - Enhanced webpack module loading for Supabase SSR client to prevent initialization failures
 
 ## 📋 TODO - Next Development Phase
 

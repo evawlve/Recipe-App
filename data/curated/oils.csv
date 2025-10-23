@@ -1,0 +1,4 @@
+id,name,brand,categoryId,densityGml,kcal100,protein100,carbs100,fat100,fiber100,sugar100,aliases,verification,popularity,units
+seed_olive_oil_curated,Olive Oil,,oil,0.91,884,0,0,100,0,0,"evoo; extra virgin olive oil",verified,90,"[{""label"":""1 tbsp"",""grams"":13.6},{""label"":""1 tsp"",""grams"":4.5}]"
+seed_avocado_oil_curated,Avocado Oil,,oil,0.91,884,0,0,100,0,0,"",verified,85,"[{""label"":""1 tbsp"",""grams"":13.6}]"
+seed_canola_oil_curated,Canola Oil,,oil,0.92,884,0,0,100,0,0,"rapeseed oil",verified,70,

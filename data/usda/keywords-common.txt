@@ -1,0 +1,5 @@
+oil, flour, starch, rice, oats, quinoa, egg, egg white, chicken, beef, pork, salmon, tuna,
+milk, yogurt, cheese, cottage cheese, greek yogurt, peanut butter, almond butter, chia,
+banana, apple, blueberry, avocado, broccoli, spinach, carrot, onion, garlic, tomato,
+ketchup, mustard, mayo, sriracha, soy sauce, vinegar, honey, sugar, salt,
+whey, protein powder, oat flour, almond flour, corn starch

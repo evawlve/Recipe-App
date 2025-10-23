@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Search, Check, X, Info } from "lucide-react";
+import { Loader2, Search, Check, X, Info, Plus, Trash2 } from "lucide-react";
 import { gramsForMeasure, calculatePerServingCalories, extractCategoryHint } from "@/lib/nutrition/serving";
 import { normalizeUnit, toGramsByUnit } from "@/lib/nutrition/units";
 import { scalePer100g } from "@/lib/nutrition/scale";
@@ -16,6 +16,7 @@ import { resolveGramsForAmount } from "@/lib/nutrition/amount-grams";
 import { parseIngredientLine } from "@/lib/parse/ingredient-line";
 import { resolveGramsAdapter } from "@/lib/nutrition/amount-grams-adapter";
 import { IngredientMappingCard } from "./IngredientMappingCard";
+import { CreateIngredientForm } from "./CreateIngredientForm";
 
 interface Food {
   id: string;
@@ -48,6 +49,7 @@ interface Ingredient {
   } | null;
 }
 
+
 interface IngredientMappingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,12 +73,35 @@ export function IngredientMappingModal({
   const [searchStates, setSearchStates] = useState<Record<string, string>>({});
   const [ingredientSuccess, setIngredientSuccess] = useState<Record<string, boolean>>({});
   const [mappedFoodIds, setMappedFoodIds] = useState<Record<string, string>>({});
+  const [showCreateIngredient, setShowCreateIngredient] = useState<Record<string, boolean>>({});
+  const [deletableFoods, setDeletableFoods] = useState<Set<string>>(new Set());
+  const searchTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
   useEffect(() => {
     if (isOpen) {
       loadIngredients();
+    } else {
+      // Clear state when modal closes
+      setSelectedFoods({});
+      setSearchResults({});
+      setSearchQueries({});
+      setSearchStates({});
+      setIngredientSuccess({});
+      setMappedFoodIds({});
+      setShowCreateIngredient({});
+      setDeletableFoods(new Set());
+      setError(null);
     }
   }, [isOpen, recipeId]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(searchTimeouts.current).forEach(timeout => {
+        clearTimeout(timeout);
+      });
+    };
+  }, []);
 
   // Initialize per-ingredient UI state and ensure mapped cards are visible
   useEffect(() => {
@@ -167,6 +192,17 @@ export function IngredientMappingModal({
       if (localResult.success && localResult.data.length > 0) {
         allResults = [...localResult.data];
         setSearchResults(prev => ({ ...prev, [ingredientId]: allResults }));
+        
+        // Mark community foods as deletable
+        const communityFoods = allResults.filter(food => food.source === 'community');
+        if (communityFoods.length > 0) {
+          setDeletableFoods(prev => {
+            const newSet = new Set(prev);
+            communityFoods.forEach(food => newSet.add(food.id));
+            return newSet;
+          });
+        }
+        
         console.log(`Search results for ${ingredientId} (${query}):`, allResults.length, 'results');
       } else {
         // If no results found, try to find the mapped food by ID
@@ -264,7 +300,22 @@ export function IngredientMappingModal({
       return newResults;
     });
     
-    searchFoods(ingredientId, query);
+    // Clear any existing timeout for this ingredient
+    if (searchTimeouts.current[ingredientId]) {
+      clearTimeout(searchTimeouts.current[ingredientId]);
+    }
+    
+    // Set up new debounced search
+    if (query.length >= 2) {
+      const timeoutId = setTimeout(async () => {
+        await performSearch(ingredientId, query);
+        delete searchTimeouts.current[ingredientId];
+      }, 300);
+      searchTimeouts.current[ingredientId] = timeoutId;
+    } else {
+      setSearchResults(prev => ({ ...prev, [ingredientId]: [] }));
+      setSearchStates(prev => ({ ...prev, [ingredientId]: '' }));
+    }
   };
 
   const selectFood = (ingredientId: string, foodId: string) => {
@@ -354,25 +405,113 @@ export function IngredientMappingModal({
     }
   };
 
+  const handleCreateIngredientSuccess = async (ingredientId: string, foodId: string) => {
+    try {
+      // Auto-map the newly created ingredient
+      const success = await mapIngredient(
+        { 
+          foodId, 
+          servingGrams: 100, // Default serving size
+          useOnce: false, 
+          confidence: 1.0 
+        }, 
+        ingredientId
+      );
+
+      if (success) {
+        // Close the create ingredient form
+        setShowCreateIngredient(prev => ({ ...prev, [ingredientId]: false }));
+        
+        // Mark the newly created food as deletable
+        setDeletableFoods(prev => new Set([...prev, foodId]));
+        
+        // Refresh the search results to show the newly created ingredient
+        const ingredient = ingredients.find(ing => ing.id === ingredientId);
+        if (ingredient) {
+          await performSearch(ingredientId, ingredient.name);
+        }
+      }
+    } catch (error) {
+      console.error('Error auto-mapping created ingredient:', error);
+      setError('Failed to map the newly created ingredient');
+    }
+  };
+
+  const handleDeleteFood = async (foodId: string, ingredientId: string) => {
+    if (!confirm('Are you sure you want to delete this ingredient? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/foods/${foodId}?recipeId=${recipeId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Remove from deletable foods
+        setDeletableFoods(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(foodId);
+          return newSet;
+        });
+
+        // Remove from search results
+        setSearchResults(prev => ({
+          ...prev,
+          [ingredientId]: prev[ingredientId]?.filter(food => food.id !== foodId) || []
+        }));
+
+        // Clear any mapping if this food was selected
+        if (selectedFoods[ingredientId] === foodId) {
+          setSelectedFoods(prev => {
+            const newSelected = { ...prev };
+            delete newSelected[ingredientId];
+            return newSelected;
+          });
+        }
+
+        // Also clear any current mapping if it was to the deleted food
+        setIngredients(prev => prev.map(ing => 
+          ing.id === ingredientId && ing.currentMapping?.foodId === foodId
+            ? { ...ing, currentMapping: null }
+            : ing
+        ));
+
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to delete ingredient');
+      }
+    } catch (error) {
+      console.error('Error deleting food:', error);
+      setError('Network error deleting ingredient');
+    }
+  };
+
   const mapAllIngredients = async () => {
     setIsMapping(true);
     setError(null);
     
     try {
-      // Only map ingredients that have new selections (not already mapped)
-      const newMappings = Object.entries(selectedFoods).filter(([ingredientId, foodId]) => {
+      // Map all ingredients that have selections (including re-mappings)
+      const mappingsToProcess = Object.entries(selectedFoods).filter(([ingredientId, foodId]) => {
         const ingredient = ingredients.find(ing => ing.id === ingredientId);
-        return ingredient && !ingredient.currentMapping;
+        // Include if ingredient exists and has a different mapping than current
+        return ingredient && (
+          !ingredient.currentMapping || 
+          ingredient.currentMapping.foodId !== foodId
+        );
       });
 
-      if (newMappings.length === 0) {
-        // All ingredients are already mapped, just close
+      if (mappingsToProcess.length === 0) {
+        // No new mappings to process, just close
         onMappingComplete?.();
         onClose();
         return;
       }
 
-      const mappingPromises = newMappings.map(([ingredientId, foodId]) =>
+      const mappingPromises = mappingsToProcess.map(([ingredientId, foodId]) =>
         fetch('/api/foods/map', {
           method: 'POST',
           headers: {
@@ -390,6 +529,51 @@ export function IngredientMappingModal({
         return;
       }
 
+      // Update the ingredients state to reflect the new mappings
+      const updatedIngredients = ingredients.map(ingredient => {
+        const selectedFoodId = selectedFoods[ingredient.id];
+        if (selectedFoodId) {
+          const selectedFood = searchResults[ingredient.id]?.find(food => food.id === selectedFoodId);
+          if (selectedFood) {
+            return {
+              ...ingredient,
+              currentMapping: {
+                foodId: selectedFood.id,
+                foodName: selectedFood.name,
+                foodBrand: selectedFood.brand ?? undefined,
+                confidence: selectedFood.confidence
+              }
+            };
+          }
+        }
+        return ingredient;
+      });
+
+      setIngredients(updatedIngredients);
+
+      // Reload ingredients from database to get the latest mappings
+      await loadIngredients();
+
+      // Recompute nutrition after mappings are updated
+      try {
+        const nutritionResponse = await fetch(`/api/recipes/${recipeId}/compute-nutrition`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ goal: 'general' }),
+        });
+
+        if (nutritionResponse.ok) {
+          console.log('✅ Nutrition recomputed successfully');
+        } else {
+          console.warn('⚠️ Failed to recompute nutrition');
+        }
+      } catch (error) {
+        console.warn('⚠️ Error recomputing nutrition:', error);
+        // Don't fail the mapping process if nutrition computation fails
+      }
+
       onMappingComplete?.();
       onClose();
     } catch (err) {
@@ -399,6 +583,7 @@ export function IngredientMappingModal({
       setIsMapping(false);
     }
   };
+
 
   const mappedCount = ingredients.filter(ingredient => 
     selectedFoods[ingredient.id] || ingredient.currentMapping
@@ -413,6 +598,7 @@ export function IngredientMappingModal({
         <DialogHeader>
           <DialogTitle>Map Ingredients to Nutrition Data</DialogTitle>
         </DialogHeader>
+
 
         {error && (
           <Alert variant="destructive">
@@ -441,36 +627,42 @@ export function IngredientMappingModal({
               </Badge>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
-                💡 <strong>Tip:</strong> Try removing brand words (e.g., 'power cakes' instead of 'kodiak power cakes')
-              </p>
-            </div>
 
             <div className="space-y-4">
               {ingredients.map((ingredient) => (
                 <Card key={ingredient.id}>
                   <CardContent className="p-4">
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{ingredient.name}</span>
-                        <Badge variant="outline">
-                          {`${ingredient.qty} ${ingredient.unit}`}
-                        </Badge>
-                        {ingredient.currentMapping && (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                              Currently: {ingredient.currentMapping.foodName}
-                              {ingredient.currentMapping.foodBrand && ` (${ingredient.currentMapping.foodBrand})`}
-                            </Badge>
-                            {ingredientSuccess[ingredient.id] && (
-                              <Badge variant="default" className="bg-green-600">
-                                <Check className="h-3 w-3 mr-1" />
-                                Mapped
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{ingredient.name}</span>
+                          <Badge variant="outline">
+                            {`${ingredient.qty} ${ingredient.unit}`}
+                          </Badge>
+                          {ingredient.currentMapping && (
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                Currently: {ingredient.currentMapping.foodName}
+                                {ingredient.currentMapping.foodBrand && ` (${ingredient.currentMapping.foodBrand})`}
                               </Badge>
-                            )}
-                          </div>
-                        )}
+                              {ingredientSuccess[ingredient.id] && (
+                                <Badge variant="default" className="bg-green-600">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Mapped
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCreateIngredient(prev => ({ ...prev, [ingredient.id]: true }))}
+                          className="flex items-center gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create new ingredient
+                        </Button>
                       </div>
 
                       <div className="space-y-2">
@@ -488,6 +680,18 @@ export function IngredientMappingModal({
                         {searchStates[ingredient.id] && (
                           <div className="text-sm text-muted-foreground py-2">
                             {searchStates[ingredient.id]}
+                          </div>
+                        )}
+
+
+                        {/* Create Ingredient Form */}
+                        {showCreateIngredient[ingredient.id] && (
+                          <div className="mt-4">
+                            <CreateIngredientForm
+                              ingredientName={ingredient.name}
+                              onClose={() => setShowCreateIngredient(prev => ({ ...prev, [ingredient.id]: false }))}
+                              onSuccess={(foodId) => handleCreateIngredientSuccess(ingredient.id, foodId)}
+                            />
                           </div>
                         )}
 
@@ -522,6 +726,8 @@ export function IngredientMappingModal({
                                   gramsResolved={gramsResolved}
                                   usedFallbackServing={usedFallbackServing ? true : undefined}
                                   isMapped={mappedFoodIds[ingredient.id] === food.id}
+                                  canDelete={deletableFoods.has(food.id)}
+                                  onDelete={() => handleDeleteFood(food.id, ingredient.id)}
                                 />
                               );
                             })}

@@ -1,0 +1,162 @@
+{
+  "meta": { "name": "basic-staples", "version": 1 },
+  "items": [
+    {
+      "id": "seed_olive_oil_curated",
+      "name": "Olive Oil",
+      "brand": null,
+      "categoryId": "oil",
+      "densityGml": 0.91,
+      "kcal100": 884, "protein100": 0, "carbs100": 0, "fat100": 100,
+      "fiber100": 0, "sugar100": 0,
+      "units": [
+        { "label": "1 tbsp", "grams": 13.6 },
+        { "label": "1 tsp",  "grams": 4.5 }
+      ],
+      "aliases": ["extra virgin olive oil", "olive-oil"],
+      "verification": "verified",
+      "popularity": 90
+    },
+    {
+      "id": "seed_chicken_breast_raw",
+      "name": "Chicken Breast, Raw (Skinless)",
+      "brand": null,
+      "categoryId": "meat",
+      "densityGml": 1.0,
+      "kcal100": 120, "protein100": 22.5, "carbs100": 0, "fat100": 2.6,
+      "fiber100": 0, "sugar100": 0,
+      "units": [{ "label": "1 cup, diced", "grams": 140 }],
+      "aliases": ["chicken breast", "raw chicken breast"],
+      "verification": "verified",
+      "popularity": 80
+    },
+    {
+      "id": "seed_butter_unsalted",
+      "name": "Butter, Unsalted",
+      "brand": null,
+      "categoryId": "dairy",
+      "densityGml": 0.91,
+      "kcal100": 717, "protein100": 0.9, "carbs100": 0.1, "fat100": 81.1,
+      "fiber100": 0, "sugar100": 0.1,
+      "units": [
+        { "label": "1 tbsp", "grams": 14.2 },
+        { "label": "1 stick", "grams": 113 }
+      ],
+      "aliases": ["unsalted butter", "sweet cream butter"],
+      "verification": "verified",
+      "popularity": 85
+    },
+    {
+      "id": "seed_all_purpose_flour",
+      "name": "All-Purpose Flour",
+      "brand": null,
+      "categoryId": "grain",
+      "densityGml": 0.59,
+      "kcal100": 364, "protein100": 10.3, "carbs100": 76.3, "fat100": 1.0,
+      "fiber100": 2.7, "sugar100": 0.3,
+      "units": [
+        { "label": "1 cup", "grams": 120 },
+        { "label": "1 tbsp", "grams": 7.5 }
+      ],
+      "aliases": ["flour", "white flour", "plain flour"],
+      "verification": "verified",
+      "popularity": 95
+    },
+    {
+      "id": "seed_eggs_large",
+      "name": "Eggs, Large, Raw",
+      "brand": null,
+      "categoryId": "protein",
+      "densityGml": 1.03,
+      "kcal100": 143, "protein100": 12.6, "carbs100": 0.7, "fat100": 9.5,
+      "fiber100": 0, "sugar100": 0.4,
+      "units": [
+        { "label": "1 large egg", "grams": 50 },
+        { "label": "1 cup, beaten", "grams": 243 }
+      ],
+      "aliases": ["eggs", "chicken eggs", "large eggs"],
+      "verification": "verified",
+      "popularity": 88
+    },
+    {
+      "id": "seed_sugar_granulated",
+      "name": "Sugar, Granulated",
+      "brand": null,
+      "categoryId": "sweetener",
+      "densityGml": 0.85,
+      "kcal100": 387, "protein100": 0, "carbs100": 100, "fat100": 0,
+      "fiber100": 0, "sugar100": 100,
+      "units": [
+        { "label": "1 cup", "grams": 200 },
+        { "label": "1 tbsp", "grams": 12.5 }
+      ],
+      "aliases": ["white sugar", "table sugar", "granulated sugar"],
+      "verification": "verified",
+      "popularity": 92
+    },
+    {
+      "id": "seed_salt_table",
+      "name": "Salt, Table",
+      "brand": null,
+      "categoryId": "seasoning",
+      "densityGml": 2.16,
+      "kcal100": 0, "protein100": 0, "carbs100": 0, "fat100": 0,
+      "fiber100": 0, "sugar100": 0,
+      "units": [
+        { "label": "1 tsp", "grams": 5.7 },
+        { "label": "1 tbsp", "grams": 17.1 }
+      ],
+      "aliases": ["table salt", "iodized salt", "sea salt"],
+      "verification": "verified",
+      "popularity": 75
+    },
+    {
+      "id": "seed_milk_whole",
+      "name": "Milk, Whole, 3.25%",
+      "brand": null,
+      "categoryId": "dairy",
+      "densityGml": 1.03,
+      "kcal100": 61, "protein100": 3.2, "carbs100": 4.8, "fat100": 3.3,
+      "fiber100": 0, "sugar100": 4.8,
+      "units": [
+        { "label": "1 cup", "grams": 244 },
+        { "label": "1 tbsp", "grams": 15 }
+      ],
+      "aliases": ["whole milk", "3.25% milk", "full fat milk"],
+      "verification": "verified",
+      "popularity": 70
+    },
+    {
+      "id": "seed_onion_yellow",
+      "name": "Onion, Yellow, Raw",
+      "brand": null,
+      "categoryId": "vegetable",
+      "densityGml": 0.5,
+      "kcal100": 40, "protein100": 1.1, "carbs100": 9.3, "fat100": 0.1,
+      "fiber100": 1.7, "sugar100": 4.2,
+      "units": [
+        { "label": "1 medium", "grams": 110 },
+        { "label": "1 cup, chopped", "grams": 160 }
+      ],
+      "aliases": ["yellow onion", "cooking onion", "spanish onion"],
+      "verification": "verified",
+      "popularity": 85
+    },
+    {
+      "id": "seed_garlic_fresh",
+      "name": "Garlic, Fresh",
+      "brand": null,
+      "categoryId": "vegetable",
+      "densityGml": 0.5,
+      "kcal100": 149, "protein100": 6.4, "carbs100": 33.1, "fat100": 0.5,
+      "fiber100": 2.1, "sugar100": 1.0,
+      "units": [
+        { "label": "1 clove", "grams": 3 },
+        { "label": "1 tbsp, minced", "grams": 8.5 }
+      ],
+      "aliases": ["garlic", "fresh garlic", "garlic cloves"],
+      "verification": "verified",
+      "popularity": 78
+    }
+  ]
+}

@@ -47,7 +47,13 @@ export async function DELETE(request: NextRequest) {
     // Delete S3 objects
     try {
       if (allS3Keys.length > 0) {
-        const s3 = new S3Client({ region });
+        const s3 = new S3Client({ 
+          region,
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+          }
+        });
         await s3.send(
           new DeleteObjectsCommand({
             Bucket: bucket,

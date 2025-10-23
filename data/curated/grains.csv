@@ -1,0 +1,4 @@
+id,name,brand,categoryId,densityGml,kcal100,protein100,carbs100,fat100,fiber100,sugar100,aliases,verification,popularity,units
+seed_rice_white_uncooked,Rice, White (Uncooked),rice_uncooked,0.85,365,7,80,0.6,1.3,0.1,"white rice; rice dry",verified,70,"[{""label"":""1 cup"",""grams"":185}]"
+seed_quinoa_dry,Quinoa, Dry,grain,0.9,368,14,64,6,7,0,"",verified,60,"[{""label"":""1 cup"",""grams"":170}]"
+seed_oats_rolled_dry,Oats, Rolled (Dry),oats,0.4,379,13,67,7,10,0.9,"rolled oats; old fashioned oats",verified,70,"[{""label"":""1 cup"",""grams"":90}]"

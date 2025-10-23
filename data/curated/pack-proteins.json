@@ -1,0 +1,82 @@
+{
+  "meta": {
+    "name": "pack-proteins",
+    "version": 1
+  },
+  "items": [
+    {
+      "id": "seed_chicken_breast_raw",
+      "name": "Chicken Breast Raw (Skinless)",
+      "brand": "",
+      "categoryId": "meat",
+      "densityGml": 1,
+      "kcal100": 120,
+      "protein100": 22.5,
+      "carbs100": 0,
+      "fat100": 2.6,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 cup, diced",
+          "grams": 140
+        }
+      ],
+      "aliases": [
+        "chicken breast"
+      ],
+      "verification": "verified",
+      "popularity": 80
+    },
+    {
+      "id": "seed_egg_whites_raw",
+      "name": "Egg Whites Raw",
+      "brand": "",
+      "categoryId": "meat",
+      "densityGml": 1,
+      "kcal100": 52,
+      "protein100": 11,
+      "carbs100": 0.7,
+      "fat100": 0.2,
+      "fiber100": 0,
+      "sugar100": 0,
+      "units": [
+        {
+          "label": "1 large white",
+          "grams": 33
+        }
+      ],
+      "aliases": [
+        "egg white",
+        "whites"
+      ],
+      "verification": "verified",
+      "popularity": 75
+    },
+    {
+      "id": "seed_whey_isolate_generic",
+      "name": "Whey Protein Isolate (Generic)",
+      "brand": "",
+      "categoryId": "whey",
+      "densityGml": 0.5,
+      "kcal100": 380,
+      "protein100": 85,
+      "carbs100": 5,
+      "fat100": 2,
+      "fiber100": 0,
+      "sugar100": 2,
+      "units": [
+        {
+          "label": "1 scoop",
+          "grams": 32
+        }
+      ],
+      "aliases": [
+        "whey isolate",
+        "protein powder isolate"
+      ],
+      "verification": "verified",
+      "popularity": 85
+    }
+  ]
+}

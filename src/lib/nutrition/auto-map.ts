@@ -38,19 +38,24 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
     
     if (bestMatch) {
       const confidence = calculateConfidence(ingredient.name, bestMatch.name);
-      try {
-        if (FOOD_MAPPING_V2) {
-          await prisma.ingredientFoodMap.create({
-            data: {
-              ingredientId: ingredient.id,
-              foodId: bestMatch.id,
-              mappedBy: 'auto',
-              confidence,
-              useOnce: false,
-              isActive: true,
-            },
-          });
-        } else {
+      
+      // Higher confidence thresholds for auto-mapping
+      const minConfidence = bestMatch.verification === 'verified' ? 0.6 : 0.7;
+      
+      if (confidence >= minConfidence) {
+        try {
+          if (FOOD_MAPPING_V2) {
+            await prisma.ingredientFoodMap.create({
+              data: {
+                ingredientId: ingredient.id,
+                foodId: bestMatch.id,
+                mappedBy: 'auto',
+                confidence,
+                useOnce: false,
+                isActive: true,
+              },
+            });
+          } else {
           // Check if mapping already exists
           const existingMapping = await prisma.ingredientFoodMap.findFirst({
             where: {
@@ -81,6 +86,7 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
         mappedCount++;
       } catch (err) {
         logger.warn('autoMap:error-map', { ingredientId: ingredient.id, err: (err as Error).message });
+      }
       }
     }
   }
