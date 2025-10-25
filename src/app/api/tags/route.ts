@@ -4,44 +4,112 @@ import { prisma } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const searchTerm = searchParams.get("s");
+    const namespace = searchParams.get("namespace");
+    const search = searchParams.get("s");
 
-    // Build where clause for search
-    const where = searchTerm
-      ? {
-          OR: [
-            { slug: { contains: searchTerm, mode: "insensitive" as const } },
-            { label: { contains: searchTerm, mode: "insensitive" as const } },
-          ],
+    // Handle search query (for TagsInput component)
+    if (search) {
+      const tags = await prisma.tag.findMany({
+        where: {
+          label: {
+            contains: search,
+            mode: 'insensitive'
+          }
+        },
+        select: {
+          id: true,
+          slug: true,
+          label: true,
+          namespace: true
+        },
+        take: 10,
+        orderBy: {
+          label: 'asc'
         }
-      : {};
+      });
 
-    // Query tags with popularity count
-    const tags = await prisma.tag.findMany({
-      where,
-      take: 10,
-      orderBy: [
-        { recipes: { _count: "desc" } },
-        { label: "asc" },
-      ],
-      include: {
+      return NextResponse.json(tags);
+    }
+
+    // Handle namespace-specific queries (for TagChipSelect component)
+    if (namespace) {
+      // Validate namespace is a valid TagNamespace
+      const validNamespaces = [
+        "MEAL_TYPE",
+        "CUISINE", 
+        "DIET",
+        "METHOD",
+        "COURSE",
+        "TIME",
+        "DIFFICULTY",
+        "OCCASION",
+        "GOAL"
+      ];
+
+      if (!validNamespaces.includes(namespace)) {
+        return NextResponse.json(
+          { error: "Invalid namespace" },
+          { status: 400 }
+        );
+      }
+
+      let tags = await prisma.tag.findMany({
+        where: {
+          namespace: namespace as any
+        },
+        select: {
+          id: true,
+          slug: true,
+          label: true,
+          namespace: true
+        }
+      });
+
+      // Custom ordering for MEAL_TYPE namespace
+      if (namespace === 'MEAL_TYPE') {
+        const order = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'];
+        tags = tags.sort((a, b) => {
+          const aIndex = order.indexOf(a.label);
+          const bIndex = order.indexOf(b.label);
+          return aIndex - bIndex;
+        });
+      } else {
+        // Default alphabetical ordering for other namespaces
+        tags = tags.sort((a, b) => a.label.localeCompare(b.label));
+      }
+
+      return NextResponse.json({ tags });
+    }
+
+    // Handle legacy requests (for TagFilters component) - return all tags with usage counts
+    const tagsWithCounts = await prisma.tag.findMany({
+      select: {
+        id: true,
+        slug: true,
+        label: true,
+        namespace: true,
         _count: {
           select: {
-            recipes: true,
-          },
-        },
+            recipes: true
+          }
+        }
       },
+      orderBy: {
+        recipes: {
+          _count: 'desc'
+        }
+      }
     });
 
-    // Transform the data to match the expected format
-    const result = tags.map((tag) => ({
+    // Transform to match expected format
+    const popularTags = tagsWithCounts.map(tag => ({
       id: tag.id,
       slug: tag.slug,
       label: tag.label,
-      count: tag._count.recipes,
+      count: tag._count.recipes
     }));
 
-    return NextResponse.json(result);
+    return NextResponse.json(popularTags);
   } catch (error) {
     console.error("Error fetching tags:", error);
     return NextResponse.json(

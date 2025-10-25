@@ -203,7 +203,8 @@ export async function PATCH(
           update: {},
           create: { 
             slug,
-            label: humanizedLabel 
+            label: humanizedLabel,
+            namespace: 'MEAL_TYPE' // Default namespace for legacy tags
           },
         });
 

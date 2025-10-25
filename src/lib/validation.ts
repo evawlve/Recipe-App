@@ -13,6 +13,11 @@ export const recipeCreateSchema = z.object({
   ).min(1, "At least one ingredient is required"),
   localFiles: z.array(z.instanceof(File)).optional().default([]),
   tags: z.array(z.string().min(1).max(24)).max(10).default([]),
+  // New tag classification fields
+  mealType: z.array(z.string()).min(1, "Meal type is required"),
+  cuisine: z.array(z.string()).default([]),
+  method: z.array(z.string()).default([]),
+  diet: z.array(z.string()).default([]),
 });
 
 // Schema for API requests (without File objects)
@@ -35,6 +40,11 @@ export const recipeApiSchema = z.object({
     })
   ).optional().default([]),
   tags: z.array(z.string().min(1).max(24)).max(10).default([]),
+  // New tag classification fields
+  mealType: z.array(z.string()).min(1, "Meal type is required"),
+  cuisine: z.array(z.string()).default([]),
+  method: z.array(z.string()).default([]),
+  diet: z.array(z.string()).default([]),
 });
 
 export type RecipeCreateInput = z.infer<typeof recipeCreateSchema>;
