@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,8 @@ import { ImageUploader } from "@/components/recipe/ImageUploader";
 import { TagsInput } from "@/components/form/TagsInput";
 import { FileState } from "@/types/file-state";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { MealTypeStep } from "./_components/MealTypeStep";
+import { OptionalTaxonomy } from "./_components/OptionalTaxonomy";
 import Link from "next/link";
 
 function NewRecipeForm() {
@@ -24,6 +26,7 @@ function NewRecipeForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fileStates, setFileStates] = useState<FileState[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const mealTypeRef = useRef<HTMLDivElement>(null);
   
   const form = useForm<RecipeCreateInput>({
     resolver: zodResolver(recipeCreateSchema),
@@ -33,6 +36,10 @@ function NewRecipeForm() {
       bodyMd: "",
       ingredients: [{ name: "", qty: 1, unit: "" }],
       tags: [],
+      mealType: [],
+      cuisine: [],
+      method: [],
+      diet: [],
     },
   });
 
@@ -46,6 +53,19 @@ function NewRecipeForm() {
   // Custom hooks for UX improvements
   const { clearDraft } = useFormDraft(form, isSubmitting);
   useFocusManagement(errors);
+
+  // Scroll to meal type section when there's a meal type error
+  useEffect(() => {
+    if (errors.mealType && mealTypeRef.current) {
+      // Small delay to ensure the error message is rendered
+      setTimeout(() => {
+        mealTypeRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+  }, [errors.mealType]);
 
   // Check if any files are uploading
   const hasUploadingFiles = fileStates.some(fs => fs.status === "uploading");
@@ -94,7 +114,7 @@ function NewRecipeForm() {
         clearDraft(); // Clear the draft on successful submission
         // Show success message with auto-mapping info
         console.log('Recipe created successfully! Ingredients have been automatically mapped for nutrition calculation.');
-        router.push(`/recipes/${result.recipe.id}`);
+        router.push(`/recipes/${result.recipe.id}?created=1`);
       } else {
         setSubmitError(result.error || "Failed to create recipe. Please try again.");
       }
@@ -165,6 +185,7 @@ function NewRecipeForm() {
               <Input
                 id="servings"
                 type="number"
+                min="1"
                 {...register("servings", { valueAsNumber: true })}
                 placeholder="Number of servings"
                 className={errors.servings ? "border-destructive" : ""}
@@ -175,6 +196,25 @@ function NewRecipeForm() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Meal Type Classification */}
+        <div ref={mealTypeRef}>
+          <MealTypeStep
+            selectedMealType={watch("mealType") || []}
+            onMealTypeChange={(selectedTags) => setValue("mealType", selectedTags)}
+            error={errors.mealType?.message}
+          />
+        </div>
+
+        {/* Optional Taxonomy */}
+        <OptionalTaxonomy
+          selectedCuisine={watch("cuisine") || []}
+          onCuisineChange={(selectedTags) => setValue("cuisine", selectedTags)}
+          selectedMethod={watch("method") || []}
+          onMethodChange={(selectedTags) => setValue("method", selectedTags)}
+          selectedDiet={watch("diet") || []}
+          onDietChange={(selectedTags) => setValue("diet", selectedTags)}
+        />
 
         {/* Ingredients */}
         <Card>

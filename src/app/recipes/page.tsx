@@ -161,7 +161,12 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       <ScrollToTop />
       <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text mb-4">Recipes</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h1 className="text-3xl font-bold text-text">Recipes</h1>
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/recipes/new">Create New Recipe</Link>
+          </Button>
+        </div>
         <p className="text-muted-foreground">
           {totalCount} recipe{totalCount !== 1 ? "s" : ""} found
           {searchQuery && ` for "${searchQuery}"`}

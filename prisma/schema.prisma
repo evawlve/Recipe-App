@@ -7,6 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TagNamespace {
+  MEAL_TYPE
+  CUISINE
+  DIET
+  METHOD
+  COURSE
+  TIME
+  DIFFICULTY
+  OCCASION
+  GOAL
+}
+
+enum TagSource {
+  USER
+  AUTO_CONFIDENT
+  AUTO_SUGGESTED
+}
+
 /// Configure Prisma to use the seed script
 // See https://www.prisma.io/docs/orm/prisma-migrate/workflows/seeding#seed-with-ts-node-or-tsx
 // prisma {
@@ -62,6 +80,7 @@ model Recipe {
   forks       Recipe[]           @relation("Forks")
   tags        RecipeTag[]
   notifications Notification[]
+  features    RecipeFeatureLite?
 }
 
 model Ingredient {
@@ -98,17 +117,21 @@ model Photo {
 }
 
 model Tag {
-  id      String      @id @default(cuid())
-  slug    String      @unique
-  label   String
-  recipes RecipeTag[]
+  id        String       @id @default(cuid())
+  slug      String       @unique
+  label     String
+  namespace TagNamespace // NEW
+  recipes   RecipeTag[]
+  createdAt DateTime     @default(now())
 }
 
 model RecipeTag {
-  recipeId String
-  tagId    String
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
-  tag      Tag    @relation(fields: [tagId], references: [id])
+  recipeId   String
+  tagId      String
+  source     TagSource   @default(USER) // NEW
+  confidence Float       @default(1.0)  // NEW
+  recipe     Recipe      @relation(fields: [recipeId], references: [id])
+  tag        Tag         @relation(fields: [tagId], references: [id])
 
   @@id([recipeId, tagId])
 }
@@ -264,4 +287,20 @@ model FoodAlias {
   
   @@unique([foodId, alias])
   @@index([alias])
+}
+
+model RecipeFeatureLite {
+  recipeId          String  @id
+  proteinPer100kcal Float   @default(0)
+  carbPer100kcal    Float   @default(0)
+  fatPer100kcal     Float   @default(0)
+  fiberPerServing   Float   @default(0)
+  sugarPerServing   Float   @default(0)
+  kcalPerServing    Float   @default(0)
+  // room for quick flags/scores if needed
+  goalScores        String  @default("{}") // JSON e.g. {"pre_workout":0.72}
+  methodFlags       String  @default("[]") // JSON e.g. ["air_fry","bake"]
+  cuisineScores     String  @default("{}") // JSON e.g. {"mexican":0.61}
+  updatedAt         DateTime @updatedAt
+  recipe            Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }

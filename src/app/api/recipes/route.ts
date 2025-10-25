@@ -4,6 +4,7 @@ import { recipeApiSchema } from "@/lib/validation";
 import { getCurrentUser } from "@/lib/auth";
 import { autoMapIngredients } from "@/lib/nutrition/auto-map";
 import { computeRecipeNutrition } from "@/lib/nutrition/compute";
+import { writeRecipeFeatureLite } from "@/lib/features/writeRecipeFeatureLite";
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,7 +74,8 @@ export async function POST(request: NextRequest) {
           update: {},
           create: { 
             slug,
-            label: humanizedLabel 
+            label: humanizedLabel,
+            namespace: 'MEAL_TYPE' // Default namespace for legacy tags
           },
         });
 
@@ -87,6 +89,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Handle new tag classification fields
+    const tagClassificationFields = [
+      { field: 'mealType', namespace: 'MEAL_TYPE' },
+      { field: 'cuisine', namespace: 'CUISINE' },
+      { field: 'method', namespace: 'METHOD' },
+      { field: 'diet', namespace: 'DIET' }
+    ];
+
+    for (const { field, namespace } of tagClassificationFields) {
+      const tagIds = validatedData[field as keyof typeof validatedData] as string[];
+      
+      if (tagIds && tagIds.length > 0) {
+        for (const tagId of tagIds) {
+          // Create recipe tag link with source=USER and confidence=1.0
+          await prisma.recipeTag.create({
+            data: {
+              recipeId: recipe.id,
+              tagId: tagId,
+              source: 'USER',
+              confidence: 1.0
+            }
+          });
+        }
+      }
+    }
+
     // Auto-map ingredients to foods and compute nutrition
     try {
       const mappedCount = await autoMapIngredients(recipe.id);
@@ -95,8 +123,12 @@ export async function POST(request: NextRequest) {
       // Compute nutrition after mapping ingredients
       await computeRecipeNutrition(recipe.id, 'general');
       console.log(`Computed nutrition for recipe ${recipe.id}`);
+      
+      // Write recipe features after nutrition is computed
+      await writeRecipeFeatureLite(recipe.id);
+      console.log(`Computed features for recipe ${recipe.id}`);
     } catch (error) {
-      console.error('Error auto-mapping ingredients or computing nutrition:', error);
+      console.error('Error auto-mapping ingredients, computing nutrition, or writing features:', error);
       // Don't fail the recipe creation if auto-mapping fails
     }
     

@@ -191,6 +191,14 @@ A full-featured recipe management application with:
 - ✅ **Advanced search** - search across recipe titles, instructions, and tag labels
 - ✅ **Search persistence** - URL state management for search and filters
 - ✅ **Quick navigation** - "View All Recipes" button to clear filters
+- ✅ **Tag Namespaces & Sources** - Structured tag system with namespaces (MEAL_TYPE, CUISINE, DIET, METHOD, COURSE, TIME, DIFFICULTY, OCCASION, GOAL) and sources (USER, AUTO_CONFIDENT, AUTO_SUGGESTED)
+- ✅ **Guided Recipe Creation** - Required meal type selection with optional taxonomy chips for Cuisine, Method, and Diet
+- ✅ **Auto-suggestions System** - AI-powered tag suggestions based on recipe nutrition and text analysis
+- ✅ **Recipe Feature Lite** - Pre-computed macro features for fast filtering and sorting
+- ✅ **Smart Goal Classification** - Advanced pre-workout/post-workout classification with tie-breaker logic
+- ✅ **Diet Classification** - Regex-based diet suggestions (vegetarian, vegan, gluten-free, dairy-free, nut-free, high-protein)
+- ✅ **Method & Cuisine Detection** - Text-based method and cuisine classification
+- ✅ **Suggestion Acceptance Flow** - Users can accept auto-suggested tags with confidence scoring
 
 ### **User Management & Discovery**
 - ✅ **Enhanced Signup Process** - Guided username setup with real-time validation
@@ -782,6 +790,7 @@ npm run aliases:backfill:fast # Generate aliases with bulk operations (faster)
 
 # Data Management
 npm run cleanup-orphaned-users  # Clean up orphaned user data
+npm run features:backfill       # Backfill RecipeFeatureLite for existing recipes
 ```
 
 ### **Environment Variables**
@@ -1083,6 +1092,22 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **API Endpoints** - New endpoints for ingredient creation, deletion, and alias management
 - ✅ **Authorization System** - Proper user ownership validation for community ingredient management
 - ✅ **Auto-alias Patterns** - Smart pattern matching for fat-related terms with comprehensive alias generation
+
+### **PR3 - Auto-suggestions & Recipe Feature Lite System**
+- ✅ **Tag Namespaces & Sources** - Complete tag system restructure with namespaces (MEAL_TYPE, CUISINE, DIET, METHOD, COURSE, TIME, DIFFICULTY, OCCASION, GOAL) and sources (USER, AUTO_CONFIDENT, AUTO_SUGGESTED)
+- ✅ **Guided Recipe Creation Flow** - Required meal type selection with optional taxonomy chips for Cuisine, Method, and Diet during recipe creation
+- ✅ **RecipeFeatureLite Model** - New database model for pre-computed macro features (proteinPer100kcal, carbPer100kcal, fatPer100kcal, fiberPerServing, sugarPerServing, kcalPerServing)
+- ✅ **Auto-suggestion Classifiers** - AI-powered suggestion system with diet, method, cuisine, and goal classification
+- ✅ **Diet Classification Engine** - Regex-based diet detection (vegetarian, vegan, gluten-free, dairy-free, nut-free, high-protein) with nutrition thresholds
+- ✅ **Smart Goal Classification** - Advanced pre-workout/post-workout classification with protein:carb ratio tie-breaker logic
+- ✅ **Method & Cuisine Detection** - Text-based classification for cooking methods (air fry, bake, grill) and cuisines (Mexican, Italian, American)
+- ✅ **Feature Writer Service** - Automatic computation and caching of recipe features on creation/update
+- ✅ **Suggestion API Endpoints** - Real-time suggestion generation and acceptance with confidence scoring
+- ✅ **SuggestionCard Component** - Interactive UI for displaying and accepting auto-suggested tags
+- ✅ **Backfill Script** - Comprehensive script to populate RecipeFeatureLite for existing recipes
+- ✅ **Database Migration** - Schema updates with RecipeFeatureLite model and relations
+- ✅ **Enhanced Tag Seeds** - Extended tag database with diet, method, cuisine, and goal tags
+- ✅ **Integration with Recipe Creation** - Automatic feature computation during recipe creation flow
 
 ### **Recent Bug Fixes & Stability Improvements**
 - ✅ **Supabase Server Client Error Resolution** - Fixed "Cannot read properties of undefined (reading 'call')" errors in server-side Supabase client initialization

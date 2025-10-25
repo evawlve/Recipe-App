@@ -13,15 +13,20 @@ import DeleteRecipeButton from "@/components/recipe/DeleteRecipeButton";
 import SaveButton from "@/components/recipe/SaveButton";
 import { AuthorLink } from "@/components/recipe/AuthorLink";
 import { RecipeNutritionDisplay } from "@/components/recipe/RecipeNutritionDisplay";
+import { SuggestionCard } from "@/components/SuggestionCard";
 
 interface RecipePageProps {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    created?: string;
+  }>;
 }
 
-export default async function RecipePage({ params }: RecipePageProps) {
+export default async function RecipePage({ params, searchParams }: RecipePageProps) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const recipe = await prisma.recipe.findUnique({
     where: {
       id: resolvedParams.id,
@@ -235,6 +240,11 @@ export default async function RecipePage({ params }: RecipePageProps) {
               />
             </CardContent>
           </Card>
+
+          {/* Show suggestion card if recipe was just created */}
+          {resolvedSearchParams.created === "1" && (
+            <SuggestionCard recipeId={recipe.id} />
+          )}
         </div>
 
         {/* Nutrition Sidebar - Desktop only */}
