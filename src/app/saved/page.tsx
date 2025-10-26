@@ -7,6 +7,9 @@ import { RecipeCard } from "@/components/recipe/RecipeCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+// Force dynamic rendering for pages that use authentication
+export const dynamic = 'force-dynamic';
+
 export default async function SavedPage() {
   const currentUser = await getCurrentUser();
   

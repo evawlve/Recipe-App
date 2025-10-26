@@ -3,6 +3,9 @@ import AuthCard from "@/components/auth/AuthCard";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+// Force dynamic rendering for pages that use authentication
+export const dynamic = 'force-dynamic';
+
 export default async function SignInPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

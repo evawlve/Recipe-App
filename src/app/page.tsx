@@ -6,6 +6,9 @@ import { SearchBar } from '@/components/home/SearchBar';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { getCurrentUser } from '@/lib/auth';
 
+// Force dynamic rendering for pages that use authentication
+export const dynamic = 'force-dynamic';
+
 const mealTypeTiles = [
   { label: 'Breakfast', slug: 'breakfast', imageSrc: '/images/cat/breakfast.svg' },
   { label: 'Lunch', slug: 'lunch', imageSrc: '/images/cat/lunch.svg' },

@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { NotificationsList } from './NotificationsList';
 
+// Force dynamic rendering for pages that use authentication
+export const dynamic = 'force-dynamic';
+
 export default async function NotificationsPage() {
   const user = await getCurrentUser();
   

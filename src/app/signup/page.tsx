@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import SignUpFormClient from "./sign-up-form-client";
 import { Suspense } from "react";
 
+// Force dynamic rendering for pages that use authentication
+export const dynamic = 'force-dynamic';
+
 export default async function SignUpPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
