@@ -28,4 +28,14 @@
   .logo-dark-mode {
     transition: filter 0.3s ease-in-out;
   }
+  
+  /* Hide scrollbar but keep functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

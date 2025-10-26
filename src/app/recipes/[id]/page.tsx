@@ -226,7 +226,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
           </Card>
 
           {/* Comments Section */}
-          <Card>
+          <Card id="comments">
             <CardHeader>
               <CardTitle>Comments</CardTitle>
             </CardHeader>

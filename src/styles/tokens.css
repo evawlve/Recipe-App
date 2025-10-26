@@ -23,17 +23,27 @@
 }
 
 .dark {
-  --bg: 222 47% 11%;
-  --card: 222 47% 13%;
-  --popover: 222 47% 13%;
-  --text: 0 0% 100%;
-  --muted: 215 16% 72%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
-  --secondary: 223 10% 22%;
+  /* New FitFood dark mode palette from Figma */
+  --bg: 15 50% 10%;              /* #211412 - very dark brown/black */
+  --card: 15 33% 15%;            /* slightly lighter than bg */
+  --popover: 15 33% 15%;         /* same as card */
+  --text: 0 0% 100%;             /* #FFFFFF - white text */
+  --muted: 15 25% 70%;           /* #C99E91 - light brown/orange */
+  --primary: 144 73% 55%;        /* Keep green accent for buttons */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 15 33% 22%;       /* #472B24 - dark brown */
   --secondary-foreground: 0 0% 100%;
-  --accent: 160 84% 39%;
-  --accent-foreground: 222 47% 11%;
-  --border: 223 10% 22%;
-  --ring: 217 91% 60%;
+  --accent: 144 73% 55%;         /* Keep green accent */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 15 33% 22%;           /* #472B24 - dark brown */
+  --ring: 144 73% 55%;           /* Keep green accent for focus rings */
+  --shadow: 15 50% 5%;           /* Very dark shadow */
+  
+  /* Additional FitFood dark mode colors from Figma */
+  --search-bg: 15 33% 22%;       /* #472B24 - dark brown for search bars */
+  --search-text: 0 0% 100%;      /* #FFFFFF - white text in search */
+  --search-placeholder: 15 25% 70%; /* #C99E91 - light brown/orange for placeholder */
+  --light-gray: 210 20% 90%;     /* #E5E8EB - light gray for subtle elements */
 }

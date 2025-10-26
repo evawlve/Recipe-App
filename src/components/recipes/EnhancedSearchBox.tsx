@@ -150,7 +150,7 @@ export function EnhancedSearchBox({ className }: EnhancedSearchBoxProps) {
     <div className={`relative ${className}`} ref={inputRef}>
       <form onSubmit={handleSubmit}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-search-placeholder h-4 w-4" />
           <Input
             ref={inputRef}
             type="text"
@@ -159,7 +159,7 @@ export function EnhancedSearchBox({ className }: EnhancedSearchBoxProps) {
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onFocus={() => setIsOpen(true)}
-            className="pl-10 pr-4 py-2 w-64 bg-muted border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="pl-10 pr-4 py-2 w-64 bg-search-bg border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-search-text placeholder:text-search-placeholder"
           />
         </div>
       </form>

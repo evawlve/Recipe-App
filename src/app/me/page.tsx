@@ -8,6 +8,9 @@ import RecipeGrid from "@/components/account/RecipeGrid";
 import SettingsPanel from "@/components/account/SettingsPanel";
 import { MePageClient } from "./MePageClient";
 
+// Force dynamic rendering for pages that use authentication
+export const dynamic = 'force-dynamic';
+
 interface MePageProps {
   searchParams: Promise<{ tab?: string }>;
 }

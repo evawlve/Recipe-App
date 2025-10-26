@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Heart } from "lucide-react";
+import { ThumbsUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function LikeButton({ recipeId, initialCount, initiallyLiked }:{
@@ -34,7 +34,7 @@ export default function LikeButton({ recipeId, initialCount, initiallyLiked }:{
 	return (
 		<div className="relative">
 			<button onClick={toggle} disabled={pending} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border">
-				<Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : "text-muted"}`} />
+				<ThumbsUp className={`h-4 w-4 ${liked ? "fill-current text-green-600" : "text-muted"}`} />
 				<span className="text-sm">{count}</span>
 			</button>
 			
