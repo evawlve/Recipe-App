@@ -2,6 +2,27 @@ import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isTokenError } from "@/lib/auth-utils";
 
+// Retry function for database operations
+async function retryDatabaseOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      if (error.code === 'P2024' && i < maxRetries - 1) {
+        // Connection pool timeout - wait and retry
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
 export async function getCurrentUser() {
   try {
     const supabase = await createSupabaseServerClient();
@@ -35,22 +56,24 @@ export async function getCurrentUser() {
     let user;
     try {
       // First, try to find by ID with all fields
-      user = await prisma.user.findUnique({
-        where: { id: authUser.id },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          firstName: true,
-          lastName: true,
-          username: true,
-          displayName: true,
-          bio: true,
-          avatarUrl: true,
-          avatarKey: true,
-          createdAt: true,
-        }
-      });
+      user = await retryDatabaseOperation(() => 
+        prisma.user.findUnique({
+          where: { id: authUser.id },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            displayName: true,
+            bio: true,
+            avatarUrl: true,
+            avatarKey: true,
+            createdAt: true,
+          }
+        })
+      );
       
       console.log('Initial user fetch - username:', user?.username);
 
@@ -80,29 +103,33 @@ export async function getCurrentUser() {
 
         console.log('Update data being sent to database:', updateData);
 
-        user = await prisma.user.update({
-          where: { id: authUser.id },
-          data: updateData,
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            displayName: true,
-            bio: true,
-            avatarUrl: true,
-            avatarKey: true,
-            createdAt: true,
-          }
-        });
+        user = await retryDatabaseOperation(() =>
+          prisma.user.update({
+            where: { id: authUser.id },
+            data: updateData,
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              username: true,
+              displayName: true,
+              bio: true,
+              avatarUrl: true,
+              avatarKey: true,
+              createdAt: true,
+            }
+          })
+        );
         console.log('Updated existing user:', user.email, 'username:', user.username);
       } else {
         // Check if user exists with same email but different ID
-        const existingUser = await prisma.user.findUnique({
-          where: { email: authUser.email || '' }
-        });
+        const existingUser = await retryDatabaseOperation(() =>
+          prisma.user.findUnique({
+            where: { email: authUser.email || '' }
+          })
+        );
 
         if (existingUser) {
           // Update the existing user's ID to match Supabase, preserve all profile data
@@ -125,48 +152,52 @@ export async function getCurrentUser() {
             updateData.lastName = authUser.user_metadata.last_name;
           }
 
-          user = await prisma.user.update({
-            where: { email: authUser.email || '' },
-            data: updateData,
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              firstName: true,
-              lastName: true,
-              username: true,
-              displayName: true,
-              bio: true,
-              avatarUrl: true,
-              avatarKey: true,
-              createdAt: true,
-            }
-          });
+          user = await retryDatabaseOperation(() =>
+            prisma.user.update({
+              where: { email: authUser.email || '' },
+              data: updateData,
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                displayName: true,
+                bio: true,
+                avatarUrl: true,
+                avatarKey: true,
+                createdAt: true,
+              }
+            })
+          );
           console.log('Updated user ID for existing email:', user.email, 'username:', user.username);
         } else {
           // Create new user
-          user = await prisma.user.create({
-            data: {
-              id: authUser.id,
-              email: authUser.email || '',
-              name: authUser.user_metadata?.name || 
-                    `${authUser.user_metadata?.first_name || ''} ${authUser.user_metadata?.last_name || ''}`.trim() ||
-                    authUser.email || 'User',
-            },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              firstName: true,
-              lastName: true,
-              username: true,
-              displayName: true,
-              bio: true,
-              avatarUrl: true,
-              avatarKey: true,
-              createdAt: true,
-            }
-          });
+          user = await retryDatabaseOperation(() =>
+            prisma.user.create({
+              data: {
+                id: authUser.id,
+                email: authUser.email || '',
+                name: authUser.user_metadata?.name || 
+                      `${authUser.user_metadata?.first_name || ''} ${authUser.user_metadata?.last_name || ''}`.trim() ||
+                      authUser.email || 'User',
+              },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                displayName: true,
+                bio: true,
+                avatarUrl: true,
+                avatarKey: true,
+                createdAt: true,
+              }
+            })
+          );
           console.log('Created new user:', user.email, 'username:', user.username);
         }
       }
@@ -174,22 +205,24 @@ export async function getCurrentUser() {
       console.error('Error in user upsert, attempting fallback:', error);
       // Fallback: try to find by email and update
       try {
-        user = await prisma.user.findUnique({
-          where: { email: authUser.email || '' },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            username: true,
-            displayName: true,
-            bio: true,
-            avatarUrl: true,
-            avatarKey: true,
-            createdAt: true,
-          }
-        });
+        user = await retryDatabaseOperation(() =>
+          prisma.user.findUnique({
+            where: { email: authUser.email || '' },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              username: true,
+              displayName: true,
+              bio: true,
+              avatarUrl: true,
+              avatarKey: true,
+              createdAt: true,
+            }
+          })
+        );
         if (user) {
           console.log('Found user by email fallback:', user.email, 'username:', user.username);
         }

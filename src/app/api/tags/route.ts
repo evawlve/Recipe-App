@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
       // Custom ordering for MEAL_TYPE namespace
       if (namespace === 'MEAL_TYPE') {
-        const order = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'];
+        const order = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Drinks'];
         tags = tags.sort((a, b) => {
           const aIndex = order.indexOf(a.label);
           const bIndex = order.indexOf(b.label);

@@ -10,6 +10,7 @@ const seed = async () => {
     { slug: 'dinner', label: 'Dinner', namespace: TagNamespace.MEAL_TYPE },
     { slug: 'dessert', label: 'Dessert', namespace: TagNamespace.MEAL_TYPE },
     { slug: 'snack', label: 'Snack', namespace: TagNamespace.MEAL_TYPE },
+    { slug: 'drinks', label: 'Drinks', namespace: TagNamespace.MEAL_TYPE },
 
     // METHOD
     { slug: 'air_fry', label: 'Air Fry', namespace: TagNamespace.METHOD },

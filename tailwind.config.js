@@ -40,6 +40,11 @@ module.exports = {
         },
         border: 'hsl(var(--border))',
         ring: 'hsl(var(--ring))',
+        // FitFood dark mode specific colors
+        'search-bg': 'hsl(var(--search-bg))',
+        'search-text': 'hsl(var(--search-text))',
+        'search-placeholder': 'hsl(var(--search-placeholder))',
+        'light-gray': 'hsl(var(--light-gray))',
       },
       borderRadius: {
         xl: 'var(--radius-xl)',

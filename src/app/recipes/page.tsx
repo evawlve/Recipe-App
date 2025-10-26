@@ -1,33 +1,39 @@
-import { prisma } from "@/lib/db";
+import { parseQuery, getTagIdsByNsAndSlug, fetchRecipePage } from "@/lib/recipes/query";
 import { RecipeCard } from "@/components/recipe/RecipeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RecipesListWithBulkDelete } from "@/components/recipe/RecipesListWithBulkDelete";
-import { SearchBox } from "@/components/recipes/SearchBox";
-import { TagFilters } from "@/components/recipes/TagFilters";
 import { getCurrentUser } from "@/lib/auth";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { Filters } from "./_components/Filters";
+import { LoadMore } from "./_components/LoadMore";
+import { RecipeSearchBar } from "@/components/recipes/RecipeSearchBar";
 import Link from "next/link";
 
 interface RecipesPageProps {
   searchParams: Promise<{
-    q?: string;
-    tags?: string | string[];
-    page?: string;
+    ns?: string;
+    tags?: string;
+    sort?: string;
+    kcalMax?: string;
+    cursor?: string;
+    search?: string;
   }>;
 }
 
 export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const resolvedSearchParams = await searchParams;
-  const searchQuery = resolvedSearchParams.q || "";
-  const selectedTags = Array.isArray(resolvedSearchParams.tags) 
-    ? resolvedSearchParams.tags 
-    : resolvedSearchParams.tags 
-    ? [resolvedSearchParams.tags] 
-    : [];
-  const currentPage = parseInt(resolvedSearchParams.page || "1", 10);
-  const itemsPerPage = 12;
-  const skip = (currentPage - 1) * itemsPerPage;
+  const { ns, tags, sort, kcalMax, cursor, search } = parseQuery(resolvedSearchParams);
+  
+  // Debug logging
+  console.log('Search params:', resolvedSearchParams);
+  console.log('Parsed query:', { ns, tags, sort, kcalMax, cursor, search });
+  
+  // For the new multi-select approach, we don't need namespaces in the query
+  // since we're selecting tags directly
+  const tagIds = await getTagIdsByNsAndSlug([], tags);
+  console.log('Tag IDs:', tagIds);
+  
+  const { items: recipes, nextCursor } = await fetchRecipePage({ tagIds, kcalMax, sort, cursor, search });
 
   // Get current user for bulk delete functionality
   const currentUser = await getCurrentUser();
@@ -43,262 +49,71 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
     }
   }
 
-  // Build the where clause for search and tags
-  const whereClause = {
-    AND: [
-      searchQuery
-        ? {
-            OR: [
-              { title: { contains: searchQuery, mode: "insensitive" as const } },
-              { bodyMd: { contains: searchQuery, mode: "insensitive" as const } },
-              {
-                tags: {
-                  some: {
-                    tag: {
-                      OR: [
-                        { label: { contains: searchQuery, mode: "insensitive" as const } },
-                        { slug: { contains: searchQuery, mode: "insensitive" as const } },
-                      ],
-                    },
-                  },
-                },
-              },
-            ],
-          }
-        : {},
-      selectedTags.length > 0
-        ? {
-            tags: {
-              some: {
-                tag: {
-                  slug: { in: selectedTags },
-                },
-              },
-            },
-          }
-        : {},
-    ],
-  };
-
-  // Fetch recipes with relations
-  const [recipes, totalCount] = await Promise.all([
-    prisma.recipe.findMany({
-      where: whereClause,
-      include: {
-        photos: {
-          select: {
-            id: true,
-            s3Key: true,
-            width: true,
-            height: true,
-          },
-        },
-        nutrition: {
-          select: {
-            calories: true,
-            proteinG: true,
-            carbsG: true,
-            fatG: true,
-          },
-        },
-        author: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            displayName: true,
-            avatarKey: true,
-          },
-        },
-        tags: {
-          include: {
-            tag: {
-              select: {
-                id: true,
-                slug: true,
-                label: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: { likes: true, comments: true },
-        },
-        ...(savedCollectionId ? {
-          collections: {
-            where: {
-              collectionId: savedCollectionId
-            },
-            select: {
-              collectionId: true
-            }
-          }
-        } : {}),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      skip,
-      take: itemsPerPage,
-    }),
-    prisma.recipe.count({
-      where: whereClause,
-    }),
-  ]);
-
-  // Process recipes to add saved state
+  // Process recipes to add saved state and liked state
   const recipesWithSavedState = recipes.map(recipe => ({
     ...recipe,
-    savedByMe: savedCollectionId ? recipe.collections?.length > 0 : false
+    savedByMe: false, // Will be handled by SaveButton component
+    likedByMe: false  // Will be handled by RecipeCard component
   }));
-
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
-  const hasNextPage = currentPage < totalPages;
-  const hasPrevPage = currentPage > 1;
 
   return (
     <>
       <ScrollToTop />
       <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <h1 className="text-3xl font-bold text-text">Recipes</h1>
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/recipes/new">Create New Recipe</Link>
-          </Button>
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <h1 className="text-3xl font-bold text-text">Recipes</h1>
+            <Button asChild className="w-full sm:w-auto">
+              <Link href="/recipes/new">Create New Recipe</Link>
+            </Button>
+          </div>
+          <p className="text-muted-foreground">
+            {recipes.length} recipe{recipes.length !== 1 ? "s" : ""} found
+            {search && ` for "${search}"`}
+            {tags.length > 0 && ` with tags: ${tags.join(", ")}`}
+            {kcalMax && kcalMax < 1000 && ` under ${kcalMax} calories`}
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          {totalCount} recipe{totalCount !== 1 ? "s" : ""} found
-          {searchQuery && ` for "${searchQuery}"`}
-          {selectedTags.length > 0 && ` with tags: ${selectedTags.join(", ")}`}
-        </p>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="mb-8 space-y-6">
-        <SearchBox initialQuery={searchQuery} />
-        <TagFilters selectedTags={selectedTags} />
-      </div>
+        {/* Search Bar */}
+        <div className="mb-6">
+          <RecipeSearchBar />
+        </div>
 
-      {recipes.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <h3 className="text-lg font-semibold text-text mb-2">No recipes found</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              {searchQuery
-                ? `No recipes match your search for "${searchQuery}"`
-                : "No recipes have been created yet"}
-            </p>
-            {!searchQuery && (
+        {/* Filters */}
+        <div className="mb-8">
+          <Filters initial={{ ns, tags, sort, kcalMax }} />
+        </div>
+
+        {recipes.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <h3 className="text-lg font-semibold text-text mb-2">No recipes found</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                No recipes match your current filters. Try adjusting your search criteria.
+              </p>
               <Button asChild>
-                <Link href="/recipes/new">Create your first recipe</Link>
+                <Link href="/recipes">View All Recipes</Link>
               </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <RecipesListWithBulkDelete 
-            recipes={recipesWithSavedState} 
-            currentUserId={currentUser?.id || null} 
-          />
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                disabled={!hasPrevPage}
-                asChild={hasPrevPage}
-              >
-                {hasPrevPage ? (
-                  <Link
-                    href={`/recipes?${(() => {
-                      const params = new URLSearchParams();
-                      if (searchQuery) params.set("q", searchQuery);
-                      if (selectedTags.length > 0) {
-                        selectedTags.forEach(tag => params.append("tags", tag));
-                      }
-                      params.set("page", (currentPage - 1).toString());
-                      return params.toString();
-                    })()}`}
-                  >
-                    Previous
-                  </Link>
-                ) : (
-                  "Previous"
-                )}
-              </Button>
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={pageNum === currentPage ? "default" : "outline"}
-                      size="sm"
-                      asChild={pageNum !== currentPage}
-                    >
-                      {pageNum === currentPage ? (
-                        pageNum
-                      ) : (
-                        <Link
-                          href={`/recipes?${(() => {
-                            const params = new URLSearchParams();
-                            if (searchQuery) params.set("q", searchQuery);
-                            if (selectedTags.length > 0) {
-                              selectedTags.forEach(tag => params.append("tags", tag));
-                            }
-                            params.set("page", pageNum.toString());
-                            return params.toString();
-                          })()}`}
-                        >
-                          {pageNum}
-                        </Link>
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              <Button
-                variant="outline"
-                disabled={!hasNextPage}
-                asChild={hasNextPage}
-              >
-                {hasNextPage ? (
-                  <Link
-                    href={`/recipes?${(() => {
-                      const params = new URLSearchParams();
-                      if (searchQuery) params.set("q", searchQuery);
-                      if (selectedTags.length > 0) {
-                        selectedTags.forEach(tag => params.append("tags", tag));
-                      }
-                      params.set("page", (currentPage + 1).toString());
-                      return params.toString();
-                    })()}`}
-                  >
-                    Next
-                  </Link>
-                ) : (
-                  "Next"
-                )}
-              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Recipe Grid */}
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+              {recipesWithSavedState.map(recipe => (
+                <RecipeCard 
+                  key={recipe.id} 
+                  recipe={recipe} 
+                  currentUserId={currentUser?.id || null}
+                />
+              ))}
             </div>
-          )}
-        </>
-      )}
+
+            {/* Infinite Scroll Load More */}
+            {nextCursor && <LoadMore cursor={nextCursor} />}
+          </>
+        )}
       </div>
     </>
   );
