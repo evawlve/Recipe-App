@@ -18,6 +18,7 @@ interface ProfileHeaderProps {
   followingCount?: number;
   avatarUrl?: string | null;
   onAvatarUpdate?: (newAvatarUrl: string) => void;
+  onTabChange?: (tab: string) => void;
 }
 
 export default function ProfileHeader({ 
@@ -30,7 +31,8 @@ export default function ProfileHeader({
   followersCount,
   followingCount,
   avatarUrl,
-  onAvatarUpdate
+  onAvatarUpdate,
+  onTabChange
 }: ProfileHeaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -186,22 +188,34 @@ export default function ProfileHeader({
         
         {/* Stats */}
         <div className="flex gap-6 pt-4">
-          <div className="text-center">
+          <div 
+            className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onTabChange?.("uploaded")}
+          >
             <div className="text-2xl font-bold text-foreground">{uploadedCount}</div>
             <div className="text-sm text-muted-foreground">Uploaded</div>
           </div>
-          <div className="text-center">
+          <div 
+            className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => onTabChange?.("saved")}
+          >
             <div className="text-2xl font-bold text-foreground">{savedCount}</div>
             <div className="text-sm text-muted-foreground">Saved</div>
           </div>
           {followersCount !== undefined && (
-            <div className="text-center">
+            <div 
+              className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => onTabChange?.("followers")}
+            >
               <div className="text-2xl font-bold text-foreground">{followersCount}</div>
               <div className="text-sm text-muted-foreground">Followers</div>
             </div>
           )}
           {followingCount !== undefined && (
-            <div className="text-center">
+            <div 
+              className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => onTabChange?.("following")}
+            >
               <div className="text-2xl font-bold text-foreground">{followingCount}</div>
               <div className="text-sm text-muted-foreground">Following</div>
             </div>

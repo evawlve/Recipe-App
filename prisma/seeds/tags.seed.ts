@@ -29,6 +29,9 @@ const seed = async () => {
     { slug: 'mexican', label: 'Mexican', namespace: TagNamespace.CUISINE },
     { slug: 'italian', label: 'Italian', namespace: TagNamespace.CUISINE },
     { slug: 'american', label: 'American', namespace: TagNamespace.CUISINE },
+    { slug: 'japanese', label: 'Japanese', namespace: TagNamespace.CUISINE },
+    { slug: 'greek', label: 'Greek', namespace: TagNamespace.CUISINE },
+    { slug: 'chinese', label: 'Chinese', namespace: TagNamespace.CUISINE },
 
     // GOAL (derived)
     { slug: 'pre_workout', label: 'Pre-workout', namespace: TagNamespace.GOAL },

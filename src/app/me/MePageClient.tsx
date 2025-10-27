@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ProfileHeader from "@/components/account/ProfileHeader";
 import TabNav from "@/components/account/TabNav";
 import RecipeGrid from "@/components/account/RecipeGrid";
 import SettingsPanel from "@/components/account/SettingsPanel";
+import FollowersList from "@/components/account/FollowersList";
+import FollowingList from "@/components/account/FollowingList";
 
 interface MePageClientProps {
   user: {
@@ -24,6 +27,8 @@ interface MePageClientProps {
   savedCount: number;
   followersCount: number;
   followingCount: number;
+  followers: any[];
+  following: any[];
   tab: string;
 }
 
@@ -32,14 +37,17 @@ export function MePageClient({
   uploaded, 
   saved, 
   uploadedCount, 
-  savedCount, 
+  savedCount,
   followersCount,
   followingCount,
+  followers,
+  following,
   tab 
 }: MePageClientProps) {
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(user.avatarUrl);
   const [currentAvatarKey, setCurrentAvatarKey] = useState(user.avatarKey);
   const [currentUser, setCurrentUser] = useState(user);
+  const router = useRouter();
 
   const handleAvatarUpdate = (newAvatarUrl: string) => {
     console.log("MePageClient received avatar update:", newAvatarUrl);
@@ -49,6 +57,10 @@ export function MePageClient({
   const handleProfileUpdate = (updatedUser: Partial<typeof user>) => {
     console.log("MePageClient received profile update:", updatedUser);
     setCurrentUser(prev => ({ ...prev, ...updatedUser }));
+  };
+
+  const handleTabChange = (newTab: string) => {
+    router.push(`/me?tab=${newTab}`);
   };
 
   return (
@@ -64,13 +76,16 @@ export function MePageClient({
         followingCount={followingCount}
         avatarUrl={currentAvatarUrl}
         onAvatarUpdate={handleAvatarUpdate}
+        onTabChange={handleTabChange}
       />
       
-      <TabNav tab={tab as "saved" | "uploaded" | "settings"} />
+      <TabNav tab={tab as "saved" | "uploaded" | "followers" | "following" | "settings"} />
       
       <div className="mt-6">
         {tab === "saved" && <RecipeGrid items={saved} currentUserId={user.id} />}
         {tab === "uploaded" && <RecipeGrid items={uploaded} currentUserId={user.id} />}
+        {tab === "followers" && <FollowersList followers={followers} currentUserId={user.id} />}
+        {tab === "following" && <FollowingList following={following} currentUserId={user.id} />}
         {tab === "settings" && (
           <SettingsPanel 
             name={currentUser.name} 

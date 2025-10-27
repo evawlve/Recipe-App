@@ -48,7 +48,7 @@ export default async function MePage({ searchParams }: MePageProps) {
   const savedCollectionId = await ensureSavedCollection(user.id);
   
   // Fetch data in parallel
-  const [uploaded, saved, uploadedCount, savedCount, followersCount, followingCount] = await Promise.all([
+  const [uploaded, saved, uploadedCount, savedCount, followersCount, followingCount, followers, following] = await Promise.all([
     prisma.recipe.findMany({
       where: { authorId: user.id },
       orderBy: { createdAt: "desc" },
@@ -93,7 +93,66 @@ export default async function MePage({ searchParams }: MePageProps) {
     prisma.collectionRecipe.count({ where: { collectionId: savedCollectionId } }),
     prisma.follow.count({ where: { followingId: user.id } }),
     prisma.follow.count({ where: { followerId: user.id } }),
+    // Fetch followers with their follow status
+    prisma.follow.findMany({
+      where: { followingId: user.id },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            avatarKey: true,
+            bio: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    }),
+    // Fetch following users
+    prisma.follow.findMany({
+      where: { followerId: user.id },
+      include: {
+        following: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            avatarKey: true,
+            bio: true
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50
+    })
   ]);
+
+  // Get the IDs of followers that the current user follows
+  const followerIds = followers.map(f => f.follower.id);
+  const currentUserFollowing = followerIds.length > 0 ? await prisma.follow.findMany({
+    where: {
+      followerId: user.id,
+      followingId: { in: followerIds }
+    },
+    select: { followingId: true }
+  }) : [];
+  
+  const followingSet = new Set(currentUserFollowing.map(f => f.followingId));
+
+  // Transform followers data to include follow status
+  const followersWithStatus = followers.map(follow => ({
+    ...follow.follower,
+    isFollowing: followingSet.has(follow.follower.id)
+  }));
+
+  // Transform following data
+  const followingUsers = following.map(follow => follow.following);
 
   return (
     <MePageClient
@@ -104,6 +163,8 @@ export default async function MePage({ searchParams }: MePageProps) {
       savedCount={savedCount}
       followersCount={followersCount}
       followingCount={followingCount}
+      followers={followersWithStatus}
+      following={followingUsers}
       tab={tab}
     />
   );
