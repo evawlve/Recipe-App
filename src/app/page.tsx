@@ -1,8 +1,7 @@
 import { getTrendingRecipes } from '@/lib/feeds/trending';
-import { getFollowingRecipes } from '@/lib/feeds/following';
 import { HomeSection } from '@/components/home/HomeSection';
 import { TrendingRail } from '@/components/home/TrendingRail';
-import { FollowingRail } from '@/components/home/FollowingRail';
+import { FollowingEmpty } from '@/components/home/FollowingEmpty';
 import { CategoryTile } from '@/components/home/CategoryTile';
 import { SearchBar } from '@/components/home/SearchBar';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
@@ -32,11 +31,6 @@ const cuisineTiles = [
 export default async function HomePage() {
   const trending = await getTrendingRecipes({ limit: 12 });
   const currentUser = await getCurrentUser();
-  
-  // Get following recipes if user is authenticated
-  const followingRecipes = currentUser 
-    ? await getFollowingRecipes({ userId: currentUser.id, limit: 12 })
-    : [];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 space-y-10">
@@ -47,8 +41,8 @@ export default async function HomePage() {
         <TrendingRail>
           {trending.map((r) => (
             <div key={r.id} className="min-w-[280px] max-w-[320px] snap-start">
-              <RecipeCard 
-                recipe={r} 
+              <RecipeCard
+                recipe={r}
                 currentUserId={currentUser?.id || null}
               />
             </div>
@@ -58,10 +52,7 @@ export default async function HomePage() {
 
       {currentUser && (
         <HomeSection title="Suggested Creators">
-          <FollowingRail 
-            currentUserId={currentUser.id} 
-            initialRecipes={followingRecipes}
-          />
+          <FollowingEmpty />
         </HomeSection>
       )}
 

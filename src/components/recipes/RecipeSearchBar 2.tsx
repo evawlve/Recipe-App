@@ -48,14 +48,14 @@ export function RecipeSearchBar() {
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
-      <Search className="h-4 w-4 text-muted-foreground" />
+    <div className="flex items-center gap-2 rounded-lg bg-search-bg border border-border px-3 py-2">
+      <Search className="h-4 w-4 text-search-placeholder" />
       <input 
         placeholder="Search recipes..." 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyPress={handleKeyPress}
-        className="w-full bg-transparent outline-none text-sm" 
+        className="w-full bg-transparent text-search-text text-sm border-0 outline-0 focus:border-0 focus:outline-0 focus:ring-0 placeholder:text-search-placeholder" 
       />
       {query && (
         <Button 

@@ -198,18 +198,14 @@ A full-featured recipe management application with:
 - ✅ **Like Button Enhancement** - Green accent color for liked recipes with ThumbsUp icon
 - ✅ **User Experience** - Clear visual feedback, loading states, and error handling
 
-### **Social Discovery & Following System**
-- ✅ **"From People You Follow" Rail** - Horizontal scrollable section showing recent recipes from followed users
-- ✅ **Server-Side Data Fetching** - Initial recipes loaded server-side for better performance and SEO
-- ✅ **Cursor Pagination API** - Efficient pagination system for loading more recipes from followed users
-- ✅ **Suggested Creators Discovery** - Smart creator recommendation system when user follows no one or has no recent content
+### **Suggested Creators Discovery System**
+- ✅ **Suggested Creators Discovery** - Smart creator recommendation system for user discovery
 - ✅ **Intelligent Ranking Algorithm** - Multi-factor ranking system prioritizing mutual followers, engagement, and recipe count
 - ✅ **Mutual Followers Display** - Shows "followed by [username] + n others" to provide social proof
 - ✅ **Creator Profile Integration** - Clickable avatars and names linking to user profiles
 - ✅ **Follow Functionality** - Working follow/unfollow buttons with optimistic UI updates
 - ✅ **Smart Name Display** - Shows real names when available, usernames as fallback with @ prefix
 - ✅ **Horizontal Scrolling UI** - Consistent with trending recipes section for familiar user experience
-- ✅ **Empty State Handling** - Graceful fallback to suggested creators when no followed content exists
 - ✅ **Authentication-Aware** - Only shows for authenticated users, handles unauthenticated states properly
 
 #### **Suggested Creators Ranking Algorithm**
@@ -621,10 +617,6 @@ DELETE /api/follow/[userId]
 # Check follow status (auth required)
 GET /api/follow/state?userId=[userId]
 # Response: { "following": boolean, "followersCount": number }
-
-# Get recipes from followed users (auth required)
-GET /api/feed/following?cursor=[id]&take=[number]
-# Response: { items: [{ id, title, createdAt, author: {...}, photos: [...], tags: [...], nutrition: {...}, _count: {...} }], nextCursor: string | null }
 
 # Get suggested creators for discovery (auth required)
 GET /api/discover/suggest-creators
