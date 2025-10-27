@@ -36,6 +36,7 @@ const NAMESPACES = [
 
 const SORT_OPTIONS = [
   { value: 'new', label: 'Newest' },
+  { value: 'interactions', label: 'Most Popular' },
   { value: 'proteinDensity', label: 'Protein Density' },
   { value: 'kcalAsc', label: 'Calories (Low to High)' },
 ];

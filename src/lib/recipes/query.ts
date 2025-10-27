@@ -23,6 +23,18 @@ export async function getTagIdsByNsAndSlug(ns: string[], slugs: string[]) {
   return tags.map(t => t.id);
 }
 
+export async function topByInteractions(lastDays = 14, take = 200) {
+  const since = new Date(Date.now() - lastDays * 24 * 3600 * 1000);
+  const rows = await prisma.recipeInteractionDaily.groupBy({
+    by: ['recipeId'],
+    where: { day: { gte: since } },
+    _sum: { score: true },
+    orderBy: { _sum: { score: 'desc' } },
+    take,
+  });
+  return rows.map(r => r.recipeId);
+}
+
 export async function fetchRecipePage({ 
   tagIds, 
   kcalMax, 
@@ -38,7 +50,7 @@ export async function fetchRecipePage({
   cursor?: string;
   search?: string;
 }) {
-  // A) Pre-filter/sort via RecipeFeatureLite
+  // A) Pre-filter/sort via RecipeFeatureLite or interactions
   const whereRfl: any = {};
   if (kcalMax) whereRfl.kcalPerServing = { lte: kcalMax };
   const orderByRfl =
@@ -46,7 +58,17 @@ export async function fetchRecipePage({
     sort === 'kcalAsc'        ? { kcalPerServing: 'asc' } : undefined;
 
   let inIds: string[] | undefined;
-  if (orderByRfl || kcalMax) {
+  
+  // Handle interactions sort
+  if (sort === 'interactions') {
+    const topRecipeIds = await topByInteractions(14, take * 3);
+    inIds = topRecipeIds;
+    
+    // If no recipes have interactions, return empty results
+    if (inIds.length === 0) {
+      return { items: [], nextCursor: null };
+    }
+  } else if (orderByRfl || kcalMax) {
     const rfl = await prisma.recipeFeatureLite.findMany({
       where: whereRfl,
       ...(orderByRfl ? { orderBy: orderByRfl as any } : {}),
@@ -75,7 +97,7 @@ export async function fetchRecipePage({
     ];
   }
 
-  const orderBy = !orderByRfl ? { createdAt: 'desc' as const } : undefined;
+  const orderBy = !orderByRfl && sort !== 'interactions' ? { createdAt: 'desc' as const } : undefined;
 
   const items = await prisma.recipe.findMany({
     where,
