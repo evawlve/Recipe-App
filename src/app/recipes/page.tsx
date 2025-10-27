@@ -7,6 +7,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { Filters } from "./_components/Filters";
 import { LoadMore } from "./_components/LoadMore";
 import { RecipeSearchBar } from "@/components/recipes/RecipeSearchBar";
+import { ExploreTiles } from "./_components/ExploreTiles";
 import Link from "next/link";
 
 interface RecipesPageProps {
@@ -83,6 +84,11 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         {/* Filters */}
         <div className="mb-8">
           <Filters initial={{ ns, tags, sort, kcalMax }} />
+        </div>
+
+        {/* Explore Tiles */}
+        <div className="mb-8">
+          <ExploreTiles />
         </div>
 
         {recipes.length === 0 ? (

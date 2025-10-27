@@ -57,6 +57,7 @@ model User {
   recipes     Recipe[]
   notifications Notification[] @relation("NotificationUser")
   notificationsActed Notification[] @relation("NotificationActor")
+  recipeViews RecipeView[]
 }
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
@@ -81,6 +82,8 @@ model Recipe {
   tags        RecipeTag[]
   notifications Notification[]
   features    RecipeFeatureLite?
+  views       RecipeView[]
+  interactions RecipeInteractionDaily[]
 }
 
 model Ingredient {
@@ -297,10 +300,39 @@ model RecipeFeatureLite {
   fiberPerServing   Float   @default(0)
   sugarPerServing   Float   @default(0)
   kcalPerServing    Float   @default(0)
+  ingredientCount   Int     @default(0)
   // room for quick flags/scores if needed
   goalScores        String  @default("{}") // JSON e.g. {"pre_workout":0.72}
   methodFlags       String  @default("[]") // JSON e.g. ["air_fry","bake"]
   cuisineScores     String  @default("{}") // JSON e.g. {"mexican":0.61}
   updatedAt         DateTime @updatedAt
   recipe            Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model RecipeView {
+  id        String   @id @default(cuid())
+  recipeId  String
+  userId    String?     // null for anonymous
+  sessionId String      // anonymous or logged-in session
+  createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([recipeId, createdAt])
+  @@index([sessionId, createdAt])
+}
+
+model RecipeInteractionDaily {
+  id        String   @id @default(cuid())
+  recipeId  String
+  day       DateTime // UTC midnight date
+  views     Int      @default(0)
+  likes     Int      @default(0)
+  comments  Int      @default(0)
+  saves     Int      @default(0)
+  score     Float    @default(0) // computed
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+
+  @@unique([recipeId, day])
+  @@index([score])
 }

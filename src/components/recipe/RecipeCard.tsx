@@ -8,6 +8,7 @@ import SaveButton from "./SaveButton";
 import { AuthorLink } from "./AuthorLink";
 import { ThumbsUp, MessageCircle } from "lucide-react";
 import { useState, useTransition } from "react";
+import { useViewPing } from "@/hooks/useViewPing";
 
 interface RecipeWithRelations extends Recipe {
   photos: Array<{
@@ -42,6 +43,9 @@ interface RecipeCardProps {
 export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
   const primaryImageUrl = recipe.photos.length > 0 ? imageSrcForKey(recipe.photos[0].s3Key) : null;
   const nutrition = recipe.nutrition;
+  
+  // View tracking
+  const viewRef = useViewPing(recipe.id);
   
   // Like functionality
   const [liked, setLiked] = useState(recipe.likedByMe || false);
@@ -90,7 +94,7 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col border-0">
+    <Card ref={viewRef} className="hover:shadow-lg transition-shadow h-full flex flex-col border-0">
       <Link href={`/recipes/${recipe.id}`} className="flex flex-col h-full">
         <div className="relative w-full h-56 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
           {primaryImageUrl ? (

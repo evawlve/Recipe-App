@@ -1,9 +1,27 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { nanoid } from 'nanoid';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // Skip static assets
+  if (pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname.startsWith('/api/static')) {
+    return NextResponse.next();
+  }
+  
+  // Handle session cookie for anonymous tracking
+  const response = NextResponse.next();
+  const hasSession = request.cookies.get('ms_session');
+  
+  if (!hasSession) {
+    response.cookies.set('ms_session', nanoid(), { 
+      httpOnly: true, 
+      sameSite: 'lax', 
+      maxAge: 60 * 60 * 24 * 365 // 1 year
+    });
+  }
   
   // Define protected routes
   const protectedRoutes = [
@@ -57,12 +75,11 @@ export async function middleware(request: NextRequest) {
     }
   }
   
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
   matcher: [
-    '/recipes/new',
-    '/recipes/:path*/(edit|delete)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
