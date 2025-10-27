@@ -3,6 +3,10 @@
  * Uses S3_PUBLIC_BASE_URL if set, otherwise uses API proxy
  */
 export function buildImageUrl(s3Key: string): string {
+  if (!s3Key) {
+    return '';
+  }
+  
   const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL;
   
   if (publicBaseUrl) {
@@ -29,6 +33,10 @@ export function getPrimaryImageUrl(photos: Array<{ s3Key: string }>): string | n
  * Always uses API proxy for client-side usage
  */
 export function imageSrcForKey(key: string): string {
+  if (!key) {
+    return '';
+  }
+  
   // Always use API proxy for private S3 buckets
   return `/api/image/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
