@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Tag {
   id: string;
@@ -49,6 +49,13 @@ export function Filters({ initial }: FiltersProps) {
   const [tagsByNamespace, setTagsByNamespace] = useState<Record<string, Tag[]>>({});
   const [loading, setLoading] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Auto-expand if there are active filters
+  useEffect(() => {
+    const hasActiveFilters = selectedTags.length > 0 || kcalMax !== 1000 || sort !== 'new';
+    setIsExpanded(hasActiveFilters);
+  }, [selectedTags.length, kcalMax, sort]);
 
   // Fetch tags for selected namespaces
   const fetchTagsForNamespaces = useCallback(async (namespaces: string[]) => {
@@ -200,12 +207,33 @@ export function Filters({ initial }: FiltersProps) {
   return (
     <div className="space-y-6">
 
-      {/* Namespace selection and Calorie filter */}
+      {/* Expandable Filters Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Filters</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-2"
+            >
+              {isExpanded ? (
+                <>
+                  <span>Hide Filters</span>
+                  <ChevronUp className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <span>Show Filters</span>
+                  <ChevronDown className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {isExpanded && (
+          <CardContent className="space-y-6">
           {/* Namespace dropdowns */}
           <div className="space-y-4">
             <label className="text-sm font-medium">Categories</label>
@@ -219,7 +247,7 @@ export function Filters({ initial }: FiltersProps) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full justify-between"
+                      className="w-full justify-between bg-search-bg border-border text-search-text hover:bg-accent hover:text-accent-foreground"
                       onClick={() => toggleDropdown(namespace.value)}
                     >
                       <span className="truncate">{getDisplayText(namespace.value)}</span>
@@ -227,7 +255,7 @@ export function Filters({ initial }: FiltersProps) {
                     </Button>
                     
                     {openDropdowns[namespace.value] && (
-                      <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-search-bg border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
                         <div className="p-2 space-y-1">
                           {tagsByNamespace[namespace.value]?.map((tag) => (
                             <div key={tag.id} className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm">
@@ -277,28 +305,29 @@ export function Filters({ initial }: FiltersProps) {
           <div className="space-y-2">
             <label className="text-sm font-medium">Sort By</label>
             <Select value={sort} onValueChange={handleSortChange}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full bg-search-bg border-border text-search-text">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-search-bg border-border">
                 {SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} className="text-search-text hover:bg-accent">
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
 
-      {/* Selected tags */}
+      {/* Selected tags - Always visible when there are selected tags */}
       {selectedTags.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Selected Tags</CardTitle>
+              <CardTitle className="text-lg">Selected Tags ({selectedTags.length})</CardTitle>
               <Button variant="outline" size="sm" onClick={clearAllFilters}>
                 Clear All
               </Button>

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Upload, Check } from "lucide-react";
+import { X, Upload, Check, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AvatarPreviewModalProps {
@@ -26,7 +26,13 @@ export function AvatarPreviewModal({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [zoomLevel, setZoomLevel] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Zoom constants
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 3;
+  const ZOOM_STEP = 0.1;
 
   // Generate preview URL when file changes
   useEffect(() => {
@@ -38,8 +44,9 @@ export function AvatarPreviewModal({
       const img = new Image();
       img.onload = () => {
         setImageSize({ width: img.width, height: img.height });
-        // Center the image initially
+        // Center the image initially and reset zoom
         setImagePosition({ x: 0, y: 0 });
+        setZoomLevel(1);
       };
       img.src = url;
       
@@ -47,6 +54,25 @@ export function AvatarPreviewModal({
     }
   }, [file]);
 
+  // Zoom control functions
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel(prev => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoomLevel(1);
+    setImagePosition({ x: 0, y: 0 });
+  }, []);
+
+  const handleWheelZoom = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+    setZoomLevel(prev => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta)));
+  }, []);
 
   // Handle mouse/touch events for dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -60,16 +86,15 @@ export function AvatarPreviewModal({
     const container = containerRef.current;
     if (!container) return;
     
-    const containerRect = container.getBoundingClientRect();
     const containerSize = 320; // Same as preview size (w-80 = 320px)
-    const circleRadius = 160;
     
     // Calculate new position
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
     
-    // Calculate image scale to fill the container
-    const scale = Math.max(containerSize / imageSize.width, containerSize / imageSize.height);
+    // Calculate image scale to fill the container with zoom
+    const baseScale = Math.max(containerSize / imageSize.width, containerSize / imageSize.height);
+    const scale = baseScale * zoomLevel;
     const scaledImageWidth = imageSize.width * scale;
     const scaledImageHeight = imageSize.height * scale;
     
@@ -82,7 +107,7 @@ export function AvatarPreviewModal({
     const constrainedY = Math.max(-maxY, Math.min(maxY, newY));
     
     setImagePosition({ x: constrainedX, y: constrainedY });
-  }, [isDragging, dragStart, imageSize]);
+  }, [isDragging, dragStart, imageSize, zoomLevel]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -109,8 +134,9 @@ export function AvatarPreviewModal({
     const newX = touch.clientX - dragStart.x;
     const newY = touch.clientY - dragStart.y;
     
-    // Calculate image scale to fill the container
-    const scale = Math.max(containerSize / imageSize.width, containerSize / imageSize.height);
+    // Calculate image scale to fill the container with zoom
+    const baseScale = Math.max(containerSize / imageSize.width, containerSize / imageSize.height);
+    const scale = baseScale * zoomLevel;
     const scaledImageWidth = imageSize.width * scale;
     const scaledImageHeight = imageSize.height * scale;
     
@@ -123,7 +149,7 @@ export function AvatarPreviewModal({
     const constrainedY = Math.max(-maxY, Math.min(maxY, newY));
     
     setImagePosition({ x: constrainedX, y: constrainedY });
-  }, [isDragging, dragStart, imageSize]);
+  }, [isDragging, dragStart, imageSize, zoomLevel]);
 
   const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
@@ -143,8 +169,9 @@ export function AvatarPreviewModal({
       const newX = e.clientX - dragStart.x;
       const newY = e.clientY - dragStart.y;
       
-      // Calculate image scale to fill the container
-      const scale = Math.max(containerSize / imageSize.width, containerSize / imageSize.height);
+      // Calculate image scale to fill the container with zoom
+      const baseScale = Math.max(containerSize / imageSize.width, containerSize / imageSize.height);
+      const scale = baseScale * zoomLevel;
       const scaledImageWidth = imageSize.width * scale;
       const scaledImageHeight = imageSize.height * scale;
       
@@ -172,7 +199,7 @@ export function AvatarPreviewModal({
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [isDragging, dragStart, imageSize]);
+  }, [isDragging, dragStart, imageSize, zoomLevel]);
 
   if (!isOpen) return null;
 
@@ -206,6 +233,7 @@ export function AvatarPreviewModal({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                onWheel={handleWheelZoom}
                 style={{ userSelect: 'none' }}
               >
                 {previewUrl ? (
@@ -216,7 +244,7 @@ export function AvatarPreviewModal({
                       alt="Crop preview"
                       className="absolute w-full h-full object-cover"
                       style={{
-                        transform: `translate(${imagePosition.x}px, ${imagePosition.y}px)`,
+                        transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${zoomLevel})`,
                         transition: isDragging ? 'none' : 'transform 0.1s ease-out',
                         imageRendering: 'crisp-edges'
                       }}
@@ -245,6 +273,53 @@ export function AvatarPreviewModal({
               <p className="text-sm font-medium">Position Your Avatar</p>
               <p className="text-xs text-muted-foreground">
                 Drag the image to position it within the circle
+              </p>
+            </div>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomOut}
+                disabled={zoomLevel <= MIN_ZOOM || isUploading}
+                className="h-8 w-8 p-0"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              
+              <div className="flex items-center space-x-2 min-w-[120px]">
+                <span className="text-xs text-muted-foreground">Zoom:</span>
+                <span className="text-sm font-medium">{Math.round(zoomLevel * 100)}%</span>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomIn}
+                disabled={zoomLevel >= MAX_ZOOM || isUploading}
+                className="h-8 w-8 p-0"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomReset}
+                disabled={isUploading}
+                className="h-8 w-8 p-0"
+                title="Reset zoom and position"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">
+                Use mouse wheel to zoom in/out
               </p>
             </div>
           </div>

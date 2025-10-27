@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface TabNavProps {
-  tab: "saved" | "uploaded" | "settings";
+  tab: "saved" | "uploaded" | "followers" | "following" | "settings";
 }
 
 export default function TabNav({ tab }: TabNavProps) {
@@ -20,6 +20,8 @@ export default function TabNav({ tab }: TabNavProps) {
   const tabs = [
     { id: "saved", label: "Saved" },
     { id: "uploaded", label: "Uploaded" },
+    { id: "followers", label: "Followers" },
+    { id: "following", label: "Following" },
     { id: "settings", label: "Settings" },
   ];
 

@@ -198,6 +198,56 @@ A full-featured recipe management application with:
 - ✅ **Like Button Enhancement** - Green accent color for liked recipes with ThumbsUp icon
 - ✅ **User Experience** - Clear visual feedback, loading states, and error handling
 
+### **Social Discovery & Following System**
+- ✅ **"From People You Follow" Rail** - Horizontal scrollable section showing recent recipes from followed users
+- ✅ **Server-Side Data Fetching** - Initial recipes loaded server-side for better performance and SEO
+- ✅ **Cursor Pagination API** - Efficient pagination system for loading more recipes from followed users
+- ✅ **Suggested Creators Discovery** - Smart creator recommendation system when user follows no one or has no recent content
+- ✅ **Intelligent Ranking Algorithm** - Multi-factor ranking system prioritizing mutual followers, engagement, and recipe count
+- ✅ **Mutual Followers Display** - Shows "followed by [username] + n others" to provide social proof
+- ✅ **Creator Profile Integration** - Clickable avatars and names linking to user profiles
+- ✅ **Follow Functionality** - Working follow/unfollow buttons with optimistic UI updates
+- ✅ **Smart Name Display** - Shows real names when available, usernames as fallback with @ prefix
+- ✅ **Horizontal Scrolling UI** - Consistent with trending recipes section for familiar user experience
+- ✅ **Empty State Handling** - Graceful fallback to suggested creators when no followed content exists
+- ✅ **Authentication-Aware** - Only shows for authenticated users, handles unauthenticated states properly
+
+#### **Suggested Creators Ranking Algorithm**
+The suggested creators system uses a sophisticated multi-factor ranking algorithm to surface the most relevant and impactful creators:
+
+**Ranking Formula:**
+```javascript
+score = (mutualFollowers × 1000) + (likes + comments×2) + (recipeCount × 0.1)
+```
+
+**Ranking Factors (in order of importance):**
+1. **🥇 Mutual Followers (Weight: 1000)** - Most important factor
+   - Users with mutual connections appear first
+   - Creates social proof and trust
+   - Strongest signal for user discovery
+
+2. **🥈 Engagement Score (Weight: 1)** - Secondary factor
+   - Total likes on their recipes
+   - Comments worth 2x more than likes (more valuable interaction)
+   - Shows active, engaged community
+
+3. **🥉 Recipe Count (Weight: 0.1)** - Tertiary factor
+   - Number of recipes they've created
+   - Shows content creation activity
+   - Lowest weight since quantity ≠ quality
+
+**Example Rankings:**
+- Creator A: 3 mutual followers + 50 likes + 10 recipes = **3,051 points**
+- Creator B: 0 mutual + 200 likes + 20 recipes = **204 points**
+- Creator C: 0 mutual + 100 likes + 5 recipes = **100.5 points**
+
+**Features:**
+- ✅ **Limited to 12 creators** - Consistent with trending recipes section
+- ✅ **60-day activity window** - Only shows creators active in last 60 days
+- ✅ **Excludes current user** - Never suggests following yourself
+- ✅ **Excludes already followed** - No duplicate suggestions
+- ✅ **Real-time mutual follower calculation** - Fresh data on each request
+
 ### **Tag System & Search**
 - ✅ **Tag input** with autocomplete suggestions from existing tags
 - ✅ **Tag chips** with visual display and easy removal
@@ -571,6 +621,18 @@ DELETE /api/follow/[userId]
 # Check follow status (auth required)
 GET /api/follow/state?userId=[userId]
 # Response: { "following": boolean, "followersCount": number }
+
+# Get recipes from followed users (auth required)
+GET /api/feed/following?cursor=[id]&take=[number]
+# Response: { items: [{ id, title, createdAt, author: {...}, photos: [...], tags: [...], nutrition: {...}, _count: {...} }], nextCursor: string | null }
+
+# Get suggested creators for discovery (auth required)
+GET /api/discover/suggest-creators
+# Response: { items: [{ id, name, username, image, mutualFollowers: [...], totalMutualFollowers: number }] }
+
+# Get popular recipes for discovery
+GET /api/discover/popular
+# Response: { items: [{ id, title, createdAt, photos: [...], author: {...}, tags: [...], _count: {...} }] }
 
 # Update user profile (auth required)
 PATCH /api/account

@@ -14,7 +14,7 @@ import { CheckCircle, Mail, User, Camera } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import Image from "next/image";
-import { SimpleAvatarUploader } from "@/components/account/SimpleAvatarUploader";
+import { AvatarEditor } from "@/components/account/AvatarEditor";
 
 // Step 1: Name
 const nameSchema = z.object({
@@ -65,6 +65,41 @@ export default function SignUpFormClient() {
       console.log('redirectTo:', redirectTo);
     console.log('==========================');
   }, [searchParams, isVerified, verifiedEmail, redirectTo]);
+
+  // Fetch Google OAuth user data for Google users
+  useEffect(() => {
+    if (isGoogle && isVerified) {
+      const fetchGoogleUserData = async () => {
+        try {
+          const supabase = createSupabaseBrowserClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user?.user_metadata) {
+            console.log('Google user metadata:', user.user_metadata);
+            
+            // Pre-populate name fields if available
+            if (user.user_metadata.first_name || user.user_metadata.last_name) {
+              setSignupData(prev => ({
+                ...prev,
+                firstName: user.user_metadata.first_name || prev.firstName,
+                lastName: user.user_metadata.last_name || prev.lastName,
+              }));
+            }
+            
+            // Set Google avatar URL if available
+            if (user.user_metadata.avatar_url) {
+              setGoogleAvatarUrl(user.user_metadata.avatar_url);
+              setAvatarUrl(user.user_metadata.avatar_url);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching Google user data:', error);
+        }
+      };
+      
+      fetchGoogleUserData();
+    }
+  }, [isGoogle, isVerified]);
   
   const [currentStep, setCurrentStep] = useState<SignupStep>("name");
   const [serverMessage, setServerMessage] = useState<string>("");
@@ -77,6 +112,7 @@ export default function SignUpFormClient() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSignupComplete, setIsSignupComplete] = useState(false);
+  const [googleAvatarUrl, setGoogleAvatarUrl] = useState<string | null>(null);
   const [usernameTimeoutRef, setUsernameTimeoutRef] = useState<NodeJS.Timeout | null>(null);
   const [signupData, setSignupData] = useState<{
     firstName: string;
@@ -1010,7 +1046,7 @@ export default function SignUpFormClient() {
             <CardContent className="space-y-4">
               <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)} className="space-y-4">
                 {/* Avatar Section */}
-                <SimpleAvatarUploader
+                <AvatarEditor
                   onImageChange={(url) => setAvatarUrl(url)}
                   currentImage={avatarUrl}
                   className="w-full"
@@ -1018,6 +1054,7 @@ export default function SignUpFormClient() {
                   maxSize={5 * 1024 * 1024} // 5MB
                   acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
                   initials={signupData.firstName.charAt(0).toUpperCase()}
+                  isGoogleAvatar={isGoogle && !!googleAvatarUrl}
                 />
 
                 {/* Username with real-time validation */}

@@ -90,7 +90,7 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
+    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col border-0">
       <Link href={`/recipes/${recipe.id}`} className="flex flex-col h-full">
         <div className="relative w-full h-56 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
           {primaryImageUrl ? (
