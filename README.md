@@ -198,6 +198,23 @@ A full-featured recipe management application with:
 - ✅ **Like Button Enhancement** - Green accent color for liked recipes with ThumbsUp icon
 - ✅ **User Experience** - Clear visual feedback, loading states, and error handling
 
+### **PR5 - Home v2 + Explore Tiles on /recipes**
+- ✅ **Home Page Redesign** - New layout: Trending → Suggested Creators → Feed Tabs (For You/Following)
+- ✅ **Auth-aware UI** - Signed-in users see tabs and Suggested Creators, signed-out users see For You only
+- ✅ **Feed System** - Infinite scroll feeds with For You and Following tabs
+- ✅ **For You Feed** - Personalized feed using PR6 personalization features
+- ✅ **Following Feed** - Recipes from users the current user follows
+- ✅ **Empty State Handling** - Helpful message when user doesn't follow anyone yet
+- ✅ **Explore Tiles Migration** - Moved Category/Cuisine tiles from Home to /recipes page
+- ✅ **6-Tile Grid Layout** - Responsive grid (1→2→3→6 columns) for explore tiles
+- ✅ **Complete Categories** - 6 categories: Breakfast, Lunch, Dinner, Snacks, Desserts, Drinks
+- ✅ **Complete Cuisines** - 6 cuisines: Mexican, Italian, American, Japanese, Greek, Chinese
+- ✅ **Deep Linking** - Tiles link to `/recipes?tags=<slug>` for seamless filtering
+- ✅ **Duplicate Prevention** - Prevents duplicate recipes in infinite scroll
+- ✅ **Error Handling** - Comprehensive error handling for feed APIs and image processing
+- ✅ **Type Safety** - Proper TypeScript interfaces throughout
+- ✅ **PR6 Compatibility** - Fully compatible with engagement tracking and personalization features
+
 ### **Suggested Creators Discovery System**
 - ✅ **Suggested Creators Discovery** - Smart creator recommendation system for user discovery
 - ✅ **Intelligent Ranking Algorithm** - Multi-factor ranking system prioritizing mutual followers, engagement, and recipe count

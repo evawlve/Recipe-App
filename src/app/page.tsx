@@ -33,15 +33,15 @@ export default async function HomePage() {
         </TrendingRail>
       </HomeSection>
 
-      <HomeSection title={currentUser ? 'For you · Following' : 'For you'}>
-        <FeedTabs signedIn={!!currentUser} currentUserId={currentUser?.id || null} />
-      </HomeSection>
-
       {currentUser && (
         <HomeSection title="Suggested Creators">
           <FollowingEmpty />
         </HomeSection>
       )}
+
+      <HomeSection title={currentUser ? 'For you · Following' : 'For you'}>
+        <FeedTabs signedIn={!!currentUser} currentUserId={currentUser?.id || null} />
+      </HomeSection>
     </div>
   );
 }

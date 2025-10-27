@@ -71,11 +71,27 @@ function Grid({ items, currentUserId }: { items: RecipeItem[]; currentUserId: st
   );
 }
 
+function FollowingEmptyState() {
+  return (
+    <div className="text-center py-12">
+      <div className="mx-auto max-w-md">
+        <h3 className="text-lg font-semibold text-foreground mb-2">No recipes yet</h3>
+        <p className="text-muted-foreground mb-4">
+          Follow some users and their recipes will begin to populate here.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          You can discover creators in the "Suggested Creators" section above.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function FeedTabs({ signedIn, currentUserId }: { signedIn: boolean; currentUserId?: string | null }) {
   const [tab, setTab] = React.useState<'foryou'|'following'>(signedIn ? 'foryou' : 'foryou');
   const [state, setState] = React.useState({
     foryou: { items: [] as RecipeItem[], cursor: null as string|null, done: false, init: false },
-    following:{ items: [] as RecipeItem[], cursor: null as string|null, done: false, init: false },
+    following:{ items: [] as RecipeItem[], cursor: null as string|null, done: false, init: false, empty: false },
   });
   const sentinel = React.useRef<HTMLDivElement|null>(null);
   const loadingRef = React.useRef<Set<string>>(new Set());
@@ -116,6 +132,8 @@ export function FeedTabs({ signedIn, currentUserId }: { signedIn: boolean; curre
             cursor: nextCursor,
             done: !nextCursor || safeItems.length === 0,
             init: true,
+            // Mark as empty if this is the first load and no items were returned
+            empty: prev[kind].items.length === 0 && safeItems.length === 0 && !nextCursor,
           }
         };
       });
@@ -174,8 +192,14 @@ export function FeedTabs({ signedIn, currentUserId }: { signedIn: boolean; curre
         </div>
       ) : null}
 
-      <Grid items={state[tab].items} currentUserId={currentUserId || null} />
-      <div ref={sentinel} />
+      {tab === 'following' && state.following.empty ? (
+        <FollowingEmptyState />
+      ) : (
+        <>
+          <Grid items={state[tab].items} currentUserId={currentUserId || null} />
+          <div ref={sentinel} />
+        </>
+      )}
     </div>
   );
 }
