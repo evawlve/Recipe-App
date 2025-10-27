@@ -215,6 +215,23 @@ A full-featured recipe management application with:
 - ✅ **Type Safety** - Proper TypeScript interfaces throughout
 - ✅ **PR6 Compatibility** - Fully compatible with engagement tracking and personalization features
 
+### **PR6 - Engagement Tracking + Interaction Sort + Light Personalization**
+- ✅ **Anonymous Session Tracking** - Session cookies for tracking both logged-in and logged-out users
+- ✅ **View Tracking System** - IntersectionObserver-based view tracking with 50% visibility threshold and 600ms delay
+- ✅ **Deduplication System** - 8-hour deduplication window per (recipeId, sessionId) to prevent spam
+- ✅ **Database Schema** - New RecipeView and RecipeInteractionDaily models with proper indexes
+- ✅ **Nightly Rollup Script** - Automated daily score computation with engagement formula
+- ✅ **Interaction Scoring** - Score = 0.2×views + 1.0×likes + 2.0×comments + 0.6×saves
+- ✅ **Most Popular Sort** - New `/recipes?sort=interactions` with 14-day score aggregation
+- ✅ **For-You Personalization** - Tag-based personalization using recent viewing history
+- ✅ **Recent Views Cookie** - Tracks last 50 viewed recipes for personalization
+- ✅ **Subtle Personalization Boost** - +0.1 per overlapping tag (capped at +0.5)
+- ✅ **Privacy-First Design** - No PII tracking, opaque UUIDs, graceful degradation
+- ✅ **Performance Optimized** - Efficient database queries with proper indexes
+- ✅ **Client-Side Integration** - Automatic view tracking in RecipeCard components
+- ✅ **API Endpoints** - View tracking API and For-You feed API with personalization
+- ✅ **Production Ready** - Comprehensive error handling and TypeScript safety
+
 ### **Suggested Creators Discovery System**
 - ✅ **Suggested Creators Discovery** - Smart creator recommendation system for user discovery
 - ✅ **Intelligent Ranking Algorithm** - Multi-factor ranking system prioritizing mutual followers, engagement, and recipe count
@@ -447,6 +464,10 @@ This app implements comprehensive database security using Supabase Row Level Sec
 - ✅ **Mapping Persistence** - Enhanced mapping system with proper state management
 - ✅ **Error Handling Improvements** - Enhanced Supabase server client with fallback mechanisms and comprehensive error handling
 - ✅ **React Component Stability** - Fixed unique key prop issues in ingredient mapping components
+- ✅ **Engagement Tracking Models** - RecipeView and RecipeInteractionDaily models for view tracking and interaction scoring
+- ✅ **Session Tracking** - Anonymous session tracking with ms_session cookies for engagement analytics
+- ✅ **Personalization Data** - Recent views tracking with ms_recent cookies for For-You feed personalization
+- ✅ **Ingredient Count Field** - Added ingredientCount to RecipeFeatureLite for future filtering features
 
 #### **USDA Database Schema:**
 - ✅ **Food Model Enhancements** - Added source field (usda, community, template) and verification field
@@ -754,6 +775,29 @@ GET /recipes?q=chocolate&tags=dessert&tags=quick
 # Searches across title, instructions, and tag labels
 ```
 
+### **Engagement Tracking & Personalization**
+```bash
+# Track recipe view (automatic via IntersectionObserver)
+POST /api/recipes/[id]/view
+# Response: { ok: true }
+# Note: Automatically called when recipe card is 50% visible for 600ms
+# Deduplication: 8-hour window per (recipeId, sessionId)
+
+# Get personalized For-You feed
+GET /api/feed/foryou?limit=12&cursor=optional_cursor
+# Response: { items: [{ id, title, createdAt, photos: [...], author: {...}, tags: [...], _count: {...} }], nextCursor }
+# Note: Uses recent viewing history for personalization
+
+# Get recipes sorted by interactions (Most Popular)
+GET /recipes?sort=interactions
+# Response: Recipes sorted by 14-day interaction score
+# Score formula: 0.2×views + 1.0×likes + 2.0×comments + 0.6×saves
+
+# Run nightly interaction rollup (cron job)
+npm run rollup:interactions
+# Processes yesterday's views, likes, comments, saves into daily scores
+```
+
 ### **Advanced Nutrition System**
 ```bash
 # Get nutrition data for a recipe
@@ -878,6 +922,7 @@ npm run aliases:backfill:fast # Generate aliases with bulk operations (faster)
 # Data Management
 npm run cleanup-orphaned-users  # Clean up orphaned user data
 npm run features:backfill       # Backfill RecipeFeatureLite for existing recipes
+npm run rollup:interactions     # Run nightly interaction score rollup
 ```
 
 ### **Environment Variables**
@@ -1243,6 +1288,24 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Error Code Handling** - Specific handling for P2024 (connection pool timeout) errors with automatic retry
 - ✅ **Connection Management** - Improved connection lifecycle management to prevent pool exhaustion
 - ✅ **Fallback Mechanisms** - Enhanced error handling with fallback database operations for critical user flows
+
+### **PR6 - Engagement Tracking & Personalization System**
+- ✅ **Anonymous Session Tracking** - Complete session management system with ms_session cookies for both logged-in and logged-out users
+- ✅ **View Tracking Infrastructure** - IntersectionObserver-based view tracking with 50% visibility threshold and 600ms delay
+- ✅ **Spam Prevention** - 8-hour deduplication window per (recipeId, sessionId) to prevent view inflation
+- ✅ **Database Schema Enhancement** - New RecipeView and RecipeInteractionDaily models with optimized indexes
+- ✅ **Nightly Rollup Automation** - Automated daily score computation with engagement formula and error handling
+- ✅ **Interaction Scoring Algorithm** - Sophisticated scoring: 0.2×views + 1.0×likes + 2.0×comments + 0.6×saves
+- ✅ **Most Popular Sorting** - New `/recipes?sort=interactions` with 14-day score aggregation and pagination
+- ✅ **For-You Personalization** - Tag-based personalization using recent viewing history with subtle boost system
+- ✅ **Recent Views Tracking** - ms_recent cookie system tracking last 50 viewed recipes for personalization
+- ✅ **Privacy-First Design** - No PII tracking, opaque UUIDs, graceful degradation for anonymous users
+- ✅ **Performance Optimization** - Efficient database queries with proper indexes and candidate window optimization
+- ✅ **Client-Side Integration** - Automatic view tracking in RecipeCard and SelectableRecipeCard components
+- ✅ **API Endpoints** - Complete API for view tracking and For-You feed with personalization logic
+- ✅ **Production Readiness** - Comprehensive error handling, TypeScript safety, and build validation
+- ✅ **Cron Job Setup** - npm run rollup:interactions script for nightly score computation
+- ✅ **Filter Integration** - "Most Popular" sort option added to recipe filters with proper URL state management
 
 ## 📋 TODO - Next Development Phase
 
