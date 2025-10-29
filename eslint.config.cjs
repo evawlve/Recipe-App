@@ -23,9 +23,24 @@ module.exports = [
 	},
 	...nextFlat,
 	{
+		files: ['**/*.{js,jsx,ts,tsx}'],
+		languageOptions: {
+			parser: require('@typescript-eslint/parser'),
+			parserOptions: {
+				ecmaVersion: 'latest',
+				sourceType: 'module',
+				ecmaFeatures: {
+					jsx: true,
+				},
+			},
+		},
+		plugins: {
+			'@typescript-eslint': require('@typescript-eslint/eslint-plugin'),
+		},
 		rules: {
 			'no-console': ['warn', { allow: ['warn', 'error'] }],
-			'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+			'no-unused-vars': 'off',
+			'@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
 			'react/jsx-key': 'off',
 		},
 	},
@@ -43,6 +58,12 @@ module.exports = [
 					],
 				},
 			],
+		},
+	},
+	{
+		files: ['scripts/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
+		rules: {
+			'no-console': 'off',
 		},
 	},
 ];

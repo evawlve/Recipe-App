@@ -8,7 +8,7 @@ const nextConfig = {
     domains: ['localhost'],
     unoptimized: false
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer: _isServer }) => {
     // Exclude large data files from webpack bundling
     config.externals = config.externals || [];
     config.externals.push({
