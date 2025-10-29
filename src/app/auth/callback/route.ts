@@ -4,6 +4,11 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const redirectTo = searchParams.get('redirectTo');
