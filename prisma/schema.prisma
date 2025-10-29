@@ -84,6 +84,8 @@ model Recipe {
   features    RecipeFeatureLite?
   views       RecipeView[]
   interactions RecipeInteractionDaily[]
+  similarTo   RecipeSimilar[] @relation("RecipeToSimilar")
+  similarFrom RecipeSimilar[] @relation("RecipeIsSimilar")
 }
 
 model Ingredient {
@@ -335,4 +337,18 @@ model RecipeInteractionDaily {
 
   @@unique([recipeId, day])
   @@index([score])
+}
+
+model RecipeSimilar {
+  recipeId  String
+  similarId String
+  score     Float     // 0..1 normalized
+  updatedAt DateTime  @updatedAt
+
+  recipe    Recipe    @relation("RecipeToSimilar", fields: [recipeId], references: [id])
+  similar   Recipe    @relation("RecipeIsSimilar", fields: [similarId], references: [id])
+
+  @@id([recipeId, similarId])
+  @@index([recipeId, score])
+  @@index([similarId])
 }

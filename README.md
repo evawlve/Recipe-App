@@ -232,6 +232,23 @@ A full-featured recipe management application with:
 - ✅ **API Endpoints** - View tracking API and For-You feed API with personalization
 - ✅ **Production Ready** - Comprehensive error handling and TypeScript safety
 
+### **PR7 - "Users also looked at..." Co-view Graph**
+- ✅ **Recipe Similarity Model** - New RecipeSimilar model with bidirectional relationships and normalized scores
+- ✅ **Co-view Analysis** - 30-day sliding window analysis of recipe co-occurrences within 60-minute sessions
+- ✅ **Lift Scoring Algorithm** - Sophisticated scoring using lift = C(i,j) / sqrt(V(i) * V(j)) with time decay
+- ✅ **Time Decay Function** - 4-day half-life decay using exp(-Δh/96) for recency weighting
+- ✅ **Noise Filtering** - Minimum co-occurrence threshold (≥3) to reduce noise and improve quality
+- ✅ **Top-K Similarity Storage** - Stores top 20 similar recipes per recipe with normalized 0-1 scores
+- ✅ **Offline Builder Script** - Automated similarity computation with batch processing and progress tracking
+- ✅ **Similar Recipes API** - `/api/recipes/[id]/similar` endpoint with cold-start fallback
+- ✅ **Cold-Start Fallback** - Tag-based fallback using meal type, cuisine, and goal tags when no co-view data
+- ✅ **AlsoViewed Component** - Horizontal scrollable rail component for recipe pages
+- ✅ **Recipe Page Integration** - Seamless integration into recipe detail pages
+- ✅ **Loading States** - Skeleton loading animation for better UX
+- ✅ **Responsive Design** - Mobile-optimized horizontal scrolling with proper aspect ratios
+- ✅ **Performance Optimized** - Efficient database queries with proper indexes and candidate windowing
+- ✅ **Production Ready** - Comprehensive error handling, TypeScript safety, and build validation
+
 ### **Suggested Creators Discovery System**
 - ✅ **Suggested Creators Discovery** - Smart creator recommendation system for user discovery
 - ✅ **Intelligent Ranking Algorithm** - Multi-factor ranking system prioritizing mutual followers, engagement, and recipe count
@@ -468,6 +485,9 @@ This app implements comprehensive database security using Supabase Row Level Sec
 - ✅ **Session Tracking** - Anonymous session tracking with ms_session cookies for engagement analytics
 - ✅ **Personalization Data** - Recent views tracking with ms_recent cookies for For-You feed personalization
 - ✅ **Ingredient Count Field** - Added ingredientCount to RecipeFeatureLite for future filtering features
+- ✅ **Recipe Similarity Model** - RecipeSimilar model for co-view based recipe recommendations
+- ✅ **Bidirectional Similarity** - RecipeSimilar supports both directions (A→B and B→A) with normalized scores
+- ✅ **Similarity Indexes** - Optimized indexes on recipeId+score and similarId for fast similarity queries
 
 #### **USDA Database Schema:**
 - ✅ **Food Model Enhancements** - Added source field (usda, community, template) and verification field
@@ -796,6 +816,15 @@ GET /recipes?sort=interactions
 # Run nightly interaction rollup (cron job)
 npm run rollup:interactions
 # Processes yesterday's views, likes, comments, saves into daily scores
+
+# Get similar recipes for a recipe
+GET /api/recipes/[id]/similar
+# Response: { items: [{ id, title, createdAt, photos: [...], author: {...}, tags: [...], _count: {...} }] }
+# Note: Uses co-view graph data with cold-start fallback to similar tags
+
+# Build recipe similarities (cron job)
+npm run similar:build
+# Processes last 30 days of views to build co-view similarity graph
 ```
 
 ### **Advanced Nutrition System**
@@ -923,6 +952,7 @@ npm run aliases:backfill:fast # Generate aliases with bulk operations (faster)
 npm run cleanup-orphaned-users  # Clean up orphaned user data
 npm run features:backfill       # Backfill RecipeFeatureLite for existing recipes
 npm run rollup:interactions     # Run nightly interaction score rollup
+npm run similar:build           # Build recipe similarity graph from co-view data
 ```
 
 ### **Environment Variables**
@@ -1306,6 +1336,22 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 - ✅ **Production Readiness** - Comprehensive error handling, TypeScript safety, and build validation
 - ✅ **Cron Job Setup** - npm run rollup:interactions script for nightly score computation
 - ✅ **Filter Integration** - "Most Popular" sort option added to recipe filters with proper URL state management
+
+### **PR7 - Recipe Similarity & Co-view Graph System**
+- ✅ **Co-view Analysis Engine** - Advanced 30-day sliding window analysis of recipe co-occurrences within 60-minute sessions
+- ✅ **Lift Scoring Algorithm** - Sophisticated similarity scoring using lift = C(i,j) / sqrt(V(i) * V(j)) with time decay
+- ✅ **Time Decay Function** - 4-day half-life decay using exp(-Δh/96) for recency weighting in similarity scores
+- ✅ **Noise Filtering System** - Minimum co-occurrence threshold (≥3) to reduce noise and improve recommendation quality
+- ✅ **Top-K Similarity Storage** - Stores top 20 similar recipes per recipe with normalized 0-1 scores for fast retrieval
+- ✅ **Offline Builder Script** - Automated similarity computation with batch processing, progress tracking, and error handling
+- ✅ **Similar Recipes API** - `/api/recipes/[id]/similar` endpoint with intelligent cold-start fallback system
+- ✅ **Cold-Start Fallback** - Tag-based fallback using meal type, cuisine, and goal tags when no co-view data exists
+- ✅ **AlsoViewed Component** - Horizontal scrollable rail component with loading states and responsive design
+- ✅ **Recipe Page Integration** - Seamless integration into recipe detail pages with proper spacing and layout
+- ✅ **Database Schema Enhancement** - New RecipeSimilar model with bidirectional relationships and optimized indexes
+- ✅ **Performance Optimization** - Efficient database queries with proper indexes and candidate windowing
+- ✅ **Production Readiness** - Comprehensive error handling, TypeScript safety, and build validation
+- ✅ **Cron Job Integration** - npm run similar:build script for automated similarity graph updates
 
 ## 📋 TODO - Next Development Phase
 

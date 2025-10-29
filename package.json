@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:ci": "eslint . --max-warnings 500",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -25,7 +26,8 @@
     "aliases:backfill:fast": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/aliases-backfill-fast.ts",
     "seed:tags": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register prisma/seeds/tags.seed.ts",
     "features:backfill": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-recipe-features.ts",
-    "rollup:interactions": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/rollup-interactions.ts"
+    "rollup:interactions": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/rollup-interactions.ts",
+    "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.673.0",
@@ -65,6 +67,8 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^24.6.0",
     "@types/react": "19.1.15",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
     "autoprefixer": "^10.4.21",
     "eslint": "9.11.1",
     "eslint-config-next": "15.0.0",

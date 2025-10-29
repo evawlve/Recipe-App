@@ -14,6 +14,7 @@ import SaveButton from "@/components/recipe/SaveButton";
 import { AuthorLink } from "@/components/recipe/AuthorLink";
 import { RecipeNutritionDisplay } from "@/components/recipe/RecipeNutritionDisplay";
 import { SuggestionCard } from "@/components/SuggestionCard";
+import { AlsoViewed } from "./_components/AlsoViewed";
 
 interface RecipePageProps {
   params: Promise<{
@@ -256,6 +257,11 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             fallbackNutrition={recipe.nutrition}
           />
         </div>
+      </div>
+
+      {/* Users also looked at section */}
+      <div className="mt-12">
+        <AlsoViewed recipeId={recipe.id} />
       </div>
     </div>
   );
