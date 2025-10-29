@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Admin endpoint for food database statistics
@@ -9,9 +7,15 @@ import { getCurrentUser } from '@/lib/auth';
 export async function GET(req: NextRequest) {
   try {
     // Skip execution during build time
-    if (process.env.NEXT_PHASE === 'phase-production-build') {
+    if (process.env.NEXT_PHASE === 'phase-production-build' || 
+        process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+        process.env.BUILD_TIME === 'true') {
       return NextResponse.json({ error: "Not available during build" }, { status: 503 });
     }
+
+    // Import only when not in build mode
+    const { prisma } = await import('@/lib/db');
+    const { getCurrentUser } = await import('@/lib/auth');
 
     // Check for API key in headers or query params
     const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');

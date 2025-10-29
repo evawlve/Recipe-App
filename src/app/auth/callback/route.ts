@@ -1,13 +1,17 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { prisma } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   // Skip execution during build time
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
+  if (process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+      process.env.BUILD_TIME === 'true') {
     return NextResponse.redirect(new URL('/', request.url));
   }
+
+  // Import only when not in build mode
+  const { createServerClient } = await import('@supabase/ssr');
+  const { cookies } = await import('next/headers');
+  const { prisma } = await import('@/lib/db');
 
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
