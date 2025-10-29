@@ -1,11 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deriveServingOptions } from '@/lib/units/servings';
-import { logger } from '@/lib/logger';
-import { rankCandidates } from '@/lib/foods/rank';
-import { kcalBandForQuery } from '@/lib/foods/plausibility';
-import { computeTotals } from '@/lib/nutrition/compute';
-import { computeImpactPreview } from '@/lib/nutrition/impact';
-import { tokens, normalizeQuery } from '@/lib/search/normalize';
 
 /**
  * Search foods by name or brand from local database only
@@ -26,6 +19,13 @@ export async function GET(req: NextRequest) {
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { deriveServingOptions } = await import("@/lib/units/servings");
+	const { logger } = await import("@/lib/logger");
+	const { rankCandidates } = await import("@/lib/foods/rank");
+	const { kcalBandForQuery } = await import("@/lib/foods/plausibility");
+	const { computeTotals } = await import("@/lib/nutrition/compute");
+	const { computeImpactPreview } = await import("@/lib/nutrition/impact");
+	const { tokens, normalizeQuery } = await import("@/lib/search/normalize");
 	
   try {
     const { searchParams } = new URL(req.url);
