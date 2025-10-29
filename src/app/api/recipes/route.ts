@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-import { recipeApiSchema } from "@/lib/validation";
-
-import { autoMapIngredients } from "@/lib/nutrition/auto-map";
-
-import { computeRecipeNutrition } from "@/lib/nutrition/compute";
-
-import { writeRecipeFeatureLite } from "@/lib/features/writeRecipeFeatureLite";
+// Avoid top-level heavy imports; dynamically import inside handlers
 
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
@@ -32,9 +26,11 @@ export async function POST(request: NextRequest) {
     console.log('Number of photos received:', body.photos?.length || 0);
     
     // Validate the request body
+    const { recipeApiSchema } = await import("@/lib/validation");
     const validatedData = recipeApiSchema.parse(body);
     
     // Get the authenticated user
+    const { getCurrentUser } = await import("@/lib/auth");
     const author = await getCurrentUser();
     
     if (!author) {
@@ -45,6 +41,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Create the recipe with ingredients, photos, and tags
+    const { prisma } = await import("@/lib/db");
     const recipe = await prisma.recipe.create({
       data: {
         title: validatedData.title,
@@ -134,14 +131,17 @@ export async function POST(request: NextRequest) {
 
     // Auto-map ingredients to foods and compute nutrition
     try {
+      const { autoMapIngredients } = await import("@/lib/nutrition/auto-map");
       const mappedCount = await autoMapIngredients(recipe.id);
       console.log(`Auto-mapped ${mappedCount} ingredients for recipe ${recipe.id}`);
       
       // Compute nutrition after mapping ingredients
+      const { computeRecipeNutrition } = await import("@/lib/nutrition/compute");
       await computeRecipeNutrition(recipe.id, 'general');
       console.log(`Computed nutrition for recipe ${recipe.id}`);
       
       // Write recipe features after nutrition is computed
+      const { writeRecipeFeatureLite } = await import("@/lib/features/writeRecipeFeatureLite");
       await writeRecipeFeatureLite(recipe.id);
       console.log(`Computed features for recipe ${recipe.id}`);
     } catch (error) {
