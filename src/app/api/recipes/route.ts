@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 import { recipeApiSchema } from "@/lib/validation";
+
 import { autoMapIngredients } from "@/lib/nutrition/auto-map";
+
 import { computeRecipeNutrition } from "@/lib/nutrition/compute";
+
 import { writeRecipeFeatureLite } from "@/lib/features/writeRecipeFeatureLite";
+
 
 export async function POST(request: NextRequest) {
 	// Skip execution during build time

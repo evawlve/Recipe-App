@@ -44,22 +44,29 @@ module.exports = [
 			'react/jsx-key': 'off',
 		},
 	},
-	{
-		files: ['src/**/*.{js,jsx,ts,tsx}'],
-		rules: {
-			'no-restricted-imports': [
-				'error',
-				{
-					patterns: [
-						{
-							group: ['**/data/usda/*.json'],
-							message: 'Do not import USDA data files directly. Use the server-only reader in lib/usda/reader.server.ts instead.',
-						},
-					],
-				},
-			],
+		{
+			files: ['src/**/*.{js,jsx,ts,tsx}'],
+			rules: {
+				'no-restricted-imports': [
+					'error',
+					{
+						patterns: [
+							{
+								group: ['**/data/usda/*.json'],
+								message: 'Do not import USDA data files directly. Use the server-only reader in lib/usda/reader.server.ts instead.',
+							},
+						],
+					},
+				],
+				'no-restricted-syntax': [
+					'error',
+					{
+						selector: 'CallExpression[callee.name="fetch"] > Literal[value=/^\\/api\\//]',
+						message: 'Do not fetch API routes from server components. Use direct server lib calls instead.',
+					},
+				],
+			},
 		},
-	},
 	{
 		files: ['scripts/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
 		rules: {

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 import { S3Client } from '@aws-sdk/client-s3';
+
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
+
 import { randomBytes } from 'crypto';
+
 
 const region = process.env.AWS_REGION || 'us-east-2';
 const bucket = process.env.S3_BUCKET;

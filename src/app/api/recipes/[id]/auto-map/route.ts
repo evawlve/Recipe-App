@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 import { autoMapIngredients } from '@/lib/nutrition/auto-map';
+
 import { computeRecipeNutrition } from '@/lib/nutrition/compute';
+
 
 /**
  * Manually trigger auto-mapping for a recipe

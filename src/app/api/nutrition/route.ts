@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { computeRecipeNutrition, getUnmappedIngredients } from '@/lib/nutrition/compute';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 /**
  * Compute nutrition for a recipe
  * POST /api/nutrition
@@ -16,6 +19,7 @@ export async function POST(req: NextRequest) {
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { computeRecipeNutrition, getUnmappedIngredients } = await import("@/lib/nutrition/compute");
 	
   try {
     const user = await getCurrentUser();
@@ -68,6 +72,7 @@ export async function GET(req: NextRequest) {
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { getUnmappedIngredients } = await import("@/lib/nutrition/compute");
 	
   try {
     const user = await getCurrentUser();

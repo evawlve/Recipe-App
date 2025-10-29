@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 import { goalSuggestions, methodSuggestions, cuisineSuggestions, computeMacroFeatures } from "@/lib/classifier/heuristics";
+
 import { dietSuggestions } from "@/lib/classifier/diet";
+
 
 interface Suggestion {
   id: string;

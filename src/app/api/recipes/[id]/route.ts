@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
-import { recipeUpdateSchema } from "@/lib/validation";
-import { autoMapIngredients } from "@/lib/nutrition/auto-map";
-import { computeRecipeNutrition } from "@/lib/nutrition/compute";
 
-export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 export async function DELETE(
   _req: Request,
@@ -20,6 +18,7 @@ export async function DELETE(
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { S3Client, DeleteObjectsCommand } = await import("@aws-sdk/client-s3");
 	
   const resolvedParams = await params;
   const id = resolvedParams.id;
@@ -94,6 +93,9 @@ export async function PATCH(
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
 	const { z } = await import("zod");
+	const { recipeUpdateSchema } = await import("@/lib/validation");
+	const { autoMapIngredients } = await import("@/lib/nutrition/auto-map");
+	const { computeRecipeNutrition } = await import("@/lib/nutrition/compute");
 	
   const resolvedParams = await params;
   const id = resolvedParams.id;

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 
-export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 export async function DELETE(request: NextRequest) {
 	// Skip execution during build time
@@ -14,6 +15,7 @@ export async function DELETE(request: NextRequest) {
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { S3Client, DeleteObjectsCommand } = await import("@aws-sdk/client-s3");
 	
   try {
     const body = await request.json();

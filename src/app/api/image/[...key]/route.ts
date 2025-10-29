@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+
 
 export async function GET(
   _req: Request,
