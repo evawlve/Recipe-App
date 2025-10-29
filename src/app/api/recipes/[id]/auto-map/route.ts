@@ -23,8 +23,7 @@ export async function POST(
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
-	const { autoMapIngredients } = await import("@/lib/nutrition/auto-map");
-	const { computeRecipeNutrition } = await import("@/lib/nutrition/compute");
+	const { autoMapRecipeIngredients } = await import("@/lib/recipes/autoMap.server");
 	
   try {
     const { id } = await params;
@@ -44,17 +43,10 @@ export async function POST(
       return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
     }
 
-    // Run auto-mapping
-    const mappedCount = await autoMapIngredients(id);
-    
-    // Compute nutrition after mapping
-    await computeRecipeNutrition(id, 'general');
+    // Use server lib to run auto-mapping
+    const result = await autoMapRecipeIngredients(id);
 
-    return NextResponse.json({
-      success: true,
-      mappedCount,
-      message: `Auto-mapped ${mappedCount} ingredients`
-    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Auto-mapping error:', error);
     return NextResponse.json(

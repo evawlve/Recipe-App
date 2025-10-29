@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-import { computeRecipeNutrition } from '@/lib/nutrition/compute';
 
 /**
  * Compute nutrition for a specific recipe
@@ -22,8 +21,8 @@ export async function POST(
 	}
 
 	// Import only when not in build mode
-	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { computeNutritionForRecipe } = await import("@/lib/recipes/nutrition.server");
 	
   try {
     const user = await getCurrentUser();
@@ -35,20 +34,17 @@ export async function POST(
     const resolvedParams = await params;
     const recipeId = resolvedParams.id;
 
-    // Verify user owns the recipe
-    const recipe = await prisma.recipe.findFirst({
-      where: { id: recipeId, authorId: user.id }
-    });
-
-    if (!recipe) {
-      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+    // Use server lib to compute nutrition
+    const result = await computeNutritionForRecipe(recipeId, goal);
+    
+    if (!result.ok) {
+      const status = result.error === 'not_found' ? 404 : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
-
-    const result = await computeRecipeNutrition(recipeId, goal as any);
     
     return NextResponse.json({
       success: true,
-      data: result
+      data: result.nutrition
     });
   } catch (error) {
     console.error('Recipe nutrition computation error:', error);

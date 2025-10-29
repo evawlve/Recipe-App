@@ -73,6 +73,17 @@ module.exports = [
 					message: 'Avoid fetch("/api/...") in Server Components. Call server libs directly.',
 				},
 			],
+			'no-restricted-imports': [
+				'warn',
+				{
+					patterns: [
+						{
+							group: ['**/api/**'],
+							message: 'Ensure API calls are not made from server components; import server libs instead.',
+						},
+					],
+				},
+			],
 		},
 	},
 	{

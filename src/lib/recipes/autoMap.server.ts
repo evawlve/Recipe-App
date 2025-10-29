@@ -32,3 +32,21 @@ export async function getAutoMapSuggestions(recipeId: string) {
     }
   };
 }
+
+export async function autoMapRecipeIngredients(recipeId: string) {
+  // Import auto-map logic dynamically to avoid build-time issues
+  const { autoMapIngredients } = await import('@/lib/nutrition/auto-map');
+  const { computeRecipeNutrition } = await import('@/lib/nutrition/compute');
+  
+  // Run auto-mapping
+  const mappedCount = await autoMapIngredients(recipeId);
+  
+  // Compute nutrition after mapping
+  await computeRecipeNutrition(recipeId, 'general');
+  
+  return { 
+    success: true,
+    mappedCount,
+    message: `Auto-mapped ${mappedCount} ingredients`
+  };
+}
