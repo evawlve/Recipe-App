@@ -21,6 +21,7 @@ module.exports = [
 			'package-lock.json',
 			'tsconfig.tsbuildinfo',
 			'cleanup-orphaned-users.js',
+			'scripts/check-server-api-usage.*',
 		],
 	},
 	...nextFlat,
