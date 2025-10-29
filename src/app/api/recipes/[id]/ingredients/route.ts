@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 import { convertUnit } from '@/lib/nutrition/compute';
 
 /**
@@ -11,6 +9,17 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	
   try {
     const user = await getCurrentUser();
     if (!user?.id) {

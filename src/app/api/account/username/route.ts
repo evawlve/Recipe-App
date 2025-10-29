@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest) {
   const { createSupabaseServerClient } = await import('@/lib/supabase/server');
   const { z } = await import('zod');
 
-  const usernameSchema = z.object({
+	const usernameSchema = z.object({
     username: z.string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username must be at most 20 characters')

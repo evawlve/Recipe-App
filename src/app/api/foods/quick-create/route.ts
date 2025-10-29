@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
-
 function generateAutoAliases(name: string): string[] {
   const aliases: string[] = [];
   const lowerName = name.toLowerCase();
@@ -29,22 +25,36 @@ function generateAutoAliases(name: string): string[] {
   return [...new Set(aliases)].filter(alias => alias.toLowerCase() !== lowerName);
 }
 
-const Body = z.object({
-  name: z.string().min(2),
-  brand: z.string().trim().optional(),
-  categoryId: z.string().optional(),
-  servingLabel: z.string().min(1),
-  gramsPerServing: z.number().positive().optional(),
-  kcal: z.number().min(0).max(1200),
-  protein: z.number().min(0).max(120),
-  carbs: z.number().min(0).max(200),
-  fat: z.number().min(0).max(120),
-  fiber: z.number().min(0).max(60).optional(),
-  sugar: z.number().min(0).max(150).optional(),
-  densityGml: z.number().positive().optional(),
-});
-
 export async function POST(req: NextRequest) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { z } = await import("zod");
+
+	const Body = z.object({
+		name: z.string().min(2),
+		brand: z.string().trim().optional(),
+		categoryId: z.string().optional(),
+		servingLabel: z.string().min(1),
+		gramsPerServing: z.number().positive().optional(),
+		kcal: z.number().min(0).max(1200),
+		protein: z.number().min(0).max(120),
+		carbs: z.number().min(0).max(200),
+		fat: z.number().min(0).max(120),
+		fiber: z.number().min(0).max(60).optional(),
+		sugar: z.number().min(0).max(150).optional(),
+		sodium: z.number().min(0).max(5000).optional(),
+		densityGml: z.number().positive().optional(),
+		aliases: z.array(z.string().min(1)).optional(),
+	});
+	
   try {
     const parse = Body.safeParse(await req.json());
     if (!parse.success) {

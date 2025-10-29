@@ -1,7 +1,4 @@
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
-
+import { NextRequest, NextResponse } from 'next/server';
 function updateRecentViewsCookie(req: NextRequest, response: Response, recipeId: string) {
   const cookie = req.cookies.get('ms_recent');
   let recentIds: string[] = [];
@@ -22,6 +19,17 @@ function updateRecentViewsCookie(req: NextRequest, response: Response, recipeId:
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	
   const { id: recipeId } = await params;
   const sessionId = req.cookies.get('ms_session')?.value;
   
