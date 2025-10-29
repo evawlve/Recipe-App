@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 import { nanoid } from "nanoid";
 
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: any) {
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
@@ -19,7 +19,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 	const { getCurrentUser } = await import("@/lib/auth");
 	const { commentBodySchema } = await import("@/lib/validation/comment");
 	
-	const resolvedParams = await params;
+    const resolvedParams = await params;
 	const user = await getCurrentUser();
 	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

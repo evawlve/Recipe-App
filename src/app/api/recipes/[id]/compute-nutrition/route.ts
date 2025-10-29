@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,8 +10,8 @@ export const runtime = 'nodejs';
  * Body: { goal?: string }
  */
 export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: any
 ) {
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
@@ -31,8 +31,7 @@ export async function POST(
     }
 
     const { goal = 'general' } = await req.json();
-    const resolvedParams = await params;
-    const recipeId = resolvedParams.id;
+    const recipeId = (await params).id;
 
     // Use server lib to compute nutrition
     const result = await computeNutritionForRecipe(recipeId, goal);
