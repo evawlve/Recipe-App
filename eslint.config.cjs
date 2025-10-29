@@ -47,6 +47,19 @@ module.exports = [
 			'react/jsx-key': 'off',
 		},
 	},
+	{
+		files: ['src/**/*.ts', 'src/**/*.tsx'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				{
+					selector: "CallExpression[callee.name='fetch'] Literal[value=/^\\/api\\//]",
+					message:
+						"Do not fetch internal /api routes from server files. Use server libs instead (client components may call /api).",
+				},
+			],
+		},
+	},
 		{
 			files: ['src/**/*.{js,jsx,ts,tsx}'],
 			rules: {
