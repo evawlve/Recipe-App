@@ -1,0 +1,23 @@
+name: Nightly Rollup (interactions)
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  rollup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci --omit=dev
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      - name: Run rollup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}   # Postgres connection
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} # if your prisma client needs it
+          NODE_ENV: production
+        run: npm run rollup:interactions

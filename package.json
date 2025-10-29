@@ -25,7 +25,8 @@
     "aliases:backfill:fast": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/aliases-backfill-fast.ts",
     "seed:tags": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register prisma/seeds/tags.seed.ts",
     "features:backfill": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-recipe-features.ts",
-    "rollup:interactions": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/rollup-interactions.ts"
+    "rollup:interactions": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/rollup-interactions.ts",
+    "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.673.0",
