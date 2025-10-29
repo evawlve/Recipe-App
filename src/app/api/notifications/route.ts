@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +9,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not available during build" }, { status: 503 });
     }
 
+    // Import only when not in build mode
+    const { prisma } = await import('@/lib/db');
+    const { getCurrentUser } = await import('@/lib/auth');
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

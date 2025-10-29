@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
   // Skip execution during build time
@@ -9,6 +8,8 @@ export async function GET() {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
+  // Import only when not in build mode
+  const { getCurrentUser } = await import("@/lib/auth");
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   return NextResponse.json({ 
