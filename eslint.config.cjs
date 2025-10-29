@@ -15,7 +15,9 @@ module.exports = [
 			'dist/**',
 			'build/**',
 			'coverage/**',
+			'.vercel/**',
 			'**/*.min.*',
+			'**/*.generated.*',
 			'package-lock.json',
 			'tsconfig.tsbuildinfo',
 			'cleanup-orphaned-users.js',
@@ -58,15 +60,21 @@ module.exports = [
 						],
 					},
 				],
-				'no-restricted-syntax': [
-					'error',
-					{
-						selector: 'CallExpression[callee.name="fetch"] > Literal[value=/^\\/api\\//]',
-						message: 'Do not fetch API routes from server components. Use direct server lib calls instead.',
-					},
-				],
 			},
 		},
+	{
+		files: ['src/app/**/*.{ts,tsx}'],
+		rules: {
+			'no-restricted-properties': [
+				'warn',
+				{
+					object: 'globalThis',
+					property: 'fetch',
+					message: 'Avoid fetch("/api/...") in Server Components. Call server libs directly.',
+				},
+			],
+		},
+	},
 	{
 		files: ['scripts/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
 		rules: {

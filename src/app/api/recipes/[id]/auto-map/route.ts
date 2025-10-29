@@ -3,9 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-import { autoMapIngredients } from '@/lib/nutrition/auto-map';
-
-import { computeRecipeNutrition } from '@/lib/nutrition/compute';
 
 
 /**
@@ -26,6 +23,8 @@ export async function POST(
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { autoMapIngredients } = await import("@/lib/nutrition/auto-map");
+	const { computeRecipeNutrition } = await import("@/lib/nutrition/compute");
 	
   try {
     const { id } = await params;
