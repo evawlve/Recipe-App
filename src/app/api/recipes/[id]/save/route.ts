@@ -12,6 +12,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
 	    process.env.BUILD_TIME === 'true') {
+		console.error('BUILD_PHASE_POST_HIT', { url: '/api/recipes/[id]/save', phase: process.env.NEXT_PHASE });
 		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
 	}
 

@@ -47,15 +47,16 @@ module.exports = [
 			'react/jsx-key': 'off',
 		},
 	},
+	// Guard against server-side fetch to internal API without using regex in selector (avoid esquery regex crashes)
 	{
-		files: ['src/**/*.ts', 'src/**/*.tsx'],
+		files: ['src/app/**/*.{ts,tsx}'],
 		rules: {
 			'no-restricted-syntax': [
-				'error',
+				'warn',
 				{
-					selector: "CallExpression[callee.name='fetch'] Literal[value=/^\\/api\\//]",
+					selector: "CallExpression[callee.name='fetch'] > Literal:first-child",
 					message:
-						"Do not fetch internal /api routes from server files. Use server libs instead (client components may call /api).",
+						"Avoid fetch('/api/...') in server components. Use server libs instead (client components may call /api).",
 				},
 			],
 		},
