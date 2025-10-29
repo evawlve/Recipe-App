@@ -6,8 +6,14 @@ import { nanoid } from 'nanoid';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Skip static assets
-  if (pathname.startsWith('/_next') || pathname.startsWith('/images') || pathname.startsWith('/api/static')) {
+  // Bypass API and static assets
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/images') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/favicon.ico')
+  ) {
     return NextResponse.next();
   }
   
