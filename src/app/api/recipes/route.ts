@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
+import { time } from "@/lib/perf";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 // Avoid top-level heavy imports; dynamically import inside handlers
 
+
+export async function GET(_req: Request) {
+	const data = await time("api/recipes", async () => {
+		const { prisma } = await import("@/lib/db");
+		return prisma.recipe.findMany({ take: 24, orderBy: { createdAt: "desc" } });
+	});
+	return NextResponse.json({ ok: true, recipes: data });
+}
 
 export async function POST(request: Request) {
 	// Skip execution during build time

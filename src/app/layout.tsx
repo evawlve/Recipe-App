@@ -1,5 +1,8 @@
 import "./globals.css";
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { WelcomeNotification } from '@/components/WelcomeNotification';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -7,6 +10,8 @@ import { SignupGuard } from '@/components/SignupGuard';
 import ThemeScript from '@/components/ThemeScript';
 import { Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
+
+export const metadata: Metadata = { title: 'Mealspire' };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -28,6 +33,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </SignupGuard>
           </ErrorBoundary>
         </ThemeProvider>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
