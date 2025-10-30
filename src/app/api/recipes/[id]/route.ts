@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
-import { S3Client, DeleteObjectsCommand } from "@aws-sdk/client-s3";
-import { recipeUpdateSchema } from "@/lib/validation";
-import { z } from "zod";
-import { autoMapIngredients } from "@/lib/nutrition/auto-map";
-import { computeRecipeNutrition } from "@/lib/nutrition/compute";
 
-export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { S3Client, DeleteObjectsCommand } = await import("@aws-sdk/client-s3");
+	
   const resolvedParams = await params;
   const id = resolvedParams.id;
   const user = await getCurrentUser();
@@ -75,6 +82,21 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { z } = await import("zod");
+	const { recipeUpdateSchema } = await import("@/lib/validation");
+	const { autoMapIngredients } = await import("@/lib/nutrition/auto-map");
+	const { computeRecipeNutrition } = await import("@/lib/nutrition/compute");
+	
   const resolvedParams = await params;
   const id = resolvedParams.id;
   

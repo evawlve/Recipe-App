@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 export async function DELETE() {
   try {
+    // Skip execution during build time - more comprehensive check
+    if (process.env.NEXT_PHASE === 'phase-production-build' || 
+        process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+        process.env.BUILD_TIME === 'true' ||
+        process.env.NODE_ENV === 'production' && process.env.VERCEL === '1' && !process.env.VERCEL_ENV ||
+        typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+      return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+    }
+
+    // Import only when not in build mode
+    const { getCurrentUser } = await import("@/lib/auth");
+    const { prisma } = await import("@/lib/db");
+    const { createClient } = await import("@supabase/supabase-js");
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

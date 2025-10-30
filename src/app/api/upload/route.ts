@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 import { S3Client } from '@aws-sdk/client-s3';
+
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
+
 import { randomBytes } from 'crypto';
+
 
 const region = process.env.AWS_REGION || 'us-east-2';
 const bucket = process.env.S3_BUCKET;
@@ -41,6 +48,13 @@ function buildS3Key(filename: string, type: 'avatar' | 'recipe' = 'recipe'): str
 }
 
 export async function POST(req: NextRequest) {
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+      process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
+
   console.log('Upload API called');
   
   if (!region || !bucket) {

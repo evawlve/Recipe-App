@@ -8,6 +8,11 @@ const nextConfig = {
     domains: ['localhost'],
     unoptimized: false
   },
+  // Prevent API routes from being executed during build
+  serverExternalPackages: ['@prisma/client'],
+  env: {
+    BUILD_TIME: process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ? 'true' : 'false',
+  },
   webpack: (config: any, { isServer: _isServer }: { isServer: boolean }) => {
     // Exclude large data files from webpack bundling
     config.externals = config.externals || [];

@@ -1,17 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { autoMapIngredients } from '@/lib/nutrition/auto-map';
-import { computeRecipeNutrition } from '@/lib/nutrition/compute';
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 
 /**
  * Manually trigger auto-mapping for a recipe
  * POST /api/recipes/[id]/auto-map
  */
 export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: any
 ) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { autoMapRecipeIngredients } = await import("@/lib/recipes/autoMap.server");
+	
   try {
     const { id } = await params;
     
@@ -30,17 +43,10 @@ export async function POST(
       return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
     }
 
-    // Run auto-mapping
-    const mappedCount = await autoMapIngredients(id);
-    
-    // Compute nutrition after mapping
-    await computeRecipeNutrition(id, 'general');
+    // Use server lib to run auto-mapping
+    const result = await autoMapRecipeIngredients(id);
 
-    return NextResponse.json({
-      success: true,
-      mappedCount,
-      message: `Auto-mapped ${mappedCount} ingredients`
-    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Auto-mapping error:', error);
     return NextResponse.json(

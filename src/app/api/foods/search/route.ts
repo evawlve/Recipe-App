@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { deriveServingOptions } from '@/lib/units/servings';
-import { logger } from '@/lib/logger';
-import { rankCandidates } from '@/lib/foods/rank';
-import { kcalBandForQuery } from '@/lib/foods/plausibility';
-import { computeTotals } from '@/lib/nutrition/compute';
-import { computeImpactPreview } from '@/lib/nutrition/impact';
-import { tokens, normalizeQuery } from '@/lib/search/normalize';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 /**
  * Search foods by name or brand from local database only
@@ -17,6 +13,24 @@ import { tokens, normalizeQuery } from '@/lib/search/normalize';
 
 
 export async function GET(req: NextRequest) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { deriveServingOptions } = await import("@/lib/units/servings");
+	const { logger } = await import("@/lib/logger");
+	const { rankCandidates } = await import("@/lib/foods/rank");
+	const { kcalBandForQuery } = await import("@/lib/foods/plausibility");
+	const { computeTotals } = await import("@/lib/nutrition/compute");
+	const { computeImpactPreview } = await import("@/lib/nutrition/impact");
+	const { tokens, normalizeQuery } = await import("@/lib/search/normalize");
+	
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('s');

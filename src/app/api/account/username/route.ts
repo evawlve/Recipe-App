@@ -1,16 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { z } from 'zod';
 
-const usernameSchema = z.object({
-  username: z.string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(20, 'Username must be at most 20 characters')
-    .regex(/^[a-z0-9_]+$/, 'Username can only contain lowercase letters, numbers, and underscores'),
-});
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
+// Schema will be defined after dynamic import
 
 export async function PATCH(request: NextRequest) {
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+      process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
+
+  // Import only when not in build mode
+  const { prisma } = await import('@/lib/db');
+  const { createSupabaseServerClient } = await import('@/lib/supabase/server');
+  const { z } = await import('zod');
+
+	const usernameSchema = z.object({
+    username: z.string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(20, 'Username must be at most 20 characters')
+      .regex(/^[a-z0-9_]+$/, 'Username can only contain lowercase letters, numbers, and underscores'),
+  });
+
   try {
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();

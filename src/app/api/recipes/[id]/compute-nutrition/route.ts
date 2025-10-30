@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { computeRecipeNutrition } from '@/lib/nutrition/compute';
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 /**
  * Compute nutrition for a specific recipe
@@ -9,9 +10,20 @@ import { prisma } from '@/lib/db';
  * Body: { goal?: string }
  */
 export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: any
 ) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { computeNutritionForRecipe } = await import("@/lib/recipes/nutrition.server");
+	
   try {
     const user = await getCurrentUser();
     if (!user?.id) {
@@ -19,23 +31,19 @@ export async function POST(
     }
 
     const { goal = 'general' } = await req.json();
-    const resolvedParams = await params;
-    const recipeId = resolvedParams.id;
+    const recipeId = (await params).id;
 
-    // Verify user owns the recipe
-    const recipe = await prisma.recipe.findFirst({
-      where: { id: recipeId, authorId: user.id }
-    });
-
-    if (!recipe) {
-      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+    // Use server lib to compute nutrition
+    const result = await computeNutritionForRecipe(recipeId, goal);
+    
+    if (!result.ok) {
+      const status = result.error === 'not_found' ? 404 : 500;
+      return NextResponse.json({ error: result.error }, { status });
     }
-
-    const result = await computeRecipeNutrition(recipeId, goal as any);
     
     return NextResponse.json({
       success: true,
-      data: result
+      data: result.nutrition
     });
   } catch (error) {
     console.error('Recipe nutrition computation error:', error);

@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { computeRecipeNutrition, getUnmappedIngredients } from '@/lib/nutrition/compute';
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 /**
  * Compute nutrition for a recipe
  * POST /api/nutrition
  * Body: { recipeId: string, goal?: string }
  */
 export async function POST(req: NextRequest) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { computeRecipeNutrition, getUnmappedIngredients } = await import("@/lib/nutrition/compute");
+	
   try {
     const user = await getCurrentUser();
     if (!user?.id) {
@@ -50,6 +62,18 @@ export async function POST(req: NextRequest) {
  * GET /api/nutrition?recipeId=...
  */
 export async function GET(req: NextRequest) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { getUnmappedIngredients } = await import("@/lib/nutrition/compute");
+	
   try {
     const user = await getCurrentUser();
     if (!user?.id) {
