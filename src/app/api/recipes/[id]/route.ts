@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
+import { time } from "@/lib/perf";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+	const data = await time("api/recipes/[id]", async () => {
+		const { prisma } = await import("@/lib/db");
+		return prisma.recipe.findUnique({ where: { id: params.id } });
+	});
+	return data
+		? NextResponse.json({ ok: true, recipe: data })
+		: NextResponse.json({ ok: false }, { status: 404 });
+}
+
 
 export async function DELETE(
   _req: Request,

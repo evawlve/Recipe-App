@@ -30,11 +30,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Suspense fallback={null}>
                 <WelcomeNotification />
               </Suspense>
-              <SpeedInsights />
-              <Analytics />
             </SignupGuard>
           </ErrorBoundary>
         </ThemeProvider>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
