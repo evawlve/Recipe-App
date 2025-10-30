@@ -47,15 +47,15 @@ module.exports = [
 			'react/jsx-key': 'off',
 		},
 	},
-	// Guard against server-side fetch to internal API using a precise AST selector
+	// Guard against server-side fetch to internal API using a precise AST selector (no regex)
 	{
 		files: ['src/app/**/*.{ts,tsx}'],
 		rules: {
 			'no-restricted-syntax': [
 				'warn',
 				{
-					// Only match fetch calls whose first argument is a string literal starting with '/api/'
-					selector: "CallExpression[callee.name='fetch'] > Literal.arguments[value=/^\\/api\\//]",
+					// Match any fetch(...) call that includes a string literal argument starting with '/api/'
+					selector: "CallExpression[callee.name='fetch'] Literal[value^='/api/']",
 					message:
 						"Do not fetch('/api/...') from server components or server code. Import and call server libs instead.",
 				},
