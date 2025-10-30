@@ -1,18 +1,41 @@
-import { NextResponse } from 'next/server';
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
+export const dynamic = "force-dynamic";
+
 export const revalidate = 0;
 
-export async function GET() {
-	const pick = (k: string) => (process.env[k] ? 'present' : 'missing');
-	return NextResponse.json({
-		NEXT_PUBLIC_SUPABASE_URL: pick('NEXT_PUBLIC_SUPABASE_URL'),
-		NEXT_PUBLIC_SUPABASE_ANON_KEY: pick('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-		SUPABASE_SERVICE_ROLE_KEY: pick('SUPABASE_SERVICE_ROLE_KEY'),
-		DATABASE_URL: pick('DATABASE_URL'),
-		NODE_ENV: process.env.NODE_ENV,
-		RUNTIME: 'nodejs-route',
-	});
+function mask(url?: string) {
+
+  if (!url) return null;
+
+  try {
+
+    const u = new URL(url);
+
+    return { host:u.host, pathname:u.pathname, search:u.search };
+
+  } catch { return "invalid"; }
+
 }
 
+export async function GET() {
 
+  return NextResponse.json({
+
+    NODE_ENV: process.env.NODE_ENV,
+
+    SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? null,
+
+    DATABASE_URL: mask(process.env.DATABASE_URL),
+
+    DIRECT_URL: mask(process.env.DIRECT_URL),
+
+    SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "missing",
+
+    SUPABASE_ANON: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "missing",
+
+  });
+
+}
