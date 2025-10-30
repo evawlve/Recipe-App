@@ -47,16 +47,17 @@ module.exports = [
 			'react/jsx-key': 'off',
 		},
 	},
-	// Guard against server-side fetch to internal API without using regex in selector (avoid esquery regex crashes)
+	// Guard against server-side fetch to internal API using a precise AST selector (no regex)
 	{
 		files: ['src/app/**/*.{ts,tsx}'],
 		rules: {
 			'no-restricted-syntax': [
 				'warn',
 				{
-					selector: "CallExpression[callee.name='fetch'] > Literal:first-child",
+					// Match any fetch(...) call that includes a string literal argument starting with '/api/'
+					selector: "CallExpression[callee.name='fetch'] Literal[value^='/api/']",
 					message:
-						"Avoid fetch('/api/...') in server components. Use server libs instead (client components may call /api).",
+						"Do not fetch('/api/...') from server components or server code. Import and call server libs instead.",
 				},
 			],
 		},
@@ -77,30 +78,7 @@ module.exports = [
 				],
 			},
 		},
-	{
-		files: ['src/app/**/*.{ts,tsx}'],
-		rules: {
-			'no-restricted-properties': [
-				'warn',
-				{
-					object: 'globalThis',
-					property: 'fetch',
-					message: 'Avoid fetch("/api/...") in Server Components. Call server libs directly.',
-				},
-			],
-			'no-restricted-imports': [
-				'warn',
-				{
-					patterns: [
-						{
-							group: ['**/api/**'],
-							message: 'Ensure API calls are not made from server components; import server libs instead.',
-						},
-					],
-				},
-			],
-		},
-	},
+	// Removed broad global fetch restrictions to prevent false positives; the targeted selector above is sufficient
 	{
 		files: ['scripts/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
 		rules: {
