@@ -4,10 +4,11 @@ import { time } from "@/lib/perf";
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+	const resolvedParams = await params;
 	const data = await time("api/recipes/[id]", async () => {
 		const { prisma } = await import("@/lib/db");
-		return prisma.recipe.findUnique({ where: { id: params.id } });
+		return prisma.recipe.findUnique({ where: { id: resolvedParams.id } });
 	});
 	return data
 		? NextResponse.json({ ok: true, recipe: data })
