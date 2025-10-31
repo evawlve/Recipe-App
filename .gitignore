@@ -91,3 +91,5 @@ data/usda/FoodData_Central_foundation_food_json_2025-04-24.json
 
 # Local CSV exports you don't want to commit accidentally
 data/curated/tmp/**
+# Sentry Config File
+.env.sentry-build-plugin
