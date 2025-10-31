@@ -6,6 +6,7 @@ import { SearchBar } from '@/components/home/SearchBar';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { FeedTabs } from '@/components/home/FeedTabs';
 import { getCurrentUser } from '@/lib/auth';
+import { ErrorBoundary as ClientErrorBoundary } from '@/components/obs/ErrorBoundary';
 
 // Force dynamic rendering for pages that use authentication
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,9 @@ export default async function HomePage() {
       )}
 
       <HomeSection title={currentUser ? 'For you · Following' : 'For you'}>
-        <FeedTabs signedIn={!!currentUser} currentUserId={currentUser?.id || null} />
+        <ClientErrorBoundary>
+          <FeedTabs signedIn={!!currentUser} currentUserId={currentUser?.id || null} />
+        </ClientErrorBoundary>
       </HomeSection>
     </div>
   );

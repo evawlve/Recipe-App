@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+import { withSpan } from '@/lib/obs/withSpan';
+import { capture } from '@/lib/obs/capture';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,6 +16,7 @@ export const runtime = 'nodejs';
 
 
 export async function GET(req: NextRequest) {
+	Sentry.setTag('endpoint', 'foods-search');
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
@@ -62,9 +66,9 @@ export async function GET(req: NextRequest) {
         };
         
         // Get goal from existing nutrition record if available
-        const existingNutrition = await prisma.nutrition.findUnique({
+        const existingNutrition = await withSpan('db.nutrition.findUnique', async () => prisma.nutrition.findUnique({
           where: { recipeId }
-        });
+        }));
         goal = existingNutrition?.goal ?? 'general';
       } catch (error) {
         console.warn('Failed to load current totals for impact calculation:', error);
@@ -98,7 +102,7 @@ export async function GET(req: NextRequest) {
       whereClause.source = source;
     }
 
-    const foods = await prisma.food.findMany({
+    const foods = await withSpan('db.food.findMany.search', async () => prisma.food.findMany({
       where: whereClause,
       include: {
         units: true,
@@ -106,7 +110,7 @@ export async function GET(req: NextRequest) {
         aliases: true
       },
       take: 200
-    });
+    }));
 
     // Build candidates for ranking
     const candidates = foods.map(f => ({
@@ -207,7 +211,7 @@ export async function GET(req: NextRequest) {
       data
     });
   } catch (error) {
-    console.error('Food search error:', error);
+    capture(error, { endpoint: 'foods-search' });
     return NextResponse.json(
       { error: 'Failed to search foods' },
       { status: 500 }
