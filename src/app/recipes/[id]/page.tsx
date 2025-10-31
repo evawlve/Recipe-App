@@ -15,6 +15,7 @@ import { AuthorLink } from "@/components/recipe/AuthorLink";
 import { RecipeNutritionDisplay } from "@/components/recipe/RecipeNutritionDisplay";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import { AlsoViewed } from "./_components/AlsoViewed";
+import { ErrorBoundary as ClientErrorBoundary } from "@/components/obs/ErrorBoundary";
 
 interface RecipePageProps {
   params: Promise<{
@@ -175,19 +176,23 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
                 <CardTitle>Photos</CardTitle>
               </CardHeader>
               <CardContent>
-                <PhotoGallery photos={recipe.photos} recipeTitle={recipe.title} canDelete={canDelete} />
+                <ClientErrorBoundary>
+                  <PhotoGallery photos={recipe.photos} recipeTitle={recipe.title} canDelete={canDelete} />
+                </ClientErrorBoundary>
               </CardContent>
             </Card>
           )}
 
           {/* Nutrition Breakdown - Mobile/Tablet (shown after photos) */}
           <div className="xl:hidden">
-            <RecipeNutritionDisplay 
-              recipeId={recipe.id}
-              servings={recipe.servings}
-              isAuthor={canDelete}
-              fallbackNutrition={recipe.nutrition}
-            />
+            <ClientErrorBoundary>
+              <RecipeNutritionDisplay 
+                recipeId={recipe.id}
+                servings={recipe.servings}
+                isAuthor={canDelete}
+                fallbackNutrition={recipe.nutrition}
+              />
+            </ClientErrorBoundary>
           </div>
 
           {/* Ingredients */}
@@ -232,13 +237,15 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               <CardTitle>Comments</CardTitle>
             </CardHeader>
             <CardContent>
-              <Comments
-                recipeId={recipe.id}
-                initial={comments as any}
-                canPost={Boolean(current)}
-                currentUserId={current?.id ?? null}
-                recipeAuthorId={recipe.authorId}
-              />
+              <ClientErrorBoundary>
+                <Comments
+                  recipeId={recipe.id}
+                  initial={comments as any}
+                  canPost={Boolean(current)}
+                  currentUserId={current?.id ?? null}
+                  recipeAuthorId={recipe.authorId}
+                />
+              </ClientErrorBoundary>
             </CardContent>
           </Card>
 
@@ -250,12 +257,14 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
 
         {/* Nutrition Sidebar - Desktop only */}
         <div className="hidden xl:block xl:col-span-1">
-          <RecipeNutritionDisplay 
-            recipeId={recipe.id}
-            servings={recipe.servings}
-            isAuthor={canDelete}
-            fallbackNutrition={recipe.nutrition}
-          />
+          <ClientErrorBoundary>
+            <RecipeNutritionDisplay 
+              recipeId={recipe.id}
+              servings={recipe.servings}
+              isAuthor={canDelete}
+              fallbackNutrition={recipe.nutrition}
+            />
+          </ClientErrorBoundary>
         </div>
       </div>
 

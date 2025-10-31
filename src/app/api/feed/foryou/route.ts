@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+import { withSpan } from '@/lib/obs/withSpan';
+import { capture } from '@/lib/obs/capture';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
+	Sentry.setTag('endpoint', 'feed-foryou');
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
@@ -29,7 +33,7 @@ export async function GET(req: NextRequest) {
     // Get tags from recently viewed recipes for personalization
     let recentTags = new Set<string>();
     if (recentViewedIds.length > 0) {
-      const recentRecipes = await prisma.recipe.findMany({
+      const recentRecipes = await withSpan('db.recipe.findMany.recentViewed', async () => prisma.recipe.findMany({
         where: { id: { in: recentViewedIds } },
         include: {
           tags: {
@@ -37,7 +41,7 @@ export async function GET(req: NextRequest) {
           }
         },
         take: 10 // Limit to last 10 viewed recipes
-      });
+      }));
       
       recentRecipes.forEach(recipe => {
         recipe.tags.forEach(rt => {
@@ -48,7 +52,7 @@ export async function GET(req: NextRequest) {
     
     // Get candidate recipes (last 30 days)
     const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-    const candidates = await prisma.recipe.findMany({
+    const candidates = await withSpan('db.recipe.findMany.candidates', async () => prisma.recipe.findMany({
       where: { 
         createdAt: { gte: since },
         // Exclude recently viewed recipes to avoid repetition
@@ -88,7 +92,7 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
       take: 200 // Large candidate window
-    });
+    }));
     
     // Score and rank candidates
     const scored = candidates.map(recipe => {
@@ -129,7 +133,7 @@ export async function GET(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('For-You feed error:', error);
+    capture(error, { endpoint: 'foryou' });
     return NextResponse.json(
       { error: 'Failed to load For-You feed' },
       { status: 500 }
