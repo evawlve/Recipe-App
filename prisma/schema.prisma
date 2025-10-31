@@ -87,6 +87,10 @@ model Recipe {
   interactions RecipeInteractionDaily[]
   similarTo   RecipeSimilar[] @relation("RecipeToSimilar")
   similarFrom RecipeSimilar[] @relation("RecipeIsSimilar")
+
+  // Index for feed queries: filters by createdAt >= date and orders by createdAt DESC
+  // Used by /api/feed/foryou and other feed endpoints
+  @@index([createdAt])
 }
 
 model Ingredient {
@@ -140,6 +144,9 @@ model RecipeTag {
   tag        Tag         @relation(fields: [tagId], references: [id])
 
   @@id([recipeId, tagId])
+  // Index for tag filtering queries: efficiently find all recipes with a specific tag
+  // Used by tags: { some: { tagId: id }} filters in recipe queries
+  @@index([tagId])
 }
 
 model Comment {
