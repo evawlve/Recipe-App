@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { withSpan } from '@/lib/obs/withSpan';
 import { capture } from '@/lib/obs/capture';
+import { shouldSkipCache, setCacheHeaders } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,8 +25,15 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12');
     const cursor = searchParams.get('cursor');
     
+    // Check if we should skip caching
+    const skipCache = shouldSkipCache(req);
+    
     // Get current user (optional for anonymous users)
     const user = await getCurrentUser().catch(() => null);
+    
+    // Build cache key: user-scoped, so include userId + page params
+    const userId = user?.id || 'anonymous';
+    const cacheKey = `foryou:${userId}:${limit}:${cursor || ''}`;
     
     // Get recently viewed recipe IDs from cookie
     const recentViewedIds = getRecentViewedIds(req);
@@ -127,10 +135,31 @@ export async function GET(req: NextRequest) {
     // Generate next cursor
     const nextCursor = ranked.length === limit ? ranked[ranked.length - 1].id : null;
     
-    return NextResponse.json({
+    // Create response
+    const response = NextResponse.json({
       items: ranked,
       nextCursor
     });
+    
+    // Add cache headers if not skipped (user-scoped, so use Vary: Cookie)
+    if (!skipCache) {
+      Sentry.addBreadcrumb({
+        category: 'cache',
+        message: 'Cache enabled for foryou feed',
+        level: 'info',
+        data: { cacheKey, 'cache.hit': false } // We can't determine HTTP cache hits from server
+      });
+      setCacheHeaders(response, true); // isUserScoped = true
+    } else {
+      Sentry.addBreadcrumb({
+        category: 'cache',
+        message: 'Cache skipped for foryou feed',
+        level: 'info',
+        data: { cacheKey, 'cache.hit': false }
+      });
+    }
+    
+    return response;
     
   } catch (error) {
     capture(error, { endpoint: 'foryou' });

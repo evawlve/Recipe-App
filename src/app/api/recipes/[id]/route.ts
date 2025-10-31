@@ -1,25 +1,56 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { withSpan } from "@/lib/obs/withSpan";
 import { capture } from "@/lib/obs/capture";
 import { time } from "@/lib/perf";
+import { shouldSkipCache, setCacheHeaders } from "@/lib/cache";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	Sentry.setTag('endpoint', 'recipes-id');
 	try {
 		const resolvedParams = await params;
+		const recipeId = resolvedParams.id;
+		
+		// Check if we should skip caching
+		const skipCache = shouldSkipCache(req);
+		
+		// Build cache key: global (not user-scoped), so just recipe ID
+		const cacheKey = `recipe:${recipeId}`;
+		
 		const data = await time("api/recipes/[id]", async () =>
 			withSpan('db.recipe.findUnique', async () => {
 				const { prisma } = await import("@/lib/db");
-				return prisma.recipe.findUnique({ where: { id: resolvedParams.id } });
+				return prisma.recipe.findUnique({ where: { id: recipeId } });
 			})
 		);
-		return data
+		
+		// Create response
+		const response = data
 			? NextResponse.json({ ok: true, recipe: data })
 			: NextResponse.json({ ok: false }, { status: 404 });
+		
+		// Add cache headers if not skipped (global, not user-scoped)
+		if (!skipCache) {
+			Sentry.addBreadcrumb({
+				category: 'cache',
+				message: 'Cache enabled for recipe',
+				level: 'info',
+				data: { cacheKey, 'cache.hit': false } // We can't determine HTTP cache hits from server
+			});
+			setCacheHeaders(response, false); // isUserScoped = false (global)
+		} else {
+			Sentry.addBreadcrumb({
+				category: 'cache',
+				message: 'Cache skipped for recipe',
+				level: 'info',
+				data: { cacheKey, 'cache.hit': false }
+			});
+		}
+		
+		return response;
 	} catch (error) {
 		capture(error, { endpoint: 'recipes-id' });
 		return NextResponse.json({ ok: false }, { status: 500 });
