@@ -6,7 +6,8 @@ export function parseQuery(sp: Record<string, string | undefined>) {
   const sort = sp.sort ?? 'new';
   const kcalMax = sp.kcalMax ? Number(sp.kcalMax) : undefined;
   const cursor = sp.cursor ?? undefined;
-  const search = sp.search ?? undefined;
+  // Support both 'q' and 'search' parameters, with 'q' taking precedence
+  const search = sp.q ?? sp.search ?? undefined;
   return { ns, tags, sort, kcalMax, cursor, search };
 }
 

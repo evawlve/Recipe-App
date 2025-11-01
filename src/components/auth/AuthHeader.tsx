@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { isTokenError } from '@/lib/auth-utils';
-import { EnhancedSearchBox } from '@/components/recipes/EnhancedSearchBox';
+import { SearchBox } from '@/components/nav/SearchBox';
 import Logo from '@/components/Logo';
 import { Menu, X, Search, Bell } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
@@ -269,7 +269,7 @@ export function AuthHeader() {
                   </div>
                 </div>
               ) : (
-                <EnhancedSearchBox />
+                <SearchBox />
               )}
             </div>
 
@@ -382,7 +382,7 @@ export function AuthHeader() {
                     <span className="text-sm">Complete setup to search...</span>
                   </div>
                 ) : (
-                  <EnhancedSearchBox className="w-full" />
+                  <SearchBox className="w-full" />
                 )}
               </div>
               

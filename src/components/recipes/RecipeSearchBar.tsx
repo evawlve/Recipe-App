@@ -10,10 +10,13 @@ export function RecipeSearchBar() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Initialize query from URL params
+  // Initialize query from URL params (support both 'q' and 'search')
   useEffect(() => {
+    const qParam = searchParams.get('q');
     const searchParam = searchParams.get('search');
-    if (searchParam) {
+    if (qParam) {
+      setQuery(qParam);
+    } else if (searchParam) {
       setQuery(searchParam);
     }
   }, [searchParams]);
@@ -22,8 +25,11 @@ export function RecipeSearchBar() {
     const params = new URLSearchParams(searchParams.toString());
     
     if (query.trim()) {
-      params.set('search', query.trim());
+      params.set('q', query.trim());
+      // Remove old 'search' param if it exists
+      params.delete('search');
     } else {
+      params.delete('q');
       params.delete('search');
     }
     
@@ -42,6 +48,7 @@ export function RecipeSearchBar() {
   const clearSearch = () => {
     setQuery('');
     const params = new URLSearchParams(searchParams.toString());
+    params.delete('q');
     params.delete('search');
     params.delete('cursor');
     router.push(`/recipes?${params.toString()}`);
