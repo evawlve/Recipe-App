@@ -1,36 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NutritionBreakdownModal } from "./NutritionBreakdownModal";
 import { BarChart3 } from "lucide-react";
-
-interface NutritionData {
-  totals: {
-    calories: number;
-    proteinG: number;
-    carbsG: number;
-    fatG: number;
-    fiberG: number;
-    sugarG: number;
-  } | null;
-  score: {
-    value: number;
-    label: string;
-    breakdown: {
-      proteinDensity: number;
-      macroBalance: number;
-      fiber: number;
-      sugar: number;
-    };
-  } | null;
-  provisional?: {
-    provisional: boolean;
-    provisionalReasons: string[];
-  };
-  unmappedIngredients: Array<{ id: string; name: string; qty: number; unit: string }>;
-}
 
 interface RecipeNutritionDisplayProps {
   recipeId: string;
@@ -60,73 +34,18 @@ export function RecipeNutritionDisplay({
   isAuthor = false,
   fallbackNutrition 
 }: RecipeNutritionDisplayProps) {
-  const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
 
-  const loadNutritionData = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`/api/nutrition?recipeId=${recipeId}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setNutritionData(result.data);
-      } else {
-        setError(result.error || 'Failed to load nutrition data');
-      }
-    } catch (err) {
-      setError('Network error loading nutrition data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadNutritionData();
-  }, [recipeId]);
-
-  // Use computed nutrition data if available, otherwise fall back to stored data
-  const displayNutrition = nutritionData?.totals || fallbackNutrition;
-  const displayScore = nutritionData?.score || (fallbackNutrition?.healthScore ? {
+  // Use pre-computed nutrition data directly from the database
+  // No need to recompute on every page view - computation happens when ingredients/mappings change
+  const displayNutrition = fallbackNutrition;
+  const displayScore = fallbackNutrition?.healthScore ? {
     value: fallbackNutrition.healthScore,
     label: fallbackNutrition.healthScore >= 80 ? 'great' : fallbackNutrition.healthScore >= 60 ? 'good' : fallbackNutrition.healthScore >= 40 ? 'ok' : 'poor',
     breakdown: null
-  } : null);
+  } : null;
 
-  if (isLoading && !nutritionData) {
-    return (
-      <Card className="sticky top-8">
-        <CardHeader>
-          <CardTitle>Nutrition Facts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">
-            <div className="text-sm text-muted-foreground">Loading nutrition data...</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error && !fallbackNutrition) {
-    return (
-      <Card className="sticky top-8">
-        <CardHeader>
-          <CardTitle>Nutrition Facts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">
-            <div className="text-sm text-red-600">Failed to load nutrition data</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  // If no nutrition data is available, don't render anything
   if (!displayNutrition) {
     return null;
   }
