@@ -28,13 +28,11 @@ const resolvedParams = await params;
 	
 	// Create notification for recipe author if they're not the one liking
 	if (recipe.authorId !== user.id) {
-		await prisma.notification.create({
-			data: {
-				userId: recipe.authorId,
-				actorId: user.id,
-				type: 'like',
-				recipeId: recipe.id
-			}
+		const { notifyLike } = await import('@/lib/notifications/create');
+		await notifyLike({
+			userId: recipe.authorId,
+			actorId: user.id,
+			recipeId: recipe.id,
 		});
 	}
 	

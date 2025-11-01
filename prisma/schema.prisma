@@ -213,6 +213,7 @@ model Notification {
   commentId   String?
   createdAt   DateTime @default(now())
   readAt      DateTime?
+  bumpedAt    DateTime @default(now())
   // relations
   user   User @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
   actor  User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
@@ -221,6 +222,9 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@unique([userId, actorId, type], map: "uniq_follow")
+  @@unique([userId, actorId, type, recipeId], map: "uniq_like")
+  @@unique([userId, type, commentId], map: "uniq_comment")
 }
 
 model Food {
