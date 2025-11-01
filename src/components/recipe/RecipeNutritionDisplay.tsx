@@ -42,7 +42,12 @@ export function RecipeNutritionDisplay({
   const displayScore = fallbackNutrition?.healthScore ? {
     value: fallbackNutrition.healthScore,
     label: fallbackNutrition.healthScore >= 80 ? 'great' : fallbackNutrition.healthScore >= 60 ? 'good' : fallbackNutrition.healthScore >= 40 ? 'ok' : 'poor',
-    breakdown: null
+    breakdown: null as null | {
+      proteinDensity: number;
+      macroBalance: number;
+      fiber: number;
+      sugar: number;
+    }
   } : null;
 
   // If no nutrition data is available, don't render anything
