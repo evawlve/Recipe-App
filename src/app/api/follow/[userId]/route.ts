@@ -60,12 +60,10 @@ export async function POST(
     });
 
     // Create notification for the followed user
-    await prisma.notification.create({
-      data: {
-        userId: targetUserId,
-        actorId: user.id,
-        type: 'follow'
-      }
+    const { notifyFollow } = await import('@/lib/notifications/create');
+    await notifyFollow({
+      userId: targetUserId,
+      actorId: user.id,
     });
 
     // Get updated follower count

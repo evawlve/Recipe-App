@@ -40,14 +40,12 @@ export async function POST(req: Request, { params }: any) {
 
 	// Create notification for recipe author if they're not the one commenting
 	if (recipe.authorId !== user.id) {
-		await prisma.notification.create({
-			data: {
-				userId: recipe.authorId,
-				actorId: user.id,
-				type: 'comment',
-				recipeId: recipe.id,
-				commentId: c.id
-			}
+		const { notifyComment } = await import('@/lib/notifications/create');
+		await notifyComment({
+			userId: recipe.authorId,
+			actorId: user.id,
+			recipeId: recipe.id,
+			commentId: c.id,
 		});
 	}
 

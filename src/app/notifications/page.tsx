@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { NotificationsList } from './NotificationsList';
+import { NotificationsRealtimeBridge } from '@/components/NotificationsRealtimeBridge';
 
 // Force dynamic rendering for pages that use authentication
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,8 @@ export default async function NotificationsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      <NotificationsRealtimeBridge />
+      
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
         <p className="text-gray-600">Stay updated with your activity</p>

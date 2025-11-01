@@ -1,15 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useNotificationsRT } from '@/hooks/useNotificationsRT';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const fetchUnreadCount = async () => {
+  // Get current user ID for realtime subscription
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }: { data: { user: any } }) => {
+      setUserId(data.user?.id || null);
+    });
+  }, []);
+
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications/unread-count');
       if (response.ok) {
@@ -21,12 +32,15 @@ export default function NotificationBell() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Realtime subscription - calls fetchUnreadCount when notifications change
+  const { isConnected } = useNotificationsRT(userId, fetchUnreadCount);
 
   useEffect(() => {
     fetchUnreadCount();
     
-    // Poll every 30 seconds
+    // Poll every 30 seconds as fallback (especially if realtime is not connected)
     const interval = setInterval(fetchUnreadCount, 30000);
     
     // Also refetch when window regains focus
@@ -37,7 +51,7 @@ export default function NotificationBell() {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [fetchUnreadCount]);
 
   return (
     <Link href="/notifications" className="relative">
