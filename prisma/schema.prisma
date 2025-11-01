@@ -251,9 +251,21 @@ model Food {
   barcodes        Barcode[]
   aliases         FoodAlias[]
   
+  // Single column indexes for common filters
   @@index([name])
   @@index([brand])
   @@index([source])
+  @@index([verification])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([popularity])
+  
+  // Composite indexes for common query patterns
+  // Used by /api/foods/search with verification filter
+  @@index([verification, source])
+  // Used by /api/foods/search with category filter
+  @@index([categoryId, verification])
+  
   @@unique([name, brand])
 }
 
@@ -298,8 +310,10 @@ model FoodAlias {
   // Relations
   food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
   
-  @@unique([foodId, alias])
+  // Optimizes frequent lookups by foodId (ingredient mapping, feed).
+  @@index([foodId])
   @@index([alias])
+  @@unique([foodId, alias])
 }
 
 model RecipeFeatureLite {
