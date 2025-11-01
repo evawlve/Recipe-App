@@ -118,20 +118,7 @@ export function NutritionBreakdownModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Nutrition Breakdown</DialogTitle>
-            {isAuthor && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEditMappings}
-                className="flex items-center gap-2"
-              >
-                <Edit3 className="h-4 w-4" />
-                Edit Mappings
-              </Button>
-            )}
-          </div>
+          <DialogTitle>Nutrition Breakdown</DialogTitle>
         </DialogHeader>
 
         {isLoading && (
@@ -153,9 +140,22 @@ export function NutritionBreakdownModal({
             {/* Mapped Ingredients */}
             {mappedIngredients.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Mapped Ingredients ({mappedIngredients.length})
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">
+                    Mapped Ingredients ({mappedIngredients.length})
+                  </h3>
+                  {isAuthor && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditMappings}
+                      className="flex items-center gap-2"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      Edit Mappings
+                    </Button>
+                  )}
+                </div>
                 <div className="grid gap-4">
                   {mappedIngredients.map((ingredient) => {
                     const nutrition = ingredient.nutrition;
