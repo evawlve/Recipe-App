@@ -23,6 +23,7 @@ interface FiltersProps {
     tags: string[];
     sort: string;
     kcalMax?: number;
+    prepTime?: string;
   };
 }
 
@@ -41,22 +42,52 @@ const SORT_OPTIONS = [
   { value: 'kcalAsc', label: 'Calories (Low to High)' },
 ];
 
+const PREP_TIME_OPTIONS = [
+  { value: '<15 min', label: '< 15 min' },
+  { value: '15-30 min', label: '15-30 min' },
+  { value: '30-45 min', label: '30-45 min' },
+  { value: '45min - 1hr', label: '45 min - 1 hr' },
+  { value: '1hr+', label: '1 hr+' },
+];
+
 export function Filters({ initial }: FiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedTags, setSelectedTags] = useState<string[]>(initial.tags);
   const [kcalMax, setKcalMax] = useState(initial.kcalMax || 1000);
   const [sort, setSort] = useState(initial.sort);
+  const [prepTime, setPrepTime] = useState(initial.prepTime || '');
   const [tagsByNamespace, setTagsByNamespace] = useState<Record<string, Tag[]>>({});
   const [loading, setLoading] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [isExpanded, setIsExpanded] = useState(false);
+  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Auto-expand if there are active filters
+  // Sync state with URL parameters when they change
   useEffect(() => {
-    const hasActiveFilters = selectedTags.length > 0 || kcalMax !== 1000 || sort !== 'new';
-    setIsExpanded(hasActiveFilters);
-  }, [selectedTags.length, kcalMax, sort]);
+    setSelectedTags(initial.tags);
+    setKcalMax(initial.kcalMax || 1000);
+    setSort(initial.sort);
+    setPrepTime(initial.prepTime || '');
+  }, [JSON.stringify(initial.tags), initial.kcalMax, initial.sort, initial.prepTime]);
+
+  // Auto-expand if there are active filters (only on initial mount)
+  useEffect(() => {
+    const hasActiveFilters = selectedTags.length > 0 || kcalMax !== 1000 || sort !== 'new' || prepTime !== '';
+    if (hasActiveFilters) {
+      setIsExpanded(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+    };
+  }, [debounceTimer]);
 
   // Fetch tags for selected namespaces
   const fetchTagsForNamespaces = useCallback(async (namespaces: string[]) => {
@@ -112,48 +143,73 @@ export function Filters({ initial }: FiltersProps) {
     tags: string[];
     sort: string;
     kcalMax: number;
-  }>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    
-    // Update namespaces
-    if (updates.ns !== undefined) {
-      params.delete('ns');
-      if (updates.ns.length > 0) {
-        params.set('ns', updates.ns.join(','));
-      }
+    prepTime: string;
+  }>, immediate = false) => {
+    // Clear existing timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
     }
-    
-    // Update tags
-    if (updates.tags !== undefined) {
-      params.delete('tags');
-      if (updates.tags.length > 0) {
-        params.set('tags', updates.tags.join(','));
+
+    const performUpdate = () => {
+      const params = new URLSearchParams(searchParams.toString());
+      
+      // Update namespaces
+      if (updates.ns !== undefined) {
+        params.delete('ns');
+        if (updates.ns.length > 0) {
+          params.set('ns', updates.ns.join(','));
+        }
       }
-    }
-    
-    // Update sort
-    if (updates.sort !== undefined) {
-      if (updates.sort === 'new') {
-        params.delete('sort');
-      } else {
-        params.set('sort', updates.sort);
+      
+      // Update tags
+      if (updates.tags !== undefined) {
+        params.delete('tags');
+        if (updates.tags.length > 0) {
+          params.set('tags', updates.tags.join(','));
+        }
       }
-    }
-    
-    // Update kcalMax
-    if (updates.kcalMax !== undefined) {
-      if (updates.kcalMax === 1000) {
-        params.delete('kcalMax');
-      } else {
-        params.set('kcalMax', updates.kcalMax.toString());
+      
+      // Update sort
+      if (updates.sort !== undefined) {
+        if (updates.sort === 'new') {
+          params.delete('sort');
+        } else {
+          params.set('sort', updates.sort);
+        }
       }
+      
+      // Update kcalMax
+      if (updates.kcalMax !== undefined) {
+        if (updates.kcalMax === 1000) {
+          params.delete('kcalMax');
+        } else {
+          params.set('kcalMax', updates.kcalMax.toString());
+        }
+      }
+      
+      // Update prepTime
+      if (updates.prepTime !== undefined) {
+        if (updates.prepTime === '') {
+          params.delete('prepTime');
+        } else {
+          params.set('prepTime', updates.prepTime);
+        }
+      }
+      
+      // Remove cursor for new filters
+      params.delete('cursor');
+      
+      router.push(`/recipes?${params.toString()}`, { scroll: false });
+    };
+
+    if (immediate) {
+      performUpdate();
+    } else {
+      // Debounce URL updates by 300ms
+      const timer = setTimeout(performUpdate, 300);
+      setDebounceTimer(timer);
     }
-    
-    // Remove cursor for new filters
-    params.delete('cursor');
-    
-    router.push(`/recipes?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+  }, [router, searchParams, debounceTimer]);
 
 
   const toggleTag = (tagSlug: string) => {
@@ -162,7 +218,7 @@ export function Filters({ initial }: FiltersProps) {
       : [...selectedTags, tagSlug];
     
     setSelectedTags(newTags);
-    updateURL({ tags: newTags });
+    updateURL({ tags: newTags }); // Debounced - allows rapid clicking
   };
 
   const toggleDropdown = (namespace: string) => {
@@ -189,19 +245,25 @@ export function Filters({ initial }: FiltersProps) {
   const handleKcalChange = (value: number[]) => {
     const newKcalMax = value[0];
     setKcalMax(newKcalMax);
-    updateURL({ kcalMax: newKcalMax });
+    updateURL({ kcalMax: newKcalMax }); // Debounced - good for sliders
   };
 
   const handleSortChange = (newSort: string) => {
     setSort(newSort);
-    updateURL({ sort: newSort });
+    updateURL({ sort: newSort }, true); // Immediate for sort
+  };
+
+  const handlePrepTimeChange = (newPrepTime: string) => {
+    setPrepTime(newPrepTime);
+    updateURL({ prepTime: newPrepTime }); // Debounced
   };
 
   const clearAllFilters = () => {
     setSelectedTags([]);
     setKcalMax(1000);
     setSort('new');
-    updateURL({ ns: [], tags: [], sort: 'new', kcalMax: 1000 });
+    setPrepTime('');
+    updateURL({ ns: [], tags: [], sort: 'new', kcalMax: 1000, prepTime: '' }, true); // Immediate
   };
 
 
@@ -233,7 +295,13 @@ export function Filters({ initial }: FiltersProps) {
             </Button>
           </div>
         </CardHeader>
-        {isExpanded && (
+        <div 
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isExpanded 
+              ? 'max-h-[2000px] opacity-100' 
+              : 'max-h-0 opacity-0'
+          }`}
+        >
           <CardContent className="space-y-6">
           {/* Namespace dropdowns */}
           <div className="space-y-4">
@@ -279,6 +347,53 @@ export function Filters({ initial }: FiltersProps) {
                   </div>
                 </div>
               ))}
+              
+              {/* Prep Time dropdown */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Prep Time
+                </label>
+                <div className="relative" data-dropdown>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between bg-search-bg border-border text-search-text hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => toggleDropdown('PREP_TIME')}
+                  >
+                    <span className="truncate">{prepTime || 'Any prep time'}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                  
+                  {openDropdowns['PREP_TIME'] && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-search-bg border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        {PREP_TIME_OPTIONS.map((option) => (
+                          <div key={option.value} className="flex items-center space-x-2 p-2 hover:bg-accent rounded-sm">
+                            <Checkbox
+                              id={`preptime-${option.value}`}
+                              checked={prepTime === option.value}
+                              onCheckedChange={() => {
+                                // Toggle: if already selected, clear it; otherwise select it
+                                if (prepTime === option.value) {
+                                  handlePrepTimeChange('');
+                                } else {
+                                  handlePrepTimeChange(option.value);
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={`preptime-${option.value}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                            >
+                              {option.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -319,7 +434,7 @@ export function Filters({ initial }: FiltersProps) {
             </Select>
           </div>
           </CardContent>
-        )}
+        </div>
       </Card>
 
 

@@ -18,6 +18,7 @@ import { FileState } from "@/types/file-state";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { MealTypeStep } from "./_components/MealTypeStep";
 import { OptionalTaxonomy } from "./_components/OptionalTaxonomy";
+import { PrepTimeSelector, PrepTime } from "@/components/recipe/PrepTimeSelector";
 import Link from "next/link";
 
 function NewRecipeForm() {
@@ -34,6 +35,7 @@ function NewRecipeForm() {
       title: "",
       servings: 1,
       bodyMd: "",
+      prepTime: undefined,
       ingredients: [{ name: "", qty: 1, unit: "" }],
       tags: [],
       mealType: [],
@@ -194,6 +196,12 @@ function NewRecipeForm() {
                 <p className="text-sm text-destructive mt-1">{errors.servings.message}</p>
               )}
             </div>
+
+            <PrepTimeSelector
+              value={watch("prepTime")}
+              onChange={(value) => setValue("prepTime", value)}
+              error={errors.prepTime?.message}
+            />
           </CardContent>
         </Card>
 

@@ -109,7 +109,20 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
       where: { recipeId: recipe.id },
       orderBy: { createdAt: "desc" },
       take: 20,
-      select: { id: true, body: true, createdAt: true, user: { select: { id: true, name: true } } },
+      select: { 
+        id: true, 
+        body: true, 
+        createdAt: true, 
+        user: { 
+          select: { 
+            id: true, 
+            name: true, 
+            username: true, 
+            displayName: true, 
+            avatarKey: true 
+          } 
+        } 
+      },
     }),
   ]);
 
@@ -144,7 +157,9 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
         </div>
         
         <h1 className="text-4xl font-bold text-text mb-2">{recipe.title}</h1>
-        <div className="flex items-center gap-4 text-muted-foreground">
+        
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-center gap-4 text-muted-foreground">
           <AuthorLink 
             author={recipe.author} 
             currentUserId={current?.id}
@@ -163,6 +178,34 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
             initiallySaved={savedByMe} 
             isAuthenticated={Boolean(current)}
           />
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="md:hidden space-y-3 text-muted-foreground">
+          {/* Author and Date Row */}
+          <div className="flex items-start gap-3">
+            <AuthorLink 
+              author={recipe.author} 
+              currentUserId={current?.id}
+              size="md"
+              showAvatar={true}
+            />
+            <span className="pt-1">•</span>
+            <span className="pt-1">{formatDate(recipe.createdAt)}</span>
+          </div>
+          
+          {/* Servings and Actions Row */}
+          <div className="flex items-center justify-between">
+            <span>{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-3">
+              <LikeButton recipeId={recipe.id} initialCount={likeCount} initiallyLiked={Boolean(likedByMe)} />
+              <SaveButton 
+                recipeId={recipe.id} 
+                initiallySaved={savedByMe} 
+                isAuthenticated={Boolean(current)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

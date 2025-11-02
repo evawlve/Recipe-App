@@ -35,7 +35,20 @@ export async function POST(req: Request, { params }: any) {
 
 	const c = await prisma.comment.create({
 		data: { id: nanoid(), recipeId: recipe.id, userId: user.id, body: parsed.data.body },
-		select: { id: true, body: true, createdAt: true, user: { select: { id: true, name: true } } },
+		select: { 
+			id: true, 
+			body: true, 
+			createdAt: true, 
+			user: { 
+				select: { 
+					id: true, 
+					name: true, 
+					username: true, 
+					displayName: true, 
+					avatarKey: true 
+				} 
+			} 
+		},
 	});
 
 	// Create notification for recipe author if they're not the one commenting

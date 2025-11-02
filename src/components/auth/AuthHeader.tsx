@@ -273,9 +273,9 @@ export function AuthHeader() {
               )}
             </div>
 
-            {/* Notifications Button */}
+            {/* Notifications Button - Visible on all screen sizes */}
             {isSignupPage ? (
-              <div className="hidden lg:flex h-10 w-10 p-0 bg-muted/50 rounded-lg cursor-not-allowed opacity-50 relative group items-center justify-center">
+              <div className="flex h-10 w-10 p-0 bg-muted/50 rounded-lg cursor-not-allowed opacity-50 relative group items-center justify-center">
                 <Bell className="h-4 w-4 text-muted-foreground/50" />
                 {/* Tooltip */}
                 <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
@@ -284,9 +284,7 @@ export function AuthHeader() {
                 </div>
               </div>
             ) : user ? (
-              <div className="hidden lg:flex">
-                <NotificationBell />
-              </div>
+              <NotificationBell />
             ) : null}
 
             {/* User Avatar or Sign In */}
@@ -349,60 +347,58 @@ export function AuthHeader() {
         </div>
 
         {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden mt-4 pb-4 border-t border-border pt-4">
-            <nav className="flex flex-col space-y-4">
-              <Link 
-                href="/" 
-                className="text-muted-foreground hover:text-foreground font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <Link 
-                href="/recipes" 
-                className="text-muted-foreground hover:text-foreground font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Explore
-              </Link>
-              <Link 
-                href="/recipes/new" 
-                className="text-muted-foreground hover:text-foreground font-medium py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Create
-              </Link>
-              
-              {/* Mobile Search */}
-              <div className="mt-4">
-                {isSignupPage ? (
-                  <div className="w-full h-10 bg-muted/50 border border-border/50 rounded-lg flex items-center px-3 text-muted-foreground/50 cursor-not-allowed">
-                    <Search className="h-4 w-4 mr-2" />
-                    <span className="text-sm">Complete setup to search...</span>
-                  </div>
-                ) : (
-                  <SearchBox className="w-full" />
-                )}
+        <div 
+          className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out border-t border-border ${
+            isMobileMenuOpen 
+              ? 'max-h-96 opacity-100 mt-4' 
+              : 'max-h-0 opacity-0'
+          }`}
+        >
+          <nav className="flex flex-col space-y-4 py-4">
+            {/* Mobile Search - First Item, Full Width */}
+            <div className="w-full px-0">
+              {isSignupPage ? (
+                <div className="w-full h-10 bg-muted/50 border border-border/50 rounded-lg flex items-center px-3 text-muted-foreground/50 cursor-not-allowed">
+                  <Search className="h-4 w-4 mr-2" />
+                  <span className="text-sm">Complete setup to search...</span>
+                </div>
+              ) : (
+                <SearchBox className="w-full" />
+              )}
+            </div>
+            
+            {/* Centered Navigation Links */}
+            <Link 
+              href="/" 
+              className="text-muted-foreground hover:text-foreground font-medium py-2 text-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link 
+              href="/recipes" 
+              className="text-muted-foreground hover:text-foreground font-medium py-2 text-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Explore
+            </Link>
+            <Link 
+              href="/recipes/new" 
+              className="text-muted-foreground hover:text-foreground font-medium py-2 text-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Create
+            </Link>
+            
+            {user && (
+              <div className="flex flex-col space-y-4 pt-4 border-t border-border">
+                <Button variant="outline" onClick={handleSignOut} className="w-full">
+                  Sign Out
+                </Button>
               </div>
-              
-              {/* Mobile Notifications */}
-              {user && !isSignupPage && (
-                <div className="mt-4">
-                  <NotificationBell />
-                </div>
-              )}
-              
-              {user && (
-                <div className="flex flex-col space-y-4 pt-4 border-t border-border">
-                  <Button variant="outline" onClick={handleSignOut} className="w-full">
-                    Sign Out
-                  </Button>
-                </div>
-              )}
-            </nav>
-          </div>
-        )}
+            )}
+          </nav>
+        </div>
       </div>
     </header>
   );

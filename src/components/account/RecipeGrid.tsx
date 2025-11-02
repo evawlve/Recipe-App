@@ -50,6 +50,7 @@ export default function RecipeGrid({ items, currentUserId }: RecipeGridProps) {
             title: item.title,
             bodyMd: "",
             servings: 1,
+            prepTime: null,
             authorId: item.author.id,
             createdAt: item.createdAt,
             updatedAt: item.createdAt,

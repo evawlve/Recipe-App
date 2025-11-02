@@ -12,6 +12,7 @@ interface Notification {
   id: string;
   type: 'follow' | 'like' | 'comment' | 'save';
   createdAt: string;
+  bumpedAt: string;
   readAt: string | null;
   actor: {
     id: string;
@@ -222,7 +223,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                     
                     <div className="flex items-center justify-between mt-2">
                       <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(notification.bumpedAt), { addSuffix: true })}
                       </p>
                     </div>
                   </div>

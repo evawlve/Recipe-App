@@ -68,6 +68,7 @@ model Recipe {
   title       String
   bodyMd      String
   servings    Int                @default(1)
+  prepTime    String?            // "<15 min" | "15-30 min" | "30-45 min" | "45min - 1hr" | "1hr+"
   parentId    String?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
@@ -222,6 +223,7 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@index([userId, bumpedAt])
   @@unique([userId, actorId, type], map: "uniq_follow")
   @@unique([userId, actorId, type, recipeId], map: "uniq_like")
   @@unique([userId, type, commentId], map: "uniq_comment")

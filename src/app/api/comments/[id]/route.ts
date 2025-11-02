@@ -62,7 +62,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 	const updated = await prisma.comment.update({
 		where: { id: resolvedParams.id },
 		data: { body: parsed.data.body },
-		select: { id: true, body: true, createdAt: true, user: { select: { id: true, name: true } } },
+		select: { 
+			id: true, 
+			body: true, 
+			createdAt: true, 
+			user: { 
+				select: { 
+					id: true, 
+					name: true, 
+					username: true, 
+					displayName: true, 
+					avatarKey: true 
+				} 
+			} 
+		},
 	});
 	return NextResponse.json(updated);
 }

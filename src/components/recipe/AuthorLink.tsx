@@ -26,7 +26,7 @@ export function AuthorLink({
   useButton = false
 }: AuthorLinkProps) {
   const router = useRouter();
-  const avatarSize = size === 'sm' ? 24 : size === 'md' ? 32 : 40;
+  const avatarSize = size === 'sm' ? 24 : size === 'md' ? 36 : 40;
   const displayName = author.displayName || author.name || author.username || "Anonymous";
   
   // Debug logging
@@ -42,14 +42,14 @@ export function AuthorLink({
   };
   
   const content = (
-    <>
+    <div className="flex flex-col">
       <span>By {displayName}</span>
       {author.username && (
-        <span className={`opacity-75 ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+        <span className={`opacity-75 ${size === 'sm' ? 'text-[10px]' : 'text-xs'}`}>
           @{author.username}
         </span>
       )}
-    </>
+    </div>
   );
   
   const clickableContent = (

@@ -56,6 +56,7 @@ export async function POST(request: Request) {
         title: validatedData.title,
         servings: validatedData.servings,
         bodyMd: validatedData.bodyMd,
+        prepTime: validatedData.prepTime,
         authorId: author.id,
         ingredients: {
           create: validatedData.ingredients.map(ingredient => ({

@@ -8,6 +8,7 @@ type RecipeItem = {
   authorId: string;
   bodyMd: string;
   servings: number;
+  prepTime: string | null;
   parentId: string | null;
   createdAt: Date;
   updatedAt: Date;

@@ -14,7 +14,7 @@ export default async function NotificationsPage() {
     redirect('/signin');
   }
 
-  // Fetch first 20 notifications
+  // Fetch first 20 notifications, ordered by most recently bumped
   const notifications = await prisma.notification.findMany({
     where: {
       userId: user.id
@@ -42,7 +42,7 @@ export default async function NotificationsPage() {
       }
     },
     orderBy: {
-      createdAt: 'desc'
+      bumpedAt: 'desc'
     },
     take: 20
   });
@@ -52,14 +52,15 @@ export default async function NotificationsPage() {
       <NotificationsRealtimeBridge />
       
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-        <p className="text-gray-600">Stay updated with your activity</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+        <p className="text-gray-600 dark:text-gray-400">Stay updated with your activity</p>
       </div>
       
       <NotificationsList initialNotifications={notifications.map(notification => ({
         ...notification,
         type: notification.type as 'follow' | 'like' | 'comment' | 'save',
         createdAt: notification.createdAt.toISOString(),
+        bumpedAt: notification.bumpedAt.toISOString(),
         readAt: notification.readAt?.toISOString() || null,
         recipe: notification.recipe || undefined,
         comment: notification.comment || undefined,
