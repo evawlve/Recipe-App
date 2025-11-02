@@ -73,12 +73,11 @@ export function Filters({ initial }: FiltersProps) {
 
   // Auto-expand if there are active filters (only on initial mount)
   useEffect(() => {
-    const hasActiveFilters = selectedTags.length > 0 || kcalMax !== 1000 || sort !== 'new' || prepTime !== '';
+    const hasActiveFilters = initial.tags.length > 0 || (initial.kcalMax && initial.kcalMax !== 1000) || initial.sort !== 'new' || initial.prepTime !== '';
     if (hasActiveFilters) {
       setIsExpanded(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, [initial.tags.length, initial.kcalMax, initial.sort, initial.prepTime]); // Only run when initial values change
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
