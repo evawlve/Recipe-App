@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 interface LogoProps {
   withText?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -16,7 +16,8 @@ export default function Logo({
   const sizeClasses = {
     sm: 'h-8 w-8',
     md: 'h-14 w-14',
-    lg: 'h-20 w-20'
+    lg: 'h-20 w-20',
+    xl: 'h-[260px] w-[260px]'
   };
   
   const logoSrc = withText ? '/logo.svg' : '/logo-noLetters.svg';
@@ -28,7 +29,7 @@ export default function Logo({
         alt="Mealspire Logo" 
         width={180} 
         height={180} 
-        className="h-36 w-36 object-contain translate-y-1 logo-dark-mode"
+        className="h-full w-full object-contain logo-dark-mode"
       />
     </div>
   );

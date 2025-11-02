@@ -97,9 +97,9 @@ export default function AuthCard({ title, mode, showForgot = false, logoSrc = "/
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
-      <div className="mb-6 flex flex-col items-center gap-3">
-        <Logo withText size="lg" />
-        <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{title}</h1>
+      <div className="-mt-12 mb-4 flex flex-col items-center">
+        <Logo withText size="xl" />
+        <h1 className="-mt-8 text-xl sm:text-2xl font-semibold text-foreground">{title}</h1>
       </div>
 
       <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
