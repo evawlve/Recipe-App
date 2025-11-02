@@ -21,6 +21,7 @@ import { imageSrcForKey } from "@/lib/images";
 import { recipeUpdateSchema, RecipeUpdateInput } from "@/lib/validation";
 import { NutritionSidebar } from "@/components/recipe/NutritionSidebar";
 import { IngredientMappingModal } from "@/components/recipe/IngredientMappingModal";
+import { PrepTimeSelector, PrepTime } from "@/components/recipe/PrepTimeSelector";
 
 interface EditRecipeFormProps {
   recipeId: string;
@@ -28,6 +29,7 @@ interface EditRecipeFormProps {
     title: string;
     servings: number;
     bodyMd: string;
+    prepTime?: PrepTime;
     ingredients: Array<{
       id?: string;
       name: string;
@@ -62,6 +64,7 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
       title: initialData.title,
       servings: initialData.servings,
       bodyMd: initialData.bodyMd,
+      prepTime: initialData.prepTime,
       ingredients: initialData.ingredients,
       tags: initialData.tags,
     },
@@ -253,6 +256,12 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
                 <p className="text-sm text-destructive mt-1">{errors.servings.message}</p>
               )}
             </div>
+
+            <PrepTimeSelector
+              value={watch("prepTime")}
+              onChange={(value) => setValue("prepTime", value)}
+              error={errors.prepTime?.message}
+            />
           </CardContent>
         </Card>
 

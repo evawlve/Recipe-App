@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId: user.id,
         ...(after && {
-          createdAt: {
+          bumpedAt: {
             lt: new Date(after)
           }
         })
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        bumpedAt: 'desc'
       },
       take: limit
     });

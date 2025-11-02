@@ -8,6 +8,7 @@ import { Filters } from "./_components/Filters";
 import { LoadMore } from "./_components/LoadMore";
 import { RecipeSearchBar } from "@/components/recipes/RecipeSearchBar";
 import { ExploreTiles } from "./_components/ExploreTiles";
+import { ClearFiltersButton } from "./_components/ClearFiltersButton";
 import Link from "next/link";
 
 interface RecipesPageProps {
@@ -16,6 +17,7 @@ interface RecipesPageProps {
     tags?: string;
     sort?: string;
     kcalMax?: string;
+    prepTime?: string;
     cursor?: string;
     search?: string;
   }>;
@@ -23,18 +25,18 @@ interface RecipesPageProps {
 
 export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const resolvedSearchParams = await searchParams;
-  const { ns, tags, sort, kcalMax, cursor, search } = parseQuery(resolvedSearchParams);
+  const { ns, tags, sort, kcalMax, prepTime, cursor, search } = parseQuery(resolvedSearchParams);
   
   // Debug logging
   console.log('Search params:', resolvedSearchParams);
-  console.log('Parsed query:', { ns, tags, sort, kcalMax, cursor, search });
+  console.log('Parsed query:', { ns, tags, sort, kcalMax, prepTime, cursor, search });
   
   // For the new multi-select approach, we don't need namespaces in the query
   // since we're selecting tags directly
   const tagIds = await getTagIdsByNsAndSlug([], tags);
   console.log('Tag IDs:', tagIds);
   
-  const { items: recipes, nextCursor } = await fetchRecipePage({ tagIds, kcalMax, sort, cursor, search });
+  const { items: recipes, nextCursor } = await fetchRecipePage({ tagIds, kcalMax, prepTime, sort, cursor, search });
 
   // Get current user for bulk delete functionality
   const currentUser = await getCurrentUser();
@@ -62,18 +64,12 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       <ScrollToTop />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <h1 className="text-3xl font-bold text-text">Recipes</h1>
-            <Button asChild className="w-full sm:w-auto">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h1 className="text-3xl font-bold text-text">Explore Recipes</h1>
+            <Button asChild size="sm">
               <Link href="/recipes/new">Create New Recipe</Link>
             </Button>
           </div>
-          <p className="text-muted-foreground">
-            {recipes.length} recipe{recipes.length !== 1 ? "s" : ""} found
-            {search && ` for "${search}"`}
-            {tags.length > 0 && ` with tags: ${tags.join(", ")}`}
-            {kcalMax && kcalMax < 1000 && ` under ${kcalMax} calories`}
-          </p>
         </div>
 
         {/* Search Bar */}
@@ -83,12 +79,22 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
 
         {/* Filters */}
         <div className="mb-8">
-          <Filters initial={{ ns, tags, sort, kcalMax }} />
+          <Filters initial={{ ns, tags, sort, kcalMax, prepTime }} />
         </div>
 
         {/* Explore Tiles */}
         <div className="mb-8">
           <ExploreTiles />
+        </div>
+
+        {/* Recipe Count */}
+        <div className="mb-6">
+          <p className="text-muted-foreground">
+            {recipes.length} recipe{recipes.length !== 1 ? "s" : ""} found
+            {search && ` for "${search}"`}
+            {tags.length > 0 && ` with tags: ${tags.join(", ")}`}
+            {kcalMax && kcalMax < 1000 && ` under ${kcalMax} calories`}
+          </p>
         </div>
 
         {recipes.length === 0 ? (
@@ -98,9 +104,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
               <p className="text-muted-foreground text-center mb-4">
                 No recipes match your current filters. Try adjusting your search criteria.
               </p>
-              <Button asChild>
-                <Link href="/recipes">View All Recipes</Link>
-              </Button>
+              <ClearFiltersButton />
             </CardContent>
           </Card>
         ) : (

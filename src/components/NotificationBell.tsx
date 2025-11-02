@@ -55,7 +55,7 @@ export default function NotificationBell() {
 
   return (
     <Link href="/notifications" className="relative">
-      <Bell className="h-6 w-6 text-gray-600 hover:text-gray-900 transition-colors" />
+      <Bell className="h-6 w-6 text-gray-600 hover:text-gray-900 dark:text-white dark:hover:text-gray-200 transition-colors" />
       {!isLoading && unreadCount > 0 && (
         <Badge 
           variant="destructive" 

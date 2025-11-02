@@ -5,10 +5,11 @@ export function parseQuery(sp: Record<string, string | undefined>) {
   const tags = (sp.tags ?? '').split(',').filter(Boolean);
   const sort = sp.sort ?? 'new';
   const kcalMax = sp.kcalMax ? Number(sp.kcalMax) : undefined;
+  const prepTime = sp.prepTime ?? undefined;
   const cursor = sp.cursor ?? undefined;
   // Support both 'q' and 'search' parameters, with 'q' taking precedence
   const search = sp.q ?? sp.search ?? undefined;
-  return { ns, tags, sort, kcalMax, cursor, search };
+  return { ns, tags, sort, kcalMax, prepTime, cursor, search };
 }
 
 export async function getTagIdsByNsAndSlug(ns: string[], slugs: string[]) {
@@ -39,6 +40,7 @@ export async function topByInteractions(lastDays = 14, take = 200) {
 export async function fetchRecipePage({ 
   tagIds, 
   kcalMax, 
+  prepTime,
   sort, 
   take = 24, 
   cursor,
@@ -46,6 +48,7 @@ export async function fetchRecipePage({
 }: {
   tagIds: string[]; 
   kcalMax?: number; 
+  prepTime?: string;
   sort: string; 
   take?: number; 
   cursor?: string;
@@ -89,7 +92,12 @@ export async function fetchRecipePage({
   const where: any = { AND: andTags.length ? andTags : undefined };
   if (inIds) where.id = { in: inIds };
   
-  // C) Add search functionality
+  // C) Add prepTime filter
+  if (prepTime) {
+    where.prepTime = prepTime;
+  }
+  
+  // D) Add search functionality
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
@@ -141,6 +149,7 @@ export async function fetchRecipePage({
           proteinG: true,
           carbsG: true,
           fatG: true,
+          healthScore: true,
         }
       },
       _count: {

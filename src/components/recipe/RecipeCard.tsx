@@ -9,6 +9,7 @@ import { AuthorLink } from "./AuthorLink";
 import { ThumbsUp, MessageCircle } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useViewPing } from "@/hooks/useViewPing";
+import { HealthScoreMeter } from "./HealthScoreMeter";
 
 interface RecipeWithRelations extends Recipe {
   photos: Array<{
@@ -22,6 +23,7 @@ interface RecipeWithRelations extends Recipe {
     proteinG: number;
     carbsG: number;
     fatG: number;
+    healthScore?: number | null;
   } | null;
   savedByMe?: boolean;
   likedByMe?: boolean;
@@ -96,7 +98,7 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
   return (
     <Card ref={viewRef} className="hover:shadow-lg transition-shadow h-full flex flex-col border-0">
       <Link href={`/recipes/${recipe.id}`} className="flex flex-col h-full">
-        <div className="relative w-full h-56 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
+        <div className="relative w-full h-48 md:h-56 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
           {primaryImageUrl ? (
             <Image
               src={primaryImageUrl}
@@ -110,11 +112,20 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
           ) : (
             <div className="h-full w-full grid place-items-center text-muted">No image</div>
           )}
+          
+          {/* Health Score Meter - Bottom Right */}
+          {nutrition?.healthScore != null && (
+            <div className="absolute bottom-2 right-2 bg-background/90 backdrop-blur-sm rounded-lg p-1.5">
+              <HealthScoreMeter score={nutrition.healthScore} size="sm" />
+            </div>
+          )}
         </div>
         
         <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="line-clamp-2 text-lg">{recipe.title}</CardTitle>
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <CardTitle className="line-clamp-2 text-xl md:text-lg font-bold">{recipe.title}</CardTitle>
+          
+          {/* Author - Desktop */}
+          <div className="hidden md:block text-sm text-muted-foreground">
             <AuthorLink 
               author={recipe.author} 
               currentUserId={currentUserId}
@@ -122,28 +133,44 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
               showAvatar={true}
               useButton={true}
             />
-            <span>{new Date(recipe.createdAt).toLocaleDateString()}</span>
+          </div>
+          
+          {/* Author - Mobile */}
+          <div className="md:hidden text-sm text-muted-foreground">
+            <AuthorLink 
+              author={recipe.author} 
+              currentUserId={currentUserId}
+              size="md"
+              showAvatar={true}
+              useButton={true}
+            />
           </div>
         </CardHeader>
         
         <CardContent className="pt-0 flex-shrink-0">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
-            {nutrition && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span>{nutrition.calories} cal</span>
+          {/* Nutrition section */}
+          {nutrition && (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2.5">
+                <span className="font-semibold text-base">{nutrition.calories} cal</span>
                 <span>•</span>
-                <span>{nutrition.proteinG.toFixed(1)}g protein</span>
+                <span className="font-semibold text-base">{recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span>
               </div>
-            )}
-          </div>
+              <div className="flex items-center gap-2.5">
+                <span className="font-medium">{nutrition.proteinG.toFixed(0)}g protein</span>
+                <span>•</span>
+                <span className="font-medium">{nutrition.carbsG.toFixed(0)}g carbs</span>
+                <span>•</span>
+                <span className="font-medium">{nutrition.fatG.toFixed(0)}g fat</span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Link>
       
       {/* Bottom section with likes, comments, and save button */}
       <div className="mt-auto px-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div></div> {/* Empty div for spacing */}
+        <div className="flex items-center justify-end">
           <div className="flex items-center gap-4">
             {/* Likes and Comments */}
             <div className="flex items-center gap-3 text-muted-foreground">

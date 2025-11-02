@@ -65,6 +65,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
     title: recipe.title,
     servings: recipe.servings,
     bodyMd: recipe.bodyMd,
+    prepTime: recipe.prepTime as "<15 min" | "15-30 min" | "30-45 min" | "45min - 1hr" | "1hr+" | undefined,
     ingredients: recipe.ingredients.map(ing => ({
       id: ing.id,
       name: ing.name,

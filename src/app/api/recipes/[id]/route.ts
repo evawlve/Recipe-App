@@ -187,6 +187,7 @@ export async function PATCH(
     if (validatedData.title !== undefined) updateData.title = validatedData.title;
     if (validatedData.servings !== undefined) updateData.servings = validatedData.servings;
     if (validatedData.bodyMd !== undefined) updateData.bodyMd = validatedData.bodyMd;
+    if (validatedData.prepTime !== undefined) updateData.prepTime = validatedData.prepTime;
 
     // Update recipe
     const updatedRecipe = await prisma.recipe.update({
