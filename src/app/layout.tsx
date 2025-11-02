@@ -11,7 +11,12 @@ import ThemeScript from '@/components/ThemeScript';
 import { Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
 
-export const metadata: Metadata = { title: 'Mealspire' };
+export const metadata: Metadata = { 
+  title: 'Mealspire',
+  icons: {
+    icon: '/logo-favico.svg',
+  }
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

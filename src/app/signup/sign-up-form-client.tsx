@@ -597,13 +597,13 @@ export default function SignUpFormClient() {
   return (
     <div className="w-full max-w-md mx-auto">
       {/* Logo */}
-      <div className="flex justify-center mb-4 -mt-8">
+      <div className="flex justify-center -mb-16">
         <Link 
           href="/" 
           onClick={handleLogoClick}
           className="hover:opacity-80 transition-opacity cursor-pointer"
         >
-          <Logo withText size="lg" />
+          <Logo withText size="xl" />
         </Link>
       </div>
       
