@@ -17,41 +17,29 @@ A full-featured recipe management application with:
 ## 🚀 Features
 
 ### **Recipe Management**
-- ✅ **Create recipes** with title, servings, ingredients, and instructions
-- ✅ **Edit recipes** with full ownership validation and secure updates
-- ✅ **Image upload** with drag & drop interface and automatic compression
-- ✅ **Existing photo management** with individual removal capability
-- ✅ **Ingredient management** with add/remove functionality
-- ✅ **Recipe listing** with search and pagination
-- ✅ **Recipe details** with full image gallery
-- ✅ **Delete recipes** with secure ownership validation
-- ✅ **Bulk delete** multiple recipes at once
-- ✅ **Tag system** with autocomplete and filtering
-- ✅ **Advanced search** across titles, instructions, and tags
-- ✅ **Tag-based filtering** with popular tags display
+- ✅ **Full CRUD operations** - Create, edit, delete (single & bulk) with ownership validation
+- ✅ **Image upload** with drag & drop, automatic WebP compression, and gallery management
+- ✅ **Smart forms** - React Hook Form + Zod validation with draft persistence and auto-focus
+- ✅ **Advanced search & filtering** - Search across titles, instructions, tags, and ingredients
+- ✅ **Tag system** - Autocomplete, namespaces (meal type, cuisine, diet, method), and auto-suggestions
 - ✅ **Author discovery** - Clickable author avatars and names for user discovery
 
-### **Form Experience**
-- ✅ **React Hook Form + Zod** validation
-- ✅ **Draft persistence** - never lose your work
-- ✅ **Focus management** - automatic focus on invalid fields
-- ✅ **Loading states** - visual feedback during operations
-- ✅ **Error handling** - comprehensive error messages
-
 ### **Image Handling**
-- ✅ **Secure S3 uploads** with presigned URLs
-- ✅ **API proxy** for private image serving
-- ✅ **Image optimization** with Next.js Image component
-- ✅ **Multiple image support** per recipe
-- ✅ **Automatic dimension detection**
-- ✅ **Client-side image compression** - Automatic compression before upload
-- ✅ **WebP conversion** - Convert all images to WebP format for optimal size
-- ✅ **EXIF orientation support** - Proper image orientation handling
-- ✅ **Avatar square cropping** - Automatic square cropping for profile pictures
-- ✅ **15MB file size limit** - Increased limit for all uploads (recipes and avatars)
+- ✅ **Secure S3 storage** - Presigned uploads, private bucket with API proxy serving
+- ✅ **Smart compression** - Automatic WebP conversion, EXIF orientation, 15MB limit
+- ✅ **Optimization** - Avatar square cropping, dimension detection, Next.js Image optimization
 
 ### **Authentication & Security**
 - ✅ **Supabase Auth** - Email/password and Google OAuth authentication
+- ✅ **Password Security** - Strong requirements (8+ chars, uppercase, lowercase, numbers, special chars) with real-time strength indicator using zxcvbn
+- ✅ **Password Encryption** - Automatic bcrypt hashing with unique salts (handled by Supabase)
+- ✅ **Email Verification** - Required for all new accounts to prevent fake signups
+- ✅ **Password Reset Flow** - Secure one-time tokens via email at `/forgot-password` and `/update-password`
+- ✅ **Account Deletion** - Complete data removal including recipes, interactions, and Supabase Auth records
+- ✅ **Rate Limiting** - IP-based limits on auth endpoints (3-5 attempts per hour) to prevent brute force attacks
+- ✅ **Account Lockout** - Progressive delays and 15-minute lockout after 5 failed login attempts
+- ✅ **Security Headers** - CSP, X-Frame-Options, HSTS, XSS protection on all responses via middleware
+- ✅ **Session Security** - httpOnly cookies with sameSite protection and automatic HTTPS enforcement in production
 - ✅ **Row Level Security (RLS)** - Database-level security policies
 - ✅ **Owner-only access** - Users can only modify their own content
 - ✅ **Public read access** - Anyone can view recipes (social features)
@@ -71,270 +59,41 @@ A full-featured recipe management application with:
 - ✅ **Real-time Profile Updates** - Instant UI updates after profile changes
 
 ### **User Interface & Experience**
-- ✅ **Modern branding** - "Mealspire" with custom logo
-- ✅ **Responsive navigation** - Mobile hamburger menu with desktop layout
-- ✅ **Consistent color scheme** - Green primary buttons throughout
-- ✅ **Logo integration** - Clickable logo linking to home page
-- ✅ **Form confirmation dialogs** - Prevent accidental data loss
-- ✅ **Mobile-first design** - Optimized for all screen sizes
-- ✅ **Accessible components** - Built with shadcn/ui primitives
-- ✅ **Theme support** - Light/dark mode with automatic switching
-- ✅ **Modern navbar** - Clean design with search, notifications, and user avatar
-- ✅ **Interactive avatar cropping** - Drag-to-position image cropping with preview
-- ✅ **Profile management** - Edit profile with avatar upload and form validation
+- ✅ **Modern design** - Responsive navigation, light/dark theme, Figma-inspired dark mode
+- ✅ **Mobile-first** - Optimized for all screen sizes with touch-friendly interactions
+- ✅ **Accessible** - Built with shadcn/ui primitives, ARIA labels, keyboard navigation
+- ✅ **Smart UX** - Form confirmation dialogs, loading states, optimistic UI updates
 
 ### **Social Interactions**
-- ✅ **Likes** - Users can like/unlike recipes with optimistic UI
-- ✅ **Comments** - Users can post, edit (own), and delete (own or recipe author)
-- ✅ **Counts** - Recipe cards display like and comment counts
-- ✅ **Auth-aware UX** - Unauthenticated likes show a sign-in notice
-- ✅ **Real-time updates** - Optimistic UI with rollback on errors
-- ✅ **Permission-based actions** - Edit only for comment authors, delete for authors or recipe owners
-- ✅ **User Search** - Search for users by username or display name
-- ✅ **User Profiles** - Public user profile pages with recipes and stats
-- ✅ **Follow System** - Follow/unfollow other users with real-time updates
-- ✅ **User Discovery** - Enhanced search with user suggestions
-- ✅ **Profile Statistics** - Display follower count, following count, and recipe count
-- ✅ **Follow Button for All Users** - Visible follow button for non-logged-in users (redirects to login)
-- ✅ **Smart Profile Redirects** - Users accessing their own profile are redirected to /me page
-- ✅ **Enhanced /me Page** - Personal dashboard with follower/following counts and complete stats
-
-### **Notifications System**
-- ✅ **Bell Icon with Unread Count** - Real-time notification count in navbar with polling
-- ✅ **Notification Types** - Follow, like, comment, and save notifications
-- ✅ **Auto-Read Functionality** - Notifications automatically marked as read when viewing page
-- ✅ **User Discovery** - Clickable user avatars and names for profile discovery
-- ✅ **Smart Navigation** - Click notifications to navigate to relevant content
-- ✅ **Dark Mode Support** - Proper text readability in both light and dark themes
-- ✅ **Responsive Design** - Works seamlessly on all screen sizes
-- ✅ **Real-time Polling** - Bell icon polls every 30 seconds for unread count
-- ✅ **Notification Creation** - Automatic notifications when users interact with content
-- ✅ **Database Schema** - Complete notification model with proper relations and indexes
+- ✅ **Engagement** - Likes, comments, saves with optimistic UI and proper permissions
+- ✅ **User profiles** - Public profiles at `/u/[username]`, personal dashboard at `/me`
+- ✅ **Follow system** - Follow/unfollow users with social stats (followers, following, recipes)
+- ✅ **Discovery** - User search, suggested creators, clickable author info
+- ✅ **Notifications** - Real-time bell icon with auto-read on page view (30s polling)
 
 ### **Collections & Saved Recipes**
-- ✅ **Saved Collections** - Automatic "Saved" collection created per user
-- ✅ **Save/Unsave Recipes** - Toggle save status with optimistic UI updates
-- ✅ **Saved Recipes Page** - Dedicated `/saved` page to view all saved recipes
-- ✅ **Recipe Card Integration** - Save buttons on recipe cards and detail pages
-- ✅ **Auth-aware Save UI** - Unauthenticated users see sign-in prompts
-- ✅ **Smart Popup Positioning** - Responsive popups that work on all screen sizes
-- ✅ **Collection Management** - Server-side collection creation and management
+- ✅ **Save recipes** - Automatic "Saved" collection with save/unsave toggle and dedicated `/saved` page
 
 ### **Advanced Nutrition & Health Scoring**
-- ✅ **Comprehensive Nutrition Database** - USDA food database with 300,000+ food items
-- ✅ **Health Score V2 Algorithm** - Advanced scoring based on protein density, macro balance, fiber bonus, and sugar penalty
-- ✅ **Feature Flagging** - Environment-controlled switching between scoring algorithms
-- ✅ **Automatic Ingredient Mapping** - AI-powered ingredient-to-food matching with confidence scores
-- ✅ **Manual Ingredient Mapping** - User-controlled ingredient mapping with search and selection
-- ✅ **Real-time Impact Preview** - Shows how ingredient changes affect nutrition and health score
-- ✅ **Nutrition Breakdown Modal** - Detailed per-ingredient nutrition display with badges
-- ✅ **Protein Density Tracking** - Calculates protein density per 100 calories
-- ✅ **Macro Balance Analysis** - Evaluates carbohydrate, protein, and fat ratios
-- ✅ **Fiber & Sugar Scoring** - Bonus points for fiber, penalty for excess sugar
-- ✅ **Unit Conversion System** - Automatic conversion between units (cups, tablespoons, grams, etc.)
-- ✅ **Per-Serving Calculations** - Accurate nutrition scaling based on recipe servings
-- ✅ **Color-coded Health Scores** - Visual indicators for health score components
-- ✅ **Ingredient Mapping Persistence** - Mappings preserved across recipe saves
-- ✅ **Edit Mappings from Recipe Page** - Direct navigation from nutrition breakdown to edit page
-- ✅ **Mobile-Responsive Nutrition Display** - Optimized nutrition display for all screen sizes
+- ✅ **USDA database** - 300,000+ food items with comprehensive nutrition data
+- ✅ **Health Score V2** - Protein density, macro balance, fiber bonus, sugar penalty algorithm
+- ✅ **Smart mapping** - Automatic + manual ingredient-to-food mapping with confidence scores
+- ✅ **Real-time impact** - Live preview of nutrition changes and health score updates
+- ✅ **Community ingredients** - Users can create custom foods with auto-alias generation
 
-### **USDA Food Database Saturation System**
-- ✅ **USDA Data Import** - Automated import of USDA FoodData Central datasets (Foundation, SR Legacy, FNDDS)
-- ✅ **Smart Filtering** - Intelligent filtering to include only generic foods (excludes branded, baby, supplement items)
-- ✅ **Category Mapping** - Automatic mapping of USDA foods to internal categories (dairy, meat, oil, flour, etc.)
-- ✅ **Deduplication System** - Advanced deduplication using canonical names and macro fingerprints
-- ✅ **Bulk Import Process** - Efficient bulk import with progress tracking and error handling
-- ✅ **Data Normalization** - Standardized nutrition data per 100g across all food items
-- ✅ **Keyword-Focused Imports** - Targeted imports for specific food categories (cheese, milk, whey, etc.)
-- ✅ **Import Statistics** - Detailed reporting of imported foods by source and category
-- ✅ **Smoke Testing** - Comprehensive test suite for deduplication and category mapping
-- ✅ **Data Quality Validation** - Plausibility checks for nutritional data (calorie ranges, macro ratios)
+### **Food Database & Search**
+- ✅ **USDA import** - 300K+ foods with deduplication, category mapping, and data validation
+- ✅ **Smart search** - Intelligent alias system, query normalization, and context-aware ranking
+- ✅ **Community foods** - Users create custom ingredients with auto-mapping and deletion controls
+### **Discovery & Feeds**
+- ✅ **Home page** - Trending recipes (4-day recency decay), suggested creators, For You/Following feeds
+- ✅ **Smart feeds** - Personalized For You (tag-based), Following, Most Popular (interaction scoring)
+- ✅ **Recipe similarity** - "Also viewed" recommendations using co-view analysis with cold-start fallback
 
-### **Advanced Food Search & Alias System**
-- ✅ **Intelligent Alias Generation** - Automatic generation of food aliases for better searchability
-- ✅ **Fat Modifier Aliases** - Smart aliases for fat-related terms (nonfat, fat-free, part-skim, reduced fat, light, etc.)
-- ✅ **Cheese & Dairy Aliases** - Comprehensive alias system for cheese and dairy products with modifier permutations
-- ✅ **Milk Product Aliases** - Specific aliases for milk products (nonfat milk, skim milk, 2% milk, etc.)
-- ✅ **Whey & Protein Aliases** - Protein powder aliases (whey protein, protein powder, whey isolate, etc.)
-- ✅ **Flour & Starch Aliases** - Powder synonyms for flour and starch products
-- ✅ **Query Normalization** - Smart query normalization that collapses synonyms (fat-free → nonfat, part-skim → part skim)
-- ✅ **Enhanced Search Ranking** - Advanced ranking algorithm with exact alias matching and category boosts
-- ✅ **Processed Food De-ranking** - Intelligent de-ranking of processed foods when searching for basic ingredients
-- ✅ **Basic Ingredient Prioritization** - Raw and fresh ingredients rank higher than processed alternatives
-- ✅ **Bulk Alias Backfill** - Efficient bulk alias generation for existing foods with pagination and skipDuplicates
-- ✅ **Search Race Condition Fixes** - Resolved search result flickering with proper timeout management
-- ✅ **Category-Based Ranking** - Category hints boost relevant foods (cheese queries prefer cheese category)
-- ✅ **Composite Dish De-ranking** - Mixed dishes rank lower unless specifically requested
-- ✅ **Exact Alias Matching** - Hard promotion for exact normalized alias matches
-- ✅ **Modifier-Head Coverage** - Medium boost for modifier + head-noun combinations (nonfat + cheese)
-
-### **Community Ingredient Creation & Management**
-- ✅ **Create New Ingredient Button** - Users can create custom ingredients directly from the mapping modal
-- ✅ **Ingredient Creation Form** - Comprehensive form with required fields (name, serving size, calories, protein, carbs, fats) and optional fields (fiber, sugar)
-- ✅ **Auto-mapping on Creation** - Newly created ingredients are automatically mapped to the source ingredient
-- ✅ **Community Labeling** - All user-created ingredients are tagged with "community" source
-- ✅ **Auto-aliases Generation** - Automatic alias creation for fat-related terms (nonfat, low fat, reduced fat, etc.)
-- ✅ **Ingredient Deletion** - Users can delete ingredients they created themselves
-- ✅ **Deletion Authorization** - Only community ingredients created by the user can be deleted
-- ✅ **Mapping Validation** - Prevents deletion of ingredients mapped to other users' recipes
-- ✅ **Legacy Data Support** - Handles legacy community ingredients with proper deletion permissions
-- ✅ **Nutrition Auto-computation** - Automatic nutrition recomputation after ingredient mappings are saved
-- ✅ **Persistent Mappings** - Ingredient mappings are properly saved and persist across modal sessions
-- ✅ **Enhanced UX** - Improved input field handling with easy placeholder deletion
-- ✅ **Database Schema Updates** - Enhanced Food model with createdById, source, and verification fields
-### **Home MVP & Discovery**
-- ✅ **Home Page MVP** - Complete home page with trending recipes, category browsing, and search
-- ✅ **Trending Recipes Algorithm** - Advanced scoring based on likes, comments, and recency decay (4-day half-life)
-- ✅ **Horizontal Recipe Rail** - Smooth scrolling carousel with navigation chevrons for desktop
-- ✅ **Category Tile System** - Browse by meal type (breakfast, lunch, dinner, snacks, desserts, drinks)
-- ✅ **Deep Linking** - URL-based navigation with query parameters for search and filtering
-- ✅ **Search Bar Integration** - Full-width search bar on home page with deep-linking to recipes
-- ✅ **Recipe Page Search** - Dedicated search bar on recipes page with URL state synchronization
-- ✅ **Advanced Search** - Search across recipe titles, body content, and ingredient names
-- ✅ **Responsive Design** - Mobile-first design with proper breakpoints and touch interactions
-- ✅ **Accessibility Features** - ARIA labels, keyboard navigation, and screen reader support
-- ✅ **Performance Optimization** - Efficient database queries with RecipeFeatureLite for fast ranking
-- ✅ **Visual Consistency** - Unified search bar styling and color schemes across pages
-- ✅ **Like Button Enhancement** - Green accent color for liked recipes with ThumbsUp icon
-- ✅ **User Experience** - Clear visual feedback, loading states, and error handling
-
-### **PR5 - Home v2 + Explore Tiles on /recipes**
-- ✅ **Home Page Redesign** - New layout: Trending → Suggested Creators → Feed Tabs (For You/Following)
-- ✅ **Auth-aware UI** - Signed-in users see tabs and Suggested Creators, signed-out users see For You only
-- ✅ **Feed System** - Infinite scroll feeds with For You and Following tabs
-- ✅ **For You Feed** - Personalized feed using PR6 personalization features
-- ✅ **Following Feed** - Recipes from users the current user follows
-- ✅ **Empty State Handling** - Helpful message when user doesn't follow anyone yet
-- ✅ **Explore Tiles Migration** - Moved Category/Cuisine tiles from Home to /recipes page
-- ✅ **6-Tile Grid Layout** - Responsive grid (1→2→3→6 columns) for explore tiles
-- ✅ **Complete Categories** - 6 categories: Breakfast, Lunch, Dinner, Snacks, Desserts, Drinks
-- ✅ **Complete Cuisines** - 6 cuisines: Mexican, Italian, American, Japanese, Greek, Chinese
-- ✅ **Deep Linking** - Tiles link to `/recipes?tags=<slug>` for seamless filtering
-- ✅ **Duplicate Prevention** - Prevents duplicate recipes in infinite scroll
-- ✅ **Error Handling** - Comprehensive error handling for feed APIs and image processing
-- ✅ **Type Safety** - Proper TypeScript interfaces throughout
-- ✅ **PR6 Compatibility** - Fully compatible with engagement tracking and personalization features
-
-### **PR6 - Engagement Tracking + Interaction Sort + Light Personalization**
-- ✅ **Anonymous Session Tracking** - Session cookies for tracking both logged-in and logged-out users
-- ✅ **View Tracking System** - IntersectionObserver-based view tracking with 50% visibility threshold and 600ms delay
-- ✅ **Deduplication System** - 8-hour deduplication window per (recipeId, sessionId) to prevent spam
-- ✅ **Database Schema** - New RecipeView and RecipeInteractionDaily models with proper indexes
-- ✅ **Nightly Rollup Script** - Automated daily score computation with engagement formula
-- ✅ **Interaction Scoring** - Score = 0.2×views + 1.0×likes + 2.0×comments + 0.6×saves
-- ✅ **Most Popular Sort** - New `/recipes?sort=interactions` with 14-day score aggregation
-- ✅ **For-You Personalization** - Tag-based personalization using recent viewing history
-- ✅ **Recent Views Cookie** - Tracks last 50 viewed recipes for personalization
-- ✅ **Subtle Personalization Boost** - +0.1 per overlapping tag (capped at +0.5)
-- ✅ **Privacy-First Design** - No PII tracking, opaque UUIDs, graceful degradation
-- ✅ **Performance Optimized** - Efficient database queries with proper indexes
-- ✅ **Client-Side Integration** - Automatic view tracking in RecipeCard components
-- ✅ **API Endpoints** - View tracking API and For-You feed API with personalization
-- ✅ **Production Ready** - Comprehensive error handling and TypeScript safety
-
-### **PR7 - "Users also looked at..." Co-view Graph**
-- ✅ **Recipe Similarity Model** - New RecipeSimilar model with bidirectional relationships and normalized scores
-- ✅ **Co-view Analysis** - 30-day sliding window analysis of recipe co-occurrences within 60-minute sessions
-- ✅ **Lift Scoring Algorithm** - Sophisticated scoring using lift = C(i,j) / sqrt(V(i) * V(j)) with time decay
-- ✅ **Time Decay Function** - 4-day half-life decay using exp(-Δh/96) for recency weighting
-- ✅ **Noise Filtering** - Minimum co-occurrence threshold (≥3) to reduce noise and improve quality
-- ✅ **Top-K Similarity Storage** - Stores top 20 similar recipes per recipe with normalized 0-1 scores
-- ✅ **Offline Builder Script** - Automated similarity computation with batch processing and progress tracking
-- ✅ **Similar Recipes API** - `/api/recipes/[id]/similar` endpoint with cold-start fallback
-- ✅ **Cold-Start Fallback** - Tag-based fallback using meal type, cuisine, and goal tags when no co-view data
-- ✅ **AlsoViewed Component** - Horizontal scrollable rail component for recipe pages
-- ✅ **Recipe Page Integration** - Seamless integration into recipe detail pages
-- ✅ **Loading States** - Skeleton loading animation for better UX
-- ✅ **Responsive Design** - Mobile-optimized horizontal scrolling with proper aspect ratios
-- ✅ **Performance Optimized** - Efficient database queries with proper indexes and candidate windowing
-- ✅ **Production Ready** - Comprehensive error handling, TypeScript safety, and build validation
-
-### **Suggested Creators Discovery System**
-- ✅ **Suggested Creators Discovery** - Smart creator recommendation system for user discovery
-- ✅ **Intelligent Ranking Algorithm** - Multi-factor ranking system prioritizing mutual followers, engagement, and recipe count
-- ✅ **Mutual Followers Display** - Shows "followed by [username] + n others" to provide social proof
-- ✅ **Creator Profile Integration** - Clickable avatars and names linking to user profiles
-- ✅ **Follow Functionality** - Working follow/unfollow buttons with optimistic UI updates
-- ✅ **Smart Name Display** - Shows real names when available, usernames as fallback with @ prefix
-- ✅ **Horizontal Scrolling UI** - Consistent with trending recipes section for familiar user experience
-- ✅ **Authentication-Aware** - Only shows for authenticated users, handles unauthenticated states properly
-
-#### **Suggested Creators Ranking Algorithm**
-The suggested creators system uses a sophisticated multi-factor ranking algorithm to surface the most relevant and impactful creators:
-
-**Ranking Formula:**
-```javascript
-score = (mutualFollowers × 1000) + (likes + comments×2) + (recipeCount × 0.1)
-```
-
-**Ranking Factors (in order of importance):**
-1. **🥇 Mutual Followers (Weight: 1000)** - Most important factor
-   - Users with mutual connections appear first
-   - Creates social proof and trust
-   - Strongest signal for user discovery
-
-2. **🥈 Engagement Score (Weight: 1)** - Secondary factor
-   - Total likes on their recipes
-   - Comments worth 2x more than likes (more valuable interaction)
-   - Shows active, engaged community
-
-3. **🥉 Recipe Count (Weight: 0.1)** - Tertiary factor
-   - Number of recipes they've created
-   - Shows content creation activity
-   - Lowest weight since quantity ≠ quality
-
-**Example Rankings:**
-- Creator A: 3 mutual followers + 50 likes + 10 recipes = **3,051 points**
-- Creator B: 0 mutual + 200 likes + 20 recipes = **204 points**
-- Creator C: 0 mutual + 100 likes + 5 recipes = **100.5 points**
-
-**Features:**
-- ✅ **Limited to 12 creators** - Consistent with trending recipes section
-- ✅ **60-day activity window** - Only shows creators active in last 60 days
-- ✅ **Excludes current user** - Never suggests following yourself
-- ✅ **Excludes already followed** - No duplicate suggestions
-- ✅ **Real-time mutual follower calculation** - Fresh data on each request
-
-### **Tag System & Search**
-- ✅ **Tag input** with autocomplete suggestions from existing tags
-- ✅ **Tag chips** with visual display and easy removal
-- ✅ **Tag normalization** - automatic slug generation and duplicate prevention
-- ✅ **Popular tags** display with usage counts
-- ✅ **Tag-based filtering** - filter recipes by one or multiple tags
-- ✅ **Advanced search** - search across recipe titles, instructions, and tag labels
-- ✅ **Search persistence** - URL state management for search and filters
-- ✅ **Quick navigation** - "View All Recipes" button to clear filters
-- ✅ **Tag Namespaces & Sources** - Structured tag system with namespaces (MEAL_TYPE, CUISINE, DIET, METHOD, COURSE, TIME, DIFFICULTY, OCCASION, GOAL) and sources (USER, AUTO_CONFIDENT, AUTO_SUGGESTED)
-- ✅ **Guided Recipe Creation** - Required meal type selection with optional taxonomy chips for Cuisine, Method, and Diet
-- ✅ **Auto-suggestions System** - AI-powered tag suggestions based on recipe nutrition and text analysis
-- ✅ **Recipe Feature Lite** - Pre-computed macro features for fast filtering and sorting
-- ✅ **Smart Goal Classification** - Advanced pre-workout/post-workout classification with tie-breaker logic
-- ✅ **Diet Classification** - Regex-based diet suggestions (vegetarian, vegan, gluten-free, dairy-free, nut-free, high-protein)
-- ✅ **Method & Cuisine Detection** - Text-based method and cuisine classification
-- ✅ **Suggestion Acceptance Flow** - Users can accept auto-suggested tags with confidence scoring
-
-### **User Management & Discovery**
-- ✅ **Enhanced Signup Process** - Guided username setup with real-time validation
-- ✅ **Username Requirements** - 3-20 characters, lowercase letters, numbers, underscores only
-- ✅ **Real-time Username Validation** - Instant availability checking with debouncing
-- ✅ **Signup Guards** - Automatic redirect to complete profile setup before accessing app
-- ✅ **Profile Completion Flow** - Users must set username before accessing main features
-- ✅ **User Search API** - Search users by username or display name with pagination
-- ✅ **User Profile Pages** - Public profiles at `/u/[username]` with recipes and stats
-- ✅ **Follow System** - Follow/unfollow users with optimistic UI updates
-- ✅ **User Statistics** - Display follower count, following count, and recipe count
-- ✅ **Enhanced Search Box** - Search both users and recipes with suggestions
-- ✅ **Profile Management** - Real-time profile updates without page refresh
-- ✅ **Avatar Management** - Upload and crop avatars with automatic compression and square cropping
-- ✅ **Smart Profile Navigation** - Users accessing their own profile are redirected to /me
-- ✅ **Enhanced Personal Dashboard** - /me page shows complete social stats (followers/following)
-- ✅ **Universal Follow Button** - Follow button visible to all users (redirects non-logged-in users to login)
-- ✅ **Complete Account Deletion** - Delete account with full data cleanup and auth removal
-- ✅ **Username Persistence** - Usernames preserved across sign-ins and OAuth flows
-- ✅ **Orphaned Data Cleanup** - Scripts to clean up orphaned user data
-- ✅ **JWT Token Management** - Proper session cleanup after account deletion
-- ✅ **Author Discovery** - Clickable author information in recipe cards and pages
-- ✅ **Enhanced User Search** - Search results redirect to /me for current user, /u/[username] for others
+### **Engagement & Analytics**
+- ✅ **View tracking** - Anonymous session tracking with 8-hour deduplication per recipe
+- ✅ **Interaction scoring** - Automated scoring: 0.2×views + 1.0×likes + 2.0×comments + 0.6×saves
+- ✅ **Cron jobs** - Nightly rollup for interaction scores, similarity graph builder
 
 ## 🚀 Quick Start
 
@@ -434,138 +193,12 @@ Visit `http://localhost:3000` to start creating recipes!
 ### **Row Level Security (RLS)**
 This app implements comprehensive database security using Supabase Row Level Security:
 
-#### **Security Model:**
-- **Public Read Access** - Anyone can view recipes, ingredients, photos, comments
-- **Owner-Only Write Access** - Users can only create/modify their own content
-- **Authentication Required** - All write operations require valid user sessions
-- **Automatic Authorization** - RLS policies enforce permissions at the database level
+**Security Model:** Public read access for recipes/comments, owner-only write access, automatic RLS enforcement at database level for User, Recipe, Ingredient, Photo, Nutrition, Comment, Like, Collection, and CollectionRecipe models.
 
-#### **Protected Operations:**
-```sql
--- Users can only modify their own recipes
-"authorId" = public.current_app_user_id()
+**Key Models:** Recipe, Ingredient, Photo, Nutrition, Comment, Like, Follow, Collection, Food, FoodAlias, IngredientFoodMap, RecipeView, RecipeInteractionDaily, RecipeSimilar, RecipeFeatureLite, Notification - all with proper indexes, unique constraints, and RLS policies.
 
--- Users can only modify their own comments
-"userId" = public.current_app_user_id()
+**Recipe Deletion:** Owner validation, cascade cleanup (ingredients, photos, nutrition, comments, likes), S3 cleanup, atomic transactions. Supports single and bulk deletion.
 
--- Users can only access their own collections
-"userId" = public.current_app_user_id()
-```
-
-#### **RLS Policies Applied To:**
-- ✅ **User** - Self-access only
-- ✅ **Recipe** - Public read, owner-only write
-- ✅ **Ingredient** - Public read, owner-only write (via recipe)
-- ✅ **Photo** - Public read, owner-only write (via recipe)
-- ✅ **Nutrition** - Public read, owner-only write (via recipe)
-- ✅ **Comment** - Public read, user-owned write
-- ✅ **Like** - Public read, user-owned write
-- ✅ **Collection** - User-owned read/write with unique constraint (userId, name)
-- ✅ **CollectionRecipe** - User-owned read/write (via collection)
-
-#### **Database Schema Updates:**
-- ✅ **Collection Model** - Stores user collections with unique constraint on (userId, name)
-- ✅ **CollectionRecipe Model** - Junction table linking collections to recipes
-- ✅ **Unique Constraints** - Prevents duplicate collections per user
-- ✅ **Automatic Collection Creation** - "Saved" collection created per user on first save
-- ✅ **Cascade Deletion** - CollectionRecipe entries cleaned up when recipes are deleted
-- ✅ **Food Model** - USDA food database with nutrition data (kcal100, protein100, carbs100, fat100, fiber100, sugar100)
-- ✅ **IngredientFoodMap Model** - Links ingredients to foods with confidence scores
-- ✅ **Nutrition Model** - Stores computed nutrition data per recipe with health scores
-- ✅ **Food Aliases** - Alternative names for foods to improve ingredient mapping
-- ✅ **Enhanced Nutrition Fields** - Added fiberG, sugarG, healthScore to nutrition calculations
-- ✅ **Community Food Support** - Enhanced Food model with createdById, source, and verification fields
-- ✅ **Food Deletion System** - Proper authorization for community ingredient deletion
-- ✅ **Legacy Data Handling** - Support for legacy community ingredients with null createdById
-- ✅ **Auto-alias Generation** - Automatic alias creation based on ingredient name patterns
-- ✅ **Mapping Persistence** - Enhanced mapping system with proper state management
-- ✅ **Error Handling Improvements** - Enhanced Supabase server client with fallback mechanisms and comprehensive error handling
-- ✅ **React Component Stability** - Fixed unique key prop issues in ingredient mapping components
-- ✅ **Engagement Tracking Models** - RecipeView and RecipeInteractionDaily models for view tracking and interaction scoring
-- ✅ **Session Tracking** - Anonymous session tracking with ms_session cookies for engagement analytics
-- ✅ **Personalization Data** - Recent views tracking with ms_recent cookies for For-You feed personalization
-- ✅ **Ingredient Count Field** - Added ingredientCount to RecipeFeatureLite for future filtering features
-- ✅ **Recipe Similarity Model** - RecipeSimilar model for co-view based recipe recommendations
-- ✅ **Bidirectional Similarity** - RecipeSimilar supports both directions (A→B and B→A) with normalized scores
-- ✅ **Similarity Indexes** - Optimized indexes on recipeId+score and similarId for fast similarity queries
-
-#### **USDA Database Schema:**
-- ✅ **Food Model Enhancements** - Added source field (usda, community, template) and verification field
-- ✅ **FoodAlias Model** - New model for food aliases with unique constraint on (foodId, alias) and index on alias
-- ✅ **USDA Data Fields** - Added fdcId, dataType, and category fields for USDA data tracking
-- ✅ **Deduplication Support** - Canonical name and macro fingerprint fields for deduplication
-- ✅ **Category Mapping** - Automatic category assignment based on USDA food descriptions
-- ✅ **Bulk Import Optimization** - Database indexes optimized for bulk insert operations
-- ✅ **Alias Performance** - Indexed alias field for fast search operations
-- ✅ **Data Integrity** - Unique constraints prevent duplicate aliases and ensure data consistency
-
-### **Recipe Deletion System**
-
-#### **Single Recipe Deletion:**
-- **Owner validation** - Only recipe authors can delete
-- **Cascade cleanup** - Removes all related data (ingredients, photos, nutrition, etc.)
-- **S3 cleanup** - Automatically deletes associated images from S3
-- **Transaction safety** - Atomic operation ensures data consistency
-
-#### **Bulk Deletion:**
-- **Batch processing** - Delete multiple recipes efficiently
-- **Owner validation** - Only deletes recipes owned by the user
-- **Selective UI** - Users can choose which recipes to delete
-- **Confirmation dialog** - Prevents accidental deletions
-
-#### **Deletion Flow:**
-```typescript
-// 1. Validate ownership
-if (recipe.authorId !== user.id) {
-  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-}
-
-// 2. Delete S3 images
-await s3.send(new DeleteObjectsCommand({
-  Bucket: bucket,
-  Delete: { Objects: recipe.photos.map(p => ({ Key: p.s3Key })) }
-}));
-
-// 3. Delete database records (atomic transaction)
-await prisma.$transaction([
-  prisma.photo.deleteMany({ where: { recipeId: id } }),
-  prisma.ingredient.deleteMany({ where: { recipeId: id } }),
-  prisma.comment.deleteMany({ where: { recipeId: id } }),
-  prisma.like.deleteMany({ where: { recipeId: id } }),
-  prisma.recipeTag.deleteMany({ where: { recipeId: id } }),
-  prisma.collectionRecipe.deleteMany({ where: { recipeId: id } }),
-  prisma.nutrition.deleteMany({ where: { recipeId: id } }),
-  prisma.recipe.delete({ where: { id } })
-]);
-```
-
-## 🔐 Authentication Features
-
-### **Sign In Options**
-- **Email/Password** - Traditional authentication with automatic signup
-- **Google OAuth** - One-click sign in with Google account
-- **Session Management** - Secure server-side session validation
-- **Auto-redirect** - Seamless flow to intended pages after signin
-
-### **Security Features**
-- **Row Level Security (RLS)** - Database-level access control
-- **Owner-only operations** - Users can only modify their own content
-- **Public recipe viewing** - Anyone can browse recipes (social features)
-- **Protected routes** - Automatic redirect to signin for protected pages
-- **Auth state display** - Real-time authentication status in header
-
-### **API Authentication**
-```bash
-# Check authentication status
-GET /api/whoami
-# Returns: { id, email, name } or 401 if not authenticated
-
-# All recipe operations require authentication
-POST /api/recipes          # Create recipe (auth required)
-PATCH /api/recipes/[id]    # Update recipe (owner only)
-DELETE /api/recipes/[id]   # Delete recipe (owner only)
-DELETE /api/recipes/bulk-delete  # Bulk delete (owner only)
-```
 
 ## 🧪 API Endpoints
 
@@ -1022,336 +655,181 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/upload" -Method POST -Body $up
 Invoke-RestMethod -Uri "http://localhost:3000/api/recipes" -Method GET
 ```
 
-## 🔐 Security Benefits
-
-### **Database Security:**
-- **Row Level Security** prevents unauthorized data access
-- **Automatic permission enforcement** at the database level
-- **No application-level security bypasses** possible
-- **Audit trail** of all database operations
-
-### **Data Protection:**
-- **User data isolation** - Users can only access their own content
-- **Public content sharing** - Recipes are viewable by everyone (social features)
-- **Secure deletion** - Complete cleanup of user data and associated files
-- **Transaction safety** - Atomic operations prevent data corruption
-
-### **Authentication & Authorization:**
-- **Supabase Auth integration** - Email/password and Google OAuth
-- **JWT-based security** - Stateless authentication with secure validation
-- **Session management** - Server-side session validation for security
-- **OAuth callback handling** - Proper Google OAuth flow implementation
-- **Page guards** - Protected routes with automatic redirects
-- **Auth state display** - Real-time authentication status in header
-- **Multi-provider support** - Easy to add more OAuth providers
 
 ## 📝 Notes
-- Images are served through a secure API proxy to keep S3 private
-- Form drafts are automatically saved to localStorage
-- The nutrition API is a stub - replace with your preferred data source
-- For production, consider using CloudFront with `S3_PUBLIC_BASE_URL`
-- **RLS policies** are automatically applied to all database operations
-- **S3 cleanup** happens automatically when recipes are deleted
-- **User authentication** is handled by Supabase Auth with OAuth support
-- **Google OAuth** requires proper callback URL configuration in Supabase
-- **Session security** uses server-side validation for maximum security
-- **Protected routes** automatically redirect unauthenticated users to signin
-- **Recipe editing** includes ownership validation and secure updates
-- **Modern UI** features responsive navigation and consistent branding
-- **Form validation** uses Zod schemas for both create and update operations
-- **Photo management** allows individual photo removal during editing
-- **Social features** include likes and comments with proper permission controls
-- **Optimistic UI** provides instant feedback for likes and comments
-- **Comment editing** is restricted to comment authors only
-- **Comment deletion** is allowed for comment authors or recipe owners
-- **Like counts** and **comment counts** are displayed on recipe cards
-- **Unauthenticated users** see sign-in prompts when trying to like recipes
-- **Saved Collections** feature with automatic "Saved" collection per user
-- **Save/Unsave functionality** with optimistic UI updates on recipe cards and detail pages
-- **Dedicated /saved page** for viewing all saved recipes (authentication required)
-- **Smart popup positioning** - Responsive popups that work on all screen sizes without overflow
-- **Improved comment UX** - Clean "Sign in to comment" button for unauthenticated users
-- **"No comments yet" placeholder** - Clear indication when no comments exist
-- **Separated Comments section** - Comments now have their own dedicated Card section
-- **Tag system** provides comprehensive recipe categorization and discovery
-- **Advanced search** enables finding recipes by title, instructions, or tags
-- **Tag filtering** allows users to browse recipes by specific categories
-- **Autocomplete suggestions** help users discover existing tags
-- **URL state management** preserves search and filter states for sharing
-- **Google OAuth display name preservation** ensures custom names aren't overridden by OAuth metadata
-- **Recipe navigation fixes** resolve NEXT_NOT_FOUND errors and avatar display issues in recipe cards
-- **Complete data structure** ensures all recipe components receive proper data for navigation and display
+- **Images:** Served via secure API proxy, automatic S3 cleanup on deletion
+- **Forms:** Auto-saved drafts (localStorage), Zod validation, optimistic UI
+- **Auth:** Supabase handles authentication, RLS enforces permissions at database level
+- **Production:** Consider CloudFront CDN via `S3_PUBLIC_BASE_URL` for image serving
 
-## 🆕 Recent Updates
+## 🆕 Recent Major Updates
 
-### **USDA Food Database & Advanced Search System**
-- ✅ **USDA Data Saturation** - Complete import system for USDA FoodData Central datasets with smart filtering and deduplication
-- ✅ **Intelligent Alias System** - Advanced alias generation for fat modifiers, cheese/dairy products, and protein powders
-- ✅ **Query Normalization** - Smart query processing that collapses synonyms (fat-free → nonfat, part-skim → part skim)
-- ✅ **Enhanced Search Ranking** - Sophisticated ranking algorithm with exact alias matching and category boosts
-- ✅ **Processed Food De-ranking** - Intelligent de-ranking of processed foods when searching for basic ingredients
-- ✅ **Bulk Alias Backfill** - Efficient bulk alias generation with pagination and skipDuplicates optimization
-- ✅ **Search Race Condition Fixes** - Resolved search result flickering with proper timeout management
-- ✅ **Category-Based Ranking** - Category hints boost relevant foods (cheese queries prefer cheese category)
-- ✅ **Composite Dish De-ranking** - Mixed dishes rank lower unless specifically requested
-- ✅ **Exact Alias Matching** - Hard promotion for exact normalized alias matches
-- ✅ **Modifier-Head Coverage** - Medium boost for modifier + head-noun combinations (nonfat + cheese)
-- ✅ **Data Quality Validation** - Plausibility checks for nutritional data and macro ratios
-- ✅ **Import Statistics** - Detailed reporting of imported foods by source and category
-- ✅ **Smoke Testing** - Comprehensive test suite for deduplication and category mapping
+- **Security enhancements** - Password strength validation, rate limiting, account lockout, security headers
+- **Advanced nutrition system** - USDA database (300K+ foods), Health Score V2, smart mapping, community ingredients
+- **Discovery & personalization** - For You feed, suggested creators, recipe similarity, engagement tracking
+- **Enhanced UX** - Figma-inspired dark mode, responsive design, notifications system, avatar cropping
+- **Technical improvements** - Connection pool optimization, error handling, OAuth fixes, performance tuning
 
-### **Enhanced User Experience**
-- ✅ **Modern Navbar Design** - Clean, Figma-inspired navigation with search bar, notifications, and user avatar
-- ✅ **Theme Support** - Full light/dark mode support with automatic theme switching
-- ✅ **Figma-Inspired Dark Mode** - New dark mode color scheme based on Figma design with warm brown palette
-- ✅ **Interactive Avatar Cropping** - Drag-to-position image cropping with real-time preview
-- ✅ **Profile Management** - Complete user profile editing with avatar upload and form validation
-- ✅ **Secure Image Proxy** - Private S3 images served through secure API proxy
-- ✅ **Enhanced Authentication** - Improved sign-out flow with proper error handling
-- ✅ **Mobile-Responsive Design** - Optimized navigation and components for all screen sizes
-- ✅ **Enhanced Signup Flow** - Guided username setup with real-time validation and redirects
-- ✅ **User Search & Discovery** - Search for users by username or display name with suggestions
-- ✅ **Follow System** - Follow/unfollow other users with real-time UI updates
-- ✅ **User Profile Pages** - Public user profiles with recipes, stats, and follow functionality
-- ✅ **Real-time Profile Updates** - Instant UI updates after profile changes without page refresh
-- ✅ **Signup Guards** - Automatic redirect to complete profile setup before accessing main app
-- ✅ **Enhanced Search Box** - Search both users and recipes with dropdown suggestions
-- ✅ **Disabled UI During Signup** - Navigation and search disabled with helpful tooltips during setup
-- ✅ **Complete Account Deletion** - Full user data cleanup with database and auth removal
-- ✅ **Username Persistence Fix** - Resolved OAuth callback overwriting usernames
-- ✅ **JWT Token Management** - Proper session cleanup after account deletion
-- ✅ **Orphaned Data Cleanup** - Scripts to identify and clean up orphaned user data
+## 🔒 Security Implementation Details
 
-### **Authentication & Display Name Fixes**
-- ✅ **Google OAuth Display Name Preservation** - Fixed issue where Google OAuth was overriding custom display names
-- ✅ **Custom Name Protection** - Users' custom display names are now preserved across Google OAuth sign-ins
-- ✅ **OAuth Metadata Handling** - Improved OAuth callback to only update empty fields, not override existing user data
-- ✅ **Profile Data Integrity** - Ensured user profile data remains consistent across authentication methods
+### Password Security
+**Requirements Enforced:**
+- Minimum 8 characters
+- At least 1 uppercase letter (A-Z)
+- At least 1 lowercase letter (a-z)  
+- At least 1 number (0-9)
+- At least 1 special character (!@#$%^&*...)
+- zxcvbn strength score ≥ 2 (Fair)
 
-### **Recipe Navigation & UI Fixes**
-- ✅ **Recipe Card Navigation Fix** - Resolved NEXT_NOT_FOUND errors when clicking recipes from /me page
-- ✅ **Complete Recipe Data Structure** - Fixed incomplete recipe objects that were causing navigation failures
-- ✅ **Avatar Display in Recipe Cards** - Fixed avatar display issues in recipe cards by including complete author data
-- ✅ **Enhanced Recipe Grid Component** - Updated RecipeGrid to pass complete author data and current user context
-- ✅ **Improved Recipe Card Data Flow** - Ensured recipe cards receive all required data for proper navigation and display
+**Features:**
+- Real-time strength indicator with visual feedback
+- Estimated crack time display
+- Automatic bcrypt hashing by Supabase (never stored in plain text)
+- Same requirements for password reset
 
-### **User Discovery & Navigation Enhancements**
-- ✅ **Clickable Author Information** - Author avatars, names, and usernames are now clickable in recipe cards and pages
-- ✅ **Smart Profile Navigation** - Clicking on your own author info redirects to /me, others redirect to their profile
-- ✅ **Enhanced Author Display** - Author avatars and usernames are visible and clickable for better user discovery
-- ✅ **Fallback Avatar System** - Users without avatars see colored circles with their initials
-- ✅ **Consistent Author Data** - All recipe displays now include complete author information (id, username, displayName, avatarKey)
-- ✅ **Server Component Compliance** - Fixed nested anchor tag issues by using client components for clickable author links
+### Rate Limiting & Brute Force Protection
 
-### **Profile & Social System Enhancements**
-- ✅ **Smart Profile Redirects** - Users accessing their own profile (`/u/username`) are automatically redirected to `/me`
-- ✅ **Enhanced /me Page** - Personal dashboard now displays complete social statistics (followers, following, uploaded, saved)
-- ✅ **Universal Follow Button** - Follow button is now visible to all users, including non-logged-in users
-- ✅ **Login Redirect for Follow** - Non-logged-in users clicking follow are redirected to login page with helpful tooltip
-- ✅ **Complete Social Stats** - /me page shows follower count, following count, uploaded recipes, and saved recipes
-- ✅ **Improved User Discovery** - Better user experience for discovering and following other users
-- ✅ **Seamless Navigation** - Users always see the appropriate version of their profile (public vs. personal dashboard)
+| Endpoint | Limit | Window | Protection |
+|----------|-------|--------|------------|
+| `/api/auth/signup` | 3 attempts | 1 hour | Rate limiting |
+| `/api/auth/signin` | 5 attempts | 15 min | Progressive delays + 15min lockout |
+| `/api/auth/reset-password` | 3 attempts | 1 hour | Rate limiting |
+| General API | 100 requests | 1 minute | Rate limiting |
 
-### **Technical Improvements**
-- ✅ **Database Schema Updates** - Added firstName, lastName, username, displayName, bio, avatarUrl, avatarKey fields to User model
-- ✅ **API Enhancements** - New user management, follow system, and account management endpoints
-- ✅ **Image Upload System** - Secure S3 uploads with presigned URLs and API proxy serving
-- ✅ **Form Validation** - Enhanced form handling with Zod schemas and error states
-- ✅ **Theme Integration** - Consistent theme-aware styling throughout the application
-- ✅ **User Search API** - Search users by username or display name with pagination
-- ✅ **Follow System API** - Complete follow/unfollow functionality with optimistic UI
-- ✅ **Profile Management API** - Real-time profile updates with instant UI feedback
-- ✅ **Username Validation** - Real-time username availability checking with debouncing
-- ✅ **Signup Flow Guards** - Automatic redirect system for incomplete profiles
-- ✅ **Enhanced Authentication** - Improved user session management and profile completion flow
-- ✅ **Supabase Server Client Fixes** - Resolved server-side client initialization errors with proper error handling and fallback mechanisms
-- ✅ **React Key Prop Fixes** - Fixed unique key prop warnings in ingredient mapping lists with fallback key generation
+**Account Lockout (Signin):**
+1. Attempt 1: Normal processing
+2. Attempt 2-5: Progressive delays (1s → 2s → 5s → 10s)
+3. Attempt 6+: **15-minute account lockout**
 
-### **Search & Alias System Architecture**
-- ✅ **Query Normalization Engine** - Smart query processing with synonym collapsing and punctuation simplification
-- ✅ **Alias Generation Rules** - Comprehensive rule system for fat modifiers, cheese/dairy, and protein products
-- ✅ **Bulk Alias Backfill** - Optimized bulk alias generation with pagination and skipDuplicates
-- ✅ **Search Ranking Algorithm** - Advanced ranking with exact alias matching, category boosts, and processed food de-ranking
-- ✅ **Race Condition Resolution** - Proper timeout management for debounced search operations
-- ✅ **Database Indexing** - Optimized indexes for alias search performance
-- ✅ **Data Integrity** - Unique constraints and proper error handling for alias operations
-- ✅ **Performance Optimization** - Efficient bulk operations and pagination for large datasets
-- ✅ **Test Coverage** - Comprehensive test suite for alias generation and search ranking
-- ✅ **Error Handling** - Robust error handling for Supabase server-side client initialization
+### Security Headers (Applied via Middleware)
 
-### **Image Compression & Optimization**
-- ✅ **Client-side Image Compression** - Automatic compression before upload using Canvas API
-- ✅ **WebP Conversion** - All images converted to WebP format for optimal file size
-- ✅ **EXIF Orientation Support** - Proper handling of image orientation using createImageBitmap
-- ✅ **Avatar Square Cropping** - Automatic square cropping for profile pictures
-- ✅ **Quality Optimization** - Different compression settings for recipes (82% quality) vs avatars (85% quality)
-- ✅ **File Size Reduction** - Typical 80-90% size reduction (20MB → 1-2MB)
-- ✅ **15MB Upload Limit** - Increased file size limit for all uploads (recipes and avatars)
-- ✅ **Enhanced File Support** - Support for JPEG, PNG, WebP, and HEIC formats
-- ✅ **Automatic Dimension Detection** - Compressed images include accurate width/height metadata
+```typescript
+X-Frame-Options: DENY                    // Prevents clickjacking
+X-Content-Type-Options: nosniff          // Prevents MIME sniffing
+X-XSS-Protection: 1; mode=block          // XSS protection
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Content-Security-Policy: [configured]    // Defense in depth
+Strict-Transport-Security: max-age=63072000  // Force HTTPS (production)
+```
 
-### **Advanced Nutrition & Health Scoring System**
-- ✅ **Health Score V2 Implementation** - Revolutionary nutrition scoring algorithm with protein density, macro balance, fiber bonus, and sugar penalty
-- ✅ **Feature Flag System** - Environment-controlled switching between scoring algorithms (HEALTH_SCORE_V2 flag)
-- ✅ **USDA Food Database Integration** - Comprehensive nutrition database with 300,000+ food items
-- ✅ **Automatic Ingredient Mapping** - AI-powered ingredient-to-food matching with confidence scoring
-- ✅ **Manual Ingredient Mapping** - User-controlled ingredient mapping with search and selection interface
-- ✅ **Real-time Impact Preview** - Live calculation of how ingredient changes affect nutrition and health score
-- ✅ **Nutrition Breakdown Modal** - Detailed per-ingredient nutrition display with health badges
-- ✅ **Protein Density Analysis** - Calculates protein density per 100 calories for health optimization
-- ✅ **Macro Balance Evaluation** - Analyzes carbohydrate, protein, and fat ratios for balanced nutrition
-- ✅ **Fiber & Sugar Scoring** - Bonus points for fiber content, penalty for excess sugar
-- ✅ **Comprehensive Unit Conversion** - Automatic conversion between cups, tablespoons, grams, scoops, etc.
-- ✅ **Per-Serving Nutrition Scaling** - Accurate nutrition calculations based on recipe serving sizes
-- ✅ **Color-coded Health Indicators** - Visual health score components with green/yellow/red coding
-- ✅ **Ingredient Mapping Persistence** - Mappings preserved across recipe saves and updates
-- ✅ **Edit Mappings from Recipe Page** - Direct navigation from nutrition breakdown to edit page with auto-opened mapping modal
-- ✅ **Mobile-Responsive Nutrition Display** - Optimized nutrition display for all screen sizes (768px+ breakpoints)
-- ✅ **Nutrition API Endpoints** - Complete API for nutrition computation, ingredient mapping, and food search
-- ✅ **Unit Tests for Scoring** - Comprehensive test coverage for health scoring algorithms
-- ✅ **Impact Preview API** - Real-time impact calculation for ingredient changes
-- ✅ **Food Search with Impact** - Search foods with real-time impact preview on recipe nutrition
+### Email Verification Flow
+1. User signs up with email/password
+2. Verification email sent automatically
+3. User clicks verification link
+4. Email verified, account activated
+5. User can now sign in
 
-### **Responsive Design & Mobile Optimization**
-- ✅ **Mobile-First Recipe Layout** - Optimized recipe page layout for mobile devices (768px+ breakpoints)
-- ✅ **Responsive Navigation** - Hamburger menu for screens 768px-1024px, desktop navigation for larger screens
-- ✅ **Mobile Nutrition Display** - Nutrition breakdown shown after photos on mobile/tablet screens
-- ✅ **Desktop Sidebar Layout** - Nutrition sidebar for desktop screens (1280px+)
-- ✅ **Adaptive Component Sizing** - Components automatically adjust to screen size
-- ✅ **Touch-Friendly Interface** - Optimized button sizes and spacing for mobile interaction
-- ✅ **Flexible Grid Layouts** - Responsive grid systems that work across all device sizes
+**Configuration:** Enable in Supabase Dashboard → Authentication → Settings → "Confirm email"
 
-### **Notifications System MVP**
-- ✅ **Complete Notifications Infrastructure** - Full notification system with database schema, API routes, and UI components
-- ✅ **Bell Icon with Unread Count** - Real-time notification count in navbar with 30-second polling
-- ✅ **Notification Types** - Follow, like, comment, and save notifications automatically created
-- ✅ **Smart Navigation** - Click notifications to navigate to relevant content (follow → /me, like/comment/save → recipe)
-- ✅ **User Discovery** - Clickable user avatars and names for profile discovery
-- ✅ **Auto-Read Functionality** - Notifications automatically marked as read when viewing page
-- ✅ **Dark Mode Support** - Proper text readability in both light and dark themes
-- ✅ **Responsive Design** - Works seamlessly on all screen sizes
-- ✅ **Database Schema** - Complete notification model with proper relations and indexes
-- ✅ **API Endpoints** - GET /api/notifications, POST /api/notifications/read, GET /api/notifications/unread-count
-- ✅ **Server-Side Rendering** - Notifications page with server-side data fetching
-- ✅ **Real-time Polling** - Bell icon polls every 30 seconds and on window focus
-- ✅ **Notification Creation** - Automatic notifications when users interact with content
-- ✅ **Proper Avatar Display** - User avatars display correctly using /api/image/ route
-- ✅ **No Nested Links** - Fixed HTML validation issues with proper click handlers
+### Password Reset Flow
+1. User requests reset at `/forgot-password`
+2. Secure one-time token sent via email (valid 1 hour)
+3. User clicks link → redirected to `/update-password`
+4. User enters new password (must meet all requirements)
+5. Password updated, session automatically established
 
-### **Community Ingredient Creation & Management System**
-- ✅ **Create New Ingredient Feature** - Users can create custom ingredients directly from the ingredient mapping modal
-- ✅ **Comprehensive Creation Form** - Form with required fields (name, serving size, calories, protein, carbs, fats) and optional fields (fiber, sugar)
-- ✅ **Auto-mapping Integration** - Newly created ingredients are automatically mapped to the source ingredient
-- ✅ **Community Labeling System** - All user-created ingredients are tagged with "community" source for identification
-- ✅ **Smart Auto-aliases** - Automatic alias generation for fat-related terms (nonfat, low fat, reduced fat, light, lean)
-- ✅ **Ingredient Deletion System** - Users can delete ingredients they created with proper authorization
-- ✅ **Deletion Authorization** - Only community ingredients created by the user can be deleted
-- ✅ **Mapping Validation** - Prevents deletion of ingredients mapped to other users' recipes
-- ✅ **Legacy Data Support** - Handles legacy community ingredients with null createdById
-- ✅ **Nutrition Auto-computation** - Automatic nutrition recomputation after ingredient mappings are saved
-- ✅ **Persistent Mappings** - Ingredient mappings are properly saved and persist across modal sessions
-- ✅ **Enhanced UX** - Improved input field handling with easy placeholder deletion for numeric fields
-- ✅ **Database Schema Updates** - Enhanced Food model with createdById, source, and verification fields
-- ✅ **API Endpoints** - New endpoints for ingredient creation, deletion, and alias management
-- ✅ **Authorization System** - Proper user ownership validation for community ingredient management
-- ✅ **Auto-alias Patterns** - Smart pattern matching for fat-related terms with comprehensive alias generation
+### Account Deletion
+**Endpoint:** `DELETE /api/account/delete`
 
-### **PR3 - Auto-suggestions & Recipe Feature Lite System**
-- ✅ **Tag Namespaces & Sources** - Complete tag system restructure with namespaces (MEAL_TYPE, CUISINE, DIET, METHOD, COURSE, TIME, DIFFICULTY, OCCASION, GOAL) and sources (USER, AUTO_CONFIDENT, AUTO_SUGGESTED)
-- ✅ **Guided Recipe Creation Flow** - Required meal type selection with optional taxonomy chips for Cuisine, Method, and Diet during recipe creation
-- ✅ **RecipeFeatureLite Model** - New database model for pre-computed macro features (proteinPer100kcal, carbPer100kcal, fatPer100kcal, fiberPerServing, sugarPerServing, kcalPerServing)
-- ✅ **Auto-suggestion Classifiers** - AI-powered suggestion system with diet, method, cuisine, and goal classification
-- ✅ **Diet Classification Engine** - Regex-based diet detection (vegetarian, vegan, gluten-free, dairy-free, nut-free, high-protein) with nutrition thresholds
-- ✅ **Smart Goal Classification** - Advanced pre-workout/post-workout classification with protein:carb ratio tie-breaker logic
-- ✅ **Method & Cuisine Detection** - Text-based classification for cooking methods (air fry, bake, grill) and cuisines (Mexican, Italian, American)
-- ✅ **Feature Writer Service** - Automatic computation and caching of recipe features on creation/update
-- ✅ **Suggestion API Endpoints** - Real-time suggestion generation and acceptance with confidence scoring
-- ✅ **SuggestionCard Component** - Interactive UI for displaying and accepting auto-suggested tags
-- ✅ **Backfill Script** - Comprehensive script to populate RecipeFeatureLite for existing recipes
-- ✅ **Database Migration** - Schema updates with RecipeFeatureLite model and relations
-- ✅ **Enhanced Tag Seeds** - Extended tag database with diet, method, cuisine, and goal tags
-- ✅ **Integration with Recipe Creation** - Automatic feature computation during recipe creation flow
+**Process:**
+1. Verify user authentication
+2. Delete all user recipes
+3. Delete all interactions (likes, comments, follows, saves)
+4. Delete user from database
+5. Delete from Supabase Auth (using service role key)
+6. Clear all active sessions
 
-### **Figma-Inspired Dark Mode Color Scheme**
-- ✅ **New Dark Mode Palette** - Implemented warm brown color scheme based on Figma design (#211412, #472B24, #C99E91, #FFFFFF, #E5E8EB)
-- ✅ **Search Bar Styling** - Updated search components with new dark brown backgrounds and proper text colors
-- ✅ **Preserved Green Accents** - Maintained green accent colors for buttons and ingredient selection backgrounds
-- ✅ **CSS Color Tokens** - Updated semantic color variables for consistent theming across components
-- ✅ **Tailwind Integration** - Added new search-specific color classes for Figma design compliance
-- ✅ **Component Updates** - Updated homepage search bar and enhanced search box with new color scheme
-- ✅ **Accessibility Maintained** - Ensured proper contrast ratios and readability in new dark mode
-- ✅ **Green Selection Preservation** - Kept beautiful green selection backgrounds in ingredient mapping modal
+**⚠️ WARNING:** Permanent and irreversible!
 
-### **Home MVP & Search Enhancement System**
-- ✅ **Home MVP Implementation** - Complete home page with trending recipes, category browsing, and search functionality
-- ✅ **Trending Algorithm** - Advanced scoring system based on likes, comments, and recency decay with 4-day half-life
-- ✅ **Horizontal Recipe Rail** - Smooth scrolling trending recipes carousel with navigation chevrons
-- ✅ **Category Tile System** - Browse by meal type with deep-linking to filtered recipe pages
-- ✅ **Search Bar Integration** - Full-width search bar on home page with deep-linking to recipes page
-- ✅ **Recipe Page Search** - Dedicated search bar on recipes page with URL state synchronization
-- ✅ **Search Functionality** - Advanced search across recipe titles, body content, and ingredient names
-- ✅ **Tag System Integration** - Added "drinks" tag to meal type categories with proper API ordering
-- ✅ **Responsive Design** - Mobile-first design with proper breakpoints and touch-friendly interactions
-- ✅ **Accessibility Features** - Proper ARIA labels, keyboard navigation, and screen reader support
-- ✅ **Performance Optimization** - Efficient database queries with RecipeFeatureLite for fast ranking
-- ✅ **Deep Linking** - URL-based navigation with query parameters for search and filtering
-- ✅ **Visual Consistency** - Unified search bar styling across home and recipes pages
-- ✅ **Like Button Enhancement** - Green accent color for liked recipes with ThumbsUp icon
-- ✅ **User Experience** - Clear visual feedback, loading states, and error handling
+### Session Management
+- JWT-based authentication via Supabase
+- 1-hour token expiry with automatic refresh
+- 30-day refresh token expiry
+- httpOnly cookies prevent JavaScript access
+- sameSite='lax' for CSRF protection
+- Secure flag in production (HTTPS only)
+- Anonymous session tracking via `ms_session` cookie (1 year)
 
-### **Recent Bug Fixes & Stability Improvements**
-- ✅ **Supabase Server Client Error Resolution** - Fixed "Cannot read properties of undefined (reading 'call')" errors in server-side Supabase client initialization
-- ✅ **Enhanced Error Handling** - Added comprehensive error handling and fallback mechanisms for Supabase server client creation
-- ✅ **Cookie Operation Safety** - Added try-catch blocks around all cookie operations to prevent server crashes
-- ✅ **Environment Variable Validation** - Added proper validation for Supabase environment variables with clear error messages
-- ✅ **React Key Prop Warnings** - Fixed "Each child in a list should have a unique key prop" warnings in ingredient mapping lists
-- ✅ **Fallback Key Generation** - Implemented fallback key generation using array index when ingredient IDs are missing or duplicate
-- ✅ **Development Server Stability** - Improved server restart process with cache clearing for clean module loading
-- ✅ **Module Loading Optimization** - Enhanced webpack module loading for Supabase SSR client to prevent initialization failures
+### File Locations
 
-### **Database Connection Pool Optimization**
-- ✅ **Prisma Connection Pool Timeout Fixes** - Resolved P2024 connection pool timeout errors with enhanced Prisma client configuration
-- ✅ **Retry Logic Implementation** - Added automatic retry mechanism for database operations with exponential backoff
-- ✅ **Connection Pool Configuration** - Enhanced Prisma client with proper timeout settings (60s connect, 30s query)
-- ✅ **Graceful Shutdown Handlers** - Added proper connection cleanup on process termination
-- ✅ **Database Operation Resilience** - All database operations now use retry logic for connection pool timeouts
-- ✅ **Error Code Handling** - Specific handling for P2024 (connection pool timeout) errors with automatic retry
-- ✅ **Connection Management** - Improved connection lifecycle management to prevent pool exhaustion
-- ✅ **Fallback Mechanisms** - Enhanced error handling with fallback database operations for critical user flows
+```
+Security Implementation:
+├── src/lib/auth/
+│   ├── password-validation.ts           # Password strength validation
+│   ├── auth-rate-limiter.ts             # Account lockout system
+│   ├── rate-limit.ts                    # Rate limiter core
+│   └── with-rate-limit.ts               # Rate limit middleware helper
+├── src/app/api/auth/
+│   ├── signin/route.ts                  # Rate-limited login endpoint
+│   ├── signup/route.ts                  # Rate-limited signup endpoint
+│   └── reset-password/route.ts          # Rate-limited reset endpoint
+├── src/components/auth/
+│   ├── AuthCard.tsx                     # Main authentication UI
+│   └── PasswordStrengthIndicator.tsx    # Real-time password strength
+├── src/middleware.ts                     # Security headers
+├── src/app/forgot-password/page.tsx     # Password reset request
+└── src/app/update-password/page.tsx     # Password update form
+```
 
-### **PR6 - Engagement Tracking & Personalization System**
-- ✅ **Anonymous Session Tracking** - Complete session management system with ms_session cookies for both logged-in and logged-out users
-- ✅ **View Tracking Infrastructure** - IntersectionObserver-based view tracking with 50% visibility threshold and 600ms delay
-- ✅ **Spam Prevention** - 8-hour deduplication window per (recipeId, sessionId) to prevent view inflation
-- ✅ **Database Schema Enhancement** - New RecipeView and RecipeInteractionDaily models with optimized indexes
-- ✅ **Nightly Rollup Automation** - Automated daily score computation with engagement formula and error handling
-- ✅ **Interaction Scoring Algorithm** - Sophisticated scoring: 0.2×views + 1.0×likes + 2.0×comments + 0.6×saves
-- ✅ **Most Popular Sorting** - New `/recipes?sort=interactions` with 14-day score aggregation and pagination
-- ✅ **For-You Personalization** - Tag-based personalization using recent viewing history with subtle boost system
-- ✅ **Recent Views Tracking** - ms_recent cookie system tracking last 50 viewed recipes for personalization
-- ✅ **Privacy-First Design** - No PII tracking, opaque UUIDs, graceful degradation for anonymous users
-- ✅ **Performance Optimization** - Efficient database queries with proper indexes and candidate window optimization
-- ✅ **Client-Side Integration** - Automatic view tracking in RecipeCard and SelectableRecipeCard components
-- ✅ **API Endpoints** - Complete API for view tracking and For-You feed with personalization logic
-- ✅ **Production Readiness** - Comprehensive error handling, TypeScript safety, and build validation
-- ✅ **Cron Job Setup** - npm run rollup:interactions script for nightly score computation
-- ✅ **Filter Integration** - "Most Popular" sort option added to recipe filters with proper URL state management
+### Testing Security Features
 
-### **PR7 - Recipe Similarity & Co-view Graph System**
-- ✅ **Co-view Analysis Engine** - Advanced 30-day sliding window analysis of recipe co-occurrences within 60-minute sessions
-- ✅ **Lift Scoring Algorithm** - Sophisticated similarity scoring using lift = C(i,j) / sqrt(V(i) * V(j)) with time decay
-- ✅ **Time Decay Function** - 4-day half-life decay using exp(-Δh/96) for recency weighting in similarity scores
-- ✅ **Noise Filtering System** - Minimum co-occurrence threshold (≥3) to reduce noise and improve recommendation quality
-- ✅ **Top-K Similarity Storage** - Stores top 20 similar recipes per recipe with normalized 0-1 scores for fast retrieval
-- ✅ **Offline Builder Script** - Automated similarity computation with batch processing, progress tracking, and error handling
-- ✅ **Similar Recipes API** - `/api/recipes/[id]/similar` endpoint with intelligent cold-start fallback system
-- ✅ **Cold-Start Fallback** - Tag-based fallback using meal type, cuisine, and goal tags when no co-view data exists
-- ✅ **AlsoViewed Component** - Horizontal scrollable rail component with loading states and responsive design
-- ✅ **Recipe Page Integration** - Seamless integration into recipe detail pages with proper spacing and layout
-- ✅ **Database Schema Enhancement** - New RecipeSimilar model with bidirectional relationships and optimized indexes
-- ✅ **Performance Optimization** - Efficient database queries with proper indexes and candidate windowing
-- ✅ **Production Readiness** - Comprehensive error handling, TypeScript safety, and build validation
-- ✅ **Cron Job Integration** - npm run similar:build script for automated similarity graph updates
+```bash
+# Test password strength validation
+# Try weak password - should reject
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"weak"}'
+
+# Test rate limiting
+# Make 4 signup attempts - 4th should be rate limited
+for i in {1..4}; do
+  curl -X POST http://localhost:3000/api/auth/signup \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"test$i@example.com\",\"password\":\"Test123!@#\"}"
+done
+
+# Test security headers
+curl -I https://yourdomain.com | grep -i "x-frame-options\|x-xss\|content-security"
+
+# Check rate limit status
+curl http://localhost:3000/api/auth/signin
+# Returns: { attempts, attemptsRemaining, lockedUntil }
+```
+
+### Production Deployment Checklist
+
+- [ ] Enable email verification in Supabase Dashboard
+- [ ] Configure redirect URLs for production domain
+- [ ] Set `NODE_ENV=production` for HTTPS enforcement
+- [ ] Verify HTTPS is enabled (automatic on Vercel/Netlify)
+- [ ] Test all auth flows on production
+- [ ] Verify security headers using [securityheaders.com](https://securityheaders.com)
+- [ ] Review CSP policy for your specific needs
+- [ ] Set up error monitoring/alerting
+- [ ] Document security contact for vulnerability reports
+
+### Additional Security Measures
+
+**Input Sanitization:**
+- All inputs validated with Zod schemas
+- Email format validation
+- Username validation (alphanumeric + underscores)
+- Content length limits enforced
+- Disposable email blocking
+
+**API Security:**
+- All routes require proper authentication
+- Row-Level Security (RLS) policies in Supabase
+- Users can only modify their own data
+- Admin endpoints protected by service role keys
+
+**Database Security:**
+- Supabase RLS policies enforce data isolation
+- Prisma prevents SQL injection
+- Encrypted connections to database
+- Connection pooling with pgBouncer
+- Regular automated backups
 
 ## 📋 TODO - Next Development Phase
 

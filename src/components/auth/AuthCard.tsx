@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Logo from "@/components/Logo";
+import PasswordStrengthIndicator from "./PasswordStrengthIndicator";
+import { validatePassword } from "@/lib/auth/password-validation";
 
 type AuthMode = "signin" | "signup";
 
@@ -19,31 +21,61 @@ export type AuthCardProps = {
   mode: AuthMode;
   showForgot?: boolean;
   logoSrc?: string; // optional override
+  initialMessage?: string;
+  initialError?: string;
 };
 
-const credentialsSchema = z.object({
+// Simple schema for sign-in
+const signinSchema = z.object({
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(8, "At least 8 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
-type CredentialsInput = z.infer<typeof credentialsSchema>;
+// Enhanced schema for sign-up with strong password validation
+const signupSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .refine((password) => {
+      const strength = validatePassword(password);
+      return strength.isValid;
+    }, {
+      message: "Password does not meet security requirements",
+    }),
+});
 
-export default function AuthCard({ title, mode, showForgot = false, logoSrc = "/logo.svg" }: AuthCardProps) {
+type CredentialsInput = z.infer<typeof signupSchema>;
+
+export default function AuthCard({ 
+  title, 
+  mode, 
+  showForgot = false, 
+  logoSrc = "/logo.svg",
+  initialMessage,
+  initialError,
+}: AuthCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/recipes";
-  const [serverError, setServerError] = useState<string>("");
+  const [serverError, setServerError] = useState<string>(initialError || "");
+  const [infoMessage, setInfoMessage] = useState<string>(initialMessage || "");
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
 
+  // Use different schemas for signin vs signup
   const form = useForm<CredentialsInput>({
-    resolver: zodResolver(credentialsSchema),
+    resolver: zodResolver(mode === "signin" ? signinSchema : signupSchema),
     defaultValues: { email: "", password: "" },
   });
+
+  // Get current password value for strength indicator
+  const passwordValue = form.watch("password");
+  const emailValue = form.watch("email");
 
   async function onSubmit(values: CredentialsInput) {
     setSubmitting(true);
     setServerError("");
+    setInfoMessage("");
     const supabase = createSupabaseBrowserClient();
     try {
       if (mode === "signin") {
@@ -56,7 +88,7 @@ export default function AuthCard({ title, mode, showForgot = false, logoSrc = "/
           return;
         }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
           options: {
@@ -69,6 +101,14 @@ export default function AuthCard({ title, mode, showForgot = false, logoSrc = "/
           setServerError(error.message);
           return;
         }
+        
+        // Check if email confirmation is required
+        if (data?.user && !data.session) {
+          // Email confirmation required - show message
+          setServerError("");
+          router.replace(`/signin?message=${encodeURIComponent("Please check your email to verify your account before signing in.")}`);
+          return;
+        }
       }
       router.replace(redirectTo);
     } finally {
@@ -79,6 +119,7 @@ export default function AuthCard({ title, mode, showForgot = false, logoSrc = "/
   async function handleGoogle() {
     setOauthLoading(true);
     setServerError("");
+    setInfoMessage("");
     const supabase = createSupabaseBrowserClient();
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -133,7 +174,22 @@ export default function AuthCard({ title, mode, showForgot = false, logoSrc = "/
           {passwordError ? (
             <p id="password-error" className="text-xs mt-1 text-destructive">{passwordError}</p>
           ) : null}
+          
+          {/* Show password strength indicator for signup mode */}
+          {mode === "signup" && (
+            <PasswordStrengthIndicator 
+              password={passwordValue || ""} 
+              userInputs={[emailValue || ""]}
+              showRequirements={true}
+            />
+          )}
         </div>
+
+        {infoMessage ? (
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3">
+            <p className="text-xs text-blue-800 dark:text-blue-200">{infoMessage}</p>
+          </div>
+        ) : null}
 
         {serverError ? (
           <p className="text-xs text-destructive">{serverError}</p>
