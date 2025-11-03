@@ -72,7 +72,7 @@ export function validatePassword(password: string, userInputs: string[] = []): P
       suggestions,
     },
     isValid,
-    crackTime: result.crack_times_display.offline_slow_hashing_1e4_per_second,
+    crackTime: String(result.crack_times_display.offline_slow_hashing_1e4_per_second),
   };
 }
 
