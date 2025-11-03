@@ -6,6 +6,9 @@ import { nanoid } from 'nanoid';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // Create response (will be modified with security headers)
+  let response: NextResponse;
+  
   // Bypass API and static assets
   if (
     pathname.startsWith('/api') ||
@@ -15,18 +18,22 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/favicon.ico') ||
     pathname.startsWith('/auth')
   ) {
-    return NextResponse.next();
+    response = NextResponse.next();
+    // Add security headers and return early
+    addSecurityHeaders(response);
+    return response;
   }
   
   // Handle session cookie for anonymous tracking
-  const response = NextResponse.next();
+  response = NextResponse.next();
   const hasSession = request.cookies.get('ms_session');
   
   if (!hasSession) {
     response.cookies.set('ms_session', nanoid(), { 
       httpOnly: true, 
       sameSite: 'lax', 
-      maxAge: 60 * 60 * 24 * 365 // 1 year
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      secure: process.env.NODE_ENV === 'production', // Secure in production
     });
   }
   
@@ -72,17 +79,70 @@ export async function middleware(request: NextRequest) {
         // Redirect to signin page
         const signInUrl = new URL('/signin', request.url);
         signInUrl.searchParams.set('redirectTo', pathname);
-        return NextResponse.redirect(signInUrl);
+        const redirectResponse = NextResponse.redirect(signInUrl);
+        addSecurityHeaders(redirectResponse);
+        return redirectResponse;
       }
     } catch (error) {
       // If there's an error checking auth, redirect to signin
       const signInUrl = new URL('/signin', request.url);
       signInUrl.searchParams.set('redirectTo', pathname);
-      return NextResponse.redirect(signInUrl);
+      const redirectResponse = NextResponse.redirect(signInUrl);
+      addSecurityHeaders(redirectResponse);
+      return redirectResponse;
     }
   }
   
+  // Add security headers to all responses
+  addSecurityHeaders(response);
   return response;
+}
+
+/**
+ * Add security headers to response
+ * These headers help protect against common web vulnerabilities
+ */
+function addSecurityHeaders(response: NextResponse): void {
+  // Prevent clickjacking attacks
+  response.headers.set('X-Frame-Options', 'DENY');
+  
+  // Prevent MIME type sniffing
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  
+  // Enable XSS protection (legacy browsers)
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  
+  // Referrer policy - don't leak URLs to external sites
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Permissions policy - restrict browser features
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+  );
+  
+  // Content Security Policy - defense in depth
+  // Note: Adjust this based on your needs (e.g., if you use external scripts/styles)
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval/inline
+    "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
+    "img-src 'self' data: https: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.amazonaws.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  response.headers.set('Content-Security-Policy', cspDirectives);
+  
+  // Strict-Transport-Security - force HTTPS (only in production)
+  if (process.env.NODE_ENV === 'production') {
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=63072000; includeSubDomains; preload'
+    );
+  }
 }
 
 export const config = {
