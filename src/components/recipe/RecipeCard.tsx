@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Recipe } from "@prisma/client";
 import { imageSrcForKey } from "@/lib/images";
@@ -10,6 +9,7 @@ import { ThumbsUp, MessageCircle } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useViewPing } from "@/hooks/useViewPing";
 import { HealthScoreMeter } from "./HealthScoreMeter";
+import { RecipeCardImage } from "./RecipeCardImage";
 
 interface RecipeWithRelations extends Recipe {
   photos: Array<{
@@ -40,9 +40,10 @@ interface RecipeWithRelations extends Recipe {
 interface RecipeCardProps {
   recipe: RecipeWithRelations;
   currentUserId?: string | null;
+  isPriority?: boolean;
 }
 
-export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
+export function RecipeCard({ recipe, currentUserId, isPriority = false }: RecipeCardProps) {
   const primaryImageUrl = recipe.photos.length > 0 ? imageSrcForKey(recipe.photos[0].s3Key) : null;
   const nutrition = recipe.nutrition;
   
@@ -98,16 +99,12 @@ export function RecipeCard({ recipe, currentUserId }: RecipeCardProps) {
   return (
     <Card ref={viewRef} className="hover:shadow-lg transition-shadow h-full flex flex-col border-0">
       <Link href={`/recipes/${recipe.id}`} className="flex flex-col h-full">
-        <div className="relative w-full h-48 md:h-56 overflow-hidden rounded-lg bg-secondary" aria-hidden style={{ position: 'relative' }}>
+        <div className="relative w-full h-48 md:h-56 overflow-hidden rounded-lg bg-secondary" aria-hidden>
           {primaryImageUrl ? (
-            <Image
+            <RecipeCardImage
               src={primaryImageUrl}
               alt={recipe.title}
-              width={600}
-              height={224}
-              priority={true}
-              className="object-cover w-full h-full"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw"
+              isPriority={isPriority}
             />
           ) : (
             <div className="h-full w-full grid place-items-center text-muted">No image</div>

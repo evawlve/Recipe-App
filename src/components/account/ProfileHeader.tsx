@@ -7,6 +7,8 @@ import { compressImage, generateCompressedFilename } from "@/lib/image-ops";
 import { Camera } from "lucide-react";
 import { AvatarPreviewModal } from "./AvatarPreviewModal";
 
+type TabType = "saved" | "uploaded" | "followers" | "following" | "settings";
+
 interface ProfileHeaderProps {
   name?: string | null;
   email: string;
@@ -18,7 +20,7 @@ interface ProfileHeaderProps {
   followingCount?: number;
   avatarUrl?: string | null;
   onAvatarUpdate?: (newAvatarUrl: string) => void;
-  onTabChange?: (tab: string) => void;
+  onTabChange?: (tab: TabType) => void;
 }
 
 export default function ProfileHeader({ 

@@ -8,13 +8,19 @@ import { FeedTabs } from '@/components/home/FeedTabs';
 import { getCurrentUser } from '@/lib/auth';
 import { ErrorBoundary as ClientErrorBoundary } from '@/components/obs/ErrorBoundary';
 
-// Force dynamic rendering for pages that use authentication
+// Enable ISR with 60-second revalidation for better performance
+export const revalidate = 60;
+
+// Allow dynamic user content while caching the rest
 export const dynamic = 'force-dynamic';
 
 
 export default async function HomePage() {
-  const trending = await getTrendingRecipes({ limit: 12 });
-  const currentUser = await getCurrentUser();
+  // Parallelize data fetching for better performance
+  const [trending, currentUser] = await Promise.all([
+    getTrendingRecipes({ limit: 12 }),
+    getCurrentUser().catch(() => null), // Don't fail if user fetch fails
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 space-y-10">
@@ -23,11 +29,12 @@ export default async function HomePage() {
 
       <HomeSection title="Trending Recipes" href="/recipes?sort=new">
         <TrendingRail>
-          {trending.map((r) => (
+          {trending.map((r, index) => (
             <div key={r.id} className="min-w-[280px] max-w-[320px] snap-start">
               <RecipeCard
                 recipe={r}
                 currentUserId={currentUser?.id || null}
+                isPriority={index < 3}
               />
             </div>
           ))}

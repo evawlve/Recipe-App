@@ -1,28 +1,19 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface TabNavProps {
   tab: "saved" | "uploaded" | "followers" | "following" | "settings";
+  onTabChange: (tab: "saved" | "uploaded" | "followers" | "following" | "settings") => void;
 }
 
-export default function TabNav({ tab }: TabNavProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const handleTabChange = (newTab: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", newTab);
-    router.push(`/me?${params.toString()}`);
-  };
-
+export default function TabNav({ tab, onTabChange }: TabNavProps) {
   const tabs = [
-    { id: "saved", label: "Saved" },
-    { id: "uploaded", label: "Uploaded" },
-    { id: "followers", label: "Followers" },
-    { id: "following", label: "Following" },
-    { id: "settings", label: "Settings" },
+    { id: "saved" as const, label: "Saved" },
+    { id: "uploaded" as const, label: "Uploaded" },
+    { id: "followers" as const, label: "Followers" },
+    { id: "following" as const, label: "Following" },
+    { id: "settings" as const, label: "Settings" },
   ];
 
   return (
@@ -31,7 +22,7 @@ export default function TabNav({ tab }: TabNavProps) {
         {tabs.map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => handleTabChange(id)}
+            onClick={() => onTabChange(id)}
             className={cn(
               "py-4 px-1 text-sm font-medium border-b-2 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               tab === id

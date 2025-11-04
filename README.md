@@ -25,9 +25,11 @@ A full-featured recipe management application with:
 - ✅ **Author discovery** - Clickable author avatars and names for user discovery
 
 ### **Image Handling**
-- ✅ **Secure S3 storage** - Presigned uploads, private bucket with API proxy serving
+- ✅ **CloudFront CDN** - Direct image serving from CloudFront for optimal LCP/FCP performance
+- ✅ **Secure S3 storage** - Private bucket with Origin Access Control (OAC), presigned uploads
 - ✅ **Smart compression** - Automatic WebP conversion, EXIF orientation, 15MB limit
-- ✅ **Optimization** - Avatar square cropping, dimension detection, Next.js Image optimization
+- ✅ **Optimization** - Priority loading for above-fold images, responsive sizes, blur placeholders
+- ✅ **Performance** - DNS prefetch, preconnect, Next.js Image optimization with CDN caching
 
 ### **Authentication & Security**
 - ✅ **Supabase Auth** - Email/password and Google OAuth authentication
@@ -119,7 +121,13 @@ S3_BUCKET="your-bucket-name"
 AWS_ACCESS_KEY_ID="your-access-key"
 AWS_SECRET_ACCESS_KEY="your-secret-key"
 
-# Optional: CDN URL (leave empty for API proxy)
+# CloudFront CDN Configuration (Highly Recommended for Production)
+# Server-side URL builder (used by getCdnImageUrl in lib/cdn.ts)
+CLOUDFRONT_IMAGE_BASE="https://d3abc123xyz0.cloudfront.net"
+# Client-side hostname (for preconnect and next.config.ts remotePatterns)
+NEXT_PUBLIC_CLOUDFRONT_HOST="d3abc123xyz0.cloudfront.net"
+
+# Legacy (deprecated - use CLOUDFRONT_IMAGE_BASE instead)
 # S3_PUBLIC_BASE_URL="https://your-cloudfront-domain.com"
 
 # Supabase Configuration (Required for Authentication & RLS)
@@ -181,12 +189,38 @@ Visit `http://localhost:3000` to start creating recipes!
 - **Next.js API Routes** for serverless functions
 - **Row Level Security (RLS)** for database-level security
 
-### **S3 Image Flow**
-- **Private S3 bucket** - images not publicly accessible
-- **Presigned POST uploads** via `/api/upload` endpoint
-- **API proxy serving** via `/api/image/[...key]` for private access
-- **Automatic dimension detection** for responsive images
-- **Next.js Image optimization** for performance
+### **Image Delivery Architecture**
+
+**Modern CloudFront Flow (Recommended):**
+1. **Upload:** Client → `/api/upload` → Presigned POST → Private S3 Bucket
+2. **Serving:** CloudFront CDN (OAC) → Private S3 Bucket
+3. **URL Builder:** `getCdnImageUrl()` from `lib/cdn.ts` generates direct CloudFront URLs
+4. **Performance:** 
+   - Direct CDN serving (no serverless proxy)
+   - Priority loading for first 3 images only
+   - Automatic preconnect and DNS prefetch
+   - 60s ISR caching for home page
+   - Expected LCP improvement: 500-1000ms
+
+**Legacy API Proxy Flow (Deprecated):**
+- ⚠️ **Fallback only** when `CLOUDFRONT_IMAGE_BASE` is not configured
+- Routes through `/api/image/[...key]` serverless function
+- Adds 200-500ms latency per image
+- Significantly impacts LCP/FCP metrics
+- Should only be used during development
+
+**Setup CloudFront for Production:**
+1. Create CloudFront distribution pointing to your S3 bucket
+2. Configure Origin Access Control (OAC) for private bucket access
+3. Set `CLOUDFRONT_IMAGE_BASE` and `NEXT_PUBLIC_CLOUDFRONT_HOST` environment variables
+4. Deploy and verify images load from CloudFront domain (not `/api/image/`)
+
+**Image Optimization Features:**
+- Automatic dimension detection for responsive images
+- Next.js Image component with proper `sizes` attribute
+- Priority loading for above-the-fold content only
+- Blur placeholder support for better perceived performance
+- WebP conversion and EXIF orientation handling
 
 ## 🔒 Security Implementation
 
