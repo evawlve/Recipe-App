@@ -1,12 +1,13 @@
 import { getTrendingRecipes } from '@/lib/feeds/trending';
 import { HomeSection } from '@/components/home/HomeSection';
 import { TrendingRail } from '@/components/home/TrendingRail';
-import { FollowingEmpty } from '@/components/home/FollowingEmpty';
 import { SearchBar } from '@/components/home/SearchBar';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
-import { FeedTabs } from '@/components/home/FeedTabs';
 import { getCurrentUser } from '@/lib/auth';
 import { ErrorBoundary as ClientErrorBoundary } from '@/components/obs/ErrorBoundary';
+// Lazy-loaded components
+import { FollowingEmpty } from '@/components/home/FollowingEmpty';
+import { FeedTabs } from '@/components/home/FeedTabs';
 
 // Enable ISR with 60-second revalidation for better performance
 export const revalidate = 60;

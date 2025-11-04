@@ -26,12 +26,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <ThemeScript />
+        {/* Preconnect to critical origins */}
         {cloudfrontHost && (
           <>
             <link rel="preconnect" href={`https://${cloudfrontHost}`} />
             <link rel="dns-prefetch" href={`https://${cloudfrontHost}`} />
           </>
         )}
+        {/* Preconnect to Supabase for faster auth */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} />
       </head>
       <body className="min-h-screen bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
