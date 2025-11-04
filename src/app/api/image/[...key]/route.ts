@@ -1,3 +1,21 @@
+/**
+ * ⚠️ DEPRECATED: Image Proxy Route
+ * 
+ * This route proxies images from S3 through serverless functions.
+ * It's being replaced by direct CloudFront CDN delivery for better performance.
+ * 
+ * Migration:
+ * - All components should use getCdnImageUrl() from @/lib/cdn instead
+ * - This route remains as a fallback when CLOUDFRONT_IMAGE_BASE is not set
+ * 
+ * Performance Impact:
+ * - This route adds ~200-500ms latency per image
+ * - Significantly impacts LCP/FCP metrics
+ * - Should only be used during development or as fallback
+ * 
+ * TODO: Remove this route after confirming all consumers have migrated to CDN
+ */
+
 import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -10,6 +28,8 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ key: string[] }> }
 ) {
+  // Log usage for migration tracking
+  console.warn('[DEPRECATED] /api/image proxy used. Consider migrating to CloudFront CDN.');
   const { key: keyArray } = await params;
   const key = keyArray.join("/"); // avatars/...
   

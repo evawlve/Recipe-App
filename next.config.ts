@@ -3,6 +3,12 @@ import {withSentryConfig} from '@sentry/nextjs';
 const nextConfig = {
   images: {
     remotePatterns: [
+      // CloudFront CDN for images
+      { 
+        protocol: 'https', 
+        hostname: process.env.NEXT_PUBLIC_CLOUDFRONT_HOST || 'd3abc123xyz0.cloudfront.net'
+      },
+      // Fallback for other external images
       { protocol: 'https', hostname: '**' }
     ],
     // Enable image optimization for /api/image/... proxy routes

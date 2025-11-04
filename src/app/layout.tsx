@@ -19,10 +19,19 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // Get CloudFront host for preconnect optimization
+  const cloudfrontHost = process.env.NEXT_PUBLIC_CLOUDFRONT_HOST;
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <ThemeScript />
+        {cloudfrontHost && (
+          <>
+            <link rel="preconnect" href={`https://${cloudfrontHost}`} />
+            <link rel="dns-prefetch" href={`https://${cloudfrontHost}`} />
+          </>
+        )}
       </head>
       <body className="min-h-screen bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
