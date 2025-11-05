@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from '@sentry/nextjs';
 
 /**
  * Checks if caching should be disabled for this request
@@ -77,12 +78,13 @@ export async function withCache(
 ): Promise<NextResponse> {
   // Check if we should skip caching
   if (shouldSkipCache(req)) {
-    Sentry.addBreadcrumb({
-      category: 'cache',
-      message: 'Cache skipped',
-      level: 'info',
-      data: { cacheKey, 'cache.hit': false }
-    });
+    // Sentry disabled
+    // Sentry.addBreadcrumb({
+    //   category: 'cache',
+    //   message: 'Cache skipped',
+    //   level: 'info',
+    //   data: { cacheKey, 'cache.hit': false }
+    // });
     const response = await handler();
     return response; // Don't set cache headers when skipping
   }
@@ -90,12 +92,13 @@ export async function withCache(
   // Execute handler and set cache headers
   // Note: We can't determine HTTP cache hits/misses from server side,
   // so we log that caching is enabled
-  Sentry.addBreadcrumb({
-    category: 'cache',
-    message: 'Cache enabled',
-    level: 'info',
-    data: { cacheKey, 'cache.hit': false } // Server-side generation, cache hit happens at CDN
-  });
+  // Sentry disabled
+  // Sentry.addBreadcrumb({
+  //   category: 'cache',
+  //   message: 'Cache enabled',
+  //   level: 'info',
+  //   data: { cacheKey, 'cache.hit': false } // Server-side generation, cache hit happens at CDN
+  // });
   
   const response = await handler();
   return setCacheHeaders(response, isUserScoped);

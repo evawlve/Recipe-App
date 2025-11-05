@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from "@sentry/nextjs";
 import { withSpan } from "@/lib/obs/withSpan";
 import { capture } from "@/lib/obs/capture";
 import { time } from "@/lib/perf";
@@ -9,7 +10,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-	Sentry.setTag('endpoint', 'recipes-id');
+	// Sentry disabled
+	// Sentry.setTag('endpoint', 'recipes-id');
 	try {
 		const resolvedParams = await params;
 		const recipeId = resolvedParams.id;
@@ -34,20 +36,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 		
 		// Add cache headers if not skipped (global, not user-scoped)
 		if (!skipCache) {
-			Sentry.addBreadcrumb({
-				category: 'cache',
-				message: 'Cache enabled for recipe',
-				level: 'info',
-				data: { cacheKey, 'cache.hit': false } // We can't determine HTTP cache hits from server
-			});
+			// Sentry disabled
+			// Sentry.addBreadcrumb({
+			// 	category: 'cache',
+			// 	message: 'Cache enabled for recipe',
+			// 	level: 'info',
+			// 	data: { cacheKey, 'cache.hit': false } // We can't determine HTTP cache hits from server
+			// });
 			setCacheHeaders(response, false); // isUserScoped = false (global)
 		} else {
-			Sentry.addBreadcrumb({
-				category: 'cache',
-				message: 'Cache skipped for recipe',
-				level: 'info',
-				data: { cacheKey, 'cache.hit': false }
-			});
+			// Sentry disabled
+			// Sentry.addBreadcrumb({
+			// 	category: 'cache',
+			// 	message: 'Cache skipped for recipe',
+			// 	level: 'info',
+			// 	data: { cacheKey, 'cache.hit': false }
+			// });
 		}
 		
 		return response;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,9 @@ export async function GET() {
   try {
     throw new Error("Sentry API oops test");
   } catch (err) {
-    Sentry.captureException(err);
+    // Sentry disabled
+    // Sentry.captureException(err);
+    console.error('Error:', err);
     // rethrow so it shows as unhandled, too
     throw err as Error;
   }

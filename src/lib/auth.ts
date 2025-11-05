@@ -38,8 +38,8 @@ export async function getCurrentUser() {
     if (userError) {
       // Handle specific auth errors
       if (isTokenError(userError)) {
-        console.log('Invalid refresh token, clearing session');
-        await supabase.auth.signOut();
+        // In RSC contexts we cannot mutate cookies; avoid signOut here to prevent cookie errors
+        console.log('Invalid refresh token; skipping signOut in RSC context');
         return null;
       }
       console.log('Auth error:', userError?.message);

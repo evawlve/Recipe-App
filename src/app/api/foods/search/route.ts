@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from '@sentry/nextjs';
 import { withSpan } from '@/lib/obs/withSpan';
 import { capture } from '@/lib/obs/capture';
 
@@ -16,7 +17,8 @@ export const runtime = 'nodejs';
 
 
 export async function GET(req: NextRequest) {
-	Sentry.setTag('endpoint', 'foods-search');
+	// Sentry disabled
+	// Sentry.setTag('endpoint', 'foods-search');
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||

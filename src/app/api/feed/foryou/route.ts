@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Sentry from '@sentry/nextjs';
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from '@sentry/nextjs';
 import { withSpan } from '@/lib/obs/withSpan';
 import { capture } from '@/lib/obs/capture';
 import { shouldSkipCache, setCacheHeaders } from '@/lib/cache';
@@ -8,7 +9,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
-	Sentry.setTag('endpoint', 'feed-foryou');
+	// Sentry disabled
+	// Sentry.setTag('endpoint', 'feed-foryou');
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
 	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
@@ -143,20 +145,22 @@ export async function GET(req: NextRequest) {
     
     // Add cache headers if not skipped (user-scoped, so use Vary: Cookie)
     if (!skipCache) {
-      Sentry.addBreadcrumb({
-        category: 'cache',
-        message: 'Cache enabled for foryou feed',
-        level: 'info',
-        data: { cacheKey, 'cache.hit': false } // We can't determine HTTP cache hits from server
-      });
+      // Sentry disabled
+      // Sentry.addBreadcrumb({
+      //   category: 'cache',
+      //   message: 'Cache enabled for foryou feed',
+      //   level: 'info',
+      //   data: { cacheKey, 'cache.hit': false } // We can't determine HTTP cache hits from server
+      // });
       setCacheHeaders(response, true); // isUserScoped = true
     } else {
-      Sentry.addBreadcrumb({
-        category: 'cache',
-        message: 'Cache skipped for foryou feed',
-        level: 'info',
-        data: { cacheKey, 'cache.hit': false }
-      });
+      // Sentry disabled
+      // Sentry.addBreadcrumb({
+      //   category: 'cache',
+      //   message: 'Cache skipped for foryou feed',
+      //   level: 'info',
+      //   data: { cacheKey, 'cache.hit': false }
+      // });
     }
     
     return response;

@@ -19,7 +19,8 @@
  *   Set SENTRY_DB_SPAN_SAMPLE=1.0 to capture all queries (default in dev)
  */
 
-import * as Sentry from "@sentry/nextjs";
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from "@sentry/nextjs";
 import type { PrismaClient } from "@prisma/client";
 
 // Guard flag to prevent double installation during HMR
@@ -28,8 +29,16 @@ const attachedInstances = new WeakSet<PrismaClient>();
 /**
  * Attaches Sentry middleware to a Prisma client instance.
  * This must be called only once per client instance to avoid duplicate spans.
+ * 
+ * NOTE: Sentry is currently disabled - this is a no-op function
  */
 export function attachPrismaSentry(prisma: PrismaClient): void {
+  // Sentry disabled - function is now a no-op
+  // All the original Sentry middleware code has been commented out below
+  // Uncomment and restore the imports when re-enabling Sentry
+  
+  /* Original Sentry code (disabled):
+  
   // Guard: Don't attach twice to the same instance
   if (attachedInstances.has(prisma)) {
     return;
@@ -114,5 +123,6 @@ export function attachPrismaSentry(prisma: PrismaClient): void {
       return next(params);
     }
   });
+  */
 }
 

@@ -30,6 +30,25 @@ export async function createSupabaseServerClient() {
   }
   try {
     const cookieStore = await cookies();
+    // We cannot reliably detect Route Handler/Server Action at runtime.
+    // To avoid runtime errors in Server Components, default cookie mutations to no-ops here.
+    const safeSetCookie = (_name: string, _value: string, _options: any) => {
+      try {
+        // Attempt to set when allowed (Route Handler/Server Action). If not allowed, this will throw and be ignored.
+        // @ts-ignore - runtime guard
+        cookieStore.set?.({ name: _name, value: _value, ..._options });
+      } catch (_err) {
+        // swallow
+      }
+    };
+    const safeRemoveCookie = (_name: string, _options: any) => {
+      try {
+        // @ts-ignore - runtime guard
+        cookieStore.set?.({ name: _name, value: '', ..._options });
+      } catch (_err) {
+        // swallow
+      }
+    };
 
     return createServerClient(supabaseUrl!, supabaseAnonKey!, {
       cookies: {
@@ -41,20 +60,8 @@ export async function createSupabaseServerClient() {
             return undefined;
           }
         },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch (error) {
-            console.error('Error setting cookie:', name, error);
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options });
-          } catch (error) {
-            console.error('Error removing cookie:', name, error);
-          }
-        },
+        set(name: string, value: string, options: any) { safeSetCookie(name, value, options); },
+        remove(name: string, options: any) { safeRemoveCookie(name, options); },
       },
     });
   } catch (error) {

@@ -1,7 +1,8 @@
 "use client";
 
 import { Component, ReactNode } from 'react';
-import * as Sentry from '@sentry/nextjs';
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -25,7 +26,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
-    Sentry.captureException(error, { extra: { errorInfo } as any });
+    // Sentry disabled - just log to console
+    console.error('Error caught by boundary:', error, errorInfo);
   }
 
   render() {

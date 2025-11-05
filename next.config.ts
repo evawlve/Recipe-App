@@ -1,5 +1,8 @@
+import path from 'path';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Ensure Next.js traces from this project root (prevents parent lockfile confusion on Windows/OneDrive)
+  outputFileTracingRoot: path.join(process.cwd()),
   // Enable production optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
