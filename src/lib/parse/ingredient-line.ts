@@ -17,6 +17,18 @@ export type ParsedIngredient = {
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
+  // Handle non-ingredient noise: separators, emojis, etc.
+  // Check for common separators that indicate this is not an ingredient
+  const trimmed = line.trim();
+  if (trimmed === '---' || trimmed === '---' || trimmed.match(/^[-=]{3,}$/)) {
+    return null; // Separator line
+  }
+  
+  // Check for "to taste" - this is not a parseable ingredient
+  if (trimmed.toLowerCase().includes('to taste')) {
+    return null;
+  }
+
   // Normalize unicode spaces (thin space, non-breaking space, etc.) to regular spaces
   // This handles cases like "2 ½" where there might be a thin space
   const normalizedLine = line
@@ -26,34 +38,119 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     .replace(/\u2001/g, ' ') // em quad
     .trim();
 
-  // Tokenize the line (split on whitespace, but also separate commas)
+  // Tokenize the line (split on whitespace, but also separate commas, parentheses, and handle "x" multipliers)
   // This handles "1 cup, packed" -> ["1", "cup", ",", "packed"]
-  const tokens = normalizedLine
-    .replace(/,/g, ' , ')
+  // Also handles "2x200g" -> ["2", "x", "200g"] and "2 x 200g" -> ["2", "x", "200", "g"]
+  // Normalize "x" multipliers: "2x200" or "2 x 200" -> "2 x 200"
+  // Also handle "2x200g" -> "2 x 200g" (we'll split the number+unit later)
+  // Separate parentheses: "1 (14 oz)" -> "1 ( 14 oz )"
+  // IMPORTANT: Handle parentheses carefully to avoid splitting "oz)" incorrectly
+  // Strategy: separate parentheses first, then split number+unit on remaining tokens
+  let preprocessed = normalizedLine
+    .replace(/(\d+)\s*[x×]\s*(\d+[a-z]*)/gi, '$1 x $2') // Normalize "2x200" or "2x200g" or "2 x 200g" to "2 x 200g"
+    .replace(/\(/g, ' ( ') // Separate opening parentheses
+    .replace(/\)/g, ' ) ') // Separate closing parentheses
+    .replace(/,/g, ' , ') // Separate commas
     .split(/\s+/)
     .filter(t => t.length > 0);
+  
+  // Post-process: split number+unit tokens (but preserve parentheses as separate tokens)
+  const tokens: string[] = [];
+  for (const token of preprocessed) {
+    // Skip parentheses and commas - they're already separated
+    if (token === '(' || token === ')' || token === ',') {
+      tokens.push(token);
+    } else {
+      // Check if token is like "200g" (number+unit)
+      const match = token.match(/^(\d+(?:\.\d+)?)([a-z]+)$/i);
+      if (match) {
+        tokens.push(match[1]); // number
+        tokens.push(match[2]); // unit
+      } else {
+        tokens.push(token);
+      }
+    }
+  }
+  
   if (tokens.length === 0) return null;
 
   let i = 0;
+  let qty = 1; // Default quantity
 
-  // Parse quantity
-  const qtyResult = parseQuantityTokens(tokens.slice(i));
-  if (!qtyResult) return null;
+  // Check if first token is a unit (e.g., "pinch of salt")
+  // If so, we'll use default qty of 1
+  let startsWithUnit = false;
+  if (tokens.length > 0) {
+    const firstToken = tokens[0];
+    const firstNormalized = normalizeUnitToken(firstToken);
+    if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count') {
+      startsWithUnit = true;
+    }
+  }
 
-  const qty = qtyResult.qty;
-  i += qtyResult.consumed;
+  // Parse quantity (if not starting with unit)
+  if (!startsWithUnit) {
+    const qtyResult = parseQuantityTokens(tokens.slice(i));
+    if (!qtyResult) return null;
+    qty = qtyResult.qty;
+    i += qtyResult.consumed;
+  }
 
   // Parse unit and multiplier
   let unit: string | null = null;
   let rawUnit: string | null = null;
   let multiplier = 1;
 
-  // Check first token for multiplier or unit
-  if (i < tokens.length) {
+  // Check for "x" multiplier pattern: "2 x 200g" or "2x200g" (already normalized to "2 x 200")
+  // Pattern: qty "x" number unit
+  if (i < tokens.length && tokens[i].toLowerCase() === 'x') {
+    // We have a quantity followed by "x", check if next token is a number
+    if (i + 1 < tokens.length) {
+      const nextToken = tokens[i + 1];
+      const nextNum = parseFloat(nextToken);
+      if (!isNaN(nextNum) && nextNum > 0) {
+        // Found "qty x number", the number is the multiplier
+        multiplier = nextNum;
+        i += 2; // Consume "x" and the number
+        
+        // Check if there's a unit after the multiplier (e.g., "2 x 200g")
+        if (i < tokens.length) {
+          const unitToken = tokens[i];
+          const unitNormalized = normalizeUnitToken(unitToken);
+          if (unitNormalized.kind === 'mass' || unitNormalized.kind === 'volume') {
+            unit = unitNormalized.unit;
+            rawUnit = unitToken;
+            if (i + 1 < tokens.length) {
+              i++; // Consume the unit
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Check first token for multiplier or unit (if we haven't already handled "x" multiplier)
+  // Also handle case where we start with a unit (e.g., "pinch of salt")
+  // Skip parentheses when looking for units
+  while (i < tokens.length && multiplier === 1 && (tokens[i] === '(' || tokens[i] === ')')) {
+    i++; // Skip parentheses
+  }
+  
+  if (i < tokens.length && multiplier === 1) {
     const firstToken = tokens[i];
     const firstNormalized = normalizeUnitToken(firstToken);
     
-    if (firstNormalized.kind === 'multiplier') {
+    // If we started with a unit, consume it now
+    if (startsWithUnit && (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count')) {
+      unit = firstNormalized.unit;
+      rawUnit = firstToken;
+      i++; // Consume the unit
+      
+      // Skip "of" if present (e.g., "pinch of salt")
+      if (i < tokens.length && tokens[i].toLowerCase() === 'of') {
+        i++;
+      }
+    } else if (firstNormalized.kind === 'multiplier') {
       multiplier *= firstNormalized.factor;
       i++;
       
@@ -72,11 +169,14 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
         }
       }
     } else if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume') {
-      unit = firstNormalized.unit;
-      rawUnit = firstToken;
-      // Only consume the unit token if it's not the last token (to preserve compound names)
-      if (i + 1 < tokens.length) {
-        i++;
+      // Only process if we didn't already handle it as a starting unit
+      if (!startsWithUnit || i > 0) {
+        unit = firstNormalized.unit;
+        rawUnit = firstToken;
+        // Only consume the unit token if it's not the last token (to preserve compound names)
+        if (i + 1 < tokens.length) {
+          i++;
+        }
       }
     } else if (firstNormalized.kind === 'count') {
       // For count units like "piece", "slice", "scoop", consume them as units
@@ -98,10 +198,32 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     // For 'unknown' tokens, don't consume them as units - they're part of the name
     // This handles cases like "5 romaine leaves" where "romaine" shouldn't be a unit
   }
+  
+  // After processing units, skip any remaining parentheses before name tokens
+  // Also check if there's a unit after parentheses (e.g., "1 (14 oz) can tomatoes")
+  while (i < tokens.length && (tokens[i] === '(' || tokens[i] === ')')) {
+    i++;
+  }
+  
+  // Check if there's a unit right after parentheses (e.g., "can" in "1 (14 oz) can tomatoes")
+  if (i < tokens.length && !unit) {
+    const afterParenToken = tokens[i];
+    const afterParenNormalized = normalizeUnitToken(afterParenToken);
+    if (afterParenNormalized.kind === 'mass' || afterParenNormalized.kind === 'volume' || afterParenNormalized.kind === 'count') {
+      // Check if it's not a unit hint
+      const lowerToken = afterParenToken.toLowerCase();
+      const possibleHints = ['cloves', 'clove', 'leaves', 'leaf', 'yolks', 'yolk', 'whites', 'white', 'sheets', 'sheet', 'stalks', 'stalk'];
+      if (!possibleHints.includes(lowerToken)) {
+        unit = afterParenNormalized.unit;
+        rawUnit = afterParenToken;
+        i++; // Consume the unit
+      }
+    }
+  }
 
   // Remaining tokens are the name (may contain qualifiers, unit hints, parentheses, commas)
-  // Filter out standalone commas
-  const nameTokens = tokens.slice(i).filter(t => t !== ',');
+  // Filter out standalone commas and parentheses (they're handled separately)
+  const nameTokens = tokens.slice(i).filter(t => t !== ',' && t !== '(' && t !== ')');
   if (nameTokens.length === 0) return null;
 
   // Join tokens and handle commas (e.g., "cilantro, finely chopped" or "1 cup, packed, brown sugar")
