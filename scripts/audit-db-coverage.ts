@@ -40,18 +40,21 @@ async function main(): Promise<void> {
   // Foods by source
   const foodsBySource = await prisma.food.groupBy({
     by: ['source'],
-    _count: { _all: true },
-    orderBy: { _count: { _all: 'desc' } },
+    _count: true,
+    orderBy: { source: 'asc' },
   });
 
   // Foods by category (top 10)
   const foodsByCategory = await prisma.food.groupBy({
     by: ['categoryId'],
-    _count: { _all: true },
-    orderBy: { _count: { _all: 'desc' } },
+    _count: true,
     where: { categoryId: { not: null } },
-    take: 10,
   });
+
+  // Sort and take top 10
+  const topCategories = foodsByCategory
+    .sort((a, b) => (b._count || 0) - (a._count || 0))
+    .slice(0, 10);
 
   // FoodUnits by label (top 15)
   const unitsRaw = await prisma.foodUnit.findMany({ select: { label: true } });
@@ -93,12 +96,12 @@ async function main(): Promise<void> {
   lines.push('');
   lines.push('## Foods by Source');
   for (const row of foodsBySource) {
-    lines.push(`- ${row.source || 'unknown'}: ${row._count._all}`);
+    lines.push(`- ${row.source || 'unknown'}: ${row._count || 0}`);
   }
   lines.push('');
   lines.push('## Top Categories (by Food count)');
-  for (const row of foodsByCategory) {
-    lines.push(`- categoryId=${row.categoryId}: ${row._count._all}`);
+  for (const row of topCategories) {
+    lines.push(`- categoryId=${row.categoryId}: ${row._count || 0}`);
   }
   lines.push('');
   lines.push('## Top FoodUnit Labels');
@@ -124,7 +127,7 @@ async function main(): Promise<void> {
   // eslint-disable-next-line no-console
   console.log(`Foods: ${totalFoods}, Units: ${totalUnits}, Barcodes: ${totalBarcodes}`);
   // eslint-disable-next-line no-console
-  console.log('Foods by source:', foodsBySource.map(f => `${f.source}:${f._count._all}`).join(', '));
+  console.log('Foods by source:', foodsBySource.map(f => `${f.source}:${f._count || 0}`).join(', '));
   // eslint-disable-next-line no-console
   console.log('Top unit labels:', topUnitLabels.map(([l, c]) => `${l}:${c}`).join(', '));
   // eslint-disable-next-line no-console
