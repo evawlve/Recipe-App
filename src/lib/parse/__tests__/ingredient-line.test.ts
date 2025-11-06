@@ -87,3 +87,62 @@ test('no quantity returns null', () => {
   const p = parseIngredientLine('protein bar');
   expect(p).toBeNull();
 });
+
+// S1.1: Fractions attached to numbers
+test('2½ cups flour', () => {
+  const p = parseIngredientLine('2½ cups flour')!;
+  expect(p.qty).toBeCloseTo(2.5);
+  expect(p.unit).toBe('cup');
+  expect(p.name).toBe('flour');
+});
+
+test('½ cup oats', () => {
+  const p = parseIngredientLine('½ cup oats')!;
+  expect(p.qty).toBeCloseTo(0.5);
+  expect(p.unit).toBe('cup');
+  expect(p.name).toBe('oats');
+});
+
+test('1 ½ cup milk', () => {
+  const p = parseIngredientLine('1 ½ cup milk')!;
+  expect(p.qty).toBeCloseTo(1.5);
+  expect(p.unit).toBe('cup');
+  expect(p.name).toBe('milk');
+});
+
+// S1.1: Ranges
+test('2-3 large eggs', () => {
+  const p = parseIngredientLine('2-3 large eggs')!;
+  expect(p.qty).toBeCloseTo(2.5);
+  // Note: "large" qualifier extraction will be handled in S1.2
+  expect(p.name).toContain('eggs');
+});
+
+test('2–3 cups flour', () => {
+  const p = parseIngredientLine('2–3 cups flour')!;
+  expect(p.qty).toBeCloseTo(2.5);
+  expect(p.unit).toBe('cup');
+  expect(p.name).toBe('flour');
+});
+
+test('2 to 3 tbsp olive oil', () => {
+  const p = parseIngredientLine('2 to 3 tbsp olive oil')!;
+  expect(p.qty).toBeCloseTo(2.5);
+  expect(p.unit).toBe('tbsp');
+  expect(p.name).toBe('olive oil');
+});
+
+// S1.1: Combined fractions with ranges
+test('1½-2 tsp vanilla extract', () => {
+  const p = parseIngredientLine('1½-2 tsp vanilla extract')!;
+  expect(p.qty).toBeCloseTo(1.75);
+  expect(p.unit).toBe('tsp');
+  expect(p.name).toBe('vanilla extract');
+});
+
+test('¼ tsp salt', () => {
+  const p = parseIngredientLine('¼ tsp salt')!;
+  expect(p.qty).toBeCloseTo(0.25);
+  expect(p.unit).toBe('tsp');
+  expect(p.name).toBe('salt');
+});

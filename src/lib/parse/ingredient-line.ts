@@ -13,8 +13,17 @@ export type ParsedIngredient = {
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
+  // Normalize unicode spaces (thin space, non-breaking space, etc.) to regular spaces
+  // This handles cases like "2 ½" where there might be a thin space
+  const normalizedLine = line
+    .replace(/\u2009/g, ' ') // thin space
+    .replace(/\u00A0/g, ' ') // non-breaking space
+    .replace(/\u2000/g, ' ') // en quad
+    .replace(/\u2001/g, ' ') // em quad
+    .trim();
+
   // Tokenize the line
-  const tokens = line.trim().split(/\s+/);
+  const tokens = normalizedLine.split(/\s+/);
   if (tokens.length === 0) return null;
 
   let i = 0;
