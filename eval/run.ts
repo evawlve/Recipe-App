@@ -123,7 +123,7 @@ async function evaluateRow(row: GoldRow) {
   let provisional = true;
   if (parsed && top) {
     const servingOptions = deriveServingOptions({
-      units: top.units?.map(u => ({ label: u.label, grams: u.grams })) ?? [],
+      units: top.units?.map((u: { label: string; grams: number }) => ({ label: u.label, grams: u.grams })) ?? [],
       densityGml: top.densityGml ?? undefined,
       categoryId: top.categoryId ?? null,
     });
