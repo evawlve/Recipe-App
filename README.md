@@ -637,6 +637,25 @@ npm run similar:build           # Build recipe similarity graph from co-view dat
 | `S3_PUBLIC_BASE_URL` | CDN URL (optional) | ❌ |
 | `HEALTH_SCORE_V2` | Enable Health Score V2 algorithm (0/1) | ❌ |
 | `DEV_API_KEY` | Development API key for bypassing auth | ❌ |
+| `FDC_API_KEY` | FoodData Central API key (get free key at https://fdc.nal.usda.gov/api-key-signup.html) | ❌ |
+| `FDC_RATE_LIMIT_PER_HOUR` | FDC API rate limit (default: 1000 requests/hour) | ❌ |
+| `ENABLE_BRANDED_SEARCH` | Feature flag for branded-only search (default: false) | ❌ |
+
+### **FDC API Setup**
+
+To enable branded food search via FoodData Central API:
+
+1. **Get a free API key**: Sign up at https://fdc.nal.usda.gov/api-key-signup.html
+2. **Add to `.env`**:
+   ```bash
+   FDC_API_KEY=your_key_here
+   FDC_RATE_LIMIT_PER_HOUR=1000
+   ENABLE_BRANDED_SEARCH=false
+   ```
+3. **Rate Limiting**: The client automatically throttles requests to stay within limits (default 1000 req/hour, capped at 10 req/s)
+4. **Safety**: Keep `ENABLE_BRANDED_SEARCH=false` until Sprint 5 when branded search is fully implemented
+
+**Note**: Without `FDC_API_KEY`, the app will continue to work but FDC API searches will be disabled.
 
 ## 🚀 Deployment
 
