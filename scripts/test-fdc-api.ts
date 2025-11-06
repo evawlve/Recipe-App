@@ -4,6 +4,9 @@
  * Tests connectivity, rate limiting, and caching behavior
  */
 
+// Load .env file
+import 'dotenv/config';
+
 import { fdcApi } from '../src/lib/usda/fdc-api';
 
 const API_KEY = process.env.FDC_API_KEY;
