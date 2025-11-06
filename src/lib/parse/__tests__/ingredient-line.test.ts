@@ -66,11 +66,11 @@ test('2 eggs', () => {
   expect(p.name).toBe('eggs');
 });
 
-test('unknown unit falls back to rawUnit', () => {
+test('unknown unit is not consumed as unit (part of name)', () => {
   const p = parseIngredientLine('1 smaccamoo protein bar')!;
-  expect(p.rawUnit).toBe('smaccamoo');
+  expect(p.rawUnit).toBeNull();
   expect(p.unit).toBeNull();
-  expect(p.name).toBe('protein bar');
+  expect(p.name).toBe('smaccamoo protein bar');
 });
 
 test('empty string returns null', () => {
@@ -145,4 +145,94 @@ test('¼ tsp salt', () => {
   expect(p.qty).toBeCloseTo(0.25);
   expect(p.unit).toBe('tsp');
   expect(p.name).toBe('salt');
+});
+
+// S1.2: Qualifiers
+test('3 large boneless skinless chicken breasts', () => {
+  const p = parseIngredientLine('3 large boneless skinless chicken breasts')!;
+  expect(p.qty).toBeCloseTo(3);
+  expect(p.qualifiers).toEqual(['large', 'boneless', 'skinless']);
+  expect(p.name).toBe('chicken breasts');
+});
+
+test('1 cup onion (diced)', () => {
+  const p = parseIngredientLine('1 cup onion (diced)')!;
+  expect(p.qty).toBeCloseTo(1);
+  expect(p.unit).toBe('cup');
+  expect(p.qualifiers).toEqual(['diced']);
+  expect(p.name).toBe('onion');
+});
+
+test('cilantro, finely chopped', () => {
+  const p = parseIngredientLine('cilantro, finely chopped');
+  // This should return null because there's no quantity
+  expect(p).toBeNull();
+});
+
+test('1 cup, packed, brown sugar', () => {
+  const p = parseIngredientLine('1 cup, packed, brown sugar')!;
+  expect(p.qty).toBeCloseTo(1);
+  expect(p.unit).toBe('cup');
+  expect(p.qualifiers).toEqual(['packed']);
+  expect(p.name).toBe('brown sugar');
+});
+
+test('2 cloves garlic, minced', () => {
+  const p = parseIngredientLine('2 cloves garlic, minced')!;
+  expect(p.qty).toBeCloseTo(2);
+  expect(p.qualifiers).toEqual(['minced']);
+  expect(p.name).toBe('garlic');
+});
+
+// S1.2: Unit hints
+test('2 egg yolks', () => {
+  const p = parseIngredientLine('2 egg yolks')!;
+  expect(p.qty).toBeCloseTo(2);
+  expect(p.unitHint).toBe('yolk');
+  expect(p.name).toBe('egg');
+});
+
+test('3 egg whites', () => {
+  const p = parseIngredientLine('3 egg whites')!;
+  expect(p.qty).toBeCloseTo(3);
+  expect(p.unitHint).toBe('white');
+  expect(p.name).toBe('egg');
+});
+
+test('5 romaine leaves', () => {
+  const p = parseIngredientLine('5 romaine leaves')!;
+  expect(p.qty).toBeCloseTo(5);
+  expect(p.unitHint).toBe('leaf');
+  expect(p.name).toBe('romaine');
+});
+
+test('2 cloves garlic', () => {
+  const p = parseIngredientLine('2 cloves garlic')!;
+  expect(p.qty).toBeCloseTo(2);
+  expect(p.unitHint).toBe('clove');
+  expect(p.name).toBe('garlic');
+});
+
+test('1 sheet nori', () => {
+  const p = parseIngredientLine('1 sheet nori')!;
+  expect(p.qty).toBeCloseTo(1);
+  expect(p.unitHint).toBe('sheet');
+  expect(p.name).toBe('nori');
+});
+
+// S1.2: Combined qualifiers and unit hints
+test('2 egg yolks with qualifier', () => {
+  const p = parseIngredientLine('2 large egg yolks')!;
+  expect(p.qty).toBeCloseTo(2);
+  expect(p.qualifiers).toEqual(['large']);
+  expect(p.unitHint).toBe('yolk');
+  expect(p.name).toBe('egg');
+});
+
+test('1 cup onion (diced) with unit hint edge case', () => {
+  const p = parseIngredientLine('1 cup onion (diced)')!;
+  expect(p.qty).toBeCloseTo(1);
+  expect(p.unit).toBe('cup');
+  expect(p.qualifiers).toEqual(['diced']);
+  expect(p.name).toBe('onion');
 });

@@ -1,0 +1,234 @@
+{
+  "gold": "gold.v1.csv",
+  "timestamp": "2025-11-06T07:19:41.725Z",
+  "totals": {
+    "count": 100
+  },
+  "metrics": {
+    "pAt1": 0.47,
+    "mae": 114.93373529562497,
+    "provisionalRate": 0.32
+  },
+  "samples": [
+    {
+      "id": "1",
+      "raw_line": "2 large eggs",
+      "expected_food_name": "Eggs, Large, Raw",
+      "expected_grams": 100,
+      "top_food_name": "Egg, yolk, dried",
+      "resolved_grams": 34,
+      "pAt1": 0,
+      "mae": 66,
+      "provisional": false
+    },
+    {
+      "id": "2",
+      "raw_line": "1 cup cooked white rice",
+      "expected_food_name": "rice, white, medium-grain, cooked",
+      "expected_grams": 186,
+      "top_food_name": "Brown Rice Uncooked",
+      "resolved_grams": 185,
+      "pAt1": 0,
+      "mae": 1,
+      "provisional": false
+    },
+    {
+      "id": "3",
+      "raw_line": "1 tbsp olive oil",
+      "expected_food_name": "Olive Oil",
+      "expected_grams": 13.6,
+      "top_food_name": "Olive Oil",
+      "resolved_grams": 13.6,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "4",
+      "raw_line": "1 cup milk",
+      "expected_food_name": "milk, whole, 3.25% milkfat",
+      "expected_grams": 244,
+      "top_food_name": "Egg custards, dry mix, prepared with 2% milk",
+      "resolved_grams": 140,
+      "pAt1": 0,
+      "mae": 104,
+      "provisional": false
+    },
+    {
+      "id": "5",
+      "raw_line": "1 cup all-purpose flour",
+      "expected_food_name": "All-Purpose Flour",
+      "expected_grams": 120,
+      "top_food_name": "All-Purpose Flour",
+      "resolved_grams": 120,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "6",
+      "raw_line": "2 large chicken breasts",
+      "expected_food_name": "Chicken Breast, Raw (Skinless)",
+      "expected_grams": 280,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 280,
+      "provisional": true
+    },
+    {
+      "id": "7",
+      "raw_line": "1 cup broccoli florets",
+      "expected_food_name": "broccoli, raw",
+      "expected_grams": 91,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 91,
+      "provisional": true
+    },
+    {
+      "id": "8",
+      "raw_line": "1 cup cooked quinoa",
+      "expected_food_name": "quinoa, cooked",
+      "expected_grams": 185,
+      "top_food_name": "Quinoa Uncooked",
+      "resolved_grams": 185,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "9",
+      "raw_line": "2 tbsp butter",
+      "expected_food_name": "Butter, Unsalted",
+      "expected_grams": 28.4,
+      "top_food_name": "Egg, whole, fried with butter",
+      "resolved_grams": 29.5735295625,
+      "pAt1": 0,
+      "mae": 1.1735295625000006,
+      "provisional": false
+    },
+    {
+      "id": "10",
+      "raw_line": "1 cup greek yogurt",
+      "expected_food_name": "greek yogurt, plain, nonfat",
+      "expected_grams": 245,
+      "top_food_name": " Nonfat Greek Yogurt 0%",
+      "resolved_grams": 170,
+      "pAt1": 1,
+      "mae": 75,
+      "provisional": false
+    },
+    {
+      "id": "11",
+      "raw_line": "1 large onion, diced",
+      "expected_food_name": "onions, raw",
+      "expected_grams": 150,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 150,
+      "provisional": true
+    },
+    {
+      "id": "12",
+      "raw_line": "2 cloves garlic, minced",
+      "expected_food_name": "garlic, raw",
+      "expected_grams": 6,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 6,
+      "provisional": true
+    },
+    {
+      "id": "13",
+      "raw_line": "1 cup brown rice, cooked",
+      "expected_food_name": "rice, brown, long-grain, cooked",
+      "expected_grams": 195,
+      "top_food_name": "Brown Rice Uncooked",
+      "resolved_grams": 185,
+      "pAt1": 0,
+      "mae": 10,
+      "provisional": false
+    },
+    {
+      "id": "14",
+      "raw_line": "1 cup oats",
+      "expected_food_name": "oats",
+      "expected_grams": 80,
+      "top_food_name": "Oats, Dry",
+      "resolved_grams": 90,
+      "pAt1": 1,
+      "mae": 10,
+      "provisional": false
+    },
+    {
+      "id": "15",
+      "raw_line": "1 cup cottage cheese",
+      "expected_food_name": "cottage cheese, lowfat, 2% milkfat",
+      "expected_grams": 226,
+      "top_food_name": "Cheese, cottage, lowfat, 2% milkfat",
+      "resolved_grams": 60,
+      "pAt1": 0,
+      "mae": 166,
+      "provisional": false
+    },
+    {
+      "id": "16",
+      "raw_line": "1 cup spinach, chopped",
+      "expected_food_name": "spinach, raw",
+      "expected_grams": 30,
+      "top_food_name": "Spinach, frozen, chopped or leaf, unprepared (Includes foods for USDA's Food Distribution Program)",
+      "resolved_grams": 60,
+      "pAt1": 0,
+      "mae": 30,
+      "provisional": false
+    },
+    {
+      "id": "17",
+      "raw_line": "1 cup tomato, diced",
+      "expected_food_name": "tomatoes, red, ripe, raw",
+      "expected_grams": 180,
+      "top_food_name": "Tomatoes, canned, red, ripe, diced",
+      "resolved_grams": 60,
+      "pAt1": 0,
+      "mae": 120,
+      "provisional": false
+    },
+    {
+      "id": "18",
+      "raw_line": "1 cup chicken broth",
+      "expected_food_name": "chicken broth, bouillon, consomme, prepared with water",
+      "expected_grams": 240,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 240,
+      "provisional": true
+    },
+    {
+      "id": "19",
+      "raw_line": "1 cup almond flour",
+      "expected_food_name": "almond flour",
+      "expected_grams": 96,
+      "top_food_name": "Almond Flour",
+      "resolved_grams": 96,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "20",
+      "raw_line": "1 cup coconut oil",
+      "expected_food_name": "coconut oil",
+      "expected_grams": 218,
+      "top_food_name": "Coconut Oil",
+      "resolved_grams": 55.2,
+      "pAt1": 1,
+      "mae": 162.8,
+      "provisional": false
+    }
+  ]
+}

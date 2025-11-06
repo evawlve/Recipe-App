@@ -23,11 +23,12 @@ test('smoke test: complete parsing and resolution flow', () => {
 
   expect(gramsA).toBeCloseTo(25); // 1 * 0.5 * 50 (matches "bar" unit)
 
-  // Test Case B: unknown grams → the action bar shows
+  // Test Case B: unknown unit is part of name (not consumed as unit)
   const parsedB = parseIngredientLine('1 mystery protein bar');
   expect(parsedB).not.toBeNull();
   expect(parsedB!.unit).toBeNull();
-  expect(parsedB!.rawUnit).toBe('mystery');
+  expect(parsedB!.rawUnit).toBeNull();
+  expect(parsedB!.name).toBe('mystery protein bar');
 
   const gramsB = resolveGramsAdapter({
     parsed: parsedB,
