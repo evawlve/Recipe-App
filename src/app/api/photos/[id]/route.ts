@@ -50,3 +50,47 @@ export async function DELETE(
   await prisma.photo.delete({ where: { id: photoId } });
   return new NextResponse(null, { status: 204 });
 }
+
+export async function PATCH(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+      process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
+
+  // Import only when not in build mode
+  const { prisma } = await import("@/lib/db");
+  const { getCurrentUser } = await import("@/lib/auth");
+  
+  const resolvedParams = await params;
+  const photoId = resolvedParams.id;
+  const user = await getCurrentUser();
+
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+    include: { recipe: { select: { authorId: true } } },
+  });
+  
+  if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!user || photo.recipe.authorId !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Set this photo as main and unset all others for this recipe
+  await prisma.$transaction([
+    prisma.photo.updateMany({
+      where: { recipeId: photo.recipeId },
+      data: { isMainPhoto: false },
+    }),
+    prisma.photo.update({
+      where: { id: photoId },
+      data: { isMainPhoto: true },
+    }),
+  ]);
+
+  return NextResponse.json({ success: true });
+}

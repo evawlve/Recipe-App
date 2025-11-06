@@ -119,12 +119,15 @@ model Nutrition {
 }
 
 model Photo {
-  id       String @id @default(cuid())
-  recipeId String
-  s3Key    String
-  width    Int
-  height   Int
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  id          String  @id @default(cuid())
+  recipeId    String
+  s3Key       String
+  width       Int
+  height      Int
+  isMainPhoto Boolean @default(false)
+  recipe      Recipe  @relation(fields: [recipeId], references: [id])
+  
+  @@index([recipeId, isMainPhoto])
 }
 
 model Tag {

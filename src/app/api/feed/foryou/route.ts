@@ -70,7 +70,10 @@ export async function GET(req: NextRequest) {
       },
       include: {
         _count: { select: { likes: true, comments: true } },
-        photos: { take: 1 },
+        photos: { 
+          take: 1,
+          orderBy: [{ isMainPhoto: 'desc' }, { id: 'asc' }]
+        },
         author: {
           select: {
             id: true,

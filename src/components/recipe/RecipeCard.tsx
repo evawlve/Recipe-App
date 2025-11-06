@@ -17,6 +17,7 @@ interface RecipeWithRelations extends Recipe {
     s3Key: string;
     width: number;
     height: number;
+    isMainPhoto?: boolean;
   }>;
   nutrition: {
     calories: number;

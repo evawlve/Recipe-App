@@ -129,8 +129,10 @@ export async function fetchRecipePage({
           s3Key: true,
           width: true,
           height: true,
+          isMainPhoto: true,
         },
-        take: 1
+        take: 1,
+        orderBy: [{ isMainPhoto: 'desc' }, { id: 'asc' }]
       },
       tags: { 
         include: { 

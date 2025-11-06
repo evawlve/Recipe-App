@@ -108,8 +108,10 @@ export async function GET(req: Request, { params }: any) {
             s3Key: true,
             width: true,
             height: true,
+            isMainPhoto: true,
           },
-          take: 1
+          take: 1,
+          orderBy: [{ isMainPhoto: 'desc' }, { id: 'asc' }]
         },
         author: {
           select: {

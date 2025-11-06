@@ -125,7 +125,11 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals &
     include: {
       foodMaps: {
         include: {
-          food: true
+          food: {
+            include: {
+              units: true  // Include food units for proper serving size resolution
+            }
+          }
         }
       }
     }
@@ -145,15 +149,49 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals &
   let unmappedCount = 0;
 
   for (const ingredient of ingredients) {
-    // Convert ingredient quantity to grams using robust normalizer
-    const grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
-    
     // Find the best food mapping (highest confidence)
     const bestMapping = ingredient.foodMaps
       .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
     
     if (bestMapping?.food) {
       const food = bestMapping.food;
+      
+      // Try to resolve grams using the mapped food's serving options
+      let grams: number;
+      
+      // Parse the ingredient line to get structured data
+      const { parseIngredientLine } = await import('../parse/ingredient-line');
+      const { deriveServingOptions } = await import('../units/servings');
+      const { resolveGramsFromParsed } = await import('./resolve-grams');
+      
+      const ingredientLine = ingredient.unit 
+        ? `${ingredient.qty} ${ingredient.unit} ${ingredient.name}`
+        : `${ingredient.qty} ${ingredient.name}`;
+      
+      const parsed = parseIngredientLine(ingredientLine);
+      
+      if (parsed) {
+        // Derive serving options from the mapped food
+        const servingOptions = deriveServingOptions({
+          units: food.units?.map(u => ({ label: u.label, grams: u.grams })),
+          densityGml: food.densityGml ?? undefined,
+          categoryId: food.categoryId ?? null,
+        });
+        
+        // Try to resolve using parsed data and serving options
+        const resolvedGrams = resolveGramsFromParsed(parsed, servingOptions);
+        
+        if (resolvedGrams !== null && resolvedGrams > 0) {
+          grams = resolvedGrams;
+        } else {
+          // Fallback to old conversion if resolution fails
+          grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
+        }
+      } else {
+        // Fallback if parsing fails
+        grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
+      }
+      
       const multiplier = grams / 100; // Convert to per-100g basis
       
       const ingredientCalories = food.kcal100 * multiplier;

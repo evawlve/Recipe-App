@@ -45,7 +45,11 @@ export async function GET(req: NextRequest) {
         select: {
           id: true, 
           createdAt: true,
-          photos: { take: 1, select: { s3Key: true } },
+          photos: { 
+            take: 1, 
+            select: { s3Key: true, isMainPhoto: true },
+            orderBy: [{ isMainPhoto: 'desc' }, { id: 'asc' }]
+          },
           _count: { select: { likes: true, comments: true } }
         },
         take: 8,

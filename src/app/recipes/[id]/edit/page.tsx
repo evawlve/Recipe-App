@@ -29,7 +29,9 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
           s3Key: true,
           width: true,
           height: true,
+          isMainPhoto: true,
         },
+        orderBy: [{ isMainPhoto: 'desc' }, { id: 'asc' }],
       },
       ingredients: {
         select: {
@@ -78,6 +80,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
       s3Key: photo.s3Key,
       width: photo.width,
       height: photo.height,
+      isMainPhoto: photo.isMainPhoto,
     })),
   };
 

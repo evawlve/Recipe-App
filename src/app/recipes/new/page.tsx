@@ -256,7 +256,7 @@ function NewRecipeForm() {
                   </label>
                   <Input
                     {...register(`ingredients.${index}.unit`)}
-                    placeholder="cup, tbsp, etc."
+                    placeholder="cup, tbsp, g, oz (or blank for count)"
                     className={errors.ingredients?.[index]?.unit ? "border-destructive" : ""}
                   />
                   {errors.ingredients?.[index]?.unit && (

@@ -14,6 +14,9 @@ interface UserSearchResult {
   username: string;
   displayName: string;
   avatarKey?: string;
+  // Optional fields if API provides follow info
+  isFollowing?: boolean;
+  followers?: number;
 }
 
 interface UserSearchClientProps {
@@ -21,8 +24,8 @@ interface UserSearchClientProps {
   currentUser: {
     id: string;
     email: string;
-    name?: string;
-    avatarUrl?: string;
+    name?: string | null;
+    avatarUrl?: string | null;
   } | null;
 }
 
@@ -164,7 +167,12 @@ export function UserSearchClient({ initialQuery, currentUser }: UserSearchClient
                       </div>
                       
                       {currentUser && currentUser.id !== user.id && (
-                        <FollowButton userId={user.id} />
+                        <FollowButton 
+                          userId={user.id}
+                          initialFollowing={user.isFollowing ?? false}
+                          initialFollowersCount={user.followers ?? 0}
+                          isLoggedIn={!!currentUser}
+                        />
                       )}
                     </div>
                   </CardContent>

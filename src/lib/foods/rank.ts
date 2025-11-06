@@ -151,21 +151,28 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
 
     // De-rank composite dishes unless query asks for them
     if (!qHasCompositeWords && (f.categoryId === 'prepared_dish' || isCompositeName(f.name))) {
-      score *= 0.6; // mild penalty to push plain ingredients up
+      score *= 0.5; // stronger penalty to push plain ingredients up
     }
 
-    // De-rank processed foods when searching for basic ingredients
-    const isProcessedFood = /\b(dip|rings|sauce|paste|powder|flakes|chips|crackers|breaded|fried|frozen|prepared|canned|dried|powdered)\b/.test(f.name.toLowerCase());
+    // De-rank processed/prepared foods when searching for basic ingredients
+    const isProcessedFood = /\b(dip|rings|sauce|paste|powder|flakes|chips|crackers|breaded|fried|frozen|prepared|canned|dried|powdered|pasteurized|cooked|braised|roasted|baked|boiled|grilled)\b/.test(f.name.toLowerCase());
     const isBasicIngredient = /\b(raw|fresh|whole|organic|natural)\b/.test(f.name.toLowerCase()) || 
                               f.name.toLowerCase().includes(', raw') ||
                               f.name.toLowerCase().includes(', fresh');
     
+    // Strong penalty for processed foods (especially for eggs/chicken/etc where raw is preferred)
     if (isProcessedFood && !qHasCompositeWords) {
-      score *= 0.4; // strong penalty for processed foods when searching for basic ingredients
+      score *= 0.3; // even stronger penalty for cooked/prepared foods
     }
     
+    // Boost basic/raw ingredients significantly
     if (isBasicIngredient) {
-      score *= 1.3; // boost for basic ingredients
+      score *= 1.5; // stronger boost for basic ingredients
+    }
+    
+    // Extra boost for eggs/meat/fish if query contains these and food is raw
+    if (/\b(egg|chicken|beef|pork|fish|salmon|tuna|turkey)\b/.test(q) && isBasicIngredient) {
+      score *= 1.2; // extra boost for raw versions of these ingredients
     }
 
     const confidence = Math.max(0, Math.min(1, score / 10.0));
