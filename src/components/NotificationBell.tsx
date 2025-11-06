@@ -21,14 +21,33 @@ export default function NotificationBell() {
   }, []);
 
   const fetchUnreadCount = useCallback(async () => {
+    // Only fetch in browser environment
+    if (typeof window === 'undefined') return;
+    
     try {
       const response = await fetch('/api/notifications/unread-count');
       if (response.ok) {
         const data = await response.json();
         setUnreadCount(data.unread);
+      } else if (response.status === 401) {
+        // User not authenticated, set count to 0 silently
+        setUnreadCount(0);
       }
     } catch (error) {
-      console.error('Failed to fetch unread count:', error);
+      // Handle connection errors gracefully - don't show as critical errors
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        // Connection refused or network error - likely server restarting
+        // Only log in development, and don't treat as critical
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('NotificationBell: Server temporarily unavailable');
+        }
+        // Don't update state on connection errors to avoid flickering
+        return;
+      }
+      // For other errors, log but don't throw
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to fetch unread count:', error);
+      }
     } finally {
       setIsLoading(false);
     }

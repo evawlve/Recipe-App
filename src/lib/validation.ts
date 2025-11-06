@@ -9,7 +9,7 @@ export const recipeCreateSchema = z.object({
     z.object({
       name: z.string().min(1, "Ingredient name is required"),
       qty: z.number().positive("Quantity must be positive"),
-      unit: z.string().min(1, "Unit is required"),
+      unit: z.string().default(""), // Allow empty string for countable items (eggs, apples, etc.)
     })
   ).min(1, "At least one ingredient is required"),
   localFiles: z.array(z.instanceof(File)).optional().default([]),
@@ -31,7 +31,7 @@ export const recipeApiSchema = z.object({
     z.object({
       name: z.string().min(1, "Ingredient name is required"),
       qty: z.number().positive("Quantity must be positive"),
-      unit: z.string().min(1, "Unit is required"),
+      unit: z.string().default(""), // Allow empty string for countable items (eggs, apples, etc.)
     })
   ).min(1, "At least one ingredient is required"),
   photos: z.array(
@@ -62,10 +62,17 @@ export const recipeUpdateSchema = z.object({
       id: z.string().optional(),
       name: z.string().min(1, "Ingredient name is required"),
       qty: z.number().positive("Quantity must be positive"),
-      unit: z.string().min(1, "Unit is required"),
+      unit: z.string().default(""), // Allow empty string for countable items (eggs, apples, etc.)
     })
   ).min(1, "At least one ingredient is required").optional(),
   tags: z.array(z.string().min(1).max(24)).max(10).optional(),
+  photos: z.array(
+    z.object({
+      s3Key: z.string(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+  ).optional(),
 });
 
 export type RecipeUpdateInput = z.infer<typeof recipeUpdateSchema>;

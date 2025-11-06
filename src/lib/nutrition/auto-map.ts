@@ -2,10 +2,15 @@ import { prisma } from '../db';
 import { FOOD_MAPPING_V2 } from '../flags';
 import { logger } from '../logger';
 import { batchFetchAliases } from '../foods/alias-cache';
+import { normalizeQuery, tokens } from '../search/normalize';
+import { parseIngredientLine } from '../parse/ingredient-line';
+import { rankCandidates, type Candidate } from '../foods/rank';
+import { kcalBandForQuery } from '../foods/plausibility';
 
 /**
  * Automatically map ingredients to foods based on name matching
  * Uses batched queries to avoid N+1 query issues
+ * Now uses the same search logic as the manual search API for consistency
  */
 export async function autoMapIngredients(recipeId: string): Promise<number> {
   logger.info('autoMap:start', { recipeId, v2: FOOD_MAPPING_V2 });
@@ -26,64 +31,175 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
     return 0;
   }
 
-  // Batch query: search for all ingredient names at once
-  // Build a combined OR query for all ingredient names
-  const searchConditions = unmappedIngredients.flatMap(ingredient => [
-    { name: { contains: ingredient.name, mode: 'insensitive' as const } },
-    { name: { contains: ingredient.name.toLowerCase(), mode: 'insensitive' as const } }
-  ]);
-
-  // Query all potential matching foods in one go
-  const allCandidateFoods = await prisma.food.findMany({
-    where: {
-      OR: searchConditions
-    },
-    take: unmappedIngredients.length * 10, // Get enough candidates for all ingredients
-    select: {
-      id: true,
-      name: true,
-      verification: true,
-      categoryId: true,
-      brand: true
+  // Extract core ingredient names and normalize them
+  // For ingredients like "1 cup fat free greek yogurt", extract "fat free greek yogurt"
+  // and normalize to "nonfat greek yogurt", then tokenize to ["nonfat", "greek", "yogurt"]
+  const ingredientSearchTerms = unmappedIngredients.map(ingredient => {
+    // Try to parse the ingredient line to extract just the name
+    // Reconstruct the full ingredient line: "1 cup fat free greek yogurt"
+    let ingredientLine: string;
+    if (ingredient.unit && ingredient.unit.trim()) {
+      ingredientLine = `${ingredient.qty} ${ingredient.unit} ${ingredient.name}`;
+    } else {
+      // If no unit, just use qty and name
+      ingredientLine = `${ingredient.qty} ${ingredient.name}`;
     }
+    
+    const parsed = parseIngredientLine(ingredientLine);
+    // Use parsed name if available, otherwise fall back to ingredient.name
+    // (in case ingredient.name is already clean like "fat free greek yogurt")
+    const coreName = parsed?.name || ingredient.name;
+    
+    // Normalize and tokenize like the search API does
+    const normalized = normalizeQuery(coreName);
+    const searchTokens = tokens(normalized);
+    
+    return {
+      ingredientId: ingredient.id,
+      originalName: ingredient.name,
+      coreName,
+      normalized,
+      searchTokens
+    };
   });
 
-  // Batch fetch aliases for all candidate foods
-  const foodIds = allCandidateFoods.map(f => f.id);
-  const aliasMap = await batchFetchAliases(foodIds);
+  // Build search queries for each ingredient using normalized tokens
+  // Each ingredient gets an AND query (all tokens must match) with OR conditions for name/brand/alias
+  const allCandidateFoodsMap = new Map<string, Array<{
+    id: string;
+    name: string;
+    brand: string | null;
+    source: string;
+    verification: string;
+    categoryId: string | null;
+    kcal100: number;
+    protein100: number;
+    carbs100: number;
+    fat100: number;
+    densityGml: number | null;
+    popularity: number;
+  }>>();
+  
+  // Process each ingredient separately to get better matches
+  for (const { ingredientId, searchTokens } of ingredientSearchTerms) {
+    if (searchTokens.length === 0) continue;
+    
+    // Build AND query: all tokens must match (in name OR brand OR alias)
+    const andORs = searchTokens.map(t => ({
+      OR: [
+        { name: { contains: t, mode: 'insensitive' as const } },
+        { brand: { contains: t, mode: 'insensitive' as const } },
+        { aliases: { some: { alias: { contains: t, mode: 'insensitive' as const } } } },
+      ]
+    }));
 
-  // Build a searchable index of foods with their aliases
-  type FoodWithAliases = typeof allCandidateFoods[0] & { aliases: string[] };
-  const foodsWithAliases: FoodWithAliases[] = allCandidateFoods.map(food => ({
-    ...food,
-    aliases: aliasMap.get(food.id) || []
-  }));
+    // Fetch full food data needed for ranking (same fields as search API)
+    const foods = await prisma.food.findMany({
+      where: {
+        AND: andORs
+      },
+      take: 50, // Get enough candidates per ingredient
+      select: {
+        id: true,
+        name: true,
+        brand: true,
+        source: true,
+        verification: true,
+        categoryId: true,
+        kcal100: true,
+        protein100: true,
+        carbs100: true,
+        fat100: true,
+        densityGml: true,
+        popularity: true,
+      }
+    });
+
+    allCandidateFoodsMap.set(ingredientId, foods);
+  }
+
+  // Collect all unique food IDs for batch alias and barcode fetching
+  const allFoodIds = new Set<string>();
+  for (const foods of allCandidateFoodsMap.values()) {
+    for (const food of foods) {
+      allFoodIds.add(food.id);
+    }
+  }
+
+  // Batch fetch aliases for all candidate foods
+  const aliasMap = await batchFetchAliases(Array.from(allFoodIds));
+  
+  // Batch fetch barcodes for all candidate foods (needed for ranking)
+  const barcodes = await prisma.barcode.findMany({
+    where: {
+      foodId: { in: Array.from(allFoodIds) }
+    },
+    select: {
+      foodId: true,
+      gtin: true
+    }
+  });
+  
+  // Build barcode map: foodId -> gtin[]
+  const barcodeMap = new Map<string, string[]>();
+  for (const barcode of barcodes) {
+    const existing = barcodeMap.get(barcode.foodId) || [];
+    existing.push(barcode.gtin);
+    barcodeMap.set(barcode.foodId, existing);
+  }
 
   let mappedCount = 0;
 
-  // Now match each ingredient against the batch-fetched foods
-  for (const ingredient of unmappedIngredients) {
-    // Filter foods that match this specific ingredient
-    const matchingFoods = filterMatchingFoods(ingredient.name, foodsWithAliases);
+  // Now match each ingredient against its candidate foods using the same ranking as manual search
+  for (const { ingredientId, originalName, coreName, normalized, searchTokens } of ingredientSearchTerms) {
+    const candidateFoods = allCandidateFoodsMap.get(ingredientId) || [];
     
-    // Find the best match using fuzzy matching (now includes alias matching)
-    const bestMatch = findBestMatch(ingredient.name, matchingFoods);
+    if (candidateFoods.length === 0) continue;
     
-    if (bestMatch) {
-      const confidence = calculateConfidence(ingredient.name, bestMatch.name, bestMatch.aliases);
+    // Build candidates in the format expected by rankCandidates
+    const candidates: Candidate[] = candidateFoods.map(food => ({
+      food: {
+        id: food.id,
+        name: food.name,
+        brand: food.brand,
+        source: food.source,
+        verification: food.verification as 'verified' | 'unverified' | 'suspect',
+        kcal100: food.kcal100,
+        protein100: food.protein100,
+        carbs100: food.carbs100,
+        fat100: food.fat100,
+        densityGml: food.densityGml,
+        categoryId: food.categoryId,
+        popularity: food.popularity,
+      },
+      aliases: aliasMap.get(food.id) || [],
+      barcodes: barcodeMap.get(food.id) || [],
+      usedByUserCount: 0, // TODO: could personalize later based on user history
+    }));
+
+    // Use the same ranking algorithm as manual search
+    const ranked = rankCandidates(candidates, {
+      query: coreName, // Use the core name (e.g., "skinless chicken breast")
+      kcalBand: kcalBandForQuery(coreName)
+    });
+
+    // Get the top-ranked candidate
+    const topCandidate = ranked[0];
+    
+    if (topCandidate && topCandidate.confidence > 0) {
+      // Confidence thresholds for auto-mapping
+      // Lower threshold for verified foods since they're more trustworthy
+      const minConfidence = topCandidate.candidate.food.verification === 'verified' ? 0.45 : 0.65;
       
-      // Higher confidence thresholds for auto-mapping
-      const minConfidence = bestMatch.verification === 'verified' ? 0.6 : 0.7;
-      
-      if (confidence >= minConfidence) {
+      if (topCandidate.confidence >= minConfidence) {
         try {
           if (FOOD_MAPPING_V2) {
             await prisma.ingredientFoodMap.create({
               data: {
-                ingredientId: ingredient.id,
-                foodId: bestMatch.id,
+                ingredientId: ingredientId,
+                foodId: topCandidate.candidate.food.id,
                 mappedBy: 'auto',
-                confidence,
+                confidence: topCandidate.confidence,
                 useOnce: false,
                 isActive: true,
               },
@@ -92,8 +208,8 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
             // Check if mapping already exists
             const existingMapping = await prisma.ingredientFoodMap.findFirst({
               where: {
-                ingredientId: ingredient.id,
-                foodId: bestMatch.id,
+                ingredientId: ingredientId,
+                foodId: topCandidate.candidate.food.id,
               },
             });
 
@@ -101,208 +217,43 @@ export async function autoMapIngredients(recipeId: string): Promise<number> {
               // Update existing mapping
               await prisma.ingredientFoodMap.update({
                 where: { id: existingMapping.id },
-                data: { confidence },
+                data: { confidence: topCandidate.confidence },
               });
             } else {
               // Create new mapping
               await prisma.ingredientFoodMap.create({
                 data: {
-                  ingredientId: ingredient.id,
-                  foodId: bestMatch.id,
-                  confidence,
+                  ingredientId: ingredientId,
+                  foodId: topCandidate.candidate.food.id,
+                  confidence: topCandidate.confidence,
                   mappedBy: 'auto',
                 },
               });
             }
           }
-          logger.info('autoMap:mapped', { ingredientId: ingredient.id, foodId: bestMatch.id, confidence });
+          logger.info('autoMap:mapped', { 
+            ingredientId, 
+            foodId: topCandidate.candidate.food.id, 
+            confidence: topCandidate.confidence, 
+            originalName, 
+            coreName,
+            foodName: topCandidate.candidate.food.name
+          });
           mappedCount++;
         } catch (err) {
-          logger.warn('autoMap:error-map', { ingredientId: ingredient.id, err: (err as Error).message });
+          logger.warn('autoMap:error-map', { ingredientId, err: (err as Error).message });
         }
+      } else {
+        logger.info('autoMap:skipped-low-confidence', {
+          ingredientId,
+          confidence: topCandidate.confidence,
+          minConfidence,
+          foodName: topCandidate.candidate.food.name
+        });
       }
     }
   }
 
   logger.info('autoMap:done', { recipeId, mappedCount, totalIngredients: ingredients.length, unmapped: unmappedIngredients.length });
   return mappedCount;
-}
-
-/**
- * Filter foods that match a given ingredient name
- * Considers both food name and aliases
- */
-function filterMatchingFoods(ingredientName: string, foods: Array<{ name: string; aliases: string[]; id: string; verification: string; categoryId: string | null; brand: string | null }>): typeof foods {
-  const ingredientLower = ingredientName.toLowerCase();
-  
-  return foods.filter(food => {
-    // Check food name
-    if (food.name.toLowerCase().includes(ingredientLower) || 
-        ingredientLower.includes(food.name.toLowerCase())) {
-      return true;
-    }
-    
-    // Check aliases
-    for (const alias of food.aliases) {
-      if (alias.toLowerCase().includes(ingredientLower) || 
-          ingredientLower.includes(alias.toLowerCase())) {
-        return true;
-      }
-    }
-    
-    return false;
-  }).slice(0, 5); // Limit to top 5 matches per ingredient
-}
-
-/**
- * Find the best matching food for an ingredient
- * Now checks both food name and aliases
- */
-function findBestMatch(ingredientName: string, foods: Array<{ name: string; aliases?: string[]; id: string; verification: string }>): typeof foods[0] | null {
-  if (foods.length === 0) return null;
-
-  const ingredientLower = ingredientName.toLowerCase();
-  
-  // 1. Exact match on food name (case-insensitive)
-  const exactMatch = foods.find(food => 
-    food.name.toLowerCase() === ingredientLower
-  );
-  if (exactMatch) return exactMatch;
-
-  // 2. Exact match on aliases
-  const exactAliasMatch = foods.find(food => 
-    (food.aliases || []).some(alias => alias.toLowerCase() === ingredientLower)
-  );
-  if (exactAliasMatch) return exactAliasMatch;
-
-  // 3. Handle common variations and synonyms
-  const variations = getIngredientVariations(ingredientName);
-  
-  for (const variation of variations) {
-    const match = foods.find(food => {
-      const nameLower = food.name.toLowerCase();
-      const varLower = variation.toLowerCase();
-      
-      // Check name
-      if (nameLower.includes(varLower) || varLower.includes(nameLower)) {
-        return true;
-      }
-      
-      // Check aliases
-      return (food.aliases || []).some(alias => {
-        const aliasLower = alias.toLowerCase();
-        return aliasLower.includes(varLower) || varLower.includes(aliasLower);
-      });
-    });
-    if (match) return match;
-  }
-
-  // 4. Partial match on name (contains)
-  const partialMatch = foods.find(food => 
-    food.name.toLowerCase().includes(ingredientLower) ||
-    ingredientLower.includes(food.name.toLowerCase())
-  );
-  if (partialMatch) return partialMatch;
-
-  // 5. Partial match on aliases
-  const partialAliasMatch = foods.find(food =>
-    (food.aliases || []).some(alias => {
-      const aliasLower = alias.toLowerCase();
-      return aliasLower.includes(ingredientLower) || ingredientLower.includes(aliasLower);
-    })
-  );
-  
-  return partialAliasMatch || null;
-}
-
-/**
- * Get common variations and synonyms for ingredient names
- */
-function getIngredientVariations(name: string): string[] {
-  const variations: string[] = [];
-  const lower = name.toLowerCase();
-  
-  // Common food variations
-  const synonyms: Record<string, string[]> = {
-    'greek yogurt': ['greek yoghurt', 'yogurt', 'yoghurt'],
-    'almonds': ['almond'],
-    'oats': ['oat', 'rolled oats', 'oatmeal'],
-    'banana': ['bananas'],
-    'chicken breast': ['chicken', 'chicken breast meat'],
-    'ground turkey': ['turkey', 'ground turkey meat'],
-    'salmon': ['salmon fillet', 'salmon fish'],
-    'eggs': ['egg'],
-    'cottage cheese': ['cottage'],
-    'whey protein': ['protein powder', 'whey'],
-    'brown rice': ['rice'],
-    'white rice': ['rice'],
-    'sweet potato': ['sweet potatoes', 'yam'],
-    'quinoa': ['quinoa grain'],
-    'avocado': ['avocados'],
-    'olive oil': ['olive'],
-    'coconut oil': ['coconut'],
-    'broccoli': ['broccoli florets'],
-    'spinach': ['spinach leaves'],
-    'carrots': ['carrot'],
-    'milk': ['dairy milk'],
-    'cheddar cheese': ['cheddar', 'cheese']
-  };
-
-  // Add the original name
-  variations.push(name);
-  
-  // Add synonyms
-  for (const [key, values] of Object.entries(synonyms)) {
-    if (lower.includes(key) || key.includes(lower)) {
-      variations.push(...values);
-    }
-  }
-
-  return [...new Set(variations)]; // Remove duplicates
-}
-
-/**
- * Calculate confidence score for a match
- * Now considers aliases for better matching
- */
-function calculateConfidence(ingredientName: string, foodName: string, aliases: string[] = []): number {
-  const ingredient = ingredientName.toLowerCase();
-  const food = foodName.toLowerCase();
-  
-  // Exact match on food name
-  if (ingredient === food) return 1.0;
-  
-  // Exact match on alias
-  if (aliases.some(alias => alias.toLowerCase() === ingredient)) return 0.95;
-  
-  // Contains match on food name
-  if (food.includes(ingredient) || ingredient.includes(food)) return 0.9;
-  
-  // Contains match on alias
-  if (aliases.some(alias => {
-    const aliasLower = alias.toLowerCase();
-    return aliasLower.includes(ingredient) || ingredient.includes(aliasLower);
-  })) {
-    return 0.85;
-  }
-  
-  // Partial match based on common words
-  const commonWords = ingredient.split(' ').filter(word => 
-    food.includes(word) && word.length > 2
-  );
-  
-  // Check for common words in aliases too
-  const aliasCommonWords = aliases.flatMap(alias => 
-    ingredient.split(' ').filter(word => 
-      alias.toLowerCase().includes(word) && word.length > 2
-    )
-  );
-  
-  const totalCommonWords = commonWords.length + aliasCommonWords.length;
-  
-  if (totalCommonWords > 0) {
-    return Math.min(0.8, 0.5 + (totalCommonWords * 0.1));
-  }
-  
-  return 0.5; // Default confidence for any match
 }

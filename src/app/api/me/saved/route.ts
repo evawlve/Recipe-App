@@ -31,7 +31,11 @@ export async function GET(request: NextRequest) {
               avatarKey: true 
             }
           }, 
-          photos: { select: { id: true, s3Key: true, width: true, height: true }, take: 1 } 
+          photos: { 
+            select: { id: true, s3Key: true, width: true, height: true, isMainPhoto: true }, 
+            take: 1,
+            orderBy: [{ isMainPhoto: 'desc' }, { id: 'asc' }]
+          } 
         }
       }),
       prisma.collectionRecipe.count({ where: { collectionId: savedCollectionId } })

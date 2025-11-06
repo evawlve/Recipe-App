@@ -66,10 +66,11 @@ export async function POST(request: Request) {
           })),
         },
         photos: {
-          create: validatedData.photos.map(photo => ({
+          create: validatedData.photos.map((photo, index) => ({
             s3Key: photo.s3Key,
             width: photo.width,
             height: photo.height,
+            isMainPhoto: index === 0, // First photo is the main photo
           })),
         },
       },

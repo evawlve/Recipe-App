@@ -106,8 +106,8 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
 
       const payload = {
         ...data,
-        // Note: We're not sending photos in the PATCH request
-        // Photos are handled separately via the ImageUploader
+        // Include newly uploaded photos if any
+        ...(newPhotos.length > 0 ? { photos: newPhotos } : {})
       };
 
       const response = await fetch(`/api/recipes/${recipeId}`, {
@@ -297,7 +297,7 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
                   </label>
                   <Input
                     {...register(`ingredients.${index}.unit`)}
-                    placeholder="cup, tbsp, etc."
+                    placeholder="cup, tbsp, g, oz (or blank for count)"
                     className={errors.ingredients?.[index]?.unit ? "border-destructive" : ""}
                   />
                   {errors.ingredients?.[index]?.unit && (

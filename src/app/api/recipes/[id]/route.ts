@@ -298,6 +298,30 @@ export async function PATCH(
       }
     }
 
+    // Handle photos update if provided
+    if (validatedData.photos !== undefined && validatedData.photos.length > 0) {
+      // Get the first existing photo to check if it's the main photo
+      const existingMainPhoto = await prisma.photo.findFirst({
+        where: { recipeId: id, isMainPhoto: true }
+      });
+      
+      // If no main photo exists yet, mark the first new photo as main
+      const shouldSetFirstAsMain = !existingMainPhoto;
+      
+      for (let i = 0; i < validatedData.photos.length; i++) {
+        const photo = validatedData.photos[i];
+        await prisma.photo.create({
+          data: {
+            recipeId: id,
+            s3Key: photo.s3Key,
+            width: photo.width,
+            height: photo.height,
+            isMainPhoto: shouldSetFirstAsMain && i === 0,
+          }
+        });
+      }
+    }
+
     // Auto-map any new ingredients to foods and compute nutrition
     // Only run auto-mapping if ingredients were actually changed
     if (validatedData.ingredients !== undefined) {

@@ -40,7 +40,12 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
           s3Key: true,
           width: true,
           height: true,
+          isMainPhoto: true,
         },
+        orderBy: [
+          { isMainPhoto: 'desc' },
+          { id: 'asc' }
+        ],
       },
       nutrition: {
         select: {
