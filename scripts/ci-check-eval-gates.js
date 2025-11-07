@@ -83,9 +83,13 @@ function main() {
   const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
   const baseline = getBaseline(baselineDir);
   
-  // Extract metrics
-  const currentPAt1 = report.metrics?.pAt1 || report.pAt1 || report.precisionAt1;
-  const currentMAE = report.metrics?.mae || report.mae || report.meanAbsoluteError;
+  // Extract metrics (handle 0 values correctly)
+  const currentPAt1 = report.metrics?.pAt1 !== undefined 
+    ? report.metrics.pAt1 
+    : (report.pAt1 !== undefined ? report.pAt1 : report.precisionAt1);
+  const currentMAE = report.metrics?.mae !== undefined
+    ? report.metrics.mae
+    : (report.mae !== undefined ? report.mae : report.meanAbsoluteError);
   
   if (currentPAt1 === undefined || currentMAE === undefined) {
     console.error('❌ Report missing required metrics (pAt1, mae)');
