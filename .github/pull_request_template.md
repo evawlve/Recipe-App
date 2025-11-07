@@ -32,7 +32,7 @@ feat(parser): add range parsing for 1½–2 tsp
 
 ## Validation (must pass locally or via CI artifacts)
 
-- [ ] **Eval suite**: `npx ts-node eval/run.ts` (no P@1 drop > 1.5pp, no MAE increase > 2g)
+- [ ] **Eval suite**: `npm run eval` (no P@1 drop > 1.5pp, no MAE increase > 2g)
   - [ ] Attach `reports/eval-*.json`
 - [ ] **Parser tests**: `npm test src/lib/parse` (core + property)
 - [ ] **Parser bench**: `npm run parser:bench` (target p95 < 0.5 ms/line)

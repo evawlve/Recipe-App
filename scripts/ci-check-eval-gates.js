@@ -68,7 +68,7 @@ function main() {
   
   // Check gates
   const pAt1Drop = baseline.pAt1 - currentPAt1;
-  const maeIncrease = currentMAE - baseline.maE;
+  const maeIncrease = currentMAE - baseline.mae;
   
   let failed = false;
   
