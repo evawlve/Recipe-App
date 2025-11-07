@@ -30,6 +30,7 @@
     "rollup:interactions": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/rollup-interactions.ts",
     "migrate:smoke": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/migrate-smoke.ts",
     "parser:bench": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/parser-bench.ts",
+    "eval": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register eval/run.ts",
     "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts",
     "test:fdc-api": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-fdc-api.ts"
   },
