@@ -132,6 +132,7 @@ parseIngredientLine('')
 
 ### State Qualifiers
 - `fresh`, `frozen`, `dried`, `canned`
+- **Cooked state qualifiers** (for Sprint 3 readiness): `raw`, `cooked`, `uncooked`, `boiled`, `baked`, `grilled`, `drained`
 
 ### Form Qualifiers
 - `whole`, `halved`, `quartered`
@@ -159,23 +160,37 @@ The parser is designed to never throw errors. Instead, it returns `null` for inv
 - Empty strings → `null`
 - Whitespace-only strings → `null`
 - Separator lines (`---`, `===`) → `null`
-- "To taste" phrases → `null`
+- "To taste" phrases → `null` (explicitly rejected, not parsed)
 - Non-ingredient text → `null`
+
+### Special Cases
+
+**"To taste" handling:**
+- Phrases containing "to taste" return `null` (not parsed)
+- This is intentional - "to taste" is not a quantifiable ingredient
+
+**Pinch/Dash handling:**
+- `pinch` and `dash` are recognized as volume units
+- Parsed with `qty: 1` (default) when no quantity specified
+- Example: `pinch of salt` → `{ qty: 1, unit: 'pinch', name: 'salt' }`
+- Grams conversion will be handled in Sprint 3 via heuristic or override tables
 
 ## Return Type
 
 ```typescript
 type ParsedIngredient = {
-  qty: number;              // Quantity (always present, defaults to 1)
+  qty: number;              // Quantity (always present, defaults to 1 for units like "pinch")
   multiplier: number;       // Multiplier for "x" patterns (defaults to 1)
-  unit?: string | null;     // Normalized unit (e.g., 'cup', 'tbsp', 'g')
+  unit?: string | null;     // Normalized unit (e.g., 'cup', 'tbsp', 'g', 'pinch')
   rawUnit?: string | null; // Original unit string (if different from normalized)
   name: string;            // Ingredient name (always present)
   notes?: string | null;   // Optional notes
-  qualifiers?: string[];   // Extracted qualifiers
+  qualifiers?: string[];   // Extracted qualifiers (e.g., ['large', 'diced', 'optional'])
   unitHint?: string | null; // Unit hint (e.g., 'yolk', 'clove', 'leaf')
 }
 ```
+
+**Note on `qty`:** The quantity is always a number. For phrases like "to taste", the parser returns `null` (not parsed). For units like "pinch" without an explicit quantity, `qty` defaults to `1`.
 
 ## Unicode Support
 
@@ -185,6 +200,62 @@ The parser normalizes various unicode spaces:
 - Non-breaking space (`\u00A0`) → regular space
 - En quad (`\u2000`) → regular space
 - Em quad (`\u2001`) → regular space
+
+## Normalization Order
+
+The parser applies transformations in the following order:
+
+1. **Unicode normalization** → Convert unicode spaces to regular spaces
+2. **Whitespace normalization** → Trim and normalize whitespace
+3. **Quantity parsing** → Extract and parse numeric quantities (fractions, ranges)
+4. **Unit extraction** → Identify and normalize units
+5. **Name extraction** → Extract core ingredient name
+6. **Qualifier extraction** → Extract qualifiers from name and parentheses
+7. **Unit hint extraction** → Extract unit hints (yolk, clove, leaf, etc.)
+
+## Locale and Edge Cases
+
+### Decimal Separators
+
+- **Comma decimals**: Currently not supported (e.g., `1,5 cup` will not parse as 1.5)
+- **Behavior**: Reject explicitly - comma decimals are not parsed
+- **Future**: May add locale support in Sprint 4
+
+### Trailing Periods
+
+- **Units with periods**: `tsp.` and `tbsp.` are normalized to `tsp` and `tbsp`
+- Example: `2 tsp. salt` → `{ qty: 2, unit: 'tsp', name: 'salt' }`
+
+### Unit Plural Irregulars
+
+- **Irregular plurals**: Handled correctly
+- Examples:
+  - `leaves` → normalized to `leaf` (unit hint)
+  - `whites` → normalized to `white` (unit hint)
+  - `yolks` → normalized to `yolk` (unit hint)
+
+### Approximate Quantities
+
+- **"About/approx"**: Currently parsed as qualifier
+- Examples:
+  - `about 2 cups flour` → `{ qty: 2, unit: 'cup', qualifiers: ['about'], name: 'flour' }`
+  - `~2 cups flour` → `{ qty: 2, unit: 'cup', qualifiers: ['approx'], name: 'flour' }`
+- **Note**: Quantity remains `2`; qualifier indicates approximation (useful for UI badges)
+
+### Optional Ingredients
+
+- **"Optional" qualifier**: Extracted from parentheses or comma-separated lists
+- Example: `salt (optional)` → `{ qty: 1, qualifiers: ['optional'], name: 'salt' }`
+- **Use case**: UI can display optional badge
+
+### State/Cooked Qualifiers
+
+The parser recognizes state/cooked qualifiers for future Sprint 3 readiness:
+
+- **Raw state**: `raw`, `uncooked`
+- **Cooked state**: `cooked`, `boiled`, `baked`, `grilled`, `drained`
+- **Example**: `2 cups cooked rice` → `{ qty: 2, unit: 'cup', qualifiers: ['cooked'], name: 'rice' }`
+- **Future use**: Sprint 3 will use these qualifiers to boost the correct FoodUnit (cooked vs uncooked)
 
 ## Before/After Examples
 
@@ -244,4 +315,24 @@ Run tests:
 ```bash
 npm test src/lib/parse
 ```
+
+## Performance
+
+### Benchmark Target
+
+- **Target**: p95 < 0.5 ms/line on dev box
+- **Benchmark script**: `scripts/parser-bench.ts`
+- **Reports**: `reports/parser-bench-YYYYMMDD.json`
+
+Run benchmark:
+```bash
+npm run parser:bench
+```
+
+### Telemetry Hooks
+
+The parser includes debug metrics (counters) for:
+- When `unitHint` is set
+- When parser falls back to default quantity
+- These metrics are cheap and help with Sprint 3/Sprint 4 tuning
 

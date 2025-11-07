@@ -24,11 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Versioned gold dataset: `eval/gold.v1.csv` (100 test cases)
   - Covers all food categories: eggs, proteins, vegetables, grains, oils
   - Immutable versioning system for tracking improvements
+  - CSV schema includes: raw_line, expected_food_name, expected_grams, expected_source, expected_source_tier, form, unit_type, difficulty, expected_food_id_hint, expected_unit_hint
+  - Stratified by form (raw/cooked/canned/prepared), unit type (piece/leaf/clove/volume/mass), cuisine tags
+  - Difficulty distribution: ~60% easy, ~30% medium, ~10% hard
+  - Future expansion plan: Sprint 2 (+150 cases → gold.v2), Sprint 4 (+100 → gold.v3), Sprint 5 (+100 branded → gold.v4), Sprint 7 (+50 → gold.v5)
+  - Documentation: `docs/eval.md`
 
 - **Evaluation Harness** (S0.3)
   - Automated testing script: `eval/run.ts`
   - Generates evaluation reports: `reports/eval-baseline-YYYYMMDD.json`
   - Metrics tracked: P@1 (precision at 1), MAE (mean absolute error), provisional rate
+  - CI integration: Exit gate fails PR if P@1 drops >1.5% or MAE increases >2g (when ENABLE_PORTION_V2=false)
 
 - **DB Audit Script** (S0.2)
   - Database coverage analysis: `scripts/audit-db-coverage.ts`
@@ -49,16 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sources**: usda=3500, template=76, community=9
 - **Top Categories**: meat (1202), dairy (327), rice_uncooked (112), fruit (98), veg (79), legume (61), sauce (53), oil (49), flour (47), sugar (24)
 - **Top Unit Labels**: "1 cup, diced" (1179), "1 cup" (292), "1 tbsp" (218), "1 tsp" (73)
-
-##### USDA Saturation System
-
-- **USDA Data Import** (S0.1)
-  - Bulk import system for USDA foods
-  - Deduplication with canonical names and macro fingerprints
-  - Category mapping from USDA categories to app categories
-  - Keyword-based saturation sweep
-  - Files: `scripts/usda-saturate.ts`, `src/ops/usda/config.ts`, `src/ops/usda/category-map.ts`, `src/ops/usda/dedupe.ts`
-  - Documentation: `docs/USDA_SATURATION_README.md`
 
 #### Findings
 
