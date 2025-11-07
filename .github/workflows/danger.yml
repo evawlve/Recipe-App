@@ -1,0 +1,25 @@
+name: Danger
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  danger:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Danger needs full git history
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - run: npm ci
+      
+      - run: npx danger ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

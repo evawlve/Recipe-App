@@ -1,12 +1,14 @@
-name: Migrate Smoke
+name: Eval Main Baseline
 
 on:
-  pull_request:
-    paths:
-      - "prisma/**"
+  push:
+    branches: [main, master]
+  schedule:
+    # Run nightly to keep baseline fresh
+    - cron: '0 2 * * *'
 
 jobs:
-  migrate-smoke:
+  baseline:
     runs-on: ubuntu-latest
     
     services:
@@ -26,6 +28,7 @@ jobs:
     
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      NODE_ENV: test
     
     steps:
       - uses: actions/checkout@v4
@@ -40,5 +43,11 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
       
-      - run: npm run migrate:smoke
+      - run: npm run eval
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-baseline
+          path: reports/*.json
+          retention-days: 30
 

@@ -37,8 +37,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: "npm"
       
       - run: npm ci
+      
+      - name: Prisma generate
+        run: npx prisma generate
       
       - name: Run parser tests
         run: npm test src/lib/parse
@@ -46,8 +50,18 @@ jobs:
       - name: Run eval suite
         run: npm run eval
       
+      - name: Download baseline from main
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: eval-baseline
+          path: baseline
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: eval-main.yml
+          commit: ${{ github.event.pull_request.base.sha }}
+        continue-on-error: true
+      
       - name: Check gates
-        run: node scripts/ci-check-eval-gates.js
+        run: node scripts/ci-check-eval-gates.js --baselineDir=baseline
       
       - uses: actions/upload-artifact@v4
         with:

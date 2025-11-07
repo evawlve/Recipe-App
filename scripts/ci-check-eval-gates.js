@@ -32,11 +32,32 @@ function findLatestEvalReport() {
   return path.join(reportsDir, files[0]);
 }
 
-// Load baseline from main/master branch (if available)
-// For now, we'll use a hardcoded baseline or compare against previous run
-function getBaseline() {
-  // In CI, we could fetch from main branch artifact
-  // For now, use Sprint 0 baseline as reference
+// Load baseline from main/master branch artifact or fallback to Sprint 0 baseline
+function getBaseline(baselineDir) {
+  // Try to load from downloaded baseline artifact
+  if (baselineDir && fs.existsSync(baselineDir)) {
+    const baselinePath = path.join(baselineDir, 'eval-baseline-*.json');
+    const files = glob.sync(baselinePath);
+    
+    if (files.length > 0) {
+      const latest = files.sort().reverse()[0];
+      try {
+        const baselineReport = JSON.parse(fs.readFileSync(latest, 'utf8'));
+        const pAt1 = baselineReport.metrics?.pAt1 || baselineReport.pAt1 || baselineReport.precisionAt1;
+        const mae = baselineReport.metrics?.mae || baselineReport.mae || baselineReport.meanAbsoluteError;
+        
+        if (pAt1 !== undefined && mae !== undefined) {
+          console.log(`📊 Using baseline from main branch artifact`);
+          return { pAt1, mae };
+        }
+      } catch (error) {
+        console.warn(`⚠️  Could not parse baseline artifact: ${error.message}`);
+      }
+    }
+  }
+  
+  // Fallback to Sprint 0 baseline
+  console.log(`📊 Using Sprint 0 hardcoded baseline (artifact not available)`);
   return {
     pAt1: 47.0,  // Sprint 0 baseline
     mae: 114.9   // Sprint 0 baseline
@@ -46,11 +67,21 @@ function getBaseline() {
 function main() {
   console.log('🔍 Checking eval gates...\n');
   
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  let baselineDir = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--baselineDir' && i + 1 < args.length) {
+      baselineDir = args[i + 1];
+      break;
+    }
+  }
+  
   const reportPath = findLatestEvalReport();
   console.log(`📄 Reading report: ${path.basename(reportPath)}\n`);
   
   const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-  const baseline = getBaseline();
+  const baseline = getBaseline(baselineDir);
   
   // Extract metrics
   const currentPAt1 = report.metrics?.pAt1 || report.pAt1 || report.precisionAt1;
