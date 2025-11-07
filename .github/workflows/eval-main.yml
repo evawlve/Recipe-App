@@ -43,6 +43,9 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
       
+      - name: Run migrations
+        run: npx prisma migrate deploy
+      
       - run: npm run eval
       
       - uses: actions/upload-artifact@v4
