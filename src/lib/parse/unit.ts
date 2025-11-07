@@ -42,11 +42,22 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'bar': 'bar', 'bars': 'bar',
     'scoop': 'scoop', 'scoops': 'scoop',
     'slice': 'slice', 'slices': 'slice',
-    'egg': 'egg', 'eggs': 'egg'
+    'egg': 'egg', 'eggs': 'egg',
+    'can': 'can', 'cans': 'can'
   };
 
   if (countUnits[token]) {
     return { kind: 'count', unit: countUnits[token] };
+  }
+
+  // Small volume units (pinch, dash, etc.)
+  const smallVolumeUnits: Record<string, string> = {
+    'pinch': 'pinch', 'pinches': 'pinch',
+    'dash': 'dash', 'dashes': 'dash'
+  };
+
+  if (smallVolumeUnits[token]) {
+    return { kind: 'volume', unit: smallVolumeUnits[token] };
   }
 
   // Multipliers

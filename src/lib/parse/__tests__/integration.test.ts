@@ -89,13 +89,13 @@ test('end-to-end: parse unicode fraction', () => {
 });
 
 test('end-to-end: fallback when no match found', () => {
-  // Parse an ingredient with unknown unit
+  // Parse an ingredient with unknown unit (now part of name)
   const parsed = parseIngredientLine('1 mystery protein bar');
   expect(parsed).not.toBeNull();
   expect(parsed!.qty).toBeCloseTo(1);
   expect(parsed!.unit).toBeNull();
-  expect(parsed!.rawUnit).toBe('mystery');
-  expect(parsed!.name).toBe('protein bar');
+  expect(parsed!.rawUnit).toBeNull();
+  expect(parsed!.name).toBe('mystery protein bar');
 
   // Resolve grams using fallback serving option
   const servingOptions = [

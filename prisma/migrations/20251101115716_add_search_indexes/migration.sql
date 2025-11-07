@@ -17,5 +17,5 @@ ON "User" USING GIN (LOWER("displayName") gin_trgm_ops);
 -- Note: GIN index on RecipeTag.tagId already exists via @@index([tagId])
 -- Adding composite index for efficient tag filtering with recipe joins
 CREATE INDEX IF NOT EXISTS recipe_tag_composite_idx 
-ON "RecipeTag" (tagId, recipeId);
+ON "RecipeTag" ("tagId", "recipeId");
 

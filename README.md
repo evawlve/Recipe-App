@@ -640,6 +640,7 @@ npm run similar:build           # Build recipe similarity graph from co-view dat
 | `FDC_API_KEY` | FoodData Central API key (get free key at https://fdc.nal.usda.gov/api-key-signup.html) | ❌ |
 | `FDC_RATE_LIMIT_PER_HOUR` | FDC API rate limit (default: 1000 requests/hour) | ❌ |
 | `ENABLE_BRANDED_SEARCH` | Feature flag for branded-only search (default: false) | ❌ |
+| `ENABLE_PORTION_V2` | Feature flag for Portion V2 resolution using PortionOverride tables (default: false) | ❌ |
 
 ### **FDC API Setup**
 
