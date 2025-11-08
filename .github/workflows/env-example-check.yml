@@ -1,0 +1,25 @@
+name: Env Example Parity
+
+on:
+  pull_request:
+    paths:
+      - ".env.example"
+      - "src/**"
+      - ".env*"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - run: npm ci
+      
+      - name: Check .env.example parity
+        run: node scripts/check-env-example.js
+

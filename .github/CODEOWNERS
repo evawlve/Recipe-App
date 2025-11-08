@@ -1,0 +1,19 @@
+# Parser
+/src/lib/parse/ @evawlve
+
+# Nutrition resolver
+/src/lib/nutrition/ @evawlve
+
+# DB & Prisma
+/prisma/ @evawlve
+
+# Eval & scripts
+/eval/ @evawlve
+/scripts/ @evawlve
+
+# Documentation
+/docs/ @evawlve
+
+# CI & workflows
+/.github/ @evawlve
+

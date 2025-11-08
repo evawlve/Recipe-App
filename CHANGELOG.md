@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Sprint 0: Audit, Baseline & FDC API Setup (3-5 days)
+
+#### Added
+
+##### FDC API Infrastructure
+
+- **FDC API Client** (S0.1)
+  - Rate-limited API client with LRU caching
+  - Supports branded food search via FDC API
+  - Rate limiting: 10 requests/second, 1000 requests/hour
+  - Cache hit rate >80% for repeated queries
+  - File: `src/lib/usda/fdc-api.ts`
+
+- **Gold Evaluation Dataset** (S0.3)
+  - Versioned gold dataset: `eval/gold.v1.csv` (100 test cases)
+  - Covers all food categories: eggs, proteins, vegetables, grains, oils
+  - Immutable versioning system for tracking improvements
+  - CSV schema includes: raw_line, expected_food_name, expected_grams, expected_source, expected_source_tier, form, unit_type, difficulty, expected_food_id_hint, expected_unit_hint
+  - Stratified by form (raw/cooked/canned/prepared), unit type (piece/leaf/clove/volume/mass), cuisine tags
+  - Difficulty distribution: ~60% easy, ~30% medium, ~10% hard
+  - Future expansion plan: Sprint 2 (+150 cases → gold.v2), Sprint 4 (+100 → gold.v3), Sprint 5 (+100 branded → gold.v4), Sprint 7 (+50 → gold.v5)
+  - Documentation: `docs/eval.md`
+
+- **Evaluation Harness** (S0.3)
+  - Automated testing script: `eval/run.ts`
+  - Generates evaluation reports: `reports/eval-baseline-YYYYMMDD.json`
+  - Metrics tracked: P@1 (precision at 1), MAE (mean absolute error), provisional rate
+  - CI integration: Exit gate fails PR if P@1 drops >1.5% or MAE increases >2g (when ENABLE_PORTION_V2=false)
+
+- **DB Audit Script** (S0.2)
+  - Database coverage analysis: `scripts/audit-db-coverage.ts`
+  - Generates audit reports: `reports/db-audit-YYYYMMDD.md`
+  - Tracks food counts, unit coverage, category distribution
+
+##### Baseline Metrics
+
+- **Mapping P@1**: 47.0% (baseline precision at rank 1)
+- **Portion MAE**: 114.9 g (mean absolute error for portion resolution)
+- **Provisional Rate**: 32.0% (fallback to assumed serving)
+
+##### Database Coverage
+
+- **Foods**: 3,585 total
+- **Units**: 1,882 total
+- **Barcodes**: 0 (GTIN coverage not yet populated)
+- **Sources**: usda=3500, template=76, community=9
+- **Top Categories**: meat (1202), dairy (327), rice_uncooked (112), fruit (98), veg (79), legume (61), sauce (53), oil (49), flour (47), sugar (24)
+- **Top Unit Labels**: "1 cup, diced" (1179), "1 cup" (292), "1 tbsp" (218), "1 tsp" (73)
+
+#### Findings
+
+- **Top Gaps Identified**:
+  - GTINs: 0 barcodes — branded dedupe/verification will need GTINs (planned Sprint 5)
+  - Portions: Many misses on cooked vs uncooked and volume→grams resolution; needs overrides and unit-hint plumbing
+  - Ranking: Candidate ranking favors uncooked variants in some grains/veg; needs cooked-state boosting and category priors
+  - Branded coverage: Smoke tests pass; leave flag off until Sprint 5 on-demand path
+  - Synonyms/International variants: Not yet addressed (planned Sprint 4)
+
+- **Risks Identified**:
+  - Over-reliance on density fallback inflates MAE
+  - Missing GTINs will hinder branded QA until seeded
+  - Gold drift: without ID/regex hints, name changes can break P@1; mitigated via expected_food_id_hint
+
+#### Technical Details
+
+- **Files Created**
+  - `src/lib/usda/fdc-api.ts` - FDC API client with rate limiting and caching
+  - `eval/gold.v1.csv` - Gold evaluation dataset (100 cases)
+  - `eval/run.ts` - Evaluation harness
+  - `scripts/audit-db-coverage.ts` - DB audit script
+  - `reports/eval-baseline-20251106.json` - Baseline metrics report
+  - `reports/db-audit-20251106.md` - DB coverage report
+  - `docs/Sprint_0_Report.md` - Sprint 0 completion report
+
+- **Environment Variables**
+  - `FDC_API_KEY` - FDC API key (required for branded search)
+  - `FDC_RATE_LIMIT_PER_HOUR` - Rate limit configuration (default: 1000)
+  - `ENABLE_BRANDED_SEARCH` - Feature flag for branded search (default: false)
+
 ### Sprint 1: Parser Enhancement + Schema (Week 1)
 
 #### Added
@@ -86,7 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ##### Documentation
 
 - **Parser Documentation** (S1.8)
-  - Comprehensive parser documentation in `docs/parser.md`
+  - Comprehensive parser documentation in `docs/s1-parser.md`
   - Examples of all supported formats
   - Lists of recognized qualifiers and unit hints
   - Before/after examples showing improvements
@@ -129,7 +208,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `src/lib/parse/__tests__/ingredient-line-core.test.ts` - Core test suite
   - `src/lib/parse/__tests__/ingredient-line-property.test.ts` - Property-based tests
   - `src/lib/flags.test.ts` - Feature flag tests
-  - `docs/parser.md` - Parser documentation
+  - `docs/s1-parser.md` - Parser documentation
   - `CHANGELOG.md` - This file
 
 - **Migrations**
