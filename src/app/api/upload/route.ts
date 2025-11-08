@@ -101,6 +101,10 @@ export async function POST(req: NextRequest) {
 
     let url, fields;
     try {
+      // @ts-ignore - Type mismatch between @aws-sdk/client-s3 and @aws-sdk/s3-presigned-post's
+      // nested dependency. Both are version 3.927.0 but TypeScript sees them as different types
+      // due to nested node_modules structure. The override in package.json should resolve this,
+      // but we use @ts-ignore as a safety net for CI environments where overrides may not apply.
       const presignedResult = await createPresignedPost(s3, {
         Bucket: bucket,
         Key: key,
