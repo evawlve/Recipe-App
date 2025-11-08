@@ -21,6 +21,9 @@ docs/
 - **[Sprint 0 Report](Sprint_0_Report.md)** — Baseline metrics, FDC API setup, and database audit
 - **[Sprint 1 Parser Documentation](s1-parser.md)** — Ingredient parser documentation with examples
 
+### Evaluation System
+- **[Evaluation System](eval.md)** — Gold dataset, evaluation harness, and CI integration
+
 ### Sprint Workflow Guides
 All sprint-related guides are in [`sprints/`](./sprints/):
 
@@ -30,8 +33,8 @@ All sprint-related guides are in [`sprints/`](./sprints/):
 
 ## 🔧 Feature Documentation
 
-- **[USDA Saturation System](USDA_SATURATION_README.md)** — USDA data import and saturation system
-- **[USDA Saturation Success](USDA_SATURATION_SUCCESS.md)** — Implementation success report
+- **[USDA Saturation System](USDA_SATURATION_README.md)** — USDA data import and saturation system (v1 implementation, before sprints 0-9)
+- **[USDA Saturation Success](USDA_SATURATION_SUCCESS.md)** — Implementation success report (v1 implementation, before sprints 0-9)
 - **[Main Photo Feature](MAIN_PHOTO_FEATURE.md)** — Recipe main photo selection feature
 
 ## Quick Links
