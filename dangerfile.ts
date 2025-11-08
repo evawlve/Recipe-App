@@ -1,7 +1,13 @@
 import { danger, fail, warn } from "danger";
 
 const changed = danger.git.modified_files.concat(danger.git.created_files);
-const parserTouched = changed.some(f => f.startsWith("src/lib/parse/"));
+// Exclude test files from parser detection to avoid false positives
+const parserTouched = changed.some(
+  f =>
+    f.startsWith("src/lib/parse/") &&
+    !f.startsWith("src/lib/parse/__tests__/") &&
+    !f.endsWith(".test.ts")
+);
 const testsTouched = changed.some(f =>
   f.startsWith("src/lib/parse/__tests__/") || f.endsWith(".test.ts")
 );
