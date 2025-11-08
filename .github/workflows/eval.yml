@@ -52,7 +52,7 @@ jobs:
         run: npm run usda:saturate:mini
       
       - name: Verify database seeding
-        run: ts-node --project tsconfig.scripts.json --transpile-only scripts/verify-seeding.ts
+        run: npm run verify:seeding
       
       - name: Run parser tests
         run: npm test src/lib/parse
