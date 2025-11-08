@@ -23,6 +23,8 @@
     "seed:curated:batch": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/seed-curated-batch.ts",
     "lint:pack": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/lint-curated-pack.ts",
     "usda:saturate": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/usda-saturate.ts",
+    "usda:saturate:mini": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/usda-saturate.ts --files=./data/usda/foundation-mini.json,./data/usda/sr-legacy-mini.json",
+    "usda:saturate:both": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/usda-saturate.ts --files=./data/usda/fdc.json",
     "aliases:backfill": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/aliases-backfill.ts",
     "aliases:backfill:fast": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/aliases-backfill-fast.ts",
     "seed:tags": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register prisma/seeds/tags.seed.ts",
