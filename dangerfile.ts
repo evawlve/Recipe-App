@@ -9,7 +9,8 @@ const parserTouched = changed.some(
     !f.endsWith(".test.ts")
 );
 const testsTouched = changed.some(f =>
-  f.startsWith("src/lib/parse/__tests__/") || f.endsWith(".test.ts")
+  f.startsWith("src/lib/parse/__tests__/") ||
+  (f.startsWith("src/lib/parse/") && f.endsWith(".test.ts"))
 );
 
 if (parserTouched && !testsTouched) {
