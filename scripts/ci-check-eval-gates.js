@@ -57,11 +57,11 @@ function getBaseline(baselineDir) {
     }
   }
   
-  // Fallback to Sprint 0 baseline
-  console.log(`📊 Using Sprint 0 hardcoded baseline (artifact not available)`);
+  // Fallback to hardcoded baseline (updated baseline with 1493 foods)
+  console.log(`📊 Using hardcoded baseline (artifact not available)`);
   return {
-    pAt1: 47.0,  // Sprint 0 baseline
-    mae: 114.9   // Sprint 0 baseline
+    pAt1: 38.0,  // Updated baseline (1493 foods in database)
+    mae: 114.0   // Updated baseline (1493 foods in database)
   };
 }
 
