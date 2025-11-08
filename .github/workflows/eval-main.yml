@@ -47,6 +47,9 @@ jobs:
       - name: Run migrations
         run: npx prisma migrate deploy
       
+      - name: Seed database (Foundation + SR Legacy)
+        run: npm run usda:saturate:mini
+      
       - run: npm run eval
       
       - uses: actions/upload-artifact@v4
