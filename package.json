@@ -35,7 +35,7 @@
     "test:fdc-api": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-fdc-api.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.673.0",
+    "@aws-sdk/client-s3": "3.927.0",
     "@aws-sdk/s3-presigned-post": "3.927.0",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "5.18.0",
@@ -98,5 +98,8 @@
   },
   "prisma": {
     "seed": "node prisma/seed.js"
+  },
+  "overrides": {
+    "@aws-sdk/client-s3": "3.927.0"
   }
 }
