@@ -51,6 +51,9 @@ jobs:
       - name: Seed database (Foundation + SR Legacy)
         run: npm run usda:saturate:mini
       
+      - name: Verify database seeding
+        run: ts-node --project tsconfig.scripts.json --transpile-only scripts/verify-seeding.ts
+      
       - name: Run parser tests
         run: npm test src/lib/parse
       
