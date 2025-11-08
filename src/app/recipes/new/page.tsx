@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -42,6 +42,7 @@ function NewRecipeForm() {
       cuisine: [],
       method: [],
       diet: [],
+      localFiles: [],
     },
   });
 
@@ -133,7 +134,7 @@ function NewRecipeForm() {
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
           <Button variant="outline" asChild>
-            <Link href="/recipes">← Back to Recipes</Link>
+            <Link href="/recipes">â† Back to Recipes</Link>
           </Button>
         </div>
         <h1 className="text-3xl font-bold text-text">Create New Recipe</h1>
@@ -385,7 +386,7 @@ function NewRecipeForm() {
             disabled={isSubmitting || hasUploadingFiles}
             className="flex-1"
           >
-            {isSubmitting ? "Creating…" : hasUploadingFiles ? "Uploading…" : "Create Recipe"}
+            {isSubmitting ? "Creatingâ€¦" : hasUploadingFiles ? "Uploadingâ€¦" : "Create Recipe"}
           </Button>
         </div>
       </form>
