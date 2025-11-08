@@ -7,6 +7,10 @@ on:
 jobs:
   size:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     
     steps:
       - uses: pascalgn/size-label-action@v0.5.0
@@ -17,5 +21,5 @@ jobs:
             S=20..99
             M=100..399
             L=400..799
-            XL=800..
-
+            XL=800..1599
+            XXL=1600..
