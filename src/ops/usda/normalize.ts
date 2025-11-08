@@ -6,6 +6,8 @@
 import { extractCategoryHint } from '@/lib/nutrition/serving';
 import { UsdaRow } from './types';
 
+export type StateTag = 'raw' | 'cooked' | null;
+
 export interface NormalizedFood {
   name: string;
   brand?: string;
@@ -17,6 +19,44 @@ export interface NormalizedFood {
   fat100: number;
   fiber100?: number;
   sugar100?: number;
+  stateTag?: StateTag;
+}
+
+/**
+ * Extract state tag from description (raw, cooked, etc.)
+ */
+export function extractStateTag(description: string): StateTag {
+  const lower = description.toLowerCase();
+  
+  // Raw states
+  if (/\b(raw|uncooked|fresh)\b/.test(lower)) {
+    return 'raw';
+  }
+  
+  // Cooked states
+  if (/\b(cooked|boiled|baked|roasted|grilled|fried|steamed|poached|sauteed|simmered)\b/.test(lower)) {
+    return 'cooked';
+  }
+  
+  return null;
+}
+
+/**
+ * Validate macro sanity: check if calculated calories match reported calories
+ */
+export function validateMacroSanity(
+  kcal: number,
+  protein: number,
+  carbs: number,
+  fat: number,
+  threshold: number = 0.30
+): boolean {
+  if (kcal <= 0) return false;
+  
+  const calculatedKcal = (protein * 4) + (carbs * 4) + (fat * 9);
+  const deviation = Math.abs(calculatedKcal - kcal) / kcal;
+  
+  return deviation <= threshold;
 }
 
 /**
@@ -73,6 +113,9 @@ export function normalizeUsdaRowToPer100g(row: UsdaRow): NormalizedFood | null {
     // Drop zeros for cleaner data
     const cleanValue = (value: number) => value > 0 ? value : 0;
 
+    // Extract state tag
+    const stateTag = extractStateTag(description);
+
     return {
       name: description.trim(),
       brand: brand?.trim() || undefined,
@@ -84,6 +127,7 @@ export function normalizeUsdaRowToPer100g(row: UsdaRow): NormalizedFood | null {
       fat100: cleanValue(clampOil(fat)),
       fiber100: cleanValue(fiber) || undefined,
       sugar100: cleanValue(sugar) || undefined,
+      stateTag: stateTag || undefined,
     };
   } catch (error) {
     console.warn('Failed to normalize USDA row:', error);
