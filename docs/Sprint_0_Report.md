@@ -16,14 +16,18 @@ Milestone: Sprint 0 — Audit, Baseline & FDC API Setup
 - DB audit: scripts/audit-db-coverage.ts → reports/db-audit-YYYYMMDD.md
 
 ## Baseline Metrics (gold.v1)
-Source: reports/eval-baseline-20251106.json
-- Mapping P@1: 47.0%
-- Portion MAE: 114.9 g
-- Provisional rate: 32.0%
+Source: reports/eval-baseline-20251108.json
+- Mapping P@1: 38.0%
+- Portion MAE: 114.0 g
+- Provisional rate: 34.0%
+
+**Database State:** 1493 foods (Foundation + SR Legacy mini dataset + additional foods)
 
 Notes:
-- Baseline is intentionally rough; many misses stem from portion resolution (unit hints) and candidate ranking (uncooked vs cooked).
-- Branded path validated separately via smoke script; ENABLE_BRANDED_SEARCH remains false.
+- Baseline updated to reflect current database state with 1493 foods
+- Lower P@1 (38% vs 47%) likely due to more candidate foods affecting search ranking
+- Many misses stem from portion resolution (unit hints) and candidate ranking (uncooked vs cooked)
+- Branded path validated separately via smoke script; ENABLE_BRANDED_SEARCH remains false
 
 ## DB Coverage Highlights
 Source: reports/db-audit-20251106.md

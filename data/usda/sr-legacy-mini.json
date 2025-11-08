@@ -1,0 +1,133 @@
+[
+  {
+    "fdcId": 167001,
+    "description": "Olive oil",
+    "dataType": "SR Legacy",
+    "foodCategory": "Fats and Oils",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 884},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 100}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167002,
+    "description": "Chicken breast, skinless, raw",
+    "dataType": "SR Legacy",
+    "foodCategory": "Poultry Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 165},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 31},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 3.6}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167003,
+    "description": "Brown rice, raw",
+    "dataType": "SR Legacy",
+    "foodCategory": "Cereal Grains and Pasta",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 370},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 7.9},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 77},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 2.9}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167004,
+    "description": "Brown rice, cooked",
+    "dataType": "SR Legacy",
+    "foodCategory": "Cereal Grains and Pasta",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 123},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 2.6},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 26},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 1}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167005,
+    "description": "Yogurt, plain, low-fat",
+    "dataType": "SR Legacy",
+    "foodCategory": "Dairy and Egg Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 63},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 5.3},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 7},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 1.6}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167006,
+    "description": "Baby food, cereal",
+    "dataType": "SR Legacy",
+    "foodCategory": "Baby Foods",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 50},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 2},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 10},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.5}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167007,
+    "description": "Protein supplement, powder",
+    "dataType": "SR Legacy",
+    "foodCategory": "Dietary Supplements",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 400},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 80},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 10},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 5}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167008,
+    "description": "Egg, whole, raw",
+    "dataType": "SR Legacy",
+    "foodCategory": "Dairy and Egg Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 143},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 12.6},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 0.7},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 9.5}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167009,
+    "description": "Spinach, raw",
+    "dataType": "SR Legacy",
+    "foodCategory": "Vegetables and Vegetable Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 23},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 2.9},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 3.6},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.4}
+    ],
+    "foodPortions": []
+  },
+  {
+    "fdcId": 167010,
+    "description": "Strawberries, raw",
+    "dataType": "SR Legacy",
+    "foodCategory": "Fruits and Fruit Juices",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 32},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 0.7},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 7.7},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.3}
+    ],
+    "foodPortions": []
+  }
+]
+

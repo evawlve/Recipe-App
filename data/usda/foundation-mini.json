@@ -1,0 +1,153 @@
+[
+  {
+    "fdcId": 321001,
+    "description": "Olive oil, extra virgin",
+    "dataType": "Foundation",
+    "foodCategory": "Fats and Oils",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 884},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 100}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "tablespoon"}, "gramWeight": 13.5}
+    ]
+  },
+  {
+    "fdcId": 321002,
+    "description": "Chicken breast, raw",
+    "dataType": "Foundation",
+    "foodCategory": "Poultry Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 165},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 31},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 3.6}
+    ],
+    "foodPortions": [
+      {"value": 4, "measureUnit": {"name": "ounce"}, "gramWeight": 113}
+    ]
+  },
+  {
+    "fdcId": 321003,
+    "description": "Chicken breast, cooked",
+    "dataType": "Foundation",
+    "foodCategory": "Poultry Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 195},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 35},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 0},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 4.5}
+    ],
+    "foodPortions": [
+      {"value": 4, "measureUnit": {"name": "ounce"}, "gramWeight": 113}
+    ]
+  },
+  {
+    "fdcId": 321004,
+    "description": "Rice, white, long-grain, raw",
+    "dataType": "Foundation",
+    "foodCategory": "Cereal Grains and Pasta",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 365},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 7.1},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 80},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.6}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "cup"}, "gramWeight": 185}
+    ]
+  },
+  {
+    "fdcId": 321005,
+    "description": "Rice, white, long-grain, cooked",
+    "dataType": "Foundation",
+    "foodCategory": "Cereal Grains and Pasta",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 130},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 2.7},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 28},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.3}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "cup"}, "gramWeight": 158}
+    ]
+  },
+  {
+    "fdcId": 321006,
+    "description": "Yogurt, Greek, plain, nonfat",
+    "dataType": "Foundation",
+    "foodCategory": "Dairy and Egg Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 59},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 10.2},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 3.6},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.4}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "cup"}, "gramWeight": 227}
+    ]
+  },
+  {
+    "fdcId": 321007,
+    "description": "Peanut butter, smooth style",
+    "dataType": "Foundation",
+    "foodCategory": "Legumes and Legume Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 588},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 25},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 20},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 50}
+    ],
+    "foodPortions": [
+      {"value": 2, "measureUnit": {"name": "tablespoon"}, "gramWeight": 32}
+    ]
+  },
+  {
+    "fdcId": 321008,
+    "description": "Broccoli, raw",
+    "dataType": "Foundation",
+    "foodCategory": "Vegetables and Vegetable Products",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 34},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 2.8},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 6.6},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.4}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "cup"}, "gramWeight": 91}
+    ]
+  },
+  {
+    "fdcId": 321009,
+    "description": "All-purpose flour",
+    "dataType": "Foundation",
+    "foodCategory": "Cereal Grains and Pasta",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 364},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 10},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 76},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 1}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "cup"}, "gramWeight": 125}
+    ]
+  },
+  {
+    "fdcId": 321010,
+    "description": "Banana, raw",
+    "dataType": "Foundation",
+    "foodCategory": "Fruits and Fruit Juices",
+    "foodNutrients": [
+      {"nutrient": {"id": 1008, "number": "208", "name": "Energy", "unitName": "KCAL"}, "amount": 89},
+      {"nutrient": {"id": 1003, "number": "203", "name": "Protein", "unitName": "G"}, "amount": 1.1},
+      {"nutrient": {"id": 1005, "number": "205", "name": "Carbohydrate, by difference", "unitName": "G"}, "amount": 23},
+      {"nutrient": {"id": 1004, "number": "204", "name": "Total lipid (fat)", "unitName": "G"}, "amount": 0.3}
+    ],
+    "foodPortions": [
+      {"value": 1, "measureUnit": {"name": "medium"}, "gramWeight": 118}
+    ]
+  }
+]
+

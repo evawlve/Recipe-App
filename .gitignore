@@ -83,11 +83,14 @@ client_secret.json
 src/data/usda/**
 !src/data/usda/.keep
 
-# Large USDA data files
+# Large USDA data files (keep only mini test files)
 data/usda/sr-legacy.jsonl
 data/usda/survey.jsonl
 data/usda/FoodData_Central_sr_legacy_food_json_2018-04.json
 data/usda/FoodData_Central_foundation_food_json_2025-04-24.json
+data/usda/fdc.json
+data/usda/fdc.jsonl
+data/usda/sr-legacy-sample.jsonl
 
 # Local CSV exports you don't want to commit accidentally
 data/curated/tmp/**
