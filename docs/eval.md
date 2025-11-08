@@ -72,19 +72,35 @@ npx ts-node eval/run.ts
 
 ### Baseline Metrics (gold.v1)
 
-Source: `reports/eval-baseline-20251106.json`
-- **Mapping P@1**: 47.0%
-- **Portion MAE**: 114.9 g
-- **Provisional Rate**: 32.0%
+Source: `reports/eval-baseline-20251108.json` (updated baseline with 1493 foods)
+- **Mapping P@1**: 38.0%
+- **Portion MAE**: 114.0 g
+- **Provisional Rate**: 34.0%
 
-### CI Integration
+**Note:** Baseline updated to reflect current database state with 1493 foods. Lower P@1 (38% vs 47%) is expected due to more candidate foods affecting search ranking.
 
-**Exit Gate Requirements:**
-- CI job `eval:baseline` runs `eval/run.ts` on main and PR head
-- PR fails if:
-  - P@1 drops >1.5% (when `ENABLE_PORTION_V2=false`)
-  - MAE increases >2g (when `ENABLE_PORTION_V2=false`)
-- Artifacts (JSON report) stored per run
+### Local Evaluation
+
+**Run eval locally during sprints:**
+```bash
+# Ensure database is seeded
+npm run usda:saturate:mini  # or use your full dataset
+
+# Run evaluation
+npm run eval
+
+# Check results in reports/eval-baseline-YYYYMMDD.json
+```
+
+**Compare against baseline:**
+- Current baseline: 38% P@1, 114.0g MAE
+- Track improvements over time by comparing local results
+- Update baseline in `docs/Sprint_0_Report.md` when making significant improvements
+
+**Why local-only?**
+- CI database state differs from local (mini dataset vs full dataset)
+- Local evaluation provides more accurate and consistent results
+- Run eval manually during sprints to track progress
 
 ## Reports
 

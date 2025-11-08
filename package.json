@@ -23,6 +23,8 @@
     "seed:curated:batch": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/seed-curated-batch.ts",
     "lint:pack": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/lint-curated-pack.ts",
     "usda:saturate": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/usda-saturate.ts",
+    "usda:saturate:mini": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/usda-saturate.ts --files=./data/usda/foundation-mini.json,./data/usda/sr-legacy-mini.json",
+    "usda:saturate:both": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/usda-saturate.ts --files=./data/usda/fdc.json",
     "aliases:backfill": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/aliases-backfill.ts",
     "aliases:backfill:fast": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/aliases-backfill-fast.ts",
     "seed:tags": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register prisma/seeds/tags.seed.ts",
@@ -32,7 +34,8 @@
     "parser:bench": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/parser-bench.ts",
     "eval": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register eval/run.ts",
     "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts",
-    "test:fdc-api": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-fdc-api.ts"
+    "test:fdc-api": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-fdc-api.ts",
+    "verify:seeding": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/verify-seeding.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.927.0",
@@ -57,7 +60,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "fuse.js": "^7.1.0",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^0.553.0",
     "nanoid": "^5.1.6",
     "next": "^15.5.6",
     "next-themes": "^0.4.6",
@@ -82,7 +85,7 @@
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
     "danger": "^13.0.5",
-    "eslint": "^9.38.0",
+    "eslint": "^9.39.1",
     "eslint-config-next": "15.0.0",
     "fast-check": "^4.3.0",
     "glob": "^11.0.3",
@@ -94,7 +97,7 @@
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.9.3"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
