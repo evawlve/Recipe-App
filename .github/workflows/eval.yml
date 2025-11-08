@@ -48,6 +48,9 @@ jobs:
       - name: Run migrations
         run: npx prisma migrate deploy
       
+      - name: Seed database (Foundation + SR Legacy)
+        run: npm run usda:saturate:mini
+      
       - name: Run parser tests
         run: npm test src/lib/parse
       
