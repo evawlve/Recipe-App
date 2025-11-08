@@ -49,7 +49,8 @@ export const recipeApiSchema = z.object({
   diet: z.array(z.string()).default([]),
 });
 
-export type RecipeCreateInput = z.infer<typeof recipeCreateSchema>;
+export type RecipeCreateFormValues = z.input<typeof recipeCreateSchema>;
+export type RecipeCreateInput = z.output<typeof recipeCreateSchema>;
 
 // Schema for recipe updates
 export const recipeUpdateSchema = z.object({
@@ -75,4 +76,5 @@ export const recipeUpdateSchema = z.object({
   ).optional(),
 });
 
-export type RecipeUpdateInput = z.infer<typeof recipeUpdateSchema>;
+export type RecipeUpdateFormValues = z.input<typeof recipeUpdateSchema>;
+export type RecipeUpdateInput = z.output<typeof recipeUpdateSchema>;

@@ -1,8 +1,7 @@
 import { useEffect } from "react";
-import { FieldErrors } from "react-hook-form";
-import { RecipeCreateInput } from "@/lib/validation";
+import { FieldErrors, FieldValues } from "react-hook-form";
 
-export function useFocusManagement(errors: FieldErrors<RecipeCreateInput>) {
+export function useFocusManagement<TFieldValues extends FieldValues>(errors: FieldErrors<TFieldValues>) {
   useEffect(() => {
     if (Object.keys(errors).length === 0) return;
 

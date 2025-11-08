@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { recipeCreateSchema, RecipeCreateInput } from "@/lib/validation";
+import { recipeCreateSchema, RecipeCreateFormValues, RecipeCreateInput } from "@/lib/validation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ function NewRecipeForm() {
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const mealTypeRef = useRef<HTMLDivElement>(null);
   
-  const form = useForm<RecipeCreateInput>({
+  const form = useForm<RecipeCreateFormValues, any, RecipeCreateInput>({
     resolver: zodResolver(recipeCreateSchema),
     defaultValues: {
       title: "",
@@ -130,18 +130,18 @@ function NewRecipeForm() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Button variant="outline" asChild>
-            <Link href="/recipes">â† Back to Recipes</Link>
-          </Button>
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="outline" asChild>
+              <Link href="/recipes">← Back to Recipes</Link>
+            </Button>
+          </div>
+          <h1 className="text-3xl font-bold text-text">Create New Recipe</h1>
+          <p className="text-muted-foreground mt-2">
+            Fill in the details below to create your recipe
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-text">Create New Recipe</h1>
-        <p className="text-muted-foreground mt-2">
-          Fill in the details below to create your recipe
-        </p>
-      </div>
 
       {/* Error Alert */}
       {submitError && (
@@ -386,7 +386,7 @@ function NewRecipeForm() {
             disabled={isSubmitting || hasUploadingFiles}
             className="flex-1"
           >
-            {isSubmitting ? "Creatingâ€¦" : hasUploadingFiles ? "Uploadingâ€¦" : "Create Recipe"}
+            {isSubmitting ? "Creating…" : hasUploadingFiles ? "Uploading…" : "Create Recipe"}
           </Button>
         </div>
       </form>

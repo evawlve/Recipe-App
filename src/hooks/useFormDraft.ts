@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { RecipeCreateInput } from "@/lib/validation";
+import { RecipeCreateFormValues, RecipeCreateInput } from "@/lib/validation";
 
 const DRAFT_KEY = "recipe-form-draft";
 
-export function useFormDraft<T extends RecipeCreateInput>(
-  form: UseFormReturn<T>,
+export function useFormDraft(
+  form: UseFormReturn<RecipeCreateFormValues, any, RecipeCreateInput>,
   isSubmitting: boolean
 ) {
   // Save draft to localStorage whenever form values change

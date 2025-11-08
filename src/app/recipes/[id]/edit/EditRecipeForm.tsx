@@ -18,7 +18,7 @@ import Link from "next/link";
 import { X, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { imageSrcForKey } from "@/lib/images";
-import { recipeUpdateSchema, RecipeUpdateInput } from "@/lib/validation";
+import { recipeUpdateSchema, RecipeUpdateFormValues, RecipeUpdateInput } from "@/lib/validation";
 import { NutritionSidebar } from "@/components/recipe/NutritionSidebar";
 import { IngredientMappingModal } from "@/components/recipe/IngredientMappingModal";
 import { PrepTimeSelector, PrepTime } from "@/components/recipe/PrepTimeSelector";
@@ -58,7 +58,7 @@ function EditRecipeFormComponent({ recipeId, initialData }: EditRecipeFormProps)
   const [ingredientsSaved, setIngredientsSaved] = useState(false);
   const searchParams = useSearchParams();
   
-  const form = useForm<RecipeUpdateInput>({
+  const form = useForm<RecipeUpdateFormValues, any, RecipeUpdateInput>({
     resolver: zodResolver(recipeUpdateSchema),
     defaultValues: {
       title: initialData.title,
