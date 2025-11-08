@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const glob = require('glob');
 
 // Find the latest eval report
 function findLatestEvalReport() {
