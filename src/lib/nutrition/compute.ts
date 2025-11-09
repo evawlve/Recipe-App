@@ -273,14 +273,18 @@ export async function computeTotals(
       let resolution: ReturnType<typeof resolvePortion> | null = null;
 
       if (usePortionV2 && parsed) {
+        // Type assertion needed because Prisma's include creates union types
+        const foodUnits = (food as any).units as Array<{ label: string; grams: number }> | undefined;
+        const foodPortionOverrides = (food as any).portionOverrides as Array<{ unit: string; grams: number; label: string | null }> | undefined;
+        
         resolution = resolvePortion({
           food: {
             id: food.id,
             name: food.name,
             densityGml: food.densityGml ?? undefined,
             categoryId: food.categoryId ?? null,
-            units: food.units?.map(u => (u ? { label: u.label, grams: u.grams } : null)) ?? [],
-            portionOverrides: (food as any).portionOverrides?.map((o: any) =>
+            units: foodUnits?.map(u => (u ? { label: u.label, grams: u.grams } : null)) ?? [],
+            portionOverrides: foodPortionOverrides?.map(o =>
               o
                 ? {
                     unit: o.unit,
@@ -298,8 +302,10 @@ export async function computeTotals(
       if (resolution && resolution.grams !== null && resolution.grams > 0) {
         grams = resolution.grams;
       } else if (parsed) {
+        // Type assertion for units (Prisma include creates union types)
+        const foodUnits = (food as any).units as Array<{ label: string; grams: number }> | undefined;
         const servingOptions = deriveServingOptions({
-          units: food.units?.map(u => ({ label: u.label, grams: u.grams })),
+          units: foodUnits?.map(u => ({ label: u.label, grams: u.grams })),
           densityGml: food.densityGml ?? undefined,
           categoryId: food.categoryId ?? null,
         });
