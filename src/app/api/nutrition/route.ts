@@ -110,7 +110,9 @@ export async function GET(req: NextRequest) {
       const { HEALTH_SCORE_V2 } = await import('@/lib/flags');
       const { scoreV2 } = await import('@/lib/nutrition/score-v2');
       
-      const result = await computeTotals(recipeId);
+      const result = await computeTotals(recipeId, {
+        userId: recipe.authorId
+      });
       const { provisional, ...totals } = result;
       
       let score;

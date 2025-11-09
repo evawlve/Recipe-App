@@ -18,6 +18,30 @@ jest.mock('../../logger', () => ({
   }
 }));
 
+const macroFood = (
+  kcal: number,
+  macros: {
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+    sugar?: number;
+  }
+) => ({
+  kcal100: kcal,
+  protein100: macros.protein ?? 0,
+  carbs100: macros.carbs ?? 0,
+  fat100: macros.fat ?? 0,
+  fiber100: macros.fiber ?? 0,
+  sugar100: macros.sugar ?? 0,
+  calories: kcal,
+  proteinG: macros.protein ?? 0,
+  carbsG: macros.carbs ?? 0,
+  fatG: macros.fat ?? 0,
+  fiberG: macros.fiber ?? 0,
+  sugarG: macros.sugar ?? 0
+});
+
 describe('Provisional tracking in computeTotals', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -34,14 +58,13 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.8,
             useOnce: false,
-            food: {
-              calories: 364,
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
-            }
+          food: macroFood(364, {
+            protein: 10,
+            carbs: 76,
+            fat: 1,
+            fiber: 3,
+            sugar: 1
+          })
           }
         ]
       },
@@ -72,14 +95,13 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.8,
             useOnce: false,
-            food: {
-              calories: 100, // Low calorie food
-              proteinG: 10,
-              carbsG: 20,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
-            }
+          food: macroFood(100, {
+            protein: 10,
+            carbs: 20,
+            fat: 1,
+            fiber: 3,
+            sugar: 1
+          }) // Low calorie food
           }
         ]
       },
@@ -92,14 +114,9 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.9,
             useOnce: true, // Use-once mapping
-            food: {
-              calories: 800, // High calorie food (800 * 0.5 = 400 calories)
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 100,
-              fiberG: 0,
-              sugarG: 0
-            }
+          food: macroFood(800, {
+            fat: 100
+          }) // High calorie food (800 * 0.5 = 400 calories)
           }
         ]
       }
@@ -126,14 +143,13 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.8,
             useOnce: false,
-            food: {
-              calories: 100, // Low calorie food
-              proteinG: 10,
-              carbsG: 20,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
-            }
+          food: macroFood(100, {
+            protein: 10,
+            carbs: 20,
+            fat: 1,
+            fiber: 3,
+            sugar: 1
+          }) // Low calorie food
           }
         ]
       },
@@ -146,14 +162,9 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.3, // Low confidence
             useOnce: false,
-            food: {
-              calories: 800, // High calorie food (800 * 0.5 = 400 calories)
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 100,
-              fiberG: 0,
-              sugarG: 0
-            }
+          food: macroFood(800, {
+            fat: 100
+          }) // High calorie food (800 * 0.5 = 400 calories)
           }
         ]
       }
@@ -180,14 +191,13 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.8,
             useOnce: false,
-            food: {
-              calories: 364,
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
-            }
+          food: macroFood(364, {
+            protein: 10,
+            carbs: 76,
+            fat: 1,
+            fiber: 3,
+            sugar: 1
+          })
           }
         ]
       },
@@ -200,14 +210,9 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.9,
             useOnce: false,
-            food: {
-              calories: 400,
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 50,
-              fiberG: 0,
-              sugarG: 0
-            }
+          food: macroFood(400, {
+            fat: 50
+          })
           }
         ]
       }
@@ -231,14 +236,13 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.8,
             useOnce: false,
-            food: {
-              calories: 800, // High calorie food
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
-            }
+          food: macroFood(800, {
+            protein: 10,
+            carbs: 76,
+            fat: 1,
+            fiber: 3,
+            sugar: 1
+          }) // High calorie food
           }
         ]
       },
@@ -251,14 +255,9 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.3, // Low confidence
             useOnce: false,
-            food: {
-              calories: 800, // High calorie food (800 * 0.1 = 80 calories)
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 100,
-              fiberG: 0,
-              sugarG: 0
-            }
+          food: macroFood(800, {
+            fat: 100
+          }) // High calorie food (800 * 0.1 = 80 calories)
           }
         ]
       }
@@ -285,14 +284,13 @@ describe('Provisional tracking in computeTotals', () => {
           {
             confidence: 0.3, // Low confidence
             useOnce: false,
-            food: {
-              calories: 800, // High calorie food
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
-            }
+          food: macroFood(800, {
+            protein: 10,
+            carbs: 76,
+            fat: 1,
+            fiber: 3,
+            sugar: 1
+          }) // High calorie food
           }
         ]
       },

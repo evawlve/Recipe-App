@@ -331,3 +331,81 @@ If foods are truly missing after verification:
 - **USDA Import**: `npm run usda:import`
 - **Verify Seeding**: `npm run verify:seeding`
 
+---
+
+## Portion Resolver V2 Rollout (Sprint 3)
+
+### 5-Tier Resolution Stack
+
+| Tier | Source | Confidence | Notes |
+|------|--------|------------|-------|
+| 0 | Direct mass units (`g`, `oz`, `lb`) | 1.00 | Immediate conversion, no resolver needed |
+| 1 | `user_override` | 1.00 | Owner corrections always win |
+| 2 | `portion_override` | 0.90 | Sprint 2 curated data |
+| 3 | `food_unit` | 0.85 | USDA labeled portions (`1 cup, diced`) |
+| 4 | `density` | 0.75 | Volume × density fallback |
+| 5 | `heuristic` | 0.50 | Last-resort hardcoded guesses (`clove`, `leaf`, etc.) |
+
+### Enabling the Resolver
+
+- **Flag**: `ENABLE_PORTION_V2`
+- **Default**: `false`
+- **How to enable locally**:
+  ```bash
+  echo "ENABLE_PORTION_V2=true" >> .env
+  ```
+- **Toggle at runtime**: restart API/server after changing the flag
+
+### Shadow Comparison Workflow
+
+1. **Run comparison** (defaults to 100 recipes):
+   ```bash
+   npm run portion:compare
+   ```
+   - Limit sample size: `npm run portion:compare -- --recipes 25`
+   - Focus single recipe: `npm run portion:compare -- --recipe <recipeId>`
+   - Adjust alert threshold (default 5%): `npm run portion:compare -- --threshold 0.03`
+
+2. **Review output**:
+   - `Portion hits`: how many ingredient resolutions used V2 tiers
+   - `Fallbacks`: count of ingredients still using legacy conversions
+   - `Avg confidence`: mean per-recipe confidence from resolver telemetry
+   - Recipes exceeding threshold are listed with per-metric deltas
+
+3. **Investigate anomalies**:
+   - Enable debug logs: `LOG_LEVEL=debug`
+   - Re-run comparison for the specific recipe to capture details
+   - Inspect `portionStats.sample` in the new totals for tier + confidence
+
+4. **Sign-off checklist**:
+   - ≤5% delta for ≥95% of recipes
+   - No change in crash rate
+   - Portion hits trending upward vs. fallbacks
+
+### Logging & Telemetry
+
+- Resolver emits `portion_resolver.summary` once per `computeTotals()` call
+  ```json
+  {
+    "resolved": 8,
+    "fallback": 2,
+    "avgConfidence": 0.88,
+    "bySource": { "portion_override": 4, "food_unit": 3, "density": 1, "fallback": 2 }
+  }
+  ```
+- Use this log in Datadog/Grafana to watch adoption once the flag turns on
+- `portionStats.sample` (max 5 entries) ships with each totals response when flag is enabled; use it for debugging ingredient-level mismatches
+
+### Rollback Plan
+
+1. **Disable flag**: remove `ENABLE_PORTION_V2` or set to `false`
+2. **Redeploy**: ensures all instances read the updated flag
+3. **Optional**: revert `src/lib/nutrition/portion.ts` and associated wiring if we need to iterate offline
+
+### Related Artifacts
+
+- Resolver implementation: `src/lib/nutrition/portion.ts`
+- Compute integration: `src/lib/nutrition/compute.ts`
+- Tests: `src/lib/nutrition/__tests__/portion.test.ts`, `compute-portion.test.ts`
+- Shadow script: `scripts/compare-resolvers.ts`
+

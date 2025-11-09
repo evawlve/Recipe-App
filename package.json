@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
+    "build": "next build",
+    "build:no-telemetry": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "next start",
     "postinstall": "prisma generate",
     "lint": "eslint .",
@@ -36,7 +37,8 @@
     "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts",
     "test:fdc-api": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-fdc-api.ts",
     "verify:seeding": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/verify-seeding.ts",
-    "seed:portion-overrides": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/seed-portion-overrides.ts"
+    "seed:portion-overrides": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/seed-portion-overrides.ts",
+    "portion:compare": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/compare-resolvers.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.927.0",

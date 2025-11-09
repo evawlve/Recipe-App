@@ -1,13 +1,14 @@
 {
-  "gold": "gold.v1.csv",
-  "timestamp": "2025-11-09T18:39:13.568Z",
+  "gold": "gold.v2.csv",
+  "portionV2Enabled": true,
+  "timestamp": "2025-11-09T18:47:45.546Z",
   "totals": {
-    "count": 100
+    "count": 250
   },
   "metrics": {
-    "pAt1": 0.38,
-    "mae": 113.96399999999998,
-    "provisionalRate": 0.34
+    "pAt1": 0.568,
+    "mae": 60.09069950771873,
+    "provisionalRate": 0.54
   },
   "samples": [
     {
@@ -16,10 +17,10 @@
       "expected_food_name": "Eggs, Large, Raw",
       "expected_grams": 100,
       "top_food_name": "Egg, whole, raw, frozen, pasteurized",
-      "resolved_grams": 280,
+      "resolved_grams": null,
       "pAt1": 0,
-      "mae": 180,
-      "provisional": false
+      "mae": 100,
+      "provisional": true
     },
     {
       "id": "2",
@@ -126,10 +127,10 @@
       "expected_food_name": "onions, raw",
       "expected_grams": 150,
       "top_food_name": "Tomato products, canned, sauce, with onions",
-      "resolved_grams": 100,
+      "resolved_grams": null,
       "pAt1": 0,
-      "mae": 50,
-      "provisional": false
+      "mae": 150,
+      "provisional": true
     },
     {
       "id": "12",
@@ -137,10 +138,10 @@
       "expected_food_name": "garlic, raw",
       "expected_grams": 6,
       "top_food_name": "Garlic, raw",
-      "resolved_grams": 200,
+      "resolved_grams": 6,
       "pAt1": 1,
-      "mae": 194,
-      "provisional": false
+      "mae": 0,
+      "provisional": true
     },
     {
       "id": "13",
@@ -170,10 +171,10 @@
       "expected_food_name": "cottage cheese, lowfat, 2% milkfat",
       "expected_grams": 226,
       "top_food_name": "Cheese, cottage, lowfat, 2% milkfat",
-      "resolved_grams": 60,
+      "resolved_grams": 240,
       "pAt1": 0,
-      "mae": 166,
-      "provisional": false
+      "mae": 14,
+      "provisional": true
     },
     {
       "id": "16",
@@ -192,9 +193,9 @@
       "expected_food_name": "tomatoes, red, ripe, raw",
       "expected_grams": 180,
       "top_food_name": "Tomatoes, canned, red, ripe, diced",
-      "resolved_grams": 60,
+      "resolved_grams": 240,
       "pAt1": 0,
-      "mae": 120,
+      "mae": 60,
       "provisional": false
     },
     {
@@ -225,10 +226,10 @@
       "expected_food_name": "coconut oil",
       "expected_grams": 218,
       "top_food_name": "Breakfast bars, oats, sugar, raisins, coconut (include granola bar)",
-      "resolved_grams": 54.6,
+      "resolved_grams": 218.4,
       "pAt1": 0,
-      "mae": 163.4,
-      "provisional": false
+      "mae": 0.4000000000000057,
+      "provisional": true
     }
   ]
 }
