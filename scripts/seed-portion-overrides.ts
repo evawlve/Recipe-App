@@ -60,10 +60,10 @@ const TIER_1_OILS: PortionEntry[] = [
   { foodName: 'Canola Oil', unit: 'tsp', grams: 4.5 },
   { foodName: 'Canola Oil', unit: 'cup', grams: 216 },
   
-  // Coconut oil (slightly denser when solid)
-  { foodName: 'Coconut Oil', unit: 'tbsp', grams: 13.6 },
-  { foodName: 'Coconut Oil', unit: 'tsp', grams: 4.5 },
-  { foodName: 'Coconut Oil', unit: 'cup', grams: 218 },
+  // Coconut oil (USDA name: "Oil, coconut")
+  { foodName: 'Oil, coconut', unit: 'tbsp', grams: 13.6 },
+  { foodName: 'Oil, coconut', unit: 'tsp', grams: 4.5 },
+  { foodName: 'Oil, coconut', unit: 'cup', grams: 218 },
 ];
 
 const TIER_1_DAIRY: PortionEntry[] = [
@@ -102,8 +102,8 @@ const TIER_1_GRAINS: PortionEntry[] = [
   // Rice - brown, uncooked
   { foodName: 'Brown Rice, Uncooked', unit: 'cup', grams: 185, notes: 'Long-grain, dry' },
   
-  // Rice - brown, cooked
-  { foodName: 'Rice, brown, medium-grain, cooked', unit: 'cup', grams: 195, notes: 'Cooked' },
+  // Rice - brown, cooked (USDA name: "Rice, brown, medium-grain, cooked (Includes foods for USDA's Food Distribution Program)")
+  { foodName: 'Rice, brown, medium-grain, cooked (Includes foods for USDA\'s Food Distribution Program)', unit: 'cup', grams: 195, notes: 'Cooked' },
   
   // Oats
   { foodName: 'Oats, Dry', unit: 'cup', grams: 90, notes: 'Rolled oats, dry' },
@@ -165,33 +165,33 @@ const TIER_2_PLANT_PROTEINS: PortionEntry[] = [
 // ============================================================================
 
 const TIER_3_AROMATICS: PortionEntry[] = [
-  // Garlic
-  { foodName: 'Garlic', unit: 'clove', grams: 3, notes: 'Medium clove' },
-  { foodName: 'Garlic', unit: 'clove', grams: 2, label: 'small', notes: 'Small clove' },
-  { foodName: 'Garlic', unit: 'clove', grams: 4, label: 'large', notes: 'Large clove' },
-  { foodName: 'Garlic', unit: 'tbsp', grams: 8.5, notes: 'Minced' },
-  { foodName: 'Garlic', unit: 'tsp', grams: 2.8, notes: 'Minced' },
+  // Garlic (USDA name: "Garlic, raw")
+  { foodName: 'Garlic, raw', unit: 'clove', grams: 3, notes: 'Medium clove' },
+  { foodName: 'Garlic, raw', unit: 'clove', grams: 2, label: 'small', notes: 'Small clove' },
+  { foodName: 'Garlic, raw', unit: 'clove', grams: 4, label: 'large', notes: 'Large clove' },
+  { foodName: 'Garlic, raw', unit: 'tbsp', grams: 8.5, notes: 'Minced' },
+  { foodName: 'Garlic, raw', unit: 'tsp', grams: 2.8, notes: 'Minced' },
   
-  // Onion
-  { foodName: 'Onion', unit: 'piece', grams: 150, label: 'medium', notes: 'Whole medium onion' },
-  { foodName: 'Onion', unit: 'slice', grams: 9, notes: '1/4-inch slice' },
-  { foodName: 'Onion', unit: 'cup', grams: 160, notes: 'Chopped' },
+  // Onion (USDA name: "Onions, yellow, raw")
+  { foodName: 'Onions, yellow, raw', unit: 'piece', grams: 150, label: 'medium', notes: 'Whole medium onion' },
+  { foodName: 'Onions, yellow, raw', unit: 'slice', grams: 9, notes: '1/4-inch slice' },
+  { foodName: 'Onions, yellow, raw', unit: 'cup', grams: 160, notes: 'Chopped' },
   
-  // Ginger
-  { foodName: 'Ginger', unit: 'piece', grams: 11, label: '1-inch', notes: '1-inch piece' },
-  { foodName: 'Ginger', unit: 'tbsp', grams: 6, notes: 'Grated' },
-  { foodName: 'Ginger', unit: 'tsp', grams: 2, notes: 'Grated' },
+  // Ginger (USDA name: "Ginger root, raw")
+  { foodName: 'Ginger root, raw', unit: 'piece', grams: 11, label: '1-inch', notes: '1-inch piece' },
+  { foodName: 'Ginger root, raw', unit: 'tbsp', grams: 6, notes: 'Grated' },
+  { foodName: 'Ginger root, raw', unit: 'tsp', grams: 2, notes: 'Grated' },
   
-  // Scallion
-  { foodName: 'Scallion', unit: 'stalk', grams: 15, notes: 'Whole scallion' },
-  { foodName: 'Scallion', unit: 'cup', grams: 100, notes: 'Chopped' },
+  // Scallion (USDA name: "Onions, spring or scallions (includes tops and bulb), raw")
+  { foodName: 'Onions, spring or scallions (includes tops and bulb), raw', unit: 'stalk', grams: 15, notes: 'Whole scallion' },
+  { foodName: 'Onions, spring or scallions (includes tops and bulb), raw', unit: 'cup', grams: 100, notes: 'Chopped' },
 ];
 
 const TIER_3_VEGETABLES: PortionEntry[] = [
-  // Tomato
-  { foodName: 'Tomato', unit: 'piece', grams: 123, label: 'medium', notes: 'Whole medium tomato' },
-  { foodName: 'Tomato', unit: 'slice', grams: 15, notes: '1/4-inch slice' },
-  { foodName: 'Tomato', unit: 'cup', grams: 180, notes: 'Chopped/diced' },
+  // Tomato (USDA name: "Tomatoes, red, ripe, raw, year round average")
+  { foodName: 'Tomatoes, red, ripe, raw, year round average', unit: 'piece', grams: 123, label: 'medium', notes: 'Whole medium tomato' },
+  { foodName: 'Tomatoes, red, ripe, raw, year round average', unit: 'slice', grams: 15, notes: '1/4-inch slice' },
+  { foodName: 'Tomatoes, red, ripe, raw, year round average', unit: 'cup', grams: 180, notes: 'Chopped/diced' },
   { foodName: 'Tomatoes, red, ripe, cooked', unit: 'cup', grams: 240 },
   { foodName: 'Tomatoes, canned, red, ripe, diced', unit: 'cup', grams: 240, notes: 'Canned, with liquid' },
   
@@ -220,12 +220,12 @@ const TIER_3_VEGETABLES: PortionEntry[] = [
 
 const TIER_4_ASIAN: PortionEntry[] = [
   // Japanese
-  { foodName: 'Miso', unit: 'tbsp', grams: 17, notes: 'Miso paste' },
+  { foodName: 'Miso', unit: 'tbsp', grams: 17, notes: 'Miso paste - NOT FOUND YET' },
   { foodName: 'Miso', unit: 'tsp', grams: 5.6 },
-  { foodName: 'Mirin', unit: 'tbsp', grams: 15, notes: 'Sweet rice wine' },
-  { foodName: 'Soy Sauce', unit: 'tbsp', grams: 16 },
-  { foodName: 'Soy Sauce', unit: 'tsp', grams: 5.3 },
-  { foodName: 'Rice Vinegar', unit: 'tbsp', grams: 15 },
+  { foodName: 'Mirin', unit: 'tbsp', grams: 15, notes: 'Sweet rice wine - NOT FOUND YET' },
+  { foodName: 'Soy sauce, reduced sodium, made from hydrolyzed vegetable protein', unit: 'tbsp', grams: 16, notes: 'USDA soy sauce' },
+  { foodName: 'Soy sauce, reduced sodium, made from hydrolyzed vegetable protein', unit: 'tsp', grams: 5.3 },
+  { foodName: 'Rice Vinegar', unit: 'tbsp', grams: 15, notes: 'NOT FOUND YET' },
   
   // Korean
   { foodName: 'Gochujang', unit: 'tbsp', grams: 17, notes: 'Korean chili paste' },
@@ -233,10 +233,10 @@ const TIER_4_ASIAN: PortionEntry[] = [
   { foodName: 'Gochugaru', unit: 'tsp', grams: 2.7 },
   
   // Thai
-  { foodName: 'Fish Sauce', unit: 'tbsp', grams: 16 },
+  { foodName: 'Fish Sauce', unit: 'tbsp', grams: 16, notes: 'NOT FOUND YET' },
   { foodName: 'Fish Sauce', unit: 'tsp', grams: 5.3 },
-  { foodName: 'Coconut Milk', unit: 'cup', grams: 240, notes: 'Canned, full-fat' },
-  { foodName: 'Coconut Milk', unit: 'tbsp', grams: 15 },
+  { foodName: 'Nuts, coconut milk, raw (liquid expressed from grated meat and water)', unit: 'cup', grams: 240, notes: 'USDA coconut milk' },
+  { foodName: 'Nuts, coconut milk, raw (liquid expressed from grated meat and water)', unit: 'tbsp', grams: 15 },
   
   // Indian
   { foodName: 'Ghee', unit: 'tbsp', grams: 13.6, notes: 'Clarified butter' },
@@ -253,21 +253,21 @@ const TIER_5_SPREADS: PortionEntry[] = [
   // Nut butters
   { foodName: 'Peanut Butter', unit: 'tbsp', grams: 16, notes: 'Smooth' },
   { foodName: 'Peanut Butter', unit: 'tsp', grams: 5.3 },
-  { foodName: 'Almond Butter', unit: 'tbsp', grams: 16 },
-  { foodName: 'Almond Butter', unit: 'tsp', grams: 5.3 },
+  { foodName: 'Nuts, almond butter, plain, with salt added', unit: 'tbsp', grams: 16, notes: 'USDA almond butter' },
+  { foodName: 'Nuts, almond butter, plain, with salt added', unit: 'tsp', grams: 5.3 },
   
   // Honey & sweeteners
-  { foodName: 'Honey', unit: 'tbsp', grams: 21 },
+  { foodName: 'Honey', unit: 'tbsp', grams: 21, notes: 'NOT FOUND YET - need plain honey' },
   { foodName: 'Honey', unit: 'tsp', grams: 7 },
 ];
 
 const TIER_5_PACKAGED: PortionEntry[] = [
   // Bread
-  { foodName: 'Bread', unit: 'slice', grams: 29, notes: 'Standard sandwich bread' },
-  { foodName: 'Tortilla', unit: 'piece', grams: 49, notes: '8-inch flour tortilla' },
+  { foodName: 'Bread', unit: 'slice', grams: 29, notes: 'NOT FOUND YET - need commercially prepared bread' },
+  { foodName: 'Tortillas, ready-to-bake or -fry, flour, shelf stable', unit: 'piece', grams: 49, notes: 'USDA tortilla' },
   
   // Pasta (dry)
-  { foodName: 'Pasta', unit: 'cup', grams: 85, notes: 'Dry, elbow macaroni' },
+  { foodName: 'Pasta, homemade, made with egg, cooked', unit: 'cup', grams: 85, notes: 'USDA pasta (cooked)' },
   
   // Nuts
   { foodName: 'Almonds', unit: 'cup', grams: 143, notes: 'Whole' },
