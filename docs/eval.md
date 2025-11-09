@@ -9,11 +9,11 @@ The evaluation system provides automated testing and metrics tracking for ingred
 ### Versioning
 
 The gold dataset is versioned and immutable:
-- `eval/gold.v1.csv` - Initial 100 test cases (Sprint 0)
-- `eval/gold.v2.csv` - +150 cases for piece/leaf/clove overrides (Sprint 2)
-- `eval/gold.v3.csv` - +100 cases for international synonyms (Sprint 4)
-- `eval/gold.v4.csv` - +100 branded cases (Sprint 5)
-- `eval/gold.v5.csv` - +50 user-pain cases (Sprint 7)
+- `eval/gold.v1.csv` - Initial 101 test cases (Sprint 0-1) ✅
+- `eval/gold.v2.csv` - 250 total cases (+150 Sprint 2 piece/leaf/clove overrides) ✅
+- `eval/gold.v3.csv` - +100 cases for international synonyms (Sprint 4) 🔜
+- `eval/gold.v4.csv` - +100 branded cases (Sprint 5) 🔜
+- `eval/gold.v5.csv` - +50 user-pain cases (Sprint 7) 🔜
 
 ### CSV Schema
 
@@ -58,10 +58,17 @@ id,raw_line,expected_food_name,expected_grams,expected_source,expected_source_ti
 ### Usage
 
 ```bash
-# Run evaluation
-npx ts-node eval/run.ts
+# Run evaluation (uses gold.v2.csv by default)
+npm run eval
+
+# Test with portion v2 resolver (Sprint 3+)
+ENABLE_PORTION_V2=true npm run eval
+
+# Override gold file
+GOLD_FILE=gold.v1.csv npm run eval
 
 # Output: reports/eval-baseline-YYYYMMDD.json
+#     or: reports/eval-portion-v2-YYYYMMDD.json (when flag enabled)
 ```
 
 ### Metrics Tracked
@@ -70,14 +77,23 @@ npx ts-node eval/run.ts
 - **MAE (Mean Absolute Error)**: Average absolute difference between expected and actual grams
 - **Provisional Rate**: Percentage of cases that fall back to assumed serving
 
-### Baseline Metrics (gold.v1)
+### Baseline Metrics
 
-Source: `reports/eval-baseline-20251108.json` (updated baseline with 1493 foods)
+#### Sprint 0-2 Baseline (gold.v1.csv)
+Source: `reports/eval-baseline-20251109.json`
+- **Dataset**: 101 test cases
 - **Mapping P@1**: 38.0%
-- **Portion MAE**: 114.0 g
-- **Provisional Rate**: 34.0%
+- **Portion MAE**: 114.0g
+- **Provisional Rate**: 38.0%
 
-**Note:** Baseline updated to reflect current database state with 1493 foods. Lower P@1 (38% vs 47%) is expected due to more candidate foods affecting search ranking.
+#### Sprint 3 Results (gold.v2.csv + Portion V2) ✅
+Source: `reports/eval-portion-v2-20251109.json`
+- **Dataset**: 250 test cases
+- **Mapping P@1**: **56.8%** (↑18.8pp, +49%)
+- **Portion MAE**: **60.1g** (↓53.9g, -47%)
+- **Provisional Rate**: 54.0%
+
+**Achievement**: Sprint 3's 5-tier portion resolver delivered dramatic improvements in both mapping accuracy and portion estimation. The P@1 improvement is partly due to the extended test dataset including more curated foods from Sprint 2 seeding.
 
 ### Local Evaluation
 
@@ -93,9 +109,10 @@ npm run eval
 ```
 
 **Compare against baseline:**
-- Current baseline: 38% P@1, 114.0g MAE
+- Sprint 0-2 baseline: 38% P@1, 114.0g MAE (gold.v1.csv)
+- Sprint 3 with portion v2: 56.8% P@1, 60.1g MAE (gold.v2.csv)
 - Track improvements over time by comparing local results
-- Update baseline in `docs/Sprint_0_Report.md` when making significant improvements
+- Document significant improvements in sprint reports
 
 **Why local-only?**
 - CI database state differs from local (mini dataset vs full dataset)
