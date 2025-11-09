@@ -2,8 +2,9 @@ import { prisma } from '../db';
 // import { FoodSource } from '@prisma/client'; // Not needed - source is just a string
 import { servingToGrams, extractCategoryHint } from './normalize';
 import { logger } from '../logger';
-import { HEALTH_SCORE_V2 } from '../flags';
+import { HEALTH_SCORE_V2, ENABLE_PORTION_V2 } from '../flags';
 import { scoreV2 } from './score-v2';
+import { resolvePortion, PortionSource } from './portion';
 
 export interface NutritionTotals {
   calories: number;
@@ -35,6 +36,42 @@ export interface ProvisionalInfo {
   provisional: boolean;
   provisionalReasons: string[];
 }
+
+export interface PortionTraceEntry {
+  ingredientId: string;
+  ingredientName: string;
+  foodId?: string;
+  qty: number;
+  unit?: string | null;
+  grams: number;
+  source: PortionSource | 'fallback';
+  confidence: number;
+  tier: number;
+  notes?: string;
+}
+
+export interface PortionResolutionStats {
+  enabled: boolean;
+  totalIngredients: number;
+  resolvedCount: number;
+  fallbackCount: number;
+  avgConfidence: number | null;
+  bySource: Record<string, number>;
+  sample: PortionTraceEntry[];
+}
+
+export interface ComputeTotalsOptions {
+  userId?: string;
+  enablePortionV2?: boolean;
+  recordSamples?: boolean;
+}
+
+export type ComputeTotalsResult = NutritionTotals & {
+  provisional: ProvisionalInfo;
+  lowConfidenceShare: number;
+  unmappedCount: number;
+  portionStats?: PortionResolutionStats;
+};
 
 export type NutritionGoal = 'general' | 'weight_loss' | 'muscle_gain' | 'maintenance';
 
@@ -119,21 +156,73 @@ export function convertUnit(qty: number, unit: string, ingredientName?: string):
 /**
  * Compute nutrition totals for a recipe with provisional tracking
  */
-export async function computeTotals(recipeId: string): Promise<NutritionTotals & { provisional: ProvisionalInfo } & { lowConfidenceShare: number; unmappedCount: number }> {
+export async function computeTotals(
+  recipeId: string,
+  options: ComputeTotalsOptions = {}
+): Promise<ComputeTotalsResult> {
+  const { userId, enablePortionV2, recordSamples = true } = options;
+  const usePortionV2 = enablePortionV2 ?? ENABLE_PORTION_V2;
+
+  const foodInclude = usePortionV2
+    ? {
+        units: true,
+        portionOverrides: true,
+      }
+    : {
+        units: true,
+      };
+
   const ingredients = await prisma.ingredient.findMany({
     where: { recipeId },
     include: {
       foodMaps: {
         include: {
           food: {
-            include: {
-              units: true  // Include food units for proper serving size resolution
-            }
+            include: foodInclude as any
           }
         }
       }
     }
   });
+
+  const ingredientContexts = ingredients.map(ingredient => {
+    const bestMapping = ingredient.foodMaps
+      .slice()
+      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    return { ingredient, bestMapping };
+  });
+
+  let userOverridesMap: Map<string, Array<{ unit: string; grams: number; label: string | null }>> | null = null;
+  if (usePortionV2 && userId) {
+    const foodIds = Array.from(
+      new Set(
+        ingredientContexts
+          .map(ctx => ctx.bestMapping?.food?.id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    if (foodIds.length > 0) {
+      const overrides = await prisma.userPortionOverride.findMany({
+        where: {
+          userId,
+          foodId: { in: foodIds }
+        }
+      });
+
+      userOverridesMap = new Map();
+      for (const override of overrides) {
+        if (!userOverridesMap.has(override.foodId)) {
+          userOverridesMap.set(override.foodId, []);
+        }
+        userOverridesMap.get(override.foodId)!.push({
+          unit: override.unit,
+          grams: override.grams,
+          label: override.label ?? null
+        });
+      }
+    }
+  }
 
   let totals: NutritionTotals = {
     calories: 0,
@@ -148,30 +237,67 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals &
   let lowConfCal = 0;
   let unmappedCount = 0;
 
-  for (const ingredient of ingredients) {
-    // Find the best food mapping (highest confidence)
-    const bestMapping = ingredient.foodMaps
-      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+  let portionStats: PortionResolutionStats | undefined;
+  let portionConfidenceSum = 0;
+
+  if (usePortionV2) {
+    portionStats = {
+      enabled: true,
+      totalIngredients: 0,
+      resolvedCount: 0,
+      fallbackCount: 0,
+      avgConfidence: null,
+      bySource: {},
+      sample: []
+    };
+  }
+
+  const { parseIngredientLine } = await import('../parse/ingredient-line');
+  const { deriveServingOptions } = await import('../units/servings');
+  const { resolveGramsFromParsed } = await import('./resolve-grams');
+
+  for (const { ingredient, bestMapping } of ingredientContexts) {
     
     if (bestMapping?.food) {
+      if (portionStats) {
+        portionStats.totalIngredients += 1;
+      }
       const food = bestMapping.food;
       
-      // Try to resolve grams using the mapped food's serving options
       let grams: number;
-      
-      // Parse the ingredient line to get structured data
-      const { parseIngredientLine } = await import('../parse/ingredient-line');
-      const { deriveServingOptions } = await import('../units/servings');
-      const { resolveGramsFromParsed } = await import('./resolve-grams');
-      
       const ingredientLine = ingredient.unit 
         ? `${ingredient.qty} ${ingredient.unit} ${ingredient.name}`
         : `${ingredient.qty} ${ingredient.name}`;
       
       const parsed = parseIngredientLine(ingredientLine);
-      
-      if (parsed) {
-        // Derive serving options from the mapped food
+      let resolution: ReturnType<typeof resolvePortion> | null = null;
+
+      if (usePortionV2 && parsed) {
+        resolution = resolvePortion({
+          food: {
+            id: food.id,
+            name: food.name,
+            densityGml: food.densityGml ?? undefined,
+            categoryId: food.categoryId ?? null,
+            units: food.units?.map(u => (u ? { label: u.label, grams: u.grams } : null)) ?? [],
+            portionOverrides: (food as any).portionOverrides?.map((o: any) =>
+              o
+                ? {
+                    unit: o.unit,
+                    grams: o.grams,
+                    label: o.label ?? null
+                  }
+                : null
+            ) ?? []
+          },
+          parsed,
+          userOverrides: userOverridesMap?.get(food.id) ?? null
+        });
+      }
+
+      if (resolution && resolution.grams !== null && resolution.grams > 0) {
+        grams = resolution.grams;
+      } else if (parsed) {
         const servingOptions = deriveServingOptions({
           units: food.units?.map(u => ({ label: u.label, grams: u.grams })),
           densityGml: food.densityGml ?? undefined,
@@ -190,6 +316,39 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals &
       } else {
         // Fallback if parsing fails
         grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
+      }
+
+      if (portionStats) {
+        const usedNewResolver = Boolean(
+          resolution && resolution.grams !== null && resolution.grams > 0
+        );
+        const source = usedNewResolver && resolution
+          ? resolution.source
+          : ('fallback' as PortionSource | 'fallback');
+        const confidence = usedNewResolver && resolution ? resolution.confidence : 0;
+        portionStats.bySource[source] = (portionStats.bySource[source] || 0) + 1;
+
+        if (usedNewResolver) {
+          portionStats.resolvedCount += 1;
+          portionConfidenceSum += resolution!.confidence;
+        } else {
+          portionStats.fallbackCount += 1;
+        }
+
+        if (recordSamples && portionStats.sample.length < 5) {
+          portionStats.sample.push({
+            ingredientId: ingredient.id,
+            ingredientName: ingredient.name,
+            foodId: food.id,
+            qty: ingredient.qty,
+            unit: ingredient.unit,
+            grams,
+            source,
+            confidence,
+            tier: resolution?.tier ?? 0,
+            notes: resolution?.notes
+          });
+        }
       }
       
       const multiplier = grams / 100; // Convert to per-100g basis
@@ -229,8 +388,23 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals &
     provisionalReasons.push(`${Math.round(lowShare * 100)}% from low-confidence mappings`);
   }
 
+  if (portionStats) {
+    portionStats.avgConfidence = portionStats.resolvedCount > 0
+      ? Number((portionConfidenceSum / portionStats.resolvedCount).toFixed(3))
+      : null;
+
+    logger.info('portion_resolver.summary', {
+      recipeId,
+      resolved: portionStats.resolvedCount,
+      fallback: portionStats.fallbackCount,
+      total: portionStats.totalIngredients,
+      avgConfidence: portionStats.avgConfidence,
+      bySource: portionStats.bySource
+    });
+  }
+
   // Round to reasonable precision
-  return {
+  const result: ComputeTotalsResult = {
     calories: Math.round(totals.calories),
     proteinG: Math.round(totals.proteinG * 10) / 10,
     carbsG: Math.round(totals.carbsG * 10) / 10,
@@ -244,6 +418,12 @@ export async function computeTotals(recipeId: string): Promise<NutritionTotals &
     lowConfidenceShare: Number(lowShare.toFixed(3)),
     unmappedCount
   };
+
+  if (portionStats) {
+    result.portionStats = portionStats;
+  }
+
+  return result;
 }
 
 /**
@@ -312,6 +492,10 @@ export async function computeRecipeNutrition(
 }> {
   try {
     console.log('Starting nutrition computation for recipe:', recipeId);
+    const recipeMeta = await prisma.recipe.findUnique({
+      where: { id: recipeId },
+      select: { authorId: true }
+    });
     // Get all ingredients to check for unmapped ones
     const ingredients = await prisma.ingredient.findMany({
       where: { recipeId },
@@ -326,7 +510,9 @@ export async function computeRecipeNutrition(
     .map(ing => ing.name);
   
   // Compute totals with provisional tracking
-  const result = await computeTotals(recipeId);
+  const result = await computeTotals(recipeId, {
+    userId: recipeMeta?.authorId ?? undefined
+  });
   const { provisional, lowConfidenceShare, unmappedCount, ...totals } = result;
   
   // Calculate health score
