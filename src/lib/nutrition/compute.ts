@@ -305,7 +305,7 @@ export async function computeTotals(
         // Type assertion for units (Prisma include creates union types)
         const foodUnits = (food as any).units as Array<{ label: string; grams: number }> | undefined;
         const servingOptions = deriveServingOptions({
-          units: foodUnits?.map(u => ({ label: u.label, grams: u.grams })),
+          units: foodUnits?.map(u => ({ label: u.label, grams: u.grams })) ?? [],
           densityGml: food.densityGml ?? undefined,
           categoryId: food.categoryId ?? null,
         });
