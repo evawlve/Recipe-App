@@ -8,6 +8,31 @@
  * - Culinary references for international ingredients
  * 
  * Run: npm run seed:portion-overrides
+ * 
+ * IMPORTANT: Fuzzy Matching for Food Names
+ * ==========================================
+ * Always verify food existence with fuzzy matching before assuming foods are missing!
+ * 
+ * USDA uses specific, verbose names:
+ * - Not "Garlic" but "Garlic, raw"
+ * - Not "Coconut Milk" but "Nuts, coconut milk, raw (liquid expressed from grated meat and water)"
+ * - Not "Pasta" but "Pasta, homemade, made with egg, cooked"
+ * 
+ * To verify missing foods before adding duplicates:
+ * 
+ * 1. Check with contains search (case-insensitive):
+ *    await prisma.food.findMany({
+ *      where: { name: { contains: 'garlic', mode: 'insensitive' } }
+ *    })
+ * 
+ * 2. Try key terms from the food name (first word usually works)
+ * 
+ * 3. Check for common USDA patterns:
+ *    - "Food, state" (e.g., "Garlic, raw", "Onions, yellow, raw")
+ *    - "Food, form, details" (e.g., "Nuts, coconut milk, raw (...)")
+ *    - "Food, brand/type" for commercial items
+ * 
+ * This verification step prevents duplicate food entries and increases seed success rate!
  */
 
 import { PrismaClient } from '@prisma/client';

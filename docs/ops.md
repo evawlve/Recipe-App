@@ -184,3 +184,150 @@ If database migrations are involved:
 - **Evaluation System**: `docs/eval.md`
 - **USDA Saturation**: `docs/USDA_SATURATION_README.md`
 
+---
+
+## Data Seeding Best Practices
+
+### Verifying Food Existence with Fuzzy Matching
+
+**IMPORTANT**: Always verify food existence with fuzzy matching before assuming foods are missing!
+
+#### Why This Matters
+
+In Sprint 2, we discovered that 12 of 21 "missing" foods actually existed with different USDA names. Fuzzy matching saved us from:
+- ❌ Adding 12 duplicate foods
+- ❌ 57% extra Sprint 5 work  
+- ✅ Increased seed success rate from 58% to 81%
+
+#### USDA Naming Conventions
+
+USDA uses specific, verbose names:
+
+| Common Name | Actual USDA Name |
+|-------------|------------------|
+| "Garlic" | `Garlic, raw` |
+| "Onion" | `Onions, yellow, raw` |
+| "Coconut Milk" | `Nuts, coconut milk, raw (liquid expressed from grated meat and water)` |
+| "Pasta" | `Pasta, homemade, made with egg, cooked` |
+| "Tomato" | `Tomatoes, red, ripe, raw, year round average` |
+
+#### How to Verify Before Adding Foods
+
+**1. Basic fuzzy search (case-insensitive):**
+
+```typescript
+const matches = await prisma.food.findMany({
+  where: {
+    name: {
+      contains: 'garlic', // Use key term
+      mode: 'insensitive'
+    }
+  },
+  select: { name: true, source: true },
+  take: 5
+});
+```
+
+**2. Check with first word of food name:**
+
+```typescript
+// For "Coconut Oil", search "coconut"
+// For "Fish Sauce", search "fish" or "sauce"
+const searchTerm = foodName.split(' ')[0].toLowerCase();
+```
+
+**3. Look for common USDA patterns:**
+- `"Food, state"` - e.g., `Garlic, raw`, `Onions, yellow, raw`
+- `"Food, form, details"` - e.g., `Nuts, coconut milk, raw (...)`
+- `"Food, brand/type"` - for commercial items
+- `"Food, preparation"` - e.g., `Chicken, cooked, braised`
+
+**4. Quick verification script:**
+
+```bash
+# Run this in your project directory
+node -e "
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function check() {
+  const foods = ['Garlic', 'Onion', 'Miso', 'Honey'];
+  
+  for (const food of foods) {
+    const term = food.toLowerCase();
+    const matches = await prisma.food.findMany({
+      where: { name: { contains: term, mode: 'insensitive' } },
+      select: { name: true },
+      take: 3
+    });
+    
+    console.log(\`\${food}:\`);
+    if (matches.length > 0) {
+      matches.forEach(m => console.log(\`  → \${m.name}\`));
+    } else {
+      console.log(\`  ❌ NOT FOUND\`);
+    }
+    console.log();
+  }
+  
+  await prisma.\$disconnect();
+}
+
+check();
+"
+```
+
+#### Sprint 2 Example Results
+
+**Before fuzzy matching verification:**
+- Gap list: 21 foods
+- Overrides seeded: 66
+
+**After fuzzy matching verification:**
+- Gap list: 9 foods (12 found!)
+- Overrides seeded: 92 (+39% improvement)
+
+#### Best Practice Workflow
+
+1. **Create seed data** with common food names
+2. **Run seed script** once (will show "not found" items)
+3. **Verify each "not found"** with fuzzy matching
+4. **Update seed data** with correct USDA names
+5. **Re-run seed script** to capture all available foods
+6. **Document truly missing** foods for future addition
+
+#### Adding New Foods
+
+If foods are truly missing after verification:
+
+1. **Use template format** for cleaner names:
+   ```typescript
+   await prisma.food.create({
+     data: {
+       name: 'Miso',
+       source: 'template',
+       // ... nutrition data
+     }
+   });
+   ```
+
+2. **Add FoodAlias entries** for common variations:
+   ```typescript
+   await prisma.foodAlias.createMany({
+     data: [
+       { foodId: misoId, alias: 'miso paste' },
+       { foodId: misoId, alias: 'miso, white' },
+       { foodId: misoId, alias: 'miso, red' },
+     ]
+   });
+   ```
+
+3. **Document in gap list** with priority and use cases
+
+### Related Scripts
+
+- **Portion Override Seed**: `npm run seed:portion-overrides`
+- **Curated Food Seed**: `npm run seed:curated`
+- **USDA Import**: `npm run usda:import`
+- **Verify Seeding**: `npm run verify:seeding`
+
