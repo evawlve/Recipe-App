@@ -9,6 +9,8 @@ import { deriveServingOptions } from '@/lib/units/servings';
 import { resolveGramsFromParsed } from '@/lib/nutrition/resolve-grams';
 import { resolvePortion } from '@/lib/nutrition/portion';
 import { ENABLE_PORTION_V2 } from '@/lib/flags';
+import { rankCandidates, Candidate } from '@/lib/foods/rank';
+import { batchFetchAliases } from '@/lib/foods/alias-cache';
 
 interface GoldRow {
   id: string;
@@ -55,7 +57,11 @@ async function readGoldCsv(filePath: string): Promise<GoldRow[]> {
   return parsed.data;
 }
 
-async function findTopFoodCandidates(query: string) {
+async function findTopFoodCandidates(
+  query: string,
+  unitHint?: string | null,
+  qualifiers?: string[]
+) {
   const normalized = normalizeQuery(query);
   const ts = tokens(normalized);
   if (ts.length === 0) return [] as any[];
@@ -68,10 +74,10 @@ async function findTopFoodCandidates(query: string) {
     ]
   }));
 
-  // Simple baseline: order by popularity desc, then verified first
+  // Fetch candidate foods (more than 10 to allow ranking to work properly)
   const foods = await prisma.food.findMany({
     where: { AND: andORs },
-    take: 10,
+    take: 20, // Increased to give ranking more candidates
     orderBy: [
       { verification: 'asc' },
       { popularity: 'desc' },
@@ -88,6 +94,7 @@ async function findTopFoodCandidates(query: string) {
       carbs100: true,
       fat100: true,
       densityGml: true,
+      popularity: true,
       units: { select: { label: true, grams: true } },
       portionOverrides: ENABLE_PORTION_V2 
         ? { select: { unit: true, grams: true, label: true } }
@@ -95,7 +102,45 @@ async function findTopFoodCandidates(query: string) {
     }
   });
 
-  return foods;
+  if (foods.length === 0) return [];
+
+  // Batch fetch aliases for all foods
+  const foodIds = foods.map(f => f.id);
+  const aliasMap = await batchFetchAliases(foodIds);
+
+  // Convert to Candidate format
+  const candidates: Candidate[] = foods.map(food => ({
+    food: {
+      id: food.id,
+      name: food.name,
+      brand: food.brand,
+      source: food.source,
+      verification: food.verification as 'verified' | 'unverified' | 'suspect',
+      kcal100: food.kcal100,
+      protein100: food.protein100,
+      carbs100: food.carbs100,
+      fat100: food.fat100,
+      densityGml: food.densityGml,
+      categoryId: food.categoryId,
+      popularity: food.popularity || 0
+    },
+    aliases: aliasMap.get(food.id) || [],
+    barcodes: [],
+    usedByUserCount: 0
+  }));
+
+  // Rank candidates using the enhanced ranking function
+  const ranked = rankCandidates(candidates, {
+    query,
+    unitHint,
+    qualifiers
+  });
+
+  // Return top 10 ranked foods (mapped back to original format)
+  return ranked.slice(0, 10).map(r => {
+    const food = foods.find(f => f.id === r.candidate.food.id)!;
+    return food;
+  });
 }
 
 function isProvisionalResolution(parsed: ReturnType<typeof parseIngredientLine> | null, servingOptions: Array<{ label: string; grams: number }>, usedGrams: number | null): boolean {
@@ -108,7 +153,11 @@ function isProvisionalResolution(parsed: ReturnType<typeof parseIngredientLine> 
 
 async function evaluateRow(row: GoldRow) {
   const parsed = parseIngredientLine(row.raw_line);
-  const candidates = await findTopFoodCandidates(parsed ? parsed.name : row.raw_line);
+  const candidates = await findTopFoodCandidates(
+    parsed ? parsed.name : row.raw_line,
+    parsed?.unitHint ?? null,
+    parsed?.qualifiers
+  );
   const top = candidates[0] || null;
 
   // P@1 calculation: match by expected_food_id_hint regex/substr OR expected_food_name substr
@@ -201,14 +250,27 @@ async function evaluateRow(row: GoldRow) {
 }
 
 async function main() {
-  // Support both v1 and v2, default to v2 if it exists
-  const goldFile = process.env.GOLD_FILE || 'gold.v2.csv';
-  const goldPath = path.join(process.cwd(), 'eval', goldFile);
+  // Support v1, v2, and v3, default to v3 if it exists, then v2, then v1
+  const goldFile = process.env.GOLD_FILE;
+  let finalPath: string;
   
-  // Fallback to v1 if v2 doesn't exist
-  const finalPath = fs.existsSync(goldPath) 
-    ? goldPath 
-    : path.join(process.cwd(), 'eval', 'gold.v1.csv');
+  if (goldFile) {
+    // Use explicit GOLD_FILE if provided
+    finalPath = path.join(process.cwd(), 'eval', goldFile);
+  } else {
+    // Auto-detect: prefer v3 > v2 > v1
+    const v3Path = path.join(process.cwd(), 'eval', 'gold.v3.csv');
+    const v2Path = path.join(process.cwd(), 'eval', 'gold.v2.csv');
+    const v1Path = path.join(process.cwd(), 'eval', 'gold.v1.csv');
+    
+    if (fs.existsSync(v3Path)) {
+      finalPath = v3Path;
+    } else if (fs.existsSync(v2Path)) {
+      finalPath = v2Path;
+    } else {
+      finalPath = v1Path;
+    }
+  }
   
   const rows = await readGoldCsv(finalPath);
   const goldFileName = path.basename(finalPath);

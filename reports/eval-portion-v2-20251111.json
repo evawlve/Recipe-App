@@ -1,0 +1,235 @@
+{
+  "gold": "gold.v2.csv",
+  "portionV2Enabled": true,
+  "timestamp": "2025-11-11T05:05:25.285Z",
+  "totals": {
+    "count": 250
+  },
+  "metrics": {
+    "pAt1": 0.528,
+    "mae": 68.06657401876876,
+    "provisionalRate": 0.656
+  },
+  "samples": [
+    {
+      "id": "1",
+      "raw_line": "2 large eggs",
+      "expected_food_name": "Eggs, Large, Raw",
+      "expected_grams": 100,
+      "top_food_name": "Eggs, Grade A, Large, egg whole",
+      "resolved_grams": 100,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "2",
+      "raw_line": "1 cup cooked white rice",
+      "expected_food_name": "rice, white, medium-grain, cooked",
+      "expected_grams": 186,
+      "top_food_name": "Rice, white, medium-grain, raw, enriched",
+      "resolved_grams": 185,
+      "pAt1": 0,
+      "mae": 1,
+      "provisional": false
+    },
+    {
+      "id": "3",
+      "raw_line": "1 tbsp olive oil",
+      "expected_food_name": "Olive Oil",
+      "expected_grams": 13.6,
+      "top_food_name": "Olive oil",
+      "resolved_grams": 13.6,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "4",
+      "raw_line": "1 cup milk",
+      "expected_food_name": "milk, whole, 3.25% milkfat",
+      "expected_grams": 244,
+      "top_food_name": "Cheese, ricotta, whole milk",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 4,
+      "provisional": true
+    },
+    {
+      "id": "5",
+      "raw_line": "1 cup all-purpose flour",
+      "expected_food_name": "All-Purpose Flour",
+      "expected_grams": 120,
+      "top_food_name": "All-purpose flour",
+      "resolved_grams": 120,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "6",
+      "raw_line": "2 large chicken breasts",
+      "expected_food_name": "Chicken Breast, Raw (Skinless)",
+      "expected_grams": 280,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 280,
+      "provisional": true
+    },
+    {
+      "id": "7",
+      "raw_line": "1 cup broccoli florets",
+      "expected_food_name": "broccoli, raw",
+      "expected_grams": 91,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 91,
+      "provisional": true
+    },
+    {
+      "id": "8",
+      "raw_line": "1 cup cooked quinoa",
+      "expected_food_name": "quinoa, cooked",
+      "expected_grams": 185,
+      "top_food_name": "Quinoa, uncooked",
+      "resolved_grams": 185,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "9",
+      "raw_line": "2 tbsp butter",
+      "expected_food_name": "Butter, Unsalted",
+      "expected_grams": 28.4,
+      "top_food_name": "Butter",
+      "resolved_grams": 28.4,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "10",
+      "raw_line": "1 cup greek yogurt",
+      "expected_food_name": "greek yogurt, plain, nonfat",
+      "expected_grams": 245,
+      "top_food_name": "SILK Banana-Strawberry soy yogurt",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 5,
+      "provisional": true
+    },
+    {
+      "id": "11",
+      "raw_line": "1 large onion, diced",
+      "expected_food_name": "onions, raw",
+      "expected_grams": 150,
+      "top_food_name": "Onions, raw",
+      "resolved_grams": null,
+      "pAt1": 1,
+      "mae": 150,
+      "provisional": true
+    },
+    {
+      "id": "12",
+      "raw_line": "2 cloves garlic, minced",
+      "expected_food_name": "garlic, raw",
+      "expected_grams": 6,
+      "top_food_name": "Garlic, raw",
+      "resolved_grams": 6,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": true
+    },
+    {
+      "id": "13",
+      "raw_line": "1 cup brown rice, cooked",
+      "expected_food_name": "rice, brown, long-grain, cooked",
+      "expected_grams": 195,
+      "top_food_name": "Rice flour, brown",
+      "resolved_grams": 120,
+      "pAt1": 0,
+      "mae": 75,
+      "provisional": false
+    },
+    {
+      "id": "14",
+      "raw_line": "1 cup oats",
+      "expected_food_name": "oats",
+      "expected_grams": 80,
+      "top_food_name": "Oats (Includes foods for USDA's Food Distribution Program)",
+      "resolved_grams": 90,
+      "pAt1": 1,
+      "mae": 10,
+      "provisional": false
+    },
+    {
+      "id": "15",
+      "raw_line": "1 cup cottage cheese",
+      "expected_food_name": "cottage cheese, lowfat, 2% milkfat",
+      "expected_grams": 226,
+      "top_food_name": "Cheese, cottage, lowfat, 2% milkfat",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 14,
+      "provisional": true
+    },
+    {
+      "id": "16",
+      "raw_line": "1 cup spinach, chopped",
+      "expected_food_name": "spinach, raw",
+      "expected_grams": 30,
+      "top_food_name": "Spinach, raw",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 210,
+      "provisional": true
+    },
+    {
+      "id": "17",
+      "raw_line": "1 cup tomato, diced",
+      "expected_food_name": "tomatoes, red, ripe, raw",
+      "expected_grams": 180,
+      "top_food_name": "Tomatoes, yellow, raw",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 60,
+      "provisional": true
+    },
+    {
+      "id": "18",
+      "raw_line": "1 cup chicken broth",
+      "expected_food_name": "chicken broth, bouillon, consomme, prepared with water",
+      "expected_grams": 240,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "pAt1": 0,
+      "mae": 240,
+      "provisional": true
+    },
+    {
+      "id": "19",
+      "raw_line": "1 cup almond flour",
+      "expected_food_name": "almond flour",
+      "expected_grams": 96,
+      "top_food_name": "Almond Flour",
+      "resolved_grams": 96,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "20",
+      "raw_line": "1 cup coconut oil",
+      "expected_food_name": "coconut oil",
+      "expected_grams": 218,
+      "top_food_name": "Nuts, coconut milk, raw (liquid expressed from grated meat and water)",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 22,
+      "provisional": false
+    }
+  ]
+}
