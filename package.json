@@ -68,7 +68,9 @@
     "phaseD:add:dry": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/phase-d-add-critical-foods.ts --dry-run",
     "debug:salt": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/debug-salt-search.ts",
     "check:salt": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/check-salt-in-db.ts",
-    "boost:popularity": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/boost-template-food-popularity.ts"
+    "boost:popularity": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/boost-template-food-popularity.ts",
+    "phaseE:popularity": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/phase-e-fix-popularity.ts",
+    "phaseE:popularity:dry": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/phase-e-fix-popularity.ts --dry-run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.927.0",

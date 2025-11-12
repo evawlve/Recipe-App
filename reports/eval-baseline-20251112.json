@@ -1,13 +1,13 @@
 {
   "gold": "gold.v3.csv",
   "portionV2Enabled": false,
-  "timestamp": "2025-11-12T03:07:30.569Z",
+  "timestamp": "2025-11-12T04:47:23.864Z",
   "totals": {
     "count": 265
   },
   "metrics": {
-    "pAt1": 0.8226415094339623,
-    "mae": 65.23443340709196,
+    "pAt1": 0.8415094339622642,
+    "mae": 61.7929239731297,
     "provisionalRate": 0.09811320754716982
   },
   "samples": [
@@ -93,10 +93,10 @@
       "raw_line": "1 cup cooked quinoa",
       "expected_food_name": "quinoa, cooked",
       "expected_grams": 185,
-      "top_food_name": "Quinoa, uncooked",
-      "resolved_grams": 185,
+      "top_food_name": "Quinoa, Uncooked",
+      "resolved_grams": 170,
       "pAt1": 1,
-      "mae": 0,
+      "mae": 15,
       "provisional": false
     },
     {
@@ -192,10 +192,10 @@
       "raw_line": "1 cup tomato, diced",
       "expected_food_name": "tomatoes, red, ripe, raw",
       "expected_grams": 180,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 240,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 60,
       "pAt1": 0,
-      "mae": 60,
+      "mae": 120,
       "provisional": false
     },
     {
@@ -315,10 +315,10 @@
       "raw_line": "1 cup cooked quinoa",
       "expected_food_name": "quinoa, cooked",
       "expected_grams": 185,
-      "top_food_name": "Quinoa, uncooked",
-      "resolved_grams": 185,
+      "top_food_name": "Quinoa, Uncooked",
+      "resolved_grams": 170,
       "pAt1": 1,
-      "mae": 0,
+      "mae": 15,
       "provisional": false
     },
     {
@@ -414,10 +414,10 @@
       "raw_line": "1 cup tomato, diced",
       "expected_food_name": "tomatoes, red, ripe, raw",
       "expected_grams": 180,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 240,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 60,
       "pAt1": 0,
-      "mae": 60,
+      "mae": 120,
       "provisional": false
     },
     {
@@ -480,10 +480,10 @@
       "raw_line": "1 cup avocado, sliced",
       "expected_food_name": "avocados, raw, California",
       "expected_grams": 146,
-      "top_food_name": "Oil, avocado",
-      "resolved_grams": 54.6,
+      "top_food_name": "Avocado",
+      "resolved_grams": 60,
       "pAt1": 0,
-      "mae": 91.4,
+      "mae": 86,
       "provisional": false
     },
     {
@@ -898,10 +898,10 @@
       "raw_line": "1 cup lentils, cooked",
       "expected_food_name": "lentils, mature seeds, cooked, boiled, without salt",
       "expected_grams": 198,
-      "top_food_name": "Lentils, raw",
-      "resolved_grams": 240,
-      "pAt1": 0,
-      "mae": 42,
+      "top_food_name": "Lentils, Cooked",
+      "resolved_grams": 198,
+      "pAt1": 1,
+      "mae": 0,
       "provisional": false
     },
     {
@@ -909,10 +909,10 @@
       "raw_line": "1 cup chickpeas, cooked",
       "expected_food_name": "chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt",
       "expected_grams": 164,
-      "top_food_name": "Chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt",
-      "resolved_grams": 240,
+      "top_food_name": "Chickpeas, Cooked",
+      "resolved_grams": 164,
       "pAt1": 1,
-      "mae": 76,
+      "mae": 0,
       "provisional": false
     },
     {
@@ -1646,10 +1646,10 @@
       "raw_line": "1 cup lentils, cooked",
       "expected_food_name": "Lentils, Cooked",
       "expected_grams": 198,
-      "top_food_name": "Lentils, raw",
-      "resolved_grams": 240,
+      "top_food_name": "Lentils, Cooked",
+      "resolved_grams": 198,
       "pAt1": 1,
-      "mae": 42,
+      "mae": 0,
       "provisional": false
     },
     {
@@ -1800,10 +1800,10 @@
       "raw_line": "1 medium tomato",
       "expected_food_name": "Tomato",
       "expected_grams": 123,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 240,
-      "pAt1": 0,
-      "mae": 117,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 100,
+      "pAt1": 1,
+      "mae": 23,
       "provisional": false
     },
     {
@@ -1822,10 +1822,10 @@
       "raw_line": "1 slice tomato",
       "expected_food_name": "Tomato",
       "expected_grams": 15,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 240,
-      "pAt1": 0,
-      "mae": 225,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 100,
+      "pAt1": 1,
+      "mae": 85,
       "provisional": true
     },
     {
@@ -1833,10 +1833,10 @@
       "raw_line": "4 slices tomato",
       "expected_food_name": "Tomato",
       "expected_grams": 60,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 960,
-      "pAt1": 0,
-      "mae": 900,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 400,
+      "pAt1": 1,
+      "mae": 340,
       "provisional": true
     },
     {
@@ -1844,10 +1844,10 @@
       "raw_line": "1 cup tomato, diced",
       "expected_food_name": "Tomato",
       "expected_grams": 180,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 240,
-      "pAt1": 0,
-      "mae": 60,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 60,
+      "pAt1": 1,
+      "mae": 120,
       "provisional": false
     },
     {
@@ -1987,10 +1987,10 @@
       "raw_line": "½ avocado",
       "expected_food_name": "Avocado",
       "expected_grams": 68,
-      "top_food_name": "Oil, avocado",
-      "resolved_grams": 6.8,
+      "top_food_name": "Avocado",
+      "resolved_grams": 75,
       "pAt1": 1,
-      "mae": 61.2,
+      "mae": 7,
       "provisional": false
     },
     {
@@ -1998,10 +1998,10 @@
       "raw_line": "1 avocado",
       "expected_food_name": "Avocado",
       "expected_grams": 136,
-      "top_food_name": "Oil, avocado",
-      "resolved_grams": 13.6,
+      "top_food_name": "Avocado",
+      "resolved_grams": 150,
       "pAt1": 1,
-      "mae": 122.4,
+      "mae": 14,
       "provisional": false
     },
     {
@@ -2119,10 +2119,10 @@
       "raw_line": "1 cup quinoa, cooked",
       "expected_food_name": "Quinoa, cooked",
       "expected_grams": 185,
-      "top_food_name": "Quinoa, uncooked",
-      "resolved_grams": 185,
+      "top_food_name": "Quinoa, Uncooked",
+      "resolved_grams": 170,
       "pAt1": 1,
-      "mae": 0,
+      "mae": 15,
       "provisional": false
     },
     {
@@ -3131,10 +3131,10 @@
       "raw_line": "1 cup tomato, chopped",
       "expected_food_name": "tomatoes, red, ripe, raw",
       "expected_grams": 180,
-      "top_food_name": "Ketchup",
-      "resolved_grams": 240,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 60,
       "pAt1": 0,
-      "mae": 60,
+      "mae": 120,
       "provisional": false
     },
     {

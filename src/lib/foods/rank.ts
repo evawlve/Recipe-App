@@ -415,6 +415,59 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
       simplicityBoost += 0.4; // Strong boost for template foods
     }
     
+    // PHASE E2: Derivative/Condiment Penalty
+    // Prevent condiments/derivatives from matching base ingredient queries
+    const DERIVATIVE_MAP: Record<string, string[]> = {
+      'tomato': ['ketchup', 'catsup', 'tomato sauce', 'tomato paste', 'salsa'],
+      'milk': ['coconut milk', 'oat milk', 'almond milk', 'soy milk', 'rice milk'],
+      'avocado': ['avocado oil'],
+      'coconut': ['coconut oil'],
+      'olive': ['olive oil'],
+      'peanut': ['peanut oil'],
+      'sesame': ['sesame oil'],
+      'chicken': ['chicken broth', 'chicken stock', 'chicken bouillon'],
+      'beef': ['beef broth', 'beef stock', 'beef bouillon'],
+    };
+    
+    let derivativePenalty = 0;
+    const derivativeQueryTokens = queryLower.split(/\s+/);
+    
+    for (const baseFood in DERIVATIVE_MAP) {
+      // If query contains base food (e.g., "tomato")
+      if (derivativeQueryTokens.includes(baseFood)) {
+        // Check if food name is a derivative (e.g., "ketchup")
+        const derivatives = DERIVATIVE_MAP[baseFood];
+        if (derivatives.some(d => foodNameLower.includes(d))) {
+          // UNLESS query explicitly mentions the derivative
+          if (!derivatives.some(d => queryLower.includes(d))) {
+            derivativePenalty = -3.0; // Very strong penalty - almost never match
+          }
+        }
+      }
+    }
+    
+    // PHASE E2: Exact Qualifier Matching
+    // Strengthen penalties for missing exact qualifiers like "2%", "skim", etc.
+    const extractExactQualifiers = (text: string): string[] => {
+      const qualifiers: string[] = [];
+      if (text.match(/\b2%\b/)) qualifiers.push('2%');
+      if (text.match(/\b1%\b/)) qualifiers.push('1%');
+      if (text.match(/\bskim\b|\bnonfat\b/i)) qualifiers.push('skim');
+      if (text.match(/\bwhole\b/i)) qualifiers.push('whole');
+      if (text.match(/\blowfat\b|low-fat\b|low fat\b/i)) qualifiers.push('lowfat');
+      return qualifiers;
+    };
+    
+    const queryExactQualifiers = extractExactQualifiers(queryLower);
+    const foodExactQualifiers = extractExactQualifiers(foodNameLower);
+    
+    let exactQualifierPenalty = 0;
+    for (const qq of queryExactQualifiers) {
+      if (!foodExactQualifiers.includes(qq)) {
+        exactQualifierPenalty -= 1.8; // Strong penalty for missing exact qualifier
+      }
+    }
+    
     // PHASE B3: Category incompatibility matrix
     const INCOMPATIBLE_CATEGORIES: Record<string, string[]> = {
       'milk': ['cheese', 'yogurt', 'dessert', 'sugar', 'soup'],
@@ -659,7 +712,10 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
       w.category * Math.max(0, categoryBoost) + // Ensure non-negative
       w.unitHint * unitHintBoost +
       w.qualifier * (qualifierBoost + qualifierPenalty) + // PHASE B: Apply both boost and penalty
-      w.state * stateBoost; // PHASE 3: Add state matching bonus/penalty
+      w.state * stateBoost + // PHASE 3: Add state matching bonus/penalty
+      simplicityBoost + // PHASE E2: Name simplicity bonus
+      derivativePenalty + // PHASE E2: Derivative/condiment penalty
+      exactQualifierPenalty; // PHASE E2: Exact qualifier penalty
 
     // Apply category hint boost
     if (f.categoryId && boosts[f.categoryId]) {

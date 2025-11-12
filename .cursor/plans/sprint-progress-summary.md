@@ -4,9 +4,10 @@
 - **P@1**: 62.6% (before Sprint 4.6)
 - **Failures**: 99/265
 
-## Current Status
+## Current Status (After Phase E Step 1)
 - **P@1**: 82.3%
 - **Failures**: 47/265
+- **MAE**: 65.2g
 - **Overall Progress**: +19.7pp improvement
 
 ## What We Accomplished
