@@ -115,6 +115,116 @@ const SYNONYM_MAPPINGS: SynonymMapping[] = [
   
   { alias: 'single cream', foodNamePattern: 'cream.*light', preferRaw: true },
   { alias: 'double cream', foodNamePattern: 'cream.*heavy', preferRaw: true },
+  
+  // MEAT CUTS (Sprint 4.5)
+  { alias: 'chicken breast', foodNamePattern: 'chicken.*breast.*raw', preferRaw: true },
+  { alias: 'boneless chicken breast', foodNamePattern: 'chicken.*breast.*raw', preferRaw: true },
+  { alias: 'skinless chicken breast', foodNamePattern: 'chicken.*breast.*raw', preferRaw: true },
+  { alias: 'boneless skinless chicken breast', foodNamePattern: 'chicken.*breast.*skinless.*raw', preferRaw: true },
+  
+  { alias: 'chicken thigh', foodNamePattern: 'chicken.*thigh.*raw', preferRaw: true },
+  { alias: 'chicken thighs', foodNamePattern: 'chicken.*thigh.*raw', preferRaw: true }, // Plural
+  { alias: 'boneless chicken thigh', foodNamePattern: 'chicken.*thigh.*raw', preferRaw: true },
+  { alias: 'skinless chicken thigh', foodNamePattern: 'chicken.*thigh.*raw', preferRaw: true },
+  
+  { alias: 'chicken drumstick', foodNamePattern: 'chicken.*drumstick.*raw', preferRaw: true },
+  { alias: 'chicken drumsticks', foodNamePattern: 'chicken.*drumstick.*raw', preferRaw: true }, // Plural
+  { alias: 'chicken leg', foodNamePattern: 'chicken.*leg.*raw', preferRaw: true },
+  { alias: 'chicken legs', foodNamePattern: 'chicken.*leg.*raw', preferRaw: true }, // Plural
+  
+  { alias: 'chicken wing', foodNamePattern: 'chicken.*wing.*raw', preferRaw: true },
+  { alias: 'chicken wings', foodNamePattern: 'chicken.*wing.*raw', preferRaw: true },
+  
+  { alias: 'beef patty', foodNamePattern: 'beef.*ground.*patty.*raw', preferRaw: true },
+  { alias: 'hamburger patty', foodNamePattern: 'beef.*ground.*patty.*raw', preferRaw: true },
+  { alias: 'burger patty', foodNamePattern: 'beef.*ground.*patty.*raw', preferRaw: true },
+  
+  { alias: 'salmon fillet', foodNamePattern: 'salmon.*atlantic.*raw', preferRaw: true },
+  { alias: 'tuna fillet', foodNamePattern: 'tuna.*raw', preferRaw: true },
+  
+  { alias: 'pork chop', foodNamePattern: 'pork.*loin.*chop.*raw', preferRaw: true },
+  { alias: 'beef steak', foodNamePattern: 'beef.*loin.*steak.*raw', preferRaw: true },
+  
+  // CONDIMENTS & SAUCES (Sprint 4.5 & 4.6)
+  { alias: 'ketchup', foodNamePattern: 'catsup', preferRaw: false },
+  { alias: 'tomato ketchup', foodNamePattern: 'catsup', preferRaw: false },
+  { alias: 'catsup', foodNamePattern: 'ketchup', preferRaw: false },
+  { alias: 'ketchup', foodNamePattern: 'ketchup', preferRaw: false }, // Self-reference for matching
+  
+  { alias: 'vinegar', foodNamePattern: 'vinegar.*distilled', preferRaw: false },
+  { alias: 'white vinegar', foodNamePattern: 'vinegar.*distilled', preferRaw: false },
+  { alias: 'distilled vinegar', foodNamePattern: 'vinegar.*distilled', preferRaw: false },
+  
+  { alias: 'sriracha', foodNamePattern: 'sauce.*sriracha', preferRaw: false },
+  { alias: 'sriracha sauce', foodNamePattern: 'sriracha.*sauce', preferRaw: false },
+  { alias: 'sriracha', foodNamePattern: 'sriracha', preferRaw: false }, // Self-reference
+  
+  { alias: 'vanilla extract', foodNamePattern: 'vanilla.*extract', preferRaw: false },
+  { alias: 'vanilla essence', foodNamePattern: 'vanilla.*extract', preferRaw: false },
+  
+  { alias: 'heavy cream', foodNamePattern: 'cream.*fluid.*heavy', preferRaw: false },
+  { alias: 'heavy whipping cream', foodNamePattern: 'cream.*fluid.*heavy', preferRaw: false },
+  { alias: 'whipping cream', foodNamePattern: 'cream.*fluid.*heavy', preferRaw: false },
+  
+  { alias: 'baking powder', foodNamePattern: 'leavening.*baking powder', preferRaw: false },
+  { alias: 'baking powder', foodNamePattern: 'baking.*powder', preferRaw: false }, // Alternative pattern
+  { alias: 'baking soda', foodNamePattern: 'leavening.*baking soda', preferRaw: false },
+  { alias: 'baking soda', foodNamePattern: 'sodium.*bicarbonate', preferRaw: false }, // Alternative pattern
+  { alias: 'bicarbonate of soda', foodNamePattern: 'leavening.*baking soda', preferRaw: false },
+  { alias: 'sodium bicarbonate', foodNamePattern: 'baking.*soda', preferRaw: false },
+  
+  { alias: 'chicken broth', foodNamePattern: 'broth.*chicken', preferRaw: false },
+  { alias: 'chicken stock', foodNamePattern: 'broth.*chicken', preferRaw: false },
+  { alias: 'chicken bouillon', foodNamePattern: 'bouillon.*chicken', preferRaw: false },
+  { alias: 'chicken bouillon', foodNamePattern: 'broth.*chicken', preferRaw: false }, // Alternative
+  
+  { alias: 'beef broth', foodNamePattern: 'broth.*beef', preferRaw: false },
+  { alias: 'beef stock', foodNamePattern: 'broth.*beef', preferRaw: false },
+  { alias: 'beef bouillon', foodNamePattern: 'bouillon.*beef', preferRaw: false },
+  { alias: 'beef bouillon', foodNamePattern: 'broth.*beef', preferRaw: false }, // Alternative
+  
+  // OILS (Sprint 4.5)
+  { alias: 'light olive oil', foodNamePattern: 'oil.*olive.*salad', preferRaw: false },
+  { alias: 'extra light olive oil', foodNamePattern: 'oil.*olive.*salad', preferRaw: false },
+  { alias: 'sesame oil', foodNamePattern: 'oil.*sesame.*salad', preferRaw: false },
+  { alias: 'vegetable oil', foodNamePattern: 'oil.*vegetable', preferRaw: false },
+  { alias: 'canola oil', foodNamePattern: 'oil.*canola', preferRaw: false },
+  
+  // INTERNATIONAL FOODS (Sprint 4.6)
+  { alias: 'soy sauce', foodNamePattern: 'soy.*sauce', preferRaw: false },
+  { alias: 'shoyu', foodNamePattern: 'soy.*sauce', preferRaw: false },
+  { alias: 'soy sauce', foodNamePattern: 'shoyu', preferRaw: false },
+  
+  { alias: 'miso', foodNamePattern: 'miso', preferRaw: false },
+  { alias: 'soybean paste', foodNamePattern: 'miso', preferRaw: false },
+  { alias: 'miso paste', foodNamePattern: 'miso', preferRaw: false },
+  
+  { alias: 'mirin', foodNamePattern: 'mirin', preferRaw: false },
+  { alias: 'sweet rice wine', foodNamePattern: 'mirin', preferRaw: false },
+  
+  { alias: 'rice vinegar', foodNamePattern: 'vinegar.*rice', preferRaw: false },
+  { alias: 'rice wine vinegar', foodNamePattern: 'vinegar.*rice', preferRaw: false },
+  
+  { alias: 'gochujang', foodNamePattern: 'gochujang', preferRaw: false },
+  { alias: 'korean chili paste', foodNamePattern: 'gochujang', preferRaw: false },
+  { alias: 'korean red pepper paste', foodNamePattern: 'gochujang', preferRaw: false },
+  
+  { alias: 'gochugaru', foodNamePattern: 'gochugaru', preferRaw: false },
+  { alias: 'korean chili powder', foodNamePattern: 'gochugaru', preferRaw: false },
+  { alias: 'korean red pepper powder', foodNamePattern: 'gochugaru', preferRaw: false },
+  
+  { alias: 'fish sauce', foodNamePattern: 'fish.*sauce', preferRaw: false },
+  { alias: 'nam pla', foodNamePattern: 'fish.*sauce', preferRaw: false },
+  { alias: 'nuoc mam', foodNamePattern: 'fish.*sauce', preferRaw: false },
+  
+  { alias: 'coconut milk', foodNamePattern: 'coconut.*milk', preferRaw: false },
+  { alias: 'coconut cream', foodNamePattern: 'coconut.*milk', preferRaw: false }, // Often interchangeable
+  
+  { alias: 'curry paste', foodNamePattern: 'curry.*paste', preferRaw: false },
+  { alias: 'thai curry paste', foodNamePattern: 'curry.*paste', preferRaw: false },
+  { alias: 'red curry paste', foodNamePattern: 'curry.*paste.*red', preferRaw: false },
+  { alias: 'green curry paste', foodNamePattern: 'curry.*paste.*green', preferRaw: false },
+  { alias: 'yellow curry paste', foodNamePattern: 'curry.*paste.*yellow', preferRaw: false },
 ];
 
 function canonicalize(s: string): string {

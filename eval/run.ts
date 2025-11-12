@@ -325,11 +325,32 @@ async function main() {
       provisionalRate,
     },
     samples: results.slice(0, 20),
+    allResults: results, // Include ALL results for detailed analysis
   };
   await fs.promises.writeFile(reportPath, JSON.stringify(payload, null, 2), 'utf8');
 
   // eslint-disable-next-line no-console
   console.log('Report:', path.relative(process.cwd(), reportPath));
+  
+  // Show failure summary
+  const failures = results.filter(r => r.pAt1 === 0);
+  // eslint-disable-next-line no-console
+  console.log(`\nFailures: ${failures.length}/${total} (${(failures.length/total*100).toFixed(1)}%)`);
+  // eslint-disable-next-line no-console
+  console.log('\nTop 10 Failures (by MAE):');
+  failures
+    .sort((a, b) => b.mae - a.mae)
+    .slice(0, 10)
+    .forEach(f => {
+      // eslint-disable-next-line no-console
+      console.log(`  [${f.id}] "${f.raw_line}"`);
+      // eslint-disable-next-line no-console
+      console.log(`      Expected: ${f.expected_food_name} (${f.expected_grams}g)`);
+      // eslint-disable-next-line no-console
+      console.log(`      Got:      ${f.top_food_name || 'NO MATCH'} (${f.resolved_grams || 0}g)`);
+      // eslint-disable-next-line no-console
+      console.log(`      MAE:      ${f.mae.toFixed(1)}g\n`);
+    });
 }
 
 main().then(() => prisma.$disconnect()).catch(async (err) => {
