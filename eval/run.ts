@@ -77,7 +77,7 @@ async function findTopFoodCandidates(
   // Fetch candidate foods (more than 10 to allow ranking to work properly)
   const foods = await prisma.food.findMany({
     where: { AND: andORs },
-    take: 20, // Increased to give ranking more candidates
+    take: 50, // Increased to give ranking more candidates (especially for cooked/raw state matching)
     orderBy: [
       { verification: 'asc' },
       { popularity: 'desc' },

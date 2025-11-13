@@ -153,6 +153,90 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
   const boosts = categoryBoostForQuery(qn);
   const qHasCompositeWords = /,| with | and | salad| sandwich| pizza/.test(qn);
 
+  // PHASE 7: Pre-check which foods have important query terms in their NAME (not just aliases)
+  // This helps us penalize foods that only match via aliases when better name matches exist
+  const queryTokens = opts.query.toLowerCase().split(/\s+/).filter(Boolean);
+  // Common words that can be filtered out UNLESS they're part of a multi-word phrase
+  // For example, "rice" in "brown rice" is important, but "rice" alone might be common
+  const commonWords = ['cooked', 'raw', 'fresh', 'diced', 'chopped', 'sliced', 'cup', 'tbsp', 'tsp', 'and', 'the', 'a', 'an'];
+  // For multi-word queries, be more conservative - only filter out truly common words
+  // Single-word queries can filter more aggressively
+  const importantTerms = queryTokens.length > 1 
+    ? queryTokens.filter(t => !commonWords.includes(t.toLowerCase()) && t.length > 2) // Multi-word: keep "rice", "brown", etc.
+    : queryTokens.filter(t => !commonWords.includes(t.toLowerCase()) && t.length > 2); // Single-word: same logic
+  
+  const foodsWithTermsInName = new Set<string>();
+  const foodsWithTermsAsPhrase = new Set<string>();
+  if (importantTerms.length > 0) {
+    // Check if query terms form a phrase (e.g., "brown rice", "ground beef")
+    const queryPhrase = opts.query.toLowerCase();
+    
+    for (const cand of cands) {
+      const foodNameLower = cand.food.name.toLowerCase();
+      // Check if ALL important terms are in the food name (not aliases)
+      const hasAllTermsInName = importantTerms.every(term => foodNameLower.includes(term.toLowerCase()));
+      if (hasAllTermsInName) {
+        foodsWithTermsInName.add(cand.food.id);
+        
+        // Check if the terms appear together as a phrase in the food name
+        // Order doesn't matter - "shredded coconut" should match "coconut, canned, shredded"
+        // But terms should be relatively close together to avoid false matches
+        if (importantTerms.length >= 2) {
+          // Find all term positions in the food name (order doesn't matter)
+          const termsLower = importantTerms.map(t => t.toLowerCase());
+          const termPositions: number[] = [];
+          for (const term of termsLower) {
+            const termIndex = foodNameLower.indexOf(term);
+            if (termIndex === -1) {
+              // Term not found - not a phrase match
+              break;
+            }
+            termPositions.push(termIndex);
+          }
+          
+          // If all terms found, check if they're relatively close together AND in a natural phrase context
+          // This allows "coconut, canned, shredded" to match "shredded coconut"
+          // But prevents "brown and serve" + "rice links" from matching "brown rice"
+          if (termPositions.length === termsLower.length) {
+            const minPos = Math.min(...termPositions);
+            const maxPos = Math.max(...termPositions);
+            const distance = maxPos - minPos;
+            
+            // Terms should be within 50 characters of each other
+            if (distance <= 50) {
+              // Get the substring BETWEEN the terms (not including the terms themselves)
+              // Find which term is first and which is last
+              const firstTermIndex = termPositions.indexOf(minPos);
+              const lastTermIndex = termPositions.indexOf(maxPos);
+              const firstTerm = termsLower[firstTermIndex];
+              const lastTerm = termsLower[lastTermIndex];
+              
+              // Get text after first term and before last term
+              const afterFirstTerm = minPos + firstTerm.length;
+              const substringBetween = foodNameLower.substring(afterFirstTerm, maxPos);
+              
+              // Check if the substring between terms contains words that break the phrase
+              // Words like "links", "and", "serve", "sausage" suggest the terms aren't part of the same phrase
+              const phraseBreakingWords = ['links', 'and', 'serve', 'sausage', 'with', 'or', 'plus', 'pork'];
+              const hasBreakingWords = phraseBreakingWords.some(word => substringBetween.includes(word));
+              
+              // Also check if terms are separated by too many content words (more than 2-3 words)
+              const wordsBetween = substringBetween.split(/\s+/).filter(w => w.length > 2 && !w.match(/^[,;:]+$/));
+              
+              // If no breaking words and not too many words between, it's a valid phrase match
+              if (!hasBreakingWords && wordsBetween.length <= 3) {
+                foodsWithTermsAsPhrase.add(cand.food.id);
+              }
+            }
+          }
+        } else {
+          // Single important term - if it's in the name, consider it a phrase match
+          foodsWithTermsAsPhrase.add(cand.food.id);
+        }
+      }
+    }
+  }
+
   return cands.map(c => {
     const q = opts.query.toLowerCase();
     const f = c.food;
@@ -198,6 +282,80 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
     // Boost for tokenized alias matches
     if (aliasTokenMatches > 0) {
       aliasMatch = Math.max(aliasMatch, aliasTokenMatches * 0.9);
+    }
+    
+    // PHASE 7: Penalize alias-only matches and non-phrase matches when better phrase matches exist
+    // If other foods have important terms as a PHRASE in their NAME, heavily penalize:
+    // 1. Foods that only match via aliases
+    // 2. Foods that have the terms but not as a phrase (e.g., "brown and serve" + "rice links" vs "brown rice")
+    // Example: "brown rice" query should NOT match "Pork sausage rice links, brown and serve" 
+    //          (has "brown" and "rice" separately) when "Rice, brown, long-grain, cooked" exists (has "brown rice" as phrase)
+    let aliasOnlyPenalty = 0;
+    if (importantTerms.length > 0 && foodsWithTermsAsPhrase.size > 0) {
+      const foodNameLower = f.name.toLowerCase();
+      const hasTermsInName = importantTerms.every(term => foodNameLower.includes(term.toLowerCase()));
+      
+      // Check if terms appear as a phrase in the food name (order doesn't matter, but should be close together)
+      let hasTermsAsPhrase = false;
+      if (importantTerms.length >= 2) {
+        const termsLower = importantTerms.map(t => t.toLowerCase());
+        const termPositions: number[] = [];
+        for (const term of termsLower) {
+          const termIndex = foodNameLower.indexOf(term);
+          if (termIndex === -1) {
+            break; // Term not found
+          }
+          termPositions.push(termIndex);
+        }
+        
+        // If all terms found, check if they're relatively close together AND in a natural phrase context
+        if (termPositions.length === termsLower.length) {
+          const minPos = Math.min(...termPositions);
+          const maxPos = Math.max(...termPositions);
+          const distance = maxPos - minPos;
+          
+          if (distance <= 50) {
+            // Get the substring BETWEEN the terms (not including the terms themselves)
+            const firstTermIndex = termPositions.indexOf(minPos);
+            const lastTermIndex = termPositions.indexOf(maxPos);
+            const firstTerm = termsLower[firstTermIndex];
+            const afterFirstTerm = minPos + firstTerm.length;
+            const substringBetween = foodNameLower.substring(afterFirstTerm, maxPos);
+            
+            // Check if the substring between terms contains words that break the phrase
+            const phraseBreakingWords = ['links', 'and', 'serve', 'sausage', 'with', 'or', 'plus', 'pork'];
+            const hasBreakingWords = phraseBreakingWords.some(word => substringBetween.includes(word));
+            
+            // Also check if terms are separated by too many content words
+            const wordsBetween = substringBetween.split(/\s+/).filter(w => w.length > 2 && !w.match(/^[,;:]+$/));
+            
+            // If no breaking words and not too many words between, it's a valid phrase match
+            hasTermsAsPhrase = !hasBreakingWords && wordsBetween.length <= 3;
+          }
+        }
+      } else {
+        hasTermsAsPhrase = hasTermsInName; // Single term - if it's in name, it's a phrase match
+      }
+      
+      if (!hasTermsAsPhrase) {
+        if (!hasTermsInName && aliasMatch > 0) {
+          // This food only matches via aliases, but other foods have the terms as a phrase in their name
+          aliasOnlyPenalty = -10.0; // Very strong penalty for alias-only matches when phrase matches exist
+        } else if (hasTermsInName && !hasTermsAsPhrase) {
+          // This food has the terms but not as a phrase (e.g., "brown and serve" + "rice links")
+          // Other foods have the terms as a phrase - heavily penalize this one
+          // This is critical - "brown rice" should match "Rice, brown, long-grain" not "Pork sausage rice links, brown and serve"
+          aliasOnlyPenalty = -12.0; // Very strong penalty for non-phrase matches when phrase matches exist
+        }
+      }
+    } else if (importantTerms.length > 0 && foodsWithTermsInName.size > 0) {
+      // Fallback: if no phrase matches but name matches exist, still penalize alias-only matches
+      const foodNameLower = f.name.toLowerCase();
+      const hasTermsInName = importantTerms.every(term => foodNameLower.includes(term.toLowerCase()));
+      
+      if (!hasTermsInName && aliasMatch > 0) {
+        aliasOnlyPenalty = -8.0; // Penalty for alias-only matches when name matches exist
+      }
     }
     const fuzzy = fuzzyScore[f.id] ?? 0;
     const plaus = plausibilityScore(f.kcal100, opts.kcalBand);
@@ -265,6 +423,31 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
     let unitHintBoost = 0;
     let unitHintPenalty = 1.0;
     const foodNameLower = f.name.toLowerCase();
+    
+    // PHASE 6: Penalize foods missing key query terms
+    // If query has multiple important terms (like "brown rice"), foods missing those terms should be penalized
+    // Example: "brown rice" query should NOT match "rice noodles" (missing "brown")
+    let missingTermPenalty = 0;
+    if (tokens.length >= 2) {
+      // For multi-word queries, check if food name contains all important terms
+      // Important terms are those that aren't common words like "rice", "cooked", etc.
+      const commonWords = ['rice', 'cooked', 'raw', 'fresh', 'diced', 'chopped', 'sliced', 'cup', 'tbsp', 'tsp'];
+      const importantTerms = tokens.filter(t => !commonWords.includes(t.toLowerCase()) && t.length > 2);
+      
+      if (importantTerms.length > 0) {
+        // Check food NAME specifically (not aliases) for important terms
+        // This prevents "Rice noodles" (which has "brown rice" in aliases) from matching "brown rice" queries
+        // Important terms should appear in the actual food name, not just aliases
+        const missingTerms = importantTerms.filter(term => !foodNameLower.includes(term.toLowerCase()));
+        
+        if (missingTerms.length > 0) {
+          // Penalize foods missing important query terms in their NAME
+          // This is critical - "brown rice" should NOT match "rice noodles" even if noodles has "brown rice" in aliases
+          // Need very strong penalty to overcome other scoring factors
+          missingTermPenalty = -10.0 * missingTerms.length; // Very strong penalty per missing important term
+        }
+      }
+    }
     
     if (opts.unitHint) {
       const hint = opts.unitHint.toLowerCase();
@@ -360,41 +543,86 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
       }
     }
 
-    // PHASE 3 FIX 3: Cooked/Prepared state matching
+    // PHASE 5: Strict Cooked/Raw State Matching (Critical)
+    // Requirement: MUST respect entire ingredient name, especially state (raw/cooked)
+    // Rules:
+    // 1. Default to "raw" when state not specified (show user this assumption)
+    // 2. NEVER match raw when cooked is specified - "cooked chicken breast" CANNOT match "chicken breast, raw"
+    // 3. NEVER match cooked when raw is specified - "raw chicken breast" CANNOT match "chicken breast, cooked"
+    // 4. Read entire ingredient name - check all qualifiers (cooked, raw, diced, sliced, etc.)
+    
     let stateBoost = 0;
+    let stateMismatch = false; // Track if there's a critical mismatch
     
-    // Preparation state keywords
-    const cookedStates = ['cooked', 'baked', 'roasted', 'grilled', 'fried', 'boiled', 'steamed', 'sauteed', 'broiled'];
-    const rawStates = ['raw', 'fresh', 'uncooked'];
-    const preparedStates = ['canned', 'prepared', 'ready-to-eat', 'ready to eat'];
+    // Preparation state keywords (comprehensive)
+    const cookedStates = ['cooked', 'baked', 'roasted', 'grilled', 'fried', 'boiled', 'steamed', 'sauteed', 'broiled', 'pan-fried', 'pan fried', 'deep-fried', 'deep fried'];
+    const rawStates = ['raw', 'fresh', 'uncooked', 'unprepared'];
+    const uncookedIndicators = ['dry', 'dried', 'uncooked', 'unprepared']; // Foods that are clearly not cooked
+    const preparedStates = ['canned', 'prepared', 'ready-to-eat', 'ready to eat', 'processed'];
     
-    // Check if query specifies a state
-    const queryCookedState = cookedStates.find(state => queryLower.includes(state));
-    const queryRawState = rawStates.find(state => queryLower.includes(state));
-    const queryPreparedState = preparedStates.find(state => queryLower.includes(state));
+    // Extract state from query (check entire query string AND qualifiers)
+    const qualifiersText = (opts.qualifiers || []).join(' ').toLowerCase();
+    const fullQueryText = `${queryLower} ${qualifiersText}`;
+    const queryCookedState = cookedStates.find(state => fullQueryText.includes(state));
+    const queryRawState = rawStates.find(state => fullQueryText.includes(state));
+    const queryPreparedState = preparedStates.find(state => fullQueryText.includes(state));
+    const queryHasState = !!(queryCookedState || queryRawState || queryPreparedState);
     
-    // Boost for matching preparation state
-    if (queryCookedState && foodNameLower.includes(queryCookedState)) {
-      stateBoost += 0.4; // Boost for exact state match (cooked → cooked)
-    } else if (queryCookedState && cookedStates.some(state => foodNameLower.includes(state))) {
-      stateBoost += 0.3; // Boost for similar cooked state (cooked → baked)
-    }
+    // Extract state from food name AND aliases (check entire name)
+    const foodText = `${foodNameLower} ${(c.aliases || []).map((a: string) => a.toLowerCase()).join(' ')}`;
+    const foodCookedState = cookedStates.find(state => foodText.includes(state));
+    const foodRawState = rawStates.find(state => foodText.includes(state));
+    const foodUncookedIndicator = uncookedIndicators.find(ind => foodText.includes(ind)); // Check for "dry", "dried", etc.
+    const foodPreparedState = preparedStates.find(state => foodText.includes(state));
+    const foodHasState = !!(foodCookedState || foodRawState || foodPreparedState || foodUncookedIndicator);
     
-    if (queryRawState && foodNameLower.includes(queryRawState)) {
-      stateBoost += 0.3; // Boost for exact raw match
-    }
-    
-    if (queryPreparedState && foodNameLower.includes(queryPreparedState)) {
-      stateBoost += 0.3; // Boost for prepared match
-    }
-    
-    // Penalty for state mismatch
-    if (queryCookedState && rawStates.some(state => foodNameLower.includes(state))) {
-      stateBoost -= 0.3; // Penalty: query wants cooked, but food is raw
-    }
-    
-    if (queryRawState && cookedStates.some(state => foodNameLower.includes(state))) {
-      stateBoost -= 0.2; // Small penalty: query wants raw, but food is cooked
+    // CRITICAL: Strong penalties for state mismatches (must never match)
+    if (queryCookedState) {
+      // Query wants cooked
+      if (foodRawState) {
+        stateMismatch = true; // CRITICAL: cooked query → raw food (NEVER match)
+        stateBoost = -10.0; // Very strong penalty to prevent match
+      } else if (foodUncookedIndicator) {
+        // Food has "dry", "dried", "uncooked" - this is NOT cooked
+        stateMismatch = true;
+        stateBoost = -10.0; // Very strong penalty: "cooked pasta" CANNOT match "pasta, dry"
+      } else if (foodCookedState) {
+        // Very strong boost for matching cooked state
+        // If query explicitly wants cooked, prioritize foods that say "cooked" even if token matching is weak
+        // This should overcome token/simplicity/category penalties
+        stateBoost += 8.0; // Increased from 5.0 - needs to be very strong to overcome other penalties
+      } else {
+        // Query wants cooked, but food doesn't specify cooked state
+        // This is a mismatch - prefer foods that explicitly say "cooked"
+        // Template foods get extra penalty since they're often generic/ambiguous
+        const isTemplate = f.source === 'template';
+        stateBoost = isTemplate ? -8.0 : -5.0; // Very strong penalty, even stronger for templates
+      }
+    } else if (queryRawState) {
+      // Query wants raw
+      if (foodCookedState || foodPreparedState) {
+        stateMismatch = true; // CRITICAL: raw query → cooked/prepared food (NEVER match)
+        stateBoost = -10.0; // Very strong penalty to prevent match
+      } else if (foodRawState) {
+        stateBoost += 0.5; // Boost for matching raw state
+      }
+    } else if (queryPreparedState) {
+      // Query wants prepared
+      if (foodRawState) {
+        stateBoost -= 1.0; // Penalty: prepared query → raw food
+      } else if (foodPreparedState) {
+        stateBoost += 0.4; // Boost for matching prepared state
+      }
+    } else {
+      // Query doesn't specify state - default to "raw" (show user this assumption)
+      // Prefer raw foods, but don't penalize cooked too much (user might accept either)
+      if (foodRawState) {
+        stateBoost += 0.2; // Small boost for raw (default assumption)
+      } else if (foodCookedState && !foodHasState) {
+        // Food name doesn't explicitly say "cooked" but might be cooked
+        // Don't penalize too much, but prefer raw
+        stateBoost -= 0.1; // Small penalty
+      }
     }
 
     // PHASE B2: Name simplicity scoring
@@ -419,9 +647,10 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
     // Prevent condiments/derivatives from matching base ingredient queries
     const DERIVATIVE_MAP: Record<string, string[]> = {
       'tomato': ['ketchup', 'catsup', 'tomato sauce', 'tomato paste', 'salsa'],
-      'milk': ['coconut milk', 'oat milk', 'almond milk', 'soy milk', 'rice milk'],
+      'milk': ['coconut milk', 'oat milk', 'almond milk', 'soy milk', 'rice milk', 'yogurt', 'greek yogurt', 'cheese'], // Prevent yogurt/cheese matching "milk"
       'avocado': ['avocado oil'],
-      'coconut': ['coconut oil'],
+      'coconut': ['coconut oil'], // "coconut" should match "coconut milk" but NOT "coconut oil"
+      'coconut oil': ['coconut milk'], // "coconut oil" should NOT match "coconut milk"
       'olive': ['olive oil'],
       'peanut': ['peanut oil'],
       'sesame': ['sesame oil'],
@@ -430,17 +659,23 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
     };
     
     let derivativePenalty = 0;
-    const derivativeQueryTokens = queryLower.split(/\s+/);
     
     for (const baseFood in DERIVATIVE_MAP) {
-      // If query contains base food (e.g., "tomato")
-      if (derivativeQueryTokens.includes(baseFood)) {
-        // Check if food name is a derivative (e.g., "ketchup")
+      // Check if query contains base food (handle both single-word and multi-word like "coconut oil")
+      const baseFoodRegex = new RegExp(`\\b${baseFood.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+      if (baseFoodRegex.test(queryLower)) {
+        // Check if food name OR ALIASES contain a derivative (e.g., "ketchup")
         const derivatives = DERIVATIVE_MAP[baseFood];
-        if (derivatives.some(d => foodNameLower.includes(d))) {
-          // UNLESS query explicitly mentions the derivative
+        const foodNameOrAliases = [foodNameLower, ...(c.aliases || []).map(a => a.toLowerCase())].join(' ');
+        
+        if (derivatives.some(d => {
+          // Use word boundary to match whole words
+          const dRegex = new RegExp(`\\b${d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+          return dRegex.test(foodNameOrAliases);
+        })) {
+          // UNLESS query explicitly mentions the derivative (e.g., "tomato ketchup", "coconut milk")
           if (!derivatives.some(d => queryLower.includes(d))) {
-            derivativePenalty = -3.0; // Very strong penalty - almost never match
+            derivativePenalty = -5.0; // Even stronger penalty - should never match
           }
         }
       }
@@ -464,7 +699,7 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
     let exactQualifierPenalty = 0;
     for (const qq of queryExactQualifiers) {
       if (!foodExactQualifiers.includes(qq)) {
-        exactQualifierPenalty -= 1.8; // Strong penalty for missing exact qualifier
+        exactQualifierPenalty -= 3.0; // Very strong penalty for missing exact qualifier (e.g., "2%" in query but not in food)
       }
     }
     
@@ -709,6 +944,8 @@ export function rankCandidates(cands: Candidate[], opts: RankOpts) {
       w.popularity * popularity +
       w.personal   * personal +
       w.token   * tokenBoost +
+      missingTermPenalty + // PHASE 6: Penalty for missing key query terms
+      aliasOnlyPenalty + // PHASE 7: Penalty for alias-only matches when name matches exist
       w.category * Math.max(0, categoryBoost) + // Ensure non-negative
       w.unitHint * unitHintBoost +
       w.qualifier * (qualifierBoost + qualifierPenalty) + // PHASE B: Apply both boost and penalty

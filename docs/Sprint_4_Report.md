@@ -522,3 +522,167 @@ The enhancements are production-ready and demonstrate **significant improvements
 - Address MAE regression through improved portion resolution
 - Continue cooked/raw state improvements
 
+---
+
+## Sprint 4.6: Cooked State & Phrase Matching Improvements
+
+**Date**: November 12, 2025  
+**Status**: ✅ Complete
+
+### Overview
+
+Sprint 4.6 focused on improving specificity in food matching, particularly for:
+1. **Cooked vs Raw State Matching**: Strict penalties for state mismatches and better handling of uncooked indicators
+2. **Phrase Matching**: Order-agnostic phrase detection that handles descriptors (e.g., "coconut, canned, shredded" matching "shredded coconut")
+3. **Missing Term Penalties**: Penalize foods missing important query terms in their name
+4. **Alias-Only Penalties**: Heavily penalize foods that only match via aliases when better name matches exist
+
+### Key Improvements
+
+#### 1. Enhanced Cooked State Matching
+
+**File**: `src/lib/foods/rank.ts`
+
+**Problem**: Queries like "brown rice, cooked" were matching raw rice or foods with "dry" indicators.
+
+**Solution**:
+- Added `uncookedIndicators` array: `['dry', 'dried', 'uncooked', 'unprepared']`
+- When query requests cooked state:
+  - **Very strong penalty (-10.0)** for raw foods or foods with uncooked indicators
+  - **Very strong boost (+8.0)** for foods explicitly marked as cooked
+  - **Strong penalty (-8.0 for templates, -5.0 for others)** for foods that don't specify cooked state
+- Increased candidate fetch from 20 to 50 to ensure relevant cooked/raw foods are considered
+
+**Example**:
+```typescript
+if (queryCookedState) {
+  if (foodRawState || foodUncookedIndicator) {
+    stateBoost = -10.0; // Never match raw/dry when cooked requested
+  } else if (foodCookedState) {
+    stateBoost += 8.0; // Strong boost for matching cooked state
+  } else {
+    stateBoost = isTemplate ? -8.0 : -5.0; // Penalty for ambiguous foods
+  }
+}
+```
+
+#### 2. Order-Agnostic Phrase Matching
+
+**Problem**: 
+- "brown rice, cooked" was matching "Pork sausage rice links, brown and serve, cooked" (has "brown" and "rice" but in wrong context)
+- "shredded coconut" should match "coconut, canned, shredded" (terms in different order)
+
+**Solution**:
+- Phrase matching now checks if all important terms appear within 50 characters of each other
+- Order doesn't matter - "coconut, canned, shredded" matches "shredded coconut"
+- Detects phrase-breaking words between terms (e.g., "links", "and", "serve", "sausage")
+- Limits content words between terms to 3 or fewer
+
+**Example**:
+```typescript
+// "brown rice" query
+// ✅ "Rice, brown, long-grain, cooked" - terms close, no breaking words
+// ❌ "Pork sausage rice links, brown and serve" - has "links" between terms
+```
+
+#### 3. Missing Term Penalty
+
+**Problem**: Multi-word queries like "brown rice" were matching foods missing key terms (e.g., "rice noodles" missing "brown").
+
+**Solution**:
+- For multi-word queries, check if food name contains all important terms
+- Apply **-10.0 penalty per missing important term**
+- Only checks food name (not aliases) to ensure specificity
+
+**Example**:
+```typescript
+// "brown rice" query
+// ✅ "Rice, brown, long-grain" - has both "brown" and "rice" in name
+// ❌ "Rice noodles" - missing "brown" in name → -10.0 penalty
+```
+
+#### 4. Alias-Only Penalty
+
+**Problem**: Foods matching only via aliases were ranking higher than foods with terms in their actual name.
+
+**Solution**:
+- Pre-compute which foods have important terms as a phrase in their name
+- Apply penalties when better phrase matches exist:
+  - **-10.0** for alias-only matches when phrase matches exist
+  - **-12.0** for foods with terms in name but not as a phrase when phrase matches exist
+
+**Example**:
+```typescript
+// "brown rice" query
+// ✅ "Rice, brown, long-grain" - has "brown rice" as phrase in name
+// ❌ "Pork sausage rice links, brown and serve" - has terms but not as phrase → -12.0 penalty
+```
+
+#### 5. Phase F Aliases
+
+**File**: `scripts/phase-f-add-missing-aliases.ts`
+
+Added 68 new aliases for common foods, including:
+- Cooked/raw state variations (e.g., "brown rice, cooked", "salmon, cooked")
+- Preparation variations (e.g., "broccoli florets", "tomato, diced", "cheese, shredded")
+- Common food name variations
+
+**Usage**:
+```bash
+npm run phaseF:aliases:dry  # Preview changes
+npm run phaseF:aliases       # Apply changes
+```
+
+### Technical Details
+
+#### Important Terms Extraction
+
+For multi-word queries, we now preserve important terms that might be filtered as "common words":
+- Removed "rice" from common words filter for multi-word queries
+- "brown rice" now correctly identifies both "brown" and "rice" as important terms
+- Single-word queries still filter common words aggressively
+
+#### Phrase Detection Algorithm
+
+1. Find positions of all important terms in food name
+2. Calculate distance between first and last term
+3. Extract substring between terms (excluding terms themselves)
+4. Check for phrase-breaking words in substring
+5. Count content words between terms
+6. Valid phrase match if: distance ≤ 50 chars, no breaking words, ≤ 3 content words
+
+### Test Results
+
+**Dataset**: `eval/gold.cooked-state.csv` (15 test cases)
+- **P@1**: 53.3% (improved from initial ~13%)
+- Focused on cooked vs raw state matching
+
+**Key Fixes**:
+- ✅ "brown rice, cooked" now correctly ranks cooked brown rice higher
+- ✅ "salmon, cooked" now correctly matches cooked salmon
+- ✅ "shredded coconut" matches "coconut, canned, shredded"
+- ✅ "brown rice" no longer matches "Pork sausage rice links, brown and serve"
+
+### Files Modified
+
+- ✅ `src/lib/foods/rank.ts` - Enhanced cooked state matching, phrase matching, missing term penalties, alias-only penalties
+- ✅ `eval/run.ts` - Increased candidate fetch from 20 to 50
+- ✅ `scripts/phase-f-add-missing-aliases.ts` - Added 68 new aliases
+
+### Known Limitations
+
+1. **P@1 on cooked-state.csv**: 53.3% - some cases still need work (avocado, banana, tomato volume/portion issues)
+2. **Specificity matching**: Some foods still match wrong variants (e.g., salmon matching coho instead of Atlantic, ground beef matching 70/30 instead of 85/15)
+3. **Missing foods**: Some specific foods may not exist in database (e.g., pasta enriched, beef 85/15)
+
+### Future Work
+
+- Continue improving specificity for variant matching (salmon types, beef fat ratios, pasta types)
+- Address volume/portion resolution issues for certain foods
+- Expand alias coverage for common food variations
+- Fine-tune phrase detection thresholds based on real-world usage
+
+---
+
+**Note**: This work will serve as a fallback system when integrating external API (FatSecret) for recipe ingredient mapping. The current matching system will be used when the API is unavailable.
+

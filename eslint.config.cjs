@@ -5,6 +5,8 @@ const nextFlat = Array.isArray(nextConfig)
 	? nextConfig
 	: (nextConfig && nextConfig.default ? nextConfig.default : []);
 
+const path = require('path');
+
 /** @type {import('eslint').Linter.FlatConfig[]} */
 module.exports = [
 	{
@@ -22,6 +24,16 @@ module.exports = [
 			'tsconfig.tsbuildinfo',
 			'cleanup-orphaned-users.js',
 			'scripts/check-server-api-usage.*',
+			// Ignore data files
+			'data/**',
+			'eval/**',
+			'reports/**',
+			// Windows system directories that cause permission errors
+			'**/AppData/**',
+			'**/ElevatedDiagnostics/**',
+			// Ignore anything outside the project root
+			'../**',
+			'../../**',
 		],
 	},
 	...nextFlat,
