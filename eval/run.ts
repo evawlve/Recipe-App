@@ -151,7 +151,41 @@ function isProvisionalResolution(parsed: ReturnType<typeof parseIngredientLine> 
   return !lowerUnits.some(lbl => lbl.includes(rawUnit));
 }
 
-async function evaluateRow(row: GoldRow) {
+type EvaluateRowOptions = {
+  useFatsecret?: boolean;
+};
+
+async function evaluateRow(row: GoldRow, opts: EvaluateRowOptions = {}) {
+  if (opts.useFatsecret) {
+    const { resolveIngredient } = await import('@/lib/nutrition/resolve-ingredient');
+    const resolution = await resolveIngredient(row.raw_line, { preferFatsecret: true });
+    const expectedG = Number(row.expected_grams);
+    const mae = Math.abs(resolution.grams - expectedG);
+    const topName = resolution.fatsecret?.foodName ?? null;
+    let pAt1 = 0;
+    if (topName) {
+      if (
+        regexOrSubstringMatch(topName, row.expected_food_id_hint || null) ||
+        topName.toLowerCase().includes((row.expected_food_name || '').toLowerCase())
+      ) {
+        pAt1 = 1;
+      }
+    }
+
+    return {
+      id: row.id,
+      raw_line: row.raw_line,
+      expected_food_name: row.expected_food_name,
+      expected_grams: expectedG,
+      top_food_name: topName,
+      resolved_grams: resolution.grams,
+      pAt1,
+      mae,
+      provisional: resolution.confidence < 0.7,
+      source: resolution.source,
+    };
+  }
+
   const parsed = parseIngredientLine(row.raw_line);
   const candidates = await findTopFoodCandidates(
     parsed ? parsed.name : row.raw_line,
@@ -185,16 +219,16 @@ async function evaluateRow(row: GoldRow) {
           densityGml: top.densityGml ?? undefined,
           categoryId: top.categoryId ?? null,
           units: top.units?.map((u: { label: string; grams: number }) => ({ label: u.label, grams: u.grams })) ?? [],
-          portionOverrides: (top as any).portionOverrides?.map((p: any) => ({ 
-            unit: p.unit, 
-            grams: p.grams, 
-            label: p.label ?? null 
+          portionOverrides: (top as any).portionOverrides?.map((p: any) => ({
+            unit: p.unit,
+            grams: p.grams,
+            label: p.label ?? null
           })) ?? []
         },
         parsed,
         userOverrides: null
       });
-      
+
       if (resolution.grams !== null && resolution.grams > 0) {
         resolvedGrams = resolution.grams;
         // Consider provisional if confidence < 0.8 or tier >= 4 (density/heuristic)
@@ -250,19 +284,25 @@ async function evaluateRow(row: GoldRow) {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  const explicitPath = args.find(arg => !arg.startsWith('--'));
+  const useFatsecret = args.includes('--fatsecret');
+
   // Support v1, v2, and v3, default to v3 if it exists, then v2, then v1
   const goldFile = process.env.GOLD_FILE;
   let finalPath: string;
-  
+
   if (goldFile) {
-    // Use explicit GOLD_FILE if provided
     finalPath = path.join(process.cwd(), 'eval', goldFile);
+  } else if (explicitPath) {
+    finalPath = path.isAbsolute(explicitPath)
+      ? explicitPath
+      : path.join(process.cwd(), explicitPath);
   } else {
-    // Auto-detect: prefer v3 > v2 > v1
     const v3Path = path.join(process.cwd(), 'eval', 'gold.v3.csv');
     const v2Path = path.join(process.cwd(), 'eval', 'gold.v2.csv');
     const v1Path = path.join(process.cwd(), 'eval', 'gold.v1.csv');
-    
+
     if (fs.existsSync(v3Path)) {
       finalPath = v3Path;
     } else if (fs.existsSync(v2Path)) {
@@ -271,16 +311,15 @@ async function main() {
       finalPath = v1Path;
     }
   }
-  
+
   const rows = await readGoldCsv(finalPath);
   const goldFileName = path.basename(finalPath);
 
   const results = [] as Array<Awaited<ReturnType<typeof evaluateRow>>>;
 
   for (const row of rows) {
-    // Basic validation: required fields
     if (!row.id || !row.raw_line) continue;
-    const r = await evaluateRow(row);
+    const r = await evaluateRow(row, { useFatsecret });
     results.push(r as any);
   }
 
@@ -289,28 +328,19 @@ async function main() {
   const mae = results.reduce((s, r) => s + r.mae, 0) / (total || 1);
   const provisionalRate = results.reduce((s, r) => s + (r.provisional ? 1 : 0), 0) / (total || 1);
 
-  // Console summary
-  // eslint-disable-next-line no-console
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  // eslint-disable-next-line no-console
   console.log(`Eval Summary (${goldFileName})`);
-  // eslint-disable-next-line no-console
   console.log(`Portion V2: ${ENABLE_PORTION_V2 ? '✅ ENABLED' : '❌ disabled'}`);
-  // eslint-disable-next-line no-console
+  console.log(`FatSecret mode: ${useFatsecret ? '✅ enabled' : '❌ disabled'}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  // eslint-disable-next-line no-console
   console.log(`Count: ${total}`);
-  // eslint-disable-next-line no-console
   console.log(`P@1: ${(pAt1 * 100).toFixed(1)}%`);
-  // eslint-disable-next-line no-console
   console.log(`MAE (g): ${mae.toFixed(1)}g`);
-  // eslint-disable-next-line no-console
   console.log(`Provisional: ${(provisionalRate * 100).toFixed(1)}%`);
 
-  // Write report
   const reportDir = path.join(process.cwd(), 'reports');
   await fs.promises.mkdir(reportDir, { recursive: true });
-  const reportName = ENABLE_PORTION_V2 
+  const reportName = ENABLE_PORTION_V2
     ? `eval-portion-v2-${formatDateUTC()}.json`
     : `eval-baseline-${formatDateUTC()}.json`;
   const reportPath = path.join(reportDir, reportName);
