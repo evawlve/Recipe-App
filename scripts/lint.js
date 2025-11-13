@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Apply ESLint patch before loading ESLint
+require('@rushstack/eslint-patch/modern-module-resolution');
+
 const { ESLint } = require('eslint');
 const path = require('path');
 const fs = require('fs');
