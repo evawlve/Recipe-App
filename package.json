@@ -38,8 +38,8 @@
     "verify:seeding": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/verify-seeding.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.673.0",
-    "@aws-sdk/s3-presigned-post": "3.673.0",
+    "@aws-sdk/client-s3": "3.927.0",
+    "@aws-sdk/s3-presigned-post": "3.927.0",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "5.18.0",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -74,6 +74,7 @@
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
+    "@smithy/uuid": "^1.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
