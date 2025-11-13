@@ -13,4 +13,5 @@ export const FATSECRET_CLIENT_ID = process.env.FATSECRET_CLIENT_ID ?? '';
 export const FATSECRET_CLIENT_SECRET = process.env.FATSECRET_CLIENT_SECRET ?? '';
 
 export type FatSecretRegion = 'US' | 'GLOBAL';
-export const FATSECRET_REGION: FatSecretRegion = (process.env.FATSECRET_REGION as FatSecretRegion) || 'US';
+const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
+export const FATSECRET_REGION: FatSecretRegion = rawRegion === 'GLOBAL' ? 'GLOBAL' : 'US';
