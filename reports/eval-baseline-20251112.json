@@ -1,0 +1,347 @@
+{
+  "gold": "gold.cooked-state.csv",
+  "portionV2Enabled": false,
+  "timestamp": "2025-11-12T07:18:59.707Z",
+  "totals": {
+    "count": 15
+  },
+  "metrics": {
+    "pAt1": 0.5333333333333333,
+    "mae": 23.6,
+    "provisionalRate": 0
+  },
+  "samples": [
+    {
+      "id": "13",
+      "raw_line": "1 cup brown rice, cooked",
+      "expected_food_name": "rice, brown, long-grain, cooked",
+      "expected_grams": 195,
+      "top_food_name": "Pork sausage rice links, brown and serve, cooked",
+      "resolved_grams": 185,
+      "pAt1": 1,
+      "mae": 10,
+      "provisional": false
+    },
+    {
+      "id": "21",
+      "raw_line": "1 cup black beans, cooked",
+      "expected_food_name": "beans, black, mature seeds, cooked",
+      "expected_grams": 172,
+      "top_food_name": "Black Beans, Cooked",
+      "resolved_grams": 172,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "22",
+      "raw_line": "1 cup sweet potato, mashed",
+      "expected_food_name": "sweet potato, cooked, baked in skin, without salt",
+      "expected_grams": 200,
+      "top_food_name": "Sweet Potato, Mashed",
+      "resolved_grams": 200,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "26",
+      "raw_line": "1 cup salmon, cooked",
+      "expected_food_name": "salmon, Atlantic, farmed, cooked, dry heat",
+      "expected_grams": 240,
+      "top_food_name": "Fish, salmon, coho, wild, cooked, moist heat",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "27",
+      "raw_line": "1 cup ground beef, cooked",
+      "expected_food_name": "beef, ground, 85% lean meat / 15% fat, patty, cooked, broiled",
+      "expected_grams": 240,
+      "top_food_name": "Beef, ground, 70% lean meat / 30% fat, patty cooked, pan-broiled",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "41",
+      "raw_line": "1 cup pasta, cooked",
+      "expected_food_name": "pasta, cooked, enriched, without added salt",
+      "expected_grams": 140,
+      "top_food_name": "Pasta, homemade, made with egg, cooked",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 100,
+      "provisional": false
+    },
+    {
+      "id": "61",
+      "raw_line": "1 cup lentils, cooked",
+      "expected_food_name": "lentils, mature seeds, cooked, boiled, without salt",
+      "expected_grams": 198,
+      "top_food_name": "Lentils, Cooked",
+      "resolved_grams": 198,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "127",
+      "raw_line": "½ cup black beans, drained",
+      "expected_food_name": "Black Beans, Cooked",
+      "expected_grams": 86,
+      "top_food_name": "Black Beans, Cooked",
+      "resolved_grams": 86,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "1",
+      "raw_line": "2 large eggs",
+      "expected_food_name": "Eggs, Large, Raw",
+      "expected_grams": 100,
+      "top_food_name": "Eggs, Grade A, Large, egg whole",
+      "resolved_grams": 100,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "4",
+      "raw_line": "1 cup milk",
+      "expected_food_name": "milk, whole, 3.25% milkfat",
+      "expected_grams": 244,
+      "top_food_name": "Milk, Whole",
+      "resolved_grams": 244,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "6",
+      "raw_line": "2 large chicken breasts",
+      "expected_food_name": "Chicken Breast, Raw (Skinless)",
+      "expected_grams": 280,
+      "top_food_name": "Chicken Breast",
+      "resolved_grams": 280,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "7",
+      "raw_line": "1 cup broccoli florets",
+      "expected_food_name": "broccoli, raw",
+      "expected_grams": 91,
+      "top_food_name": "Broccoli, Raw",
+      "resolved_grams": 91,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "17",
+      "raw_line": "1 cup tomato, diced",
+      "expected_food_name": "tomatoes, red, ripe, raw",
+      "expected_grams": 180,
+      "top_food_name": "Tomato powder",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 60,
+      "provisional": false
+    },
+    {
+      "id": "23",
+      "raw_line": "1 cup avocado, sliced",
+      "expected_food_name": "avocados, raw, California",
+      "expected_grams": 146,
+      "top_food_name": "Avocado",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 94,
+      "provisional": false
+    },
+    {
+      "id": "24",
+      "raw_line": "1 cup banana, sliced",
+      "expected_food_name": "bananas, raw",
+      "expected_grams": 150,
+      "top_food_name": "Banana",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 90,
+      "provisional": false
+    }
+  ],
+  "allResults": [
+    {
+      "id": "13",
+      "raw_line": "1 cup brown rice, cooked",
+      "expected_food_name": "rice, brown, long-grain, cooked",
+      "expected_grams": 195,
+      "top_food_name": "Pork sausage rice links, brown and serve, cooked",
+      "resolved_grams": 185,
+      "pAt1": 1,
+      "mae": 10,
+      "provisional": false
+    },
+    {
+      "id": "21",
+      "raw_line": "1 cup black beans, cooked",
+      "expected_food_name": "beans, black, mature seeds, cooked",
+      "expected_grams": 172,
+      "top_food_name": "Black Beans, Cooked",
+      "resolved_grams": 172,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "22",
+      "raw_line": "1 cup sweet potato, mashed",
+      "expected_food_name": "sweet potato, cooked, baked in skin, without salt",
+      "expected_grams": 200,
+      "top_food_name": "Sweet Potato, Mashed",
+      "resolved_grams": 200,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "26",
+      "raw_line": "1 cup salmon, cooked",
+      "expected_food_name": "salmon, Atlantic, farmed, cooked, dry heat",
+      "expected_grams": 240,
+      "top_food_name": "Fish, salmon, coho, wild, cooked, moist heat",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "27",
+      "raw_line": "1 cup ground beef, cooked",
+      "expected_food_name": "beef, ground, 85% lean meat / 15% fat, patty, cooked, broiled",
+      "expected_grams": 240,
+      "top_food_name": "Beef, ground, 70% lean meat / 30% fat, patty cooked, pan-broiled",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "41",
+      "raw_line": "1 cup pasta, cooked",
+      "expected_food_name": "pasta, cooked, enriched, without added salt",
+      "expected_grams": 140,
+      "top_food_name": "Pasta, homemade, made with egg, cooked",
+      "resolved_grams": 240,
+      "pAt1": 1,
+      "mae": 100,
+      "provisional": false
+    },
+    {
+      "id": "61",
+      "raw_line": "1 cup lentils, cooked",
+      "expected_food_name": "lentils, mature seeds, cooked, boiled, without salt",
+      "expected_grams": 198,
+      "top_food_name": "Lentils, Cooked",
+      "resolved_grams": 198,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "127",
+      "raw_line": "½ cup black beans, drained",
+      "expected_food_name": "Black Beans, Cooked",
+      "expected_grams": 86,
+      "top_food_name": "Black Beans, Cooked",
+      "resolved_grams": 86,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "1",
+      "raw_line": "2 large eggs",
+      "expected_food_name": "Eggs, Large, Raw",
+      "expected_grams": 100,
+      "top_food_name": "Eggs, Grade A, Large, egg whole",
+      "resolved_grams": 100,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "4",
+      "raw_line": "1 cup milk",
+      "expected_food_name": "milk, whole, 3.25% milkfat",
+      "expected_grams": 244,
+      "top_food_name": "Milk, Whole",
+      "resolved_grams": 244,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "6",
+      "raw_line": "2 large chicken breasts",
+      "expected_food_name": "Chicken Breast, Raw (Skinless)",
+      "expected_grams": 280,
+      "top_food_name": "Chicken Breast",
+      "resolved_grams": 280,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "7",
+      "raw_line": "1 cup broccoli florets",
+      "expected_food_name": "broccoli, raw",
+      "expected_grams": 91,
+      "top_food_name": "Broccoli, Raw",
+      "resolved_grams": 91,
+      "pAt1": 1,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "17",
+      "raw_line": "1 cup tomato, diced",
+      "expected_food_name": "tomatoes, red, ripe, raw",
+      "expected_grams": 180,
+      "top_food_name": "Tomato powder",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 60,
+      "provisional": false
+    },
+    {
+      "id": "23",
+      "raw_line": "1 cup avocado, sliced",
+      "expected_food_name": "avocados, raw, California",
+      "expected_grams": 146,
+      "top_food_name": "Avocado",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 94,
+      "provisional": false
+    },
+    {
+      "id": "24",
+      "raw_line": "1 cup banana, sliced",
+      "expected_food_name": "bananas, raw",
+      "expected_grams": 150,
+      "top_food_name": "Banana",
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 90,
+      "provisional": false
+    }
+  ]
+}

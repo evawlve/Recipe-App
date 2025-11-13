@@ -1,0 +1,578 @@
+{
+  "summary": {
+    "total": 265,
+    "failures": 56,
+    "failureRate": 0.21132075471698114,
+    "noMatch": 22,
+    "wrongMatch": 34
+  },
+  "patterns": {
+    "cooked vs raw": 5,
+    "specific cut/part": 1,
+    "preparation qualifier": 4,
+    "brand/type mismatch": 3,
+    "wrong category": 20
+  },
+  "allFailures": [
+    {
+      "id": "108",
+      "raw_line": "1½ cups milk",
+      "expected_food_name": "Milk, Whole",
+      "expected_grams": 366,
+      "top_food_name": "Soup, cream of asparagus, canned, prepared with equal volume milk",
+      "resolved_grams": 90,
+      "mae": 276,
+      "provisional": false
+    },
+    {
+      "id": "54",
+      "raw_line": "1 cup skim milk",
+      "expected_food_name": "milk, nonfat, fluid, with added vitamin A and vitamin D",
+      "expected_grams": 245,
+      "top_food_name": "Soup, tomato, canned, prepared with equal volume low fat (2%) milk",
+      "resolved_grams": 60,
+      "mae": 185,
+      "provisional": false
+    },
+    {
+      "id": "4",
+      "raw_line": "1 cup milk",
+      "expected_food_name": "milk, whole, 3.25% milkfat",
+      "expected_grams": 244,
+      "top_food_name": "Soup, cream of asparagus, canned, prepared with equal volume milk",
+      "resolved_grams": 60,
+      "mae": 184,
+      "provisional": false
+    },
+    {
+      "id": "53",
+      "raw_line": "1 cup whole milk",
+      "expected_food_name": "milk, whole, 3.25% milkfat",
+      "expected_grams": 244,
+      "top_food_name": "Soup, cream of asparagus, canned, prepared with equal volume milk",
+      "resolved_grams": 60,
+      "mae": 184,
+      "provisional": false
+    },
+    {
+      "id": "242",
+      "raw_line": "1 cup milk, whole",
+      "expected_food_name": "Milk, Whole",
+      "expected_grams": 244,
+      "top_food_name": "Soup, cream of asparagus, canned, prepared with equal volume milk",
+      "resolved_grams": 60,
+      "mae": 184,
+      "provisional": false
+    },
+    {
+      "id": "1",
+      "raw_line": "2 large eggs",
+      "expected_food_name": "Eggs, Large, Raw",
+      "expected_grams": 100,
+      "top_food_name": "Eggs, Grade A, Large, egg whole",
+      "resolved_grams": 280,
+      "mae": 180,
+      "provisional": false
+    },
+    {
+      "id": "79",
+      "raw_line": "1 cup oat milk",
+      "expected_food_name": "beverages, oat milk, unsweetened, shelf stable",
+      "expected_grams": 240,
+      "top_food_name": "Candies, milk chocolate coated peanuts",
+      "resolved_grams": 60,
+      "mae": 180,
+      "provisional": false
+    },
+    {
+      "id": "15",
+      "raw_line": "1 cup cottage cheese",
+      "expected_food_name": "cottage cheese, lowfat, 2% milkfat",
+      "expected_grams": 226,
+      "top_food_name": "Cheese, cottage, lowfat, 2% milkfat",
+      "resolved_grams": 60,
+      "mae": 166,
+      "provisional": false
+    },
+    {
+      "id": "20",
+      "raw_line": "1 cup coconut oil",
+      "expected_food_name": "coconut oil",
+      "expected_grams": 218,
+      "top_food_name": "Oil, coconut",
+      "resolved_grams": 54.6,
+      "mae": 163.4,
+      "provisional": false
+    },
+    {
+      "id": "33",
+      "raw_line": "1 cup salt",
+      "expected_food_name": "Salt, Table",
+      "expected_grams": 288,
+      "top_food_name": "Lambsquarters, cooked, boiled, drained, without salt",
+      "resolved_grams": 140,
+      "mae": 148,
+      "provisional": false
+    },
+    {
+      "id": "32",
+      "raw_line": "1 cup sugar",
+      "expected_food_name": "Sugar, Granulated",
+      "expected_grams": 200,
+      "top_food_name": "Sugar-apples, (sweetsop), raw",
+      "resolved_grams": 60,
+      "mae": 140,
+      "provisional": false
+    },
+    {
+      "id": "93",
+      "raw_line": "1 cup hazelnuts",
+      "expected_food_name": "filberts, hazelnuts",
+      "expected_grams": 135,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 135,
+      "provisional": true
+    },
+    {
+      "id": "97",
+      "raw_line": "1 cup pine nuts",
+      "expected_food_name": "pine nuts, dried",
+      "expected_grams": 135,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 135,
+      "provisional": true
+    },
+    {
+      "id": "95",
+      "raw_line": "1 cup macadamia nuts",
+      "expected_food_name": "nuts, macadamia nuts, raw",
+      "expected_grams": 134,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 134,
+      "provisional": true
+    },
+    {
+      "id": "94",
+      "raw_line": "1 cup brazil nuts",
+      "expected_food_name": "nuts, brazilnuts, dried, unblanched",
+      "expected_grams": 133,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 133,
+      "provisional": true
+    },
+    {
+      "id": "126",
+      "raw_line": "1 cup tofu, cubed",
+      "expected_food_name": "Tofu, Firm",
+      "expected_grams": 126,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 126,
+      "provisional": true
+    },
+    {
+      "id": "96",
+      "raw_line": "1 cup pistachios",
+      "expected_food_name": "nuts, pistachio nuts, dry roasted, without salt added",
+      "expected_grams": 123,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 123,
+      "provisional": true
+    },
+    {
+      "id": "17",
+      "raw_line": "1 cup tomato, diced",
+      "expected_food_name": "tomatoes, red, ripe, raw",
+      "expected_grams": 180,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 60,
+      "mae": 120,
+      "provisional": false
+    },
+    {
+      "id": "81",
+      "raw_line": "1 cup casein protein powder",
+      "expected_food_name": "protein powder, casein",
+      "expected_grams": 120,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 120,
+      "provisional": true
+    },
+    {
+      "id": "82",
+      "raw_line": "1 cup plant-based protein powder",
+      "expected_food_name": "protein powder, plant-based",
+      "expected_grams": 120,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 120,
+      "provisional": true
+    },
+    {
+      "id": "90",
+      "raw_line": "1 cup cashews",
+      "expected_food_name": "nuts, cashew nuts, raw",
+      "expected_grams": 120,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 120,
+      "provisional": true
+    },
+    {
+      "id": "264",
+      "raw_line": "1 cup tomato, chopped",
+      "expected_food_name": "tomatoes, red, ripe, raw",
+      "expected_grams": 180,
+      "top_food_name": "Tomato products, canned, sauce",
+      "resolved_grams": 60,
+      "mae": 120,
+      "provisional": false
+    },
+    {
+      "id": "125",
+      "raw_line": "½ block tofu",
+      "expected_food_name": "Tofu, Firm",
+      "expected_grams": 113,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 113,
+      "provisional": true
+    },
+    {
+      "id": "92",
+      "raw_line": "1 cup pecans",
+      "expected_food_name": "nuts, pecans",
+      "expected_grams": 109,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 109,
+      "provisional": true
+    },
+    {
+      "id": "56",
+      "raw_line": "1 cup half and half",
+      "expected_food_name": "cream, fluid, half and half",
+      "expected_grams": 242,
+      "top_food_name": "Beef, brisket, flat half, separable lean and fat, trimmed to 1/8\" fat, all grades, raw",
+      "resolved_grams": 140,
+      "mae": 102,
+      "provisional": false
+    },
+    {
+      "id": "26",
+      "raw_line": "1 cup salmon, cooked",
+      "expected_food_name": "salmon, Atlantic, farmed, cooked, dry heat",
+      "expected_grams": 240,
+      "top_food_name": "Salmon",
+      "resolved_grams": 140,
+      "mae": 100,
+      "provisional": false
+    },
+    {
+      "id": "27",
+      "raw_line": "1 cup ground beef, cooked",
+      "expected_food_name": "beef, ground, 85% lean meat / 15% fat, patty, cooked, broiled",
+      "expected_grams": 240,
+      "top_food_name": "Beef, grass-fed, ground, raw",
+      "resolved_grams": 140,
+      "mae": 100,
+      "provisional": false
+    },
+    {
+      "id": "241",
+      "raw_line": "½ cup milk, 2%",
+      "expected_food_name": "Milk, 2%",
+      "expected_grams": 122,
+      "top_food_name": "Soup, tomato, canned, prepared with equal volume low fat (2%) milk",
+      "resolved_grams": 30,
+      "mae": 92,
+      "provisional": false
+    },
+    {
+      "id": "23",
+      "raw_line": "1 cup avocado, sliced",
+      "expected_food_name": "avocados, raw, California",
+      "expected_grams": 146,
+      "top_food_name": "Oil, avocado",
+      "resolved_grams": 54.6,
+      "mae": 91.4,
+      "provisional": false
+    },
+    {
+      "id": "7",
+      "raw_line": "1 cup broccoli florets",
+      "expected_food_name": "broccoli, raw",
+      "expected_grams": 91,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 91,
+      "provisional": true
+    },
+    {
+      "id": "166",
+      "raw_line": "1 cup broccoli florets",
+      "expected_food_name": "Broccoli, Raw",
+      "expected_grams": 91,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 91,
+      "provisional": true
+    },
+    {
+      "id": "24",
+      "raw_line": "1 cup banana, sliced",
+      "expected_food_name": "bananas, raw",
+      "expected_grams": 150,
+      "top_food_name": "Banana",
+      "resolved_grams": 60,
+      "mae": 90,
+      "provisional": false
+    },
+    {
+      "id": "80",
+      "raw_line": "1 cup whey protein powder",
+      "expected_food_name": "whey protein powder",
+      "expected_grams": 120,
+      "top_food_name": "Beverages, Protein powder soy based",
+      "resolved_grams": 30,
+      "mae": 90,
+      "provisional": false
+    },
+    {
+      "id": "48",
+      "raw_line": "1 cup cocoa powder",
+      "expected_food_name": "cocoa, dry powder, unsweetened",
+      "expected_grams": 86,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 86,
+      "provisional": true
+    },
+    {
+      "id": "127",
+      "raw_line": "½ cup black beans, drained",
+      "expected_food_name": "Black Beans, Cooked",
+      "expected_grams": 86,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 86,
+      "provisional": true
+    },
+    {
+      "id": "223",
+      "raw_line": "1 cup ground beef",
+      "expected_food_name": "Ground Beef 90/10",
+      "expected_grams": 225,
+      "top_food_name": "Beef, grass-fed, ground, raw",
+      "resolved_grams": 140,
+      "mae": 85,
+      "provisional": false
+    },
+    {
+      "id": "13",
+      "raw_line": "1 cup brown rice, cooked",
+      "expected_food_name": "rice, brown, long-grain, cooked",
+      "expected_grams": 195,
+      "top_food_name": "Rice flour, brown",
+      "resolved_grams": 120,
+      "mae": 75,
+      "provisional": false
+    },
+    {
+      "id": "39",
+      "raw_line": "1 cup cheese, shredded",
+      "expected_food_name": "cheese, cheddar",
+      "expected_grams": 113,
+      "top_food_name": "Rice mix, cheese flavor, dry mix, unprepared",
+      "resolved_grams": 185,
+      "mae": 72,
+      "provisional": false
+    },
+    {
+      "id": "106",
+      "raw_line": "1 jumbo egg",
+      "expected_food_name": "Egg",
+      "expected_grams": 63,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 63,
+      "provisional": true
+    },
+    {
+      "id": "41",
+      "raw_line": "1 cup pasta, cooked",
+      "expected_food_name": "pasta, cooked, enriched, without added salt",
+      "expected_grams": 140,
+      "top_food_name": "Pasta, Dry",
+      "resolved_grams": 85,
+      "mae": 55,
+      "provisional": false
+    },
+    {
+      "id": "6",
+      "raw_line": "2 large chicken breasts",
+      "expected_food_name": "Chicken Breast, Raw (Skinless)",
+      "expected_grams": 280,
+      "top_food_name": "Chicken Breast",
+      "resolved_grams": 226,
+      "mae": 54,
+      "provisional": false
+    },
+    {
+      "id": "51",
+      "raw_line": "2% milk",
+      "expected_food_name": "milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",
+      "expected_grams": 244,
+      "top_food_name": "Soup, cream of asparagus, canned, prepared with equal volume milk",
+      "resolved_grams": 200,
+      "mae": 44,
+      "provisional": false
+    },
+    {
+      "id": "222",
+      "raw_line": "½ cup ground beef",
+      "expected_food_name": "Ground Beef 90/10",
+      "expected_grams": 112.5,
+      "top_food_name": "Beef, grass-fed, ground, raw",
+      "resolved_grams": 70,
+      "mae": 42.5,
+      "provisional": false
+    },
+    {
+      "id": "61",
+      "raw_line": "1 cup lentils, cooked",
+      "expected_food_name": "lentils, mature seeds, cooked, boiled, without salt",
+      "expected_grams": 198,
+      "top_food_name": "Lentils, raw",
+      "resolved_grams": 240,
+      "mae": 42,
+      "provisional": false
+    },
+    {
+      "id": "150",
+      "raw_line": "2 inch ginger",
+      "expected_food_name": "Ginger",
+      "expected_grams": 22,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 22,
+      "provisional": true
+    },
+    {
+      "id": "221",
+      "raw_line": "¼ cup ground beef",
+      "expected_food_name": "Ground Beef 90/10",
+      "expected_grams": 56.25,
+      "top_food_name": "Beef, grass-fed, ground, raw",
+      "resolved_grams": 35,
+      "mae": 21.25,
+      "provisional": false
+    },
+    {
+      "id": "149",
+      "raw_line": "1 inch ginger",
+      "expected_food_name": "Ginger",
+      "expected_grams": 11,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 11,
+      "provisional": true
+    },
+    {
+      "id": "44",
+      "raw_line": "1 cup cornstarch",
+      "expected_food_name": "cornstarch",
+      "expected_grams": 128,
+      "top_food_name": "Corn flour, whole-grain, white",
+      "resolved_grams": 120,
+      "mae": 8,
+      "provisional": false
+    },
+    {
+      "id": "246",
+      "raw_line": "2 nori sheets",
+      "expected_food_name": "Nori",
+      "expected_grams": 5,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 5,
+      "provisional": true
+    },
+    {
+      "id": "245",
+      "raw_line": "1 nori sheet",
+      "expected_food_name": "Nori",
+      "expected_grams": 2.5,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 2.5,
+      "provisional": true
+    },
+    {
+      "id": "237",
+      "raw_line": "1 tsp black pepper",
+      "expected_food_name": "Black Pepper",
+      "expected_grams": 2.3,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 2.3,
+      "provisional": true
+    },
+    {
+      "id": "55",
+      "raw_line": "1 cup heavy cream",
+      "expected_food_name": "cream, fluid, heavy whipping",
+      "expected_grams": 238,
+      "top_food_name": "Heavy Cream",
+      "resolved_grams": 240,
+      "mae": 2,
+      "provisional": false
+    },
+    {
+      "id": "236",
+      "raw_line": "½ tsp black pepper",
+      "expected_food_name": "Black Pepper",
+      "expected_grams": 1.15,
+      "top_food_name": null,
+      "resolved_grams": null,
+      "mae": 1.15,
+      "provisional": true
+    },
+    {
+      "id": "9",
+      "raw_line": "2 tbsp butter",
+      "expected_food_name": "Butter, Unsalted",
+      "expected_grams": 28.4,
+      "top_food_name": "Butter",
+      "resolved_grams": 28.4,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "21",
+      "raw_line": "1 cup black beans, cooked",
+      "expected_food_name": "beans, black, mature seeds, cooked",
+      "expected_grams": 172,
+      "top_food_name": "Black Beans, Cooked",
+      "resolved_grams": 172,
+      "mae": 0,
+      "provisional": false
+    },
+    {
+      "id": "22",
+      "raw_line": "1 cup sweet potato, mashed",
+      "expected_food_name": "sweet potato, cooked, baked in skin, without salt",
+      "expected_grams": 200,
+      "top_food_name": "Sweet Potato, Mashed",
+      "resolved_grams": 200,
+      "mae": 0,
+      "provisional": false
+    }
+  ]
+}

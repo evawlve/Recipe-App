@@ -43,7 +43,8 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'scoop': 'scoop', 'scoops': 'scoop',
     'slice': 'slice', 'slices': 'slice',
     'egg': 'egg', 'eggs': 'egg',
-    'can': 'can', 'cans': 'can'
+    'can': 'can', 'cans': 'can',
+    'block': 'block', 'blocks': 'block' // For tofu, cheese blocks, etc.
   };
 
   if (countUnits[token]) {

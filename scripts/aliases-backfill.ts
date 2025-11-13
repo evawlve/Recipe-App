@@ -36,7 +36,7 @@ const prisma = new PrismaClient();
           data: { foodId: f.id, alias: a } 
         });
         created++;
-      } catch (error) {
+      } catch {
         // Skip duplicates or other errors
         skipped++;
       }

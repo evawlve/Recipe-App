@@ -80,7 +80,7 @@ module.exports = [
 		},
 	// Removed broad global fetch restrictions to prevent false positives; the targeted selector above is sufficient
 	{
-		files: ['scripts/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
+		files: ['scripts/**/*.{js,ts}', 'eval/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
 		rules: {
 			'no-console': 'off',
 		},

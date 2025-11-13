@@ -1,0 +1,20 @@
+id,raw_line,expected_food_name,expected_grams,expected_source,expected_source_tier,form,unit_type,cuisine_tag,difficulty,expected_food_id_hint,expected_unit_hint,notes
+13,"1 cup brown rice, cooked","rice, brown, long-grain, cooked",195,usda,usda_portion,cooked,volume,asian,medium,"rice.*brown.*cooked","cup","Grain with type and state - COOKED"
+21,"1 cup black beans, cooked","beans, black, mature seeds, cooked",172,usda,usda_portion,cooked,volume,mexican,medium,"beans.*black.*cooked","cup","Legume with preparation - COOKED"
+22,"1 cup sweet potato, mashed","sweet potato, cooked, baked in skin, without salt",200,usda,usda_portion,cooked,volume,american,medium,"sweet.*potato.*cooked","cup","Vegetable with preparation - COOKED"
+26,"1 cup salmon, cooked","salmon, Atlantic, farmed, cooked, dry heat",240,usda,usda_portion,cooked,volume,american,medium,"salmon.*cooked","cup","Protein with preparation - COOKED"
+27,"1 cup ground beef, cooked","beef, ground, 85% lean meat / 15% fat, patty, cooked, broiled",240,usda,usda_portion,cooked,volume,american,medium,"beef.*ground.*cooked","cup","Protein with preparation - COOKED"
+41,"1 cup pasta, cooked","pasta, cooked, enriched, without added salt",140,usda,usda_portion,cooked,volume,italian,medium,"pasta.*cooked","cup","Grain with preparation - COOKED"
+61,"1 cup lentils, cooked","lentils, mature seeds, cooked, boiled, without salt",198,usda,usda_portion,cooked,volume,american,hard,"lentil.*cooked","cup","Legume with preparation - COOKED"
+127,"½ cup black beans, drained","Black Beans, Cooked",86,curated,override,cooked,volume,mexican,easy,"black.*beans","cup","Half cup beans - COOKED"
+1,"2 large eggs","Eggs, Large, Raw",100,curated,override,raw,piece,american,easy,"egg.*large.*raw","piece","Standard egg reference - RAW (no state specified, should default to raw)"
+4,"1 cup milk","milk, whole, 3.25% milkfat",244,usda,usda_portion,raw,volume,american,easy,"milk.*whole","cup","Standard dairy - RAW (no state specified, should default to raw)"
+6,"2 large chicken breasts","Chicken Breast, Raw (Skinless)",280,curated,override,raw,piece,american,easy,"chicken.*breast.*raw","piece","Common protein - RAW (no state specified, should default to raw)"
+7,"1 cup broccoli florets","broccoli, raw",91,usda,usda_portion,raw,volume,american,medium,"broccoli.*raw","cup","Vegetable with preparation - RAW (no state specified, should default to raw)"
+17,"1 cup tomato, diced","tomatoes, red, ripe, raw",180,usda,usda_portion,raw,volume,italian,medium,"tomato.*red.*ripe.*raw","cup","Vegetable with preparation - RAW (no state specified, should default to raw)"
+23,"1 cup avocado, sliced","avocados, raw, California",146,usda,usda_portion,raw,volume,mexican,medium,"avocado.*raw","cup","Fruit with preparation - RAW (no state specified, should default to raw)"
+24,"1 cup banana, sliced","bananas, raw",150,usda,usda_portion,raw,volume,american,medium,"banana.*raw","cup","Fruit with preparation - RAW (no state specified, should default to raw)"
+
+
+
+
