@@ -93,14 +93,43 @@ export async function POST(request: Request) {
         const slug = tagLabel.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
         const humanizedLabel = tagLabel.trim();
         
-        // Upsert tag
-        const tag = await prisma.tag.upsert({
+        // Check if a similar tag already exists in GOAL namespace
+        // Try common variations to avoid duplicates (e.g., "preworkout" vs "pre-workout" vs "pre_workout")
+        const slugVariations: string[] = [slug]; // Start with original slug
+        
+        // Generate variations for workout-related tags
+        if (slug.includes('preworkout') || slug.includes('pre-workout') || slug.includes('pre_workout')) {
+          slugVariations.push('pre-workout', 'pre_workout', 'preworkout');
+        } else if (slug.includes('postworkout') || slug.includes('post-workout') || slug.includes('post_workout')) {
+          slugVariations.push('post-workout', 'post_workout', 'postworkout');
+        }
+        
+        // Add hyphen/underscore variations
+        if (slug.includes('-')) {
+          slugVariations.push(slug.replace(/-/g, '_'));
+        }
+        if (slug.includes('_')) {
+          slugVariations.push(slug.replace(/_/g, '-'));
+        }
+        
+        // Remove duplicates
+        const uniqueVariations = [...new Set(slugVariations)];
+        
+        const existingTag = await prisma.tag.findFirst({
+          where: {
+            slug: { in: uniqueVariations },
+            namespace: 'GOAL'
+          }
+        });
+        
+        // Use existing tag if found, otherwise create new one
+        const tag = existingTag || await prisma.tag.upsert({
           where: { slug },
           update: {},
           create: { 
             slug,
             label: humanizedLabel,
-            namespace: 'MEAL_TYPE' // Default namespace for legacy tags
+            namespace: 'GOAL' // Use GOAL namespace to avoid polluting MEAL_TYPE selector
           },
         });
 
