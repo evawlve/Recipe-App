@@ -21,6 +21,7 @@ if (!fs.existsSync(path.join(projectRoot, 'package.json'))) {
 const patterns = [
   path.join(projectRoot, 'src', '**', '*.{js,jsx,ts,tsx}'),
   path.join(projectRoot, 'scripts', '**', '*.{js,ts}'),
+  path.join(projectRoot, 'eval', '**', '*.{js,ts}'),
   path.join(projectRoot, 'prisma', '**', '*.{js,ts}'),
 ];
 
