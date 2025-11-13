@@ -5,8 +5,6 @@ const nextFlat = Array.isArray(nextConfig)
 	? nextConfig
 	: (nextConfig && nextConfig.default ? nextConfig.default : []);
 
-const path = require('path');
-
 /** @type {import('eslint').Linter.FlatConfig[]} */
 module.exports = [
 	{
@@ -24,16 +22,6 @@ module.exports = [
 			'tsconfig.tsbuildinfo',
 			'cleanup-orphaned-users.js',
 			'scripts/check-server-api-usage.*',
-			// Ignore data files
-			'data/**',
-			'eval/**',
-			'reports/**',
-			// Windows system directories that cause permission errors
-			'**/AppData/**',
-			'**/ElevatedDiagnostics/**',
-			// Ignore anything outside the project root
-			'../**',
-			'../../**',
 		],
 	},
 	...nextFlat,
@@ -92,7 +80,7 @@ module.exports = [
 		},
 	// Removed broad global fetch restrictions to prevent false positives; the targeted selector above is sufficient
 	{
-		files: ['scripts/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
+		files: ['scripts/**/*.{js,ts}', 'eval/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
 		rules: {
 			'no-console': 'off',
 		},

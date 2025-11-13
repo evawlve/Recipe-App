@@ -118,26 +118,17 @@ async function main(): Promise<void> {
   await fs.promises.writeFile(reportPath, lines.join('\n'), 'utf8');
 
   // Console summary
-  // eslint-disable-next-line no-console
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  // eslint-disable-next-line no-console
   console.log('DB Coverage Audit — Summary');
-  // eslint-disable-next-line no-console
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  // eslint-disable-next-line no-console
   console.log(`Foods: ${totalFoods}, Units: ${totalUnits}, Barcodes: ${totalBarcodes}`);
-  // eslint-disable-next-line no-console
   console.log('Foods by source:', foodsBySource.map(f => `${f.source}:${f._count || 0}`).join(', '));
-  // eslint-disable-next-line no-console
   console.log('Top unit labels:', topUnitLabels.map(([l, c]) => `${l}:${c}`).join(', '));
-  // eslint-disable-next-line no-console
   console.log('Top missing keywords:', topMissing.join(', '));
-  // eslint-disable-next-line no-console
   console.log('Report written to:', path.relative(process.cwd(), reportPath));
 }
 
 main().then(() => prisma.$disconnect()).catch(async (err) => {
-  // eslint-disable-next-line no-console
   console.error('Audit failed:', err);
   await prisma.$disconnect();
   process.exit(1);
