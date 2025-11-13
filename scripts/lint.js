@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// Apply ESLint patch before loading ESLint
-require('@rushstack/eslint-patch/modern-module-resolution');
-
+// ESLint 9 with flat config doesn't require the rushstack patch
+// The patch is kept in eslint.config.cjs for eslint-config-next compatibility
 const { ESLint } = require('eslint');
 const path = require('path');
 const fs = require('fs');
