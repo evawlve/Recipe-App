@@ -19,7 +19,7 @@ import { AvatarEditor } from "@/components/account/AvatarEditor";
 // Step 1: Name
 const nameSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  lastName: z.string().optional(), // Last name is optional
 });
 
 // Step 2: Email and Email Confirmation
@@ -54,58 +54,28 @@ export default function SignUpFormClient() {
   const isGoogle = searchParams.get("google") === "true";
   const verifiedEmail = searchParams.get("email");
   
+  // Initialize isGoogleUser from URL parameter immediately (must be before useEffect that uses it)
+  const [isGoogleUser, setIsGoogleUser] = useState(isGoogle);
+  // Add a flag to track if we've determined the flow type (prevents flash of wrong flow)
+  const [flowDetermined, setFlowDetermined] = useState(!!isGoogle || !!isVerified);
+  const [currentStep, setCurrentStep] = useState<SignupStep>("name");
+  const [serverMessage, setServerMessage] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  
   // Debug logging (client-side only)
   useEffect(() => {
     console.log('=== SIGNUP FORM DEBUG ===');
     console.log('Current URL:', window.location.href);
       console.log('Search params:', Object.fromEntries(searchParams.entries()));
       console.log('isVerified:', isVerified);
-      console.log('isGoogle:', isGoogle);
+      console.log('isGoogle (URL param):', isGoogle);
+      console.log('isGoogleUser (state):', isGoogleUser);
+      console.log('currentStep:', currentStep);
       console.log('verifiedEmail:', verifiedEmail);
       console.log('redirectTo:', redirectTo);
     console.log('==========================');
-  }, [searchParams, isVerified, verifiedEmail, redirectTo]);
-
-  // Fetch Google OAuth user data for Google users
-  useEffect(() => {
-    if (isGoogle && isVerified) {
-      const fetchGoogleUserData = async () => {
-        try {
-          const supabase = createSupabaseBrowserClient();
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (user?.user_metadata) {
-            console.log('Google user metadata:', user.user_metadata);
-            
-            // Pre-populate name fields if available
-            if (user.user_metadata.first_name || user.user_metadata.last_name) {
-              setSignupData(prev => ({
-                ...prev,
-                firstName: user.user_metadata.first_name || prev.firstName,
-                lastName: user.user_metadata.last_name || prev.lastName,
-              }));
-            }
-            
-            // Set Google avatar URL if available
-            if (user.user_metadata.avatar_url) {
-              setGoogleAvatarUrl(user.user_metadata.avatar_url);
-              setAvatarUrl(user.user_metadata.avatar_url);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching Google user data:', error);
-        }
-      };
-      
-      fetchGoogleUserData();
-    }
-  }, [isGoogle, isVerified]);
-  
-  const [currentStep, setCurrentStep] = useState<SignupStep>("name");
-  const [serverMessage, setServerMessage] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
-  const [isGoogleUser, setIsGoogleUser] = useState(false);
+  }, [searchParams, isVerified, isGoogle, isGoogleUser, currentStep, verifiedEmail, redirectTo]);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -152,63 +122,271 @@ export default function SignUpFormClient() {
 
   const supabase = createSupabaseBrowserClient();
 
-  // Check if user is already authenticated on component mount
+  // Sync form fields when signupData changes and we're on the name step for Google users
+  // This must be after all state and form declarations
   useEffect(() => {
+    const isGoogleOAuthUser = isGoogleUser || isGoogle;
+    if (isGoogleOAuthUser && currentStep === "name" && signupData.firstName) {
+      // Use setTimeout to ensure DOM is ready
+      const timeoutId = setTimeout(() => {
+        try {
+          nameForm.reset({
+            firstName: signupData.firstName,
+            lastName: signupData.lastName || "", // Use empty string if lastName is null/undefined
+          });
+        } catch (error) {
+          // Form might not be mounted yet, ignore error
+          console.log('Form reset skipped:', error);
+        }
+      }, 150);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentStep, isGoogleUser, isGoogle, signupData.firstName, signupData.lastName]); // Don't include nameForm in deps
+
+  // Check if user is already authenticated on component mount - only run once
+  useEffect(() => {
+    let isMounted = true;
     const checkAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        // Log full user object for debugging
+        console.log('=== FULL USER OBJECT DEBUG ===');
+        console.log('User:', user);
+        console.log('User email:', user?.email);
+        console.log('User metadata:', (user as any)?.user_metadata);
+        console.log('User app_metadata:', (user as any)?.app_metadata);
+        console.log('User identities:', (user as any)?.identities);
+        console.log('User error:', userError);
+        console.log('=============================');
+        
+        if (user && isMounted) {
           console.log('User is already authenticated:', user.email);
           setIsAuthenticated(true);
           
-          // If user is authenticated but doesn't have a username, go to appropriate step
-          if (!(user as any).user_metadata?.username) {
-            // For Google OAuth users, start with name confirmation
-            // For regular users, go directly to profile setup
-            if (isGoogle) {
-              setCurrentStep("name");
-              setIsGoogleUser(true);
-            } else {
-              setCurrentStep("profile");
+          // Check if user has completed profile setup by fetching from database
+          try {
+            const response = await fetch('/api/whoami');
+            if (response.ok && isMounted) {
+              const dbUser = await response.json();
+              
+              console.log('=== DATABASE USER DEBUG ===');
+              console.log('DB User:', dbUser);
+              console.log('===========================');
+              
+              // If user has username, they're fully set up
+              if (dbUser.username) {
+                router.push("/recipes?newUser=true");
+                return;
+              }
+              
+              // User needs to complete profile setup
+              const firstName = dbUser.firstName || (user as any).user_metadata?.first_name || "";
+              const lastName = dbUser.lastName || (user as any).user_metadata?.last_name || "";
+              const email = user.email || "";
+              
+              // Check if user signed up with Google OAuth by checking multiple sources
+              // 1. URL parameter (google=true) - most reliable if present
+              // 2. Supabase identities array - VERY reliable (check for Google identity)
+              // 3. app_metadata.provider - sometimes not set correctly
+              // 4. Check if user has first_name/last_name in metadata (Google OAuth always provides this)
+              const hasGoogleIdentity = (user as any).identities?.some((identity: any) => identity.provider === 'google');
+              const isGoogleProvider = (user as any).app_metadata?.provider === 'google';
+              const hasGoogleMetadata = !!(user as any).user_metadata?.first_name || (user as any).user_metadata?.last_name;
+              // If user has Google metadata (first_name/last_name) and is verified, likely Google OAuth
+              const isGoogleOAuthUser = isGoogle || hasGoogleIdentity || isGoogleProvider || (hasGoogleMetadata && isVerified);
+              
+              console.log('=== SIGNUP FORM AUTH CHECK ===');
+              console.log('isGoogle (URL param):', isGoogle);
+              console.log('isVerified:', isVerified);
+              console.log('hasGoogleIdentity:', hasGoogleIdentity);
+              console.log('isGoogleProvider:', isGoogleProvider);
+              console.log('hasGoogleMetadata (first_name/last_name):', hasGoogleMetadata);
+              console.log('isGoogleOAuthUser (final):', isGoogleOAuthUser);
+              console.log('Identities:', (user as any).identities);
+              console.log('User metadata keys:', Object.keys((user as any)?.user_metadata || {}));
+              console.log('App metadata keys:', Object.keys((user as any)?.app_metadata || {}));
+              console.log('============================');
+              
+              // For Google OAuth users, ALWAYS start with name confirmation step (even if they have firstName/lastName)
+              // This allows them to confirm/edit their name before setting username
+              // For regular users, go directly to profile setup
+              if (isGoogleOAuthUser) {
+                setCurrentStep("name");
+                setIsGoogleUser(true);
+                
+                // Always populate form fields with data from database or metadata
+                setSignupData(prev => ({
+                  ...prev,
+                  firstName: firstName,
+                  lastName: lastName,
+                  email: email,
+                }));
+              } else {
+                setCurrentStep("profile");
+                setSignupData(prev => ({
+                  ...prev,
+                  firstName: firstName,
+                  lastName: lastName,
+                  email: email,
+                }));
+              }
             }
-            setSignupData(prev => ({
-              ...prev,
-              firstName: (user as any).user_metadata?.first_name || "",
-              lastName: (user as any).user_metadata?.last_name || "",
-              email: user.email || "",
-            }));
-          } else {
-            // User is fully set up, redirect to app
-            router.push("/recipes?newUser=true");
+          } catch (dbError) {
+            console.error('Error fetching user from database:', dbError);
+            // Fallback to metadata if database fetch fails
+            if (isMounted && !(user as any).user_metadata?.username) {
+              const firstName = (user as any).user_metadata?.first_name || "";
+              const lastName = (user as any).user_metadata?.last_name || "";
+              const email = user.email || "";
+              
+              // Check if user signed up with Google OAuth by checking multiple sources
+              const hasGoogleIdentity = (user as any).identities?.some((identity: any) => identity.provider === 'google');
+              const isGoogleProvider = (user as any).app_metadata?.provider === 'google';
+              const isGoogleOAuthUser = isGoogle || hasGoogleIdentity || isGoogleProvider;
+              
+              // For Google OAuth users, ALWAYS start with name confirmation step
+              if (isGoogleOAuthUser) {
+                setCurrentStep("name");
+                setIsGoogleUser(true);
+                setSignupData(prev => ({
+                  ...prev,
+                  firstName: firstName,
+                  lastName: lastName,
+                  email: email,
+                }));
+              } else {
+                setCurrentStep("profile");
+                setSignupData(prev => ({
+                  ...prev,
+                  firstName: firstName,
+                  lastName: lastName,
+                  email: email,
+                }));
+              }
+            }
           }
-        } else if (isVerified || isGoogle) {
+        } else if (isMounted && (isVerified || isGoogle)) {
           // User is not authenticated but we have verified=true or google=true parameter
           // This means they need to complete the signup process
-          if (isGoogle) {
-            // Google OAuth user - start with name confirmation
-            setCurrentStep("name");
-            setIsGoogleUser(true);
-            // Pre-populate with Google data if available
-            if ((user as any)?.user_metadata) {
-              setSignupData(prev => ({
-                ...prev,
-                firstName: (user as any).user_metadata?.first_name || "",
-                lastName: (user as any).user_metadata?.last_name || "",
-                email: (user as any)?.email || "",
-              }));
+          // Try to get user data from Supabase session and database
+          try {
+            const { data: { user: sessionUser } } = await supabase.auth.getUser();
+            if (sessionUser && isMounted) {
+              // Try to fetch from database first
+              try {
+                const response = await fetch('/api/whoami');
+                if (response.ok && isMounted) {
+                  const dbUser = await response.json();
+                  const firstName = dbUser.firstName || (sessionUser as any).user_metadata?.first_name || "";
+                  const lastName = dbUser.lastName || (sessionUser as any).user_metadata?.last_name || "";
+                  const email = sessionUser.email || "";
+                  
+                  // Check if user signed up with Google OAuth by checking multiple sources
+                  const hasGoogleIdentity = (sessionUser as any).identities?.some((identity: any) => identity.provider === 'google');
+                  const isGoogleProvider = (sessionUser as any).app_metadata?.provider === 'google';
+                  const isGoogleOAuthUser = isGoogle || hasGoogleIdentity || isGoogleProvider;
+                  
+                  if (isGoogleOAuthUser) {
+                    // Google OAuth user - ALWAYS start with name confirmation
+                    setCurrentStep("name");
+                    setIsGoogleUser(true);
+                    setSignupData(prev => ({
+                      ...prev,
+                      firstName: firstName,
+                      lastName: lastName,
+                      email: email,
+                    }));
+                  } else {
+                    // Regular email verification - go to profile setup
+                    setCurrentStep("profile");
+                    setSignupData(prev => ({
+                      ...prev,
+                      firstName: firstName,
+                      lastName: lastName,
+                      email: email,
+                    }));
+                  }
+                }
+              } catch (dbError) {
+                // Fallback to metadata
+                if (isMounted) {
+                  const firstName = (sessionUser as any).user_metadata?.first_name || "";
+                  const lastName = (sessionUser as any).user_metadata?.last_name || "";
+                  const email = sessionUser.email || "";
+                  
+                  // Check if user signed up with Google OAuth by checking multiple sources
+                  const hasGoogleIdentity = (sessionUser as any).identities?.some((identity: any) => identity.provider === 'google');
+                  const isGoogleProvider = (sessionUser as any).app_metadata?.provider === 'google';
+                  const isGoogleOAuthUser = isGoogle || hasGoogleIdentity || isGoogleProvider;
+                  
+                  if (isGoogleOAuthUser) {
+                    setCurrentStep("name");
+                    setIsGoogleUser(true);
+                    setSignupData(prev => ({
+                      ...prev,
+                      firstName: firstName,
+                      lastName: lastName,
+                      email: email,
+                    }));
+                  } else {
+                    setCurrentStep("profile");
+                  }
+                }
+              }
+            } else if (isMounted) {
+              // If we can't get session, default behavior
+              if (isGoogle) {
+                setCurrentStep("name");
+                setIsGoogleUser(true);
+              } else {
+                setCurrentStep("profile");
+              }
             }
-          } else {
-            // Regular email verification - go to profile setup
-            setCurrentStep("profile");
+          } catch (sessionError) {
+            // If we can't get session, default behavior
+            if (isMounted) {
+              if (isGoogle) {
+                setCurrentStep("name");
+                setIsGoogleUser(true);
+              } else {
+                setCurrentStep("profile");
+              }
+            }
           }
         }
       } catch (error) {
         console.error("Error checking authentication:", error);
+      } finally {
+        // Mark flow as determined after auth check completes
+        if (isMounted) {
+          setFlowDetermined(true);
+        }
       }
     };
 
-    checkAuth();
-  }, [supabase, router, isVerified]);
+    // If we already have Google or verified in URL, we know the flow immediately
+    if (isGoogle || isVerified) {
+      setFlowDetermined(true);
+    } else {
+      // Otherwise, check auth to determine flow
+      checkAuth();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase, router, isVerified, isGoogle]); // Removed nameForm from dependencies
+
+  // Guard: If Google user is on email/password/verification steps, redirect to profile
+  useEffect(() => {
+    const isGoogleOAuthUser = isGoogleUser || isGoogle;
+    if (isGoogleOAuthUser && (currentStep === "email" || currentStep === "password" || currentStep === "verification")) {
+      console.log('Google user detected on wrong step, redirecting to profile');
+      setCurrentStep("profile");
+    }
+  }, [currentStep, isGoogleUser, isGoogle]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -240,27 +418,8 @@ export default function SignUpFormClient() {
     }
   }, [currentStep]);
 
-  // Load user data when coming from email verification
-  useEffect(() => {
-    if (isVerified) {
-      const loadUserData = async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            setSignupData(prev => ({
-              ...prev,
-              firstName: (user as any).user_metadata?.first_name || "",
-              lastName: (user as any).user_metadata?.last_name || "",
-              email: user.email || verifiedEmail || "",
-            }));
-          }
-        } catch (error) {
-          console.error('Error loading user data:', error);
-        }
-      };
-      loadUserData();
-    }
-  }, [isVerified, verifiedEmail]);
+  // Load user data when coming from email verification - simplified to avoid conflicts
+  // This is now handled by the main checkAuth useEffect above
 
   // Prevent navigation away from signup if not complete
   useEffect(() => {
@@ -300,9 +459,12 @@ export default function SignUpFormClient() {
     setSignupData(prev => ({ ...prev, ...values }));
     
     // For Google OAuth users, skip email and password steps
-    if (isGoogle) {
+    // Check both isGoogleUser (from provider metadata) and isGoogle (from URL parameter)
+    if (isGoogleUser || isGoogle) {
+      console.log('Google user detected, skipping to profile step');
       setCurrentStep("profile");
     } else {
+      console.log('Regular user, going to email step');
       setCurrentStep("email");
     }
   }
@@ -341,8 +503,10 @@ export default function SignUpFormClient() {
           emailRedirectTo: `${window.location.origin}/auth/callback?newUser=true`,
           data: {
             first_name: signupData.firstName,
-            last_name: signupData.lastName,
-            name: `${signupData.firstName} ${signupData.lastName}`,
+            last_name: signupData.lastName || null,
+            name: signupData.lastName 
+              ? `${signupData.firstName} ${signupData.lastName}`
+              : signupData.firstName,
           },
         },
       });
@@ -474,6 +638,12 @@ export default function SignUpFormClient() {
       return;
     }
     
+    // Validate firstName is provided and non-empty
+    if (!signupData.firstName || signupData.firstName.trim().length === 0) {
+      setServerMessage('First name is required');
+      return;
+    }
+    
     // Update signup data with profile values
     const updatedSignupData = { ...signupData, ...values };
     setSignupData(updatedSignupData);
@@ -489,9 +659,11 @@ export default function SignUpFormClient() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firstName: updatedSignupData.firstName,
-          lastName: updatedSignupData.lastName,
-          name: `${updatedSignupData.firstName} ${updatedSignupData.lastName}`,
+          firstName: updatedSignupData.firstName.trim(), // Required, must be non-empty
+          lastName: updatedSignupData.lastName?.trim() || null, // Optional, can be null
+          name: updatedSignupData.lastName?.trim()
+            ? `${updatedSignupData.firstName.trim()} ${updatedSignupData.lastName.trim()}`
+            : updatedSignupData.firstName.trim(), // Use only firstName if lastName is empty
           username: updatedSignupData.username,
           bio: updatedSignupData.bio,
           ...(avatarUrl && { avatarUrl: avatarUrl }), // Only include avatarUrl if it exists
@@ -525,10 +697,17 @@ export default function SignUpFormClient() {
     setOauthLoading(true);
     setServerMessage("");
     try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      // Always include google=true and newUser=true in the callback URL to identify Google OAuth flow
+      // This ensures the callback route knows it's a Google OAuth signup, even for existing users
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?newUser=true`,
+        options: { 
+          redirectTo: origin ? `${origin}/auth/callback?google=true&newUser=true&redirectTo=${encodeURIComponent(redirectTo)}` : undefined,
+          queryParams: {
+            prompt: 'select_account', // Force account selection
+            access_type: 'offline',
+          },
         },
       });
       if (error) setServerMessage(`Google sign in failed: ${error.message}`);
@@ -538,6 +717,9 @@ export default function SignUpFormClient() {
   }
 
   function goBack() {
+    // Check if user is Google OAuth user (from state or URL parameter)
+    const isGoogleOAuthUser = isGoogleUser || isGoogle;
+    
     if (currentStep === "email") {
       setCurrentStep("name");
     } else if (currentStep === "password") {
@@ -547,7 +729,7 @@ export default function SignUpFormClient() {
     } else if (currentStep === "profile") {
       // For Google OAuth users, go back to name step
       // For regular users, go back to verification step
-      if (isGoogle) {
+      if (isGoogleOAuthUser) {
         setCurrentStep("name");
       } else {
         setCurrentStep("verification");
@@ -609,96 +791,95 @@ export default function SignUpFormClient() {
       
       {/* Progress indicator */}
       <div className="flex justify-center mb-6">
-        {isGoogleUser ? (
-          // Simplified progress for Google OAuth users
-          <div className="flex items-center space-x-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "name" ? "bg-primary text-primary-foreground" : 
-              ["profile", "confirmation"].includes(currentStep) ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <User className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              ["profile", "confirmation"].includes(currentStep) ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "profile" ? "bg-primary text-primary-foreground" : 
-              currentStep === "confirmation" ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <Camera className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              currentStep === "confirmation" ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "confirmation" ? "bg-primary text-primary-foreground" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <CheckCircle className="w-4 h-4" />
-            </div>
-          </div>
+        {(isGoogleUser || isGoogle) ? (
+          // Simplified progress for Google OAuth users: name → profile → confirmation
+          (() => {
+            const steps = ["name", "profile", "confirmation"] as const;
+            type GoogleStep = typeof steps[number];
+            // For Google OAuth users, currentStep should only be one of the Google steps
+            // If somehow it's not (e.g., "verification"), default to "name"
+            const googleStep: GoogleStep = (steps.includes(currentStep as GoogleStep) ? currentStep : "name") as GoogleStep;
+            const currentIndex = steps.indexOf(googleStep);
+            
+            return (
+              <div className="flex items-center space-x-2">
+                {steps.map((step, index) => {
+                  const isCurrent = googleStep === step;
+                  const isCompleted = currentIndex > index;
+                  const isUpcoming = currentIndex < index;
+                  // Line after this step should be green if we've completed this step
+                  const lineAfterIsCompleted = isCompleted;
+                  
+                  return (
+                    <div key={step} className="flex items-center">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                        isCurrent 
+                          ? "bg-amber-500 text-white ring-2 ring-amber-600 ring-offset-2" 
+                          : isCompleted
+                          ? "bg-green-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {step === "name" && <User className="w-4 h-4" />}
+                        {step === "profile" && <Camera className="w-4 h-4" />}
+                        {step === "confirmation" && <CheckCircle className="w-4 h-4" />}
+                      </div>
+                      {index < steps.length - 1 && (
+                        <div className={`w-6 h-0.5 transition-colors ${
+                          lineAfterIsCompleted
+                            ? "bg-green-500"
+                            : "bg-muted"
+                        }`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()
         ) : (
-          // Full progress for regular email signup
-          <div className="flex items-center space-x-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "name" ? "bg-primary text-primary-foreground" : 
-              ["email", "password", "verification", "profile", "confirmation"].includes(currentStep) ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <User className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              ["email", "password", "verification", "profile", "confirmation"].includes(currentStep) ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "email" ? "bg-primary text-primary-foreground" : 
-              ["password", "verification", "profile", "confirmation"].includes(currentStep) ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <Mail className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              ["password", "verification", "profile", "confirmation"].includes(currentStep) ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "password" ? "bg-primary text-primary-foreground" : 
-              ["verification", "profile", "confirmation"].includes(currentStep) ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <User className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              ["verification", "profile", "confirmation"].includes(currentStep) ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "verification" ? "bg-primary text-primary-foreground" : 
-              ["profile", "confirmation"].includes(currentStep) ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <CheckCircle className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              ["profile", "confirmation"].includes(currentStep) ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "profile" ? "bg-primary text-primary-foreground" : 
-              currentStep === "confirmation" ? "bg-primary/20 text-primary" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <Camera className="w-4 h-4" />
-            </div>
-            <div className={`w-6 h-0.5 ${
-              currentStep === "confirmation" ? "bg-primary" : "bg-muted"
-            }`} />
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              currentStep === "confirmation" ? "bg-primary text-primary-foreground" : 
-              "bg-muted text-muted-foreground"
-            }`}>
-              <CheckCircle className="w-4 h-4" />
-            </div>
-          </div>
+          // Full progress for regular email signup: name → email → password → verification → profile → confirmation
+          (() => {
+            const steps = ["name", "email", "password", "verification", "profile", "confirmation"] as const;
+            const currentIndex = steps.indexOf(currentStep);
+            
+            return (
+              <div className="flex items-center space-x-2">
+                {steps.map((step, index) => {
+                  const isCurrent = currentStep === step;
+                  const isCompleted = currentIndex > index;
+                  const isUpcoming = currentIndex < index;
+                  // Line after this step should be green if we've completed this step
+                  const lineAfterIsCompleted = isCompleted;
+                  
+                  return (
+                    <div key={step} className="flex items-center">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                        isCurrent 
+                          ? "bg-amber-500 text-white ring-2 ring-amber-600 ring-offset-2" 
+                          : isCompleted
+                          ? "bg-green-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {step === "name" && <User className="w-4 h-4" />}
+                        {step === "email" && <Mail className="w-4 h-4" />}
+                        {step === "password" && <User className="w-4 h-4" />}
+                        {step === "verification" && <CheckCircle className="w-4 h-4" />}
+                        {step === "profile" && <Camera className="w-4 h-4" />}
+                        {step === "confirmation" && <CheckCircle className="w-4 h-4" />}
+                      </div>
+                      {index < steps.length - 1 && (
+                        <div className={`w-6 h-0.5 transition-colors ${
+                          lineAfterIsCompleted
+                            ? "bg-green-500"
+                            : "bg-muted"
+                        }`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()
         )}
       </div>
 
@@ -721,9 +902,14 @@ export default function SignUpFormClient() {
         }`}>
           <Card>
             <CardHeader>
-              <CardTitle>What's your name?</CardTitle>
+              <CardTitle>
+                {(isGoogleUser || isGoogle) ? "Confirm your name" : "What's your name?"}
+              </CardTitle>
               <CardDescription>
-                Tell us your first and last name
+                {(isGoogleUser || isGoogle)
+                  ? "We've pre-filled your name from Google. You can edit it if needed, then continue to set up your profile."
+                  : "Tell us your name (last name is optional)"
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -748,7 +934,7 @@ export default function SignUpFormClient() {
 
                   <div>
                     <label htmlFor="lastName" className="block text-sm font-medium">
-                      Last Name
+                      Last Name <span className="text-muted-foreground">(optional)</span>
                     </label>
                     <Input
                       id="lastName"
@@ -770,7 +956,7 @@ export default function SignUpFormClient() {
               </form>
 
               {/* Only show Google OAuth option for non-Google users */}
-              {!isGoogleUser && (
+              {!(isGoogleUser || isGoogle) && (
                 <>
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -802,7 +988,8 @@ export default function SignUpFormClient() {
           </Card>
         </div>
 
-        {/* Step 2: Email */}
+        {/* Step 2: Email - Only show for non-Google users */}
+        {!isGoogle && (
         <div className={`transition-all duration-500 ease-in-out ${
           currentStep === "email" 
             ? "translate-x-0 opacity-100" 
@@ -884,8 +1071,10 @@ export default function SignUpFormClient() {
             </CardContent>
           </Card>
         </div>
+        )}
 
-        {/* Step 3: Password */}
+        {/* Step 3: Password - Only show for non-Google users */}
+        {!isGoogle && (
         <div className={`transition-all duration-500 ease-in-out ${
           currentStep === "password" 
             ? "translate-x-0 opacity-100" 
@@ -967,8 +1156,10 @@ export default function SignUpFormClient() {
             </CardContent>
           </Card>
         </div>
+        )}
 
-        {/* Step 4: Email Verification */}
+        {/* Step 4: Email Verification - Only show for non-Google users */}
+        {!isGoogle && (
         <div className={`transition-all duration-500 ease-in-out ${
           currentStep === "verification" 
             ? "translate-x-0 opacity-100" 
@@ -1022,6 +1213,7 @@ export default function SignUpFormClient() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {/* Step 5: Profile Setup */}
         <div className={`transition-all duration-500 ease-in-out ${
@@ -1053,8 +1245,8 @@ export default function SignUpFormClient() {
                   uploadPath="avatars"
                   maxSize={5 * 1024 * 1024} // 5MB
                   acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
-                  initials={signupData.firstName.charAt(0).toUpperCase()}
-                  isGoogleAvatar={isGoogle && !!googleAvatarUrl}
+                  initials={signupData.firstName ? signupData.firstName.charAt(0).toUpperCase() : 'U'}
+                  isGoogleAvatar={(isGoogleUser || isGoogle) && !!googleAvatarUrl}
                 />
 
                 {/* Username with real-time validation */}
@@ -1068,7 +1260,7 @@ export default function SignUpFormClient() {
                       type="text"
                       value={signupData.username}
                       onChange={(e) => {
-                        const value = e.target.value;
+                        const value = e.target.value.toLowerCase();
                         console.log('USERNAME CHANGED:', value);
                         setSignupData(prev => ({ ...prev, username: value }));
                         validateUsername(value);

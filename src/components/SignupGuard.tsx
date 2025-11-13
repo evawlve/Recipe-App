@@ -31,21 +31,47 @@ export function SignupGuard({ children }: SignupGuardProps) {
         const response = await fetch('/api/whoami');
         if (response.ok) {
           const userData = await response.json();
-          console.log('SignupGuard: User data from whoami:', userData);
           
           if (userData.username) {
             // User has completed signup, allow access
-            console.log('SignupGuard: User has username, allowing access');
             setIsAllowed(true);
           } else {
             // User is authenticated but hasn't completed signup
-            console.log('SignupGuard: User missing username, redirecting to signup');
-            router.push('/signup?verified=true&email=' + encodeURIComponent(user.email || ''));
+            // Check if user is a Google OAuth user by checking Supabase user metadata
+            const hasGoogleIdentity = (user as any).identities?.some((identity: any) => identity.provider === 'google');
+            const isGoogleProvider = (user as any).app_metadata?.provider === 'google';
+            const hasGoogleMetadata = !!(user as any).user_metadata?.first_name || (user as any).user_metadata?.last_name;
+            const isGoogleOAuthUser = hasGoogleIdentity || isGoogleProvider || hasGoogleMetadata;
+            
+            // Build signup URL with Google OAuth parameter if detected
+            const signupParams = new URLSearchParams({
+              verified: 'true',
+              email: user.email || '',
+            });
+            if (isGoogleOAuthUser) {
+              signupParams.set('google', 'true');
+            }
+            
+            router.push(`/signup?${signupParams.toString()}`);
             return;
           }
         } else {
           // API error, redirect to signup
-          router.push('/signup?verified=true&email=' + encodeURIComponent(user.email || ''));
+          // Check if user is a Google OAuth user
+          const hasGoogleIdentity = (user as any).identities?.some((identity: any) => identity.provider === 'google');
+          const isGoogleProvider = (user as any).app_metadata?.provider === 'google';
+          const hasGoogleMetadata = !!(user as any).user_metadata?.first_name || (user as any).user_metadata?.last_name;
+          const isGoogleOAuthUser = hasGoogleIdentity || isGoogleProvider || hasGoogleMetadata;
+          
+          const signupParams = new URLSearchParams({
+            verified: 'true',
+            email: user.email || '',
+          });
+          if (isGoogleOAuthUser) {
+            signupParams.set('google', 'true');
+          }
+          
+          router.push(`/signup?${signupParams.toString()}`);
           return;
         }
       } catch (error) {

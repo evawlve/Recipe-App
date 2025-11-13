@@ -4,7 +4,22 @@ import { createServerClient } from '@supabase/ssr';
 import { nanoid } from 'nanoid';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+  
+  // Handle OAuth callback at root route - rewrite to callback route handler
+  // This is necessary because Supabase redirects to / instead of /auth/callback
+  if (pathname === '/' && searchParams.has('code')) {
+    // Rewrite the request to the callback route handler with all parameters
+    const callbackUrl = new URL('/auth/callback', request.url);
+    // Copy all search parameters
+    searchParams.forEach((value, key) => {
+      callbackUrl.searchParams.set(key, value);
+    });
+    
+    const rewriteResponse = NextResponse.rewrite(callbackUrl);
+    addSecurityHeaders(rewriteResponse);
+    return rewriteResponse;
+  }
   
   // Create response (will be modified with security headers)
   let response: NextResponse;
