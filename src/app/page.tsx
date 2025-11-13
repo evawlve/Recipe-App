@@ -15,8 +15,11 @@ export const revalidate = 60;
 // Allow dynamic user content while caching the rest
 export const dynamic = 'force-dynamic';
 
-
 export default async function HomePage() {
+  // Note: OAuth callbacks with code parameter are handled by middleware
+  // which rewrites them to /auth/callback route handler
+  // This page should never receive a code parameter due to the middleware rewrite
+  
   // Parallelize data fetching for better performance
   const [trending, currentUser] = await Promise.all([
     getTrendingRecipes({ limit: 12 }),

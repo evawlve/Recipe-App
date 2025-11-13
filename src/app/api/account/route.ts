@@ -21,21 +21,45 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, firstName, lastName, username, bio, avatarUrl, avatarKey } = await req.json().catch(() => ({}));
+    let { name, firstName, lastName, username, bio, avatarUrl, avatarKey } = await req.json().catch(() => ({}));
     
     // Validate name if provided
     if (name !== undefined && (!name || typeof name !== "string" || name.length > 80)) {
       return NextResponse.json({ error: "Invalid name" }, { status: 400 });
     }
 
-    // Validate firstName if provided
-    if (firstName !== undefined && (typeof firstName !== "string" || firstName.length > 50)) {
-      return NextResponse.json({ error: "Invalid first name" }, { status: 400 });
+    // Validate firstName if provided (required if provided, must be non-empty)
+    if (firstName !== undefined) {
+      if (typeof firstName !== "string") {
+        return NextResponse.json({ error: "First name must be a string" }, { status: 400 });
+      }
+      const trimmedFirstName = firstName.trim();
+      if (trimmedFirstName.length === 0) {
+        return NextResponse.json({ error: "First name is required and cannot be empty" }, { status: 400 });
+      }
+      if (trimmedFirstName.length > 50) {
+        return NextResponse.json({ error: "First name must be 50 characters or less" }, { status: 400 });
+      }
+      // Use trimmed version
+      firstName = trimmedFirstName;
     }
 
-    // Validate lastName if provided
-    if (lastName !== undefined && (typeof lastName !== "string" || lastName.length > 50)) {
-      return NextResponse.json({ error: "Invalid last name" }, { status: 400 });
+    // Validate lastName if provided (optional, but must be valid if provided)
+    if (lastName !== undefined && lastName !== null) {
+      if (typeof lastName !== "string") {
+        return NextResponse.json({ error: "Invalid last name" }, { status: 400 });
+      }
+      const trimmedLastName = lastName.trim();
+      // Allow empty string for lastName (will be stored as null)
+      if (trimmedLastName.length === 0) {
+        lastName = null;
+      } else {
+        if (trimmedLastName.length > 50) {
+          return NextResponse.json({ error: "Last name must be 50 characters or less" }, { status: 400 });
+        }
+        // Use trimmed version if not empty
+        lastName = trimmedLastName;
+      }
     }
 
     // Validate username if provided
@@ -86,8 +110,17 @@ export async function PATCH(req: Request) {
     // Build update data object with only provided fields
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
+    if (firstName !== undefined) {
+      updateData.firstName = firstName; // Already trimmed and validated above
+      // If name is not explicitly provided, construct it from firstName and lastName
+      if (name === undefined) {
+        updateData.name = lastName ? `${firstName} ${lastName}` : firstName;
+      }
+    }
+    // Allow lastName to be explicitly set to null (for optional lastName)
+    if (lastName !== undefined) {
+      updateData.lastName = lastName; // Already handled (null or trimmed string)
+    }
     if (username !== undefined) updateData.username = username.toLowerCase();
     if (bio !== undefined) updateData.bio = bio;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;

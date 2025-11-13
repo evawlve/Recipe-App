@@ -123,9 +123,17 @@ export default function AuthCard({
     const supabase = createSupabaseBrowserClient();
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
+      // Always include newUser=true and prompt=select_account to force account selection
+      // This ensures users can choose which Google account to use, even if they have an existing session
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: origin ? `${origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}` : undefined },
+        options: { 
+          redirectTo: origin ? `${origin}/auth/callback?google=true&newUser=true&redirectTo=${encodeURIComponent(redirectTo)}` : undefined,
+          queryParams: {
+            prompt: 'select_account', // Force account selection
+            access_type: 'offline',
+          },
+        },
       });
       if (error) setServerError(error.message);
     } finally {
