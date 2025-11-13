@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { formatIngredientLineForDisplay } from "@/lib/ingredients/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -252,11 +253,8 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
               <CardContent>
                 <ul className="space-y-2">
                   {recipe.ingredients.map((ingredient) => (
-                    <li key={ingredient.id} className="flex items-center gap-2">
-                      <span className="text-muted-foreground">
-                        {ingredient.qty} {ingredient.unit}
-                      </span>
-                      <span className="text-text">{ingredient.name}</span>
+                    <li key={ingredient.id} className="text-text">
+                      {formatIngredientLineForDisplay(ingredient)}
                     </li>
                   ))}
                 </ul>

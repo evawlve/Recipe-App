@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import type { FormEvent } from "react";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { recipeCreateSchema, RecipeCreateInput } from "@/lib/validation";
@@ -15,6 +16,7 @@ import { useFocusManagement } from "@/hooks/useFocusManagement";
 import { ImageUploader } from "@/components/recipe/ImageUploader";
 import { TagsInput } from "@/components/form/TagsInput";
 import { FileState } from "@/types/file-state";
+import { parseIngredientInput } from "@/lib/ingredients/format";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { MealTypeStep } from "./_components/MealTypeStep";
 import { OptionalTaxonomy } from "./_components/OptionalTaxonomy";
@@ -28,6 +30,13 @@ function NewRecipeForm() {
   const [fileStates, setFileStates] = useState<FileState[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const mealTypeRef = useRef<HTMLDivElement>(null);
+
+  const createEmptyIngredient = () => ({
+    name: "",
+    qty: 1,
+    unit: "",
+    original: "",
+  });
   
   const form = useForm<RecipeCreateInput>({
     resolver: zodResolver(recipeCreateSchema),
@@ -36,7 +45,7 @@ function NewRecipeForm() {
       servings: 1,
       bodyMd: "",
       prepTime: undefined,
-      ingredients: [{ name: "", qty: 1, unit: "" }],
+      ingredients: [createEmptyIngredient()],
       tags: [],
       mealType: [],
       cuisine: [],
@@ -47,7 +56,7 @@ function NewRecipeForm() {
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = form;
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "ingredients",
   });
@@ -128,6 +137,35 @@ function NewRecipeForm() {
     }
   };
 
+  const handleFilteredSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const currentIngredients = form.getValues("ingredients") ?? [];
+    const filteredIngredients = currentIngredients.filter(
+      (ingredient) => ingredient.name && ingredient.name.trim().length > 0
+    );
+
+    if (filteredIngredients.length === 0) {
+      replace([createEmptyIngredient()]);
+      form.setError("ingredients", {
+        type: "manual",
+        message: "At least one ingredient is required.",
+      });
+      return;
+    }
+
+    if (filteredIngredients.length !== currentIngredients.length) {
+      replace(
+        filteredIngredients.map((ingredient) => ({
+          ...ingredient,
+          original: ingredient.original ?? "",
+        }))
+      );
+    }
+
+    form.clearErrors("ingredients");
+    await handleSubmit(onSubmit)();
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="mb-8">
@@ -158,7 +196,7 @@ function NewRecipeForm() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleFilteredSubmit} className="space-y-6">
         {/* Basic Information */}
         <Card>
           <CardHeader>
@@ -231,75 +269,74 @@ function NewRecipeForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                  <label className="block text-sm font-medium text-text mb-2">
-                    Quantity
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    {...register(`ingredients.${index}.qty`, { valueAsNumber: true })}
-                    placeholder="1"
-                    className={errors.ingredients?.[index]?.qty ? "border-destructive" : ""}
-                  />
-                  {errors.ingredients?.[index]?.qty && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.ingredients[index]?.qty?.message}
-                    </p>
-                  )}
+              <div key={field.id}>
+                <label className="block text-sm font-medium text-text mb-2">
+                  Ingredient *
+                </label>
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:gap-4">
+                  <div className="flex-1">
+                    <Controller
+                      control={control}
+                      name={`ingredients.${index}.original`}
+                      render={({ field: ingredientField }) => (
+                        <Input
+                          {...ingredientField}
+                          value={ingredientField.value ?? ""}
+                          placeholder="e.g. 1/2 an onion, finely chopped"
+                          className={errors.ingredients?.[index]?.name ? "border-destructive" : ""}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            ingredientField.onChange(value);
+                            const parsed = parseIngredientInput(value);
+                            setValue(`ingredients.${index}.qty`, parsed.qty, { shouldDirty: true });
+                            setValue(`ingredients.${index}.unit`, parsed.unit, { shouldDirty: true });
+                            setValue(`ingredients.${index}.name`, parsed.name, { shouldDirty: true });
+                            const hasNonEmptyIngredient = (form.getValues("ingredients") ?? []).some(
+                              (ingredient) => ingredient.name && ingredient.name.trim().length > 0
+                            );
+                            if (hasNonEmptyIngredient) {
+                              form.clearErrors("ingredients");
+                            }
+                          }}
+                          onBlur={(event) => {
+                            const value = event.target.value;
+                            const parsed = parseIngredientInput(value);
+                            setValue(`ingredients.${index}.qty`, parsed.qty, { shouldDirty: true });
+                            setValue(`ingredients.${index}.unit`, parsed.unit, { shouldDirty: true });
+                            setValue(`ingredients.${index}.name`, parsed.name, { shouldDirty: true });
+                            ingredientField.onBlur();
+                          }}
+                        />
+                      )}
+                    />
+                    {errors.ingredients?.[index]?.name && (
+                      <p className="text-sm text-destructive mt-1">
+                        {errors.ingredients[index]?.name?.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => remove(index)}
+                      disabled={fields.length === 1 || isSubmitting}
+                    >
+                      Remove
+                    </Button>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-text mb-2">
-                    Unit
-                  </label>
-                  <Input
-                    {...register(`ingredients.${index}.unit`)}
-                    placeholder="cup, tbsp, g, oz (or blank for count)"
-                    className={errors.ingredients?.[index]?.unit ? "border-destructive" : ""}
-                  />
-                  {errors.ingredients?.[index]?.unit && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.ingredients[index]?.unit?.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-text mb-2">
-                    Ingredient Name
-                  </label>
-                  <Input
-                    {...register(`ingredients.${index}.name`)}
-                    placeholder="Flour, sugar, etc."
-                    className={errors.ingredients?.[index]?.name ? "border-destructive" : ""}
-                  />
-                  {errors.ingredients?.[index]?.name && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.ingredients[index]?.name?.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => remove(index)}
-                    disabled={fields.length === 1 || isSubmitting}
-                  >
-                    Remove
-                  </Button>
-                </div>
+                <input type="hidden" {...register(`ingredients.${index}.qty`, { valueAsNumber: true })} />
+                <input type="hidden" {...register(`ingredients.${index}.unit`)} />
+                <input type="hidden" {...register(`ingredients.${index}.name`)} />
               </div>
             ))}
 
             <Button
               type="button"
               variant="outline"
-              onClick={() => append({ name: "", qty: 1, unit: "" })}
+              onClick={() => append(createEmptyIngredient())}
               disabled={isSubmitting}
               className="w-full"
             >
