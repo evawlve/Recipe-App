@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Edit3 } from "lucide-react";
+import { formatIngredientLineForDisplay } from "@/lib/ingredients/format";
 
 interface MappedIngredient {
   id: string;
@@ -167,7 +168,7 @@ export function NutritionBreakdownModal({
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-base">
-                              {ingredient.qty} {ingredient.unit} {ingredient.name}
+                              {formatIngredientLineForDisplay(ingredient)}
                             </CardTitle>
                             <div className="flex items-center gap-2">
                               {badges.map((badge, index) => (
@@ -231,7 +232,7 @@ export function NutritionBreakdownModal({
                     <Card key={ingredient.id} className="border-l-4 border-l-red-500">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base">
-                          {ingredient.qty} {ingredient.unit} {ingredient.name}
+                          {formatIngredientLineForDisplay(ingredient)}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0">
