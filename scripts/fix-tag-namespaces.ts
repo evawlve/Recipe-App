@@ -1,12 +1,17 @@
+import 'dotenv/config';
 import { PrismaClient, TagNamespace } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 /**
- * Fix tags that were incorrectly assigned to MEAL_TYPE namespace during migration.
+ * Fix tags that were incorrectly assigned to MEAL_TYPE namespace.
  * 
- * The migration 20251024173300 set ALL existing tags to MEAL_TYPE by default,
- * which caused tags like "high_protein" and "testing" to be incorrectly categorized.
+ * This script fixes two issues:
+ * 1. Tags incorrectly assigned during migration 20251024173300
+ * 2. Free-form tags created via the recipe "tags" field that were assigned MEAL_TYPE
+ *    (these should now use GOAL namespace to avoid appearing in meal type selectors)
+ * 
+ * Usage: npx tsx scripts/fix-tag-namespaces.ts
  */
 
 const correctNamespaces: Record<string, TagNamespace> = {
@@ -19,6 +24,7 @@ const correctNamespaces: Record<string, TagNamespace> = {
   'keto': TagNamespace.DIET,
   'paleo': TagNamespace.DIET,
   'gluten_free': TagNamespace.DIET,
+  'gluten-free': TagNamespace.DIET,
   'gluten free': TagNamespace.DIET,
   'dairy_free': TagNamespace.DIET,
   'dairy free': TagNamespace.DIET,
@@ -51,9 +57,13 @@ const correctNamespaces: Record<string, TagNamespace> = {
   
   // Goal tags
   'pre_workout': TagNamespace.GOAL,
+  'pre-workout': TagNamespace.GOAL,
   'pre workout': TagNamespace.GOAL,
+  'preworkout': TagNamespace.GOAL, // Handle variant without space/underscore
   'post_workout': TagNamespace.GOAL,
+  'post-workout': TagNamespace.GOAL,
   'post workout': TagNamespace.GOAL,
+  'postworkout': TagNamespace.GOAL, // Handle variant without space/underscore
   'weight_loss': TagNamespace.GOAL,
   'weight loss': TagNamespace.GOAL,
   'muscle_gain': TagNamespace.GOAL,
@@ -94,7 +104,33 @@ async function fixTagNamespaces() {
   console.log(`Found ${mealTypeTags.length} tags in MEAL_TYPE namespace`);
   console.log(`${invalidTags.length} tags are incorrectly classified:\n`);
   
-  if (invalidTags.length === 0) {
+  // Also check GOAL namespace for tags that should be in DIET
+  const goalTags = await prisma.tag.findMany({
+    where: {
+      namespace: TagNamespace.GOAL
+    },
+    include: {
+      _count: {
+        select: {
+          recipes: true
+        }
+      }
+    }
+  });
+  
+  const tagsInGoalThatShouldBeDiet = goalTags.filter(tag => 
+    correctNamespaces[tag.slug.toLowerCase()] === TagNamespace.DIET
+  );
+  
+  if (tagsInGoalThatShouldBeDiet.length > 0) {
+    console.log(`Found ${tagsInGoalThatShouldBeDiet.length} tags in GOAL that should be in DIET:\n`);
+    for (const tag of tagsInGoalThatShouldBeDiet) {
+      console.log(`  - "${tag.label}" (${tag.slug}) -> DIET (used in ${tag._count.recipes} recipes)`);
+    }
+    console.log();
+  }
+  
+  if (invalidTags.length === 0 && tagsInGoalThatShouldBeDiet.length === 0) {
     console.log('✅ No misclassified tags found!');
     return;
   }
@@ -102,7 +138,7 @@ async function fixTagNamespaces() {
   // Group by action
   const toUpdate: typeof invalidTags = [];
   const toDelete: typeof invalidTags = [];
-  const unknown: typeof invalidTags = [];
+  const toMoveToGoal: typeof invalidTags = []; // Unknown tags that should go to GOAL (free-form tags)
   
   for (const tag of invalidTags) {
     if (tagsToDelete.includes(tag.slug.toLowerCase())) {
@@ -110,15 +146,17 @@ async function fixTagNamespaces() {
     } else if (correctNamespaces[tag.slug.toLowerCase()]) {
       toUpdate.push(tag);
     } else {
-      unknown.push(tag);
+      // Unknown tags are likely free-form tags created via the tags field
+      // Move them to GOAL namespace (which we now use for free-form tags)
+      toMoveToGoal.push(tag);
     }
   }
   
   // Report findings
   console.log('📊 Classification:');
-  console.log(`  - ${toUpdate.length} tags to update`);
+  console.log(`  - ${toUpdate.length} tags to update (known categories)`);
   console.log(`  - ${toDelete.length} tags to delete`);
-  console.log(`  - ${unknown.length} tags need manual review\n`);
+  console.log(`  - ${toMoveToGoal.length} tags to move to GOAL (free-form tags)\n`);
   
   // Show details
   if (toUpdate.length > 0) {
@@ -138,10 +176,10 @@ async function fixTagNamespaces() {
     console.log();
   }
   
-  if (unknown.length > 0) {
-    console.log('❓ Tags needing manual review:');
-    for (const tag of unknown) {
-      console.log(`  - "${tag.label}" (${tag.slug}) (used in ${tag._count.recipes} recipes)`);
+  if (toMoveToGoal.length > 0) {
+    console.log('🔄 Free-form tags to move to GOAL:');
+    for (const tag of toMoveToGoal) {
+      console.log(`  - "${tag.label}" (${tag.slug}) -> GOAL (used in ${tag._count.recipes} recipes)`);
     }
     console.log();
   }
@@ -156,6 +194,28 @@ async function fixTagNamespaces() {
     });
     updatedCount++;
     console.log(`✅ Updated "${tag.label}" to ${newNamespace}`);
+  }
+  
+  // Execute moves to GOAL (free-form tags)
+  let movedToGoalCount = 0;
+  for (const tag of toMoveToGoal) {
+    await prisma.tag.update({
+      where: { id: tag.id },
+      data: { namespace: TagNamespace.GOAL }
+    });
+    movedToGoalCount++;
+    console.log(`✅ Moved "${tag.label}" to GOAL namespace`);
+  }
+  
+  // Fix tags in GOAL that should be in DIET
+  let movedFromGoalToDietCount = 0;
+  for (const tag of tagsInGoalThatShouldBeDiet) {
+    await prisma.tag.update({
+      where: { id: tag.id },
+      data: { namespace: TagNamespace.DIET }
+    });
+    movedFromGoalToDietCount++;
+    console.log(`✅ Moved "${tag.label}" from GOAL to DIET namespace`);
   }
   
   // Execute deletions
@@ -176,15 +236,10 @@ async function fixTagNamespaces() {
   
   console.log();
   console.log('✅ Fix complete!');
-  console.log(`  - Updated: ${updatedCount} tags`);
+  console.log(`  - Updated (known categories): ${updatedCount} tags`);
+  console.log(`  - Moved to GOAL (free-form): ${movedToGoalCount} tags`);
+  console.log(`  - Moved from GOAL to DIET: ${movedFromGoalToDietCount} tags`);
   console.log(`  - Deleted: ${deletedCount} tags`);
-  
-  if (unknown.length > 0) {
-    console.log();
-    console.log('⚠️  Warning: Some tags need manual review.');
-    console.log('   These tags are in MEAL_TYPE but don\'t match any known category.');
-    console.log('   You may want to update or delete them manually.');
-  }
 }
 
 async function main() {
