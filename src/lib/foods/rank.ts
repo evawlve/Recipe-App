@@ -2,6 +2,8 @@ import Fuse from 'fuse.js';
 import { plausibilityScore, KcalBand } from './plausibility';
 import { normalizeQuery } from '@/lib/search/normalize';
 
+// Sprint 4: Enhanced ranking with unit hints and qualifiers
+
 // tokens in the query → nudge these categories
 const HINTS: Record<string, string[]> = {
   powder: ['whey','flour'],
