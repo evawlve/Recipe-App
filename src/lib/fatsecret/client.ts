@@ -3,6 +3,8 @@ import {
   FATSECRET_CLIENT_ID,
   FATSECRET_CLIENT_SECRET,
   FATSECRET_REGION,
+  FATSECRET_SCOPE,
+  FATSECRET_BARCODE_REGION,
   FATSECRET_TIMEOUT_MS,
 } from './config';
 
@@ -146,6 +148,23 @@ export class FatSecretClient {
     };
   }
 
+  async searchFoodsV4(query: string, opts: FatSecretSearchOptions = {}): Promise<FatSecretFoodSummary[]> {
+    const response = await this.request<any>({
+      method: 'foods.search.v4',
+      search_expression: query,
+      max_results: String(opts.maxResults ?? 8),
+      page_number: String(opts.pageNumber ?? 0),
+    });
+
+    const foodsNode =
+      response?.foods_search?.results?.food ??
+      response?.foods_search?.food ??
+      response?.foods?.food ??
+      null;
+
+    return normalizeFoods(foodsNode);
+  }
+
   async getFood(foodId: string): Promise<FatSecretFoodDetails | null> {
     if (!foodId) return null;
     const response = await this.request<any>({
@@ -157,8 +176,62 @@ export class FatSecretClient {
     return normalizeFoodDetails(food);
   }
 
+  async getFoodDetails(foodId: string): Promise<FatSecretFoodDetails | null> {
+    return this.getFood(foodId);
+  }
+
   async getFoodById(foodId: string): Promise<FatSecretFoodDetails | null> {
     return this.getFood(foodId);
+  }
+
+  async getFoodByBarcode(barcode: string): Promise<FatSecretFoodDetails | null> {
+    if (!barcode) return null;
+    try {
+      const response = await this.request<any>({
+        method: 'food.find_id_for_barcode',
+        barcode,
+        region: FATSECRET_BARCODE_REGION,
+      });
+
+      const rawFoodId =
+        response?.food_id ??
+        response?.food?.food_id ??
+        (Array.isArray(response?.foods?.food)
+          ? response.foods.food[0]?.food_id
+          : response?.foods?.food?.food_id) ??
+        null;
+
+      const foodIdValue =
+        typeof rawFoodId === 'object' && rawFoodId !== null && 'value' in rawFoodId
+          ? rawFoodId.value
+          : rawFoodId;
+
+      const foodIdStr = String(foodIdValue ?? '').trim();
+      if (!foodIdStr) {
+        return null;
+      }
+
+      try {
+        return await this.getFood(foodIdStr);
+      } catch (getFoodErr) {
+        // Catch errors from getFood (e.g., invalid food_id) and return null
+        if (getFoodErr instanceof FatSecretError) {
+          if (getFoodErr.status === 404 || getFoodErr.message?.includes('Invalid long value')) {
+            return null;
+          }
+        }
+        throw getFoodErr;
+      }
+    } catch (err) {
+      if (err instanceof FatSecretError && err.status === 404) {
+        return null;
+      }
+      // Also catch invalid food_id errors and return null
+      if (err instanceof FatSecretError && (err.message?.includes('Invalid long value') || err.message?.includes('Invalid'))) {
+        return null;
+      }
+      throw err;
+    }
   }
 
   async nlpParse(text: string): Promise<FatSecretNlpParseResponse | null> {
@@ -189,11 +262,13 @@ export class FatSecretClient {
       throw new FatSecretAuthError('Missing FatSecret client credentials');
     }
 
-    const query = new URLSearchParams({
+    // Build params: default region can be overridden by params.region
+    const queryParams: Record<string, string> = {
       format: 'json',
       region: FATSECRET_REGION,
       ...params,
-    });
+    };
+    const query = new URLSearchParams(queryParams);
 
     const token = await this.getAccessToken();
 
@@ -224,7 +299,19 @@ export class FatSecretClient {
       throw new FatSecretError(`FatSecret request failed (${response.status})`, response.status, await safeJson(response));
     }
 
-    return response.json() as Promise<T>;
+    const payload = await response.json();
+
+    if ((payload as any)?.error) {
+      const err = (payload as any).error;
+
+      throw new FatSecretError(
+        `FatSecret error ${err.code ?? ''}: ${err.message ?? 'unknown'}`,
+        response.status,
+        payload
+      );
+    }
+
+    return payload as T;
   }
 
   private async getAccessToken(forceRefresh = false): Promise<string> {
@@ -234,7 +321,7 @@ export class FatSecretClient {
 
     const body = new URLSearchParams({
       grant_type: 'client_credentials',
-      scope: 'basic',
+      scope: FATSECRET_SCOPE,
     });
 
     const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');

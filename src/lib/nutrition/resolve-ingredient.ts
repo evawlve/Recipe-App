@@ -7,7 +7,7 @@ import { deriveServingOptions } from '../units/servings';
 import { resolvePortion } from './portion';
 import { resolveGramsFromParsed } from './resolve-grams';
 import { mapIngredientWithFatsecret, type FatsecretMappedIngredient } from '../fatsecret/map-ingredient';
-import { FATSECRET_ENABLED, FATSECRET_MIN_CONFIDENCE } from '../fatsecret/config';
+import { FATSECRET_ENABLED, FATSECRET_MIN_CONFIDENCE, FATSECRET_STRICT_MODE } from '../fatsecret/config';
 
 export type ResolvedIngredient = {
   source: 'fatsecret' | 'local';
@@ -55,26 +55,113 @@ export async function resolveIngredient(
   if (preferFatsecret && FATSECRET_ENABLED) {
     try {
       const fatsecretResult = await dependencies.mapWithFatsecret!(rawLine);
-      if (fatsecretResult && fatsecretResult.confidence >= minConfidence) {
-        return {
-          source: 'fatsecret',
-          system: 'fatsecret',
+      if (fatsecretResult) {
+        // In strict mode, require confidence >= minConfidence
+        // In non-strict mode, accept any confidence >= 0.3 (do not treat as fallback)
+        if (FATSECRET_STRICT_MODE) {
+          if (fatsecretResult.confidence >= minConfidence) {
+            logger.info('fatsecret.resolve.success', {
+              rawLine,
+              foodId: fatsecretResult.foodId,
+              grams: fatsecretResult.grams,
+              confidence: fatsecretResult.confidence,
+              strictMode: true,
+              FATSECRET_STRICT_MODE: true,
+            });
+            return {
+              source: 'fatsecret',
+              system: 'fatsecret',
+              rawLine,
+              grams: fatsecretResult.grams,
+              kcal: fatsecretResult.kcal,
+              protein: fatsecretResult.protein,
+              carbs: fatsecretResult.carbs,
+              fat: fatsecretResult.fat,
+              confidence: fatsecretResult.confidence,
+              fatsecret: fatsecretResult,
+            };
+          }
+          // Strict mode: reject low confidence
+          logger.info('fatsecret.resolve.fallback', {
+            rawLine,
+            reason: 'low_confidence',
+            confidence: fatsecretResult.confidence,
+            minConfidence,
+            strictMode: true,
+            FATSECRET_STRICT_MODE: true,
+          });
+        } else {
+          // Non-strict mode: accept any confidence >= 0.3 (skip "low_confidence" fallback log)
+          if (fatsecretResult.confidence >= 0.3) {
+            // Track when we accept low confidence for coverage metrics
+            if (fatsecretResult.confidence < minConfidence) {
+              logger.info('fatsecret.resolve.accepted_low_confidence', {
+                rawLine,
+                foodId: fatsecretResult.foodId,
+                confidence: fatsecretResult.confidence,
+                minConfidence,
+                strictMode: false,
+                FATSECRET_STRICT_MODE: false,
+              });
+            }
+            logger.info('fatsecret.resolve.success', {
+              rawLine,
+              foodId: fatsecretResult.foodId,
+              grams: fatsecretResult.grams,
+              confidence: fatsecretResult.confidence,
+              strictMode: false,
+              FATSECRET_STRICT_MODE: false,
+            });
+            return {
+              source: 'fatsecret',
+              system: 'fatsecret',
+              rawLine,
+              grams: fatsecretResult.grams,
+              kcal: fatsecretResult.kcal,
+              protein: fatsecretResult.protein,
+              carbs: fatsecretResult.carbs,
+              fat: fatsecretResult.fat,
+              confidence: fatsecretResult.confidence,
+              fatsecret: fatsecretResult,
+            };
+          }
+          // Non-strict mode: only reject very low confidence (< 0.3)
+          logger.info('fatsecret.resolve.fallback', {
+            rawLine,
+            reason: 'very_low_confidence',
+            confidence: fatsecretResult.confidence,
+            threshold: 0.3,
+            strictMode: false,
+            FATSECRET_STRICT_MODE: false,
+          });
+        }
+      } else {
+        logger.info('fatsecret.resolve.fallback', {
           rawLine,
-          grams: fatsecretResult.grams,
-          kcal: fatsecretResult.kcal,
-          protein: fatsecretResult.protein,
-          carbs: fatsecretResult.carbs,
-          fat: fatsecretResult.fat,
-          confidence: fatsecretResult.confidence,
-          fatsecret: fatsecretResult,
-        };
+          reason: 'no_match',
+        });
       }
     } catch (error) {
-      logger.warn('resolveIngredient.fatsecret_failed', { message: (error as Error).message });
+      logger.warn('fatsecret.resolve.error', {
+        rawLine,
+        reason: 'exception',
+        message: (error as Error).message,
+      });
     }
+  } else if (!FATSECRET_ENABLED || !preferFatsecret) {
+    logger.info('fatsecret.resolve.fallback', {
+      rawLine,
+      reason: 'disabled',
+    });
   }
 
-  return dependencies.resolveLocally!(rawLine);
+  const localResult = await dependencies.resolveLocally!(rawLine);
+  logger.info('resolveIngredient.local_used', {
+    rawLine,
+    grams: localResult.grams,
+    source: localResult.source,
+  });
+  return localResult;
 }
 
 export async function resolveIngredientWithLocalSystem(rawLine: string): Promise<ResolvedIngredient> {
