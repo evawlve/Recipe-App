@@ -1,0 +1,135 @@
+{
+  "gold": "gold.fatsecret-sanity.csv",
+  "portionV2Enabled": false,
+  "timestamp": "2025-11-14T01:10:29.849Z",
+  "totals": {
+    "count": 10
+  },
+  "metrics": {
+    "pAt1": 0,
+    "mae": 55.910000000000004,
+    "provisionalRate": 0.5
+  },
+  "samples": [
+    {
+      "id": "1",
+      "raw_line": "3 large eggs",
+      "expected_food_name": "Egg, whole, raw",
+      "expected_grams": 150,
+      "top_food_name": null,
+      "resolved_grams": 150,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false,
+      "source": "local"
+    },
+    {
+      "id": "2",
+      "raw_line": "2 egg yolks",
+      "expected_food_name": "Egg, yolk, raw",
+      "expected_grams": 34,
+      "top_food_name": null,
+      "resolved_grams": 280,
+      "pAt1": 0,
+      "mae": 246,
+      "provisional": false,
+      "source": "local"
+    },
+    {
+      "id": "3",
+      "raw_line": "1 cup brown rice, cooked",
+      "expected_food_name": "Brown rice, cooked",
+      "expected_grams": 195,
+      "top_food_name": null,
+      "resolved_grams": 185,
+      "pAt1": 0,
+      "mae": 10,
+      "provisional": false,
+      "source": "local"
+    },
+    {
+      "id": "4",
+      "raw_line": "1 cup spinach",
+      "expected_food_name": "Spinach, raw",
+      "expected_grams": 30,
+      "top_food_name": null,
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 210,
+      "provisional": true,
+      "source": "local"
+    },
+    {
+      "id": "5",
+      "raw_line": "1 tbsp olive oil",
+      "expected_food_name": "Olive oil",
+      "expected_grams": 13.5,
+      "top_food_name": null,
+      "resolved_grams": 13.6,
+      "pAt1": 0,
+      "mae": 0.09999999999999964,
+      "provisional": false,
+      "source": "local"
+    },
+    {
+      "id": "6",
+      "raw_line": "200 g chicken breast",
+      "expected_food_name": "Chicken breast, raw",
+      "expected_grams": 200,
+      "top_food_name": null,
+      "resolved_grams": 200,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": false,
+      "source": "local"
+    },
+    {
+      "id": "7",
+      "raw_line": "1 cup milk",
+      "expected_food_name": "Milk, whole",
+      "expected_grams": 244,
+      "top_food_name": null,
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 4,
+      "provisional": true,
+      "source": "local"
+    },
+    {
+      "id": "8",
+      "raw_line": "2 cloves garlic",
+      "expected_food_name": "Garlic, raw",
+      "expected_grams": 6,
+      "top_food_name": null,
+      "resolved_grams": 6,
+      "pAt1": 0,
+      "mae": 0,
+      "provisional": true,
+      "source": "local"
+    },
+    {
+      "id": "9",
+      "raw_line": "1 cup strawberries",
+      "expected_food_name": "Strawberries, raw",
+      "expected_grams": 152,
+      "top_food_name": null,
+      "resolved_grams": 240,
+      "pAt1": 0,
+      "mae": 88,
+      "provisional": true,
+      "source": "local"
+    },
+    {
+      "id": "10",
+      "raw_line": "1 tbsp peanut butter",
+      "expected_food_name": "Peanut butter",
+      "expected_grams": 16,
+      "top_food_name": null,
+      "resolved_grams": 15,
+      "pAt1": 0,
+      "mae": 1,
+      "provisional": true,
+      "source": "local"
+    }
+  ]
+}
