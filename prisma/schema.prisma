@@ -279,6 +279,102 @@ model Food {
   @@index([categoryId, verification])
 }
 
+model FatSecretFoodCache {
+  id               String   @id
+  name             String
+  brandName        String?
+  foodType         String?
+  country          String?
+  description      String?
+  defaultServingId String?
+  source           String?  @default("food.get.v4")
+  confidence       Float?   @default(0.9)
+  nutrientsPer100g Json?
+  legacyFoodId     String?  @unique
+  hash             String?
+  syncedAt         DateTime @default(now())
+  expiresAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  servings        FatSecretServingCache[]
+  aliases         FatSecretFoodAlias[]
+  densityEstimates FatSecretDensityEstimate[]
+
+  @@index([syncedAt])
+  @@index([expiresAt])
+  @@index([hash])
+}
+
+model FatSecretServingCache {
+  id                    String   @id
+  foodId                String
+  measurementDescription String?
+  numberOfUnits         Float?
+  metricServingAmount   Float?
+  metricServingUnit     String?
+  servingWeightGrams    Float?
+  volumeMl              Float?
+  isVolume              Boolean  @default(false)
+  isDefault             Boolean  @default(false)
+  derivedViaDensity     Boolean  @default(false)
+  densityEstimateId     String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  food            FatSecretFoodCache     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  densityEstimate FatSecretDensityEstimate? @relation(fields: [densityEstimateId], references: [id])
+
+  @@index([foodId])
+  @@index([isDefault])
+  @@index([densityEstimateId])
+}
+
+model FatSecretFoodAlias {
+  id      String   @id @default(cuid())
+  foodId  String
+  alias   String
+  locale  String?  @db.VarChar(16)
+  source  String?  @default("fatsecret")
+  createdAt DateTime @default(now())
+
+  food FatSecretFoodCache @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@unique([foodId, alias])
+  @@index([alias])
+}
+
+model FatSecretDensityEstimate {
+  id         String   @id @default(cuid())
+  foodId     String
+  densityGml Float
+  source     String
+  confidence Float?   @default(0.0)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  food     FatSecretFoodCache @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  servings FatSecretServingCache[]
+
+  @@index([foodId])
+  @@index([source])
+}
+
+model FatSecretCacheSyncRun {
+  id             String   @id @default(cuid())
+  status         String   @default("pending")
+  totalRequested Int      @default(0)
+  totalHydrated  Int      @default(0)
+  totalFailed    Int      @default(0)
+  startedAt      DateTime @default(now())
+  finishedAt     DateTime?
+  error          String?
+  metadata       Json?
+
+  @@index([status, startedAt])
+}
+
 model FoodUnit {
   id     String @id @default(cuid())
   foodId String

@@ -192,14 +192,15 @@ function normalizeServings(details: FatSecretFoodDetails): NormalizedServing[] {
   for (const [index, serving] of details.servings.entries()) {
     const id = serving.id ?? `${details.id}_${index}`;
     const volumeMl = deriveVolumeMl(serving);
-    const density = deriveDensity(serving, volumeMl);
+    const servingWeightGrams = resolveServingWeightGrams(serving);
+    const density = deriveDensity(servingWeightGrams, volumeMl);
     servings.push({
       id,
       measurementDescription: serving.measurementDescription,
       numberOfUnits: serving.numberOfUnits,
       metricServingAmount: serving.metricServingAmount,
       metricServingUnit: serving.metricServingUnit,
-      servingWeightGrams: serving.servingWeightGrams,
+      servingWeightGrams,
       volumeMl,
       isVolume: volumeMl != null,
       isDefault: index === 0,
@@ -215,18 +216,70 @@ function normalizeServings(details: FatSecretFoodDetails): NormalizedServing[] {
   return servings;
 }
 
+const VOLUME_UNIT_TO_ML: Record<string, number> = {
+  'ml': 1,
+  'milliliter': 1,
+  'milliliters': 1,
+  'millilitre': 1,
+  'millilitres': 1,
+  'l': 1000,
+  'liter': 1000,
+  'liters': 1000,
+  'litre': 1000,
+  'litres': 1000,
+  'cup': 240,
+  'cups': 240,
+  'tbsp': 14.7868,
+  'tablespoon': 14.7868,
+  'tablespoons': 14.7868,
+  'tbs': 14.7868,
+  'tsp': 4.92892,
+  'teaspoon': 4.92892,
+  'teaspoons': 4.92892,
+  'fl oz': 29.5735,
+  'fluid ounce': 29.5735,
+  'fluid ounces': 29.5735,
+  'pint': 473.176,
+  'pints': 473.176,
+  'quart': 946.353,
+  'quarts': 946.353,
+  'gallon': 3785.41,
+  'gallons': 3785.41,
+};
+
 function deriveVolumeMl(serving: FatSecretServing): number | null {
+  const metricVolume = deriveVolumeFromMetric(serving);
+  if (metricVolume != null) return metricVolume;
+  const descriptionVolume = deriveVolumeFromDescription(serving);
+  if (descriptionVolume != null) return descriptionVolume;
+  return null;
+}
+
+function deriveVolumeFromMetric(serving: FatSecretServing): number | null {
   if (!serving.metricServingAmount || !serving.metricServingUnit) return null;
   const unit = serving.metricServingUnit.toLowerCase();
-  if (unit === 'ml' || unit === 'milliliter' || unit === 'milliliters') {
-    return serving.metricServingAmount;
+  if (unit in VOLUME_UNIT_TO_ML) {
+    const multiplier = VOLUME_UNIT_TO_ML[unit];
+    return serving.metricServingAmount * multiplier;
   }
   return null;
 }
 
-function deriveDensity(serving: FatSecretServing, volumeMl: number | null): number | null {
-  if (!serving.servingWeightGrams || serving.servingWeightGrams <= 0) return null;
-  const grams = serving.servingWeightGrams;
+function deriveVolumeFromDescription(serving: FatSecretServing): number | null {
+  if (!serving.measurementDescription) return null;
+  const desc = serving.measurementDescription.toLowerCase();
+  const units = serving.numberOfUnits && serving.numberOfUnits > 0 ? serving.numberOfUnits : 1;
+  for (const [token, ml] of Object.entries(VOLUME_UNIT_TO_ML)) {
+    if (desc.includes(token)) {
+      return ml * units;
+    }
+  }
+  return null;
+}
+
+function deriveDensity(servingWeightGrams: number | null, volumeMl: number | null): number | null {
+  if (!servingWeightGrams || servingWeightGrams <= 0) return null;
+  const grams = servingWeightGrams;
   if (volumeMl && volumeMl > 0) {
     return grams / volumeMl;
   }
@@ -236,7 +289,7 @@ function deriveDensity(serving: FatSecretServing, volumeMl: number | null): numb
 function deriveNutrients(details: FatSecretFoodDetails): Prisma.JsonObject | null {
   if (!details.servings || details.servings.length === 0) return null;
   for (const serving of details.servings) {
-    const grams = serving.servingWeightGrams;
+    const grams = resolveServingWeightGrams(serving);
     if (!grams || grams <= 0) continue;
     const nutrients = {
       calories: normalizeMacro(serving.calories, grams),
@@ -257,6 +310,29 @@ function normalizeMacro(value: number | null | undefined, grams: number): number
   if (value == null || grams <= 0) return null;
   const normalized = (value / grams) * 100;
   return Number.isFinite(normalized) ? Number(normalized.toFixed(4)) : null;
+}
+
+function resolveServingWeightGrams(serving: FatSecretServing): number | null {
+  if (serving.servingWeightGrams && serving.servingWeightGrams > 0) {
+    return serving.servingWeightGrams;
+  }
+  if (!serving.metricServingAmount || serving.metricServingAmount <= 0 || !serving.metricServingUnit) {
+    return null;
+  }
+  const unit = serving.metricServingUnit.toLowerCase();
+  if (unit === 'g' || unit === 'gram' || unit === 'grams') {
+    return serving.metricServingAmount;
+  }
+  if (unit === 'kg' || unit === 'kilogram' || unit === 'kilograms') {
+    return serving.metricServingAmount * 1000;
+  }
+  if (unit === 'oz' || unit === 'ounce' || unit === 'ounces') {
+    return serving.metricServingAmount * 28.349523125;
+  }
+  if (unit === 'lb' || unit === 'lbs' || unit === 'pound' || unit === 'pounds') {
+    return serving.metricServingAmount * 453.59237;
+  }
+  return null;
 }
 
 function buildAliasList(details: FatSecretFoodDetails): string[] {

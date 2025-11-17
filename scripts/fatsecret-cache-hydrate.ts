@@ -104,6 +104,7 @@ async function main() {
       hydrated += 1;
       logger.info({ foodId }, 'Hydrated FatSecret food');
     } catch (error) {
+      console.error('hydrate failed', error); // add this line
       failed += 1;
       logger.error({ foodId, err: error }, 'Failed to hydrate FatSecret food');
     }

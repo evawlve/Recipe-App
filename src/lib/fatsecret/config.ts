@@ -14,6 +14,16 @@ export const FATSECRET_CLIENT_SECRET = process.env.FATSECRET_CLIENT_SECRET ?? ''
 export const FATSECRET_SCOPE = process.env.FATSECRET_SCOPE ?? 'premier';
 export const FATSECRET_BARCODE_REGION = (process.env.FATSECRET_BARCODE_REGION ?? 'US').trim().toUpperCase();
 export const FATSECRET_STRICT_MODE = getFlag('FATSECRET_STRICT_MODE', true); // Default: strict (only use if confidence >= minConfidence)
+export const FATSECRET_CACHE_MAX_AGE_MINUTES = Number.parseInt(
+  process.env.FATSECRET_CACHE_MAX_AGE_MINUTES ?? '720',
+  10,
+);
+export const FATSECRET_CACHE_SYNC_BATCH_SIZE = Number.parseInt(
+  process.env.FATSECRET_CACHE_SYNC_BATCH_SIZE ?? '25',
+  10,
+);
+export const FATSECRET_CACHE_DENSITY_AI_ENDPOINT =
+  process.env.FATSECRET_CACHE_DENSITY_AI_ENDPOINT ?? '';
 
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
