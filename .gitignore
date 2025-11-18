@@ -96,3 +96,6 @@ data/usda/sr-legacy-sample.jsonl
 data/curated/tmp/**
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Git corrupted files
+.git.corrupted/
