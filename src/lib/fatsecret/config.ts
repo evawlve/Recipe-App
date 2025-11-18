@@ -24,6 +24,18 @@ export const FATSECRET_CACHE_SYNC_BATCH_SIZE = Number.parseInt(
 );
 export const FATSECRET_CACHE_DENSITY_AI_ENDPOINT =
   process.env.FATSECRET_CACHE_DENSITY_AI_ENDPOINT ?? '';
+export const FATSECRET_CACHE_AI_MODEL = process.env.FATSECRET_CACHE_AI_MODEL ?? 'gpt-5-nano';
+export const FATSECRET_CACHE_AI_CONFIDENCE_MIN = Number.parseFloat(
+  process.env.FATSECRET_CACHE_AI_CONFIDENCE_MIN ?? '0.6',
+);
+export const FATSECRET_CACHE_AI_MIN_DENSITY = Number.parseFloat(
+  process.env.FATSECRET_CACHE_AI_MIN_DENSITY ?? '0.05',
+);
+export const FATSECRET_CACHE_AI_MAX_DENSITY = Number.parseFloat(
+  process.env.FATSECRET_CACHE_AI_MAX_DENSITY ?? '5',
+);
+export const FATSECRET_CACHE_AI_ENABLED = getFlag('FATSECRET_CACHE_AI_ENABLED', true);
+export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://api.openai.com/v1';
 
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();

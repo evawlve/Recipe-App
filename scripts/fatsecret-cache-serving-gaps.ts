@@ -54,6 +54,24 @@ function ensureDir(filePath: string) {
 async function main() {
   const options = parseArgs();
 
+  // Test database connection first
+  try {
+    await prisma.$connect();
+    logger.info('Database connection established');
+  } catch (error) {
+    throw new Error(`Failed to connect to database: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // Check if tables exist by trying a simple count
+  try {
+    const count = await prisma.fatSecretFoodCache.count();
+    logger.info({ totalFoods: count }, 'FatSecret cache table accessible');
+  } catch (error) {
+    throw new Error(
+      `FatSecretFoodCache table may not exist or is not accessible: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
   const servingFilters = [];
   if (options.includeWeight) {
     servingFilters.push({
@@ -74,6 +92,19 @@ async function main() {
       },
     });
   }
+
+  if (servingFilters.length === 0) {
+    throw new Error('No serving filters configured - this should not happen');
+  }
+
+  logger.info(
+    {
+      includeWeight: options.includeWeight,
+      includeVolume: options.includeVolume,
+      filterCount: servingFilters.length,
+    },
+    'Querying for serving gaps',
+  );
 
   const foods = await prisma.fatSecretFoodCache.findMany({
     where: {
@@ -159,7 +190,21 @@ async function main() {
 
 main()
   .catch((error) => {
-    logger.error({ err: error }, 'FatSecret serving gap detection failed');
+    const errorDetails = error instanceof Error
+      ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        }
+      : { raw: String(error), type: typeof error };
+    logger.error(
+      {
+        err: errorDetails,
+        errorString: String(error),
+      },
+      'FatSecret serving gap detection failed',
+    );
+    console.error('Full error:', error);
     process.exitCode = 1;
   })
   .finally(async () => {

@@ -195,25 +195,16 @@ Detailed guidance for Phases 1-4 is outlined below.
   - Coverage metrics for key recipes (≥95% of `IngredientFoodMap` rows now have `fatsecretFoodId`).
   - Density coverage: ≥90% of foods with at least one volume-based serving; remaining items logged for AI/manual follow-up.
 
-### Cache verification & density backfill
+### Cache verification & AI backfill
 1. After every bootstrap/queue run, execute `npm run fatsecret:cache:verify -- --missing-servings` to flag stale entries, missing nutrients, or foods without serving rows.
 2. Export the flagged IDs to `data/fatsecret/density_review.csv` (append if you already have this file in flight).
-3. For foods that still lack volume servings, run `npm run calc:density -- --food-id=<legacyFoodId>` to pull density from the curated `FoodUnit` catalog, then insert the value via `FatSecretDensityEstimate` with `source='legacy_unit'`. The hydrate logic automatically links the density row when you re-run `fatsecret:cache:hydrate` for that food.
-4. Once densities exist, re-run `npm run fatsecret:cache:verify -- --missing-servings` to ensure `volumeMl` + `derivedViaDensity=true` servings were created.
-5. Missing-serving remediation (Phase 2+): introduce two new CLIs:
-   - `npm run fatsecret:cache:serving-gaps` → emits foods that lack convertible volume or weight servings (saves to `data/fatsecret/serving_gaps.jsonl`).
-   - `npm run fatsecret:cache:backfill-servings -- --input=data/fatsecret/serving_gaps.jsonl` → per-food fallback pipeline:
-     1. **Legacy density**: copy grams↔volume pairs from curated `FoodUnit` rows where available and insert `FatSecretDensityEstimate` with `source='legacy_unit'`.
-     2. **Manual heuristics**: look up staple conversions in `data/fatsecret/manual-density.json`, tag them with `source='manual'`.
-     3. **AI fallback** (guarded by `ENABLE_FATSECRET_AI_SERVINGS` + `OPENAI_API_KEY`):
-        - Call GPT‑5 nano/mini (configurable via `FATSECRET_CACHE_AI_MODEL`) with a structured prompt tailored to the missing type:
-          * Missing volume → “return one convertible volume serving (cup/tbsp/tsp/ml/fl oz) and its weight in grams”.
-          * Missing weight → “return one weight serving (grams/ounces)”.
-        - Require JSON response with `{ servingLabel, volumeUnit?, volumeAmount?, grams, confidence (0‑1), rationale }` or `{ error: 'no convertible serving' }`.
-        - Apply safety gates: reject confidence <0.6 (tunable via `FATSECRET_CACHE_AI_CONFIDENCE_MIN`), density outside ~0.05–5 g/ml (override per category), or calorie estimates outside plausible ranges.
-        - Accepted entries are persisted as new `FatSecretDensityEstimate`/`FatSecretServingCache` rows (`source='ai'`, `confidence`, `aiNote=rationale`), then rehydrated via `upsertFoodFromApi`.
-     4. Foods the AI cannot solve are appended to `data/fatsecret/manual-review.csv` for human follow-up.
-   - Extend `FatSecretServingCache` metadata with optional `source`, `confidence`, and `note` columns so the admin UI can badge AI/manual estimates while end users only “select” servings; they never mutate the cache definitions. This keeps recipe inputs constrained to canonical servings (FatSecret, curated, AI-derived) while maintaining auditability.
+3. Run `npm run fatsecret:cache:serving-gaps` to refresh `data/fatsecret/serving_gaps.volume.jsonl` and `data/fatsecret/serving_gaps.weight.jsonl`.
+4. Feed those queues into `npm run fatsecret:cache:backfill-servings` (defaults to both files; supports `--dry-run`, `--volume-only`, `--weight-only`, `--limit=<n>`, `--prompt-debug`). The CLI now calls the OpenAI helper (`OPENAI_API_KEY`, `FATSECRET_CACHE_AI_MODEL`) for each food, requesting a single serving suggestion or `{ "error": "no convertible serving" }`.
+     1. The helper enforces a JSON schema (`servingLabel`, `volumeUnit?`, `volumeAmount?`, `grams`, `confidence`, `rationale`) and sanity bounds: minimum confidence (`FATSECRET_CACHE_AI_CONFIDENCE_MIN`, default 0.6) plus density limits (`FATSECRET_CACHE_AI_MIN_DENSITY`, `FATSECRET_CACHE_AI_MAX_DENSITY`, default 0.05–5 g/ml).
+     2. Accepted responses are inserted into `FatSecretServingCache` with `source='ai'`, `confidence`, `note=rationale`, and (when volume data exists) a sibling `FatSecretDensityEstimate` row. Every prompt/response pair goes to `data/fatsecret/ai-servings.log`; rejected foods are appended to `data/fatsecret/manual-review.csv` for follow-up.
+5. Extend `FatSecretServingCache` metadata with optional `source`, `confidence`, and `note` columns so the admin UI can badge AI/manual estimates while end users only “select” servings; they never mutate the cache definitions. This keeps recipe inputs constrained to canonical servings (FatSecret, curated, AI-derived) while maintaining auditability.
+6. Ingredient mapping follow-up: update `map-ingredient` so descriptors like “diced tomato” prefer the generic/raw tomato FatSecret ID (skip branded/canned hits unless the ingredient explicitly says “canned”, “jar”, etc.). This keeps AI suggestions aligned with fresh-produce inputs instead of returning “1 can …” conversions.
+7. “Next best” FatSecret fallback: when the top FatSecret hit hydrates without weight and volume servings or 100 g macros, automatically try the second-best candidate before leaning on AI. Log these retries so we know which foods needed fallback handling.
 
    (Here’s a plan that layers detection, heuristics, and AI estimation so every cached food ends up with at least one weight and one convertible volume serving:
 
@@ -254,8 +245,8 @@ Update fatsecret:cache:verify to include new checks: warn if nutrientsPer100g is
 Optionally wire the backfill script into CI or a cron job so new foods always get volume/weight coverage shortly after hydration.
 Once these pieces are in place, we can run:
 
-npm run fatsecret:cache:serving-gaps > data/fatsecret/serving_gaps.jsonl
-npm run fatsecret:cache:backfill-servings -- --input=data/fatsecret/serving_gaps.jsonl
+npm run fatsecret:cache:serving-gaps
+npm run fatsecret:cache:backfill-servings
 npm run fatsecret:cache:verify -- --missing-servings)
 
 Recent automation notes:

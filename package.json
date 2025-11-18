@@ -40,6 +40,7 @@
     "fatsecret:cache:queue": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-queue.ts",
     "fatsecret:cache:verify": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-verify.ts",
     "fatsecret:cache:serving-gaps": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-serving-gaps.ts",
+    "fatsecret:cache:backfill-servings": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-backfill-servings.ts",
     "fatsecret:cache:bootstrap": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-bootstrap.ts",
     "fatsecret:cache:manifest": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-build-manifest.ts",
     "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts",
