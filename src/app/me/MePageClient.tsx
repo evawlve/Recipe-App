@@ -58,6 +58,22 @@ export function MePageClient({ user }: MePageClientProps) {
     setCurrentTab(newTab);
   };
 
+  const handleSavedItemsChange = (items: any[], meta?: { newCount?: number }) => {
+    setTabData(prev => ({
+      ...prev,
+      saved: items,
+      savedCount: meta?.newCount ?? items.length
+    }));
+  };
+
+  const handleUploadedItemsChange = (items: any[], meta?: { newCount?: number }) => {
+    setTabData(prev => ({
+      ...prev,
+      uploaded: items,
+      uploadedCount: meta?.newCount ?? items.length
+    }));
+  };
+
   // Lazy load tab data when tab changes
   useEffect(() => {
     const loadTabData = async () => {
@@ -135,14 +151,24 @@ export function MePageClient({ user }: MePageClientProps) {
           isLoading ? (
             <RecipeGridSkeleton />
           ) : (
-            <RecipeGrid items={tabData.saved ?? []} currentUserId={user.id} />
+            <RecipeGrid 
+              items={tabData.saved ?? []} 
+              currentUserId={user.id} 
+              mode="saved"
+              onItemsChange={handleSavedItemsChange}
+            />
           )
         )}
         {currentTab === "uploaded" && (
           isLoading ? (
             <RecipeGridSkeleton />
           ) : (
-            <RecipeGrid items={tabData.uploaded ?? []} currentUserId={user.id} />
+            <RecipeGrid 
+              items={tabData.uploaded ?? []} 
+              currentUserId={user.id}
+              mode="uploaded"
+              onItemsChange={handleUploadedItemsChange}
+            />
           )
         )}
         {currentTab === "followers" && (

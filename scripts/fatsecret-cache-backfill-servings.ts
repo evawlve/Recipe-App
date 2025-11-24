@@ -196,15 +196,29 @@ async function insertAiServing(
       { foodId: entry.foodId, gapType, prompt: aiResult.prompt },
       'AI prompt debug',
     );
+    logger.info(
+      { foodId: entry.foodId, gapType, raw: aiResult.raw, suggestion: aiResult.status === 'success' ? aiResult.suggestion : undefined },
+      'AI response debug',
+    );
   }
   if (aiResult.status === 'error') {
     logger.warn({ foodId: entry.foodId, reason: aiResult.reason }, 'AI serving suggestion failed');
     appendManualReview(entry, aiResult.reason);
     logAiServing({
+      timestamp: new Date().toISOString(),
       foodId: entry.foodId,
+      foodName: entry.name,
+      brandName: entry.brandName,
       mode: gapType,
       status: 'error',
       reason: aiResult.reason,
+      existingServings: food.servings.map((s) => ({
+        id: s.id,
+        description: s.measurementDescription,
+        grams: s.servingWeightGrams,
+        volumeMl: s.volumeMl,
+        isVolume: s.isVolume,
+      })),
       prompt: aiResult.prompt,
       raw: aiResult.raw,
     });
@@ -237,10 +251,27 @@ async function insertAiServing(
     );
     appendManualReview(entry, 'AI missing convertible volume');
     logAiServing({
+      timestamp: new Date().toISOString(),
       foodId: entry.foodId,
+      foodName: entry.name,
+      brandName: entry.brandName,
       mode: gapType,
       status: 'error',
       reason: 'missing_volume_unit',
+      suggestion: {
+        servingLabel: suggestion.servingLabel,
+        grams: suggestion.grams,
+        volumeUnit: suggestion.volumeUnit,
+        volumeAmount: suggestion.volumeAmount,
+        confidence: suggestion.confidence,
+      },
+      existingServings: food.servings.map((s) => ({
+        id: s.id,
+        description: s.measurementDescription,
+        grams: s.servingWeightGrams,
+        volumeMl: s.volumeMl,
+        isVolume: s.isVolume,
+      })),
       prompt: aiResult.prompt,
       raw: aiResult.raw,
     });
@@ -250,6 +281,31 @@ async function insertAiServing(
   if (suggestion.grams <= 0) {
     logger.warn({ foodId: entry.foodId }, 'AI returned invalid gram weight');
     appendManualReview(entry, 'AI invalid grams');
+    logAiServing({
+      timestamp: new Date().toISOString(),
+      foodId: entry.foodId,
+      foodName: entry.name,
+      brandName: entry.brandName,
+      mode: gapType,
+      status: 'error',
+      reason: 'invalid_grams',
+      suggestion: {
+        servingLabel: suggestion.servingLabel,
+        grams: suggestion.grams,
+        volumeUnit: suggestion.volumeUnit,
+        volumeAmount: suggestion.volumeAmount,
+        confidence: suggestion.confidence,
+      },
+      existingServings: food.servings.map((s) => ({
+        id: s.id,
+        description: s.measurementDescription,
+        grams: s.servingWeightGrams,
+        volumeMl: s.volumeMl,
+        isVolume: s.isVolume,
+      })),
+      prompt: aiResult.prompt,
+      raw: aiResult.raw,
+    });
     return false;
   }
 
@@ -260,6 +316,35 @@ async function insertAiServing(
   ) {
     logger.warn({ foodId: entry.foodId, density }, 'AI density outside bounds');
     appendManualReview(entry, 'AI density outside bounds');
+    logAiServing({
+      timestamp: new Date().toISOString(),
+      foodId: entry.foodId,
+      foodName: entry.name,
+      brandName: entry.brandName,
+      mode: gapType,
+      status: 'error',
+      reason: 'density_outside_bounds',
+      density,
+      densityMin: FATSECRET_CACHE_AI_MIN_DENSITY,
+      densityMax: FATSECRET_CACHE_AI_MAX_DENSITY,
+      suggestion: {
+        servingLabel: suggestion.servingLabel,
+        grams: suggestion.grams,
+        volumeUnit: suggestion.volumeUnit,
+        volumeAmount: suggestion.volumeAmount,
+        volumeMl,
+        confidence: suggestion.confidence,
+      },
+      existingServings: food.servings.map((s) => ({
+        id: s.id,
+        description: s.measurementDescription,
+        grams: s.servingWeightGrams,
+        volumeMl: s.volumeMl,
+        isVolume: s.isVolume,
+      })),
+      prompt: aiResult.prompt,
+      raw: aiResult.raw,
+    });
     return false;
   }
 
@@ -278,18 +363,35 @@ async function insertAiServing(
       'DRY RUN: would insert AI-derived serving',
     );
     logAiServing({
+      timestamp: new Date().toISOString(),
       foodId: entry.foodId,
+      foodName: entry.name,
+      brandName: entry.brandName,
       mode: gapType,
       status: 'dry-run',
-      suggestion,
+      servingId,
+      suggestion: {
+        ...suggestion,
+        volumeMl,
+        density,
+        countServing,
+        countUnit,
+      },
+      existingServings: food.servings.map((s) => ({
+        id: s.id,
+        description: s.measurementDescription,
+        grams: s.servingWeightGrams,
+        volumeMl: s.volumeMl,
+        isVolume: s.isVolume,
+      })),
       prompt: aiResult.prompt,
       raw: aiResult.raw,
     });
     return true;
   }
 
+  let densityEstimateId: string | undefined;
   await prisma.$transaction(async (tx) => {
-    let densityEstimateId: string | undefined;
     if (density && volumeMl) {
       const densityRow = await tx.fatSecretDensityEstimate.create({
         data: {
@@ -340,10 +442,28 @@ async function insertAiServing(
   });
 
   logAiServing({
+    timestamp: new Date().toISOString(),
     foodId: entry.foodId,
+    foodName: entry.name,
+    brandName: entry.brandName,
     mode: gapType,
     status: 'inserted',
-    suggestion,
+    servingId,
+    densityEstimateId,
+    suggestion: {
+      ...suggestion,
+      volumeMl,
+      density,
+      countServing,
+      countUnit,
+    },
+    existingServings: food.servings.map((s) => ({
+      id: s.id,
+      description: s.measurementDescription,
+      grams: s.servingWeightGrams,
+      volumeMl: s.volumeMl,
+      isVolume: s.isVolume,
+    })),
     prompt: aiResult.prompt,
     raw: aiResult.raw,
   });

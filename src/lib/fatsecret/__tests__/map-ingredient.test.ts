@@ -1,5 +1,14 @@
 import { mapIngredientWithFatsecret } from '../map-ingredient';
 import type { FatSecretNlpParseResponse, FatSecretSearchResponse, FatSecretFoodDetails, FatSecretFoodSummary } from '../client';
+import * as cacheSearch from '../cache-search';
+
+// Mock cache search functions to return empty results (tests use mocked API client instead)
+// This allows the code to use the cache path but fall back to API (which is mocked)
+jest.spyOn(cacheSearch, 'searchFatSecretCacheFoods').mockResolvedValue([]);
+jest.spyOn(cacheSearch, 'getCachedFoodWithRelations').mockResolvedValue(null);
+
+// Increase default timeout to cover slower rerank/cache hydration in these tests
+jest.setTimeout(15000);
 
 type ClientResponse = {
   nlp?: Record<string, FatSecretNlpParseResponse | null>;
@@ -85,6 +94,16 @@ class FakeFatSecretClient {
 
   async getFoodDetails(foodId: string) {
     return this.responses.foods?.[foodId] ?? null;
+  }
+
+  async autocompleteFoods(query: string, maxResults: number = 10) {
+    // Return empty array for autocomplete (not needed for most tests)
+    return [];
+  }
+
+  async autocompleteFoods(query: string, maxResults: number = 10) {
+    // Return empty array for autocomplete (not needed for most tests)
+    return [];
   }
 }
 
@@ -504,5 +523,206 @@ describe('mapIngredientWithFatsecret', () => {
     expect(result).not.toBeNull();
     expect(result?.foodName.toLowerCase()).toContain('whole');
     expect(result?.grams).toBeCloseTo(244, 1);
+  });
+
+  it('applies herb tsp/tbsp defaults to avoid 100g fallback', async () => {
+    const herbServing = [
+      createServing({
+        id: 'srv-100',
+        description: '100 g',
+        servingWeightGrams: 100,
+        calories: 23,
+        protein: 3,
+        carbohydrate: 4,
+        fat: 0.6,
+      }),
+    ];
+    const basil = { id: 'basil', name: 'Basil, fresh', brandName: null, foodType: 'Generic' };
+
+    const client = new FakeFatSecretClient({
+      searchV4: {
+        basil: [basil],
+      },
+      foods: {
+        basil: { id: 'basil', name: 'Basil, fresh', brandName: null, servings: herbServing } as FatSecretFoodDetails,
+      },
+    });
+
+    const tspResult = await mapIngredientWithFatsecret('1 tsp basil', { client: client as any });
+    expect(tspResult?.grams).toBeCloseTo(0.7, 1); // tsp heuristic
+
+    const tbspResult = await mapIngredientWithFatsecret('1 tbsp basil', { client: client as any });
+    expect(tbspResult?.grams).toBeCloseTo(2, 1); // tbsp heuristic
+  });
+
+  it('uses dash default for spices', async () => {
+    const pepperServing = [
+      createServing({
+        id: 'srv-100',
+        description: '100 g',
+        servingWeightGrams: 100,
+        calories: 251,
+        protein: 10,
+        carbohydrate: 64,
+        fat: 3.3,
+      }),
+    ];
+    const pepper = { id: 'pepper', name: 'Black pepper, ground', brandName: null, foodType: 'Generic' };
+    const client = new FakeFatSecretClient({
+      searchV4: { pepper: [pepper], 'black pepper': [pepper] },
+      foods: {
+        pepper: { id: 'pepper', name: 'Black pepper, ground', brandName: null, servings: pepperServing } as FatSecretFoodDetails,
+      },
+    });
+
+    const result = await mapIngredientWithFatsecret('dash black pepper', { client: client as any });
+    expect(result?.grams).toBeCloseTo(0.6, 1);
+    expect(result?.foodName.toLowerCase()).toContain('pepper');
+  });
+
+  it('strips inch/prep noise from queries (chicken breast)', async () => {
+    const chicken = { id: 'chicken-breast', name: 'Chicken breast, raw, skinless', brandName: null, foodType: 'Generic' };
+    const servings = [
+      createServing({
+        id: 'srv-100',
+        description: '100 g',
+        servingWeightGrams: 100,
+        calories: 165,
+        protein: 31,
+        carbohydrate: 0,
+        fat: 3.6,
+      }),
+    ];
+    const client = new FakeFatSecretClient({
+      searchV4: { 'chicken breast': [chicken], breast: [chicken], chicken: [chicken] },
+      foods: {
+        'chicken-breast': { id: 'chicken-breast', name: 'Chicken breast, raw, skinless', brandName: null, servings } as FatSecretFoodDetails,
+      },
+    });
+
+    const result = await mapIngredientWithFatsecret('2 chicken breasts cut into 1\" pieces', {
+      client: client as any,
+    });
+
+    expect(result).not.toBeNull();
+    expect(client.searchFoodsCalls.some(q => /inch/.test(q))).toBe(false);
+  });
+
+  it('strips thinly/sliced descriptors (onion thinly sliced)', async () => {
+    const onion = { id: 'onion', name: 'Onions, raw', brandName: null, foodType: 'Generic' };
+    const servings = [
+      createServing({
+        id: 'srv-100',
+        description: '100 g',
+        servingWeightGrams: 100,
+        calories: 40,
+        protein: 1.1,
+        carbohydrate: 9.3,
+        fat: 0.1,
+      }),
+    ];
+    const client = new FakeFatSecretClient({
+      searchV4: { onion: [onion], onions: [onion] },
+      foods: { onion: { id: 'onion', name: 'Onions, raw', brandName: null, servings } as FatSecretFoodDetails },
+    });
+
+    await mapIngredientWithFatsecret('1 onion thinly sliced', { client: client as any });
+    expect(client.searchFoodsCalls.some(q => q.includes('thinly'))).toBe(false);
+  });
+
+  it('prefers plain oils over spreads for vegetable oil queries', async () => {
+    const plainOil = { id: 'veg-oil', name: 'Vegetable oil', brandName: null, foodType: 'Generic' };
+    const spread = { id: 'veg-spread', name: 'Vegetable oil spread', brandName: 'BrandCo', foodType: 'Brand' };
+    const servings = [
+      createServing({
+        id: 'srv-100',
+        description: '100 g',
+        servingWeightGrams: 100,
+        calories: 884,
+        protein: 0,
+        carbohydrate: 0,
+        fat: 100,
+      }),
+    ];
+    const client = new FakeFatSecretClient({
+      searchV4: { 'vegetable oil': [plainOil, spread], oil: [plainOil, spread] },
+      foods: {
+        'veg-oil': { id: 'veg-oil', name: 'Vegetable oil', brandName: null, foodType: 'Generic', servings } as FatSecretFoodDetails,
+        'veg-spread': { id: 'veg-spread', name: 'Vegetable oil spread', brandName: 'BrandCo', foodType: 'Brand', servings } as FatSecretFoodDetails,
+      },
+    });
+
+    const result = await mapIngredientWithFatsecret('vegetable oil', { client: client as any });
+    expect(result?.foodId).toBe('veg-oil');
+  });
+
+  it('maps chicken sausage to chicken sausage, not pork sausage', async () => {
+    // Increase timeout since this test processes multiple candidates and may use AI rerank
+    jest.setTimeout(15000);
+    
+    const servings = [
+      createServing({
+        id: 'srv-100g',
+        description: '100 g',
+        servingWeightGrams: 100,
+        numberOfUnits: 100,
+        calories: 196,
+        protein: 16,
+        carbohydrate: 1,
+        fat: 13,
+      }),
+    ];
+
+    // Create chicken sausage and pork sausage foods
+    const chickenSausage = { 
+      id: 'chicken-sausage', 
+      name: 'Chicken Sausage', 
+      brandName: null, 
+      foodType: 'Generic' 
+    };
+    const porkSausage = { 
+      id: 'pork-sausage', 
+      name: 'Italian Sausage, Pork', 
+      brandName: null, 
+      foodType: 'Generic' 
+    };
+
+    // Simulate FatSecret API returning both, with pork potentially ranking higher initially
+    // Note: buildSearchExpressions generates multiple variants, so we need to mock common ones
+    const client = new FakeFatSecretClient({
+      searchV4: {
+        'chicken sausage': [porkSausage, chickenSausage], // Pork first (simulating popularity ranking)
+        'chicken': [porkSausage, chickenSausage],
+        'sausage': [porkSausage, chickenSausage],
+        // Add variants that buildSearchExpressions might generate
+        'sausage chicken': [porkSausage, chickenSausage],
+      },
+      foods: {
+        'chicken-sausage': { 
+          id: 'chicken-sausage', 
+          name: 'Chicken Sausage', 
+          brandName: null, 
+          servings 
+        } as FatSecretFoodDetails,
+        'pork-sausage': { 
+          id: 'pork-sausage', 
+          name: 'Italian Sausage, Pork', 
+          brandName: null, 
+          servings 
+        } as FatSecretFoodDetails,
+      },
+    });
+
+    const result = await mapIngredientWithFatsecret('chicken sausage', { 
+      client: client as any,
+      minConfidence: 0.5 
+    });
+    
+    expect(result).not.toBeNull();
+    expect(result?.foodName.toLowerCase()).toContain('chicken');
+    expect(result?.foodName.toLowerCase()).not.toContain('pork');
+    expect(result?.foodName.toLowerCase()).not.toContain('italian');
+    expect(result?.foodId).toBe('chicken-sausage');
+    expect(result?.confidence).toBeGreaterThan(0.5);
   });
 });

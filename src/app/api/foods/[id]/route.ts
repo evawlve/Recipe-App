@@ -20,6 +20,8 @@ export async function GET(
 	// Import only when not in build mode
 	const { prisma } = await import("@/lib/db");
 	const { getCurrentUser } = await import("@/lib/auth");
+	const { FATSECRET_CACHE_MODE } = await import('@/lib/fatsecret/config');
+	const { getCachedFoodWithRelations, buildCacheFoodResponse } = await import('@/lib/fatsecret/cache-search');
 	
   try {
     const { id } = await params;
@@ -32,19 +34,15 @@ export async function GET(
       include: { units: true }
     });
 
-    if (!f) {
-      return NextResponse.json({ success: false, error: 'Food not found' }, { status: 404 });
-    }
+    let responsePayload: any | null = null;
 
-    const servingOptions = deriveServingOptions({
-      units: f.units?.map(u => ({ label: u.label, grams: u.grams })),
-      densityGml: f.densityGml ?? undefined,
-      categoryId: f.categoryId ?? null,
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
+    if (f) {
+      const servingOptions = deriveServingOptions({
+        units: f.units?.map(u => ({ label: u.label, grams: u.grams })),
+        densityGml: f.densityGml ?? undefined,
+        categoryId: f.categoryId ?? null,
+      });
+      responsePayload = {
         id: f.id,
         name: f.name,
         brand: f.brand,
@@ -61,7 +59,23 @@ export async function GET(
         popularity: f.popularity,
         createdById: f.createdById,
         servingOptions,
+      };
+    } else if (FATSECRET_CACHE_MODE !== 'legacy') {
+      const cachedFood = await getCachedFoodWithRelations(id);
+      if (cachedFood) {
+        const base = buildCacheFoodResponse(cachedFood, 1);
+        const { confidence, ...rest } = base;
+        responsePayload = rest;
       }
+    }
+
+    if (!responsePayload) {
+      return NextResponse.json({ success: false, error: 'Food not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: responsePayload,
     });
   } catch (error) {
     console.error('Food by id error:', error);

@@ -1,0 +1,39 @@
+FatSecret cache category coverage
+================================
+Manifest entries (unique): 463
+Entries cached           : 463
+Entries missing cache    : 0
+
+Category counts
+---------------
+- Uncategorized: 91 (e.g., Diced Onion (Adams), Avocado, Sliced (Subway), Blueberries (Sunsweet), Chocolate Chips, Half and Half Cream)
+- Produce – Vegetables: 47 (e.g., Broccoli Florets (Kroger), Minced Garlic, Spinach, Diced Tomatoes in Tomato Juice (First Street), Mashed Potato)
+- Pantry – Grains & Starches: 42 (e.g., Cooked Rice, White Flour, Quinoa (Cooked), Brown Rice (Long-Grain, Cooked), Oats)
+- Pantry – Canned Goods: 38 (e.g., Chicken Broth (Hannaford), Vegetable Oil, Roasted Chickpeas, Tomatoes, Garbanzo Beans)
+- Protein – Dairy: 35 (e.g., Milk, Butter, Greek Yogurt, Cottage Cheese, Peanut Butter)
+- Beverages: 33 (e.g., Milk, Almond Milk, Oat Milk, Meal Replacement Shake (Elevation), Chocolate Shake)
+- Pantry – Condiments & Sauces: 31 (e.g., Vinegar, Soy Sauce, Ketchup, Mustard, Sriracha Sauce)
+- Pantry – Spices & Seasonings: 26 (e.g., Mashed Potato, Salt, Fresh Pasta (Cooked), Spinach Spaghetti (Cooked), Mixed Nuts)
+- Dairy – Low-Fat & Fat-Free: 23 (e.g., Milk, Cheese, Mozzarella Cheese, Milk (Nonfat), Mozzarella Cheese (Nonfat))
+- Pantry – Keto Alternatives: 22 (e.g., White Flour, Tortilla, Keto Bread, Keto Bagel, Hamburger Buns (Keto Culture))
+- Pantry – Nuts & Seeds: 15 (e.g., White Flour, Butter, Peanut Butter, Almond Butter, Almond Milk)
+- Protein – Beef: 15 (e.g., Ground Beef (Cooked), Ground Beef, Beef Patty (Kroger), Beef, Lean Ground Beef)
+- Protein – Supplements: 15 (e.g., Whey Protein Powder (GNC), Protein Powder, Plant Based Protein Powder (Isopure), Soy Protein Isolate, Whey Protein Concentrate (True Protein))
+- Protein – Seafood: 14 (e.g., Cooked Salmon, Salmon, Prawns, Raw Peeled & Deveined Shrimp (Gulf Shrimp), Tuna in Water (Canned))
+- Pantry – Beans & Legumes: 13 (e.g., Black Beans, Garbanzo Beans, Green String Beans, Cooked Dry Red Kidney Beans, Cooked Pinto, Calico or Red Beans)
+- Protein – Pork: 13 (e.g., Turkey Bacon, Pork, Tenderloin Pork, Pork Chops or Roasts (Sirloin, Bone-In), Pork Belly)
+- Baking – Essentials: 10 (e.g., White Flour, White Rice Flour, Vanilla Extract, Cocoa Powder, Dry Buttermilk)
+- Protein – Plant-Based: 10 (e.g., Firm Tofu (Nasoya), Whey Protein Powder (GNC), Plant Based Protein Powder (Isopure), Fried Tofu, Cubed Super Firm Tofu (Nasoya))
+- Produce – Fruits: 9 (e.g., Banana, Avocado, Apples, Bananas, Pineapple Chunks (Publix))
+- Pantry – Oils & Fats: 8 (e.g., Olive Oil, Coconut Oil, Extra Virgin Olive Oil, Vegetable Oil, Sesame Oil)
+- Pantry – Sweeteners: 8 (e.g., Honey, Sugar, Powdered Sugar, Brown Sugar, Granulated Sugar)
+- Protein – Turkey: 8 (e.g., Ground Turkey, 93% Lean Ground Turkey (Kroger), 85% Lean Ground Turkey (Butterball), 99% Lean Ground Turkey (Jennie-O), Roasted Turkey Breast (Publix))
+- Protein – Eggs: 7 (e.g., Large Eggs (Nearby Eggs), Egg White, Egg Yolk, Egg (Whole), Medium Eggs (Publix))
+- Pantry – Nut Butters: 7 (e.g., Butter, Peanut Butter, Almond Butter, Smooth Peanut Butter, Tahini (Krinos))
+- Baking – Leaveners & Starches: 6 (e.g., Cornstarch, Baking Powder (Low Sodium), Baking Soda, Arrowroot, Bakers Yeast (Active Dry))
+- Protein – Chicken Thigh: 4 (e.g., Chicken Thighs (Perdue), Roasted Potato, Meat, Grilled Chicken)
+- Protein – Chicken Breast: 3 (e.g., Boneless Skinless Chicken Breast (Aldi), Boneless Skinless Chicken Breast (Kroger), Grilled Chicken Breast)
+- Protein – Chicken (Other): 3 (e.g., Pulled Chicken, Chicken, Shredded Chicken)
+- Protein – Chicken Drumstick: 2 (e.g., Chicken Drumstick, Roasted Chicken Roll)
+- Protein – Chicken Wing: 2 (e.g., Chicken Wings (Kroger), Buffalo Chicken)
+- Protein – Ground Chicken: 1 (e.g., Ground Chicken)

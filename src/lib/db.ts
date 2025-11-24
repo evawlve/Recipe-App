@@ -9,7 +9,8 @@ export const prisma =
     log: ['query', 'error', 'warn'],
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        // Prefer direct URL (unpooled) when available to avoid pgBouncer constraints in dev
+        url: process.env.DIRECT_URL || process.env.DATABASE_URL,
       },
     },
   });

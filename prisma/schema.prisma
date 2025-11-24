@@ -1,63 +1,35 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // direct (5432 + sslmode=require)
+  directUrl = env("DIRECT_URL")
 }
-
-enum TagNamespace {
-  MEAL_TYPE
-  CUISINE
-  DIET
-  METHOD
-  COURSE
-  TIME
-  DIFFICULTY
-  OCCASION
-  GOAL
-}
-
-enum TagSource {
-  USER
-  AUTO_CONFIDENT
-  AUTO_SUGGESTED
-}
-
-/// Configure Prisma to use the seed script
-// See https://www.prisma.io/docs/orm/prisma-migrate/workflows/seeding#seed-with-ts-node-or-tsx
-// prisma {
-//   seed = "ts-node prisma/seed.ts"
-// }
 
 model User {
-  id        String   @id
-  email     String   @unique
-  name      String?
-  role      String   @default("user")
-  createdAt DateTime @default(now())
-  avatarUrl String?
-  avatarKey String?
-  firstName String?
-  lastName  String?
-
-  // NEW
-  username    String? @unique // lowercase, 3-20, a-z0-9_
-  displayName String? // pretty name for UI
-  bio         String?
-
-  // relations
-  followedBy Follow[] @relation("FollowedBy") // users who follow me
-  following  Follow[] @relation("Following") // users I follow
-
+  id                   String                @id
+  email                String                @unique
+  name                 String?
+  role                 String                @default("user")
+  createdAt            DateTime              @default(now())
+  avatarUrl            String?
+  avatarKey            String?
+  firstName            String?
+  lastName             String?
+  username             String?               @unique
+  displayName          String?
+  bio                  String?
   collections          Collection[]
   comments             Comment[]
+  following            Follow[]              @relation("Following")
+  followedBy           Follow[]              @relation("FollowedBy")
   likes                Like[]
-  recipes              Recipe[]
-  notifications        Notification[]        @relation("NotificationUser")
   notificationsActed   Notification[]        @relation("NotificationActor")
+  notifications        Notification[]        @relation("NotificationUser")
+  recipes              Recipe[]
   recipeViews          RecipeView[]
   userPortionOverrides UserPortionOverride[]
 }
@@ -69,7 +41,7 @@ model Recipe {
   title         String
   bodyMd        String
   servings      Int                      @default(1)
-  prepTime      String? // "<15 min" | "15-30 min" | "30-45 min" | "45min - 1hr" | "1hr+"
+  prepTime      String?
   parentId      String?
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
@@ -77,21 +49,19 @@ model Recipe {
   comments      Comment[]
   ingredients   Ingredient[]
   likes         Like[]
+  notifications Notification[]
   nutrition     Nutrition?
   photos        Photo[]
   author        User                     @relation(fields: [authorId], references: [id])
   parent        Recipe?                  @relation("Forks", fields: [parentId], references: [id])
   forks         Recipe[]                 @relation("Forks")
-  tags          RecipeTag[]
-  notifications Notification[]
   features      RecipeFeatureLite?
-  views         RecipeView[]
   interactions  RecipeInteractionDaily[]
   similarTo     RecipeSimilar[]          @relation("RecipeToSimilar")
   similarFrom   RecipeSimilar[]          @relation("RecipeIsSimilar")
+  tags          RecipeTag[]
+  views         RecipeView[]
 
-  // Index for feed queries: filters by createdAt >= date and orders by createdAt DESC
-  // Used by /api/feed/foryou and other feed endpoints
   @@index([createdAt])
 }
 
@@ -114,7 +84,7 @@ model Nutrition {
   fiberG      Float?   @default(0)
   sugarG      Float?   @default(0)
   healthScore Float?   @default(0)
-  goal        String?  @default("general") // "general" | "weight_loss" | "muscle_gain" | "maintenance"
+  goal        String?  @default("general")
   computedAt  DateTime @default(now())
   recipe      Recipe   @relation(fields: [recipeId], references: [id])
 }
@@ -135,22 +105,20 @@ model Tag {
   id        String       @id @default(cuid())
   slug      String       @unique
   label     String
-  namespace TagNamespace // NEW
-  recipes   RecipeTag[]
+  namespace TagNamespace
   createdAt DateTime     @default(now())
+  recipes   RecipeTag[]
 }
 
 model RecipeTag {
   recipeId   String
   tagId      String
-  source     TagSource @default(USER) // NEW
-  confidence Float     @default(1.0) // NEW
+  source     TagSource @default(USER)
+  confidence Float     @default(1.0)
   recipe     Recipe    @relation(fields: [recipeId], references: [id])
   tag        Tag       @relation(fields: [tagId], references: [id])
 
   @@id([recipeId, tagId])
-  // Index for tag filtering queries: efficiently find all recipes with a specific tag
-  // Used by tags: { some: { tagId: id }} filters in recipe queries
   @@index([tagId])
 }
 
@@ -200,9 +168,8 @@ model Follow {
   followerId  String
   followingId String
   createdAt   DateTime @default(now())
-
-  follower  User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  following User @relation("FollowedBy", fields: [followingId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("FollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
   @@index([followerId])
@@ -211,19 +178,18 @@ model Follow {
 
 model Notification {
   id        String    @id @default(cuid())
-  userId    String // receiver
-  actorId   String // who triggered it
-  type      String // "follow" | "like" | "comment"
+  userId    String
+  actorId   String
+  type      String
   recipeId  String?
   commentId String?
   createdAt DateTime  @default(now())
   readAt    DateTime?
   bumpedAt  DateTime  @default(now())
-  // relations
-  user      User      @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
   actor     User      @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  recipe    Recipe?   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   comment   Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  recipe    Recipe?   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User      @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, actorId, type], map: "uniq_follow")
   @@unique([userId, actorId, type, recipeId], map: "uniq_like")
@@ -234,37 +200,31 @@ model Notification {
 }
 
 model Food {
-  id           String  @id @default(cuid())
-  name         String
-  brand        String? @db.VarChar(120)
-  categoryId   String?
-  source       String  @default("usda") // 'usda' | 'brand' | 'community' | 'template'
-  verification String  @default("unverified") // 'verified' | 'unverified' | 'suspect'
-  densityGml   Float? // g per ml
-
-  // Per 100g nutrition values
-  kcal100    Float
-  protein100 Float
-  carbs100   Float
-  fat100     Float
-  fiber100   Float?
-  sugar100   Float?
-
-  popularity  Int      @default(0)
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  ingredientMaps       IngredientFoodMap[]
-  units                FoodUnit[]
+  id                   String                @id @default(cuid())
+  name                 String
+  brand                String?               @db.VarChar(120)
+  categoryId           String?
+  source               String                @default("usda")
+  verification         String                @default("unverified")
+  densityGml           Float?
+  kcal100              Float
+  protein100           Float
+  carbs100             Float
+  fat100               Float
+  fiber100             Float?
+  sugar100             Float?
+  popularity           Int                   @default(0)
+  createdById          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   barcodes             Barcode[]
   aliases              FoodAlias[]
+  units                FoodUnit[]
+  ingredientMaps       IngredientFoodMap[]
   portionOverrides     PortionOverride[]
   userPortionOverrides UserPortionOverride[]
 
   @@unique([name, brand])
-  // Single column indexes for common filters
   @@index([name])
   @@index([brand])
   @@index([source])
@@ -272,34 +232,30 @@ model Food {
   @@index([categoryId])
   @@index([createdAt])
   @@index([popularity])
-  // Composite indexes for common query patterns
-  // Used by /api/foods/search with verification filter
   @@index([verification, source])
-  // Used by /api/foods/search with category filter
   @@index([categoryId, verification])
 }
 
 model FatSecretFoodCache {
-  id               String   @id
+  id               String                     @id
   name             String
   brandName        String?
   foodType         String?
   country          String?
   description      String?
   defaultServingId String?
-  source           String?  @default("food.get.v4")
-  confidence       Float?   @default(0.9)
+  source           String?                    @default("food.get.v4")
+  confidence       Float?                     @default(0.9)
   nutrientsPer100g Json?
-  legacyFoodId     String?  @unique
+  legacyFoodId     String?                    @unique
   hash             String?
-  syncedAt         DateTime @default(now())
+  syncedAt         DateTime                   @default(now())
   expiresAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  servings        FatSecretServingCache[]
-  aliases         FatSecretFoodAlias[]
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
   densityEstimates FatSecretDensityEstimate[]
+  aliases          FatSecretFoodAlias[]
+  servings         FatSecretServingCache[]
 
   @@index([syncedAt])
   @@index([expiresAt])
@@ -307,26 +263,25 @@ model FatSecretFoodCache {
 }
 
 model FatSecretServingCache {
-  id                    String   @id
-  foodId                String
+  id                     String                    @id
+  foodId                 String
   measurementDescription String?
-  numberOfUnits         Float?
-  metricServingAmount   Float?
-  metricServingUnit     String?
-  servingWeightGrams    Float?
-  volumeMl              Float?
-  isVolume              Boolean  @default(false)
-  isDefault             Boolean  @default(false)
-  derivedViaDensity     Boolean  @default(false)
-  densityEstimateId     String?
-  source                String?  @default("fatsecret")
-  confidence            Float?
-  note                  String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  food            FatSecretFoodCache     @relation(fields: [foodId], references: [id], onDelete: Cascade)
-  densityEstimate FatSecretDensityEstimate? @relation(fields: [densityEstimateId], references: [id])
+  numberOfUnits          Float?
+  metricServingAmount    Float?
+  metricServingUnit      String?
+  servingWeightGrams     Float?
+  volumeMl               Float?
+  isVolume               Boolean                   @default(false)
+  isDefault              Boolean                   @default(false)
+  derivedViaDensity      Boolean                   @default(false)
+  densityEstimateId      String?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  source                 String?                   @default("fatsecret")
+  confidence             Float?
+  note                   String?
+  densityEstimate        FatSecretDensityEstimate? @relation(fields: [densityEstimateId], references: [id])
+  food                   FatSecretFoodCache        @relation(fields: [foodId], references: [id], onDelete: Cascade)
 
   @@index([foodId])
   @@index([isDefault])
@@ -334,43 +289,41 @@ model FatSecretServingCache {
 }
 
 model FatSecretFoodAlias {
-  id      String   @id @default(cuid())
-  foodId  String
-  alias   String
-  locale  String?  @db.VarChar(16)
-  source  String?  @default("fatsecret")
-  createdAt DateTime @default(now())
-
-  food FatSecretFoodCache @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  id        String             @id @default(cuid())
+  foodId    String
+  alias     String
+  locale    String?            @db.VarChar(16)
+  source    String?            @default("fatsecret")
+  createdAt DateTime           @default(now())
+  food      FatSecretFoodCache @relation(fields: [foodId], references: [id], onDelete: Cascade)
 
   @@unique([foodId, alias])
   @@index([alias])
 }
 
 model FatSecretDensityEstimate {
-  id         String   @id @default(cuid())
+  id         String                  @id @default(cuid())
   foodId     String
   densityGml Float
   source     String
-  confidence Float?   @default(0.0)
+  confidence Float?                  @default(0)
   notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  food     FatSecretFoodCache @relation(fields: [foodId], references: [id], onDelete: Cascade)
-  servings FatSecretServingCache[]
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  food       FatSecretFoodCache      @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  servings   FatSecretServingCache[]
 
   @@index([foodId])
   @@index([source])
 }
 
 model FatSecretCacheSyncRun {
-  id             String   @id @default(cuid())
-  status         String   @default("pending")
-  totalRequested Int      @default(0)
-  totalHydrated  Int      @default(0)
-  totalFailed    Int      @default(0)
-  startedAt      DateTime @default(now())
+  id             String    @id @default(cuid())
+  status         String    @default("pending")
+  totalRequested Int       @default(0)
+  totalHydrated  Int       @default(0)
+  totalFailed    Int       @default(0)
+  startedAt      DateTime  @default(now())
   finishedAt     DateTime?
   error          String?
   metadata       Json?
@@ -381,8 +334,8 @@ model FatSecretCacheSyncRun {
 model FoodUnit {
   id     String @id @default(cuid())
   foodId String
-  label  String // e.g. "1 scoop", "1 slice"
-  grams  Float // anchor to grams
+  label  String
+  grams  Float
   Food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
 }
 
@@ -394,33 +347,35 @@ model Barcode {
 }
 
 model IngredientFoodMap {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   ingredientId String
-  foodId       String
-  mappedBy     String // user id or 'auto'
-  confidence   Float    @default(0.0)
-  useOnce      Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-
-  // Relations
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  food       Food       @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  foodId       String?
+  fatsecretFoodId       String?
+  fatsecretServingId    String?
+  fatsecretGrams        Float?
+  fatsecretConfidence   Float?
+  fatsecretSource       String?
+  pendingVolume         Boolean   @default(false)
+  mappedBy     String
+  confidence   Float      @default(0.0)
+  useOnce      Boolean    @default(false)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  food         Food?      @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
 
   @@index([ingredientId])
   @@index([foodId])
+  @@index([fatsecretFoodId])
 }
 
 model FoodAlias {
   id     String @id @default(cuid())
   foodId String
   alias  String
-
-  // Relations
-  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
 
   @@unique([foodId, alias])
-  // Optimizes frequent lookups by foodId (ingredient mapping, feed).
   @@index([foodId])
   @@index([alias])
 }
@@ -428,18 +383,14 @@ model FoodAlias {
 model PortionOverride {
   id        String   @id @default(cuid())
   foodId    String
-  unit      String // e.g., "cup", "tbsp"
-  grams     Float // grams per unit
-  label     String? // optional, e.g., "packed", "heaping"
+  unit      String
+  grams     Float
+  label     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  food      Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
 
-  // Relations
-  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
-
-  // One override per food+unit combination
   @@unique([foodId, unit])
-  // Index for unit-based queries
   @@index([unit])
 }
 
@@ -447,19 +398,15 @@ model UserPortionOverride {
   id        String   @id @default(cuid())
   userId    String
   foodId    String
-  unit      String // e.g., "cup", "tbsp"
-  grams     Float // grams per unit
-  label     String? // optional, e.g., "packed", "heaping"
+  unit      String
+  grams     Float
+  label     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  food      Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
-
-  // One override per user+food+unit combination
   @@unique([userId, foodId, unit])
-  // Index for user food queries
   @@index([userId, foodId])
 }
 
@@ -472,10 +419,9 @@ model RecipeFeatureLite {
   sugarPerServing   Float    @default(0)
   kcalPerServing    Float    @default(0)
   ingredientCount   Int      @default(0)
-  // room for quick flags/scores if needed
-  goalScores        String   @default("{}") // JSON e.g. {"pre_workout":0.72}
-  methodFlags       String   @default("[]") // JSON e.g. ["air_fry","bake"]
-  cuisineScores     String   @default("{}") // JSON e.g. {"mexican":0.61}
+  goalScores        String   @default("{}")
+  methodFlags       String   @default("[]")
+  cuisineScores     String   @default("{}")
   updatedAt         DateTime @updatedAt
   recipe            Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
@@ -483,8 +429,8 @@ model RecipeFeatureLite {
 model RecipeView {
   id        String   @id @default(cuid())
   recipeId  String
-  userId    String? // null for anonymous
-  sessionId String // anonymous or logged-in session
+  userId    String?
+  sessionId String
   createdAt DateTime @default(now())
   recipe    Recipe   @relation(fields: [recipeId], references: [id])
   user      User?    @relation(fields: [userId], references: [id])
@@ -496,12 +442,12 @@ model RecipeView {
 model RecipeInteractionDaily {
   id       String   @id @default(cuid())
   recipeId String
-  day      DateTime // UTC midnight date
+  day      DateTime
   views    Int      @default(0)
   likes    Int      @default(0)
   comments Int      @default(0)
   saves    Int      @default(0)
-  score    Float    @default(0) // computed
+  score    Float    @default(0)
   recipe   Recipe   @relation(fields: [recipeId], references: [id])
 
   @@unique([recipeId, day])
@@ -511,13 +457,30 @@ model RecipeInteractionDaily {
 model RecipeSimilar {
   recipeId  String
   similarId String
-  score     Float // 0..1 normalized
+  score     Float
   updatedAt DateTime @updatedAt
-
-  recipe  Recipe @relation("RecipeToSimilar", fields: [recipeId], references: [id])
-  similar Recipe @relation("RecipeIsSimilar", fields: [similarId], references: [id])
+  recipe    Recipe   @relation("RecipeToSimilar", fields: [recipeId], references: [id])
+  similar   Recipe   @relation("RecipeIsSimilar", fields: [similarId], references: [id])
 
   @@id([recipeId, similarId])
   @@index([recipeId, score])
   @@index([similarId])
+}
+
+enum TagNamespace {
+  MEAL_TYPE
+  CUISINE
+  DIET
+  METHOD
+  COURSE
+  TIME
+  DIFFICULTY
+  OCCASION
+  GOAL
+}
+
+enum TagSource {
+  USER
+  AUTO_CONFIDENT
+  AUTO_SUGGESTED
 }

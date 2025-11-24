@@ -104,9 +104,12 @@ async function main() {
       hydrated += 1;
       logger.info({ foodId }, 'Hydrated FatSecret food');
     } catch (error) {
-      console.error('hydrate failed', error); // add this line
       failed += 1;
-      logger.error({ foodId, err: error }, 'Failed to hydrate FatSecret food');
+      const errorDetails = error instanceof Error 
+        ? { message: error.message, stack: error.stack, name: error.name }
+        : { error: String(error) };
+      logger.error({ foodId, err: errorDetails }, 'Failed to hydrate FatSecret food');
+      console.error(`Failed to hydrate food ${foodId}:`, error);
     }
   }
 

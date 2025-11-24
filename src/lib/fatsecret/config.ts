@@ -40,3 +40,20 @@ export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://a
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
 export const FATSECRET_REGION: FatSecretRegion = rawRegion === 'GLOBAL' ? 'GLOBAL' : 'US';
+
+export type FatSecretCacheMode = 'legacy' | 'shadow' | 'dual' | 'primary';
+const CACHE_MODES: FatSecretCacheMode[] = ['legacy', 'shadow', 'dual', 'primary'];
+const rawCacheMode = (process.env.FATSECRET_CACHE_MODE ?? 'legacy').toLowerCase();
+export const FATSECRET_CACHE_MODE: FatSecretCacheMode = CACHE_MODES.includes(
+  rawCacheMode as FatSecretCacheMode,
+)
+  ? (rawCacheMode as FatSecretCacheMode)
+  : 'legacy';
+
+export const FATSECRET_CACHE_MODE_HELPERS = {
+  isLegacy: FATSECRET_CACHE_MODE === 'legacy',
+  isShadow: FATSECRET_CACHE_MODE === 'shadow',
+  isDual: FATSECRET_CACHE_MODE === 'dual',
+  isPrimary: FATSECRET_CACHE_MODE === 'primary',
+  shouldServeCache: FATSECRET_CACHE_MODE === 'dual' || FATSECRET_CACHE_MODE === 'primary',
+};

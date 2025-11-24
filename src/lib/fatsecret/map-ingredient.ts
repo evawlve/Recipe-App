@@ -1,8 +1,24 @@
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
-import { FatSecretClient, type FatSecretFoodDetails, type FatSecretFoodSummary, type FatSecretServing } from './client';
-import { FATSECRET_MIN_CONFIDENCE } from './config';
+import {
+  FatSecretClient,
+  type FatSecretAutocompleteHit,
+  type FatSecretFoodDetails,
+  type FatSecretFoodSummary,
+  type FatSecretServing,
+} from './client';
+import { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS, FATSECRET_MIN_CONFIDENCE } from './config';
+import {
+  cacheFoodToDetails,
+  cacheFoodToSummary,
+  getCachedFoodWithRelations,
+  searchFatSecretCacheFoods,
+} from './cache-search';
+import { ensureFoodCached } from './cache';
+import { rerankFatsecretCandidates } from './ai-rerank';
+import { aiNormalizeIngredient } from './ai-normalize';
+import { normalizeIngredientName } from './normalization-rules';
 
 export type FatsecretMappedIngredient = {
   source: 'fatsecret';
@@ -29,8 +45,10 @@ const defaultClient = new FatSecretClient();
 
 interface MappingCandidate {
   food: FatSecretFoodSummary;
-  source: 'search';
+  source: 'search' | 'cache';
   baseScore: number;
+  hydratedOverride?: FatSecretFoodDetails;
+  query: string;
 }
 
 // Synonym table for pantry staples and produce
@@ -45,6 +63,15 @@ const INGREDIENT_SYNONYMS: Record<string, string[]> = {
   'whey protein powder': ['whey protein', 'protein powder whey', 'whey powder'],
   'protein powder': ['whey protein powder', 'protein powder whey'],
   'oil': ['vegetable oil'],
+  'vegetable oil': ['vegetable oil', 'canola oil', 'sunflower oil'],
+  'black pepper': ['pepper', 'ground black pepper'],
+  'bell pepper': ['green pepper', 'red pepper'],
+  'green pepper': ['bell pepper'],
+  'chicken breast': ['chicken breast raw', 'chicken breast skinless', 'boneless chicken breast'],
+  'chicken sausage': ['smoked chicken sausage', 'chicken link sausage'],
+  'mushrooms': ['mushroom', 'mushroom raw'],
+  'zucchini': ['courgette'],
+  'parsley sprig': ['parsley', 'parsley leaf', 'parsley leaves'],
   // Nuts: add variants with "nuts" suffix and "raw" prefix
   'cashews': ['cashew nuts', 'raw cashews', 'cashew'],
   'cashew': ['cashew nuts', 'raw cashew', 'cashews'],
@@ -59,22 +86,158 @@ const INGREDIENT_SYNONYMS: Record<string, string[]> = {
 
 // Plural → singular mapping for meat cuts and common ingredients
 const PLURAL_TO_SINGULAR: Record<string, string> = {
-  'eggs': 'egg',
-  'thighs': 'thigh',
-  'breasts': 'breast',
-  'onions': 'onion',
-  'tomatoes': 'tomato',
-  'blueberries': 'blueberry',
-  'cashews': 'cashew',
-  'hazelnuts': 'hazelnut',
-  'pistachios': 'pistachio',
+  eggs: 'egg',
+  thighs: 'thigh',
+  breasts: 'breast',
+  onions: 'onion',
+  tomatoes: 'tomato',
+  blueberries: 'blueberry',
+  cashews: 'cashew',
+  hazelnuts: 'hazelnut',
+  pistachios: 'pistachio',
+  mushrooms: 'mushroom',
 };
+
+const DESCRIPTOR_STOPWORDS = new Set([
+  'cut',
+  'cutting',
+  'cuttinginto',
+  'cutinto',
+  'thinly',
+  'thin',
+  'thick',
+  'sliced',
+  'slice',
+  'slices',
+  'diced',
+  'chopped',
+  'minced',
+  'cubed',
+  'cube',
+  'shredded',
+  'grated',
+  'crushed',
+  'peeled',
+  'trimmed',
+  'rinsed',
+  'drained',
+  'seeded',
+  'deveined',
+  'halved',
+  'quartered',
+  'into',
+  'piece',
+  'pieces',
+  'inch',
+  'inches',
+  '\"',
+  'dash',
+  'pinch',
+]);
+
+const UNIT_STOPWORDS = new Set([
+  'tsp',
+  'teaspoon',
+  'teaspoons',
+  'tbsp',
+  'tablespoon',
+  'tablespoons',
+  'cup',
+  'cups',
+  'ml',
+  'milliliter',
+  'milliliters',
+  'l',
+  'liter',
+  'liters',
+  'ounce',
+  'ounces',
+  'oz',
+  'g',
+  'gram',
+  'grams',
+  'lb',
+  'pound',
+  'pounds',
+  'dash',
+  'pinch',
+  'clove',
+  'cloves',
+  'leaf',
+  'leaves',
+]);
+
+const HERB_OR_SPICE_TOKENS = [
+  'basil',
+  'parsley',
+  'cilantro',
+  'coriander',
+  'oregano',
+  'thyme',
+  'rosemary',
+  'sage',
+  'mint',
+  'dill',
+  'chive',
+  'chives',
+  'tarragon',
+  'marjoram',
+  'pepper',
+  'paprika',
+  'cumin',
+  'turmeric',
+  'ginger',
+  'cinnamon',
+  'nutmeg',
+  'clove',
+  'cardamom',
+  'cayenne',
+];
+
+function cleanIngredientName(rawName: string): string {
+  const normalized = normalizeQuery(rawName);
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const cleaned: string[] = [];
+
+  for (let token of tokens) {
+    if (!token || DESCRIPTOR_STOPWORDS.has(token) || UNIT_STOPWORDS.has(token)) {
+      continue;
+    }
+    // Remove inch markers like 1" or 1-inch
+    if (/^\d+("?|-inch|inch)?$/.test(token)) {
+      continue;
+    }
+    if (token === 'sprigs') token = 'sprig';
+    if (token === 'leeks') token = 'leek';
+    if (token === 'cubes') token = 'cube';
+    // Singularize simple plurals and keep mapped forms
+    const mapped = PLURAL_TO_SINGULAR[token];
+    if (mapped) {
+      token = mapped;
+    } else if (token.endsWith('es') && token.length > 3) {
+      token = token.slice(0, -2);
+    } else if (token.endsWith('s') && token.length > 3) {
+      token = token.slice(0, -1);
+    }
+    cleaned.push(token);
+  }
+
+  return cleaned.join(' ').trim();
+}
+
+function isHerbOrSpice(tokens: string[]): boolean {
+  return tokens.some((t) => HERB_OR_SPICE_TOKENS.includes(t));
+}
 
 export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine: string): string[] {
   // Start from parsed name or raw line, strip qty/multiplier and normalize
   const baseName = parsed?.name?.trim() || rawLine.trim();
-  let normalized = normalizeQuery(baseName);
-  
+  // Clean up qty/unit/prep noise before generating expressions
+  let normalized = cleanIngredientName(baseName);
+  if (!normalized) {
+    normalized = normalizeQuery(baseName);
+  }
+
   // Remove any residual quantity/number patterns from normalized name
   normalized = normalized.replace(/^\d+[\s\.\-\d]*\s+/, '').trim();
   
@@ -370,31 +533,109 @@ export async function mapIngredientWithFatsecret(
   if (!trimmed) return null;
 
   const parsed = parseIngredientLine(trimmed);
+  const baseName = parsed?.name?.trim() || trimmed;
+  let normalization = normalizeIngredientName(baseName);
+  let normalizedName = normalization.cleaned || baseName;
+  const extraSynonyms: string[] = [];
+  const aiHint = await aiNormalizeIngredient(rawLine, normalization.cleaned);
+  if (aiHint.status === 'success') {
+    normalization = normalizeIngredientName(aiHint.normalizedName || baseName);
+    normalizedName = normalization.cleaned || baseName;
+    extraSynonyms.push(...aiHint.synonyms);
+    logger.info('fatsecret.map.ai_normalize_used', {
+      rawLine,
+      normalized: aiHint.normalizedName,
+      synonyms: aiHint.synonyms,
+      prepPhrases: aiHint.prepPhrases,
+      sizePhrases: aiHint.sizePhrases,
+    });
+  } else if (aiHint.status === 'error' && aiHint.reason !== 'OPENAI_API_KEY missing') {
+    logger.debug('fatsecret.map.ai_normalize_skipped', { rawLine, reason: aiHint.reason });
+  }
   const client = options.client ?? defaultClient;
   const minConfidence = options.minConfidence ?? 0;
+  const preferCache = FATSECRET_CACHE_MODE_HELPERS.shouldServeCache;
+  // Always allow live FatSecret API fallback when cache is missing/weak
+  const allowLiveFallback = true;
 
   const candidates: MappingCandidate[] = [];
   const seenFoodIds = new Set<string>();
+  let cacheCandidateCount = 0;
+  let apiCandidateCount = 0;
+  let autocompleteBoostsApplied = 0;
 
   // Build multiple search expressions and try each
-  const searchExpressions = buildSearchExpressions(parsed, trimmed);
+  const searchExpressions = buildSearchExpressions(parsed, normalizedName);
+  if (normalization.nounOnly && !searchExpressions.includes(normalization.nounOnly)) {
+    searchExpressions.push(normalization.nounOnly);
+  }
+  for (const syn of extraSynonyms) {
+    if (syn && !searchExpressions.includes(syn)) {
+      searchExpressions.push(syn);
+    }
+  }
   
   for (const query of searchExpressions) {
     // Allow up to 15 candidates per expression, but don't stop if we have enough total
     // We'll still check seenFoodIds to avoid duplicates across expressions
-    
+
+    let autocompleteSuggestions: FatSecretAutocompleteHit[] = [];
+    if (preferCache) {
+      try {
+        autocompleteSuggestions = await client.autocompleteFoods(query, 5);
+      } catch (error) {
+        logger.debug('fatsecret.autocomplete_failed', { query, message: (error as Error).message });
+      }
+    }
+
+    let cacheMatches = 0;
+    if (preferCache) {
+      try {
+        const cachedFoods = await searchFatSecretCacheFoods(query, 20);
+        for (const cached of cachedFoods) {
+          if (seenFoodIds.has(cached.id)) continue;
+          seenFoodIds.add(cached.id);
+          const summary = cacheFoodToSummary(cached);
+          candidates.push({
+            food: summary,
+            source: 'cache',
+            baseScore: computeCandidateScore(summary, query, parsed),
+            hydratedOverride: cacheFoodToDetails(cached),
+            query,
+          });
+          cacheMatches += 1;
+          cacheCandidateCount += 1;
+        }
+      } catch (error) {
+        logger.warn('fatsecret.map.cache_search_failed', { message: (error as Error).message, query });
+      }
+    }
+
+    const shouldCallApi = !preferCache || (cacheMatches === 0 && allowLiveFallback);
+    if (!shouldCallApi) {
+      continue;
+    }
+
     try {
-      const foods = await client.searchFoodsV4(query, { maxResults: 15 });
-      for (const food of foods) {
-        // Avoid duplicates across all expressions
-        if (seenFoodIds.has(food.id)) continue;
-        seenFoodIds.add(food.id);
-        
-        candidates.push({
-          food,
-          source: 'search',
-          baseScore: computeCandidateScore(food, query, parsed),
-        });
+      const searchQueries = [query, ...autocompleteSuggestions.map((s) => s.value).slice(0, 3)];
+      for (const searchQuery of searchQueries) {
+        const foods = await client.searchFoodsV4(searchQuery, { maxResults: 15 });
+        for (const food of foods) {
+          // Avoid duplicates across all expressions
+          if (seenFoodIds.has(food.id)) continue;
+          seenFoodIds.add(food.id);
+          
+          candidates.push({
+            food,
+            source: 'search',
+            baseScore: computeCandidateScore(food, searchQuery, parsed),
+            query: searchQuery,
+          });
+          apiCandidateCount += 1;
+        }
+      }
+      if (autocompleteSuggestions.length > 0) {
+        autocompleteBoostsApplied += 1;
       }
     } catch (error) {
       logger.warn('fatsecret.map.search_failed', { message: (error as Error).message, query });
@@ -406,10 +647,138 @@ export async function mapIngredientWithFatsecret(
     return null;
   }
 
+  const normalizedQueryName = normalizeForMatch(parsed?.name || trimmed);
+  const isTrivialSingleTokenQuery = TRIVIAL_SINGLE_TOKEN.has(normalizedQueryName);
+  const isTrivialPhraseQuery = CLEAR_GENERIC_PHRASES.has(normalizedQueryName);
+  const isTrivialQuery = isTrivialSingleTokenQuery || isTrivialPhraseQuery;
+
+  // Prefer obvious generic matches for trivial queries (e.g., water, salt, vegetable oil) to avoid unnecessary rerank
+  if (isTrivialQuery) {
+    for (const candidate of candidates) {
+      const normalizedFoodName = normalizeForMatch(`${candidate.food.brandName ?? ''} ${candidate.food.name}`);
+      const isGeneric =
+        (candidate.food.foodType ?? 'Generic').toLowerCase() === 'generic' && !candidate.food.brandName;
+      if (isGeneric && normalizedFoodName === normalizedQueryName) {
+        candidate.baseScore += 0.2; // Keep the obvious generic on top
+      }
+    }
+  }
+
   candidates.sort((a, b) => b.baseScore - a.baseScore);
 
+  // Exact match short-circuit: if we already have a deterministic match, skip AI rerank
+  let rerankSkipReason: string | null = null;
+  const exactMatchIdx = candidates.findIndex(
+    (c) => normalizeForMatch(`${c.food.brandName ?? ''} ${c.food.name}`) === normalizedQueryName
+  );
+  if (exactMatchIdx !== -1) {
+    const [match] = candidates.splice(exactMatchIdx, 1);
+    candidates.unshift(match);
+    rerankSkipReason = 'exact_match';
+    logger.debug('fatsecret.map.ai_rerank_skipped', {
+      rawLine,
+      reason: rerankSkipReason,
+      matchedId: match.food.id,
+    });
+  }
+
+  // Detect ambiguous queries that should always use AI rerank
+  const isAmbiguousQuery = (() => {
+    if (candidates.length < 2) return false;
+    
+    // Check if top candidates have similar scores (within 0.1)
+    const topScore = candidates[0].baseScore;
+    const secondScore = candidates[1]?.baseScore ?? 0;
+    const scoreGap = topScore - secondScore;
+    if (scoreGap < 0.1 && topScore > 0.3) {
+      return true; // Top candidates are too close
+    }
+    
+    // Check if query contains ambiguous terms (sausage without meat type, generic terms)
+    const queryLower = (parsed?.name?.trim() || trimmed).toLowerCase();
+    const ambiguousTerms = ['sausage', 'oil', 'flour', 'cheese', 'sauce'];
+    const hasAmbiguousTerm = ambiguousTerms.some(term => 
+      queryLower.includes(term) && !/\b(chicken|pork|beef|turkey|olive|canola|vegetable)\b/.test(queryLower)
+    );
+    if (hasAmbiguousTerm) {
+      return true;
+    }
+    
+    // Check if query contains multiple food types (could match different categories)
+    const meatTypes = ['chicken', 'pork', 'beef', 'turkey', 'fish', 'salmon'];
+    const meatTypeCount = meatTypes.filter(m => queryLower.includes(m)).length;
+    if (meatTypeCount > 1) {
+      return true; // Multiple meat types mentioned
+    }
+    
+    return false;
+  })();
+
+  // Use AI rerank for ambiguous queries or when we have multiple candidates
+  // Lower threshold to 0.6 to catch more edge cases
+  const topScore = candidates[0].baseScore;
+  const secondScore = candidates[1]?.baseScore ?? 0;
+  const scoreGap = topScore - secondScore;
+  const hasSmallGap = scoreGap < 0.1 && topScore < 0.8;
+  const isClearLeader = topScore >= 0.85 && scoreGap >= 0.15;
+  const shouldUseAiRerank =
+    !rerankSkipReason &&
+    !isTrivialQuery &&
+    !isClearLeader &&
+    (isAmbiguousQuery || (candidates.length > 1 && hasSmallGap));
+
+  if (!shouldUseAiRerank && !rerankSkipReason) {
+    const reason = isTrivialQuery ? 'trivial_query' : isClearLeader ? 'clear_leader' : null;
+    if (reason) {
+      logger.debug('fatsecret.map.ai_rerank_skipped', { rawLine, reason, topScore, scoreGap });
+    }
+  }
+  if (shouldUseAiRerank) {
+    try {
+      const topForAi = candidates.slice(0, 5).map((c) => ({
+        id: c.food.id,
+        name: c.food.name,
+        brandName: c.food.brandName,
+        foodType: c.food.foodType,
+        score: c.baseScore,
+      }));
+      const minAiConfidence = isAmbiguousQuery ? 0.5 : 0.6; // Lower threshold for ambiguous queries
+      const aiPick = await rerankFatsecretCandidates(rawLine, topForAi, minAiConfidence);
+      if (aiPick.status === 'success') {
+        const idx = candidates.findIndex((c) => c.food.id === aiPick.id);
+        if (idx > -1) {
+          const [picked] = candidates.splice(idx, 1);
+          // Boost based on AI confidence (stronger boost for ambiguous queries)
+          const boostMultiplier = isAmbiguousQuery ? 0.2 : 0.1;
+          picked.baseScore += boostMultiplier * aiPick.confidence;
+          candidates.unshift(picked);
+          logger.info('fatsecret.map.ai_rerank_used', {
+            rawLine,
+            pickedId: aiPick.id,
+            aiConfidence: aiPick.confidence,
+            isAmbiguous: isAmbiguousQuery,
+            rationale: aiPick.rationale,
+          });
+        }
+      } else {
+        logger.debug('fatsecret.map.ai_rerank_skipped', { 
+          rawLine, 
+          reason: aiPick.reason,
+          isAmbiguous: isAmbiguousQuery,
+        });
+      }
+    } catch (err) {
+      logger.warn('fatsecret.map.ai_rerank_failed', { message: (err as Error).message });
+    }
+  }
+
   for (const candidate of candidates.slice(0, 6)) {
-    const hydrated = await client.getFoodDetails(candidate.food.id);
+    const hydrated = await hydrateCandidateFromCacheOrApi(
+      candidate,
+      client,
+      preferCache,
+      allowLiveFallback,
+    );
     if (!hydrated || !hydrated.servings || hydrated.servings.length === 0) continue;
 
     let servingSelection = selectServing(parsed, hydrated.servings);
@@ -494,9 +863,16 @@ export async function mapIngredientWithFatsecret(
       }
     }
 
+    grams = applyServingDefaults(parsed, rawLine, servingSelection, grams);
+
     if (!grams || grams <= 0) continue;
 
-    const macros = computeMacros(servingSelection.serving, qty, servingSelection.unitsPerServing);
+    const macros = computeMacros(
+      servingSelection.serving,
+      qty,
+      servingSelection.unitsPerServing,
+      grams
+    );
     if (!macros) continue;
 
     // Check if serving description matches unit/unitHint for bonus
@@ -564,7 +940,7 @@ export async function mapIngredientWithFatsecret(
       continue;
     }
 
-    return {
+    const result = {
       source: 'fatsecret',
       foodId: hydrated.id,
       foodName: hydrated.name,
@@ -579,6 +955,17 @@ export async function mapIngredientWithFatsecret(
       confidence,
       rawLine: rawLine.trim(),
     };
+    if (preferCache) {
+      logger.info('fatsecret.map.cache_usage', {
+        cacheMode: FATSECRET_CACHE_MODE,
+        usedSource: candidate.source,
+        cacheCandidates: cacheCandidateCount,
+        apiCandidates: apiCandidateCount,
+        hydratedFromCache: Boolean(candidate.hydratedOverride),
+        autocompleteBoostsApplied,
+      });
+    }
+    return result;
   }
 
   // Second pass: if top candidate shares >= 2 tokens but serving match is low,
@@ -629,53 +1016,160 @@ export async function mapIngredientWithFatsecret(
                 servingDesc: serving100g.description,
                 grams,
               });
-              
-              // Lower confidence since we used 100g fallback, but still accept if >= 0.3
-              const fallbackConfidence = Math.max(0.3, Math.min(0.7, topCandidate.baseScore * 0.5 + 0.3));
-              
-              return {
-                source: 'fatsecret',
-                foodId: hydrated.id,
-                foodName: hydrated.name,
-                brandName: hydrated.brandName,
-                servingId: serving100g.id ?? undefined,
+            
+            // Lower confidence since we used 100g fallback, but still accept if >= 0.3
+            const fallbackConfidence = Math.max(0.3, Math.min(0.7, topCandidate.baseScore * 0.5 + 0.3));
+            const result = {
+              source: 'fatsecret',
+              foodId: hydrated.id,
+              foodName: hydrated.name,
+              brandName: hydrated.brandName,
+              servingId: serving100g.id ?? undefined,
                 servingDescription: serving100g.description ?? undefined,
                 grams,
                 kcal: macros.kcal,
                 protein: macros.protein,
                 carbs: macros.carbs,
-                fat: macros.fat,
-                confidence: fallbackConfidence,
-                rawLine: rawLine.trim(),
-              };
+              fat: macros.fat,
+              confidence: fallbackConfidence,
+              rawLine: rawLine.trim(),
+            };
+            if (preferCache) {
+              logger.info('fatsecret.map.cache_usage', {
+                cacheMode: FATSECRET_CACHE_MODE,
+                usedSource: topCandidate.source,
+                cacheCandidates: cacheCandidateCount,
+                apiCandidates: apiCandidateCount,
+                hydratedFromCache: Boolean(topCandidate.hydratedOverride),
+                fallback: '100g',
+              });
             }
+            return result;
           }
         }
       }
     }
   }
+  }
 
   return null;
+}
+
+async function hydrateCandidateFromCacheOrApi(
+  candidate: MappingCandidate,
+  client: FatSecretClient,
+  preferCache: boolean,
+  allowLiveFallback: boolean,
+): Promise<FatSecretFoodDetails | null> {
+  if (candidate.hydratedOverride) return candidate.hydratedOverride;
+
+  if (preferCache) {
+    try {
+      const cached = await getCachedFoodWithRelations(candidate.food.id);
+      if (cached) {
+        return cacheFoodToDetails(cached);
+      }
+      if (allowLiveFallback) {
+        const hydrated = await ensureFoodCached(candidate.food.id, {
+          client,
+          searchQuery: candidate.query,
+        });
+        if (hydrated?.food) {
+          const refreshed = await getCachedFoodWithRelations(hydrated.food.id);
+          if (refreshed) {
+            return cacheFoodToDetails(refreshed);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('fatsecret.map.cache_hydrate_failed', {
+        message: (error as Error).message,
+        foodId: candidate.food.id,
+        query: candidate.query,
+      });
+    }
+  }
+
+  return client.getFoodDetails(candidate.food.id);
 }
 
 
 function computeCandidateScore(food: FatSecretFoodSummary, query: string, parsed: ParsedIngredient | null): number {
   const normalizedQuery = normalizeQuery(query);
   const foodName = `${food.brandName ?? ''} ${food.name}`.trim().toLowerCase();
+  const foodNameLower = foodName.toLowerCase();
   const queryTokens = tokenSet(normalizedQuery);
   const foodTokens = tokenSet(foodName);
-  const similarity = jaccard(queryTokens, foodTokens);
+  // Use weighted similarity to prioritize distinctive words (e.g., "chicken" > "sausage")
+  const similarity = weightedJaccard(queryTokens, foodTokens);
 
   let score = similarity;
-  
+
   // Check if query mentions a brand
   const rawLineLower = parsed ? '' : query.toLowerCase();
-  const queryText = parsed ? (normalizedQuery + ' ' + (parsed.qualifiers?.join(' ') || '')).toLowerCase() : rawLineLower;
-  const queryHasBrand = /brand|fage|blue.?diamond|almond.?breeze|silk|califia/i.test(queryText);
-  
+  const queryText = parsed
+    ? (normalizedQuery + ' ' + (parsed.qualifiers?.join(' ') || '')).toLowerCase()
+    : rawLineLower;
+  const queryHasBrand = /brand|fage|blue.?diamond|almond.?breeze|silk|califia|boar.?s head/i.test(
+    queryText
+  );
+
   // Boost generic foods if query doesn't mention a brand
   if ((food.foodType ?? 'Generic').toLowerCase() === 'generic' && !queryHasBrand) {
     score += 0.1;
+  }
+
+  // Meat type mismatch handling - use multiplicative penalties for critical mismatches
+  const meatHints = ['chicken', 'beef', 'pork', 'turkey', 'sausage', 'ham', 'bacon'];
+  const queryMeats = meatHints.filter((m) => queryText.includes(m));
+  const foodMeats = meatHints.filter((m) => foodName.includes(m));
+  let meatMismatchDetected = false;
+  if (queryMeats.length > 0 && foodMeats.length > 0) {
+    const mismatch = !foodMeats.some((m) => queryMeats.includes(m));
+    if (mismatch) {
+      // Multiplicative penalty makes mismatches harder to override
+      score *= 0.3;
+      meatMismatchDetected = true;
+      logger.debug('fatsecret.map.meat_mismatch', {
+        query: queryText,
+        foodName: foodName,
+        queryMeats,
+        foodMeats,
+        scoreAfterPenalty: score,
+      });
+    }
+  } else if (queryMeats.length > 0 && foodMeats.length === 0) {
+    // Query specifies meat type but food doesn't - moderate penalty
+    score *= 0.6;
+  }
+  // Chicken sausage specificity: favor chicken sausage, penalize pork/Italian when chicken is asked
+  const chickenSausageQuery = /\bchicken\b.*\bsausage\b/.test(queryText);
+  if (chickenSausageQuery) {
+    if (/chicken/.test(foodNameLower) && /sausage/.test(foodNameLower)) {
+      score += 0.2; // Boost for correct match
+    } else if ((/pork|italian/.test(foodNameLower)) && !/chicken/.test(foodNameLower)) {
+      // Multiplicative penalty for wrong meat type when chicken is explicitly requested
+      score *= 0.25;
+      meatMismatchDetected = true;
+      logger.debug('fatsecret.map.chicken_sausage_mismatch', {
+        query: queryText,
+        foodName: foodName,
+        scoreAfterPenalty: score,
+      });
+    }
+  }
+
+  // Canned vs fresh heuristic - use multiplicative penalty for mismatches
+  const queryCanned = /\bcanned\b/.test(queryText);
+  const foodCanned = /\bcanned\b/.test(foodName);
+  if (queryCanned && foodCanned) {
+    score += 0.05; // Boost for correct match
+  } else if (queryCanned && !foodCanned) {
+    // Query wants canned but food is fresh - moderate penalty
+    score *= 0.7;
+  } else if (!queryCanned && foodCanned) {
+    // Query wants fresh but food is canned - stronger penalty
+    score *= 0.5;
   }
 
   // Brand handling
@@ -689,18 +1183,30 @@ function computeCandidateScore(food: FatSecretFoodSummary, query: string, parsed
     }
   }
 
-  // Cooked/raw preference matching
+  // Cooked/raw preference matching - use multiplicative penalty for conflicts
   const cookPreference = detectCookPreference(queryText);
   if (cookPreference) {
-    const foodNameLower = foodName.toLowerCase();
-    const matches = cookPreference === 'cooked'
-      ? /cooked|baked|roasted|grilled|boiled|steamed|boiled/.test(foodNameLower)
-      : /raw|uncooked|fresh|dry/.test(foodNameLower);
-    const conflicts = cookPreference === 'cooked'
-      ? /raw|uncooked/.test(foodNameLower)
-      : /cooked|baked|roasted|grilled|boiled|steamed/.test(foodNameLower);
-    if (matches) score += 0.15;
-    if (conflicts) score -= 0.15;
+    const matches =
+      cookPreference === 'cooked'
+        ? /cooked|baked|roasted|grilled|boiled|steamed|boiled/.test(foodNameLower)
+        : /raw|uncooked|fresh|dry/.test(foodNameLower);
+    const conflicts =
+      cookPreference === 'cooked'
+        ? /raw|uncooked/.test(foodNameLower)
+        : /cooked|baked|roasted|grilled|boiled|steamed/.test(foodNameLower);
+    if (matches) {
+      score += 0.15; // Boost for correct match
+    }
+    if (conflicts) {
+      // Multiplicative penalty for cooking state conflicts
+      score *= 0.4;
+      logger.debug('fatsecret.map.cook_state_conflict', {
+        query: queryText,
+        foodName: foodName,
+        preference: cookPreference,
+        scoreAfterPenalty: score,
+      });
+    }
   }
 
   // Unit hint matching
@@ -713,12 +1219,20 @@ function computeCandidateScore(food: FatSecretFoodSummary, query: string, parsed
 
   // Qualifier matching - improved scoring per qualifier
   if (parsed?.qualifiers && parsed.qualifiers.length > 0) {
-    const qualifierLower = parsed.qualifiers.map(q => q.toLowerCase());
-    const foodNameLower = foodName.toLowerCase();
-    
+    const qualifierLower = parsed.qualifiers.map((q) => q.toLowerCase());
+
     // Important qualifiers that should boost score when matched
-    const importantQualifiers = ['diced', 'chopped', 'sliced', 'minced', 'grated', 'unsweetened', 'sweetened', 'whole'];
-    
+    const importantQualifiers = [
+      'diced',
+      'chopped',
+      'sliced',
+      'minced',
+      'grated',
+      'unsweetened',
+      'sweetened',
+      'whole',
+    ];
+
     // Count matches for important qualifiers (+0.1 per match)
     let qualifierMatches = 0;
     for (const q of qualifierLower) {
@@ -730,15 +1244,80 @@ function computeCandidateScore(food: FatSecretFoodSummary, query: string, parsed
         score += 0.05; // Smaller boost for other qualifiers
       }
     }
-    
+
     // Check for extra qualifiers in food name that aren't in query (penalty)
-    const commonQualifiers = ['diced', 'chopped', 'sliced', 'minced', 'grated', 'unsweetened', 'sweetened', 'whole', 'skim', 'low-fat', 'reduced-fat', 'baked', 'roasted'];
-    const foodQualifiers = commonQualifiers.filter(q => foodNameLower.includes(q));
-    const queryQualifiers = commonQualifiers.filter(q => qualifierLower.includes(q));
-    const extraQualifiers = foodQualifiers.filter(q => !queryQualifiers.includes(q));
+    const commonQualifiers = [
+      'diced',
+      'chopped',
+      'sliced',
+      'minced',
+      'grated',
+      'unsweetened',
+      'sweetened',
+      'whole',
+      'skim',
+      'low-fat',
+      'reduced-fat',
+      'baked',
+      'roasted',
+    ];
+    const foodQualifiers = commonQualifiers.filter((q) => foodNameLower.includes(q));
+    const queryQualifiers = commonQualifiers.filter((q) => qualifierLower.includes(q));
+    const extraQualifiers = foodQualifiers.filter((q) => !queryQualifiers.includes(q));
     if (extraQualifiers.length > 0 && qualifierMatches === 0) {
       score -= 0.05; // Small penalty for flavor variants we didn't ask for
     }
+  }
+
+  // Candidate ranking fixes: prefer generic/raw meats and oils, de-rank deli/branded spreads for generic queries
+  const isMeatQuery = /\b(chicken|turkey|beef|pork|steak|ham)\b/.test(queryText);
+  if (isMeatQuery && !queryHasBrand) {
+    if (/deli|rotisserie|smoked|breaded|nugget|patty|lunch meat|cold cut/.test(foodNameLower)) {
+      score -= 0.12;
+    }
+    if (/raw|skinless|boneless|breast|thigh|drumstick/.test(foodNameLower)) {
+      score += 0.08;
+    }
+  }
+
+  const isOilQuery = /\b(vegetable oil|olive oil|canola oil|sunflower oil)\b/.test(queryText);
+  if (isOilQuery) {
+    if (/spread|margarine|butter/.test(foodNameLower)) {
+      score -= 0.15;
+    } else if (/oil/.test(foodNameLower)) {
+      score += 0.08;
+    }
+  }
+
+  const herbSpiceQuery = isHerbOrSpice(Array.from(queryTokens));
+  if (herbSpiceQuery) {
+    if (/seasoning|blend|mix/.test(foodNameLower) && !/seasoning|blend|mix/.test(queryText)) {
+      score -= 0.08;
+    }
+    if (/raw|dried|fresh/.test(foodNameLower)) {
+      score += 0.05;
+    }
+  }
+
+  // Sausage heuristic: prefer chicken for "chicken sausage", de-rank pork/Italian
+  const sausageQuery = /\bsausage\b/.test(queryText);
+  const chickenHint = /\bchicken\b/.test(queryText);
+  if (sausageQuery && chickenHint) {
+    if (/chicken/.test(foodNameLower)) {
+      score += 0.12;
+    } else if (/pork|italian/.test(foodNameLower)) {
+      score -= 0.12;
+    }
+  }
+
+  // Bouillon/cube heuristic: prefer cube servings when "cube" or "bouillon" present
+  const bouillonQuery = /\bbouillon\b/.test(queryText) || /\bcube\b/.test(queryText);
+  if (bouillonQuery) {
+    const hasCube = /cube/.test(foodNameLower);
+    const hasBouillon = /bouillon/.test(foodNameLower);
+    const isBrothOnly = /broth|stock/.test(foodNameLower) && !hasCube;
+    if (hasCube || hasBouillon) score += 0.2;
+    if (isBrothOnly) score -= 0.1;
   }
 
   return score;
@@ -878,6 +1457,63 @@ function selectServing(
   };
 }
 
+function applyServingDefaults(
+  parsed: ParsedIngredient | null,
+  rawLine: string,
+  servingSelection: { serving: FatSecretServing; matchScore: number; gramsPerUnit: number | null; unitsPerServing: number; baseGrams: number | null },
+  baseGrams: number | null
+): number | null {
+  const qty = parsed ? parsed.qty * parsed.multiplier : 1;
+  const unitLower = parsed?.unit?.toLowerCase() ?? '';
+  const unitHintLower = parsed?.unitHint?.toLowerCase() ?? '';
+  const tokens = cleanIngredientName(parsed?.name?.trim() || rawLine).split(/\s+/).filter(Boolean);
+  const herbOrSpice = isHerbOrSpice(tokens);
+  const includesSprig = tokens.includes('sprig');
+  const includesBouillon = tokens.includes('bouillon');
+  const includesCube = tokens.includes('cube');
+
+  // Dash/pinch override to avoid 100g defaults
+  if (unitLower === 'dash' || unitLower === 'pinch' || unitHintLower === 'dash' || unitHintLower === 'pinch') {
+    return 0.6 * qty;
+  }
+
+  // Herb/spice tsp/tbsp overrides (avoid 100g fallbacks)
+  const isLikelyHerb = herbOrSpice || /herb|spice/.test(unitHintLower);
+  const shouldOverrideHerb = isLikelyHerb && (!baseGrams || baseGrams >= 80);
+  if (shouldOverrideHerb) {
+    if (unitLower === 'tbsp' || unitHintLower === 'tbsp' || unitHintLower === 'tablespoon') {
+      return 2 * qty;
+    }
+    if (unitLower === 'tsp' || unitHintLower === 'tsp' || unitHintLower === 'teaspoon') {
+      return 0.7 * qty;
+    }
+    if (unitLower === 'cup' || unitHintLower === 'cup') {
+      // Rough cup of chopped herbs
+      return 64 * qty; // 1 cup chopped herbs ~64g
+    }
+    if (unitLower === 'leaf' || unitLower === 'leaves' || unitHintLower === 'leaf' || unitHintLower === 'leaves') {
+      return 0.5 * qty;
+    }
+    if (includesSprig) {
+      return 0.5 * qty;
+    }
+  }
+
+  // Garlic clove override
+  const hasGarlic = tokens.includes('garlic');
+  const hasClove = unitLower === 'clove' || unitLower === 'cloves' || unitHintLower === 'clove' || tokens.includes('clove') || tokens.includes('cloves');
+  if (hasGarlic && hasClove && (!baseGrams || baseGrams >= 50)) {
+    return 3 * qty;
+  }
+
+  // Bouillon cube override
+  if ((includesBouillon || includesCube) && (unitLower === 'cube' || unitLower === 'cubes' || unitHintLower === 'cube' || includesCube)) {
+    return 5 * qty; // average cube ~5g
+  }
+
+  return baseGrams;
+}
+
 function gramsForServing(serving: FatSecretServing): number | null {
   if (serving.servingWeightGrams && serving.servingWeightGrams > 0) return serving.servingWeightGrams;
   if (serving.metricServingUnit?.toLowerCase() === 'g' && serving.metricServingAmount) {
@@ -889,9 +1525,35 @@ function gramsForServing(serving: FatSecretServing): number | null {
   return null;
 }
 
-function computeMacros(serving: FatSecretServing, qty: number, unitsPerServing: number) {
+function computeMacros(
+  serving: FatSecretServing,
+  qty: number,
+  unitsPerServing: number,
+  gramsOverride?: number | null
+) {
   const divisor = unitsPerServing > 0 ? unitsPerServing : 1;
-  const factor = qty / divisor;
+  const factorFromUnits = qty / divisor;
+  const gramsForServingWeight = gramsForServing(serving);
+
+  // If we have a grams override and a base grams reference, scale macros by grams ratio
+  if (gramsOverride && gramsForServingWeight) {
+    const factor = gramsOverride / gramsForServingWeight;
+    if (
+      serving.calories == null ||
+      serving.protein == null ||
+      serving.carbohydrate == null ||
+      serving.fat == null
+    ) {
+      return null;
+    }
+    return {
+      kcal: serving.calories * factor,
+      protein: serving.protein * factor,
+      carbs: serving.carbohydrate * factor,
+      fat: serving.fat * factor,
+    };
+  }
+
   if (
     serving.calories == null ||
     serving.protein == null ||
@@ -901,15 +1563,102 @@ function computeMacros(serving: FatSecretServing, qty: number, unitsPerServing: 
     return null;
   }
   return {
-    kcal: serving.calories * factor,
-    protein: serving.protein * factor,
-    carbs: serving.carbohydrate * factor,
-    fat: serving.fat * factor,
+    kcal: serving.calories * factorFromUnits,
+    protein: serving.protein * factorFromUnits,
+    carbs: serving.carbohydrate * factorFromUnits,
+    fat: serving.fat * factorFromUnits,
   };
 }
 
 function tokenSet(value: string): Set<string> {
   return new Set(value.split(/[^a-z0-9]+/).filter(Boolean));
+}
+
+// Common words that appear in many food names - these get lower weight
+// Distinctive words (meat types, specific ingredients) get higher weight
+const COMMON_FOOD_WORDS = new Set([
+  'sausage', 'oil', 'flour', 'powder', 'sauce', 'cheese', 'milk', 'cream',
+  'butter', 'bread', 'rice', 'pasta', 'noodle', 'soup', 'broth', 'stock',
+  'canned', 'fresh', 'raw', 'cooked', 'diced', 'chopped', 'sliced', 'whole',
+  'large', 'medium', 'small', 'organic', 'natural', 'unsweetened', 'sweetened',
+]);
+
+const TRIVIAL_SINGLE_TOKEN = new Set([
+  'water',
+  'salt',
+  'sugar',
+  'milk',
+  'flour',
+  'oil',
+  'pepper',
+  'rice',
+  'yeast',
+  'honey',
+  'vinegar',
+  'onion',
+  'jalapeno',
+  'sauerkraut',
+  'tomatoes',
+  'mustard',
+  'apple',
+  'apples',
+  'ginger',
+]);
+
+const CLEAR_GENERIC_PHRASES = new Set([
+  'vegetable oil',
+  'olive oil',
+  'canola oil',
+  'coconut oil',
+  'brown sugar',
+  'white sugar',
+  'baking soda',
+  'baking powder',
+  'garlic powder',
+  'onion powder',
+  'yellow mustard',
+  'hot pepper sauce',
+  'thai red curry paste',
+  'low sodium soy sauce',
+  'soy sauce low sodium',
+  'cherry tomatoes',
+]);
+
+function getTokenWeight(token: string): number {
+  // Common words get lower weight (0.5), distinctive words get full weight (1.0)
+  if (COMMON_FOOD_WORDS.has(token.toLowerCase())) {
+    return 0.5;
+  }
+  // Very short tokens (1-2 chars) get lower weight
+  if (token.length <= 2) {
+    return 0.7;
+  }
+  return 1.0;
+}
+
+function weightedJaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  
+  let weightedIntersection = 0;
+  let weightedUnion = 0;
+  
+  // Calculate weighted intersection
+  for (const token of a) {
+    const weight = getTokenWeight(token);
+    if (b.has(token)) {
+      weightedIntersection += weight;
+    }
+    weightedUnion += weight;
+  }
+  
+  // Add tokens from b that aren't in a
+  for (const token of b) {
+    if (!a.has(token)) {
+      weightedUnion += getTokenWeight(token);
+    }
+  }
+  
+  return weightedUnion > 0 ? weightedIntersection / weightedUnion : 0;
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
@@ -926,6 +1675,14 @@ function detectCookPreference(query: string): 'cooked' | 'raw' | null {
   if (/cooked|baked|roasted|steamed|grilled|boiled/.test(query)) return 'cooked';
   if (/raw|uncooked|fresh|dry/.test(query)) return 'raw';
   return null;
+}
+
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function clamp(value: number, min: number, max: number) {

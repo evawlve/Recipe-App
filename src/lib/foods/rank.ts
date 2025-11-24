@@ -46,6 +46,8 @@ export type CandidateFood = {
   densityGml?: number | null;
   categoryId?: string | null;
   popularity: number;
+  fatsecretId?: string;
+  legacyFoodId?: string;
 };
 
 export type Candidate = {

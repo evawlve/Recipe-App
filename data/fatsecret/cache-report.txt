@@ -1,0 +1,17 @@
+FatSecret cache summary
+=======================
+Foods cached          : 496
+Servings cached       : 2110
+Aliases cached        : 614
+Missing nutrients     : 0
+Missing servings      : 0
+Stale (needs hydrate) : 252
+
+By source
+  curated                 370
+  gold                    124
+  food.get.v4               2
+
+By food type
+  Generic                 378
+  Brand                   118

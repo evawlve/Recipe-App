@@ -1,0 +1,125 @@
+699f8c348878c8ee5c5d8ba4768eb936
+"use strict";
+/**
+ * Prisma Sentry Middleware
+ *
+ * Automatically wraps all Prisma queries in Sentry performance spans to track
+ * database query performance and errors.
+ *
+ * Features:
+ * - Creates spans for every Prisma operation with model and action tags
+ * - Tracks query duration in milliseconds
+ * - Captures errors with context
+ * - Supports rate limiting via SENTRY_DB_SPAN_SAMPLE (0-1, default: 1.0)
+ *
+ * Usage:
+ *   import { prisma } from '@/lib/db';
+ *   // Middleware is automatically attached when prisma is created
+ *
+ * Tuning:
+ *   Set SENTRY_DB_SPAN_SAMPLE=0.1 in .env to sample 10% of queries in production
+ *   Set SENTRY_DB_SPAN_SAMPLE=1.0 to capture all queries (default in dev)
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.attachPrismaSentry = attachPrismaSentry;
+// Guard flag to prevent double installation during HMR
+const attachedInstances = new WeakSet();
+/**
+ * Attaches Sentry middleware to a Prisma client instance.
+ * This must be called only once per client instance to avoid duplicate spans.
+ *
+ * NOTE: Sentry is currently disabled - this is a no-op function
+ */
+function attachPrismaSentry(prisma) {
+    // Sentry disabled - function is now a no-op
+    // All the original Sentry middleware code has been commented out below
+    // Uncomment and restore the imports when re-enabling Sentry
+    /* Original Sentry code (disabled):
+    
+    // Guard: Don't attach twice to the same instance
+    if (attachedInstances.has(prisma)) {
+      return;
+    }
+  
+    // Guard: Only attach if Sentry is available
+    if (typeof Sentry.startSpan !== "function") {
+      return;
+    }
+  
+    // Get sampling rate (0-1), default to 1.0 (100%)
+    const sampleRate = (() => {
+      const envValue = process.env.SENTRY_DB_SPAN_SAMPLE;
+      if (!envValue) return 1.0;
+      const parsed = Number.parseFloat(envValue);
+      if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) return 1.0;
+      return parsed;
+    })();
+  
+    // Mark this instance as attached
+    attachedInstances.add(prisma);
+  
+    prisma.$use(async (params, next) => {
+      // Apply rate limiting: skip span creation if we shouldn't sample this query
+      if (sampleRate < 1.0 && Math.random() >= sampleRate) {
+        return next(params);
+      }
+  
+      const startTime = performance.now();
+      const model = params.model ?? "unknown";
+      const action = params.action;
+      const spanName = `db.${model}.${action}`;
+  
+      try {
+        return await Sentry.startSpan(
+          {
+            name: spanName,
+            op: "db.prisma",
+          },
+          async (span) => {
+            try {
+              const result = await next(params);
+              const duration = performance.now() - startTime;
+              const durationMs = Math.round(duration * 100) / 100; // Round to 2 decimal places
+  
+              // Set tags on the span
+              if (span) {
+                span.setAttribute("db.model", model);
+                span.setAttribute("db.action", action);
+                span.setAttribute("db.duration_ms", durationMs);
+              }
+  
+              return result;
+            } catch (error) {
+              const duration = performance.now() - startTime;
+              const durationMs = Math.round(duration * 100) / 100;
+  
+              // Set error tags and context
+              if (span) {
+                span.setAttribute("db.error", true);
+                span.setAttribute("db.duration_ms", durationMs);
+              }
+  
+              // Set error context for Sentry
+              if (error instanceof Error) {
+                Sentry.setContext("db.error", {
+                  message: error.message,
+                  stack: error.stack,
+                  model,
+                  action,
+                });
+              }
+  
+              // Re-throw the error
+              throw error;
+            }
+          }
+        );
+      } catch (error) {
+        // Fallback: if Sentry.startSpan fails, just execute the query
+        // This ensures queries still work even if Sentry has issues
+        return next(params);
+      }
+    });
+    */
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXG9ic1xccHJpc21hU2VudHJ5LnRzIiwibWFwcGluZ3MiOiI7QUFBQTs7Ozs7Ozs7Ozs7Ozs7Ozs7OztHQW1CRzs7QUFlSCxnREE0RkM7QUFyR0QsdURBQXVEO0FBQ3ZELE1BQU0saUJBQWlCLEdBQUcsSUFBSSxPQUFPLEVBQWdCLENBQUM7QUFFdEQ7Ozs7O0dBS0c7QUFDSCxTQUFnQixrQkFBa0IsQ0FBQyxNQUFvQjtJQUNyRCw0Q0FBNEM7SUFDNUMsdUVBQXVFO0lBQ3ZFLDREQUE0RDtJQUU1RDs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7TUFzRkU7QUFDSixDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIkM6XFxEZXZcXFJlY2lwZSBBcHBcXHNyY1xcbGliXFxvYnNcXHByaXNtYVNlbnRyeS50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIFByaXNtYSBTZW50cnkgTWlkZGxld2FyZVxuICogXG4gKiBBdXRvbWF0aWNhbGx5IHdyYXBzIGFsbCBQcmlzbWEgcXVlcmllcyBpbiBTZW50cnkgcGVyZm9ybWFuY2Ugc3BhbnMgdG8gdHJhY2tcbiAqIGRhdGFiYXNlIHF1ZXJ5IHBlcmZvcm1hbmNlIGFuZCBlcnJvcnMuXG4gKiBcbiAqIEZlYXR1cmVzOlxuICogLSBDcmVhdGVzIHNwYW5zIGZvciBldmVyeSBQcmlzbWEgb3BlcmF0aW9uIHdpdGggbW9kZWwgYW5kIGFjdGlvbiB0YWdzXG4gKiAtIFRyYWNrcyBxdWVyeSBkdXJhdGlvbiBpbiBtaWxsaXNlY29uZHNcbiAqIC0gQ2FwdHVyZXMgZXJyb3JzIHdpdGggY29udGV4dFxuICogLSBTdXBwb3J0cyByYXRlIGxpbWl0aW5nIHZpYSBTRU5UUllfREJfU1BBTl9TQU1QTEUgKDAtMSwgZGVmYXVsdDogMS4wKVxuICogXG4gKiBVc2FnZTpcbiAqICAgaW1wb3J0IHsgcHJpc21hIH0gZnJvbSAnQC9saWIvZGInO1xuICogICAvLyBNaWRkbGV3YXJlIGlzIGF1dG9tYXRpY2FsbHkgYXR0YWNoZWQgd2hlbiBwcmlzbWEgaXMgY3JlYXRlZFxuICogXG4gKiBUdW5pbmc6XG4gKiAgIFNldCBTRU5UUllfREJfU1BBTl9TQU1QTEU9MC4xIGluIC5lbnYgdG8gc2FtcGxlIDEwJSBvZiBxdWVyaWVzIGluIHByb2R1Y3Rpb25cbiAqICAgU2V0IFNFTlRSWV9EQl9TUEFOX1NBTVBMRT0xLjAgdG8gY2FwdHVyZSBhbGwgcXVlcmllcyAoZGVmYXVsdCBpbiBkZXYpXG4gKi9cblxuLy8gU2VudHJ5IGRpc2FibGVkIC0gY2FuIGJlIHJlLWVuYWJsZWQgaW4gdGhlIGZ1dHVyZVxuLy8gaW1wb3J0ICogYXMgU2VudHJ5IGZyb20gXCJAc2VudHJ5L25leHRqc1wiO1xuaW1wb3J0IHR5cGUgeyBQcmlzbWFDbGllbnQgfSBmcm9tIFwiQHByaXNtYS9jbGllbnRcIjtcblxuLy8gR3VhcmQgZmxhZyB0byBwcmV2ZW50IGRvdWJsZSBpbnN0YWxsYXRpb24gZHVyaW5nIEhNUlxuY29uc3QgYXR0YWNoZWRJbnN0YW5jZXMgPSBuZXcgV2Vha1NldDxQcmlzbWFDbGllbnQ+KCk7XG5cbi8qKlxuICogQXR0YWNoZXMgU2VudHJ5IG1pZGRsZXdhcmUgdG8gYSBQcmlzbWEgY2xpZW50IGluc3RhbmNlLlxuICogVGhpcyBtdXN0IGJlIGNhbGxlZCBvbmx5IG9uY2UgcGVyIGNsaWVudCBpbnN0YW5jZSB0byBhdm9pZCBkdXBsaWNhdGUgc3BhbnMuXG4gKiBcbiAqIE5PVEU6IFNlbnRyeSBpcyBjdXJyZW50bHkgZGlzYWJsZWQgLSB0aGlzIGlzIGEgbm8tb3AgZnVuY3Rpb25cbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGF0dGFjaFByaXNtYVNlbnRyeShwcmlzbWE6IFByaXNtYUNsaWVudCk6IHZvaWQge1xuICAvLyBTZW50cnkgZGlzYWJsZWQgLSBmdW5jdGlvbiBpcyBub3cgYSBuby1vcFxuICAvLyBBbGwgdGhlIG9yaWdpbmFsIFNlbnRyeSBtaWRkbGV3YXJlIGNvZGUgaGFzIGJlZW4gY29tbWVudGVkIG91dCBiZWxvd1xuICAvLyBVbmNvbW1lbnQgYW5kIHJlc3RvcmUgdGhlIGltcG9ydHMgd2hlbiByZS1lbmFibGluZyBTZW50cnlcbiAgXG4gIC8qIE9yaWdpbmFsIFNlbnRyeSBjb2RlIChkaXNhYmxlZCk6XG4gIFxuICAvLyBHdWFyZDogRG9uJ3QgYXR0YWNoIHR3aWNlIHRvIHRoZSBzYW1lIGluc3RhbmNlXG4gIGlmIChhdHRhY2hlZEluc3RhbmNlcy5oYXMocHJpc21hKSkge1xuICAgIHJldHVybjtcbiAgfVxuXG4gIC8vIEd1YXJkOiBPbmx5IGF0dGFjaCBpZiBTZW50cnkgaXMgYXZhaWxhYmxlXG4gIGlmICh0eXBlb2YgU2VudHJ5LnN0YXJ0U3BhbiAhPT0gXCJmdW5jdGlvblwiKSB7XG4gICAgcmV0dXJuO1xuICB9XG5cbiAgLy8gR2V0IHNhbXBsaW5nIHJhdGUgKDAtMSksIGRlZmF1bHQgdG8gMS4wICgxMDAlKVxuICBjb25zdCBzYW1wbGVSYXRlID0gKCgpID0+IHtcbiAgICBjb25zdCBlbnZWYWx1ZSA9IHByb2Nlc3MuZW52LlNFTlRSWV9EQl9TUEFOX1NBTVBMRTtcbiAgICBpZiAoIWVudlZhbHVlKSByZXR1cm4gMS4wO1xuICAgIGNvbnN0IHBhcnNlZCA9IE51bWJlci5wYXJzZUZsb2F0KGVudlZhbHVlKTtcbiAgICBpZiAoTnVtYmVyLmlzTmFOKHBhcnNlZCkgfHwgcGFyc2VkIDwgMCB8fCBwYXJzZWQgPiAxKSByZXR1cm4gMS4wO1xuICAgIHJldHVybiBwYXJzZWQ7XG4gIH0pKCk7XG5cbiAgLy8gTWFyayB0aGlzIGluc3RhbmNlIGFzIGF0dGFjaGVkXG4gIGF0dGFjaGVkSW5zdGFuY2VzLmFkZChwcmlzbWEpO1xuXG4gIHByaXNtYS4kdXNlKGFzeW5jIChwYXJhbXMsIG5leHQpID0+IHtcbiAgICAvLyBBcHBseSByYXRlIGxpbWl0aW5nOiBza2lwIHNwYW4gY3JlYXRpb24gaWYgd2Ugc2hvdWxkbid0IHNhbXBsZSB0aGlzIHF1ZXJ5XG4gICAgaWYgKHNhbXBsZVJhdGUgPCAxLjAgJiYgTWF0aC5yYW5kb20oKSA+PSBzYW1wbGVSYXRlKSB7XG4gICAgICByZXR1cm4gbmV4dChwYXJhbXMpO1xuICAgIH1cblxuICAgIGNvbnN0IHN0YXJ0VGltZSA9IHBlcmZvcm1hbmNlLm5vdygpO1xuICAgIGNvbnN0IG1vZGVsID0gcGFyYW1zLm1vZGVsID8/IFwidW5rbm93blwiO1xuICAgIGNvbnN0IGFjdGlvbiA9IHBhcmFtcy5hY3Rpb247XG4gICAgY29uc3Qgc3Bhbk5hbWUgPSBgZGIuJHttb2RlbH0uJHthY3Rpb259YDtcblxuICAgIHRyeSB7XG4gICAgICByZXR1cm4gYXdhaXQgU2VudHJ5LnN0YXJ0U3BhbihcbiAgICAgICAge1xuICAgICAgICAgIG5hbWU6IHNwYW5OYW1lLFxuICAgICAgICAgIG9wOiBcImRiLnByaXNtYVwiLFxuICAgICAgICB9LFxuICAgICAgICBhc3luYyAoc3BhbikgPT4ge1xuICAgICAgICAgIHRyeSB7XG4gICAgICAgICAgICBjb25zdCByZXN1bHQgPSBhd2FpdCBuZXh0KHBhcmFtcyk7XG4gICAgICAgICAgICBjb25zdCBkdXJhdGlvbiA9IHBlcmZvcm1hbmNlLm5vdygpIC0gc3RhcnRUaW1lO1xuICAgICAgICAgICAgY29uc3QgZHVyYXRpb25NcyA9IE1hdGgucm91bmQoZHVyYXRpb24gKiAxMDApIC8gMTAwOyAvLyBSb3VuZCB0byAyIGRlY2ltYWwgcGxhY2VzXG5cbiAgICAgICAgICAgIC8vIFNldCB0YWdzIG9uIHRoZSBzcGFuXG4gICAgICAgICAgICBpZiAoc3Bhbikge1xuICAgICAgICAgICAgICBzcGFuLnNldEF0dHJpYnV0ZShcImRiLm1vZGVsXCIsIG1vZGVsKTtcbiAgICAgICAgICAgICAgc3Bhbi5zZXRBdHRyaWJ1dGUoXCJkYi5hY3Rpb25cIiwgYWN0aW9uKTtcbiAgICAgICAgICAgICAgc3Bhbi5zZXRBdHRyaWJ1dGUoXCJkYi5kdXJhdGlvbl9tc1wiLCBkdXJhdGlvbk1zKTtcbiAgICAgICAgICAgIH1cblxuICAgICAgICAgICAgcmV0dXJuIHJlc3VsdDtcbiAgICAgICAgICB9IGNhdGNoIChlcnJvcikge1xuICAgICAgICAgICAgY29uc3QgZHVyYXRpb24gPSBwZXJmb3JtYW5jZS5ub3coKSAtIHN0YXJ0VGltZTtcbiAgICAgICAgICAgIGNvbnN0IGR1cmF0aW9uTXMgPSBNYXRoLnJvdW5kKGR1cmF0aW9uICogMTAwKSAvIDEwMDtcblxuICAgICAgICAgICAgLy8gU2V0IGVycm9yIHRhZ3MgYW5kIGNvbnRleHRcbiAgICAgICAgICAgIGlmIChzcGFuKSB7XG4gICAgICAgICAgICAgIHNwYW4uc2V0QXR0cmlidXRlKFwiZGIuZXJyb3JcIiwgdHJ1ZSk7XG4gICAgICAgICAgICAgIHNwYW4uc2V0QXR0cmlidXRlKFwiZGIuZHVyYXRpb25fbXNcIiwgZHVyYXRpb25Ncyk7XG4gICAgICAgICAgICB9XG5cbiAgICAgICAgICAgIC8vIFNldCBlcnJvciBjb250ZXh0IGZvciBTZW50cnlcbiAgICAgICAgICAgIGlmIChlcnJvciBpbnN0YW5jZW9mIEVycm9yKSB7XG4gICAgICAgICAgICAgIFNlbnRyeS5zZXRDb250ZXh0KFwiZGIuZXJyb3JcIiwge1xuICAgICAgICAgICAgICAgIG1lc3NhZ2U6IGVycm9yLm1lc3NhZ2UsXG4gICAgICAgICAgICAgICAgc3RhY2s6IGVycm9yLnN0YWNrLFxuICAgICAgICAgICAgICAgIG1vZGVsLFxuICAgICAgICAgICAgICAgIGFjdGlvbixcbiAgICAgICAgICAgICAgfSk7XG4gICAgICAgICAgICB9XG5cbiAgICAgICAgICAgIC8vIFJlLXRocm93IHRoZSBlcnJvclxuICAgICAgICAgICAgdGhyb3cgZXJyb3I7XG4gICAgICAgICAgfVxuICAgICAgICB9XG4gICAgICApO1xuICAgIH0gY2F0Y2ggKGVycm9yKSB7XG4gICAgICAvLyBGYWxsYmFjazogaWYgU2VudHJ5LnN0YXJ0U3BhbiBmYWlscywganVzdCBleGVjdXRlIHRoZSBxdWVyeVxuICAgICAgLy8gVGhpcyBlbnN1cmVzIHF1ZXJpZXMgc3RpbGwgd29yayBldmVuIGlmIFNlbnRyeSBoYXMgaXNzdWVzXG4gICAgICByZXR1cm4gbmV4dChwYXJhbXMpO1xuICAgIH1cbiAgfSk7XG4gICovXG59XG5cbiJdLCJ2ZXJzaW9uIjozfQ==

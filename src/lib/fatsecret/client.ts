@@ -85,6 +85,23 @@ export interface FatSecretSearchOptions {
   pageNumber?: number;
 }
 
+export interface FatSecretAutocompleteHit {
+  value: string;
+}
+
+export interface FatSecretRecipeSummary {
+  id: string;
+  name: string;
+  description?: string | null;
+  servings?: number | null;
+  ingredients?: string[];
+}
+
+export interface FatSecretRecipeDetails extends FatSecretRecipeSummary {
+  ingredients: string[];
+  directions?: string | null;
+}
+
 export class FatSecretError extends Error {
   constructor(message: string, public status?: number, public responseBody?: any) {
     super(message);
@@ -163,6 +180,150 @@ export class FatSecretClient {
       null;
 
     return normalizeFoods(foodsNode);
+  }
+
+  async autocompleteFoods(query: string, maxResults = 10): Promise<FatSecretAutocompleteHit[]> {
+    if (!query.trim()) return [];
+    const response = await this.request<any>({
+      method: 'foods.autocomplete.v2',
+      expression: query,
+      max_results: String(maxResults),
+      region: FATSECRET_REGION,
+    });
+    const hits = response?.suggestions?.results?.suggestion ?? response?.suggestions?.suggestion;
+    if (!hits) return [];
+    const arr = Array.isArray(hits) ? hits : [hits];
+    return arr
+      .map((h: any) => ({ value: String(h?.value ?? '').trim() }))
+      .filter((h: FatSecretAutocompleteHit) => Boolean(h.value));
+  }
+
+  async searchRecipes(query: string, maxResults = 5, pageNumber = 0): Promise<FatSecretRecipeSummary[]> {
+    if (!query.trim()) return [];
+    const response = await this.request<any>({
+      method: 'recipes.search.v3',
+      search_expression: query,
+      max_results: String(maxResults),
+      page_number: String(pageNumber),
+    });
+    const recipesNode =
+      response?.recipes_search?.results?.recipe ??
+      response?.recipes?.recipe ??
+      response?.recipes_search?.recipe ??
+      null;
+    const arr = Array.isArray(recipesNode) ? recipesNode : recipesNode ? [recipesNode] : [];
+    return arr
+      .map((r: any) => ({
+        id: String(r?.recipe_id ?? '').trim(),
+        name: String(r?.recipe_name ?? '').trim(),
+        description: r?.recipe_description ?? null,
+        servings: r?.number_of_servings ? Number(r.number_of_servings) : null,
+        ingredients: extractRecipeIngredients(r),
+      }))
+      .filter((r: FatSecretRecipeSummary) => Boolean(r.id) && Boolean(r.name));
+  }
+
+  async getRecipeDetails(recipeId: string): Promise<FatSecretRecipeDetails | null> {
+    if (!recipeId) return null;
+    let response: any;
+    
+    // Try recipe.get.v3 first (singular, as per API docs)
+    try {
+      response = await this.request<any>({
+        method: 'recipe.get.v3',
+        recipe_id: recipeId,
+      });
+    } catch (err) {
+      // Log the error for debugging
+      if (err instanceof FatSecretError) {
+        logger.warn('fatsecret.recipe.get.v3_failed', {
+          recipeId,
+          status: err.status,
+          message: err.message,
+          responseBody: err.responseBody,
+        });
+      } else {
+        logger.warn('fatsecret.recipe.get.v3_error', {
+          recipeId,
+          message: (err as Error).message,
+        });
+      }
+      
+      // Try recipe.get.v2 (singular v2)
+      try {
+        response = await this.request<any>({
+          method: 'recipe.get.v2',
+          recipe_id: recipeId,
+        });
+        logger.info('fatsecret.recipe.get.v2_success', { recipeId });
+      } catch (v2Err) {
+        logger.warn('fatsecret.recipe.get.v2_failed', {
+          recipeId,
+          message: v2Err instanceof Error ? v2Err.message : String(v2Err),
+        });
+        
+        // Try recipes.get.v3 (plural, legacy support)
+        try {
+          response = await this.request<any>({
+            method: 'recipes.get.v3',
+            recipe_id: recipeId,
+          });
+          logger.info('fatsecret.recipes.get.v3_success', { recipeId });
+        } catch (pluralV3Err) {
+          logger.warn('fatsecret.recipes.get.v3_failed', {
+            recipeId,
+            message: pluralV3Err instanceof Error ? pluralV3Err.message : String(pluralV3Err),
+          });
+          
+          // Try recipes.get.v2 (plural v2, legacy support)
+          try {
+            response = await this.request<any>({
+              method: 'recipes.get.v2',
+              recipe_id: recipeId,
+            });
+            logger.info('fatsecret.recipes.get.v2_success', { recipeId });
+          } catch (pluralV2Err) {
+            logger.warn('fatsecret.recipes.get.v2_failed', {
+              recipeId,
+              message: pluralV2Err instanceof Error ? pluralV2Err.message : String(pluralV2Err),
+            });
+            // All methods failed, return null so callers can use search payload
+            return null;
+          }
+        }
+      }
+    }
+    const recipe = response?.recipe;
+    if (!recipe) {
+      logger.warn('fatsecret.recipe.get.no_recipe_in_response', {
+        recipeId,
+        responseKeys: Object.keys(response || {}),
+      });
+      return null;
+    }
+    const ingredientsRaw = recipe?.ingredients?.ingredient ?? recipe?.ingredients ?? [];
+    const ingredientsArr = Array.isArray(ingredientsRaw) ? ingredientsRaw : [ingredientsRaw];
+    const ingredients = ingredientsArr
+      .map((i: any) => String(i?.ingredient_description ?? i?.ingredient ?? '').trim())
+      .filter(Boolean);
+    const directions = Array.isArray(recipe?.directions?.direction)
+      ? recipe.directions.direction.map((d: any) => d?.direction_description).filter(Boolean).join('\n')
+      : recipe?.directions?.direction_description ?? recipe?.directions ?? null;
+    
+    logger.info('fatsecret.recipe.get.success', {
+      recipeId,
+      ingredientCount: ingredients.length,
+      hasDirections: !!directions,
+    });
+    
+    return {
+      id: String(recipe.recipe_id ?? '').trim(),
+      name: String(recipe.recipe_name ?? '').trim(),
+      description: recipe.recipe_description ?? null,
+      servings: recipe.number_of_servings ? Number(recipe.number_of_servings) : null,
+      ingredients: ingredients.length ? ingredients : extractRecipeIngredients(recipe),
+      directions,
+    };
   }
 
   async getFood(foodId: string): Promise<FatSecretFoodDetails | null> {
@@ -446,4 +607,12 @@ function parseNumber(value: any): number | null {
   if (value == null || value === '') return null;
   const num = Number.parseFloat(value);
   return Number.isFinite(num) ? num : null;
+}
+
+function extractRecipeIngredients(recipe: any): string[] {
+  const ingredientsRaw = recipe?.recipe_ingredients?.ingredient ?? recipe?.recipe_ingredients ?? [];
+  const arr = Array.isArray(ingredientsRaw) ? ingredientsRaw : [ingredientsRaw];
+  return arr
+    .map((i: any) => String(i?.ingredient ?? i?.ingredient_description ?? '').trim())
+    .filter(Boolean);
 }

@@ -1,0 +1,46 @@
+# FatSecret Cache Hydration Commands (updated)
+# Use PowerShell's `--%` before `--` if your shell eats npm flags, or run via npx as listed below.
+
+# ============================================================================
+# STEP 1: Build Manifests (curated CSV -> JSONL queue)
+# ============================================================================
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-build-manifest.ts --curated --curated-file=data/curated/beverages.csv --curated-output=data/fatsecret/bootstrap/beverages.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-build-manifest.ts --curated --curated-file=data/curated/produce_herbs.csv --curated-output=data/fatsecret/bootstrap/produce_herbs.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-build-manifest.ts --curated --curated-file=data/curated/breads_wraps.csv --curated-output=data/fatsecret/bootstrap/breads_wraps.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-build-manifest.ts --curated --curated-file=data/curated/seafood_extra.csv --curated-output=data/fatsecret/bootstrap/seafood_extra.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-build-manifest.ts --curated --curated-file=data/curated/chicken_variety.csv --curated-output=data/fatsecret/bootstrap/chicken_variety.jsonl
+
+# ============================================================================
+# STEP 2: Hydrate Cache (JSONL queue -> FatSecret cache tables)
+# ============================================================================
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-bootstrap.ts --file=data/fatsecret/bootstrap/beverages.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-bootstrap.ts --file=data/fatsecret/bootstrap/produce_herbs.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-bootstrap.ts --file=data/fatsecret/bootstrap/breads_wraps.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-bootstrap.ts --file=data/fatsecret/bootstrap/seafood_extra.jsonl
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-bootstrap.ts --file=data/fatsecret/bootstrap/chicken_variety.jsonl
+
+# ============================================================================
+# STEP 3: Verify, Backfill, and Report
+# ============================================================================
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-verify.ts --missing-servings
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-serving-gaps.ts
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-backfill-servings.ts
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-category-report.ts --output=data/fatsecret/cache-categories.txt
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-report.ts
+
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-coverage-report.ts --output=data/fatsecret/ingredient_map_coverage.txt

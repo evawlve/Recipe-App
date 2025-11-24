@@ -1,0 +1,48 @@
+{
+  "prep_phrases": [
+    "beaten",
+    "thinly",
+    "parboiled",
+    "cut into [0-9]+(\\s)?(inch|inches|in|cm|centimeter|centimeters)?\\b",
+    "cut into \\\"?.+?\\\\\"?",
+    "bone and skin removed",
+    "boneless skinless",
+    "links [0-9]+\\s*/?\\s*lb",
+    "less sodium",
+    "low sodium",
+    "extra",
+    "whole",
+    "split",
+    "cubed",
+    "diced",
+    "sliced",
+    "chopped",
+    "minced",
+    "roughly",
+    "trimmed"
+  ],
+  "size_phrases": [
+    "[0-9]+\\s*(inch|inches|in|cm|centimeter|centimeters)\\b",
+    "1\\s*\"",
+    "1\\s*inch",
+    "1\\s*cm"
+  ],
+  "synonym_rewrites": [
+    { "from": "cherries tomatoes", "to": "cherry tomatoes" },
+    { "from": "cherries tomato", "to": "cherry tomatoes" },
+    { "from": "green pepper", "to": "bell pepper" },
+    { "from": "green peppers", "to": "bell pepper" },
+    { "from": "hot sausage", "to": "spicy sausage" },
+    { "from": "mostaccioli", "to": "mostaccioli pasta" },
+    { "from": "less sodium soy sauce", "to": "low sodium soy sauce" },
+    { "from": "low sodium soy sauce", "to": "soy sauce low sodium" },
+    { "from": "cube chicken bouillon", "to": "chicken bouillon cube" },
+    { "from": "polish beef sausage", "to": "polish sausage" },
+    { "from": "polish sausage", "to": "kielbasa" },
+    { "from": "yellow deli mustard", "to": "yellow mustard" },
+    { "from": "hot sauce", "to": "hot pepper sauce" },
+    { "from": "red curry paste", "to": "thai red curry paste" },
+    { "from": "less sodium soy sauce", "to": "low sodium soy sauce" },
+    { "from": "links 4/lb", "to": "" }
+  ]
+}

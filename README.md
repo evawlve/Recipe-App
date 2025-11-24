@@ -13,6 +13,7 @@ A full-featured recipe management application with:
 - **Row Level Security (RLS)** for database-level security
 - **Recipe editing** with ownership validation
 - **Modern UI/UX** with consistent branding
+- **FatSecret migration guide** captured in `docs/FATSECRET_MIGRATION.md` for the cache rollout plan
 
 ## 🚀 Features
 

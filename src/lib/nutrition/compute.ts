@@ -5,6 +5,8 @@ import { logger } from '../logger';
 import { HEALTH_SCORE_V2, ENABLE_PORTION_V2 } from '../flags';
 import { scoreV2 } from './score-v2';
 import { resolvePortion, PortionSource } from './portion';
+import { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } from '../fatsecret/config';
+import { buildServingOptionsForCacheFood, extractCacheNutrients } from '../fatsecret/cache-search';
 
 export interface NutritionTotals {
   calories: number;
@@ -185,28 +187,64 @@ export async function computeTotals(
     }
   });
 
-  const ingredientContexts = ingredients.map(ingredient => {
-    const bestMapping = ingredient.foodMaps
+  const ingredientContexts = ingredients.map((ingredient) => {
+    const sorted = ingredient.foodMaps
       .slice()
-      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+      .sort((a, b) => {
+        const aConf = (a as any).fatsecretConfidence ?? a.confidence ?? 0;
+        const bConf = (b as any).fatsecretConfidence ?? b.confidence ?? 0;
+        const aIsFat = Boolean((a as any).fatsecretFoodId);
+        const bIsFat = Boolean((b as any).fatsecretFoodId);
+        if (aIsFat !== bIsFat) return aIsFat ? -1 : 1;
+        return bConf - aConf;
+      });
+    const bestMapping = sorted[0] ?? null;
     return { ingredient, bestMapping };
   });
 
+  const preferFatsecretCache = FATSECRET_CACHE_MODE_HELPERS.shouldServeCache;
+  const mappedFatsecretIds = Array.from(
+    new Set(
+      ingredientContexts
+        .map((ctx) => (ctx.bestMapping as any)?.fatsecretFoodId as string | undefined)
+        .filter(Boolean),
+    ),
+  );
+  const mappedFoodIds = Array.from(
+    new Set(
+      ingredientContexts
+        .map((ctx) => ctx.bestMapping?.food?.id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const fatsecretCacheLookup =
+    mappedFatsecretIds.length > 0
+      ? await prisma.fatSecretFoodCache.findMany({
+          where: { id: { in: mappedFatsecretIds } },
+          include: {
+            servings: true,
+            densityEstimates: true,
+            aliases: true,
+          },
+        })
+      : [];
+  const fatsecretCacheById = new Map(fatsecretCacheLookup.map((f) => [f.id, f]));
+  const fatsecretCacheByLegacyId = new Map(
+    preferFatsecretCache
+      ? fatsecretCacheLookup
+          .filter((f) => f.legacyFoodId)
+          .map((f) => [f.legacyFoodId as string, f])
+      : [],
+  );
+
   let userOverridesMap: Map<string, Array<{ unit: string; grams: number; label: string | null }>> | null = null;
   if (usePortionV2 && userId) {
-    const foodIds = Array.from(
-      new Set(
-        ingredientContexts
-          .map(ctx => ctx.bestMapping?.food?.id)
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-
-    if (foodIds.length > 0) {
+    if (mappedFoodIds.length > 0) {
       const overrides = await prisma.userPortionOverride.findMany({
         where: {
           userId,
-          foodId: { in: foodIds }
+          foodId: { in: mappedFoodIds }
         }
       });
 
@@ -239,6 +277,8 @@ export async function computeTotals(
 
   let portionStats: PortionResolutionStats | undefined;
   let portionConfidenceSum = 0;
+  let cacheNutritionHits = 0;
+  let cacheNutritionMisses = 0;
 
   if (usePortionV2) {
     portionStats = {
@@ -258,11 +298,116 @@ export async function computeTotals(
 
   for (const { ingredient, bestMapping } of ingredientContexts) {
     
+    const fatsecretFoodId = (bestMapping as any)?.fatsecretFoodId as string | undefined;
+    if (fatsecretFoodId) {
+      if (portionStats) {
+        portionStats.totalIngredients += 1;
+      }
+      const cacheFood = fatsecretCacheById.get(fatsecretFoodId);
+      if (!cacheFood) {
+        unmappedCount++;
+        continue;
+      }
+
+      const nutrients = extractCacheNutrients(cacheFood as any);
+      const { servingOptions, densityGml } = buildServingOptionsForCacheFood(cacheFood as any);
+
+      let grams: number | null = (bestMapping as any).fatsecretGrams ?? null;
+
+      const ingredientLine = ingredient.unit 
+        ? `${ingredient.qty} ${ingredient.unit} ${ingredient.name}`
+        : `${ingredient.qty} ${ingredient.name}`;
+      
+      const parsed = parseIngredientLine(ingredientLine);
+
+      const isDirectWeightUnit =
+        parsed?.unit &&
+        ['g', 'gram', 'grams', 'kg', 'kilogram', 'kilograms', 'oz', 'ounce', 'ounces', 'lb', 'pound', 'pounds'].includes(
+          parsed.unit.toLowerCase(),
+        );
+
+      if ((!grams || grams <= 0) && parsed && !isDirectWeightUnit) {
+        const resolved = resolveGramsFromParsed(parsed, servingOptions);
+        if (resolved && resolved > 0) {
+          grams = resolved;
+        }
+      }
+
+      if ((!grams || grams <= 0) && parsed && isDirectWeightUnit) {
+        grams = convertUnit(parsed.qty * parsed.multiplier, parsed.unit, parsed.name);
+      }
+
+      if (!grams || grams <= 0) {
+        unmappedCount++;
+        continue;
+      }
+
+      const multiplier = grams / 100;
+      const kcal100 = nutrients?.calories ?? 0;
+      const protein100 = nutrients?.protein ?? 0;
+      const carbs100 = nutrients?.carbs ?? 0;
+      const fat100 = nutrients?.fat ?? 0;
+      const fiber100 = nutrients?.fiber ?? 0;
+      const sugar100 = nutrients?.sugar ?? 0;
+
+      const ingredientCalories = kcal100 * multiplier;
+      totals.calories += ingredientCalories;
+      totals.proteinG += protein100 * multiplier;
+      totals.carbsG += carbs100 * multiplier;
+      totals.fatG += fat100 * multiplier;
+      totals.fiberG += fiber100 * multiplier;
+      totals.sugarG += sugar100 * multiplier;
+
+      totalCal += ingredientCalories;
+
+      const confidence = (bestMapping as any).fatsecretConfidence ?? bestMapping.confidence ?? 0;
+      const isUseOnce = bestMapping.useOnce || false;
+      if (confidence < 0.5 || isUseOnce) {
+        lowConfCal += ingredientCalories;
+      }
+
+      if (portionStats) {
+        portionStats.resolvedCount += 1;
+        portionStats.bySource['fatsecret'] = (portionStats.bySource['fatsecret'] || 0) + 1;
+        portionConfidenceSum += confidence;
+        if (recordSamples && portionStats.sample.length < 5) {
+          portionStats.sample.push({
+            ingredientId: ingredient.id,
+            ingredientName: ingredient.name,
+            foodId: fatsecretFoodId,
+            qty: ingredient.qty,
+            unit: ingredient.unit,
+            grams,
+            source: 'fatsecret' as PortionSource,
+            confidence,
+            tier: 0,
+            notes: densityGml ? `density=${densityGml}` : undefined,
+          });
+        }
+      }
+
+      continue;
+    }
+
     if (bestMapping?.food) {
       if (portionStats) {
         portionStats.totalIngredients += 1;
       }
       const food = bestMapping.food;
+      const cacheFood = preferFatsecretCache ? fatsecretCacheByLegacyId.get(food.id) : undefined;
+      const cacheServingData = cacheFood ? buildServingOptionsForCacheFood(cacheFood as any) : null;
+      const cacheUnits =
+        cacheServingData?.servingOptions?.map((opt) => ({ label: opt.label, grams: opt.grams })) ??
+        null;
+      const cacheDensity = cacheServingData?.densityGml ?? undefined;
+      const cacheMacros = cacheFood ? extractCacheNutrients(cacheFood as any) : null;
+      if (preferFatsecretCache) {
+        if (cacheFood) {
+          cacheNutritionHits += 1;
+        } else {
+          cacheNutritionMisses += 1;
+        }
+      }
       
       let grams: number;
       const ingredientLine = ingredient.unit 
@@ -272,16 +417,24 @@ export async function computeTotals(
       const parsed = parseIngredientLine(ingredientLine);
       let resolution: ReturnType<typeof resolvePortion> | null = null;
 
-      if (usePortionV2 && parsed) {
+      // If the user already supplied a weight unit (g/oz/lb), trust it instead of multiplying
+      // through serving options (which would treat qty as "servings").
+      const isDirectWeightUnit =
+        parsed?.unit &&
+        ['g', 'gram', 'grams', 'kg', 'kilogram', 'kilograms', 'oz', 'ounce', 'ounces', 'lb', 'pound', 'pounds'].includes(
+          parsed.unit.toLowerCase(),
+        );
+
+      if (usePortionV2 && parsed && !isDirectWeightUnit) {
         // Type assertion needed because Prisma's include creates union types
-        const foodUnits = (food as any).units as Array<{ label: string; grams: number }> | undefined;
+        const foodUnits = cacheUnits ?? ((food as any).units as Array<{ label: string; grams: number }> | undefined);
         const foodPortionOverrides = (food as any).portionOverrides as Array<{ unit: string; grams: number; label: string | null }> | undefined;
         
         resolution = resolvePortion({
           food: {
             id: food.id,
             name: food.name,
-            densityGml: food.densityGml ?? undefined,
+            densityGml: cacheDensity ?? food.densityGml ?? undefined,
             categoryId: food.categoryId ?? null,
             units: foodUnits?.map(u => (u ? { label: u.label, grams: u.grams } : null)) ?? [],
             portionOverrides: foodPortionOverrides?.map(o =>
@@ -303,20 +456,21 @@ export async function computeTotals(
         grams = resolution.grams;
       } else if (parsed) {
         // Type assertion for units (Prisma include creates union types)
-        const foodUnits = (food as any).units as Array<{ label: string; grams: number }> | undefined;
+        const foodUnits = cacheUnits ?? ((food as any).units as Array<{ label: string; grams: number }> | undefined);
         const servingOptions = deriveServingOptions({
-          units: foodUnits?.map(u => ({ label: u.label, grams: u.grams })) ?? [],
-          densityGml: food.densityGml ?? undefined,
+          units: foodUnits?.map(u => ({ label: u?.label ?? '', grams: u?.grams ?? 0 })) ?? [],
+          densityGml: cacheDensity ?? food.densityGml ?? undefined,
           categoryId: food.categoryId ?? null,
         });
         
         // Try to resolve using parsed data and serving options
-        const resolvedGrams = resolveGramsFromParsed(parsed, servingOptions);
+        const resolvedGrams =
+          !isDirectWeightUnit ? resolveGramsFromParsed(parsed, servingOptions) : null;
         
         if (resolvedGrams !== null && resolvedGrams > 0) {
           grams = resolvedGrams;
         } else {
-          // Fallback to old conversion if resolution fails
+          // Fallback to old conversion if resolution fails or for direct weight units
           grams = convertUnit(ingredient.qty, ingredient.unit, ingredient.name);
         }
       } else {
@@ -358,14 +512,20 @@ export async function computeTotals(
       }
       
       const multiplier = grams / 100; // Convert to per-100g basis
-      
-      const ingredientCalories = food.kcal100 * multiplier;
+      const kcal100 = cacheMacros?.calories ?? food.kcal100 ?? 0;
+      const protein100 = cacheMacros?.protein ?? food.protein100 ?? 0;
+      const carbs100 = cacheMacros?.carbs ?? food.carbs100 ?? 0;
+      const fat100 = cacheMacros?.fat ?? food.fat100 ?? 0;
+      const fiber100 = cacheMacros?.fiber ?? food.fiber100 ?? 0;
+      const sugar100 = cacheMacros?.sugar ?? food.sugar100 ?? 0;
+
+      const ingredientCalories = kcal100 * multiplier;
       totals.calories += ingredientCalories;
-      totals.proteinG += food.protein100 * multiplier;
-      totals.carbsG += food.carbs100 * multiplier;
-      totals.fatG += food.fat100 * multiplier;
-      totals.fiberG += (food.fiber100 || 0) * multiplier;
-      totals.sugarG += (food.sugar100 || 0) * multiplier;
+      totals.proteinG += protein100 * multiplier;
+      totals.carbsG += carbs100 * multiplier;
+      totals.fatG += fat100 * multiplier;
+      totals.fiberG += fiber100 * multiplier;
+      totals.sugarG += sugar100 * multiplier;
 
       // Track calories for provisional calculation
       totalCal += ingredientCalories;
@@ -427,6 +587,15 @@ export async function computeTotals(
 
   if (portionStats) {
     result.portionStats = portionStats;
+  }
+
+  if (preferFatsecretCache) {
+    logger.info('fatsecret.nutrition.cache_usage', {
+      cacheMode: FATSECRET_CACHE_MODE,
+      mappedFoods: mappedFoodIds.length,
+      cacheHits: cacheNutritionHits,
+      cacheMisses: cacheNutritionMisses,
+    });
   }
 
   return result;
@@ -503,16 +672,16 @@ export async function computeRecipeNutrition(
       select: { authorId: true }
     });
     // Get all ingredients to check for unmapped ones
-    const ingredients = await prisma.ingredient.findMany({
-      where: { recipeId },
-      include: {
-        foodMaps: true
-      }
-    });
+  const ingredients = await prisma.ingredient.findMany({
+    where: { recipeId },
+    include: {
+      foodMaps: true
+    }
+  });
     console.log('Found', ingredients.length, 'ingredients');
   
-  const unmappedIngredients = ingredients
-    .filter(ing => ing.foodMaps.length === 0)
+const unmappedIngredients = ingredients
+    .filter(ing => ing.foodMaps.every(m => !(m as any).fatsecretFoodId && !m.foodId))
     .map(ing => ing.name);
   
   // Compute totals with provisional tracking
@@ -600,7 +769,7 @@ export async function getUnmappedIngredients(recipeId: string): Promise<Array<{ 
   });
   
   return ingredients
-    .filter(ing => ing.foodMaps.length === 0)
+    .filter(ing => ing.foodMaps.every(m => !(m as any).fatsecretFoodId && !m.foodId))
     .map(ing => ({
       id: ing.id,
       name: ing.name,

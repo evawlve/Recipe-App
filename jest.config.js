@@ -1,7 +1,11 @@
+// Force Jest to use a WSL-writeable temp dir instead of the Windows Temp path.
+process.env.TMPDIR = process.env.TMPDIR || '/tmp';
+
 module.exports = {
   projects: [
     {
       displayName: 'api',
+      cacheDirectory: '<rootDir>/tmp/jest-cache',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/src/app/**/*.test.ts', '<rootDir>/src/lib/**/*.test.ts', '<rootDir>/src/ops/**/*.test.ts'],
       transform: {
@@ -13,6 +17,7 @@ module.exports = {
     },
     {
       displayName: 'components',
+      cacheDirectory: '<rootDir>/tmp/jest-cache',
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/src/components/**/*.test.tsx'],
       transform: {

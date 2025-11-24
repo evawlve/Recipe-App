@@ -130,6 +130,16 @@ export async function DELETE(
     prisma.recipeTag.deleteMany({ where: { recipeId: id } }),
     prisma.collectionRecipe.deleteMany({ where: { recipeId: id } }),
     prisma.nutrition.deleteMany({ where: { recipeId: id } }),
+    prisma.recipeView.deleteMany({ where: { recipeId: id } }),
+    prisma.recipeInteractionDaily.deleteMany({ where: { recipeId: id } }),
+    prisma.recipeSimilar.deleteMany({ 
+      where: { 
+        OR: [
+          { recipeId: id },
+          { similarId: id }
+        ]
+      } 
+    }),
     prisma.recipe.delete({ where: { id } }),
   ]);
 

@@ -15,6 +15,8 @@ export interface CacheFoodOptions {
   client?: FatSecretClient;
   source?: string;
   legacyFoodId?: string;
+  searchQuery?: string;
+  allowNextBest?: boolean;
 }
 
 export interface CachedFoodResult {
@@ -63,27 +65,57 @@ export async function upsertFoodFromApi(
 ): Promise<FatSecretFoodCache | null> {
   if (!fatsecretId) return null;
   const client = options.client ?? defaultClient;
-  const details = await client.getFood(fatsecretId);
+  let details = await client.getFood(fatsecretId);
   if (!details) {
     logger.warn({ fatsecretId }, 'FatSecret cache: no food details returned');
     return null;
   }
 
+  let resolvedFoodId = fatsecretId;
+  let servings = normalizeServings(details);
+  let nutrients = deriveNutrients(details);
+  const fallbackQuery = options.searchQuery?.trim() || details.name?.trim() || '';
+
+  // If the top hit lacks nutrients or serving weight/volume, try the next-best search result.
+  if (
+    fallbackQuery &&
+    options.allowNextBest !== false &&
+    shouldTryNextBest(servings, nutrients)
+  ) {
+    const fallback = await pickNextBestFatSecretResult({
+      client,
+      query: fallbackQuery,
+      excludeId: fatsecretId,
+    });
+    if (fallback) {
+      details = fallback;
+      resolvedFoodId = fallback.id;
+      servings = normalizeServings(details);
+      nutrients = deriveNutrients(details);
+      logger.info(
+        {
+          requestedId: fatsecretId,
+          fallbackId: resolvedFoodId,
+          query: fallbackQuery,
+        },
+        'fatsecret.cache.next_best_fallback_used',
+      );
+    }
+  }
+
   const hash = hashFoodDetails(details);
   const expiresAt = new Date(Date.now() + FATSECRET_CACHE_MAX_AGE_MINUTES * MS_PER_MINUTE);
-  const nutrients = deriveNutrients(details);
   const aliases = buildAliasList(details);
-  const servings = normalizeServings(details);
 
   return prisma.$transaction(async (tx) => {
-    await tx.fatSecretServingCache.deleteMany({ where: { foodId: fatsecretId } });
-    await tx.fatSecretFoodAlias.deleteMany({ where: { foodId: fatsecretId } });
-    await tx.fatSecretDensityEstimate.deleteMany({ where: { foodId: fatsecretId } });
+    await tx.fatSecretServingCache.deleteMany({ where: { foodId: resolvedFoodId } });
+    await tx.fatSecretFoodAlias.deleteMany({ where: { foodId: resolvedFoodId } });
+    await tx.fatSecretDensityEstimate.deleteMany({ where: { foodId: resolvedFoodId } });
 
     const food = await tx.fatSecretFoodCache.upsert({
-      where: { id: fatsecretId },
+      where: { id: resolvedFoodId },
       create: {
-        id: fatsecretId,
+        id: resolvedFoodId,
         name: details.name,
         brandName: details.brandName,
         foodType: details.foodType,
@@ -99,6 +131,7 @@ export async function upsertFoodFromApi(
         expiresAt,
       },
       update: {
+        id: resolvedFoodId,
         name: details.name,
         brandName: details.brandName,
         foodType: details.foodType,
@@ -123,7 +156,7 @@ export async function upsertFoodFromApi(
         if (!cachedId) {
           const density = await tx.fatSecretDensityEstimate.create({
             data: {
-              foodId: fatsecretId,
+              foodId: resolvedFoodId,
               densityGml: serving.densityGml,
               source: serving.densitySource ?? 'fatsecret_serving',
               confidence: serving.densityConfidence ?? 0.9,
@@ -139,7 +172,7 @@ export async function upsertFoodFromApi(
       await tx.fatSecretServingCache.create({
         data: {
           id: serving.id,
-          foodId: fatsecretId,
+          foodId: resolvedFoodId,
           measurementDescription: serving.measurementDescription,
           numberOfUnits: serving.numberOfUnits,
           metricServingAmount: serving.metricServingAmount,
@@ -157,7 +190,7 @@ export async function upsertFoodFromApi(
     if (aliases.length > 0) {
       await tx.fatSecretFoodAlias.createMany({
         data: aliases.map((alias) => ({
-          foodId: fatsecretId,
+          foodId: resolvedFoodId,
           alias,
           source: alias.includes(details.name) ? 'fatsecret' : 'derived',
         })),
@@ -185,6 +218,51 @@ type NormalizedServing = {
   densityConfidence?: number;
   densityNote?: string;
 };
+
+function shouldTryNextBest(
+  servings: NormalizedServing[],
+  nutrients: Prisma.JsonObject | null,
+): boolean {
+  const hasWeight = servings.some((s) => (s.servingWeightGrams ?? 0) > 0);
+  const hasVolume = servings.some((s) => (s.volumeMl ?? 0) > 0 || s.isVolume);
+  const missingServings = !hasWeight && !hasVolume;
+  return missingServings || nutrients == null;
+}
+
+async function pickNextBestFatSecretResult({
+  client,
+  query,
+  excludeId,
+}: {
+  client: FatSecretClient;
+  query: string;
+  excludeId?: string;
+}): Promise<FatSecretFoodDetails | null> {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+  try {
+    const searchResults = await client.searchFoodsV4(trimmed, { maxResults: 5 });
+    const candidates = searchResults.filter((f) => f.id !== excludeId).slice(0, 2);
+    for (const candidate of candidates) {
+      const details = await client.getFood(candidate.id);
+      if (!details) continue;
+      const servings = normalizeServings(details);
+      const nutrients = deriveNutrients(details);
+      if (!shouldTryNextBest(servings, nutrients)) {
+        return details;
+      }
+    }
+  } catch (error) {
+    logger.warn(
+      {
+        query,
+        message: (error as Error).message,
+      },
+      'fatsecret.cache.next_best_lookup_failed',
+    );
+  }
+  return null;
+}
 
 function normalizeServings(details: FatSecretFoodDetails): NormalizedServing[] {
   if (!details.servings || details.servings.length === 0) return [];
