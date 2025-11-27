@@ -3,6 +3,7 @@ import {
   FATSECRET_CACHE_AI_MODEL,
   OPENAI_API_BASE_URL,
 } from './config';
+import { getAiNormalizeCache, saveAiNormalizeCache } from './validated-mapping-helpers';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
@@ -44,15 +45,19 @@ const SYSTEM_PROMPT = [
   'Do not invent foods; stay close to the ingredient meaning. If truly unclear, set error.',
 ].join(' ');
 
-const cache = new Map<string, AiNormalizeSuccess>();
-
 export async function aiNormalizeIngredient(
   rawLine: string,
   cleanedInput?: string
 ): Promise<AiNormalizeResult> {
-  if (cache.has(rawLine)) {
-    return cache.get(rawLine)!;
+  // Check persistent database cache first
+  const cached = await getAiNormalizeCache(rawLine);
+  if (cached) {
+    return {
+      status: 'success',
+      ...cached,
+    };
   }
+
   if (!OPENAI_API_KEY) {
     return { status: 'error', reason: 'OPENAI_API_KEY missing' };
   }
@@ -105,7 +110,15 @@ export async function aiNormalizeIngredient(
       sizePhrases: parsed.size_phrases.filter((p: unknown) => typeof p === 'string'),
       synonyms: parsed.synonyms.filter((s: unknown) => typeof s === 'string'),
     };
-    cache.set(rawLine, result);
+
+    // Save to persistent database cache
+    await saveAiNormalizeCache(rawLine, {
+      normalizedName: result.normalizedName,
+      synonyms: result.synonyms,
+      prepPhrases: result.prepPhrases,
+      sizePhrases: result.sizePhrases,
+    });
+
     return result;
   } catch (err) {
     return { status: 'error', reason: (err as Error).message };

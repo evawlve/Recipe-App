@@ -1,0 +1,202 @@
+[
+  {
+    "keyword": "beef",
+    "recipeId": "cmicnfwuj00017514g6ftq2ra",
+    "title": "Hamburger Seasoning Mix",
+    "ingredientCount": 10,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T04:35:13.840Z"
+  },
+  {
+    "keyword": "beef",
+    "recipeId": "cmicnlczs00397514ebabdnj9",
+    "title": "Smothered Crock Pot Steak",
+    "ingredientCount": 7,
+    "mapResult": 3,
+    "timestamp": "2025-11-24T04:38:30.440Z"
+  },
+  {
+    "keyword": "beef",
+    "recipeId": "cmicnpkow006b7514ad329232",
+    "title": "Busy Day Beef Stew",
+    "ingredientCount": 11,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T04:43:27.285Z"
+  },
+  {
+    "keyword": "beef",
+    "recipeId": "cmicnvxqx00ak7514svfkayhd",
+    "title": "Ragu Meatloaf",
+    "ingredientCount": 13,
+    "mapResult": 11,
+    "timestamp": "2025-11-24T04:47:52.886Z"
+  },
+  {
+    "keyword": "beef",
+    "recipeId": "cmico1mob00dt7514k5pplj2m",
+    "title": "Christmas Prime Rib",
+    "ingredientCount": 9,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T04:52:09.794Z"
+  },
+  {
+    "keyword": "high-protein",
+    "recipeId": "cmico750w00gm7514ca2gr5ge",
+    "title": "Protein Bread",
+    "ingredientCount": 5,
+    "mapResult": 4,
+    "timestamp": "2025-11-24T04:54:17.180Z"
+  },
+  {
+    "keyword": "high-protein",
+    "recipeId": "cmico9v7f00ik7514fswjn9hh",
+    "title": "Protein Dessert",
+    "ingredientCount": 7,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T04:56:50.818Z"
+  },
+  {
+    "keyword": "high-protein",
+    "recipeId": "cmicod5sm00ju7514tcb2dsd6",
+    "title": "Protein Pancakes",
+    "ingredientCount": 8,
+    "mapResult": 6,
+    "timestamp": "2025-11-24T05:00:27.373Z"
+  },
+  {
+    "keyword": "high-protein",
+    "recipeId": "cmicohsuk00md75148p0wzcbt",
+    "title": "Protein Shake",
+    "ingredientCount": 4,
+    "mapResult": 3,
+    "timestamp": "2025-11-24T05:02:23.333Z"
+  },
+  {
+    "keyword": "high-protein",
+    "recipeId": "cmicokabc00nh75145mqxlch8",
+    "title": "Protein Balls",
+    "ingredientCount": 5,
+    "mapResult": 4,
+    "timestamp": "2025-11-24T05:04:53.483Z"
+  },
+  {
+    "keyword": "chicken",
+    "recipeId": "cmiconii900oa7514rpqh6cfk",
+    "title": "Honey Lime Chicken",
+    "ingredientCount": 8,
+    "mapResult": 8,
+    "timestamp": "2025-11-24T05:07:16.917Z"
+  },
+  {
+    "keyword": "chicken",
+    "recipeId": "cmicoqkuj00qn7514d3d9f766",
+    "title": "Chicken Vegetable Stir-Fry",
+    "ingredientCount": 10,
+    "mapResult": 6,
+    "timestamp": "2025-11-24T05:11:31.173Z"
+  },
+  {
+    "keyword": "chicken",
+    "recipeId": "cmicow1co00to7514afxmics8",
+    "title": "Teriyaki Chicken",
+    "ingredientCount": 6,
+    "mapResult": 5,
+    "timestamp": "2025-11-24T05:13:58.898Z"
+  },
+  {
+    "keyword": "chicken",
+    "recipeId": "cmicoz70900un7514yrltk5u2",
+    "title": "Lemon Pepper Chicken",
+    "ingredientCount": 3,
+    "mapResult": 1,
+    "timestamp": "2025-11-24T05:15:00.028Z"
+  },
+  {
+    "keyword": "chicken",
+    "recipeId": "cmicp0i6q00vn7514fdotejcj",
+    "title": "General Tsao Chicken",
+    "ingredientCount": 12,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T05:20:14.928Z"
+  },
+  {
+    "keyword": "pasta",
+    "recipeId": "cmicp798r01017514jt6ejddz",
+    "title": "Pasta Primavera Alfredo",
+    "ingredientCount": 10,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T05:24:07.634Z"
+  },
+  {
+    "keyword": "pasta",
+    "recipeId": "cmicpc8wu012q751488jtfv99",
+    "title": "Chicken Artichoke Pasta",
+    "ingredientCount": 12,
+    "mapResult": 11,
+    "timestamp": "2025-11-24T05:29:50.414Z"
+  },
+  {
+    "keyword": "pasta",
+    "recipeId": "cmicpjl7f01577514et2h3pd0",
+    "title": "One Pan Enchilada Pasta",
+    "ingredientCount": 9,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T05:33:30.569Z"
+  },
+  {
+    "keyword": "pasta",
+    "recipeId": "cmicpob8x017x75146f9bkiz3",
+    "title": "Lasagna",
+    "ingredientCount": 11,
+    "mapResult": 9,
+    "timestamp": "2025-11-24T05:37:49.706Z"
+  },
+  {
+    "keyword": "pasta",
+    "recipeId": "cmicptv1e01a37514hod76ppk",
+    "title": "Protein Pasta Salad",
+    "ingredientCount": 8,
+    "mapResult": 6,
+    "timestamp": "2025-11-24T05:41:11.864Z"
+  },
+  {
+    "keyword": "salad",
+    "recipeId": "cmicpy7lv01ci7514b6ns60ih",
+    "title": "Mixed Vegetable Salad",
+    "ingredientCount": 7,
+    "mapResult": 7,
+    "timestamp": "2025-11-24T05:43:13.445Z"
+  },
+  {
+    "keyword": "salad",
+    "recipeId": "cmicq0t3r01dw7514h2ntyohr",
+    "title": "Salad Mix",
+    "ingredientCount": 5,
+    "mapResult": 3,
+    "timestamp": "2025-11-24T05:45:26.997Z"
+  },
+  {
+    "keyword": "salad",
+    "recipeId": "cmicq3nw201g07514nvfrsm8n",
+    "title": "Avocado Salad",
+    "ingredientCount": 7,
+    "mapResult": 4,
+    "timestamp": "2025-11-24T05:47:35.808Z"
+  },
+  {
+    "keyword": "salad",
+    "recipeId": "cmicq6f9t01hs7514bmysz31a",
+    "title": "Cucumber, Tomato and Onion Salad",
+    "ingredientCount": 7,
+    "mapResult": 6,
+    "timestamp": "2025-11-24T05:48:54.961Z"
+  },
+  {
+    "keyword": "salad",
+    "recipeId": "cmicq84ck01in751451ew8mpr",
+    "title": "Chopped Chicken Salad",
+    "ingredientCount": 12,
+    "mapResult": 8,
+    "timestamp": "2025-11-24T05:53:42.479Z"
+  }
+]

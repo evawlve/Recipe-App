@@ -1,0 +1,18 @@
+DEBUG: candidates found 1
+DEBUG: hydrate details 123 1
+DEBUG: servingSelection {"serving":{"id":"s1","measurementDescription":"1 serving","metricServingAmount":100,"metricServingUnit":"g","servingWeightGrams":100},"matchScore":0.12,"gramsPerUnit":100,"unitsPerServing":1,"baseGrams":100} parsed: null
+DEBUG: candidates found 1
+DEBUG: hydrate details 456 0
+DEBUG: servingSelection {"serving":{"id":"s2","measurementDescription":"1 serving","metricServingAmount":100,"metricServingUnit":"g","servingWeightGrams":100},"matchScore":0.12,"gramsPerUnit":100,"unitsPerServing":1,"baseGrams":100} parsed: null
+DEBUG: candidates found 1
+DEBUG: hydrate details 123 1
+DEBUG: servingSelection {"serving":{"id":"s1","measurementDescription":"1 serving","metricServingAmount":100,"metricServingUnit":"g","servingWeightGrams":100,"calories":100,"protein":10,"carbohydrate":10,"fat":10},"matchScore":0.12,"gramsPerUnit":100,"unitsPerServing":1,"baseGrams":100} parsed: null
+DEBUG: candidates found 1
+DEBUG: hydrate details 456 0
+DEBUG: servingSelection {"serving":{"id":"s2","measurementDescription":"1 serving","metricServingAmount":100,"metricServingUnit":"g","servingWeightGrams":100,"calories":100,"protein":10,"carbohydrate":10,"fat":10},"matchScore":0.12,"gramsPerUnit":100,"unitsPerServing":1,"baseGrams":100} parsed: null
+DEBUG: candidates found 1
+DEBUG: hydrate details 123 1
+DEBUG: servingSelection {"serving":{"id":"s1","measurementDescription":"1 serving","metricServingAmount":100,"metricServingUnit":"g","servingWeightGrams":100,"calories":100,"protein":10,"carbohydrate":10,"fat":10},"matchScore":0.12,"gramsPerUnit":100,"unitsPerServing":1,"baseGrams":100} parsed: null
+DEBUG: candidates found 1
+DEBUG: hydrate details 456 0
+DEBUG: servingSelection {"serving":{"id":"s2","measurementDescription":"1 serving","metricServingAmount":100,"metricServingUnit":"g","servingWeightGrams":100,"calories":100,"protein":10,"carbohydrate":10,"fat":10},"matchScore":0.12,"gramsPerUnit":100,"unitsPerServing":1,"baseGrams":100} parsed: null

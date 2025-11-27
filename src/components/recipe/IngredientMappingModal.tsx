@@ -57,11 +57,11 @@ interface IngredientMappingModalProps {
   onMappingComplete?: () => void;
 }
 
-export function IngredientMappingModal({ 
-  isOpen, 
-  onClose, 
-  recipeId, 
-  onMappingComplete 
+export function IngredientMappingModal({
+  isOpen,
+  onClose,
+  recipeId,
+  onMappingComplete
 }: IngredientMappingModalProps) {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
@@ -144,11 +144,11 @@ export function IngredientMappingModal({
   const loadIngredients = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(`/api/recipes/${recipeId}/ingredients`);
       const result = await response.json();
-      
+
       if (result.success) {
         setIngredients(result.data || []);
       } else {
@@ -186,13 +186,13 @@ export function IngredientMappingModal({
       // Search local database first
       const localResponse = await fetch(`/api/foods/search?s=${encodeURIComponent(query)}`);
       const localResult = await localResponse.json();
-      
+
       let allResults: Food[] = [];
-      
+
       if (localResult.success && localResult.data.length > 0) {
         allResults = [...localResult.data];
         setSearchResults(prev => ({ ...prev, [ingredientId]: allResults }));
-        
+
         // Mark community foods as deletable
         const communityFoods = allResults.filter(food => food.source === 'community');
         if (communityFoods.length > 0) {
@@ -202,7 +202,7 @@ export function IngredientMappingModal({
             return newSet;
           });
         }
-        
+
         console.log(`Search results for ${ingredientId} (${query}):`, allResults.length, 'results');
       } else {
         // If no results found, try to find the mapped food by ID
@@ -228,50 +228,50 @@ export function IngredientMappingModal({
           }
         }
       }
-      
+
       // Update state to show USDA search
       setSearchStates(prev => ({ ...prev, [ingredientId]: 'Searching USDA...' }));
-      
+
       // TODO: Add USDA search here when implemented
       // const usdaResults = await searchUSDAFoods(query);
       // if (usdaResults.length > 0) {
       //   allResults = [...allResults, ...usdaResults];
       //   setSearchResults(prev => ({ ...prev, [ingredientId]: allResults }));
       // }
-      
+
       // Update state to show OpenFoodFacts search
       setSearchStates(prev => ({ ...prev, [ingredientId]: 'Searching OpenFoodFacts...' }));
-      
+
       // TODO: Add OpenFoodFacts search here when implemented
       // const offResults = await searchOpenFoodFacts(query);
       // if (offResults.length > 0) {
       //   allResults = [...allResults, ...offResults];
       //   setSearchResults(prev => ({ ...prev, [ingredientId]: allResults }));
       // }
-      
+
       // Final state update
       if (allResults.length === 0) {
         setSearchStates(prev => ({ ...prev, [ingredientId]: 'No results—try a simpler term' }));
       } else {
         setSearchStates(prev => ({ ...prev, [ingredientId]: '' }));
-        
+
         // Auto-select exact matches (case-insensitive and with common variations)
         const exactMatch = allResults.find((food: any) => {
           const foodName = food.name.toLowerCase();
           const queryLower = query.toLowerCase();
-          
+
           // Direct match
           if (foodName === queryLower) return true;
-          
+
           // Handle common variations
           if (queryLower === 'greek yogurt' && foodName.includes('greek') && foodName.includes('yogurt')) return true;
           if (queryLower === 'almonds' && foodName === 'almonds') return true;
           if (queryLower === 'banana' && foodName === 'banana') return true;
           if (queryLower === 'oats' && foodName === 'oats') return true;
-          
+
           return false;
         });
-        
+
         if (exactMatch && !selectedFoods[ingredientId]) {
           selectFood(ingredientId, exactMatch.id);
         }
@@ -284,7 +284,7 @@ export function IngredientMappingModal({
 
   const handleSearchChange = (ingredientId: string, query: string) => {
     setSearchQueries(prev => ({ ...prev, [ingredientId]: query }));
-    
+
     // Clear search results for other ingredients when searching, but preserve automapped results
     setSearchResults(prev => {
       const newResults = { ...prev };
@@ -299,12 +299,12 @@ export function IngredientMappingModal({
       });
       return newResults;
     });
-    
+
     // Clear any existing timeout for this ingredient
     if (searchTimeouts.current[ingredientId]) {
       clearTimeout(searchTimeouts.current[ingredientId]);
     }
-    
+
     // Set up new debounced search
     if (query.length >= 2) {
       const timeoutId = setTimeout(async () => {
@@ -355,9 +355,10 @@ export function IngredientMappingModal({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          ingredientId, 
+        body: JSON.stringify({
+          ingredientId,
           foodId: opts.foodId,
+          servingGrams: opts.servingGrams,
           useOnce: opts.useOnce,
           confidence: opts.confidence
         }),
@@ -374,24 +375,24 @@ export function IngredientMappingModal({
         const food = searchResults[ingredientId]?.find(f => f.id === opts.foodId);
         if (food) {
           // Update the ingredient's current mapping
-          setIngredients(prev => prev.map(ing => 
-            ing.id === ingredientId 
-              ? { 
-                  ...ing, 
-                  currentMapping: { 
-                    foodId: food.id, 
-                    foodName: food.name, 
-                    foodBrand: food.brand ?? undefined,
-                    confidence: opts.confidence 
-                  } 
+          setIngredients(prev => prev.map(ing =>
+            ing.id === ingredientId
+              ? {
+                ...ing,
+                currentMapping: {
+                  foodId: food.id,
+                  foodName: food.name,
+                  foodBrand: food.brand ?? undefined,
+                  confidence: opts.confidence
                 }
+              }
               : ing
           ));
-          
+
           // Show success message for this ingredient
           setIngredientSuccess(prev => ({ ...prev, [ingredientId]: true }));
           setError(null);
-          
+
           // Track which food is mapped for this ingredient
           setMappedFoodIds(prev => ({ ...prev, [ingredientId]: opts.foodId }));
         }
@@ -409,22 +410,22 @@ export function IngredientMappingModal({
     try {
       // Auto-map the newly created ingredient
       const success = await mapIngredient(
-        { 
-          foodId, 
+        {
+          foodId,
           servingGrams: 100, // Default serving size
-          useOnce: false, 
-          confidence: 1.0 
-        }, 
+          useOnce: false,
+          confidence: 1.0
+        },
         ingredientId
       );
 
       if (success) {
         // Close the create ingredient form
         setShowCreateIngredient(prev => ({ ...prev, [ingredientId]: false }));
-        
+
         // Mark the newly created food as deletable
         setDeletableFoods(prev => new Set([...prev, foodId]));
-        
+
         // Refresh the search results to show the newly created ingredient
         const ingredient = ingredients.find(ing => ing.id === ingredientId);
         if (ingredient) {
@@ -473,7 +474,7 @@ export function IngredientMappingModal({
         }
 
         // Also clear any current mapping if it was to the deleted food
-        setIngredients(prev => prev.map(ing => 
+        setIngredients(prev => prev.map(ing =>
           ing.id === ingredientId && ing.currentMapping?.foodId === foodId
             ? { ...ing, currentMapping: null }
             : ing
@@ -492,14 +493,14 @@ export function IngredientMappingModal({
   const mapAllIngredients = async () => {
     setIsMapping(true);
     setError(null);
-    
+
     try {
       // Map all ingredients that have selections (including re-mappings)
       const mappingsToProcess = Object.entries(selectedFoods).filter(([ingredientId, foodId]) => {
         const ingredient = ingredients.find(ing => ing.id === ingredientId);
         // Include if ingredient exists and has a different mapping than current
         return ingredient && (
-          !ingredient.currentMapping || 
+          !ingredient.currentMapping ||
           ingredient.currentMapping.foodId !== foodId
         );
       });
@@ -523,7 +524,7 @@ export function IngredientMappingModal({
 
       const results = await Promise.all(mappingPromises);
       const failedMappings = results.filter(result => !result.ok);
-      
+
       if (failedMappings.length > 0) {
         setError('Some ingredients failed to map. Please try again.');
         return;
@@ -585,7 +586,7 @@ export function IngredientMappingModal({
   };
 
 
-  const mappedCount = ingredients.filter(ingredient => 
+  const mappedCount = ingredients.filter(ingredient =>
     selectedFoods[ingredient.id] || ingredient.currentMapping
   ).length;
   const totalCount = ingredients.length;
@@ -595,177 +596,177 @@ export function IngredientMappingModal({
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Map Ingredients to Nutrition Data</DialogTitle>
-        </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Map Ingredients to Nutrition Data</DialogTitle>
+          </DialogHeader>
 
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Loading ingredients...</span>
-          </div>
-        ) : ingredients.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No ingredients found.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Map each ingredient to a food item for accurate nutrition calculation
-              </p>
-              <Badge variant="outline">
-                {mappedCount} of {totalCount} mapped
-              </Badge>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Loading ingredients...</span>
             </div>
-            
+          ) : ingredients.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No ingredients found.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Map each ingredient to a food item for accurate nutrition calculation
+                </p>
+                <Badge variant="outline">
+                  {mappedCount} of {totalCount} mapped
+                </Badge>
+              </div>
 
-            <div className="space-y-4">
-              {ingredients.map((ingredient) => (
-                <Card key={ingredient.id}>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{ingredient.name}</span>
-                          <Badge variant="outline">
-                            {`${ingredient.qty} ${ingredient.unit}`}
-                          </Badge>
-                          {ingredient.currentMapping && (
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                Currently: {ingredient.currentMapping.foodName}
-                                {ingredient.currentMapping.foodBrand && ` (${ingredient.currentMapping.foodBrand})`}
-                              </Badge>
-                              {ingredientSuccess[ingredient.id] && (
-                                <Badge variant="default" className="bg-green-600">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Mapped
+
+              <div className="space-y-4">
+                {ingredients.map((ingredient) => (
+                  <Card key={ingredient.id}>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{ingredient.name}</span>
+                            <Badge variant="outline">
+                              {`${ingredient.qty} ${ingredient.unit}`}
+                            </Badge>
+                            {ingredient.currentMapping && (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                  Currently: {ingredient.currentMapping.foodName}
+                                  {ingredient.currentMapping.foodBrand && ` (${ingredient.currentMapping.foodBrand})`}
                                 </Badge>
-                              )}
+                                {ingredientSuccess[ingredient.id] && (
+                                  <Badge variant="default" className="bg-green-600">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Mapped
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowCreateIngredient(prev => ({ ...prev, [ingredient.id]: true }))}
+                            className="flex items-center gap-2"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Create new ingredient
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search for food item..."
+                              value={searchQueries[ingredient.id] || ''}
+                              onChange={(e) => handleSearchChange(ingredient.id, e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+
+                          {/* Search State Display */}
+                          {searchStates[ingredient.id] && (
+                            <div className="text-sm text-muted-foreground py-2">
+                              {searchStates[ingredient.id]}
+                            </div>
+                          )}
+
+
+                          {/* Create Ingredient Form */}
+                          {showCreateIngredient[ingredient.id] && (
+                            <div className="mt-4">
+                              <CreateIngredientForm
+                                ingredientName={ingredient.name}
+                                onClose={() => setShowCreateIngredient(prev => ({ ...prev, [ingredient.id]: false }))}
+                                onSuccess={(foodId) => handleCreateIngredientSuccess(ingredient.id, foodId)}
+                              />
+                            </div>
+                          )}
+
+                          {/* Search Results */}
+                          {searchResults[ingredient.id] && searchResults[ingredient.id].length > 0 && (
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {searchResults[ingredient.id].map((food) => {
+                                // Parse the ingredient line to get structured data
+                                const parsed = parseIngredientLine(`${ingredient.qty} ${ingredient.unit} ${ingredient.name}`);
+
+                                // Resolve grams using the new adapter
+                                const gramsResolved = resolveGramsAdapter({
+                                  parsed: parsed ?? undefined,
+                                  densityGml: food.densityGml,
+                                  servingOptions: food.servingOptions
+                                });
+
+                                // Check if we used fallback serving (first serving option)
+                                const usedFallbackServing = parsed && parsed.unit &&
+                                  !food.servingOptions.find(opt =>
+                                    opt.label.toLowerCase().includes(parsed.unit!.toLowerCase())
+                                  ) &&
+                                  food.servingOptions.length > 0;
+
+                                return (
+                                  <IngredientMappingCard
+                                    key={food.id}
+                                    ingredientName={ingredient.name}
+                                    parsed={parsed ?? undefined}
+                                    candidate={food}
+                                    onMap={(opts) => mapIngredient(opts, ingredient.id)}
+                                    gramsResolved={gramsResolved}
+                                    usedFallbackServing={usedFallbackServing ? true : undefined}
+                                    isMapped={mappedFoodIds[ingredient.id] === food.id}
+                                    canDelete={deletableFoods.has(food.id)}
+                                    onDelete={() => handleDeleteFood(food.id, ingredient.id)}
+                                  />
+                                );
+                              })}
                             </div>
                           )}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowCreateIngredient(prev => ({ ...prev, [ingredient.id]: true }))}
-                          className="flex items-center gap-2"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Create new ingredient
-                        </Button>
                       </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search for food item..."
-                            value={searchQueries[ingredient.id] || ''}
-                            onChange={(e) => handleSearchChange(ingredient.id, e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
-
-                        {/* Search State Display */}
-                        {searchStates[ingredient.id] && (
-                          <div className="text-sm text-muted-foreground py-2">
-                            {searchStates[ingredient.id]}
-                          </div>
-                        )}
-
-
-                        {/* Create Ingredient Form */}
-                        {showCreateIngredient[ingredient.id] && (
-                          <div className="mt-4">
-                            <CreateIngredientForm
-                              ingredientName={ingredient.name}
-                              onClose={() => setShowCreateIngredient(prev => ({ ...prev, [ingredient.id]: false }))}
-                              onSuccess={(foodId) => handleCreateIngredientSuccess(ingredient.id, foodId)}
-                            />
-                          </div>
-                        )}
-
-                        {/* Search Results */}
-                        {searchResults[ingredient.id] && searchResults[ingredient.id].length > 0 && (
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {searchResults[ingredient.id].map((food) => {
-                              // Parse the ingredient line to get structured data
-                              const parsed = parseIngredientLine(`${ingredient.qty} ${ingredient.unit} ${ingredient.name}`);
-                              
-                              // Resolve grams using the new adapter
-                              const gramsResolved = resolveGramsAdapter({
-                                parsed: parsed ?? undefined,
-                                densityGml: food.densityGml,
-                                servingOptions: food.servingOptions
-                              });
-                              
-                              // Check if we used fallback serving (first serving option)
-                              const usedFallbackServing = parsed && parsed.unit && 
-                                !food.servingOptions.find(opt => 
-                                  opt.label.toLowerCase().includes(parsed.unit!.toLowerCase())
-                                ) && 
-                                food.servingOptions.length > 0;
-                              
-                              return (
-                                <IngredientMappingCard
-                                  key={food.id}
-                                  ingredientName={ingredient.name}
-                                  parsed={parsed ?? undefined}
-                                  candidate={food}
-                                  onMap={(opts) => mapIngredient(opts, ingredient.id)}
-                                  gramsResolved={gramsResolved}
-                                  usedFallbackServing={usedFallbackServing ? true : undefined}
-                                  isMapped={mappedFoodIds[ingredient.id] === food.id}
-                                  canDelete={deletableFoods.has(food.id)}
-                                  onDelete={() => handleDeleteFood(food.id, ingredient.id)}
-                                />
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={mapAllIngredients}
+                  disabled={!allMapped || isMapping}
+                  className="flex-1"
+                >
+                  {isMapping ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Mapping...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Map All Ingredients
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={mapAllIngredients}
-                disabled={!allMapped || isMapping}
-                className="flex-1"
-              >
-                {isMapping ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Mapping...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Map All Ingredients
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

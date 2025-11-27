@@ -236,6 +236,36 @@ model Food {
   @@index([categoryId, verification])
 }
 
+model FdcFoodCache {
+  id            Int                  @id
+  description   String
+  brandName     String?
+  dataType      String
+  nutrients     Json                 // nutrientsPer100g
+  servingSize   Float?
+  servingSizeUnit String?
+  syncedAt      DateTime             @default(now())
+  expiresAt     DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  servings      FdcServingCache[]
+  
+  @@index([syncedAt])
+  @@index([expiresAt])
+}
+
+model FdcServingCache {
+  id                Int            @id @default(autoincrement())
+  fdcId             Int
+  description       String
+  grams             Float
+  source            String         @default("fdc")
+  isAiEstimated     Boolean        @default(false)
+  food              FdcFoodCache   @relation(fields: [fdcId], references: [id], onDelete: Cascade)
+  
+  @@index([fdcId])
+}
+
 model FatSecretFoodCache {
   id               String                     @id
   name             String
@@ -483,4 +513,185 @@ enum TagSource {
   USER
   AUTO_CONFIDENT
   AUTO_SUGGESTED
+}
+
+model GlobalIngredientMapping {
+  id                  String   @id @default(cuid())
+  normalizedName      String   @unique
+  fatsecretFoodId     String?
+  fatsecretServingId  String?
+  fdcId               Int?
+  source              String   // "fatsecret" | "fdc"
+  confidence          Float
+  usageCount          Int      @default(1)
+  lastUsed            DateTime @default(now())
+  createdBy           String?
+  isUserOverride      Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  
+  @@index([normalizedName])
+  @@index([confidence])
+}
+
+model IngredientCleanupPattern {
+  id            String   @id @default(cuid())
+  
+  // Pattern definition
+  pattern       String   @unique
+  patternType   PatternType
+  replacement   String
+  description   String?
+  
+  // Learning metadata
+  source        PatternSource
+  confidence    Float    @default(0.8)
+  
+  // Usage tracking
+  usageCount    Int      @default(0)
+  successCount  Int      @default(0)
+  failureCount  Int      @default(0)
+  
+  // Computed metrics
+  successRate   Float?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  lastUsed      DateTime @default(now())
+  
+  // Relations
+  appliedTo     IngredientCleanupApplication[]
+  
+  @@index([patternType])
+  @@index([source])
+  @@index([confidence])
+  @@index([successRate])
+}
+
+model IngredientCleanupApplication {
+  id               String   @id @default(cuid())
+  
+  // What was cleaned
+  rawInput         String
+  cleanedOutput    String
+  
+  // Which pattern was used
+  patternId        String
+  pattern          IngredientCleanupPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+  
+  // Context
+  recipeId         String?
+  ingredientId     String?
+  
+  // Outcome
+  mappingSucceeded Boolean?
+  confidenceScore  Float?
+  
+  // Timestamp
+  appliedAt        DateTime @default(now())
+  
+  @@index([patternId])
+  @@index([mappingSucceeded])
+  @@index([appliedAt])
+}
+
+enum PatternType {
+  MEASUREMENT_PREFIX
+  MEASUREMENT_SUFFIX
+  PREP_PHRASE
+  SIZE_PHRASE
+  PARSING_ARTIFACT
+  BRAND_NAME
+  REDUNDANT_WORDS
+}
+
+enum PatternSource {
+  AI_LEARNED
+  MANUAL
+  AUTO_DETECTED
+  USER_FEEDBACK
+}
+
+// ============================================================================
+// AI-Validated Mapping Tables
+// ============================================================================
+
+model ValidatedMapping {
+  id                      String   @id @default(cuid())
+  rawIngredient           String
+  normalizedForm          String
+  foodId                  String
+  foodName                String
+  brandName               String?
+  source                  String   @default("fatsecret")
+  aiConfidence            Float
+  validationReason        String?
+  isAlias                 Boolean  @default(false)
+  canonicalRawIngredient  String?
+  validatedAt             DateTime @default(now())
+  validatedBy             String   @default("ai")
+  usedCount               Int      @default(0)
+  lastUsedAt              DateTime @default(now())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([rawIngredient, source])
+  @@index([rawIngredient])
+  @@index([normalizedForm])
+  @@index([isAlias, canonicalRawIngredient])
+  @@index([foodId])
+  @@index([lastUsedAt(sort: Desc)])
+}
+
+model MappingValidationFailure {
+  id                      String   @id @default(cuid())
+  rawIngredient           String
+  attemptedFoodId         String
+  attemptedFoodName       String
+  ourConfidence           Float
+  aiConfidence            Float
+  aiRejectionReason       String
+  aiFailureCategory       String
+  failureType             String
+  aiSuggestedAlternative  String?
+  retrySucceeded          Boolean?
+  scoringDetails          Json?
+  createdAt               DateTime @default(now())
+
+  @@index([aiFailureCategory])
+  @@index([failureType])
+  @@index([rawIngredient])
+  @@index([createdAt(sort: Desc)])
+}
+
+model AiNormalizeCache {
+  rawLine       String   @id
+  normalizedName String
+  synonyms      Json     @default("[]")
+  prepPhrases   Json     @default("[]")
+  sizePhrases   Json     @default("[]")
+  createdAt     DateTime @default(now())
+  lastUsedAt    DateTime @default(now())
+  useCount      Int      @default(0)
+
+  @@index([lastUsedAt(sort: Desc)])
+}
+
+/// Tracks search query patterns that AI identifies as problematic
+/// Used to improve parser and search logic based on AI feedback
+model SearchQueryPattern {
+  id               String   @id @default(cuid())
+  rawIngredient    String   // Original ingredient line
+  searchQuery      String   // The query that was used
+  suggestedQuery   String?  // AI's suggested alternative 
+  detectedIssues   Json     @default("[]") // Array of issue types
+  aiReason         String   // AI's explanation
+  aiCategory       String   // validation category: search_query_issue, search_scoring_issue, etc.
+  occurrences      Int      @default(1) // How many times we've seen this pattern
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([searchQuery, aiCategory])
+  @@index([aiCategory])
+  @@index([occurrences(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
 }

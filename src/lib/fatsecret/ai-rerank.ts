@@ -16,15 +16,15 @@ type CandidateInput = {
 
 type AiPick =
   | {
-      status: 'success';
-      id: string;
-      confidence: number;
-      rationale?: string | null;
-    }
+    status: 'success';
+    id: string;
+    confidence: number;
+    rationale?: string | null;
+  }
   | {
-      status: 'error';
-      reason: string;
-    };
+    status: 'error';
+    reason: string;
+  };
 
 const RESPONSE_SCHEMA = {
   name: 'fatsecret_candidate_pick',
@@ -71,6 +71,15 @@ export async function rerankFatsecretCandidates(
     return { status: 'error', reason: 'no candidates' };
   }
   const prompt = buildUserPrompt(rawLine, candidates);
+
+  // DEBUG: Log candidates for analysis
+  console.log('\n🤖 AI Rerank Input:');
+  console.log(`  Query: "${rawLine}"`);
+  console.log('  Candidates:');
+  candidates.forEach((c, idx) => {
+    console.log(`    ${idx + 1}. [${c.id}] "${c.name}" (Score: ${c.score.toFixed(3)})`);
+  });
+
   try {
     const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
       method: 'POST',

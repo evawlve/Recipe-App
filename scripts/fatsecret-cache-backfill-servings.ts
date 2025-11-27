@@ -129,7 +129,7 @@ function readGapFile(filePath: string | null, limit: number | null): ServingGapR
   if (!filePath) return [];
   const absolute = path.resolve(filePath);
   if (!fs.existsSync(absolute)) {
-    logger.warn({ filePath: absolute }, 'Serving gap file not found, skipping');
+    logger.warn('Serving gap file not found, skipping', { filePath: absolute });
     return [];
   }
   const lines = fs.readFileSync(absolute, 'utf-8').split(/\r?\n/).filter(Boolean);
@@ -139,7 +139,7 @@ function readGapFile(filePath: string | null, limit: number | null): ServingGapR
     try {
       records.push(JSON.parse(line));
     } catch (error) {
-      logger.warn({ filePath: absolute, line }, 'Failed to parse serving gap entry');
+      logger.warn('Failed to parse serving gap entry', { filePath: absolute, line });
     }
   }
   return records;
@@ -176,80 +176,23 @@ function buildServingId(foodId: string, label: string): string {
   return `ai_${hash}`;
 }
 
-async function insertAiServing(
+import { insertAiServing } from '../src/lib/fatsecret/ai-backfill';
+
+async function insertAiServingWrapper(
   entry: ServingGapRecord,
   gapType: ServingGapType,
   options: CliOptions,
 ): Promise<boolean> {
-  const food = await prisma.fatSecretFoodCache.findUnique({
-    where: { id: entry.foodId },
-    include: { servings: true },
+  const result = await insertAiServing(entry.foodId, gapType, {
+    dryRun: options.dryRun,
+    promptDebug: options.promptDebug,
   });
-  if (!food) {
-    logger.warn({ foodId: entry.foodId }, 'FatSecret food missing from cache');
-    return false;
-  }
 
-  const aiResult = await requestAiServing({ gapType, food });
-  if (options.promptDebug) {
-    logger.info(
-      { foodId: entry.foodId, gapType, prompt: aiResult.prompt },
-      'AI prompt debug',
-    );
-    logger.info(
-      { foodId: entry.foodId, gapType, raw: aiResult.raw, suggestion: aiResult.status === 'success' ? aiResult.suggestion : undefined },
-      'AI response debug',
-    );
-  }
-  if (aiResult.status === 'error') {
-    logger.warn({ foodId: entry.foodId, reason: aiResult.reason }, 'AI serving suggestion failed');
-    appendManualReview(entry, aiResult.reason);
-    logAiServing({
-      timestamp: new Date().toISOString(),
-      foodId: entry.foodId,
-      foodName: entry.name,
-      brandName: entry.brandName,
-      mode: gapType,
-      status: 'error',
-      reason: aiResult.reason,
-      existingServings: food.servings.map((s) => ({
-        id: s.id,
-        description: s.measurementDescription,
-        grams: s.servingWeightGrams,
-        volumeMl: s.volumeMl,
-        isVolume: s.isVolume,
-      })),
-      prompt: aiResult.prompt,
-      raw: aiResult.raw,
-    });
-    return false;
-  }
-
-  const suggestion = aiResult.suggestion;
-  let volumeMl =
-    suggestion.volumeUnit && suggestion.volumeAmount
-      ? convertVolumeToMl(suggestion.volumeUnit, suggestion.volumeAmount)
-      : null;
-  let countServing = false;
-  let countUnit: string | undefined;
-  if (gapType === 'volume' && !volumeMl) {
-    const unit = suggestion.volumeUnit?.toLowerCase().trim();
-    if (suggestion.volumeAmount && suggestion.volumeAmount > 0 && (unit ? COUNT_UNITS.has(unit) : true)) {
-      countServing = true;
-      countUnit = unit ?? 'count';
-      volumeMl = suggestion.volumeAmount;
-    } else if (unit && COUNT_UNITS.has(unit)) {
-      countServing = true;
-      countUnit = unit;
-      volumeMl = suggestion.volumeAmount ?? 1;
+  if (!result.success) {
+    if (result.reason) {
+      appendManualReview(entry, result.reason);
     }
-  }
-  if (gapType === 'volume' && !volumeMl && !countServing) {
-    logger.warn(
-      { foodId: entry.foodId, serving: suggestion.servingLabel },
-      'AI did not return a convertible volume',
-    );
-    appendManualReview(entry, 'AI missing convertible volume');
+    // Log failure for stats
     logAiServing({
       timestamp: new Date().toISOString(),
       foodId: entry.foodId,
@@ -257,220 +200,17 @@ async function insertAiServing(
       brandName: entry.brandName,
       mode: gapType,
       status: 'error',
-      reason: 'missing_volume_unit',
-      suggestion: {
-        servingLabel: suggestion.servingLabel,
-        grams: suggestion.grams,
-        volumeUnit: suggestion.volumeUnit,
-        volumeAmount: suggestion.volumeAmount,
-        confidence: suggestion.confidence,
-      },
-      existingServings: food.servings.map((s) => ({
-        id: s.id,
-        description: s.measurementDescription,
-        grams: s.servingWeightGrams,
-        volumeMl: s.volumeMl,
-        isVolume: s.isVolume,
-      })),
-      prompt: aiResult.prompt,
-      raw: aiResult.raw,
+      reason: result.reason ?? 'unknown',
     });
     return false;
   }
 
-  if (suggestion.grams <= 0) {
-    logger.warn({ foodId: entry.foodId }, 'AI returned invalid gram weight');
-    appendManualReview(entry, 'AI invalid grams');
-    logAiServing({
-      timestamp: new Date().toISOString(),
-      foodId: entry.foodId,
-      foodName: entry.name,
-      brandName: entry.brandName,
-      mode: gapType,
-      status: 'error',
-      reason: 'invalid_grams',
-      suggestion: {
-        servingLabel: suggestion.servingLabel,
-        grams: suggestion.grams,
-        volumeUnit: suggestion.volumeUnit,
-        volumeAmount: suggestion.volumeAmount,
-        confidence: suggestion.confidence,
-      },
-      existingServings: food.servings.map((s) => ({
-        id: s.id,
-        description: s.measurementDescription,
-        grams: s.servingWeightGrams,
-        volumeMl: s.volumeMl,
-        isVolume: s.isVolume,
-      })),
-      prompt: aiResult.prompt,
-      raw: aiResult.raw,
-    });
-    return false;
-  }
+  // If successful (or dry-run success), log it
+  // Note: The shared function doesn't return the full suggestion details in the return value
+  // so we might miss some detailed logging here compared to the original script,
+  // but the shared function does its own logging.
+  // We'll keep the simple success/failure stats.
 
-  const density = volumeMl && !countServing ? suggestion.grams / volumeMl : null;
-  if (
-    density &&
-    (density < FATSECRET_CACHE_AI_MIN_DENSITY || density > FATSECRET_CACHE_AI_MAX_DENSITY)
-  ) {
-    logger.warn({ foodId: entry.foodId, density }, 'AI density outside bounds');
-    appendManualReview(entry, 'AI density outside bounds');
-    logAiServing({
-      timestamp: new Date().toISOString(),
-      foodId: entry.foodId,
-      foodName: entry.name,
-      brandName: entry.brandName,
-      mode: gapType,
-      status: 'error',
-      reason: 'density_outside_bounds',
-      density,
-      densityMin: FATSECRET_CACHE_AI_MIN_DENSITY,
-      densityMax: FATSECRET_CACHE_AI_MAX_DENSITY,
-      suggestion: {
-        servingLabel: suggestion.servingLabel,
-        grams: suggestion.grams,
-        volumeUnit: suggestion.volumeUnit,
-        volumeAmount: suggestion.volumeAmount,
-        volumeMl,
-        confidence: suggestion.confidence,
-      },
-      existingServings: food.servings.map((s) => ({
-        id: s.id,
-        description: s.measurementDescription,
-        grams: s.servingWeightGrams,
-        volumeMl: s.volumeMl,
-        isVolume: s.isVolume,
-      })),
-      prompt: aiResult.prompt,
-      raw: aiResult.raw,
-    });
-    return false;
-  }
-
-  const servingId = buildServingId(entry.foodId, suggestion.servingLabel);
-  if (options.dryRun) {
-    logger.info(
-      {
-        foodId: entry.foodId,
-        gapType,
-        servingId,
-        label: suggestion.servingLabel,
-        grams: suggestion.grams,
-        volumeMl,
-        confidence: suggestion.confidence,
-      },
-      'DRY RUN: would insert AI-derived serving',
-    );
-    logAiServing({
-      timestamp: new Date().toISOString(),
-      foodId: entry.foodId,
-      foodName: entry.name,
-      brandName: entry.brandName,
-      mode: gapType,
-      status: 'dry-run',
-      servingId,
-      suggestion: {
-        ...suggestion,
-        volumeMl,
-        density,
-        countServing,
-        countUnit,
-      },
-      existingServings: food.servings.map((s) => ({
-        id: s.id,
-        description: s.measurementDescription,
-        grams: s.servingWeightGrams,
-        volumeMl: s.volumeMl,
-        isVolume: s.isVolume,
-      })),
-      prompt: aiResult.prompt,
-      raw: aiResult.raw,
-    });
-    return true;
-  }
-
-  let densityEstimateId: string | undefined;
-  await prisma.$transaction(async (tx) => {
-    if (density && volumeMl) {
-      const densityRow = await tx.fatSecretDensityEstimate.create({
-        data: {
-          foodId: entry.foodId,
-          densityGml: density,
-          source: 'ai',
-          confidence: suggestion.confidence,
-          notes: suggestion.rationale,
-        },
-      });
-      densityEstimateId = densityRow.id;
-    }
-
-    await tx.fatSecretServingCache.upsert({
-      where: { id: servingId },
-      create: {
-        id: servingId,
-        foodId: entry.foodId,
-        measurementDescription: suggestion.servingLabel,
-        numberOfUnits: suggestion.volumeAmount ?? (countServing ? 1 : undefined),
-        metricServingAmount: volumeMl ?? suggestion.grams,
-        metricServingUnit: countServing ? (countUnit ?? suggestion.volumeUnit ?? 'count') : volumeMl ? 'ml' : 'g',
-        servingWeightGrams: suggestion.grams,
-        volumeMl,
-        isVolume: gapType === 'volume',
-        isDefault: false,
-        derivedViaDensity: volumeMl != null && !countServing,
-        densityEstimateId,
-        source: 'ai',
-        confidence: suggestion.confidence,
-        note: suggestion.rationale,
-      },
-      update: {
-        measurementDescription: suggestion.servingLabel,
-        numberOfUnits: suggestion.volumeAmount ?? (countServing ? 1 : undefined),
-        metricServingAmount: volumeMl ?? suggestion.grams,
-        metricServingUnit: countServing ? (countUnit ?? suggestion.volumeUnit ?? 'count') : volumeMl ? 'ml' : 'g',
-        servingWeightGrams: suggestion.grams,
-        volumeMl,
-        isVolume: gapType === 'volume',
-        derivedViaDensity: volumeMl != null && !countServing,
-        densityEstimateId,
-        source: 'ai',
-        confidence: suggestion.confidence,
-        note: suggestion.rationale,
-      },
-    });
-  });
-
-  logAiServing({
-    timestamp: new Date().toISOString(),
-    foodId: entry.foodId,
-    foodName: entry.name,
-    brandName: entry.brandName,
-    mode: gapType,
-    status: 'inserted',
-    servingId,
-    densityEstimateId,
-    suggestion: {
-      ...suggestion,
-      volumeMl,
-      density,
-      countServing,
-      countUnit,
-    },
-    existingServings: food.servings.map((s) => ({
-      id: s.id,
-      description: s.measurementDescription,
-      grams: s.servingWeightGrams,
-      volumeMl: s.volumeMl,
-      isVolume: s.isVolume,
-    })),
-    prompt: aiResult.prompt,
-    raw: aiResult.raw,
-  });
-  logger.info(
-    { foodId: entry.foodId, servingId, gapType, label: suggestion.servingLabel },
-    'Inserted AI-derived FatSecret serving',
-  );
   return true;
 }
 
@@ -481,7 +221,7 @@ async function processGapRecords(
 ): Promise<ProcessStats> {
   const stats: ProcessStats = { created: 0, skipped: 0, manualReview: 0 };
   for (const record of records) {
-    const success = await insertAiServing(record, gapType, options);
+    const success = await insertAiServingWrapper(record, gapType, options);
     if (success) {
       stats.created += 1;
     } else {
@@ -498,32 +238,32 @@ async function main() {
   const weightRecords = readGapFile(options.weightInput, options.limit);
 
   logger.info(
+    'Starting FatSecret AI serving backfill',
     {
       dryRun: options.dryRun,
       volumeRecords: volumeRecords.length,
       weightRecords: weightRecords.length,
       confidenceMin: FATSECRET_CACHE_AI_CONFIDENCE_MIN,
     },
-    'Starting FatSecret AI serving backfill',
   );
 
   const volumeStats = await processGapRecords(volumeRecords, 'volume', options);
   const weightStats = await processGapRecords(weightRecords, 'weight', options);
 
   logger.info(
+    'FatSecret AI serving backfill finished',
     {
       created: volumeStats.created + weightStats.created,
       skipped: volumeStats.skipped + weightStats.skipped,
       manualReview: volumeStats.manualReview + weightStats.manualReview,
       dryRun: options.dryRun,
     },
-    'FatSecret AI serving backfill finished',
   );
 }
 
 main()
   .catch((error) => {
-    logger.error({ err: error }, 'FatSecret AI serving backfill failed');
+    logger.error('FatSecret AI serving backfill failed', { err: error });
     process.exitCode = 1;
   })
   .finally(async () => {

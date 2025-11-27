@@ -1,0 +1,62 @@
+﻿TESTING FIXED SEARCH EXPRESSION BUILDER
+
+
+================================================================================
+RAW LINE: "16oz 90 lean ground beef"
+================================================================================
+
+Parsed name: 90 lean ground beef
+
+Search expressions (in priority order):
+  [1] "90 lean ground beef"
+
+================================================================================
+RAW LINE: "rice vinegar"
+================================================================================
+
+Parsed name: undefined
+
+Search expressions (in priority order):
+  [1] "rice vinegar"
+
+================================================================================
+RAW LINE: "1 lb 93% lean ground beef"
+================================================================================
+
+Parsed name: 93% lean ground beef
+
+Search expressions (in priority order):
+  [1] "93% lean ground beef"
+
+================================================================================
+RAW LINE: "2 tbsp apple cider vinegar"
+================================================================================
+
+Parsed name: apple cider vinegar
+
+Search expressions (in priority order):
+  [1] "apple cider vinegar"
+
+================================================================================
+RAW LINE: "1/4 cup balsamic vinegar"
+================================================================================
+
+Parsed name: balsamic vinegar
+
+Search expressions (in priority order):
+  [1] "balsamic vinegar"
+
+================================================================================
+RAW LINE: "2 cups vegetable oil"
+================================================================================
+
+Parsed name: vegetable oil
+
+Search expressions (in priority order):
+  [1] "vegetable oil"
+  [2] "canola oil"
+  [3] "sunflower oil"
+
+================================================================================
+Testing complete
+================================================================================

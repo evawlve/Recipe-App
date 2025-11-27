@@ -19,6 +19,16 @@ import { ensureFoodCached } from './cache';
 import { rerankFatsecretCandidates } from './ai-rerank';
 import { aiNormalizeIngredient } from './ai-normalize';
 import { normalizeIngredientName } from './normalization-rules';
+import { insertAiServing } from './ai-backfill';
+import { debugLogger } from './debug-logger';
+import { detectCookState } from './cook-state-detector';
+import { validateMappingWithAI } from './ai-validation';
+import {
+  getValidatedMapping,
+  saveValidatedMapping,
+  trackValidationFailure,
+} from './validated-mapping-helpers';
+import { refineSearchQuery } from './ai-search-refine';
 
 export type FatsecretMappedIngredient = {
   source: 'fatsecret';
@@ -33,12 +43,22 @@ export type FatsecretMappedIngredient = {
   carbs: number;
   fat: number;
   confidence: number;
+  quality: 'high' | 'medium' | 'low';
   rawLine: string;
+  aiValidation?: {
+    approved: boolean;
+    confidence: number;
+    reason: string;
+    category?: string;
+    detectedIssues?: string[];
+  };
 };
 
 export interface MapIngredientOptions {
   client?: FatSecretClient;
   minConfidence?: number;
+  allowLiveFallback?: boolean;
+  debug?: boolean;
 }
 
 const defaultClient = new FatSecretClient();
@@ -199,14 +219,23 @@ function cleanIngredientName(rawName: string): string {
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const cleaned: string[] = [];
 
-  for (let token of tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    let token = tokens[i];
     if (!token || DESCRIPTOR_STOPWORDS.has(token) || UNIT_STOPWORDS.has(token)) {
       continue;
     }
-    // Remove inch markers like 1" or 1-inch
-    if (/^\d+("?|-inch|inch)?$/.test(token)) {
+
+    // Preserve leanness percentages for ground meat (e.g., "90 lean", "85%")
+    // Check if next token is "lean" or if current token is a percentage
+    const nextToken = tokens[i + 1];
+    const isLeannessNumber = /^\d+$/.test(token) && nextToken === 'lean';
+    const isPercentage = /^\d+%$/.test(token);
+
+    // Remove inch markers like 1" or 1-inch, but NOT leanness numbers or percentages
+    if (!isLeannessNumber && !isPercentage && /^\d+("?|-inch|inch)?$/.test(token)) {
       continue;
     }
+
     if (token === 'sprigs') token = 'sprig';
     if (token === 'leeks') token = 'leek';
     if (token === 'cubes') token = 'cube';
@@ -239,17 +268,21 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
   }
 
   // Remove any residual quantity/number patterns from normalized name
-  normalized = normalized.replace(/^\d+[\s\.\-\d]*\s+/, '').trim();
-  
+  // BUT preserve leanness indicators (e.g., "90 lean", "93%")
+  // Don't strip numbers that are followed by "lean" or are percentages
+  if (!/\d+%?\s+lean/.test(normalized) && !/\d+%/.test(normalized)) {
+    normalized = normalized.replace(/^\d+[\s\.\-\d]*\s+/, '').trim();
+  }
+
   const expressions: string[] = [];
   const seen = new Set<string>();
-  
+
   // Extract important qualifiers (cooked/raw, preparation methods, unsweetened/whole)
   const importantQualifiers: string[] = [];
   const brandHints: string[] = [];
   const prepQualifiers: string[] = [];
   const sizeQualifiers: string[] = []; // large, medium, small
-  
+
   if (parsed?.qualifiers) {
     for (const q of parsed.qualifiers) {
       const qLower = q.toLowerCase();
@@ -270,7 +303,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       }
     }
   }
-  
+
   // Special handling for "eggs"/"egg" patterns: add (qty?) + "egg" and singular/plural variants before qualifiers
   // This ensures "3 large eggs" generates "large egg", "egg large", "eggs large" etc.
   const normalizedLower = normalized.toLowerCase();
@@ -279,7 +312,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
     const eggBase = normalizedLower.includes('eggs') ? 'eggs' : 'egg';
     const eggSingular = 'egg';
     const eggPlural = 'eggs';
-    
+
     // Add variants with size qualifiers BEFORE other expressions (prepend to ensure priority)
     if (sizeQualifiers.length > 0) {
       for (const sizeQ of sizeQualifiers) {
@@ -305,7 +338,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
         }
       }
     }
-    
+
     // Add base singular/plural variants
     if (!seen.has(eggSingular)) {
       expressions.unshift(eggSingular);
@@ -316,7 +349,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       seen.add(eggPlural);
     }
   }
-  
+
   // Special handling for chicken parts: add explicit unit words and force search with just meat noun
   // e.g., "2 large chicken breasts" → "skinless chicken breast", "boneless chicken breast", "chicken breast", "breast"
   const chickenPattern = /chicken\s+(breast|thigh|wing|leg|drumstick)/i;
@@ -325,7 +358,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
     const cut = chickenMatch[1].toLowerCase();
     const cutPlural = cut.endsWith('s') ? cut : `${cut}s`;
     const cutSingular = cut.endsWith('s') ? cut.slice(0, -1) : cut;
-    
+
     // Add explicit unit words before other expressions
     expressions.unshift(`skinless chicken ${cutSingular}`);
     seen.add(`skinless chicken ${cutSingular}`);
@@ -335,14 +368,14 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
     seen.add(`chicken ${cutSingular}`);
     expressions.unshift(`chicken ${cutPlural}`);
     seen.add(`chicken ${cutPlural}`);
-    
+
     // Force search with just the meat noun before noun-only fallback
     expressions.unshift(cutSingular);
     seen.add(cutSingular);
     expressions.unshift(cutPlural);
     seen.add(cutPlural);
   }
-  
+
   // Primary expression: base name + important qualifiers
   let primary = normalized;
   if (importantQualifiers.length > 0) {
@@ -352,7 +385,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
     expressions.push(primary);
     seen.add(primary);
   }
-  
+
   // If brand hints exist, add expression with brand
   if (brandHints.length > 0) {
     const withBrand = `${normalized} ${brandHints.join(' ')}`.trim();
@@ -361,7 +394,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       seen.add(withBrand);
     }
   }
-  
+
   // Fallback: base name without qualifiers (if we added them)
   if (importantQualifiers.length > 0 && normalized !== primary) {
     if (normalized && !seen.has(normalized)) {
@@ -369,7 +402,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       seen.add(normalized);
     }
   }
-  
+
   // Fallback: base name + unitHint if available and not already included
   if (parsed?.unitHint) {
     const unitHintLower = parsed.unitHint.toLowerCase();
@@ -381,7 +414,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       }
     }
   }
-  
+
   // Fallback: strip size/prep adjectives and try again (keep important ones)
   const stripped = normalized
     .replace(/\b(large|medium|small)\b/gi, '')
@@ -391,7 +424,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
     expressions.push(stripped);
     seen.add(stripped);
   }
-  
+
   // If we have prep qualifiers, add an expression with just prep (e.g., "onion diced")
   if (prepQualifiers.length > 0 && normalized) {
     const nameOnly = normalized.replace(/\b(diced|chopped|sliced|minced)\b/gi, '').replace(/\s+/g, ' ').trim();
@@ -403,7 +436,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       }
     }
   }
-  
+
   // Add synonym-based variants
   for (const [key, synonyms] of Object.entries(INGREDIENT_SYNONYMS)) {
     // Check if the key matches the normalized name (as substring or full match)
@@ -451,7 +484,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       }
     }
   }
-  
+
   // Add plural → singular mappings for meat cuts and common ingredients
   const normalizedLower2 = normalized.toLowerCase();
   for (const [plural, singular] of Object.entries(PLURAL_TO_SINGULAR)) {
@@ -460,7 +493,7 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       seen.add(singular);
     }
   }
-  
+
   // Add singular forms (plural -> singular)
   if (normalized.endsWith('ies')) {
     const singular = normalized.slice(0, -3) + 'y';
@@ -481,56 +514,94 @@ export function buildSearchExpressions(parsed: ParsedIngredient | null, rawLine:
       seen.add(singular);
     }
   }
-  
+
+  // Detect compound ingredients that should NOT be reduced to single-word fallbacks
+  // e.g., "rice vinegar" should not add "vinegar", "soy sauce" should not add "sauce"
+  const PROTECTED_COMPOUNDS = [
+    'rice vinegar', 'apple cider vinegar', 'balsamic vinegar', 'red wine vinegar', 'white wine vinegar',
+    'soy sauce', 'fish sauce', 'oyster sauce', 'worcestershire sauce', 'hot sauce',
+    'peanut butter', 'almond butter', 'cashew butter',
+    'coconut milk', 'almond milk', 'soy milk',
+    'olive oil', 'coconut oil', 'sesame oil', 'vegetable oil', 'canola oil',
+    'ground beef', 'ground turkey', 'ground chicken', 'ground pork',
+  ];
+
+  const normalizedLowerForCompound = normalized.toLowerCase();
+  // Use exact match to check if this is a protected compound
+  // Also check if the normalized name contains the full compound phrase as a substring
+  const isProtectedCompound = PROTECTED_COMPOUNDS.some(compound => {
+    return normalizedLowerForCompound === compound ||
+      normalizedLowerForCompound.startsWith(compound + ' ') ||
+      normalizedLowerForCompound.endsWith(' ' + compound) ||
+      normalizedLowerForCompound.includes(' ' + compound + ' ');
+  });
+
   // Final ultra-generic fallback: extract just the core noun (last significant word)
   // This helps with pantry staples like "all-purpose flour" -> "flour", "lettuce leaves" -> "lettuce"
-  // Skip common qualifiers and take the last substantial word
-  const skipWords = new Set(['cooked', 'raw', 'diced', 'chopped', 'sliced', 'minced', 'unsweetened', 'sweetened', 'whole']);
-  const words = normalized.split(/[^\w]+/).filter(w => w.length > 2 && !skipWords.has(w)); // Filter out very short words and qualifiers
-  if (words.length > 1) {
-    const coreNoun = words[words.length - 1]; // Take last non-qualifier word as likely core noun
-    if (coreNoun && !seen.has(coreNoun)) {
-      expressions.push(coreNoun);
-      seen.add(coreNoun);
+  // BUT skip this for protected compound ingredients to avoid "rice vinegar" -> "vinegar"
+  if (!isProtectedCompound) {
+    const skipWords = new Set(['cooked', 'raw', 'diced', 'chopped', 'sliced', 'minced', 'unsweetened', 'sweetened', 'whole']);
+    const words = normalized.split(/[^\w]+/).filter(w => w.length > 2 && !skipWords.has(w));
+    if (words.length > 1) {
+      const coreNoun = words[words.length - 1];
+      if (coreNoun && !seen.has(coreNoun)) {
+        expressions.push(coreNoun);
+        seen.add(coreNoun);
+      }
+    } else if (words.length === 1 && !seen.has(words[0])) {
+      expressions.push(words[0]);
+      seen.add(words[0]);
     }
-  } else if (words.length === 1 && !seen.has(words[0])) {
-    // If only one word left after filtering, use it
-    expressions.push(words[0]);
-    seen.add(words[0]);
   }
-  
-  // Force ultra-generic queries for common pantry items ending in specific nouns
-  // This handles cases like "all-purpose flour" -> "flour", "lettuce leaves" -> "lettuce"
-  const pantryNouns = ['powder', 'flour', 'oil', 'lettuce', 'onion', 'garlic', 'rice', 'pasta', 'noodle'];
-  for (const noun of pantryNouns) {
-    if (normalized.endsWith(noun) || normalized.includes(` ${noun}`)) {
-      if (!seen.has(noun)) {
-        expressions.push(noun);
-        seen.add(noun);
+
+  // Force ultra-generic queries for SINGLE-WORD pantry items only
+  // Don't do this for compound ingredients like "rice" (part of "rice vinegar")
+  const pantryNouns = ['powder', 'flour', 'lettuce', 'onion', 'garlic', 'pasta', 'noodle'];
+  if (!isProtectedCompound) {
+    for (const noun of pantryNouns) {
+      if (normalized.endsWith(noun) && !normalized.includes(' ')) {
+        if (!seen.has(noun)) {
+          expressions.push(noun);
+          seen.add(noun);
+        }
       }
     }
   }
-  
+
   // Final "noun only" fallback: extract the last significant word/token
-  // This handles cases where everything else failed (e.g., "egg", "lettuce", "cashews")
-  const allWords = normalized.split(/[^\w]+/).filter(w => w.length > 2);
-  if (allWords.length > 0) {
-    const lastWord = allWords[allWords.length - 1];
-    if (lastWord && !seen.has(lastWord)) {
-      expressions.push(lastWord);
-      seen.add(lastWord);
+  // BUT only if not a protected compound
+  if (!isProtectedCompound) {
+    const allWords = normalized.split(/[^\w]+/).filter(w => w.length > 2);
+    if (allWords.length > 0) {
+      const lastWord = allWords[allWords.length - 1];
+      if (lastWord && !seen.has(lastWord)) {
+        expressions.push(lastWord);
+        seen.add(lastWord);
+      }
     }
   }
-  
+
   return expressions.length > 0 ? expressions : [normalized || rawLine.trim()];
 }
 
 export async function mapIngredientWithFatsecret(
   rawLine: string,
-  options: MapIngredientOptions = {}
+  options: {
+    client?: FatSecretClient;
+    minConfidence?: number;
+    allowLiveFallback?: boolean;
+    debug?: boolean;
+  } = {}
 ): Promise<FatsecretMappedIngredient | null> {
+  const { client = defaultClient, minConfidence = 0, allowLiveFallback = true, debug = false } = options;
   const trimmed = rawLine.trim();
   if (!trimmed) return null;
+
+  // Step 0: Check validated cache for instant return
+  const validated = await getValidatedMapping(trimmed);
+  if (validated) {
+    return validated;
+  }
 
   const parsed = parseIngredientLine(trimmed);
   const baseName = parsed?.name?.trim() || trimmed;
@@ -552,11 +623,11 @@ export async function mapIngredientWithFatsecret(
   } else if (aiHint.status === 'error' && aiHint.reason !== 'OPENAI_API_KEY missing') {
     logger.debug('fatsecret.map.ai_normalize_skipped', { rawLine, reason: aiHint.reason });
   }
-  const client = options.client ?? defaultClient;
-  const minConfidence = options.minConfidence ?? 0;
+  // const client = options.client ?? defaultClient; // Moved to destructuring
+  // const minConfidence = options.minConfidence ?? 0; // Moved to destructuring
   const preferCache = FATSECRET_CACHE_MODE_HELPERS.shouldServeCache;
   // Always allow live FatSecret API fallback when cache is missing/weak
-  const allowLiveFallback = true;
+  // const allowLiveFallback = true; // Moved to destructuring
 
   const candidates: MappingCandidate[] = [];
   const seenFoodIds = new Set<string>();
@@ -574,7 +645,7 @@ export async function mapIngredientWithFatsecret(
       searchExpressions.push(syn);
     }
   }
-  
+
   for (const query of searchExpressions) {
     // Allow up to 15 candidates per expression, but don't stop if we have enough total
     // We'll still check seenFoodIds to avoid duplicates across expressions
@@ -624,7 +695,7 @@ export async function mapIngredientWithFatsecret(
           // Avoid duplicates across all expressions
           if (seenFoodIds.has(food.id)) continue;
           seenFoodIds.add(food.id);
-          
+
           candidates.push({
             food,
             source: 'search',
@@ -643,8 +714,60 @@ export async function mapIngredientWithFatsecret(
     }
   }
 
+  // console.debug('DEBUG: candidates found', candidates.length);
+  if (debug) {
+    debugLogger.logDebug(`Candidates found for "${rawLine}"`, { count: candidates.length, candidates: candidates.map(c => c.food.name) });
+  }
   if (candidates.length === 0) {
-    return null;
+    // Retry Loop:
+    // 1. If we haven't tried AI normalization yet, try it now
+    if (aiHint.status !== 'success') {
+      const retryAiHint = await aiNormalizeIngredient(rawLine, normalization.cleaned);
+      if (retryAiHint.status === 'success') {
+        logger.info('fatsecret.map.retry_with_ai_normalize', { rawLine, normalized: retryAiHint.normalizedName });
+        if (retryAiHint.normalizedName && retryAiHint.normalizedName !== rawLine) {
+          debugLogger.logAiUsage('normalize', { original: rawLine, normalized: retryAiHint.normalizedName });
+          // Recursive call with the normalized name
+          const retryResult = await mapIngredientWithFatsecret(retryAiHint.normalizedName, {
+            client,
+            minConfidence,
+            allowLiveFallback,
+            debug,
+          });
+          if (retryResult) {
+            return retryResult;
+          }
+        }
+      }
+    }
+
+    // 2. If still no candidates, try AI Search Refinement
+    const refined = await refineSearchQuery(rawLine, []);
+    if (refined) {
+      logger.info('fatsecret.map.retry_with_refined_query', { rawLine, refined: refined.suggestedQuery });
+      try {
+        const refinedFoods = await client.searchFoodsV4(refined.suggestedQuery, { maxResults: 10 });
+        for (const food of refinedFoods) {
+          if (seenFoodIds.has(food.id)) continue;
+          seenFoodIds.add(food.id);
+          candidates.push({
+            food,
+            source: 'search',
+            baseScore: computeCandidateScore(food, refined.suggestedQuery, parsed),
+            query: refined.suggestedQuery,
+          });
+        }
+      } catch (error) {
+        logger.warn('fatsecret.map.refined_search_failed', { message: (error as Error).message });
+      }
+    }
+
+    if (candidates.length === 0) {
+      await trackValidationFailure(rawLine, {
+        foodId: '', foodName: '', source: 'fatsecret', grams: 0, kcal: 0, protein: 0, carbs: 0, fat: 0, confidence: 0, quality: 'low', rawLine
+      }, { approved: false, confidence: 0, reason: 'no_candidates_found' });
+      return null;
+    }
   }
 
   const normalizedQueryName = normalizeForMatch(parsed?.name || trimmed);
@@ -685,7 +808,7 @@ export async function mapIngredientWithFatsecret(
   // Detect ambiguous queries that should always use AI rerank
   const isAmbiguousQuery = (() => {
     if (candidates.length < 2) return false;
-    
+
     // Check if top candidates have similar scores (within 0.1)
     const topScore = candidates[0].baseScore;
     const secondScore = candidates[1]?.baseScore ?? 0;
@@ -693,24 +816,24 @@ export async function mapIngredientWithFatsecret(
     if (scoreGap < 0.1 && topScore > 0.3) {
       return true; // Top candidates are too close
     }
-    
+
     // Check if query contains ambiguous terms (sausage without meat type, generic terms)
     const queryLower = (parsed?.name?.trim() || trimmed).toLowerCase();
     const ambiguousTerms = ['sausage', 'oil', 'flour', 'cheese', 'sauce'];
-    const hasAmbiguousTerm = ambiguousTerms.some(term => 
+    const hasAmbiguousTerm = ambiguousTerms.some(term =>
       queryLower.includes(term) && !/\b(chicken|pork|beef|turkey|olive|canola|vegetable)\b/.test(queryLower)
     );
     if (hasAmbiguousTerm) {
       return true;
     }
-    
+
     // Check if query contains multiple food types (could match different categories)
     const meatTypes = ['chicken', 'pork', 'beef', 'turkey', 'fish', 'salmon'];
     const meatTypeCount = meatTypes.filter(m => queryLower.includes(m)).length;
     if (meatTypeCount > 1) {
       return true; // Multiple meat types mentioned
     }
-    
+
     return false;
   })();
 
@@ -733,6 +856,8 @@ export async function mapIngredientWithFatsecret(
       logger.debug('fatsecret.map.ai_rerank_skipped', { rawLine, reason, topScore, scoreGap });
     }
   }
+  let aiValidationData: { id: string; confidence: number; reason: string } | null = null;
+
   if (shouldUseAiRerank) {
     try {
       const topForAi = candidates.slice(0, 5).map((c) => ({
@@ -752,6 +877,13 @@ export async function mapIngredientWithFatsecret(
           const boostMultiplier = isAmbiguousQuery ? 0.2 : 0.1;
           picked.baseScore += boostMultiplier * aiPick.confidence;
           candidates.unshift(picked);
+
+          aiValidationData = {
+            id: aiPick.id,
+            confidence: aiPick.confidence,
+            reason: aiPick.rationale ?? 'AI Rerank',
+          };
+
           logger.info('fatsecret.map.ai_rerank_used', {
             rawLine,
             pickedId: aiPick.id,
@@ -759,10 +891,19 @@ export async function mapIngredientWithFatsecret(
             isAmbiguous: isAmbiguousQuery,
             rationale: aiPick.rationale,
           });
+          if (debug) {
+            debugLogger.logAiUsage('retry', {
+              original: rawLine,
+              pickedId: aiPick.id,
+              aiConfidence: aiPick.confidence,
+              rationale: aiPick.rationale,
+              subType: 'rerank'
+            });
+          }
         }
       } else {
-        logger.debug('fatsecret.map.ai_rerank_skipped', { 
-          rawLine, 
+        logger.debug('fatsecret.map.ai_rerank_skipped', {
+          rawLine,
           reason: aiPick.reason,
           isAmbiguous: isAmbiguousQuery,
         });
@@ -782,10 +923,16 @@ export async function mapIngredientWithFatsecret(
     if (!hydrated || !hydrated.servings || hydrated.servings.length === 0) continue;
 
     let servingSelection = selectServing(parsed, hydrated.servings);
-    if (!servingSelection) continue;
+    // console.debug('DEBUG: servingSelection', servingSelection);
+    if (debug && !servingSelection) {
+      debugLogger.logDebug(`No serving match for "${rawLine}"`, { food: hydrated.name, parsed, servings: hydrated.servings });
+    }
+    if (!servingSelection) {
+      continue;
+    }
 
     const qty = parsed ? parsed.qty * parsed.multiplier : 1;
-    
+
     // Compute grams: prefer gramsPerUnit * qty, fallback to baseGrams
     // If serving weight is available but unit matching is weak, still use it
     let grams = servingSelection.gramsPerUnit != null
@@ -798,7 +945,7 @@ export async function mapIngredientWithFatsecret(
       // Use base grams directly if we couldn't compute per-unit grams
       grams = servingSelection.baseGrams;
     }
-    
+
     // If grams is still null, try using servingWeightGrams from the serving object directly
     if ((!grams || grams <= 0) && servingSelection.serving.servingWeightGrams && servingSelection.serving.servingWeightGrams > 0) {
       grams = servingSelection.serving.servingWeightGrams;
@@ -809,11 +956,17 @@ export async function mapIngredientWithFatsecret(
     // This catches cases where FatSecret picks a tiny serving (e.g., 1 tsp = 2g) for a volume request (e.g., 1 cup)
     const volumeAndSolidUnits = ['cup', 'cups', 'tablespoon', 'tablespoons', 'tbsp', 'tbs', 'teaspoon', 'teaspoons', 'tsp', 'ml', 'milliliter', 'milliliters', 'liter', 'liters', 'l', 'fl oz', 'fluid ounce', 'fluid ounces'];
     const isVolumeOrSolidUnit = parsed?.unit && volumeAndSolidUnits.some(vu => parsed.unit!.toLowerCase().includes(vu));
-    
-    if (grams && grams > 0 && isVolumeOrSolidUnit && grams < 10) {
+
+    // Special handling for produce (onion, tomato, pepper) where "cup" is common but might map to a tiny serving
+    // If unit is "cup" and food is produce, be more aggressive about finding a larger serving
+    const isProduce = /onion|tomato|pepper|jalapeno|carrot|celery|zucchini|mushroom|spinach|kale/i.test(hydrated.name);
+    const isCup = parsed?.unit && /cup/i.test(parsed.unit);
+    const minGrams = isProduce && isCup ? 50 : 10; // Expect at least 50g for a cup of produce
+
+    if (grams && grams > 0 && isVolumeOrSolidUnit && grams < minGrams) {
       const originalGrams = grams;
       const originalServing = servingSelection.serving;
-      
+
       // Try to find a better serving: prefer 100g/ml serving, otherwise any serving with weight >= 10g
       const betterServing = hydrated.servings.find(s => {
         const desc = (s.description ?? '').toLowerCase();
@@ -821,13 +974,13 @@ export async function mapIngredientWithFatsecret(
         const hasGoodWeight = s.servingWeightGrams && s.servingWeightGrams >= 10;
         return has100g || hasGoodWeight;
       });
-      
+
       if (betterServing) {
         const fallbackBaseGrams = betterServing.servingWeightGrams ?? 100;
         // Use the serving's own servingWeightGrams if >= 10, otherwise fall back to 100g/ml
         // For volume units, we still multiply by qty to respect the user's quantity
         grams = fallbackBaseGrams * (qty || 1);
-        
+
         // Update serving selection to use the better serving
         // Macros will be recomputed later using this new serving
         servingSelection = {
@@ -837,7 +990,7 @@ export async function mapIngredientWithFatsecret(
           unitsPerServing: 1,
           baseGrams: betterServing.servingWeightGrams ?? null,
         };
-        
+
         logger.warn('fatsecret.map.tiny_serving', {
           rawLine,
           foodId: hydrated.id,
@@ -879,7 +1032,7 @@ export async function mapIngredientWithFatsecret(
     const servingDesc = (servingSelection.serving.description ?? '').toLowerCase();
     const unitLower = parsed?.unit?.toLowerCase();
     const unitHintLower = parsed?.unitHint?.toLowerCase();
-    
+
     // Unit match bonus - check for word boundary matches
     let unitMatchBonus = 0;
     if (unitLower) {
@@ -900,10 +1053,73 @@ export async function mapIngredientWithFatsecret(
         unitMatchBonus = 0.05;
       }
     }
-    
+
     // UnitHint match bonus
     const unitHintMatchBonus = unitHintLower && servingDesc.includes(unitHintLower) ? 0.05 : 0;
-    
+
+    // Detect herbs/spices to adjust weighting
+    // Herbs/spices often have tiny servings which get penalized heavily by the serving match score
+    // We want to rely more on the name match for these
+    const isHerbOrSpice = parsed?.name && (
+      parsed.name.match(/\b(powder|seasoning|spice|herb|leaves|ground|dried|flakes|rub|mix)\b/i) ||
+      ['salt', 'pepper', 'cinnamon', 'cumin', 'paprika', 'oregano', 'basil', 'thyme', 'rosemary'].some(s => parsed.name.toLowerCase().includes(s))
+    );
+
+    const baseScoreWeight = isHerbOrSpice ? 0.55 : 0.45;
+    const servingScoreWeight = isHerbOrSpice ? 0.15 : 0.25;
+
+    // Exact name match bonus
+    // If the food name is a very close match to the query, give a significant boost
+    const normalizedQuery = normalizeQuery(parsed?.name?.trim() || rawLine.trim());
+    const normalizedFoodName = normalizeQuery(hydrated.name);
+    const isExactMatch = normalizedQuery === normalizedFoodName || normalizedFoodName === normalizedQuery + 's' || normalizedQuery === normalizedFoodName + 's';
+    const exactMatchBonus = isExactMatch ? 0.20 : 0;  // QUICK FIX: Doubled from 0.10
+
+    // Brand penalty for generic queries
+    // If query is generic (e.g. "flour") but result is specific brand (e.g. "King Arthur Flour"), penalize slightly
+    // unless the user asked for a brand
+    const queryHasBrand = parsed?.name?.match(/\b(brand|king arthur|gold medal|pillsbury)\b/i); // Simplified check
+    const isGenericQuery = !queryHasBrand && normalizedQuery.split(/\s+/).length <= 2;
+    const brandPenalty = (hydrated.brandName && isGenericQuery) ? -0.05 : 0;
+
+    // Prefer Generic foods over Branded for generic queries
+    // FoodType is typically "Generic" or "Brand" in FatSecret
+    const isGenericFood = hydrated.foodType?.toLowerCase() === 'generic' || !hydrated.brandName;
+    const genericBonus = (isGenericFood && !queryHasBrand && isGenericQuery) ? 0.05 : 0;
+
+    // Penalize cooked/raw mismatches
+    // Detect cooking state in query and food name
+    const queryCookState = detectCookState(parsed?.name || rawLine);
+    const foodCookState = detectCookState(hydrated.name);
+    const cookStateMismatch = (queryCookState && foodCookState && queryCookState !== foodCookState);
+
+    // PHASE A: Only harsh penalty if user EXPLICITLY requested cook state
+    const explicitCookState = /\b(raw|uncooked|cooked|baked|fried|grilled|roasted)\b/i.test(parsed?.name || rawLine);
+    const cookStatePenalty = cookStateMismatch ? (explicitCookState ? -0.15 : -0.05) : 0;
+
+    // Boost for nutrient density match (e.g., high-protein queries)
+    let nutrientDensityBonus = 0;
+    const queryLower = (parsed?.name || rawLine).toLowerCase();
+    const hasHighProteinQuery = /\b(high-protein|protein|lean)\b/i.test(queryLower);
+
+    if (hasHighProteinQuery && hydrated.servings && hydrated.servings.length > 0) {
+      // Try to find a 100g serving for nutrient density calculation
+      const serving100g = hydrated.servings.find(s => {
+        const desc = (s.description ?? '').toLowerCase();
+        return /100\s*(g|gram)/i.test(desc) && s.servingWeightGrams && Math.abs(s.servingWeightGrams - 100) < 5;
+      });
+
+      if (serving100g && serving100g.protein && serving100g.calories) {
+        const protein100g = serving100g.protein;
+        const kcal100 = serving100g.calories || 1; // Avoid division by zero
+        const proteinPer100kcal = (protein100g / kcal100) * 100;
+        // High protein is typically >20g per 100 kcal
+        if (proteinPer100kcal > 20) {
+          nutrientDensityBonus = 0.05;
+        }
+      }
+    }
+
     // Confidence boost when food name shares >= 2 tokens with the query
     // This keeps good generic matches (egg, chicken) from being dropped due to low serving match score
     let confidenceBoostWhenExactFoodMatch = 0;
@@ -922,25 +1138,150 @@ export async function mapIngredientWithFatsecret(
         confidenceBoostWhenExactFoodMatch = 0.05;
       }
     }
-    
+
+    // ACCURACY FIX: Common ingredient boost
+    // Ingredients that appear in 50%+ of recipes get a small confidence boost
+    const commonIngredients = new Set([
+      'chicken', 'beef', 'pork', 'turkey', 'salmon', 'shrimp', 'tuna',
+      'egg', 'eggs', 'milk', 'butter', 'cheese', 'yogurt', 'cream',
+      'flour', 'sugar', 'salt', 'pepper', 'oil', 'olive oil', 'water',
+      'onion', 'onions', 'garlic', 'tomato', 'tomatoes', 'potato', 'potatoes',
+      'carrot', 'carrots', 'celery', 'bell pepper', 'broccoli', 'spinach',
+      'rice', 'pasta', 'bread', 'oats', 'quinoa',
+      'lemon', 'lime', 'parsley', 'basil', 'oregano', 'cumin', 'paprika',
+      'soy sauce', 'vinegar', 'honey', 'maple syrup'
+    ]);
+
+    const normalizedIngredient = (parsed?.name || rawLine).toLowerCase().trim();
+    const isCommonIngredient = Array.from(commonIngredients).some(common =>
+      normalizedIngredient.includes(common) || common.includes(normalizedIngredient)
+    );
+    const commonIngredientBonus = isCommonIngredient ? 0.05 : 0;
+
+    // ACCURACY FIX: Prepared food & restaurant detection with heavy penalty
+    const preparedFoodKeywords = [
+      'rings', 'nuggets', 'strips', 'patty', 'sandwich', 'burger',
+      'pizza', 'taco', 'burrito', 'wrap', 'bowl', 'platter',
+      'combo', 'meal', 'dinner', 'breakfast', 'lunch', 'wings',
+      'fries', 'tots', 'sticks', 'bites', 'popcorn chicken'
+    ];
+
+    const restaurantBrands = [
+      'mcdonalds', 'denny', 'burger king', 'wendys', 'taco bell',
+      'kfc', 'subway', 'chipotle', 'panera', 'applebee',
+      'chili', 'olive garden', 'red lobster', 'outback'
+    ];
+
+    const foodNameLower = hydrated.name.toLowerCase();
+    const brandNameLower = (hydrated.brandName || '').toLowerCase();
+
+    const isPreparedFood = preparedFoodKeywords.some(kw => foodNameLower.includes(kw));
+    const isRestaurant = restaurantBrands.some(brand =>
+      brandNameLower.includes(brand) || foodNameLower.includes(brand)
+    );
+
+    // Heavy penalty for prepared/restaurant foods (-0.30)
+    const preparedFoodPenalty = (isPreparedFood || isRestaurant) ? -0.30 : 0;
+
+    // ACCURACY FIX: Specificity bonus - reward matching ALL query tokens
+    const queryTokens = normalizedQuery.split(/\s+/).filter(t => t.length > 2);
+    const foodTokens = normalizedFoodName.split(/\s+/).filter(t => t.length > 2);
+
+    let specificityBonus = 0;
+    if (queryTokens.length > 1) {
+      const matchCount = queryTokens.filter(qt =>
+        foodTokens.some(ft => ft.includes(qt) || qt.includes(ft))
+      ).length;
+
+      // Bonus if ALL query tokens match
+      if (matchCount === queryTokens.length) {
+        specificityBonus = 0.10;
+      }
+    }
+
+    // ACCURACY FIX: Ground beef leanness matching
+    let leanessMatchBonus = 0;
+    const isGroundBeef = /ground\s+beef/i.test(parsed?.name || rawLine);
+    if (isGroundBeef) {
+      // Parse leanness from query (e.g., "90% lean", "90/10", "90%")
+      const leannessMatch = rawLine.match(/(\d{2,3})\s*%?\s*(lean|\/)/i);
+      if (leannessMatch) {
+        const leanPercent = parseInt(leannessMatch[1]);
+        const targetFatPercent = 100 - leanPercent;  // 90% lean = 10% fat
+
+        // Calculate fat percentage of this food
+        const serving = servingSelection.serving;
+        if (serving.fat && serving.servingWeightGrams) {
+          const actualFatPercent = (serving.fat / serving.servingWeightGrams) * 100;
+          const fatDiff = Math.abs(actualFatPercent - targetFatPercent);
+
+          // Bonus if within 5% of target fat content
+          if (fatDiff < 5) {
+            leanessMatchBonus = 0.15;
+          }
+        }
+      }
+    }
+
     const confidence = clamp(
       0.25 +
-        Math.min(1, Math.max(0, candidate.baseScore)) * 0.45 +
-        servingSelection.matchScore * 0.25 +
-        (hydrated.country?.toUpperCase() === 'US' ? 0.05 : 0) +
-        (unitHintLower && hydrated.name.toLowerCase().includes(unitHintLower) ? 0.05 : 0) +
-        unitMatchBonus +
-        unitHintMatchBonus +
-        confidenceBoostWhenExactFoodMatch,
+      Math.min(1, Math.max(0, candidate.baseScore)) * baseScoreWeight +
+      servingSelection.matchScore * servingScoreWeight +
+      (hydrated.country?.toUpperCase() === 'US' ? 0.05 : 0) +
+      (unitHintLower && hydrated.name.toLowerCase().includes(unitHintLower) ? 0.05 : 0) +
+      unitMatchBonus +
+      unitHintMatchBonus +
+      confidenceBoostWhenExactFoodMatch +
+      exactMatchBonus +
+      brandPenalty +
+      genericBonus +
+      cookStatePenalty +
+      nutrientDensityBonus +
+      commonIngredientBonus +
+      preparedFoodPenalty +    // ACCURACY FIX: -0.30 for restaurants/prepared
+      specificityBonus +       // ACCURACY FIX: +0.10 for multi-token match
+      leanessMatchBonus,       // ACCURACY FIX: +0.15 for ground beef fat%
       0,
       1
     );
 
+    if (debug) {
+      debugLogger.logDebug(`Candidate scored for "${rawLine}"`, {
+        food: hydrated.name,
+        confidence,
+        baseScore: candidate.baseScore,
+        servingMatch: servingSelection.matchScore,
+        bonuses: {
+          us: hydrated.country?.toUpperCase() === 'US',
+          unitHint: !!unitHintLower && hydrated.name.toLowerCase().includes(unitHintLower),
+          unitMatch: unitMatchBonus,
+          unitHintMatch: unitHintMatchBonus,
+          exactFoodMatch: confidenceBoostWhenExactFoodMatch,
+          exactMatchBonus,
+          brandPenalty,
+          isHerbOrSpice,
+          genericBonus,
+          cookStatePenalty,
+          explicitCookState,
+          nutrientDensityBonus,
+          commonIngredientBonus,
+          preparedFoodPenalty,   // ACCURACY FIX: Show penalty
+          specificityBonus,      // ACCURACY FIX: Show bonus
+          leanessMatchBonus,     // ACCURACY FIX: Show bonus
+          isPreparedFood,        // ACCURACY FIX: Show detection
+          isRestaurant           // ACCURACY FIX: Show detection
+        }
+      });
+    }
+
     if (confidence < minConfidence) {
+      if (debug) {
+        debugLogger.logDebug(`Candidate rejected (low confidence)`, { food: hydrated.name, confidence, minConfidence });
+      }
       continue;
     }
 
-    const result = {
+    const result: FatsecretMappedIngredient = {
       source: 'fatsecret',
       foodId: hydrated.id,
       foodName: hydrated.name,
@@ -953,8 +1294,65 @@ export async function mapIngredientWithFatsecret(
       carbs: macros.carbs,
       fat: macros.fat,
       confidence,
+      quality: confidence >= 0.8 ? 'high' : (confidence >= 0.6 ? 'medium' : 'low'),
       rawLine: rawLine.trim(),
     };
+
+    // AI Validation - run on EVERY final mapping
+    let finalAiValidation: Awaited<ReturnType<typeof validateMappingWithAI>> | null = null;
+    try {
+      finalAiValidation = await validateMappingWithAI(rawLine, {
+        foodId: result.foodId,
+        foodName: result.foodName,
+        brandName: result.brandName,
+        searchQuery: normalizedName,  // Show AI the search query we used
+        ourConfidence: confidence,
+        nutrition: {  // Include nutrition for better validation
+          protein: result.protein,
+          carbs: result.carbs,
+          fat: result.fat,
+          kcal: result.kcal,
+        },
+      });
+
+      // Log if AI rejects our confident choice
+      if (!finalAiValidation.approved && confidence >= 0.7) {
+        logger.warn('fatsecret.map.ai_rejected_confident_mapping', {
+          rawLine,
+          foodName: result.foodName,
+          ourConfidence: confidence,
+          aiConfidence: finalAiValidation.confidence,
+          aiReason: finalAiValidation.reason,
+          aiCategory: finalAiValidation.category,
+        });
+      }
+
+      // Save to validated cache ONLY if AI approves with high confidence
+      if (finalAiValidation.approved && finalAiValidation.confidence >= 0.85) {
+        await saveValidatedMapping(rawLine, result, finalAiValidation);
+        logger.info('fatsecret.map.saved_to_validated_cache', {
+          rawLine,
+          foodName: result.foodName,
+          aiConfidence: finalAiValidation.confidence,
+        });
+      }
+
+      // Attach AI validation result to return object
+      result.aiValidation = {
+        approved: finalAiValidation.approved,
+        confidence: finalAiValidation.confidence,
+        reason: finalAiValidation.reason,
+        category: finalAiValidation.category,
+        detectedIssues: finalAiValidation.detectedIssues,
+      };
+    } catch (error) {
+      // If AI validation fails, log but continue (fail open)
+      logger.error('fatsecret.map.ai_validation_error', {
+        rawLine,
+        error: (error as Error).message,
+      });
+    }
+
     if (preferCache) {
       logger.info('fatsecret.map.cache_usage', {
         cacheMode: FATSECRET_CACHE_MODE,
@@ -984,7 +1382,7 @@ export async function mapIngredientWithFatsecret(
           tokenOverlap++;
         }
       }
-      
+
       // If overlap >= 2 tokens, try 100g serving
       if (tokenOverlap >= 2) {
         // Find 100g/ml serving
@@ -992,7 +1390,7 @@ export async function mapIngredientWithFatsecret(
           const desc = (s.description ?? '').toLowerCase();
           return /100\s*(g|gram|grams|ml|milliliter)/i.test(desc) && s.servingWeightGrams && Math.abs(s.servingWeightGrams - 100) < 5;
         });
-        
+
         if (serving100g) {
           const qty = parsed ? parsed.qty * parsed.multiplier : 1;
           // Use 100g as base and multiply by qty if applicable
@@ -1004,7 +1402,7 @@ export async function mapIngredientWithFatsecret(
           } else {
             grams = 100 * qty; // For other cases, treat as 100g per unit
           }
-          
+
           if (grams > 0) {
             const macros = computeMacros(serving100g, qty, 1); // 1 serving = 100g
             if (macros) {
@@ -1016,41 +1414,47 @@ export async function mapIngredientWithFatsecret(
                 servingDesc: serving100g.description,
                 grams,
               });
-            
-            // Lower confidence since we used 100g fallback, but still accept if >= 0.3
-            const fallbackConfidence = Math.max(0.3, Math.min(0.7, topCandidate.baseScore * 0.5 + 0.3));
-            const result = {
-              source: 'fatsecret',
-              foodId: hydrated.id,
-              foodName: hydrated.name,
-              brandName: hydrated.brandName,
-              servingId: serving100g.id ?? undefined,
+
+              // Lower confidence since we used 100g fallback, but still accept if >= 0.3
+              const fallbackConfidence = Math.max(0.3, Math.min(0.7, topCandidate.baseScore * 0.5 + 0.3));
+              const result: FatsecretMappedIngredient = {
+                source: 'fatsecret',
+                foodId: hydrated.id,
+                foodName: hydrated.name,
+                brandName: hydrated.brandName,
+                servingId: serving100g.id ?? undefined,
                 servingDescription: serving100g.description ?? undefined,
                 grams,
                 kcal: macros.kcal,
                 protein: macros.protein,
                 carbs: macros.carbs,
-              fat: macros.fat,
-              confidence: fallbackConfidence,
-              rawLine: rawLine.trim(),
-            };
-            if (preferCache) {
-              logger.info('fatsecret.map.cache_usage', {
-                cacheMode: FATSECRET_CACHE_MODE,
-                usedSource: topCandidate.source,
-                cacheCandidates: cacheCandidateCount,
-                apiCandidates: apiCandidateCount,
-                hydratedFromCache: Boolean(topCandidate.hydratedOverride),
-                fallback: '100g',
-              });
+                fat: macros.fat,
+                confidence: fallbackConfidence,
+                quality: fallbackConfidence >= 0.8 ? 'high' : (fallbackConfidence >= 0.6 ? 'medium' : 'low'),
+                rawLine: rawLine.trim(),
+              };
+              if (preferCache) {
+                logger.info('fatsecret.map.cache_usage', {
+                  cacheMode: FATSECRET_CACHE_MODE,
+                  usedSource: topCandidate.source,
+                  cacheCandidates: cacheCandidateCount,
+                  apiCandidates: apiCandidateCount,
+                  hydratedFromCache: Boolean(topCandidate.hydratedOverride),
+                  fallback: '100g',
+                });
+              }
+              return result;
             }
-            return result;
           }
         }
       }
     }
   }
-  }
+
+  // Track failure if we reached here without returning
+  await trackValidationFailure(rawLine, {
+    foodId: '', foodName: '', source: 'fatsecret', grams: 0, kcal: 0, protein: 0, carbs: 0, fat: 0, confidence: 0, quality: 'low', rawLine
+  }, { approved: false, confidence: 0, reason: 'no_suitable_serving_found' });
 
   return null;
 }
@@ -1090,7 +1494,26 @@ async function hydrateCandidateFromCacheOrApi(
     }
   }
 
-  return client.getFoodDetails(candidate.food.id);
+  const details = await client.getFoodDetails(candidate.food.id);
+
+  // Inline AI serving backfill: if details lack usable servings, try to backfill
+  // console.debug('DEBUG: hydrate details', details?.id, details?.servings?.length);
+  if (details && allowLiveFallback) {
+    const hasWeight = details.servings?.some(s => (s.servingWeightGrams ?? 0) > 0);
+    const hasVolume = details.servings?.some(s => (s.metricServingUnit === 'ml' || s.metricServingUnit === 'l') && (s.metricServingAmount ?? 0) > 0);
+
+    if (!hasWeight && !hasVolume) {
+      // Try to backfill weight-based serving first (most critical)
+      const backfillResult = await insertAiServing(details.id, 'weight');
+      if (backfillResult.success) {
+        logger.info('fatsecret.map.inline_backfill_success', { foodId: details.id });
+        // Re-fetch details to get the new serving
+        return client.getFoodDetails(candidate.food.id);
+      }
+    }
+  }
+
+  return details;
 }
 
 
@@ -1347,11 +1770,11 @@ function selectServing(
   for (const serving of servings) {
     let score = 0;
     const description = (serving.description ?? '').toLowerCase();
-    
+
     // Check if parsed unit is a volume/solid unit (cup, tbsp, tsp, etc.)
     const volumeAndSolidUnits = ['cup', 'cups', 'tablespoon', 'tablespoons', 'tbsp', 'tbs', 'teaspoon', 'teaspoons', 'tsp', 'ml', 'milliliter', 'milliliters', 'liter', 'liters', 'l', 'fl oz', 'fluid ounce', 'fluid ounces'];
     const isVolumeOrSolidUnit = unit && volumeAndSolidUnits.some(vu => unit.includes(vu));
-    
+
     // Strong match for exact unit (increased weight)
     let hasUnitMatch = false;
     if (unit) {
@@ -1372,7 +1795,7 @@ function selectServing(
         }
       }
     }
-    
+
     // Strong match for unitHint (increased weight)
     if (parsed?.unitHint) {
       const unitHintLower = parsed.unitHint.toLowerCase();
@@ -1393,18 +1816,18 @@ function selectServing(
         hasUnitMatch = true;
       }
     }
-    
+
     // Penalize tiny servings when parsed unit is a volume/solid unit
     if (isVolumeOrSolidUnit && serving.servingWeightGrams && serving.servingWeightGrams < 10) {
       score -= 0.8; // Increased penalty for tiny servings for volume/solid units
     }
-    
+
     // Prefer 100g/ml servings when volume/solid unit is requested (even if unit matches, if it's tiny)
     // This ensures 100g entries score higher when the user asked for cups/tbsp/tsp
     if (isVolumeOrSolidUnit) {
-      const is100g = /100\s*(g|gram|grams|ml|milliliter|milliliters)/i.test(description) && 
-                     serving.servingWeightGrams && 
-                     Math.abs(serving.servingWeightGrams - 100) < 5;
+      const is100g = /100\s*(g|gram|grams|ml|milliliter|milliliters)/i.test(description) &&
+        serving.servingWeightGrams &&
+        Math.abs(serving.servingWeightGrams - 100) < 5;
       if (is100g) {
         // Boost 100g/ml servings when volume unit is requested
         // Boost more if there's no unit match, or if there was a unit match but it's a tiny serving
@@ -1426,13 +1849,13 @@ function selectServing(
         score += 0.6; // Increased weight for 100g/ml fallback
       }
     }
-    
+
     // Quantity matching (bonus if quantity matches)
     const units = serving.numberOfUnits ?? 1;
     if (qty === units) {
       score += 0.3;
     }
-    
+
     if (!best || score > bestScore) {
       best = serving;
       bestScore = score;
@@ -1638,10 +2061,10 @@ function getTokenWeight(token: string): number {
 
 function weightedJaccard(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
-  
+
   let weightedIntersection = 0;
   let weightedUnion = 0;
-  
+
   // Calculate weighted intersection
   for (const token of a) {
     const weight = getTokenWeight(token);
@@ -1650,14 +2073,14 @@ function weightedJaccard(a: Set<string>, b: Set<string>): number {
     }
     weightedUnion += weight;
   }
-  
+
   // Add tokens from b that aren't in a
   for (const token of b) {
     if (!a.has(token)) {
       weightedUnion += getTokenWeight(token);
     }
   }
-  
+
   return weightedUnion > 0 ? weightedIntersection / weightedUnion : 0;
 }
 

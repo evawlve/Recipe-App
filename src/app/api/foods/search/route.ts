@@ -17,32 +17,32 @@ export const runtime = 'nodejs';
 
 
 export async function GET(req: NextRequest) {
-	// Sentry disabled
-	// Sentry.setTag('endpoint', 'foods-search');
-	// Skip execution during build time
-	if (process.env.NEXT_PHASE === 'phase-production-build' || 
-	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
-	    process.env.BUILD_TIME === 'true') {
-		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
-	}
+  // Sentry disabled
+  // Sentry.setTag('endpoint', 'foods-search');
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+    process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
 
-	// Import only when not in build mode
-	const { prisma } = await import("@/lib/db");
-	const { getCurrentUser } = await import("@/lib/auth");
-	const { deriveServingOptions } = await import("@/lib/units/servings");
-	const { logger } = await import("@/lib/logger");
-	const { rankCandidates } = await import("@/lib/foods/rank");
-	const { kcalBandForQuery } = await import("@/lib/foods/plausibility");
-	const { computeTotals } = await import("@/lib/nutrition/compute");
-	const { computeImpactPreview } = await import("@/lib/nutrition/impact");
-	const { tokens, normalizeQuery } = await import("@/lib/search/normalize");
-	const { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } = await import('@/lib/fatsecret/config');
-	const {
-		searchFatSecretCacheFoods,
-		buildCacheCandidate,
-		buildCacheFoodResponse,
-	} = await import('@/lib/fatsecret/cache-search');
-	
+  // Import only when not in build mode
+  const { prisma } = await import("@/lib/db");
+  const { getCurrentUser } = await import("@/lib/auth");
+  const { deriveServingOptions } = await import("@/lib/units/servings");
+  const { logger } = await import("@/lib/logger");
+  const { rankCandidates } = await import("@/lib/foods/rank");
+  const { kcalBandForQuery } = await import("@/lib/foods/plausibility");
+  const { computeTotals } = await import("@/lib/nutrition/compute");
+  const { computeImpactPreview } = await import("@/lib/nutrition/impact");
+  const { tokens, normalizeQuery } = await import("@/lib/search/normalize");
+  const { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } = await import('@/lib/fatsecret/config');
+  const {
+    searchFatSecretCacheFoods,
+    buildCacheCandidate,
+    buildCacheFoodResponse,
+  } = await import('@/lib/fatsecret/cache-search');
+
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('s');
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const recipeId = searchParams.get('recipeId');
     const verification = searchParams.get('verification');
     const source = searchParams.get('source');
-    
+
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ error: 'Search query must be at least 2 characters' }, { status: 400 });
     }
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
           fiber: totals.fiberG,
           sugar: totals.sugarG
         };
-        
+
         // Get goal from existing nutrition record if available
         const existingNutrition = await withSpan('db.nutrition.findUnique', async () => prisma.nutrition.findUnique({
           where: { recipeId }
@@ -127,19 +127,19 @@ export async function GET(req: NextRequest) {
           { aliases: { some: { alias: { contains: t, mode: 'insensitive' } } } },
         ]
       }));
-  
+
       const whereClause: any = {
         AND: andORs
       };
-  
+
       if (verification) {
         whereClause.verification = verification;
       }
-      
+
       if (source) {
         whereClause.source = source;
       }
-  
+
       const foods = await withSpan('db.food.findMany.search', async () => prisma.food.findMany({
         where: whereClause,
         include: {
@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
       }));
 
       const foodsById = new Map(foods.map((f) => [f.id, f]));
-  
+
       const candidates = foods.map(f => ({
         food: {
           id: f.id,
@@ -171,12 +171,12 @@ export async function GET(req: NextRequest) {
         barcodes: (f.barcodes ?? []).map(b => b.gtin),
         usedByUserCount: 0,
       }));
-  
-      const ranked = rankCandidates(candidates, { 
-        query: q, 
+
+      const ranked = rankCandidates(candidates, {
+        query: q,
         kcalBand
       });
-  
+
       const data = ranked.slice(0, 30).map(({ candidate, confidence }) => {
         const f = foodsById.get(candidate.food.id);
         if (!f) return null;
@@ -185,7 +185,7 @@ export async function GET(req: NextRequest) {
           densityGml: f.densityGml ?? undefined,
           categoryId: f.categoryId ?? null,
         });
-        
+
         const item: any = {
           id: f.id,
           name: f.name,
@@ -204,22 +204,22 @@ export async function GET(req: NextRequest) {
           confidence,
           servingOptions,
         };
-  
+
         const impactPayload = buildImpact(
-          { 
-            kcal100: f.kcal100, 
-            protein100: f.protein100, 
-            carbs100: f.carbs100, 
-            fat100: f.fat100, 
-            fiber100: f.fiber100 ?? undefined, 
-            sugar100: f.sugar100 ?? undefined 
+          {
+            kcal100: f.kcal100,
+            protein100: f.protein100,
+            carbs100: f.carbs100,
+            fat100: f.fat100,
+            fiber100: f.fiber100 ?? undefined,
+            sugar100: f.sugar100 ?? undefined
           },
           servingOptions,
         );
         if (impactPayload) {
           item.impact = impactPayload;
         }
-  
+
         return item;
       }).filter(Boolean);
 
@@ -270,15 +270,15 @@ export async function GET(req: NextRequest) {
           'fatsecret_cache_search',
         );
       } else {
-        const legacyResult = await runLegacySearch();
-        responseData = legacyResult.data;
+        // ACCURACY FIX: No legacy fallback - only serve FatSecret/FDC cache
+        // This prevents showing prepared foods (Denny's, McDonald's) and outdated USDA data
+        responseData = [];
         logger.info(
           {
             feature: 'mapping_v2',
-            step: 'cache_empty_legacy_fallback',
+            step: 'cache_empty_no_results',
             q,
             cacheMode: FATSECRET_CACHE_MODE,
-            legacyCount: legacyResult.count,
           },
           'fatsecret_cache_search',
         );
@@ -310,7 +310,7 @@ export async function GET(req: NextRequest) {
       topId: responseData[0]?.id,
       topConfidence: responseData[0]?.confidence,
     });
-    
+
     return NextResponse.json({
       success: true,
       data: responseData

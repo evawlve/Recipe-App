@@ -144,20 +144,20 @@ export function cacheFoodToDetails(food: CacheFoodRecord): FatSecretFoodDetails 
   };
 }
 
-export async function searchFatSecretCacheFoods(query: string, limit = 200) {
+export async function searchFatSecretCacheFoods(query: string, limit = 200): Promise<CacheFoodRecord[]> {
   const normalized = normalizeQuery(query.trim());
   if (!normalized) return [];
   const toks = tokens(normalized);
   const where = toks.length
     ? {
-        AND: toks.map((t) => ({
-          OR: [
-            { name: { contains: t, mode: 'insensitive' } },
-            { brandName: { contains: t, mode: 'insensitive' } },
-            { aliases: { some: { alias: { contains: t, mode: 'insensitive' } } } },
-          ],
-        })),
-      }
+      AND: toks.map((t) => ({
+        OR: [
+          { name: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
+          { brandName: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
+          { aliases: { some: { alias: { contains: t, mode: 'insensitive' as Prisma.QueryMode } } } },
+        ],
+      })),
+    }
     : {};
 
   const foods = await prisma.fatSecretFoodCache.findMany({
@@ -169,7 +169,7 @@ export async function searchFatSecretCacheFoods(query: string, limit = 200) {
       densityEstimates: true,
     },
   });
-  return foods;
+  return foods as unknown as CacheFoodRecord[];
 }
 
 export async function getCachedFoodWithRelations(id: string) {

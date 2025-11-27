@@ -1,0 +1,6 @@
+﻿{
+    "scripts":  {
+                    "clear-auto-mappings":  "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/clear-auto-mappings.ts",
+                    "clear-user-recipes":  "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/clear-user-recipes.ts"
+                }
+}
