@@ -5,10 +5,12 @@ import { mapIngredientWithFatsecret } from '../fatsecret/map-ingredient';
 import { mapIngredientWithFdc } from '../usda/map-ingredient-fdc';
 import { createFoodAlias } from '../fatsecret/alias-manager';
 import { normalizeIngredientName } from '../fatsecret/normalization-rules';
-import { FATSECRET_MIN_CONFIDENCE } from '../fatsecret/config';
 import { applyCleanupPatterns, recordCleanupOutcome } from '../ingredients/cleanup';
 import { learnPatternsFromAI } from '../ingredients/pattern-learner';
 import { aiNormalizeIngredient } from '../fatsecret/ai-normalize';
+
+// Align with pilot importer: allow candidates down to 0.5 but gate on AI validation
+const MIN_AUTOMAP_CONFIDENCE = 0.5;
 
 /**
  * Process items in batches with concurrency control
@@ -119,7 +121,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
         // Always enable debug logging for failure analysis
         // Use cleaned ingredient line for mapping
         let mapped = await mapIngredientWithFatsecret(cleanedLine, {
-          minConfidence: FATSECRET_MIN_CONFIDENCE,
+          minConfidence: MIN_AUTOMAP_CONFIDENCE,
           debug: true,
         });
 
@@ -211,7 +213,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
               : `${ingredient.qty} ${aiResult.normalizedName}`;
 
             mapped = await mapIngredientWithFatsecret(aiNormalizedLine, {
-              minConfidence: FATSECRET_MIN_CONFIDENCE,
+              minConfidence: MIN_AUTOMAP_CONFIDENCE,
               debug: true,
             });
 
@@ -253,6 +255,32 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
             }
             return { success: false, ingredientId: ingredient.id };
           }
+        }
+
+        // Hard stop: if AI validation explicitly rejects, do not save
+        if (mapped.aiValidation && mapped.aiValidation.approved === false) {
+          logger.info('autoMap:ai_rejected', {
+            ingredientId: ingredient.id,
+            rawLine: ingredientLine,
+            foodName: mapped.foodName,
+            aiReason: mapped.aiValidation.reason,
+            aiCategory: mapped.aiValidation.category,
+            aiConfidence: mapped.aiValidation.confidence,
+          });
+
+          // Record cleanup attempt as failed so we can learn later
+          if (cleanupResult.appliedPatterns.length > 0) {
+            await recordCleanupOutcome(
+              ingredient.name,
+              cleanedName,
+              cleanupResult.appliedPatterns.map(p => p.id),
+              false,
+              mapped.confidence,
+              { recipeId, ingredientId: ingredient.id }
+            );
+          }
+
+          return { success: false, ingredientId: ingredient.id, error: 'ai_rejected' };
         }
 
         const payload: any = {

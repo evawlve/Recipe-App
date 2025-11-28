@@ -607,11 +607,19 @@ export async function mapIngredientWithFatsecret(
   const baseName = parsed?.name?.trim() || trimmed;
   let normalization = normalizeIngredientName(baseName);
   let normalizedName = normalization.cleaned || baseName;
+
+  // Extra safety: strip leading quantity/unit from normalizedName if parser failed to do so
+  const stripLeadingQuantity = (value: string) => {
+    // Patterns: numbers (with decimals/fractions) + optional units like cup, tbsp, tsp, oz, g, ml, packet(s)
+    const UNIT_PATTERN = '(cups?|cup|tbsps?|tablespoons?|tbsp|tsps?|teaspoons?|tsp|oz|ounce?s?|g|gram?s?|kg|ml|l|liters?|packet?s?|packets?)';
+    return value.replace(new RegExp(`^\\s*[\\d/.]+\\s*${UNIT_PATTERN}\\s+`, 'i'), '').trim();
+  };
+  normalizedName = stripLeadingQuantity(normalizedName);
   const extraSynonyms: string[] = [];
   const aiHint = await aiNormalizeIngredient(rawLine, normalization.cleaned);
   if (aiHint.status === 'success') {
     normalization = normalizeIngredientName(aiHint.normalizedName || baseName);
-    normalizedName = normalization.cleaned || baseName;
+    normalizedName = stripLeadingQuantity(normalization.cleaned || baseName);
     extraSynonyms.push(...aiHint.synonyms);
     logger.info('fatsecret.map.ai_normalize_used', {
       rawLine,
@@ -629,7 +637,7 @@ export async function mapIngredientWithFatsecret(
   // Always allow live FatSecret API fallback when cache is missing/weak
   // const allowLiveFallback = true; // Moved to destructuring
 
-  const candidates: MappingCandidate[] = [];
+  let candidates: MappingCandidate[] = [];
   const seenFoodIds = new Set<string>();
   let cacheCandidateCount = 0;
   let apiCandidateCount = 0;
@@ -774,6 +782,34 @@ export async function mapIngredientWithFatsecret(
   const isTrivialSingleTokenQuery = TRIVIAL_SINGLE_TOKEN.has(normalizedQueryName);
   const isTrivialPhraseQuery = CLEAR_GENERIC_PHRASES.has(normalizedQueryName);
   const isTrivialQuery = isTrivialSingleTokenQuery || isTrivialPhraseQuery;
+  const hasMeasurementInRaw = /^\s*[\d/.]+\s+\w+/.test(trimmed);
+
+  // Require must-have tokens from the normalized name to be present in candidate names
+  const mustHaveTokens = deriveMustHaveTokens(normalizedName);
+  if (mustHaveTokens.length > 0) {
+    const before = candidates.length;
+    candidates = candidates.filter((c) => {
+      const normalizedFoodName = normalizeForMatch(`${c.food.brandName ?? ''} ${c.food.name}`);
+      return mustHaveTokens.every((t) => normalizedFoodName.includes(t));
+    });
+    if (debug && before !== candidates.length) {
+      debugLogger.logDebug('Filtered candidates missing required tokens', {
+        rawLine,
+        required: mustHaveTokens,
+        before,
+        after: candidates.length,
+      });
+    }
+    if (candidates.length === 0) {
+      if (debug) {
+        debugLogger.logDebug('All candidates removed by must-have tokens filter', {
+          rawLine,
+          required: mustHaveTokens,
+        });
+      }
+      return null;
+    }
+  }
 
   // Prefer obvious generic matches for trivial queries (e.g., water, salt, vegetable oil) to avoid unnecessary rerank
   if (isTrivialQuery) {
@@ -794,7 +830,7 @@ export async function mapIngredientWithFatsecret(
   const exactMatchIdx = candidates.findIndex(
     (c) => normalizeForMatch(`${c.food.brandName ?? ''} ${c.food.name}`) === normalizedQueryName
   );
-  if (exactMatchIdx !== -1) {
+  if (exactMatchIdx !== -1 && !hasMeasurementInRaw) {
     const [match] = candidates.splice(exactMatchIdx, 1);
     candidates.unshift(match);
     rerankSkipReason = 'exact_match';
@@ -867,7 +903,8 @@ export async function mapIngredientWithFatsecret(
         foodType: c.food.foodType,
         score: c.baseScore,
       }));
-      const minAiConfidence = isAmbiguousQuery ? 0.5 : 0.6; // Lower threshold for ambiguous queries
+      // Allow lower floor for ambiguous queries so rerank can still choose among close candidates
+      const minAiConfidence = isAmbiguousQuery ? 0.4 : 0.6;
       const aiPick = await rerankFatsecretCandidates(rawLine, topForAi, minAiConfidence);
       if (aiPick.status === 'success') {
         const idx = candidates.findIndex((c) => c.food.id === aiPick.id);
@@ -1528,6 +1565,11 @@ function computeCandidateScore(food: FatSecretFoodSummary, query: string, parsed
 
   let score = similarity;
 
+  // Strong boost for exact normalized name match
+  if (normalizeForMatch(foodName) === normalizedQuery) {
+    score += 0.4;
+  }
+
   // Check if query mentions a brand
   const rawLineLower = parsed ? '' : query.toLowerCase();
   const queryText = parsed
@@ -1540,6 +1582,39 @@ function computeCandidateScore(food: FatSecretFoodSummary, query: string, parsed
   // Boost generic foods if query doesn't mention a brand
   if ((food.foodType ?? 'Generic').toLowerCase() === 'generic' && !queryHasBrand) {
     score += 0.1;
+  }
+
+  // Penalize missing critical qualifiers/types to avoid generic downgrades
+  const qualifierGroups: Array<{ tokens: string[]; penalty: number }> = [
+    { tokens: ['coconut'], penalty: 0.35 },
+    { tokens: ['almond'], penalty: 0.35 },
+    { tokens: ['soy'], penalty: 0.4 },
+    { tokens: ['oat'], penalty: 0.4 },
+    { tokens: ['unsweetened'], penalty: 0.5 },
+    { tokens: ['sweetened'], penalty: 0.45 },
+    { tokens: ['salted'], penalty: 0.6 },
+    { tokens: ['unsalted'], penalty: 0.6 },
+    { tokens: ['part skim', 'part-skim'], penalty: 0.4 },
+    { tokens: ['low moisture', 'low-moisture'], penalty: 0.4 },
+    { tokens: ['reduced fat', 'low fat', 'light', 'nonfat'], penalty: 0.45 },
+    { tokens: ['riced'], penalty: 0.5 },
+    { tokens: ['chunk'], penalty: 0.45 },
+    { tokens: ['spread'], penalty: 0.5 },
+    { tokens: ['monk fruit', 'erythritol', 'stevia'], penalty: 0.4 },
+    { tokens: ['granola'], penalty: 0.3 },
+    { tokens: ['fat bomb'], penalty: 0.5 },
+  ];
+
+  for (const group of qualifierGroups) {
+    const queryHasToken = group.tokens.some((t) => queryText.includes(t));
+    const foodHasToken = group.tokens.some((t) => foodNameLower.includes(t));
+    if (queryHasToken && !foodHasToken) {
+      score *= (1 - group.penalty);
+      // If we already penalized hard, stop early for low scores
+      if (score < 0.2) {
+        return Math.max(score, 0);
+      }
+    }
   }
 
   // Meat type mismatch handling - use multiplicative penalties for critical mismatches
@@ -2082,6 +2157,19 @@ function weightedJaccard(a: Set<string>, b: Set<string>): number {
   }
 
   return weightedUnion > 0 ? weightedIntersection / weightedUnion : 0;
+}
+
+function deriveMustHaveTokens(normalizedName: string): string[] {
+  const STOP = new Set([
+    'cup', 'cups', 'tbsp', 'tbsps', 'tablespoon', 'tablespoons',
+    'tsp', 'tsps', 'teaspoon', 'teaspoons',
+    'oz', 'ounce', 'ounces', 'g', 'gram', 'grams', 'kg', 'ml', 'l', 'liter', 'liters',
+    'packet', 'packets'
+  ]);
+  return normalizedName
+    .toLowerCase()
+    .split(/[^\w]+/)
+    .filter((t) => t.length > 2 && !STOP.has(t));
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {

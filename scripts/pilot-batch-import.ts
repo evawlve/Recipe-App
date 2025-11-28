@@ -1,6 +1,7 @@
 #!/usr/bin/env ts-node
 
 import 'dotenv/config';
+import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
 import { mapIngredientWithFatsecret } from '../src/lib/fatsecret/map-ingredient';
 import { FatSecretClient } from '../src/lib/fatsecret/client';
@@ -14,7 +15,25 @@ interface PilotStats {
     errors: Array<{ ingredient: string; error: string }>;
 }
 
-async function pilotBatchImport(recipeLimit: number = 30) {
+type AiLogEntry = {
+    rawLine: string;
+    ourConfidence?: number;
+    approved?: boolean;
+    aiConfidence?: number;
+    reason?: string;
+    category?: string;
+    foodName?: string;
+    status: 'mapped' | 'rejected' | 'no_match' | 'error';
+};
+
+async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
+    const aiLogStream = aiLogPath ? fs.createWriteStream(aiLogPath, { flags: 'a' }) : null;
+    const writeAiLog = (entry: AiLogEntry) => {
+        if (aiLogStream) {
+            aiLogStream.write(JSON.stringify(entry) + '\n');
+        }
+    };
+
     console.log(`\n🚀 Pilot Batch Import (${recipeLimit} recipes max)\n`);
     console.log('⚙️  Safeguards enabled:');
     console.log('   - Rate limiting: 100ms between AI calls');
@@ -93,6 +112,14 @@ async function pilotBatchImport(recipeLimit: number = 30) {
                     console.log('❌ No match');
                     stats.failed++;
                     stats.errors.push({ ingredient: rawLine, error: 'No mapping found' });
+                    writeAiLog({
+                        rawLine,
+                        status: 'no_match',
+                        foodName: undefined,
+                        approved: undefined,
+                        aiConfidence: undefined,
+                        reason: 'No mapping found',
+                    });
                     continue;
                 }
 
@@ -102,6 +129,16 @@ async function pilotBatchImport(recipeLimit: number = 30) {
                 if (result.aiValidation && !result.aiValidation.approved) {
                     console.log(`❌ AI Rejected (${result.aiValidation.confidence.toFixed(3)}) - ${result.foodName}`);
                     console.log(`   Reason: ${result.aiValidation.reason}`);
+                    writeAiLog({
+                        rawLine,
+                        foodName: result.foodName,
+                        ourConfidence: confidence,
+                        approved: result.aiValidation.approved,
+                        aiConfidence: result.aiValidation.confidence,
+                        reason: result.aiValidation.reason,
+                        category: result.aiValidation.category,
+                        status: 'rejected',
+                    });
                     stats.failed++;
                     stats.errors.push({
                         ingredient: rawLine,
@@ -112,6 +149,18 @@ async function pilotBatchImport(recipeLimit: number = 30) {
 
                 stats.successful++;
                 stats.avgConfidence += confidence;
+
+                // Log AI-approved mapping
+                writeAiLog({
+                    rawLine,
+                    foodName: result.foodName,
+                    ourConfidence: confidence,
+                    approved: result.aiValidation?.approved ?? true,
+                    aiConfidence: result.aiValidation?.confidence,
+                    reason: result.aiValidation?.reason,
+                    category: result.aiValidation?.category,
+                    status: 'mapped',
+                });
 
                 // Categorize by confidence
                 if (confidence < 0.5) {
@@ -146,6 +195,12 @@ async function pilotBatchImport(recipeLimit: number = 30) {
             } catch (error) {
                 console.log(`❌ Error`);
                 stats.failed++;
+                writeAiLog({
+                    rawLine,
+                    foodName: undefined,
+                    status: 'error',
+                    reason: error instanceof Error ? error.message : String(error),
+                });
                 stats.errors.push({
                     ingredient: rawLine,
                     error: error instanceof Error ? error.message : String(error),
@@ -216,20 +271,28 @@ async function pilotBatchImport(recipeLimit: number = 30) {
     console.log('   npm run review-mappings --min 0.7            (high confidence)');
     console.log('\n');
 
+    if (aiLogStream) {
+        aiLogStream.end();
+        console.log(`📝 AI log written to: ${aiLogPath}`);
+    }
+
     return stats;
 }
 
 async function main() {
     const args = process.argv.slice(2);
-    const recipeLimit = args[0] ? parseInt(args[0]) : 30;
+    const recipeLimitArg = args[0] && !args[0].startsWith('--') ? parseInt(args[0]) : 30;
+    const aiLogArg = args.find(a => a.startsWith('--ai-log='));
+    const aiLogPath = aiLogArg ? aiLogArg.split('=')[1] : undefined;
 
-    if (isNaN(recipeLimit) || recipeLimit < 1) {
+    if (isNaN(recipeLimitArg) || recipeLimitArg < 1) {
         console.error('Usage: npm run pilot-import [recipeLimit]');
+        console.error('       npm run pilot-import 5 --ai-log=pilot-ai.log');
         console.error('Example: npm run pilot-import 50');
         process.exit(1);
     }
 
-    await pilotBatchImport(recipeLimit);
+    await pilotBatchImport(recipeLimitArg, aiLogPath);
     await prisma.$disconnect();
 }
 

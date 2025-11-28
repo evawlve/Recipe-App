@@ -72,6 +72,7 @@ export async function upsertFoodFromApi(
   }
 
   let resolvedFoodId = fatsecretId;
+  const originalFoodName = details.name?.toLowerCase() || '';
   let servings = normalizeServings(details);
   let nutrients = deriveNutrients(details);
   const fallbackQuery = options.searchQuery?.trim() || details.name?.trim() || '';
@@ -80,12 +81,14 @@ export async function upsertFoodFromApi(
   if (
     fallbackQuery &&
     options.allowNextBest !== false &&
-    shouldTryNextBest(servings, nutrients)
+    shouldTryNextBest(servings, nutrients) &&
+    allowFallbackForQueryType(fallbackQuery, originalFoodName)
   ) {
     const fallback = await pickNextBestFatSecretResult({
       client,
       query: fallbackQuery,
       excludeId: fatsecretId,
+      originalFoodName,
     });
     if (fallback) {
       details = fallback;
@@ -233,19 +236,43 @@ async function pickNextBestFatSecretResult({
   client,
   query,
   excludeId,
+  originalFoodName,
+  allowFallbackForQuery,
 }: {
   client: FatSecretClient;
   query: string;
   excludeId?: string;
+  originalFoodName?: string;
+  allowFallbackForQuery?: boolean;
 }): Promise<FatSecretFoodDetails | null> {
   const trimmed = query.trim();
   if (!trimmed) return null;
+  if (allowFallbackForQuery === false) return null;
   try {
     const searchResults = await client.searchFoodsV4(trimmed, { maxResults: 5 });
     const candidates = searchResults.filter((f) => f.id !== excludeId).slice(0, 2);
     for (const candidate of candidates) {
       const details = await client.getFood(candidate.id);
       if (!details) continue;
+      // Safeguard: only accept fallback if it shares key tokens with original
+      if (originalFoodName) {
+        const origTokens = tokenSet(originalFoodName);
+        const candTokens = tokenSet(details.name ?? '');
+        const overlap = [...origTokens].filter(t => candTokens.has(t));
+        // Require at least 2 overlapping tokens to avoid unrelated fallbacks
+        if (overlap.length < 2) {
+          continue;
+        }
+
+        // For sweeteners and milks/cheeses with qualifiers, require all critical tokens to be present
+        const critical = extractCriticalTokens(originalFoodName);
+        if (critical.length > 0) {
+          const missing = critical.filter(t => !candTokens.has(t));
+          if (missing.length > 0) {
+            continue;
+          }
+        }
+      }
       const servings = normalizeServings(details);
       const nutrients = deriveNutrients(details);
       if (!shouldTryNextBest(servings, nutrients)) {
@@ -262,6 +289,62 @@ async function pickNextBestFatSecretResult({
     );
   }
   return null;
+}
+
+function tokenSet(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^\w]+/)
+      .filter((t) => t.length > 2)
+  );
+}
+
+function allowFallbackForQueryType(query: string, originalFoodName?: string): boolean {
+  const text = `${query} ${originalFoodName ?? ''}`.toLowerCase();
+  const sweetenerTokens = ['monk', 'erythritol', 'stevia', 'allulose', 'splenda', 'sweetener'];
+  const milkTokens = ['coconut', 'almond', 'soy', 'oat', 'unsweetened', 'sweetened'];
+  const cheeseTokens = ['mozzarella', 'part', 'skim', 'low', 'moisture', 'reduced', 'fat', 'light'];
+  const meatFatTokens = ['90', '85', '80', '75', 'lean', 'fat']; // crude check for fat% qualifiers
+
+  const hasSweetener = sweetenerTokens.some(t => text.includes(t));
+  const hasMilk = milkTokens.some(t => text.includes(t));
+  const hasCheese = cheeseTokens.some(t => text.includes(t));
+  const hasMeatFat = /(\d{2})\s*\/\s*(\d{2})/.test(text) || meatFatTokens.some(t => text.includes(t));
+  const hasSalted = /\bsalted\b|\bunsalted\b/.test(text);
+
+  // Disable fallback for any qualifier-heavy query; we prefer AI serving backfill over swapping foods.
+  if (hasSweetener || hasMilk || hasCheese || hasMeatFat || hasSalted) return false;
+
+  // Allow fallback only for trivial/generic items without critical qualifiers
+  const trivialTokens = ['water', 'salt', 'sugar', 'flour', 'rice', 'oil', 'vinegar'];
+  return trivialTokens.some(t => text.includes(t));
+}
+
+function extractCriticalTokens(text: string): string[] {
+  const lower = text.toLowerCase();
+  const tokens: string[] = [];
+  const pairs: Array<[RegExp, string]> = [
+    [/\bmonk\b.*\bfruit\b/, 'monk'],
+    [/\berytr/i, 'erythritol'],
+    [/\bstevia\b/, 'stevia'],
+    [/\ballulose\b/, 'allulose'],
+    [/\bsplenda\b/, 'splenda'],
+    [/\bcoconut\b/, 'coconut'],
+    [/\balmond\b/, 'almond'],
+    [/\bsoy\b/, 'soy'],
+    [/\boat\b/, 'oat'],
+    [/\bunsweetened\b/, 'unsweetened'],
+    [/\bsweetened\b/, 'sweetened'],
+    [/\bpart[-\s]?skim\b/, 'part'],
+    [/\blow[-\s]?moisture\b/, 'low'],
+    [/\breduced[-\s]?fat\b/, 'reduced'],
+    [/\blight\b/, 'light'],
+  ];
+  for (const [re, token] of pairs) {
+    if (re.test(lower)) tokens.push(token);
+  }
+  return tokens;
 }
 
 function normalizeServings(details: FatSecretFoodDetails): NormalizedServing[] {
