@@ -3,6 +3,7 @@ import {
   FATSECRET_CACHE_AI_MODEL,
   FATSECRET_CACHE_AI_ENABLED,
   FATSECRET_CACHE_AI_CONFIDENCE_MIN,
+  FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
   FATSECRET_CACHE_AI_MAX_DENSITY,
   FATSECRET_CACHE_AI_MIN_DENSITY,
   OPENAI_API_BASE_URL,
@@ -13,6 +14,10 @@ export type ServingGapType = 'volume' | 'weight';
 export interface AiServingRequest {
   gapType: ServingGapType;
   food: FatSecretFoodCache & { servings: FatSecretServingCache[] };
+  /** Specific unit to estimate (e.g., "packet", "scoop", "slice") */
+  targetServingUnit?: string;
+  /** Use lower confidence threshold for on-demand backfills (user can see/override grams) */
+  isOnDemandBackfill?: boolean;
 }
 
 export interface ServingSuggestion {
@@ -148,7 +153,7 @@ function prefersCountServing(food: FatSecretFoodCache): boolean {
 }
 
 function buildUserPrompt(request: AiServingRequest): string {
-  const { food, gapType } = request;
+  const { food, gapType, targetServingUnit } = request;
   const lines = [
     `Food name: ${food.name}`,
     `Brand: ${food.brandName ?? 'generic'}`,
@@ -156,6 +161,21 @@ function buildUserPrompt(request: AiServingRequest): string {
     `Gap type: ${gapType === 'volume' ? 'Need convertible volume serving (cup/tbsp/tsp/ml/fl oz)' : 'Need weight-based serving in grams/ounces'}`,
     `Existing servings:\n${formatExistingServings(food.servings)}`,
     `Per-100g nutrition: ${formatNutrients(food.nutrientsPer100g)}`,
+  ];
+
+  // If a specific unit is requested, prioritize that
+  if (targetServingUnit) {
+    lines.push(
+      ``,
+      `IMPORTANT: User specifically requested a "${targetServingUnit}" serving.`,
+      `Please estimate how many grams 1 ${targetServingUnit} of "${food.name}" weighs.`,
+      `The servingLabel should be "1 ${targetServingUnit}" or similar.`,
+      `Set volumeUnit to "${targetServingUnit}" and volumeAmount to 1.`,
+    );
+  }
+
+  lines.push(
+    '',
     'Instructions:',
     '- Provide exactly one serving suggestion.',
     '- Prefer official label units if available.',
@@ -163,7 +183,7 @@ function buildUserPrompt(request: AiServingRequest): string {
     "- If cups/tbsp/ml aren't realistic but a count-based portion is (e.g., 1 tortilla, 2 bagels, 1 egg), return that count and its grams instead of throwing an error, and set volumeUnit to 'count' (or a similar label) with volumeAmount equal to the count.",
     '- For any solid, whole item (proteins, whole fruits/veggies, baked goods), avoid ml/tbsp unless the food can genuinely be scooped or poured; use a count-based portion instead.',
     '- Only return { "error": "no convertible serving" } when no reasonable label/count/volume can be provided.',
-  ];
+  );
   if (prefersCountServing(food)) {
     lines.push(
       'This food is a solid, whole item. Prefer a count-based portion (e.g., "1 chicken breast", "1 bagel") over cups/tbsp/ml unless a true liquid/puree serving is available.',
@@ -242,17 +262,24 @@ export async function requestAiServing(request: AiServingRequest): Promise<AiSer
       return { status: 'error', reason: 'Incomplete AI response', prompt, raw: parsed };
     }
 
-    if (suggestion.confidence < FATSECRET_CACHE_AI_CONFIDENCE_MIN) {
-      return { status: 'error', reason: 'low confidence', prompt, raw: parsed };
+    // Use lower threshold for on-demand backfills (user can see and override the gram amount)
+    const minConfidence = request.isOnDemandBackfill 
+      ? FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN 
+      : FATSECRET_CACHE_AI_CONFIDENCE_MIN;
+    
+    if (suggestion.confidence < minConfidence) {
+      return { status: 'error', reason: `low confidence (${suggestion.confidence.toFixed(2)} < ${minConfidence})`, prompt, raw: parsed };
     }
 
     const normalizedUnit = suggestion.volumeUnit?.toLowerCase?.().trim();
-    const isCountUnit =
-      normalizedUnit === 'count' ||
-      normalizedUnit === 'item' ||
-      normalizedUnit === 'items' ||
-      normalizedUnit === 'piece' ||
-      normalizedUnit === 'pieces';
+    const countUnitSet = new Set([
+      'count', 'item', 'items', 'piece', 'pieces',
+      'packet', 'packets', 'sachet', 'sachets', 'pouch', 'pouches',
+      'scoop', 'scoops', 'stick', 'sticks', 'bar', 'bars',
+      'envelope', 'envelopes', 'serving', 'servings',
+      'slice', 'slices', 'egg', 'eggs', 'tortilla', 'tortillas',
+    ]);
+    const isCountUnit = normalizedUnit ? countUnitSet.has(normalizedUnit) : false;
     if (!isCountUnit && suggestion.volumeAmount && suggestion.volumeUnit) {
       const volumeMl = toMilliliters(suggestion.volumeUnit, suggestion.volumeAmount);
       if (!volumeMl) {

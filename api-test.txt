@@ -1,0 +1,12 @@
+﻿
+=== Testing APIs with query: "fat free cheddar cheese" ===
+
+--- FDC Results ---
+  1. [171295] Cheese, cheddar, nonfat or fat free (SR Legacy)
+  2. [172207] Cheese, cream, fat free (SR Legacy)
+  3. [170863] Cheese, American, nonfat or fat free (SR Legacy)
+
+--- FatSecret Results ---
+  1. [27330] Natural Shredded Fat Free Cheddar Cheese (Kraft)
+  2. [41534646] Shredded Mild Cheddar Cheese Fat Free (Great Value)
+  3. [288342] Fat Free American Cheese (Generic)

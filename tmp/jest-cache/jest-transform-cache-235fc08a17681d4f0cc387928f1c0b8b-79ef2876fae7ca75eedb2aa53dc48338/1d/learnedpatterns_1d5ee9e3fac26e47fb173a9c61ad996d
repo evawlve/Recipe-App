@@ -1,0 +1,96 @@
+f46a7c6d57b33508c487561e690e79a1
+"use strict";
+/**
+ * Learned Patterns Cache
+ *
+ * Provides a sync getter for learned prep phrases from the IngredientCleanupPattern table.
+ * Call refreshLearnedPatterns() at entry points (recipe creation, batch import) to load patterns.
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.refreshLearnedPatterns = refreshLearnedPatterns;
+exports.getLearnedPrepPhrases = getLearnedPrepPhrases;
+exports.hasLoadedPatterns = hasLoadedPatterns;
+// Module-level cache for learned prep phrases
+let learnedPrepPhrases = new Set();
+/**
+ * Refresh learned prep phrases from DB.
+ * Call this at entry points before parsing ingredients.
+ * Uses dynamic imports to avoid breaking tests that don't have DB access.
+ */
+async function refreshLearnedPatterns() {
+    try {
+        // Dynamic imports to avoid breaking tests without DB
+        const { prisma } = await Promise.resolve().then(() => __importStar(require('../db')));
+        const { logger } = await Promise.resolve().then(() => __importStar(require('../logger')));
+        const patterns = await prisma.ingredientCleanupPattern.findMany({
+            where: {
+                patternType: 'PREP_PHRASE',
+                confidence: { gte: 0.7 },
+                // Only use patterns that have been proven or are new
+                OR: [
+                    { successRate: null },
+                    { successRate: { gte: 0.6 } }
+                ]
+            },
+            select: {
+                pattern: true
+            }
+        });
+        learnedPrepPhrases = new Set(patterns.map(p => p.pattern.toLowerCase()));
+        logger.info('learned-patterns:refreshed', {
+            count: learnedPrepPhrases.size
+        });
+    }
+    catch (error) {
+        // Non-critical - log and continue with empty/stale cache
+        // This gracefully handles test environments without DB
+        console.warn('learned-patterns:refresh-failed', error.message);
+    }
+}
+/**
+ * Get cached learned prep phrases (sync).
+ * Returns empty set if refresh hasn't been called.
+ */
+function getLearnedPrepPhrases() {
+    return learnedPrepPhrases;
+}
+/**
+ * Check if patterns have been loaded.
+ */
+function hasLoadedPatterns() {
+    return learnedPrepPhrases.size > 0;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXHBhcnNlXFxsZWFybmVkLXBhdHRlcm5zLnRzIiwibWFwcGluZ3MiOiI7QUFBQTs7Ozs7R0FLRzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7QUFVSCx3REErQkM7QUFNRCxzREFFQztBQUtELDhDQUVDO0FBdERELDhDQUE4QztBQUM5QyxJQUFJLGtCQUFrQixHQUFnQixJQUFJLEdBQUcsRUFBRSxDQUFDO0FBRWhEOzs7O0dBSUc7QUFDSSxLQUFLLFVBQVUsc0JBQXNCO0lBQ3hDLElBQUksQ0FBQztRQUNELHFEQUFxRDtRQUNyRCxNQUFNLEVBQUUsTUFBTSxFQUFFLEdBQUcsd0RBQWEsT0FBTyxHQUFDLENBQUM7UUFDekMsTUFBTSxFQUFFLE1BQU0sRUFBRSxHQUFHLHdEQUFhLFdBQVcsR0FBQyxDQUFDO1FBRTdDLE1BQU0sUUFBUSxHQUFHLE1BQU0sTUFBTSxDQUFDLHdCQUF3QixDQUFDLFFBQVEsQ0FBQztZQUM1RCxLQUFLLEVBQUU7Z0JBQ0gsV0FBVyxFQUFFLGFBQWE7Z0JBQzFCLFVBQVUsRUFBRSxFQUFFLEdBQUcsRUFBRSxHQUFHLEVBQUU7Z0JBQ3hCLHFEQUFxRDtnQkFDckQsRUFBRSxFQUFFO29CQUNBLEVBQUUsV0FBVyxFQUFFLElBQUksRUFBRTtvQkFDckIsRUFBRSxXQUFXLEVBQUUsRUFBRSxHQUFHLEVBQUUsR0FBRyxFQUFFLEVBQUU7aUJBQ2hDO2FBQ0o7WUFDRCxNQUFNLEVBQUU7Z0JBQ0osT0FBTyxFQUFFLElBQUk7YUFDaEI7U0FDSixDQUFDLENBQUM7UUFFSCxrQkFBa0IsR0FBRyxJQUFJLEdBQUcsQ0FBQyxRQUFRLENBQUMsR0FBRyxDQUFDLENBQUMsQ0FBQyxFQUFFLENBQUMsQ0FBQyxDQUFDLE9BQU8sQ0FBQyxXQUFXLEVBQUUsQ0FBQyxDQUFDLENBQUM7UUFFekUsTUFBTSxDQUFDLElBQUksQ0FBQyw0QkFBNEIsRUFBRTtZQUN0QyxLQUFLLEVBQUUsa0JBQWtCLENBQUMsSUFBSTtTQUNqQyxDQUFDLENBQUM7SUFDUCxDQUFDO0lBQUMsT0FBTyxLQUFLLEVBQUUsQ0FBQztRQUNiLHlEQUF5RDtRQUN6RCx1REFBdUQ7UUFDdkQsT0FBTyxDQUFDLElBQUksQ0FBQyxpQ0FBaUMsRUFBRyxLQUFlLENBQUMsT0FBTyxDQUFDLENBQUM7SUFDOUUsQ0FBQztBQUNMLENBQUM7QUFFRDs7O0dBR0c7QUFDSCxTQUFnQixxQkFBcUI7SUFDakMsT0FBTyxrQkFBa0IsQ0FBQztBQUM5QixDQUFDO0FBRUQ7O0dBRUc7QUFDSCxTQUFnQixpQkFBaUI7SUFDN0IsT0FBTyxrQkFBa0IsQ0FBQyxJQUFJLEdBQUcsQ0FBQyxDQUFDO0FBQ3ZDLENBQUMiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXHBhcnNlXFxsZWFybmVkLXBhdHRlcm5zLnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxyXG4gKiBMZWFybmVkIFBhdHRlcm5zIENhY2hlXHJcbiAqIFxyXG4gKiBQcm92aWRlcyBhIHN5bmMgZ2V0dGVyIGZvciBsZWFybmVkIHByZXAgcGhyYXNlcyBmcm9tIHRoZSBJbmdyZWRpZW50Q2xlYW51cFBhdHRlcm4gdGFibGUuXHJcbiAqIENhbGwgcmVmcmVzaExlYXJuZWRQYXR0ZXJucygpIGF0IGVudHJ5IHBvaW50cyAocmVjaXBlIGNyZWF0aW9uLCBiYXRjaCBpbXBvcnQpIHRvIGxvYWQgcGF0dGVybnMuXHJcbiAqL1xyXG5cclxuLy8gTW9kdWxlLWxldmVsIGNhY2hlIGZvciBsZWFybmVkIHByZXAgcGhyYXNlc1xyXG5sZXQgbGVhcm5lZFByZXBQaHJhc2VzOiBTZXQ8c3RyaW5nPiA9IG5ldyBTZXQoKTtcclxuXHJcbi8qKlxyXG4gKiBSZWZyZXNoIGxlYXJuZWQgcHJlcCBwaHJhc2VzIGZyb20gREIuXHJcbiAqIENhbGwgdGhpcyBhdCBlbnRyeSBwb2ludHMgYmVmb3JlIHBhcnNpbmcgaW5ncmVkaWVudHMuXHJcbiAqIFVzZXMgZHluYW1pYyBpbXBvcnRzIHRvIGF2b2lkIGJyZWFraW5nIHRlc3RzIHRoYXQgZG9uJ3QgaGF2ZSBEQiBhY2Nlc3MuXHJcbiAqL1xyXG5leHBvcnQgYXN5bmMgZnVuY3Rpb24gcmVmcmVzaExlYXJuZWRQYXR0ZXJucygpOiBQcm9taXNlPHZvaWQ+IHtcclxuICAgIHRyeSB7XHJcbiAgICAgICAgLy8gRHluYW1pYyBpbXBvcnRzIHRvIGF2b2lkIGJyZWFraW5nIHRlc3RzIHdpdGhvdXQgREJcclxuICAgICAgICBjb25zdCB7IHByaXNtYSB9ID0gYXdhaXQgaW1wb3J0KCcuLi9kYicpO1xyXG4gICAgICAgIGNvbnN0IHsgbG9nZ2VyIH0gPSBhd2FpdCBpbXBvcnQoJy4uL2xvZ2dlcicpO1xyXG5cclxuICAgICAgICBjb25zdCBwYXR0ZXJucyA9IGF3YWl0IHByaXNtYS5pbmdyZWRpZW50Q2xlYW51cFBhdHRlcm4uZmluZE1hbnkoe1xyXG4gICAgICAgICAgICB3aGVyZToge1xyXG4gICAgICAgICAgICAgICAgcGF0dGVyblR5cGU6ICdQUkVQX1BIUkFTRScsXHJcbiAgICAgICAgICAgICAgICBjb25maWRlbmNlOiB7IGd0ZTogMC43IH0sXHJcbiAgICAgICAgICAgICAgICAvLyBPbmx5IHVzZSBwYXR0ZXJucyB0aGF0IGhhdmUgYmVlbiBwcm92ZW4gb3IgYXJlIG5ld1xyXG4gICAgICAgICAgICAgICAgT1I6IFtcclxuICAgICAgICAgICAgICAgICAgICB7IHN1Y2Nlc3NSYXRlOiBudWxsIH0sXHJcbiAgICAgICAgICAgICAgICAgICAgeyBzdWNjZXNzUmF0ZTogeyBndGU6IDAuNiB9IH1cclxuICAgICAgICAgICAgICAgIF1cclxuICAgICAgICAgICAgfSxcclxuICAgICAgICAgICAgc2VsZWN0OiB7XHJcbiAgICAgICAgICAgICAgICBwYXR0ZXJuOiB0cnVlXHJcbiAgICAgICAgICAgIH1cclxuICAgICAgICB9KTtcclxuXHJcbiAgICAgICAgbGVhcm5lZFByZXBQaHJhc2VzID0gbmV3IFNldChwYXR0ZXJucy5tYXAocCA9PiBwLnBhdHRlcm4udG9Mb3dlckNhc2UoKSkpO1xyXG5cclxuICAgICAgICBsb2dnZXIuaW5mbygnbGVhcm5lZC1wYXR0ZXJuczpyZWZyZXNoZWQnLCB7XHJcbiAgICAgICAgICAgIGNvdW50OiBsZWFybmVkUHJlcFBocmFzZXMuc2l6ZVxyXG4gICAgICAgIH0pO1xyXG4gICAgfSBjYXRjaCAoZXJyb3IpIHtcclxuICAgICAgICAvLyBOb24tY3JpdGljYWwgLSBsb2cgYW5kIGNvbnRpbnVlIHdpdGggZW1wdHkvc3RhbGUgY2FjaGVcclxuICAgICAgICAvLyBUaGlzIGdyYWNlZnVsbHkgaGFuZGxlcyB0ZXN0IGVudmlyb25tZW50cyB3aXRob3V0IERCXHJcbiAgICAgICAgY29uc29sZS53YXJuKCdsZWFybmVkLXBhdHRlcm5zOnJlZnJlc2gtZmFpbGVkJywgKGVycm9yIGFzIEVycm9yKS5tZXNzYWdlKTtcclxuICAgIH1cclxufVxyXG5cclxuLyoqXHJcbiAqIEdldCBjYWNoZWQgbGVhcm5lZCBwcmVwIHBocmFzZXMgKHN5bmMpLlxyXG4gKiBSZXR1cm5zIGVtcHR5IHNldCBpZiByZWZyZXNoIGhhc24ndCBiZWVuIGNhbGxlZC5cclxuICovXHJcbmV4cG9ydCBmdW5jdGlvbiBnZXRMZWFybmVkUHJlcFBocmFzZXMoKTogU2V0PHN0cmluZz4ge1xyXG4gICAgcmV0dXJuIGxlYXJuZWRQcmVwUGhyYXNlcztcclxufVxyXG5cclxuLyoqXHJcbiAqIENoZWNrIGlmIHBhdHRlcm5zIGhhdmUgYmVlbiBsb2FkZWQuXHJcbiAqL1xyXG5leHBvcnQgZnVuY3Rpb24gaGFzTG9hZGVkUGF0dGVybnMoKTogYm9vbGVhbiB7XHJcbiAgICByZXR1cm4gbGVhcm5lZFByZXBQaHJhc2VzLnNpemUgPiAwO1xyXG59XHJcbiJdLCJ2ZXJzaW9uIjozfQ==

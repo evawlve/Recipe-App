@@ -172,9 +172,24 @@ export async function upsertFoodFromApi(
         densityEstimateId = cachedId;
       }
 
-      await tx.fatSecretServingCache.create({
-        data: {
+      await tx.fatSecretServingCache.upsert({
+        where: { id: serving.id },
+        create: {
           id: serving.id,
+          foodId: resolvedFoodId,
+          measurementDescription: serving.measurementDescription,
+          numberOfUnits: serving.numberOfUnits,
+          metricServingAmount: serving.metricServingAmount,
+          metricServingUnit: serving.metricServingUnit,
+          servingWeightGrams: serving.servingWeightGrams,
+          volumeMl: serving.volumeMl,
+          isVolume: serving.isVolume,
+          isDefault: serving.isDefault,
+          derivedViaDensity: serving.derivedViaDensity,
+          densityEstimateId,
+        },
+        update: {
+          // Update with same values - serves as idempotent upsert
           foodId: resolvedFoodId,
           measurementDescription: serving.measurementDescription,
           numberOfUnits: serving.numberOfUnits,
@@ -406,6 +421,11 @@ const VOLUME_UNIT_TO_ML: Record<string, number> = {
   'quarts': 946.353,
   'gallon': 3785.41,
   'gallons': 3785.41,
+  // Small volume units
+  'dash': 0.625,    // 1 dash ≈ 1/8 tsp
+  'dashes': 0.625,
+  'pinch': 0.3,     // 1 pinch ≈ 1/16 tsp
+  'pinches': 0.3,
 };
 
 function deriveVolumeMl(serving: FatSecretServing): number | null {

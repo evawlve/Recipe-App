@@ -10,6 +10,7 @@
     "links [0-9]+\\s*/?\\s*lb",
     "less sodium",
     "low sodium",
+    "low-moisture",
     "extra",
     "whole",
     "split",
@@ -19,7 +20,54 @@
     "chopped",
     "minced",
     "roughly",
-    "trimmed"
+    "trimmed",
+    "halves",
+    "cubes",
+    "fancy",
+    "mashed",
+    "grated",
+    "shredded",
+    "crushed",
+    "ground",
+    "julienned",
+    "peeled",
+    "cored",
+    "seeded",
+    "deveined",
+    "deboned",
+    "pitted",
+    "scrambled",
+    "boiled",
+    "hard[-\\s]?boiled",
+    "soft[-\\s]?boiled",
+    "steamed",
+    "poached",
+    "grilled",
+    "baked",
+    "roasted",
+    "broiled",
+    "blanched",
+    "sauteed",
+    "sautéed",
+    "microwaved",
+    "smoked",
+    "dried",
+    "dehydrated",
+    "raw",
+    "fresh",
+    "frozen",
+    "thawed",
+    "canned",
+    "drained",
+    "until fluffy",
+    "until tender",
+    "until soft",
+    "until crisp",
+    "lightly",
+    "well done",
+    "medium rare",
+    "rare",
+    "al dente"
   ],
   "size_phrases": [
     "[0-9]+\\s*(inch|inches|in|cm|centimeter|centimeters)\\b",
@@ -28,21 +76,149 @@
     "1\\s*cm"
   ],
   "synonym_rewrites": [
-    { "from": "cherries tomatoes", "to": "cherry tomatoes" },
-    { "from": "cherries tomato", "to": "cherry tomatoes" },
-    { "from": "green pepper", "to": "bell pepper" },
-    { "from": "green peppers", "to": "bell pepper" },
-    { "from": "hot sausage", "to": "spicy sausage" },
-    { "from": "mostaccioli", "to": "mostaccioli pasta" },
-    { "from": "less sodium soy sauce", "to": "low sodium soy sauce" },
-    { "from": "low sodium soy sauce", "to": "soy sauce low sodium" },
-    { "from": "cube chicken bouillon", "to": "chicken bouillon cube" },
-    { "from": "polish beef sausage", "to": "polish sausage" },
-    { "from": "polish sausage", "to": "kielbasa" },
-    { "from": "yellow deli mustard", "to": "yellow mustard" },
-    { "from": "hot sauce", "to": "hot pepper sauce" },
-    { "from": "red curry paste", "to": "thai red curry paste" },
-    { "from": "less sodium soy sauce", "to": "low sodium soy sauce" },
-    { "from": "links 4/lb", "to": "" }
+    {
+      "from": "single cream",
+      "to": "light cream"
+    },
+    {
+      "from": "fl oz single cream",
+      "to": "fl oz light cream"
+    },
+    {
+      "from": "floz single cream",
+      "to": "fl oz light cream"
+    },
+    {
+      "from": "double cream",
+      "to": "heavy cream"
+    },
+    {
+      "from": "stberry",
+      "to": "strawberries"
+    },
+    {
+      "from": "ground beef",
+      "to": "ground beef 85% lean"
+    },
+    {
+      "from": "ice cubes",
+      "to": "ice"
+    },
+    {
+      "from": "liquid aminos",
+      "to": "bragg liquid aminos"
+    },
+    {
+      "from": "all purpose flour",
+      "to": "all-purpose flour"
+    },
+    {
+      "from": "oats",
+      "to": "rolled oats"
+    },
+    {
+      "from": "cherries tomatoes",
+      "to": "cherry tomatoes"
+    },
+    {
+      "from": "cherries tomato",
+      "to": "cherry tomatoes"
+    },
+    {
+      "from": "green pepper",
+      "to": "bell pepper"
+    },
+    {
+      "from": "green peppers",
+      "to": "bell pepper"
+    },
+    {
+      "from": "hot sausage",
+      "to": "spicy sausage"
+    },
+    {
+      "from": "mostaccioli",
+      "to": "mostaccioli pasta"
+    },
+    {
+      "from": "less sodium soy sauce",
+      "to": "low sodium soy sauce"
+    },
+    {
+      "from": "low sodium soy sauce",
+      "to": "soy sauce low sodium"
+    },
+    {
+      "from": "cube chicken bouillon",
+      "to": "chicken bouillon cube"
+    },
+    {
+      "from": "polish beef sausage",
+      "to": "polish sausage"
+    },
+    {
+      "from": "polish sausage",
+      "to": "kielbasa"
+    },
+    {
+      "from": "yellow deli mustard",
+      "to": "yellow mustard"
+    },
+    {
+      "from": "hot sauce",
+      "to": "hot pepper sauce"
+    },
+    {
+      "from": "red curry paste",
+      "to": "thai red curry paste"
+    },
+    {
+      "from": "links 4/lb",
+      "to": ""
+    },
+    {
+      "from": "parsley leaves",
+      "to": "parsley"
+    },
+    {
+      "from": "cilantro leaves",
+      "to": "cilantro"
+    },
+    {
+      "from": "basil leaves",
+      "to": "basil"
+    },
+    {
+      "from": "mint leaves",
+      "to": "mint"
+    },
+    {
+      "from": "celery stalks",
+      "to": "celery"
+    },
+    {
+      "from": "celery stalk",
+      "to": "celery"
+    },
+    {
+      "from": "garlic cloves",
+      "to": "garlic"
+    },
+    {
+      "from": "garlic clove",
+      "to": "garlic"
+    },
+    {
+      "from": "lemon zest",
+      "to": "lemon peel"
+    },
+    {
+      "from": "lime zest",
+      "to": "lime peel"
+    },
+    {
+      "from": "orange zest",
+      "to": "orange peel"
+    }
   ]
 }

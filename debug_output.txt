@@ -1,0 +1,60 @@
+=== Debugging Remaining Failures ===
+
+----------------------------------------
+Testing: "1 oz fat free pudding"
+1. AI Normalization:
+   Normalized: "pudding"
+   Synonyms: ["fat-free pudding","nonfat pudding"]
+
+2. Gather Candidates for "pudding":
+   Found 6 candidates.
+   - [0.95] Chocolate Pudding Snack Pack (Hunt's) [fatsecret]
+   - [0.90] Pudding (-) [fatsecret]
+   - [0.85] Sugar Free Dark Chocolate Pudding Snack (Jell-O) [fatsecret]
+   - [0.95] PUDDING (TRIKO) [fdc]
+   - [0.99] home prepared corn pudding (-) [fdc]
+
+3. Filter Candidates:
+   Kept: 0, Reason: removed_by_must_have_tokens
+
+----------------------------------------
+Testing: "1 container low fat yogurt"
+1. AI Normalization:
+   Normalized: "low fat yogurt"
+   Synonyms: []
+
+2. Gather Candidates for "low fat yogurt":
+   Found 6 candidates.
+   - [0.95] Plain Yogurt (Lowfat) (-) [fatsecret]
+   - [0.90] Low Fat Vanilla Yogurt (Great Value) [fatsecret]
+   - [0.85] Low-Fat Yogurt (Dannon) [fatsecret]
+   - [0.95] LOW FAT YOGURT (YOPLAIT) [fdc]
+   - [0.90] LOW FAT YOGURT (DESI FRESH FOODS) [fdc]
+
+3. Filter Candidates:
+   Kept: 4, Reason: removed_by_must_have_tokens
+   ✓ Low Fat Vanilla Yogurt
+   ✓ LOW FAT YOGURT
+   ✓ LOW FAT YOGURT
+   ✓ LOW FAT YOGURT
+
+----------------------------------------
+Testing: "2 lbs extra lean ground beef"
+1. AI Normalization:
+   Normalized: "extra lean beef"
+   Synonyms: []
+
+2. Gather Candidates for "extra lean beef":
+   Found 6 candidates.
+   - [0.95] Extra Lean Ground Beef (-) [fatsecret]
+   - [0.90] Extra Lean Shredded Beef (Sampco) [fatsecret]
+   - [0.85] Extra Lean Roast Beef (Dietz & Watson) [fatsecret]
+   - [1.04] smoked extra lean low sodium ham (-) [fdc]
+   - [0.99] turkey sliced extra lean prepackaged or deli ham (-) [fdc]
+
+3. Filter Candidates:
+   Kept: 3, Reason: removed_by_must_have_tokens
+   ✓ Extra Lean Ground Beef
+   ✓ Extra Lean Shredded Beef
+   ✓ Extra Lean Roast Beef
+

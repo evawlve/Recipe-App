@@ -19,7 +19,7 @@ export const FATSECRET_CACHE_MAX_AGE_MINUTES = Number.parseInt(
   10,
 );
 export const FATSECRET_CACHE_SYNC_BATCH_SIZE = Number.parseInt(
-  process.env.FATSECRET_CACHE_SYNC_BATCH_SIZE ?? '25',
+  process.env.FATSECRET_CACHE_SYNC_BATCH_SIZE ?? '100',
   10,
 );
 export const FATSECRET_CACHE_DENSITY_AI_ENDPOINT =
@@ -27,6 +27,11 @@ export const FATSECRET_CACHE_DENSITY_AI_ENDPOINT =
 export const FATSECRET_CACHE_AI_MODEL = process.env.FATSECRET_CACHE_AI_MODEL ?? 'gpt-5-nano';
 export const FATSECRET_CACHE_AI_CONFIDENCE_MIN = Number.parseFloat(
   process.env.FATSECRET_CACHE_AI_CONFIDENCE_MIN ?? '0.6',
+);
+// Lower threshold for on-demand serving backfills (e.g., "1 packet" → estimate grams)
+// User can see and override the gram amount, so we can be more lenient here
+export const FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN = Number.parseFloat(
+  process.env.FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN ?? '0.35',
 );
 export const FATSECRET_CACHE_AI_MIN_DENSITY = Number.parseFloat(
   process.env.FATSECRET_CACHE_AI_MIN_DENSITY ?? '0.05',
@@ -57,3 +62,8 @@ export const FATSECRET_CACHE_MODE_HELPERS = {
   isPrimary: FATSECRET_CACHE_MODE === 'primary',
   shouldServeCache: FATSECRET_CACHE_MODE === 'dual' || FATSECRET_CACHE_MODE === 'primary',
 };
+
+// Blocked IDs (Bad Data)
+export const BAD_FOOD_IDS = new Set([
+  '35976', // STRAWBERRY (TONY'S) - 113g carbs
+]);

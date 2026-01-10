@@ -30,9 +30,35 @@ const VOLUME_UNIT_TO_ML: Record<string, number> = {
     'fl oz': 30,
     'fluid ounce': 30,
     'fluid ounces': 30,
+    // Small volume units
+    dash: 0.625,       // 1 dash ≈ 1/8 tsp ≈ 0.625ml
+    dashes: 0.625,
+    pinch: 0.3,        // 1 pinch ≈ 1/16 tsp ≈ 0.3ml
+    pinches: 0.3,
 };
 
-const COUNT_UNITS = new Set(['count', 'item', 'items', 'piece', 'pieces', 'tortilla', 'egg', 'bagel']);
+// Count-based units - synced with unit-type.ts COUNT_UNITS
+const COUNT_UNITS = new Set([
+    'count', 'item', 'items', 'piece', 'pieces', 'pc', 'pcs',
+    'each', 'ea', 'unit', 'units',
+    // Food-specific counts
+    'tortilla', 'tortillas', 'egg', 'eggs', 'bagel', 'bagels',
+    'patty', 'patties', 'fillet', 'fillets', 'breast', 'breasts',
+    'thigh', 'thighs', 'wing', 'wings', 'drumstick', 'drumsticks',
+    'clove', 'cloves', 'stalk', 'stalks', 'leaf', 'leaves', 'sprig', 'sprigs',
+    'strip', 'strips', 'wedge', 'wedges', 'cube', 'cubes', 'slice', 'slices',
+    // Packages and containers
+    'packet', 'packets', 'sachet', 'sachets', 'pouch', 'pouches',
+    'scoop', 'scoops', 'stick', 'sticks', 'bar', 'bars',
+    'envelope', 'envelopes', 'container', 'containers', 'can', 'cans',
+    'bottle', 'bottles', 'serving', 'servings',
+    // Baked goods
+    'cookie', 'cookies', 'cracker', 'crackers', 'chip', 'chips',
+    'muffin', 'muffins', 'roll', 'rolls', 'bun', 'buns',
+    'wafer', 'wafers', 'sheet', 'sheets',
+    // Size descriptors (for whole foods)
+    'small', 'medium', 'large', 'whole',
+]);
 
 function convertVolumeToMl(unit: string, amount: number): number | null {
     if (!unit || !Number.isFinite(amount) || amount <= 0) return null;
@@ -50,6 +76,10 @@ function buildServingId(foodId: string, label: string): string {
 export interface InsertAiServingOptions {
     dryRun?: boolean;
     promptDebug?: boolean;
+    /** Specific unit to estimate (e.g., "packet", "scoop", "slice") */
+    targetServingUnit?: string;
+    /** Use lower confidence threshold (for on-demand backfills where user can see/override) */
+    isOnDemandBackfill?: boolean;
 }
 
 export async function insertAiServing(
@@ -67,7 +97,12 @@ export async function insertAiServing(
         return { success: false, reason: 'food_missing' };
     }
 
-    const aiResult = await requestAiServing({ gapType, food });
+    const aiResult = await requestAiServing({
+        gapType,
+        food,
+        targetServingUnit: options.targetServingUnit,
+        isOnDemandBackfill: options.isOnDemandBackfill,
+    });
 
     if (options.promptDebug) {
         logger.info(

@@ -3,8 +3,9 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
-import { mapIngredientWithFatsecret } from '../src/lib/fatsecret/map-ingredient';
-import { FatSecretClient } from '../src/lib/fatsecret/client';
+import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
+import { refreshNormalizationRules } from '../src/lib/fatsecret/normalization-rules';
 
 interface PilotStats {
     recipesProcessed: number;
@@ -27,6 +28,9 @@ type AiLogEntry = {
 };
 
 async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
+    // Sync AI-learned prep phrases before processing
+    await refreshNormalizationRules();
+
     const aiLogStream = aiLogPath ? fs.createWriteStream(aiLogPath, { flags: 'a' }) : null;
     const writeAiLog = (entry: AiLogEntry) => {
         if (aiLogStream) {
@@ -80,7 +84,6 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
 
     console.log(`📦 Found ${recipes.length} recipes with unmapped ingredients\n`);
 
-    const client = new FatSecretClient();
     const reviewQueue: Array<{
         ingredientId: string;
         rawLine: string;
@@ -88,28 +91,91 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
         confidence: number;
     }> = [];
 
+    const BATCH_SIZE = 50; // Process 50 ingredients in parallel (maximized)
+
     for (const recipe of recipes) {
         console.log(`\n📝 Processing: "${recipe.title}" (${recipe.ingredients.length} ingredients)`);
         stats.recipesProcessed++;
 
-        for (const ingredient of recipe.ingredients) {
-            stats.totalIngredients++;
-            const rawLine = `${ingredient.qty || ''} ${ingredient.unit || ''} ${ingredient.name}`.trim();
+        // Process ingredients in batches of BATCH_SIZE
+        for (let i = 0; i < recipe.ingredients.length; i += BATCH_SIZE) {
+            const batch = recipe.ingredients.slice(i, i + BATCH_SIZE);
 
-            process.stdout.write(`   - ${rawLine}... `);
+            const batchResults = await Promise.allSettled(
+                batch.map(async (ingredient) => {
+                    // Fix misplaced units: if unit is null but name starts with a unit, extract it
+                    let effectiveUnit = ingredient.unit;
+                    let effectiveName = ingredient.name;
 
-            try {
-                // Add rate limiting delay
-                await new Promise(resolve => setTimeout(resolve, 100));
+                    if (!effectiveUnit || !effectiveUnit.trim()) {
+                        // Expanded unit pattern to include count units like packet, scoop, serving, etc.
+                        const unitMatch = ingredient.name.match(/^(tbsps?|tsps?|cups?|oz|g|ml|lbs?|tablespoons?|teaspoons?|scoops?|packets?|sachets?|pouches?|sticks?|servings?|bars?|pieces?|slices?|cans?|envelopes?)\s+(.+)$/i);
+                        if (unitMatch) {
+                            effectiveUnit = unitMatch[1];
+                            effectiveName = unitMatch[2];
+                        }
+                    }
 
-                const result = await mapIngredientWithFatsecret(rawLine, {
-                    client,
-                    minConfidence: 0.5,
-                    debug: false,
-                });
+                    const rawLine = `${ingredient.qty || ''} ${effectiveUnit || ''} ${effectiveName}`.trim();
+
+                    // NOTE: We no longer skip unitless ingredients!
+                    // The mapping pipeline (mapIngredientWithFallback) can handle unitless ingredients
+                    // via AI backfill for serving estimation (e.g., "1 banana" → "medium banana (118g)")
+
+                    try {
+                        // Apply learned cleanup patterns before mapping
+                        const cleanupResult = await applyCleanupPatterns(effectiveName);
+                        const cleanedName = cleanupResult.cleaned;
+                        const cleanedLine = `${ingredient.qty || ''} ${effectiveUnit || ''} ${cleanedName}`.trim();
+
+                        const result = await mapIngredientWithFallback(cleanedLine, {
+                            minConfidence: 0.5,
+                            skipAiValidation: true,  // Skip AI validation for pilot imports (too strict)
+                            debug: false,
+                        });
+
+                        return { ingredient, rawLine, result, error: null, skipped: false };
+                    } catch (error) {
+                        return { ingredient, rawLine, result: null, error: error as Error, skipped: false };
+                    }
+                })
+            );
+
+            // Process batch results
+            for (const settled of batchResults) {
+                stats.totalIngredients++;
+
+                if (settled.status === 'rejected') {
+                    const errorMsg = settled.reason?.message || 'Unknown error';
+                    console.log(`   - [ERROR] ${errorMsg}`);
+                    stats.failed++;
+                    stats.errors.push({ ingredient: 'Unknown', error: errorMsg });
+                    continue;
+                }
+
+                const { ingredient, rawLine, result, error, skipped } = settled.value;
+
+                // Handle skipped ingredients (e.g., no unit)
+                if (skipped) {
+                    console.log(`   - ${rawLine}... ⏭️  Skipped`);
+                    // Don't count as failed - this is expected behavior for unitless ingredients
+                    continue;
+                }
+
+                if (error) {
+                    console.log(`   - ${rawLine}... ❌ Error: ${error.message}`);
+                    stats.failed++;
+                    stats.errors.push({ ingredient: rawLine, error: error.message });
+                    writeAiLog({
+                        rawLine,
+                        status: 'error',
+                        reason: error.message,
+                    });
+                    continue;
+                }
 
                 if (!result) {
-                    console.log('❌ No match');
+                    console.log(`   - ${rawLine}... ❌ No match`);
                     stats.failed++;
                     stats.errors.push({ ingredient: rawLine, error: 'No mapping found' });
                     writeAiLog({
@@ -127,8 +193,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
 
                 // Check AI Validation Result
                 if (result.aiValidation && !result.aiValidation.approved) {
-                    console.log(`❌ AI Rejected (${result.aiValidation.confidence.toFixed(3)}) - ${result.foodName}`);
-                    console.log(`   Reason: ${result.aiValidation.reason}`);
+                    console.log(`   - ${rawLine}... ❌ AI Rejected (${result.aiValidation.confidence.toFixed(3)}) - ${result.foodName}`);
                     writeAiLog({
                         rawLine,
                         foodName: result.foodName,
@@ -164,10 +229,10 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
 
                 // Categorize by confidence
                 if (confidence < 0.5) {
-                    console.log(`🔴 Low (${confidence.toFixed(3)}) - ${result.foodName}`);
+                    console.log(`   - ${rawLine}... 🔴 Low (${confidence.toFixed(3)}) - ${result.foodName}`);
                     continue; // Don't save low confidence
                 } else if (confidence < 0.7) {
-                    console.log(`⚠️  Review (${confidence.toFixed(3)}) - ${result.foodName}`);
+                    console.log(`   - ${rawLine}... ⚠️  Review (${confidence.toFixed(3)}) - ${result.foodName}`);
                     reviewQueue.push({
                         ingredientId: ingredient.id,
                         rawLine,
@@ -175,7 +240,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                         confidence,
                     });
                 } else {
-                    console.log(`✅ Good (${confidence.toFixed(3)}) - ${result.foodName}`);
+                    console.log(`   - ${rawLine}... ✅ Good (${confidence.toFixed(3)}) - ${result.foodName}`);
                 }
 
                 // Save mapping to database
@@ -191,20 +256,11 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                         isActive: true,
                     },
                 });
+            }
 
-            } catch (error) {
-                console.log(`❌ Error`);
-                stats.failed++;
-                writeAiLog({
-                    rawLine,
-                    foodName: undefined,
-                    status: 'error',
-                    reason: error instanceof Error ? error.message : String(error),
-                });
-                stats.errors.push({
-                    ingredient: rawLine,
-                    error: error instanceof Error ? error.message : String(error),
-                });
+            // Small delay between batches to avoid rate limiting
+            if (i + BATCH_SIZE < recipe.ingredients.length) {
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
         }
     }

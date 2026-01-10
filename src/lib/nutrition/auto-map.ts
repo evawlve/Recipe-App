@@ -1,10 +1,10 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { parseIngredientLine } from '../parse/ingredient-line';
-import { mapIngredientWithFatsecret } from '../fatsecret/map-ingredient';
+import { mapIngredientWithFallback, type FatsecretMappedIngredient } from '../fatsecret/map-ingredient-with-fallback';
 import { mapIngredientWithFdc } from '../usda/map-ingredient-fdc';
 import { createFoodAlias } from '../fatsecret/alias-manager';
-import { normalizeIngredientName } from '../fatsecret/normalization-rules';
+import { normalizeIngredientName, refreshNormalizationRules } from '../fatsecret/normalization-rules';
 import { applyCleanupPatterns, recordCleanupOutcome } from '../ingredients/cleanup';
 import { learnPatternsFromAI } from '../ingredients/pattern-learner';
 import { aiNormalizeIngredient } from '../fatsecret/ai-normalize';
@@ -38,7 +38,11 @@ async function processBatch<T, R>(
  * PHASE B: Now with parallel processing for faster batch imports
  */
 export async function autoMapIngredients(recipeId: string, options?: { concurrency?: number }): Promise<number> {
-  const concurrency = options?.concurrency ?? 20;  // INCREASED: Default 20 (was 10) for faster processing
+  const concurrency = options?.concurrency ?? 100;  // INCREASED: Default 100 for maximized parallel processing
+
+  // Sync AI-learned prep phrases before processing
+  await refreshNormalizationRules();
+
   logger.info('autoMap:start', { recipeId, mode: 'fatsecret-only', concurrency });
 
   const ingredients = await prisma.ingredient.findMany({
@@ -120,7 +124,9 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
 
         // Always enable debug logging for failure analysis
         // Use cleaned ingredient line for mapping
-        let mapped = await mapIngredientWithFatsecret(cleanedLine, {
+        // NOTE: mapIngredientWithFallback already includes FDC search in parallel,
+        // so the FDC fallback below is a secondary safety net for edge cases.
+        let mapped: FatsecretMappedIngredient | null = await mapIngredientWithFallback(cleanedLine, {
           minConfidence: MIN_AUTOMAP_CONFIDENCE,
           debug: true,
         });
@@ -212,7 +218,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
               ? `${ingredient.qty} ${ingredient.unit} ${aiResult.normalizedName}`
               : `${ingredient.qty} ${aiResult.normalizedName}`;
 
-            mapped = await mapIngredientWithFatsecret(aiNormalizedLine, {
+            mapped = await mapIngredientWithFallback(aiNormalizedLine, {
               minConfidence: MIN_AUTOMAP_CONFIDENCE,
               debug: true,
             });

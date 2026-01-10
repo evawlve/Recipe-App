@@ -635,6 +635,7 @@ model ValidatedMapping {
   updatedAt               DateTime @updatedAt
 
   @@unique([rawIngredient, source])
+  @@unique([normalizedForm, source], map: "ValidatedMapping_normalizedForm_source_key")
   @@index([rawIngredient])
   @@index([normalizedForm])
   @@index([isAlias, canonicalRawIngredient])
@@ -664,14 +665,20 @@ model MappingValidationFailure {
 }
 
 model AiNormalizeCache {
-  rawLine       String   @id
-  normalizedName String
-  synonyms      Json     @default("[]")
-  prepPhrases   Json     @default("[]")
-  sizePhrases   Json     @default("[]")
-  createdAt     DateTime @default(now())
-  lastUsedAt    DateTime @default(now())
-  useCount      Int      @default(0)
+  rawLine                  String   @id
+  normalizedName           String
+  synonyms                 Json     @default("[]")
+  prepPhrases              Json     @default("[]")
+  sizePhrases              Json     @default("[]")
+  cookingModifier          String?              // Preserved for future food diary use
+  estimatedCaloriesPer100g Float?               // AI estimate (kcal)
+  estimatedProteinPer100g  Float?               // AI estimate (g)
+  estimatedCarbsPer100g    Float?               // AI estimate (g)
+  estimatedFatPer100g      Float?               // AI estimate (g)
+  nutritionConfidence      Float?               // 0-1 confidence for nutrition estimate
+  createdAt                DateTime @default(now())
+  lastUsedAt               DateTime @default(now())
+  useCount                 Int      @default(0)
 
   @@index([lastUsedAt(sort: Desc)])
 }
@@ -694,4 +701,25 @@ model SearchQueryPattern {
   @@index([aiCategory])
   @@index([occurrences(sort: Desc)])
   @@index([createdAt(sort: Desc)])
+}
+
+/// Learned synonym pairs from AI normalization
+/// Used to speed up future lookups by caching synonym relationships
+model LearnedSynonym {
+  id           String   @id @default(cuid())
+  sourceTerm   String   // The original term
+  targetTerm   String   // The synonym
+  locale       String?  @db.VarChar(16)
+  category     String?  // e.g., "british_american", "spelling", "ingredient"
+  source       String   @default("ai") // "ai", "manual", "fatsecret_alias"
+  confidence   Float    @default(0.8)
+  useCount     Int      @default(0)
+  successCount Int      @default(0)
+  failureCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  @@unique([sourceTerm, targetTerm])
+  @@index([sourceTerm])
+  @@index([successCount(sort: Desc)])
 }

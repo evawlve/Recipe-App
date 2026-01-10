@@ -1,0 +1,456 @@
+/**
+ * Simple Reranking Module
+ * 
+ * Replaces AI reranking with a fast, deterministic scoring algorithm.
+ * Uses token overlap, source preference, and name similarity.
+ */
+
+import { logger } from '../logger';
+
+export interface RerankCandidate {
+    id: string;
+    name: string;
+    brandName?: string;
+    foodType?: string;
+    score: number;
+    source: 'fatsecret' | 'fdc' | 'cache';
+    nutrition?: {
+        kcal: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+        per100g: boolean;
+    };
+}
+
+export interface AiNutritionEstimate {
+    caloriesPer100g: number;
+    proteinPer100g: number;
+    carbsPer100g: number;
+    fatPer100g: number;
+    confidence: number;
+}
+
+export interface SimpleRerankResult {
+    winner: RerankCandidate;
+    confidence: number;
+    reason: string;
+}
+
+// ============================================================
+// Scoring Weights
+// ============================================================
+
+const WEIGHTS = {
+    EXACT_MATCH: 0.1,        // Exact name match bonus (reduced - API order matters more)
+    TOKEN_OVERLAP: 0.1,      // Token overlap ratio (reduced - trust API)
+    SOURCE_FATSECRET: 0.1,   // Prefer FatSecret (better servings)
+    NO_BRAND: 0.05,          // Prefer generic over branded (reduced)
+    SHORT_NAME: 0.02,        // Prefer shorter, simpler names (minimal)
+    ORIGINAL_SCORE: 0.6,     // API score (HEAVILY trust API ranking!)
+    SIMPLE_INGREDIENT_BRAND_PENALTY: 0.1,  // Reduced - was 0.3 which over-penalized good branded matches
+    EXTRA_TOKEN_PENALTY: 0.25,  // Increased - strongly penalize candidates with extra unrelated words
+    // Nutrition scoring (Jan 2026)
+    NUTRITION_CALORIE_SCORING: 0.12,  // Primary: calorie matching
+    NUTRITION_MACRO_SCORING: 0.10,    // Secondary: macro sanity check (increased from 0.03)
+    MISSING_MACRO_PENALTY: 0.15,      // Penalty for candidates with P:0, C:0 when AI expects values
+};
+
+// Nutrition scoring thresholds
+const NUTRITION_CALORIE_VARIANCE_THRESHOLD = 0.30;  // 30% difference triggers penalty
+const NUTRITION_CONFIDENCE_GATE = 0.70;             // Only apply if AI confidence >= 0.7
+
+// Modifiers/descriptors we should ignore in matching
+const IGNORE_TOKENS = new Set([
+    'raw', 'fresh', 'organic', 'natural', 'whole',
+    'all', 'purpose', 'pure', 'real', 'original',
+]);
+
+// Synonyms for matching (bidirectional)
+const SYNONYMS: Record<string, string[]> = {
+    'zest': ['peel', 'rind'],
+    'peel': ['zest', 'rind'],
+    'rind': ['zest', 'peel'],
+    // Spelling variants (include singular forms since tokenizer stems words)
+    'scallop': ['skallop'],   // Singular/stemmed form
+    'skallop': ['scallop'],
+    'scallops': ['skallops'],  // Plural form (for raw text matching)
+    'skallops': ['scallops'],
+};
+
+// Brands known to produce nutrition bars/snacks that shouldn't match produce
+const BAR_BRANDS = new Set([
+    'luna', 'clif', 'kind', 'rxbar', 'larabar', 'quest', 'perfect bar',
+    'power crunch', 'think!', 'one', 'built', 'barebells', 'pure protein',
+]);
+
+// ============================================================
+// Core Scoring Logic
+// ============================================================
+
+// Simple English plural stemmer (banana/bananas, onion/onions)
+function stem(word: string): string {
+    if (word.endsWith('ies') && word.length > 4) {
+        return word.slice(0, -3) + 'y';  // berries → berry
+    }
+    if (word.endsWith('es') && word.length > 3) {
+        if (word.endsWith('ches') || word.endsWith('shes') || word.endsWith('sses') || word.endsWith('xes')) {
+            return word.slice(0, -2);  // peaches → peach
+        }
+        if (word.endsWith('oes')) {
+            return word.slice(0, -2);  // potatoes → potato
+        }
+    }
+    if (word.endsWith('s') && word.length > 3 && !word.endsWith('ss')) {
+        return word.slice(0, -1);  // onions → onion, bananas → banana
+    }
+    return word;
+}
+
+function tokenize(text: string): string[] {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(t => t.length > 1 && !IGNORE_TOKENS.has(t))
+        .map(t => stem(t));  // Apply stemming to all tokens
+}
+
+/** Check if two tokens match (including synonyms) */
+function tokensMatch(queryToken: string, candidateToken: string): boolean {
+    if (queryToken === candidateToken) return true;
+    const synonyms = SYNONYMS[queryToken];
+    return synonyms ? synonyms.includes(candidateToken) : false;
+}
+
+function computeTokenOverlap(query: string, candidateName: string): number {
+    const queryTokens = new Set(tokenize(query));
+    const candidateTokens = tokenize(candidateName);
+
+    if (queryTokens.size === 0 || candidateTokens.length === 0) {
+        return 0;
+    }
+
+    // Count matches including synonyms
+    const matches = candidateTokens.filter(ct =>
+        [...queryTokens].some(qt => tokensMatch(qt, ct))
+    ).length;
+    // Jaccard-like: matches / union size
+    const union = new Set([...queryTokens, ...candidateTokens]).size;
+    return matches / union;
+}
+
+function isExactMatch(query: string, candidateName: string): boolean {
+    const queryTokens = tokenize(query);
+    const candTokens = tokenize(candidateName);
+
+    // Exact match = candidate contains all query tokens (or synonyms) with no significant extras
+    if (queryTokens.length === 0) return false;
+
+    // All query tokens must be in candidate (including synonyms)
+    const allQueryInCandidate = queryTokens.every(qt =>
+        candTokens.some(ct => tokensMatch(qt, ct))
+    );
+    // Candidate should not have extra tokens (prevents "banana" → "Banana Peppers")
+    const extraTokens = candTokens.filter(ct =>
+        !queryTokens.some(qt => tokensMatch(qt, ct))
+    );
+
+    return allQueryInCandidate && extraTokens.length === 0;
+}
+
+function computeSimpleScore(candidate: RerankCandidate, query: string): number {
+    let score = 0;
+
+    // 1. Exact match bonus
+    if (isExactMatch(query, candidate.name)) {
+        score += WEIGHTS.EXACT_MATCH;
+    }
+
+    // 2. Token overlap
+    const overlap = computeTokenOverlap(query, candidate.name);
+    score += overlap * WEIGHTS.TOKEN_OVERLAP;
+
+    // 2b. Penalty for extra tokens (words in candidate but not in query)
+    // This prevents "banana" → "Banana Peppers" by penalizing the extra "peppers"
+    const queryTokens = tokenize(query);
+    const candTokens = tokenize(candidate.name);
+    // Don't count synonyms as extra tokens (e.g., "peel" isn't extra when query is "zest")
+    const extraTokens = candTokens.filter(ct =>
+        !queryTokens.some(qt => tokensMatch(qt, ct))
+    );
+
+    if (queryTokens.length > 0 && extraTokens.length > 0) {
+        // Proportional penalty based on extra tokens relative to total
+        const extraRatio = extraTokens.length / (queryTokens.length + extraTokens.length);
+        score -= extraRatio * WEIGHTS.EXTRA_TOKEN_PENALTY;
+    }
+
+    // 3. Source preference (FatSecret has better serving data)
+    if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
+        score += WEIGHTS.SOURCE_FATSECRET;
+    }
+
+    // 4. Prefer generic over branded (but smarter about it)
+    if (!candidate.brandName) {
+        score += WEIGHTS.NO_BRAND;
+    } else {
+        const brandLower = candidate.brandName.toLowerCase().trim();
+        const queryLower = query.toLowerCase().trim();
+
+        // Check if query effectively IS the brand or contains it clearly
+        // e.g. query "egg beaters" matches brand "egg beaters"
+        const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower);
+
+        if (queryContainsBrand) {
+            // User asked for this brand - NO PENALTY
+        } else {
+            const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+            const candNameLower = candidate.name.toLowerCase();
+
+            // Check if branded item has BETTER token coverage than a generic would
+            // e.g., "unsweetened coconut milk" → "Unsweetened Coconut Milk (Silk)" has ALL query tokens
+            const allQueryTokensInName = queryWords.every(qw => candNameLower.includes(qw));
+
+            if (allQueryTokensInName) {
+                // Branded item matches all query tokens - minimal/no penalty
+                // This prevents penalizing "Unsweetened Coconut Milk (Silk)" for query "unsweetened coconut milk"
+            } else if (queryWords.length <= 2) {
+                // Apply brand penalty for simple ingredients where branded doesn't have full coverage
+                score -= WEIGHTS.SIMPLE_INGREDIENT_BRAND_PENALTY;
+            }
+
+            // Extra penalty for known bar/snack brands on produce-like queries
+            if (BAR_BRANDS.has(brandLower)) {
+                // Severe penalty - Luna, Clif, etc. should never match "lemon zest"
+                score -= WEIGHTS.SIMPLE_INGREDIENT_BRAND_PENALTY * 2;
+            }
+        }
+    }
+
+    // 5. Prefer shorter, simpler names
+    const nameLength = candidate.name.length;
+    if (nameLength < 30) {
+        score += WEIGHTS.SHORT_NAME * (1 - nameLength / 60);
+    }
+
+    // 6. Original API score (normalized to 0-1)
+    score += Math.min(candidate.score, 1) * WEIGHTS.ORIGINAL_SCORE;
+
+    return score;
+}
+
+// ============================================================
+// Nutrition Scoring (Jan 2026)
+// ============================================================
+
+/**
+ * Compute nutrition score based on AI estimate vs candidate's actual nutrition.
+ * Only applies when:
+ * - AI confidence >= NUTRITION_CONFIDENCE_GATE (0.7)
+ * - Candidate has per-100g nutrition data
+ * 
+ * Returns a score between -WEIGHTS.NUTRITION_CALORIE_SCORING and +WEIGHTS.NUTRITION_CALORIE_SCORING
+ */
+function computeNutritionScore(
+    candidate: RerankCandidate,
+    aiEstimate?: AiNutritionEstimate
+): { score: number; reason?: string } {
+    // Skip if no AI estimate or low confidence
+    if (!aiEstimate || aiEstimate.confidence < NUTRITION_CONFIDENCE_GATE) {
+        return { score: 0 };
+    }
+
+    // Skip if candidate doesn't have per-100g nutrition
+    if (!candidate.nutrition?.per100g || candidate.nutrition.kcal == null) {
+        return { score: 0 };
+    }
+
+    let score = 0;
+    const reasons: string[] = [];
+
+    // 1. Calorie scoring (primary signal - weight 0.12)
+    const estimatedCalories = aiEstimate.caloriesPer100g;
+    const actualCalories = candidate.nutrition.kcal;
+
+    if (estimatedCalories > 0 && actualCalories >= 0) {
+        const calorieDiff = Math.abs(actualCalories - estimatedCalories) / estimatedCalories;
+
+        if (calorieDiff <= NUTRITION_CALORIE_VARIANCE_THRESHOLD) {
+            // Within threshold: small bonus based on closeness
+            const closenessBonus = (1 - (calorieDiff / NUTRITION_CALORIE_VARIANCE_THRESHOLD));
+            score += closenessBonus * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence;
+            reasons.push(`kcal_match:+${(closenessBonus * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence).toFixed(3)}`);
+        } else {
+            // Outside threshold: penalty
+            const penaltyAmount = Math.min(calorieDiff, 1);  // Cap at 100% difference
+            score -= penaltyAmount * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence;
+            reasons.push(`kcal_mismatch:-${(penaltyAmount * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence).toFixed(3)}`);
+        }
+    }
+
+    // 2. Missing macros detection (Option B fix)
+    // If candidate shows P:0, C:0 but AI expects meaningful values, it's likely bad data
+    const candidateProtein = candidate.nutrition.protein ?? 0;
+    const candidateCarbs = candidate.nutrition.carbs ?? 0;
+    const candidateFat = candidate.nutrition.fat ?? 0;
+
+    const aiExpectsProtein = aiEstimate.proteinPer100g > 5;
+    const aiExpectsCarbs = aiEstimate.carbsPer100g > 5;
+
+    // Check for suspiciously missing macros (P:0 AND C:0 when both expected)
+    if (aiExpectsProtein && aiExpectsCarbs && candidateProtein === 0 && candidateCarbs === 0) {
+        score -= WEIGHTS.MISSING_MACRO_PENALTY * aiEstimate.confidence;
+        reasons.push('missing_macros');
+    }
+
+    // 3. Macro sanity check (secondary signal)
+    // Penalize if macros are WAY off (50% variance)
+    const macroDiffThreshold = 0.50;
+    if (aiExpectsProtein) {
+        const proteinDiff = Math.abs(candidateProtein - aiEstimate.proteinPer100g) / aiEstimate.proteinPer100g;
+        if (proteinDiff > macroDiffThreshold) {
+            score -= WEIGHTS.NUTRITION_MACRO_SCORING * aiEstimate.confidence;
+            reasons.push('protein_mismatch');
+        }
+    }
+    if (aiEstimate.fatPer100g > 5) {
+        const fatDiff = Math.abs(candidateFat - aiEstimate.fatPer100g) / aiEstimate.fatPer100g;
+        if (fatDiff > macroDiffThreshold) {
+            score -= WEIGHTS.NUTRITION_MACRO_SCORING * aiEstimate.confidence;
+            reasons.push('fat_mismatch');
+        }
+    }
+
+    return {
+        score,
+        reason: reasons.length > 0 ? reasons.join(',') : undefined
+    };
+}
+
+// ============================================================
+// Main Rerank Function
+// ============================================================
+
+/**
+ * Simple rerank: Pick the best candidate using token-based scoring.
+ * No AI calls - fast and deterministic.
+ * 
+ * @param query - The normalized ingredient name
+ * @param candidates - List of candidates from APIs
+ * @param aiNutritionEstimate - Optional AI-estimated nutrition for scoring
+ */
+export function simpleRerank(
+    query: string,
+    candidates: RerankCandidate[],
+    aiNutritionEstimate?: AiNutritionEstimate
+): SimpleRerankResult | null {
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    if (candidates.length === 1) {
+        return {
+            winner: candidates[0],
+            confidence: Math.min(candidates[0].score, 0.95),
+            reason: 'single_candidate',
+        };
+    }
+
+    // Score all candidates (base score + nutrition score)
+    const scored = candidates.map(c => {
+        const baseScore = computeSimpleScore(c, query);
+        const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
+        return {
+            candidate: c,
+            score: baseScore + nutritionResult.score,
+            baseScore,
+            nutritionScore: nutritionResult.score,
+            nutritionReason: nutritionResult.reason,
+        };
+    });
+
+    // Sort by score descending, with deterministic tiebreaker (ID) to ensure stable results
+    // This prevents non-determinism when candidates have equal scores
+    scored.sort((a, b) => {
+        const scoreDiff = b.score - a.score;
+        if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
+        // Tiebreaker: prefer non-branded (generic) foods
+        const aHasBrand = a.candidate.brandName ? 1 : 0;
+        const bHasBrand = b.candidate.brandName ? 1 : 0;
+        if (aHasBrand !== bHasBrand) return aHasBrand - bHasBrand;
+        // Final tiebreaker: sort by ID for absolute determinism
+        return a.candidate.id.localeCompare(b.candidate.id);
+    });
+
+    const top = scored[0];
+    const second = scored[1];
+    const gap = top.score - second.score;
+
+    // Determine confidence based on score and gap
+    let confidence = Math.min(0.5 + top.score * 0.5, 0.95);
+    if (gap > 0.1) {
+        confidence = Math.min(confidence + 0.1, 0.95);
+    }
+
+    // Determine reason
+    let reason = 'simple_rerank';
+    if (isExactMatch(query, top.candidate.name)) {
+        reason = 'exact_match';
+        confidence = Math.min(confidence + 0.1, 0.98);
+    } else if (gap > 0.15) {
+        reason = 'clear_winner';
+    } else if (gap < 0.05) {
+        reason = 'close_match';
+    }
+
+    logger.debug('simple_rerank.result', {
+        query,
+        winner: top.candidate.name,
+        winnerScore: top.score.toFixed(3),
+        winnerBaseScore: top.baseScore.toFixed(3),
+        winnerNutritionScore: top.nutritionScore.toFixed(3),
+        winnerNutritionReason: top.nutritionReason,
+        runnerUp: second.candidate.name,
+        runnerUpScore: second.score.toFixed(3),
+        gap: gap.toFixed(3),
+        confidence: confidence.toFixed(2),
+        reason,
+    });
+
+    return {
+        winner: top.candidate,
+        confidence,
+        reason,
+    };
+}
+
+/**
+ * Convert UnifiedCandidate to RerankCandidate format.
+ * Helper for integrating with existing pipeline.
+ */
+export function toRerankCandidate(candidate: {
+    id: string;
+    name: string;
+    brandName?: string | null;
+    foodType?: string | null;
+    score: number;
+    source: 'fatsecret' | 'fdc' | 'cache';
+    nutrition?: {
+        kcal: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+        per100g: boolean;
+    };
+}): RerankCandidate {
+    return {
+        id: candidate.id,
+        name: candidate.name,
+        brandName: candidate.brandName || undefined,
+        foodType: candidate.foodType || undefined,
+        score: candidate.score,
+        source: candidate.source,
+        nutrition: candidate.nutrition,
+    };
+}

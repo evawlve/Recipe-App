@@ -16,9 +16,66 @@ const VOLUME_UNIT_TO_ML: Record<string, number> = {
     tbsp: 15, tablespoon: 15, tablespoons: 15,
     tsp: 5, teaspoon: 5, teaspoons: 5,
     floz: 30, 'fl oz': 30, 'fluid ounce': 30, 'fluid ounces': 30,
+    // Small volume units
+    dash: 0.625, dashes: 0.625,    // 1 dash ≈ 1/8 tsp
+    pinch: 0.3, pinches: 0.3,       // 1 pinch ≈ 1/16 tsp
 };
 
-const COUNT_UNITS = new Set(['count', 'item', 'items', 'piece', 'pieces', 'tortilla', 'egg', 'bagel']);
+// Count-based units - synced with unit-type.ts COUNT_UNITS
+const COUNT_UNITS = new Set([
+    'count', 'item', 'items', 'piece', 'pieces', 'pc', 'pcs',
+    'each', 'ea', 'unit', 'units',
+    // Food-specific counts
+    'tortilla', 'tortillas', 'egg', 'eggs', 'bagel', 'bagels',
+    'patty', 'patties', 'fillet', 'fillets', 'breast', 'breasts',
+    'thigh', 'thighs', 'wing', 'wings', 'drumstick', 'drumsticks',
+    'clove', 'cloves', 'stalk', 'stalks', 'leaf', 'leaves', 'sprig', 'sprigs',
+    'strip', 'strips', 'wedge', 'wedges', 'cube', 'cubes', 'slice', 'slices',
+    // Packages and containers
+    'packet', 'packets', 'sachet', 'sachets', 'pouch', 'pouches',
+    'scoop', 'scoops', 'stick', 'sticks', 'bar', 'bars',
+    'envelope', 'envelopes', 'container', 'containers', 'can', 'cans',
+    'bottle', 'bottles', 'serving', 'servings',
+    // Baked goods
+    'cookie', 'cookies', 'cracker', 'crackers', 'chip', 'chips',
+    'muffin', 'muffins', 'roll', 'rolls', 'bun', 'buns',
+    'wafer', 'wafers', 'sheet', 'sheets',
+    // Size descriptors (for whole foods)
+    'small', 'medium', 'large', 'whole',
+]);
+
+// Size qualifiers for produce (small, medium, large, etc.)
+const SIZE_QUALIFIERS = new Set([
+    'small', 'sm',
+    'medium', 'med',
+    'large', 'lg',
+    'extra-large', 'xl', 'extralarge',
+]);
+
+/**
+ * Check if a unit is a size qualifier (small, medium, large, etc.)
+ */
+export function isSizeQualifier(unit: string | undefined | null): boolean {
+    if (!unit) return false;
+    return SIZE_QUALIFIERS.has(unit.toLowerCase().trim());
+}
+
+/**
+ * Get or create AI-estimated servings for size qualifiers (small/medium/large).
+ * Returns a map of size -> grams, or null if estimation fails.
+ * TODO: Implement actual AI estimation and caching
+ */
+export async function getOrCreateFdcSizeServings(
+    fdcId: number,
+    foodName: string
+): Promise<Record<string, number> | null> {
+    // Stub implementation - return common produce size estimates
+    // These are rough averages that should be replaced with AI-estimated values
+    logger.info('fdc.size_servings_stub', { fdcId, foodName });
+
+    // Return null to trigger fallback - actual implementation would query cache or call AI
+    return null;
+}
 
 function convertVolumeToMl(unit: string, amount: number): number | null {
     if (!unit || !Number.isFinite(amount) || amount <= 0) return null;
@@ -31,6 +88,8 @@ function convertVolumeToMl(unit: string, amount: number): number | null {
 export interface InsertFdcAiServingOptions {
     dryRun?: boolean;
     promptDebug?: boolean;
+    /** Specific unit to estimate (e.g., "packet", "egg", "slice") */
+    targetUnit?: string;
 }
 
 export async function insertFdcAiServing(
@@ -63,7 +122,12 @@ export async function insertFdcAiServing(
         }))
     };
 
-    const aiResult = await requestAiServing({ gapType, food: mockFood });
+    const aiResult = await requestAiServing({
+        gapType,
+        food: mockFood,
+        targetServingUnit: options.targetUnit,
+        isOnDemandBackfill: !!options.targetUnit,  // Use lower threshold for on-demand
+    });
 
     if (options.promptDebug) {
         logger.info({ fdcId: String(fdcId), gapType, prompt: aiResult.prompt }, 'AI prompt debug (FDC)');
