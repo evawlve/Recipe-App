@@ -35,6 +35,7 @@ import { queueForDeferredHydration } from './deferred-hydration';
 import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-generator';
 import { backfillOnDemand } from './serving-backfill';
 import { classifyUnit } from './unit-type';
+import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -185,6 +186,49 @@ export async function mapIngredientWithFallback(
     if (!baseName || UNIT_ONLY_PATTERN.test(baseName.trim())) {
         logger.warn('mapping.no_food_name', { rawLine: trimmed, baseName });
         return null;
+    }
+
+    // ============================================================
+    // Step 1-WATER: Early exit for ice/water - always zero calories
+    // ============================================================
+    // These ingredients have no nutritional value and should never map to food
+    const ZERO_CALORIE_INGREDIENTS = ['ice', 'ice cubes', 'crushed ice', 'shaved ice', 'water', 'tap water', 'cold water', 'hot water', 'ice water'];
+    const baseNameLowerForWaterCheck = baseName.toLowerCase().trim();
+    if (ZERO_CALORIE_INGREDIENTS.some(term => baseNameLowerForWaterCheck === term || baseNameLowerForWaterCheck.endsWith(' ' + term))) {
+        logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName });
+
+        // Calculate grams from parsed quantity using standard conversions
+        const WATER_UNIT_GRAMS: Record<string, number> = {
+            'cup': 237, 'cups': 237,
+            'ml': 1, 'milliliter': 1, 'milliliters': 1,
+            'l': 1000, 'liter': 1000, 'liters': 1000,
+            'oz': 29.57, 'ounce': 29.57, 'ounces': 29.57,
+            'fl oz': 29.57, 'floz': 29.57, 'fluid ounce': 29.57,
+            'tbsp': 14.79, 'tablespoon': 14.79,
+            'tsp': 4.93, 'teaspoon': 4.93,
+            'g': 1, 'gram': 1, 'grams': 1,
+        };
+        const unitLower = parsed?.unit?.toLowerCase() || 'cup';
+        const gramsPerUnit = WATER_UNIT_GRAMS[unitLower] || 237;  // Default to 1 cup
+        const qty = parsed ? parsed.qty * parsed.multiplier : 1;
+        const totalGrams = gramsPerUnit * qty;
+
+        return {
+            source: 'cache',
+            foodId: 'water_default',
+            foodName: 'Water',
+            brandName: null,
+            servingId: null,
+            servingDescription: `${qty} ${parsed?.unit || 'cup'}`,
+            grams: totalGrams,
+            kcal: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+            confidence: 1.0,
+            quality: 'high',
+            rawLine,
+        };
     }
 
     // ============================================================
@@ -1141,6 +1185,60 @@ async function hydrateAndSelectServing(
             logger.warn('hydrate.unitless_backfill_failed', {
                 foodId: candidate.id,
                 reason: backfillRes.reason
+            });
+        }
+    }
+
+    // If selection failed and unit is AMBIGUOUS (container, scoop, etc.), try AI estimation
+    if (!servingResult && parsed?.unit && isAmbiguousUnit(parsed.unit)) {
+        logger.info('hydrate.attempting_ambiguous_unit_backfill', {
+            foodId: candidate.id,
+            foodName: candidate.name,
+            unit: parsed.unit,
+        });
+
+        const ambiguousResult = await getOrCreateAmbiguousServing(
+            candidate.id,
+            candidate.name,
+            parsed.unit,
+            candidate.brandName
+        );
+
+        if (ambiguousResult.status === 'success' || ambiguousResult.status === 'cached') {
+            const estimatedGrams = ambiguousResult.grams!;
+            const qty = parsed.qty * parsed.multiplier;
+            const totalGrams = estimatedGrams * qty;
+
+            // Find ANY gram-based serving to calculate nutrition
+            const gramServing = details.servings.find(s =>
+                s.metricServingUnit === 'g' ||
+                s.measurementDescription?.toLowerCase().includes('gram') ||
+                gramsForServing(s) != null
+            );
+
+            if (gramServing) {
+                servingResult = {
+                    serving: gramServing,
+                    matchScore: 0.85,
+                    gramsPerUnit: estimatedGrams,
+                    unitsPerServing: 1,
+                    baseGrams: totalGrams,
+                    matchType: 'fallback' as const,
+                    warning: `AI-estimated: 1 ${parsed.unit} ≈ ${estimatedGrams}g`,
+                };
+
+                logger.info('hydrate.ambiguous_unit_success', {
+                    foodId: candidate.id,
+                    unit: parsed.unit,
+                    estimatedGrams,
+                    totalGrams,
+                });
+            }
+        } else {
+            logger.warn('hydrate.ambiguous_unit_failed', {
+                foodId: candidate.id,
+                unit: parsed.unit,
+                error: ambiguousResult.error,
             });
         }
     }

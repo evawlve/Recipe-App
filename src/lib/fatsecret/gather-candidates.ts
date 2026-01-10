@@ -1094,7 +1094,7 @@ function computePositionScore(
     // that are NOT in the query, penalize.
     // e.g., Query: "strawberry" -> Food: "Strawberry Smoothie" (Unexpected "smoothie") -> Penalty!
 
-    const DISH_TERMS = ['smoothie', 'pie', 'cake', 'bread', 'muffin', 'juice', 'sauce', 'soup', 'stew', 'casserole', 'salad', 'pizza', 'sandwich', 'burger', 'dip', 'jam', 'jelly', 'yogurt', 'ice cream', 'shake'];
+    const DISH_TERMS = ['smoothie', 'pie', 'cake', 'cheesecake', 'cupcake', 'pancake', 'bread', 'muffin', 'juice', 'sauce', 'soup', 'stew', 'casserole', 'salad', 'pizza', 'sandwich', 'burger', 'dip', 'jam', 'jelly', 'yogurt', 'ice cream', 'shake'];
 
     // Only apply if query itself isn't asking for a dish
     const queryHasDishTerm = DISH_TERMS.some(term => queryLower.includes(term));
