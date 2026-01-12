@@ -667,6 +667,7 @@ model MappingValidationFailure {
 model AiNormalizeCache {
   rawLine                  String   @id
   normalizedName           String
+  canonicalBase            String?              // Base ingredient for cache lookup (e.g., 'strawberries' for 'strawberry halves')
   synonyms                 Json     @default("[]")
   prepPhrases              Json     @default("[]")
   sizePhrases              Json     @default("[]")

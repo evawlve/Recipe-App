@@ -12,6 +12,7 @@ export type ParsedIngredient = {
   notes?: string | null;
   qualifiers?: string[];
   unitHint?: string | null;
+  isEstimatedQuantity?: boolean;  // True when qty is AI-estimated (e.g., "to taste" -> 1 tsp)
 };
 
 export function parseIngredientLine(line: string): ParsedIngredient | null {
@@ -24,10 +25,32 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     return null; // Separator line
   }
 
-  // Check for "to taste" - this is not a parseable ingredient
-  if (trimmed.toLowerCase().includes('to taste')) {
+  // Handle "to taste" specially for spices/seasonings - default to 1 tsp
+  // This provides a reasonable nutritional estimate while flagging as estimated
+  const isToTaste = trimmed.toLowerCase().includes('to taste');
+  if (isToTaste) {
+    // Extract ingredient name: remove "to taste", commas, and any leading qty patterns
+    const cleaned = trimmed
+      .replace(/,?\s*to taste/i, '')         // Remove "to taste"
+      .replace(/^\d+[\s\/\.]*\d*\s*/, '')    // Remove leading numbers like "1 1" or "1.5"
+      .trim();
+
+    if (cleaned.length > 0) {
+      return {
+        qty: 1,
+        multiplier: 1,
+        unit: 'tsp',
+        rawUnit: 'tsp',
+        name: cleaned,
+        notes: 'to taste (estimated as 1 tsp)',
+        qualifiers: undefined,
+        unitHint: null,
+        isEstimatedQuantity: true,
+      };
+    }
     return null;
   }
+
 
   // Normalize unicode spaces (thin space, non-breaking space, etc.) to regular spaces
   // This handles cases like "2 ½" where there might be a thin space

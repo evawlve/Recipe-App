@@ -16,7 +16,8 @@
 9. [Key Files](#key-files)
 10. [Debugging](#debugging-incorrect-mappings)
 11. [Determinism Mechanisms](#determinism-mechanisms-jan-9-fix)
-12. [Cooking State Disambiguation](#cooking-state-disambiguation)
+12. [Cache Normalization](#cache-normalization-jan-10-fix)
+13. [Cooking State Disambiguation](#cooking-state-disambiguation)
 
 ---
 
@@ -541,6 +542,83 @@ The script shows: Parsed Result, AI Normalized Name, Raw API Results, Post-Filte
 
 ---
 
+## Cache Normalization (Jan 10 Fix)
+
+### Canonical Base for Cache Keys
+
+The `AiNormalizeCache` now includes a `canonicalBase` field that provides a stable cache key:
+
+| Raw Input | Normalized Name | Canonical Base |
+|-----------|-----------------|----------------|
+| `2 cup strawberry halves` | `strawberry halves` | `strawberries` |
+| `1 cup strawberries` | `strawberries` | `strawberries` |
+| `diced tomatoes` | `diced tomatoes` | `tomatoes` |
+| `1 medium tomato` | `tomato` | `tomatoes` |
+
+**Key Principle**: Strip prep/size words but **preserve nutrition-affecting modifiers**.
+
+### Modifier Preservation Rules
+
+| Modifier Type | Example | Action |
+|--------------|---------|--------|
+| Prep phrases | chopped, diced, sliced | ✅ Strip from canonical |
+| Size phrases | halves, cubes | ✅ Strip from canonical |
+| Fat modifiers | skinless, skim, 2%, reduced fat | ❌ Keep in canonical |
+| Lean % | 85% lean, 90/10 | ❌ Keep in canonical |
+| Form words | powder, flakes | ❌ Keep in canonical |
+
+### Examples
+
+| Input | Canonical Base | Why |
+|-------|----------------|-----|
+| `skinless chicken thighs` | `skinless chicken thighs` | Skinless = less fat |
+| `skim milk` | `skim milk` | Different nutrition than whole |
+| `85% lean ground beef` | `85% lean ground beef` | Lean % affects fat content |
+| `garlic powder` | `garlic powder` | Different product than garlic |
+
+### Dynamic Singular/Plural Matching
+
+Token filtering now uses dynamic `singularize()`/`pluralize()` helpers instead of static synonym lists:
+
+**File**: `filter-candidates.ts` (lines 99-142)
+
+```typescript
+// berries → berry, potatoes → potato
+function singularize(word: string): string { ... }
+
+// berry → berries, potato → potatoes  
+function pluralize(word: string): string { ... }
+
+// Returns all variants for token matching
+function getSingularPluralVariants(word: string): string[] { ... }
+```
+
+This ensures `strawberry` matches candidates containing `strawberries` automatically.
+
+### DISH_TERMS Expansion
+
+Added terms to penalize processed products when searching for raw ingredients:
+
+```typescript
+DISH_TERMS = [..., 'drink', 'beverage', 'flavored'];
+```
+
+This prevents `"stberry halves"` from mapping to `"Strawberry-Flavored Drink"`.
+
+### Test Suite
+
+```bash
+npx tsx scripts/test-canonical-base.ts
+```
+
+**22/22 tests pass** covering:
+- Plural matching (strawberry ↔ strawberries)
+- Nutritional modifier separation (skinless ≠ with skin)
+- Prep phrase consolidation (diced ↔ chopped)
+- Processed vs raw (smoothie ≠ fruit)
+
+---
+
 ## Cooking State Disambiguation
 
 ### Overview
@@ -687,6 +765,8 @@ orderBy: [
 2. **Confidence decay**: Re-validate old mappings periodically
 3. **User feedback loop**: Learn from user corrections
 4. **Regional variations**: Handle UK vs US ingredient names
+5. **Eager AI Density Backfill**: Currently uses lazy backfill (category-based density from food name keywords). When logging feature ships, consider switching to eager AI backfill for more accurate density estimation - would call AI to estimate density for any ml-based serving without cached `FatSecretDensityEstimate`. See `density.ts:inferCategoryFromName()` for current implementation.
+
 
 ---
 

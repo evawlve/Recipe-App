@@ -377,6 +377,7 @@ export async function getAiNormalizeCache(rawLine: string) {
 
         return {
             normalizedName: cached.normalizedName,
+            canonicalBase: cached.canonicalBase ?? cached.normalizedName,  // Fallback for backward compatibility
             synonyms: cached.synonyms as string[],
             prepPhrases: cached.prepPhrases as string[],
             sizePhrases: cached.sizePhrases as string[],
@@ -405,6 +406,7 @@ export async function saveAiNormalizeCache(
     rawLine: string,
     result: {
         normalizedName: string;
+        canonicalBase?: string;  // Base ingredient for cache key
         synonyms: string[];
         prepPhrases: string[];
         sizePhrases: string[];
@@ -424,6 +426,7 @@ export async function saveAiNormalizeCache(
             create: {
                 rawLine,
                 normalizedName: result.normalizedName,
+                canonicalBase: result.canonicalBase,
                 synonyms: result.synonyms,
                 prepPhrases: result.prepPhrases,
                 sizePhrases: result.sizePhrases,

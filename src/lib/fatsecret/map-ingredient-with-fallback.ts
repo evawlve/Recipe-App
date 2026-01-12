@@ -17,6 +17,7 @@ import {
     isCategoryMismatch,
     isMultiIngredientMismatch,
     isReplacementMismatch,
+    validateAliasMapping,
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate } from './simple-rerank';
 import { getValidatedMapping, getValidatedMappingByNormalizedName, saveValidatedMapping } from './validated-mapping-helpers';
@@ -930,6 +931,7 @@ export async function mapIngredientWithFallback(
 
             // Also save AI synonyms as aliases to enable future cache hits
             // e.g., if "fresh raspberries" maps to Raspberries, also save "raspberries" as alias
+            // NEW: Validate each alias before saving to prevent cascade poisoning
             for (const synonym of allSynonyms) {
                 const synLower = synonym.toLowerCase().trim();
                 const rawLower = trimmed.toLowerCase().trim();
@@ -937,7 +939,25 @@ export async function mapIngredientWithFallback(
                 // Skip if same as original or too short
                 if (synLower === rawLower || synLower.length < 3) continue;
 
-                // Save synonym as alias pointing to the same food
+                // Validate alias before saving - prevent cascade poisoning
+                const aliasNutrients = result.grams > 0 ? {
+                    kcal: (result.kcal / result.grams) * 100,
+                    protein: (result.protein / result.grams) * 100,
+                    carbs: (result.carbs / result.grams) * 100,
+                    fat: (result.fat / result.grams) * 100,
+                } : undefined;
+
+                const validation = validateAliasMapping(synonym, result.foodName, aliasNutrients);
+                if (!validation.valid) {
+                    logger.warn('mapping.alias_validation_failed', {
+                        synonym,
+                        foodName: result.foodName,
+                        reason: validation.reason,
+                    });
+                    continue; // Skip this invalid alias
+                }
+
+                // Save validated synonym as alias pointing to the same food
                 await saveValidatedMapping(synonym, result, {
                     approved: true,
                     confidence: confidence * 0.9,  // Slightly lower confidence for aliases
@@ -1308,7 +1328,7 @@ async function hydrateAndSelectServing(
     }
 
     // Calculate final grams for the result
-    const finalGrams = targetGrams || ((unitGrams || gramsForServing(serving) || 100) * qty);
+    const finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
 
     return {
         source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
@@ -1870,7 +1890,10 @@ function selectServing(
 // Helper Functions
 // ============================================================
 
-function gramsForServing(serving: FatSecretServing): number | null {
+function gramsForServing(
+    serving: FatSecretServing,
+    foodName?: string | null
+): number | null {
     if (serving.servingWeightGrams && serving.servingWeightGrams > 0) {
         return serving.servingWeightGrams;
     }
@@ -1878,10 +1901,36 @@ function gramsForServing(serving: FatSecretServing): number | null {
         return serving.metricServingAmount;
     }
     if (serving.metricServingUnit?.toLowerCase() === 'ml' && serving.metricServingAmount) {
-        return serving.metricServingAmount;
+        // IMPORTANT: ml ≠ grams! Must apply density conversion.
+        // 1. Try to infer category from food name
+        // 2. Look up category density (legume: 0.90, grain: 0.80, rice: 0.85, etc.)
+        // 3. Fallback to 1.0 g/ml (water-like)
+        let density = 1.0;  // Default: water-like
+
+        if (foodName) {
+            // Import dynamically to avoid circular deps - but we know it's already loaded
+            const { inferCategoryFromName, categoryDensity } = require('../units/density');
+            const category = inferCategoryFromName(foodName);
+            if (category) {
+                const catDensity = categoryDensity(category);
+                if (catDensity) {
+                    density = catDensity;
+                    logger.debug('gramsForServing.category_density', {
+                        foodName,
+                        category,
+                        density,
+                        ml: serving.metricServingAmount
+                    });
+                }
+            }
+        }
+
+        return serving.metricServingAmount * density;
     }
     return null;
 }
+
+
 
 function computeMacros(
     serving: FatSecretServing,

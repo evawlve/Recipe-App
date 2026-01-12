@@ -98,6 +98,48 @@ const TOKEN_SYNONYMS: Record<string, string[]> = {
 };
 
 // ============================================================
+// Dynamic Singular/Plural Helpers
+// ============================================================
+
+/**
+ * Convert plural to singular form
+ * e.g., berries → berry, potatoes → potato, eggs → egg
+ */
+function singularize(word: string): string {
+    if (word.endsWith('ies') && word.length > 4) return word.slice(0, -3) + 'y'; // berries → berry
+    if (word.endsWith('oes')) return word.slice(0, -2); // potatoes → potato
+    if (word.endsWith('es') && word.length > 3) return word.slice(0, -2); // tomatoes → tomato
+    if (word.endsWith('s') && word.length > 2) return word.slice(0, -1); // eggs → egg
+    return word;
+}
+
+/**
+ * Convert singular to plural form
+ * e.g., berry → berries, potato → potatoes, egg → eggs
+ */
+function pluralize(word: string): string {
+    if (word.endsWith('y') && !/[aeiou]y$/.test(word)) return word.slice(0, -1) + 'ies'; // berry → berries
+    if (word.endsWith('o')) return word + 'es'; // potato → potatoes
+    if (word.endsWith('s') || word.endsWith('x') || word.endsWith('ch') || word.endsWith('sh')) return word + 'es';
+    return word + 's';
+}
+
+/**
+ * Get all singular/plural variants of a word
+ */
+function getSingularPluralVariants(word: string): string[] {
+    const variants = [word];
+    const singular = singularize(word);
+    const plural = pluralize(word);
+    if (singular !== word) variants.push(singular);
+    if (plural !== word) variants.push(plural);
+    // Also try pluralizing the singular (handles irregular forms)
+    const pluralOfSingular = pluralize(singular);
+    if (!variants.includes(pluralOfSingular)) variants.push(pluralOfSingular);
+    return variants;
+}
+
+// ============================================================
 // Specialty Patterns (lenient filtering for these)
 // ============================================================
 
@@ -935,6 +977,263 @@ export function hasImpossibleMacros(
 }
 
 // ============================================================
+// Null/Invalid Macro Validation
+// ============================================================
+
+/**
+ * Check if nutrition data has null or invalid macros (data quality issue).
+ * Foods with null macros should be rejected from selection.
+ * 
+ * We are stricter for foods with significant calories - they should have
+ * both protein AND carbs data (since these are the main calorie sources).
+ */
+export function hasNullOrInvalidMacros(
+    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null
+): boolean {
+    if (!nutrients) return true;
+
+    // Check for kcal (we accept either kcal or calories field)
+    const calories = nutrients.kcal ?? nutrients.calories;
+    if (calories == null) return true;
+
+    // Reject if ALL macros are null (at least one should be present)
+    if (nutrients.protein == null && nutrients.carbs == null && nutrients.fat == null) {
+        return true;
+    }
+
+    // For foods with significant calories (>50 kcal/100g), we need BOTH protein AND carbs
+    // This catches cases like red lentils where fat=2.86 but protein/carbs are null
+    // (A food with 314 kcal but only 2.86g fat can't be valid - macros don't add up)
+    if (calories > 50) {
+        // If protein AND carbs are both null, that's suspicious for a caloric food
+        if (nutrients.protein == null && nutrients.carbs == null) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// ============================================================
+// Simple Ingredient → Processed Product Validation
+// ============================================================
+
+// Categories of simple ingredients with expected calorie ranges
+// Used to catch when fresh ingredients map to processed products
+const SIMPLE_INGREDIENT_CATEGORIES: Array<{
+    terms: string[];           // Terms that identify this category
+    maxCalPer100g: number;     // Max expected calories for this category
+    description: string;       // For logging
+    processedIndicators: string[];  // Words that suggest processed product
+}> = [
+        // Fresh vegetables and produce (<60 kcal/100g typically)
+        {
+            terms: [
+                'pepper', 'peppers', 'chili', 'chilli', 'chile', 'jalapeno', 'serrano', 'habanero',
+                'tomato', 'tomatoes', 'onion', 'onions', 'garlic', 'ginger',
+                'carrot', 'carrots', 'celery', 'cucumber', 'lettuce', 'spinach', 'kale',
+                'broccoli', 'cauliflower', 'cabbage', 'zucchini', 'squash', 'eggplant',
+                'mushroom', 'mushrooms', 'asparagus', 'artichoke', 'leek', 'leeks',
+                'radish', 'radishes', 'turnip', 'turnips', 'beet', 'beets',
+                'green bean', 'green beans', 'snap peas', 'snow peas',
+            ],
+            maxCalPer100g: 80,  // Fresh veg is typically 10-50 kcal/100g
+            description: 'fresh_vegetable',
+            processedIndicators: ['cream cheese', 'spread', 'dip', 'sauce', 'dressing', 'chips', 'fried', 'battered'],
+        },
+        // Fresh herbs (<50 kcal/100g)
+        {
+            terms: [
+                'basil', 'cilantro', 'parsley', 'mint', 'oregano', 'thyme', 'rosemary',
+                'dill', 'chives', 'tarragon', 'sage', 'bay leaf', 'bay leaves',
+            ],
+            maxCalPer100g: 60,
+            description: 'fresh_herb',
+            processedIndicators: ['pesto', 'sauce', 'dressing', 'spread', 'butter'],
+        },
+        // Fresh fruits (<80 kcal/100g typically)
+        {
+            terms: [
+                'lemon', 'lime', 'orange', 'grapefruit', 'tangerine',
+                'apple', 'pear', 'peach', 'plum', 'apricot', 'nectarine',
+                'strawberry', 'strawberries', 'blueberry', 'blueberries',
+                'raspberry', 'raspberries', 'blackberry', 'blackberries',
+                'grape', 'grapes', 'cherry', 'cherries',
+                'watermelon', 'cantaloupe', 'honeydew', 'melon',
+                'pineapple', 'mango', 'papaya', 'kiwi',
+            ],
+            maxCalPer100g: 80,
+            description: 'fresh_fruit',
+            processedIndicators: ['jam', 'jelly', 'preserve', 'syrup', 'candy', 'dried', 'juice', 'pie', 'cake', 'smoothie'],
+        },
+        // Raw proteins (<200 kcal/100g for lean cuts)
+        {
+            terms: [
+                'chicken breast', 'turkey breast', 'pork tenderloin', 'beef sirloin',
+                'fish fillet', 'salmon fillet', 'tilapia', 'cod', 'halibut',
+                'shrimp', 'prawns', 'scallops', 'crab', 'lobster',
+                'tofu', 'tempeh', 'seitan',
+            ],
+            maxCalPer100g: 220,
+            description: 'raw_protein',
+            processedIndicators: ['breaded', 'battered', 'fried', 'nugget', 'patty', 'burger', 'stick', 'finger'],
+        },
+        // Spices and dried seasonings (<350 kcal/100g but usually used in tiny amounts)
+        {
+            terms: [
+                'cumin', 'coriander seed', 'turmeric', 'paprika', 'curry powder',
+                'chili powder', 'cayenne', 'cinnamon', 'nutmeg', 'clove', 'cloves',
+                'cardamom', 'allspice', 'ginger powder', 'garlic powder', 'onion powder',
+            ],
+            maxCalPer100g: 400,
+            description: 'spice',
+            processedIndicators: ['blend', 'mix', 'rub', 'with', 'flavored'],
+        },
+        // Fresh dairy basics (<100 kcal/100g for milk/yogurt)
+        {
+            terms: [
+                'milk', 'skim milk', 'lowfat milk', 'nonfat milk',
+                'buttermilk', 'kefir',
+            ],
+            maxCalPer100g: 80,
+            description: 'fresh_dairy_liquid',
+            processedIndicators: ['shake', 'smoothie', 'ice cream', 'frozen', 'chocolate', 'flavored'],
+        },
+        // Eggs (<160 kcal/100g)
+        {
+            terms: ['egg', 'eggs', 'egg white', 'egg whites', 'egg yolk', 'egg yolks'],
+            maxCalPer100g: 180,
+            description: 'egg',
+            processedIndicators: ['sandwich', 'muffin', 'biscuit', 'mcmuffin', 'croissant', 'burrito'],
+        },
+        // Grains dry (<380 kcal/100g)
+        {
+            terms: [
+                'rice', 'quinoa', 'oats', 'barley', 'bulgur', 'couscous',
+                'farro', 'millet', 'buckwheat',
+            ],
+            maxCalPer100g: 400,
+            description: 'dry_grain',
+            processedIndicators: ['cake', 'pudding', 'cereal bar', 'granola bar', 'crispy', 'puffed'],
+        },
+        // Legumes dry (<360 kcal/100g)
+        {
+            terms: [
+                'lentil', 'lentils', 'chickpea', 'chickpeas', 'black beans',
+                'kidney beans', 'pinto beans', 'navy beans', 'cannellini',
+                'split peas', 'dal', 'dhal',
+            ],
+            maxCalPer100g: 380,
+            description: 'legume',
+            processedIndicators: ['hummus', 'falafel', 'burger', 'patty', 'chips', 'snack'],
+        },
+    ];
+
+/**
+ * Check if a simple ingredient query is incorrectly matching a processed product.
+ * 
+ * e.g., "chili peppers" (fresh veg, ~40 kcal) → "Chilli Peppers Cream Cheese" (233 kcal) = MISMATCH
+ * e.g., "strawberries" (fresh fruit, ~32 kcal) → "Strawberry Jam" (250 kcal) = MISMATCH
+ * 
+ * Used both for candidate filtering AND alias validation.
+ */
+export function isSimpleIngredientToProcessedMismatch(
+    query: string,
+    candidateName: string,
+    nutrients?: { kcal?: number | null; calories?: number | null } | null
+): boolean {
+    const queryLower = query.toLowerCase().trim();
+    const candidateLower = candidateName.toLowerCase();
+
+    // Only apply to simple queries (1-3 words)
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+    if (queryWords.length > 4) return false;
+
+    const caloriesPer100g = nutrients?.kcal ?? nutrients?.calories;
+
+    for (const category of SIMPLE_INGREDIENT_CATEGORIES) {
+        // Check if query matches this category
+        const matchesTerm = category.terms.some(term =>
+            queryLower.includes(term) || term.includes(queryLower)
+        );
+
+        if (!matchesTerm) continue;
+
+        // Check 1: If we have calorie data and it exceeds threshold + candidate has processed indicators
+        if (caloriesPer100g != null && caloriesPer100g > category.maxCalPer100g) {
+            const hasProcessedIndicator = category.processedIndicators.some(ind =>
+                candidateLower.includes(ind)
+            );
+            if (hasProcessedIndicator) {
+                return true;  // Clear mismatch: high-cal processed product for simple ingredient
+            }
+        }
+
+        // Check 2: Even without calorie data, flag if candidate has processed indicators
+        // AND the calorie threshold is low (fresh produce/herbs)
+        if (category.maxCalPer100g <= 100) {
+            const hasProcessedIndicator = category.processedIndicators.some(ind =>
+                candidateLower.includes(ind)
+            );
+            // Also check if query starts with candidate (good) vs candidate having extra product words
+            const candidateHasExtraProductWords = candidateLower.length > queryLower.length + 20;
+
+            if (hasProcessedIndicator && candidateHasExtraProductWords) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Comprehensive alias validation for mapping synonyms.
+ * Before saving a synonym as an alias, validate the mapping makes sense for that synonym.
+ * 
+ * Returns { valid: false, reason: string } if alias should NOT be saved.
+ */
+export function validateAliasMapping(
+    synonymToSave: string,
+    foodName: string,
+    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null
+): { valid: boolean; reason?: string } {
+    // Check 1: Simple ingredient → processed product mismatch
+    if (isSimpleIngredientToProcessedMismatch(synonymToSave, foodName, nutrients)) {
+        return {
+            valid: false,
+            reason: `simple_ingredient_to_processed: "${synonymToSave}" should not map to "${foodName}"`
+        };
+    }
+
+    // Check 2: Category mismatch (using existing function)
+    if (isCategoryMismatch(synonymToSave, foodName)) {
+        return {
+            valid: false,
+            reason: `category_mismatch: "${synonymToSave}" should not map to "${foodName}"`
+        };
+    }
+
+    // Check 3: Food type mismatch - synonym ending with food type must match
+    if (isFoodTypeMismatch(synonymToSave, foodName)) {
+        return {
+            valid: false,
+            reason: `food_type_mismatch: "${synonymToSave}" requires different food type than "${foodName}"`
+        };
+    }
+
+    // Check 4: Null macros - don't save aliases to foods with bad data
+    if (hasNullOrInvalidMacros(nutrients)) {
+        return {
+            valid: false,
+            reason: `null_macros: "${foodName}" has null/invalid nutrition data`
+        };
+    }
+
+    return { valid: true };
+}
+
+// ============================================================
 // Replacement/Replacer Mismatch (e.g., "egg replacer" vs "egg")
 // ============================================================
 
@@ -1258,11 +1557,27 @@ export function filterCandidatesByTokens(
             if (wordBoundaryRegex.test(candidateName)) {
                 return true;
             }
+
+            // Dynamic singular/plural variant check
+            // e.g., "strawberry" should match candidates with "strawberries"
+            const variants = getSingularPluralVariants(token);
+            for (const variant of variants) {
+                if (variant !== token) {
+                    if (candidateTokens.has(variant)) {
+                        return true;
+                    }
+                    const variantRegex = new RegExp(`\\b${variant}\\b`, 'i');
+                    if (variantRegex.test(candidateName)) {
+                        return true;
+                    }
+                }
+            }
+
             // Try synonym matches (for British → American translations)
             const synonyms = TOKEN_SYNONYMS[token];
             if (synonyms) {
                 return synonyms.some(syn =>
-                    candidateTokens.has(syn) || wordBoundaryRegex.test(candidateName)
+                    candidateTokens.has(syn) || new RegExp(`\\b${syn}\\b`, 'i').test(candidateName)
                 );
             }
             return false;
