@@ -22,6 +22,10 @@ type AiNormalizeSuccess = {
     fatPer100g: number;
     confidence: number;  // 0-1
   };
+  // Candidate filtering hints (Jan 2026)
+  isBranded: boolean;           // User explicitly wants branded product
+  isMultiIngredient: boolean;   // Input contains multiple distinct ingredients
+  splitIngredients?: string[];  // If isMultiIngredient, the separated components
 };
 
 type AiNormalizeError = {
@@ -55,9 +59,13 @@ const RESPONSE_SCHEMA = {
         required: ['calories_per_100g', 'protein_per_100g', 'carbs_per_100g', 'fat_per_100g', 'confidence'],
         additionalProperties: false,
       },
+      // Candidate filtering hints (Jan 2026)
+      is_branded: { type: 'boolean' },
+      is_multi_ingredient: { type: 'boolean' },
+      split_ingredients: { type: ['array', 'null'], items: { type: 'string' } },
       error: { type: ['string', 'null'] },
     },
-    required: ['normalized_name', 'canonical_base', 'prep_phrases', 'size_phrases', 'synonyms', 'cooking_modifier', 'nutrition_estimate', 'error'],
+    required: ['normalized_name', 'canonical_base', 'prep_phrases', 'size_phrases', 'synonyms', 'cooking_modifier', 'nutrition_estimate', 'is_branded', 'is_multi_ingredient', 'split_ingredients', 'error'],
   },
   strict: true,
 };
@@ -70,6 +78,11 @@ const SYSTEM_PROMPT = [
   '- Strip prep/size words: "strawberry halves" → canonical_base: "strawberries"',
   '- Use plural form when it\'s a common ingredient: "strawberry" → "strawberries", "egg" → "eggs"',
   '- Keep modifiers that affect nutrition: "reduced fat milk" → canonical_base: "reduced fat milk"',
+  '- BRANDS: When is_branded=true, INCLUDE the brand name (lowercase) in canonical_base:',
+  '  - "Philadelphia cream cheese" → canonical_base: "philadelphia cream cheese", is_branded: true',
+  '  - "Kerrygold butter" → canonical_base: "kerrygold butter", is_branded: true',
+  '  - "Kraft singles" → canonical_base: "kraft cheese singles", is_branded: true',
+  '  - "cream cheese" (generic) → canonical_base: "cream cheese", is_branded: false',
   '- Examples: "diced tomatoes" → canonical_base: "tomatoes", "fresh basil leaves" → canonical_base: "basil"',
   '',
   'CRITICAL: Dietary modifiers that affect nutrition MUST be preserved in normalized_name:',
@@ -113,6 +126,21 @@ const SYSTEM_PROMPT = [
   '- "2 cup stberry halves" → normalized_name: "strawberry halves", canonical_base: "strawberries" (fix typos, base for caching), nutrition_estimate: {calories_per_100g: 32, protein_per_100g: 0.7, carbs_per_100g: 7.7, fat_per_100g: 0.3, confidence: 0.95}',
   '- "3 g garlic powder" → normalized_name: "garlic powder" (keep form word!), prep_phrases: [], nutrition_estimate: {calories_per_100g: 331, protein_per_100g: 17, carbs_per_100g: 73, fat_per_100g: 0.7, confidence: 0.9}',
   '',
+  'BRANDED DETECTION (is_branded):',
+  'Set is_branded=true if the user explicitly mentions a brand name or product line:',
+  '- "Violife cream cheese" → is_branded: true',
+  '- "Kraft singles" → is_branded: true',
+  '- "cream cheese" → is_branded: false (generic)',
+  '- "organic milk" → is_branded: false (organic is a category, not brand)',
+  '',
+  'MULTI-INGREDIENT DETECTION (is_multi_ingredient):',
+  'Set is_multi_ingredient=true if input contains TWO DISTINCT ingredients that would be measured separately:',
+  '- "salt and pepper" → is_multi_ingredient: true, split_ingredients: ["salt", "pepper"]',
+  '- "sour cream and onion dip" → is_multi_ingredient: false (this is ONE product name)',
+  '- "chilli peppers cream cheese" → is_multi_ingredient: false (ONE compound product)',
+  'The key distinction: Would you need to measure/add these separately in a recipe?',
+  'When is_multi_ingredient=true, normalize the FIRST ingredient and list all in split_ingredients.',
+  '',
   'Do not invent foods; stay close to the ingredient meaning. If truly unclear, set error.',
 ].join('\n');
 
@@ -126,6 +154,10 @@ export async function aiNormalizeIngredient(
     return {
       status: 'success',
       ...cached,
+      // Provide defaults for new fields (backward compatibility with older cache entries)
+      isBranded: cached.isBranded ?? false,
+      isMultiIngredient: cached.isMultiIngredient ?? false,
+      splitIngredients: cached.splitIngredients ?? undefined,
     };
   }
 
@@ -192,7 +224,16 @@ export async function aiNormalizeIngredient(
       synonyms: parsed.synonyms.filter((s: unknown) => typeof s === 'string'),
       cookingModifier: parsed.cooking_modifier || undefined,
       nutritionEstimate,
+      // Candidate filtering hints (Jan 2026)
+      isBranded: parsed.is_branded ?? false,
+      isMultiIngredient: parsed.is_multi_ingredient ?? false,
+      splitIngredients: parsed.split_ingredients?.filter((s: unknown) => typeof s === 'string') || undefined,
     };
+
+    // Log warning if multi-ingredient detected (mapped to first ingredient only)
+    if (result.isMultiIngredient && result.splitIngredients?.length) {
+      console.warn(`[ai-normalize] Multi-ingredient detected: "${rawLine}" → mapping first ingredient only. All ingredients: ${result.splitIngredients.join(', ')}`);
+    }
 
     // Save to persistent database cache
     await saveAiNormalizeCache(rawLine, {

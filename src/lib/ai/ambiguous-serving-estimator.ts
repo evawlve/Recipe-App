@@ -21,6 +21,7 @@ export const AMBIGUOUS_UNITS = new Set([
     'bowl', 'bowls',
     'handful', 'handfuls',
     'packet', 'packets',
+    'package', 'packages',    // NEW: "1 package spinach"
     'envelope', 'envelopes',
     'can', 'cans',
     'jar', 'jars',
@@ -30,6 +31,8 @@ export const AMBIGUOUS_UNITS = new Set([
     'box', 'boxes',
     'bag', 'bags',
     'pouch', 'pouches',
+    // Size descriptors for whole produce (when no serving data exists)
+    'medium', 'large', 'small', 'whole',
 ]);
 
 export interface AmbiguousServingRequest {

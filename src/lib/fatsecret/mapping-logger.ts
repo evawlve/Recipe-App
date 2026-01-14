@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 export interface MappingAnalysisLog {
-    timestamp: string;
+    timestamp?: string;  // Optional - can be generated automatically if not provided
     rawIngredient: string;
     parsed: {
         amount?: number;
@@ -70,6 +70,9 @@ export interface MappingAnalysisLog {
     // Final result
     finalResult: 'success' | 'failed' | 'skipped';
     failureReason?: string;
+
+    // Source tracking - where did this mapping come from?
+    source?: 'early_cache' | 'normalized_cache' | 'full_pipeline';
 }
 
 interface MappingAnalysisSession {
@@ -297,9 +300,10 @@ function writeSimpleSummaryEntry(log: MappingAnalysisLog) {
         nutritionStr = ` | ${nutr.calories.toFixed(0)}kcal P:${nutr.protein.toFixed(1)} C:${nutr.carbs.toFixed(1)} F:${nutr.fat.toFixed(1)}`;
     }
 
-    // Format the line
+    // Format the line with source indicator
     const flagStr = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
-    const line = `${status} [${conf}] "${raw}" → "${mapped}${brand}"${nutritionStr}${flagStr}\n`;
+    const sourceTag = log.source ? `{${log.source}} ` : '';
+    const line = `${status} ${sourceTag}[${conf}] "${raw}" → "${mapped}${brand}"${nutritionStr}${flagStr}\n`;
 
     fs.appendFileSync(simpleSummaryPath, line, 'utf-8');
 }

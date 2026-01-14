@@ -231,9 +231,12 @@ export async function saveValidatedMapping(
         isAlias?: boolean;
         canonicalRawIngredient?: string;
         normalizedForm?: string;  // If provided, uses this; otherwise normalizes rawIngredient
+        canonicalBase?: string;   // AI-derived base form for cache key consolidation (highest priority)
     }
 ): Promise<void> {
-    const normalizedForm = options?.normalizedForm || normalizeQuery(rawIngredient);
+    // Priority: canonicalBase > normalizedForm > computed from rawIngredient
+    // canonicalBase consolidates variations like "lemon zest", "lemon rind" -> "lemon peel"
+    const normalizedForm = options?.canonicalBase || options?.normalizedForm || normalizeQuery(rawIngredient);
 
     try {
         // Save by normalizedForm (primary lookup key)

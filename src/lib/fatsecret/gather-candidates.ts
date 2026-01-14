@@ -640,6 +640,12 @@ const BRITISH_TO_AMERICAN: Record<string, string[]> = {
     'jelly': ['gelatin', 'jello'],
     'tin': ['can', 'canned'],
     'tinned': ['canned'],
+    // Chilli (British) → Chili (American) - CRITICAL for search expansion
+    // Without this, "chilli peppers" only finds branded products, not actual peppers
+    'chilli': ['chili', 'hot pepper'],
+    'chilli pepper': ['chili pepper', 'hot pepper', 'hot chili pepper'],
+    'chilli peppers': ['chili peppers', 'hot peppers', 'hot chili peppers'],
+    'chillies': ['chilies', 'hot peppers'],
 };
 
 // Dietary modifier synonyms (used in search expansion)

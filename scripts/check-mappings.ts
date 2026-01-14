@@ -1,48 +1,30 @@
-#!/usr/bin/env ts-node
-
-import 'dotenv/config';
 import { prisma } from '../src/lib/db';
 
-async function checkMappings() {
-    const recipeId = 'cmifbcr81001t10al6fxn735m';
-
-    const maps = await (prisma as any).ingredientFoodMap.findMany({
-        where: {
-            ingredient: {
-                recipeId
-            },
-            isActive: true
-        },
-        include: {
-            ingredient: true,
-            food: true
-        }
+async function main() {
+    const maps = await prisma.ingredientFoodMap.findMany({
+        take: 20,
+        include: { ingredient: true }
     });
 
-    console.log('\n📊 Active Ingredient Mappings:\n');
+    console.log('=== IngredientFoodMap Table ===');
+    console.log('Total entries:', maps.length);
 
-    for (const map of maps) {
-        console.log(`Ingredient: "${map.ingredient.name}"`);
-        console.log(`  Qty: ${map.ingredient.qty} ${map.ingredient.unit || ''}`);
-        console.log(`  foodId: ${map.foodId || 'null'}`);
-        console.log(`  fatsecretFoodId: ${map.fatsecretFoodId || 'null'}`);
-        console.log(`  fatsecretServingId: ${map.fatsecretServingId || 'null'}`);
-        console.log(`  fatsecretGrams: ${map.fatsecretGrams || 'NULL ⚠️'}`);  // ADDED THIS
-        console.log(`  confidence: ${map.confidence}`);
-
-        if (map.food) {
-            console.log(`  Food: "${map.food.name}"`);
-            console.log(`  Macros (per 100g): ${map.food.protein100}p / ${map.food.carbs100}c / ${map.food.fat100}f`);
-        } else if (map.fatsecretFoodId) {
-            console.log(`  ⚠️  FatSecret ID present but no Food linked!`);
-            if (!map.fatsecretGrams) {
-                console.log(`  ❌ CRITICAL: fatsecretGrams is NULL - computeTotals will skip this!`);
-            }
-        }
-        console.log();
+    if (maps.length > 0) {
+        console.log('\nEntries:');
+        maps.forEach(m => {
+            console.log(`  - [${m.ingredientId?.substring(0, 8)}...] ${m.ingredient?.name} -> ${m.fatsecretFoodId}`);
+        });
     }
+
+    // Check ValidatedMapping
+    const validatedMaps = await prisma.validatedMapping.findMany({ take: 20 });
+    console.log('\n=== ValidatedMapping Table ===');
+    console.log('Total entries:', validatedMaps.length);
+    validatedMaps.forEach(v => {
+        console.log(`  - "${v.rawIngredient?.substring(0, 30)}" -> ${v.foodName}`);
+    });
 
     await prisma.$disconnect();
 }
 
-checkMappings().catch(console.error);
+main().catch(console.error);

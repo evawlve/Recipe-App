@@ -63,18 +63,65 @@ export function isSizeQualifier(unit: string | undefined | null): boolean {
 /**
  * Get or create AI-estimated servings for size qualifiers (small/medium/large).
  * Returns a map of size -> grams, or null if estimation fails.
- * TODO: Implement actual AI estimation and caching
+ * 
+ * This function calls AI synchronously to estimate weight for "1 medium {foodName}".
+ * Results should be cached in a future enhancement.
  */
 export async function getOrCreateFdcSizeServings(
     fdcId: number,
     foodName: string
 ): Promise<Record<string, number> | null> {
-    // Stub implementation - return common produce size estimates
-    // These are rough averages that should be replaced with AI-estimated values
-    logger.info('fdc.size_servings_stub', { fdcId, foodName });
+    logger.info('fdc.size_servings_estimating', { fdcId, foodName });
 
-    // Return null to trigger fallback - actual implementation would query cache or call AI
-    return null;
+    try {
+        // Use the ambiguous serving estimator to get "medium" weight
+        const { estimateAmbiguousServing } = await import('../ai/ambiguous-serving-estimator');
+
+        const result = await estimateAmbiguousServing({
+            foodName,
+            brandName: null,
+            unit: 'medium',  // Ask: "What does 1 medium {foodName} weigh?"
+        });
+
+        if (result.status === 'success' && result.estimatedGrams && result.estimatedGrams > 0) {
+            logger.info('fdc.size_servings_estimated', {
+                fdcId,
+                foodName,
+                mediumGrams: result.estimatedGrams,
+                confidence: result.confidence,
+                reasoning: result.reasoning,
+            });
+
+            // Return estimated weights for all sizes based on medium
+            // Standard ratios: small ≈ 70% of medium, large ≈ 140% of medium
+            const mediumGrams = result.estimatedGrams;
+            return {
+                'small': Math.round(mediumGrams * 0.70),
+                'sm': Math.round(mediumGrams * 0.70),
+                'medium': Math.round(mediumGrams),
+                'med': Math.round(mediumGrams),
+                'large': Math.round(mediumGrams * 1.40),
+                'lg': Math.round(mediumGrams * 1.40),
+                'extra-large': Math.round(mediumGrams * 1.60),
+                'xl': Math.round(mediumGrams * 1.60),
+                'whole': Math.round(mediumGrams),  // "whole" = "medium" by default
+            };
+        }
+
+        logger.warn('fdc.size_servings_ai_failed', {
+            fdcId,
+            foodName,
+            error: result.error,
+        });
+        return null;
+    } catch (error) {
+        logger.error('fdc.size_servings_error', {
+            fdcId,
+            foodName,
+            error: (error as Error).message,
+        });
+        return null;
+    }
 }
 
 function convertVolumeToMl(unit: string, amount: number): number | null {

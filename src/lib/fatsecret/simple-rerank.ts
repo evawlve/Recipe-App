@@ -50,6 +50,7 @@ const WEIGHTS = {
     ORIGINAL_SCORE: 0.6,     // API score (HEAVILY trust API ranking!)
     SIMPLE_INGREDIENT_BRAND_PENALTY: 0.1,  // Reduced - was 0.3 which over-penalized good branded matches
     EXTRA_TOKEN_PENALTY: 0.25,  // Increased - strongly penalize candidates with extra unrelated words
+    TOKEN_BLOAT_PENALTY: 0.10,   // Penalty per excess token beyond +2 (max 0.30 total)
     // Nutrition scoring (Jan 2026)
     NUTRITION_CALORIE_SCORING: 0.12,  // Primary: calorie matching
     NUTRITION_MACRO_SCORING: 0.10,    // Secondary: macro sanity check (increased from 0.03)
@@ -159,6 +160,44 @@ function isExactMatch(query: string, candidateName: string): boolean {
     return allQueryInCandidate && extraTokens.length === 0;
 }
 
+/**
+ * Calculate penalty for candidates with excessive tokens vs query.
+ * A simple query like "chilli peppers" (2 tokens) shouldn't highly rank
+ * a complex product like "Chilli Peppers Cream Cheese (VIOLIFE)" (5+ tokens).
+ * 
+ * This catches compound products that happen to contain the query words
+ * but are categorically different (fresh ingredient vs processed product).
+ * 
+ * @param query - The normalized ingredient name
+ * @param candidateName - The candidate food name
+ * @param isBranded - If true (user wants branded), be more lenient
+ * @returns 0 (no penalty) to 0.30 (heavy penalty)
+ */
+function getTokenBloatPenalty(
+    query: string,
+    candidateName: string,
+    isBranded?: boolean
+): number {
+    // Remove parenthetical brand names for token counting
+    // e.g., "Chilli Peppers Cream Cheese (VIOLIFE)" → "Chilli Peppers Cream Cheese"
+    const candidateClean = candidateName.replace(/\([^)]+\)/g, '').trim();
+
+    // Tokenize both (filters out 1-char tokens)
+    const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+    const candTokens = candidateClean.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+
+    const excess = candTokens.length - queryTokens.length;
+
+    // If user explicitly wants branded items, be lenient (allow up to +4 tokens)
+    if (isBranded && excess <= 4) return 0;
+
+    // Allow up to 2 extra tokens with no penalty (e.g., "Fresh" or "Organic" additions)
+    if (excess <= 2) return 0;
+
+    // Graduated penalty: 0.10 per excess token beyond +2, capped at 0.30
+    return Math.min(0.30, (excess - 2) * WEIGHTS.TOKEN_BLOAT_PENALTY);
+}
+
 function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     let score = 0;
 
@@ -185,6 +224,11 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
         const extraRatio = extraTokens.length / (queryTokens.length + extraTokens.length);
         score -= extraRatio * WEIGHTS.EXTRA_TOKEN_PENALTY;
     }
+
+    // 2c. Token bloat penalty (catches compound products for simple queries)
+    // e.g., "chilli peppers" (2 tokens) → "Chilli Peppers Cream Cheese" (4 tokens) = penalty
+    const tokenBloatPenalty = getTokenBloatPenalty(query, candidate.name);
+    score -= tokenBloatPenalty;
 
     // 3. Source preference (FatSecret has better serving data)
     if (candidate.source === 'fatsecret' || candidate.source === 'cache') {

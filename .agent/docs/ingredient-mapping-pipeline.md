@@ -759,6 +759,71 @@ orderBy: [
 
 ---
 
+## Candidate Validation Hardening (Jan 11 Fix)
+
+### Overview
+
+Three complementary mechanisms prevent simple ingredients from incorrectly mapping to compound/branded products (e.g., "chilli peppers" → "Chilli Peppers Cream Cheese (VIOLIFE)").
+
+### Route A: Token Bloat Penalty
+
+**File**: `simple-rerank.ts:162-199`
+
+Penalizes candidates with excessive tokens compared to query:
+
+```typescript
+// "chilli peppers" (2 tokens) → "Chilli Peppers Cream Cheese" (4 tokens)
+// Excess = 4 - 2 = 2, penalty = (2 - 2) * 0.10 = 0
+// But if candidate has 5 tokens: penalty = (5 - 2 - 2) * 0.10 = 0.10
+```
+
+| Excess Tokens | Penalty |
+|---------------|---------|
+| 0-2 | 0 |
+| 3 | 0.10 |
+| 4 | 0.20 |
+| 5+ | 0.30 (max) |
+
+### Route C: AI Nutrition Estimate Validation
+
+**File**: `simple-rerank.ts:255-329`
+
+Uses AI-estimated nutrition to reject candidates with mismatched macros:
+- AI estimates chilli peppers at ~40 kcal/100g
+- Candidate "Cream Cheese" has ~230 kcal/100g
+- Mismatch > 30% → score penalty applied
+
+Only applies when AI confidence ≥ 0.7.
+
+### Route E: Branded Detection (isBranded)
+
+**File**: `ai-normalize.ts`
+
+AI normalize now returns additional fields:
+
+| Field | Purpose |
+|-------|---------|
+| `isBranded` | User explicitly wants branded product |
+| `isMultiIngredient` | Input contains multiple distinct ingredients |
+| `splitIngredients` | List of separated ingredients (when multi) |
+
+**Behavior**:
+- `isBranded=true`: Relax token containment penalty (allow branded matches)
+- `isMultiIngredient=true`: Log warning, map first ingredient only
+
+### Test Cases
+
+```bash
+# Verify token bloat penalty
+npx ts-node -e "
+const { getTokenBloatPenalty } = require('./src/lib/fatsecret/simple-rerank');
+console.log('2→4 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese'));
+console.log('2→5 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese VIOLIFE Product'));
+"
+```
+
+---
+
 ## Future Improvements
 
 1. **Remove AI Normalize dependency**: Use improved parsing once cache is mature

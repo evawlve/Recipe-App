@@ -85,6 +85,10 @@ export interface MapIngredientOptions {
     skipAiValidation?: boolean;
     skipCache?: boolean;
     skipFdc?: boolean;
+    /** Internal flag - skip in-flight lock for recursive fallback calls */
+    _skipInFlightLock?: boolean;
+    /** Internal flag - skip fallback to prevent infinite recursion */
+    _skipFallback?: boolean;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -104,6 +108,8 @@ export async function mapIngredientWithFallback(
         skipCache = false,
         skipFdc = false,
         allowLiveFallback = true,
+        _skipInFlightLock = false,
+        _skipFallback = false,
     } = options;
 
     const trimmed = rawLine.trim();
@@ -170,6 +176,37 @@ export async function mapIngredientWithFallback(
             );
 
             if (hydratedResult) {
+                // Log the cache hit for summary tracking
+                logMappingAnalysis({
+                    rawIngredient: trimmed,
+                    parsed: {
+                        amount: parsedForServing?.qty,
+                        unit: parsedForServing?.unit,
+                        ingredient: parsedForServing?.name,
+                    },
+                    topCandidates: [],  // No candidate search was performed
+                    selectedCandidate: {
+                        foodId: cached.foodId,
+                        foodName: cached.foodName,
+                        brandName: cached.brandName || '',
+                        confidence: cached.confidence,
+                        selectionReason: 'early_cache_hit',
+                    },
+                    selectedNutrition: {
+                        calories: hydratedResult.kcal,
+                        protein: hydratedResult.protein,
+                        carbs: hydratedResult.carbs,
+                        fat: hydratedResult.fat,
+                        perGrams: hydratedResult.grams,
+                    },
+                    servingSelection: {
+                        servingDescription: hydratedResult.servingDescription || 'N/A',
+                        grams: hydratedResult.grams,
+                        backfillUsed: false,
+                    },
+                    finalResult: 'success',
+                    source: 'early_cache',
+                });
                 return hydratedResult;
             }
             // If hydration fails, fall through to normal search
@@ -193,9 +230,16 @@ export async function mapIngredientWithFallback(
     // Step 1-WATER: Early exit for ice/water - always zero calories
     // ============================================================
     // These ingredients have no nutritional value and should never map to food
-    const ZERO_CALORIE_INGREDIENTS = ['ice', 'ice cubes', 'crushed ice', 'shaved ice', 'water', 'tap water', 'cold water', 'hot water', 'ice water'];
+    // Note: "liquid" added to handle ambiguous inputs like "100% liquid" that normalize to just "liquid"
+    const ZERO_CALORIE_INGREDIENTS = ['ice', 'ice cubes', 'crushed ice', 'shaved ice', 'water', 'tap water', 'cold water', 'hot water', 'ice water', 'liquid'];
     const baseNameLowerForWaterCheck = baseName.toLowerCase().trim();
-    if (ZERO_CALORIE_INGREDIENTS.some(term => baseNameLowerForWaterCheck === term || baseNameLowerForWaterCheck.endsWith(' ' + term))) {
+    // Also extract the last word to handle "100% liquid" → "liquid"
+    const lastWordForWaterCheck = baseNameLowerForWaterCheck.split(/\s+/).pop() || '';
+    if (ZERO_CALORIE_INGREDIENTS.some(term =>
+        baseNameLowerForWaterCheck === term ||
+        baseNameLowerForWaterCheck.endsWith(' ' + term) ||
+        lastWordForWaterCheck === term  // <-- NEW: Handles "100% liquid"
+    )) {
         logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName });
 
         // Calculate grams from parsed quantity using standard conversions
@@ -242,7 +286,8 @@ export async function mapIngredientWithFallback(
     const lockKey = getLockKey(baseName);
     const existingLock = inFlightLocks.get(lockKey);
 
-    if (existingLock) {
+    // Skip lock check if this is a recursive fallback call (to prevent self-deadlock)
+    if (existingLock && !_skipInFlightLock) {
         logger.debug('mapping.waiting_for_lock', { baseName, lockKey });
         await existingLock;  // Wait for the other thread to finish
 
@@ -375,12 +420,17 @@ export async function mapIngredientWithFallback(
         // Try AI normalization for better search terms
         // SKIP if we already applied a generic fallback (to avoid AI changing "vegetable oil" to "cooking oil")
         let aiSynonyms: string[] = [];
+        let aiNutritionEstimate: { caloriesPer100g: number; proteinPer100g: number; carbsPer100g: number; fatPer100g: number; confidence: number } | undefined;
+        let aiCanonicalBase: string | undefined;  // For cache key consolidation
         if (!usedGenericFallback) {
             const aiHint = await aiNormalizeIngredient(rawLine, normalizedName);
             if (aiHint.status === 'success') {
                 if (aiHint.normalizedName) {
                     normalizedName = aiHint.normalizedName;
                 }
+                // Capture canonical base for cache key consolidation
+                // This ensures "lemon zest", "lemon rind", "lemon peel" all use the same cache key
+                aiCanonicalBase = aiHint.canonicalBase;
                 // Collect AI-generated synonyms for additional search queries (but don't save them here)
                 // Saving happens later via conservative generateAndSaveSynonyms after successful mapping
                 aiSynonyms = aiHint.synonyms || [];
@@ -389,6 +439,8 @@ export async function mapIngredientWithFallback(
                     // NOTE: We no longer save synonyms here - the conservative ai-synonym-generator
                     // handles this after successful mapping, with proper filtering
                 }
+                // Extract AI nutrition estimate for Route C macro sanity checking
+                aiNutritionEstimate = aiHint.nutritionEstimate;
             }
         }
 
@@ -545,9 +597,10 @@ export async function mapIngredientWithFallback(
                             foodType: c.foodType,
                             score: c.score,
                             source: c.source,
+                            nutrition: c.nutrition,  // Include for Route C macro sanity check
                         }));
 
-                        const rerankResult = simpleRerank(searchQuery, rerankCandidates);
+                        const rerankResult = simpleRerank(searchQuery, rerankCandidates, aiNutritionEstimate);
 
                         if (rerankResult) {
                             const selected = filtered.find(c => c.id === rerankResult.winner.id);
@@ -660,7 +713,8 @@ export async function mapIngredientWithFallback(
 
         // Step 2b: Semantic Fallback (If still no winner)
         // Handle complex lines like "buttermilk pancake mix light" -> "Pancake Mix"
-        if (!winner) {
+        // Skip if this is already a recursive fallback call to prevent infinite loops
+        if (!winner && !_skipFallback) {
             logger.info('mapping.attempting_fallback', { rawLine: trimmed });
             const { aiSimplifyIngredient } = await import('./ai-simplify');
 
@@ -672,10 +726,13 @@ export async function mapIngredientWithFallback(
 
                     // Recursively try to map the simplifed name
                     // We use a lower minConfidence to accept matches
+                    // IMPORTANT: Pass _skipInFlightLock to prevent deadlock if simplified name
+                    // normalizes to the same lock key as the original
                     const fallbackResult = await mapIngredientWithFallback(result.simplified, {
                         ...options,
                         minConfidence: 0.1, // Accept imperfect matches for fallback
-                        // Prevent infinite loops (though aiSimplify should converge)
+                        _skipInFlightLock: true, // Prevent recursive deadlock
+                        _skipFallback: true, // Prevent infinite fallback recursion
                     });
 
                     if (fallbackResult) {
@@ -927,6 +984,8 @@ export async function mapIngredientWithFallback(
                 approved: true,
                 confidence,
                 reason: selectionReason,
+            }, {
+                canonicalBase: aiCanonicalBase,  // Use AI-derived base for cache consolidation
             });
 
             // Also save AI synonyms as aliases to enable future cache hits
@@ -965,6 +1024,7 @@ export async function mapIngredientWithFallback(
                 }, {
                     isAlias: true,
                     canonicalRawIngredient: trimmed,
+                    canonicalBase: aiCanonicalBase,  // Use AI-derived base for cache consolidation
                 }).catch(() => { }); // Best effort, ignore duplicates
             }
         }
@@ -1014,6 +1074,7 @@ export async function mapIngredientWithFallback(
                     backfillUsed: false,
                 },
                 finalResult: 'success',
+                source: selectionReason === 'normalized_cache_hit' ? 'normalized_cache' : 'full_pipeline',
             });
         }
 
@@ -1175,17 +1236,19 @@ async function hydrateAndSelectServing(
     }
 
     // If selection failed for UNITLESS ingredient (no unit), try count backfill
-    // e.g., "5 garlic" has no unit but needs a "clove" serving
+    // e.g., "1 cucumber" needs a "medium" serving (~300g), not "slice" (7g)
+    // Use 'medium' as target to get proper whole-item weight
     if (!servingResult && parsed && !parsed.unit) {
         logger.info('hydrate.attempting_unitless_backfill', {
             foodId: candidate.id,
             ingredientName: parsed.name,
         });
 
+        // For unitless produce, request a 'medium' or 'whole' serving
         const backfillRes = await backfillOnDemand(
             candidate.id,
             'count',
-            'piece'  // Generic count unit to trigger AI to infer the right serving
+            'medium'  // Request medium/whole serving for proper gram weight
         );
 
         if (backfillRes.success) {
@@ -1206,6 +1269,59 @@ async function hydrateAndSelectServing(
                 foodId: candidate.id,
                 reason: backfillRes.reason
             });
+        }
+
+        // If still no serving result for unitless produce, use AI to estimate "1 medium {food}" weight
+        // This handles FDC entries that don't have medium/whole servings
+        if (!servingResult && parsed) {
+            logger.info('hydrate.attempting_unitless_ai_estimate', {
+                foodId: candidate.id,
+                foodName: candidate.name,
+            });
+
+            const ambiguousResult = await getOrCreateAmbiguousServing(
+                candidate.id,
+                candidate.name,
+                'medium',  // Ask AI: "what does 1 medium {foodName} weigh?"
+                candidate.brandName
+            );
+
+            if (ambiguousResult.status === 'success' || ambiguousResult.status === 'cached') {
+                const estimatedGrams = ambiguousResult.grams!;
+                const qty = parsed.qty * parsed.multiplier;
+                const totalGrams = estimatedGrams * qty;
+
+                // Find ANY gram-based serving to calculate nutrition
+                const gramServing = details.servings.find(s =>
+                    s.metricServingUnit === 'g' ||
+                    s.measurementDescription?.toLowerCase().includes('gram') ||
+                    gramsForServing(s) != null
+                );
+
+                if (gramServing) {
+                    servingResult = {
+                        serving: gramServing,
+                        matchScore: 0.85,
+                        gramsPerUnit: estimatedGrams,
+                        unitsPerServing: 1,
+                        baseGrams: totalGrams,
+                        matchType: 'fallback' as const,
+                        warning: `AI-estimated: 1 medium ${candidate.name} ≈ ${estimatedGrams}g`,
+                    };
+
+                    logger.info('hydrate.unitless_ai_estimate_success', {
+                        foodId: candidate.id,
+                        foodName: candidate.name,
+                        estimatedGrams,
+                        totalGrams,
+                    });
+                }
+            } else {
+                logger.warn('hydrate.unitless_ai_estimate_failed', {
+                    foodId: candidate.id,
+                    error: ambiguousResult.error,
+                });
+            }
         }
     }
 
@@ -1422,8 +1538,32 @@ async function buildFdcResult(
                 fallbackGrams: grams,
             });
         }
+    } else if (!unit) {
+        // UNITLESS PRODUCE: "1 cucumber", "2 avocados" - use AI to estimate "medium" weight
+        // This ensures proper gram calculation instead of 100g fallback
+        const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
+        const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
+
+        if (sizes && sizes['medium']) {
+            const gramsPerUnit = sizes['medium'];
+            grams = qty * gramsPerUnit;
+            servingDescription = `${qty} medium (${gramsPerUnit}g each)`;
+            logger.info('fdc.unitless_medium_resolved', {
+                foodName: candidate.name,
+                gramsPerUnit,
+                totalGrams: grams,
+            });
+        } else {
+            // Fallback to 100g if AI estimation fails
+            grams = 100 * qty;
+            servingDescription = `${grams.toFixed(1)}g`;
+            logger.warn('fdc.unitless_fallback', {
+                foodName: candidate.name,
+                fallbackGrams: grams,
+            });
+        }
     } else {
-        // Assume 100g serving for unknown units
+        // Unknown units (count-based like "slices", etc.) - use 100g default
         grams = 100 * qty;
         servingDescription = `${grams.toFixed(1)}g`;
     }
@@ -1805,43 +1945,63 @@ function selectServing(
         matchType = 'fallback';
         if (!warning) warning = `No "${effectiveUnit}" serving found, using fallback`;
     } else if (!effectiveUnit) {
-        // No unit specified - PREFER count-based servings for whole foods
-        // e.g., "3 garlic" should use "clove" (3g) not "g" (100g)
-        const countPatterns = [
-            /\bclove\b/i, /\bcloves\b/i,
-            /\bpiece\b/i, /\bpieces\b/i,
-            /\bwhole\b/i, /\beach\b/i,
-            /\bslice\b/i, /\bslices\b/i,
-            /\bsprig\b/i, /\bsprigs\b/i,
-            /\bleaf\b/i, /\bleaves\b/i,
-            /\bstalk\b/i, /\bstalks\b/i,
-            /\bhead\b/i, /\bheads\b/i,
+        // No unit specified - PREFER whole-item servings for produce
+        // e.g., "1 cucumber" should use "medium" (~300g), NOT "slice" (7g)
+
+        // PRIORITY 1: Look for WHOLE-ITEM servings (medium, large, small, whole, fruit)
+        const wholeItemPatterns = [
             /\bmedium\b/i, /\blarge\b/i, /\bsmall\b/i,
+            /\bwhole\b/i, /\beach\b/i,
             /\bfruit\b/i, /\bfruits\b/i,  // For "1 mango" → "fruit without refuse"
+            /\bhead\b/i, /\bheads\b/i,    // For "1 lettuce" → "head"
         ];
 
-        // First, look for a count-based serving
-        const countServing = servings.find(s => {
+        const wholeItemServing = servings.find(s => {
             const desc = (s.measurementDescription || s.description || '').toLowerCase();
             const g = gramsForServing(s);
-            return g != null && g > 0 && countPatterns.some(p => p.test(desc));
+            return g != null && g > 0 && wholeItemPatterns.some(p => p.test(desc));
         });
 
-        if (countServing) {
-            selected = { serving: countServing, score: 1.0, factor: 1 };
+        if (wholeItemServing) {
+            selected = { serving: wholeItemServing, score: 1.0, factor: 1 };
             matchType = 'same_type';
-            logger.debug('selectServing.unitless_count_serving', {
-                description: countServing.measurementDescription || countServing.description,
-                grams: gramsForServing(countServing),
+            logger.debug('selectServing.unitless_whole_item_serving', {
+                description: wholeItemServing.measurementDescription || wholeItemServing.description,
+                grams: gramsForServing(wholeItemServing),
             });
         } else {
-            // No count-based serving found for unitless ingredient
-            // Return null to trigger AI backfill instead of using generic fallback
-            // e.g., "5 garlic" should get a "clove" serving, not use 100g generic
-            logger.warn('selectServing.unitless_no_count_serving', {
-                availableServings: servings.map(s => s.measurementDescription || s.description).slice(0, 5),
+            // PRIORITY 2: Look for other count-based servings (clove, piece, slice, etc.)
+            // These are for items where partial servings are default (garlic cloves, bread slices)
+            const countPatterns = [
+                /\bclove\b/i, /\bcloves\b/i,
+                /\bpiece\b/i, /\bpieces\b/i,
+                /\bslice\b/i, /\bslices\b/i,
+                /\bsprig\b/i, /\bsprigs\b/i,
+                /\bleaf\b/i, /\bleaves\b/i,
+                /\bstalk\b/i, /\bstalks\b/i,
+            ];
+
+            const countServing = servings.find(s => {
+                const desc = (s.measurementDescription || s.description || '').toLowerCase();
+                const g = gramsForServing(s);
+                return g != null && g > 0 && countPatterns.some(p => p.test(desc));
             });
-            return null;  // Trigger AI backfill for count-based serving
+
+            if (countServing) {
+                selected = { serving: countServing, score: 1.0, factor: 1 };
+                matchType = 'same_type';
+                logger.debug('selectServing.unitless_count_serving', {
+                    description: countServing.measurementDescription || countServing.description,
+                    grams: gramsForServing(countServing),
+                });
+            } else {
+                // No suitable serving found - return null to trigger AI backfill
+                // e.g., "5 garlic" should get a "clove" serving, not use 100g generic
+                logger.warn('selectServing.unitless_no_count_serving', {
+                    availableServings: servings.map(s => s.measurementDescription || s.description).slice(0, 5),
+                });
+                return null;  // Trigger AI backfill for count-based serving
+            }
         }
     }
 

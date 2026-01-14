@@ -582,10 +582,14 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
         query: ['unsweetened coconut milk', 'coconut milk unsweetened'],
         excludeIfContains: ['cream', 'canned', 'full fat', 'liquid, canned']
     },
-    // Chilies/peppers should NOT match mixed canned products
+    // Chilies/peppers should NOT match mixed canned products OR cream cheese spreads
+    // CRITICAL: Include both American (chili) and British (chilli) spellings
     {
-        query: ['chilies', 'chili', 'green chilies', 'green chili', 'jalapeno', 'serrano'],
-        excludeIfContains: ['diced tomatoes', 'canned tomatoes', 'tomato sauce']
+        query: ['chilies', 'chili', 'chilli', 'chillies', 'chili pepper', 'chilli pepper',
+            'chili peppers', 'chilli peppers', 'green chilies', 'green chili',
+            'jalapeno', 'serrano', 'hot pepper', 'hot peppers'],
+        excludeIfContains: ['diced tomatoes', 'canned tomatoes', 'tomato sauce',
+            'cream cheese', 'cheese spread', 'dip', 'hummus', 'hazelnuts', 'mango']
     },
     // Raw vegetables should NOT match juice/processed forms (unless query asks for juice)
     {
@@ -709,6 +713,27 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
     {
         query: ['sugar substitute', 'sweetener', 'artificial sweetener', 'low calorie sweetener', 'zero calorie sweetener'],
         excludeIfContains: ['low calorie sugar substitute', 'granulated sugar substitute', 'maltodextrin']
+    },
+    // === NEW: Fresh herbs should NOT match candy/mints ===
+    // "mint" (herb) should NOT map to "Mints (Wilhelmina)" candy
+    // "1 tbsp mint" is fresh mint leaves, not breath mints
+    {
+        query: ['mint', 'fresh mint', 'mint leaves', 'peppermint leaves', 'spearmint', 'spearmint leaves'],
+        excludeIfContains: ['candy', 'candies', 'mints', 'confection', 'breath mint', 'after dinner',
+            'wilhelmina', 'altoids', 'tic tac', 'mentos', 'gum', 'chocolate mint']
+    },
+    // === NEW: Canned fish should NOT match raw fish ===
+    // "1 can tuna" or "canned tuna" should NOT map to "raw yellowfin tuna"
+    // NOTE: This requires checking the rawLine for "can" unit, handled in filterCandidates
+    {
+        query: ['canned tuna', 'canned salmon', 'canned sardines', 'canned mackerel',
+            'canned fish', 'tuna can', 'salmon can'],
+        excludeIfContains: ['raw', 'fresh', 'sashimi', 'sushi grade']
+    },
+    // === NEW: Raw garlic should NOT match pickled garlic ===
+    {
+        query: ['garlic', 'raw garlic', 'fresh garlic', 'garlic bulb'],
+        excludeIfContains: ['pickled', 'pickles', 'pickl']
     },
 ];
 
@@ -986,15 +1011,22 @@ export function hasImpossibleMacros(
  * 
  * We are stricter for foods with significant calories - they should have
  * both protein AND carbs data (since these are the main calorie sources).
+ * 
+ * NOTE: If no nutrition data exists at all, we return FALSE (not invalid),
+ * since we can't validate what we don't have. The data will be validated
+ * later when the candidate is hydrated with full nutrition info.
  */
 export function hasNullOrInvalidMacros(
     nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null
 ): boolean {
-    if (!nutrients) return true;
+    // If nutrients object doesn't exist, we can't validate - allow through
+    // (will be validated after hydration when we have actual data)
+    if (!nutrients) return false;
 
     // Check for kcal (we accept either kcal or calories field)
     const calories = nutrients.kcal ?? nutrients.calories;
-    if (calories == null) return true;
+    // If no calorie data, skip this validation (will be checked after hydration)
+    if (calories == null) return false;
 
     // Reject if ALL macros are null (at least one should be present)
     if (nutrients.protein == null && nutrients.carbs == null && nutrients.fat == null) {
@@ -1007,6 +1039,12 @@ export function hasNullOrInvalidMacros(
     if (calories > 50) {
         // If protein AND carbs are both null, that's suspicious for a caloric food
         if (nutrients.protein == null && nutrients.carbs == null) {
+            return true;
+        }
+        // ALSO: If protein AND carbs are BOTH ZERO, that's equally suspicious
+        // This catches corrupted data like red lentils with P:0, C:0, F:2.86, kcal:314
+        // Real lentils have ~25g protein and ~60g carbs per 100g
+        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0) {
             return true;
         }
     }
@@ -1689,6 +1727,13 @@ export function filterCandidatesByTokens(
         // e.g. "Strawberry" with 113g carbs
         if (hasImpossibleMacros(nutrientsToCheck)) {
             if (debug) logger.info('filter.candidates.impossible_macros', { candidate: candidate.name, nutrients: nutrientsToCheck });
+            return false;
+        }
+
+        // Check for NULL/INVALID macros (corrupted data)
+        // e.g. Red lentils with P:0, C:0, kcal:314 - this is bad data
+        if (hasNullOrInvalidMacros(nutrientsToCheck)) {
+            if (debug) logger.info('filter.candidates.null_or_invalid_macros', { candidate: candidate.name, nutrients: nutrientsToCheck });
             return false;
         }
 
