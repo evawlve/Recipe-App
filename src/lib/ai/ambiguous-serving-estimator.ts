@@ -31,6 +31,8 @@ export const AMBIGUOUS_UNITS = new Set([
     'box', 'boxes',
     'bag', 'bags',
     'pouch', 'pouches',
+    // Eggs: API often returns 100g/egg instead of actual ~50g
+    'egg', 'eggs',
     // Size descriptors for whole produce (when no serving data exists)
     'medium', 'large', 'small', 'whole',
 ]);

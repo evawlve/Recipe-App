@@ -51,6 +51,8 @@ const WEIGHTS = {
     SIMPLE_INGREDIENT_BRAND_PENALTY: 0.1,  // Reduced - was 0.3 which over-penalized good branded matches
     EXTRA_TOKEN_PENALTY: 0.25,  // Increased - strongly penalize candidates with extra unrelated words
     TOKEN_BLOAT_PENALTY: 0.10,   // Penalty per excess token beyond +2 (max 0.30 total)
+    // Phrase matching (Jan 2026)
+    EXACT_PHRASE_BOOST: 0.15,  // Boost when candidate contains exact multi-word phrases from query
     // Nutrition scoring (Jan 2026)
     NUTRITION_CALORIE_SCORING: 0.12,  // Primary: calorie matching
     NUTRITION_MACRO_SCORING: 0.10,    // Secondary: macro sanity check (increased from 0.03)
@@ -161,6 +163,48 @@ function isExactMatch(query: string, candidateName: string): boolean {
 }
 
 /**
+ * Calculate boost for candidates that contain exact multi-word phrases from the query.
+ * This helps break ties when token-based matching scores similarly.
+ * 
+ * Example: Query "fat free mayonnaise"
+ * - "Fat Free Mayonnaise" contains "fat free" → gets boost
+ * - "Light Mayonnaise" does NOT contain "fat free" → no boost
+ * 
+ * @param query - The normalized ingredient name  
+ * @param candidateName - The candidate food name
+ * @returns Boost value (0 to WEIGHTS.EXACT_PHRASE_BOOST)
+ */
+function getExactPhraseBoost(query: string, candidateName: string): number {
+    const queryLower = query.toLowerCase();
+    const candLower = candidateName.toLowerCase();
+
+    // Important multi-word modifiers that should be matched exactly
+    const IMPORTANT_PHRASES = [
+        'fat free', 'nonfat', 'non fat', 'non-fat',
+        'low fat', 'lowfat', 'reduced fat',
+        'sugar free', 'no sugar', 'unsweetened',
+        'low sodium', 'no salt', 'reduced sodium',
+        'extra lean', 'lean',
+        'whole grain', 'whole wheat', 'multigrain',
+        'fire roasted', 'fire-roasted',
+        'sun dried', 'sun-dried',
+        'oven roasted', 'oven-roasted',
+    ];
+
+    // Check if query contains any important phrases
+    for (const phrase of IMPORTANT_PHRASES) {
+        if (queryLower.includes(phrase)) {
+            // Query has this phrase - check if candidate has it too
+            if (candLower.includes(phrase)) {
+                return WEIGHTS.EXACT_PHRASE_BOOST;  // Full boost
+            }
+        }
+    }
+
+    return 0;  // No boost
+}
+
+/**
  * Calculate penalty for candidates with excessive tokens vs query.
  * A simple query like "chilli peppers" (2 tokens) shouldn't highly rank
  * a complex product like "Chilli Peppers Cream Cheese (VIOLIFE)" (5+ tokens).
@@ -229,6 +273,12 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     // e.g., "chilli peppers" (2 tokens) → "Chilli Peppers Cream Cheese" (4 tokens) = penalty
     const tokenBloatPenalty = getTokenBloatPenalty(query, candidate.name);
     score -= tokenBloatPenalty;
+
+    // 2d. Exact phrase boost (Jan 2026)
+    // Boost candidates that contain exact multi-word phrases from query
+    // e.g., "fat free mayonnaise" → "Fat Free Mayonnaise" gets boost over "Light Mayonnaise"
+    const phraseBoost = getExactPhraseBoost(query, candidate.name);
+    score += phraseBoost;
 
     // 3. Source preference (FatSecret has better serving data)
     if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
@@ -419,10 +469,18 @@ export function simpleRerank(
     scored.sort((a, b) => {
         const scoreDiff = b.score - a.score;
         if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
-        // Tiebreaker: prefer non-branded (generic) foods
+
+        // Tiebreaker 1: Prefer candidates with exact phrase matches from query
+        // e.g., "fat free mayonnaise" → "Fat Free Mayonnaise" beats "Light Mayonnaise"
+        const aPhraseBst = getExactPhraseBoost(query, a.candidate.name) > 0 ? 1 : 0;
+        const bPhraseBst = getExactPhraseBoost(query, b.candidate.name) > 0 ? 1 : 0;
+        if (bPhraseBst !== aPhraseBst) return bPhraseBst - aPhraseBst;
+
+        // Tiebreaker 2: prefer non-branded (generic) foods
         const aHasBrand = a.candidate.brandName ? 1 : 0;
         const bHasBrand = b.candidate.brandName ? 1 : 0;
         if (aHasBrand !== bHasBrand) return aHasBrand - bHasBrand;
+
         // Final tiebreaker: sort by ID for absolute determinism
         return a.candidate.id.localeCompare(b.candidate.id);
     });

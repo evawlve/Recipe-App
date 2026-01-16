@@ -4,10 +4,9 @@
  * Handles backfill for ambiguous units (container, scoop, bowl, etc.)
  * that require AI estimation to determine weight.
  * 
- * Key differences from regular serving backfill:
- * 1. Saves to PortionOverride table (global default, not per-food-cache)
- * 2. Can be overridden per-user via UserPortionOverride
- * 3. Uses simpler AI prompt focused on package/portion size estimation
+ * Saves to FatSecretServingCache for FatSecret foods (most common case)
+ * or falls back to PortionOverride for legacy Food table entries.
+ * Uses simpler AI prompt focused on package/portion size estimation.
  */
 
 import { prisma } from '../db';
@@ -53,28 +52,41 @@ export async function getOrCreateAmbiguousServing(
         return { status: 'error', error: `"${unit}" is not an ambiguous unit` };
     }
 
-    // Check for existing PortionOverride (global default)
-    try {
-        const existing = await prisma.portionOverride.findUnique({
-            where: {
-                foodId_unit: { foodId, unit: normalizedUnit },
-            },
-        });
+    // Check for existing cached estimate in FatSecretServingCache
+    const servingId = `ai_${foodId}_${normalizedUnit}`;
+    const existingServing = await prisma.fatSecretServingCache.findUnique({
+        where: { id: servingId },
+    });
 
-        if (existing) {
+    if (existingServing?.servingWeightGrams) {
+        logger.debug('ambiguous_backfill.cache_hit', {
+            foodId,
+            unit: normalizedUnit,
+            grams: existingServing.servingWeightGrams,
+            source: 'fatsecret_serving_cache',
+        });
+        return {
+            status: 'cached',
+            grams: existingServing.servingWeightGrams,
+        };
+    }
+
+    // Also check legacy PortionOverride (for backward compatibility)
+    try {
+        const legacyOverride = await prisma.portionOverride.findUnique({
+            where: { foodId_unit: { foodId, unit: normalizedUnit } },
+        });
+        if (legacyOverride) {
             logger.debug('ambiguous_backfill.cache_hit', {
                 foodId,
                 unit: normalizedUnit,
-                grams: existing.grams,
+                grams: legacyOverride.grams,
+                source: 'portion_override',
             });
-            return {
-                status: 'cached',
-                grams: existing.grams,
-            };
+            return { status: 'cached', grams: legacyOverride.grams };
         }
-    } catch (error) {
-        // foodId might not exist in Food table - this is expected for FatSecret-only foods
-        logger.debug('ambiguous_backfill.no_food_record', { foodId, unit: normalizedUnit });
+    } catch {
+        // foodId might not exist in Food table - expected for FatSecret-only foods
     }
 
     // No cached value - call AI to estimate
@@ -96,14 +108,23 @@ export async function getOrCreateAmbiguousServing(
         return { status: 'error', error: result.error ?? 'AI estimation failed' };
     }
 
-    // Try to save to PortionOverride (may fail if foodId doesn't exist in Food table)
+    // Save to FatSecretServingCache (works for all FatSecret foods)
     try {
-        await prisma.portionOverride.create({
-            data: {
+        await prisma.fatSecretServingCache.upsert({
+            where: { id: servingId },
+            create: {
+                id: servingId,
                 foodId,
-                unit: normalizedUnit,
-                grams: result.estimatedGrams,
-                label: result.reasoning?.slice(0, 200), // Truncate long reasoning
+                measurementDescription: normalizedUnit,
+                servingWeightGrams: result.estimatedGrams,
+                source: 'ai_ambiguous',
+                confidence: result.confidence,
+                note: result.reasoning?.slice(0, 200),
+            },
+            update: {
+                servingWeightGrams: result.estimatedGrams,
+                confidence: result.confidence,
+                note: result.reasoning?.slice(0, 200),
             },
         });
 
@@ -113,10 +134,10 @@ export async function getOrCreateAmbiguousServing(
             unit: normalizedUnit,
             grams: result.estimatedGrams,
             confidence: result.confidence,
+            source: 'fatsecret_serving_cache',
         });
     } catch (error) {
-        // If we can't save (foodId not in Food table), still return the estimate
-        // The caller can use it for this request even if it's not cached
+        // If FatSecretFoodCache doesn't exist, log and continue
         logger.warn('ambiguous_backfill.save_failed', {
             foodId,
             unit: normalizedUnit,
@@ -159,14 +180,20 @@ export async function getUserOrGlobalPortionOverride(
         }
     }
 
-    // 2. Check global PortionOverride
+    // 2. Check FatSecretServingCache for AI-estimated ambiguous units
+    const servingId = `ai_${foodId}_${normalizedUnit}`;
+    const aiServing = await prisma.fatSecretServingCache.findUnique({
+        where: { id: servingId },
+    });
+    if (aiServing?.servingWeightGrams) {
+        return { grams: aiServing.servingWeightGrams, source: 'global' };
+    }
+
+    // 3. Check legacy PortionOverride
     try {
         const globalOverride = await prisma.portionOverride.findUnique({
-            where: {
-                foodId_unit: { foodId, unit: normalizedUnit },
-            },
+            where: { foodId_unit: { foodId, unit: normalizedUnit } },
         });
-
         if (globalOverride) {
             return { grams: globalOverride.grams, source: 'global' };
         }

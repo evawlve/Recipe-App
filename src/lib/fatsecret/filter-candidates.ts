@@ -1445,7 +1445,7 @@ export function hasCriticalModifierMismatch(
     // - STRICT: nonfat, fat-free, fat free → candidate MUST have nonfat/fat-free (not just light)
     // - LENIENT: low-fat, reduced fat, light, lite → candidate can have any low-fat modifier
 
-    const STRICT_NONFAT = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree'];
+    const STRICT_NONFAT = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'extra light', 'extra-light'];
     const NONFAT_CANDIDATES = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'fat not added', '0% fat', 'zero fat'];
 
     const queryHasStrictNonfat = STRICT_NONFAT.some(m => queryLower.includes(m));

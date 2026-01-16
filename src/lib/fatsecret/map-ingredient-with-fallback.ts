@@ -77,6 +77,16 @@ export type FatsecretMappedIngredient = {
     };
 };
 
+/**
+ * Returned when skipOnLock is true and the ingredient is currently locked.
+ * The caller should retry this ingredient after other ingredients are processed.
+ */
+export type MapIngredientPendingResult = {
+    status: 'pending';
+    lockKey: string;
+    rawLine: string;
+};
+
 export interface MapIngredientOptions {
     client?: FatSecretClient;
     minConfidence?: number;
@@ -89,6 +99,8 @@ export interface MapIngredientOptions {
     _skipInFlightLock?: boolean;
     /** Internal flag - skip fallback to prevent infinite recursion */
     _skipFallback?: boolean;
+    /** If true, return 'pending' immediately when lock is held instead of blocking */
+    skipOnLock?: boolean;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -100,7 +112,7 @@ const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
 export async function mapIngredientWithFallback(
     rawLine: string,
     options: MapIngredientOptions = {}
-): Promise<FatsecretMappedIngredient | null> {
+): Promise<FatsecretMappedIngredient | MapIngredientPendingResult | null> {
     const {
         client = defaultClient,
         minConfidence = 0,
@@ -110,6 +122,7 @@ export async function mapIngredientWithFallback(
         allowLiveFallback = true,
         _skipInFlightLock = false,
         _skipFallback = false,
+        skipOnLock = false,
     } = options;
 
     const trimmed = rawLine.trim();
@@ -288,6 +301,12 @@ export async function mapIngredientWithFallback(
 
     // Skip lock check if this is a recursive fallback call (to prevent self-deadlock)
     if (existingLock && !_skipInFlightLock) {
+        // If skipOnLock is enabled, return pending immediately instead of blocking
+        if (skipOnLock) {
+            logger.debug('mapping.skip_on_lock', { baseName, lockKey });
+            return { status: 'pending', lockKey, rawLine: trimmed };
+        }
+
         logger.debug('mapping.waiting_for_lock', { baseName, lockKey });
         await existingLock;  // Wait for the other thread to finish
 
@@ -814,7 +833,10 @@ export async function mapIngredientWithFallback(
         hydrateSingleCandidate(winner, client).catch(err => {
             logger.debug('mapping.winner_hydration_failed', { error: (err as Error).message });
         });
-        queueForDeferredHydration(allCandidates, winner.id);
+        queueForDeferredHydration(allCandidates, winner.id, parsed?.unit ? {
+            unit: parsed.unit,
+            unitType: classifyUnit(parsed.unit),
+        } : undefined);
 
         // Step 4b: Reject if confidence is too low (avoid garbage matches)
         const MIN_ACCEPTABLE_CONFIDENCE = 0.3;
@@ -1193,7 +1215,8 @@ async function hydrateAndSelectServing(
     let servingResult = selectServing(parsed, details.servings);
 
     // If selection failed and we have a specific unit, try on-demand backfill
-    if (!servingResult && parsed?.unit) {
+    // BUT skip for ambiguous units (egg, packet, etc.) - those need AI estimation
+    if (!servingResult && parsed?.unit && !isAmbiguousUnit(parsed.unit)) {
         const unitType = classifyUnit(parsed.unit);
 
         // Only attempt backfill for count/volume types (mass is usually handled or canonical)
@@ -1562,8 +1585,37 @@ async function buildFdcResult(
                 fallbackGrams: grams,
             });
         }
+    } else if (unit && isAmbiguousUnit(unit)) {
+        // AMBIGUOUS UNITS (egg, packet, container, etc.) - use AI estimation
+        const ambiguousResult = await getOrCreateAmbiguousServing(
+            candidate.id,
+            candidate.name,
+            unit,
+            candidate.brandName
+        );
+
+        if (ambiguousResult.status === 'success' || ambiguousResult.status === 'cached') {
+            const gramsPerUnit = ambiguousResult.grams!;
+            grams = qty * gramsPerUnit;
+            servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
+            logger.info('fdc.ambiguous_unit_resolved', {
+                foodName: candidate.name,
+                unit,
+                gramsPerUnit,
+                totalGrams: grams,
+            });
+        } else {
+            // Fallback to 100g if AI estimation fails
+            grams = 100 * qty;
+            servingDescription = `${grams.toFixed(1)}g (estimated)`;
+            logger.warn('fdc.ambiguous_unit_fallback', {
+                foodName: candidate.name,
+                unit,
+                fallbackGrams: grams,
+            });
+        }
     } else {
-        // Unknown units (count-based like "slices", etc.) - use 100g default
+        // Unknown units (slices, pieces, etc.) - use 100g default
         grams = 100 * qty;
         servingDescription = `${grams.toFixed(1)}g`;
     }
@@ -1609,6 +1661,19 @@ function selectServing(
 
     const qty = parsed ? parsed.qty * parsed.multiplier : 1;
     const unit = parsed?.unit?.toLowerCase() ?? null;
+
+    // AMBIGUOUS UNITS: Skip normal serving selection and force AI backfill
+    // Units like "packet", "container", "scoop", "medium" get wildly incorrect grams
+    // from API-provided servings (e.g., "1 packet" matching to "serving = 100g").
+    // These require AI estimation to get accurate weights.
+    if (unit && isAmbiguousUnit(unit)) {
+        logger.debug('selectServing.ambiguous_unit_skip', {
+            unit,
+            ingredientName: parsed?.name,
+            reason: 'Forcing AI backfill for ambiguous unit',
+        });
+        return null; // Trigger AI backfill path
+    }
 
     // Debug: Log available servings to help diagnose unit matching issues
     logger.debug('selectServing.start', {

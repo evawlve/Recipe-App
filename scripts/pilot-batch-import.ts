@@ -3,7 +3,7 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
-import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../src/lib/fatsecret/map-ingredient-with-fallback';
 import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
 import { refreshNormalizationRules } from '../src/lib/fatsecret/normalization-rules';
 
@@ -30,6 +30,11 @@ type AiLogEntry = {
     foodName?: string;
     status: 'mapped' | 'rejected' | 'no_match' | 'error';
 };
+
+// Helper to check if a mapping result is pending (locked)
+function isPendingResult(result: unknown): result is MapIngredientPendingResult {
+    return result !== null && typeof result === 'object' && 'status' in result && (result as { status: string }).status === 'pending';
+}
 
 async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
     dbg('=== pilotBatchImport STARTED ===');
@@ -96,187 +101,275 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
         confidence: number;
     }> = [];
 
-    const BATCH_SIZE = 50; // Process 50 ingredients in parallel (maximized)
+    const BATCH_SIZE = 50; // Max ingredients per chunk (for future use with very large recipes)
+    const RECIPE_CONCURRENCY = 10; // Process 10 recipes simultaneously
 
-    for (const recipe of recipes) {
-        console.log(`\n📝 Processing: "${recipe.title}" (${recipe.ingredients.length} ingredients)`);
-        stats.recipesProcessed++;
-
-        // Process ingredients SEQUENTIALLY (debugging parallel issue)
-        dbg(`Processing ${recipe.ingredients.length} ingredients sequentially`);
-        const batchResults: Array<PromiseSettledResult<{ ingredient: typeof recipe.ingredients[0], rawLine: string, result: Awaited<ReturnType<typeof mapIngredientWithFallback>> | null, error: Error | null, skipped: boolean }>> = [];
-
-        for (const ingredient of recipe.ingredients) {
-            // Fix misplaced units: if unit is null but name starts with a unit, extract it
-            let effectiveUnit = ingredient.unit;
-            let effectiveName = ingredient.name;
-
-            if (!effectiveUnit || !effectiveUnit.trim()) {
-                // Expanded unit pattern to include count units like packet, scoop, serving, etc.
-                const unitMatch = ingredient.name.match(/^(tbsps?|tsps?|cups?|oz|g|ml|lbs?|tablespoons?|teaspoons?|scoops?|packets?|sachets?|pouches?|sticks?|servings?|bars?|pieces?|slices?|cans?|envelopes?)\s+(.+)$/i);
-                if (unitMatch) {
-                    effectiveUnit = unitMatch[1];
-                    effectiveName = unitMatch[2];
-                }
-            }
-
-            const rawLine = `${ingredient.qty || ''} ${effectiveUnit || ''} ${effectiveName}`.trim();
-
-            // NOTE: We no longer skip unitless ingredients!
-            // The mapping pipeline (mapIngredientWithFallback) can handle unitless ingredients
-            // via AI backfill for serving estimation (e.g., "1 banana" → "medium banana (118g)")
-
-            try {
-                // Apply learned cleanup patterns before mapping
-                const cleanupResult = await applyCleanupPatterns(effectiveName);
-                const cleanedName = cleanupResult.cleaned;
-                const cleanedLine = `${ingredient.qty || ''} ${effectiveUnit || ''} ${cleanedName}`.trim();
-                dbg(`  Mapping: ${cleanedLine}`);
-
-                const result = await mapIngredientWithFallback(cleanedLine, {
-                    minConfidence: 0.5,
-                    skipAiValidation: true,  // Skip AI validation for pilot imports (too strict)
-                    debug: false,
-                });
-                dbg(`  Mapped: ${result?.foodName || 'null'}`);
-
-                batchResults.push({ status: 'fulfilled', value: { ingredient, rawLine, result, error: null, skipped: false } });
-            } catch (error) {
-                dbg(`  Error: ${(error as Error).message}`);
-                batchResults.push({ status: 'fulfilled', value: { ingredient, rawLine, result: null, error: error as Error, skipped: false } });
-            }
+    // Helper to chunk array into batches
+    function chunk<T>(arr: T[], size: number): T[][] {
+        const chunks: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) {
+            chunks.push(arr.slice(i, i + size));
         }
-        dbg(`Batch complete: ${batchResults.length} results`);
+        return chunks;
+    }
 
-        // Process batch results
-        dbg(`Batch results: ${batchResults.length} items`);
-        console.log(`   📊 Batch results: ${batchResults.length} items`);
-        for (const settled of batchResults) {
-            dbg(`Processing settled: ${settled.status}`);
-            console.log(`   🔍 Processing: status=${settled.status}`);
-            stats.totalIngredients++;
+    // Process recipes in parallel batches
+    const recipeChunks = chunk(recipes, RECIPE_CONCURRENCY);
+    console.log(`⚡ Processing ${recipes.length} recipes in ${recipeChunks.length} parallel batches of up to ${RECIPE_CONCURRENCY}\n`);
 
-            if (settled.status === 'rejected') {
-                const errorMsg = settled.reason?.message || 'Unknown error';
-                console.log(`   - [ERROR] ${errorMsg}`);
-                stats.failed++;
-                stats.errors.push({ ingredient: 'Unknown', error: errorMsg });
-                continue;
-            }
+    for (const recipeChunk of recipeChunks) {
+        // Process this chunk of recipes in parallel
+        await Promise.allSettled(recipeChunk.map(async (recipe) => {
+            console.log(`\n📝 Processing: "${recipe.title}" (${recipe.ingredients.length} ingredients)`);
+            stats.recipesProcessed++;
 
-            const { ingredient, rawLine, result, error, skipped } = settled.value;
+            // Process ingredients in PARALLEL using Promise.allSettled with skip-on-lock
+            dbg(`Processing ${recipe.ingredients.length} ingredients in parallel`);
 
-            // Handle skipped ingredients (e.g., no unit)
-            if (skipped) {
-                console.log(`   - ${rawLine}... ⏭️  Skipped`);
-                // Don't count as failed - this is expected behavior for unitless ingredients
-                continue;
-            }
+            const batchResults = await Promise.allSettled(
+                recipe.ingredients.map(async (ingredient) => {
+                    // Fix misplaced units: if unit is null but name starts with a unit, extract it
+                    let effectiveUnit = ingredient.unit;
+                    let effectiveName = ingredient.name;
 
-            if (error) {
-                console.log(`   - ${rawLine}... ❌ Error: ${error.message}`);
-                stats.failed++;
-                stats.errors.push({ ingredient: rawLine, error: error.message });
-                writeAiLog({
-                    rawLine,
-                    status: 'error',
-                    reason: error.message,
-                });
-                continue;
-            }
+                    if (!effectiveUnit || !effectiveUnit.trim()) {
+                        // Expanded unit pattern to include count units like packet, scoop, serving, etc.
+                        const unitMatch = ingredient.name.match(/^(tbsps?|tsps?|cups?|oz|g|ml|lbs?|tablespoons?|teaspoons?|scoops?|packets?|sachets?|pouches?|sticks?|servings?|bars?|pieces?|slices?|cans?|envelopes?)\s+(.+)$/i);
+                        if (unitMatch) {
+                            effectiveUnit = unitMatch[1];
+                            effectiveName = unitMatch[2];
+                        }
+                    }
 
-            if (!result) {
-                console.log(`   - ${rawLine}... ❌ No match`);
-                stats.failed++;
-                stats.errors.push({ ingredient: rawLine, error: 'No mapping found' });
-                writeAiLog({
-                    rawLine,
-                    status: 'no_match',
-                    foodName: undefined,
-                    approved: undefined,
-                    aiConfidence: undefined,
-                    reason: 'No mapping found',
-                });
-                continue;
-            }
+                    const rawLine = `${ingredient.qty || ''} ${effectiveUnit || ''} ${effectiveName}`.trim();
 
-            const confidence = result.confidence;
+                    // NOTE: We no longer skip unitless ingredients!
+                    // The mapping pipeline (mapIngredientWithFallback) can handle unitless ingredients
+                    // via AI backfill for serving estimation (e.g., "1 banana" → "medium banana (118g)")
 
-            // Check AI Validation Result
-            if (result.aiValidation && !result.aiValidation.approved) {
-                console.log(`   - ${rawLine}... ❌ AI Rejected (${result.aiValidation.confidence.toFixed(3)}) - ${result.foodName}`);
+                    try {
+                        // Apply learned cleanup patterns before mapping
+                        const cleanupResult = await applyCleanupPatterns(effectiveName);
+                        const cleanedName = cleanupResult.cleaned;
+                        const cleanedLine = `${ingredient.qty || ''} ${effectiveUnit || ''} ${cleanedName}`.trim();
+                        dbg(`  Mapping: ${cleanedLine}`);
+
+                        const result = await mapIngredientWithFallback(cleanedLine, {
+                            minConfidence: 0.5,
+                            skipAiValidation: true,  // Skip AI validation for pilot imports (too strict)
+                            skipOnLock: true,  // Don't block on locked ingredients - retry later
+                            debug: false,
+                        });
+                        dbg(`  Mapped: ${isPendingResult(result) ? 'PENDING' : (result?.foodName || 'null')}`);
+
+                        return { ingredient, rawLine, cleanedLine, result, error: null, skipped: false };
+                    } catch (error) {
+                        dbg(`  Error: ${(error as Error).message}`);
+                        return { ingredient, rawLine, cleanedLine: rawLine, result: null, error: error as Error, skipped: false };
+                    }
+                })
+            );
+            dbg(`Batch complete: ${batchResults.length} results`);
+
+            // Process batch results
+            dbg(`Batch results: ${batchResults.length} items`);
+            console.log(`   📊 Batch results: ${batchResults.length} items`);
+            for (const settled of batchResults) {
+                dbg(`Processing settled: ${settled.status}`);
+                console.log(`   🔍 Processing: status=${settled.status}`);
+                stats.totalIngredients++;
+
+                if (settled.status === 'rejected') {
+                    const errorMsg = settled.reason?.message || 'Unknown error';
+                    console.log(`   - [ERROR] ${errorMsg}`);
+                    stats.failed++;
+                    stats.errors.push({ ingredient: 'Unknown', error: errorMsg });
+                    continue;
+                }
+
+                const { ingredient, rawLine, cleanedLine, result, error, skipped } = settled.value;
+
+                // Handle pending (locked) ingredients - will be retried after first pass
+                if (isPendingResult(result)) {
+                    dbg(`  Pending: ${rawLine} (locked)`);
+                    // Don't count or process yet - collected for retry below
+                    continue;
+                }
+
+                // Handle skipped ingredients (e.g., no unit)
+                if (skipped) {
+                    console.log(`   - ${rawLine}... ⏭️  Skipped`);
+                    // Don't count as failed - this is expected behavior for unitless ingredients
+                    continue;
+                }
+
+                if (error) {
+                    console.log(`   - ${rawLine}... ❌ Error: ${error.message}`);
+                    stats.failed++;
+                    stats.errors.push({ ingredient: rawLine, error: error.message });
+                    writeAiLog({
+                        rawLine,
+                        status: 'error',
+                        reason: error.message,
+                    });
+                    continue;
+                }
+
+                if (!result) {
+                    console.log(`   - ${rawLine}... ❌ No match`);
+                    stats.failed++;
+                    stats.errors.push({ ingredient: rawLine, error: 'No mapping found' });
+                    writeAiLog({
+                        rawLine,
+                        status: 'no_match',
+                        foodName: undefined,
+                        approved: undefined,
+                        aiConfidence: undefined,
+                        reason: 'No mapping found',
+                    });
+                    continue;
+                }
+
+                const confidence = result.confidence;
+
+                // Check AI Validation Result
+                if (result.aiValidation && !result.aiValidation.approved) {
+                    console.log(`   - ${rawLine}... ❌ AI Rejected (${result.aiValidation.confidence.toFixed(3)}) - ${result.foodName}`);
+                    writeAiLog({
+                        rawLine,
+                        foodName: result.foodName,
+                        ourConfidence: confidence,
+                        approved: result.aiValidation.approved,
+                        aiConfidence: result.aiValidation.confidence,
+                        reason: result.aiValidation.reason,
+                        category: result.aiValidation.category,
+                        status: 'rejected',
+                    });
+                    stats.failed++;
+                    stats.errors.push({
+                        ingredient: rawLine,
+                        error: `AI Rejected: ${result.aiValidation.reason} (Category: ${result.aiValidation.category})`
+                    });
+                    continue; // Don't save rejected mappings
+                }
+
+                stats.successful++;
+                stats.avgConfidence += confidence;
+
+                // Log AI-approved mapping
                 writeAiLog({
                     rawLine,
                     foodName: result.foodName,
                     ourConfidence: confidence,
-                    approved: result.aiValidation.approved,
-                    aiConfidence: result.aiValidation.confidence,
-                    reason: result.aiValidation.reason,
-                    category: result.aiValidation.category,
-                    status: 'rejected',
+                    approved: result.aiValidation?.approved ?? true,
+                    aiConfidence: result.aiValidation?.confidence,
+                    reason: result.aiValidation?.reason,
+                    category: result.aiValidation?.category,
+                    status: 'mapped',
                 });
-                stats.failed++;
-                stats.errors.push({
-                    ingredient: rawLine,
-                    error: `AI Rejected: ${result.aiValidation.reason} (Category: ${result.aiValidation.category})`
-                });
-                continue; // Don't save rejected mappings
-            }
 
-            stats.successful++;
-            stats.avgConfidence += confidence;
-
-            // Log AI-approved mapping
-            writeAiLog({
-                rawLine,
-                foodName: result.foodName,
-                ourConfidence: confidence,
-                approved: result.aiValidation?.approved ?? true,
-                aiConfidence: result.aiValidation?.confidence,
-                reason: result.aiValidation?.reason,
-                category: result.aiValidation?.category,
-                status: 'mapped',
-            });
-
-            // Categorize by confidence
-            if (confidence < 0.5) {
-                console.log(`   - ${rawLine}... 🔴 Low (${confidence.toFixed(3)}) - ${result.foodName}`);
-                continue; // Don't save low confidence
-            } else if (confidence < 0.7) {
-                console.log(`   - ${rawLine}... ⚠️  Review (${confidence.toFixed(3)}) - ${result.foodName}`);
-                reviewQueue.push({
-                    ingredientId: ingredient.id,
-                    rawLine,
-                    foodName: result.foodName,
-                    confidence,
-                });
-            } else {
-                console.log(`   - ${rawLine}... ✅ Good (${confidence.toFixed(3)}) - ${result.foodName}`);
-            }
-
-            // Save mapping to database
-            dbg(`ATTEMPTING CREATE for ${rawLine}`);
-            try {
-                await prisma.ingredientFoodMap.create({
-                    data: {
+                // Categorize by confidence
+                if (confidence < 0.5) {
+                    console.log(`   - ${rawLine}... 🔴 Low (${confidence.toFixed(3)}) - ${result.foodName}`);
+                    continue; // Don't save low confidence
+                } else if (confidence < 0.7) {
+                    console.log(`   - ${rawLine}... ⚠️  Review (${confidence.toFixed(3)}) - ${result.foodName}`);
+                    reviewQueue.push({
                         ingredientId: ingredient.id,
-                        fatsecretFoodId: result.foodId,
-                        fatsecretServingId: result.servingId,
-                        fatsecretGrams: result.grams,
-                        fatsecretConfidence: confidence,
-                        fatsecretSource: 'fatsecret',
-                        mappedBy: 'ai_pilot',
-                        isActive: true,
-                    },
-                });
-                dbg(`SUCCESS - created for ${rawLine}`);
-                console.log(`   📁 Saved IngredientFoodMap for ${ingredient.id.substring(0, 8)}...`);
-            } catch (createErr) {
-                dbg(`FAILED - ${(createErr as Error).message}`);
-                console.error(`   ❌ Failed to create IngredientFoodMap:`, createErr);
+                        rawLine,
+                        foodName: result.foodName,
+                        confidence,
+                    });
+                } else {
+                    console.log(`   - ${rawLine}... ✅ Good (${confidence.toFixed(3)}) - ${result.foodName}`);
+                }
+
+                // Save mapping to database
+                dbg(`ATTEMPTING CREATE for ${rawLine}`);
+                try {
+                    await prisma.ingredientFoodMap.create({
+                        data: {
+                            ingredientId: ingredient.id,
+                            fatsecretFoodId: result.foodId,
+                            fatsecretServingId: result.servingId,
+                            fatsecretGrams: result.grams,
+                            fatsecretConfidence: confidence,
+                            fatsecretSource: 'fatsecret',
+                            mappedBy: 'ai_pilot',
+                            isActive: true,
+                        },
+                    });
+                    dbg(`SUCCESS - created for ${rawLine}`);
+                    console.log(`   📁 Saved IngredientFoodMap for ${ingredient.id.substring(0, 8)}...`);
+                } catch (createErr) {
+                    dbg(`FAILED - ${(createErr as Error).message}`);
+                    console.error(`   ❌ Failed to create IngredientFoodMap:`, createErr);
+                }
             }
-        }
-    }
+
+            // ============================================================
+            // RETRY PASS: Process pending (locked) ingredients
+            // ============================================================
+            const pendingItems = batchResults
+                .filter((r): r is PromiseFulfilledResult<{ ingredient: any; rawLine: string; cleanedLine: string; result: any; error: null; skipped: false }> =>
+                    r.status === 'fulfilled' && isPendingResult(r.value.result))
+                .map(r => r.value);
+
+            if (pendingItems.length > 0) {
+                console.log(`   🔄 Retrying ${pendingItems.length} previously-locked ingredients...`);
+                dbg(`Retrying ${pendingItems.length} pending items`);
+
+                for (const pending of pendingItems) {
+                    stats.totalIngredients++;
+                    try {
+                        const result = await mapIngredientWithFallback(pending.cleanedLine, {
+                            minConfidence: 0.5,
+                            skipAiValidation: true,
+                            skipOnLock: false,  // Block on retry - should hit cache instantly
+                        });
+
+                        if (!result || isPendingResult(result)) {
+                            console.log(`   - ${pending.rawLine}... ❌ No match (retry)`);
+                            stats.failed++;
+                            stats.errors.push({ ingredient: pending.rawLine, error: 'No mapping (retry)' });
+                            continue;
+                        }
+
+                        const confidence = result.confidence;
+                        stats.successful++;
+                        stats.avgConfidence += confidence;
+
+                        if (confidence >= 0.5) {
+                            console.log(`   - ${pending.rawLine}... ✅ (${confidence.toFixed(3)}) - ${result.foodName} [retry]`);
+                            await prisma.ingredientFoodMap.create({
+                                data: {
+                                    ingredientId: pending.ingredient.id,
+                                    fatsecretFoodId: result.foodId,
+                                    fatsecretServingId: result.servingId,
+                                    fatsecretGrams: result.grams,
+                                    fatsecretConfidence: confidence,
+                                    fatsecretSource: 'fatsecret',
+                                    mappedBy: 'ai_pilot',
+                                    isActive: true,
+                                },
+                            });
+                            if (confidence < 0.7) {
+                                reviewQueue.push({ ingredientId: pending.ingredient.id, rawLine: pending.rawLine, foodName: result.foodName, confidence });
+                            }
+                        }
+                    } catch (err) {
+                        console.log(`   - ${pending.rawLine}... ❌ Error (retry): ${(err as Error).message}`);
+                        stats.failed++;
+                        stats.errors.push({ ingredient: pending.rawLine, error: (err as Error).message });
+                    }
+                }
+            }
+        }));  // End recipe callback and Promise.allSettled
+    }  // End recipeChunks loop
+
+    // Note: Deferred hydration now runs in background (fire-and-forget)
+    // Runner-up candidates are hydrated immediately when scored, no need to wait here
+    console.log('\n✅ Deferred hydration running in background (fire-and-forget)');
 
     // Calculate final stats
     if (stats.successful > 0) {

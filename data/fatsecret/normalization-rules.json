@@ -219,6 +219,14 @@
     {
       "from": "orange zest",
       "to": "orange peel"
+    },
+    {
+      "from": "extra light",
+      "to": "fat free"
+    },
+    {
+      "from": "extra-light",
+      "to": "fat free"
     }
   ]
 }

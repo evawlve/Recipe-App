@@ -129,6 +129,9 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'lemon zest', to: 'lemon peel' },
     { from: 'lime zest', to: 'lime peel' },
     { from: 'orange zest', to: 'orange peel' },
+    // Fat level synonyms
+    { from: 'extra light', to: 'fat free' },
+    { from: 'extra-light', to: 'fat free' },
   ],
 };
 
@@ -290,7 +293,43 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   const allPhrases = [...getMergedPrepPhrases(), ...rules.size_phrases];
   const sortedPhrases = allPhrases.sort((a, b) => b.length - a.length);
 
+  // PROTECTED PRODUCT PHRASES: These contain prep words but are product types that MUST be preserved
+  // e.g., "fire roasted tomatoes" should NOT strip "roasted" - it's a canned product type
+  const PROTECTED_PRODUCT_PHRASES = [
+    'fire roasted',
+    'fire-roasted',
+    'oven roasted',
+    'oven-roasted',
+    'slow roasted',
+    'slow-roasted',
+    'sun dried',
+    'sun-dried',
+    'flame grilled',
+    'flame-grilled',
+    'char grilled',
+    'char-grilled',
+    'pan fried',   // different from just "fried" - product type for products like pan-fried noodles
+    'stir fried',
+    'stir-fried',
+    'deep fried',
+    'smoked salmon',  // "smoked" is prep, but "smoked salmon" is a product type
+  ];
+
+  const workingLower = working.toLowerCase();
+  const protectedPhrasesInInput = PROTECTED_PRODUCT_PHRASES.filter(p =>
+    workingLower.includes(p)
+  );
+
   for (const phrase of sortedPhrases) {
+    // Skip stripping if this phrase is part of a protected product phrase
+    const phraseLower = phrase.toLowerCase();
+    const isProtected = protectedPhrasesInInput.some(protectedPhrase =>
+      protectedPhrase.includes(phraseLower) && protectedPhrase !== phraseLower
+    );
+    if (isProtected) {
+      continue; // Don't strip - it's part of a protected product phrase
+    }
+
     // Add word boundaries to prevent partial matches (e.g., "raw" inside "strawberries")
     // But only for simple literal phrases, not for complex regex patterns
     const isComplexPattern = /[\[\]\(\)\*\+\?\|]/.test(phrase);

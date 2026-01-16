@@ -314,3 +314,101 @@ export async function backfillOnDemand(
 
     return { success: result.success, reason: result.reason };
 }
+
+// ============================================================
+// Liquid Detection
+// ============================================================
+
+const LIQUID_PATTERNS = [
+    /milk/i, /cream/i, /juice/i, /water/i, /broth/i, /stock/i,
+    /oil/i, /sauce/i, /syrup/i, /vinegar/i, /wine/i, /beer/i,
+    /whiskey/i, /vodka/i, /rum/i, /gin/i, /liqueur/i,
+];
+
+/**
+ * Detect if an ingredient is a liquid (volume-based).
+ */
+export function isLiquid(name: string): boolean {
+    return LIQUID_PATTERNS.some(p => p.test(name));
+}
+
+// ============================================================
+// Common Servings Backfill
+// ============================================================
+
+/**
+ * Backfill common serving options based on food type.
+ * Called during deferred hydration to pre-populate serving alternatives.
+ * 
+ * @param foodId - The food cache ID
+ * @param foodName - The food name (for type detection)
+ * @param requestedUnit - Optional specific unit from user query
+ */
+export async function backfillCommonServings(
+    foodId: string,
+    foodName: string,
+    requestedUnit?: string
+): Promise<{ backfilled: string[]; skipped: string[] }> {
+    const servingsToCreate: string[] = [];
+
+    // 1. Always add the requested unit if provided
+    if (requestedUnit) {
+        servingsToCreate.push(requestedUnit);
+    }
+
+    // 2. Add type-specific common servings
+    if (isDiscreteItem(foodName)) {
+        // Discrete items: whole, medium, large, piece
+        servingsToCreate.push('whole', 'medium', 'large', 'piece');
+    } else if (isLiquid(foodName)) {
+        // Liquids: tbsp, cup, ml
+        servingsToCreate.push('tbsp', 'cup', 'ml');
+    } else {
+        // Default (powders, general): tsp, tbsp, cup
+        servingsToCreate.push('tsp', 'tbsp', 'cup');
+    }
+
+    // Dedupe
+    const unique = [...new Set(servingsToCreate)];
+
+    logger.info('backfill.common_servings_start', {
+        foodId,
+        foodName,
+        servingsToCreate: unique,
+    });
+
+    // Backfill each in parallel
+    const results = await Promise.allSettled(
+        unique.map(async (unit) => {
+            const unitType = isCountUnit(unit) ? 'count' : 'volume';
+            const res = await backfillOnDemand(foodId, unitType, unit);
+            return { unit, success: res.success };
+        })
+    );
+
+    const backfilled = results
+        .filter((r): r is PromiseFulfilledResult<{ unit: string; success: boolean }> =>
+            r.status === 'fulfilled' && r.value.success)
+        .map(r => r.value.unit);
+
+    const skipped = results
+        .filter((r): r is PromiseFulfilledResult<{ unit: string; success: boolean }> =>
+            r.status === 'fulfilled' && !r.value.success)
+        .map(r => r.value.unit);
+
+    logger.info('backfill.common_servings_complete', {
+        foodId,
+        backfilled,
+        skipped,
+    });
+
+    return { backfilled, skipped };
+}
+
+/**
+ * Check if a unit is count-based (for backfill type detection).
+ */
+function isCountUnit(unit: string): boolean {
+    const countUnits = ['whole', 'medium', 'large', 'small', 'piece', 'slice', 'item'];
+    return countUnits.includes(unit.toLowerCase());
+}

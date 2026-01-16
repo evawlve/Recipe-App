@@ -18,6 +18,8 @@
 11. [Determinism Mechanisms](#determinism-mechanisms-jan-9-fix)
 12. [Cache Normalization](#cache-normalization-jan-10-fix)
 13. [Cooking State Disambiguation](#cooking-state-disambiguation)
+14. [Batch Processing Optimizations](#batch-processing-optimizations-jan-14-fix)
+15. [Ambiguous Unit AI Estimation](#ambiguous-unit-handling-jan-15-fix)
 
 ---
 
@@ -302,13 +304,32 @@ When a food lacks the requested serving type:
 - Standard AI: 0.6 (60%)
 - On-demand backfill: 0.35 (35%) - user can override
 
-### Ambiguous Unit Handling
+### Ambiguous Unit Handling (Jan 15 Fix)
 
-For units like "container", "scoop", "bowl":
-1. Detect ambiguous unit
-2. Check `PortionOverride` table for cached estimate
-3. If not found, AI estimates (e.g., "1 container yogurt ≈ 150g")
-4. Save to `PortionOverride` for global reuse
+Units that have variable weights depending on brand/context require AI estimation:
+
+```typescript
+// AMBIGUOUS_UNITS - triggers AI estimation instead of API servings
+'container', 'scoop', 'bowl', 'handful', 'packet', 'package',
+'envelope', 'can', 'jar', 'bottle', 'carton', 'tub', 'box',
+'bag', 'pouch', 'egg', 'medium', 'large', 'small', 'whole'
+```
+
+**Flow for Ambiguous Units:**
+1. `selectServing()` returns `null` for ambiguous units (skips unreliable API data)
+2. `backfillOnDemand()` is also skipped (prevents generic serving creation)
+3. AI estimates weight based on food name and unit context
+4. Result saved to `FatSecretServingCache` (for FatSecret foods) or used inline (for FDC foods)
+
+**Before/After Examples:**
+| Input | Before | After |
+|-------|--------|-------|
+| `1 egg` | 100g | **50g** ✓ |
+| `1 packet sweetener` | 100g | **1g** ✓ |
+| `1 bowl oatmeal` | 100g | **235g** ✓ |
+| `1 jar peanut butter` | 100g | **454g** ✓ |
+
+> **Key Files**: `ambiguous-unit-backfill.ts`, `ambiguous-serving-estimator.ts`
 
 ---
 
@@ -397,8 +418,9 @@ Critical modifiers kept for accurate matching:
 | File | Purpose |
 |------|---------|
 | `src/lib/fatsecret/serving-backfill.ts` | On-demand serving backfill |
+| `src/lib/fatsecret/ambiguous-unit-backfill.ts` | AI estimation for ambiguous units |
 | `src/lib/ai/serving-estimator.ts` | AI serving size estimation |
-| `src/lib/ai/ambiguous-serving-estimator.ts` | AI for ambiguous units |
+| `src/lib/ai/ambiguous-serving-estimator.ts` | AI prompt/schema for ambiguous units |
 | `src/lib/fatsecret/unit-type.ts` | Unit classification |
 
 ### Recipe Import
@@ -821,6 +843,94 @@ console.log('2→4 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Pepp
 console.log('2→5 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese VIOLIFE Product'));
 "
 ```
+
+---
+
+## Batch Processing Optimizations (Jan 14 Fix)
+
+### Overview
+
+Optimizations to speed up batch ingredient mapping while enriching the cache for manual mapping UX.
+
+**Verification Results (100-recipe batch):**
+
+| Metric | Value |
+|--------|-------|
+| Recipes | 100 |
+| Ingredients | 785 |
+| Success Rate | 88.8% |
+| Avg Confidence | 0.966 |
+| High Confidence | 100% |
+
+### 1. Parallel Recipe Processing
+
+**File**: `scripts/pilot-batch-import.ts`
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `RECIPE_CONCURRENCY` | 10 | Recipes processed simultaneously |
+| `Promise.allSettled` | Per recipe | All ingredients parallel within recipe |
+
+```typescript
+const recipeChunks = chunk(recipes, RECIPE_CONCURRENCY);
+for (const recipeChunk of recipeChunks) {
+    await Promise.allSettled(recipeChunk.map(async (recipe) => {
+        await Promise.allSettled(recipe.ingredients.map(...));
+    }));
+}
+```
+
+### 2. Skip-on-Lock Pattern
+
+**File**: `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+
+Prevents blocking when multiple threads map the same ingredient:
+
+```typescript
+export type MapIngredientPendingResult = {
+    status: 'pending';
+    lockKey: string;
+    rawLine: string;
+};
+
+// When skipOnLock: true and lock exists
+if (existingLock && skipOnLock) {
+    return { status: 'pending', lockKey, rawLine };  // Don't block
+}
+```
+
+Batch import retries pending items after first pass to ensure all are mapped.
+
+### 3. Fire-and-Forget Deferred Hydration
+
+**File**: `src/lib/fatsecret/deferred-hydration.ts`
+
+Runner-up candidates hydrate **immediately** when scored — no blocking:
+
+```typescript
+export function queueForDeferredHydration(candidates, excludeId, servingContext) {
+    // Fire and forget - kick off immediately, don't await
+    processImmediately(runnerUps, servingContext).catch(err => {
+        logger.error('deferred_hydration.fire_and_forget_failed', { error });
+    });
+}
+```
+
+### 4. Preemptive Serving Backfill
+
+**File**: `src/lib/fatsecret/serving-backfill.ts`
+
+Pre-fills common serving options based on food type for rich manual mapping UX:
+
+| Food Type | Servings Added |
+|-----------|----------------|
+| Discrete (apple, egg, banana) | whole, medium, large, piece |
+| Liquid (milk, juice, oil) | tbsp, cup, ml |
+| Default (powder, spice) | tsp, tbsp, cup |
+
+**Environment Variable**: `ENABLE_PREEMPTIVE_BACKFILL=true`
+
+**Key Function**: `backfillCommonServings(foodId, foodName, requestedUnit)`
 
 ---
 
