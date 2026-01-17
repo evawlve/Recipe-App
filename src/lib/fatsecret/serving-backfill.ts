@@ -333,6 +333,51 @@ export function isLiquid(name: string): boolean {
 }
 
 // ============================================================
+// Produce Detection (for size-based servings: small/medium/large)
+// ============================================================
+
+const PRODUCE_PATTERNS = [
+    // Fruits
+    /\b(apple|apples)\b/i,
+    /\b(banana|bananas)\b/i,
+    /\b(orange|oranges)\b/i,
+    /\b(avocado|avocados)\b/i,
+    /\b(peach|peaches)\b/i,
+    /\b(pear|pears)\b/i,
+    /\b(mango|mangos|mangoes)\b/i,
+    /\b(lemon|lemons)\b/i,
+    /\b(lime|limes)\b/i,
+    /\b(grapefruit|grapefruits)\b/i,
+    /\b(plum|plums)\b/i,
+    /\b(nectarine|nectarines)\b/i,
+    /\b(kiwi|kiwis)\b/i,
+    /\b(papaya|papayas)\b/i,
+    /\b(pomegranate|pomegranates)\b/i,
+    // Vegetables (whole items that vary by size)
+    /\b(potato|potatoes)\b/i,
+    /\b(tomato|tomatoes)\b/i,
+    /\b(onion|onions)\b/i,
+    /\b(carrot|carrots)\b/i,
+    /\b(zucchini|zucchinis)\b/i,
+    /\b(cucumber|cucumbers)\b/i,
+    /\b(bell pepper|bell peppers)\b/i,
+    /\b(sweet potato|sweet potatoes)\b/i,
+    /\b(beet|beets)\b/i,
+    /\b(turnip|turnips)\b/i,
+    /\b(eggplant|eggplants)\b/i,
+    /\b(squash)\b/i,
+    /\b(artichoke|artichokes)\b/i,
+];
+
+/**
+ * Detect if an ingredient is produce (whole fruit/vegetable that varies by size).
+ * These items should get small/medium/large servings.
+ */
+export function isProduce(name: string): boolean {
+    return PRODUCE_PATTERNS.some(p => p.test(name));
+}
+
+// ============================================================
 // Common Servings Backfill
 // ============================================================
 
@@ -357,7 +402,10 @@ export async function backfillCommonServings(
     }
 
     // 2. Add type-specific common servings
-    if (isDiscreteItem(foodName)) {
+    if (isProduce(foodName)) {
+        // Produce (whole fruits/vegetables): small, medium, large
+        servingsToCreate.push('small', 'medium', 'large');
+    } else if (isDiscreteItem(foodName)) {
         // Discrete items: whole, medium, large, piece
         servingsToCreate.push('whole', 'medium', 'large', 'piece');
     } else if (isLiquid(foodName)) {
@@ -377,9 +425,21 @@ export async function backfillCommonServings(
         servingsToCreate: unique,
     });
 
+    // Size units use ambiguous serving estimator (small/medium/large)
+    const SIZE_UNITS = new Set(['small', 'medium', 'large', 'whole']);
+
+    // Import the ambiguous backfill function
+    const { getOrCreateAmbiguousServing } = await import('./ambiguous-unit-backfill');
+
     // Backfill each in parallel
     const results = await Promise.allSettled(
         unique.map(async (unit) => {
+            // For size units, use the ambiguous serving estimator
+            if (SIZE_UNITS.has(unit.toLowerCase())) {
+                const res = await getOrCreateAmbiguousServing(foodId, foodName, unit);
+                return { unit, success: res.status === 'success' || res.status === 'cached' };
+            }
+            // For other units, use standard backfill
             const unitType = isCountUnit(unit) ? 'count' : 'volume';
             const res = await backfillOnDemand(foodId, unitType, unit);
             return { unit, success: res.success };

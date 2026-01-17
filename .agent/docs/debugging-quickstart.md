@@ -87,6 +87,25 @@ $env:ENABLE_MAPPING_ANALYSIS='true'; npm run pilot-import 100
 
 ---
 
+### 6. Serving Selection Failure
+
+**Symptom**: Correct food selected but wrong calories, or fallback to unexpected lower-ranked food.
+
+**Example**: `"4 oz sugar substitute"` → correct 0-cal food scored #1, but falls back to 300-cal generic.
+
+**Root Cause**: Winner lacks weight servings (g/oz), causing hydration failure and candidate fallback.
+
+**Where to Fix**: 
+- `ai-backfill.ts` - `backfillWeightServing()` creates 100g serving
+- `map-ingredient-with-fallback.ts` - Step 5a tries weight backfill before candidate fallback
+
+**Debug Command**:
+```bash
+npx ts-node scripts/check-serving-data.ts --food-id "1269847"
+```
+
+---
+
 ## Systematic Debugging Workflow
 
 ### Step 1: Find Issue in Summary
@@ -182,6 +201,20 @@ npx ts-node scripts/debug-mapping-issue.ts --search "light cream"
 npx ts-node scripts/debug-mapping-issue.ts --from-log "mapping-analysis-2026-01-05.json" --index 5
 ```
 
+### Check Serving Data
+
+When serving selection fails (e.g., weight unit request falls back to wrong food):
+
+```bash
+# Check specific food by ID
+npx ts-node scripts/check-serving-data.ts --food-id "1269847"
+
+# Search foods by name
+npx ts-node scripts/check-serving-data.ts --food-name "sweetener"
+```
+
+Shows: available servings, capability flags (weight/volume support), and suggested fixes.
+
 ---
 
 ## Fix Categories
@@ -194,6 +227,7 @@ npx ts-node scripts/debug-mapping-issue.ts --from-log "mapping-analysis-2026-01-
 | Correct food filtered out | `filter-candidates.ts` | Adjust filter rules |
 | Macro values unrealistic | `filter-candidates.ts` | Add macro profile |
 | Specific exclusion needed | `filter-candidates.ts` | Add to `CATEGORY_EXCLUSIONS` |
+| Serving selection failure | `ai-backfill.ts` | Add weight/volume backfill |
 
 ---
 

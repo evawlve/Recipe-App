@@ -20,6 +20,7 @@
 13. [Cooking State Disambiguation](#cooking-state-disambiguation)
 14. [Batch Processing Optimizations](#batch-processing-optimizations-jan-14-fix)
 15. [Ambiguous Unit AI Estimation](#ambiguous-unit-handling-jan-15-fix)
+16. [Proactive Produce Backfill](#5-proactive-produce-size-backfill-jan-15-fix)
 
 ---
 
@@ -330,6 +331,37 @@ Units that have variable weights depending on brand/context require AI estimatio
 | `1 jar peanut butter` | 100g | **454g** ✓ |
 
 > **Key Files**: `ambiguous-unit-backfill.ts`, `ambiguous-serving-estimator.ts`
+
+### Weight Serving Backfill (Jan 15 Fix)
+
+When the best-scored candidate lacks weight-based servings (g/oz), hydration can fail for weight-unit requests, causing fallback to lower-ranked candidates.
+
+**Problem Scenario:**
+```
+Input: "4 oz sugar substitute"
+
+1. Winner: Market Pantry (0 cal) - Score: 1.000 ✓
+2. Available servings: [serving, tsp, tbsp, cup] - NO gram serving!
+3. hydrateAndSelectServing() fails (no "oz" or "g" serving)
+4. Falls back to generic sweetener (300 cal) with "g" serving ✗
+```
+
+**Solution:** Before falling back to other candidates, try AI backfill for weight serving:
+
+```typescript
+// Step 5a in map-ingredient-with-fallback.ts
+if (!result && isWeightUnit && winner.source === 'fatsecret') {
+    await backfillWeightServing(winner.id);  // Creates 100g serving
+    result = await hydrateAndSelectServing(winner, ...);  // Retry
+}
+```
+
+**After Fix:**
+| Input | Before | After |
+|-------|--------|-------|
+| `4 oz sugar substitute` | 340 kcal | **0 kcal** ✓ |
+
+> **Key Files**: `ai-backfill.ts` (`backfillWeightServing`), `map-ingredient-with-fallback.ts` (Step 5a)
 
 ---
 
@@ -931,6 +963,110 @@ Pre-fills common serving options based on food type for rich manual mapping UX:
 **Environment Variable**: `ENABLE_PREEMPTIVE_BACKFILL=true`
 
 **Key Function**: `backfillCommonServings(foodId, foodName, requestedUnit)`
+
+### 5. Proactive Produce Size Backfill (Jan 15 Fix)
+
+**Problem**: Produce items (fruits/vegetables) often need size-based servings (small/medium/large), but the first mapping only creates the requested size. Subsequent queries for different sizes trigger on-demand AI calls.
+
+**Solution**: Proactively backfill all three sizes (small/medium/large) after the first produce mapping.
+
+#### Produce Detection
+
+**File**: `src/lib/fatsecret/serving-backfill.ts`
+
+```typescript
+const PRODUCE_PATTERNS = [
+    /\b(apple|apples)\b/i,
+    /\b(banana|bananas)\b/i,
+    /\b(avocado|avocados)\b/i,
+    // ... 28 common fruits/vegetables
+];
+
+export function isProduce(name: string): boolean {
+    return PRODUCE_PATTERNS.some(p => p.test(name));
+}
+```
+
+#### Proactive Backfill Flow
+
+```mermaid
+flowchart TD
+    A[Ingredient Mapped Successfully] --> B{isProduce?}
+    B -->|No| C[Done]
+    B -->|Yes| D[proactiveProduceBackfill]
+    D --> E[Fire-and-Forget]
+    E --> F[estimateProduceSizes - 1 AI call]
+    F --> G[Save small/medium/large to cache]
+```
+
+**Key Files**:
+| File | Function |
+|------|----------|
+| `deferred-hydration.ts` | `proactiveProduceBackfill()` - triggered after winner mapping |
+| `serving-backfill.ts` | `isProduce()` - pattern-based detection |
+| `ambiguous-unit-backfill.ts` | `batchBackfillProduceSizes()` - batched saving |
+| `ambiguous-serving-estimator.ts` | `estimateProduceSizes()` - single AI call for all 3 sizes |
+
+#### Batched AI Estimation
+
+Instead of 3 separate AI calls per produce item, uses a single batched call:
+
+```typescript
+// Before: 3 AI calls
+await estimateAmbiguousServing(food, 'small');
+await estimateAmbiguousServing(food, 'medium');
+await estimateAmbiguousServing(food, 'large');
+
+// After: 1 AI call
+const result = await estimateProduceSizes(foodName);
+// Returns: { small: 101, medium: 118, large: 136, confidence: 0.85 }
+```
+
+**AI Prompt Examples**:
+```
+Examples:
+- Apple: small=150g, medium=182g, large=220g
+- Banana: small=101g, medium=118g, large=136g
+- Avocado: small=115g, medium=150g, large=200g
+- Potato: small=150g, medium=213g, large=300g
+```
+
+#### Batch Backfill Script
+
+For backfilling existing produce items in the cache:
+
+```bash
+# Dry run - see what would be backfilled
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-produce-sizes.ts --dry-run
+
+# Limit to N items (for testing)
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-produce-sizes.ts --limit 10
+
+# Full run
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-produce-sizes.ts
+```
+
+**Performance**:
+| Metric | Value |
+|--------|-------|
+| AI calls per item | 1 (not 3) |
+| Full backfill time | ~15-20 min for 200 items |
+| Savings | 66% fewer API calls |
+
+#### Analysis Script
+
+Check produce coverage in cache:
+
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/analyze-produce-cache.ts
+```
+
+Outputs:
+- Total produce items in FatSecret/FDC caches
+- Fully backfilled (all 3 sizes)
+- Partially backfilled (some sizes)
+- No size servings
+- Potential AI backfill calls needed
 
 ---
 

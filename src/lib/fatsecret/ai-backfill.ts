@@ -240,3 +240,84 @@ export async function insertAiServing(
 
     return { success: true };
 }
+
+// ============================================================
+// Weight Serving Backfill
+// ============================================================
+
+/**
+ * Backfill a weight-based (grams) serving for foods that lack one.
+ * Creates a standard "100 g" serving using nutrientsPer100g data.
+ * 
+ * This is called when:
+ * 1. Winner candidate has better score but lacks weight serving
+ * 2. User requested a weight unit (oz, g, lb, etc.)
+ * 3. Hydration failed because selectServing found no gram-based serving
+ * 
+ * @param foodId - FatSecret food ID
+ * @returns Success status and reason if failed
+ */
+export async function backfillWeightServing(
+    foodId: string
+): Promise<{ success: boolean; reason?: string }> {
+    const food = await prisma.fatSecretFoodCache.findUnique({
+        where: { id: foodId },
+        include: { servings: true },
+    });
+
+    if (!food) {
+        logger.warn({ foodId }, 'backfillWeightServing: Food not found');
+        return { success: false, reason: 'food_not_found' };
+    }
+
+    // Check if we already have a weight-based serving
+    const hasWeightServing = food.servings.some(s => {
+        const unit = s.metricServingUnit?.toLowerCase();
+        return unit === 'g' || unit === 'gram' || unit === 'grams' ||
+            (s.servingWeightGrams != null && s.servingWeightGrams > 0 && s.measurementDescription?.toLowerCase() === 'g');
+    });
+
+    if (hasWeightServing) {
+        logger.debug({ foodId, name: food.name }, 'backfillWeightServing: Already has weight serving');
+        return { success: true };
+    }
+
+    // Create a 100g serving using the nutrientsPer100g data
+    // This is the canonical reference point for all calculations
+    const servingId = buildServingId(foodId, '100 g');
+
+    try {
+        await prisma.fatSecretServingCache.upsert({
+            where: { id: servingId },
+            create: {
+                id: servingId,
+                foodId,
+                measurementDescription: 'g',
+                numberOfUnits: 100,
+                metricServingAmount: 100,
+                metricServingUnit: 'g',
+                servingWeightGrams: 100,
+                volumeMl: null,
+                isVolume: false,
+                isDefault: false,
+                derivedViaDensity: false,
+                source: 'ai',
+                confidence: 0.95,  // High confidence - this is just a reference unit
+                note: 'AI-backfilled weight serving for gram-based calculations',
+            },
+            update: {
+                // Already exists, no update needed
+            },
+        });
+
+        logger.info(
+            { foodId, name: food.name, servingId },
+            'Inserted AI-derived weight (100g) serving',
+        );
+
+        return { success: true };
+    } catch (err) {
+        logger.error({ foodId, error: (err as Error).message }, 'backfillWeightServing failed');
+        return { success: false, reason: 'db_error' };
+    }
+}

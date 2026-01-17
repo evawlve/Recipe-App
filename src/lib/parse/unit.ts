@@ -47,12 +47,15 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'block': 'block', 'blocks': 'block', // For tofu, cheese blocks, etc.
     'cube': 'cube', 'cubes': 'cube',
     'packet': 'packet', 'packets': 'packet',  // For sweeteners, seasonings, etc.
+    'package': 'package', 'packages': 'package',  // For packaged goods (spinach, etc.)
     'sachet': 'sachet', 'sachets': 'sachet',  // Alternative for packet
     'pouch': 'pouch', 'pouches': 'pouch',
     'stick': 'stick', 'sticks': 'stick',  // For butter, gum, etc.
     'container': 'container', 'containers': 'container',
     'envelope': 'envelope', 'envelopes': 'envelope',  // For gelatin, yeast packets
-    'serving': 'serving', 'servings': 'serving'  // Generic serving unit
+    'serving': 'serving', 'servings': 'serving',  // Generic serving unit
+    // Size descriptors for whole produce (triggers AI backfill for realistic weights)
+    'small': 'small', 'medium': 'medium', 'large': 'large', 'whole': 'whole',
   };
 
   if (countUnits[token]) {

@@ -203,3 +203,132 @@ export async function getUserOrGlobalPortionOverride(
 
     return null;
 }
+
+// ============================================================
+// Batched Produce Size Backfill (single AI call for all 3 sizes)
+// ============================================================
+
+import { estimateProduceSizes } from '../ai/ambiguous-serving-estimator';
+
+export interface BatchedProduceBackfillResult {
+    status: 'success' | 'partial' | 'error';
+    created: { size: string; grams: number }[];
+    skipped: string[];
+    error?: string;
+}
+
+/**
+ * Backfill small/medium/large servings for a produce item in a SINGLE AI call.
+ * Much more efficient than calling getOrCreateAmbiguousServing() 3 times.
+ * 
+ * @param foodId - The FatSecret food ID
+ * @param foodName - The name of the produce item
+ * @param brandName - Optional brand/variety name
+ */
+export async function batchBackfillProduceSizes(
+    foodId: string,
+    foodName: string,
+    brandName?: string | null
+): Promise<BatchedProduceBackfillResult> {
+    const SIZE_UNITS = ['small', 'medium', 'large'] as const;
+    const created: { size: string; grams: number }[] = [];
+    const skipped: string[] = [];
+
+    // Check which sizes already exist
+    const existingServings = await prisma.fatSecretServingCache.findMany({
+        where: { foodId },
+        select: { measurementDescription: true },
+    });
+
+    const existingSizes = new Set(
+        existingServings
+            .map(s => s.measurementDescription?.toLowerCase())
+            .filter(Boolean)
+    );
+
+    const missingSizes = SIZE_UNITS.filter(size => !existingSizes.has(size));
+
+    if (missingSizes.length === 0) {
+        // All sizes already exist
+        return {
+            status: 'success',
+            created: [],
+            skipped: [...SIZE_UNITS],
+        };
+    }
+
+    // Call AI once for all sizes
+    logger.info('batch_produce_backfill.estimating', {
+        foodId,
+        foodName,
+        missingSizes,
+    });
+
+    const result = await estimateProduceSizes(foodName, brandName);
+
+    if (result.status !== 'success' || !result.estimates) {
+        return {
+            status: 'error',
+            created: [],
+            skipped: [],
+            error: result.error ?? 'AI estimation failed',
+        };
+    }
+
+    const { estimates } = result;
+
+    // Save each missing size
+    for (const size of missingSizes) {
+        const grams = estimates[size];
+        const servingId = `ai_${foodId}_${size}`;
+
+        try {
+            await prisma.fatSecretServingCache.upsert({
+                where: { id: servingId },
+                create: {
+                    id: servingId,
+                    foodId,
+                    measurementDescription: size,
+                    servingWeightGrams: grams,
+                    source: 'ai_ambiguous',
+                    confidence: estimates.confidence,
+                    note: estimates.reasoning?.slice(0, 200),
+                },
+                update: {
+                    servingWeightGrams: grams,
+                    confidence: estimates.confidence,
+                    note: estimates.reasoning?.slice(0, 200),
+                },
+            });
+
+            created.push({ size, grams });
+
+            logger.info('batch_produce_backfill.saved', {
+                foodId,
+                foodName,
+                size,
+                grams,
+            });
+        } catch (error) {
+            logger.warn('batch_produce_backfill.save_failed', {
+                foodId,
+                size,
+                error: (error as Error).message,
+            });
+        }
+    }
+
+    // Mark already existing sizes as skipped
+    for (const size of SIZE_UNITS) {
+        if (existingSizes.has(size)) {
+            skipped.push(size);
+        }
+    }
+
+    return {
+        status: created.length > 0 ? 'success' : 'error',
+        created,
+        skipped,
+    };
+}
+

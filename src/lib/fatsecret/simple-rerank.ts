@@ -57,6 +57,7 @@ const WEIGHTS = {
     NUTRITION_CALORIE_SCORING: 0.12,  // Primary: calorie matching
     NUTRITION_MACRO_SCORING: 0.10,    // Secondary: macro sanity check (increased from 0.03)
     MISSING_MACRO_PENALTY: 0.15,      // Penalty for candidates with P:0, C:0 when AI expects values
+    UNSPECIFIED_LEAN_PENALTY: 0.20,   // Penalty for lean variants when query doesn't specify lean %
 };
 
 // Nutrition scoring thresholds
@@ -67,6 +68,9 @@ const NUTRITION_CONFIDENCE_GATE = 0.70;             // Only apply if AI confiden
 const IGNORE_TOKENS = new Set([
     'raw', 'fresh', 'organic', 'natural', 'whole',
     'all', 'purpose', 'pure', 'real', 'original',
+    // Form descriptors - shouldn't affect core food identity matching
+    // e.g., "powdered sugar substitute" should match sugar substitutes, not "Cream Substitute (Powdered)"
+    'powdered', 'granulated', 'liquid', 'dry', 'powder',
 ]);
 
 // Synonyms for matching (bidirectional)
@@ -242,6 +246,107 @@ function getTokenBloatPenalty(
     return Math.min(0.30, (excess - 2) * WEIGHTS.TOKEN_BLOAT_PENALTY);
 }
 
+/**
+ * Penalty for candidates with lean/fat percentages when query doesn't specify one.
+ * 
+ * Problem: "ground beef" → "Organic 85% Lean Ground Beef" instead of generic.
+ * Generic ground beef (~80/20) has different nutrition than lean variants.
+ * 
+ * Regex patterns match: "85%", "93% lean", "85/15", "90/10", "(lean)" alone, etc.
+ * 
+ * @param query - The normalized ingredient name
+ * @param candidateName - The candidate food name
+ * @returns Penalty (0 or UNSPECIFIED_LEAN_PENALTY)
+ */
+function getLeanPercentagePenalty(query: string, candidateName: string): number {
+    const queryLower = query.toLowerCase();
+    const candLower = candidateName.toLowerCase();
+
+    // Patterns that indicate query specifies lean preference
+    const LEAN_QUERY_PATTERNS = [
+        /\b\d{2,3}\s*%/,              // "85%", "93 %"
+        /\b\d{2,3}\s*\/\s*\d{1,2}\b/, // "85/15", "90/10"
+        /\blean\b/,                   // "lean", "extra lean"
+    ];
+
+    // Check if query already specifies lean - no penalty if so
+    const querySpecifiesLean = LEAN_QUERY_PATTERNS.some(p => p.test(queryLower));
+    if (querySpecifiesLean) {
+        return 0;  // User wants lean - don't penalize lean candidates
+    }
+
+    // Patterns that indicate candidate is a lean variant
+    const LEAN_CANDIDATE_PATTERNS = [
+        /\b\d{2,3}\s*%\s*(lean)?/i,   // "85% lean", "93%"
+        /\b\d{2,3}\s*\/\s*\d{1,2}\b/, // "85/15", "90/10"
+        /\(lean\)/i,                  // "(lean)" label
+    ];
+
+    // Only apply to ground meat queries to avoid false positives
+    const GROUND_MEAT_TERMS = ['ground beef', 'ground turkey', 'ground pork', 'ground chicken', 'ground lamb'];
+    const isGroundMeatQuery = GROUND_MEAT_TERMS.some(term => queryLower.includes(term));
+
+    if (!isGroundMeatQuery) {
+        return 0;  // Only penalize for ground meat queries
+    }
+
+    // Check if candidate has lean percentage
+    const candidateHasLean = LEAN_CANDIDATE_PATTERNS.some(p => p.test(candLower));
+    if (candidateHasLean) {
+        return WEIGHTS.UNSPECIFIED_LEAN_PENALTY;
+    }
+
+    return 0;
+}
+
+/**
+ * Extract lean percentage from food name for display annotation.
+ * Returns the lean % (e.g., "85%") or null if not found.
+ * 
+ * This is used to annotate food names when a lean variant is selected
+ * for a generic ground meat query, so users know what they're getting.
+ * 
+ * @param candidateName - The food name to extract from
+ * @returns The lean percentage string (e.g., "85% Lean") or null
+ */
+export function extractLeanPercentage(candidateName: string): string | null {
+    // Match patterns like "85%", "85% Lean", "93% lean"
+    const percentMatch = candidateName.match(/\b(\d{2,3})\s*%\s*(lean)?/i);
+    if (percentMatch) {
+        return `${percentMatch[1]}% Lean`;
+    }
+
+    // Match patterns like "85/15", "90/10"
+    const ratioMatch = candidateName.match(/\b(\d{2,3})\s*\/\s*(\d{1,2})\b/);
+    if (ratioMatch) {
+        return `${ratioMatch[1]}% Lean`;
+    }
+
+    return null;
+}
+
+/**
+ * Check if query is for generic ground meat (no lean % specified).
+ * Used to determine if we should annotate the food name with lean %.
+ */
+export function isGenericGroundMeatQuery(query: string): boolean {
+    const queryLower = query.toLowerCase();
+
+    // Check if it's a ground meat query
+    const GROUND_MEAT_TERMS = ['ground beef', 'ground turkey', 'ground pork', 'ground chicken', 'ground lamb'];
+    const isGroundMeatQuery = GROUND_MEAT_TERMS.some(term => queryLower.includes(term));
+    if (!isGroundMeatQuery) return false;
+
+    // Check if query already specifies lean
+    const LEAN_QUERY_PATTERNS = [
+        /\b\d{2,3}\s*%/,              // "85%", "93 %"
+        /\b\d{2,3}\s*\/\s*\d{1,2}\b/, // "85/15", "90/10"
+        /\blean\b/,                   // "lean", "extra lean"
+    ];
+
+    return !LEAN_QUERY_PATTERNS.some(p => p.test(queryLower));
+}
+
 function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     let score = 0;
 
@@ -279,6 +384,12 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     // e.g., "fat free mayonnaise" → "Fat Free Mayonnaise" gets boost over "Light Mayonnaise"
     const phraseBoost = getExactPhraseBoost(query, candidate.name);
     score += phraseBoost;
+
+    // 2e. Lean percentage penalty (Jan 2026)
+    // Penalize lean variants (85%, 93/7, etc.) when query doesn't specify lean
+    // e.g., "ground beef" should prefer generic (~80/20) over "85% Lean Ground Beef"
+    const leanPenalty = getLeanPercentagePenalty(query, candidate.name);
+    score -= leanPenalty;
 
     // 3. Source preference (FatSecret has better serving data)
     if (candidate.source === 'fatsecret' || candidate.source === 'cache') {

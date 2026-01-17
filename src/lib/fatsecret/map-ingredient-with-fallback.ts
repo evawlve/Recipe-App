@@ -19,7 +19,7 @@ import {
     isReplacementMismatch,
     validateAliasMapping,
 } from './filter-candidates';
-import { simpleRerank, toRerankCandidate } from './simple-rerank';
+import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery } from './simple-rerank';
 import { getValidatedMapping, getValidatedMappingByNormalizedName, saveValidatedMapping } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
@@ -29,10 +29,10 @@ import { FatSecretClient, type FatSecretFoodDetails, type FatSecretServing } fro
 const defaultClient = new FatSecretClient();
 import { getCachedFoodWithRelations, cacheFoodToDetails } from './cache-search';
 import { ensureFoodCached } from './cache';
-import { insertAiServing } from './ai-backfill';
+import { insertAiServing, backfillWeightServing } from './ai-backfill';
 import { aiNormalizeIngredient } from './ai-normalize';
 import { hydrateSingleCandidate } from './hydrate-cache';
-import { queueForDeferredHydration } from './deferred-hydration';
+import { queueForDeferredHydration, proactiveProduceBackfill } from './deferred-hydration';
 import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-generator';
 import { backfillOnDemand } from './serving-backfill';
 import { classifyUnit } from './unit-type';
@@ -47,6 +47,42 @@ const inFlightLocks = new Map<string, Promise<FatsecretMappedIngredient | null>>
 
 function getLockKey(name: string): string {
     return name.toLowerCase().trim();
+}
+
+/**
+ * Annotate ground meat food name with lean percentage when query didn't specify one.
+ * This ensures users can see what lean % they're getting when they just typed "ground beef".
+ * 
+ * Example: Query "ground beef" → Winner "Organic 85% Lean Ground Beef"
+ *          Returns: "Ground Beef (85% Lean)" for clearer display
+ * 
+ * @param foodName - The original food name from the API
+ * @param query - The search query (normalized ingredient name)
+ * @returns The food name, potentially with lean % annotation
+ */
+function annotateGroundMeatName(foodName: string, query: string): string {
+    // Only annotate if this was a generic ground meat query (no lean % specified)
+    if (!isGenericGroundMeatQuery(query)) {
+        return foodName;  // User specified lean %, no annotation needed
+    }
+
+    // Extract lean % from the food name
+    const leanPercent = extractLeanPercentage(foodName);
+    if (!leanPercent) {
+        return foodName;  // Food name doesn't have lean %, nothing to annotate
+    }
+
+    // Check if the lean % is already clearly visible in a short name
+    // e.g., "Ground Beef (85% Lean)" doesn't need annotation
+    const hasExplicitLean = foodName.toLowerCase().includes('% lean');
+    if (hasExplicitLean && foodName.length < 40) {
+        return foodName;  // Already clear
+    }
+
+    // For long branded names, simplify to generic + lean %
+    // e.g., "Organic 85% Lean Ground Beef (Organic Prairie)" → "Ground Beef (85% Lean)"
+    const genericName = query.charAt(0).toUpperCase() + query.slice(1);  // Capitalize first letter
+    return `${genericName} (${leanPercent})`;
 }
 
 // ============================================================
@@ -874,6 +910,41 @@ export async function mapIngredientWithFallback(
         // Step 5: Hydrate and select serving with fallback to next candidates
         let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, client);
 
+        // Step 5a: If hydration failed and user requested a weight unit (oz, g, lb),
+        // try AI backfill for weight serving on the winner BEFORE falling back to other candidates.
+        // This prevents falling back to lower-ranked candidates just because they have gram servings.
+        const isWeightUnit = parsed?.unit && /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms)$/i.test(parsed.unit);
+
+        if (!result && isWeightUnit && winner.source === 'fatsecret') {
+            logger.info('mapping.weight_backfill_attempt', {
+                foodId: winner.id,
+                foodName: winner.name,
+                unit: parsed.unit,
+            });
+
+            const backfillResult = await backfillWeightServing(winner.id);
+
+            if (backfillResult.success) {
+                // Retry hydration now that we have a weight serving
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, client);
+
+                if (result) {
+                    logger.info('mapping.weight_backfill_success', {
+                        foodId: winner.id,
+                        foodName: winner.name,
+                        unit: parsed.unit,
+                        grams: result.grams,
+                    });
+                    selectionReason = 'weight_backfill_success';
+                }
+            } else {
+                logger.warn('mapping.weight_backfill_failed', {
+                    foodId: winner.id,
+                    reason: backfillResult.reason,
+                });
+            }
+        }
+
         // If first choice fails (e.g., branded item without serving weights), try next candidates
         // Note: filtered may be empty if winner came from cache hit - skip fallback in that case
         if (!result && filtered.length > 0) {
@@ -1108,6 +1179,11 @@ export async function mapIngredientWithFallback(
                 logger.debug('mapping.synonym_save_failed', { error: (err as Error).message });
             });
         }
+
+        // Phase 4: Proactive produce backfill (fire-and-forget)
+        // For produce items, pre-populate small/medium/large servings so future
+        // size-based queries (e.g., "1 large avocado") hit cached servings
+        proactiveProduceBackfill(result.foodId, result.foodName);
 
         return result;
     } finally {
@@ -1469,13 +1545,25 @@ async function hydrateAndSelectServing(
     // Calculate final grams for the result
     const finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
 
+    // Determine the correct serving description
+    // For ambiguous unit fallbacks, use the parsed unit with gram weight (e.g., "package (227g)")
+    // instead of the anchor serving's description (e.g., "cup")
+    let finalServingDescription = serving.measurementDescription || serving.description;
+    if (servingResult.matchType === 'fallback' && parsed?.unit && servingResult.gramsPerUnit) {
+        finalServingDescription = `${parsed.unit} (${Math.round(servingResult.gramsPerUnit)}g)`;
+    }
+
+    // Annotate food name for ground meat (so users see lean % when they just typed "ground beef")
+    const queryForAnnotation = parsed?.name?.toLowerCase() || rawLine.toLowerCase();
+    const annotatedFoodName = annotateGroundMeatName(candidate.name, queryForAnnotation);
+
     return {
         source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
         foodId: candidate.id,
-        foodName: candidate.name,
+        foodName: annotatedFoodName,
         brandName: candidate.brandName,
         servingId: serving.id,
-        servingDescription: serving.measurementDescription || serving.description,
+        servingDescription: finalServingDescription,
         grams: finalGrams,
         kcal: macros.kcal,
         protein: macros.protein,
@@ -1622,10 +1710,14 @@ async function buildFdcResult(
 
     const factor = grams / 100;
 
+    // Annotate food name for ground meat (so users see lean % when they just typed "ground beef")
+    const queryForAnnotation = parsed?.name?.toLowerCase() || rawLine.toLowerCase();
+    const annotatedFoodName = annotateGroundMeatName(candidate.name, queryForAnnotation);
+
     return {
         source: 'fdc',
         foodId: candidate.id,
-        foodName: candidate.name,
+        foodName: annotatedFoodName,
         brandName: candidate.brandName,
         servingId: null,
         servingDescription,

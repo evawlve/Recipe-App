@@ -709,10 +709,11 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
     // === NEW: Sugar substitute should prefer pure sweeteners ===
     // "sugar substitute" should NOT match maltodextrin-based products (100g carbs = not low calorie!)
     // The FatSecret "Low Calorie Sugar Substitute (Powdered)" is actually maltodextrin with 100g carbs
+    // Also exclude "cream substitute" which is a completely different product category
     // Prefer sucralose, aspartame, stevia, monk fruit (true zero/low calorie)
     {
-        query: ['sugar substitute', 'sweetener', 'artificial sweetener', 'low calorie sweetener', 'zero calorie sweetener'],
-        excludeIfContains: ['low calorie sugar substitute', 'granulated sugar substitute', 'maltodextrin']
+        query: ['sugar substitute', 'sweetener', 'artificial sweetener', 'low calorie sweetener', 'zero calorie sweetener', 'powdered sugar substitute'],
+        excludeIfContains: ['low calorie sugar substitute', 'granulated sugar substitute', 'maltodextrin', 'cream substitute']
     },
     // === NEW: Fresh herbs should NOT match candy/mints ===
     // "mint" (herb) should NOT map to "Mints (Wilhelmina)" candy

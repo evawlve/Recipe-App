@@ -15,6 +15,52 @@ import { FatSecretClient } from './client';
 import type { UnifiedCandidate } from './gather-candidates';
 
 // ============================================================
+// Proactive Produce Backfill (for winner candidate)
+// ============================================================
+
+/**
+ * Fire-and-forget backfill of small/medium/large servings for produce.
+ * Called for the WINNER candidate after successful mapping.
+ * Does NOT block the main mapping flow.
+ * 
+ * @param foodId - The food cache ID
+ * @param foodName - The food name (for produce detection)
+ */
+export function proactiveProduceBackfill(foodId: string, foodName: string): void {
+    // Fire and forget - kick off immediately, don't await
+    doProduceBackfill(foodId, foodName).catch(err => {
+        logger.debug('proactive_produce_backfill.failed', {
+            foodId,
+            foodName,
+            error: (err as Error).message,
+        });
+    });
+}
+
+async function doProduceBackfill(foodId: string, foodName: string): Promise<void> {
+    const { isProduce, backfillCommonServings } = await import('./serving-backfill');
+
+    if (!isProduce(foodName)) {
+        return; // Not produce, skip
+    }
+
+    logger.info('proactive_produce_backfill.starting', {
+        foodId,
+        foodName,
+    });
+
+    // Backfill small/medium/large for produce
+    const result = await backfillCommonServings(foodId, foodName);
+
+    logger.info('proactive_produce_backfill.complete', {
+        foodId,
+        foodName,
+        backfilled: result.backfilled,
+        skipped: result.skipped,
+    });
+}
+
+// ============================================================
 // Queue Storage
 // ============================================================
 
@@ -37,6 +83,7 @@ let isProcessingQueue = false;
 // ============================================================
 // Queue Management
 // ============================================================
+
 
 /**
  * Fire-and-forget hydration for runner-up candidates.

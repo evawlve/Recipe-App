@@ -21,7 +21,7 @@ export const AMBIGUOUS_UNITS = new Set([
     'bowl', 'bowls',
     'handful', 'handfuls',
     'packet', 'packets',
-    'package', 'packages',    // NEW: "1 package spinach"
+    'package', 'packages',    // "1 package spinach"
     'envelope', 'envelopes',
     'can', 'cans',
     'jar', 'jars',
@@ -33,6 +33,8 @@ export const AMBIGUOUS_UNITS = new Set([
     'pouch', 'pouches',
     // Eggs: API often returns 100g/egg instead of actual ~50g
     'egg', 'eggs',
+    // Stock/bouillon cubes: API inconsistently uses dry vs prepared liquid weights
+    'cube', 'cubes',
     // Size descriptors for whole produce (when no serving data exists)
     'medium', 'large', 'small', 'whole',
 ]);
@@ -195,3 +197,157 @@ function buildPrompt(request: AmbiguousServingRequest): string {
 
     return lines.join('\n');
 }
+
+// ============================================================
+// Batched Produce Size Estimation (single AI call for all 3 sizes)
+// ============================================================
+
+export interface ProduceSizeEstimates {
+    small: number;
+    medium: number;
+    large: number;
+    confidence: number;
+    reasoning?: string;
+}
+
+export interface BatchedProduceSizeResult {
+    status: 'success' | 'error';
+    estimates?: ProduceSizeEstimates;
+    error?: string;
+}
+
+const PRODUCE_SIZE_RESPONSE_SCHEMA = {
+    name: 'produce_size_estimates',
+    schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+            small: { type: 'number', description: 'Weight in grams for a small item' },
+            medium: { type: 'number', description: 'Weight in grams for a medium item' },
+            large: { type: 'number', description: 'Weight in grams for a large item' },
+            confidence: { type: 'number', description: 'Confidence score 0-1' },
+            reasoning: { type: 'string', description: 'Brief explanation of estimates' },
+            error: { type: ['string', 'null'] },
+        },
+        required: ['small', 'medium', 'large', 'confidence', 'reasoning', 'error'],
+    },
+    strict: true,
+};
+
+const PRODUCE_SIZE_SYSTEM_PROMPT = [
+    'You are a nutrition assistant that estimates weights for whole produce items.',
+    'Given a produce item (fruit or vegetable), estimate typical weights in grams for SMALL, MEDIUM, and LARGE sizes.',
+    'Use USDA/FDA standard sizing guidelines when available.',
+    'Return all three estimates with a confidence score (0-1) and brief reasoning.',
+].join(' ');
+
+/**
+ * Estimates small/medium/large weights for a produce item in a SINGLE AI call.
+ * Use this instead of 3 separate calls to estimateAmbiguousServing().
+ */
+export async function estimateProduceSizes(
+    foodName: string,
+    brandName?: string | null
+): Promise<BatchedProduceSizeResult> {
+    if (!FATSECRET_CACHE_AI_ENABLED) {
+        return { status: 'error', error: 'AI backfill disabled' };
+    }
+
+    if (!OPENAI_API_KEY) {
+        return { status: 'error', error: 'OPENAI_API_KEY missing' };
+    }
+
+    const prompt = buildProduceSizePrompt(foodName, brandName);
+
+    try {
+        const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: FATSECRET_CACHE_AI_MODEL,
+                response_format: { type: 'json_schema', json_schema: PRODUCE_SIZE_RESPONSE_SCHEMA },
+                messages: [
+                    { role: 'system', content: PRODUCE_SIZE_SYSTEM_PROMPT },
+                    { role: 'user', content: prompt },
+                ],
+            }),
+        });
+
+        if (!response.ok) {
+            const errorPayload = await response.text();
+            return {
+                status: 'error',
+                error: `OpenAI request failed (${response.status}): ${errorPayload}`,
+            };
+        }
+
+        const payload = (await response.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+        };
+        const content = payload.choices?.[0]?.message?.content;
+        if (!content) {
+            return { status: 'error', error: 'Empty AI response' };
+        }
+
+        const parsed = JSON.parse(content) as Record<string, unknown>;
+
+        if (typeof parsed.error === 'string' && parsed.error.length > 0) {
+            return { status: 'error', error: parsed.error };
+        }
+
+        const small = typeof parsed.small === 'number' ? parsed.small : NaN;
+        const medium = typeof parsed.medium === 'number' ? parsed.medium : NaN;
+        const large = typeof parsed.large === 'number' ? parsed.large : NaN;
+        const confidence = typeof parsed.confidence === 'number' ? parsed.confidence : NaN;
+        const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : undefined;
+
+        if (Number.isNaN(small) || small <= 0 ||
+            Number.isNaN(medium) || medium <= 0 ||
+            Number.isNaN(large) || large <= 0) {
+            return { status: 'error', error: 'Invalid gram estimates from AI' };
+        }
+
+        if (confidence < FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN) {
+            return {
+                status: 'error',
+                error: `Low confidence (${confidence.toFixed(2)} < ${FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN})`,
+            };
+        }
+
+        return {
+            status: 'success',
+            estimates: { small, medium, large, confidence, reasoning },
+        };
+    } catch (error) {
+        return { status: 'error', error: (error as Error).message };
+    }
+}
+
+function buildProduceSizePrompt(foodName: string, brandName?: string | null): string {
+    const lines = [
+        `Produce: ${foodName}`,
+        brandName ? `Variety/Brand: ${brandName}` : '',
+        ``,
+        `Question: What are the typical weights in grams for SMALL, MEDIUM, and LARGE sizes of "${foodName}"?`,
+        ``,
+        `Guidelines (use USDA standards when available):`,
+        `- Small: bottom 10-20% of typical size range`,
+        `- Medium: average/typical size`,
+        `- Large: top 10-20% of typical size range`,
+        ``,
+        `Examples:`,
+        `- Apple: small=150g, medium=182g, large=220g`,
+        `- Banana: small=101g, medium=118g, large=136g`,
+        `- Avocado: small=115g, medium=150g, large=200g`,
+        `- Potato: small=150g, medium=213g, large=300g`,
+        `- Tomato: small=91g, medium=123g, large=182g`,
+        ``,
+        `Provide estimates for all three sizes.`,
+    ].filter(Boolean);
+
+    return lines.join('\n');
+}
+
