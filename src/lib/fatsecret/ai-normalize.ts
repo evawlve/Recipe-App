@@ -1,11 +1,9 @@
 import 'dotenv/config';
 import {
   FATSECRET_CACHE_AI_MODEL,
-  OPENAI_API_BASE_URL,
 } from './config';
 import { getAiNormalizeCache, saveAiNormalizeCache } from './validated-mapping-helpers';
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
+import { callStructuredLlm } from '../ai/structured-client';
 
 type AiNormalizeSuccess = {
   status: 'success';
@@ -74,18 +72,24 @@ const SYSTEM_PROMPT = [
   'You normalize ingredient strings for recipe mapping.',
   'Return JSON with: canonical name (no quantity/units), canonical_base (base ingredient for caching), prep/size phrases, synonyms, cooking modifier (if any), and nutrition estimate.',
   '',
-  'CANONICAL_BASE: This is the simplest form of the ingredient for cache lookup.',
-  '- Strip prep/size words: "strawberry halves" → canonical_base: "strawberries"',
-  '- Use plural form when it\'s a common ingredient: "strawberry" → "strawberries", "egg" → "eggs"',
-  '- Keep modifiers that affect nutrition: "reduced fat milk" → canonical_base: "reduced fat milk"',
+  'CANONICAL_BASE RULES (CRITICAL - affects cache lookups):',
+  '- Strip ONLY prep/size words: "strawberry halves" → canonical_base: "strawberries"',
+  '- Use plural form when common: "strawberry" → "strawberries", "egg" → "eggs"',
+  '- MUST PRESERVE nutrition-affecting modifiers in BOTH normalized_name AND canonical_base:',
+  '  - "fat free milk" → canonical_base: "fat free milk" (NOT just "milk")',
+  '  - "skim milk" → canonical_base: "skim milk" (NOT just "milk")',
+  '  - "unsweetened almond milk" → canonical_base: "unsweetened almond milk" (NOT just "almond milk")',
+  '  - "reduced fat cream cheese" → canonical_base: "reduced fat cream cheese"',
+  '  - "sugar free pudding" → canonical_base: "sugar free pudding"',
   '- BRANDS: When is_branded=true, INCLUDE the brand name (lowercase) in canonical_base:',
   '  - "Philadelphia cream cheese" → canonical_base: "philadelphia cream cheese", is_branded: true',
   '  - "Kerrygold butter" → canonical_base: "kerrygold butter", is_branded: true',
   '  - "Kraft singles" → canonical_base: "kraft cheese singles", is_branded: true',
   '  - "cream cheese" (generic) → canonical_base: "cream cheese", is_branded: false',
+  '- ALLOWED TO STRIP: prep words (diced, chopped), size words (halves, cubes), freshness (fresh)',
   '- Examples: "diced tomatoes" → canonical_base: "tomatoes", "fresh basil leaves" → canonical_base: "basil"',
   '',
-  'CRITICAL: Dietary modifiers that affect nutrition MUST be preserved in normalized_name:',
+  'NUTRITION-AFFECTING MODIFIERS (NEVER strip from normalized_name OR canonical_base):',
   '- Fat modifiers: "reduced fat", "low fat", "nonfat", "fat free", "light", "lite", "skim"',
   '- CONVERT "extra light" → "fat free" (they are equivalent)',
   '- Calorie modifiers: "low calorie", "diet", "zero calorie", "sugar free"',
@@ -173,9 +177,8 @@ export async function aiNormalizeIngredient(
     };
   }
 
-  if (!OPENAI_API_KEY) {
-    return { status: 'error', reason: 'OPENAI_API_KEY missing' };
-  }
+  // Check if no API keys are configured
+  // (callStructuredLlm will handle the actual key check)
 
   const userPrompt = [
     `Raw: ${rawLine}`,
@@ -186,29 +189,20 @@ export async function aiNormalizeIngredient(
     .join('\n');
 
   try {
-    const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: FATSECRET_CACHE_AI_MODEL,
-        response_format: { type: 'json_schema', json_schema: RESPONSE_SCHEMA },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
+    const result = await callStructuredLlm({
+      schema: RESPONSE_SCHEMA,
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt,
+      purpose: 'normalize',
     });
-    const json = await response.json();
-    const content = json?.choices?.[0]?.message?.content;
-    if (!content) {
-      return { status: 'error', reason: 'empty AI response' };
+
+    if (result.status === 'error') {
+      return { status: 'error', reason: result.error ?? 'unknown error' };
     }
-    const parsed = JSON.parse(content);
+
+    const parsed = result.content as Record<string, unknown>;
     if (parsed.error) {
-      return { status: 'error', reason: parsed.error };
+      return { status: 'error', reason: parsed.error as string };
     }
     if (
       typeof parsed.normalized_name !== 'string' ||
@@ -227,7 +221,7 @@ export async function aiNormalizeIngredient(
       confidence: parsed.nutrition_estimate.confidence,
     } : undefined;
 
-    const result: AiNormalizeSuccess = {
+    const normalizeResult: AiNormalizeSuccess = {
       status: 'success',
       normalizedName: parsed.normalized_name,
       canonicalBase: parsed.canonical_base || parsed.normalized_name,  // Fallback for backward compatibility
@@ -243,22 +237,22 @@ export async function aiNormalizeIngredient(
     };
 
     // Log warning if multi-ingredient detected (mapped to first ingredient only)
-    if (result.isMultiIngredient && result.splitIngredients?.length) {
-      console.warn(`[ai-normalize] Multi-ingredient detected: "${rawLine}" → mapping first ingredient only. All ingredients: ${result.splitIngredients.join(', ')}`);
+    if (normalizeResult.isMultiIngredient && normalizeResult.splitIngredients?.length) {
+      console.warn(`[ai-normalize] Multi-ingredient detected: "${rawLine}" → mapping first ingredient only. All ingredients: ${normalizeResult.splitIngredients.join(', ')}`);
     }
 
     // Save to persistent database cache
     await saveAiNormalizeCache(rawLine, {
-      normalizedName: result.normalizedName,
-      canonicalBase: result.canonicalBase,
-      synonyms: result.synonyms,
-      prepPhrases: result.prepPhrases,
-      sizePhrases: result.sizePhrases,
-      cookingModifier: result.cookingModifier,
-      nutritionEstimate: result.nutritionEstimate,
+      normalizedName: normalizeResult.normalizedName,
+      canonicalBase: normalizeResult.canonicalBase,
+      synonyms: normalizeResult.synonyms,
+      prepPhrases: normalizeResult.prepPhrases,
+      sizePhrases: normalizeResult.sizePhrases,
+      cookingModifier: normalizeResult.cookingModifier,
+      nutritionEstimate: normalizeResult.nutritionEstimate,
     });
 
-    return result;
+    return normalizeResult;
   } catch (err) {
     return { status: 'error', reason: (err as Error).message };
   }

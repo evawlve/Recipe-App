@@ -8,11 +8,12 @@
  */
 
 import {
-    FATSECRET_CACHE_AI_MODEL,
     FATSECRET_CACHE_AI_ENABLED,
     FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
-    OPENAI_API_BASE_URL,
 } from '../fatsecret/config';
+import { callStructuredLlm } from './structured-client';
+import { getFdcServingWeight } from '../fdc/fdc-servings';
+import { getDefaultCountServing } from '../servings/default-count-grams';
 
 // Units that are inherently ambiguous and require AI estimation
 export const AMBIGUOUS_UNITS = new Set([
@@ -78,8 +79,6 @@ const SYSTEM_PROMPT = [
     'If you cannot make a reasonable estimate, return an error message.',
 ].join(' ');
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
-
 /**
  * Checks if a unit is ambiguous and requires AI estimation
  */
@@ -89,56 +88,75 @@ export function isAmbiguousUnit(unit: string): boolean {
 
 /**
  * Estimates the weight of an ambiguous unit using AI
+ * Step 8 optimization: Try FDC servings and count defaults before LLM
  */
 export async function estimateAmbiguousServing(
     request: AmbiguousServingRequest
 ): Promise<AmbiguousServingResult> {
     const { foodName, brandName, unit, foodType } = request;
 
+    // Step 8: Try count defaults first (no API call)
+    const sizeFromUnit = unit.toLowerCase() as 'small' | 'medium' | 'large' | undefined;
+    const isSize = ['small', 'medium', 'large'].includes(sizeFromUnit || '');
+    const countDefault = getDefaultCountServing(
+        foodName,
+        unit,
+        isSize ? sizeFromUnit : undefined
+    );
+
+    if (countDefault) {
+        return {
+            status: 'success',
+            estimatedGrams: countDefault.grams,
+            confidence: countDefault.confidence,
+            reasoning: `Default from ${countDefault.source} data`,
+        };
+    }
+
+    // Step 8: Try FDC serving lookup (uses cache)
+    try {
+        const fdcResult = await getFdcServingWeight(
+            foodName,
+            unit,
+            isSize ? sizeFromUnit : undefined
+        );
+
+        if (fdcResult) {
+            return {
+                status: 'success',
+                estimatedGrams: fdcResult.grams,
+                confidence: 0.9, // High confidence for USDA data
+                reasoning: `From USDA FDC: ${fdcResult.label}`,
+            };
+        }
+    } catch (err) {
+        // FDC lookup failed, continue to LLM
+    }
+
+    // Fall back to LLM if no defaults available
     if (!FATSECRET_CACHE_AI_ENABLED) {
         return { status: 'error', error: 'AI backfill disabled' };
     }
 
-    if (!OPENAI_API_KEY) {
-        return { status: 'error', error: 'OPENAI_API_KEY missing' };
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENROUTER_API_KEY) {
+        return { status: 'error', error: 'No API keys configured' };
     }
 
     const prompt = buildPrompt(request);
 
     try {
-        const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: FATSECRET_CACHE_AI_MODEL,
-                response_format: { type: 'json_schema', json_schema: RESPONSE_SCHEMA },
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: prompt },
-                ],
-            }),
+        const result = await callStructuredLlm({
+            schema: RESPONSE_SCHEMA,
+            systemPrompt: SYSTEM_PROMPT,
+            userPrompt: prompt,
+            purpose: 'ambiguous',
         });
 
-        if (!response.ok) {
-            const errorPayload = await response.text();
-            return {
-                status: 'error',
-                error: `OpenAI request failed (${response.status}): ${errorPayload}`,
-            };
+        if (result.status === 'error') {
+            return { status: 'error', error: result.error ?? 'unknown error' };
         }
 
-        const payload = (await response.json()) as {
-            choices?: Array<{ message?: { content?: string } }>;
-        };
-        const content = payload.choices?.[0]?.message?.content;
-        if (!content) {
-            return { status: 'error', error: 'Empty AI response' };
-        }
-
-        const parsed = JSON.parse(content) as Record<string, unknown>;
+        const parsed = result.content as Record<string, unknown>;
 
         if (typeof parsed.error === 'string' && parsed.error.length > 0) {
             return { status: 'error', error: parsed.error };
@@ -243,56 +261,79 @@ const PRODUCE_SIZE_SYSTEM_PROMPT = [
 
 /**
  * Estimates small/medium/large weights for a produce item in a SINGLE AI call.
+ * Step 8 optimization: Try FDC servings and count defaults before LLM.
  * Use this instead of 3 separate calls to estimateAmbiguousServing().
  */
 export async function estimateProduceSizes(
     foodName: string,
     brandName?: string | null
 ): Promise<BatchedProduceSizeResult> {
+    // Step 8: Try FDC first for all three sizes
+    try {
+        const [fdcSmall, fdcMedium, fdcLarge] = await Promise.all([
+            getFdcServingWeight(foodName, 'small', 'small'),
+            getFdcServingWeight(foodName, 'medium', 'medium'),
+            getFdcServingWeight(foodName, 'large', 'large'),
+        ]);
+
+        if (fdcSmall && fdcMedium && fdcLarge) {
+            return {
+                status: 'success',
+                estimates: {
+                    small: fdcSmall.grams,
+                    medium: fdcMedium.grams,
+                    large: fdcLarge.grams,
+                    confidence: 0.9,
+                    reasoning: 'From USDA FDC household measures',
+                },
+            };
+        }
+    } catch (err) {
+        // FDC lookup failed, try count defaults
+    }
+
+    // Step 8: Try count defaults
+    const defaultSmall = getDefaultCountServing(foodName, 'small', 'small');
+    const defaultMedium = getDefaultCountServing(foodName, 'medium', 'medium');
+    const defaultLarge = getDefaultCountServing(foodName, 'large', 'large');
+
+    if (defaultSmall && defaultMedium && defaultLarge) {
+        return {
+            status: 'success',
+            estimates: {
+                small: defaultSmall.grams,
+                medium: defaultMedium.grams,
+                large: defaultLarge.grams,
+                confidence: Math.min(defaultSmall.confidence, defaultMedium.confidence, defaultLarge.confidence),
+                reasoning: `Default from ${defaultMedium.source} data`,
+            },
+        };
+    }
+
+    // Fall back to LLM
     if (!FATSECRET_CACHE_AI_ENABLED) {
         return { status: 'error', error: 'AI backfill disabled' };
     }
 
-    if (!OPENAI_API_KEY) {
-        return { status: 'error', error: 'OPENAI_API_KEY missing' };
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENROUTER_API_KEY) {
+        return { status: 'error', error: 'No API keys configured' };
     }
 
     const prompt = buildProduceSizePrompt(foodName, brandName);
 
     try {
-        const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: FATSECRET_CACHE_AI_MODEL,
-                response_format: { type: 'json_schema', json_schema: PRODUCE_SIZE_RESPONSE_SCHEMA },
-                messages: [
-                    { role: 'system', content: PRODUCE_SIZE_SYSTEM_PROMPT },
-                    { role: 'user', content: prompt },
-                ],
-            }),
+        const result = await callStructuredLlm({
+            schema: PRODUCE_SIZE_RESPONSE_SCHEMA,
+            systemPrompt: PRODUCE_SIZE_SYSTEM_PROMPT,
+            userPrompt: prompt,
+            purpose: 'produce',
         });
 
-        if (!response.ok) {
-            const errorPayload = await response.text();
-            return {
-                status: 'error',
-                error: `OpenAI request failed (${response.status}): ${errorPayload}`,
-            };
+        if (result.status === 'error') {
+            return { status: 'error', error: result.error ?? 'unknown error' };
         }
 
-        const payload = (await response.json()) as {
-            choices?: Array<{ message?: { content?: string } }>;
-        };
-        const content = payload.choices?.[0]?.message?.content;
-        if (!content) {
-            return { status: 'error', error: 'Empty AI response' };
-        }
-
-        const parsed = JSON.parse(content) as Record<string, unknown>;
+        const parsed = result.content as Record<string, unknown>;
 
         if (typeof parsed.error === 'string' && parsed.error.length > 0) {
             return { status: 'error', error: parsed.error };

@@ -42,6 +42,14 @@ export const FATSECRET_CACHE_AI_MAX_DENSITY = Number.parseFloat(
 export const FATSECRET_CACHE_AI_ENABLED = getFlag('FATSECRET_CACHE_AI_ENABLED', true);
 export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://api.openai.com/v1';
 
+// OpenRouter configuration for cheap-first LLM fallback (Jan 2026)
+export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? '';
+export const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1';
+export const CHEAP_AI_MODEL_PRIMARY = process.env.CHEAP_AI_MODEL_PRIMARY ?? 'qwen/qwen-turbo';
+export const CHEAP_AI_MODEL_FALLBACK = process.env.CHEAP_AI_MODEL_FALLBACK ?? 'mistralai/mistral-nemo';
+export const STRUCTURED_LLM_TIMEOUT_MS = Number.parseInt(process.env.STRUCTURED_LLM_TIMEOUT_MS ?? '15000', 10);
+export const STRUCTURED_LLM_MAX_RETRIES = Number.parseInt(process.env.STRUCTURED_LLM_MAX_RETRIES ?? '3', 10);
+
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
 export const FATSECRET_REGION: FatSecretRegion = rawRegion === 'GLOBAL' ? 'GLOBAL' : 'US';

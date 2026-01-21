@@ -6,6 +6,7 @@
  */
 
 import { logger } from '../logger';
+import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
 
 export interface RerankCandidate {
     id: string;
@@ -544,11 +545,13 @@ function computeNutritionScore(
  * @param query - The normalized ingredient name
  * @param candidates - List of candidates from APIs
  * @param aiNutritionEstimate - Optional AI-estimated nutrition for scoring
+ * @param rawLine - Optional raw ingredient line for modifier constraint extraction
  */
 export function simpleRerank(
     query: string,
     candidates: RerankCandidate[],
-    aiNutritionEstimate?: AiNutritionEstimate
+    aiNutritionEstimate?: AiNutritionEstimate,
+    rawLine?: string
 ): SimpleRerankResult | null {
     if (candidates.length === 0) {
         return null;
@@ -562,18 +565,68 @@ export function simpleRerank(
         };
     }
 
-    // Score all candidates (base score + nutrition score)
-    const scored = candidates.map(c => {
-        const baseScore = computeSimpleScore(c, query);
-        const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
-        return {
-            candidate: c,
-            score: baseScore + nutritionResult.score,
-            baseScore,
-            nutritionScore: nutritionResult.score,
-            nutritionReason: nutritionResult.reason,
-        };
-    });
+    // Step 4: Extract modifier constraints from the raw line (or query)
+    const constraints = extractModifierConstraints(rawLine || query);
+
+    // Score all candidates (base score + nutrition score + modifier constraints)
+    const scored = candidates
+        .map(c => {
+            // Apply modifier constraints (Step 4)
+            const constraintResult = applyModifierConstraints(
+                { name: c.name, brandName: c.brandName },
+                constraints
+            );
+
+            // Skip rejected candidates entirely
+            if (constraintResult.rejected) {
+                return null;
+            }
+
+            const baseScore = computeSimpleScore(c, query);
+            const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
+
+            // Apply constraint penalty
+            const constraintPenalty = constraintResult.penalty * 0.5; // Scale penalty to reasonable range
+
+            return {
+                candidate: c,
+                score: baseScore + nutritionResult.score - constraintPenalty,
+                baseScore,
+                nutritionScore: nutritionResult.score,
+                nutritionReason: nutritionResult.reason,
+                constraintPenalty,
+                constraintReason: constraintResult.reason,
+            };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
+
+    // If all candidates were rejected by constraints, fall back to original scoring without constraints
+    if (scored.length === 0) {
+        logger.warn('simple_rerank.all_rejected', {
+            query,
+            rawLine,
+            candidateCount: candidates.length,
+            constraints: {
+                requiredTokens: constraints.requiredTokens.slice(0, 3),
+                bannedTokens: constraints.bannedTokens.slice(0, 3)
+            }
+        });
+        // Re-score without constraint rejection (still apply penalties)
+        const fallbackScored = candidates.map(c => {
+            const baseScore = computeSimpleScore(c, query);
+            const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
+            return {
+                candidate: c,
+                score: baseScore + nutritionResult.score,
+                baseScore,
+                nutritionScore: nutritionResult.score,
+                nutritionReason: nutritionResult.reason,
+                constraintPenalty: 0,
+                constraintReason: 'fallback_no_rejection',
+            };
+        });
+        scored.push(...fallbackScored);
+    }
 
     // Sort by score descending, with deterministic tiebreaker (ID) to ensure stable results
     // This prevents non-determinism when candidates have equal scores

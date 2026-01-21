@@ -6,6 +6,7 @@ import { prisma } from '../src/lib/db';
 import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../src/lib/fatsecret/map-ingredient-with-fallback';
 import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
 import { refreshNormalizationRules } from '../src/lib/fatsecret/normalization-rules';
+import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/fatsecret/mapping-logger';
 
 // DEBUG: File-based logging to trace control flow
 const debugLog = fs.createWriteStream('logs/pilot-debug.log', { flags: 'w' });
@@ -40,6 +41,11 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
     dbg('=== pilotBatchImport STARTED ===');
     // Sync AI-learned prep phrases before processing
     await refreshNormalizationRules();
+
+    // Initialize mapping analysis session for AI call tracking
+    if (process.env.ENABLE_MAPPING_ANALYSIS === 'true') {
+        initMappingAnalysisSession();
+    }
 
     const aiLogStream = aiLogPath ? fs.createWriteStream(aiLogPath, { flags: 'a' }) : null;
     const writeAiLog = (entry: AiLogEntry) => {
@@ -436,6 +442,11 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
     if (aiLogStream) {
         aiLogStream.end();
         console.log(`📝 AI log written to: ${aiLogPath}`);
+    }
+
+    // Finalize mapping analysis session (shows AI call summary)
+    if (process.env.ENABLE_MAPPING_ANALYSIS === 'true') {
+        finalizeMappingAnalysisSession();
     }
 
     return stats;

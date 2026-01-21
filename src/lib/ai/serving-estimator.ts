@@ -1,13 +1,12 @@
 import type { FatSecretFoodCache, FatSecretServingCache, Prisma } from '@prisma/client';
 import {
-  FATSECRET_CACHE_AI_MODEL,
   FATSECRET_CACHE_AI_ENABLED,
   FATSECRET_CACHE_AI_CONFIDENCE_MIN,
   FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
   FATSECRET_CACHE_AI_MAX_DENSITY,
   FATSECRET_CACHE_AI_MIN_DENSITY,
-  OPENAI_API_BASE_URL,
 } from '../fatsecret/config';
+import { callStructuredLlm } from './structured-client';
 
 export type ServingGapType = 'volume' | 'weight';
 
@@ -31,17 +30,17 @@ export interface ServingSuggestion {
 
 export type AiServingResult =
   | {
-      status: 'success';
-      suggestion: ServingSuggestion;
-      prompt: string;
-      raw: unknown;
-    }
+    status: 'success';
+    suggestion: ServingSuggestion;
+    prompt: string;
+    raw: unknown;
+  }
   | {
-      status: 'error';
-      reason: string;
-      prompt: string;
-      raw?: unknown;
-    };
+    status: 'error';
+    reason: string;
+    prompt: string;
+    raw?: unknown;
+  };
 
 const RESPONSE_SCHEMA = {
   name: 'fatsecret_serving_suggestion',
@@ -77,7 +76,6 @@ const SYSTEM_PROMPT = [
   'When you can provide a serving, prefer canonical nutrition label formats (cups, tbsp, tsp, ml, fl oz, grams, ounces, or explicit counts).',
   'Report your confidence between 0 and 1 and include a short rationale.',
 ].join(' ');
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
 function formatNutrients(nutrients: Prisma.JsonValue | null): string {
@@ -199,46 +197,23 @@ export async function requestAiServing(request: AiServingRequest): Promise<AiSer
   if (!FATSECRET_CACHE_AI_ENABLED) {
     return { status: 'error', reason: 'AI backfill disabled', prompt };
   }
-  if (!OPENAI_API_KEY) {
-    return { status: 'error', reason: 'OPENAI_API_KEY missing', prompt };
+  if (!OPENAI_API_KEY && !process.env.OPENROUTER_API_KEY) {
+    return { status: 'error', reason: 'No API keys configured', prompt };
   }
 
   try {
-    const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: FATSECRET_CACHE_AI_MODEL,
-        response_format: { type: 'json_schema', json_schema: RESPONSE_SCHEMA },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-      }),
+    const result = await callStructuredLlm({
+      schema: RESPONSE_SCHEMA,
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: prompt,
+      purpose: 'serving',
     });
 
-    if (!response.ok) {
-      const errorPayload = await response.text();
-      return {
-        status: 'error',
-        reason: `OpenAI request failed (${response.status})`,
-        prompt,
-        raw: errorPayload,
-      };
+    if (result.status === 'error') {
+      return { status: 'error', reason: result.error ?? 'unknown error', prompt };
     }
 
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = payload.choices?.[0]?.message?.content;
-    if (!content) {
-      return { status: 'error', reason: 'Empty AI response', prompt, raw: payload };
-    }
-
-    const parsed = JSON.parse(content) as Record<string, unknown>;
+    const parsed = result.content as Record<string, unknown>;
     if (typeof parsed.error === 'string' && parsed.error.length > 0) {
       return { status: 'error', reason: parsed.error, prompt, raw: parsed };
     }
@@ -263,10 +238,10 @@ export async function requestAiServing(request: AiServingRequest): Promise<AiSer
     }
 
     // Use lower threshold for on-demand backfills (user can see and override the gram amount)
-    const minConfidence = request.isOnDemandBackfill 
-      ? FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN 
+    const minConfidence = request.isOnDemandBackfill
+      ? FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN
       : FATSECRET_CACHE_AI_CONFIDENCE_MIN;
-    
+
     if (suggestion.confidence < minConfidence) {
       return { status: 'error', reason: `low confidence (${suggestion.confidence.toFixed(2)} < ${minConfidence})`, prompt, raw: parsed };
     }

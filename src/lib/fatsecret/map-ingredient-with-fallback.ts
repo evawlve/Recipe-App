@@ -37,6 +37,9 @@ import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-
 import { backfillOnDemand } from './serving-backfill';
 import { classifyUnit } from './unit-type';
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
+import { shouldNormalizeLlm } from './normalize-gate';
+import { extractModifierConstraints } from './modifier-constraints';
+import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -225,6 +228,9 @@ export async function mapIngredientWithFallback(
             );
 
             if (hydratedResult) {
+                // Track cache hit for metrics
+                incrementCacheHit();
+
                 // Log the cache hit for summary tracking
                 logMappingAnalysis({
                     rawIngredient: trimmed,
@@ -255,6 +261,7 @@ export async function mapIngredientWithFallback(
                     },
                     finalResult: 'success',
                     source: 'early_cache',
+                    aiCalls: undefined,  // No AI calls for cache hits
                 });
                 return hydratedResult;
             }
@@ -363,7 +370,44 @@ export async function mapIngredientWithFallback(
             const hydratedResult = await hydrateAndSelectServing(
                 cachedCandidate, parsed, cachedAfterLock.confidence, rawLine, client
             );
-            if (hydratedResult) return hydratedResult;
+            if (hydratedResult) {
+                // Track and log cache hit
+                incrementCacheHit();
+                if (ENABLE_MAPPING_ANALYSIS) {
+                    logMappingAnalysis({
+                        rawIngredient: trimmed,
+                        parsed: {
+                            amount: parsed?.qty,
+                            unit: parsed?.unit,
+                            ingredient: parsed?.name,
+                        },
+                        topCandidates: [],
+                        selectedCandidate: {
+                            foodId: cachedAfterLock.foodId,
+                            foodName: cachedAfterLock.foodName,
+                            brandName: cachedAfterLock.brandName || '',
+                            confidence: cachedAfterLock.confidence,
+                            selectionReason: 'cache_hit_after_lock',
+                        },
+                        selectedNutrition: {
+                            calories: hydratedResult.kcal,
+                            protein: hydratedResult.protein,
+                            carbs: hydratedResult.carbs,
+                            fat: hydratedResult.fat,
+                            perGrams: hydratedResult.grams,
+                        },
+                        servingSelection: {
+                            servingDescription: hydratedResult.servingDescription || 'N/A',
+                            grams: hydratedResult.grams,
+                            backfillUsed: false,
+                        },
+                        finalResult: 'success',
+                        source: 'early_cache',
+                        aiCalls: undefined,
+                    });
+                }
+                return hydratedResult;
+            }
         }
         logger.warn('mapping.lock_released_but_no_cache', { baseName });
     }
@@ -452,7 +496,43 @@ export async function mapIngredientWithFallback(
                 );
 
                 if (hydratedResult) {
-                    // Usage already tracked by getValidatedMapping
+                    // Track cache hit for metrics
+                    incrementCacheHit();
+
+                    // Log the early cache hit
+                    if (ENABLE_MAPPING_ANALYSIS) {
+                        logMappingAnalysis({
+                            rawIngredient: trimmed,
+                            parsed: {
+                                amount: parsed?.qty,
+                                unit: parsed?.unit,
+                                ingredient: parsed?.name,
+                            },
+                            topCandidates: [],
+                            selectedCandidate: {
+                                foodId: earlyCacheHit.foodId,
+                                foodName: earlyCacheHit.foodName,
+                                brandName: earlyCacheHit.brandName || '',
+                                confidence: earlyCacheHit.confidence,
+                                selectionReason: 'early_cache_hit_after_normalize',
+                            },
+                            selectedNutrition: {
+                                calories: hydratedResult.kcal,
+                                protein: hydratedResult.protein,
+                                carbs: hydratedResult.carbs,
+                                fat: hydratedResult.fat,
+                                perGrams: hydratedResult.grams,
+                            },
+                            servingSelection: {
+                                servingDescription: hydratedResult.servingDescription || 'N/A',
+                                grams: hydratedResult.grams,
+                                backfillUsed: false,
+                            },
+                            finalResult: 'success',
+                            source: 'early_cache',
+                            aiCalls: undefined,  // No AI calls for cache hits
+                        });
+                    }
                     return hydratedResult;
                 }
                 // If hydration fails, continue with normal flow
@@ -474,28 +554,56 @@ export async function mapIngredientWithFallback(
 
         // Try AI normalization for better search terms
         // SKIP if we already applied a generic fallback (to avoid AI changing "vegetable oil" to "cooking oil")
+        // ============================================================
+        // STEP 5: NORMALIZE GATE - Skip LLM if heuristics are sufficient
+        // ============================================================
         let aiSynonyms: string[] = [];
         let aiNutritionEstimate: { caloriesPer100g: number; proteinPer100g: number; carbsPer100g: number; fatPer100g: number; confidence: number } | undefined;
         let aiCanonicalBase: string | undefined;  // For cache key consolidation
+        let skippedLlmNormalize = false;
+
         if (!usedGenericFallback) {
-            const aiHint = await aiNormalizeIngredient(rawLine, normalizedName);
-            if (aiHint.status === 'success') {
-                if (aiHint.normalizedName) {
-                    normalizedName = aiHint.normalizedName;
+            // First gather candidates to check if LLM is needed
+            const quickGatherOptions: GatherOptions = {
+                client,
+                skipCache,
+                skipLiveApi: !allowLiveFallback,
+                skipFdc,
+                aiSynonyms: learnedSynonyms,  // Use only learned synonyms for quick check
+            };
+
+            const quickCandidates = await gatherCandidates(rawLine, parsed, normalizedName, quickGatherOptions);
+            const modConstraints = extractModifierConstraints(trimmed);
+            const gateDecision = shouldNormalizeLlm(trimmed, quickCandidates, modConstraints);
+
+            if (gateDecision.shouldCallLlm) {
+                logger.info('normalize_gate.calling_llm', {
+                    rawLine: trimmed,
+                    reason: gateDecision.reason,
+                    candidateCount: quickCandidates.length
+                });
+
+                const aiHint = await aiNormalizeIngredient(rawLine, normalizedName);
+                if (aiHint.status === 'success') {
+                    if (aiHint.normalizedName) {
+                        normalizedName = aiHint.normalizedName;
+                    }
+                    aiCanonicalBase = aiHint.canonicalBase;
+                    aiSynonyms = aiHint.synonyms || [];
+                    if (aiSynonyms.length > 0) {
+                        logger.info('mapping.ai_synonyms', { rawLine: trimmed, synonyms: aiSynonyms });
+                    }
+                    aiNutritionEstimate = aiHint.nutritionEstimate;
                 }
-                // Capture canonical base for cache key consolidation
-                // This ensures "lemon zest", "lemon rind", "lemon peel" all use the same cache key
-                aiCanonicalBase = aiHint.canonicalBase;
-                // Collect AI-generated synonyms for additional search queries (but don't save them here)
-                // Saving happens later via conservative generateAndSaveSynonyms after successful mapping
-                aiSynonyms = aiHint.synonyms || [];
-                if (aiSynonyms.length > 0) {
-                    logger.info('mapping.ai_synonyms', { rawLine: trimmed, synonyms: aiSynonyms });
-                    // NOTE: We no longer save synonyms here - the conservative ai-synonym-generator
-                    // handles this after successful mapping, with proper filtering
-                }
-                // Extract AI nutrition estimate for Route C macro sanity checking
-                aiNutritionEstimate = aiHint.nutritionEstimate;
+            } else {
+                logger.info('normalize_gate.skipped_llm', {
+                    rawLine: trimmed,
+                    reason: gateDecision.reason,
+                    confidence: gateDecision.confidence.toFixed(2),
+                    candidateCount: quickCandidates.length
+                });
+                skippedLlmNormalize = true;
+                incrementSkippedByGate();  // Track for metrics
             }
         }
 
@@ -655,7 +763,7 @@ export async function mapIngredientWithFallback(
                             nutrition: c.nutrition,  // Include for Route C macro sanity check
                         }));
 
-                        const rerankResult = simpleRerank(searchQuery, rerankCandidates, aiNutritionEstimate);
+                        const rerankResult = simpleRerank(searchQuery, rerankCandidates, aiNutritionEstimate, trimmed);
 
                         if (rerankResult) {
                             const selected = filtered.find(c => c.id === rerankResult.winner.id);
@@ -1168,6 +1276,14 @@ export async function mapIngredientWithFallback(
                 },
                 finalResult: 'success',
                 source: selectionReason === 'normalized_cache_hit' ? 'normalized_cache' : 'full_pipeline',
+                // Track AI calls made during this mapping
+                aiCalls: {
+                    normalize: {
+                        called: !skippedLlmNormalize && !usedGenericFallback,
+                        skipped: skippedLlmNormalize,
+                        reason: skippedLlmNormalize ? 'gate_skipped' : undefined,
+                    },
+                },
             });
         }
 

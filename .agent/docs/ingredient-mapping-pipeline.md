@@ -1070,6 +1070,129 @@ Outputs:
 
 ---
 
+## AI Cost Reduction Refactor (Jan 2026)
+
+### Overview
+
+Implemented a "Heuristic-First, AI-Gated" pipeline to reduce LLM API costs by eliminating unnecessary AI normalization calls. The system uses candidate confidence scoring to decide whether LLM normalization is needed.
+
+### Verified Results (20-Recipe Import, Fresh Cache)
+
+```
+AI Call Summary:
+  Total Ingredients Processed: 436
+  Cache Hits: 9
+  Gate Skipped: 126
+  LLM Calls: 301
+    - Normalize: 0      ← 100% skipped by gate!
+    - Serving: 256
+    - Ambiguous: 45
+  Skip Rate: 31.0%
+```
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Normalize Gate | `normalize-gate.ts` | Decides if LLM normalize needed |
+| Modifier Constraints | `modifier-constraints.ts` | Enforces fat-free/unsweetened without AI |
+| AI Call Metrics | `structured-client.ts` | Tracks all LLM calls |
+| Mapping Logger | `mapping-logger.ts` | Logs cache hits + AI tags |
+
+### LLM Normalize Gate
+
+**File**: `src/lib/fatsecret/normalize-gate.ts`
+
+The gate evaluates candidate quality before calling AI normalization:
+
+```typescript
+interface GateDecision {
+    shouldCallLlm: boolean;
+    confidence: number;
+    reason: string;
+}
+
+function shouldNormalizeLlm(
+    rawLine: string,
+    candidates: UnifiedCandidate[],
+    topScore: number
+): GateDecision
+```
+
+**Skip Conditions**:
+- Top candidate score ≥ 0.85
+- Single-word ingredient with exact match
+- High-confidence match within top 3 candidates
+
+**Trigger Conditions**:
+- Multi-ingredient input detected ("salt and pepper")
+- Low candidate scores (< 0.7)
+- Complex modifiers requiring AI parsing
+
+### AI Call Metrics Tracking
+
+**File**: `src/lib/ai/structured-client.ts`
+
+Session-based metrics for cost analysis:
+
+```typescript
+const sessionMetrics = {
+    normalize: 0,      // AI normalization calls
+    serving: 0,        // Serving estimation calls
+    ambiguous: 0,      // Ambiguous unit estimation
+    produce: 0,        // Produce size estimation
+    skippedByGate: 0,  // Calls avoided by gate
+    cacheHits: 0       // Validated cache hits
+};
+
+// Functions
+getAiCallMetrics()       // Get current counts
+resetAiCallMetrics()     // Reset for new session
+incrementAiCall(purpose) // Auto-called on LLM success
+incrementSkippedByGate() // Track gate skips
+incrementCacheHit()      // Track cache hits
+getAiCallSummary()       // Human-readable summary
+```
+
+### Mapping Summary Tags
+
+With `ENABLE_MAPPING_ANALYSIS=true`, the summary shows AI status:
+
+```
+✓ {full_pipeline} [0.98] "1 banana" → "Banana" | 105kcal [AI:GATE]
+✓ {early_cache} [0.98] "1 egg" → "Egg" | 74kcal [AI:CACHE]
+```
+
+| Tag | Meaning |
+|-----|---------|
+| `[AI:GATE]` | Normalize LLM skipped by gate |
+| `[AI:CACHE]` | Cache hit, no pipeline run |
+| `[AI:NORM]` | LLM normalize was called |
+
+### Verification Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `test-normalize-gate.ts` | Verify gate skip logic |
+| `test-ai-metrics.ts` | Test metrics tracking |
+| `check-db-stats.ts` | Database status |
+| `clear-all-mappings.ts` | Clear cache for fresh test |
+
+### Running Cost Analysis
+
+```powershell
+# Clear all mappings for fresh test
+npm run ts scripts/clear-all-mappings.ts
+
+# Run pilot import with metrics
+$env:ENABLE_MAPPING_ANALYSIS='true'; npm run pilot-import 20
+
+# View results
+Get-Content logs/mapping-summary-*.txt | Select-Object -Last 30
+```
+
+---
+
 ## Future Improvements
 
 1. **Remove AI Normalize dependency**: Use improved parsing once cache is mature

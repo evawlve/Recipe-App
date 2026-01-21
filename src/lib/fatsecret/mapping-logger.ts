@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getAiCallMetrics, getAiCallSummary, resetAiCallMetrics } from '../ai/structured-client';
 
 export interface MappingAnalysisLog {
     timestamp?: string;  // Optional - can be generated automatically if not provided
@@ -73,6 +74,12 @@ export interface MappingAnalysisLog {
 
     // Source tracking - where did this mapping come from?
     source?: 'early_cache' | 'normalized_cache' | 'full_pipeline';
+
+    // AI call tracking - which AI calls were made for this ingredient
+    aiCalls?: {
+        normalize?: { called: boolean; skipped: boolean; reason?: string; };
+        serving?: { called: boolean; type?: 'ambiguous' | 'produce' | 'weight'; };
+    };
 }
 
 interface MappingAnalysisSession {
@@ -300,10 +307,25 @@ function writeSimpleSummaryEntry(log: MappingAnalysisLog) {
         nutritionStr = ` | ${nutr.calories.toFixed(0)}kcal P:${nutr.protein.toFixed(1)} C:${nutr.carbs.toFixed(1)} F:${nutr.fat.toFixed(1)}`;
     }
 
-    // Format the line with source indicator
+    // Format the line with source indicator and AI call indicator
     const flagStr = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
     const sourceTag = log.source ? `{${log.source}} ` : '';
-    const line = `${status} ${sourceTag}[${conf}] "${raw}" → "${mapped}${brand}"${nutritionStr}${flagStr}\n`;
+
+    // AI call indicator
+    let aiTag = '';
+    if (log.aiCalls) {
+        const parts: string[] = [];
+        if (log.aiCalls.normalize?.called) parts.push('NORM');
+        if (log.aiCalls.normalize?.skipped) parts.push('GATE');
+        if (log.aiCalls.serving?.called) parts.push('SERV');
+        if (parts.length > 0) {
+            aiTag = ` [AI:${parts.join('+')}]`;
+        }
+    } else if (log.source === 'early_cache' || log.source === 'normalized_cache') {
+        aiTag = ' [AI:CACHE]';
+    }
+
+    const line = `${status} ${sourceTag}[${conf}] "${raw}" → "${mapped}${brand}"${nutritionStr}${aiTag}${flagStr}\n`;
 
     fs.appendFileSync(simpleSummaryPath, line, 'utf-8');
 }
@@ -316,14 +338,30 @@ export function finalizeMappingAnalysisSession() {
 
     writeSessionToFile();
 
+    // Get AI call metrics
+    const metrics = getAiCallMetrics();
+    const aiSummary = getAiCallSummary();
+
     console.log('\n' + '='.repeat(80));
     console.log('📊 MAPPING ANALYSIS SESSION COMPLETE');
     console.log('='.repeat(80));
     console.log(`Total Ingredients: ${currentSession.mappings.length}`);
     console.log(`Successful: ${currentSession.mappings.filter(m => m.finalResult === 'success').length}`);
     console.log(`Failed: ${currentSession.mappings.filter(m => m.finalResult === 'failed').length}`);
+    console.log('');
+    console.log('🤖 ' + aiSummary.replace(/\n/g, '\n   '));
+    console.log('');
     console.log(`Detailed log: ${logFilePath}`);
     console.log(`Quick summary: ${simpleSummaryPath}\n`);
+
+    // Write AI summary to the simple summary file
+    if (simpleSummaryPath) {
+        fs.appendFileSync(simpleSummaryPath, '\n' + '='.repeat(50) + '\n', 'utf-8');
+        fs.appendFileSync(simpleSummaryPath, aiSummary + '\n', 'utf-8');
+    }
+
+    // Reset metrics for next session
+    resetAiCallMetrics();
 
     currentSession = null;
     logFilePath = null;

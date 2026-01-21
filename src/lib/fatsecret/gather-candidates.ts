@@ -52,6 +52,94 @@ export interface GatherOptions {
 }
 
 // ============================================================
+// Step 3: Multi-Query Gather Variants
+// Modifier synonym groups for search expansion
+// ============================================================
+
+/**
+ * Modifier synonym groups - each inner array represents equivalent terms.
+ * Used to expand queries and find candidates with different modifier phrasings.
+ * 
+ * @example "fat free milk" → also search "nonfat milk", "skim milk"
+ */
+export const MODIFIER_SYNONYM_GROUPS: string[][] = [
+    // Fat-free group (NOT the same as reduced-fat)
+    ['fat free', 'fat-free', 'nonfat', 'non-fat', 'skim', '0%', 'zero fat'],
+    // Reduced-fat group (separate from fat-free)
+    ['reduced fat', 'low fat', 'lowfat', 'low-fat', 'light', 'lite', '2%', '1%'],
+    // Sugar-free/unsweetened group
+    ['unsweetened', 'no sugar added', 'sugar free', 'sugar-free', 'no sugar', 'zero sugar'],
+    // Whole grain group
+    ['whole grain', 'whole wheat', 'wholegrain', 'wholewheat', 'whole-grain', 'whole-wheat'],
+    // Extra lean group (ground meats)
+    ['extra lean', 'extra-lean', '95%', '93%', '95% lean', '93% lean'],
+    // Lean group (ground meats)
+    ['lean', '90%', '85%', '90% lean', '85% lean', '90/10', '85/15'],
+    // Organic group
+    ['organic', 'certified organic'],
+    // Regular/whole dairy
+    ['whole', 'full fat', 'regular', 'full-fat'],
+];
+
+/**
+ * Build expanded query variants with modifier synonyms.
+ * Handles "fat free" ↔ "nonfat" ↔ "skim" style expansions.
+ * 
+ * @param parsed - Parsed ingredient (optional, can be null)
+ * @param cleanedInput - The cleaned/normalized input string
+ * @returns Array of query variants to search
+ * 
+ * @example
+ * buildQueryVariants(parsed, "fat free milk") 
+ * // → ["fat free milk", "nonfat milk", "skim milk", "fat-free milk", ...]
+ */
+export function buildQueryVariants(
+    parsed: ParsedIngredient | null,
+    cleanedInput: string
+): string[] {
+    const variants: string[] = [];
+    const seen = new Set<string>();
+
+    const addVariant = (v: string) => {
+        const lower = v.toLowerCase().trim();
+        if (lower && !seen.has(lower)) {
+            seen.add(lower);
+            variants.push(lower);
+        }
+    };
+
+    // Start with the original cleaned input
+    addVariant(cleanedInput);
+
+    // Add parsed name if different
+    if (parsed?.name && parsed.name.toLowerCase() !== cleanedInput.toLowerCase()) {
+        addVariant(parsed.name);
+    }
+
+    const inputLower = cleanedInput.toLowerCase();
+
+    // Find which modifier group(s) the input contains
+    for (const group of MODIFIER_SYNONYM_GROUPS) {
+        for (const modifier of group) {
+            if (inputLower.includes(modifier)) {
+                // Found a modifier - add variants with synonyms from the same group
+                for (const synonym of group) {
+                    if (synonym !== modifier) {
+                        const variant = inputLower.replace(modifier, synonym);
+                        addVariant(variant);
+                    }
+                }
+                // Only expand one modifier group to avoid query explosion
+                break;
+            }
+        }
+    }
+
+    // Limit to reasonable number of variants
+    return variants.slice(0, 8);
+}
+
+// ============================================================
 // Main Gather Function
 // ============================================================
 
