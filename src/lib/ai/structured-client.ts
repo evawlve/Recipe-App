@@ -21,6 +21,10 @@ import {
     CHEAP_AI_MODEL_FALLBACK,
     STRUCTURED_LLM_TIMEOUT_MS,
     STRUCTURED_LLM_MAX_RETRIES,
+    OLLAMA_ENABLED,
+    OLLAMA_BASE_URL,
+    OLLAMA_MODEL,
+    OLLAMA_TIMEOUT_MS,
 } from '../fatsecret/config';
 
 // ============================================================
@@ -28,7 +32,7 @@ import {
 // ============================================================
 
 export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce';
-export type StructuredLlmProvider = 'openrouter' | 'openai';
+export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
 
 export interface StructuredLlmOptions {
     /** JSON schema for response_format */
@@ -144,7 +148,17 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 function getProviderChain(): ProviderConfig[] {
     const chain: ProviderConfig[] = [];
 
-    // OpenRouter primary (cheap)
+    // Local Ollama first (free, fast, no rate limits - RTX 3090)
+    if (OLLAMA_ENABLED) {
+        chain.push({
+            name: 'ollama',
+            baseUrl: OLLAMA_BASE_URL,
+            apiKey: 'ollama',  // Ollama doesn't require an API key
+            model: OLLAMA_MODEL,
+        });
+    }
+
+    // OpenRouter primary (cheap cloud fallback)
     if (OPENROUTER_API_KEY) {
         chain.push({
             name: 'openrouter',

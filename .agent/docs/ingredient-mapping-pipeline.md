@@ -21,6 +21,8 @@
 14. [Batch Processing Optimizations](#batch-processing-optimizations-jan-14-fix)
 15. [Ambiguous Unit AI Estimation](#ambiguous-unit-handling-jan-15-fix)
 16. [Proactive Produce Backfill](#5-proactive-produce-size-backfill-jan-15-fix)
+17. [AI Cost Reduction Refactor](#ai-cost-reduction-refactor-jan-2026)
+18. [Local LLM Integration (RTX 3090)](#local-llm-integration-jan-2026---rtx-3090)
 
 ---
 
@@ -1190,6 +1192,108 @@ $env:ENABLE_MAPPING_ANALYSIS='true'; npm run pilot-import 20
 # View results
 Get-Content logs/mapping-summary-*.txt | Select-Object -Last 30
 ```
+
+---
+
+## Local LLM Integration (Jan 2026 - RTX 3090)
+
+### Overview
+
+Added **Ollama** as the first provider in the AI fallback chain, running locally on an RTX 3090 GPU. This reduces serving estimation costs to zero while maintaining full cloud fallback capability.
+
+### Provider Fallback Chain
+
+```mermaid
+flowchart LR
+    A[callStructuredLlm] --> B{Ollama Available?}
+    B -->|Yes| C[🖥️ Local RTX 3090<br/>qwen2.5:14b<br/>FREE]
+    B -->|No| D{OpenRouter Key?}
+    D -->|Yes| E[☁️ OpenRouter<br/>qwen-turbo<br/>$0.001/call]
+    D -->|No| F[☁️ OpenAI<br/>gpt-5-nano<br/>$0.01/call]
+    C --> G[Return Result]
+    E --> G
+    F --> G
+```
+
+### Configuration
+
+**File**: `src/lib/fatsecret/config.ts`
+
+```typescript
+// Local LLM configuration
+export const OLLAMA_ENABLED = getFlag('OLLAMA_ENABLED', true);
+export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:14b';
+export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?? '30000', 10);
+```
+
+**Environment Variables** (`.env`):
+```env
+OLLAMA_ENABLED=true
+OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_MODEL=qwen2.5:14b
+```
+
+### Setup Instructions
+
+```powershell
+# 1. Install Ollama (Windows)
+# Download from: https://ollama.com/download/windows
+
+# 2. Pull recommended model (9GB download)
+ollama pull qwen2.5:14b
+
+# 3. Verify API is running
+curl http://localhost:11434/v1/models
+```
+
+### Recommended Models
+
+| Model | Size | VRAM | Speed | Best For |
+|-------|------|------|-------|----------|
+| **Qwen2.5 14B** | 9GB | ~12GB | ~40 t/s | Highest accuracy |
+| Mistral 7B | 4GB | ~6GB | ~100 t/s | Faster, still excellent |
+| Llama 3.1 8B | 5GB | ~8GB | ~70 t/s | Good alternative |
+
+### Batch Backfill Script
+
+For backfilling serving options across the food cache:
+
+```bash
+# Dry run - preview only
+npx tsx scripts/backfill-servings-local.ts --dry-run --limit 100
+
+# Run backfill on 100 foods
+npx tsx scripts/backfill-servings-local.ts --limit 100
+
+# Full backfill (all foods with gaps)
+npx tsx scripts/backfill-servings-local.ts
+
+# Cache-specific backfill
+npx tsx scripts/backfill-servings-local.ts --cache fatsecret
+npx tsx scripts/backfill-servings-local.ts --cache fdc
+```
+
+**File**: `scripts/backfill-servings-local.ts`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/fatsecret/config.ts` | Ollama configuration variables |
+| `src/lib/ai/structured-client.ts` | Provider chain with Ollama first |
+| `scripts/backfill-servings-local.ts` | Batch backfill using local LLM |
+| `scripts/test-ollama-integration.ts` | Integration test script |
+
+### Cost Impact
+
+| Scenario | Before (Cloud) | After (Local) |
+|----------|----------------|---------------|
+| Per serving estimation | $0.001-0.01 | **$0** |
+| Batch of 1,000 items | $1-10 | **$0** |
+| Rate limits | API quotas apply | Unlimited |
+
+> **Note**: When Ollama is unavailable (not running), the system silently falls back to cloud providers (OpenRouter → OpenAI).
 
 ---
 

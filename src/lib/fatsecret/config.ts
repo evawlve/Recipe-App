@@ -50,6 +50,12 @@ export const CHEAP_AI_MODEL_FALLBACK = process.env.CHEAP_AI_MODEL_FALLBACK ?? 'm
 export const STRUCTURED_LLM_TIMEOUT_MS = Number.parseInt(process.env.STRUCTURED_LLM_TIMEOUT_MS ?? '15000', 10);
 export const STRUCTURED_LLM_MAX_RETRIES = Number.parseInt(process.env.STRUCTURED_LLM_MAX_RETRIES ?? '3', 10);
 
+// Local LLM configuration (Jan 2026 - RTX 3090 cost reduction)
+export const OLLAMA_ENABLED = getFlag('OLLAMA_ENABLED', true);
+export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:14b';
+export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?? '30000', 10);
+
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
 export const FATSECRET_REGION: FatSecretRegion = rawRegion === 'GLOBAL' ? 'GLOBAL' : 'US';
