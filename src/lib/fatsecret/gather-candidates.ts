@@ -254,13 +254,40 @@ export interface ConfidenceGateResult {
     reason: string;
 }
 
+// ============================================================
+// Noise Words (size/prep descriptors that shouldn't affect matching)
+// ============================================================
+
+/**
+ * Words that describe size, preparation, or state but aren't the core ingredient.
+ * These are filtered from token matching to prevent false confidence.
+ * 
+ * Without this: "long sweet potato" matches "Long Rice Noodles" (1/3 tokens = "long")
+ * With this: "long" is filtered, only "sweet" + "potato" are required to match
+ */
+const NOISE_WORDS = new Set([
+    // Size descriptors
+    'long', 'short', 'tall', 'baby', 'mini', 'giant', 'jumbo',
+    // Unit-like words that shouldn't affect food matching
+    'bunch', 'bundle', 'sprig', 'stalk',
+    // Common prep/flavor words that appear in product names
+    'fresh', 'raw', 'whole', 'pure', 'natural', 'organic', 'buttery',
+    // State descriptors
+    'new', 'young', 'old',
+]);
+
 /**
  * Assess match confidence between query and a candidate result.
  * Uses token overlap and API position to determine confidence.
+ * 
+ * IMPORTANT: Filters out NOISE_WORDS from query tokens to prevent
+ * false matches like "long sweet potato" → "Long Rice Noodles"
  */
 export function assessConfidence(query: string, candidate: UnifiedCandidate): number {
+    // Filter out noise words from query - these shouldn't affect matching
     const queryTokens = new Set(
-        query.toLowerCase().split(/\s+/).filter(t => t.length > 2)
+        query.toLowerCase().split(/\s+/)
+            .filter(t => t.length > 2 && !NOISE_WORDS.has(t))
     );
     const resultTokens = new Set(
         candidate.name.toLowerCase().split(/\s+/).filter(t => t.length > 2)
@@ -268,7 +295,7 @@ export function assessConfidence(query: string, candidate: UnifiedCandidate): nu
 
     if (queryTokens.size === 0) return 0;
 
-    // Token overlap coverage
+    // Token overlap coverage (now based on core tokens only)
     const overlap = [...queryTokens].filter(t => resultTokens.has(t)).length;
     const coverage = overlap / queryTokens.size;
 
@@ -701,6 +728,10 @@ const BRITISH_TO_AMERICAN: Record<string, string[]> = {
     'mange tout': ['snow peas', 'sugar snap peas'],
     'mangetout': ['snow peas', 'sugar snap peas'],
     'swede': ['rutabaga'],
+    // British "marrow" is zucchini (CRITICAL: prevents "baby marrows" → "bone marrow")
+    'marrow': ['zucchini', 'zucchini squash', 'summer squash'],
+    'marrows': ['zucchini', 'zucchini squash', 'summer squash'],
+    'baby marrows': ['zucchini', 'baby zucchini', 'small zucchini'],
     'single cream': ['light cream', 'half and half', 'coffee cream'],
     'light cream': ['half and half', 'coffee cream', 'table cream', 'cream'],  // Fallbacks if 'light cream' has no results
     'double cream': ['heavy cream', 'heavy whipping cream', 'whipping cream'],

@@ -31,6 +31,7 @@ import { getCachedFoodWithRelations, cacheFoodToDetails } from './cache-search';
 import { ensureFoodCached } from './cache';
 import { insertAiServing, backfillWeightServing } from './ai-backfill';
 import { aiNormalizeIngredient } from './ai-normalize';
+import { aiParseIngredient } from './ai-parse';
 import { hydrateSingleCandidate } from './hydrate-cache';
 import { queueForDeferredHydration, proactiveProduceBackfill } from './deferred-hydration';
 import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-generator';
@@ -271,8 +272,37 @@ export async function mapIngredientWithFallback(
     }
 
     // Step 1: Parse and normalize
-    const parsed = parseIngredientLine(trimmed);
+    let parsed = parseIngredientLine(trimmed);
     let baseName = parsed?.name?.trim() || trimmed;
+
+    // Step 1-AI-FALLBACK: If regex parser didn't detect a unit but input looks complex,
+    // try AI to extract qty/unit/name. This handles edge cases like "1 5 floz serving red wine"
+    // where the parser gets confused by the leading "1" serving count.
+    const looksLikeHasUnit = /\d+\s*(floz|fl\s*oz|oz|cup|tbsp|tsp|ml|g|lb|lbs|serving)\b/i.test(trimmed);
+    if (!parsed?.unit && looksLikeHasUnit && !_skipFallback) {
+        logger.info('mapping.ai_parse_fallback_attempt', { rawLine: trimmed });
+        const aiParsed = await aiParseIngredient(trimmed);
+        if (aiParsed.status === 'success' && aiParsed.name) {
+            // Update parsed with AI results
+            parsed = {
+                qty: aiParsed.qty ?? 1,
+                multiplier: 1,
+                unit: aiParsed.unit,
+                rawUnit: aiParsed.unit,
+                name: aiParsed.name,
+                notes: aiParsed.notes ?? null,
+                qualifiers: undefined,
+                unitHint: null,
+            };
+            baseName = aiParsed.name;
+            logger.info('mapping.ai_parse_fallback_success', {
+                rawLine: trimmed,
+                qty: parsed.qty,
+                unit: parsed.unit,
+                name: parsed.name,
+            });
+        }
+    }
 
     // Step 1-VALIDATION: Reject lines with no actual food name (only qty/unit)
     // e.g., "4 1/2 oz" has no food name - should not map to anything
@@ -752,8 +782,9 @@ export async function mapIngredientWithFallback(
                         selectionReason = gateResult.reason || 'confidence_gate';
                     } else {
                         // Step 4: Simple rerank (Token-based)
-                        // sortedFiltered already defined above
-                        const rerankCandidates = sortedFiltered.slice(0, 10).map(c => toRerankCandidate({
+                        // Use filtered (not sortedFiltered) to ensure high-overlap candidates aren't pushed out
+                        // simpleRerank will do its own scoring based on token overlap + other factors
+                        const rerankCandidates = filtered.slice(0, 10).map(c => toRerankCandidate({
                             id: c.id,
                             name: c.name,
                             brandName: c.brandName,
@@ -775,10 +806,21 @@ export async function mapIngredientWithFallback(
                         }
 
                         if (!winner && filtered.length > 0) {
-                            // Fallback to top scorer
-                            winner = filtered[0];
-                            confidence = winner.score;
-                            selectionReason = 'scored_by_confidence';
+                            // Fallback to top scorer ONLY if above minimum threshold
+                            const MIN_FALLBACK_CONFIDENCE = 0.80;
+                            if (filtered[0].score >= MIN_FALLBACK_CONFIDENCE) {
+                                winner = filtered[0];
+                                confidence = winner.score;
+                                selectionReason = 'scored_by_confidence';
+                            } else {
+                                // Below threshold - let fallback step handle it
+                                logger.info('mapping.fallback_rejected', {
+                                    rawLine: trimmed,
+                                    topCandidate: filtered[0].name,
+                                    score: filtered[0].score,
+                                    threshold: MIN_FALLBACK_CONFIDENCE,
+                                });
+                            }
                         }
                     }
                 }
@@ -879,6 +921,8 @@ export async function mapIngredientWithFallback(
         // Skip if this is already a recursive fallback call to prevent infinite loops
         if (!winner && !_skipFallback) {
             logger.info('mapping.attempting_fallback', { rawLine: trimmed });
+
+            // LLM-based simplification for complex ingredient names
             const { aiSimplifyIngredient } = await import('./ai-simplify');
 
             try {

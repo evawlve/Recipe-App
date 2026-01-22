@@ -27,11 +27,22 @@ const SYSTEM_PROMPT = [
     '- "reduced fat colby and monterey jack cheese" → "Reduced Fat Colby Jack Cheese" (preserved dietary modifier)',
     '- "nonfat greek yogurt vanilla flavored" → "Nonfat Greek Yogurt" (preserved dietary modifier)',
     '',
+    'EDGE CASE Examples:',
+    '- "burger relish" → "Pickle Relish" (relish used on burgers is pickle relish)',
+    '- "hot dog relish" → "Pickle Relish" (same product)',
+    '- "buttery cinnamon powder" → "Cinnamon" (buttery is a fabricated flavor descriptor)',
+    '- "buttery vanilla extract" → "Vanilla Extract" (remove fabricated flavors)',
+    '- "vegetarian mince" → "Meatless Crumbles" (common API name for meat-free ground)',
+    '- "vegan mince" → "Meatless Crumbles"',
+    '- "plant-based ground" → "Plant Based Ground Beef"',
+    '',
     'RULES:',
     '1. Remove non-essential adjectives (fluffy, organic, premium, delicious).',
     '2. Remove brands unless the item IS the brand (e.g. Nutella).',
     '3. ALWAYS preserve fat/calorie/sodium/lean modifiers - they affect nutrition values!',
-    '4. OUTPUT JSON: { simplified: string, rationale: string }',
+    '4. Remove fabricated flavor descriptors (buttery, tangy, zesty) that don\'t exist as real products.',
+    '5. For use-case words (burger, hot dog, taco), identify the actual ingredient being described.',
+    '6. OUTPUT JSON: { simplified: string, rationale: string }',
 ].join('\n');
 
 type AiSimplifyResult = {

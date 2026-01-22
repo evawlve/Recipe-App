@@ -6,6 +6,8 @@
 // Common qualifiers that appear in ingredient names
 const QUALIFIERS = new Set([
   'large', 'small', 'medium',
+  'long', 'short', 'tall',  // Size descriptors (long banana → large banana)
+  'jumbo', 'extra-large', 'xl',  // Additional sizes
   'raw', 'cooked', 'diced', 'chopped', 'minced', 'sliced', 'grated', 'shredded',
   'boneless', 'skinless', 'bone-in', 'skin-on',
   'finely', 'coarsely', 'roughly',
@@ -26,6 +28,18 @@ const MULTI_WORD_QUALIFIERS = [
   'bone-in',
   'skin-on'
 ];
+
+/**
+ * Map non-standard size qualifiers to standard serving sizes.
+ * Used when selecting serving sizes for produce (e.g., "1 long banana" → "1 large banana")
+ */
+export const SIZE_ALIASES: Record<string, string> = {
+  'long': 'large',      // 1 long banana → 1 large banana
+  'short': 'small',
+  'tall': 'large',
+  'jumbo': 'extra-large',
+  'xl': 'extra-large',
+};
 
 /**
  * Check if a token is a qualifier
@@ -83,7 +97,7 @@ export function extractQualifiersFromParentheses(text: string): string[] {
   // Match content in parentheses: (diced), (finely chopped), etc.
   const parenPattern = /\(([^)]+)\)/g;
   let match;
-  
+
   while ((match = parenPattern.exec(text)) !== null) {
     const content = match[1].trim();
     // Split by comma if multiple qualifiers in parentheses

@@ -7,7 +7,10 @@ import { FatSecretClient } from '../src/lib/fatsecret/client';
 import { parseIngredientLine } from '../src/lib/parse/ingredient-line';
 import { autoMapIngredients } from '../src/lib/nutrition/auto-map';
 
-const KEYWORDS = ['keto', 'high-protein', 'low-carb', 'paleo', 'whole30'];
+const KEYWORDS = [
+    'keto', 'high-protein', 'low-carb', 'paleo', 'whole30',
+    'low-fat', 'mediterranean', 'vegan', 'vegetarian', 'gluten-free'
+];
 const RECIPES_PER_KEYWORD = 5;
 const AUTHOR_ID = process.env.IMPORT_AUTHOR_ID || '279a6119-a377-42b4-9ee9-1f08169a8e71';
 

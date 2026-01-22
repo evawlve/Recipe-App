@@ -392,8 +392,12 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     const leanPenalty = getLeanPercentagePenalty(query, candidate.name);
     score -= leanPenalty;
 
-    // 3. Source preference (FatSecret has better serving data)
-    if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
+    // 3. Source preference
+    // Prefer FDC for categories where FatSecret data is unreliable (e.g., vinegar)
+    const isVinegar = query.toLowerCase().includes('vinegar');
+    if (isVinegar && candidate.source === 'fdc') {
+        score += WEIGHTS.SOURCE_FATSECRET + 0.05;  // Boost FDC for vinegar above FatSecret
+    } else if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
         score += WEIGHTS.SOURCE_FATSECRET;
     }
 
@@ -558,9 +562,25 @@ export function simpleRerank(
     }
 
     if (candidates.length === 1) {
+        const singleConfidence = Math.min(candidates[0].score, 0.95);
+
+        // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
+        // If the only candidate has low confidence, reject it to trigger fallback.
+        // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
+        const MIN_SINGLE_CANDIDATE_CONFIDENCE = 0.80;
+        if (singleConfidence < MIN_SINGLE_CANDIDATE_CONFIDENCE) {
+            logger.info('simple_rerank.single_candidate_rejected', {
+                candidate: candidates[0].name,
+                confidence: singleConfidence.toFixed(3),
+                threshold: MIN_SINGLE_CANDIDATE_CONFIDENCE,
+                reason: 'confidence_below_threshold'
+            });
+            return null;  // Reject - let fallback handle it
+        }
+
         return {
             winner: candidates[0],
-            confidence: Math.min(candidates[0].score, 0.95),
+            confidence: singleConfidence,
             reason: 'single_candidate',
         };
     }
@@ -683,6 +703,20 @@ export function simpleRerank(
         confidence: confidence.toFixed(2),
         reason,
     });
+
+    // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
+    // Reject low-confidence winners to trigger fallback recovery.
+    // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
+    const MIN_RERANK_CONFIDENCE = 0.80;
+    if (confidence < MIN_RERANK_CONFIDENCE) {
+        logger.info('simple_rerank.winner_rejected', {
+            winner: top.candidate.name,
+            confidence: confidence.toFixed(3),
+            threshold: MIN_RERANK_CONFIDENCE,
+            reason: 'confidence_below_threshold'
+        });
+        return null;  // Reject - let fallback handle it
+    }
 
     return {
         winner: top.candidate,

@@ -177,6 +177,49 @@ export async function estimateAmbiguousServing(
             };
         }
 
+        // Sanity check: Validate against category-specific limits
+        const sanitized = applySanityCheck(foodName, unit, estimatedGrams, request);
+        if (sanitized.needsReEstimate) {
+            // Re-estimate with OpenRouter if local estimate is out of bounds
+            try {
+                const reResult = await callStructuredLlm({
+                    schema: RESPONSE_SCHEMA,
+                    systemPrompt: SYSTEM_PROMPT + `\n\nWARNING: Previous estimate of ${estimatedGrams}g was rejected. ${sanitized.reason}. Please provide a more accurate estimate.`,
+                    userPrompt: prompt,
+                    purpose: 'ambiguous',
+                    forceProvider: 'openrouter',
+                });
+
+                if (reResult.status === 'success' && reResult.content) {
+                    const reParsed = reResult.content as Record<string, unknown>;
+                    const reGrams = typeof reParsed.estimatedGrams === 'number' ? reParsed.estimatedGrams : NaN;
+                    if (!Number.isNaN(reGrams) && reGrams > 0) {
+                        const reCheck = applySanityCheck(foodName, unit, reGrams, request);
+                        if (!reCheck.needsReEstimate) {
+                            return {
+                                status: 'success',
+                                estimatedGrams: reGrams,
+                                confidence: (reParsed.confidence as number) ?? 0.7,
+                                reasoning: `Re-estimated with cloud API: ${reParsed.reasoning}`,
+                            };
+                        }
+                    }
+                }
+            } catch (err) {
+                // Fall through to use clamped value
+            }
+
+            // If re-estimate still fails, use clamped value
+            if (sanitized.clampedGrams !== estimatedGrams) {
+                return {
+                    status: 'success',
+                    estimatedGrams: sanitized.clampedGrams,
+                    confidence: confidence * 0.7, // Reduce confidence for clamped values
+                    reasoning: `${reasoning} [Clamped: ${sanitized.reason}]`,
+                };
+            }
+        }
+
         return {
             status: 'success',
             estimatedGrams,
@@ -186,6 +229,54 @@ export async function estimateAmbiguousServing(
     } catch (error) {
         return { status: 'error', error: (error as Error).message };
     }
+}
+
+// ============================================================
+// Sanity Check for Category-Specific Limits
+// ============================================================
+
+interface SanityCheckResult {
+    needsReEstimate: boolean;
+    clampedGrams: number;
+    reason?: string;
+}
+
+const CATEGORY_LIMITS: Record<string, { minG: number; maxG: number; keywords: string[] }> = {
+    'protein_powder': { minG: 20, maxG: 50, keywords: ['protein powder', 'whey', 'casein', 'protein isolate'] },
+    'scallion': { minG: 5, maxG: 40, keywords: ['scallion', 'green onion', 'spring onion'] },
+    'herbs': { minG: 1, maxG: 20, keywords: ['basil', 'cilantro', 'parsley', 'mint', 'dill', 'oregano', 'thyme'] },
+    'spices': { minG: 0.5, maxG: 10, keywords: ['pepper', 'cinnamon', 'cumin', 'paprika', 'turmeric'] },
+};
+
+function applySanityCheck(
+    foodName: string,
+    unit: string,
+    estimatedGrams: number,
+    _request: AmbiguousServingRequest
+): SanityCheckResult {
+    const nameLower = foodName.toLowerCase();
+
+    for (const [category, limits] of Object.entries(CATEGORY_LIMITS)) {
+        const matches = limits.keywords.some(kw => nameLower.includes(kw));
+        if (matches) {
+            if (estimatedGrams < limits.minG) {
+                return {
+                    needsReEstimate: true,
+                    clampedGrams: limits.minG,
+                    reason: `${category}: ${estimatedGrams}g below minimum ${limits.minG}g`,
+                };
+            }
+            if (estimatedGrams > limits.maxG) {
+                return {
+                    needsReEstimate: true,
+                    clampedGrams: limits.maxG,
+                    reason: `${category}: ${estimatedGrams}g exceeds maximum ${limits.maxG}g per serving`,
+                };
+            }
+        }
+    }
+
+    return { needsReEstimate: false, clampedGrams: estimatedGrams };
 }
 
 function buildPrompt(request: AmbiguousServingRequest): string {
@@ -379,14 +470,35 @@ function buildProduceSizePrompt(foodName: string, brandName?: string | null): st
         `- Medium: average/typical size`,
         `- Large: top 10-20% of typical size range`,
         ``,
-        `Examples:`,
-        `- Apple: small=150g, medium=182g, large=220g`,
-        `- Banana: small=101g, medium=118g, large=136g`,
-        `- Avocado: small=115g, medium=150g, large=200g`,
-        `- Potato: small=150g, medium=213g, large=300g`,
-        `- Tomato: small=91g, medium=123g, large=182g`,
+        `IMPORTANT: Pay attention to the type of produce!`,
+        `- HEAVY produce (potatoes, apples): 100-300g each`,
+        `- MEDIUM produce (tomatoes, peppers): 80-180g each`,
+        `- THIN/LIGHT produce (scallions, herbs, green onions): 5-25g each`,
+        `- TINY items (garlic cloves, berries): 1-5g each`,
         ``,
-        `Provide estimates for all three sizes.`,
+        `Examples by category:`,
+        ``,
+        `HEAVY produce:`,
+        `- Apple: small=150g, medium=182g, large=220g`,
+        `- Potato: small=150g, medium=213g, large=300g`,
+        `- Avocado: small=115g, medium=150g, large=200g`,
+        ``,
+        `MEDIUM produce:`,
+        `- Tomato: small=91g, medium=123g, large=182g`,
+        `- Banana: small=101g, medium=118g, large=136g`,
+        `- Bell pepper: small=120g, medium=164g, large=186g`,
+        ``,
+        `THIN/LIGHT produce:`,
+        `- Scallion/Green onion: small=10g, medium=15g, large=25g`,
+        `- Celery stalk: small=30g, medium=40g, large=50g`,
+        `- Asparagus spear: small=12g, medium=16g, large=20g`,
+        `- Carrot: small=50g, medium=72g, large=85g`,
+        ``,
+        `TINY items:`,
+        `- Garlic clove: small=2g, medium=3g, large=5g`,
+        `- Strawberry: small=7g, medium=12g, large=18g`,
+        ``,
+        `Provide estimates for all three sizes. Do NOT confuse thin produce with heavy produce!`,
     ].filter(Boolean);
 
     return lines.join('\n');

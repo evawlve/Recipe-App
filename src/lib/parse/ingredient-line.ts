@@ -54,11 +54,21 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Normalize unicode spaces (thin space, non-breaking space, etc.) to regular spaces
   // This handles cases like "2 ½" where there might be a thin space
-  const normalizedLine = line
+  let normalizedLine = line
     .replace(/\u2009/g, ' ') // thin space
     .replace(/\u00A0/g, ' ') // non-breaking space
     .replace(/\u2000/g, ' ') // en quad
     .replace(/\u2001/g, ' ') // em quad
+    .trim();
+
+  // Strip dimension patterns like 5", 7", 3/4" from ingredient names
+  // These are physical size descriptors (e.g., "1 5" long sweet potato" means "1 five-inch-long sweet potato")
+  // The dimension itself is not the food - "sweet potato" is the food
+  // Pattern: number (optionally with fraction) followed by " or '
+  // Examples: 5", 7", 3/4", 1/2", 10"
+  normalizedLine = normalizedLine
+    .replace(/\b\d+(?:\/\d+)?['"]\s*/g, '') // Remove "5" ", "3/4" ", etc.
+    .replace(/\b\d+(?:\.\d+)?['"]\s*/g, '') // Remove "5.5" ", etc.
     .trim();
 
   // Tokenize the line (split on whitespace, but also separate commas, parentheses, and handle "x" multipliers)
@@ -69,7 +79,40 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Separate parentheses: "1 (14 oz)" -> "1 ( 14 oz )"
   // IMPORTANT: Handle parentheses carefully to avoid splitting "oz)" incorrectly
   // Strategy: separate parentheses first, then split number+unit on remaining tokens
-  let preprocessed = normalizedLine
+
+  // === NEW: Handle compound volume unit patterns like "5 floz" or "8 fl oz" ===
+  // These need to be recognized as a single quantity+unit, not "qty=1" + "name=5 floz..."
+  // Pattern: when we see "1 5 floz ...", the "5 floz" is the actual measure, "1" is serving count
+  // Convert "N floz" -> join as compound for later parsing
+  // Also normalize "fl oz" -> "floz" and "fl. oz" -> "floz"
+  let unitNormalized = normalizedLine
+    .replace(/\bfl\.?\s*oz\b/gi, 'floz')  // Normalize "fl oz" and "fl. oz" to "floz"
+    .replace(/\bfluid\s+oz\b/gi, 'floz')  // Normalize "fluid oz" to "floz"
+    .replace(/\bfluid\s+ounces?\b/gi, 'floz'); // Normalize "fluid ounce(s)" to "floz"
+
+  // === NEW: Fix "1 5 floz serving X" pattern ===
+  // When we have "N N unit serving", the first N is a recipe serving count, not ingredient qty
+  // Pattern: "1 5 floz serving" -> strip the leading "1" to get "5 floz serving"
+  // Also handles: "1 8 oz serving", "2 4 tbsp", etc.
+  const servingCountPattern = /^(\d+)\s+(\d+(?:\.\d+)?)\s+(floz|oz|ml|cup|cups|tbsp|tsp|g|lb|lbs)\s+serving\b/i;
+  const servingMatch = unitNormalized.match(servingCountPattern);
+  if (servingMatch) {
+    // Strip the leading serving count, keep the actual quantity+unit
+    unitNormalized = unitNormalized.replace(servingCountPattern, '$2 $3');
+  }
+
+  // === NEW: British to American term normalization ===
+  unitNormalized = unitNormalized
+    .replace(/\btinned\b/gi, 'canned')     // British "tinned" -> American "canned"
+    .replace(/\bcourgettes?\b/gi, 'zucchini')  // British "courgette(s)" -> American "zucchini"
+    .replace(/\baubergines?\b/gi, 'eggplant')  // British "aubergine(s)" -> American "eggplant"
+    .replace(/\brocket\b/gi, 'arugula')
+    .replace(/\bcoriander\b/gi, 'cilantro')
+    .replace(/\bspring onions?\b/gi, 'green onion')  // British "spring onion(s)" -> American
+    // Synonym: "calorie free" → "sugar free" (many products labeled as sugar free, not calorie free)
+    .replace(/\bcalorie[- ]free\b/gi, 'sugar free');
+
+  let preprocessed = unitNormalized
     .replace(/(\d+)\s*[x×]\s*(\d+[a-z]*)/gi, '$1 x $2') // Normalize "2x200" or "2x200g" or "2 x 200g" to "2 x 200g"
     .replace(/\(/g, ' ( ') // Separate opening parentheses
     .replace(/\)/g, ' ) ') // Separate closing parentheses

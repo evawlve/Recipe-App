@@ -52,9 +52,13 @@ const TOKEN_SYNONYMS: Record<string, string[]> = {
     'mange': ['snow', 'snap'],  // mange tout → snow peas
     'mangetout': ['snow', 'snap'],
     'swede': ['rutabaga'],
+    // British "marrow" is zucchini (CRITICAL: prevent "baby marrows" → "bone marrow")
+    'marrow': ['zucchini', 'courgette', 'squash'],
+    'marrows': ['zucchini', 'courgettes', 'squash'],
     'single': ['light', 'half'],  // single cream → light cream
     'double': ['heavy', 'whipping'],  // double cream → heavy cream
-    'mince': ['ground', 'beef'],
+    // NOTE: 'mince' maps to 'ground' (cooking method), NOT 'beef' - that loses vegetarian context
+    'mince': ['ground'],
     'minced': ['ground'],
     'prawns': ['shrimp'],
     'gammon': ['ham'],
@@ -248,11 +252,14 @@ function isWrongFormForContext(rawLine: string, normalizedName: string, candidat
                     candLower.includes('stuffed pepper') ||
                     // Generic "PEPPERS" brand name without spice qualifiers is likely vegetable
                     (candLower === 'peppers' || candLower.match(/^peppers?\s*\(/)) ||
-                    // Color + pepper without flake/crushed is vegetable (e.g., "green pepper", "red pepper")
+                    // Color + pepper without any spice indicators is vegetable (e.g., "green bell pepper")
+                    // BUT allow: "red pepper" (spice), "cayenne pepper", "red or cayenne pepper"
                     (candLower.includes('pepper') &&
-                        (candLower.includes('green') || candLower.includes('yellow') || candLower.includes('orange') || candLower.includes('red')) &&
+                        (candLower.includes('green') || candLower.includes('yellow') || candLower.includes('orange')) &&
                         !candLower.includes('flake') && !candLower.includes('crushed') && !candLower.includes('cayenne'))
                 );
+                // Note: "red pepper" without "bell" is a valid spice (cayenne family)
+                // Only reject if explicitly "red bell pepper" or "red sweet pepper"
                 if (isVegetablePepper) {
                     return true; // Wrong form - vegetable pepper
                 }
@@ -669,15 +676,22 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
     // Lowfat milk should NOT match nonfat milk (different nutrition)
     {
         query: ['lowfat milk', 'low fat milk', 'low-fat milk', 'milk lowfat', 'milk low fat', '1% milk', '2% milk', 'reduced fat milk'],
-        excludeIfContains: ['nonfat', 'non-fat', 'skim', 'fat free', 'fat-free', 'whole milk']
+        excludeIfContains: ['nonfat', 'non-fat', 'skim', 'fat free', 'fat-free', 'whole milk', 'dry', 'powder', 'powdered', 'dried']
     },
     {
         query: ['nonfat milk', 'non-fat milk', 'skim milk', 'fat free milk', 'fat-free milk'],
-        excludeIfContains: ['lowfat', 'low fat', 'low-fat', '1%', '2%', 'reduced fat', 'whole milk']
+        excludeIfContains: ['lowfat', 'low fat', 'low-fat', '1%', '2%', 'reduced fat', 'whole milk', 'dry', 'powder', 'powdered', 'dried']
     },
     {
         query: ['whole milk', 'full fat milk'],
-        excludeIfContains: ['nonfat', 'non-fat', 'skim', 'lowfat', 'low fat', 'low-fat', '1%', '2%', 'reduced fat', 'fat free', 'fat-free']
+        excludeIfContains: ['nonfat', 'non-fat', 'skim', 'lowfat', 'low fat', 'low-fat', '1%', '2%', 'reduced fat', 'fat free', 'fat-free', 'dry', 'powder', 'powdered', 'dried']
+    },
+    // === NEW: Liquid milk (any type) should NOT match dry/powdered milk ===
+    // Physical state mismatch: volume units (cup, ml) imply LIQUID milk
+    // "1.5 cup milk lowfat" → should NOT match "Lowfat Dry Milk" (powder, 653kcal vs ~75kcal)
+    {
+        query: ['milk', 'milk lowfat', 'lowfat milk', 'low fat milk', 'milk low fat', 'whole milk', 'skim milk'],
+        excludeIfContains: ['dry milk', 'dried milk', 'powdered milk', 'milk powder', 'dry nonfat', 'dry lowfat']
     },
     // === NEW: Ground Meat Exclusions ===
     // "ground chuck", "ground beef" should NOT match steak cuts
@@ -736,7 +750,121 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
         query: ['garlic', 'raw garlic', 'fresh garlic', 'garlic bulb'],
         excludeIfContains: ['pickled', 'pickles', 'pickl']
     },
+    // === Priority 2: Tacos vs Nachos Food Type Mismatch ===
+    // "tacos" should NOT map to "nachos" - these are different Mexican foods
+    // Tacos = folded tortilla with filling
+    // Nachos = chips with toppings
+    // The issue: "nachos taco bell" contains "taco" in brand name, not food type
+    {
+        query: ['taco', 'tacos', 'soft taco', 'hard taco', 'beef taco', 'chicken taco', 'fish taco'],
+        excludeIfContains: ['nacho', 'nachos', 'chips', 'tortilla chips']
+    },
+    {
+        query: ['nacho', 'nachos'],
+        excludeIfContains: ['taco', 'tacos', 'burrito', 'burritos']
+    },
+    // Also guard burritos from tacos/nachos
+    {
+        query: ['burrito', 'burritos', 'beef burrito', 'chicken burrito', 'bean burrito'],
+        excludeIfContains: ['taco', 'tacos', 'nacho', 'nachos']
+    },
+    // === Priority 2: Specialty Pasta/Flour Guards ===
+    // Regular pasta should NOT match specialty pasta variants (different nutrition)
+    // "linguini pasta" should NOT map to "chickpea pasta" or "lentil pasta"
+    // These specialty variants have very different macros (higher protein, fiber)
+    {
+        query: ['linguine', 'linguini', 'spaghetti', 'penne', 'fettuccine', 'rigatoni', 'fusilli',
+            'macaroni', 'rotini', 'farfalle', 'angel hair', 'pasta', 'noodles'],
+        excludeIfContains: ['chickpea', 'lentil', 'black bean', 'edamame', 'quinoa pasta', 'rice pasta',
+            'gluten free', 'gluten-free', 'protein pasta', 'veggie pasta']
+    },
+    // Specialty pastas should explicitly include their base ingredient
+    {
+        query: ['chickpea pasta', 'chickpea noodles'],
+        excludeIfContains: ['regular', 'semolina', 'durum', 'wheat pasta']
+    },
+    {
+        query: ['lentil pasta', 'red lentil pasta'],
+        excludeIfContains: ['regular', 'semolina', 'durum', 'wheat pasta']
+    },
+    // === Priority 2: Specialty Flour Guards ===
+    // "all purpose flour" should NOT match "almond flour" or "coconut flour"
+    {
+        query: ['flour', 'all purpose flour', 'all-purpose flour', 'plain flour', 'white flour', 'wheat flour'],
+        excludeIfContains: ['almond flour', 'coconut flour', 'oat flour', 'rice flour', 'chickpea flour',
+            'cassava flour', 'tapioca flour', 'buckwheat flour', 'gluten free', 'gluten-free']
+    },
+    // === Priority 3: Extra Lean Ground Meat Guards ===
+    // "Extra lean" ground beef typically means 93-96% lean
+    // Should NOT match standard 85% lean (significantly more fat/calories)
+    {
+        query: ['extra lean ground beef', 'extra-lean ground beef', 'extra lean beef',
+            'extra lean ground turkey', 'extra-lean ground turkey'],
+        excludeIfContains: ['85%', '80%', '73%', '70%', '85 lean', '80 lean', '73 lean', '70 lean']
+    },
+    // Standard ground beef should NOT match lean/extra lean (calorie difference matters)
+    {
+        query: ['ground beef', 'ground chuck'],
+        excludeIfContains: ['extra lean', 'extra-lean', '95%', '96%', '97%', '93%', '95 lean', '96 lean', '97 lean', '93 lean']
+    },
+    // === Priority 3: Canned/Prepared Tomato State Guards ===
+    // "Crushed tomatoes" and "diced tomatoes" are canned products with different density/nutrition
+    // Should NOT match raw/fresh tomatoes
+    {
+        query: ['crushed tomatoes', 'crushed tomato'],
+        excludeIfContains: ['raw', 'fresh', 'cherry', 'grape', 'plum', 'roma', 'beefsteak', 'heirloom']
+    },
+    {
+        query: ['diced tomatoes', 'diced tomato', 'canned tomatoes', 'canned tomato', 'tinned tomatoes', 'tinned tomato', 'fire roasted tomatoes', 'fire-roasted tomatoes'],
+        excludeIfContains: ['raw', 'fresh', 'cherry', 'grape', 'plum', 'roma', 'beefsteak', 'heirloom']
+    },
+    // Fresh tomatoes should NOT match canned/processed
+    // BUT: If query explicitly has canned-related terms, skip this rule entirely
+    {
+        query: ['tomato', 'tomatoes', 'cherry tomatoes', 'grape tomatoes', 'roma tomatoes'],
+        excludeIfContains: ['crushed', 'diced', 'canned', 'stewed', 'sun dried', 'paste'],
+        // Skip this rule if query already contains a canned/prepared modifier
+        skipIfQueryContains: ['fire roasted', 'fire-roasted', 'crushed', 'diced', 'canned', 'tinned', 'stewed', 'sun dried', 'sun-dried']
+    },
+    // === NEW: Critical Mapping Failure Fixes (Jan 2026) ===
+    // Sweet potato should NOT match noodles (fixes "long sweet potato" → "Long Rice Noodles")
+    {
+        query: ['sweet potato', 'sweet potatoes', 'yam', 'yams'],
+        excludeIfContains: ['noodles', 'rice noodles', 'vermicelli', 'pasta', 'glass noodles', 'cellophane']
+    },
+    // British marrows (zucchini) should NOT match bone marrow (meat byproduct)
+    {
+        query: ['baby marrows', 'marrow', 'marrows', 'vegetable marrow'],
+        excludeIfContains: ['bone marrow', 'caribou', 'moose', 'alaska', 'native', 'beef marrow', 'roasted marrow']
+    },
+    // Relish (condiment) should NOT match meat products
+    {
+        query: ['relish', 'burger relish', 'dill relish', 'sweet relish', 'pickle relish', 'hot dog relish'],
+        excludeIfContains: ['turkey burger', 'beef burger', 'hamburger', 'cheeseburger', 'patty', 'turkey patty',
+            'chicken burger', 'veggie burger', 'fish burger', 'burger king', 'mcdonalds']
+    },
+    // Vegetarian/vegan products should NOT match animal meat OR baked goods containing "mince"
+    {
+        query: ['vegetarian mince', 'vegan mince', 'plant-based mince', 'meatless mince', 'veggie mince',
+            'vegetarian ground', 'vegan ground', 'plant-based ground', 'meatless ground'],
+        excludeIfContains: ['beef', 'pork', 'chicken', 'turkey', 'lamb', 'ground meat', 'ground beef',
+            'ground pork', 'ground chicken', 'ground turkey', 'ground lamb',
+            'mince pie', 'mince tart', 'mincemeat', 'fruit mince', 'christmas mince']
+    },
+    // Red pepper (spice) should NOT match black pepper when in spice context
+    // Note: This is handled by spice context detection, but adding explicit guard
+    {
+        query: ['red pepper', 'crushed red pepper', 'red pepper flakes', 'cayenne'],
+        excludeIfContains: ['black pepper', 'white pepper', 'peppercorn', 'green peppercorn']
+    },
 ];
+
+// Type for category exclusions with optional skip condition
+type CategoryExclusion = {
+    query: string[];
+    excludeIfContains: string[];
+    skipIfQueryContains?: string[];
+};
 
 // ============================================================
 // Food Type Guard (e.g., "mixed seeds bread" MUST contain "bread")
@@ -791,7 +919,8 @@ export function isCategoryMismatch(
     const queryLower = normalizedName.toLowerCase().trim();
     const candidateLower = [candidateName, candidateBrand].filter(Boolean).join(' ').toLowerCase().trim();
 
-    for (const { query, excludeIfContains } of CATEGORY_EXCLUSIONS) {
+    for (const exclusion of CATEGORY_EXCLUSIONS) {
+        const { query, excludeIfContains, skipIfQueryContains } = exclusion as CategoryExclusion;
         // Check if query matches any pattern
         const queryMatches = query.some(q =>
             queryLower === q ||
@@ -800,6 +929,11 @@ export function isCategoryMismatch(
         );
 
         if (queryMatches) {
+            // Check if this rule should be skipped based on query content
+            if (skipIfQueryContains?.some(term => queryLower.includes(term))) {
+                continue; // Skip this rule - query itself contains a term that overrides this rule
+            }
+
             // Check if candidate contains excluded categories
             // BUT skip if the query itself contains the excluded term!
             const hasExclusion = excludeIfContains.some(excl => {
@@ -1522,6 +1656,74 @@ export function hasCriticalModifierMismatch(
     return false;
 }
 
+// ============================================================
+// Strict Dietary Exclusion (Vegetarian/Vegan/Plant-Based)
+// ============================================================
+
+/**
+ * STRICT dietary constraint filter.
+ * When query contains vegetarian/vegan/plant-based, REJECT ALL meat candidates.
+ * 
+ * This ensures "vegetarian mince" NEVER maps to "ground beef", "deer meat", etc.
+ * If no suitable plant-based candidates exist, the mapping should FAIL
+ * and trigger AI fallback rather than produce a false mapping.
+ * 
+ * @returns true if candidate should be REJECTED (dietary violation)
+ */
+export function isDietaryConstraintViolation(
+    rawLine: string,
+    candidateName: string,
+    candidateBrand?: string | null
+): boolean {
+    const queryLower = rawLine.toLowerCase();
+    const candidateLower = [candidateName, candidateBrand].filter(Boolean).join(' ').toLowerCase();
+
+    // Detect if query requires vegetarian/vegan/plant-based
+    const VEGETARIAN_INDICATORS = [
+        'vegetarian', 'vegan', 'plant-based', 'plant based', 'meatless',
+        'meat-free', 'meat free', 'veggie', 'vegetable-based'
+    ];
+    const requiresVegetarian = VEGETARIAN_INDICATORS.some(ind => queryLower.includes(ind));
+
+    if (!requiresVegetarian) {
+        return false;  // No dietary constraint
+    }
+
+    // STRICT: Reject ANY meat-related candidate
+    const MEAT_INDICATORS = [
+        // Animal meats
+        'beef', 'pork', 'chicken', 'turkey', 'lamb', 'mutton', 'veal', 'venison',
+        'bison', 'buffalo', 'deer', 'elk', 'moose', 'caribou', 'goat', 'rabbit',
+        'duck', 'goose', 'pheasant', 'quail', 'game meat', 'game bird',
+        // Ground/processed meats
+        'ground meat', 'ground beef', 'ground pork', 'ground turkey', 'ground chicken',
+        'minced meat', 'minced beef', 'minced pork',
+        'sausage', 'bacon', 'ham', 'prosciutto', 'salami', 'pepperoni',
+        'hot dog', 'bratwurst', 'chorizo', 'kielbasa',
+        // Seafood (for strict vegetarian)
+        'fish', 'salmon', 'tuna', 'cod', 'tilapia', 'shrimp', 'prawn', 'crab',
+        'lobster', 'scallop', 'mussel', 'clam', 'oyster', 'anchovy', 'sardine',
+        // Bone/animal products
+        'bone marrow', 'bone broth', 'gelatin', 'lard', 'tallow', 'suet',
+        // Common patterns that indicate meat
+        'raw meat', 'cooked meat', 'roast beef', 'steak', 'chop', 'rib',
+    ];
+
+    const hasMeatIndicator = MEAT_INDICATORS.some(meat => candidateLower.includes(meat));
+
+    if (hasMeatIndicator) {
+        // Log the rejection for debugging
+        logger.debug('filter.dietary_constraint_violation', {
+            query: rawLine,
+            candidate: candidateName,
+            reason: 'vegetarian_query_meat_candidate'
+        });
+        return true;  // REJECT - dietary constraint violation
+    }
+
+    return false;
+}
+
 
 // ============================================================
 // Main Filter Function
@@ -1580,6 +1782,17 @@ export function filterCandidatesByTokens(
 
         // Check for ambiguous ingredients with wrong context (e.g., "1 dash pepper" → spice, not bell pepper)
         if (rawLine && isWrongFormForContext(rawLine, normalizedName, candidate.name)) {
+            return false;
+        }
+
+        // STRICT dietary constraint (vegetarian/vegan queries → reject ALL meat candidates)
+        if (rawLine && isDietaryConstraintViolation(rawLine, candidate.name, candidate.brandName)) {
+            if (debug) {
+                logger.info('filter.candidates.dietary_constraint_violation', {
+                    query: rawLine,
+                    candidate: candidate.name,
+                });
+            }
             return false;
         }
 
@@ -1819,6 +2032,10 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
         'vegetarian', 'vegan', 'plant', 'meatless', 'dairy',
         // Size/age modifiers
         'baby', 'mini', 'small', 'large', 'jumbo', 'young', 'mature',
+        // Unit-like words that shouldn't be mandatory tokens
+        'bunch', 'bundle', 'sprig', 'stalk', 'head', 'clove',
+        // Flavor/texture descriptors
+        'buttery', 'nutty', 'tangy', 'zesty', 'spicy', 'mild',
         // Color/variety modifiers  
         'dark', 'golden', 'white', 'red', 'green', 'yellow', 'black',
         // Form modifiers

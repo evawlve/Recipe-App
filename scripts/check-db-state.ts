@@ -1,40 +1,27 @@
 import { prisma } from '../src/lib/db';
 
 async function main() {
-    const totalRecipes = await prisma.recipe.count();
-    const totalIngs = await prisma.ingredient.count();
-    const mappedIngs = await prisma.ingredientFoodMap.count();
-    const validatedMaps = await prisma.validatedMapping.count();
-
-    const recipesWithUnmapped = await prisma.recipe.count({
-        where: {
-            ingredients: {
-                some: {
-                    foodMaps: { none: {} }
-                }
-            }
-        }
-    });
-
-    // Get sample of unmapped ingredients
-    const sampleUnmapped = await prisma.ingredient.findMany({
-        where: {
-            foodMaps: { none: {} }
-        },
-        take: 10,
-        select: { id: true, name: true, qty: true, unit: true }
-    });
+    const recipes = await prisma.recipe.count();
+    const ingredients = await prisma.ingredient.count();
+    const unmapped = await prisma.ingredient.count({ where: { foodMaps: { none: {} } } });
+    const mapped = await prisma.ingredient.count({ where: { foodMaps: { some: {} } } });
 
     console.log('=== Database State ===');
-    console.log('Total Recipes:', totalRecipes);
-    console.log('Total Ingredients:', totalIngs);
-    console.log('IngredientFoodMap count:', mappedIngs);
-    console.log('ValidatedMapping count:', validatedMaps);
-    console.log('Recipes with unmapped ingredients:', recipesWithUnmapped);
-    console.log('\nSample unmapped ingredients:');
-    sampleUnmapped.forEach(ing => {
-        console.log(`  - ${ing.qty || ''} ${ing.unit || ''} ${ing.name}`.trim());
-    });
+    console.log('Recipes:', recipes);
+    console.log('Total Ingredients:', ingredients);
+    console.log('  - Mapped:', mapped);
+    console.log('  - Unmapped:', unmapped);
+
+    // Show some unmapped ingredients
+    if (unmapped > 0) {
+        const samples = await prisma.ingredient.findMany({
+            where: { foodMaps: { none: {} } },
+            take: 10,
+            select: { name: true, qty: true, unit: true }
+        });
+        console.log('\nSample unmapped ingredients:');
+        samples.forEach(s => console.log(`  - ${s.qty || ''} ${s.unit || ''} ${s.name}`));
+    }
 
     await prisma.$disconnect();
 }

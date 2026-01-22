@@ -81,6 +81,10 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'broccoli floret': { grams: 11, confidence: 0.75, aliases: ['broccoli florets'] },
     'cauliflower floret': { grams: 13, confidence: 0.75, aliases: ['cauliflower florets'] },
     'corn ear': { grams: 103, confidence: 0.85, sizes: { small: 77, medium: 103, large: 127 }, aliases: ['corn on the cob', 'ear of corn'] },
+    // THIN/LIGHT produce - important to have small weights
+    'scallion': { grams: 15, confidence: 0.9, sizes: { small: 10, medium: 15, large: 25 }, aliases: ['scallions'] },
+    'green onion': { grams: 15, confidence: 0.9, sizes: { small: 10, medium: 15, large: 25 }, aliases: ['green onions'] },
+    'spring onion': { grams: 15, confidence: 0.9, sizes: { small: 10, medium: 15, large: 25 }, aliases: ['spring onions'] },
 
     // ===== BREAD & BAKED GOODS =====
     'bread slice': { grams: 30, confidence: 0.85, aliases: ['slice bread', 'bread'] },
@@ -128,6 +132,13 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'olive': { grams: 4, confidence: 0.8, sizes: { small: 3, medium: 4, large: 5 }, aliases: ['olives'] },
     'pickle': { grams: 35, confidence: 0.75, aliases: ['pickles'] },
     'ice cube': { grams: 30, confidence: 0.85, aliases: ['ice cubes', 'ice'] },
+
+    // ===== SUPPLEMENTS & POWDERS =====
+    'protein powder scoop': { grams: 30, confidence: 0.9, aliases: ['scoop protein powder', 'protein scoop'] },
+    'whey protein scoop': { grams: 30, confidence: 0.9, aliases: ['scoop whey protein', 'whey scoop'] },
+    'whey protein isolate scoop': { grams: 30, confidence: 0.9, aliases: ['scoop whey isolate', 'isolate scoop'] },
+    'collagen scoop': { grams: 11, confidence: 0.85, aliases: ['scoop collagen', 'collagen powder scoop'] },
+    'creatine scoop': { grams: 5, confidence: 0.9, aliases: ['scoop creatine'] },
 };
 
 // Build lookup map with aliases

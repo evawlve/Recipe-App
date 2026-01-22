@@ -1,40 +1,41 @@
-import 'dotenv/config';
 import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
-import { prisma } from '../src/lib/db';
 
-const failures = [
-    "4 cup dry mix light & fluffy buttermilk complete pancake mix",
-    "3  egg",
-    "1 medium onion",
-    "0.3333333333333333 cup onions",
-    "1 cup unsweetened coconut milk",
+const FAILING_INGREDIENTS = [
+    '1 5 floz serving red wine',
+    '3.5 cup fire roasted tomatoes',
+    '4 cup tinned tomatoes',
+    '0.25 cup calorie-free pancake syrup',
+    '0.5 tsp buttery cinnamon powder',
 ];
 
 async function debug() {
-    console.log('='.repeat(60));
-    console.log('DEBUGGING FAILED INGREDIENTS');
-    console.log('='.repeat(60));
+    console.log('=== Debugging 5 Failing Ingredients ===\n');
 
-    for (const input of failures) {
-        console.log(`\n--- Testing: "${input}" ---`);
+    for (const ingredient of FAILING_INGREDIENTS) {
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`INPUT: "${ingredient}"`);
+        console.log('='.repeat(60));
 
         try {
-            const result = await mapIngredientWithFallback(input, {
+            const result = await mapIngredientWithFallback(ingredient, {
                 debug: true,
+                minConfidence: 0.3,
             });
 
             if (result) {
-                console.log(`  ✅ SUCCESS: ${result.foodName}`);
-                console.log(`     Source: ${result.source}`);
-                console.log(`     Confidence: ${result.confidence.toFixed(2)}`);
-                console.log(`     Serving: ${result.servingDescription} (${result.servingGrams}g)`);
+                console.log(`\n✅ MAPPED TO: ${result.foodName}`);
+                console.log(`   Confidence: ${result.confidence}`);
+                console.log(`   Grams: ${result.grams}g`);
+                console.log(`   Kcal: ${result.kcal}`);
             } else {
-                console.log(`  ❌ STILL FAILED: null result`);
+                console.log(`\n❌ FAILED: No mapping found`);
             }
         } catch (err) {
-            console.log(`  ❌ ERROR: ${(err as Error).message}`);
+            console.log(`\n❌ ERROR: ${(err as Error).message}`);
         }
     }
+
+    process.exit(0);
 }
 
-debug().finally(() => prisma.$disconnect());
+debug().catch(console.error);
