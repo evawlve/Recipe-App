@@ -857,7 +857,17 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
         query: ['red pepper', 'crushed red pepper', 'red pepper flakes', 'cayenne'],
         excludeIfContains: ['black pepper', 'white pepper', 'peppercorn', 'green peppercorn']
     },
+    // === NEW: Leafy greens should NOT match pasta/noodle products ===
+    // "1 bunch spinach" should map to raw spinach, NOT "Spinach Noodles"
+    // "bunch" is a produce unit indicator
+    {
+        query: ['spinach', 'bunch spinach', 'baby spinach', 'fresh spinach', 'raw spinach',
+            'kale', 'bunch kale', 'collard greens', 'swiss chard', 'arugula', 'lettuce'],
+        excludeIfContains: ['noodle', 'noodles', 'pasta', 'spaghetti', 'linguine', 'fettuccine',
+            'macaroni', 'lasagna', 'ravioli', 'tortellini', 'gnocchi', 'dip', 'artichoke dip']
+    },
 ];
+
 
 // Type for category exclusions with optional skip condition
 type CategoryExclusion = {

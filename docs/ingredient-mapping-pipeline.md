@@ -1200,20 +1200,48 @@ Get-Content logs/mapping-summary-*.txt | Select-Object -Last 30
 
 ### Overview
 
-Added **Ollama** as the first provider in the AI fallback chain, running locally on an RTX 3090 GPU. This reduces serving estimation costs to zero while maintaining full cloud fallback capability.
+Added **Ollama** as a local LLM provider running on an RTX 3090 GPU. Uses **purpose-based routing** to optimize cost vs quality: simple parse-assist tasks use Ollama, while complex backfill/normalize tasks use cloud providers.
 
-### Provider Fallback Chain
+### Purpose-Based Provider Routing (Jan 22 Update)
+
+Different AI tasks have different quality requirements. The provider chain is now selected based on purpose:
+
+| Purpose | Provider Chain | Rationale |
+|---------|---------------|-----------|
+| `parse` | **Ollama only** | Simple structural extraction (qty/unit/name) |
+| `normalize` | **OpenRouter → OpenAI** | Complex reasoning for ingredient normalization |
+| `serving` | **OpenRouter → OpenAI** | Accurate serving size estimation |
+| `ambiguous` | **OpenRouter → OpenAI** | Context-aware weight estimation |
+| `produce` | **OpenRouter → OpenAI** | Size-based produce estimation |
 
 ```mermaid
-flowchart LR
-    A[callStructuredLlm] --> B{Ollama Available?}
-    B -->|Yes| C[🖥️ Local RTX 3090<br/>qwen2.5:14b<br/>FREE]
-    B -->|No| D{OpenRouter Key?}
+flowchart TD
+    A[callStructuredLlm] --> B{Purpose?}
+    B -->|parse| C[🖥️ Ollama Only<br/>qwen2.5:14b<br/>FREE]
+    B -->|normalize/serving/etc| D{OpenRouter Key?}
     D -->|Yes| E[☁️ OpenRouter<br/>qwen-turbo<br/>$0.001/call]
-    D -->|No| F[☁️ OpenAI<br/>gpt-5-nano<br/>$0.01/call]
+    D -->|No| F[☁️ OpenAI<br/>gpt-5-mini<br/>$0.01/call]
+    E -->|Fail| F
     C --> G[Return Result]
     E --> G
     F --> G
+```
+
+**Key File**: `src/lib/ai/structured-client.ts` - `getProviderChain(purpose, forceProvider)`
+
+### forceProvider Override
+
+The `forceProvider` option bypasses purpose-based routing for specific use cases:
+
+```typescript
+// Force OpenRouter for re-estimation after sanity check failure
+const result = await callStructuredLlm({
+    schema: RESPONSE_SCHEMA,
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: prompt,
+    purpose: 'ambiguous',
+    forceProvider: 'openrouter',  // Skip Ollama, go straight to cloud
+});
 ```
 
 ### Configuration
@@ -1282,19 +1310,20 @@ npx tsx scripts/backfill-servings-local.ts --cache fdc
 | File | Purpose |
 |------|---------|
 | `src/lib/fatsecret/config.ts` | Ollama configuration variables |
-| `src/lib/ai/structured-client.ts` | Provider chain with Ollama first |
+| `src/lib/ai/structured-client.ts` | Purpose-based provider routing |
+| `src/lib/fatsecret/ai-parse.ts` | AI parse assist (uses `purpose: 'parse'`) |
 | `scripts/backfill-servings-local.ts` | Batch backfill using local LLM |
-| `scripts/test-ollama-integration.ts` | Integration test script |
+| `scripts/test-provider-routing.ts` | Provider routing test script |
 
 ### Cost Impact
 
 | Scenario | Before (Cloud) | After (Local) |
 |----------|----------------|---------------|
-| Per serving estimation | $0.001-0.01 | **$0** |
-| Batch of 1,000 items | $1-10 | **$0** |
-| Rate limits | API quotas apply | Unlimited |
+| Per parse-assist call | $0.001-0.01 | **$0** |
+| Per backfill/normalize | $0.001-0.01 | $0.001-0.01 (cloud quality) |
+| Rate limits | API quotas apply | Parse: Unlimited, Backfill: API quotas |
 
-> **Note**: When Ollama is unavailable (not running), the system silently falls back to cloud providers (OpenRouter → OpenAI).
+> **Note**: When Ollama is unavailable for `parse` tasks, the call fails (no cloud fallback). For all other purposes, cloud fallback is automatic.
 
 ---
 

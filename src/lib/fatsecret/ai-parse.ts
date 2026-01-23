@@ -110,7 +110,7 @@ export async function aiParseIngredient(rawLine: string): Promise<AiParseResult>
             schema: RESPONSE_SCHEMA,
             systemPrompt: SYSTEM_PROMPT,
             userPrompt,
-            purpose: 'normalize',  // Reuse normalize purpose for rate limiting
+            purpose: 'parse',  // Dedicated purpose for Ollama-only (simple structural extraction)
         });
 
         if (result.status === 'error') {

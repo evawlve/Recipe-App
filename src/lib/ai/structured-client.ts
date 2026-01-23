@@ -31,7 +31,7 @@ import {
 // Types
 // ============================================================
 
-export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce';
+export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse';
 export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
 
 export interface StructuredLlmOptions {
@@ -41,10 +41,12 @@ export interface StructuredLlmOptions {
     systemPrompt: string;
     /** User prompt */
     userPrompt: string;
-    /** Purpose category for concurrency limiting and metrics */
+    /** Purpose category for concurrency limiting, metrics, and provider routing */
     purpose: StructuredLlmPurpose;
     /** Timeout in ms (default: STRUCTURED_LLM_TIMEOUT_MS from config) */
     timeout?: number;
+    /** Force a specific provider (bypasses purpose-based routing) */
+    forceProvider?: StructuredLlmProvider;
 }
 
 export interface StructuredLlmResult {
@@ -123,6 +125,7 @@ const CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number> = {
     serving: 5,
     ambiguous: 5,
     produce: 5,
+    parse: 5,  // AI parse assist (Ollama only)
 };
 
 const limiters: Record<StructuredLlmPurpose, Semaphore> = {
@@ -130,6 +133,7 @@ const limiters: Record<StructuredLlmPurpose, Semaphore> = {
     serving: new Semaphore(CONCURRENCY_LIMITS.serving),
     ambiguous: new Semaphore(CONCURRENCY_LIMITS.ambiguous),
     produce: new Semaphore(CONCURRENCY_LIMITS.produce),
+    parse: new Semaphore(CONCURRENCY_LIMITS.parse),
 };
 
 // ============================================================
@@ -145,45 +149,101 @@ interface ProviderConfig {
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
-function getProviderChain(): ProviderConfig[] {
+/**
+ * Build the provider chain based on purpose and optional forceProvider.
+ * 
+ * Provider routing strategy:
+ * - 'parse' purpose: Ollama ONLY (no cloud fallback) - for simple structural extraction
+ * - All other purposes: Cloud providers only (OpenRouter → OpenAI) - for complex reasoning
+ * - forceProvider: Overrides purpose-based routing to use a single specific provider
+ */
+function getProviderChain(
+    purpose: StructuredLlmPurpose,
+    forceProvider?: StructuredLlmProvider
+): ProviderConfig[] {
     const chain: ProviderConfig[] = [];
 
-    // Local Ollama first (free, fast, no rate limits - RTX 3090)
-    if (OLLAMA_ENABLED) {
+    // Handle forceProvider override
+    if (forceProvider === 'ollama' && OLLAMA_ENABLED) {
+        return [{
+            name: 'ollama',
+            baseUrl: OLLAMA_BASE_URL,
+            apiKey: 'ollama',
+            model: OLLAMA_MODEL,
+        }];
+    }
+    if (forceProvider === 'openrouter' && OPENROUTER_API_KEY) {
+        return [
+            {
+                name: 'openrouter',
+                baseUrl: OPENROUTER_BASE_URL,
+                apiKey: OPENROUTER_API_KEY,
+                model: CHEAP_AI_MODEL_PRIMARY,
+            },
+            {
+                name: 'openrouter',
+                baseUrl: OPENROUTER_BASE_URL,
+                apiKey: OPENROUTER_API_KEY,
+                model: CHEAP_AI_MODEL_FALLBACK,
+            },
+        ];
+    }
+    if (forceProvider === 'openai' && OPENAI_API_KEY) {
+        return [{
+            name: 'openai',
+            baseUrl: OPENAI_API_BASE_URL,
+            apiKey: OPENAI_API_KEY,
+            model: FATSECRET_CACHE_AI_MODEL,
+        }];
+    }
+
+    // Purpose-based routing:
+    // 'parse' = Ollama only (simple structural extraction, no cloud fallback)
+    // All other purposes = Cloud only (complex reasoning, skip local Ollama)
+    const useOllamaOnly = purpose === 'parse';
+    const useCloudOnly = !useOllamaOnly;
+
+    // Local Ollama (for 'parse' purpose only)
+    if (OLLAMA_ENABLED && useOllamaOnly) {
         chain.push({
             name: 'ollama',
             baseUrl: OLLAMA_BASE_URL,
             apiKey: 'ollama',  // Ollama doesn't require an API key
             model: OLLAMA_MODEL,
         });
+        // 'parse' purpose: Ollama only, no cloud fallback
+        return chain;
     }
 
-    // OpenRouter primary (cheap cloud fallback)
-    if (OPENROUTER_API_KEY) {
-        chain.push({
-            name: 'openrouter',
-            baseUrl: OPENROUTER_BASE_URL,
-            apiKey: OPENROUTER_API_KEY,
-            model: CHEAP_AI_MODEL_PRIMARY,
-        });
+    // Cloud providers for all non-parse purposes
+    if (useCloudOnly) {
+        // OpenRouter primary (cheap cloud)
+        if (OPENROUTER_API_KEY) {
+            chain.push({
+                name: 'openrouter',
+                baseUrl: OPENROUTER_BASE_URL,
+                apiKey: OPENROUTER_API_KEY,
+                model: CHEAP_AI_MODEL_PRIMARY,
+            });
 
-        // OpenRouter fallback (also cheap, different model)
-        chain.push({
-            name: 'openrouter',
-            baseUrl: OPENROUTER_BASE_URL,
-            apiKey: OPENROUTER_API_KEY,
-            model: CHEAP_AI_MODEL_FALLBACK,
-        });
-    }
+            // OpenRouter fallback (also cheap, different model)
+            chain.push({
+                name: 'openrouter',
+                baseUrl: OPENROUTER_BASE_URL,
+                apiKey: OPENROUTER_API_KEY,
+                model: CHEAP_AI_MODEL_FALLBACK,
+            });
+        }
 
-    // OpenAI fallback (reliable but more expensive)
-    if (OPENAI_API_KEY) {
-        chain.push({
-            name: 'openai',
-            baseUrl: OPENAI_API_BASE_URL,
-            apiKey: OPENAI_API_KEY,
-            model: FATSECRET_CACHE_AI_MODEL,
-        });
+        // OpenAI fallback (reliable but more expensive)
+        if (OPENAI_API_KEY) {
+            chain.push({
+                name: 'openai',
+                baseUrl: OPENAI_API_BASE_URL,
+                apiKey: OPENAI_API_KEY,
+                model: FATSECRET_CACHE_AI_MODEL,
+            });
+        }
     }
 
     return chain;
@@ -333,17 +393,19 @@ async function makeRequest(
 export async function callStructuredLlm(
     options: StructuredLlmOptions
 ): Promise<StructuredLlmResult> {
-    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS } = options;
+    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider } = options;
     const limiter = limiters[purpose];
     const startTime = Date.now();
 
     return limiter.run(async () => {
-        const providerChain = getProviderChain();
+        const providerChain = getProviderChain(purpose, forceProvider);
 
         if (providerChain.length === 0) {
             return {
                 status: 'error',
-                error: 'No API keys configured (need OPENROUTER_API_KEY or OPENAI_API_KEY)',
+                error: purpose === 'parse'
+                    ? 'Ollama not available for parse assist (set OLLAMA_ENABLED=true)'
+                    : 'No API keys configured (need OPENROUTER_API_KEY or OPENAI_API_KEY)',
                 provider: 'openai',
                 model: 'none',
                 durationMs: Date.now() - startTime,
@@ -462,6 +524,8 @@ export interface AiCallMetrics {
     ambiguous: number;
     /** Count of produce size estimation calls */
     produce: number;
+    /** Count of AI parse assist calls (Ollama only) */
+    parse: number;
     /** Total LLM calls made */
     total: number;
     /** Count of LLM calls skipped by normalize gate */
@@ -476,6 +540,7 @@ let sessionMetrics: AiCallMetrics = {
     serving: 0,
     ambiguous: 0,
     produce: 0,
+    parse: 0,
     total: 0,
     skippedByGate: 0,
     cacheHits: 0,
@@ -497,6 +562,7 @@ export function resetAiCallMetrics(): void {
         serving: 0,
         ambiguous: 0,
         produce: 0,
+        parse: 0,
         total: 0,
         skippedByGate: 0,
         cacheHits: 0,
@@ -546,6 +612,7 @@ export function getAiCallSummary(): string {
         `    - Serving: ${m.serving}`,
         `    - Ambiguous: ${m.ambiguous}`,
         `    - Produce: ${m.produce}`,
+        `    - Parse (Ollama): ${m.parse}`,
         `  Skip Rate: ${skipRate}%`,
     ].join('\n');
 }
