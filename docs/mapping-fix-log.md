@@ -163,6 +163,14 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Fix | Added `bunch`, `bundle`, `sprig`, `stalk`, `head`, `clove`, `buttery`, `nutty`, `tangy`, `zesty`, `spicy`, `mild` to MODIFIER_TOKENS in `filter-candidates.ts` |
 | Test | "1 bunch spinach" now matches Spinach candidates |
 
+### Fix 21: Produce Unit Recognition (bunch, head, stalk, etc.)
+| Issue | `"1 bunch spinach"` → "Water Spinach" (different food than `"spinach"` → "Spinach") |
+|-------|--------------------------------------------------------------------------------------|
+| Root Cause | "bunch" wasn't recognized as a unit, so it stayed in the ingredient name. Query became "bunch spinach" instead of "spinach", causing different search results |
+| Fix | Added produce-specific units to `countUnits` in `src/lib/parse/unit.ts`: `bunch/bunches`, `head/heads`, `stalk/stalks`, `sprig/sprigs`, `clove/cloves`, `leaf/leaves`, `ear/ears`, `rib/ribs`, `bulb/bulbs`, `crown/crowns`, `floret/florets` |
+| Test | `"1 bunch spinach"` now parses as `{unit: "bunch", name: "spinach"}` → searches for "spinach" → matches same "Spinach" food as `"spinach"` query (0.98 confidence) |
+| Impact | Ensures produce queries with unit descriptors map to the same food as queries without units |
+
 ### Fix 20: AI Simplification Edge Cases
 | Issue | `"burger relish"`, `"buttery cinnamon"`, `"vegetarian mince"` → Failed |
 |-------|------------------------------------------------------------------------|
@@ -198,6 +206,7 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | 17 | Produce estimation | Categorized AI examples |
 | 18 | Debug script | Step-by-step pipeline tracing |
 | 19 | Unit-like tokens | bunch/buttery → MODIFIER_TOKENS |
+| 21 | Produce unit recognition | bunch/head/stalk → recognized as units |
 
 ## Test Script
 

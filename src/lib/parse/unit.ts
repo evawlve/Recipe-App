@@ -56,6 +56,18 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'serving': 'serving', 'servings': 'serving',  // Generic serving unit
     // Size descriptors for whole produce (triggers AI backfill for realistic weights)
     'small': 'small', 'medium': 'medium', 'large': 'large', 'whole': 'whole',
+    // Produce-specific units (bunch, head, stalk, etc.)
+    'bunch': 'bunch', 'bunches': 'bunch',  // For spinach, kale, herbs, grapes
+    'head': 'head', 'heads': 'head',  // For lettuce, cabbage, garlic
+    'stalk': 'stalk', 'stalks': 'stalk',  // For celery, lemongrass
+    'sprig': 'sprig', 'sprigs': 'sprig',  // For herbs (thyme, rosemary)
+    'clove': 'clove', 'cloves': 'clove',  // For garlic
+    'leaf': 'leaf', 'leaves': 'leaf',  // For herbs, bay leaves
+    'ear': 'ear', 'ears': 'ear',  // For corn
+    'rib': 'rib', 'ribs': 'rib',  // For celery ribs
+    'bulb': 'bulb', 'bulbs': 'bulb',  // For fennel, garlic
+    'crown': 'crown', 'crowns': 'crown',  // For broccoli
+    'floret': 'floret', 'florets': 'floret',  // For broccoli, cauliflower
   };
 
   if (countUnits[token]) {

@@ -77,6 +77,47 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 ---
 
+### Token Scoring Too Permissive - Category-Changing Tokens
+
+**Date**: Jan 2026  
+**Symptom**: "1 bunch spinach" was mapping to "Spinach Noodles" because it had perfect token overlap on "spinach"  
+**Root Cause**: Weak initial token scoring—API ranking was trusted too heavily (0.6 weight), and extra tokens like "noodles" weren't penalized enough
+
+**Fix**: 
+1. Rebalanced scoring weights:
+   - `EXACT_MATCH`: 0.10 → 0.30 (reward precise matches)
+   - `ORIGINAL_SCORE`: 0.60 → 0.45 (don't blindly trust API)
+   - `EXTRA_TOKEN_PENALTY`: 0.25 → 0.35 (penalize unrelated words harder)
+   - `TOKEN_BLOAT_PENALTY`: 0.10 → 0.15 per excess token
+
+2. Added `CATEGORY_CHANGING_TOKENS` detection:
+   - Heavy penalty (0.50) when candidate has tokens like "noodles", "pasta", "pie", "cake", etc. that completely transform the food category
+   - e.g., "spinach" → "Spinach Noodles" now gets -0.50 penalty
+
+3. Added `BENIGN_DESCRIPTOR_TOKENS` set:
+   - Descriptors like "baby", "water", "fresh", "creamed" get reduced penalty (25% of full)
+   - This allows "Water Spinach" and "Baby Spinach" to score well for "spinach" queries
+
+4. Stricter token bloat threshold:
+   - Was: Allow +2 extra tokens with no penalty
+   - Now: Allow only +1 extra token with no penalty
+
+**Files**: `src/lib/fatsecret/simple-rerank.ts`
+
+**Test Cases**:
+```bash
+# Should map to spinach varieties (NOT noodles)
+"1 bunch spinach" → "Water Spinach" ✓
+
+# Should map to zucchini (NOT bone marrow)  
+"4 medium baby marrows" → "Baby Zucchini" ✓
+
+# Should map to bouillon (NOT vegetable)
+"2 cube vegetable bouillon" → "Vegetable Bouillon" ✓
+```
+
+---
+
 ## Parsing & Normalization
 
 ### Prep Phrase Stripped Inside Words

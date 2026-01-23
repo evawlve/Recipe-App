@@ -43,15 +43,15 @@ export interface SimpleRerankResult {
 // ============================================================
 
 const WEIGHTS = {
-    EXACT_MATCH: 0.1,        // Exact name match bonus (reduced - API order matters more)
-    TOKEN_OVERLAP: 0.1,      // Token overlap ratio (reduced - trust API)
+    EXACT_MATCH: 0.30,       // Exact name match bonus (INCREASED - precise matches should win)
+    TOKEN_OVERLAP: 0.15,     // Token overlap ratio (slightly increased)
     SOURCE_FATSECRET: 0.1,   // Prefer FatSecret (better servings)
     NO_BRAND: 0.05,          // Prefer generic over branded (reduced)
     SHORT_NAME: 0.02,        // Prefer shorter, simpler names (minimal)
-    ORIGINAL_SCORE: 0.6,     // API score (HEAVILY trust API ranking!)
+    ORIGINAL_SCORE: 0.45,    // API score (REDUCED - don't blindly trust API ranking)
     SIMPLE_INGREDIENT_BRAND_PENALTY: 0.1,  // Reduced - was 0.3 which over-penalized good branded matches
-    EXTRA_TOKEN_PENALTY: 0.25,  // Increased - strongly penalize candidates with extra unrelated words
-    TOKEN_BLOAT_PENALTY: 0.10,   // Penalty per excess token beyond +2 (max 0.30 total)
+    EXTRA_TOKEN_PENALTY: 0.35,  // INCREASED - strongly penalize candidates with extra unrelated words
+    TOKEN_BLOAT_PENALTY: 0.15,   // Penalty per excess token beyond +1 (max 0.45 total) - INCREASED
     // Phrase matching (Jan 2026)
     EXACT_PHRASE_BOOST: 0.15,  // Boost when candidate contains exact multi-word phrases from query
     // Nutrition scoring (Jan 2026)
@@ -59,6 +59,8 @@ const WEIGHTS = {
     NUTRITION_MACRO_SCORING: 0.10,    // Secondary: macro sanity check (increased from 0.03)
     MISSING_MACRO_PENALTY: 0.15,      // Penalty for candidates with P:0, C:0 when AI expects values
     UNSPECIFIED_LEAN_PENALTY: 0.20,   // Penalty for lean variants when query doesn't specify lean %
+    // Category-changing token penalty (Jan 2026)
+    CATEGORY_CHANGE_PENALTY: 0.50,    // Heavy penalty when candidate has tokens that change food category
 };
 
 // Nutrition scoring thresholds
@@ -72,6 +74,32 @@ const IGNORE_TOKENS = new Set([
     // Form descriptors - shouldn't affect core food identity matching
     // e.g., "powdered sugar substitute" should match sugar substitutes, not "Cream Substitute (Powdered)"
     'powdered', 'granulated', 'liquid', 'dry', 'powder',
+]);
+
+// Benign descriptor tokens - these add context but don't change food category
+// These should receive REDUCED extra token penalty (not eliminated, but less harsh)
+// e.g., "baby spinach", "water spinach", "creamed spinach" are all still spinach
+const BENIGN_DESCRIPTOR_TOKENS = new Set([
+    // Size/age descriptors
+    'baby', 'mini', 'small', 'medium', 'large', 'jumbo', 'giant', 'young', 'mature',
+    // Freshness/state descriptors  
+    'raw', 'fresh', 'frozen', 'canned', 'dried', 'dehydrated', 'cooked', 'steamed',
+    'boiled', 'roasted', 'grilled', 'baked', 'fried', 'sauteed',
+    // Quality/type descriptors
+    'organic', 'natural', 'wild', 'farmed', 'domestic', 'imported',
+    // Color descriptors (for produce varieties)
+    'red', 'green', 'yellow', 'orange', 'white', 'purple', 'black', 'golden',
+    // Preparation descriptors
+    'chopped', 'diced', 'sliced', 'minced', 'crushed', 'ground', 'whole', 'halved',
+    'shredded', 'grated', 'cubed', 'julienne', 'peeled', 'skinless', 'boneless',
+    // Common variety descriptors
+    'sweet', 'sour', 'bitter', 'spicy', 'hot', 'mild',
+    // Plant parts
+    'leaf', 'leaves', 'stalk', 'stalks', 'stem', 'stems', 'root', 'roots',
+    // Water/liquid varieties (like "water spinach", "water chestnut")
+    'water',
+    // Cooking additions
+    'creamed', 'buttered', 'breaded', 'stuffed',
 ]);
 
 // Synonyms for matching (bidirectional)
@@ -91,6 +119,71 @@ const BAR_BRANDS = new Set([
     'luna', 'clif', 'kind', 'rxbar', 'larabar', 'quest', 'perfect bar',
     'power crunch', 'think!', 'one', 'built', 'barebells', 'pure protein',
 ]);
+
+// ============================================================
+// Category-Changing Tokens (Jan 2026)
+// ============================================================
+// Tokens that completely transform the food category when present.
+// If the query is for a simple ingredient like "spinach" but the 
+// candidate has "noodles", it's a completely different food category.
+// These should NOT just get an "extra token" penalty - they should
+// get a HEAVY penalty because they change the entire nature of the food.
+
+const CATEGORY_CHANGING_TOKENS = new Set([
+    // Pasta/noodle products (turn produce → carb-heavy pasta)
+    'noodle', 'noodles', 'pasta', 'spaghetti', 'linguine', 'fettuccine',
+    'macaroni', 'lasagna', 'ravioli', 'tortellini', 'gnocchi', 'penne',
+    'fusilli', 'rigatoni', 'rotini', 'vermicelli',
+    // Baked goods (turn ingredients → high-calorie desserts)
+    'cake', 'pie', 'tart', 'cookie', 'cookies', 'muffin', 'bread',
+    'cupcake', 'cheesecake', 'brownie', 'pastry', 'croissant', 'donut',
+    'waffle', 'pancake', 'biscuit', 'scone',
+    // Prepared dishes (turn raw → complex dishes)
+    'soup', 'stew', 'casserole', 'salad', 'sandwich', 'burger', 'wrap',
+    'pizza', 'quesadilla', 'enchilada', 'burrito', 'taco',
+    // Beverages/processed (turn solid → liquid/processed)
+    'smoothie', 'shake', 'juice', 'drink', 'beverage', 'soda', 'lemonade',
+    // Snacks/confections
+    'candy', 'candies', 'chocolate', 'bar', 'chip', 'chips', 'fries',
+    'fritter', 'nugget', 'nuggets', 'stick', 'sticks',
+    // Spreads/condiments
+    'dip', 'spread', 'hummus', 'guacamole', 'sauce', 'dressing',
+    'jam', 'jelly', 'preserves', 'butter',
+    // Dairy products (when not queried)
+    'ice cream', 'yogurt', 'pudding', 'custard', 'mousse',
+]);
+
+/**
+ * Check if candidate has category-changing tokens that are NOT in the query.
+ * This catches "spinach" → "Spinach Noodles" type mismatches.
+ * 
+ * Returns the penalty amount (0 to CATEGORY_CHANGE_PENALTY)
+ */
+function getCategoryChangePenalty(query: string, candidateName: string): number {
+    const queryLower = query.toLowerCase();
+    const candLower = candidateName.toLowerCase();
+    
+    // Tokenize candidate name
+    const candidateWords = candLower
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+    
+    // Check each candidate word against category-changing tokens
+    for (const word of candidateWords) {
+        if (CATEGORY_CHANGING_TOKENS.has(word)) {
+            // Is this category-changing token also in the query?
+            // If so, it's intentional (e.g., "spinach pasta" query)
+            if (!queryLower.includes(word)) {
+                // Query doesn't have this token - it's parasitic!
+                // Return heavy penalty
+                return WEIGHTS.CATEGORY_CHANGE_PENALTY;
+            }
+        }
+    }
+    
+    return 0; // No category-changing tokens found
+}
 
 // ============================================================
 // Core Scoring Logic
@@ -220,7 +313,7 @@ function getExactPhraseBoost(query: string, candidateName: string): number {
  * @param query - The normalized ingredient name
  * @param candidateName - The candidate food name
  * @param isBranded - If true (user wants branded), be more lenient
- * @returns 0 (no penalty) to 0.30 (heavy penalty)
+ * @returns 0 (no penalty) to 0.45 (heavy penalty)
  */
 function getTokenBloatPenalty(
     query: string,
@@ -237,14 +330,16 @@ function getTokenBloatPenalty(
 
     const excess = candTokens.length - queryTokens.length;
 
-    // If user explicitly wants branded items, be lenient (allow up to +4 tokens)
-    if (isBranded && excess <= 4) return 0;
+    // If user explicitly wants branded items, be lenient (allow up to +3 tokens)
+    if (isBranded && excess <= 3) return 0;
 
-    // Allow up to 2 extra tokens with no penalty (e.g., "Fresh" or "Organic" additions)
-    if (excess <= 2) return 0;
+    // Allow only 1 extra token with no penalty (e.g., "Fresh" or "Organic")
+    // STRICTER than before - was 2, now 1 (Jan 2026)
+    if (excess <= 1) return 0;
 
-    // Graduated penalty: 0.10 per excess token beyond +2, capped at 0.30
-    return Math.min(0.30, (excess - 2) * WEIGHTS.TOKEN_BLOAT_PENALTY);
+    // Graduated penalty: 0.15 per excess token beyond +1, capped at 0.45
+    // STRICTER than before - penalty per token increased (Jan 2026)
+    return Math.min(0.45, (excess - 1) * WEIGHTS.TOKEN_BLOAT_PENALTY);
 }
 
 /**
@@ -370,15 +465,35 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     );
 
     if (queryTokens.length > 0 && extraTokens.length > 0) {
-        // Proportional penalty based on extra tokens relative to total
-        const extraRatio = extraTokens.length / (queryTokens.length + extraTokens.length);
-        score -= extraRatio * WEIGHTS.EXTRA_TOKEN_PENALTY;
+        // Separate benign descriptors from problematic extra tokens
+        // Benign descriptors get reduced penalty, category-changers get full penalty
+        const benignExtras = extraTokens.filter(t => BENIGN_DESCRIPTOR_TOKENS.has(t));
+        const problematicExtras = extraTokens.filter(t => !BENIGN_DESCRIPTOR_TOKENS.has(t));
+        
+        // Full penalty for problematic extras
+        if (problematicExtras.length > 0) {
+            const extraRatio = problematicExtras.length / (queryTokens.length + extraTokens.length);
+            score -= extraRatio * WEIGHTS.EXTRA_TOKEN_PENALTY;
+        }
+        
+        // Reduced penalty (25% of full) for benign descriptors
+        // "baby spinach" has "baby" as benign → small penalty, still viable
+        if (benignExtras.length > 0) {
+            const benignRatio = benignExtras.length / (queryTokens.length + extraTokens.length);
+            score -= benignRatio * WEIGHTS.EXTRA_TOKEN_PENALTY * 0.25;
+        }
     }
 
     // 2c. Token bloat penalty (catches compound products for simple queries)
     // e.g., "chilli peppers" (2 tokens) → "Chilli Peppers Cream Cheese" (4 tokens) = penalty
     const tokenBloatPenalty = getTokenBloatPenalty(query, candidate.name);
     score -= tokenBloatPenalty;
+
+    // 2c-2. Category-changing token penalty (Jan 2026)
+    // Heavy penalty when candidate has parasitic tokens that completely change the food category
+    // e.g., "spinach" → "Spinach Noodles" (noodles is category-changing)
+    const categoryChangePenalty = getCategoryChangePenalty(query, candidate.name);
+    score -= categoryChangePenalty;
 
     // 2d. Exact phrase boost (Jan 2026)
     // Boost candidates that contain exact multi-word phrases from query
