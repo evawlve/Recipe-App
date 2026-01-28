@@ -1,4 +1,4 @@
-import type { FatSecretFoodCache, FatSecretServingCache, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import {
   FATSECRET_CACHE_AI_ENABLED,
   FATSECRET_CACHE_AI_CONFIDENCE_MIN,
@@ -10,14 +10,42 @@ import { callStructuredLlm } from './structured-client';
 
 export type ServingGapType = 'volume' | 'weight';
 
+// ============================================================
+// Unified Types for AI Serving Estimation
+// Works with both FatSecret and FDC food sources
+// ============================================================
+
+export interface UnifiedServingForAi {
+  description: string;
+  grams: number | null;
+  volumeMl: number | null;
+}
+
+export interface UnifiedFoodForAi {
+  id: string;
+  name: string;
+  brandName: string | null;
+  foodType: string | null;
+  nutrientsPer100g: {
+    calories?: number;
+    protein?: number;
+    carbohydrate?: number;
+    fat?: number;
+    fiber?: number;
+  };
+  servings: UnifiedServingForAi[];
+  source: 'fatsecret' | 'fdc';
+}
+
 export interface AiServingRequest {
   gapType: ServingGapType;
-  food: FatSecretFoodCache & { servings: FatSecretServingCache[] };
+  food: UnifiedFoodForAi;
   /** Specific unit to estimate (e.g., "packet", "scoop", "slice") */
   targetServingUnit?: string;
   /** Use lower confidence threshold for on-demand backfills (user can see/override grams) */
   isOnDemandBackfill?: boolean;
 }
+
 
 export interface ServingSuggestion {
   servingLabel: string;
@@ -70,7 +98,7 @@ const RESPONSE_SCHEMA = {
 };
 
 const SYSTEM_PROMPT = [
-  'You are a nutrition assistant that fills in missing serving data for a FatSecret-backed food cache.',
+  'You are a nutrition assistant that fills in missing serving data for food items.',
   'Every response must be valid JSON following the provided schema.',
   'If a realistic convertible volume or weight serving does not exist, return { "error": "reason" }.',
   'When you can provide a serving, prefer canonical nutrition label formats (cups, tbsp, tsp, ml, fl oz, grams, ounces, or explicit counts).',
@@ -78,36 +106,31 @@ const SYSTEM_PROMPT = [
 ].join(' ');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
-function formatNutrients(nutrients: Prisma.JsonValue | null): string {
-  if (!nutrients || typeof nutrients !== 'object') return 'unknown';
+function formatNutrients(nutrients: UnifiedFoodForAi['nutrientsPer100g']): string {
+  if (!nutrients) return 'unknown';
   try {
-    const data = nutrients as Record<string, unknown>;
     const fragments: string[] = [];
-    for (const key of ['calories', 'protein', 'carbohydrate', 'fat', 'fiber']) {
-      const value = data[key];
-      if (typeof value === 'number') {
-        const unit = key === 'calories' ? 'kcal' : 'g';
-        fragments.push(`${value}${unit} ${key}/100g`);
-      }
-    }
+    if (nutrients.calories != null) fragments.push(`${nutrients.calories}kcal calories/100g`);
+    if (nutrients.protein != null) fragments.push(`${nutrients.protein}g protein/100g`);
+    if (nutrients.carbohydrate != null) fragments.push(`${nutrients.carbohydrate}g carbohydrate/100g`);
+    if (nutrients.fat != null) fragments.push(`${nutrients.fat}g fat/100g`);
+    if (nutrients.fiber != null) fragments.push(`${nutrients.fiber}g fiber/100g`);
     return fragments.length > 0 ? fragments.join(', ') : 'unknown';
   } catch {
     return 'unknown';
   }
 }
 
-function formatExistingServings(servings: FatSecretServingCache[]): string {
+function formatExistingServings(servings: UnifiedServingForAi[]): string {
   if (!servings || servings.length === 0) return 'none';
   return servings
     .map((serving) => {
       const parts = [];
-      if (serving.measurementDescription) {
-        parts.push(serving.measurementDescription);
-      } else if (serving.numberOfUnits != null) {
-        parts.push(`${serving.numberOfUnits} unit`);
+      if (serving.description) {
+        parts.push(serving.description);
       }
-      if (serving.servingWeightGrams) {
-        parts.push(`${serving.servingWeightGrams} g`);
+      if (serving.grams) {
+        parts.push(`${serving.grams} g`);
       }
       if (serving.volumeMl) {
         parts.push(`${serving.volumeMl} ml`);
@@ -142,8 +165,8 @@ const WHOLE_ITEM_KEYWORDS = [
   'cucumber',
 ];
 
-function prefersCountServing(food: FatSecretFoodCache): boolean {
-  const haystack = [food.name, food.brandName, food.description]
+function prefersCountServing(food: UnifiedFoodForAi): boolean {
+  const haystack = [food.name, food.brandName, food.foodType]
     .filter(Boolean)
     .map((value) => value!.toLowerCase())
     .join(' ');

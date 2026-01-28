@@ -67,8 +67,9 @@ export const MODIFIER_SYNONYM_GROUPS: string[][] = [
     ['fat free', 'fat-free', 'nonfat', 'non-fat', 'skim', '0%', 'zero fat'],
     // Reduced-fat group (separate from fat-free)
     ['reduced fat', 'low fat', 'lowfat', 'low-fat', 'light', 'lite', '2%', '1%'],
-    // Sugar-free/unsweetened group
-    ['unsweetened', 'no sugar added', 'sugar free', 'sugar-free', 'no sugar', 'zero sugar'],
+    // Sugar-free/unsweetened group - includes low-calorie equivalents
+    // "sugar free cherry pie filling" should also find "low calorie cherry pie filling"
+    ['unsweetened', 'no sugar added', 'sugar free', 'sugar-free', 'no sugar', 'zero sugar', 'low calorie', 'low-calorie', 'lite', 'light', 'diet'],
     // Whole grain group
     ['whole grain', 'whole wheat', 'wholegrain', 'wholewheat', 'whole-grain', 'whole-wheat'],
     // Extra lean group (ground meats)

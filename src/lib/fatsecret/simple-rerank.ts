@@ -162,13 +162,13 @@ const CATEGORY_CHANGING_TOKENS = new Set([
 function getCategoryChangePenalty(query: string, candidateName: string): number {
     const queryLower = query.toLowerCase();
     const candLower = candidateName.toLowerCase();
-    
+
     // Tokenize candidate name
     const candidateWords = candLower
         .replace(/[^a-z0-9\s]/g, ' ')
         .split(/\s+/)
         .filter(w => w.length > 2);
-    
+
     // Check each candidate word against category-changing tokens
     for (const word of candidateWords) {
         if (CATEGORY_CHANGING_TOKENS.has(word)) {
@@ -181,7 +181,7 @@ function getCategoryChangePenalty(query: string, candidateName: string): number 
             }
         }
     }
-    
+
     return 0; // No category-changing tokens found
 }
 
@@ -469,13 +469,13 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
         // Benign descriptors get reduced penalty, category-changers get full penalty
         const benignExtras = extraTokens.filter(t => BENIGN_DESCRIPTOR_TOKENS.has(t));
         const problematicExtras = extraTokens.filter(t => !BENIGN_DESCRIPTOR_TOKENS.has(t));
-        
+
         // Full penalty for problematic extras
         if (problematicExtras.length > 0) {
             const extraRatio = problematicExtras.length / (queryTokens.length + extraTokens.length);
             score -= extraRatio * WEIGHTS.EXTRA_TOKEN_PENALTY;
         }
-        
+
         // Reduced penalty (25% of full) for benign descriptors
         // "baby spinach" has "baby" as benign → small penalty, still viable
         if (benignExtras.length > 0) {
@@ -682,7 +682,8 @@ export function simpleRerank(
         // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
         // If the only candidate has low confidence, reject it to trigger fallback.
         // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
-        const MIN_SINGLE_CANDIDATE_CONFIDENCE = 0.80;
+        // NOTE: Lowered from 0.80 to 0.75 to match main threshold
+        const MIN_SINGLE_CANDIDATE_CONFIDENCE = 0.75;
         if (singleConfidence < MIN_SINGLE_CANDIDATE_CONFIDENCE) {
             logger.info('simple_rerank.single_candidate_rejected', {
                 candidate: candidates[0].name,
@@ -822,7 +823,11 @@ export function simpleRerank(
     // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
     // Reject low-confidence winners to trigger fallback recovery.
     // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
-    const MIN_RERANK_CONFIDENCE = 0.80;
+    // NOTE: Lowered from 0.80 to 0.74 to allow close semantic matches like:
+    //   - "sugar free" ↔ "no sugar added" (cherry pie filling)
+    //   - "plum tomatoes" ↔ "whole peeled plum tomatoes" (0.741 conf)
+    const MIN_RERANK_CONFIDENCE = 0.74;
+
     if (confidence < MIN_RERANK_CONFIDENCE) {
         logger.info('simple_rerank.winner_rejected', {
             winner: top.candidate.name,

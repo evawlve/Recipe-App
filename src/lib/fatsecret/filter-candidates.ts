@@ -877,6 +877,110 @@ type CategoryExclusion = {
 };
 
 // ============================================================
+// Cache Token Coverage Check (Jan 2026)
+// ============================================================
+// Validates that core tokens from query exist in cached food name.
+// Catches stale cache entries like "vegetable bouillon" → "Raw Vegetable"
+// where "bouillon" is a core token that MUST be in the food name.
+
+// Core tokens that MUST be present in food name (not modifiers)
+const CORE_FOOD_TOKENS = new Set([
+    // Proteins & Meat
+    'chicken', 'beef', 'pork', 'lamb', 'turkey', 'duck', 'fish', 'salmon', 'tuna',
+    'shrimp', 'crab', 'lobster', 'scallop', 'egg', 'tofu', 'tempeh', 'seitan',
+    // Grains & Starches
+    'rice', 'pasta', 'noodle', 'noodles', 'bread', 'flour', 'oat', 'oats', 'quinoa',
+    'barley', 'wheat', 'corn', 'couscous', 'bulgur',
+    // Produce
+    'apple', 'apples', 'banana', 'orange', 'lemon', 'lime', 'berry', 'berries',
+    'strawberry', 'blueberry', 'raspberry', 'tomato', 'tomatoes', 'potato', 'potatoes',
+    'onion', 'garlic', 'carrot', 'celery', 'broccoli', 'spinach', 'kale', 'lettuce',
+    'pepper', 'peppers', 'cucumber', 'zucchini', 'squash', 'pumpkin', 'avocado',
+    'mushroom', 'mushrooms', 'bean', 'beans', 'lentil', 'lentils', 'pea', 'peas',
+    // Seeds & Nuts
+    'flaxseed', 'flax', 'chia', 'sesame', 'sunflower', 'almond', 'walnut', 'cashew',
+    'peanut', 'pecan', 'pistachio', 'hazelnut', 'macadamia',
+    // Dairy & Alternatives
+    'milk', 'cream', 'cheese', 'yogurt', 'butter', 'margarine',
+    // Seasonings & Condiments
+    'bouillon', 'broth', 'stock', 'sauce', 'vinegar', 'mustard', 'ketchup', 'mayo',
+    'mayonnaise', 'soy', 'worcestershire',
+    // Sweeteners
+    'sugar', 'honey', 'syrup', 'molasses', 'stevia',
+    // Oils & Fats
+    'oil', 'olive', 'coconut', 'canola', 'vegetable',
+    // Spices (when they ARE the ingredient, not just modifiers)
+    'cinnamon', 'cumin', 'paprika', 'turmeric', 'ginger', 'oregano', 'basil',
+    'thyme', 'rosemary', 'parsley', 'cilantro', 'dill', 'mint', 'sage',
+]);
+
+// Synonyms for core token matching in cache validation
+const CORE_TOKEN_SYNONYMS: Record<string, string[]> = {
+    'flaxseed': ['flax', 'linseed'],
+    'flax': ['flaxseed', 'linseed'],
+    'zucchini': ['courgette', 'marrow', 'marrows'],
+    'courgette': ['zucchini'],
+    'marrow': ['zucchini', 'marrows'],
+    'marrows': ['zucchini', 'marrow'],
+    'eggplant': ['aubergine'],
+    'aubergine': ['eggplant'],
+    'cilantro': ['coriander'],
+    'coriander': ['cilantro'],
+    'scallion': ['green onion', 'spring onion'],
+    'bouillon': ['broth', 'stock', 'consomme', 'cube'],
+    'broth': ['bouillon', 'stock'],
+    'stock': ['bouillon', 'broth'],
+};
+
+/**
+ * Check if cached food name is missing core tokens from the query.
+ * This catches stale cache entries where the food is semantically different.
+ * 
+ * e.g., "vegetable bouillon" → "Raw Vegetable" 
+ *       "bouillon" is core token, not in "Raw Vegetable" → MISMATCH
+ * 
+ * e.g., "golden flaxseed" → "Golden Delicious Apples"
+ *       "flaxseed" is core token, not in "Golden Delicious Apples" → MISMATCH
+ */
+export function hasCoreTokenMismatch(
+    normalizedQuery: string,
+    cachedFoodName: string,
+    cachedBrandName?: string | null
+): boolean {
+    const queryLower = normalizedQuery.toLowerCase().trim();
+    const queryTokens = queryLower.split(/\s+/).filter(Boolean);
+    const foodLower = [cachedFoodName, cachedBrandName].filter(Boolean).join(' ').toLowerCase();
+
+    // Find core tokens in the query
+    const coreTokensInQuery = queryTokens.filter(t => CORE_FOOD_TOKENS.has(t));
+
+    // If no core tokens, can't do this check
+    if (coreTokensInQuery.length === 0) {
+        return false;
+    }
+
+    // Check each core token - at least ONE must be present (or its synonym)
+    for (const coreToken of coreTokensInQuery) {
+        const synonyms = CORE_TOKEN_SYNONYMS[coreToken] || [];
+        const allForms = [coreToken, ...synonyms];
+
+        // Check if any form exists in the food name
+        const found = allForms.some(form => {
+            // Word boundary match to avoid partial matches
+            const regex = new RegExp(`\\b${form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i');
+            return regex.test(foodLower);
+        });
+
+        if (!found) {
+            // Core token missing from cached food - this is a mismatch!
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// ============================================================
 // Food Type Guard (e.g., "mixed seeds bread" MUST contain "bread")
 // ============================================================
 

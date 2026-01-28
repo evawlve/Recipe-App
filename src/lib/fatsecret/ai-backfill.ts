@@ -1,11 +1,12 @@
 import crypto from 'node:crypto';
 import { prisma } from '../db';
 import { logger } from '../logger';
-import { requestAiServing, type ServingGapType } from '../ai/serving-estimator';
+import { requestAiServing, type ServingGapType, type UnifiedFoodForAi } from '../ai/serving-estimator';
 import {
     FATSECRET_CACHE_AI_MAX_DENSITY,
     FATSECRET_CACHE_AI_MIN_DENSITY,
 } from './config';
+import type { FatSecretFoodCache, FatSecretServingCache, FdcFoodCache, FdcServingCache, Prisma } from '@prisma/client';
 
 const VOLUME_UNIT_TO_ML: Record<string, number> = {
     ml: 1,
@@ -73,6 +74,63 @@ function buildServingId(foodId: string, label: string): string {
     return `ai_${hash}`;
 }
 
+// ============================================================
+// Unified Food Adapters for AI Serving Estimation
+// ============================================================
+
+function adaptFatSecretToUnified(
+    food: FatSecretFoodCache & { servings: FatSecretServingCache[] }
+): UnifiedFoodForAi {
+    const nutrients = food.nutrientsPer100g as Record<string, unknown> | null;
+    return {
+        id: food.id,
+        name: food.name,
+        brandName: food.brandName,
+        foodType: food.foodType,
+        nutrientsPer100g: {
+            calories: typeof nutrients?.calories === 'number' ? nutrients.calories : undefined,
+            protein: typeof nutrients?.protein === 'number' ? nutrients.protein : undefined,
+            carbohydrate: typeof nutrients?.carbohydrate === 'number' ? nutrients.carbohydrate : undefined,
+            fat: typeof nutrients?.fat === 'number' ? nutrients.fat : undefined,
+            fiber: typeof nutrients?.fiber === 'number' ? nutrients.fiber : undefined,
+        },
+        servings: food.servings.map(s => ({
+            description: s.measurementDescription ?? 'serving',
+            grams: s.servingWeightGrams,
+            volumeMl: s.volumeMl,
+        })),
+        source: 'fatsecret',
+    };
+}
+
+function adaptFdcToUnified(
+    food: FdcFoodCache & { servings: FdcServingCache[] }
+): UnifiedFoodForAi {
+    const nutrients = food.nutrients as Record<string, unknown> | null;
+    return {
+        id: `fdc_${food.id}`,
+        name: food.description,
+        brandName: food.brandName,
+        foodType: food.dataType,
+        nutrientsPer100g: {
+            calories: typeof nutrients?.calories === 'number' ? nutrients.calories :
+                typeof nutrients?.energy === 'number' ? nutrients.energy : undefined,
+            protein: typeof nutrients?.protein === 'number' ? nutrients.protein : undefined,
+            carbohydrate: typeof nutrients?.carbohydrate === 'number' ? nutrients.carbohydrate :
+                typeof nutrients?.carbs === 'number' ? nutrients.carbs : undefined,
+            fat: typeof nutrients?.fat === 'number' ? nutrients.fat :
+                typeof nutrients?.totalFat === 'number' ? nutrients.totalFat : undefined,
+            fiber: typeof nutrients?.fiber === 'number' ? nutrients.fiber : undefined,
+        },
+        servings: food.servings.map(s => ({
+            description: s.description,
+            grams: s.grams,
+            volumeMl: null, // FDC servings don't track volumeMl separately
+        })),
+        source: 'fdc',
+    };
+}
+
 export interface InsertAiServingOptions {
     dryRun?: boolean;
     promptDebug?: boolean;
@@ -87,15 +145,34 @@ export async function insertAiServing(
     gapType: ServingGapType,
     options: InsertAiServingOptions = {}
 ): Promise<{ success: boolean; reason?: string }> {
-    const food = await prisma.fatSecretFoodCache.findUnique({
-        where: { id: foodId },
-        include: { servings: true },
-    });
+    // Detect FDC vs FatSecret based on ID prefix
+    const isFdc = foodId.startsWith('fdc_');
+    let food: UnifiedFoodForAi | null = null;
+
+    if (isFdc) {
+        const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
+        const fdcFood = await prisma.fdcFoodCache.findUnique({
+            where: { id: fdcId },
+            include: { servings: true },
+        });
+        if (fdcFood) {
+            food = adaptFdcToUnified(fdcFood);
+        }
+    } else {
+        const fsFood = await prisma.fatSecretFoodCache.findUnique({
+            where: { id: foodId },
+            include: { servings: true },
+        });
+        if (fsFood) {
+            food = adaptFatSecretToUnified(fsFood);
+        }
+    }
 
     if (!food) {
-        logger.warn({ foodId }, 'FatSecret food missing from cache');
+        logger.warn({ foodId, isFdc }, 'Food missing from cache for AI serving backfill');
         return { success: false, reason: 'food_missing' };
     }
+
 
     const aiResult = await requestAiServing({
         gapType,
@@ -183,59 +260,97 @@ export async function insertAiServing(
     }
 
     let densityEstimateId: string | undefined;
+
     await prisma.$transaction(async (tx) => {
-        if (density && volumeMl) {
-            const densityRow = await tx.fatSecretDensityEstimate.create({
-                data: {
-                    foodId,
-                    densityGml: density,
-                    source: 'ai',
-                    confidence: suggestion.confidence,
-                    notes: suggestion.rationale,
+        if (isFdc) {
+            // FDC: Simple serving cache with fewer fields
+            const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
+
+            // Check if serving already exists (by description match)
+            const existing = await tx.fdcServingCache.findFirst({
+                where: {
+                    fdcId,
+                    description: suggestion.servingLabel,
                 },
             });
-            densityEstimateId = densityRow.id;
-        }
 
-        await tx.fatSecretServingCache.upsert({
-            where: { id: servingId },
-            create: {
-                id: servingId,
-                foodId,
-                measurementDescription: suggestion.servingLabel,
-                numberOfUnits: suggestion.volumeAmount ?? (countServing ? 1 : undefined),
-                metricServingAmount: volumeMl ?? suggestion.grams,
-                metricServingUnit: countServing ? (countUnit ?? suggestion.volumeUnit ?? 'count') : volumeMl ? 'ml' : 'g',
-                servingWeightGrams: suggestion.grams,
-                volumeMl,
-                isVolume: gapType === 'volume',
-                isDefault: false,
-                derivedViaDensity: volumeMl != null && !countServing,
-                densityEstimateId,
-                source: 'ai',
-                confidence: suggestion.confidence,
-                note: suggestion.rationale,
-            },
-            update: {
-                measurementDescription: suggestion.servingLabel,
-                numberOfUnits: suggestion.volumeAmount ?? (countServing ? 1 : undefined),
-                metricServingAmount: volumeMl ?? suggestion.grams,
-                metricServingUnit: countServing ? (countUnit ?? suggestion.volumeUnit ?? 'count') : volumeMl ? 'ml' : 'g',
-                servingWeightGrams: suggestion.grams,
-                volumeMl,
-                isVolume: gapType === 'volume',
-                derivedViaDensity: volumeMl != null && !countServing,
-                densityEstimateId,
-                source: 'ai',
-                confidence: suggestion.confidence,
-                note: suggestion.rationale,
-            },
-        });
+            if (existing) {
+                // Update existing
+                await tx.fdcServingCache.update({
+                    where: { id: existing.id },
+                    data: {
+                        grams: suggestion.grams,
+                        source: 'ai',
+                        isAiEstimated: true,
+                    },
+                });
+            } else {
+                // Create new
+                await tx.fdcServingCache.create({
+                    data: {
+                        fdcId,
+                        description: suggestion.servingLabel,
+                        grams: suggestion.grams,
+                        source: 'ai',
+                        isAiEstimated: true,
+                    },
+                });
+            }
+        } else {
+            // FatSecret: Full serving cache with density estimates
+            if (density && volumeMl) {
+                const densityRow = await tx.fatSecretDensityEstimate.create({
+                    data: {
+                        foodId,
+                        densityGml: density,
+                        source: 'ai',
+                        confidence: suggestion.confidence,
+                        notes: suggestion.rationale,
+                    },
+                });
+                densityEstimateId = densityRow.id;
+            }
+
+            await tx.fatSecretServingCache.upsert({
+                where: { id: servingId },
+                create: {
+                    id: servingId,
+                    foodId,
+                    measurementDescription: suggestion.servingLabel,
+                    numberOfUnits: suggestion.volumeAmount ?? (countServing ? 1 : undefined),
+                    metricServingAmount: volumeMl ?? suggestion.grams,
+                    metricServingUnit: countServing ? (countUnit ?? suggestion.volumeUnit ?? 'count') : volumeMl ? 'ml' : 'g',
+                    servingWeightGrams: suggestion.grams,
+                    volumeMl,
+                    isVolume: gapType === 'volume',
+                    isDefault: false,
+                    derivedViaDensity: volumeMl != null && !countServing,
+                    densityEstimateId,
+                    source: 'ai',
+                    confidence: suggestion.confidence,
+                    note: suggestion.rationale,
+                },
+                update: {
+                    measurementDescription: suggestion.servingLabel,
+                    numberOfUnits: suggestion.volumeAmount ?? (countServing ? 1 : undefined),
+                    metricServingAmount: volumeMl ?? suggestion.grams,
+                    metricServingUnit: countServing ? (countUnit ?? suggestion.volumeUnit ?? 'count') : volumeMl ? 'ml' : 'g',
+                    servingWeightGrams: suggestion.grams,
+                    volumeMl,
+                    isVolume: gapType === 'volume',
+                    derivedViaDensity: volumeMl != null && !countServing,
+                    densityEstimateId,
+                    source: 'ai',
+                    confidence: suggestion.confidence,
+                    note: suggestion.rationale,
+                },
+            });
+        }
     });
 
     logger.info(
-        { foodId, servingId, gapType, label: suggestion.servingLabel },
-        'Inserted AI-derived FatSecret serving',
+        { foodId, servingId, gapType, label: suggestion.servingLabel, source: isFdc ? 'fdc' : 'fatsecret' },
+        `Inserted AI-derived ${isFdc ? 'FDC' : 'FatSecret'} serving`,
     );
 
     return { success: true };

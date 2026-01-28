@@ -186,6 +186,56 @@ npx ts-node scripts/clear-all-mappings.ts
 
 ---
 
+### Cache Keys Saved with Raw Input Instead of Canonical Form
+
+**Date**: Jan 2026  
+**Symptom**: Same ingredient maps correctly first time, but future queries fail to find cached entry  
+**Root Cause**: When `shouldNormalizeLlm()` decides to skip the AI call (because a high-confidence match exists), `aiCanonicalBase` remains `undefined`. The save then falls back to `normalizeQuery(rawInput)` which does minimal cleaning, resulting in cache keys like `"0 311625 cup ground golden flaxseed meal"` instead of `"golden flaxseed meal"`.
+
+**How it happened**:
+1. Input: `"0.311625 cup ground golden flaxseed meal"`
+2. Normalize gate sees high confidence match → skips LLM call
+3. `aiCanonicalBase` stays `undefined`
+4. Save uses `normalizeQuery(rawInput)` → `"0 311625 cup ground golden flaxseed meal"` (bad!)
+5. Future query for `"golden flaxseed meal"` can't find cache entry
+
+**Fix**: 
+1. When saving to cache, use `aiCanonicalBase || normalizedName` where `normalizedName` is from `normalizeIngredientName()` 
+2. This ensures cache keys are always canonical forms like `"golden flaxseed meal"`
+3. Applied fix to BOTH:
+   - `map-ingredient-with-fallback.ts` (new function)
+   - `map-ingredient.ts` (old function still used by `resolve-ingredient.ts`)
+
+**Files**: 
+- `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 1240-1250, 1285)
+- `src/lib/fatsecret/map-ingredient.ts` (line 1369)
+
+---
+
+### Cached Mappings Missing Core Tokens
+
+**Date**: Jan 2026  
+**Symptom**: "vegetable bouillon" returns "Raw Vegetable" from cache, "golden flaxseed" returns "Golden Delicious Apples"  
+**Root Cause**: Old cache entries from before scoring improvements were not being validated. Cache validation only checked category/modifier mismatches, not whether core ingredient tokens were actually present in the cached food name.
+
+**Examples**:
+- `"vegetable bouillon"` → `"Raw Vegetable"` (missing "bouillon")
+- `"golden flaxseed"` → `"Golden Delicious Apples"` (missing "flaxseed")
+- `"baby marrows"` → `"Pickled Zucchini"` (should be "Baby Zucchini")
+
+**Fix**: 
+1. Added `hasCoreTokenMismatch()` function in `filter-candidates.ts`
+2. Validates that core ingredient tokens (50+ proteins, grains, produce, seasonings) exist in cached food name
+3. Uses synonym mapping (e.g., "marrows" → "zucchini", "flaxseed" → "flax")
+4. Applied to ALL cache lookup paths in both mapping functions
+
+**Files**: 
+- `src/lib/fatsecret/filter-candidates.ts` (added `CORE_FOOD_TOKENS`, `CORE_TOKEN_SYNONYMS`, `hasCoreTokenMismatch()`)
+- `src/lib/fatsecret/map-ingredient-with-fallback.ts` (6+ cache lookup points)
+- `src/lib/fatsecret/validated-mapping-helpers.ts`
+
+---
+
 ### Ambiguous Units (container, scoop, etc.)
 
 **Date**: Jan 2026  

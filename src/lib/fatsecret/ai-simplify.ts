@@ -1,11 +1,6 @@
 import 'dotenv/config';
-import {
-    FATSECRET_CACHE_AI_MODEL,
-    OPENAI_API_BASE_URL,
-} from './config';
+import { callStructuredLlm } from '../ai/structured-client';
 import { getAiNormalizeCache, saveAiNormalizeCache } from './validated-mapping-helpers';
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
 const CACHE_PREFIX = 'SIMPLIFY:';
 
@@ -35,6 +30,8 @@ const SYSTEM_PROMPT = [
     '- "vegetarian mince" → "Meatless Crumbles" (common API name for meat-free ground)',
     '- "vegan mince" → "Meatless Crumbles"',
     '- "plant-based ground" → "Plant Based Ground Beef"',
+    '- "sugar free cherry pie filling" → "Sugar Free Cherry Pie Filling" (preserve dietary modifier)',
+    '- "plum tomatoes" → "Plum Tomatoes" (already a valid, standard name)',
     '',
     'RULES:',
     '1. Remove non-essential adjectives (fluffy, organic, premium, delicious).',
@@ -44,6 +41,20 @@ const SYSTEM_PROMPT = [
     '5. For use-case words (burger, hot dog, taco), identify the actual ingredient being described.',
     '6. OUTPUT JSON: { simplified: string, rationale: string }',
 ].join('\n');
+
+const JSON_SCHEMA = {
+    name: 'simplify_ingredient',
+    schema: {
+        type: 'object',
+        properties: {
+            simplified: { type: 'string' },
+            rationale: { type: 'string' }
+        },
+        required: ['simplified', 'rationale'],
+        additionalProperties: false
+    },
+    strict: true
+};
 
 type AiSimplifyResult = {
     simplified: string;
@@ -62,58 +73,36 @@ export async function aiSimplifyIngredient(rawLine: string): Promise<AiSimplifyR
         };
     }
 
-    if (!OPENAI_API_KEY) return null;
-
+    // 2. Call structured LLM with OpenRouter → OpenAI fallback
     try {
-        const response = await fetch(`${OPENAI_API_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: FATSECRET_CACHE_AI_MODEL,
-                // Note: Some models don't support temperature=0
-                response_format: {
-                    type: 'json_schema', json_schema: {
-                        name: 'simplify_ingredient',
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                simplified: { type: 'string' },
-                                rationale: { type: 'string' }
-                            },
-                            required: ['simplified', 'rationale'],
-                            additionalProperties: false
-                        },
-                        strict: true
-                    }
-                },
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: `Ingredient: ${rawLine}` },
-                ],
-            }),
+        const result = await callStructuredLlm({
+            schema: JSON_SCHEMA,
+            systemPrompt: SYSTEM_PROMPT,
+            userPrompt: `Ingredient: ${rawLine}`,
+            purpose: 'simplify',
         });
 
-        const json = await response.json();
-        const content = json?.choices?.[0]?.message?.content;
-        if (!content) return null;
+        if (result.status !== 'success' || !result.content) {
+            console.error('aiSimplifyIngredient error:', result.error);
+            return null;
+        }
 
-        const parsed = JSON.parse(content);
-        if (!parsed.simplified) return null;
+        const simplified = result.content.simplified as string;
+        const rationale = result.content.rationale as string;
 
-        // Save to cache (Abusing AiNormalizeCache)
+        if (!simplified) return null;
+
+        // Save to cache
         await saveAiNormalizeCache(cacheKey, {
-            normalizedName: parsed.simplified,
+            normalizedName: simplified,
             synonyms: [],
             prepPhrases: [],
             sizePhrases: [],
         });
 
         return {
-            simplified: parsed.simplified,
-            rationale: parsed.rationale,
+            simplified,
+            rationale,
         };
 
     } catch (err) {

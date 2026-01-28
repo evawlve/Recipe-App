@@ -10,6 +10,8 @@
  *   --skip-cache     Skip cache lookups (force fresh search)
  *   --skip-fdc       Skip FDC (USDA) API
  *   --verbose        Show even more details
+ *   --production     Run through ACTUAL mapIngredientWithFallback (matches pilot import exactly)
+ *   --with-cleanup   Apply database cleanup patterns before mapping (like pilot import)
  */
 
 import { parseIngredientLine } from '../src/lib/parse/ingredient-line';
@@ -20,6 +22,8 @@ import { simpleRerank, toRerankCandidate } from '../src/lib/fatsecret/simple-rer
 import { aiSimplifyIngredient } from '../src/lib/fatsecret/ai-simplify';
 import { getValidatedMapping } from '../src/lib/fatsecret/validated-mapping-helpers';
 import { FatSecretClient } from '../src/lib/fatsecret/client';
+import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
 import chalk from 'chalk';
 
 // ============================================================
@@ -31,6 +35,8 @@ let ingredient = '';
 let skipCache = false;
 let skipFdc = false;
 let verbose = false;
+let productionMode = false;
+let withCleanup = false;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--ingredient' && args[i + 1]) {
@@ -42,6 +48,10 @@ for (let i = 0; i < args.length; i++) {
         skipFdc = true;
     } else if (args[i] === '--verbose') {
         verbose = true;
+    } else if (args[i] === '--production') {
+        productionMode = true;
+    } else if (args[i] === '--with-cleanup') {
+        withCleanup = true;
     } else if (!args[i].startsWith('--')) {
         ingredient = args[i];
     }
@@ -49,7 +59,7 @@ for (let i = 0; i < args.length; i++) {
 
 if (!ingredient) {
     console.log(chalk.red('Usage: debug-mapping-pipeline.ts "ingredient line"'));
-    console.log(chalk.gray('  Options: --skip-cache, --skip-fdc, --verbose'));
+    console.log(chalk.gray('  Options: --skip-cache, --skip-fdc, --verbose, --production, --with-cleanup'));
     process.exit(1);
 }
 
@@ -99,6 +109,80 @@ function candidateTable(candidates: UnifiedCandidate[], limit = 10) {
     if (candidates.length > limit) {
         console.log(chalk.gray(`  ... and ${candidates.length - limit} more`));
     }
+}
+
+// ============================================================
+// Production Mode - Call mapIngredientWithFallback directly
+// ============================================================
+// This matches EXACTLY what pilot-batch-import does
+
+async function runProductionMode(rawLine: string) {
+    console.log();
+    console.log(chalk.bold.yellow('╔══════════════════════════════════════════════════════════════════════╗'));
+    console.log(chalk.bold.yellow('║  PRODUCTION MODE - Calling mapIngredientWithFallback'));
+    console.log(chalk.bold.yellow('╚══════════════════════════════════════════════════════════════════════╝'));
+    console.log();
+    console.log(chalk.white(`  Input: "${rawLine}"`));
+    console.log(chalk.gray(`  Skip Cache: ${skipCache}, With Cleanup: ${withCleanup}`));
+    console.log();
+
+    let effectiveLine = rawLine;
+
+    // Apply cleanup patterns if requested (like pilot-batch-import does)
+    if (withCleanup) {
+        console.log(chalk.cyan('  Step 0: Applying cleanup patterns...'));
+        const cleanupResult = await applyCleanupPatterns(rawLine);
+        if (cleanupResult.appliedPatterns.length > 0) {
+            console.log(chalk.green(`    ✓ Applied ${cleanupResult.appliedPatterns.length} patterns`));
+            for (const p of cleanupResult.appliedPatterns) {
+                console.log(chalk.gray(`      - ${p.pattern} (${p.type})`));
+            }
+            console.log(chalk.white(`    Before: "${rawLine}"`));
+            console.log(chalk.white(`    After:  "${cleanupResult.cleaned}"`));
+            effectiveLine = cleanupResult.cleaned;
+        } else {
+            console.log(chalk.gray('    No patterns applied'));
+        }
+        console.log();
+    }
+
+    console.log(chalk.cyan('  Calling mapIngredientWithFallback()...'));
+    console.log();
+
+    try {
+        const result = await mapIngredientWithFallback(effectiveLine, {
+            minConfidence: 0.5,
+            skipAiValidation: true,
+            skipCache,
+            skipFdc,
+            debug: true,  // Enable debug logging
+        });
+
+        if (!result) {
+            console.log(chalk.red('  ✗ Result: NULL (no mapping found)'));
+        } else if ('status' in result && result.status === 'pending') {
+            console.log(chalk.yellow('  ⏳ Result: PENDING (locked by another process)'));
+        } else {
+            console.log(chalk.green('  ✓ Result:'));
+            console.log(chalk.white(`    Food Name:   ${result.foodName}`));
+            console.log(chalk.white(`    Food ID:     ${result.foodId}`));
+            console.log(chalk.white(`    Source:      ${result.source}`));
+            console.log(chalk.white(`    Confidence:  ${result.confidence.toFixed(3)}`));
+            console.log(chalk.white(`    Grams:       ${result.grams}`));
+            console.log(chalk.white(`    Calories:    ${result.kcal}`));
+            if (result.brandName) {
+                console.log(chalk.gray(`    Brand:       ${result.brandName}`));
+            }
+            if (result.servingDescription) {
+                console.log(chalk.gray(`    Serving:     ${result.servingDescription}`));
+            }
+        }
+    } catch (err) {
+        console.log(chalk.red(`  ✗ Error: ${(err as Error).message}`));
+    }
+
+    console.log();
+    console.log(chalk.gray('Done.'));
 }
 
 // ============================================================
@@ -359,4 +443,8 @@ async function debugPipeline(rawLine: string) {
 }
 
 // Run
-debugPipeline(ingredient).catch(console.error);
+if (productionMode) {
+    runProductionMode(ingredient).catch(console.error);
+} else {
+    debugPipeline(ingredient).catch(console.error);
+}

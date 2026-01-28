@@ -102,7 +102,11 @@ const INGREDIENT_SYNONYMS: Record<string, string[]> = {
   // UK synonyms
   'courgette': ['zucchini', 'zucchini squash'],
   'aubergine': ['eggplant'],
+  // Tomato varieties: plum tomatoes are also called roma tomatoes or italian tomatoes
+  'plum tomato': ['roma tomato', 'italian tomato', 'tomato'],
+  'plum tomatoes': ['roma tomatoes', 'italian tomatoes', 'tomatoes'],
 };
+
 
 // Plural → singular mapping for meat cuts and common ingredients
 const PLURAL_TO_SINGULAR: Record<string, string> = {
@@ -1366,9 +1370,14 @@ export async function mapIngredientWithFatsecret(
 
       // Save to validated cache ONLY if AI approves with high confidence
       if (finalAiValidation.approved && finalAiValidation.confidence >= 0.85) {
-        await saveValidatedMapping(rawLine, result, finalAiValidation);
+        // Use normalizedName (from normalizeIngredientName) as cache key
+        // This ensures lookups work correctly regardless of raw input format
+        await saveValidatedMapping(rawLine, result, finalAiValidation, {
+          canonicalBase: normalizedName,
+        });
         logger.info('fatsecret.map.saved_to_validated_cache', {
           rawLine,
+          normalizedForm: normalizedName,
           foodName: result.foodName,
           aiConfidence: finalAiValidation.confidence,
         });

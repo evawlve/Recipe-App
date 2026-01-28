@@ -31,7 +31,7 @@ import {
 // Types
 // ============================================================
 
-export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse';
+export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse' | 'simplify';
 export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
 
 export interface StructuredLlmOptions {
@@ -126,6 +126,7 @@ const CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number> = {
     ambiguous: 5,
     produce: 5,
     parse: 5,  // AI parse assist (Ollama only)
+    simplify: 5,  // AI ingredient simplification fallback
 };
 
 const limiters: Record<StructuredLlmPurpose, Semaphore> = {
@@ -134,6 +135,7 @@ const limiters: Record<StructuredLlmPurpose, Semaphore> = {
     ambiguous: new Semaphore(CONCURRENCY_LIMITS.ambiguous),
     produce: new Semaphore(CONCURRENCY_LIMITS.produce),
     parse: new Semaphore(CONCURRENCY_LIMITS.parse),
+    simplify: new Semaphore(CONCURRENCY_LIMITS.simplify),
 };
 
 // ============================================================
@@ -526,6 +528,8 @@ export interface AiCallMetrics {
     produce: number;
     /** Count of AI parse assist calls (Ollama only) */
     parse: number;
+    /** Count of AI simplify fallback calls */
+    simplify: number;
     /** Total LLM calls made */
     total: number;
     /** Count of LLM calls skipped by normalize gate */
@@ -541,6 +545,7 @@ let sessionMetrics: AiCallMetrics = {
     ambiguous: 0,
     produce: 0,
     parse: 0,
+    simplify: 0,
     total: 0,
     skippedByGate: 0,
     cacheHits: 0,
@@ -563,6 +568,7 @@ export function resetAiCallMetrics(): void {
         ambiguous: 0,
         produce: 0,
         parse: 0,
+        simplify: 0,
         total: 0,
         skippedByGate: 0,
         cacheHits: 0,

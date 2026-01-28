@@ -1,54 +1,36 @@
-// Test the fixes for ice mapping and serving selection
-import { PrismaClient } from '@prisma/client';
-import { parseIngredientLine } from '../lib/parse/ingredient-line';
-import { normalizeIngredientName } from '../lib/fatsecret/normalization-rules';
-
-// Suppress logs
-process.env.LOG_LEVEL = 'error';
-
-const prisma = new PrismaClient({ log: [] });
+/**
+ * Test the burger relish and cherry pie filling fixes with verbose logging
+ */
+import 'dotenv/config';
+process.env.LOG_LEVEL = 'debug';
+import { mapIngredientWithFallback } from '../lib/fatsecret/map-ingredient-with-fallback';
 
 async function main() {
-    // Import dynamically to ensure LOG_LEVEL is set first
-    const { gatherCandidates } = await import('../lib/fatsecret/gather-candidates');
-    const { filterCandidatesByTokens } = await import('../lib/fatsecret/filter-candidates');
+    console.log("\n=== TESTING BURGER RELISH FIX ===\n");
+    console.log("Expected: Should trigger AI simplify fallback since initial Black Bean Burger has conf 0.80 < 0.85");
+    console.log("Expected result: Pickle Relish\n");
 
-    console.log('=== TEST: crushed ice filtering ===\n');
+    const burgerResult = await mapIngredientWithFallback("0.67 tbsp burger relish");
+    console.log(`\n=== BURGER RELISH RESULT ===`);
+    console.log(`Food: ${burgerResult?.foodName || 'FAILED'}`);
+    console.log(`Confidence: ${burgerResult?.confidence}`);
+    console.log(`Grams: ${burgerResult?.grams}`);
+    console.log(`Kcal: ${burgerResult?.kcal}`);
+    console.log(`Success: ${burgerResult?.foodName?.toLowerCase().includes('relish') ? '✅ PASS' : '❌ FAIL'}`);
 
-    const rawLine = '1 cup crushed ice';
-    const parsed = parseIngredientLine(rawLine);
-    const normalizedName = normalizeIngredientName(parsed?.name || 'crushed ice').cleaned;
+    console.log("\n=== TESTING SUGAR FREE CHERRY PIE FILLING ===\n");
+    console.log("Expected: Should find 'Low Calorie Cherry Pie Filling' via synonym expansion");
 
-    // Gather candidates
-    const candidates = await gatherCandidates(rawLine, parsed, normalizedName, {
-        skipFdc: true,  // Skip FDC to focus on FatSecret
-        maxPerSource: 10,
-    });
+    const cherryResult = await mapIngredientWithFallback("0.75 cup sugar free cherry pie filling");
+    console.log(`\n=== CHERRY PIE FILLING RESULT ===`);
+    console.log(`Food: ${cherryResult?.foodName || 'FAILED'}`);
+    console.log(`Confidence: ${cherryResult?.confidence}`);
+    console.log(`Grams: ${cherryResult?.grams}`);
+    console.log(`Kcal: ${cherryResult?.kcal}`);
+    console.log(`Success: ${cherryResult ? '✅ PASS' : '❌ FAIL'}`);
 
-    console.log(`Gathered ${candidates.length} candidates`);
-
-    // Filter candidates
-    const filterResult = filterCandidatesByTokens(candidates, normalizedName, {
-        debug: true,
-        rawLine
-    });
-
-    console.log(`After filtering: ${filterResult.filtered.length} candidates`);
-    console.log(`Removed: ${filterResult.removedCount}`);
-
-    // Check if Rice is in the results
-    const riceInFiltered = filterResult.filtered.some(c =>
-        c.name.toLowerCase().includes('rice')
-    );
-    console.log(`\nRice in filtered results: ${riceInFiltered ? 'YES (BUG!)' : 'NO (CORRECT!)'}`);
-
-    // Show top candidates after filtering
-    console.log('\nTop filtered candidates:');
-    for (const c of filterResult.filtered.slice(0, 5)) {
-        console.log(`  [${c.source}] ${c.name} (${c.brandName || 'Generic'})`);
-    }
-
-    await prisma.$disconnect();
+    console.log("\n=== TEST COMPLETE ===\n");
+    process.exit(0);
 }
 
 main().catch(console.error);

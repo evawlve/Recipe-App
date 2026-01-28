@@ -36,8 +36,10 @@ const DISCRETE_ITEMS = new Set([
     // Produce
     'clove', 'stalk', 'leaf', 'sprig', 'wedge', 'slice', 'strip',
 
-    // Proteins
+    // Proteins - discrete countable items
     'patty', 'strip', 'piece', 'fillet', 'cutlet',
+    'frank', 'franks', 'sausage', 'sausages', 'hotdog', 'hot dog',
+    'link', 'links', 'wiener', 'wieners',
 
     // Other discrete items
     'chip', 'chip', 'wafer', 'sheet', 'nugget', 'stick',
@@ -54,6 +56,11 @@ const DISCRETE_PATTERNS = [
     /cracker/i,
     /chip/i,
     /slice/i,
+    /frank/i,         // hot dog franks
+    /sausage/i,       // sausages
+    /hot\s*dog/i,     // hot dogs
+    /wiener/i,        // wieners
+    /link/i,          // sausage links
 ];
 
 /**

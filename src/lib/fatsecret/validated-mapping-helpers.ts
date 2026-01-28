@@ -13,6 +13,7 @@ import type { FatsecretMappedIngredient } from './map-ingredient';
 import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
+import { hasCoreTokenMismatch } from './filter-candidates';
 
 /**
  * Retrieve a validated mapping from cache by RAW ingredient line
@@ -109,11 +110,21 @@ export async function getValidatedMappingByNormalizedName(
             return null;
         }
 
-        // Validate cached mapping against current query context (cooking state, modifiers)
-        if (rawLine) {
-            const { isWrongCookingStateForGrain, hasCriticalModifierMismatch } =
-                await import('./filter-candidates');
+        // Validate cached mapping against current query context (cooking state, modifiers, core tokens)
+        const { isWrongCookingStateForGrain, hasCriticalModifierMismatch, hasCoreTokenMismatch } =
+            await import('./filter-candidates');
 
+        // Always check core token coverage (Jan 2026)
+        // e.g., "vegetable bouillon" → "Raw Vegetable" should be rejected
+        if (hasCoreTokenMismatch(normalizedName, cached.foodName, cached.brandName)) {
+            logger.debug('validated_mapping.cache_core_token_mismatch', {
+                query: normalizedName,
+                cachedFood: cached.foodName,
+            });
+            return null;  // Reject cache hit, force fresh search
+        }
+
+        if (rawLine) {
             if (isWrongCookingStateForGrain(rawLine, normalizedName, cached.foodName) ||
                 hasCriticalModifierMismatch(rawLine, cached.foodName, 'cache')) {
                 logger.debug('validated_mapping.cache_context_mismatch', {
@@ -188,16 +199,22 @@ async function findByTokenSet(
     });
 
     // Find exact token-set match with validation
+    const { isWrongCookingStateForGrain, hasCriticalModifierMismatch, hasCoreTokenMismatch } =
+        await import('./filter-candidates');
+
     for (const candidate of candidates) {
         const candidateTokens = new Set(
             candidate.normalizedForm.toLowerCase().split(/\s+/).filter(Boolean)
         );
         if (setsEqual(inputTokens, candidateTokens)) {
+            // Always validate core token coverage (Jan 2026)
+            if (hasCoreTokenMismatch(normalizedName, candidate.foodName, candidate.brandName)) {
+                // Skip this candidate, try next one
+                continue;
+            }
+
             // Validate against cooking state and modifiers if rawLine provided
             if (rawLine) {
-                const { isWrongCookingStateForGrain, hasCriticalModifierMismatch } =
-                    await import('./filter-candidates');
-
                 if (isWrongCookingStateForGrain(rawLine, normalizedName, candidate.foodName) ||
                     hasCriticalModifierMismatch(rawLine, candidate.foodName, 'cache')) {
                     // Skip this candidate, try next one
@@ -237,6 +254,19 @@ export async function saveValidatedMapping(
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
     // canonicalBase consolidates variations like "lemon zest", "lemon rind" -> "lemon peel"
     const normalizedForm = options?.canonicalBase || options?.normalizedForm || normalizeQuery(rawIngredient);
+
+    // Pre-save validation: Reject mappings where core tokens from normalizedForm 
+    // are missing from foodName (e.g., "dry brown rice" → "dry brown beans" is invalid
+    // because "rice" is a core token that must appear in the food name)
+    if (hasCoreTokenMismatch(normalizedForm, mapping.foodName, mapping.brandName)) {
+        logger.warn('validated_mapping.save_rejected_core_token_mismatch', {
+            rawIngredient,
+            normalizedForm,
+            foodName: mapping.foodName,
+            brandName: mapping.brandName,
+        });
+        return; // Don't save this invalid mapping
+    }
 
     try {
         // Save by normalizedForm (primary lookup key)

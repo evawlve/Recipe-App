@@ -18,9 +18,10 @@ import {
     isMultiIngredientMismatch,
     isReplacementMismatch,
     validateAliasMapping,
+    hasCoreTokenMismatch,
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery } from './simple-rerank';
-import { getValidatedMapping, getValidatedMappingByNormalizedName, saveValidatedMapping } from './validated-mapping-helpers';
+import { getValidatedMappingByNormalizedName, saveValidatedMapping } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
 import { FatSecretClient, type FatSecretFoodDetails, type FatSecretServing } from './client';
@@ -35,7 +36,7 @@ import { aiParseIngredient } from './ai-parse';
 import { hydrateSingleCandidate } from './hydrate-cache';
 import { queueForDeferredHydration, proactiveProduceBackfill } from './deferred-hydration';
 import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-generator';
-import { backfillOnDemand } from './serving-backfill';
+import { backfillOnDemand, isDiscreteItem } from './serving-backfill';
 import { classifyUnit } from './unit-type';
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
 import { shouldNormalizeLlm } from './normalize-gate';
@@ -48,6 +49,12 @@ import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-clie
 // When multiple threads try to map the same ingredient simultaneously,
 // only the first one runs the full pipeline. Others wait for its result.
 const inFlightLocks = new Map<string, Promise<FatsecretMappedIngredient | null>>();
+
+// Minimum confidence to SKIP AI simplify fallback
+// If winner confidence is below this, we try AI simplify even if there's a winner
+// This catches cases like "burger relish" -> "Black Bean Burger" (0.80 conf)
+// where AI simplify would correctly map to "Pickle Relish"
+const MIN_CONFIDENCE_FOR_FALLBACK_SKIP = 0.85;
 
 function getLockKey(name: string): string {
     return name.toLowerCase().trim();
@@ -176,102 +183,9 @@ export async function mapIngredientWithFallback(
         logger.debug('mapping.synonym_found', { rawLine: trimmed, canonicalName });
     }
 
-    // Step 0b: Check validated cache for instant return
-    const cached = await getValidatedMapping(effectiveQuery);
-    if (cached) {
-        logger.info('mapping.validated_cache_hit', { rawLine: trimmed, effectiveQuery });
-
-        // Step 0b-1: Validate cached mapping against current filters
-        // Cached mappings from before filter improvements may have bad mappings
-        const parsedCheck = parseIngredientLine(trimmed);
-        const normalizedCheck = normalizeIngredientName(parsedCheck?.name || trimmed).cleaned || trimmed;
-
-        if (isCategoryMismatch(normalizedCheck, cached.foodName, cached.brandName) ||
-            isMultiIngredientMismatch(normalizedCheck, cached.foodName) ||
-            hasCriticalModifierMismatch(trimmed, cached.foodName, 'cache') ||
-            isReplacementMismatch(trimmed, cached.foodName, cached.brandName)) {
-            logger.warn('mapping.cache_filter_mismatch', {
-                rawLine: trimmed,
-                cachedFood: cached.foodName,
-                normalized: normalizedCheck,
-            });
-            // Fall through to normal search - don't use stale cached mapping
-        } else {
-            // ValidatedMapping only stores food info, not serving details
-            // If the cached result already has serving info (servingId), return directly
-            if (cached.servingId) {
-                return cached;
-            }
-
-            // Otherwise, we need to hydrate serving info for this food
-            // Parse the input to get quantity/unit for serving selection
-            const parsedForServing = parseIngredientLine(trimmed);
-
-            // Create a synthetic candidate from the cached result
-            // Always use 'cache' source so it goes through the proper serving selection path
-            // (FDC foods in cache don't have nutrition in the candidate, so buildFdcResult would fail)
-            const cachedCandidate: UnifiedCandidate = {
-                id: cached.foodId,
-                name: cached.foodName,
-                brandName: cached.brandName || undefined,
-                source: 'cache',  // Always cache, even for fdc_ IDs
-                score: cached.confidence,
-                foodType: 'generic',
-                rawData: {},
-            };
-
-            const hydratedResult = await hydrateAndSelectServing(
-                cachedCandidate,
-                parsedForServing,
-                cached.confidence,
-                rawLine,
-                client
-            );
-
-            if (hydratedResult) {
-                // Track cache hit for metrics
-                incrementCacheHit();
-
-                // Log the cache hit for summary tracking
-                logMappingAnalysis({
-                    rawIngredient: trimmed,
-                    parsed: {
-                        amount: parsedForServing?.qty,
-                        unit: parsedForServing?.unit,
-                        ingredient: parsedForServing?.name,
-                    },
-                    topCandidates: [],  // No candidate search was performed
-                    selectedCandidate: {
-                        foodId: cached.foodId,
-                        foodName: cached.foodName,
-                        brandName: cached.brandName || '',
-                        confidence: cached.confidence,
-                        selectionReason: 'early_cache_hit',
-                    },
-                    selectedNutrition: {
-                        calories: hydratedResult.kcal,
-                        protein: hydratedResult.protein,
-                        carbs: hydratedResult.carbs,
-                        fat: hydratedResult.fat,
-                        perGrams: hydratedResult.grams,
-                    },
-                    servingSelection: {
-                        servingDescription: hydratedResult.servingDescription || 'N/A',
-                        grams: hydratedResult.grams,
-                        backfillUsed: false,
-                    },
-                    finalResult: 'success',
-                    source: 'early_cache',
-                    aiCalls: undefined,  // No AI calls for cache hits
-                });
-                return hydratedResult;
-            }
-            // If hydration fails, fall through to normal search
-            logger.warn('mapping.cache_hydration_failed', { rawLine: trimmed, foodId: cached.foodId });
-        }
-    }
-
     // Step 1: Parse and normalize
+    // NOTE: Cache lookup now only happens after normalization (see "EARLY CACHE CHECK" below)
+    // This eliminates "selection drift" where raw line variations would get different mappings
     let parsed = parseIngredientLine(trimmed);
     let baseName = parsed?.name?.trim() || trimmed;
 
@@ -283,24 +197,39 @@ export async function mapIngredientWithFallback(
         logger.info('mapping.ai_parse_fallback_attempt', { rawLine: trimmed });
         const aiParsed = await aiParseIngredient(trimmed);
         if (aiParsed.status === 'success' && aiParsed.name) {
-            // Update parsed with AI results
-            parsed = {
-                qty: aiParsed.qty ?? 1,
-                multiplier: 1,
-                unit: aiParsed.unit,
-                rawUnit: aiParsed.unit,
-                name: aiParsed.name,
-                notes: aiParsed.notes ?? null,
-                qualifiers: undefined,
-                unitHint: null,
-            };
-            baseName = aiParsed.name;
-            logger.info('mapping.ai_parse_fallback_success', {
-                rawLine: trimmed,
-                qty: parsed.qty,
-                unit: parsed.unit,
-                name: parsed.name,
-            });
+            // SANITY CHECK: Reject absurd quantity values
+            // This catches OCR/import artifacts like "0 311625 cup" where the AI
+            // might misinterpret malformed numbers as quantities
+            const MAX_REASONABLE_QTY = 1000;
+            const aiQty = aiParsed.qty ?? 1;
+
+            if (aiQty > MAX_REASONABLE_QTY) {
+                logger.warn('mapping.ai_parse_qty_rejected', {
+                    rawLine: trimmed,
+                    aiQty,
+                    reason: 'exceeds_max_reasonable_qty',
+                });
+                // Don't use AI result - keep original parsed values
+            } else {
+                // Update parsed with AI results
+                parsed = {
+                    qty: aiQty,
+                    multiplier: 1,
+                    unit: aiParsed.unit,
+                    rawUnit: aiParsed.unit,
+                    name: aiParsed.name,
+                    notes: aiParsed.notes ?? null,
+                    qualifiers: undefined,
+                    unitHint: null,
+                };
+                baseName = aiParsed.name;
+                logger.info('mapping.ai_parse_fallback_success', {
+                    rawLine: trimmed,
+                    qty: parsed.qty,
+                    unit: parsed.unit,
+                    name: parsed.name,
+                });
+            }
         }
     }
 
@@ -488,13 +417,15 @@ export async function mapIngredientWithFallback(
         // ============================================================
         // Check ValidatedMapping for normalized name BEFORE calling AI
         // This is the key optimization: "1 cup chopped onion" → normalized "onion" → cache hit!
-        const earlyCacheHit = await getValidatedMapping(normalizedName);
+        const earlyCacheHit = await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
 
             // Validate cached mapping against current filters
             // Cached mappings from before filter improvements may have bad mappings
-            if (isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
+            const earlyCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName);
+            if (earlyCoreTokenMismatch ||
+                isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
                 isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ||
                 hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ||
                 isReplacementMismatch(trimmed, earlyCacheHit.foodName, earlyCacheHit.brandName)) {
@@ -502,6 +433,7 @@ export async function mapIngredientWithFallback(
                     rawLine: trimmed,
                     cachedFood: earlyCacheHit.foodName,
                     normalized: normalizedName,
+                    coreTokenMismatch: earlyCoreTokenMismatch,
                 });
                 // Fall through to normal search - don't use stale cached mapping
             } else {
@@ -657,10 +589,12 @@ export async function mapIngredientWithFallback(
         // Step 1c: Check validated cache for normalized name (User Optimization)
         // "1 cup chopped onion" -> normalized "onion" -> checks cache for "onion"
         if (!winner) {
-            const normalizedCache = await getValidatedMapping(normalizedName);
+            const normalizedCache = await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
-                if (isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
+                const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
+                if (normalizedCoreTokenMismatch ||
+                    isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
                     isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ||
                     hasCriticalModifierMismatch(trimmed, normalizedCache.foodName, 'cache') ||
                     isReplacementMismatch(trimmed, normalizedCache.foodName, normalizedCache.brandName)) {
@@ -668,6 +602,7 @@ export async function mapIngredientWithFallback(
                         rawLine: trimmed,
                         cachedFood: normalizedCache.foodName,
                         normalized: normalizedName,
+                        coreTokenMismatch: normalizedCoreTokenMismatch,
                     });
                 } else {
                     winner = {
@@ -916,11 +851,14 @@ export async function mapIngredientWithFallback(
             }
         }
 
-        // Step 2b: Semantic Fallback (If still no winner)
+        // Step 2b: Semantic Fallback (If no winner OR low-confidence winner)
         // Handle complex lines like "buttermilk pancake mix light" -> "Pancake Mix"
+        // Also handle cases like "burger relish" -> "Black Bean Burger" (low conf)
+        // where AI simplify would correctly return "Pickle Relish"
         // Skip if this is already a recursive fallback call to prevent infinite loops
-        if (!winner && !_skipFallback) {
-            logger.info('mapping.attempting_fallback', { rawLine: trimmed });
+        const shouldTryFallback = !winner || (confidence < MIN_CONFIDENCE_FOR_FALLBACK_SKIP);
+        if (shouldTryFallback && !_skipFallback) {
+            logger.info('mapping.attempting_fallback', { rawLine: trimmed, currentConfidence: confidence, winner: winner?.name });
 
             // LLM-based simplification for complex ingredient names
             const { aiSimplifyIngredient } = await import('./ai-simplify');
@@ -1097,6 +1035,41 @@ export async function mapIngredientWithFallback(
             }
         }
 
+        // Step 5a-VOLUME: If hydration failed for a VOLUME unit (cup, tbsp, tsp, etc.),
+        // try AI volume backfill to estimate density for the winner BEFORE falling back to other candidates.
+        // This prevents falling back to semantically unrelated candidates just because they have volume servings.
+        const isVolumeUnit = parsed?.unit && /^(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*ounce|l|liter|liters)$/i.test(parsed.unit);
+
+        if (!result && isVolumeUnit && winner.source === 'fatsecret') {
+            logger.info('mapping.volume_backfill_attempt', {
+                foodId: winner.id,
+                foodName: winner.name,
+                unit: parsed.unit,
+            });
+
+            const volumeBackfillResult = await insertAiServing(winner.id, 'volume');
+
+            if (volumeBackfillResult.success) {
+                // Retry hydration now that we have a volume serving
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, client);
+
+                if (result) {
+                    logger.info('mapping.volume_backfill_success', {
+                        foodId: winner.id,
+                        foodName: winner.name,
+                        unit: parsed.unit,
+                        grams: result.grams,
+                    });
+                    selectionReason = 'volume_backfill_success';
+                }
+            } else {
+                logger.warn('mapping.volume_backfill_failed', {
+                    foodId: winner.id,
+                    reason: volumeBackfillResult.reason,
+                });
+            }
+        }
+
         // If first choice fails (e.g., branded item without serving weights), try next candidates
         // Note: filtered may be empty if winner came from cache hit - skip fallback in that case
         if (!result && filtered.length > 0) {
@@ -1112,9 +1085,53 @@ export async function mapIngredientWithFallback(
                 .slice(0, 3);
 
             for (const fallback of fallbackCandidates) {
-                const fallbackResult = await hydrateAndSelectServing(
+                // CRITICAL: Validate semantic relevance before accepting fallback
+                // This prevents "golden flaxseed meal" → "Golden Delicious Apples" syndrome
+                // where the fallback is selected just because it has the right serving, 
+                // despite being semantically unrelated to the query
+                if (hasCoreTokenMismatch(normalizedName, fallback.name, fallback.brandName)) {
+                    logger.debug('mapping.fallback_rejected_token_mismatch', {
+                        query: normalizedName,
+                        fallbackName: fallback.name,
+                        fallbackBrand: fallback.brandName,
+                    });
+                    continue; // Skip this fallback, try next one
+                }
+
+
+                let fallbackResult = await hydrateAndSelectServing(
                     fallback, parsed, confidence * 0.95, rawLine, client
                 );
+
+                // If hydration failed for a FatSecret candidate, try backfill before giving up
+                if (!fallbackResult && fallback.source === 'fatsecret') {
+                    if (isVolumeUnit) {
+                        logger.info('mapping.fallback_volume_backfill_attempt', {
+                            foodId: fallback.id,
+                            foodName: fallback.name,
+                            unit: parsed?.unit,
+                        });
+                        const backfillResult = await insertAiServing(fallback.id, 'volume');
+                        if (backfillResult.success) {
+                            fallbackResult = await hydrateAndSelectServing(
+                                fallback, parsed, confidence * 0.95, rawLine, client
+                            );
+                        }
+                    } else if (isWeightUnit) {
+                        logger.info('mapping.fallback_weight_backfill_attempt', {
+                            foodId: fallback.id,
+                            foodName: fallback.name,
+                            unit: parsed?.unit,
+                        });
+                        const backfillResult = await backfillWeightServing(fallback.id);
+                        if (backfillResult.success) {
+                            fallbackResult = await hydrateAndSelectServing(
+                                fallback, parsed, confidence * 0.95, rawLine, client
+                            );
+                        }
+                    }
+                }
+
                 if (fallbackResult) {
                     logger.info('mapping.fallback_success', {
                         originalId: winner.id,
@@ -1225,12 +1242,17 @@ export async function mapIngredientWithFallback(
 
         // Step 6: Save to validated cache if high confidence
         if (confidence >= 0.85) {
+            // Use AI-derived canonicalBase if available, otherwise fall back to normalizedName
+            // (which has already been processed by normalizeIngredientName to strip prep phrases)
+            // This ensures cache lookups can find the entry by normalized form
+            const cacheKey = aiCanonicalBase || normalizedName;
+
             await saveValidatedMapping(rawLine, result, {
                 approved: true,
                 confidence,
                 reason: selectionReason,
             }, {
-                canonicalBase: aiCanonicalBase,  // Use AI-derived base for cache consolidation
+                canonicalBase: cacheKey,  // Use canonical base for cache consolidation
             });
 
             // Also save AI synonyms as aliases to enable future cache hits
@@ -1269,7 +1291,7 @@ export async function mapIngredientWithFallback(
                 }, {
                     isAlias: true,
                     canonicalRawIngredient: trimmed,
-                    canonicalBase: aiCanonicalBase,  // Use AI-derived base for cache consolidation
+                    canonicalBase: cacheKey,  // Use same cache key for consolidation
                 }).catch(() => { }); // Best effort, ignore duplicates
             }
         }
@@ -1344,6 +1366,58 @@ export async function mapIngredientWithFallback(
         // For produce items, pre-populate small/medium/large servings so future
         // size-based queries (e.g., "1 large avocado") hit cached servings
         proactiveProduceBackfill(result.foodId, result.foodName);
+
+        // ============================================================
+        // FINAL SANITY CHECK: Reject wildly unreasonable computed values
+        // ============================================================
+        // This catches cases where:
+        // 1. User genuinely entered an absurd quantity (e.g., "5000 cups flour")
+        // 2. Upstream calculation errors produced unreasonable results
+        // 3. Import/OCR artifacts created malformed inputs
+        const MAX_REASONABLE_GRAMS = 10000;  // 10kg - more than any typical ingredient
+        const MAX_REASONABLE_KCAL = 50000;   // ~20 days of calories - clearly an error
+
+        if (result.grams > MAX_REASONABLE_GRAMS || result.kcal > MAX_REASONABLE_KCAL) {
+            logger.warn('mapping.result_sanity_check_failed', {
+                rawLine: trimmed,
+                grams: result.grams,
+                kcal: result.kcal,
+                foodName: result.foodName,
+                reason: result.grams > MAX_REASONABLE_GRAMS
+                    ? 'grams_exceeds_10kg'
+                    : 'kcal_exceeds_50000',
+            });
+
+            if (ENABLE_MAPPING_ANALYSIS) {
+                logMappingAnalysis({
+                    rawIngredient: trimmed,
+                    parsed: {
+                        amount: parsed?.qty,
+                        unit: parsed?.unit,
+                        ingredient: parsed?.name,
+                    },
+                    topCandidates: [],
+                    selectedCandidate: {
+                        foodId: result.foodId,
+                        foodName: result.foodName,
+                        brandName: result.brandName || '',
+                        confidence,
+                        selectionReason,
+                    },
+                    selectedNutrition: {
+                        calories: result.kcal,
+                        protein: result.protein,
+                        carbs: result.carbs,
+                        fat: result.fat,
+                        perGrams: result.grams,
+                    },
+                    finalResult: 'failed',
+                    failureReason: `sanity_check_failed: grams=${result.grams.toFixed(0)}, kcal=${result.kcal.toFixed(0)}`,
+                });
+            }
+
+            return null;  // Reject the mapping - better to fail than return garbage
+        }
 
         return result;
     } finally {
@@ -1448,7 +1522,7 @@ async function hydrateAndSelectServing(
     }
 
     // Select best serving
-    let servingResult = selectServing(parsed, details.servings);
+    let servingResult = selectServing(parsed, details.servings, candidate.name);
 
     // If selection failed and we have a specific unit, try on-demand backfill
     // BUT skip for ambiguous units (egg, packet, etc.) - those need AI estimation
@@ -1475,7 +1549,7 @@ async function hydrateAndSelectServing(
                 if (freshData) {
                     details = cacheFoodToDetails(freshData);
                     // Retry selection with new servings
-                    servingResult = selectServing(parsed, details.servings);
+                    servingResult = selectServing(parsed, details.servings, candidate.name);
 
                     if (servingResult) {
                         logger.info('hydrate.backfill_recovery_success', {
@@ -1514,7 +1588,7 @@ async function hydrateAndSelectServing(
             const freshData = await getCachedFoodWithRelations(candidate.id);
             if (freshData) {
                 details = cacheFoodToDetails(freshData);
-                servingResult = selectServing(parsed, details.servings);
+                servingResult = selectServing(parsed, details.servings, candidate.name);
 
                 if (servingResult) {
                     logger.info('hydrate.unitless_backfill_success', {
@@ -1899,7 +1973,8 @@ async function buildFdcResult(
 
 function selectServing(
     parsed: ParsedIngredient | null,
-    servings: FatSecretServing[]
+    servings: FatSecretServing[],
+    foodName?: string  // Optional food name for discrete item detection
 ): {
     serving: FatSecretServing;
     matchScore: number;
@@ -1919,6 +1994,40 @@ function selectServing(
     // from API-provided servings (e.g., "1 packet" matching to "serving = 100g").
     // These require AI estimation to get accurate weights.
     if (unit && isAmbiguousUnit(unit)) {
+        // EXCEPTION: For size qualifiers (small/medium/large), first check if
+        // an existing serving already contains that size with valid grams.
+        // e.g., "medium (4-1/8" long)" with 15g should be used instead of AI.
+        const SIZE_QUALIFIERS = ['small', 'medium', 'large'];
+        if (SIZE_QUALIFIERS.includes(unit)) {
+            const matchingServing = servings.find(s => {
+                const desc = (s.measurementDescription || s.description || '').toLowerCase();
+                const g = gramsForServing(s);
+                // Must contain the size qualifier and have valid grams
+                return desc.includes(unit) && g != null && g > 0;
+            });
+
+            if (matchingServing) {
+                const grams = gramsForServing(matchingServing)!;
+                const unitsPerServing = matchingServing.numberOfUnits && matchingServing.numberOfUnits > 0
+                    ? matchingServing.numberOfUnits : 1;
+
+                logger.debug('selectServing.size_qualifier_from_existing', {
+                    unit,
+                    matchedServing: matchingServing.measurementDescription || matchingServing.description,
+                    grams,
+                });
+
+                return {
+                    serving: matchingServing,
+                    matchScore: 3.0,
+                    gramsPerUnit: grams / unitsPerServing,
+                    unitsPerServing,
+                    baseGrams: grams / unitsPerServing,
+                    matchType: 'exact' as const,
+                };
+            }
+        }
+
         logger.debug('selectServing.ambiguous_unit_skip', {
             unit,
             ingredientName: parsed?.name,
@@ -1926,6 +2035,7 @@ function selectServing(
         });
         return null; // Trigger AI backfill path
     }
+
 
     // Debug: Log available servings to help diagnose unit matching issues
     logger.debug('selectServing.start', {
@@ -2016,7 +2126,7 @@ function selectServing(
     };
 
     // Extract volume unit from serving description
-    const extractServingVolumeUnit = (description: string): { unit: string; amount: number } | null => {
+    const extractServingVolumeUnit = (description: string, serving?: FatSecretServing): { unit: string; amount: number } | null => {
         const desc = description.toLowerCase();
         // Match patterns like "2 tbsp", "1 cup", "100 ml", "4 fl oz"
         const match = desc.match(/(\d+(?:\.\d+)?)\s*(cup|cups|c|tbsp|tablespoon|tablespoons|tbs|tsp|teaspoon|teaspoons|ml|fl\.?\s*oz|floz|fluid\s*ounce?s?)/i);
@@ -2031,8 +2141,29 @@ function selectServing(
                 return { unit: canonical, amount };
             }
         }
-        // Also handle servings that are just the unit without number prefix (e.g., "fl oz")
-        // In this case, use numberOfUnits from the serving object
+
+        // Handle servings that are just the unit without number prefix (e.g., "ml", "tbsp")
+        // Use numberOfUnits from serving object or volumeMl for ml amount
+        const standaloneVolumeUnits = ['ml', 'cup', 'cups', 'tbsp', 'tablespoon', 'tsp', 'teaspoon', 'floz', 'fl oz'];
+        const descTrimmed = desc.trim();
+        for (const volUnit of standaloneVolumeUnits) {
+            if (descTrimmed === volUnit || descTrimmed === volUnit + 's') {
+                const canonical = getCanonicalVolumeUnit(volUnit);
+                if (canonical) {
+                    // Use volumeMl if available (for ml servings), otherwise numberOfUnits
+                    let amount = 1;
+                    if (serving) {
+                        if (canonical === 'ml' && serving.volumeMl && serving.volumeMl > 0) {
+                            amount = serving.volumeMl;
+                        } else if (serving.numberOfUnits && serving.numberOfUnits > 0) {
+                            amount = serving.numberOfUnits;
+                        }
+                    }
+                    return { unit: canonical, amount };
+                }
+            }
+        }
+
         return null;
     };
 
@@ -2131,7 +2262,7 @@ function selectServing(
 
         // Volume conversion match
         if (effectiveUnit && requestedVolumeUnit) {
-            let servingVolume = extractServingVolumeUnit(description);
+            let servingVolume = extractServingVolumeUnit(description, serving);
 
             // Fallback: check metricServingUnit for volume data when description lacks it
             // This handles cases like "serving" with metricServingAmount=240, metricServingUnit="ml"
@@ -2262,33 +2393,81 @@ function selectServing(
         matchType = 'fallback';
         if (!warning) warning = `No "${effectiveUnit}" serving found, using fallback`;
     } else if (!effectiveUnit) {
-        // No unit specified - PREFER whole-item servings for produce
-        // e.g., "1 cucumber" should use "medium" (~300g), NOT "slice" (7g)
+        // No unit specified - need to determine if this is:
+        // A) Produce (use medium/large/small for whole items)
+        // B) Discrete countable items like franks, sausages (use default "serving")
+
+        // PRIORITY 0: For discrete countable items, prefer the default "serving"
+        // These are items where "medium" means size variation, not a whole item
+        // e.g., "2 beef franks" should use 2x "serving" (45g each), not "medium" (140g)
+        const defaultServing = servings.find(s => s.isDefault === true);
+        const defaultDesc = (defaultServing?.measurementDescription || defaultServing?.description || '').toLowerCase();
+        const isSimpleServingDefault = defaultDesc === 'serving' || defaultDesc === '1 serving';
+
+        if (defaultServing && isSimpleServingDefault) {
+            const g = gramsForServing(defaultServing);
+            if (g != null && g > 0) {
+                selected = { serving: defaultServing, score: 1.0, factor: 1 };
+                matchType = 'exact';
+                logger.debug('selectServing.unitless_default_serving', {
+                    description: defaultServing.measurementDescription || defaultServing.description,
+                    grams: g,
+                });
+            }
+        }
 
         // PRIORITY 1: Look for WHOLE-ITEM servings (medium, large, small, whole, fruit)
-        const wholeItemPatterns = [
-            /\bmedium\b/i, /\blarge\b/i, /\bsmall\b/i,
-            /\bwhole\b/i, /\beach\b/i,
-            /\bfruit\b/i, /\bfruits\b/i,  // For "1 mango" → "fruit without refuse"
-            /\bhead\b/i, /\bheads\b/i,    // For "1 lettuce" → "head"
-        ];
+        // This is for produce like "1 cucumber" → "medium" (~300g)
+        // Skip if we already found a good default serving
+        // IMPORTANT: Skip for discrete items (franks, sausages) where "medium" means size, not quantity
+        const isDiscrete = foodName ? isDiscreteItem(foodName) : false;
 
-        const wholeItemServing = servings.find(s => {
-            const desc = (s.measurementDescription || s.description || '').toLowerCase();
-            const g = gramsForServing(s);
-            return g != null && g > 0 && wholeItemPatterns.some(p => p.test(desc));
-        });
+        if (!selected && !isDiscrete) {
+            const wholeItemPatterns = [
+                /\bmedium\b/i, /\blarge\b/i, /\bsmall\b/i,
+                /\bwhole\b/i, /\beach\b/i,
+                /\bfruit\b/i, /\bfruits\b/i,  // For "1 mango" → "fruit without refuse"
+                /\bhead\b/i, /\bheads\b/i,    // For "1 lettuce" → "head"
+            ];
 
-        if (wholeItemServing) {
-            selected = { serving: wholeItemServing, score: 1.0, factor: 1 };
-            matchType = 'same_type';
-            logger.debug('selectServing.unitless_whole_item_serving', {
-                description: wholeItemServing.measurementDescription || wholeItemServing.description,
-                grams: gramsForServing(wholeItemServing),
+            const wholeItemServing = servings.find(s => {
+                const desc = (s.measurementDescription || s.description || '').toLowerCase();
+                const g = gramsForServing(s);
+                return g != null && g > 0 && wholeItemPatterns.some(p => p.test(desc));
             });
-        } else {
-            // PRIORITY 2: Look for other count-based servings (clove, piece, slice, etc.)
-            // These are for items where partial servings are default (garlic cloves, bread slices)
+
+            if (wholeItemServing) {
+                selected = { serving: wholeItemServing, score: 1.0, factor: 1 };
+                matchType = 'same_type';
+                logger.debug('selectServing.unitless_whole_item_serving', {
+                    description: wholeItemServing.measurementDescription || wholeItemServing.description,
+                    grams: gramsForServing(wholeItemServing),
+                });
+            }
+        }
+
+        // For discrete items without a default serving, use ANY serving with valid grams
+        // This ensures "2 beef franks" uses a per-item serving rather than failing
+        if (!selected && isDiscrete) {
+            const anyServing = servings.find(s => {
+                const g = gramsForServing(s);
+                return g != null && g > 0;
+            });
+
+            if (anyServing) {
+                selected = { serving: anyServing, score: 1.0, factor: 1 };
+                matchType = 'fallback';
+                logger.debug('selectServing.discrete_fallback_serving', {
+                    foodName,
+                    description: anyServing.measurementDescription || anyServing.description,
+                    grams: gramsForServing(anyServing),
+                });
+            }
+        }
+
+        // PRIORITY 2: Look for other count-based servings (clove, piece, slice, etc.)
+        // These are for items where partial servings are default (garlic cloves, bread slices)
+        if (!selected) {
             const countPatterns = [
                 /\bclove\b/i, /\bcloves\b/i,
                 /\bpiece\b/i, /\bpieces\b/i,

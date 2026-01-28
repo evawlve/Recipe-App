@@ -243,7 +243,7 @@ interface SanityCheckResult {
 
 const CATEGORY_LIMITS: Record<string, { minG: number; maxG: number; keywords: string[] }> = {
     'protein_powder': { minG: 20, maxG: 50, keywords: ['protein powder', 'whey', 'casein', 'protein isolate'] },
-    'scallion': { minG: 5, maxG: 40, keywords: ['scallion', 'green onion', 'spring onion'] },
+    'scallion': { minG: 5, maxG: 25, keywords: ['scallion', 'green onion', 'spring onion'] },
     'herbs': { minG: 1, maxG: 20, keywords: ['basil', 'cilantro', 'parsley', 'mint', 'dill', 'oregano', 'thyme'] },
     'spices': { minG: 0.5, maxG: 10, keywords: ['pepper', 'cinnamon', 'cumin', 'paprika', 'turmeric'] },
 };
