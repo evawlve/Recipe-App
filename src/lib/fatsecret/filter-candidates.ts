@@ -866,6 +866,16 @@ const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] 
         excludeIfContains: ['noodle', 'noodles', 'pasta', 'spaghetti', 'linguine', 'fettuccine',
             'macaroni', 'lasagna', 'ravioli', 'tortellini', 'gnocchi', 'dip', 'artichoke dip']
     },
+    // === NEW: Generic yogurt should prefer PLAIN over flavored ===
+    // "low fat yogurt" or "greek yogurt" without flavor should NOT match vanilla, strawberry, etc.
+    // Flavored yogurt has added sugar/calories
+    {
+        query: ['yogurt', 'low fat yogurt', 'lowfat yogurt', 'nonfat yogurt', 'greek yogurt',
+            'fat free yogurt', 'plain yogurt', 'natural yogurt'],
+        excludeIfContains: ['vanilla', 'strawberry', 'blueberry', 'peach', 'cherry', 'raspberry',
+            'fruit', 'flavored', 'honey', 'maple', 'caramel', 'chocolate', 'banana',
+            'mango', 'key lime', 'lemon', 'mixed berry', 'tropical']
+    },
 ];
 
 
@@ -891,6 +901,7 @@ const CORE_FOOD_TOKENS = new Set([
     // Grains & Starches
     'rice', 'pasta', 'noodle', 'noodles', 'bread', 'flour', 'oat', 'oats', 'quinoa',
     'barley', 'wheat', 'corn', 'couscous', 'bulgur',
+    'starch', 'cornstarch',  // Added: prevents "corn starch" → "Baby Corn"
     // Produce
     'apple', 'apples', 'banana', 'orange', 'lemon', 'lime', 'berry', 'berries',
     'strawberry', 'blueberry', 'raspberry', 'tomato', 'tomatoes', 'potato', 'potatoes',
@@ -905,6 +916,9 @@ const CORE_FOOD_TOKENS = new Set([
     // Seasonings & Condiments
     'bouillon', 'broth', 'stock', 'sauce', 'vinegar', 'mustard', 'ketchup', 'mayo',
     'mayonnaise', 'soy', 'worcestershire',
+    'relish',  // Added: prevents "burger relish" → "Black Bean Burger"
+    // Fats & Shortening
+    'shortening',  // Added: prevents "vegetable bouillon" → "Vegetable Shortening"
     // Sweeteners
     'sugar', 'honey', 'syrup', 'molasses', 'stevia',
     // Oils & Fats
@@ -912,6 +926,8 @@ const CORE_FOOD_TOKENS = new Set([
     // Spices (when they ARE the ingredient, not just modifiers)
     'cinnamon', 'cumin', 'paprika', 'turmeric', 'ginger', 'oregano', 'basil',
     'thyme', 'rosemary', 'parsley', 'cilantro', 'dill', 'mint', 'sage',
+    // Spice/seasoning products (for spice blends like "five spice", "taco seasoning")
+    'spice', 'spices', 'powder', 'blend', 'seasoning', 'rub', 'flakes',
 ]);
 
 // Synonyms for core token matching in cache validation
@@ -930,6 +946,9 @@ const CORE_TOKEN_SYNONYMS: Record<string, string[]> = {
     'bouillon': ['broth', 'stock', 'consomme', 'cube'],
     'broth': ['bouillon', 'stock'],
     'stock': ['bouillon', 'broth'],
+    // Spice form synonyms - "flakes" and "crushed" are equivalent
+    'flakes': ['crushed'],
+    'crushed': ['flakes'],
 };
 
 /**
@@ -1175,10 +1194,14 @@ export function hasSuspiciousMacros(
         // Check both exact includes AND normalized pattern matching
         const matchesIngredient = profile.ingredients.some(ing => {
             const ingNormalized = ing.replace(/(\d+)\s*%/g, '$1').replace(/-/g, ' ');
-            // Match if query contains ingredient pattern OR vice versa
+            // Use word boundary matching instead of includes() to prevent
+            // substring collisions like "ice" matching "rice vinegar"
+            const ingRegex = new RegExp(`\\b${ing.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            const ingNormRegex = new RegExp(`\\b${ingNormalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            // Match if query contains ingredient pattern (with word boundaries) OR vice versa
             // This handles "ground beef 85 lean" matching "ground beef 85"
-            return queryLower.includes(ing) ||
-                queryNormalized.includes(ingNormalized) ||
+            return ingRegex.test(queryLower) ||
+                ingNormRegex.test(queryNormalized) ||
                 ingNormalized.includes(queryNormalized.split(' ').slice(0, 3).join(' ')); // First 3 words
         });
 
@@ -1254,6 +1277,47 @@ export function hasImpossibleMacros(
 // Null/Invalid Macro Validation
 // ============================================================
 
+// ============================================================
+// MUST-HAVE-CALORIES Watchlist (inverted zero-calorie check)
+// ============================================================
+// Food categories where 0 kcal is ALWAYS corrupted data.
+// If a candidate name matches one of these and has all-zero macros, reject it.
+// Foods NOT matching (salt, baking soda, seasonings, etc.) are allowed through.
+const MUST_HAVE_CALORIES_PATTERNS: RegExp[] = [
+    // Produce & Vegetables
+    /\b(onion|garlic|tomato|potato|carrot|spinach|kale|broccoli|cauliflower|celery|lettuce|cabbage|zucchini|squash|eggplant|artichoke|asparagus|beet|radish|turnip|parsnip|yam|pea|bean|lentil|chickpea|corn|mushroom|pepper|cucumber|avocado)s?\b/i,
+    // Fruits
+    /\b(apple|banana|orange|strawberr|blueberr|raspberr|blackberr|grape|mango|pineapple|peach|pear|plum|cherry|melon|watermelon|kiwi|lemon|lime|grapefruit|cranberr|fig|date|apricot|pomegranate|coconut|papaya)(?:y|ies|s)?\b/i,
+    // Meats & Poultry
+    /\b(beef|pork|chicken|turkey|lamb|veal|venison|bison|duck|goose|sausage|bacon|ham|steak|chop|rib|ground meat|mince)s?\b/i,
+    // Seafood
+    /\b(salmon|tuna|cod|tilapia|shrimp|prawn|crab|lobster|scallop|mussel|clam|oyster|anchov|sardine|fish|trout|bass|halibut|mahi|swordfish)(?:y|ies|s)?\b/i,
+    // Dairy
+    /\b(milk|cheese|yogurt|cream|butter|cream cheese|sour cream|cottage cheese|ricotta|mozzarella|cheddar|parmesan|brie|feta|gouda)\b/i,
+    // Eggs
+    /\b(egg|eggs)\b/i,
+    // Grains & Starches
+    /\b(rice|pasta|bread|flour|oat|wheat|barley|quinoa|couscous|bulgur|farro|millet|noodle|tortilla|cereal|granola|cracker|bagel|biscuit|roll|muffin|pancake|waffle)s?\b/i,
+    // Oils & Fats
+    /\b(oil|olive oil|canola oil|vegetable oil|coconut oil|sesame oil|peanut oil|shortening|lard|ghee|margarine)\b/i,
+    // Nuts & Seeds
+    /\b(almond|walnut|pecan|cashew|pistachio|peanut|hazelnut|macadamia|sunflower|pumpkin seed|chia|flax|hemp|sesame|pine nut)s?\b/i,
+    // Sweeteners
+    /\b(sugar|honey|maple syrup|agave|molasses|corn syrup|brown sugar|powdered sugar|confectioner)s?\b/i,
+    // Legumes
+    /\b(tofu|tempeh|edamame|soy|soybean)s?\b/i,
+];
+
+/**
+ * Check if a food name belongs to a category that MUST have calories.
+ * Foods like salt, baking soda, and seasonings legitimately have 0 kcal
+ * and are NOT covered by this list.
+ */
+function isFoodThatMustHaveCalories(candidateName?: string): boolean {
+    if (!candidateName) return false; // No name = can't check, allow through
+    return MUST_HAVE_CALORIES_PATTERNS.some(pattern => pattern.test(candidateName));
+}
+
 /**
  * Check if nutrition data has null or invalid macros (data quality issue).
  * Foods with null macros should be rejected from selection.
@@ -1264,9 +1328,14 @@ export function hasImpossibleMacros(
  * NOTE: If no nutrition data exists at all, we return FALSE (not invalid),
  * since we can't validate what we don't have. The data will be validated
  * later when the candidate is hydrated with full nutrition info.
+ * 
+ * @param nutrients - The nutrition data to check
+ * @param candidateName - Optional candidate food name, used to check if
+ *   the food belongs to a category that MUST have calories (for the all-zero check)
  */
 export function hasNullOrInvalidMacros(
-    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null
+    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null,
+    candidateName?: string
 ): boolean {
     // If nutrients object doesn't exist, we can't validate - allow through
     // (will be validated after hydration when we have actual data)
@@ -1274,7 +1343,20 @@ export function hasNullOrInvalidMacros(
 
     // Check for kcal (we accept either kcal or calories field)
     const calories = nutrients.kcal ?? nutrients.calories;
-    // If no calorie data, skip this validation (will be checked after hydration)
+
+    // REJECT candidates where ALL key nutrition values are null/undefined
+    // This catches bad data like Freshii "Green Onion" where all values are undefined
+    // Real foods should have at least calories defined
+    const allNull = calories == null &&
+        nutrients.protein == null &&
+        nutrients.carbs == null &&
+        nutrients.fat == null;
+    if (allNull) {
+        return true; // Bad data - no nutrition info at all
+    }
+
+    // If no calorie data but some macros exist, skip further validation
+    // (partial data is better than no data)
     if (calories == null) return false;
 
     // Reject if ALL macros are null (at least one should be present)
@@ -1298,8 +1380,53 @@ export function hasNullOrInvalidMacros(
         }
     }
 
+    // Reject all-zero nutrition ONLY for foods that MUST have calories.
+    // Foods like salt, baking soda, and seasonings legitimately have 0 kcal.
+    // Only flag produce, meats, dairy, grains, etc. where 0 kcal is corrupted data
+    // (e.g., Freshii "Green Onion" with 0 kcal/15g — real green onions have ~32 kcal/100g)
+    const allZero = calories === 0 &&
+        (nutrients.protein ?? 0) === 0 &&
+        (nutrients.carbs ?? 0) === 0 &&
+        (nutrients.fat ?? 0) === 0;
+    if (allZero && isFoodThatMustHaveCalories(candidateName)) {
+        return true;
+    }
+
+    // ============================================================
+    // MACRO/CALORIE CONSISTENCY CHECK
+    // ============================================================
+    // Reject foods where macros and calories are inconsistent.
+    // Two cases:
+    // 1. Reported calories > 0, but computed calories from macros > 2x reported (GOLCHIN Jalapeño)
+    // 2. Reported calories = 0, but macros imply significant calories (CRUSHED RED PEPPER CENTO: 0kcal, 91g carbs)
+
+    const protein = nutrients.protein ?? 0;
+    const carbs = nutrients.carbs ?? 0;
+    const fat = nutrients.fat ?? 0;
+
+    // Only check if we have at least one macro value
+    if (protein > 0 || carbs > 0 || fat > 0) {
+        const computedCalories = (protein * 4) + (carbs * 4) + (fat * 9);
+
+        if (calories > 0) {
+            // Case 1: If computed is more than 2x reported, macros are clearly wrong
+            // (e.g., 53.6g carbs = 214 kcal, but reported is only 21 kcal)
+            if (computedCalories > calories * 2) {
+                return true;  // Bad data - macros don't match calories
+            }
+        } else {
+            // Case 2: calories = 0 but macros imply significant calories (> 10 kcal)
+            // e.g., CRUSHED RED PEPPER CENTO: 0kcal but 91g carbs = 364 computed kcal
+            // Allow small tolerance for trace amounts (< 10 computed kcal)
+            if (computedCalories > 10) {
+                return true;  // Bad data - has macros but 0 calories
+            }
+        }
+    }
+
     return false;
 }
+
 
 // ============================================================
 // Simple Ingredient → Processed Product Validation
@@ -1703,7 +1830,11 @@ export function hasCriticalModifierMismatch(
     if (queryHasStrictNonfat) {
         // Query asks for nonfat/fat-free - REQUIRE nonfat/fat-free in candidate
         // "Light Italian Dressing" does NOT satisfy "nonfat Italian dressing"
-        if (!candHasNonfat) {
+        // EXCEPTION: Substitute/replacer products (e.g., "Egg Substitute", "Egg Beaters")
+        // are inherently fat-free even without "fat free" in the name
+        const REPLACER_EXEMPTION_TERMS = ['substitute', 'substitution', 'replacer', 'replacement'];
+        const candIsReplacer = REPLACER_EXEMPTION_TERMS.some(term => candLower.includes(term));
+        if (!candHasNonfat && !candIsReplacer) {
             return true; // Reject - candidate doesn't meet strict nonfat requirement
         }
     }
@@ -1766,6 +1897,11 @@ export function hasCriticalModifierMismatch(
         // (but "light" and "lite" are acceptable substitutes)
         return true;
     }
+
+    // NOTE: Form/preparation modifiers (crushed, canned, cube, dried) are handled 
+    // by scoring boost in simple-rerank.ts, NOT by hard filtering here.
+    // This prevents rejecting valid candidates like "Crushed Tomatoes (Hunt's)"
+    // that ARE the correct product but don't have every modifier in the name.
 
     return false;
 }
@@ -2048,7 +2184,12 @@ export function filterCandidatesByTokens(
         } else if (candidate.rawData && candidate.rawData.nutrientsPer100g) {
             nutrientsToCheck = candidate.rawData.nutrientsPer100g;
         } else {
-            nutrientsToCheck = candidate.rawData;
+            // Don't fall back to raw API response — it's not nutrition data.
+            // FatSecret search results don't include per-100g nutrition;
+            // they only have per-serving data in a different format.
+            // Passing rawData here caused all FatSecret candidates to be
+            // falsely rejected by hasNullOrInvalidMacros (all fields = null).
+            nutrientsToCheck = null;
         }
 
         // Check for IMPOSSIBLE macros (bad API data)
@@ -2060,7 +2201,7 @@ export function filterCandidatesByTokens(
 
         // Check for NULL/INVALID macros (corrupted data)
         // e.g. Red lentils with P:0, C:0, kcal:314 - this is bad data
-        if (hasNullOrInvalidMacros(nutrientsToCheck)) {
+        if (hasNullOrInvalidMacros(nutrientsToCheck, candidate.name)) {
             if (debug) logger.info('filter.candidates.null_or_invalid_macros', { candidate: candidate.name, nutrients: nutrientsToCheck });
             return false;
         }
@@ -2115,8 +2256,8 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
     // Check if this is a specialty ingredient
     const nameLower = normalizedName.toLowerCase();
 
-    // Plum/Roma tomatoes should require the tomato token (avoid plum fruit matches)
-    if (/(plum|roma)\s+tomato/.test(nameLower)) {
+    // Plum/Roma/Petite tomatoes should require the tomato token (avoid plum fruit matches)
+    if (/(plum|roma|petite)\s+tomato/.test(nameLower)) {
         return ['tomato'];
     }
     const isSpecialty = SPECIALTY_PATTERNS.some(p => p.test(nameLower));
@@ -2145,7 +2286,7 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
         // Dietary preference modifiers (these describe HOW the food is made, not WHAT it is)
         'vegetarian', 'vegan', 'plant', 'meatless', 'dairy',
         // Size/age modifiers
-        'baby', 'mini', 'small', 'large', 'jumbo', 'young', 'mature',
+        'baby', 'mini', 'petite', 'small', 'large', 'jumbo', 'young', 'mature',
         // Unit-like words that shouldn't be mandatory tokens
         'bunch', 'bundle', 'sprig', 'stalk', 'head', 'clove',
         // Flavor/texture descriptors
