@@ -366,6 +366,36 @@ export function confidenceGate(
         };
     }
 
+    // YEAST VARIANT PREFERENCE: When candidates include both "Compressed" and "Active Dry" yeast,
+    // prefer Active Dry because home bakers typically use packets (7g each), not fresh cakes (17g each).
+    // This prevents "1 package yeast" from mapping to Compressed at 125g/package.
+    // IMPORTANT: Return early after swap to bypass margin check (both have 1.000 confidence)
+    if (queryLower.includes('yeast') && candidates.length >= 2) {
+        const compressedIdx = candidates.findIndex(c =>
+            c.name.toLowerCase().includes('compressed')
+        );
+        const activeDryIdx = candidates.findIndex(c =>
+            c.name.toLowerCase().includes('active dry')
+        );
+
+        // If Compressed is ranked higher than Active Dry, select Active Dry directly
+        if (compressedIdx !== -1 && activeDryIdx !== -1 && compressedIdx < activeDryIdx) {
+            const activeDry = candidates[activeDryIdx];
+            logger.info('confidence_gate.yeast_rerank', {
+                query,
+                swappedFrom: candidates[compressedIdx].name,
+                selectedDirect: activeDry.name,
+            });
+            // Return immediately to bypass margin check (both have same confidence)
+            return {
+                skipAiRerank: true,
+                selected: activeDry,
+                confidence: 0.95,  // High confidence for explicit preference
+                reason: 'yeast_variant_preference'
+            };
+        }
+    }
+
     const top1 = candidates[0];
     const top2 = candidates[1];
     const top1Conf = assessConfidence(query, top1);
@@ -699,6 +729,13 @@ async function searchFdcSimple(query: string, limit: number, rawLine: string): P
             });
         }
 
+        // Cache top 3 FDC candidates to database (non-blocking)
+        // This ensures FDC foods are available for AI backfill
+        const topForCaching = allCandidates.slice(0, 3);
+        cacheFdcCandidates(topForCaching).catch(err => {
+            logger.warn('fdc.cache_failed', { error: (err as Error).message });
+        });
+
         // Take top N and remove internal properties
         return allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
     } catch (err) {
@@ -766,6 +803,20 @@ const BRITISH_TO_AMERICAN: Record<string, string[]> = {
     'chilli pepper': ['chili pepper', 'hot pepper', 'hot chili pepper'],
     'chilli peppers': ['chili peppers', 'hot peppers', 'hot chili peppers'],
     'chillies': ['chilies', 'hot peppers'],
+    // CITRUS PEEL FALLBACKS - rare varieties fall back to common ones (nutrition is similar)
+    // "blood orange peel" has no match, but "orange peel" does
+    'blood orange peel': ['orange peel', 'citrus peel', 'orange zest'],
+    'cara cara orange peel': ['orange peel', 'citrus peel'],
+    'navel orange peel': ['orange peel', 'citrus peel'],
+    'meyer lemon peel': ['lemon peel', 'citrus peel', 'lemon zest'],
+    'bergamot peel': ['lemon peel', 'citrus peel'],
+    'key lime peel': ['lime peel', 'citrus peel', 'lime zest'],
+    'persian lime peel': ['lime peel', 'citrus peel'],
+    // RED PEPPER FLAKES → CAYENNE fallback
+    // "Red pepper flakes" often returns branded items with bad data (0kcal entries)
+    // Cayenne is nutritionally equivalent and has high-quality SR Legacy data
+    'red pepper flakes': ['cayenne', 'crushed red pepper', 'red pepper spice'],
+    'pepper flakes': ['cayenne', 'crushed red pepper', 'red pepper'],
 };
 
 // Dietary modifier synonyms (used in search expansion)
@@ -806,6 +857,30 @@ const DIETARY_SYNONYMS: Record<string, string[]> = {
     'lean ground turkey': ['93% lean ground turkey', '99% fat free ground turkey'],
 };
 
+// Form/processing synonyms (used in search expansion for ingredient forms)
+// These handle cases where different terms describe the same processing state
+const FORM_SYNONYMS: Record<string, string[]> = {
+    // Flakes/crushed - common for spices like red pepper
+    'flakes': ['crushed', 'flaked'],
+    'flaked': ['crushed', 'flakes'],
+    'crushed': ['flakes', 'flaked'],
+    // Powder/ground - common for spices
+    'powder': ['ground', 'powdered'],
+    'powdered': ['ground', 'powder'],
+    'ground': ['powder', 'powdered'],
+    // Dried/dehydrated
+    'dried': ['dehydrated', 'dry'],
+    'dehydrated': ['dried', 'dry'],
+    // Minced/chopped (for garlic, onion, etc.)
+    'minced': ['chopped', 'diced', 'crushed'],
+    'chopped': ['minced', 'diced'],
+    'diced': ['chopped', 'minced'],
+    // Sliced/cut
+    'sliced': ['cut', 'slices'],
+    'slices': ['sliced', 'cut'],
+    // Whole/intact
+    'whole': ['intact', 'uncut'],
+};
 
 function expandWithSynonyms(query: string): string[] {
     const lower = query.toLowerCase();
@@ -835,6 +910,21 @@ function expandWithSynonyms(query: string): string[] {
                 }
             }
             break;  // Only expand one modifier to avoid explosion
+        }
+    }
+
+    // Check for ingredient form/processing synonyms (flakes↔crushed, powder↔ground, etc.)
+    // This enables "red pepper flakes" → "crushed red pepper" expansion
+    for (const [form, synonyms] of Object.entries(FORM_SYNONYMS)) {
+        if (lower.includes(form)) {
+            // Add variations with synonym forms
+            for (const syn of synonyms) {
+                const variant = lower.replace(form, syn);
+                if (!expanded.map(e => e.toLowerCase()).includes(variant)) {
+                    expanded.push(variant);
+                }
+            }
+            break;  // Only expand one form to avoid explosion
         }
     }
 
@@ -1578,4 +1668,111 @@ function extractCacheServings(food: CacheFoodRecord): UnifiedCandidate['servings
         grams: s.servingWeightGrams || s.metricServingAmount || null,
         isDefault: s.isDefault || false,
     }));
+}
+
+// ============================================================
+// FDC Caching Helper
+// ============================================================
+
+/**
+ * Cache FDC candidates to database and trigger pre-emptive serving backfill.
+ * This runs in the background (non-blocking) to avoid slowing down search.
+ * 
+ * Pre-emptive backfill ensures servings are ready for future manual mapping.
+ */
+async function cacheFdcCandidates(candidates: Array<{
+    id: string;
+    name: string;
+    brandName?: string | null;
+    foodType: string;
+    nutrition?: {
+        kcal: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+        per100g: boolean;
+    };
+    rawData: any;
+}>): Promise<void> {
+    // Import preemptive backfill lazily to avoid circular dependencies
+    const { generatePreemptiveServings } = await import('./preemptive-backfill');
+
+    for (const candidate of candidates) {
+        try {
+            const fdcId = parseInt(candidate.id, 10);
+            if (isNaN(fdcId)) continue;
+
+            // Check if already cached
+            const existing = await prisma.fdcFoodCache.findUnique({
+                where: { id: fdcId },
+            });
+
+            if (existing) continue;  // Already cached, skip
+
+            // Extract nutrients from rawData for per100g storage
+            const nutrients = candidate.rawData?.foodNutrients || [];
+            const getNutrientValue = (ids: number[]) => {
+                const n = nutrients.find((x: any) => ids.includes(x.nutrientId));
+                return n?.value || 0;
+            };
+
+            // Build nutrient object per 100g
+            const nutrientsPer100g = {
+                calories: getNutrientValue([1008, 2047, 2048]),
+                protein: getNutrientValue([1003]),
+                carbs: getNutrientValue([1005]),
+                fat: getNutrientValue([1004]),
+                fiber: getNutrientValue([1079]),
+                sodium: getNutrientValue([1093]),
+            };
+
+            // Cache the food
+            await prisma.fdcFoodCache.create({
+                data: {
+                    id: fdcId,
+                    description: candidate.name,
+                    brandName: candidate.brandName,
+                    dataType: candidate.foodType,
+                    nutrients: nutrientsPer100g,
+                    // servingSize and servingSizeUnit will be populated by AI backfill
+                },
+            });
+
+            logger.debug('fdc.cached', {
+                fdcId,
+                name: candidate.name,
+                dataType: candidate.foodType,
+            });
+
+            // Trigger pre-emptive serving backfill if enabled (non-blocking)
+            // This ensures servings are ready for future manual mapping
+            // Set ENABLE_PREEMPTIVE_BACKFILL=true to enable
+            if (process.env.ENABLE_PREEMPTIVE_BACKFILL === 'true') {
+                generatePreemptiveServings(`fdc_${fdcId}`, candidate.name, { maxServings: 3 })
+                    .then(result => {
+                        if (result.servingsGenerated > 0) {
+                            logger.info('fdc.preemptive_backfill', {
+                                fdcId,
+                                name: candidate.name,
+                                category: result.category,
+                                servingsGenerated: result.servingsGenerated,
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        logger.warn('fdc.preemptive_backfill_failed', {
+                            fdcId,
+                            error: (err as Error).message,
+                        });
+                    });
+            }
+        } catch (err) {
+            // Ignore unique constraint violations (race condition)
+            if ((err as any)?.code === 'P2002') continue;
+            logger.warn('fdc.cache_candidate_failed', {
+                id: candidate.id,
+                error: (err as Error).message,
+            });
+        }
+    }
 }

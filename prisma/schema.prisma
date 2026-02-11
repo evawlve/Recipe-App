@@ -259,11 +259,19 @@ model FdcServingCache {
   fdcId             Int
   description       String
   grams             Float
+  volumeMl          Float?         // Volume in ml (for density-based conversions)
+  derivedViaDensity Boolean        @default(false)
+  densityGml        Float?         // Density in g/ml (stored inline for FDC)
+  prepModifier      String?        // e.g., "cubed", "minced", "sliced"
   source            String         @default("fdc")
   isAiEstimated     Boolean        @default(false)
+  confidence        Float?         // AI confidence score
+  note              String?        // AI rationale or notes
   food              FdcFoodCache   @relation(fields: [fdcId], references: [id], onDelete: Cascade)
   
+  @@unique([fdcId, description], name: "FdcServingCache_fdcId_description_key")
   @@index([fdcId])
+  @@index([prepModifier])
 }
 
 model FatSecretFoodCache {
@@ -665,7 +673,8 @@ model MappingValidationFailure {
 }
 
 model AiNormalizeCache {
-  rawLine                  String   @id
+  normalizedKey            String   @id   // Normalized ingredient name for lookup (computed from rawLine)
+  rawLine                  String?        // Original raw line (for reference/debugging only)
   normalizedName           String
   canonicalBase            String?              // Base ingredient for cache lookup (e.g., 'strawberries' for 'strawberry halves')
   synonyms                 Json     @default("[]")

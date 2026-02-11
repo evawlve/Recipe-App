@@ -248,6 +248,75 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 
 ---
 
+## 2026-01-28: Product-Type Modifier Preservation
+
+**Source**: `"Crushed Tomatoes"` mapping to raw `"Tomatoes"` instead of canned product
+
+### Fix 28: Product-Type Modifier Preservation (MAJOR)
+| Issue | `"Crushed Tomatoes"` → `"Tomatoes"` (raw) with low confidence |
+|-------|---------------------------------------------------------------|
+| Root Cause | `normalizeIngredientName()` stripped "crushed" from "Crushed Tomatoes" because it was in `prep_phrases`. API then searched for just "Tomatoes", missing canned products entirely. |
+| Investigation | Debug logs showed `normalizedName = "Tomatoes"` (not "Crushed Tomatoes"). FDC search used query `"Tomatoes"`. "Crushed Tomatoes (Hunt's)" never appeared in candidates. Modifier boost correctly penalized "Tomatoes" (-0.100) but no correct candidate existed to win. |
+| Fix | Implemented `PRODUCT_TYPE_MODIFIERS` system in `normalization-rules.ts`: when modifier appears as FIRST word, preserve it. |
+| Modifiers | `canned`, `frozen`, `dried`, `crushed`, `diced`, `stewed`, `pickled`, `roasted`, `smoked`, `condensed`, `evaporated`, `powdered`, `instant`, `creamed` |
+| Rule | First-word modifiers = product type (preserve). Non-first modifiers = prep instruction (strip). |
+| Examples | `"canned pineapple"` → `"canned pineapple"` ✅ | `"pineapple, canned"` → `"pineapple"` ✅ |
+| Before | `"Crushed Tomatoes"` → normalized to `"Tomatoes"` → API search `"Tomatoes"` → Winner: raw Tomatoes (0.592) → LOW_CONF |
+| After | `"Crushed Tomatoes"` → normalized to `"Crushed Tomatoes"` → API search `"Crushed Tomatoes"` → Winner: Crushed Tomatoes (Tuttorosso) (1.365) → **0.98 confidence** |
+| Files | `src/lib/fatsecret/normalization-rules.ts` |
+| Test | `normalizeIngredientName("Canned Pineapple")` → `"Canned Pineapple"` (preserved) |
+| Test | `normalizeIngredientName("chopped onion")` → `"onion"` (stripped, "chopped" is prep) |
+
+---
+
+## 2026-01-30: Serving Selection and Candidate Preference Fixes
+
+**Source**: `mapping-summary-2026-01-30T06-01-33.txt` - incorrect serving calculations and candidate selection
+
+### Fix 29: Count-Based Serving Multiplier Bug (MAJOR)
+| Issue | `"10 large black olives"` → 460g (wrong), should be 46g |
+|-------|--------------------------------------------------------|
+| Root Cause | When selecting a serving like "10 large: 46g", the system used `numberOfUnits=1` (FatSecret doesn't set this correctly for count-based servings). This caused `gramsPerUnit = 46/1 = 46g`. Then `finalGrams = 46 * 10 = 460g` (10x too high). |
+| Investigation | Debug showed serving "10 large" correctly matched but `unitsPerServing=1` instead of `10`. The count was in the description but not extracted. |
+| Fix | Added regex extraction in `selectServing()` to parse count from serving descriptions: `^(\d+)\s+(small|medium|large|extra\s*large)`. Extracts the count (e.g., "10" from "10 large") and uses it as `unitsPerServing`. |
+| Formula | Before: `gramsPerUnit = 46g / 1 = 46g each` → After: `gramsPerUnit = 46g / 10 = 4.6g each` |
+| Result | `finalGrams = 4.6g * 10 = 46g` ✅ |
+| Files | `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 2021-2048) |
+| Test | `"10 large black olives"` → 46g (was 460g), `"8 medium red peppers"` → 952g (was 80g) |
+
+### Fix 30: Yeast Variant Preference
+| Issue | `"1 package bakers yeast"` → Compressed (125g/package) instead of Active Dry (7g/package) |
+|-------|--------------------------------------------------------------------------------------------|
+| Root Cause | Both "Bakers Yeast (Compressed)" and "Bakers Yeast (Active Dry)" returned from FatSecret with identical confidence (1.000). Compressed listed first in API results. Margin check failed (both 1.000), forcing `simpleRerank` which kept Compressed. |
+| Investigation | Compressed yeast comes in "cakes" (17g), Active Dry comes in "packets" (7g). Home bakers use packets, not fresh cakes. |
+| Fix | Added explicit preference in `confidenceGate()`: when query contains "yeast" and both "Compressed" and "Active Dry" are candidates, return Active Dry immediately with 0.95 confidence, bypassing margin check. |
+| Files | `src/lib/fatsecret/gather-candidates.ts` (lines 369-394) |
+| Before | `"1 package bakers yeast"` → Compressed → 131kcal/125g |
+| After | `"1 package bakers yeast"` → Active Dry → 20kcal/7g ✅ |
+| Side Effect | Also deleted bad AI serving `ai_39077_package` (125g for Compressed) from FatSecretServingCache |
+
+### Fix 31: Live Candidate Core Token Validation
+| Issue | `"5 oz dry brown rice"` → `"dry brown (0% moisture) beans"` (completely wrong food) |
+|-------|--------------------------------------------------------------------------------------|
+| Root Cause | `hasCoreTokenMismatch` was only applied to CACHE lookups, not to live API candidates. Fresh results from FatSecret/FDC weren't being validated for core token presence. |
+| Investigation | FDC returned "dry brown beans" which matched "dry" + "brown" tokens but was missing "rice". |
+| Fix | Added core token validation filter to live candidate pipeline in `map-ingredient-with-fallback.ts` (lines 651-673). Filters out any candidate missing required core tokens. |
+| Examples Fixed | `"dry brown rice"` no longer maps to `"dry brown beans"`, `"vegetable bouillon"` no longer maps to `"Raw Vegetable"` |
+| Before | `"5 oz dry brown rice"` → `"dry brown (0% moisture) beans"` (0kcal - clearly wrong) |
+| After | `"5 oz dry brown rice"` → `"Brown Rice"` via fallback ✅ |
+| Before | `"2 cube vegetable bouillon"` → `"Vegetable Shortening"` (265kcal/30g) |
+| After | `"2 cube vegetable bouillon"` → `"Vegetable Bouillon (Knorr)"` (24kcal/8g) ✅ |
+
+### Fix 32: Bell Pepper Sanity Check False Positive
+| Issue | `"1 large yellow bell pepper"` → 14g instead of ~164g |
+|-------|-------------------------------------------------------|
+| Root Cause | The AI serving estimator's `applySanityCheck` has a 'spices' category with keyword `'pepper'` and maxG=10. "bell yellow raw peppers" matched 'pepper' → clamped to 10g. Large = 1.4 * 10 = 14g. |
+| Investigation | The `CATEGORY_LIMITS` was designed to catch spice estimation errors but `'pepper'` matched both black pepper (spice, ~3g) AND bell pepper (vegetable, ~164g). |
+| Fix | Updated `CATEGORY_LIMITS` in `ambiguous-serving-estimator.ts` to: 1) Use specific spice terms ('black pepper', 'ground pepper', etc.) instead of generic 'pepper'. 2) Added `excludeKeywords` array to skip categories when bell/sweet pepper terms are present. 3) Added 'bell_peppers' category with correct limits (80-250g). |
+| Files | `src/lib/ai/ambiguous-serving-estimator.ts` (lines 244-258, 269-273) |
+| Before | `"1 large yellow bell pepper"` → 14g (clamped to spice limits!) |
+| After | `"1 large yellow bell pepper"` → 154g ✅ |
+
 ## Summary
 
 | Fix | Issue | Resolution |
@@ -278,13 +347,20 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | 25 | Token bloat threshold | Stricter: +1 token allowed (was +2) |
 | 26 | Cache core token validation | Reject stale cache entries missing core ingredient tokens |
 | 27 | Cache key fix when AI skipped | Use normalizedName instead of raw input for cache key |
+| 28 | Product-type modifier preservation | Preserve canned/frozen/dried/crushed at start → correct API search |
+| 29 | Count-based serving multiplier | Extract count from "10 large" descriptions → correct gram calculation |
+| 30 | Yeast variant preference | Prefer Active Dry (packets) over Compressed (cakes) |
+| 31 | Live candidate core token validation | Filter out candidates missing core tokens like "rice" or "bouillon" |
+| 32 | Bell pepper sanity check false positive | Fix spice category matching bell peppers (154g instead of 14g) |
+| 33 | **Sanity check removal** | Removed entire sanity check system - trust OpenRouter AI directly |
 
 ## Test Script
 
 Run `npx tsx scripts/test-mapping-fixes.ts` to verify all fixes.
 
-**Final Result**: 464/468 (99.1%) mapping success rate on 100-recipe pilot (642 ingredients after dedup).
+**Final Result**: 139/140 (99.3%) mapping success rate on 50-recipe pilot (347 ingredients after dedup).
 
 ### Note on Remaining Failures
 - `buttery cinnamon powder` - fictional ingredient, no API match
 - `burger relish` - AI simplification needed to map to "pickle relish"
+

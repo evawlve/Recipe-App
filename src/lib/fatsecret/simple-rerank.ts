@@ -45,7 +45,7 @@ export interface SimpleRerankResult {
 const WEIGHTS = {
     EXACT_MATCH: 0.30,       // Exact name match bonus (INCREASED - precise matches should win)
     TOKEN_OVERLAP: 0.15,     // Token overlap ratio (slightly increased)
-    SOURCE_FATSECRET: 0.1,   // Prefer FatSecret (better servings)
+    SOURCE_FATSECRET: 0.15,  // Prefer FatSecret (better servings) - INCREASED from 0.1
     NO_BRAND: 0.05,          // Prefer generic over branded (reduced)
     SHORT_NAME: 0.02,        // Prefer shorter, simpler names (minimal)
     ORIGINAL_SCORE: 0.45,    // API score (REDUCED - don't blindly trust API ranking)
@@ -61,7 +61,11 @@ const WEIGHTS = {
     UNSPECIFIED_LEAN_PENALTY: 0.20,   // Penalty for lean variants when query doesn't specify lean %
     // Category-changing token penalty (Jan 2026)
     CATEGORY_CHANGE_PENALTY: 0.50,    // Heavy penalty when candidate has tokens that change food category
+    // Semantic modifier matching (Jan 2026)
+    MODIFIER_MATCH_BOOST: 0.20,       // Boost when candidate matches query's form modifiers (crushed, canned, dried, cube)
+    WORD_COVERAGE_BONUS: 0.15,        // Bonus for candidates containing ALL query words in order
 };
+
 
 // Nutrition scoring thresholds
 const NUTRITION_CALORIE_VARIANCE_THRESHOLD = 0.30;  // 30% difference triggers penalty
@@ -303,6 +307,138 @@ function getExactPhraseBoost(query: string, candidateName: string): number {
 }
 
 /**
+ * Calculate boost for candidates that match the query's semantic modifiers.
+ * 
+ * Semantic modifiers are words that describe the FORM of the ingredient:
+ * - Preparation: crushed, diced, sliced, minced, ground, cubed
+ * - Preservation: canned, dried, frozen, fresh
+ * - Form variants: cube (stock cube → bouillon cube requires "cube" match)
+ * 
+ * Example: Query "crushed tomatoes"
+ * - "Crushed Tomatoes (Canned)" contains "crushed" AND "canned" → gets boost
+ * - "Tomatoes" does NOT contain "crushed" → no boost
+ * 
+ * Example: Query "beef stock cube"  
+ * - "Beef Bouillon Cube" contains "cube" → gets boost
+ * - "Beef Stock" does NOT contain "cube" → no boost
+ * 
+ * @param query - The normalized ingredient name
+ * @param candidateName - The candidate food name
+ * @returns Boost value (0 to WEIGHTS.MODIFIER_MATCH_BOOST)
+ */
+function getModifierMatchBoost(query: string, candidateName: string): number {
+    const queryLower = query.toLowerCase();
+    const candLower = candidateName.toLowerCase();
+
+    // Semantic modifiers that change the nature/form of the ingredient
+    const SEMANTIC_MODIFIERS = [
+        // Preparation modifiers (change texture/form)
+        'crushed', 'diced', 'sliced', 'minced', 'ground', 'cubed', 'pureed', 'mashed',
+        'chopped', 'shredded', 'grated', 'julienne', 'halved', 'quartered',
+        // Preservation/state modifiers (change nutritional density)
+        'canned', 'dried', 'frozen', 'fresh', 'dehydrated', 'pickled', 'smoked',
+        'roasted', 'toasted', 'blanched',
+        // Form variants (important for stocks/broths)
+        'cube', 'cubes', 'bouillon', 'concentrate', 'paste', 'powder', 'liquid',
+        // Fat/lean modifiers
+        'lean', 'extra lean', 'low fat', 'fat free', 'whole',
+    ];
+
+    // Find modifiers present in the query
+    const queryModifiers = SEMANTIC_MODIFIERS.filter(mod => queryLower.includes(mod));
+
+    if (queryModifiers.length === 0) {
+        return 0;  // No modifiers in query, no boost needed
+    }
+
+    // Count how many query modifiers appear in the candidate
+    let matchCount = 0;
+    for (const mod of queryModifiers) {
+        if (candLower.includes(mod)) {
+            matchCount++;
+        }
+    }
+
+    // Boost based on proportion of modifiers matched
+    if (matchCount === 0) {
+        // PENALTY: Query has modifiers but candidate has NONE of them
+        // e.g., "crushed tomatoes" → "Tomatoes" (no "crushed")
+        return -WEIGHTS.MODIFIER_MATCH_BOOST * 0.5;  // Half penalty
+    }
+
+    // Partial to full boost based on match ratio
+    const matchRatio = matchCount / queryModifiers.length;
+    return matchRatio * WEIGHTS.MODIFIER_MATCH_BOOST;
+}
+
+/**
+ * Calculate bonus for candidates where ALL query words appear in order.
+ * 
+ * This gives preference to candidates that fully contain the query as a phrase
+ * rather than just having overlapping tokens.
+ * 
+ * Example: Query "crushed tomatoes"
+ * - "Crushed Tomatoes" → all words present, gets bonus
+ * - "Crushed Red Tomatoes" → all words present, gets bonus  
+ * - "Tomatoes" → missing "crushed", no bonus
+ * - "Tomato Crush" → wrong order, reduced bonus
+ * 
+ * @param query - The normalized ingredient name
+ * @param candidateName - The candidate food name
+ * @returns Bonus value (0 to WEIGHTS.WORD_COVERAGE_BONUS)
+ */
+function getWordCoverageBonus(query: string, candidateName: string): number {
+    const queryLower = query.toLowerCase();
+    const candLower = candidateName.toLowerCase();
+
+    // Tokenize both (skip very short words)
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
+    const candWords = candLower.split(/\s+/).filter(w => w.length > 2);
+
+    if (queryWords.length === 0) return 0;
+
+    // Check if ALL query words appear in candidate
+    let allPresent = true;
+    let inOrderCount = 0;
+    let lastFoundIndex = -1;
+
+    for (const qWord of queryWords) {
+        // Allow plural/singular matching
+        const found = candWords.findIndex((cWord, idx) =>
+            idx > lastFoundIndex && (
+                cWord === qWord ||
+                cWord === qWord + 's' ||
+                cWord === qWord + 'es' ||
+                qWord === cWord + 's' ||
+                qWord === cWord + 'es' ||
+                cWord.startsWith(qWord) ||
+                qWord.startsWith(cWord)
+            )
+        );
+
+        if (found === -1) {
+            allPresent = false;
+            break;
+        }
+
+        // Track if words appear in order
+        if (found > lastFoundIndex) {
+            inOrderCount++;
+        }
+        lastFoundIndex = found;
+    }
+
+    if (!allPresent) {
+        return 0;  // Not all words present, no bonus
+    }
+
+    // Full bonus if all words are in order, partial if rearranged
+    const orderRatio = inOrderCount / queryWords.length;
+    return orderRatio * WEIGHTS.WORD_COVERAGE_BONUS;
+}
+
+
+/**
  * Calculate penalty for candidates with excessive tokens vs query.
  * A simple query like "chilli peppers" (2 tokens) shouldn't highly rank
  * a complex product like "Chilli Peppers Cream Cheese (VIOLIFE)" (5+ tokens).
@@ -507,13 +643,34 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     const leanPenalty = getLeanPercentagePenalty(query, candidate.name);
     score -= leanPenalty;
 
+    // 2f. Semantic modifier match boost (Jan 2026)
+    // Boost candidates that match the query's form modifiers (crushed, canned, dried, cube)
+    // e.g., "crushed tomatoes" → "Crushed Tomatoes (Canned)" gets boost over "Tomatoes"
+    // e.g., "beef stock cube" → "Beef Bouillon Cube" gets boost over "Beef Stock"
+    const modifierBoost = getModifierMatchBoost(query, candidate.name);
+    score += modifierBoost;
+
+    // 2g. Word coverage bonus (Jan 2026)
+    // Bonus for candidates where ALL query words appear (in order preferred)
+    // e.g., "crushed tomatoes" → "Crushed Tomatoes" gets bonus over "Tomatoes"
+    const wordCoverageBonus = getWordCoverageBonus(query, candidate.name);
+    score += wordCoverageBonus;
+
     // 3. Source preference
-    // Prefer FDC for categories where FatSecret data is unreliable (e.g., vinegar)
-    const isVinegar = query.toLowerCase().includes('vinegar');
-    if (isVinegar && candidate.source === 'fdc') {
-        score += WEIGHTS.SOURCE_FATSECRET + 0.05;  // Boost FDC for vinegar above FatSecret
+    // Prefer FDC for categories where FatSecret data is unreliable (e.g., vinegar, stock cubes)
+    // Otherwise strongly prefer FatSecret because it has better serving data coverage
+    const queryLower = query.toLowerCase();
+    const isVinegar = queryLower.includes('vinegar');
+    // FatSecret beef stock has incomplete nutrition (0kcal issue) - prefer FDC
+    const isStockBouillon = queryLower.includes('stock') || queryLower.includes('bouillon') || queryLower.includes('broth');
+
+    if ((isVinegar || isStockBouillon) && candidate.source === 'fdc') {
+        score += WEIGHTS.SOURCE_FATSECRET + 0.05;  // Boost FDC for these categories above FatSecret
     } else if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
         score += WEIGHTS.SOURCE_FATSECRET;
+    } else if (candidate.source === 'fdc') {
+        // FDC often has incomplete serving data, apply mild penalty to prefer FatSecret
+        score -= 0.08;
     }
 
     // 4. Prefer generic over branded (but smarter about it)

@@ -1,30 +1,30 @@
 import { prisma } from '../src/lib/db';
 
 async function main() {
-    const maps = await prisma.ingredientFoodMap.findMany({
-        take: 20,
-        include: { ingredient: true }
+    console.log('=== Checking ValidatedMappings ===\n');
+
+    // Red pepper
+    const redPepper = await prisma.validatedMapping.findMany({
+        where: { normalizedForm: { contains: 'red pepper', mode: 'insensitive' } }
     });
+    console.log('Red Pepper mappings:');
+    redPepper.forEach(m => console.log(`  "${m.normalizedForm}" -> "${m.foodName}" | ${m.brandName || 'Generic'} | conf:${m.aiConfidence}`));
 
-    console.log('=== IngredientFoodMap Table ===');
-    console.log('Total entries:', maps.length);
-
-    if (maps.length > 0) {
-        console.log('\nEntries:');
-        maps.forEach(m => {
-            console.log(`  - [${m.ingredientId?.substring(0, 8)}...] ${m.ingredient?.name} -> ${m.fatsecretFoodId}`);
-        });
-    }
-
-    // Check ValidatedMapping
-    const validatedMaps = await prisma.validatedMapping.findMany({ take: 20 });
-    console.log('\n=== ValidatedMapping Table ===');
-    console.log('Total entries:', validatedMaps.length);
-    validatedMaps.forEach(v => {
-        console.log(`  - "${v.rawIngredient?.substring(0, 30)}" -> ${v.foodName}`);
+    // Vinegar
+    const vinegar = await prisma.validatedMapping.findMany({
+        where: { normalizedForm: { contains: 'vinegar', mode: 'insensitive' } }
     });
+    console.log('\nVinegar mappings:');
+    vinegar.forEach(m => console.log(`  "${m.normalizedForm}" -> "${m.foodName}" | ${m.brandName || 'Generic'} | conf:${m.aiConfidence}`));
+
+    // Rice
+    const rice = await prisma.validatedMapping.findMany({
+        where: { normalizedForm: { contains: 'rice', mode: 'insensitive' } },
+        take: 10
+    });
+    console.log('\nRice mappings (sample):');
+    rice.forEach(m => console.log(`  "${m.normalizedForm}" -> "${m.foodName}" | ${m.brandName || 'Generic'}`));
 
     await prisma.$disconnect();
 }
-
-main().catch(console.error);
+main();

@@ -42,6 +42,8 @@ export interface AiServingRequest {
   food: UnifiedFoodForAi;
   /** Specific unit to estimate (e.g., "packet", "scoop", "slice") */
   targetServingUnit?: string;
+  /** Prep modifier to include in serving label (e.g., "cubed", "minced", "sliced") */
+  prepModifier?: string;
   /** Use lower confidence threshold for on-demand backfills (user can see/override grams) */
   isOnDemandBackfill?: boolean;
 }
@@ -54,6 +56,8 @@ export interface ServingSuggestion {
   volumeAmount?: number;
   confidence: number;
   rationale?: string;
+  /** The prep modifier that was used (passed through from request) */
+  prepModifier?: string;
 }
 
 export type AiServingResult =
@@ -173,8 +177,23 @@ function prefersCountServing(food: UnifiedFoodForAi): boolean {
   return WHOLE_ITEM_KEYWORDS.some((keyword) => haystack.includes(keyword));
 }
 
+/** Density adjustment factors for different prep methods - exported for use in backfill */
+export const PREP_MODIFIER_DENSITY_HINTS: Record<string, { factor: number; description: string }> = {
+  cubed: { factor: 0.85, description: 'Air gaps between cubes → lighter per cup' },
+  diced: { factor: 0.90, description: 'Smaller pieces, fewer gaps' },
+  sliced: { factor: 0.92, description: 'Flat pieces stack loosely' },
+  chopped: { factor: 1.00, description: 'Standard density reference' },
+  minced: { factor: 1.10, description: 'Fine pieces pack tightly' },
+  grated: { factor: 1.15, description: 'Very fine, high packing density' },
+  mashed: { factor: 1.05, description: 'No air gaps, slightly compressed' },
+  shredded: { factor: 0.80, description: 'Loose strands with lots of air' },
+  crushed: { factor: 1.20, description: 'Broken down, packs very densely' },
+  julienned: { factor: 0.88, description: 'Thin strips with air gaps' },
+  pureed: { factor: 1.00, description: 'Liquid-like, no air gaps' },
+};
+
 function buildUserPrompt(request: AiServingRequest): string {
-  const { food, gapType, targetServingUnit } = request;
+  const { food, gapType, targetServingUnit, prepModifier } = request;
   const lines = [
     `Food name: ${food.name}`,
     `Brand: ${food.brandName ?? 'generic'}`,
@@ -184,13 +203,30 @@ function buildUserPrompt(request: AiServingRequest): string {
     `Per-100g nutrition: ${formatNutrients(food.nutrientsPer100g)}`,
   ];
 
+  // If a prep modifier is provided, add context about density adjustment
+  if (prepModifier) {
+    const hint = PREP_MODIFIER_DENSITY_HINTS[prepModifier.toLowerCase()];
+    lines.push(
+      ``,
+      `PREP MODIFIER: The ingredient is "${prepModifier}".`,
+      `IMPORTANT: The serving label MUST include this modifier (e.g., "1 cup ${prepModifier}" not "1 cup").`,
+    );
+    if (hint) {
+      lines.push(
+        `Density hint: ${hint.description}`,
+        `Adjust gram weight by approximately ${((hint.factor - 1) * 100).toFixed(0)}% compared to unprepared form.`,
+      );
+    }
+  }
+
   // If a specific unit is requested, prioritize that
   if (targetServingUnit) {
+    const labelWithModifier = prepModifier ? `${targetServingUnit} ${prepModifier}` : targetServingUnit;
     lines.push(
       ``,
       `IMPORTANT: User specifically requested a "${targetServingUnit}" serving.`,
-      `Please estimate how many grams 1 ${targetServingUnit} of "${food.name}" weighs.`,
-      `The servingLabel should be "1 ${targetServingUnit}" or similar.`,
+      `Please estimate how many grams 1 ${labelWithModifier} of "${food.name}" weighs.`,
+      `The servingLabel should be "1 ${labelWithModifier}" or similar.`,
       `Set volumeUnit to "${targetServingUnit}" and volumeAmount to 1.`,
     );
   }
@@ -241,9 +277,16 @@ export async function requestAiServing(request: AiServingRequest): Promise<AiSer
       return { status: 'error', reason: parsed.error, prompt, raw: parsed };
     }
 
+    // Handle model non-compliance: some models return 'serving' instead of 'servingLabel'
+    // Also handle 'label', 'servingDescription', etc.
+    const servingLabelRaw = parsed.servingLabel ?? parsed.serving ?? parsed.label ?? parsed.servingDescription ?? '';
+
+    // Handle model non-compliance: some models use 'weightGrams' or 'weight' instead of 'grams'
+    const gramsRaw = parsed.grams ?? parsed.weightGrams ?? parsed.weight;
+
     const suggestion: ServingSuggestion = {
-      servingLabel: String(parsed.servingLabel ?? '').trim(),
-      grams: typeof parsed.grams === 'number' ? parsed.grams : NaN,
+      servingLabel: String(servingLabelRaw).trim(),
+      grams: typeof gramsRaw === 'number' ? gramsRaw : NaN,
       volumeUnit:
         typeof parsed.volumeUnit === 'string' && parsed.volumeUnit.trim().length > 0
           ? parsed.volumeUnit.trim()
@@ -254,6 +297,7 @@ export async function requestAiServing(request: AiServingRequest): Promise<AiSer
         typeof parsed.rationale === 'string' && parsed.rationale.length > 0
           ? parsed.rationale
           : undefined,
+      prepModifier: request.prepModifier,
     };
 
     if (!suggestion.servingLabel || Number.isNaN(suggestion.grams)) {

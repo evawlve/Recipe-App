@@ -227,6 +227,34 @@
     {
       "from": "extra-light",
       "to": "fat free"
+    },
+    {
+      "from": "blood orange peel",
+      "to": "orange peel"
+    },
+    {
+      "from": "blood orange zest",
+      "to": "orange peel"
+    },
+    {
+      "from": "cara cara orange peel",
+      "to": "orange peel"
+    },
+    {
+      "from": "meyer lemon peel",
+      "to": "lemon peel"
+    },
+    {
+      "from": "meyer lemon zest",
+      "to": "lemon peel"
+    },
+    {
+      "from": "key lime peel",
+      "to": "lime peel"
+    },
+    {
+      "from": "key lime zest",
+      "to": "lime peel"
     }
   ]
 }

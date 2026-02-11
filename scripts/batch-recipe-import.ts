@@ -8,10 +8,17 @@ import { parseIngredientLine } from '../src/lib/parse/ingredient-line';
 import { autoMapIngredients } from '../src/lib/nutrition/auto-map';
 
 const KEYWORDS = [
-    'keto', 'high-protein', 'low-carb', 'paleo', 'whole30',
-    'low-fat', 'mediterranean', 'vegan', 'vegetarian', 'gluten-free'
+    // High protein combinations
+    'high protein breakfast', 'high protein lunch', 'high protein dinner',
+    'high protein salad', 'high protein soup', 'high protein snack',
+    // Healthy cuisine styles
+    'healthy asian', 'healthy mexican', 'healthy italian',
+    // Diet-focused
+    'low calorie dinner', 'low carb breakfast', 'lean protein meal',
+    // Specific healthy foods
+    'grilled chicken', 'salmon bowl', 'quinoa salad'
 ];
-const RECIPES_PER_KEYWORD = 5;
+const RECIPES_PER_KEYWORD = 10;
 const AUTHOR_ID = process.env.IMPORT_AUTHOR_ID || '279a6119-a377-42b4-9ee9-1f08169a8e71';
 
 async function main() {

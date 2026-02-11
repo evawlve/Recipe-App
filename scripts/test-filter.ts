@@ -1,49 +1,35 @@
 /**
- * Debug test for token filtering
+ * Test the hasNullOrInvalidMacros filter directly
  */
-import 'dotenv/config';
-import { filterCandidatesByTokens, deriveMustHaveTokens } from '../src/lib/fatsecret/filter-candidates';
-import type { UnifiedCandidate } from '../src/lib/fatsecret/gather-candidates';
 
-const testCandidates: UnifiedCandidate[] = [
-    {
-        id: '123',
-        name: 'SALTED BUTTER',
-        source: 'fdc',
-        score: 0.95,
-        foodType: 'generic',
-        rawData: {}
-    },
-    {
-        id: '456',
-        name: 'Butter, Salted',
-        source: 'fatsecret',
-        score: 0.90,
-        foodType: 'generic',
-        rawData: {}
-    }
-];
+import { hasNullOrInvalidMacros } from '../src/lib/fatsecret/filter-candidates';
 
-console.log('Testing filterCandidatesByTokens for "salted butter"');
+// This is what Freshii Green Onion has
+const freshiiNutrients = {
+    fat: 0,
+    carbs: 0,
+    fiber: 0,
+    sugar: 0,
+    protein: 0,
+    calories: 0
+};
+
+console.log('Testing hasNullOrInvalidMacros with Freshii data:');
+console.log('Input:', JSON.stringify(freshiiNutrients));
+
+const result = hasNullOrInvalidMacros(freshiiNutrients);
+console.log('Result (true = invalid/should reject):', result);
 console.log('');
 
-const normalizedName = 'salted butter';
-const rawLine = '2 tbsp salted butter';
+// Test with null values
+const nullNutrients = {
+    fat: null,
+    carbs: null,
+    protein: null,
+    calories: null
+};
 
-console.log('1. deriveMustHaveTokens("salted butter"):');
-const tokens = deriveMustHaveTokens(normalizedName);
-console.log('   Must-have tokens:', tokens);
-console.log('');
-
-console.log('2. Filtering candidates with debug=true:');
-const result = filterCandidatesByTokens(testCandidates, normalizedName, { debug: true, rawLine });
-
-console.log('');
-console.log('3. Result:');
-console.log('   Filtered count:', result.filtered.length);
-console.log('   Removed count:', result.removedCount);
-if (result.filtered.length > 0) {
-    console.log('   Filtered candidates:', result.filtered.map(c => c.name));
-} else {
-    console.log('   ALL REJECTED!');
-}
+console.log('Testing with null values:');
+console.log('Input:', JSON.stringify(nullNutrients));
+const result2 = hasNullOrInvalidMacros(nullNutrients);
+console.log('Result:', result2);

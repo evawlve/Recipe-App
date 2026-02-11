@@ -16,6 +16,7 @@ import { FatSecretClient } from './client';
 import { ensureFoodCached } from './cache';
 import { fdcApi } from '../usda/fdc-api';
 import type { UnifiedCandidate } from './gather-candidates';
+import { generatePreemptiveServings } from './preemptive-backfill';
 
 const defaultClient = new FatSecretClient();
 
@@ -164,6 +165,13 @@ async function hydrateFatSecretToCache(
             foodId,
             name: result.food.name
         });
+
+        // Pre-emptive backfill for FatSecret foods
+        if (process.env.ENABLE_PREEMPTIVE_BACKFILL === 'true') {
+            generatePreemptiveServings(foodId, result.food.name, { maxServings: 3 })
+                .catch(err => logger.warn('FatSecret preemptive backfill failed', { foodId, error: (err as Error).message }));
+        }
+
         return 'hydrated';
     }
 
@@ -241,6 +249,12 @@ async function hydrateFdcToCache(
         name: candidate.name,
         dataType: fdcDetails.dataType
     });
+
+    // Pre-emptive backfill for FDC foods
+    if (process.env.ENABLE_PREEMPTIVE_BACKFILL === 'true') {
+        generatePreemptiveServings(candidate.id, candidate.name, { maxServings: 3 })
+            .catch(err => logger.warn('FDC preemptive backfill failed', { fdcId, error: (err as Error).message }));
+    }
 
     return 'hydrated';
 }

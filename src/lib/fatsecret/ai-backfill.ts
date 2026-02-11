@@ -136,8 +136,64 @@ export interface InsertAiServingOptions {
     promptDebug?: boolean;
     /** Specific unit to estimate (e.g., "packet", "scoop", "slice") */
     targetServingUnit?: string;
+    /** Prep modifier to include in serving label (e.g., "cubed", "minced", "sliced") */
+    prepModifier?: string;
     /** Use lower confidence threshold (for on-demand backfills where user can see/override) */
     isOnDemandBackfill?: boolean;
+    /** 
+     * Pass candidate data directly to avoid DB lookup race condition.
+     * When food comes from API but hasn't been cached yet, this allows
+     * backfill to work without requiring the food to be in the database.
+     */
+    candidateData?: {
+        id: string;
+        name: string;
+        brandName?: string | null;
+        foodType?: string;
+        source: 'fatsecret' | 'fdc' | 'cache';
+        nutrition?: {
+            kcal: number;
+            protein: number;
+            carbs: number;
+            fat: number;
+            per100g: boolean;
+        };
+        servings?: Array<{
+            description: string;
+            grams: number | null;
+            isDefault?: boolean;
+        }>;
+    };
+}
+
+/**
+ * Adapt a UnifiedCandidate (from gather-candidates) to UnifiedFoodForAi.
+ * This allows backfill to work without requiring the food to be in the database.
+ */
+function adaptCandidateToUnified(candidate: InsertAiServingOptions['candidateData']): UnifiedFoodForAi | null {
+    if (!candidate) return null;
+
+    const source = candidate.source === 'cache' ? 'fatsecret' : candidate.source;
+    if (source !== 'fatsecret' && source !== 'fdc') return null;
+
+    return {
+        id: candidate.id,
+        name: candidate.name,
+        brandName: candidate.brandName ?? null,
+        foodType: candidate.foodType ?? null,
+        nutrientsPer100g: candidate.nutrition ? {
+            calories: candidate.nutrition.kcal,
+            protein: candidate.nutrition.protein,
+            carbohydrate: candidate.nutrition.carbs,
+            fat: candidate.nutrition.fat,
+        } : {},
+        servings: (candidate.servings ?? []).map(s => ({
+            description: s.description,
+            grams: s.grams,
+            volumeMl: null,
+        })),
+        source,
+    };
 }
 
 export async function insertAiServing(
@@ -149,27 +205,38 @@ export async function insertAiServing(
     const isFdc = foodId.startsWith('fdc_');
     let food: UnifiedFoodForAi | null = null;
 
-    if (isFdc) {
-        const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
-        const fdcFood = await prisma.fdcFoodCache.findUnique({
-            where: { id: fdcId },
-            include: { servings: true },
-        });
-        if (fdcFood) {
-            food = adaptFdcToUnified(fdcFood);
+    // PRIORITY 1: Use passed candidate data (avoids DB race condition)
+    if (options.candidateData) {
+        food = adaptCandidateToUnified(options.candidateData);
+        if (food) {
+            logger.debug('ai_backfill.using_candidate_data', { foodId, foodName: food.name });
         }
-    } else {
-        const fsFood = await prisma.fatSecretFoodCache.findUnique({
-            where: { id: foodId },
-            include: { servings: true },
-        });
-        if (fsFood) {
-            food = adaptFatSecretToUnified(fsFood);
+    }
+
+    // PRIORITY 2: Fallback to database lookup
+    if (!food) {
+        if (isFdc) {
+            const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
+            const fdcFood = await prisma.fdcFoodCache.findUnique({
+                where: { id: fdcId },
+                include: { servings: true },
+            });
+            if (fdcFood) {
+                food = adaptFdcToUnified(fdcFood);
+            }
+        } else {
+            const fsFood = await prisma.fatSecretFoodCache.findUnique({
+                where: { id: foodId },
+                include: { servings: true },
+            });
+            if (fsFood) {
+                food = adaptFatSecretToUnified(fsFood);
+            }
         }
     }
 
     if (!food) {
-        logger.warn({ foodId, isFdc }, 'Food missing from cache for AI serving backfill');
+        logger.warn({ foodId, isFdc, hasCandidateData: !!options.candidateData }, 'Food missing from cache for AI serving backfill');
         return { success: false, reason: 'food_missing' };
     }
 
@@ -178,6 +245,7 @@ export async function insertAiServing(
         gapType,
         food,
         targetServingUnit: options.targetServingUnit,
+        prepModifier: options.prepModifier,
         isOnDemandBackfill: options.isOnDemandBackfill,
     });
 
@@ -263,39 +331,45 @@ export async function insertAiServing(
 
     await prisma.$transaction(async (tx) => {
         if (isFdc) {
-            // FDC: Simple serving cache with fewer fields
+            // FDC: Now supports full volume/density tracking like FatSecret
             const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
 
-            // Check if serving already exists (by description match)
-            const existing = await tx.fdcServingCache.findFirst({
-                where: {
-                    fdcId,
-                    description: suggestion.servingLabel,
-                },
-            });
+            // Calculate density if we have volume info
+            const fdcDensity = volumeMl && !countServing ? suggestion.grams / volumeMl : null;
 
-            if (existing) {
-                // Update existing
-                await tx.fdcServingCache.update({
-                    where: { id: existing.id },
-                    data: {
-                        grams: suggestion.grams,
-                        source: 'ai',
-                        isAiEstimated: true,
-                    },
-                });
-            } else {
-                // Create new
-                await tx.fdcServingCache.create({
-                    data: {
+            // Upsert using the unique constraint on (fdcId, description)
+            await tx.fdcServingCache.upsert({
+                where: {
+                    FdcServingCache_fdcId_description_key: {
                         fdcId,
                         description: suggestion.servingLabel,
-                        grams: suggestion.grams,
-                        source: 'ai',
-                        isAiEstimated: true,
                     },
-                });
-            }
+                },
+                create: {
+                    fdcId,
+                    description: suggestion.servingLabel,
+                    grams: suggestion.grams,
+                    volumeMl: volumeMl,
+                    derivedViaDensity: volumeMl != null && !countServing,
+                    densityGml: fdcDensity,
+                    prepModifier: suggestion.prepModifier ?? options.prepModifier,
+                    source: 'ai',
+                    isAiEstimated: true,
+                    confidence: suggestion.confidence,
+                    note: suggestion.rationale,
+                },
+                update: {
+                    grams: suggestion.grams,
+                    volumeMl: volumeMl,
+                    derivedViaDensity: volumeMl != null && !countServing,
+                    densityGml: fdcDensity,
+                    prepModifier: suggestion.prepModifier ?? options.prepModifier,
+                    source: 'ai',
+                    isAiEstimated: true,
+                    confidence: suggestion.confidence,
+                    note: suggestion.rationale,
+                },
+            });
         } else {
             // FatSecret: Full serving cache with density estimates
             if (density && volumeMl) {

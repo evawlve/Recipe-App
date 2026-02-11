@@ -14,6 +14,8 @@ import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
+import { parseIngredientLine } from '../parse/ingredient-line';
+import { normalizeIngredientName } from './normalization-rules';
 
 /**
  * Retrieve a validated mapping from cache by RAW ingredient line
@@ -387,12 +389,26 @@ function classifyFailureType(
 }
 
 /**
+ * Compute a normalized cache key from a raw ingredient line.
+ * This ensures consistent lookups regardless of quantities/units.
+ */
+function computeNormalizedKey(rawLine: string): string {
+    const parsed = parseIngredientLine(rawLine.trim());
+    const baseName = parsed?.name?.trim() || rawLine.trim();
+    const normalized = normalizeIngredientName(baseName).cleaned || baseName;
+    // Lowercase for consistent matching
+    return normalized.toLowerCase().trim();
+}
+
+/**
  * Get AI normalize result from cache or return null
+ * Uses normalized key (not raw line) for lookup
  */
 export async function getAiNormalizeCache(rawLine: string) {
     try {
+        const normalizedKey = computeNormalizedKey(rawLine);
         const cached = await prisma.aiNormalizeCache.findUnique({
-            where: { rawLine },
+            where: { normalizedKey },
         });
 
         if (!cached) {
@@ -401,7 +417,7 @@ export async function getAiNormalizeCache(rawLine: string) {
 
         // Update usage stats
         await prisma.aiNormalizeCache.update({
-            where: { rawLine },
+            where: { normalizedKey },
             data: {
                 useCount: { increment: 1 },
                 lastUsedAt: new Date(),
@@ -434,6 +450,7 @@ export async function getAiNormalizeCache(rawLine: string) {
 
 /**
  * Save AI normalize result to cache
+ * Uses normalized key (not raw line) as the primary key
  */
 export async function saveAiNormalizeCache(
     rawLine: string,
@@ -454,10 +471,12 @@ export async function saveAiNormalizeCache(
     }
 ): Promise<void> {
     try {
+        const normalizedKey = computeNormalizedKey(rawLine);
         await prisma.aiNormalizeCache.upsert({
-            where: { rawLine },
+            where: { normalizedKey },
             create: {
-                rawLine,
+                normalizedKey,
+                rawLine,  // Keep for reference/debugging
                 normalizedName: result.normalizedName,
                 canonicalBase: result.canonicalBase,
                 synonyms: result.synonyms,
@@ -477,7 +496,7 @@ export async function saveAiNormalizeCache(
             },
         });
 
-        logger.debug('ai_normalize_cache.saved', { rawLine });
+        logger.debug('ai_normalize_cache.saved', { normalizedKey, rawLine });
     } catch (error) {
         logger.error('ai_normalize_cache.save_error', {
             error: (error as Error).message,
@@ -485,3 +504,4 @@ export async function saveAiNormalizeCache(
         });
     }
 }
+

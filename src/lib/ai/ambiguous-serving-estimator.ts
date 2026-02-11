@@ -177,49 +177,7 @@ export async function estimateAmbiguousServing(
             };
         }
 
-        // Sanity check: Validate against category-specific limits
-        const sanitized = applySanityCheck(foodName, unit, estimatedGrams, request);
-        if (sanitized.needsReEstimate) {
-            // Re-estimate with OpenRouter if local estimate is out of bounds
-            try {
-                const reResult = await callStructuredLlm({
-                    schema: RESPONSE_SCHEMA,
-                    systemPrompt: SYSTEM_PROMPT + `\n\nWARNING: Previous estimate of ${estimatedGrams}g was rejected. ${sanitized.reason}. Please provide a more accurate estimate.`,
-                    userPrompt: prompt,
-                    purpose: 'ambiguous',
-                    forceProvider: 'openrouter',
-                });
-
-                if (reResult.status === 'success' && reResult.content) {
-                    const reParsed = reResult.content as Record<string, unknown>;
-                    const reGrams = typeof reParsed.estimatedGrams === 'number' ? reParsed.estimatedGrams : NaN;
-                    if (!Number.isNaN(reGrams) && reGrams > 0) {
-                        const reCheck = applySanityCheck(foodName, unit, reGrams, request);
-                        if (!reCheck.needsReEstimate) {
-                            return {
-                                status: 'success',
-                                estimatedGrams: reGrams,
-                                confidence: (reParsed.confidence as number) ?? 0.7,
-                                reasoning: `Re-estimated with cloud API: ${reParsed.reasoning}`,
-                            };
-                        }
-                    }
-                }
-            } catch (err) {
-                // Fall through to use clamped value
-            }
-
-            // If re-estimate still fails, use clamped value
-            if (sanitized.clampedGrams !== estimatedGrams) {
-                return {
-                    status: 'success',
-                    estimatedGrams: sanitized.clampedGrams,
-                    confidence: confidence * 0.7, // Reduce confidence for clamped values
-                    reasoning: `${reasoning} [Clamped: ${sanitized.reason}]`,
-                };
-            }
-        }
-
+        // Trust the AI estimate directly (no sanity check clamping)
         return {
             status: 'success',
             estimatedGrams,
@@ -229,54 +187,6 @@ export async function estimateAmbiguousServing(
     } catch (error) {
         return { status: 'error', error: (error as Error).message };
     }
-}
-
-// ============================================================
-// Sanity Check for Category-Specific Limits
-// ============================================================
-
-interface SanityCheckResult {
-    needsReEstimate: boolean;
-    clampedGrams: number;
-    reason?: string;
-}
-
-const CATEGORY_LIMITS: Record<string, { minG: number; maxG: number; keywords: string[] }> = {
-    'protein_powder': { minG: 20, maxG: 50, keywords: ['protein powder', 'whey', 'casein', 'protein isolate'] },
-    'scallion': { minG: 5, maxG: 25, keywords: ['scallion', 'green onion', 'spring onion'] },
-    'herbs': { minG: 1, maxG: 20, keywords: ['basil', 'cilantro', 'parsley', 'mint', 'dill', 'oregano', 'thyme'] },
-    'spices': { minG: 0.5, maxG: 10, keywords: ['pepper', 'cinnamon', 'cumin', 'paprika', 'turmeric'] },
-};
-
-function applySanityCheck(
-    foodName: string,
-    unit: string,
-    estimatedGrams: number,
-    _request: AmbiguousServingRequest
-): SanityCheckResult {
-    const nameLower = foodName.toLowerCase();
-
-    for (const [category, limits] of Object.entries(CATEGORY_LIMITS)) {
-        const matches = limits.keywords.some(kw => nameLower.includes(kw));
-        if (matches) {
-            if (estimatedGrams < limits.minG) {
-                return {
-                    needsReEstimate: true,
-                    clampedGrams: limits.minG,
-                    reason: `${category}: ${estimatedGrams}g below minimum ${limits.minG}g`,
-                };
-            }
-            if (estimatedGrams > limits.maxG) {
-                return {
-                    needsReEstimate: true,
-                    clampedGrams: limits.maxG,
-                    reason: `${category}: ${estimatedGrams}g exceeds maximum ${limits.maxG}g per serving`,
-                };
-            }
-        }
-    }
-
-    return { needsReEstimate: false, clampedGrams: estimatedGrams };
 }
 
 function buildPrompt(request: AmbiguousServingRequest): string {

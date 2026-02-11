@@ -24,7 +24,7 @@ import { debugLogger } from './debug-logger';
 import { detectCookState } from './cook-state-detector';
 import { validateMappingWithAI } from './ai-validation';
 import {
-  getValidatedMapping,
+  getValidatedMappingByNormalizedName,
   saveValidatedMapping,
   trackValidationFailure,
 } from './validated-mapping-helpers';
@@ -601,8 +601,12 @@ export async function mapIngredientWithFatsecret(
   const trimmed = rawLine.trim();
   if (!trimmed) return null;
 
-  // Step 0: Check validated cache for instant return
-  const validated = await getValidatedMapping(trimmed);
+  // Step 0: Check validated cache by NORMALIZED name (not raw ingredient)
+  // Parse first to get the base name, then normalize it for cache lookup
+  const parsedForCache = parseIngredientLine(trimmed);
+  const baseNameForCache = parsedForCache?.name?.trim() || trimmed;
+  const normalizedForCache = normalizeIngredientName(baseNameForCache).cleaned || baseNameForCache;
+  const validated = await getValidatedMappingByNormalizedName(normalizedForCache, 'fatsecret', trimmed);
   if (validated) {
     return validated;
   }

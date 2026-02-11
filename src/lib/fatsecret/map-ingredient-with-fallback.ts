@@ -19,6 +19,7 @@ import {
     isReplacementMismatch,
     validateAliasMapping,
     hasCoreTokenMismatch,
+    hasNullOrInvalidMacros,
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery } from './simple-rerank';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping } from './validated-mapping-helpers';
@@ -42,6 +43,7 @@ import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-b
 import { shouldNormalizeLlm } from './normalize-gate';
 import { extractModifierConstraints } from './modifier-constraints';
 import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
+import { extractPrepModifier, generatePreemptiveServings } from './preemptive-backfill';
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -55,6 +57,42 @@ const inFlightLocks = new Map<string, Promise<FatsecretMappedIngredient | null>>
 // This catches cases like "burger relish" -> "Black Bean Burger" (0.80 conf)
 // where AI simplify would correctly map to "Pickle Relish"
 const MIN_CONFIDENCE_FOR_FALLBACK_SKIP = 0.85;
+
+// ============================================================
+// AI Parse Event Logger (for debugging/learning)
+// ============================================================
+// Logs every AI parse assist call to a dedicated file so we can:
+// 1. See exactly which ingredients triggered AI parsing
+// 2. Compare regex parser output vs AI output
+// 3. Identify patterns to improve the regex parser
+import { appendFileSync, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
+
+interface AiParseLogEntry {
+    rawLine: string;
+    regexResult: unknown;
+    triggerReason: string;
+    aiResult: unknown;
+    outcome: 'success' | 'rejected_absurd_qty' | 'ai_failed';
+}
+
+function logAiParseEvent(entry: AiParseLogEntry): void {
+    try {
+        const logsDir = join(process.cwd(), 'logs');
+        if (!existsSync(logsDir)) {
+            mkdirSync(logsDir, { recursive: true });
+        }
+        const logPath = join(logsDir, 'ai-parse-events.jsonl');
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            ...entry,
+        };
+        appendFileSync(logPath, JSON.stringify(logEntry) + '\n');
+    } catch (err) {
+        // Don't fail the pipeline for logging errors
+        logger.warn('ai_parse_log.write_failed', { error: (err as Error).message });
+    }
+}
 
 function getLockKey(name: string): string {
     return name.toLowerCase().trim();
@@ -210,6 +248,15 @@ export async function mapIngredientWithFallback(
                     reason: 'exceeds_max_reasonable_qty',
                 });
                 // Don't use AI result - keep original parsed values
+
+                // Log to dedicated file for debugging
+                logAiParseEvent({
+                    rawLine: trimmed,
+                    regexResult: parsed,
+                    triggerReason: 'unit_pattern_detected_but_not_parsed',
+                    aiResult: aiParsed,
+                    outcome: 'rejected_absurd_qty',
+                });
             } else {
                 // Update parsed with AI results
                 parsed = {
@@ -229,7 +276,25 @@ export async function mapIngredientWithFallback(
                     unit: parsed.unit,
                     name: parsed.name,
                 });
+
+                // Log to dedicated file for debugging
+                logAiParseEvent({
+                    rawLine: trimmed,
+                    regexResult: { qty: null, unit: null, name: trimmed },  // Original failed parse
+                    triggerReason: 'unit_pattern_detected_but_not_parsed',
+                    aiResult: aiParsed,
+                    outcome: 'success',
+                });
             }
+        } else {
+            // Log failed AI parse attempts  
+            logAiParseEvent({
+                rawLine: trimmed,
+                regexResult: parsed,
+                triggerReason: 'unit_pattern_detected_but_not_parsed',
+                aiResult: aiParsed.status === 'error' ? { error: aiParsed.reason } : null,
+                outcome: 'ai_failed',
+            });
         }
     }
 
@@ -424,7 +489,31 @@ export async function mapIngredientWithFallback(
             // Validate cached mapping against current filters
             // Cached mappings from before filter improvements may have bad mappings
             const earlyCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName);
+
+            // ALSO validate nutrition data - reject cached mappings to foods with zero/null nutrition
+            // This catches bad products like Freshii "Green Onion" with all-zero macros
+            let earlyNutritionInvalid = false;
+            if (!earlyCoreTokenMismatch) {
+                const { prisma } = await import('../db');
+                const cachedFood = await prisma.fatSecretFoodCache.findUnique({
+                    where: { id: earlyCacheHit.foodId },
+                    select: { nutrientsPer100g: true }
+                });
+                if (cachedFood?.nutrientsPer100g) {
+                    const nutrients = cachedFood.nutrientsPer100g as any;
+                    earlyNutritionInvalid = hasNullOrInvalidMacros(nutrients);
+                    if (earlyNutritionInvalid) {
+                        logger.warn('mapping.early_cache_bad_nutrition', {
+                            rawLine: trimmed,
+                            cachedFood: earlyCacheHit.foodName,
+                            nutrients,
+                        });
+                    }
+                }
+            }
+
             if (earlyCoreTokenMismatch ||
+                earlyNutritionInvalid ||
                 isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
                 isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ||
                 hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ||
@@ -434,6 +523,7 @@ export async function mapIngredientWithFallback(
                     cachedFood: earlyCacheHit.foodName,
                     normalized: normalizedName,
                     coreTokenMismatch: earlyCoreTokenMismatch,
+                    nutritionInvalid: earlyNutritionInvalid,
                 });
                 // Fall through to normal search - don't use stale cached mapping
             } else {
@@ -593,7 +683,30 @@ export async function mapIngredientWithFallback(
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
                 const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
+
+                // Validate nutrition data - reject cached mappings to foods with zero/null nutrition
+                let normalizedNutritionInvalid = false;
+                if (!normalizedCoreTokenMismatch) {
+                    const { prisma } = await import('../db');
+                    const cachedFood = await prisma.fatSecretFoodCache.findUnique({
+                        where: { id: normalizedCache.foodId },
+                        select: { nutrientsPer100g: true }
+                    });
+                    if (cachedFood?.nutrientsPer100g) {
+                        const nutrients = cachedFood.nutrientsPer100g as any;
+                        normalizedNutritionInvalid = hasNullOrInvalidMacros(nutrients);
+                        if (normalizedNutritionInvalid) {
+                            logger.warn('mapping.normalized_cache_bad_nutrition', {
+                                rawLine: trimmed,
+                                cachedFood: normalizedCache.foodName,
+                                nutrients,
+                            });
+                        }
+                    }
+                }
+
                 if (normalizedCoreTokenMismatch ||
+                    normalizedNutritionInvalid ||
                     isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
                     isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ||
                     hasCriticalModifierMismatch(trimmed, normalizedCache.foodName, 'cache') ||
@@ -603,6 +716,7 @@ export async function mapIngredientWithFallback(
                         cachedFood: normalizedCache.foodName,
                         normalized: normalizedName,
                         coreTokenMismatch: normalizedCoreTokenMismatch,
+                        nutritionInvalid: normalizedNutritionInvalid,
                     });
                 } else {
                     winner = {
@@ -618,6 +732,7 @@ export async function mapIngredientWithFallback(
                     selectionReason = 'normalized_cache_hit';
                 }
             }
+
         }
 
         let allCandidates: UnifiedCandidate[] = [];
@@ -647,8 +762,31 @@ export async function mapIngredientWithFallback(
                 filtered = filterResult.filtered;
                 const removedCount = filterResult.removedCount;
 
+                // Step 3b: Apply core token validation to filtered candidates
+                // This catches cases like "dry brown rice" → "dry brown beans" (missing "rice" token)
+                const beforeCoreFilter = filtered.length;
+                filtered = filtered.filter(c => {
+                    const mismatch = hasCoreTokenMismatch(normalizedName, c.name, c.brandName);
+                    if (mismatch && debug) {
+                        logger.debug('mapping.core_token_filtered', {
+                            normalizedName,
+                            candidate: c.name,
+                            reason: 'core_token_mismatch',
+                        });
+                    }
+                    return !mismatch;
+                });
+                const coreFilterRemoved = beforeCoreFilter - filtered.length;
+                if (coreFilterRemoved > 0) {
+                    logger.info('mapping.core_token_filter_applied', {
+                        rawLine: trimmed,
+                        removed: coreFilterRemoved,
+                        remaining: filtered.length,
+                    });
+                }
+
                 if (filtered.length === 0) {
-                    logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount });
+                    logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount: removedCount + coreFilterRemoved });
                     // Fall through to Fallback
                 } else {
                     // Step 3a: Confidence Gate
@@ -740,19 +878,19 @@ export async function mapIngredientWithFallback(
                             }
                         }
 
-                        if (!winner && filtered.length > 0) {
+                        if (!winner && sortedFiltered.length > 0) {
                             // Fallback to top scorer ONLY if above minimum threshold
                             const MIN_FALLBACK_CONFIDENCE = 0.80;
-                            if (filtered[0].score >= MIN_FALLBACK_CONFIDENCE) {
-                                winner = filtered[0];
+                            if (sortedFiltered[0].score >= MIN_FALLBACK_CONFIDENCE) {
+                                winner = sortedFiltered[0];
                                 confidence = winner.score;
                                 selectionReason = 'scored_by_confidence';
                             } else {
                                 // Below threshold - let fallback step handle it
                                 logger.info('mapping.fallback_rejected', {
                                     rawLine: trimmed,
-                                    topCandidate: filtered[0].name,
-                                    score: filtered[0].score,
+                                    topCandidate: sortedFiltered[0].name,
+                                    score: sortedFiltered[0].score,
                                     threshold: MIN_FALLBACK_CONFIDENCE,
                                 });
                             }
@@ -887,11 +1025,24 @@ export async function mapIngredientWithFallback(
                             id: fallbackResult.foodId,
                             name: fallbackResult.foodName,
                             brandName: fallbackResult.brandName || undefined,
-                            source: 'cache',  // Use cache path for proper serving selection
+                            source: fallbackResult.foodId.startsWith('fdc_') ? 'fdc' : 'cache',
                             score: fallbackResult.confidence * 0.85,
                             foodType: 'generic',
                             rawData: {},
                         };
+
+                        // For FDC candidates, populate nutrition from fallback result
+                        // so buildFdcResult() can compute serving-specific nutrition
+                        if (fallbackResult.foodId.startsWith('fdc_') && fallbackResult.grams > 0) {
+                            const factor = 100 / fallbackResult.grams;
+                            fallbackCandidate.nutrition = {
+                                kcal: fallbackResult.kcal * factor,
+                                protein: fallbackResult.protein * factor,
+                                carbs: fallbackResult.carbs * factor,
+                                fat: fallbackResult.fat * factor,
+                                per100g: true,
+                            };
+                        }
 
                         // Re-hydrate with ORIGINAL parsed input to get correct serving for "0.25 cup"
                         const rehydratedResult = await hydrateAndSelectServing(
@@ -1040,14 +1191,24 @@ export async function mapIngredientWithFallback(
         // This prevents falling back to semantically unrelated candidates just because they have volume servings.
         const isVolumeUnit = parsed?.unit && /^(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*ounce|l|liter|liters)$/i.test(parsed.unit);
 
-        if (!result && isVolumeUnit && winner.source === 'fatsecret') {
+        // Extract prep modifier from ingredient line for modifier-aware serving labels
+        const prepModifier = extractPrepModifier(rawLine, parsed?.qualifiers);
+
+        // Enable AI backfill for BOTH FatSecret and FDC sources (FDC often lacks volume servings)
+        if (!result && isVolumeUnit && (winner.source === 'fatsecret' || winner.source === 'fdc')) {
             logger.info('mapping.volume_backfill_attempt', {
                 foodId: winner.id,
                 foodName: winner.name,
                 unit: parsed.unit,
+                source: winner.source,
+                prepModifier,
             });
 
-            const volumeBackfillResult = await insertAiServing(winner.id, 'volume');
+            const volumeBackfillResult = await insertAiServing(winner.id, 'volume', {
+                targetServingUnit: parsed.unit,
+                prepModifier,
+                candidateData: winner,  // Pass candidate data to avoid DB lookup race condition
+            });
 
             if (volumeBackfillResult.success) {
                 // Retry hydration now that we have a volume serving
@@ -1110,8 +1271,13 @@ export async function mapIngredientWithFallback(
                             foodId: fallback.id,
                             foodName: fallback.name,
                             unit: parsed?.unit,
+                            prepModifier,
                         });
-                        const backfillResult = await insertAiServing(fallback.id, 'volume');
+                        const backfillResult = await insertAiServing(fallback.id, 'volume', {
+                            targetServingUnit: parsed?.unit,
+                            prepModifier,
+                            candidateData: fallback,  // Pass candidate data to avoid DB lookup race condition
+                        });
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
                                 fallback, parsed, confidence * 0.95, rawLine, client
@@ -1495,8 +1661,14 @@ async function hydrateAndSelectServing(
     if (!details || !details.servings?.length || !hasUsableServing(details.servings)) {
         logger.warn('hydrate.no_usable_servings', { foodId: candidate.id, hasDetails: !!details, servingsCount: details?.servings?.length || 0 });
 
+        // Extract prep modifier for modifier-aware serving labels
+        const hydratePrepModifier = extractPrepModifier(rawLine, parsed?.qualifiers);
+
         // Try AI backfill for weight-based serving
-        const backfillResult = await insertAiServing(candidate.id, 'weight');
+        const backfillResult = await insertAiServing(candidate.id, 'weight', {
+            prepModifier: hydratePrepModifier,
+            candidateData: candidate,  // Pass candidate data to avoid DB lookup race condition
+        });
         if (backfillResult.success) {
             const refreshed = await getCachedFoodWithRelations(candidate.id);
             if (refreshed) {
@@ -1506,7 +1678,11 @@ async function hydrateAndSelectServing(
 
         // If still no usable servings, try volume backfill
         if (!details || !hasUsableServing(details.servings)) {
-            const volumeBackfill = await insertAiServing(candidate.id, 'volume');
+            const volumeBackfill = await insertAiServing(candidate.id, 'volume', {
+                targetServingUnit: parsed?.unit,
+                prepModifier: hydratePrepModifier,
+                candidateData: candidate,  // Pass candidate data to avoid DB lookup race condition
+            });
             if (volumeBackfill.success) {
                 const refreshed = await getCachedFoodWithRelations(candidate.id);
                 if (refreshed) {
@@ -1853,10 +2029,42 @@ async function buildFdcResult(
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
     } else if (unit && volumeToGrams[unit]) {
-        // Unit is a volume unit - estimate grams using approximate density
-        // e.g., "2 tbsp" → 2 * 7.5g = 15g
-        grams = qty * volumeToGrams[unit];
-        servingDescription = `${qty} ${unit}`;
+        // Unit is a volume unit - try AI estimation first for food-specific density
+        const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
+        let aiEstimated = false;
+
+        if (!isNaN(fdcId)) {
+            try {
+                const { insertFdcAiServing } = await import('../usda/fdc-ai-backfill');
+                const aiResult = await insertFdcAiServing(fdcId, 'volume', { targetUnit: unit });
+                if (aiResult.success) {
+                    // Fetch the AI-created serving from cache
+                    const aiServing = await prisma.fdcServingCache.findFirst({
+                        where: { fdcId, isAiEstimated: true },
+                        orderBy: { id: 'desc' },
+                    });
+                    if (aiServing && aiServing.grams > 0) {
+                        grams = qty * aiServing.grams;
+                        servingDescription = `${qty} ${unit}`;
+                        aiEstimated = true;
+                        logger.info('fdc.volume_ai_estimated', {
+                            foodName: candidate.name, unit, gramsPerUnit: aiServing.grams, totalGrams: grams,
+                        });
+                    }
+                }
+            } catch (err) {
+                logger.warn('fdc.volume_ai_failed', { foodName: candidate.name, unit, error: (err as Error).message });
+            }
+        }
+
+        if (!aiEstimated) {
+            // Fallback to hardcoded density estimate
+            grams = qty * volumeToGrams[unit];
+            servingDescription = `${qty} ${unit}`;
+            logger.info('fdc.volume_hardcoded_fallback', {
+                foodName: candidate.name, unit, gramsPerUnit: volumeToGrams[unit], totalGrams: grams,
+            });
+        }
     } else if (isSizeQualifier(unit)) {
         // Unit is a size qualifier (small/medium/large)
         // Get AI-estimated weight for this size, caching for future use
@@ -2008,13 +2216,32 @@ function selectServing(
 
             if (matchingServing) {
                 const grams = gramsForServing(matchingServing)!;
-                const unitsPerServing = matchingServing.numberOfUnits && matchingServing.numberOfUnits > 0
+                const servingDesc = (matchingServing.measurementDescription || matchingServing.description || '').toLowerCase();
+
+                // Extract count from serving description (e.g., "10 large" → 10, "10 medium" → 10)
+                // This is critical because FatSecret often doesn't set numberOfUnits correctly
+                // for count-based servings, causing double-multiplication bugs
+                const countMatch = servingDesc.match(/^(\d+)\s+(small|medium|large|extra\s*large)/i);
+                let unitsPerServing = matchingServing.numberOfUnits && matchingServing.numberOfUnits > 0
                     ? matchingServing.numberOfUnits : 1;
+
+                if (countMatch) {
+                    const extractedCount = parseInt(countMatch[1], 10);
+                    if (extractedCount > 0) {
+                        unitsPerServing = extractedCount;
+                        logger.debug('selectServing.extracted_count_from_desc', {
+                            servingDesc,
+                            extractedCount,
+                            originalNumberOfUnits: matchingServing.numberOfUnits,
+                        });
+                    }
+                }
 
                 logger.debug('selectServing.size_qualifier_from_existing', {
                     unit,
                     matchedServing: matchingServing.measurementDescription || matchingServing.description,
                     grams,
+                    unitsPerServing,
                 });
 
                 return {

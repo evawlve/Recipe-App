@@ -129,6 +129,15 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'lemon zest', to: 'lemon peel' },
     { from: 'lime zest', to: 'lime peel' },
     { from: 'orange zest', to: 'orange peel' },
+    // Rare citrus peel → common citrus peel (nutritionally equivalent)
+    { from: 'blood orange peel', to: 'orange peel' },
+    { from: 'blood orange zest', to: 'orange peel' },
+    { from: 'cara cara orange peel', to: 'orange peel' },
+    { from: 'navel orange peel', to: 'orange peel' },
+    { from: 'meyer lemon peel', to: 'lemon peel' },
+    { from: 'meyer lemon zest', to: 'lemon peel' },
+    { from: 'key lime peel', to: 'lime peel' },
+    { from: 'key lime zest', to: 'lime peel' },
     // Fat level synonyms
     { from: 'extra light', to: 'fat free' },
     { from: 'extra-light', to: 'fat free' },
@@ -261,6 +270,11 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   // PRE-PROCESSING: Clean up common input issues
   // ============================================================
 
+  // Step 0: Strip accent characters (Unicode normalization)
+  // e.g., "Jalapeño" → "Jalapeno", "crème" → "creme", "café" → "cafe"
+  // This ensures consistent API search results regardless of accent usage
+  working = working.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
   // Step 1: Strip percentage patterns >= 50% (e.g., "100% liquid" → "liquid")
   // BUT preserve low percentages like "2% milk" which are nutritionally significant
   working = working.replace(/\b(100|[5-9]\d)%\s*/g, '');
@@ -293,9 +307,55 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   const allPhrases = [...getMergedPrepPhrases(), ...rules.size_phrases];
   const sortedPhrases = allPhrases.sort((a, b) => b.length - a.length);
 
-  // PROTECTED PRODUCT PHRASES: These contain prep words but are product types that MUST be preserved
-  // e.g., "fire roasted tomatoes" should NOT strip "roasted" - it's a canned product type
+  // ============================================================
+  // PRODUCT-TYPE MODIFIERS
+  // ============================================================
+  // These modifiers, when appearing at the START of an ingredient name,
+  // indicate a fundamentally different product type that should be preserved
+  // in the normalized name for accurate API search.
+  //
+  // Examples where modifier IS the product type (preserve):
+  // - "canned pineapple" → different product than fresh pineapple
+  // - "dried apricots" → concentrated sugars, different nutrition
+  // - "frozen pizza" → completely different product!
+  // - "crushed tomatoes" → canned product, not fresh tomatoes
+  //
+  // Examples where modifier is just prep (strip):
+  // - "chopped onion" → same nutrition as whole onion
+  // - "diced, canned tomatoes" → "diced" is prep, "canned" comes after so strip too
+  //
+  // Rule: If the modifier is the FIRST word and followed by a base noun,
+  // it's likely a product type. Otherwise, it's prep.
+  const PRODUCT_TYPE_MODIFIERS = new Set([
+    'canned',      // canned pineapple, canned beans, canned corn
+    'frozen',      // frozen peas, frozen pizza, frozen berries
+    'dried',       // dried apricots, dried cranberries, dried herbs
+    'crushed',     // crushed tomatoes (the canned product)
+    'diced',       // diced tomatoes (the canned product)
+    'stewed',      // stewed tomatoes
+    'pickled',     // pickled jalapeños, pickled ginger
+    'roasted',     // roasted peppers (jarred product)
+    'smoked',      // smoked salmon, smoked paprika
+    'condensed',   // condensed milk
+    'evaporated',  // evaporated milk
+    'powdered',    // powdered sugar, powdered milk
+    'instant',     // instant oatmeal, instant coffee
+    'creamed',     // creamed corn
+  ]);
+
+  // Get lowercase version for all case-insensitive comparisons
+  const workingLower = working.toLowerCase();
+
+  // Check if input starts with a product-type modifier
+  // e.g., "canned pineapple" → preserve "canned"
+  // e.g., "pineapple, canned" → don't preserve (not at start)
+  const firstWord = workingLower.split(/\s+/)[0]?.replace(/[^a-z]/g, '');
+  const startsWithProductModifier = PRODUCT_TYPE_MODIFIERS.has(firstWord);
+
+  // PROTECTED PRODUCT PHRASES: Compound phrases that must be preserved as-is
+  // These are phrases where the combination is the product type
   const PROTECTED_PRODUCT_PHRASES = [
+    // Compound cooking method phrases
     'fire roasted',
     'fire-roasted',
     'oven roasted',
@@ -308,14 +368,24 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     'flame-grilled',
     'char grilled',
     'char-grilled',
-    'pan fried',   // different from just "fried" - product type for products like pan-fried noodles
+    'pan fried',
     'stir fried',
     'stir-fried',
     'deep fried',
-    'smoked salmon',  // "smoked" is prep, but "smoked salmon" is a product type
+    // Specific product names that contain prep words
+    'smoked salmon',
+    'tomato paste',
+    'tomato sauce',
+    'tomato puree',
+    'cream cheese',
+    'cottage cheese',
+    'peanut butter',
+    'apple sauce',
+    'apple butter',
+    'coconut milk',
+    'coconut cream',
   ];
 
-  const workingLower = working.toLowerCase();
   const protectedPhrasesInInput = PROTECTED_PRODUCT_PHRASES.filter(p =>
     workingLower.includes(p)
   );
@@ -328,6 +398,12 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     );
     if (isProtected) {
       continue; // Don't strip - it's part of a protected product phrase
+    }
+
+    // Skip stripping product-type modifiers when they're at the start
+    // This preserves "canned pineapple" but still strips "pineapple, canned"
+    if (startsWithProductModifier && PRODUCT_TYPE_MODIFIERS.has(phraseLower) && phraseLower === firstWord) {
+      continue; // Don't strip - it's a product-type modifier at the start
     }
 
     // Add word boundaries to prevent partial matches (e.g., "raw" inside "strawberries")

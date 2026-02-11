@@ -90,6 +90,62 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
    | Ranks lower than wrong food | `simple-rerank.ts` scoring |
    | Gets wrong nutrition | Serving selection or cache |
 
+4. **If selectionReason = "fallback_after_serving_failure":**
+   - The CORRECT candidate was selected first, but serving lookup failed
+   - Check WHY AI backfill didn't create a serving estimate
+   - Investigate: `npx tsx scripts/check-serving-cache.ts --food FOOD_ID`
+   - Check if backfill is enabled: `ENABLE_PREEMPTIVE_BACKFILL` env var
+   - Verify backfill eligibility in `serving-backfill.ts`
+
+5. **If FDC candidate has higher score but lower rank:**
+   - Check source preference boost in `simple-rerank.ts`
+   - FatSecret boost may be too aggressive, causing FDC to rank lower
+   - Consider reducing `WEIGHTS.SOURCE_FATSECRET` or adding FDC preference for this category
+
+6. **Common Pitfalls (learned Feb 2026):**
+
+   **`sortedFiltered` vs `filtered` trap:**
+   - `filtered` = output of `filterCandidatesByTokens()` — **NOT SORTED** by score
+   - `sortedFiltered` = explicitly sorted by score descending
+   - When `simpleRerank` returns null, fallback checks `sortedFiltered[0].score >= 0.80`
+   - If debugging shows candidates pass filters but pipeline still fails, check which array is used
+
+   **Modifier filter over-blocking:**
+   - `hasCriticalModifierMismatch` requires exact modifier text (e.g., "fat free") in candidate name
+   - Products like Egg Beaters are nutritionally fat-free but don't say "fat free"
+   - Substitute/replacer products are exempt from strict nonfat checks (fix applied Feb 2026)
+   - Always check ALL three filters: `hasCriticalModifierMismatch`, `isReplacementMismatch`, `hasCoreTokenMismatch`
+
+   **Two-layer failure pattern:**
+   - When confidence = 0.0, check BOTH: (1) are candidates being filtered out? (2) are surviving candidates scoring below threshold?
+   - A fix to one layer may reveal the second layer still blocks
+
+---
+
+## ⚠️ CRITICAL: Fix Scalability Principle
+
+> **Every fix MUST be general/broad enough to apply to other ingredients that could suffer the same issue.**
+
+### ❌ BAD Fixes (NOT scalable):
+- Adding ingredient-specific exclusion rules like `"chinese five spice" → exclude "banana"`
+- Hard-coding specific food names to block
+- One-off exceptions for individual ingredients
+
+### ✅ GOOD Fixes (scalable):
+- **Core token mismatch improvements** - If food A is missing a core query token, block it for ALL queries
+- **Scoring weight adjustments** - If token overlap scoring is too weak, improve it for all ingredients
+- **Category detection patterns** - If "spice" category is being matched to "fruit", improve category detection
+- **Data quality filters** - If nutritional data has impossible values, add validation that catches all bad data
+
+### How to identify the right fix:
+1. Ask: "Could other ingredients have this same problem?"
+2. Ask: "Does this fix address the ROOT CAUSE or just the symptom?"
+3. Ask: "If I add 1000 new ingredients, will this fix help prevent similar issues?"
+
+**Example**: "Chinese five spice" → "Chinese Banana"
+- ❌ BAD: Add exclusion `{query: ['five spice'], excludeIfContains: ['banana']}`
+- ✅ GOOD: Fix core token mismatch logic - "banana" is NOT in query, so candidate should be rejected
+
 ---
 
 ## Phase 5: Implement Fix
@@ -97,7 +153,7 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 ### Safe Fixes (auto-proceed):
 - Adding British→American synonyms in `ingredient-line.ts`
 - Adding prep phrase stripping patterns
-- Adding specific category exclusions for obvious mismatches
+- ~~Adding specific category exclusions for obvious mismatches~~ **(AVOID - not scalable)**
 - Fixing parsing regex for edge cases
 
 ### ⚠️ STOP AND ASK for these changes:
