@@ -82,28 +82,28 @@ const IGNORE_TOKENS = new Set([
 
 // Benign descriptor tokens - these add context but don't change food category
 // These should receive REDUCED extra token penalty (not eliminated, but less harsh)
-// e.g., "baby spinach", "water spinach", "creamed spinach" are all still spinach
+// e.g., "baby spinach", "organic spinach" are still spinach variants
+//
+// NOTE: Cooking-method tokens (fried, creamed, roasted, etc.) are intentionally
+// NOT listed here. When the query is plain "tofu" and the candidate is "Fried Tofu",
+// "fried" fundamentally changes the food — it must carry a full extra-token penalty.
+// Only truly neutral descriptors (size, color, quality) belong here.
 const BENIGN_DESCRIPTOR_TOKENS = new Set([
     // Size/age descriptors
     'baby', 'mini', 'small', 'medium', 'large', 'jumbo', 'giant', 'young', 'mature',
-    // Freshness/state descriptors  
-    'raw', 'fresh', 'frozen', 'canned', 'dried', 'dehydrated', 'cooked', 'steamed',
-    'boiled', 'roasted', 'grilled', 'baked', 'fried', 'sauteed',
+    // Freshness/source state (physical state, not cooking method)
+    'raw', 'fresh', 'frozen', 'canned', 'dried', 'dehydrated',
     // Quality/type descriptors
     'organic', 'natural', 'wild', 'farmed', 'domestic', 'imported',
     // Color descriptors (for produce varieties)
     'red', 'green', 'yellow', 'orange', 'white', 'purple', 'black', 'golden',
-    // Preparation descriptors
+    // Preparation descriptors (physical cut only — not cooking method)
     'chopped', 'diced', 'sliced', 'minced', 'crushed', 'ground', 'whole', 'halved',
     'shredded', 'grated', 'cubed', 'julienne', 'peeled', 'skinless', 'boneless',
     // Common variety descriptors
     'sweet', 'sour', 'bitter', 'spicy', 'hot', 'mild',
     // Plant parts
     'leaf', 'leaves', 'stalk', 'stalks', 'stem', 'stems', 'root', 'roots',
-    // Water/liquid varieties (like "water spinach", "water chestnut")
-    'water',
-    // Cooking additions
-    'creamed', 'buttered', 'breaded', 'stuffed',
 ]);
 
 // Synonyms for matching (bidirectional)
@@ -145,14 +145,25 @@ const CATEGORY_CHANGING_TOKENS = new Set([
     // Prepared dishes (turn raw → complex dishes)
     'soup', 'stew', 'casserole', 'salad', 'sandwich', 'burger', 'wrap',
     'pizza', 'quesadilla', 'enchilada', 'burrito', 'taco',
+    // Sauces / condiments (turn raw produce → processed product)
+    'marinara', 'bisque', 'gravy', 'relish',
     // Beverages/processed (turn solid → liquid/processed)
     'smoothie', 'shake', 'juice', 'drink', 'beverage', 'soda', 'lemonade',
+    'julep', 'cocktail', 'spritzer',
     // Snacks/confections
     'candy', 'candies', 'chocolate', 'bar', 'chip', 'chips', 'fries',
     'fritter', 'nugget', 'nuggets', 'stick', 'sticks',
+    'patty', 'patties', 'mints',
     // Spreads/condiments
     'dip', 'spread', 'hummus', 'guacamole', 'sauce', 'dressing',
     'jam', 'jelly', 'preserves', 'butter',
+    // Pickled/preserved products (turn fresh herb → preserved product)
+    'pickle', 'pickles', 'pickled',
+    // Processed meat products
+    'sausage', 'sausages', 'hot dog', 'bratwurst', 'chorizo', 'salami',
+    // Part-of-whole (when query is for whole fruit/veg)
+    // e.g. "lemons" → "lemon peel" or "lemon zest" is wrong unless query asks for it
+    'peel', 'rind',
     // Dairy products (when not queried)
     'ice cream', 'yogurt', 'pudding', 'custard', 'mousse',
 ]);
@@ -161,11 +172,28 @@ const CATEGORY_CHANGING_TOKENS = new Set([
  * Check if candidate has category-changing tokens that are NOT in the query.
  * This catches "spinach" → "Spinach Noodles" type mismatches.
  * 
+ * Synonym-aware: if the query uses "zest" and the candidate has "peel",
+ * the penalty is suppressed because they are declared synonyms.
+ * 
  * Returns the penalty amount (0 to CATEGORY_CHANGE_PENALTY)
  */
 function getCategoryChangePenalty(query: string, candidateName: string): number {
     const queryLower = query.toLowerCase();
     const candLower = candidateName.toLowerCase();
+
+    // Build an expanded set of query tokens including declared synonyms
+    // so that "lemon zest" query doesn't penalize "Lemon Peel" candidate
+    const queryWords = queryLower
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+    const expandedQueryTokens = new Set(queryWords);
+    for (const word of queryWords) {
+        const synList = SYNONYMS[word];
+        if (synList) {
+            for (const syn of synList) expandedQueryTokens.add(syn);
+        }
+    }
 
     // Tokenize candidate name
     const candidateWords = candLower
@@ -176,10 +204,10 @@ function getCategoryChangePenalty(query: string, candidateName: string): number 
     // Check each candidate word against category-changing tokens
     for (const word of candidateWords) {
         if (CATEGORY_CHANGING_TOKENS.has(word)) {
-            // Is this category-changing token also in the query?
-            // If so, it's intentional (e.g., "spinach pasta" query)
-            if (!queryLower.includes(word)) {
-                // Query doesn't have this token - it's parasitic!
+            // Is this category-changing token in the query (or covered by a synonym)?
+            // If so, it's intentional (e.g., "spinach pasta" query, or "lemon zest" → peel)
+            if (!expandedQueryTokens.has(word)) {
+                // Query doesn't have this token or any synonym for it — parasitic!
                 // Return heavy penalty
                 return WEIGHTS.CATEGORY_CHANGE_PENALTY;
             }
@@ -694,9 +722,20 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
             // e.g., "unsweetened coconut milk" → "Unsweetened Coconut Milk (Silk)" has ALL query tokens
             const allQueryTokensInName = queryWords.every(qw => candNameLower.includes(qw));
 
-            if (allQueryTokensInName) {
-                // Branded item matches all query tokens - minimal/no penalty
-                // This prevents penalizing "Unsweetened Coconut Milk (Silk)" for query "unsweetened coconut milk"
+            // Count tokens in the candidate name (excluding brand in parens) vs query
+            const candidateNameOnly = candidate.name.replace(/\([^)]+\)/g, '').trim();
+            const candidateNameTokens = candidateNameOnly.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            const extraCandidateTokens = candidateNameTokens.filter(ct => !queryWords.some(qw => ct.includes(qw) || qw.includes(ct)));
+            const hasExtraNameTokens = extraCandidateTokens.length > 0;
+
+            if (allQueryTokensInName && !hasExtraNameTokens) {
+                // Branded item matches ALL query tokens AND has no extra name tokens - no penalty
+                // e.g., "Unsweetened Coconut Milk (Silk)" for "unsweetened coconut milk"
+            } else if (allQueryTokensInName && hasExtraNameTokens) {
+                // Branded item covers all query tokens BUT has extra tokens in its name
+                // e.g., "Italian Plum Tomato Marinara (Mezzetta)" for "plum tomato"
+                // → The extra "Italian" + "Marinara" tokens indicate it's a different product
+                score -= WEIGHTS.SIMPLE_INGREDIENT_BRAND_PENALTY;
             } else if (queryWords.length <= 2) {
                 // Apply brand penalty for simple ingredients where branded doesn't have full coverage
                 score -= WEIGHTS.SIMPLE_INGREDIENT_BRAND_PENALTY;
