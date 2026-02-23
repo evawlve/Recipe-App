@@ -45,7 +45,7 @@ export interface SimpleRerankResult {
 const WEIGHTS = {
     EXACT_MATCH: 0.30,       // Exact name match bonus (INCREASED - precise matches should win)
     TOKEN_OVERLAP: 0.15,     // Token overlap ratio (slightly increased)
-    SOURCE_FATSECRET: 0.15,  // Prefer FatSecret (better servings) - INCREASED from 0.1
+    SOURCE_FATSECRET: 0.05,  // Slight tiebreaker for FatSecret (better serving data), reduced from 0.15
     NO_BRAND: 0.05,          // Prefer generic over branded (reduced)
     SHORT_NAME: 0.02,        // Prefer shorter, simpler names (minimal)
     ORIGINAL_SCORE: 0.45,    // API score (REDUCED - don't blindly trust API ranking)
@@ -696,10 +696,11 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
         score += WEIGHTS.SOURCE_FATSECRET + 0.05;  // Boost FDC for these categories above FatSecret
     } else if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
         score += WEIGHTS.SOURCE_FATSECRET;
-    } else if (candidate.source === 'fdc') {
-        // FDC often has incomplete serving data, apply mild penalty to prefer FatSecret
-        score -= 0.08;
     }
+    // FDC: no penalty. FatSecret is already preferred via SOURCE_FATSECRET (+0.15).
+    // A blanket FDC penalty was causing generic FDC produce entries to lose to
+    // branded FatSecret products (e.g. CORA peeled plum tomatoes vs Muir Glen canned).
+    // Serving data gaps are handled downstream during hydration, not here.
 
     // 4. Prefer generic over branded (but smarter about it)
     if (!candidate.brandName) {
@@ -1060,9 +1061,22 @@ export function toRerankCandidate(candidate: {
         per100g: boolean;
     };
 }): RerankCandidate {
+    // Some FDC entries have doubled descriptions (a known FDC data quality issue).
+    // e.g. "peeled plum tomatoes peeled plum tomatoes" → "peeled plum tomatoes"
+    // Deduplicating prevents the token bloat penalty from unfairly hurting these entries.
+    let name = candidate.name;
+    if (candidate.source === 'fdc') {
+        const half = Math.floor(name.length / 2);
+        const firstHalf = name.slice(0, half).trim();
+        const secondHalf = name.slice(half).trim();
+        if (firstHalf && firstHalf === secondHalf) {
+            name = firstHalf;
+        }
+    }
+
     return {
         id: candidate.id,
-        name: candidate.name,
+        name,
         brandName: candidate.brandName || undefined,
         foodType: candidate.foodType || undefined,
         score: candidate.score,
