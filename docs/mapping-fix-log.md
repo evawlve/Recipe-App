@@ -364,3 +364,53 @@ Run `npx tsx scripts/test-mapping-fixes.ts` to verify all fixes.
 - `buttery cinnamon powder` - fictional ingredient, no API match
 - `burger relish` - AI simplification needed to map to "pickle relish"
 
+---
+
+## 2026-02-23: Systemic Scoring Defects (simple-rerank.ts)
+
+**Source**: `mapping-summary-2026-02-11T17-25-24.txt` (200-recipe pilot, 2114 ingredients)
+**File**: `src/lib/fatsecret/simple-rerank.ts`
+
+Root cause was in `computeSimpleScore()` — three distinct defects allowing wrong prepared/processed food candidates to outscore the correct raw ingredient.
+
+### Fix 34: Expand `CATEGORY_CHANGING_TOKENS`
+
+| Issue | Multiple wrong mappings to prepared products |
+|-------|----------------------------------------------|
+| Examples | `"20 mint"` → Mint Patties (candy), `"5 sprig dill"` → Dill Cucumber Pickles, `"4 lemons crosswise"` → raw lemon peel |
+| Root Cause | Tokens like `patties`, `pickles`, `marinara`, `peel` were missing from the set that triggers a 0.50 penalty when present in a candidate but not the query |
+| Fix | Added to `CATEGORY_CHANGING_TOKENS`: `marinara`, `bisque`, `gravy`, `relish`, `julep`, `cocktail`, `spritzer`, `patty`, `patties`, `mints`, `pickle`, `pickles`, `pickled`, `sausage`, `sausages`, `hot dog`, `bratwurst`, `chorizo`, `salami`, `peel`, `rind` |
+| Result | `"20 mint"` → MINT (0.98) ✅, `"5 sprig dill"` → Dill (0.98) ✅ |
+
+### Fix 35: Remove Cooking Methods from `BENIGN_DESCRIPTOR_TOKENS`
+
+| Issue | `"1 package cubed tofu"` → Fried Tofu (538kcal) instead of plain Tofu |
+|-------|------------------------------------------------------------------------|
+| Root Cause | `fried`, `creamed`, `roasted`, `baked`, `boiled`, `steamed`, `sauteed`, `buttered`, `breaded`, `stuffed`, `water` were classified as "benign" descriptors (only 25% extra-token penalty). When the query is plain `"tofu"`, `"Fried Tofu"` should be penalized heavily for the extra `fried` token. |
+| Fix | Removed all cooking-method tokens from `BENIGN_DESCRIPTOR_TOKENS`. Kept `raw`, `fresh`, `frozen`, `canned`, `dried`, `dehydrated` (physical state, not cooking method). Kept size, color, and quality descriptors (baby, organic, red, etc.). |
+| Result | `"cubed tofu"` → Fried Tofu score drops relative to Firm Tofu; falls below threshold → AI simplification fires → `"Tofu"` → TOFU (0.98) ✅ |
+
+### Fix 36: Brand Penalty for Extra-Token Branded Candidates
+
+| Issue | `"1 plum tomato"` → Italian Plum Tomato Marinara (Mezzetta) (130kcal) instead of raw plum tomato (~11kcal) |
+|-------|-------------------------------------------------------------------------------------------------------------|
+| Root Cause | `SIMPLE_INGREDIENT_BRAND_PENALTY` was skipped when a branded candidate contained all query tokens. `"Italian Plum Tomato Marinara (Mezzetta)"` contains `plum` + `tomato` → penalty skipped → it beat generic plum tomatoes despite the extra `Italian` + `Marinara` tokens. |
+| Fix | Added check: if branded candidate covers all query tokens BUT has extra name tokens beyond the query, apply the penalty. Only truly exact-coverage branded items (e.g., `"Unsweetened Coconut Milk (Silk)"` for `"unsweetened coconut milk"`) are now penalty-free. |
+| Result | Marinara no longer wins for `"plum tomato"` queries; pipeline falls to AI fallback → re-runs as `"Plum Tomatoes"` ✅ |
+
+### Bonus Fix 37: Synonym-Aware `getCategoryChangePenalty`
+
+| Issue | Adding `peel` to `CATEGORY_CHANGING_TOKENS` would have penalized `"Lemon Peel"` candidates for `"lemon zest"` queries (a regression) |
+|-------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Root Cause | `getCategoryChangePenalty` checked `queryLower.includes(word)` — not aware of the `SYNONYMS` map (`zest ↔ peel`) |
+| Fix | Expanded the query token set with all declared synonyms before the penalty check. `"lemon zest"` query now includes `"peel"` and `"rind"` in its expanded token set → no penalty for `"Lemon Peel"` candidates. |
+
+### Change Index Update
+
+| # | Category | Description |
+|---|----------|-------------|
+| 34 | Category-changing tokens | Added marinara, patties, pickles, peel, rind, sausage, julep + variants |
+| 35 | Benign descriptor cleanup | Removed cooking methods (fried, creamed, roasted, etc.) from benign set |
+| 36 | Brand penalty tightening | Penalize extra-token branded candidates even with full query coverage |
+| 37 | Synonym-aware penalty | getCategoryChangePenalty checks SYNONYMS before firing |
+
