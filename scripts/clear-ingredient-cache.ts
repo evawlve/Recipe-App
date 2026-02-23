@@ -23,45 +23,45 @@ async function clearIngredientCache(terms: string[]) {
     for (const term of terms) {
         const termLower = term.toLowerCase();
 
-        // ValidatedMapping — keyed on normalizedName
+        // ValidatedMapping — keyed on rawIngredient
         const validated = await prisma.validatedMapping.findMany({
-            where: { normalizedName: { contains: term, mode: 'insensitive' } },
-            select: { normalizedName: true, foodName: true },
+            where: {
+                OR: [
+                    { rawIngredient: { contains: term } },
+                    { rawIngredient: { contains: termLower } },
+                ],
+            },
+            select: { rawIngredient: true, foodName: true },
         });
         if (validated.length > 0) {
             await prisma.validatedMapping.deleteMany({
-                where: { normalizedName: { contains: term, mode: 'insensitive' } },
+                where: {
+                    OR: [
+                        { rawIngredient: { contains: term } },
+                        { rawIngredient: { contains: termLower } },
+                    ],
+                },
             });
             console.log(`✓ ValidatedMapping [${term}]: deleted ${validated.length}`);
-            validated.forEach(v => console.log(`    "${v.normalizedName}" → ${v.foodName}`));
+            validated.forEach(v => console.log(`    "${v.rawIngredient}" → ${v.foodName}`));
         } else {
             console.log(`  ValidatedMapping [${term}]: none found`);
         }
         totalValidated += validated.length;
 
-        // IngredientFoodMap — keyed on rawIngredient
-        const foodMap = await prisma.ingredientFoodMap.findMany({
-            where: { rawIngredient: { contains: term, mode: 'insensitive' } },
-            select: { rawIngredient: true, foodName: true },
-        });
-        if (foodMap.length > 0) {
-            await prisma.ingredientFoodMap.deleteMany({
-                where: { rawIngredient: { contains: term, mode: 'insensitive' } },
-            });
-            console.log(`✓ IngredientFoodMap [${term}]: deleted ${foodMap.length}`);
-            foodMap.forEach(f => console.log(`    "${f.rawIngredient}" → ${f.foodName}`));
-        } else {
-            console.log(`  IngredientFoodMap [${term}]: none found`);
-        }
-        totalFoodMap += foodMap.length;
+        // Note: IngredientFoodMap entries are linked via recipeId/ingredientId — not directly
+        // searchable by ingredient name. Use scripts/clear-all-mappings.ts to clear all of these,
+        // or delete them via the DB if you need to clear specific recipe-level nutrition mappings.
 
-        // AiNormalizeCache — keyed on normalizedKey / rawLine
+        // AiNormalizeCache — keyed on normalizedKey / rawLine / normalizedName
         const normCache = await prisma.aiNormalizeCache.findMany({
             where: {
                 OR: [
                     { normalizedKey: { contains: termLower } },
-                    { rawLine: { contains: term, mode: 'insensitive' } },
-                    { normalizedName: { contains: term, mode: 'insensitive' } },
+                    { rawLine: { contains: term } },
+                    { rawLine: { contains: termLower } },
+                    { normalizedName: { contains: term } },
+                    { normalizedName: { contains: termLower } },
                 ],
             },
             select: { normalizedKey: true, normalizedName: true },
@@ -71,8 +71,10 @@ async function clearIngredientCache(terms: string[]) {
                 where: {
                     OR: [
                         { normalizedKey: { contains: termLower } },
-                        { rawLine: { contains: term, mode: 'insensitive' } },
-                        { normalizedName: { contains: term, mode: 'insensitive' } },
+                        { rawLine: { contains: term } },
+                        { rawLine: { contains: termLower } },
+                        { normalizedName: { contains: term } },
+                        { normalizedName: { contains: termLower } },
                     ],
                 },
             });
@@ -92,6 +94,7 @@ async function clearIngredientCache(terms: string[]) {
     console.log(`  AiNormalizeCache deleted : ${totalNormCache}`);
     console.log('\n✅ Done. Now run the full pipeline without --skip-cache to verify.\n');
 }
+
 
 const terms = process.argv.slice(2);
 if (terms.length === 0) {
