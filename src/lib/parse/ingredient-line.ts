@@ -112,6 +112,27 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     // Synonym: "calorie free" → "sugar free" (many products labeled as sugar free, not calorie free)
     .replace(/\bcalorie[- ]free\b/gi, 'sugar free');
 
+  // === NEW: Spelling corrections for common misspellings ===
+  // These would otherwise return 0 API results and fail with 0.00 confidence
+  unitNormalized = unitNormalized
+    .replace(/\bcanellini\b/gi, 'cannellini')   // "Canellini" → "Cannellini" (double-n)
+    .replace(/\bchick\s+peas?\b/gi, 'chickpeas') // "chick pea(s)" → "chickpeas"
+    .replace(/\bchilli\b/gi, 'chili')            // British "chilli" → American "chili"
+    .replace(/\bjalape[nñ]o\b/gi, 'jalapeno');   // Accent variants → unaccented
+
+  // === NEW: Strip alternative measurement noise appended after a dash ===
+  // Recipes sometimes include alternative measures like "2 cup water - 1 to 2 cups"
+  // or cooking instructions like "1 tbsp parmesan - per serving sprinkle..."
+  // Strip everything from " - " onwards when it looks like a range or instruction
+  unitNormalized = unitNormalized
+    // " - N to N unit" pattern → alternative quantity range (e.g. "- 1 to 2 cups")
+    .replace(/\s+-\s+\d[\d\s\/]*to\s+\d[^,]*/gi, '')
+    // " - N unit ..." pattern → single alternative (e.g. "- 1 teaspoon basil")
+    .replace(/\s+-\s+\d+\s+(?:teaspoon|tablespoon|tsp|tbsp|cup|oz|g|ml)[^\w]*.*/gi, '')
+    // " -per serving..." and other instruction fragments
+    .replace(/\s+-\s*per\s+serving.*/gi, '')
+    .trim();
+
   let preprocessed = unitNormalized
     .replace(/(\d+)\s*[x×]\s*(\d+[a-z]*)/gi, '$1 x $2') // Normalize "2x200" or "2x200g" or "2 x 200g" to "2 x 200g"
     .replace(/\(/g, ' ( ') // Separate opening parentheses

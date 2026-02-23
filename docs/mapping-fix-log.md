@@ -414,3 +414,41 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | 36 | Brand penalty tightening | Penalize extra-token branded candidates even with full query coverage |
 | 37 | Synonym-aware penalty | getCategoryChangePenalty checks SYNONYMS before firing |
 
+---
+
+## 2026-02-23 (Part 2): FDC Source Bias Removal (simple-rerank.ts)
+
+**Source**: Follow-up investigation — `"1 plum tomato"` still failing after Fix 36 due to source scoring bias
+**File**: `src/lib/fatsecret/simple-rerank.ts`
+
+### Fix 38: Reduce FatSecret Source Bonus
+
+| Issue | Generic FDC produce entries losing to branded FatSecret canned products |
+|-------|-------------------------------------------------------------------------|
+| Before | `SOURCE_FATSECRET: 0.15` — structural 0.15 advantage on every candidate from FatSecret |
+| Fix | Reduced to `SOURCE_FATSECRET: 0.05` — now just a tiebreaker, not a structural bias |
+
+### Fix 39: Remove Blanket FDC Source Penalty
+
+| Issue | FDC generic entries penalised an extra −0.08 making them systematically worse than all FatSecret candidates |
+|-------|-------------------------------------------------------------------------------------------------------------|
+| Before | `score -= 0.08` applied to every FDC candidate |
+| Fix | Penalty removed entirely. Serving data gaps are handled downstream during hydration, not at scoring time. FatSecret still preferred via the +0.05 tiebreaker. |
+
+### Fix 40: Deduplicate Doubled FDC Names
+
+| Issue | `"peeled plum tomatoes peeled plum tomatoes"` (CORA FDC) was hit by token bloat penalty for its own duplicated name |
+|-------|----------------------------------------------------------------------------------------------------------------------|
+| Root Cause | Some FDC entries store the description doubled (FDC data quality issue). Token bloat penalty counted the extra tokens as "candidate bloat" vs the query. |
+| Fix | In `toRerankCandidate()`: detect when a FDC name is exactly its first half repeated, and deduplicate before scoring. |
+| Result | `"1 plum tomato"` → `peeled plum tomatoes (CORA)` at **0.853 confidence, clear_winner** ✅ (was: dead-end AI fallback loop) |
+
+### Change Index Update
+
+| # | Category | Description |
+|---|----------|-------------|
+| 38 | Source bias | SOURCE_FATSECRET bonus 0.15 → 0.05 (tiebreaker only) |
+| 39 | FDC penalty | Removed blanket −0.08 FDC penalty |
+| 40 | FDC data quality | Deduplicate doubled FDC description names in toRerankCandidate |
+
+
