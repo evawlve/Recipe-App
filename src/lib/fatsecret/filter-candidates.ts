@@ -2297,6 +2297,10 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
         'granules', 'granulated', 'flakes', 'powder', 'powdered', 'ground', 'dried', 'fresh', 'frozen',
         // Processing modifiers
         'toasted', 'roasted', 'raw', 'cooked', 'canned', 'diced', 'sliced', 'chopped',
+        // Cut-shape descriptors — describe how the food is cut, not what it is
+        // e.g. "3 strips green peppers" should not require "strips" in every candidate
+        'strip', 'strips', 'floret', 'florets', 'wedge', 'wedges',
+        'chunk', 'chunks', 'cube', 'cubes',
         // Texture modifiers
         'creamy', 'smooth', 'chunky', 'thick', 'thin',
         // Prep/state modifiers

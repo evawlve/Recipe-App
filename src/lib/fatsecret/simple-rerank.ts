@@ -100,6 +100,10 @@ const BENIGN_DESCRIPTOR_TOKENS = new Set([
     // Preparation descriptors (physical cut only — not cooking method)
     'chopped', 'diced', 'sliced', 'minced', 'crushed', 'ground', 'whole', 'halved',
     'shredded', 'grated', 'cubed', 'julienne', 'peeled', 'skinless', 'boneless',
+    // Cut-shape descriptors (describe how food is cut, not what it is)
+    // e.g. "3 strips green peppers" should still match "Green Bell Pepper"
+    'strip', 'strips', 'sprig', 'sprigs', 'floret', 'florets',
+    'wedge', 'wedges', 'chunk', 'chunks', 'clove', 'cloves',
     // Common variety descriptors
     'sweet', 'sour', 'bitter', 'spicy', 'hot', 'mild',
     // Plant parts

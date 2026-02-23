@@ -451,4 +451,50 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | 39 | FDC penalty | Removed blanket −0.08 FDC penalty |
 | 40 | FDC data quality | Deduplicate doubled FDC description names in toRerankCandidate |
 
+---
+
+## 2026-02-23 (Part 3): Ingredient Line Parser + Cache Tooling
+
+**File**: `src/lib/parse/ingredient-line.ts`, `scripts/clear-ingredient-cache.ts`, `src/lib/fatsecret/simple-rerank.ts`
+
+### Fix 41: Strip Alternative-Measurement Noise After Dash
+
+| Issue | `"2 cup water - 1 to 2 cups"` → Water Spinach; `"0.25 tbsp basil - 1 teaspoon basil"` → wrong query |
+|-------|--------------------------------------------------------------------------------------------------------|
+| Root Cause | Parser kept everything after ` - ` as part of the ingredient name. Range expressions and cooking instruction annotations leaked into the API search query. |
+| Fix | Added 3 regex patterns in `unitNormalized` block: strip ` - N to N unit`, ` - N unit ...`, and ` -per serving ...` patterns |
+| Result | `"water - 1 to 2 cups"` → name `"water"` → **Water (0.98)** ✅; `"basil - 1 teaspoon basil"` → `"basil"` → **Basil (0.98)** ✅ |
+
+### Fix 42: Spelling Corrections for Common Misspellings
+
+| Issue | `"Canellini Beans"` → 0.00 confidence (6 occurrences across 200-recipe pilot) |
+|-------|--------------------------------------------------------------------------------|
+| Root Cause | Parser passed misspelled name directly to APIs; no fuzzy matching. |
+| Fix | Added spelling correction block: `canellini → cannellini`, `chick pea → chickpeas`, `chilli → chili`, `jalapeno` accent variants |
+| Result | `"Canellini Beans"` → name `"cannellini Beans"` → **Cannellini Beans (0.98)** ✅ |
+
+### Fix 43: Cut-Shape Descriptors Added to `BENIGN_DESCRIPTOR_TOKENS`
+
+| Issue | `"3 strips green peppers"` → roasted jarred strips (Jeff's Naturals) at 0.43 score — filter required `"strips"` as core token, eliminating raw `Green Bell Pepper` candidates |
+|-------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Root Cause | `"strips"` was not in `BENIGN_DESCRIPTOR_TOKENS`, so it was treated as a required filter token AND incurred a full extra-token penalty on candidates that lacked it. |
+| Fix | Added `strip`, `strips`, `sprig`, `sprigs`, `floret`, `florets`, `wedge`, `wedges`, `chunk`, `chunks`, `clove`, `cloves` to `BENIGN_DESCRIPTOR_TOKENS` |
+| Result | Raw bell pepper candidates now survive filter and score correctly; roasted jarred products now compete fairly |
+
+### Fix 44 (Tooling): Per-Ingredient Cache Clear Script
+
+| Tool | `scripts/clear-ingredient-cache.ts` |
+|------|--------------------------------------|
+| Purpose | Clear `ValidatedMapping`, `IngredientFoodMap`, and `AiNormalizeCache` for specific ingredient terms without nuking the entire cache |
+| Usage | `npx tsx scripts/clear-ingredient-cache.ts "mint" "canellini" "plum tomato"` |
+| Why | Enables verifying fixes via full pipeline (without `--skip-cache`) on just the affected ingredients |
+
+### Change Index Update
+
+| # | Category | Description |
+|---|----------|-------------|
+| 41 | Noise stripping | Strip dash-appended range/alternative measurement annotations |
+| 42 | Spelling corrections | canellini → cannellini; chilli → chili; jalapeño variants |
+| 43 | Cut-shape tokens | strip/strips/sprig/floret/wedge/chunk/clove added to BENIGN_DESCRIPTOR_TOKENS |
+| 44 | Tooling | clear-ingredient-cache.ts — per-term targeted cache clearing |
 
