@@ -7,6 +7,7 @@ import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../s
 import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
 import { refreshNormalizationRules } from '../src/lib/fatsecret/normalization-rules';
 import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/fatsecret/mapping-logger';
+import { drainPendingBackgroundTasks } from '../src/lib/fatsecret/deferred-hydration';
 
 // DEBUG: File-based logging to trace control flow
 const debugLog = fs.createWriteStream('logs/pilot-debug.log', { flags: 'w' });
@@ -483,6 +484,9 @@ async function main() {
 
     console.log(`📋 Recipe limit: ${recipeLimitArg}`);
     await pilotBatchImport(recipeLimitArg, aiLogPath);
+    // Await all fire-and-forget background hydration tasks before disconnecting
+    // Prevents "Transaction not found" errors from deferred-hydration.ts
+    await drainPendingBackgroundTasks();
     await prisma.$disconnect();
 }
 

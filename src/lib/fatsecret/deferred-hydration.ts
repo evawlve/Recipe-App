@@ -27,14 +27,16 @@ import type { UnifiedCandidate } from './gather-candidates';
  * @param foodName - The food name (for produce detection)
  */
 export function proactiveProduceBackfill(foodId: string, foodName: string): void {
-    // Fire and forget - kick off immediately, don't await
-    doProduceBackfill(foodId, foodName).catch(err => {
+    // Fire and forget — but tracked so drainPendingBackgroundTasks() can await it
+    const task = doProduceBackfill(foodId, foodName).catch(err => {
         logger.debug('proactive_produce_backfill.failed', {
             foodId,
             foodName,
             error: (err as Error).message,
         });
     });
+    pendingBackgroundTasks.add(task);
+    task.finally(() => pendingBackgroundTasks.delete(task));
 }
 
 async function doProduceBackfill(foodId: string, foodName: string): Promise<void> {
@@ -80,6 +82,22 @@ interface QueuedCandidate {
 let hydrationQueue: QueuedCandidate[] = [];
 let isProcessingQueue = false;
 
+// Tracks all background fire-and-forget promises so callers can await them
+// before disconnecting Prisma (prevents stale-transaction errors).
+const pendingBackgroundTasks = new Set<Promise<void>>();
+
+/**
+ * Await all in-flight background hydration and backfill tasks.
+ * Call this before `prisma.$disconnect()` in scripts that trigger
+ * `queueForDeferredHydration` or `proactiveProduceBackfill`.
+ */
+export async function drainPendingBackgroundTasks(): Promise<void> {
+    if (pendingBackgroundTasks.size === 0) return;
+    logger.debug('deferred_hydration.drain_pending', { count: pendingBackgroundTasks.size });
+    await Promise.allSettled([...pendingBackgroundTasks]);
+    pendingBackgroundTasks.clear();
+}
+
 // ============================================================
 // Queue Management
 // ============================================================
@@ -109,12 +127,14 @@ export function queueForDeferredHydration(
         hasServingContext: !!servingContext,
     });
 
-    // Fire and forget - kick off immediately, don't await
-    processImmediately(runnerUps, servingContext).catch(err => {
+    // Fire and forget — but tracked so drainPendingBackgroundTasks() can await it
+    const task = processImmediately(runnerUps, servingContext).catch(err => {
         logger.error('deferred_hydration.fire_and_forget_failed', {
             error: (err as Error).message,
         });
     });
+    pendingBackgroundTasks.add(task);
+    task.finally(() => pendingBackgroundTasks.delete(task));
 }
 
 /**
