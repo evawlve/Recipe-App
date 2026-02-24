@@ -45,7 +45,7 @@ export interface SimpleRerankResult {
 const WEIGHTS = {
     EXACT_MATCH: 0.30,       // Exact name match bonus (INCREASED - precise matches should win)
     TOKEN_OVERLAP: 0.15,     // Token overlap ratio (slightly increased)
-    SOURCE_FATSECRET: 0.05,  // Slight tiebreaker for FatSecret (better serving data), reduced from 0.15
+    // SOURCE_FATSECRET removed — FDC and FatSecret compete equally on name match quality
     NO_BRAND: 0.05,          // Prefer generic over branded (reduced)
     SHORT_NAME: 0.02,        // Prefer shorter, simpler names (minimal)
     ORIGINAL_SCORE: 0.45,    // API score (REDUCED - don't blindly trust API ranking)
@@ -688,23 +688,12 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     const wordCoverageBonus = getWordCoverageBonus(query, candidate.name);
     score += wordCoverageBonus;
 
-    // 3. Source preference
-    // Prefer FDC for categories where FatSecret data is unreliable (e.g., vinegar, stock cubes)
-    // Otherwise strongly prefer FatSecret because it has better serving data coverage
-    const queryLower = query.toLowerCase();
-    const isVinegar = queryLower.includes('vinegar');
-    // FatSecret beef stock has incomplete nutrition (0kcal issue) - prefer FDC
-    const isStockBouillon = queryLower.includes('stock') || queryLower.includes('bouillon') || queryLower.includes('broth');
-
-    if ((isVinegar || isStockBouillon) && candidate.source === 'fdc') {
-        score += WEIGHTS.SOURCE_FATSECRET + 0.05;  // Boost FDC for these categories above FatSecret
-    } else if (candidate.source === 'fatsecret' || candidate.source === 'cache') {
-        score += WEIGHTS.SOURCE_FATSECRET;
-    }
-    // FDC: no penalty. FatSecret is already preferred via SOURCE_FATSECRET (+0.15).
-    // A blanket FDC penalty was causing generic FDC produce entries to lose to
-    // branded FatSecret products (e.g. CORA peeled plum tomatoes vs Muir Glen canned).
-    // Serving data gaps are handled downstream during hydration, not here.
+    // 3. Source preference — REMOVED (Feb 2026)
+    // FDC and FatSecret now compete purely on name match quality.
+    // Previous bias: FatSecret +0.05 always; FDC +0.10 for vinegar/stock/bouillon.
+    // Removed because FatSecret nutritional data can be inferior for common produce
+    // (e.g. Grape Tomatoes: FatSecret ~13 kcal/100g vs USDA ~35 kcal/100g).
+    // Best-match food name wins regardless of source.
 
     // 4. Prefer generic over branded (but smarter about it)
     if (!candidate.brandName) {
