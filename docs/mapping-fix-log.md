@@ -500,7 +500,19 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Script | `scripts/test-grape-tomatoes.ts` — verifies fix |
 | Expected result | `"20 grape tomatoes"` → ~300–600g total (≈15–30g per tomato) |
 
-### Change Index Update
+### Fix 46: Qualifier-Only `mustHaveToken` Regression ("Popcorn → Buttermilk")
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"1 oz low fat popcorn"` → `"low fat buttermilk"` |
+| Introduced by | Removing FatSecret source bias (Feb 2026). FatSecret's old +0.15 blanket bonus previously kept its popcorn candidates ahead of FDC dairy. Once both sources competed equally the latent filter flaw became decisive. |
+| Root Cause | `deriveMustHaveTokens("low fat popcorn")` returned `["low"]` because `"low"` was not in `MODIFIER_TOKENS`. `"low fat buttermilk"` passed trivially (it contains `"low"`); `"popcorn"` was never required. Separately, `"Lowfat Popcorn Popped in Oil"` (the best FatSecret candidate) was eliminated because `"lowfat"` (compound) ≠ token `"low"`, leaving only weaker FatSecret entries that the FDC +0.03 tiebreaker then overcame. |
+| Fix | `deriveMustHaveTokens` in `filter-candidates.ts`: (1) Added `'low', 'high', 'no', 'non', 'zero'` to `MODIFIER_TOKENS`. (2) Changed `slice(0,1)` → `slice(0,2)` — requires up to 2 core food noun tokens. `coreTokens=["popcorn"]` → buttermilk rejected at filter. |
+| File | `src/lib/fatsecret/filter-candidates.ts` |
+| Result | `"1 oz low fat popcorn"` → `"Oil Popped Popcorn (Low Fat)"` ✅ |
+| General principle | Fixes the whole class of `"[qualifier] [noun]"` queries. No hand-curated category-change list needed. |
+
+### Change Index
 
 | # | Category | Description |
 |---|----------|-------------|
@@ -508,5 +520,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | 42 | Spelling corrections | canellini → cannellini; chilli → chili; jalapeño variants |
 | 43 | Cut-shape tokens | strip/strips/sprig/floret/wedge/chunk/clove added to BENIGN_DESCRIPTOR_TOKENS |
 | 44 | Tooling | clear-ingredient-cache.ts — per-term targeted cache clearing |
-| 45 | Serving selection | Double Multiplier fix — extract embedded count from serving description in `selectServing` |
-
+| 45 | Serving selection | Double Multiplier — extract embedded count from serving description in `selectServing` |
+| 46 | Scoring/filter | Qualifier-only token regression — add `low/high/no/non/zero` to MODIFIER_TOKENS, require up to 2 core food noun tokens |
+| 47 | Scoring | Remove FDC/FatSecret source bias — both sources now compete equally on name match quality |
+| 48 | Scoring | Raw-state normalization — strip `raw`/`uncooked` from FDC names for scoring; +0.03 FDC tiebreaker for produce/meat |
