@@ -17,9 +17,15 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
    Get-ChildItem logs/mapping-summary-*.txt | Sort-Object LastWriteTime -Descending | Select-Object -First 1
    ```
 
-2. If no recent summary, run pilot batch import with analysis enabled:
+2. If no recent summary, run pilot batch import with analysis enabled (replace 100 with desired recipe count):
    ```powershell
-   $env:ENABLE_MAPPING_ANALYSIS='true'; npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/pilot-batch-import.ts 100
+   $env:ENABLE_MAPPING_ANALYSIS='true'; npx tsx scripts/pilot-batch-import.ts --recipes 100
+   ```
+   All three formats are equivalent:
+   ```powershell
+   npx tsx scripts/pilot-batch-import.ts 100
+   npx tsx scripts/pilot-batch-import.ts --recipes 100
+   npx tsx scripts/pilot-batch-import.ts --recipes=100
    ```
 
 3. Wait for completion and note the output file paths.
@@ -188,7 +194,7 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 2. Re-run pilot import:
    ```powershell
-   $env:ENABLE_MAPPING_ANALYSIS='true'; npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/pilot-batch-import.ts 100
+   $env:ENABLE_MAPPING_ANALYSIS='true'; npx tsx scripts/pilot-batch-import.ts --recipes 100
    ```
 
 3. Compare results:
@@ -234,9 +240,9 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 | Task | Command |
 |------|---------|
-| Run pilot import | `$env:ENABLE_MAPPING_ANALYSIS='true'; npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/pilot-batch-import.ts 100` |
-| Debug ingredient | `npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/debug-mapping-pipeline.ts "ingredient"` |
-| Clear mappings | `npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/clear-all-mappings.ts` |
+| Run pilot import | `$env:ENABLE_MAPPING_ANALYSIS='true'; npx tsx scripts/pilot-batch-import.ts --recipes 100` |
+| Debug ingredient | `npx tsx scripts/debug-mapping-pipeline.ts "ingredient"` |
+| Clear mappings | `npx tsx scripts/clear-all-mappings.ts` |
 | Test all fixes | `npx tsx scripts/test-mapping-fixes.ts` |
 
 ---

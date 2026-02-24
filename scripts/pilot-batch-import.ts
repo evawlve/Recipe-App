@@ -454,17 +454,34 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
 
 async function main() {
     const args = process.argv.slice(2);
-    const recipeLimitArg = args[0] && !args[0].startsWith('--') ? parseInt(args[0]) : 30;
+
+    // Support three formats:
+    //   pilot-batch-import.ts 300
+    //   pilot-batch-import.ts --recipes 300
+    //   pilot-batch-import.ts --recipes=300
+    let recipeLimitArg = 30; // default
+    const recipesEqFlag = args.find(a => a.startsWith('--recipes='));
+    const recipesFlagIdx = args.indexOf('--recipes');
+    if (recipesEqFlag) {
+        recipeLimitArg = parseInt(recipesEqFlag.split('=')[1]);
+    } else if (recipesFlagIdx !== -1 && args[recipesFlagIdx + 1]) {
+        recipeLimitArg = parseInt(args[recipesFlagIdx + 1]);
+    } else if (args[0] && !args[0].startsWith('--')) {
+        recipeLimitArg = parseInt(args[0]);
+    }
+
     const aiLogArg = args.find(a => a.startsWith('--ai-log='));
     const aiLogPath = aiLogArg ? aiLogArg.split('=')[1] : undefined;
 
     if (isNaN(recipeLimitArg) || recipeLimitArg < 1) {
-        console.error('Usage: npm run pilot-import [recipeLimit]');
-        console.error('       npm run pilot-import 5 --ai-log=pilot-ai.log');
-        console.error('Example: npm run pilot-import 50');
+        console.error('Usage: npx tsx scripts/pilot-batch-import.ts [recipeLimit]');
+        console.error('       npx tsx scripts/pilot-batch-import.ts 300');
+        console.error('       npx tsx scripts/pilot-batch-import.ts --recipes 300');
+        console.error('       npx tsx scripts/pilot-batch-import.ts --recipes=300 --ai-log=out.log');
         process.exit(1);
     }
 
+    console.log(`📋 Recipe limit: ${recipeLimitArg}`);
     await pilotBatchImport(recipeLimitArg, aiLogPath);
     await prisma.$disconnect();
 }
