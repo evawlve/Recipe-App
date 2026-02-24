@@ -110,6 +110,67 @@ const BENIGN_DESCRIPTOR_TOKENS = new Set([
     'leaf', 'leaves', 'stalk', 'stalks', 'stem', 'stems', 'root', 'roots',
 ]);
 
+// Tokens representing the DEFAULT (uncooked) state — get ZERO extra-token penalty when the
+// query doesn't specify cooking state. Rationale: when a recipe says "chicken breast" or
+// "grape tomatoes" with no qualifier, raw is the implicit default. FDC entries often append
+// "raw" to their names (e.g. "grape raw tomatoes", "Chicken Breast, Raw"). Penalizing this
+// would unfairly bias away from nutritionally accurate USDA data.
+// Cooked states (baked, roasted, etc.) still get the normal 25% benign penalty — they
+// represent a genuinely different food state from the unspecified raw default.
+const RAW_STATE_TOKENS = new Set(['raw', 'uncooked']);
+
+function querySpeaksCookingState(query: string): boolean {
+    const ALL_COOKING_STATES = new Set([
+        'raw', 'uncooked', 'fresh',
+        'cooked', 'baked', 'boiled', 'steamed', 'roasted', 'grilled', 'fried',
+        'braised', 'poached', 'smoked', 'cured', 'salted', 'pickled',
+    ]);
+    return tokenize(query).some(t => ALL_COOKING_STATES.has(t));
+}
+
+/**
+ * Strip raw-state tokens from a candidate name for scoring purposes.
+ * When the query doesn't specify cooking state, "grape raw tomatoes" → "grape tomatoes"
+ * so it can achieve exact-match parity with "Grape Tomatoes" from FatSecret.
+ * This is purely for scoring — the original food name is still stored/displayed.
+ */
+function normalizeCandidateNameForScoring(candidateName: string, query: string): string {
+    if (querySpeaksCookingState(query)) return candidateName;  // Query specifies state — don't strip
+    const tokens = tokenize(candidateName);
+    const filtered = tokens.filter(t => !RAW_STATE_TOKENS.has(t));
+    return filtered.join(' ');
+}
+
+/**
+ * Detect if the query is for fresh produce or unprocessed meat.
+ * Used as a tiebreaker to prefer FDC (USDA) data for these categories
+ * since FDC has authoritative nutritional data for raw produce and meats.
+ */
+function isProduceOrMeat(query: string): boolean {
+    const q = query.toLowerCase();
+    // Common produce keywords
+    const PRODUCE = [
+        'tomato', 'tomatoes', 'pepper', 'peppers', 'onion', 'onions', 'garlic',
+        'spinach', 'kale', 'lettuce', 'arugula', 'cucumber', 'zucchini', 'squash',
+        'broccoli', 'cauliflower', 'carrot', 'carrots', 'celery', 'asparagus',
+        'mushroom', 'mushrooms', 'eggplant', 'artichoke', 'beet', 'beets',
+        'potato', 'potatoes', 'sweet potato', 'yam', 'corn', 'pea', 'peas',
+        'bean', 'beans', 'lentil', 'lentils', 'chickpea', 'chickpeas',
+        'apple', 'apples', 'banana', 'bananas', 'orange', 'lemon', 'lime',
+        'grape', 'grapes', 'berry', 'berries', 'strawberry', 'blueberry',
+        'raspberry', 'cherry', 'cherries', 'mango', 'pineapple', 'peach',
+        'pear', 'plum', 'watermelon', 'melon', 'avocado',
+    ];
+    // Unprocessed meat/seafood keywords
+    const MEAT = [
+        'chicken', 'turkey', 'beef', 'pork', 'lamb', 'veal', 'bison', 'venison',
+        'salmon', 'tuna', 'cod', 'tilapia', 'shrimp', 'scallop', 'lobster',
+        'crab', 'clam', 'oyster', 'halibut', 'trout', 'sardine', 'anchovy',
+        'duck', 'goose', 'rabbit',
+    ];
+    return [...PRODUCE, ...MEAT].some(term => q.includes(term));
+}
+
 // Synonyms for matching (bidirectional)
 const SYNONYMS: Record<string, string[]> = {
     'zest': ['peel', 'rind'],
@@ -614,29 +675,53 @@ export function isGenericGroundMeatQuery(query: string): boolean {
 function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     let score = 0;
 
+    // Normalize candidate name for scoring: strip raw-state tokens when query doesn't specify.
+    // e.g. FDC "grape raw tomatoes" → scored as "grape tomatoes" → exact-match parity with
+    // FatSecret "Grape Tomatoes". The original name is preserved for display.
+    const scoringName = normalizeCandidateNameForScoring(candidate.name, query);
+
     // 1. Exact match bonus
-    if (isExactMatch(query, candidate.name)) {
+    if (isExactMatch(query, scoringName)) {
         score += WEIGHTS.EXACT_MATCH;
     }
 
     // 2. Token overlap
-    const overlap = computeTokenOverlap(query, candidate.name);
+    const overlap = computeTokenOverlap(query, scoringName);
     score += overlap * WEIGHTS.TOKEN_OVERLAP;
 
     // 2b. Penalty for extra tokens (words in candidate but not in query)
     // This prevents "banana" → "Banana Peppers" by penalizing the extra "peppers"
     const queryTokens = tokenize(query);
-    const candTokens = tokenize(candidate.name);
+    const candTokens = tokenize(scoringName);
     // Don't count synonyms as extra tokens (e.g., "peel" isn't extra when query is "zest")
     const extraTokens = candTokens.filter(ct =>
         !queryTokens.some(qt => tokensMatch(qt, ct))
     );
 
     if (queryTokens.length > 0 && extraTokens.length > 0) {
-        // Separate benign descriptors from problematic extra tokens
-        // Benign descriptors get reduced penalty, category-changers get full penalty
-        const benignExtras = extraTokens.filter(t => BENIGN_DESCRIPTOR_TOKENS.has(t));
-        const problematicExtras = extraTokens.filter(t => !BENIGN_DESCRIPTOR_TOKENS.has(t));
+        // Separate extra tokens into three buckets:
+        // 1. Raw-state extras (raw, uncooked) — ZERO penalty when query doesn't specify cooking state
+        //    These are the implicit default; FDC names often include "raw" for produce/meat.
+        // 2. Other benign extras (baby, organic, baked, roasted…) — 25% penalty
+        //    Cooked states ARE penalized since they differ from the raw default.
+        // 3. Problematic extras (noodles, sauce, etc.) — full penalty
+        const querySpecifiesCookingState = querySpeaksCookingState(query);
+        const rawStateExtras = extraTokens.filter(t =>
+            RAW_STATE_TOKENS.has(t) && !querySpecifiesCookingState
+        );
+        const remainingExtras = extraTokens.filter(t =>
+            !(RAW_STATE_TOKENS.has(t) && !querySpecifiesCookingState)
+        );
+        const benignExtras = remainingExtras.filter(t => BENIGN_DESCRIPTOR_TOKENS.has(t));
+        const problematicExtras = remainingExtras.filter(t => !BENIGN_DESCRIPTOR_TOKENS.has(t));
+
+        if (rawStateExtras.length > 0) {
+            logger.debug('computeSimpleScore.raw_state_exempt', {
+                query,
+                candidate: candidate.name,
+                exempted: rawStateExtras,
+            });
+        }
 
         // Full penalty for problematic extras
         if (problematicExtras.length > 0) {
@@ -650,6 +735,7 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
             const benignRatio = benignExtras.length / (queryTokens.length + extraTokens.length);
             score -= benignRatio * WEIGHTS.EXTRA_TOKEN_PENALTY * 0.25;
         }
+        // cookingStateExtras: zero penalty (no deduction applied)
     }
 
     // 2c. Token bloat penalty (catches compound products for simple queries)
@@ -688,12 +774,14 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     const wordCoverageBonus = getWordCoverageBonus(query, candidate.name);
     score += wordCoverageBonus;
 
-    // 3. Source preference — REMOVED (Feb 2026)
-    // FDC and FatSecret now compete purely on name match quality.
-    // Previous bias: FatSecret +0.05 always; FDC +0.10 for vinegar/stock/bouillon.
-    // Removed because FatSecret nutritional data can be inferior for common produce
-    // (e.g. Grape Tomatoes: FatSecret ~13 kcal/100g vs USDA ~35 kcal/100g).
-    // Best-match food name wins regardless of source.
+    // 3. Source tiebreaker — FDC wins for produce and unprocessed meat
+    // When name-match scores are equal, prefer FDC (USDA) for its authoritative
+    // nutritional accuracy on raw produce and meats (e.g. Grape Tomatoes: FDC=35 kcal/100g
+    // vs FatSecret=13 kcal/100g). This is a small nudge, not a blanket preference.
+    if (candidate.source === 'fdc' && isProduceOrMeat(query)) {
+        score += 0.03;  // Small enough not to override a genuine name-quality difference
+    }
+
 
     // 4. Prefer generic over branded (but smarter about it)
     if (!candidate.brandName) {
