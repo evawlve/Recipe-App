@@ -2283,6 +2283,9 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
         'reduced', 'calorie', 'calories', 'lowfat', 'nonfat', 'light', 'lite',
         'fat', 'free', 'sugar', 'sodium', 'salt', 'unsalted', 'salted',
         'whole', 'skim', 'part', 'extra', 'lean', 'diet',
+        // Pure qualifier words (intensity/negation — never food nouns)
+        // e.g. "low fat popcorn" → 'low' must NOT become the required token
+        'low', 'high', 'no', 'non', 'zero',
         // Dietary preference modifiers (these describe HOW the food is made, not WHAT it is)
         'vegetarian', 'vegan', 'plant', 'meatless', 'dairy',
         // Size/age modifiers
@@ -2354,11 +2357,11 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
     // Separate core tokens from modifier tokens
     const coreTokens = tokens.filter(t => !MODIFIER_TOKENS.has(t));
 
-    // LENIENT APPROACH: Only require 1 core token
-    // The goal is to avoid obviously wrong choices, not to be strict
-    // If we have any core tokens, just require the first one
+    // Require up to 2 core tokens so that qualifier-only matches are caught.
+    // e.g. "low fat popcorn" → coreTokens=["popcorn"] ("low" is now a MODIFIER) → requires "popcorn"
+    // e.g. "almond flour" → coreTokens=["almond","flour"] → requires both to be present
     if (coreTokens.length >= 1) {
-        return coreTokens.slice(0, 1);
+        return coreTokens.slice(0, 2);
     }
 
     // If ALL tokens are modifiers (rare), just use the first token
