@@ -2740,9 +2740,31 @@ function selectServing(
 
     if (!selected) return null;
 
-    const unitsPerServing = selected.serving.numberOfUnits && selected.serving.numberOfUnits > 0
+    // Extract count embedded in serving description when numberOfUnits is missing/zero.
+    // FatSecret frequently omits numberOfUnits for count-based servings (e.g., "5 grape tomatoes = 123g"
+    // has numberOfUnits=0), causing Double Multiplier: qty=20 × gramsPerUnit=123 → 2460g instead of 492g.
+    // This mirrors the same fix applied above for size_qualifiers (small/medium/large).
+    const servingDescForCount = (
+        selected.serving.measurementDescription || selected.serving.description || ''
+    ).toLowerCase();
+    // Match patterns like: "5 grape tomatoes", "3 pieces", "10 crackers", "2 large eggs"
+    const embeddedCountMatch = servingDescForCount.match(/^(\d+)\s+\S/);
+    let unitsPerServing = selected.serving.numberOfUnits && selected.serving.numberOfUnits > 0
         ? selected.serving.numberOfUnits
         : 1;
+
+    if (embeddedCountMatch && unitsPerServing === 1) {
+        const extractedCount = parseInt(embeddedCountMatch[1], 10);
+        if (extractedCount > 1) {
+            unitsPerServing = extractedCount;
+            logger.debug('selectServing.extracted_count_from_desc', {
+                servingDesc: servingDescForCount,
+                extractedCount,
+                originalNumberOfUnits: selected.serving.numberOfUnits,
+            });
+        }
+    }
+
     const bestGrams = gramsForServing(selected.serving);
     const adjustedGrams = bestGrams ? (bestGrams / unitsPerServing) * selected.factor : null;
 

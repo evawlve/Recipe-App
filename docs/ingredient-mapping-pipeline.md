@@ -368,6 +368,9 @@ When a modifier appears as the **first word**, it indicates a different product:
 | `scripts/pilot-batch-import.ts` | Batch imports with analysis |
 | `scripts/clear-all-mappings.ts` | Clears mappings (keeps food cache) |
 | `scripts/clear-all-for-test.ts` | Clears ALL caches (clean slate) |
+| `scripts/clear-ingredient-cache.ts` | Clears `ValidatedMapping` + `AiNormalizeCache` for specific ingredient terms |
+
+> **When to use `clear-ingredient-cache.ts`**: Use this for targeted cache invalidation when verifying a fix for a specific ingredient, without blowing away all mappings. Useful after changing `filter-candidates.ts` or `simple-rerank.ts` for an ingredient you can name.
 
 ---
 
@@ -457,6 +460,10 @@ npx tsx scripts/clear-all-mappings.ts
 
 # Clear everything (clean slate)
 npx tsx scripts/clear-all-for-test.ts
+
+# Clear just specific ingredients (ValidatedMapping + AiNormalizeCache)
+# Use after fixing a single ingredient without nuking the whole mapping set
+npx tsx scripts/clear-ingredient-cache.ts "mint" "grape tomatoes" "green peppers"
 
 # Check cache status
 npx tsx -e "import { prisma } from './src/lib/db'; Promise.all([prisma.fdcFoodCache.count(), prisma.fdcServingCache.count(), prisma.fatSecretFoodCache.count(), prisma.fatSecretServingCache.count()]).then(r => console.log('FDC:', r[0], 'foods,', r[1], 'servings | FatSecret:', r[2], 'foods,', r[3], 'servings'));"

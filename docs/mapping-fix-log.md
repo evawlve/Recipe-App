@@ -489,6 +489,17 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Usage | `npx tsx scripts/clear-ingredient-cache.ts "mint" "canellini" "plum tomato"` |
 | Why | Enables verifying fixes via full pipeline (without `--skip-cache`) on just the affected ingredients |
 
+### Fix 45: Double Multiplier Bug in `selectServing` for Count-Based Servings
+
+| Issue | `"20 grape tomatoes"` → 2460g (expected ~480g) |
+|-------|------------------------------------------------|
+| Root Cause | `selectServing` used `numberOfUnits` from the DB to divide `servingWeightGrams`. FatSecret frequently omits this field (`numberOfUnits=0` or null) for count-based servings. When a serving description reads "5 grape tomatoes = 123g", `unitsPerServing` defaulted to 1, giving `gramsPerUnit=123`. Multiplied by `qty=20` → 2460g. |
+| Pre-existing partial fix | The `size_qualifiers` path (small/medium/large) already had a regex that extracted the count from the description (`/^(\d+)\s+(small|medium|large)/`). That path used `gramsPerUnit = grams / extractedCount`. The main return path did not. |
+| Fix | Extended the same count-extraction regex (`/^(\d+)\s+\S/`) to the **final `unitsPerServing` computation** in `selectServing` at the bottom of the function. Now, any serving whose description starts with a number (e.g., "5 grape tomatoes", "3 crackers") correctly divides by that count. |
+| File | `src/lib/fatsecret/map-ingredient-with-fallback.ts` |
+| Script | `scripts/test-grape-tomatoes.ts` — verifies fix |
+| Expected result | `"20 grape tomatoes"` → ~300–600g total (≈15–30g per tomato) |
+
 ### Change Index Update
 
 | # | Category | Description |
@@ -497,4 +508,5 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | 42 | Spelling corrections | canellini → cannellini; chilli → chili; jalapeño variants |
 | 43 | Cut-shape tokens | strip/strips/sprig/floret/wedge/chunk/clove added to BENIGN_DESCRIPTOR_TOKENS |
 | 44 | Tooling | clear-ingredient-cache.ts — per-term targeted cache clearing |
+| 45 | Serving selection | Double Multiplier fix — extract embedded count from serving description in `selectServing` |
 
