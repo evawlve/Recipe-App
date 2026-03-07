@@ -31,7 +31,7 @@ api-test.txt
 connect-db.ps1
 *-analysis.md
 *-analysis.json
-test-results*.json
+test-results*
 temp-scripts.json
 data/fatsecret/*.log
 data/fatsecret/debug-*.json
