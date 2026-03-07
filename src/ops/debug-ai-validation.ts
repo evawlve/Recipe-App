@@ -138,15 +138,10 @@ async function debugIngredient(testCase: typeof TEST_CASES[0]): Promise<DebugRes
                     searchQuery: testCase.ingredient,
                     ourConfidence: mapped.confidence,
                     nutrition: {
-                        per100: per100,
-                        perServing: {
-                            description: mapped.servingDescription ?? null,
-                            grams: mapped.grams,
-                            protein: mapped.protein,
-                            carbs: mapped.carbs,
-                            fat: mapped.fat,
-                            kcal: mapped.kcal,
-                        },
+                        protein: per100?.protein ?? 0,
+                        carbs: per100?.carbs ?? 0,
+                        fat: per100?.fat ?? 0,
+                        kcal: per100?.kcal ?? 0,
                     },
                 });
 

@@ -5,4 +5,4 @@ console.log('Result:', JSON.stringify(result, null, 2));
 console.log('');
 console.log('name:', result?.name);
 console.log('unitHint:', result?.unitHint);
-console.log('prepPhrases:', result?.prepPhrases);
+console.log('notes:', result?.notes);
