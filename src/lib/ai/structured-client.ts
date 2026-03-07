@@ -25,13 +25,14 @@ import {
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_MS,
+    NUTRITION_AI_MODEL,
 } from '../fatsecret/config';
 
 // ============================================================
 // Types
 // ============================================================
 
-export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse' | 'simplify';
+export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse' | 'simplify' | 'nutrition';
 export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
 
 export interface StructuredLlmOptions {
@@ -127,6 +128,7 @@ const CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number> = {
     produce: 5,
     parse: 5,  // AI parse assist (Ollama only)
     simplify: 5,  // AI ingredient simplification fallback
+    nutrition: 3,  // AI nutrition generation (rare, uses more capable model)
 };
 
 const limiters: Record<StructuredLlmPurpose, Semaphore> = {
@@ -136,6 +138,7 @@ const limiters: Record<StructuredLlmPurpose, Semaphore> = {
     produce: new Semaphore(CONCURRENCY_LIMITS.produce),
     parse: new Semaphore(CONCURRENCY_LIMITS.parse),
     simplify: new Semaphore(CONCURRENCY_LIMITS.simplify),
+    nutrition: new Semaphore(CONCURRENCY_LIMITS.nutrition),
 };
 
 // ============================================================
@@ -204,6 +207,7 @@ function getProviderChain(
     // All other purposes = Cloud only (complex reasoning, skip local Ollama)
     const useOllamaOnly = purpose === 'parse';
     const useCloudOnly = !useOllamaOnly;
+    const useCapableModel = purpose === 'nutrition';
 
     // Local Ollama (for 'parse' purpose only)
     if (OLLAMA_ENABLED && useOllamaOnly) {
@@ -225,7 +229,7 @@ function getProviderChain(
                 name: 'openrouter',
                 baseUrl: OPENROUTER_BASE_URL,
                 apiKey: OPENROUTER_API_KEY,
-                model: CHEAP_AI_MODEL_PRIMARY,
+                model: useCapableModel ? NUTRITION_AI_MODEL : CHEAP_AI_MODEL_PRIMARY,
             });
 
             // OpenRouter fallback (also cheap, different model)
@@ -233,7 +237,7 @@ function getProviderChain(
                 name: 'openrouter',
                 baseUrl: OPENROUTER_BASE_URL,
                 apiKey: OPENROUTER_API_KEY,
-                model: CHEAP_AI_MODEL_FALLBACK,
+                model: useCapableModel ? CHEAP_AI_MODEL_PRIMARY : CHEAP_AI_MODEL_FALLBACK,
             });
         }
 
@@ -530,6 +534,8 @@ export interface AiCallMetrics {
     parse: number;
     /** Count of AI simplify fallback calls */
     simplify: number;
+    /** Count of AI nutrition generation calls */
+    nutrition: number;
     /** Total LLM calls made */
     total: number;
     /** Count of LLM calls skipped by normalize gate */
@@ -546,6 +552,7 @@ let sessionMetrics: AiCallMetrics = {
     produce: 0,
     parse: 0,
     simplify: 0,
+    nutrition: 0,
     total: 0,
     skippedByGate: 0,
     cacheHits: 0,
@@ -569,6 +576,7 @@ export function resetAiCallMetrics(): void {
         produce: 0,
         parse: 0,
         simplify: 0,
+        nutrition: 0,
         total: 0,
         skippedByGate: 0,
         cacheHits: 0,
@@ -619,6 +627,8 @@ export function getAiCallSummary(): string {
         `    - Ambiguous: ${m.ambiguous}`,
         `    - Produce: ${m.produce}`,
         `    - Parse (Ollama): ${m.parse}`,
+        `    - Simplify: ${m.simplify}`,
+        `    - Nutrition: ${m.nutrition}`,
         `  Skip Rate: ${skipRate}%`,
     ].join('\n');
 }

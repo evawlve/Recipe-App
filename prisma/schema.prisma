@@ -393,6 +393,7 @@ model IngredientFoodMap {
   fatsecretGrams        Float?
   fatsecretConfidence   Float?
   fatsecretSource       String?
+  aiGeneratedFoodId     String?
   pendingVolume         Boolean   @default(false)
   mappedBy     String
   confidence   Float      @default(0.0)
@@ -401,10 +402,12 @@ model IngredientFoodMap {
   createdAt    DateTime   @default(now())
   food         Food?      @relation(fields: [foodId], references: [id], onDelete: Cascade)
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  aiGeneratedFood AiGeneratedFood? @relation(fields: [aiGeneratedFoodId], references: [id], onDelete: SetNull)
 
   @@index([ingredientId])
   @@index([foodId])
   @@index([fatsecretFoodId])
+  @@index([aiGeneratedFoodId])
 }
 
 model FoodAlias {
@@ -732,4 +735,62 @@ model LearnedSynonym {
   @@unique([sourceTerm, targetTerm])
   @@index([sourceTerm])
   @@index([successCount(sort: Desc)])
+}
+
+// ============================================================================
+// AI-Generated Nutrition Data
+// ============================================================================
+
+model AiGeneratedFood {
+  id                    String    @id @default(cuid())
+  ingredientName        String    @unique  // Normalized ingredient (cache key)
+  rawLine               String?             // Original raw line for reference
+  displayName           String              // Human-readable food name
+
+  // Nutrition per 100g
+  caloriesPer100g       Float
+  proteinPer100g        Float
+  carbsPer100g          Float
+  fatPer100g            Float
+  fiberPer100g          Float?    @default(0)
+  sugarPer100g          Float?    @default(0)
+  sodiumMgPer100g       Float?    @default(0)
+  saturatedFatPer100g   Float?    @default(0)
+  cholesterolMgPer100g  Float?    @default(0)
+
+  // AI metadata
+  aiConfidence          Float               // Self-assessed 0-1
+  aiModel               String              // e.g., "google/gemini-2.0-flash"
+  aiNotes               String?             // Caveats from the AI
+  baseFoodName          String?             // Reference food used (e.g., "salad seasoning")
+  baseFoodSource        String?             // "fatsecret" | "fdc" | null
+
+  // Lifecycle
+  reviewStatus          String    @default("pending")  // "pending" | "approved" | "rejected"
+  expiresAt             DateTime?           // Optional, for scheduled re-evaluation
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  useCount              Int       @default(0)
+
+  servings              AiGeneratedServing[]
+  ingredientMaps        IngredientFoodMap[]
+
+  @@index([ingredientName])
+  @@index([reviewStatus])
+  @@index([createdAt(sort: Desc)])
+}
+
+model AiGeneratedServing {
+  id                String          @id @default(cuid())
+  foodId            String
+  label             String              // e.g., "cup", "tbsp", "packet"
+  grams             Float               // Estimated weight
+  volumeMl          Float?              // For volume units
+  aiConfidence      Float
+  aiNotes           String?
+  createdAt         DateTime        @default(now())
+  food              AiGeneratedFood @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@unique([foodId, label])
+  @@index([foodId])
 }

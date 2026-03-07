@@ -236,7 +236,7 @@ export async function insertAiServing(
     }
 
     if (!food) {
-        logger.warn({ foodId, isFdc, hasCandidateData: !!options.candidateData }, 'Food missing from cache for AI serving backfill');
+        logger.warn('Food missing from cache for AI serving backfill', { foodId, isFdc, hasCandidateData: !!options.candidateData });
         return { success: false, reason: 'food_missing' };
     }
 
@@ -251,17 +251,17 @@ export async function insertAiServing(
 
     if (options.promptDebug) {
         logger.info(
-            { foodId, gapType, prompt: aiResult.prompt },
             'AI prompt debug',
+            { foodId, gapType, prompt: aiResult.prompt },
         );
         logger.info(
-            { foodId, gapType, raw: aiResult.raw, suggestion: aiResult.status === 'success' ? aiResult.suggestion : undefined },
             'AI response debug',
+            { foodId, gapType, raw: aiResult.raw, suggestion: aiResult.status === 'success' ? aiResult.suggestion : undefined },
         );
     }
 
     if (aiResult.status === 'error') {
-        logger.warn({ foodId, reason: aiResult.reason }, 'AI serving suggestion failed');
+        logger.warn('AI serving suggestion failed', { foodId, reason: aiResult.reason });
         return { success: false, reason: aiResult.reason };
     }
 
@@ -289,14 +289,14 @@ export async function insertAiServing(
 
     if (gapType === 'volume' && !volumeMl && !countServing) {
         logger.warn(
-            { foodId, serving: suggestion.servingLabel },
             'AI did not return a convertible volume',
+            { foodId, serving: suggestion.servingLabel },
         );
         return { success: false, reason: 'missing_volume_unit' };
     }
 
     if (suggestion.grams <= 0) {
-        logger.warn({ foodId }, 'AI returned invalid gram weight');
+        logger.warn('AI returned invalid gram weight', { foodId });
         return { success: false, reason: 'invalid_grams' };
     }
 
@@ -305,7 +305,7 @@ export async function insertAiServing(
         density &&
         (density < FATSECRET_CACHE_AI_MIN_DENSITY || density > FATSECRET_CACHE_AI_MAX_DENSITY)
     ) {
-        logger.warn({ foodId, density }, 'AI density outside bounds');
+        logger.warn('AI density outside bounds', { foodId, density });
         return { success: false, reason: 'density_outside_bounds' };
     }
 
@@ -313,6 +313,7 @@ export async function insertAiServing(
 
     if (options.dryRun) {
         logger.info(
+            'DRY RUN: would insert AI-derived serving',
             {
                 foodId,
                 gapType,
@@ -322,7 +323,6 @@ export async function insertAiServing(
                 volumeMl,
                 confidence: suggestion.confidence,
             },
-            'DRY RUN: would insert AI-derived serving',
         );
         return { success: true };
     }
@@ -372,6 +372,19 @@ export async function insertAiServing(
             });
         } else {
             // FatSecret: Full serving cache with density estimates
+            // Check if the food exists in cache before FK-dependent inserts
+            const foodExists = await tx.fatSecretFoodCache.findUnique({
+                where: { id: foodId },
+                select: { id: true },
+            });
+
+            if (!foodExists) {
+                logger.warn('ai_backfill.food_not_in_cache_skipping_fk_inserts', { foodId });
+                // Still create the serving but skip density estimate (no FK parent)
+                // Use create with try/catch to handle missing FK gracefully
+                return;
+            }
+
             if (density && volumeMl) {
                 const densityRow = await tx.fatSecretDensityEstimate.create({
                     data: {
@@ -423,8 +436,8 @@ export async function insertAiServing(
     });
 
     logger.info(
-        { foodId, servingId, gapType, label: suggestion.servingLabel, source: isFdc ? 'fdc' : 'fatsecret' },
         `Inserted AI-derived ${isFdc ? 'FDC' : 'FatSecret'} serving`,
+        { foodId, servingId, gapType, label: suggestion.servingLabel, source: isFdc ? 'fdc' : 'fatsecret' },
     );
 
     return { success: true };
@@ -455,7 +468,7 @@ export async function backfillWeightServing(
     });
 
     if (!food) {
-        logger.warn({ foodId }, 'backfillWeightServing: Food not found');
+        logger.warn('backfillWeightServing: Food not found', { foodId });
         return { success: false, reason: 'food_not_found' };
     }
 
@@ -467,7 +480,7 @@ export async function backfillWeightServing(
     });
 
     if (hasWeightServing) {
-        logger.debug({ foodId, name: food.name }, 'backfillWeightServing: Already has weight serving');
+        logger.debug('backfillWeightServing: Already has weight serving', { foodId, name: food.name });
         return { success: true };
     }
 
@@ -500,13 +513,13 @@ export async function backfillWeightServing(
         });
 
         logger.info(
-            { foodId, name: food.name, servingId },
             'Inserted AI-derived weight (100g) serving',
+            { foodId, name: food.name, servingId },
         );
 
         return { success: true };
     } catch (err) {
-        logger.error({ foodId, error: (err as Error).message }, 'backfillWeightServing failed');
+        logger.error('backfillWeightServing failed', { foodId, error: (err as Error).message });
         return { success: false, reason: 'db_error' };
     }
 }

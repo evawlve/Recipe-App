@@ -67,7 +67,7 @@ export async function upsertFoodFromApi(
   const client = options.client ?? defaultClient;
   let details = await client.getFood(fatsecretId);
   if (!details) {
-    logger.warn({ fatsecretId }, 'FatSecret cache: no food details returned');
+    logger.warn('FatSecret cache: no food details returned', { fatsecretId });
     return null;
   }
 
@@ -96,12 +96,12 @@ export async function upsertFoodFromApi(
       servings = normalizeServings(details);
       nutrients = deriveNutrients(details);
       logger.info(
+        'fatsecret.cache.next_best_fallback_used',
         {
           requestedId: fatsecretId,
           fallbackId: resolvedFoodId,
           query: fallbackQuery,
         },
-        'fatsecret.cache.next_best_fallback_used',
       );
     }
   }
@@ -127,7 +127,7 @@ export async function upsertFoodFromApi(
         defaultServingId: servings.find((s) => s.isDefault)?.id,
         source: options.source ?? 'food.get.v4',
         confidence: 0.95,
-        nutrientsPer100g: nutrients,
+        nutrientsPer100g: nutrients as Prisma.InputJsonValue ?? undefined,
         legacyFoodId: options.legacyFoodId,
         hash,
         syncedAt: new Date(),
@@ -142,7 +142,7 @@ export async function upsertFoodFromApi(
         description: details.description,
         defaultServingId: servings.find((s) => s.isDefault)?.id,
         source: options.source ?? 'food.get.v4',
-        nutrientsPer100g: nutrients,
+        nutrientsPer100g: nutrients as Prisma.InputJsonValue ?? undefined,
         legacyFoodId: options.legacyFoodId ?? undefined,
         hash,
         syncedAt: new Date(),
@@ -296,11 +296,11 @@ async function pickNextBestFatSecretResult({
     }
   } catch (error) {
     logger.warn(
+      'fatsecret.cache.next_best_lookup_failed',
       {
         query,
         message: (error as Error).message,
       },
-      'fatsecret.cache.next_best_lookup_failed',
     );
   }
   return null;
@@ -381,7 +381,7 @@ function normalizeServings(details: FatSecretFoodDetails): NormalizedServing[] {
       isVolume: volumeMl != null,
       isDefault: index === 0,
       derivedViaDensity: false,
-      densityGml: density,
+      densityGml: density ?? undefined,
       densitySource: density ? 'fatsecret_serving' : undefined,
       densityConfidence: density ? 0.9 : undefined,
       densityNote: density && serving.measurementDescription

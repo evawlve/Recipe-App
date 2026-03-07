@@ -524,3 +524,181 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | 46 | Scoring/filter | Qualifier-only token regression — add `low/high/no/non/zero` to MODIFIER_TOKENS, require up to 2 core food noun tokens |
 | 47 | Scoring | Remove FDC/FatSecret source bias — both sources now compete equally on name match quality |
 | 48 | Scoring | Raw-state normalization — strip `raw`/`uncooked` from FDC names for scoring; +0.03 FDC tiebreaker for produce/meat |
+
+---
+
+## 2026-02-28: Ingredient Mapping Pipeline Hardening (Session 2)
+
+**Source**: `handoff-feb24.md` — resolving remaining open issues from 300-recipe pilot import
+**Files**: `filter-candidates.ts`, `simple-rerank.ts`, `ingredient-line.ts`, `map-ingredient-with-fallback.ts`
+
+### Fix 49: "freshly" as mustHaveToken Kills Real Garlic Candidates
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"2 freshly garlic"` → Freshly Chile-Garlic Pork Bowl (920kcal branded meal) |
+| Root Cause | `MODIFIER_TOKENS` had `'fresh'` but not `'freshly'` (adverb form). `deriveMustHaveTokens` kept `'freshly'` as a must-have token, filtering out all real garlic entries. Only branded "Freshly" meal products survived. |
+| Fix | Added `'freshly'` to `MODIFIER_TOKENS` in `deriveMustHaveTokens` (`filter-candidates.ts`) |
+| File | `src/lib/fatsecret/filter-candidates.ts` (L2367) |
+| Result | `"2 freshly garlic"` → **raw garlic** (30g, 42.9 kcal) ✅ |
+
+### Fix 50: Default-Ripeness Penalty for Green Tomato Candidates
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"Petite Tomatoes"` → green raw tomatoes (unripe/specialty item) |
+| Root Cause | `getAttributeContradictionPenalty` only fired when query explicitly specified a color. "Petite tomatoes" has no color → no penalty for "green" candidates. FDC "green raw tomatoes" (0.552) outscored "grape raw tomatoes" (0.477) on token overlap. |
+| Fix | Added default-ripeness penalty block in `getAttributeContradictionPenalty` (`simple-rerank.ts`): when query mentions `ASSUMED_RED_FOODS` (tomato/tomatoes) without specifying a color, apply 50% of `ATTRIBUTE_CONTRADICTION_PENALTY` to candidates containing `\bgreen\b`. |
+| File | `src/lib/fatsecret/simple-rerank.ts` (~L436) |
+| Result | `"petite tomatoes"` → **grape raw tomatoes** (123g) ✅ |
+| Note | 50% penalty is intentionally softer to preserve explicit "green tomatoes" queries. `ASSUMED_RED_FOODS` list is extensible. |
+
+### Fix 51: "juice/zest from N fruit" Parser Normalization
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"1 juice from 1 lemon"` → bottled real lemon juice from concentrate (240g) |
+| Root Cause | Parser tokenized as `qty=1, name="juice from 1 lemon"`. The `"X from Y"` recipe phrasing (where ingredient = `Y X`) was not recognized. The resulting query matched FDC "bottled real lemon lemon juice from concentrate" (an entire bottle). |
+| Fix | Added regex pre-processing in `ingredient-line.ts` that transforms `juice/zest from\|of N fruit` → `N fruit juice/zest` before tokenization. |
+| File | `src/lib/parse/ingredient-line.ts` (L123) |
+| Result | `"1 juice from 1 lemon"` → **raw lemon juice** (60g, 13.2 kcal) ✅ |
+| Also verified | `"juice of 2 limes"` → raw lime juice (120g) ✅, `"zest from 1 orange"` → raw orange peel (10g) ✅ |
+
+### Additional Fixes (Same Session, Earlier)
+
+| Fix | Detail |
+|-----|--------|
+| B6 green peppers | Color contradiction filter + `MIN_RERANK_CONFIDENCE` 0.74→0.70 + fallback `!winner` guard (3 files) |
+| A1 dill regression | Cleared stale ValidatedMapping + AiNormalizeCache for "dill" → now maps to Dill herb |
+| D1 strawberry halves | Fixed `-y→-ies` plural mismatch in `hasCoreTokenMismatch` regex |
+
+### Change Index
+
+| # | Category | Description |
+|---|----------|-------------|
+| 49 | Filter/tokens | Added `'freshly'` to MODIFIER_TOKENS — prevents adverb from becoming must-have token |
+| 50 | Scoring | Default-ripeness penalty — 50% contradiction penalty for "green" tomato when query doesn't specify color |
+| 51 | Parser | `juice/zest from\|of N fruit` → `N fruit juice/zest` pre-processing normalization |
+
+---
+
+## 2026-03-02: Pilot Import Systematic Failures (Session 3)
+
+**Source**: `mapping-summary-2026-03-02T06-28-24.txt` — 400-recipe pilot import systematic failures
+**Files**: `filter-candidates.ts`, `ingredient-line.ts`
+
+### Fix 52: Pure-Fat Foods Rejected by `hasNullOrInvalidMacros` (MAJOR)
+
+| Field | Detail |
+|-------|--------|
+| Issue | All cooking oils (coconut, avocado, vegetable, sesame, canola, EVOO) → 0.00 confidence |
+| Affected | 12+ summary lines (6 oil types × 2 attempts each) |
+| Root Cause | `hasNullOrInvalidMacros` rejects foods where `calories > 50 && protein === 0 && carbs === 0`. Designed to catch corrupted data (e.g., red lentils with P:0, C:0, F:2.86, kcal:314). But **pure oils legitimately have 0 protein, 0 carbs** — they are 100% fat (~860-930 kcal/100g). All 20 coconut oil candidates were killed by this filter. |
+| Fix | Added fat-exemption: when `fat > 50` (per 100g), the food is a pure fat/oil, and P=0/C=0 is valid nutritional data. |
+| File | `src/lib/fatsecret/filter-candidates.ts` (L1397) |
+| Before | `if ((protein ?? 0) === 0 && (carbs ?? 0) === 0) return true;` |
+| After | `if ((protein ?? 0) === 0 && (carbs ?? 0) === 0 && fatValue <= 50) return true;` |
+| Result | `"coconut oil"` → **Organic Virgin Coconut Oil (Spectrum)** (0.765) ✅ |
+| Also | `"avocado oil"` → **AVOCADO OIL (SPECTRUM CULINARY)** (0.980) ✅ |
+
+### Fix 53: Potato `hasSuspiciousMacros` Fat Threshold Too Strict
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"1 medium potato"` → 0.00 confidence (no candidates survived) |
+| Root Cause | `INGREDIENT_MACRO_PROFILES` had `maxFatPer100g: 1` for potatoes. FDC reports raw potato at 2.4g fat/100g → flagged as `suspicious_macros` → rejected. After cooking-state filter removed baked/boiled/roasted variants, core token filter eliminated remaining branded candidates. |
+| Fix | Raised `maxFatPer100g` from 1 to 5 for the vegetables profile. |
+| File | `src/lib/fatsecret/filter-candidates.ts` (L1141) |
+| Result | `"1 medium potato"` → **Potato** (1.000) ✅ |
+
+### Fix 54: Strawberry Halves — "halves" Treated as Must-Have Token
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"2 cup strawberry halves"` → 0.00 confidence (18 candidates, 0 survived) |
+| Root Cause | `deriveMustHaveTokens("strawberry halves")` produced `["strawberry", "halves"]`. "halves" is a cut-shape descriptor, NOT a food identity token. No API candidate name contains "halves" → ALL 18 candidates rejected. Previous D1 fix (`-y→-ies` plural support) was correct but irrelevant — the actual failure was the must-have token filter. |
+| Fix | Added `'half', 'halves', 'quarter', 'quarters', 'third', 'thirds'` to `MODIFIER_TOKENS` in `deriveMustHaveTokens`. |
+| File | `src/lib/fatsecret/filter-candidates.ts` (L2369) |
+| Result | `"strawberry halves"` → **Strawberries** (0.980) ✅ |
+
+### Fix 55: Compound Word + Brand Spelling Normalization
+
+| Field | Detail |
+|-------|--------|
+| Issue | `"snowpeas"` → 0.00 (APIs expect "snow peas" with space) |
+| Fix | Added compound word normalization: `snowpeas → snow peas`, `sugarsnap → sugar snap peas` |
+| Also | Added brand-to-generic synonyms: `swerve → erythritol sweetener`, `splenda → sucralose sweetener` |
+| File | `src/lib/parse/ingredient-line.ts` (L123-135) |
+| Result | `"snowpeas"` → **SNOW PEAS** (0.980) ✅ |
+| Note | Swerve/Splenda synonyms still fail — APIs may not have these niche sweetener products |
+
+### Change Index
+
+| # | Category | Description |
+|---|----------|-------------|
+| 52 | Filter/macros | Fat-exemption in `hasNullOrInvalidMacros` — pure-fat foods (fat>50g/100g) no longer rejected |
+| 53 | Filter/macros | Potato `maxFatPer100g` raised 1→5 in `hasSuspiciousMacros` |
+| 54 | Filter/tokens | Added `half/halves/quarter/quarters/third/thirds` to MODIFIER_TOKENS cut-shape section |
+| 55 | Parser | Compound word normalization (snowpeas) + brand synonyms (swerve/splenda) |
+
+
+---
+
+### Fix 56: Dry Mustard - Multiple Filter Issues
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1 tsp or 1 packet dry mustard` -> 0.00 confidence |
+| Root Causes | (1) `or 1 packet` noise in parsed input. (2) `dry` treated as must-have token. (3) `hasNullOrInvalidMacros` rejects Dry Mustard (cal:100, P/C/F:0). |
+| Fixes | (a) Strip `or N unit` alternatives in parser. (b) `dry,wet,liquid,solid` -> MODIFIER_TOKENS. (c) `mustard` -> CORE_FOOD_TOKENS. |
+| Files | `ingredient-line.ts` (L145), `filter-candidates.ts` (L932, L2363) |
+| Result | `1 tsp or 1 packet dry mustard` -> **Mustard** (0.705) |
+
+### Fix 57: Yellow Cherry Tomato - -o/-oes Plural Mismatch
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1 cup yellow cherry tomato` -> 0.00 |
+| Root Cause | `hasCoreTokenMismatch` regex `\btomatos?\b` doesn't match tomatoes (-oes). |
+| Fix | Added -o/-oes plural handling + reverse in `hasCoreTokenMismatch`. |
+| File | `filter-candidates.ts` (L995) |
+| Result | `yellow cherry tomato` -> **Cherry Tomatoes** (0.813) |
+
+### Bonus: Splenda Now Works (via Fix 55 + 56)
+
+Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Splenda:
+- `1 serving 1 packet splenda` -> **Liquid Sucralose (EZ-Sweetz)** (0.980)
+
+### Change Index (Fixes 56-57)
+
+| # | Category | Description |
+|---|----------|-------------|
+| 56 | Filter/tokens + Parser | dry/wet/liquid/solid to MODIFIER_TOKENS; mustard to CORE_FOOD_TOKENS; or N unit parser strip |
+| 57 | Filter/plurals | -o/-oes plural handling in hasCoreTokenMismatch (tomato/tomatoes, potato/potatoes) |
+
+### Fix 58: Strawberry Banana Greek Yogurt - Compound Product vs. Raw Produce
+
+| Field | Detail |
+|-------|--------|
+| Issue | `5 oz strawberry banana Greek yogurt` -> 0.00 (ALL 18 candidates rejected) |
+| Root Cause | `INGREDIENT_MACRO_PROFILES` has a `strawberry/berries` profile with `maxCalPer100g: 60`. Query contains `strawberry` -> profile fires. Greek yogurt candidates have 80-88 cal/100g -> ALL flagged as `suspicious_macros` -> ALL rejected. The profile is correct for fresh berries but wrong for strawberry-flavored products. |
+| Fix | Added compound product exclusion in `hasSuspiciousMacros`: when query contains product terms (yogurt, ice cream, jam, smoothie, etc.), raw produce macro profiles are skipped. |
+| File | `filter-candidates.ts` (L1247) |
+| Result | `strawberry banana Greek yogurt` -> **Greek Yogurt Strawberry Banana (HEB)** (0.708) |
+
+### Fix 59: Dietary-Prefix Stripping (fat-free, gluten-free, etc.)
+
+| Field | Detail |
+|-------|--------|
+| Issue | (1) `fat free liquid egg substitute` -> 0.00 (score 0.688 < 0.70 threshold). (2) `gluten-free salad seasoning` -> 0.00 (zero relevant API results). |
+| Root Cause | Dietary-attribute prefixes like `fat free` and `gluten-free` describe what is ABSENT from the food, not what it IS. They pollute API searches and scoring. `fat free` caused `CAGE FREE LIQUID EGG SUBSTITUTE` to barely miss the confidence threshold (`cage` != `fat`). `gluten-free` returned only GF breads/pastas, no seasonings. |
+| Fix | Strip dietary-attribute prefixes in parser (before API search): `fat-free/nonfat`, `gluten-free`, `sugar-free`, `dairy-free`, `grain-free`, `nut-free`. The `critical_modifier_mismatch` filter still enforces modifier matching separately, if the best candidate happens to violate the dietary constraint. |
+| File | `ingredient-line.ts` (L115) |
+| Result | `fat free liquid egg substitute` -> **Egg Substitute (Liquid)** (0.882). `gluten-free salad seasoning` -> **Original Ranch Seasoning and Salad Dressing Mix** (0.950). |
+
+### Change Index (Fixes 58-59)
+
+| # | Category | Description |
+|---|----------|-------------|
+| 58 | Filter/macros | Compound product exclusion in `hasSuspiciousMacros` - skip produce profiles for yogurt/ice cream/jam/etc. |
+| 59 | Parser | Dietary-prefix stripping (fat-free, gluten-free, sugar-free, dairy-free, grain-free, nut-free) |

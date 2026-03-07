@@ -171,9 +171,9 @@ export async function aiNormalizeIngredient(
       status: 'success',
       ...cached,
       // Provide defaults for new fields (backward compatibility with older cache entries)
-      isBranded: cached.isBranded ?? false,
-      isMultiIngredient: cached.isMultiIngredient ?? false,
-      splitIngredients: cached.splitIngredients ?? undefined,
+      isBranded: (cached as any).isBranded ?? false,
+      isMultiIngredient: (cached as any).isMultiIngredient ?? false,
+      splitIngredients: (cached as any).splitIngredients ?? undefined,
     };
   }
 
@@ -213,27 +213,28 @@ export async function aiNormalizeIngredient(
       return { status: 'error', reason: 'invalid AI response schema' };
     }
     // Extract nutrition estimate if present
-    const nutritionEstimate = parsed.nutrition_estimate ? {
-      caloriesPer100g: parsed.nutrition_estimate.calories_per_100g,
-      proteinPer100g: parsed.nutrition_estimate.protein_per_100g,
-      carbsPer100g: parsed.nutrition_estimate.carbs_per_100g,
-      fatPer100g: parsed.nutrition_estimate.fat_per_100g,
-      confidence: parsed.nutrition_estimate.confidence,
+    const nutritionRaw = parsed.nutrition_estimate as Record<string, number> | null | undefined;
+    const nutritionEstimate = nutritionRaw ? {
+      caloriesPer100g: nutritionRaw.calories_per_100g,
+      proteinPer100g: nutritionRaw.protein_per_100g,
+      carbsPer100g: nutritionRaw.carbs_per_100g,
+      fatPer100g: nutritionRaw.fat_per_100g,
+      confidence: nutritionRaw.confidence,
     } : undefined;
 
     const normalizeResult: AiNormalizeSuccess = {
       status: 'success',
-      normalizedName: parsed.normalized_name,
-      canonicalBase: parsed.canonical_base || parsed.normalized_name,  // Fallback for backward compatibility
-      prepPhrases: parsed.prep_phrases.filter((p: unknown) => typeof p === 'string'),
-      sizePhrases: parsed.size_phrases.filter((p: unknown) => typeof p === 'string'),
-      synonyms: parsed.synonyms.filter((s: unknown) => typeof s === 'string'),
-      cookingModifier: parsed.cooking_modifier || undefined,
+      normalizedName: parsed.normalized_name as string,
+      canonicalBase: (parsed.canonical_base as string) || (parsed.normalized_name as string),  // Fallback for backward compatibility
+      prepPhrases: (parsed.prep_phrases as unknown[]).filter((p: unknown) => typeof p === 'string') as string[],
+      sizePhrases: (parsed.size_phrases as unknown[]).filter((p: unknown) => typeof p === 'string') as string[],
+      synonyms: (parsed.synonyms as unknown[]).filter((s: unknown) => typeof s === 'string') as string[],
+      cookingModifier: (parsed.cooking_modifier as string) || undefined,
       nutritionEstimate,
       // Candidate filtering hints (Jan 2026)
-      isBranded: parsed.is_branded ?? false,
-      isMultiIngredient: parsed.is_multi_ingredient ?? false,
-      splitIngredients: parsed.split_ingredients?.filter((s: unknown) => typeof s === 'string') || undefined,
+      isBranded: (parsed.is_branded as boolean) ?? false,
+      isMultiIngredient: (parsed.is_multi_ingredient as boolean) ?? false,
+      splitIngredients: (parsed.split_ingredients as unknown[] | null)?.filter((s: unknown) => typeof s === 'string') as string[] ?? undefined,
     };
 
     // Log warning if multi-ingredient detected (mapped to first ingredient only)

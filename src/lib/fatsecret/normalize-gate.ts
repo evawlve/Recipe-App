@@ -240,8 +240,17 @@ export function shouldNormalizeLlm(
     const secondScore = sorted.length > 1 ? sorted[1].score : 0;
     const scoreGap = bestScore - secondScore;
 
-    // If best score is very high, skip LLM
+    // If best score is very high, skip LLM — UNLESS top candidates are tied.
+    // Tied high-confidence candidates (e.g., 3 branded "Rice Vinegar" variants)
+    // need the LLM's nutrition estimate to break the tie.
     if (bestScore >= HIGH_CONFIDENCE_THRESHOLD) {
+        if (scoreGap < MIN_SCORE_GAP && sorted.length > 1) {
+            return {
+                shouldCallLlm: true,
+                reason: 'high_confidence_tie_needs_nutrition',
+                confidence: 0.7,
+            };
+        }
         return {
             shouldCallLlm: false,
             reason: 'high_confidence_match',

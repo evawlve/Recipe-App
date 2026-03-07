@@ -14,7 +14,7 @@
  * - Query has noise words that confuse the search (e.g., "long" in "long sweet potato")
  */
 
-import { generateStructuredOutput } from '../ai/structured-client';
+import { callStructuredLlm } from '../ai/structured-client';
 import { logger } from '../logger';
 
 // ============================================================
@@ -179,29 +179,28 @@ Analyze why the search failed and provide:
 Return JSON matching the schema.`;
 
     try {
-        const result = await generateStructuredOutput(
-            prompt,
-            PARSE_RECOVERY_SCHEMA,
-            {
-                temperature: 0.3,
-                maxRetries: 1,
-                timeoutMs: 5000  // Aggressive timeout - this is a fallback
-            }
-        );
+        const result = await callStructuredLlm({
+            schema: PARSE_RECOVERY_SCHEMA,
+            systemPrompt: 'You are analyzing a failed ingredient mapping. Return simplified search suggestions.',
+            userPrompt: prompt,
+            purpose: 'simplify',
+            timeout: 5000,
+        });
 
-        if (result.success && result.data) {
+        if (result.status === 'success' && result.content) {
+            const data = result.content as Record<string, unknown>;
             logger.info('parse_recovery.llm_success', {
                 original: input.normalizedName,
-                simplified: result.data.simplifiedQuery,
-                badTokens: result.data.badTokens,
+                simplified: data.simplifiedQuery,
+                badTokens: data.badTokens,
             });
 
             return {
                 success: true,
-                simplifiedQuery: result.data.simplifiedQuery,
-                badTokens: result.data.badTokens,
-                suggestedSynonyms: result.data.suggestedSynonyms,
-                confidence: result.data.confidence || 0.7,
+                simplifiedQuery: data.simplifiedQuery as string,
+                badTokens: data.badTokens as string[] | undefined,
+                suggestedSynonyms: data.suggestedSynonyms as string[] | undefined,
+                confidence: (data.confidence as number) || 0.7,
             };
         }
 

@@ -120,6 +120,36 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     .replace(/\bchilli\b/gi, 'chili')            // British "chilli" → American "chili"
     .replace(/\bjalape[nñ]o\b/gi, 'jalapeno');   // Accent variants → unaccented
 
+  // === NEW: Compound word normalization ===
+  // Some ingredients are written as one word but APIs expect two words
+  unitNormalized = unitNormalized
+    .replace(/\bsnowpeas?\b/gi, 'snow peas')         // "snowpeas" → "snow peas"
+    .replace(/\bsugarsnaps?\b/gi, 'sugar snap peas')  // "sugarsnap" → "sugar snap peas"
+    .replace(/\bmustardpowder\b/gi, 'mustard powder'); // "mustardpowder" → "mustard powder"
+
+  // === NEW: Brand name → generic ingredient synonyms ===
+  // Brand names that don't exist in FatSecret/FDC search results
+  unitNormalized = unitNormalized
+    .replace(/\bswerve\b/gi, 'erythritol sweetener')  // Swerve → erythritol sweetener
+    .replace(/\bsplenda\b/gi, 'sucralose sweetener');  // Splenda → sucralose sweetener
+
+  // === NEW: Normalize "juice/zest from N fruit" → "N fruit juice/zest" ===
+  // Common recipe phrasing: "1 juice from 1 lemon" → "1 lemon juice"
+  // Also handles: "juice from 2 limes", "zest from 1 orange", "juice of 1 lemon"
+  // Pattern: (optional qty) (juice|zest) (from|of) (qty) (fruit name) → (qty) (fruit) (juice|zest)
+  unitNormalized = unitNormalized
+    .replace(/^(\d*\s*)(juice|zest)\s+(?:from|of)\s+(\d+)\s+(.+)$/i,
+      (_, _leadingQty, type, fruitQty, fruit) => `${fruitQty} ${fruit.trim()} ${type}`)
+    .trim();
+
+  // === NEW: Strip "or N unit" alternative measurement patterns ===
+  // Recipes sometimes offer alternatives: "1 tsp or 1 packet dry mustard"
+  // The "or N unit" part is an alternative the cook can choose, not part of the ingredient name
+  // Pattern: "or N unit" where unit is a measurement word
+  unitNormalized = unitNormalized
+    .replace(/\s+or\s+\d+(?:\.\d+)?\s+(?:packet|packets|package|packages|serving|servings|piece|pieces|envelope|envelopes|sachet|sachets|stick|sticks|tsp|tbsp|cup|cups|oz|g|ml|lb|lbs)\b/gi, '')
+    .trim();
+
   // === NEW: Strip alternative measurement noise appended after a dash ===
   // Recipes sometimes include alternative measures like "2 cup water - 1 to 2 cups"
   // or cooking instructions like "1 tbsp parmesan - per serving sprinkle..."

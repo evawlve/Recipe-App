@@ -31,7 +31,7 @@ import {
 import { refineSearchQuery } from './ai-search-refine';
 
 export type FatsecretMappedIngredient = {
-  source: 'fatsecret';
+  source: 'fatsecret' | 'fdc' | 'cache' | 'ai_generated';
   foodId: string;
   foodName: string;
   brandName?: string | null;

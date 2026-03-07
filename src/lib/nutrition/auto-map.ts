@@ -129,7 +129,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
         let mapped: FatsecretMappedIngredient | null = await mapIngredientWithFallback(cleanedLine, {
           minConfidence: MIN_AUTOMAP_CONFIDENCE,
           debug: true,
-        });
+        }) as FatsecretMappedIngredient | null;
 
         // FDC Fallback
         // If FatSecret failed or confidence is low (< 0.4), try FDC
@@ -221,7 +221,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
             mapped = await mapIngredientWithFallback(aiNormalizedLine, {
               minConfidence: MIN_AUTOMAP_CONFIDENCE,
               debug: true,
-            });
+            }) as FatsecretMappedIngredient | null;
 
             if (!mapped) {
               logger.info('autoMap:skipped-no-match-after-ai', {

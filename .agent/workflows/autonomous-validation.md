@@ -74,7 +74,12 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 1. Run the debug pipeline script:
    ```powershell
-   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/debug-mapping-pipeline.ts "INGREDIENT_TEXT"
+   npx tsx src/scripts/debug-ingredient.ts "INGREDIENT_TEXT" --verbose
+   ```
+
+   To see candidates before/after filters:
+   ```powershell
+   npx tsx src/scripts/gather-candidates.ts "INGREDIENT_TEXT" --show-filtered
    ```
 
 2. Analyze output at each stage:
@@ -99,7 +104,7 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 4. **If selectionReason = "fallback_after_serving_failure":**
    - The CORRECT candidate was selected first, but serving lookup failed
    - Check WHY AI backfill didn't create a serving estimate
-   - Investigate: `npx tsx scripts/check-serving-cache.ts --food FOOD_ID`
+   - Investigate: `npx tsx src/scripts/check-food-servings.ts "FOOD NAME"`
    - Check if backfill is enabled: `ENABLE_PREEMPTIVE_BACKFILL` env var
    - Verify backfill eligibility in `serving-backfill.ts`
 
@@ -175,7 +180,8 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 1. Re-run debug script on the specific ingredient:
    ```powershell
-   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/debug-mapping-pipeline.ts "INGREDIENT_TEXT" --skip-cache
+   npx tsx src/scripts/check-cache-entry.ts "INGREDIENT_TEXT" --clear
+   npx tsx src/scripts/debug-ingredient.ts "INGREDIENT_TEXT" --verbose
    ```
 
 2. Verify:
@@ -189,7 +195,11 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 1. Clear relevant mappings if needed:
    ```powershell
-   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/clear-all-mappings.ts
+   # Clear just the affected ingredient's cache (preferred — keeps other mappings intact)
+   npx tsx src/scripts/check-cache-entry.ts "INGREDIENT_TEXT" --clear
+
+   # Or wipe all mapping caches for a full re-run
+   npx tsx src/scripts/clear-all-cache.ts
    ```
 
 2. Re-run pilot import:
@@ -241,9 +251,12 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 | Task | Command |
 |------|---------|
 | Run pilot import | `$env:ENABLE_MAPPING_ANALYSIS='true'; npx tsx scripts/pilot-batch-import.ts --recipes 100` |
-| Debug ingredient | `npx tsx scripts/debug-mapping-pipeline.ts "ingredient"` |
-| Clear mappings | `npx tsx scripts/clear-all-mappings.ts` |
-| Test all fixes | `npx tsx scripts/test-mapping-fixes.ts` |
+| Full pipeline debug | `npx tsx src/scripts/debug-ingredient.ts "1 cup honey" --verbose` |
+| See candidates + scores | `npx tsx src/scripts/gather-candidates.ts "rice vinegar" --show-filtered` |
+| Check serving cache | `npx tsx src/scripts/check-food-servings.ts "mayonnaise"` |
+| Inspect & clear cache entry | `npx tsx src/scripts/check-cache-entry.ts "onion" --clear` |
+| Wipe all mapping caches | `npx tsx src/scripts/clear-all-cache.ts` |
+| Clear mappings (keep food cache) | `npx tsx scripts/clear-all-mappings.ts` |
 
 ---
 

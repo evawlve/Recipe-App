@@ -83,6 +83,8 @@ flowchart TD
 |-------|---------|
 | `LearnedSynonym` | Synonym pairs learned from AI/user feedback |
 | `PortionOverride` | AI-estimated portions for ambiguous units (global) |
+| `AiGeneratedFood` | LLM-generated nutrition data (last-resort fallback, requires review) |
+| `AiGeneratedServing` | Unit-to-grams estimates for AI-generated foods |
 
 ---
 
@@ -343,6 +345,7 @@ When a modifier appears as the **first word**, it indicates a different product:
 | `src/lib/fatsecret/gather-candidates.ts` | Searches APIs, caches FDC results |
 | `src/lib/fatsecret/filter-candidates.ts` | Exclusion rules, token filtering |
 | `src/lib/fatsecret/simple-rerank.ts` | Scoring and ranking |
+| `src/lib/fatsecret/ai-nutrition-backfill.ts` | LLM-generated nutrition (last-resort fallback) |
 
 ### Serving & Backfill
 
@@ -361,16 +364,27 @@ When a modifier appears as the **first word**, it indicates a different product:
 | `src/lib/parse/ingredient-line.ts` | Parses raw ingredient |
 | `src/lib/fatsecret/ai-normalize.ts` | AI-powered normalization |
 
-### Recipe Import
+### Recipe Import (`scripts/`)
 
 | File | Purpose |
 |------|---------|
 | `scripts/pilot-batch-import.ts` | Batch imports with analysis |
 | `scripts/clear-all-mappings.ts` | Clears mappings (keeps food cache) |
-| `scripts/clear-all-for-test.ts` | Clears ALL caches (clean slate) |
-| `scripts/clear-ingredient-cache.ts` | Clears `ValidatedMapping` + `AiNormalizeCache` for specific ingredient terms |
 
-> **When to use `clear-ingredient-cache.ts`**: Use this for targeted cache invalidation when verifying a fix for a specific ingredient, without blowing away all mappings. Useful after changing `filter-candidates.ts` or `simple-rerank.ts` for an ingredient you can name.
+### Debug Scripts (`src/scripts/`)
+
+All debug scripts accept CLI arguments — no need to edit files.
+
+| Script | Usage | Purpose |
+|--------|-------|---------|
+| `debug-ingredient.ts` | `npx tsx src/scripts/debug-ingredient.ts "1 cup honey" [--skip-fdc] [--verbose]` | Full pipeline trace: parse → normalize → map → result |
+| `gather-candidates.ts` | `npx tsx src/scripts/gather-candidates.ts "rice vinegar" [--skip-fdc] [--show-filtered]` | Show raw candidates, filter pass/fail, reranker winner |
+| `check-food-servings.ts` | `npx tsx src/scripts/check-food-servings.ts "mayonnaise" [--exact] [--limit 20]` | Inspect FatSecret serving cache for any food |
+| `check-cache-entry.ts` | `npx tsx src/scripts/check-cache-entry.ts "onion" [--clear]` | Inspect ValidatedMapping, AiNormalizeCache, IngredientFoodMap entries; optionally clear |
+| `clear-all-cache.ts` | `npx tsx src/scripts/clear-all-cache.ts` | Wipe all mapping caches (ValidatedMapping, IngredientFoodMap, AiNormalizeCache) |
+| `clear-cache.ts` | `npx tsx src/scripts/clear-cache.ts` | Selective cache clear |
+
+> **Diagnosis workflow**: Run `gather-candidates.ts` first to see if the correct food ever appears. If it does but maps wrong, run `debug-ingredient.ts --verbose` to trace scoring. If serving data looks wrong, use `check-food-servings.ts`.
 
 ---
 
@@ -410,11 +424,17 @@ npx tsx scripts/pilot-batch-import.ts --recipes 100 --analysis
 ### Debug Scripts
 
 ```bash
-# Debug a full ingredient line
-npx tsx scripts/debug-mapping-pipeline.ts "ingredient" --verbose
+# Full pipeline trace for any ingredient
+npx tsx src/scripts/debug-ingredient.ts "1 cup honey" --verbose
 
-# Debug just a search query
-npx tsx scripts/debug-mapping-issue.ts --search "light cream"
+# See candidates before/after filters and reranker winner
+npx tsx src/scripts/gather-candidates.ts "rice vinegar" --show-filtered
+
+# Inspect serving cache for a food
+npx tsx src/scripts/check-food-servings.ts "mayonnaise" --limit 20
+
+# Inspect and optionally clear cache entries for an ingredient
+npx tsx src/scripts/check-cache-entry.ts "onion" --clear
 ```
 
 ### Diagnosis Guide
@@ -453,18 +473,27 @@ npx tsx scripts/debug-mapping-issue.ts --search "light cream"
 
 ```bash
 # Pilot import with analysis
-npx tsx scripts/pilot-batch-import.ts --recipes 100 --analysis
+$env:ENABLE_MAPPING_ANALYSIS='true'
+npx tsx scripts/pilot-batch-import.ts --recipes 100
 
 # Clear all mappings (keeps food cache)
 npx tsx scripts/clear-all-mappings.ts
 
-# Clear everything (clean slate)
-npx tsx scripts/clear-all-for-test.ts
+# Debug a specific ingredient (full pipeline trace)
+npx tsx src/scripts/debug-ingredient.ts "1 cup chopped onion" --verbose
 
-# Clear just specific ingredients (ValidatedMapping + AiNormalizeCache)
-# Use after fixing a single ingredient without nuking the whole mapping set
-npx tsx scripts/clear-ingredient-cache.ts "mint" "grape tomatoes" "green peppers"
+# See all candidates + filter/rerank results
+npx tsx src/scripts/gather-candidates.ts "rice vinegar" --show-filtered
 
-# Check cache status
+# Check serving data for a food
+npx tsx src/scripts/check-food-servings.ts "mayonnaise"
+
+# Inspect & optionally clear cache for an ingredient
+npx tsx src/scripts/check-cache-entry.ts "onion" --clear
+
+# Wipe all mapping caches (fresh start)
+npx tsx src/scripts/clear-all-cache.ts
+
+# Check cache counts
 npx tsx -e "import { prisma } from './src/lib/db'; Promise.all([prisma.fdcFoodCache.count(), prisma.fdcServingCache.count(), prisma.fatSecretFoodCache.count(), prisma.fatSecretServingCache.count()]).then(r => console.log('FDC:', r[0], 'foods,', r[1], 'servings | FatSecret:', r[2], 'foods,', r[3], 'servings'));"
 ```

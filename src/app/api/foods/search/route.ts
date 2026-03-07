@@ -172,7 +172,7 @@ export async function GET(req: NextRequest) {
         usedByUserCount: 0,
       }));
 
-      const ranked = rankCandidates(candidates, {
+      const ranked = rankCandidates(candidates as any, {
         query: q,
         kcalBand
       });
@@ -232,7 +232,7 @@ export async function GET(req: NextRequest) {
         return { data: [] as any[], count: 0 };
       }
       const candidates = cachedFoods.map(buildCacheCandidate);
-      const ranked = rankCandidates(candidates, { query: q, kcalBand });
+      const ranked = rankCandidates(candidates as any, { query: q, kcalBand });
       const cacheById = new Map(cachedFoods.map((f) => [f.id, f]));
       const data = ranked.slice(0, 30).map(({ candidate, confidence }) => {
         const food = cacheById.get(candidate.food.id);
@@ -260,6 +260,7 @@ export async function GET(req: NextRequest) {
       if (cacheResult.data.length > 0) {
         responseData = cacheResult.data;
         logger.info(
+          'fatsecret_cache_search',
           {
             feature: 'mapping_v2',
             step: 'cache_served',
@@ -267,20 +268,19 @@ export async function GET(req: NextRequest) {
             cacheCount: cacheResult.count,
             cacheMode: FATSECRET_CACHE_MODE,
           },
-          'fatsecret_cache_search',
         );
       } else {
         // ACCURACY FIX: No legacy fallback - only serve FatSecret/FDC cache
         // This prevents showing prepared foods (Denny's, McDonald's) and outdated USDA data
         responseData = [];
         logger.info(
+          'fatsecret_cache_search',
           {
             feature: 'mapping_v2',
             step: 'cache_empty_no_results',
             q,
             cacheMode: FATSECRET_CACHE_MODE,
           },
-          'fatsecret_cache_search',
         );
       }
     } else {
@@ -289,6 +289,7 @@ export async function GET(req: NextRequest) {
       if (isShadow) {
         const cacheResult = await runCacheSearch();
         logger.info(
+          'fatsecret_cache_shadow',
           {
             feature: 'mapping_v2',
             step: 'search_shadow_compare',
@@ -296,7 +297,6 @@ export async function GET(req: NextRequest) {
             legacyCount: legacyResult.count,
             cacheCount: cacheResult.count,
           },
-          'fatsecret_cache_shadow',
         );
       }
     }

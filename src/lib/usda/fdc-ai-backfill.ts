@@ -150,7 +150,7 @@ export async function insertFdcAiServing(
     });
 
     if (!food) {
-        logger.warn({ fdcId: String(fdcId) }, 'FDC food missing from cache');
+        logger.warn('FDC food missing from cache', { fdcId: String(fdcId) });
         return { success: false, reason: 'food_missing' };
     }
 
@@ -177,11 +177,11 @@ export async function insertFdcAiServing(
     });
 
     if (options.promptDebug) {
-        logger.info({ fdcId: String(fdcId), gapType, prompt: aiResult.prompt }, 'AI prompt debug (FDC)');
+        logger.info('AI prompt debug (FDC)', { fdcId: String(fdcId), gapType, prompt: aiResult.prompt });
     }
 
     if (aiResult.status === 'error') {
-        logger.warn({ fdcId: String(fdcId), reason: aiResult.reason }, 'AI serving suggestion failed (FDC)');
+        logger.warn('AI serving suggestion failed (FDC)', { fdcId: String(fdcId), reason: aiResult.reason });
         return { success: false, reason: aiResult.reason };
     }
 
@@ -237,10 +237,9 @@ export async function insertFdcAiServing(
         }
     });
 
-    logger.info(
-        { fdcId: String(fdcId), gapType, label: suggestion.servingLabel },
-        'Inserted AI-derived FDC serving',
-    );
+    logger.info('Inserted AI-derived FDC serving', {
+        fdcId: String(fdcId), gapType, label: suggestion.servingLabel,
+    });
 
     return { success: true };
 }

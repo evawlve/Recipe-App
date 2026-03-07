@@ -347,8 +347,17 @@ export function confidenceGate(
 
     // BASIC PRODUCE: Always skip AI rerank - FDC/USDA data is more reliable
     // AI tends to select FatSecret candidates with inflated fat values
-    const BASIC_PRODUCE = ['potato', 'potatoes', 'lentil', 'lentils', 'beans', 'chickpea', 'chickpeas', 'rice', 'spinach', 'broccoli', 'carrot', 'carrots'];
-    const isBasicProduce = BASIC_PRODUCE.some(p => queryLower.includes(p));
+    // NOTE: Words like 'rice' use word-boundary regex to avoid matching
+    // compound foods where the word is a modifier (e.g., 'rice vinegar', 'rice paper')
+    const BASIC_PRODUCE_PATTERNS: RegExp[] = [
+        /\bpotato(es)?\b/i, /\blentils?\b/i, /\bbeans?\b/i,
+        /\bchickpeas?\b/i, /\bspinach\b/i, /\bbroccoli\b/i, /\bcarrots?\b/i,
+        // 'rice' only when it's the core food, not a modifier
+        // Matches: "rice", "brown rice", "fried rice", "jasmine rice"
+        // Does NOT match: "rice vinegar", "rice wine", "rice paper", "rice noodles"
+        /\brice\b(?!\s+(vinegar|wine|paper|noodle|flour|milk|bran|syrup|cake|cracker|wrapper))/i,
+    ];
+    const isBasicProduce = BASIC_PRODUCE_PATTERNS.some(p => p.test(queryLower));
 
     if (isBasicProduce && candidates.length > 0) {
         const top1 = candidates[0];
@@ -519,20 +528,102 @@ async function searchFatSecretLiveSimple(
     try {
         const results = await client.searchFoodsV4(query, { maxResults: limit });
 
-        return results.map((food, position) => ({
-            id: food.id,
-            source: 'fatsecret' as const,
-            name: food.name,
-            brandName: food.brandName,
-            // Use query (normalizedName) for name matching, rawLine is kept for modifier detection
-            score: computePositionScore(query, food.name, position),
-            foodType: food.foodType || 'Generic',
-            rawData: food,
-        }));
+        return results.map((food, position) => {
+            // Extract per-100g nutrition from the V4 search API serving data.
+            // V4 search returns servings with per-serving macros + metricServingAmount.
+            // This gives us nutrition at search time without extra API calls.
+            let nutrition: UnifiedCandidate['nutrition'] | undefined;
+            const serving = food.servings?.[0];
+            if (serving && serving.calories != null) {
+                // Determine serving weight in grams
+                let servingGrams: number | null = serving.servingWeightGrams ?? null;
+                if (!servingGrams && serving.metricServingAmount && serving.metricServingAmount > 0) {
+                    const unit = (serving.metricServingUnit || '').toLowerCase();
+                    if (unit === 'g' || unit === 'gram' || unit === 'grams') {
+                        servingGrams = serving.metricServingAmount;
+                    } else if (unit === 'ml' || unit === 'milliliter' || unit === 'milliliters') {
+                        // For liquids, assume density ≈ 1 g/ml (valid for water-based
+                        // products like vinegar, juice, milk, broth, etc.)
+                        servingGrams = serving.metricServingAmount;
+                    }
+                }
+                if (servingGrams && servingGrams > 0) {
+                    const scale = 100 / servingGrams;
+                    nutrition = {
+                        kcal: (serving.calories ?? 0) * scale,
+                        protein: (serving.protein ?? 0) * scale,
+                        carbs: (serving.carbohydrate ?? 0) * scale,
+                        fat: (serving.fat ?? 0) * scale,
+                        per100g: true,
+                    };
+                }
+            }
+            return {
+                id: food.id,
+                source: 'fatsecret' as const,
+                name: food.name,
+                brandName: food.brandName,
+                score: computePositionScore(query, food.name, position),
+                foodType: food.foodType || 'Generic',
+                nutrition,
+                rawData: food,
+            };
+        });
     } catch (err) {
         logger.warn('gather.live.search_failed', { query, error: (err as Error).message });
         return [];
     }
+}
+
+/**
+ * Parse serving weight in grams from a FatSecret food_description string.
+ * Examples:
+ *   "Per 1 tbsp - Calories: 45kcal"     → 15 (1 tbsp ≈ 15g)
+ *   "Per 100g - Calories: 18kcal"       → 100
+ *   "Per 1 cup - Calories: 45kcal"      → 240
+ *   "Per 1 serving (30g) - Calories: X" → 30
+ *   "Per 100 ml - Calories: X"          → 100 (assume density ~1)
+ */
+function parseServingGramsFromDescription(description: string): number | null {
+    const lower = description.toLowerCase();
+
+    // Try explicit gram/ml in parentheses: "Per 1 serving (30g)"
+    const explicitGrams = lower.match(/\((\d+(?:\.\d+)?)\s*g\)/);
+    if (explicitGrams) return parseFloat(explicitGrams[1]);
+
+    // "Per Xg" or "Per X g"
+    const perGrams = lower.match(/per\s+([\d.]+)\s*g\b/);
+    if (perGrams) return parseFloat(perGrams[1]);
+
+    // "Per X ml" (assume density ≈ 1 g/ml for liquids)
+    const perMl = lower.match(/per\s+([\d.]+)\s*ml\b/);
+    if (perMl) return parseFloat(perMl[1]);
+
+    // Common volume units: "Per 1 tbsp", "Per 2 cups", etc.
+    const UNIT_GRAMS: Record<string, number> = {
+        'tbsp': 15, 'tablespoon': 15, 'tablespoons': 15, 'tbs': 15,
+        'tsp': 5, 'teaspoon': 5, 'teaspoons': 5,
+        'cup': 240, 'cups': 240,
+        'fl oz': 30, 'fluid ounce': 30,
+        'oz': 28.35, 'ounce': 28.35, 'ounces': 28.35,
+    };
+
+    const unitMatch = lower.match(/per\s+([\d.\/]+)\s*(tbsp|tablespoons?|tbs|tsp|teaspoons?|cups?|fl\s*oz|fluid\s*ounce|ounces?|oz)\b/);
+    if (unitMatch) {
+        let qty = 1;
+        const qtyStr = unitMatch[1];
+        if (qtyStr.includes('/')) {
+            const parts = qtyStr.split('/');
+            qty = parseFloat(parts[0]) / parseFloat(parts[1]);
+        } else {
+            qty = parseFloat(qtyStr);
+        }
+        const unitKey = unitMatch[2].replace(/\s+/g, ' ').trim();
+        const gramsPerUnit = UNIT_GRAMS[unitKey];
+        if (gramsPerUnit && qty > 0) return qty * gramsPerUnit;
+    }
+
+    return null;
 }
 
 

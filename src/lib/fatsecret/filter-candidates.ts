@@ -559,7 +559,7 @@ function isBrandedProductForSimpleQuery(
 // ============================================================
 
 // Categories that should NOT be confused
-const CATEGORY_EXCLUSIONS: Array<{ query: string[]; excludeIfContains: string[] }> = [
+const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
     // Cream (dairy) should NOT match ice cream (frozen dessert)
     { query: ['cream', 'single cream', 'double cream', 'light cream', 'heavy cream'], excludeIfContains: ['ice cream', 'sherbet', 'gelato', 'frozen'] },
     // Ice (frozen water) should NOT match ice cream (dessert) or Ice Breakers/Ice Cubes (candy/gum brands)
@@ -926,6 +926,7 @@ const CORE_FOOD_TOKENS = new Set([
     // Spices (when they ARE the ingredient, not just modifiers)
     'cinnamon', 'cumin', 'paprika', 'turmeric', 'ginger', 'oregano', 'basil',
     'thyme', 'rosemary', 'parsley', 'cilantro', 'dill', 'mint', 'sage',
+    'mustard',
     // Spice/seasoning products (for spice blends like "five spice", "taco seasoning")
     'spice', 'spices', 'powder', 'blend', 'seasoning', 'rub', 'flakes',
 ]);
@@ -985,9 +986,40 @@ export function hasCoreTokenMismatch(
 
         // Check if any form exists in the food name
         const found = allForms.some(form => {
-            // Word boundary match to avoid partial matches
-            const regex = new RegExp(`\\b${form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i');
-            return regex.test(foodLower);
+            // Build plural variants for comprehensive matching:
+            // - "tomato" → /\btomatos?\b/ (simple s)
+            // - "strawberry" → /\bstrawberry\b/ OR /\bstrawberries\b/ (-y → -ies)
+            // - "cherry" → /\bcherry\b/ OR /\bcherries\b/
+            const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const simpleRegex = new RegExp(`\\b${escaped}s?\\b`, 'i');
+            if (simpleRegex.test(foodLower)) return true;
+
+            // Handle -o → -oes (tomato → tomatoes, potato → potatoes)
+            if (form.endsWith('o') && form.length > 2) {
+                const oesRegex = new RegExp(`\\b${escaped}es\\b`, 'i');
+                if (oesRegex.test(foodLower)) return true;
+            }
+            // Handle reverse: if token is "tomatoes", also check for "tomato"
+            if (form.endsWith('oes') && form.length > 4) {
+                const stem = form.slice(0, -2); // "tomatoes" → "tomato"
+                const singularRegex = new RegExp(`\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                if (singularRegex.test(foodLower)) return true;
+            }
+
+            // Handle -y → -ies (consonant + y → consonant + ies)
+            if (form.endsWith('y') && form.length > 2) {
+                const stem = form.slice(0, -1);
+                const iesRegex = new RegExp(`\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}ies\\b`, 'i');
+                if (iesRegex.test(foodLower)) return true;
+            }
+            // Handle reverse: if token is "berries", also check for "berry"
+            if (form.endsWith('ies') && form.length > 4) {
+                const stem = form.slice(0, -3) + 'y';
+                const singularRegex = new RegExp(`\\b${stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                if (singularRegex.test(foodLower)) return true;
+            }
+
+            return false;
         });
 
         if (!found) {
@@ -1116,9 +1148,10 @@ const INGREDIENT_MACRO_PROFILES: Array<{
             maxCarbPer100g: 8,
         },
         // Raw vegetables should be very low-fat
+        // NOTE: Potato can have 2-3g fat/100g depending on data source (FDC reports 2.4g)
         {
             ingredients: ['potato', 'potatoes', 'carrot', 'carrots', 'broccoli', 'spinach', 'lettuce'],
-            maxFatPer100g: 1,
+            maxFatPer100g: 5,
         },
         // Fresh berries should be low-calorie (catches processed/dried berry products like FRUTSTIX)
         {
@@ -1206,6 +1239,13 @@ export function hasSuspiciousMacros(
         });
 
         if (!matchesIngredient) continue;
+
+        // EXCLUSION: If the query contains a compound product term (yogurt, ice cream, jam, etc.),
+        // skip produce-based macro profiles. "Strawberry banana greek yogurt" should NOT
+        // be checked against the fresh strawberry profile (maxCalPer100g: 60).
+        // The berry/produce is a FLAVOR component, not the main food.
+        const COMPOUND_PRODUCT_TERMS = /\b(yogurt|yoghurt|ice cream|gelato|sorbet|smoothie|jam|jelly|preserve|marmalade|pie|cake|muffin|bread|cereal|granola|oatmeal|pancake|waffle|syrup|sauce|salsa|dressing|bar|cookie|pudding|mousse|parfait|protein bar|shake)\b/i;
+        if (COMPOUND_PRODUCT_TERMS.test(queryLower)) continue;
 
         // Check calorie bounds (e.g., ice/water should have ~0 calories)
         if (profile.maxCalPer100g != null && candidateNutrients.calories != null) {
@@ -1375,7 +1415,12 @@ export function hasNullOrInvalidMacros(
         // ALSO: If protein AND carbs are BOTH ZERO, that's equally suspicious
         // This catches corrupted data like red lentils with P:0, C:0, F:2.86, kcal:314
         // Real lentils have ~25g protein and ~60g carbs per 100g
-        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0) {
+        //
+        // EXCEPTION: Pure-fat foods (oils, butter, lard, ghee) legitimately have
+        // 0 protein and 0 carbs — they are 100% fat. If fat > 50g/100g, this is
+        // a valid pure-fat food, not corrupted data.
+        const fatValue = nutrients.fat ?? 0;
+        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0 && fatValue <= 50) {
             return true;
         }
     }
@@ -2030,7 +2075,44 @@ export function filterCandidatesByTokens(
             return false;
         }
 
-        // Check for ambiguous ingredients with wrong context (e.g., "1 dash pepper" → spice, not bell pepper)
+        // Color contradiction filter (e.g., "green peppers" should NOT match "ROASTED RED BELL PEPPER STRIPS")
+        // When raw line specifies a color, reject candidates with a contradicting color
+        if (rawLine) {
+            const COLOR_GROUPS: Record<string, string[]> = {
+                'red': ['red'],
+                'green': ['green'],
+                'yellow': ['yellow'],
+                'orange': ['orange'],
+                'white': ['white'],
+                'black': ['black'],
+                'purple': ['purple'],
+            };
+            const rawLower = rawLine.toLowerCase();
+            const candNameLower = candidate.name.toLowerCase();
+
+            for (const [color, variants] of Object.entries(COLOR_GROUPS)) {
+                const colorRegex = new RegExp(`\\b${color}\\b`, 'i');
+                if (colorRegex.test(rawLower)) {
+                    // Raw line specifies this color — check if candidate has a DIFFERENT color
+                    for (const [otherColor, otherVariants] of Object.entries(COLOR_GROUPS)) {
+                        if (otherColor === color) continue;
+                        const otherRegex = new RegExp(`\\b${otherColor}\\b`, 'i');
+                        if (otherRegex.test(candNameLower)) {
+                            if (debug) {
+                                logger.info('filter.candidates.color_contradiction', {
+                                    query: rawLine,
+                                    queryColor: color,
+                                    candidate: candidate.name,
+                                    candidateColor: otherColor,
+                                });
+                            }
+                            return false;
+                        }
+                    }
+                    break; // Only check the first matching color
+                }
+            }
+        }
         if (rawLine && isWrongFormForContext(rawLine, normalizedName, candidate.name)) {
             return false;
         }
@@ -2297,13 +2379,18 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
         // Color/variety modifiers  
         'dark', 'golden', 'white', 'red', 'green', 'yellow', 'black',
         // Form modifiers
-        'granules', 'granulated', 'flakes', 'powder', 'powdered', 'ground', 'dried', 'fresh', 'frozen',
+        'granules', 'granulated', 'flakes', 'powder', 'powdered', 'ground', 'dried', 'fresh', 'freshly', 'frozen',
         // Processing modifiers
         'toasted', 'roasted', 'raw', 'cooked', 'canned', 'diced', 'sliced', 'chopped',
+        // Processing state modifiers — describe form, not identity
+        // e.g. "1 tsp dry mustard" should not require both "dry" AND "mustard"
+        'dry', 'wet', 'liquid', 'solid',
         // Cut-shape descriptors — describe how the food is cut, not what it is
         // e.g. "3 strips green peppers" should not require "strips" in every candidate
+        // e.g. "2 cup strawberry halves" should not require "halves" in every candidate
         'strip', 'strips', 'floret', 'florets', 'wedge', 'wedges',
         'chunk', 'chunks', 'cube', 'cubes',
+        'half', 'halves', 'quarter', 'quarters', 'third', 'thirds',
         // Texture modifiers
         'creamy', 'smooth', 'chunky', 'thick', 'thin',
         // Prep/state modifiers

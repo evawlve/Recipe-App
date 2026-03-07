@@ -56,6 +56,11 @@ export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:14b';
 export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?? '60000', 10);
 
+// AI Nutrition Backfill configuration
+export const AI_NUTRITION_BACKFILL_ENABLED = getFlag('AI_NUTRITION_BACKFILL_ENABLED', true);
+export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'google/gemini-2.0-flash-lite';
+export const AI_NUTRITION_MAX_PER_BATCH = Number.parseInt(process.env.AI_NUTRITION_MAX_PER_BATCH ?? '20', 10);
+
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
 export const FATSECRET_REGION: FatSecretRegion = rawRegion === 'GLOBAL' ? 'GLOBAL' : 'US';

@@ -222,7 +222,7 @@ export async function computeTotals(
   const fatsecretCacheLookup =
     mappedFatsecretIds.length > 0
       ? await prisma.fatSecretFoodCache.findMany({
-        where: { id: { in: mappedFatsecretIds } },
+        where: { id: { in: mappedFatsecretIds.filter((id): id is string => id !== undefined) } },
         include: {
           servings: true,
           densityEstimates: true,
@@ -335,7 +335,7 @@ export async function computeTotals(
       }
 
       if ((!grams || grams <= 0) && parsed && isDirectWeightUnit) {
-        grams = convertUnit(parsed.qty * parsed.multiplier, parsed.unit, parsed.name);
+        grams = convertUnit(parsed.qty * parsed.multiplier, parsed.unit ?? 'g', parsed.name);
       }
 
       if (!grams || grams <= 0) {

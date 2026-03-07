@@ -64,6 +64,8 @@ const WEIGHTS = {
     // Semantic modifier matching (Jan 2026)
     MODIFIER_MATCH_BOOST: 0.20,       // Boost when candidate matches query's form modifiers (crushed, canned, dried, cube)
     WORD_COVERAGE_BONUS: 0.15,        // Bonus for candidates containing ALL query words in order
+    // Attribute contradiction penalty (Fix 49, Feb 2026)
+    ATTRIBUTE_CONTRADICTION_PENALTY: 0.35,  // Penalty when query says "green" but candidate says "red"
 };
 
 
@@ -72,12 +74,13 @@ const NUTRITION_CALORIE_VARIANCE_THRESHOLD = 0.30;  // 30% difference triggers p
 const NUTRITION_CONFIDENCE_GATE = 0.70;             // Only apply if AI confidence >= 0.7
 
 // Modifiers/descriptors we should ignore in matching
+// ⚠️ ONLY truly neutral words belong here. Form-changing tokens (powder, paste, seed, etc.)
+// MUST remain visible to scoring so they get penalized via CATEGORY_CHANGING_TOKENS when the
+// query doesn't ask for that form. See Fix 49 (Feb 2026).
 const IGNORE_TOKENS = new Set([
     'raw', 'fresh', 'organic', 'natural', 'whole',
     'all', 'purpose', 'pure', 'real', 'original',
-    // Form descriptors - shouldn't affect core food identity matching
-    // e.g., "powdered sugar substitute" should match sugar substitutes, not "Cream Substitute (Powdered)"
-    'powdered', 'granulated', 'liquid', 'dry', 'powder',
+    'liquid',  // "liquid" rarely changes food identity (liquid vs solid creamer ≈ same)
 ]);
 
 // Benign descriptor tokens - these add context but don't change food category
@@ -138,6 +141,90 @@ function normalizeCandidateNameForScoring(candidateName: string, query: string):
     if (querySpeaksCookingState(query)) return candidateName;  // Query specifies state — don't strip
     const tokens = tokenize(candidateName);
     const filtered = tokens.filter(t => !RAW_STATE_TOKENS.has(t));
+    return filtered.join(' ');
+}
+
+// ============================================================
+// Prep Modifier Stripping (Feb 2026)
+// ============================================================
+// Strips non-nutritional prep modifiers from the rerank query so scoring
+// operates on food identity only. "green peppers cut in strips" → "green peppers"
+//
+// IMPORTANT: Identity-changing modifiers (dried, ground, roasted, etc.) are
+// NEVER stripped — they change what the food IS, not how it's prepared.
+
+/** Prep words that describe physical cutting/shape — safe to strip */
+const PREP_CUTTING_WORDS = new Set([
+    'cut', 'diced', 'chopped', 'minced', 'sliced', 'julienned', 'cubed',
+    'halved', 'quartered', 'shredded', 'grated', 'mashed', 'torn',
+    'strips', 'chunks', 'pieces', 'rings', 'wedges',
+]);
+
+/** Prep actions that don't change nutritional identity */
+const PREP_ACTION_WORDS = new Set([
+    'peeled', 'seeded', 'cored', 'deveined', 'trimmed', 'pitted',
+    'husked', 'shelled', 'stemmed', 'deseeded', 'washed', 'rinsed',
+    'drained', 'squeezed', 'pressed',
+]);
+
+/** Size qualifiers used as prep instructions, not food size */
+const PREP_SIZE_QUALIFIERS = new Set([
+    'finely', 'roughly', 'coarsely', 'thinly', 'thickly',
+]);
+
+/** All prep words combined for fast lookup */
+const ALL_PREP_WORDS = new Set([
+    ...PREP_CUTTING_WORDS,
+    ...PREP_ACTION_WORDS,
+    ...PREP_SIZE_QUALIFIERS,
+]);
+
+/**
+ * Strip non-nutritional prep modifiers from a rerank query.
+ * This ensures scoring operates on food identity only.
+ *
+ * Safe to strip: "cut in strips", "finely diced", "peeled and deveined"
+ * NOT stripped:  "dried", "ground", "roasted", "frozen", "canned" (identity-changing)
+ *
+ * @example
+ *   stripPrepModifiers("green peppers cut in strips") → "green peppers"
+ *   stripPrepModifiers("finely diced onion")          → "onion"
+ *   stripPrepModifiers("ground cinnamon")             → "ground cinnamon"  // preserved
+ *   stripPrepModifiers("dried cranberries")           → "dried cranberries" // preserved
+ */
+export function stripPrepModifiers(query: string): string {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+    // Filter out prep words and connectors ("in", "and", "or") that only appear
+    // between prep phrases (we only strip connectors if they're adjacent to prep words)
+    const CONNECTORS = new Set(['in', 'and', 'or', 'into']);
+    const filtered: string[] = [];
+
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+
+        if (ALL_PREP_WORDS.has(word)) {
+            continue; // Strip prep word
+        }
+
+        // Strip connectors only if surrounded by prep context
+        // e.g., "cut in strips" → strip "in" because "cut" and "strips" are both prep
+        if (CONNECTORS.has(word)) {
+            const prevIsPrep = i > 0 && ALL_PREP_WORDS.has(words[i - 1]);
+            const nextIsPrep = i < words.length - 1 && ALL_PREP_WORDS.has(words[i + 1]);
+            if (prevIsPrep || nextIsPrep) {
+                continue; // Strip connector in prep context
+            }
+        }
+
+        filtered.push(word);
+    }
+
+    // Safety: never return empty — fall back to original query
+    if (filtered.length === 0) {
+        return query.toLowerCase().trim();
+    }
+
     return filtered.join(' ');
 }
 
@@ -210,6 +297,7 @@ const CATEGORY_CHANGING_TOKENS = new Set([
     // Prepared dishes (turn raw → complex dishes)
     'soup', 'stew', 'casserole', 'salad', 'sandwich', 'burger', 'wrap',
     'pizza', 'quesadilla', 'enchilada', 'burrito', 'taco',
+    'bowl', 'entree', 'platter',  // Fix 49: prepared-meal containers
     // Sauces / condiments (turn raw produce → processed product)
     'marinara', 'bisque', 'gravy', 'relish',
     // Beverages/processed (turn solid → liquid/processed)
@@ -219,6 +307,7 @@ const CATEGORY_CHANGING_TOKENS = new Set([
     'candy', 'candies', 'chocolate', 'bar', 'chip', 'chips', 'fries',
     'fritter', 'nugget', 'nuggets', 'stick', 'sticks',
     'patty', 'patties', 'mints',
+    'caramel', 'candied', 'glazed', 'coated', 'frosted',  // Fix 49: confection modifiers
     // Spreads/condiments
     'dip', 'spread', 'hummus', 'guacamole', 'sauce', 'dressing',
     'jam', 'jelly', 'preserves', 'butter',
@@ -231,6 +320,26 @@ const CATEGORY_CHANGING_TOKENS = new Set([
     'peel', 'rind',
     // Dairy products (when not queried)
     'ice cream', 'yogurt', 'pudding', 'custard', 'mousse',
+    // ============================================================
+    // Form-change tokens (Fix 49, Feb 2026)
+    // ============================================================
+    // These change the PHYSICAL FORM of a food, producing a fundamentally
+    // different product with different caloric density / nutritional profile.
+    //   "tomato" (18 kcal/100g)  ≠ "Tomato powder" (302 kcal/100g)
+    //   "fennel" (31 kcal/100g)  ≠ "Fennel Seed"   (345 kcal/100g)
+    // Only penalized when NOT present in the query — "garlic powder" query
+    // still matches "Garlic Powder" fine since "powder" is in the query.
+    'powder', 'powdered',
+    'flake', 'flakes',
+    'paste',
+    'puree',
+    'concentrate',
+    'extract',
+    'seed', 'seeds',
+    'oil',           // "olive" ≠ "olive oil"
+    'flour',         // "almond" ≠ "almond flour"
+    'granulated',    // "garlic" ≠ "granulated garlic"
+    'dry',           // "milk" ≠ "dry milk" (42 vs 355 kcal/100g)
 ]);
 
 /**
@@ -280,6 +389,73 @@ function getCategoryChangePenalty(query: string, candidateName: string): number 
     }
 
     return 0; // No category-changing tokens found
+}
+
+// ============================================================
+// Attribute Contradiction Penalty (Fix 49, Feb 2026)
+// ============================================================
+// When the query specifies a distinguishing attribute (e.g., a color like "green")
+// and the candidate specifies a DIFFERENT value for the same attribute (e.g., "red"),
+// apply a heavy penalty. This is stronger than a simple extra-token penalty because
+// it represents a direct contradiction, not just unrelated information.
+//
+// Example: "green peppers" → "ROASTED RED BELL PEPPER STRIPS (MEZZETTA)"
+//   Query has color "green", candidate has color "red" → contradiction penalty.
+//
+// This is general and scalable: covers all color-distinguished produce varieties
+// (red/green/yellow peppers, red/green/yellow onions, etc.) without per-food rules.
+
+const FOOD_COLORS = new Set([
+    'red', 'green', 'yellow', 'orange', 'white', 'purple',
+    'black', 'golden', 'brown', 'pink', 'blue',
+]);
+
+function getAttributeContradictionPenalty(query: string, candidateName: string): number {
+    const queryTokens = tokenize(query);
+    const candTokens = tokenize(candidateName);
+
+    const queryColors = queryTokens.filter(t => FOOD_COLORS.has(t));
+    const candColors = candTokens.filter(t => FOOD_COLORS.has(t));
+
+    // Only fire when query specifies exactly one color and candidate specifies
+    // a different one (with the query's color absent from the candidate).
+    // This avoids false positives for multi-color queries like "red and green peppers".
+    if (queryColors.length === 1 && candColors.length >= 1) {
+        const queryColor = queryColors[0];
+        const candHasQueryColor = candTokens.some(t => t === queryColor);
+        const candHasDifferentColor = candColors.some(c => c !== queryColor);
+
+        if (!candHasQueryColor && candHasDifferentColor) {
+            logger.debug('getAttributeContradictionPenalty.color_mismatch', {
+                query,
+                candidate: candidateName,
+                queryColor,
+                candColors,
+            });
+            return WEIGHTS.ATTRIBUTE_CONTRADICTION_PENALTY;
+        }
+    }
+
+    // Default-ripeness penalty: when query mentions "tomato" without specifying "green",
+    // penalize candidates with "green" since green tomatoes are unripe/specialty.
+    // Most recipe references to "tomatoes", "petite tomatoes", "cherry tomatoes" etc.
+    // mean red/ripe varieties. Use a softer penalty (50%) to prefer red without hard-blocking.
+    if (queryColors.length === 0) {
+        const queryLower = query.toLowerCase();
+        const candLower = candidateName.toLowerCase();
+        const ASSUMED_RED_FOODS = ['tomato', 'tomatoes'];
+        const isAssumedRed = ASSUMED_RED_FOODS.some(f => queryLower.includes(f));
+        if (isAssumedRed && /\bgreen\b/.test(candLower)) {
+            logger.debug('getAttributeContradictionPenalty.default_ripeness', {
+                query,
+                candidate: candidateName,
+                reason: 'green_tomato_without_explicit_green_query',
+            });
+            return WEIGHTS.ATTRIBUTE_CONTRADICTION_PENALTY * 0.5;
+        }
+    }
+
+    return 0;
 }
 
 // ============================================================
@@ -774,6 +950,12 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     const wordCoverageBonus = getWordCoverageBonus(query, candidate.name);
     score += wordCoverageBonus;
 
+    // 2h. Attribute contradiction penalty (Fix 49, Feb 2026)
+    // Heavy penalty when query specifies one color/variety and candidate has a different one.
+    // e.g., "green peppers" → "Red Bell Pepper" gets penalty (green ≠ red)
+    const contradictionPenalty = getAttributeContradictionPenalty(query, candidate.name);
+    score -= contradictionPenalty;
+
     // 3. Source tiebreaker — FDC wins for produce and unprocessed meat
     // When name-match scores are equal, prefer FDC (USDA) for its authoritative
     // nutritional accuracy on raw produce and meats (e.g. Grape Tomatoes: FDC=35 kcal/100g
@@ -1059,13 +1241,82 @@ export function simpleRerank(
         const bHasBrand = b.candidate.brandName ? 1 : 0;
         if (aHasBrand !== bHasBrand) return aHasBrand - bHasBrand;
 
+        // Tiebreaker 3: nutrition closeness — prefer candidate whose per-100g
+        // calories are closest to the AI estimate. This resolves cases like
+        // rice vinegar where all branded entries score identically on name
+        // matching, but seasoned (45 kcal/tbsp) vs plain (0 kcal/tbsp) differ hugely.
+        if (aiNutritionEstimate &&
+            aiNutritionEstimate.confidence >= NUTRITION_CONFIDENCE_GATE &&
+            aiNutritionEstimate.caloriesPer100g > 0) {
+            const aHasNutr = a.candidate.nutrition?.per100g && a.candidate.nutrition.kcal != null;
+            const bHasNutr = b.candidate.nutrition?.per100g && b.candidate.nutrition.kcal != null;
+            if (aHasNutr && bHasNutr) {
+                const aDev = Math.abs(a.candidate.nutrition!.kcal - aiNutritionEstimate.caloriesPer100g);
+                const bDev = Math.abs(b.candidate.nutrition!.kcal - aiNutritionEstimate.caloriesPer100g);
+                if (Math.abs(aDev - bDev) > 0.5) {  // Only break tie if difference is meaningful
+                    return aDev - bDev;  // Lower deviation wins (sorts first)
+                }
+            }
+        }
+
         // Final tiebreaker: sort by ID for absolute determinism
         return a.candidate.id.localeCompare(b.candidate.id);
     });
 
+    // Per-candidate score breakdown (Bug 3 fix, Feb 2026)
+    // Shows ALL score components for top candidates to aid debugging.
+    // Enable: set DEBUG_RERANK_SCORES=true or pass debug option.
+    if (process.env.DEBUG_RERANK_SCORES === 'true') {
+        console.log(`\n  ── Rerank Scores for "${query}" (${scored.length} candidates) ──`);
+        scored.slice(0, 10).forEach((s, i) => {
+            // Re-compute individual score components for the breakdown
+            const scoringName = normalizeCandidateNameForScoring(s.candidate.name, query);
+            const exact = isExactMatch(query, scoringName) ? WEIGHTS.EXACT_MATCH : 0;
+            const overlap = computeTokenOverlap(query, scoringName) * WEIGHTS.TOKEN_OVERLAP;
+            const catChange = getCategoryChangePenalty(query, s.candidate.name);
+            const contradiction = getAttributeContradictionPenalty(query, s.candidate.name);
+            const bloat = getTokenBloatPenalty(query, s.candidate.name);
+            const phrase = getExactPhraseBoost(query, s.candidate.name);
+            const modifier = getModifierMatchBoost(query, s.candidate.name);
+            const coverage = getWordCoverageBonus(query, s.candidate.name);
+            const apiScore = Math.min(s.candidate.score, 1) * WEIGHTS.ORIGINAL_SCORE;
+            const fdcBoost = (s.candidate.source === 'fdc' && isProduceOrMeat(query)) ? 0.03 : 0;
+            const brand = !s.candidate.brandName ? WEIGHTS.NO_BRAND : 0;
+            const nutrDev = (aiNutritionEstimate && s.candidate.nutrition?.per100g && s.candidate.nutrition.kcal != null)
+                ? Math.abs(s.candidate.nutrition.kcal - aiNutritionEstimate.caloriesPer100g).toFixed(0)
+                : '—';
+
+            console.log(
+                `  ${String(i + 1).padStart(3)}. ${s.candidate.name.slice(0, 45).padEnd(45)} ` +
+                `total=${s.score.toFixed(3)} base=${s.baseScore.toFixed(3)} ` +
+                `[exact=${exact.toFixed(2)} overlap=${overlap.toFixed(2)} api=${apiScore.toFixed(2)} ` +
+                `catΔ=-${catChange.toFixed(2)} contra=-${contradiction.toFixed(2)} bloat=-${bloat.toFixed(2)} ` +
+                `phrase=${phrase.toFixed(2)} mod=${modifier.toFixed(2)} cover=${coverage.toFixed(2)} ` +
+                `fdc=${fdcBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
+                `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
+                `src=${s.candidate.source}`
+            );
+        });
+        console.log();
+    }
+
     const top = scored[0];
     const second = scored[1];
-    const gap = top.score - second.score;
+
+    // Fix 50 (Feb 2026): Compute gap against the first DISTINCT runner-up.
+    // Duplicate API entries (e.g., two "Strawberries" from FatSecret with different IDs)
+    // create a near-zero gap that artificially suppresses confidence.
+    // We normalize names (lowercase, strip brand) to find the real competitor.
+    const topNameNorm = top.candidate.name.toLowerCase().replace(/\s*\(.*\)\s*$/, '').trim();
+    let effectiveRunnerUp = second;
+    for (let i = 1; i < scored.length; i++) {
+        const candNameNorm = scored[i].candidate.name.toLowerCase().replace(/\s*\(.*\)\s*$/, '').trim();
+        if (candNameNorm !== topNameNorm) {
+            effectiveRunnerUp = scored[i];
+            break;
+        }
+    }
+    const gap = top.score - effectiveRunnerUp.score;
 
     // Determine confidence based on score and gap
     let confidence = Math.min(0.5 + top.score * 0.5, 0.95);
@@ -1093,6 +1344,8 @@ export function simpleRerank(
         winnerNutritionReason: top.nutritionReason,
         runnerUp: second.candidate.name,
         runnerUpScore: second.score.toFixed(3),
+        effectiveRunnerUp: effectiveRunnerUp.candidate.name,
+        effectiveRunnerUpScore: effectiveRunnerUp.score.toFixed(3),
         gap: gap.toFixed(3),
         confidence: confidence.toFixed(2),
         reason,
@@ -1101,10 +1354,11 @@ export function simpleRerank(
     // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
     // Reject low-confidence winners to trigger fallback recovery.
     // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
-    // NOTE: Lowered from 0.80 to 0.74 to allow close semantic matches like:
+    // NOTE: Lowered from 0.80 → 0.74 → 0.70 to allow close semantic matches like:
     //   - "sugar free" ↔ "no sugar added" (cherry pie filling)
     //   - "plum tomatoes" ↔ "whole peeled plum tomatoes" (0.741 conf)
-    const MIN_RERANK_CONFIDENCE = 0.74;
+    //   - "green peppers cut in strips" ↔ "bell green raw peppers" (0.72 conf)
+    const MIN_RERANK_CONFIDENCE = 0.70;
 
     if (confidence < MIN_RERANK_CONFIDENCE) {
         logger.info('simple_rerank.winner_rejected', {

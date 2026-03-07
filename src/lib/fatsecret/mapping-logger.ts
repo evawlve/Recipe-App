@@ -7,8 +7,8 @@ export interface MappingAnalysisLog {
     rawIngredient: string;
     parsed: {
         amount?: number;
-        unit?: string;
-        ingredient?: string;
+        unit?: string | null;
+        ingredient?: string | null;
     };
 
     // Candidate analysis
@@ -79,6 +79,7 @@ export interface MappingAnalysisLog {
     aiCalls?: {
         normalize?: { called: boolean; skipped: boolean; reason?: string; };
         serving?: { called: boolean; type?: 'ambiguous' | 'produce' | 'weight'; };
+        nutrition?: { called: boolean; cached: boolean; success: boolean; };
     };
 }
 
@@ -246,7 +247,7 @@ function writeSimpleSummaryEntry(log: MappingAnalysisLog) {
     const brand = log.selectedCandidate.brandName ? ` (${log.selectedCandidate.brandName})` : '';
     const status = log.finalResult === 'success' ? '✓' : log.finalResult === 'failed' ? '✗' : '⏭';
 
-    // Flag suspicious mappings for easy spotting
+    // Flag suspicious/notable mappings for easy spotting
     const flags: string[] = [];
 
     // Check for potential issues
@@ -272,6 +273,11 @@ function writeSimpleSummaryEntry(log: MappingAnalysisLog) {
     // Low confidence
     if (log.selectedCandidate.confidence < 0.7) {
         flags.push('LOW_CONF');
+    }
+
+    // AI-generated nutrition (not from FatSecret/FDC)
+    if (log.selectedCandidate.selectionReason?.includes('ai_nutrition')) {
+        flags.push('AI_GENERATED');
     }
 
     // Build nutrition summary with BOTH per-serving AND calculated totals
@@ -318,6 +324,7 @@ function writeSimpleSummaryEntry(log: MappingAnalysisLog) {
         if (log.aiCalls.normalize?.called) parts.push('NORM');
         if (log.aiCalls.normalize?.skipped) parts.push('GATE');
         if (log.aiCalls.serving?.called) parts.push('SERV');
+        if (log.aiCalls.nutrition?.called) parts.push(log.aiCalls.nutrition.cached ? 'NUTR:CACHE' : 'NUTR');
         if (parts.length > 0) {
             aiTag = ` [AI:${parts.join('+')}]`;
         }

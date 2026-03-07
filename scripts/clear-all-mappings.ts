@@ -17,10 +17,12 @@ async function main() {
     // Get counts before
     const validatedBefore = await prisma.validatedMapping.count();
     const foodMapBefore = await prisma.ingredientFoodMap.count();
+    const normCacheBefore = await prisma.aiNormalizeCache.count();
 
     console.log('Before:');
     console.log(`  ValidatedMapping: ${validatedBefore}`);
     console.log(`  IngredientFoodMap: ${foodMapBefore}`);
+    console.log(`  AiNormalizeCache: ${normCacheBefore}`);
 
     // Clear ValidatedMapping
     const validatedResult = await prisma.validatedMapping.deleteMany({});
@@ -29,6 +31,10 @@ async function main() {
     // Clear IngredientFoodMap
     const foodMapResult = await prisma.ingredientFoodMap.deleteMany({});
     console.log(`✓ IngredientFoodMap: ${foodMapResult.count} deleted`);
+
+    // Clear AiNormalizeCache
+    const normCacheResult = await prisma.aiNormalizeCache.deleteMany({});
+    console.log(`✓ AiNormalizeCache: ${normCacheResult.count} deleted`);
 
     console.log('\n✅ All mapping caches cleared!');
     console.log('   Now run pilot import to test with fresh mappings.\n');
