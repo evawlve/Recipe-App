@@ -30,6 +30,14 @@ batch-import-results-summary.md
 api-test.txt
 connect-db.ps1
 *-analysis.md
+*-analysis.json
+test-results*.json
+temp-scripts.json
+data/fatsecret/*.log
+data/fatsecret/debug-*.json
+data/fatsecret/cache-seed.json
+reports/eval-*.json
+.claude/settings.local.json
 
 # Runtime data
 pids
