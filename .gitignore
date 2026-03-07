@@ -22,6 +22,14 @@ build/
 
 # Logs
 logs/
+*.log
+
+# Development artifacts
+batch-import-log-*.json
+batch-import-results-summary.md
+api-test.txt
+connect-db.ps1
+*-analysis.md
 
 # Runtime data
 pids
