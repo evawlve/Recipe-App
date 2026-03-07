@@ -212,8 +212,14 @@ CREATE TABLE "FdcServingCache" (
     "fdcId" INTEGER NOT NULL,
     "description" TEXT NOT NULL,
     "grams" DOUBLE PRECISION NOT NULL,
+    "volumeMl" DOUBLE PRECISION,
+    "derivedViaDensity" BOOLEAN NOT NULL DEFAULT false,
+    "densityGml" DOUBLE PRECISION,
+    "prepModifier" TEXT,
     "source" TEXT NOT NULL DEFAULT 'fdc',
     "isAiEstimated" BOOLEAN NOT NULL DEFAULT false,
+    "confidence" DOUBLE PRECISION,
+    "note" TEXT,
 
     CONSTRAINT "FdcServingCache_pkey" PRIMARY KEY ("id")
 );
@@ -333,6 +339,7 @@ CREATE TABLE "IngredientFoodMap" (
     "fatsecretGrams" DOUBLE PRECISION,
     "fatsecretConfidence" DOUBLE PRECISION,
     "fatsecretSource" TEXT,
+    "aiGeneratedFoodId" TEXT,
     "pendingVolume" BOOLEAN NOT NULL DEFAULT false,
     "mappedBy" TEXT NOT NULL,
     "confidence" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
@@ -528,8 +535,10 @@ CREATE TABLE "MappingValidationFailure" (
 
 -- CreateTable
 CREATE TABLE "AiNormalizeCache" (
-    "rawLine" TEXT NOT NULL,
+    "normalizedKey" TEXT NOT NULL,
+    "rawLine" TEXT,
     "normalizedName" TEXT NOT NULL,
+    "canonicalBase" TEXT,
     "synonyms" JSONB NOT NULL DEFAULT '[]',
     "prepPhrases" JSONB NOT NULL DEFAULT '[]',
     "sizePhrases" JSONB NOT NULL DEFAULT '[]',
@@ -543,7 +552,7 @@ CREATE TABLE "AiNormalizeCache" (
     "lastUsedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "useCount" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "AiNormalizeCache_pkey" PRIMARY KEY ("rawLine")
+    CONSTRAINT "AiNormalizeCache_pkey" PRIMARY KEY ("normalizedKey")
 );
 
 -- CreateTable
@@ -578,6 +587,49 @@ CREATE TABLE "LearnedSynonym" (
     "lastUsedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "LearnedSynonym_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AiGeneratedFood" (
+    "id" TEXT NOT NULL,
+    "ingredientName" TEXT NOT NULL,
+    "rawLine" TEXT,
+    "displayName" TEXT NOT NULL,
+    "caloriesPer100g" DOUBLE PRECISION NOT NULL,
+    "proteinPer100g" DOUBLE PRECISION NOT NULL,
+    "carbsPer100g" DOUBLE PRECISION NOT NULL,
+    "fatPer100g" DOUBLE PRECISION NOT NULL,
+    "fiberPer100g" DOUBLE PRECISION DEFAULT 0,
+    "sugarPer100g" DOUBLE PRECISION DEFAULT 0,
+    "sodiumMgPer100g" DOUBLE PRECISION DEFAULT 0,
+    "saturatedFatPer100g" DOUBLE PRECISION DEFAULT 0,
+    "cholesterolMgPer100g" DOUBLE PRECISION DEFAULT 0,
+    "aiConfidence" DOUBLE PRECISION NOT NULL,
+    "aiModel" TEXT NOT NULL,
+    "aiNotes" TEXT,
+    "baseFoodName" TEXT,
+    "baseFoodSource" TEXT,
+    "reviewStatus" TEXT NOT NULL DEFAULT 'pending',
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "useCount" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "AiGeneratedFood_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AiGeneratedServing" (
+    "id" TEXT NOT NULL,
+    "foodId" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "grams" DOUBLE PRECISION NOT NULL,
+    "volumeMl" DOUBLE PRECISION,
+    "aiConfidence" DOUBLE PRECISION NOT NULL,
+    "aiNotes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AiGeneratedServing_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -665,6 +717,12 @@ CREATE INDEX "FdcFoodCache_expiresAt_idx" ON "FdcFoodCache"("expiresAt");
 CREATE INDEX "FdcServingCache_fdcId_idx" ON "FdcServingCache"("fdcId");
 
 -- CreateIndex
+CREATE INDEX "FdcServingCache_prepModifier_idx" ON "FdcServingCache"("prepModifier");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FdcServingCache_fdcId_description_key" ON "FdcServingCache"("fdcId", "description");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "FatSecretFoodCache_legacyFoodId_key" ON "FatSecretFoodCache"("legacyFoodId");
 
 -- CreateIndex
@@ -711,6 +769,9 @@ CREATE INDEX "IngredientFoodMap_foodId_idx" ON "IngredientFoodMap"("foodId");
 
 -- CreateIndex
 CREATE INDEX "IngredientFoodMap_fatsecretFoodId_idx" ON "IngredientFoodMap"("fatsecretFoodId");
+
+-- CreateIndex
+CREATE INDEX "IngredientFoodMap_aiGeneratedFoodId_idx" ON "IngredientFoodMap"("aiGeneratedFoodId");
 
 -- CreateIndex
 CREATE INDEX "FoodAlias_foodId_idx" ON "FoodAlias"("foodId");
@@ -841,6 +902,24 @@ CREATE INDEX "LearnedSynonym_successCount_idx" ON "LearnedSynonym"("successCount
 -- CreateIndex
 CREATE UNIQUE INDEX "LearnedSynonym_sourceTerm_targetTerm_key" ON "LearnedSynonym"("sourceTerm", "targetTerm");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "AiGeneratedFood_ingredientName_key" ON "AiGeneratedFood"("ingredientName");
+
+-- CreateIndex
+CREATE INDEX "AiGeneratedFood_ingredientName_idx" ON "AiGeneratedFood"("ingredientName");
+
+-- CreateIndex
+CREATE INDEX "AiGeneratedFood_reviewStatus_idx" ON "AiGeneratedFood"("reviewStatus");
+
+-- CreateIndex
+CREATE INDEX "AiGeneratedFood_createdAt_idx" ON "AiGeneratedFood"("createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "AiGeneratedServing_foodId_idx" ON "AiGeneratedServing"("foodId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AiGeneratedServing_foodId_label_key" ON "AiGeneratedServing"("foodId", "label");
+
 -- AddForeignKey
 ALTER TABLE "Recipe" ADD CONSTRAINT "Recipe_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -929,6 +1008,9 @@ ALTER TABLE "IngredientFoodMap" ADD CONSTRAINT "IngredientFoodMap_foodId_fkey" F
 ALTER TABLE "IngredientFoodMap" ADD CONSTRAINT "IngredientFoodMap_ingredientId_fkey" FOREIGN KEY ("ingredientId") REFERENCES "Ingredient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "IngredientFoodMap" ADD CONSTRAINT "IngredientFoodMap_aiGeneratedFoodId_fkey" FOREIGN KEY ("aiGeneratedFoodId") REFERENCES "AiGeneratedFood"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "FoodAlias" ADD CONSTRAINT "FoodAlias_foodId_fkey" FOREIGN KEY ("foodId") REFERENCES "Food"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -960,4 +1042,7 @@ ALTER TABLE "RecipeSimilar" ADD CONSTRAINT "RecipeSimilar_similarId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "IngredientCleanupApplication" ADD CONSTRAINT "IngredientCleanupApplication_patternId_fkey" FOREIGN KEY ("patternId") REFERENCES "IngredientCleanupPattern"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AiGeneratedServing" ADD CONSTRAINT "AiGeneratedServing_foodId_fkey" FOREIGN KEY ("foodId") REFERENCES "AiGeneratedFood"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

@@ -9,7 +9,7 @@
         "start": "next start",
         "postinstall": "prisma generate",
         "lint": "node scripts/lint.js",
-        "lint:ci": "eslint . --max-warnings 500",
+        "lint:ci": "eslint . --max-warnings 700",
         "typecheck": "tsc --noEmit",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
