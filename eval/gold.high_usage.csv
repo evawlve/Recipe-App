@@ -1,0 +1,101 @@
+id,raw_line,expected_food_name,expected_grams,expected_source,expected_source_tier,form,unit_type,cuisine_tag,difficulty,expected_food_id_hint,expected_unit_hint,notes
+1,100 g almond flour,almond flour,100,curated,override,raw,weight,global,easy,almond.*flour,g,High-usage cache seed
+2,1 cup 2% milk,"milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",244,curated,override,raw,volume,global,easy,milk.*2%,cup,High-usage cache seed
+3,"1 cup yellow bell pepper, chopped","peppers, sweet, yellow, raw, chopped",160,curated,override,raw,volume,global,easy,pepper.*yellow,cup,High-usage cache seed
+4,1 tbsp olive oil,"oil, olive, salad or cooking",13.5,curated,override,raw,volume,global,easy,olive.*oil,tbsp,duplicate cleanup - olive oil
+5,1 tbsp canola oil,"oil, canola",13.6,curated,override,raw,volume,global,easy,canola.*oil,tbsp,High-usage cache seed
+6,1 tbsp vegetable oil,"oil, vegetable, soybean, refined",13.6,curated,override,raw,volume,global,easy,vegetable.*soybean,tbsp,High-usage cache seed
+7,1 cup coconut milk,"milk, coconut, fluid (liquid expressed from grated meat and water)",240,curated,override,raw,volume,global,easy,coconut.*milk,cup,High-usage cache seed
+8,28 g sunflower seed kernels,"seeds, sunflower seed kernels, dried",28,curated,override,raw,weight,global,easy,sunflower.*seed,g,duplicate cleanup - sunflower
+9,1 large egg yolk,"Egg, yolk",17,curated,override,raw,piece,global,easy,egg.*yolk,piece,High-usage cache seed
+10,1 large egg white,Egg White,33,curated,override,raw,piece,global,easy,egg.*white,piece,High-usage cache seed
+11,1 large egg,"Eggs, Large, Raw",50,curated,override,raw,piece,global,easy,egg.*large,piece,High-usage cache seed
+12,1 cup whole milk,"Milk, Whole",244,curated,override,raw,volume,global,easy,milk.*whole,cup,High-usage cache seed
+13,2 tbsp unsalted butter,Butter,28.4,curated,override,raw,volume,global,easy,butter,tbsp,duplicate cleanup - butter
+14,"1 chicken breast, raw, skinless",Chicken Breast,150,curated,override,raw,weight,global,easy,chicken.*breast,g,High-usage cache seed
+15,"1 chicken thigh, raw",Chicken Thigh,90,curated,override,raw,weight,global,easy,chicken.*thigh,g,High-usage cache seed
+16,"1 chicken drumstick, raw","Chicken, drumstick",75,curated,override,raw,weight,global,easy,chicken.*drumstick,g,High-usage cache seed
+17,"4 oz salmon fillet, cooked",Salmon,113,curated,override,cooked,weight,global,easy,salmon,g,High-usage cache seed
+18,"1 cup black beans, cooked","Black Beans, Cooked",172,curated,override,cooked,volume,global,easy,black.*bean,cup,High-usage cache seed
+19,"1 cup lentils, cooked","Lentils, Cooked",198,curated,override,cooked,volume,global,easy,lentil.*cooked,cup,High-usage cache seed
+20,3 cloves garlic,"garlic, raw",9,curated,override,raw,piece,global,easy,garlic,clove,High-usage cache seed
+21,1 medium yellow onion,"onions, raw",150,curated,override,raw,weight,global,easy,onion.*raw,g,High-usage cache seed
+22,"1 cup roma tomato, diced","tomatoes, red, ripe, raw",180,curated,override,raw,volume,global,easy,tomato.*raw,cup,High-usage cache seed
+23,1 cup canned diced tomatoes,"Tomatoes, canned, diced",240,curated,override,prepared,volume,global,easy,tomato.*canned,cup,High-usage cache seed
+24,"1 tbsp fresh ginger, minced",Ginger,6,curated,override,raw,weight,global,easy,ginger,g,High-usage cache seed
+25,2 medium scallions,Scallion,30,curated,override,raw,piece,global,easy,scallion,piece,High-usage cache seed
+26,"2 cups spinach, raw","Spinach, Raw",60,curated,override,raw,volume,global,easy,spinach,cup,High-usage cache seed
+27,1 medium avocado,Avocado,150,curated,override,raw,weight,global,easy,avocado,g,High-usage cache seed
+28,1 medium banana,Banana,118,curated,override,raw,weight,global,easy,banana,g,High-usage cache seed
+29,1 cup broccoli florets,"Broccoli, Raw",91,curated,override,raw,volume,global,easy,broccoli,cup,High-usage cache seed
+30,1 cup cooked white rice,"Rice, white, cooked",186,curated,override,cooked,volume,global,easy,rice.*white,cup,High-usage cache seed
+31,1 cup cooked quinoa,"Quinoa, cooked",185,curated,override,cooked,volume,global,easy,quinoa,cup,High-usage cache seed
+32,1 cup dry rolled oats,"Oats, Dry",80,curated,override,raw,volume,global,easy,oats,cup,High-usage cache seed
+33,1 cup all-purpose flour,All-Purpose Flour,120,curated,override,raw,volume,global,easy,all.*purpose.*flour,cup,High-usage cache seed
+34,2 tbsp white miso,Miso,34,curated,override,raw,volume,global,easy,miso,tbsp,High-usage cache seed
+35,2 tbsp soy sauce,Soy Sauce,30,curated,override,raw,volume,global,easy,soy.*sauce,tbsp,High-usage cache seed
+36,1 tbsp fish sauce,Fish Sauce,18,curated,override,raw,volume,global,easy,fish.*sauce,tbsp,High-usage cache seed
+37,2 tbsp mirin,Mirin,30,curated,override,raw,volume,global,easy,mirin,tbsp,High-usage cache seed
+38,2 tbsp rice vinegar,Rice Vinegar,30,curated,override,raw,volume,global,easy,rice.*vinegar,tbsp,High-usage cache seed
+39,2 tbsp gochujang,Gochujang,36,curated,override,raw,volume,global,easy,gochujang,tbsp,High-usage cache seed
+40,1 tbsp gochugaru,Gochugaru,5,curated,override,raw,weight,global,easy,gochugaru,g,High-usage cache seed
+41,1 tbsp ghee,Ghee,14,curated,override,raw,volume,global,easy,ghee,tbsp,High-usage cache seed
+42,2 tbsp peanut butter,Peanut Butter,32,curated,override,raw,volume,global,easy,peanut.*butter,tbsp,High-usage cache seed
+43,2 tbsp almond butter,Almond Butter,32,curated,override,raw,volume,global,easy,almond.*butter,tbsp,High-usage cache seed
+44,2 tbsp honey,Honey,42,curated,override,raw,volume,global,easy,honey,tbsp,High-usage cache seed
+45,2 slices sandwich bread,Bread,56,curated,override,raw,piece,global,easy,bread,slice,High-usage cache seed
+46,2 oz dry pasta,Pasta,56,curated,override,raw,weight,global,easy,pasta,g,duplicate cleanup - pasta
+47,28 g raw almonds,Almonds,28,curated,override,raw,weight,global,easy,almond$,g,High-usage cache seed
+48,4 oz ground beef 90/10,Ground Beef 90/10,113,curated,override,raw,weight,global,easy,ground.*beef,g,High-usage cache seed
+49,1 tsp table salt,Salt,6,curated,override,raw,volume,global,easy,salt,tsp,High-usage cache seed
+50,1 tsp black pepper,Black Pepper,2,curated,override,raw,volume,global,easy,pepper,tsp,High-usage cache seed
+51,"1 cup greek yogurt, nonfat",Greek Yogurt 0%,245,curated,override,raw,volume,global,easy,greek.*yogurt,cup,High-usage cache seed
+52,1 sheet nori,Nori,3,curated,override,raw,piece,global,easy,nori,sheet,High-usage cache seed
+53,2 stalks celery,Celery,80,curated,override,raw,piece,global,easy,celery,stalk,High-usage cache seed
+54,"1 cup strawberries, halved","Strawberries, raw",152,curated,override,raw,volume,global,easy,strawber,cup,coverage gap - berries
+55,1 cup blueberries,"Blueberries, raw",148,curated,override,raw,volume,global,easy,blueber,cup,High-usage cache seed
+56,1 cup raspberries,"Raspberries, raw",123,curated,override,raw,volume,global,easy,raspber,cup,High-usage cache seed
+57,1 cup blackberries,"Blackberries, raw",144,curated,override,raw,volume,global,easy,blackber,cup,High-usage cache seed
+58,1 medium apple,"Apples, raw, with skin",182,curated,override,raw,weight,global,easy,apple,g,High-usage cache seed
+59,1 medium orange,"Oranges, raw",140,curated,override,raw,weight,global,easy,orange,g,High-usage cache seed
+60,1 medium lemon,"Lemons, raw",58,curated,override,raw,weight,global,easy,lemon,g,High-usage cache seed
+61,1 medium lime,"Limes, raw",67,curated,override,raw,weight,global,easy,lime,g,High-usage cache seed
+62,1 cup pineapple chunks,"Pineapple, raw",165,curated,override,raw,volume,global,easy,pineapple,cup,High-usage cache seed
+63,"1 cup mango, diced","Mango, raw",165,curated,override,raw,volume,global,easy,mango,cup,High-usage cache seed
+64,1 cup watermelon cubes,"Watermelon, raw",154,curated,override,raw,volume,global,easy,watermelon,cup,High-usage cache seed
+65,1 cup cucumber slices,"Cucumbers, raw",104,curated,override,raw,volume,global,easy,cucumber,cup,High-usage cache seed
+66,1 cup zucchini slices,"Zucchini, raw",124,curated,override,raw,volume,global,easy,zucchini,cup,High-usage cache seed
+67,"1 cup carrots, sliced","Carrots, raw",128,curated,override,raw,volume,global,easy,carrot,cup,High-usage cache seed
+68,"1 cup kale, chopped","Kale, raw",67,curated,override,raw,volume,global,easy,kale,cup,High-usage cache seed
+69,1 cup arugula,"Arugula, raw",20,curated,override,raw,volume,global,easy,arugula,cup,High-usage cache seed
+70,1 cup romaine lettuce,"Lettuce, romaine, raw",47,curated,override,raw,volume,global,easy,romaine,cup,High-usage cache seed
+71,1 cup iceberg lettuce,"Lettuce, iceberg (includes crisphead types), raw",72,curated,override,raw,volume,global,easy,iceberg,cup,High-usage cache seed
+72,1 cup shredded cabbage,"Cabbage, green, raw",89,curated,override,raw,volume,global,easy,cabbage,cup,High-usage cache seed
+73,1 cup cauliflower florets,"Cauliflower, raw",107,curated,override,raw,volume,global,easy,cauliflower,cup,High-usage cache seed
+74,"1 cup brussels sprouts, halved","Brussels sprouts, raw",88,curated,override,raw,volume,global,easy,brussels,cup,High-usage cache seed
+75,"1 cup mushrooms, sliced","Mushrooms, white, raw",72,curated,override,raw,volume,global,easy,mushroom,cup,High-usage cache seed
+76,"1 cup red bell pepper, diced","Peppers, sweet, red, raw",149,curated,override,raw,volume,global,easy,pepper.*red,cup,High-usage cache seed
+77,"1 cup green beans, trimmed","Beans, snap, green, raw",125,curated,override,raw,volume,global,easy,green bean,cup,High-usage cache seed
+78,1 cup sweet potato mash,"Sweet potato, cooked, baked in skin, without salt",200,curated,override,cooked,volume,global,easy,sweet.*potato,cup,High-usage cache seed
+79,"1 cup russet potato, diced","Potatoes, russet, flesh and skin, raw",150,curated,override,raw,volume,global,easy,potato,cup,High-usage cache seed
+80,1 cup butternut squash cubes,"Squash, winter, butternut, raw",140,curated,override,raw,volume,global,easy,butternut,cup,High-usage cache seed
+81,1 cup canned pumpkin,"Pumpkin, canned, without salt",245,curated,override,raw,volume,global,easy,pumpkin,cup,High-usage cache seed
+82,"1 cup chickpeas, cooked","Chickpeas (garbanzo beans), cooked",164,curated,override,cooked,volume,global,easy,chickpea,cup,High-usage cache seed
+83,"1 cup kidney beans, cooked","Kidney beans, red, mature seeds, cooked",177,curated,override,cooked,volume,global,easy,kidney,cup,High-usage cache seed
+84,"1 cup pinto beans, cooked","Beans, pinto, cooked",171,curated,override,cooked,volume,global,easy,pinto,cup,High-usage cache seed
+85,"1 cup brown rice, cooked","Rice, brown, long-grain, cooked",195,curated,override,cooked,volume,global,easy,rice.*brown,cup,High-usage cache seed
+86,"1 cup barley, cooked","Barley, pearled, cooked",157,curated,override,cooked,volume,global,easy,barley,cup,High-usage cache seed
+87,"1 cup farro, cooked","Farro, cooked",170,curated,override,cooked,volume,global,easy,farro,cup,High-usage cache seed
+88,"1 cup bulgur, cooked","Bulgur, cooked",151,curated,override,cooked,volume,global,easy,bulgur,cup,High-usage cache seed
+89,"1 cup couscous, cooked","Couscous, cooked",157,curated,override,cooked,volume,global,easy,couscous,cup,High-usage cache seed
+90,"1 cup polenta, cooked","Cornmeal mush (polenta), cooked",240,curated,override,cooked,volume,global,easy,polenta,cup,High-usage cache seed
+91,"1 cup cornmeal, dry","Cornmeal, yellow",120,curated,override,raw,volume,global,easy,cornmeal,cup,High-usage cache seed
+92,"1 cup couscous, whole wheat cooked","Couscous, whole wheat, cooked",170,curated,override,cooked,volume,global,easy,couscous.*whole,cup,High-usage cache seed
+93,1 large flour tortilla,"Tortillas, flour, enriched",49,curated,override,raw,piece,global,easy,tortilla.*flour,piece,High-usage cache seed
+94,1 large corn tortilla,"Tortillas, ready-to-bake/fry, corn",24,curated,override,raw,piece,global,easy,tortilla.*corn,piece,High-usage cache seed
+95,1 whole pita bread,"Pita bread, white",60,curated,override,raw,piece,global,easy,pita,piece,High-usage cache seed
+96,1 slice sourdough bread,"Bread, sourdough",56,curated,override,raw,piece,global,easy,sourdough,slice,High-usage cache seed
+97,1 plain bagel,"Bagels, plain",105,curated,override,raw,piece,global,easy,bagel,piece,High-usage cache seed
+98,1 cup tomato sauce,"Tomato sauce, canned",245,curated,override,raw,volume,global,easy,tomato.*sauce,cup,High-usage cache seed
+99,2 tbsp ketchup,Ketchup,34,curated,override,raw,volume,global,easy,ketchup,tbsp,High-usage cache seed
+100,1 tbsp yellow mustard,"Mustard, prepared, yellow",16,curated,override,raw,volume,global,easy,mustard,tbsp,High-usage cache seed

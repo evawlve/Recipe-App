@@ -1,0 +1,36 @@
+ac3e36bd7c03108774f11df190c1c87b
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.prisma = void 0;
+const client_1 = require("@prisma/client");
+const prismaSentry_1 = require("@/lib/obs/prismaSentry");
+const globalForPrisma = global;
+exports.prisma = globalForPrisma.prisma ||
+    new client_1.PrismaClient({
+        log: ['query', 'error', 'warn'],
+        datasources: {
+            db: {
+                // Prefer direct URL (unpooled) when available to avoid pgBouncer constraints in dev
+                url: process.env.DIRECT_URL || process.env.DATABASE_URL,
+            },
+        },
+    });
+// Attach Sentry middleware for observability (guard prevents double installation)
+if (!globalForPrisma.prisma) {
+    (0, prismaSentry_1.attachPrismaSentry)(exports.prisma);
+}
+if (process.env.NODE_ENV !== 'production')
+    globalForPrisma.prisma = exports.prisma;
+// Graceful shutdown
+process.on('beforeExit', async () => {
+    await exports.prisma.$disconnect();
+});
+process.on('SIGINT', async () => {
+    await exports.prisma.$disconnect();
+    process.exit(0);
+});
+process.on('SIGTERM', async () => {
+    await exports.prisma.$disconnect();
+    process.exit(0);
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXGRiLnRzIiwibWFwcGluZ3MiOiI7OztBQUFBLDJDQUE4QztBQUM5Qyx5REFBNEQ7QUFFNUQsTUFBTSxlQUFlLEdBQUcsTUFBNkMsQ0FBQztBQUV6RCxRQUFBLE1BQU0sR0FDakIsZUFBZSxDQUFDLE1BQU07SUFDdEIsSUFBSSxxQkFBWSxDQUFDO1FBQ2YsR0FBRyxFQUFFLENBQUMsT0FBTyxFQUFFLE9BQU8sRUFBRSxNQUFNLENBQUM7UUFDL0IsV0FBVyxFQUFFO1lBQ1gsRUFBRSxFQUFFO2dCQUNGLG9GQUFvRjtnQkFDcEYsR0FBRyxFQUFFLE9BQU8sQ0FBQyxHQUFHLENBQUMsVUFBVSxJQUFJLE9BQU8sQ0FBQyxHQUFHLENBQUMsWUFBWTthQUN4RDtTQUNGO0tBQ0YsQ0FBQyxDQUFDO0FBRUwsa0ZBQWtGO0FBQ2xGLElBQUksQ0FBQyxlQUFlLENBQUMsTUFBTSxFQUFFLENBQUM7SUFDNUIsSUFBQSxpQ0FBa0IsRUFBQyxjQUFNLENBQUMsQ0FBQztBQUM3QixDQUFDO0FBRUQsSUFBSSxPQUFPLENBQUMsR0FBRyxDQUFDLFFBQVEsS0FBSyxZQUFZO0lBQUUsZUFBZSxDQUFDLE1BQU0sR0FBRyxjQUFNLENBQUM7QUFFM0Usb0JBQW9CO0FBQ3BCLE9BQU8sQ0FBQyxFQUFFLENBQUMsWUFBWSxFQUFFLEtBQUssSUFBSSxFQUFFO0lBQ2xDLE1BQU0sY0FBTSxDQUFDLFdBQVcsRUFBRSxDQUFDO0FBQzdCLENBQUMsQ0FBQyxDQUFDO0FBRUgsT0FBTyxDQUFDLEVBQUUsQ0FBQyxRQUFRLEVBQUUsS0FBSyxJQUFJLEVBQUU7SUFDOUIsTUFBTSxjQUFNLENBQUMsV0FBVyxFQUFFLENBQUM7SUFDM0IsT0FBTyxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsQ0FBQztBQUNsQixDQUFDLENBQUMsQ0FBQztBQUVILE9BQU8sQ0FBQyxFQUFFLENBQUMsU0FBUyxFQUFFLEtBQUssSUFBSSxFQUFFO0lBQy9CLE1BQU0sY0FBTSxDQUFDLFdBQVcsRUFBRSxDQUFDO0lBQzNCLE9BQU8sQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUM7QUFDbEIsQ0FBQyxDQUFDLENBQUMiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXGRiLnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IFByaXNtYUNsaWVudCB9IGZyb20gXCJAcHJpc21hL2NsaWVudFwiO1xyXG5pbXBvcnQgeyBhdHRhY2hQcmlzbWFTZW50cnkgfSBmcm9tIFwiQC9saWIvb2JzL3ByaXNtYVNlbnRyeVwiO1xyXG5cclxuY29uc3QgZ2xvYmFsRm9yUHJpc21hID0gZ2xvYmFsIGFzIHVua25vd24gYXMgeyBwcmlzbWE6IFByaXNtYUNsaWVudCB9O1xyXG5cclxuZXhwb3J0IGNvbnN0IHByaXNtYSA9XG4gIGdsb2JhbEZvclByaXNtYS5wcmlzbWEgfHxcbiAgbmV3IFByaXNtYUNsaWVudCh7XG4gICAgbG9nOiBbJ3F1ZXJ5JywgJ2Vycm9yJywgJ3dhcm4nXSxcbiAgICBkYXRhc291cmNlczoge1xuICAgICAgZGI6IHtcbiAgICAgICAgLy8gUHJlZmVyIGRpcmVjdCBVUkwgKHVucG9vbGVkKSB3aGVuIGF2YWlsYWJsZSB0byBhdm9pZCBwZ0JvdW5jZXIgY29uc3RyYWludHMgaW4gZGV2XG4gICAgICAgIHVybDogcHJvY2Vzcy5lbnYuRElSRUNUX1VSTCB8fCBwcm9jZXNzLmVudi5EQVRBQkFTRV9VUkwsXG4gICAgICB9LFxuICAgIH0sXG4gIH0pO1xuXHJcbi8vIEF0dGFjaCBTZW50cnkgbWlkZGxld2FyZSBmb3Igb2JzZXJ2YWJpbGl0eSAoZ3VhcmQgcHJldmVudHMgZG91YmxlIGluc3RhbGxhdGlvbilcclxuaWYgKCFnbG9iYWxGb3JQcmlzbWEucHJpc21hKSB7XHJcbiAgYXR0YWNoUHJpc21hU2VudHJ5KHByaXNtYSk7XHJcbn1cclxuXHJcbmlmIChwcm9jZXNzLmVudi5OT0RFX0VOViAhPT0gJ3Byb2R1Y3Rpb24nKSBnbG9iYWxGb3JQcmlzbWEucHJpc21hID0gcHJpc21hO1xyXG5cclxuLy8gR3JhY2VmdWwgc2h1dGRvd25cclxucHJvY2Vzcy5vbignYmVmb3JlRXhpdCcsIGFzeW5jICgpID0+IHtcclxuICBhd2FpdCBwcmlzbWEuJGRpc2Nvbm5lY3QoKTtcclxufSk7XHJcblxyXG5wcm9jZXNzLm9uKCdTSUdJTlQnLCBhc3luYyAoKSA9PiB7XHJcbiAgYXdhaXQgcHJpc21hLiRkaXNjb25uZWN0KCk7XHJcbiAgcHJvY2Vzcy5leGl0KDApO1xyXG59KTtcclxuXHJcbnByb2Nlc3Mub24oJ1NJR1RFUk0nLCBhc3luYyAoKSA9PiB7XHJcbiAgYXdhaXQgcHJpc21hLiRkaXNjb25uZWN0KCk7XHJcbiAgcHJvY2Vzcy5leGl0KDApO1xyXG59KTtcclxuIl0sInZlcnNpb24iOjN9

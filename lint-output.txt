@@ -1,0 +1,747 @@
+﻿
+C:\Dev\Recipe App\scripts\analyze-failures.ts
+   5:8   warning  'path' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  57:22  warning  'e' is defined but never used                                           @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\backfill-aliases.ts
+  26:9   warning  'skipped' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  44:18  warning  'e' is defined but never used                                                       @typescript-eslint/no-unused-vars
+  45:13  warning  'errors' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\backfill-recipe-features.ts
+  12:3  warning  Unused eslint-disable directive (no problems were reported from 'no-constant-condition')
+
+C:\Dev\Recipe App\scripts\batch-recipe-import.ts
+  8:10  warning  'autoMapIngredients' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\check-all-mappings.ts
+  34:17  warning  'ingredientId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\check-cooked-foods.ts
+  4:7  warning  'expectedFoods' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\check-env-example.js
+  14:7  warning  'dotenvPattern' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\debug-ai-baseline.ts
+   2:10  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  56:18  warning  'e' is defined but never used                                             @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\debug-automap-cases.ts
+  6:10  warning  'parseIngredientLine' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\debug-volume-resolution.ts
+  83:15  warning  'unitLower' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\fatsecret-cache-backfill-servings.ts
+    9:10  warning  'requestAiServing' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+   12:3   warning  'FATSECRET_CACHE_AI_MAX_DENSITY' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   13:3   warning  'FATSECRET_CACHE_AI_MIN_DENSITY' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   80:7   warning  'COUNT_UNITS' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  141:14  warning  'error' is defined but never used                                                                 @typescript-eslint/no-unused-vars
+  166:10  warning  'convertVolumeToMl' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  174:10  warning  'buildServingId' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\fatsecret-eval-debug.ts
+    6:10  warning  'mapIngredientWithFatsecret' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  144:22  warning  'err' is defined but never used                                                               @typescript-eslint/no-unused-vars
+  150:18  warning  'err' is defined but never used                                                               @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\fatsecret-problem-debug.ts
+   94:20  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  100:16  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\fix-egg-units.ts
+  58:7  warning  'marked' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\force-map-recipe.ts
+  6:10  warning  'logger' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\import-missing-foods.ts
+    9:25  warning  'macroFingerprintSaturation' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  133:9   warning  'idName' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\seed-portion-overrides.ts
+  385:7  warning  'skipped' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\show-recipe-mappings.ts
+  38:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\show-unmapped-ingredients.ts
+  37:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\test-fdc-caching.ts
+  52:11  warning  'result2' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\test-global-mapping.ts
+  11:11  warning  'testIngredientName' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\test-phase2-integration.ts
+  39:15  warning  'mappedCount' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\scripts\usda-saturate.ts
+   6:25  warning  'macroFingerprintSaturation' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  92:9   warning  'idName' is assigned a value but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\account\delete\route.ts
+   28:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   57:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   99:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  120:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\api\account\route.ts
+   96:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  104:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  129:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  130:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  149:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\api\admin\food-stats\route.ts
+   30:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   98:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  104:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  110:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\api\auth\signup\route.ts
+  5:23  warning  'getClientIp' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\comments\[id]\route.ts
+  18:10  warning  'commentBodySchema' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\debug\foods\route.ts
+  35:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\api\discover\popular\route.ts
+   6:27  warning  'req' is defined but never used. Allowed unused args must match /^_/u                      @typescript-eslint/no-unused-vars
+  16:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\discover\suggest-creators\route.ts
+  6:27  warning  'req' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\feed\foryou\route.ts
+  38:11  warning  'cacheKey' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\follow\[userId]\route.ts
+  22:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  98:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\follow\state\route.ts
+  19:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\foods\[id]\route.ts
+   22:11  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   41:17  warning  'confidence' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  154:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+
+C:\Dev\Recipe App\src\app\api\foods\map\route.ts
+  111:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\api\foods\search\route.ts
+  31:11  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  66:17  warning  'provisional' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  66:30  warning  'lowConfidenceShare' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  66:50  warning  'unmappedCount' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\me\followers\route.ts
+  5:27  warning  'request' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\me\following\route.ts
+  5:27  warning  'request' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\me\saved\route.ts
+  6:27  warning  'request' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\me\uploaded\route.ts
+  5:27  warning  'request' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\nutrition\route.ts
+  22:34  warning  'getUnmappedIngredients' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\oops\route.ts
+  1:10  warning  'NextResponse' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\recipes\[id]\route.ts
+   23:9  warning  'cacheKey' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  370:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error    no-console
+  374:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error    no-console
+  383:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error    no-console
+
+C:\Dev\Recipe App\src\app\api\recipes\[id]\similar\route.ts
+  16:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  33:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+  80:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+  86:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+
+C:\Dev\Recipe App\src\app\api\recipes\[id]\suggestions\route.ts
+  6:66  warning  'computeMacroFeatures' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\recipes\route.ts
+   27:10  warning  'prisma' is assigned a value but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   28:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   34:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+   35:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+  154:25  warning  'namespace' is assigned a value but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  176:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+  181:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+  186:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error          no-console
+
+C:\Dev\Recipe App\src\app\api\tags\route.ts
+  16:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\upload\route.ts
+   58:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+   74:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+   78:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+   80:36  warning  'maxSizeMB' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   84:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+  100:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+  121:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+  133:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+  134:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+  135:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error     no-console
+  144:12  warning  'error' is defined but never used                                                     @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\users\[username]\route.ts
+  19:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\api\users\search\route.ts
+  16:10  warning  'getCurrentUser' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\auth\callback\route.ts
+   23:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   24:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   25:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   26:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   27:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   75:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   76:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   77:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   78:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   79:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   80:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   81:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   82:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   83:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   84:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   85:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   86:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   87:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   88:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   89:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   90:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   91:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   92:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   93:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   94:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  134:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  140:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  177:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  183:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  202:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  213:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  224:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  225:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  226:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  227:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  228:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  229:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  230:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  231:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  236:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  237:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  238:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  239:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  247:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  248:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  249:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  250:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  251:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  252:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  253:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  259:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  264:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  270:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  276:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  277:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\clear-auth\page.tsx
+  20:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\me\MePageClient.tsx
+  41:28  warning  'setCurrentAvatarKey' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\notifications\NotificationsList.tsx
+    5:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u                  @typescript-eslint/no-unused-vars
+    9:8   warning  'Link' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+   39:10  warning  'isLoading' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   66:9   warning  'markAsRead' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   90:9   warning  'markAllAsRead' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  114:11  warning  'actorName' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\recipes\[id]\edit\EditRecipeForm.tsx
+  56:10  warning  'isUploadingImages' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\recipes\[id]\page.tsx
+    5:8   warning  'Image' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+    8:10  warning  'imageSrcForKey' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  136:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  137:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\app\recipes\_components\ExploreTiles.tsx
+  57:13  warning  'clientWidth' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\recipes\_components\Filters.tsx
+  61:10  warning  'loading' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\recipes\new\_components\TagChipSelect.tsx
+  5:10  warning  'Badge' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\recipes\new\page.tsx
+   23:28  warning  'PrepTime' is defined but never used. Allowed unused vars must match /^_/u                    @typescript-eslint/no-unused-vars
+   31:10  warning  'isUploadingImages' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   99:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  100:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  106:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  107:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  127:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+
+C:\Dev\Recipe App\src\app\recipes\page.tsx
+  31:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  32:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  37:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error             no-console
+  49:7  warning  'savedCollectionId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\app\signup\sign-up-form-client.tsx
+    16:8   warning  'Image' is defined but never used. Allowed unused vars must match /^_/u                          @typescript-eslint/no-unused-vars
+    60:10  warning  'flowDetermined' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+    68:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    69:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    70:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    71:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    72:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    73:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    74:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    75:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    76:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    77:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+    85:27  warning  'setGoogleAvatarUrl' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   139:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   155:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   156:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   157:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   158:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   159:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   160:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   161:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   162:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   165:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   174:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   175:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   176:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   200:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   201:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   202:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   203:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   204:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   205:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   206:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   207:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   208:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   209:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   210:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   312:24  warning  'dbError' is defined but never used                                                              @typescript-eslint/no-unused-vars
+   347:20  warning  'sessionError' is defined but never used                                                         @typescript-eslint/no-unused-vars
+   386:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   464:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   467:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   521:14  warning  'error' is defined but never used                                                                @typescript-eslint/no-unused-vars
+   530:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   531:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   532:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   533:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   534:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   543:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   549:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   555:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   582:9   warning  'handleUsernameChange' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   586:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   587:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   588:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   589:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   590:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   591:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   617:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   618:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   619:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   620:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   621:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+   689:14  warning  'error' is defined but never used                                                                @typescript-eslint/no-unused-vars
+   809:25  warning  'isUpcoming' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+   850:25  warning  'isUpcoming' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+  1264:25  warning  Unexpected console statement. Only these console methods are allowed: warn, error                no-console
+
+C:\Dev\Recipe App\src\app\u\[username]\page.tsx
+   1:20  warning  'redirect' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   6:29  warning  'CardHeader' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   8:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  10:33  warning  'Heart' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  10:40  warning  'MessageCircle' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\NotificationBell.tsx
+  57:11  warning  'isConnected' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\NotificationsRealtimeBridge.tsx
+  28:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  35:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\components\account\AvatarEditor.tsx
+   6:18  warning  'Upload' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  28:3   warning  'uploadPath' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\account\AvatarPreviewModal.tsx
+  6:21  warning  'Check' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  7:10  warning  'cn' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\account\FollowersList.tsx
+  26:52  warning  'currentUserId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\account\FollowingList.tsx
+  25:52  warning  'currentUserId' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\account\ProfileHeader.tsx
+   56:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   71:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   79:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   94:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  129:18  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  136:21  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  137:21  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  139:33  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\components\account\SettingsPanel.tsx
+   12:10  warning  'Camera' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+   12:18  warning  'X' is defined but never used. Allowed unused vars must match /^_/u                             @typescript-eslint/no-unused-vars
+   13:10  warning  'AvatarPreviewModal' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+   36:3   warning  'name' is defined but never used. Allowed unused args must match /^_/u                          @typescript-eslint/no-unused-vars
+   43:14  warning  'initialAvatarKey' is defined but never used. Allowed unused args must match /^_/u              @typescript-eslint/no-unused-vars
+   61:10  warning  'showPreviewModal' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+   62:10  warning  'selectedFile' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+   67:9   warning  'fileInputRef' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  152:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+  167:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+  175:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error               no-console
+  206:9   warning  'handleFileSelect' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  214:9   warning  'handleConfirmUpload' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  280:14  warning  'error' is defined but never used                                                               @typescript-eslint/no-unused-vars
+  324:14  warning  'error' is defined but never used                                                               @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\account\SimpleAvatarUploader.tsx
+  23:3  warning  'uploadPath' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  60:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error      no-console
+
+C:\Dev\Recipe App\src\components\auth\AuthCard.tsx
+  53:3  warning  'logoSrc' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\auth\AuthHeader.tsx
+  7:10  warning  'Input' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\home\FollowingEmpty.tsx
+  3:10  warning  'imageSrcForKey' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\AuthorLink.tsx
+  33:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  34:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  35:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\components\recipe\ImageUploader.tsx
+  118:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  129:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  144:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  155:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  184:9  warning  'uploadAllQueued' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  229:9  warning  'hasQueuedFiles' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\IngredientMappingCard.tsx
+  11:3  warning  'parsed' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\IngredientMappingModal.tsx
+   10:10  warning  'Tooltip' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+   10:19  warning  'TooltipContent' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   10:52  warning  'TooltipTrigger' is defined but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+   11:34  warning  'X' is defined but never used. Allowed unused vars must match /^_/u                            @typescript-eslint/no-unused-vars
+   11:37  warning  'Info' is defined but never used. Allowed unused vars must match /^_/u                         @typescript-eslint/no-unused-vars
+   11:49  warning  'Trash2' is defined but never used. Allowed unused vars must match /^_/u                       @typescript-eslint/no-unused-vars
+   12:10  warning  'gramsForMeasure' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+   12:27  warning  'calculatePerServingCalories' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   12:56  warning  'extractCategoryHint' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+   13:10  warning  'normalizeUnit' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+   13:25  warning  'toGramsByUnit' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+   14:10  warning  'scalePer100g' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+   15:10  warning  'resolveGramsForAmount' is defined but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  136:20  warning  'e' is defined but never used                                                                  @typescript-eslint/no-unused-vars
+  157:14  warning  'err' is defined but never used                                                                @typescript-eslint/no-unused-vars
+  164:9   warning  'searchFoods' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  180:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
+  206:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
+  211:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
+  224:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
+  325:9   warning  'computeNutrition' is assigned a value but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  342:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
+  569:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error              no-console
+
+C:\Dev\Recipe App\src\components\recipe\LikeButton.tsx
+  4:10  warning  'Alert' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  4:17  warning  'AlertDescription' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\NutritionBreakdownModal.tsx
+  66:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\NutritionSidebar.tsx
+  46:16  warning  'setGoal' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  61:14  warning  'err' is defined but never used                                                     @typescript-eslint/no-unused-vars
+  88:14  warning  'err' is defined but never used                                                     @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\RecipesListWithBulkDelete.tsx
+  6:10  warning  'getCurrentUser' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipe\SaveButton.tsx
+  4:10  warning  'Alert' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars
+  4:17  warning  'AlertDescription' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\components\recipes\EnhancedSearchBox.tsx
+    6:10  warning  'Button' is defined but never used. Allowed unused vars must match /^_/u                      @typescript-eslint/no-unused-vars
+    7:24  warning  'ChefHat' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars
+  113:9   warning  'handleRecipeClick' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\hooks\useNotificationsRT.ts
+  43:15  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  48:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  62:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\auth.ts
+   42:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   45:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   50:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   53:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   78:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   81:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  104:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  125:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  174:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  201:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  227:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  245:12  warning  'error' is defined but never used                                                  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient.test.ts
+   99:42  warning  'maxResults' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  104:42  warning  'maxResults' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\ai-batch-normalize.ts
+  132:50  warning  'index' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\ai-rerank.ts
+  132:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  133:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  134:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  136:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\fatsecret\ai-search-refine.ts
+  73:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\filter-candidates.ts
+  134:28  warning  'forms' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\gather-candidates.ts
+    8:10  warning  'prisma' is defined but never used. Allowed unused vars must match /^_/u                   @typescript-eslint/no-unused-vars
+   11:10  warning  'parseIngredientLine' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+   12:10  warning  'normalizeIngredientName' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  234:5   warning  'rawLine' is defined but never used. Allowed unused args must match /^_/u                  @typescript-eslint/no-unused-vars
+  259:62  warning  'rawLine' is defined but never used. Allowed unused args must match /^_/u                  @typescript-eslint/no-unused-vars
+  396:10  warning  'buildSearchQueries' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+  438:16  warning  'searchCache' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  482:16  warning  'searchFatSecretLive' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  682:16  warning  'searchFdc' is defined but never used. Allowed unused vars must match /^_/u                @typescript-eslint/no-unused-vars
+  781:10  warning  'computeBaseScore' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\learned-synonyms.ts
+  178:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\map-ingredient-with-fallback.ts
+   79:9   warning  'minConfidence' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  187:37  warning  'reason' is assigned a value but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  533:22  warning  'gramsPerUnit' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  606:11  warning  'qty' is assigned a value but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\map-ingredient.ts
+   511:11  warning  'eggBase' is assigned a value but never used. Allowed unused vars must match /^_/u               @typescript-eslint/no-unused-vars
+  1173:11  warning  'aiValidationData' is assigned a value but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  2044:7   warning  'meatMismatchDetected' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  2596:10  warning  'jaccard' is defined but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\fatsecret\mapping-logger.ts
+  112:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  113:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  114:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  129:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  130:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  131:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  135:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  139:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  144:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  149:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  150:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  151:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  155:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  157:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  164:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  165:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  166:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  167:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  169:13  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  175:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  177:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  267:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  268:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  269:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  270:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  271:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  272:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  273:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  274:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\features\writeRecipeFeatureLite.ts
+  18:11  warning  'pPct' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  18:17  warning  'cPct' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  18:23  warning  'fPct' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+  37:9   warning  'dietScores' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\flags.test.ts
+  6:10  warning  'ENABLE_PORTION_V2' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+  6:29  warning  'ENABLE_BRANDED_SEARCH' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\image-ops.ts
+   33:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   80:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  113:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\logger.ts
+  25:50  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  28:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\nutrition\amount-grams-adapter.ts
+  40:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  84:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\nutrition\compute.ts
+  670:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  682:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  726:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  752:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\nutrition\normalize.ts
+  12:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\nutrition\seed.ts
+  259:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  277:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\obs\prismaSentry.ts
+  27:7   warning  'attachedInstances' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  35:36  warning  'prisma' is defined but never used. Allowed unused args must match /^_/u                      @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\perf.ts
+   6:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  10:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\recipes\ingredients.server.ts
+  172:9  warning  'newIngredients' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\s3-upload.ts
+   12:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   31:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   40:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   54:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   55:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   57:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   65:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   66:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   82:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  108:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  123:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  153:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  156:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  160:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  162:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  165:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  167:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\lib\supabase\client.ts
+  19:31  warning  'callback' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\supabase\server.ts
+  20:31  warning  'callback' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  40:16  warning  '_err' is defined but never used                                            @typescript-eslint/no-unused-vars
+  48:16  warning  '_err' is defined but never used                                            @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\usda.ts
+   14:9   warning  'ingredientLower' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   48:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+   53:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  110:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  114:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  119:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  133:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  152:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  191:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  197:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  204:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  206:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  210:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  258:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  265:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  267:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  294:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  303:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  315:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  330:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  340:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  352:11  warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  361:9   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+  367:7   warning  Unexpected console statement. Only these console methods are allowed: warn, error           no-console
+
+C:\Dev\Recipe App\src\lib\usda\fdc-ai-backfill.ts
+   1:8   warning  'crypto' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  94:13  warning  'countUnit' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\usda\fdc-api.ts
+  163:11  warning  'cacheKey' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\lib\usda\map-ingredient-fdc.ts
+  4:10  warning  'debugLogger' is defined but never used. Allowed unused vars must match /^_/u         @typescript-eslint/no-unused-vars
+  5:10  warning  'prisma' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  6:10  warning  'insertFdcAiServing' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\middleware.ts
+  101:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Dev\Recipe App\src\ops\debug-ai-validation.ts
+  219:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  220:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  225:9  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  249:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  250:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  251:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  252:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  253:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  254:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  255:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  256:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  257:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\Dev\Recipe App\src\ops\usda\importer.ts
+   94:15  warning  'finger' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  250:3   warning  'options' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+Γ£û 505 problems (0 errors, 505 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

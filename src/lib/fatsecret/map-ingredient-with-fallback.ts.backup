@@ -1,0 +1,164 @@
+import { mapIngredientWithFatsecret, type FatsecretMappedIngredient, type MapIngredientOptions } from './map-ingredient';
+import { mapIngredientWithFdc, type FdcMappedIngredient } from '../usda/map-ingredient-fdc';
+import { validateMappingWithAI } from './ai-validation';
+import { saveValidatedMapping } from './validated-mapping-helpers';
+import { logger } from '../logger';
+import { normalizeIngredientName } from './normalization-rules';
+
+/**
+ * Map ingredient with parallel FatSecret + FDC search
+ * AI picks the best candidate from both sources
+ * Falls back to AI estimation if both fail
+ */
+export async function mapIngredientWithFallback(
+    rawLine: string,
+    options: MapIngredientOptions = {}
+): Promise<FatsecretMappedIngredient | null> {
+    // Search both FatSecret and FDC in parallel
+    const [fatsecretResult, fdcResult] = await Promise.allSettled([
+        mapIngredientWithFatsecret(rawLine, options),
+        mapIngredientWithFdc(rawLine)
+    ]);
+
+    const fatsecret = fatsecretResult.status === 'fulfilled' ? fatsecretResult.value : null;
+    const fdcResults = fdcResult.status === 'fulfilled' ? fdcResult.value : null;
+
+    // Collect all processed candidates (approved and rejected)
+    const allCandidates: Array<{
+        source: 'fatsecret' | 'fdc',
+        result: FatsecretMappedIngredient,
+        approved: boolean,
+        confidence: number
+    }> = [];
+
+    // Process FatSecret result
+    if (fatsecret) {
+        allCandidates.push({
+            source: 'fatsecret',
+            result: fatsecret,
+            approved: fatsecret.aiValidation?.approved ?? false,
+            confidence: fatsecret.aiValidation?.confidence ?? 0
+        });
+    }
+
+    // Process FDC results (now an array of candidates)
+    if (fdcResults && Array.isArray(fdcResults)) {
+        const normalizedQuery = normalizeIngredientName(rawLine).cleaned;
+
+        // Process multiple FDC candidates (up to top 3)
+        for (const fdc of fdcResults.slice(0, 3)) {
+            // Convert FDC to FatSecret format
+            const fdcConverted: FatsecretMappedIngredient = {
+                source: 'fatsecret',
+                foodId: `fdc_${fdc.fdcId}`,
+                foodName: fdc.description,
+                brandName: fdc.brandName,
+                servingId: null,
+                servingDescription: `${fdc.grams}g`,
+                grams: fdc.grams,
+                kcal: fdc.kcal,
+                protein: fdc.protein,
+                carbs: fdc.carbs,
+                fat: fdc.fat,
+                confidence: fdc.confidence,
+                quality: fdc.confidence >= 0.8 ? 'high' : (fdc.confidence >= 0.6 ? 'medium' : 'low'),
+                rawLine: rawLine.trim(),
+            };
+
+            // Calculate per-100g nutrition (FDC already returns per-100g values)
+            const nutritionPer100g = {
+                protein: (fdc.protein / fdc.grams) * 100,
+                carbs: (fdc.carbs / fdc.grams) * 100,
+                fat: (fdc.fat / fdc.grams) * 100,
+                kcal: (fdc.kcal / fdc.grams) * 100,
+            };
+
+            // Validate FDC result with AI, providing nutritional context
+            const fdcAiValidation = await validateMappingWithAI(rawLine, {
+                foodId: fdcConverted.foodId,
+                foodName: fdcConverted.foodName,
+                brandName: fdcConverted.brandName,
+                searchQuery: normalizedQuery,
+                ourConfidence: fdc.confidence,
+                nutrition: {
+                    per100: nutritionPer100g,
+                    perServing: {
+                        description: `${fdc.grams}g serving`,
+                        grams: fdc.grams,
+                        protein: fdc.protein,
+                        carbs: fdc.carbs,
+                        fat: fdc.fat,
+                        kcal: fdc.kcal,
+                    },
+                },
+            });
+
+            fdcConverted.aiValidation = {
+                approved: fdcAiValidation.approved,
+                confidence: fdcAiValidation.confidence,
+                reason: fdcAiValidation.reason,
+                category: fdcAiValidation.category,
+                detectedIssues: fdcAiValidation.detectedIssues,
+            };
+
+            // Save to validated cache if approved with high confidence
+            if (fdcAiValidation.approved && fdcAiValidation.confidence >= 0.85) {
+                await saveValidatedMapping(rawLine, fdcConverted, fdcAiValidation);
+            }
+
+            allCandidates.push({
+                source: 'fdc',
+                result: fdcConverted,
+                approved: fdcAiValidation.approved,
+                confidence: fdcAiValidation.confidence
+            });
+        }
+    }
+
+    // Log search results
+    logger.info('ingredient.parallel_search_complete', {
+        rawLine,
+        candidates: allCandidates.map(c => ({
+            source: c.source,
+            approved: c.approved,
+            foodName: c.result.foodName,
+            aiConfidence: c.confidence
+        }))
+    });
+
+    if (allCandidates.length === 0) {
+        return null;
+    }
+
+    // Filter for approved candidates
+    const approvedCandidates = allCandidates.filter(c => c.approved);
+
+    if (approvedCandidates.length > 0) {
+        // Pick best approved candidate (highest confidence)
+        approvedCandidates.sort((a, b) => b.confidence - a.confidence);
+        const winner = approvedCandidates[0];
+
+        logger.info('ingredient.winner_selected', {
+            rawLine,
+            source: winner.source,
+            foodName: winner.result.foodName,
+            confidence: winner.confidence
+        });
+
+        return winner.result;
+    }
+
+    // No approved candidates - return best rejected one (highest confidence)
+    // This allows the caller to see the rejection reason
+    allCandidates.sort((a, b) => b.confidence - a.confidence);
+    const bestRejected = allCandidates[0];
+
+    logger.info('ingredient.all_rejected_returning_best', {
+        rawLine,
+        source: bestRejected.source,
+        foodName: bestRejected.result.foodName,
+        reason: bestRejected.result.aiValidation?.reason
+    });
+
+    return bestRejected.result;
+}

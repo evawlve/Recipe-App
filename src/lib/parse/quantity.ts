@@ -5,7 +5,7 @@
 
 // Unicode fractions mapping
 const UNICODE_FRACTIONS: Record<string, number> = {
-  '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1/3, '⅔': 2/3,
+  '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3,
   '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875
 };
 
@@ -60,7 +60,7 @@ function parseRange(tokens: string[], startIdx: number): { qty: number; consumed
   // Check if first token contains a range separator (e.g., "2-3")
   const firstToken = tokens[i];
   const rangeSplit = splitRangeToken(firstToken);
-  
+
   if (rangeSplit) {
     // Token contains range separator - parse both parts
     const firstWithFraction = parseNumberWithFraction(rangeSplit.first);
@@ -96,7 +96,7 @@ function parseRange(tokens: string[], startIdx: number): { qty: number; consumed
 
   // Try to parse first number (may have fraction attached)
   const firstWithFraction = parseNumberWithFraction(firstToken);
-  
+
   if (firstWithFraction) {
     firstNum = firstWithFraction.whole + firstWithFraction.fraction;
     consumed = 1;
@@ -116,8 +116,8 @@ function parseRange(tokens: string[], startIdx: number): { qty: number; consumed
   if (i >= tokens.length) return null;
 
   const separator = tokens[i];
-  const isRangeSeparator = 
-    separator === '-' || 
+  const isRangeSeparator =
+    separator === '-' ||
     separator === '–' || // en-dash
     separator === '—' || // em-dash
     separator === 'to' ||
@@ -139,7 +139,7 @@ function parseRange(tokens: string[], startIdx: number): { qty: number; consumed
 
   const secondToken = tokens[i];
   const secondWithFraction = parseNumberWithFraction(secondToken);
-  
+
   if (secondWithFraction) {
     secondNum = secondWithFraction.whole + secondWithFraction.fraction;
     consumed++;
@@ -182,7 +182,7 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
 
   // Handle word fractions
   const wordFractions: Record<string, number> = {
-    'half': 0.5, 'quarter': 0.25, 'third': 1/3
+    'half': 0.5, 'quarter': 0.25, 'third': 1 / 3
   };
 
   if (wordFractions[tokens[0]]) {
@@ -190,27 +190,38 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
   }
 
   // Handle "one and a half" pattern
-  if (tokens.length >= 4 && 
-      tokens[0] === 'one' && 
-      tokens[1] === 'and' && 
-      tokens[2] === 'a' && 
-      tokens[3] === 'half') {
+  if (tokens.length >= 4 &&
+    tokens[0] === 'one' &&
+    tokens[1] === 'and' &&
+    tokens[2] === 'a' &&
+    tokens[3] === 'half') {
     return { qty: 1.5, consumed: 4 };
   }
 
   // Handle "1 and 1/2" pattern
-  if (tokens.length >= 3 && 
-      tokens[0] === '1' && 
-      tokens[1] === 'and' && 
-      tokens[2] === '1/2') {
+  if (tokens.length >= 3 &&
+    tokens[0] === '1' &&
+    tokens[1] === 'and' &&
+    tokens[2] === '1/2') {
     return { qty: 1.5, consumed: 3 };
   }
 
-  // Handle "1 1/2" pattern (mixed number with space)
-  if (tokens.length >= 2 && 
-      tokens[0] === '1' && 
-      tokens[1] === '1/2') {
-    return { qty: 1.5, consumed: 2 };
+  // Handle "number fraction" pattern (e.g., "1 1/2", "4 1/2")
+  if (tokens.length >= 2) {
+    const firstNum = parseFloat(tokens[0]);
+    if (!isNaN(firstNum)) {
+      // Check if second token is fraction like "1/2"
+      if (tokens[1].includes('/')) {
+        const parts = tokens[1].split('/');
+        if (parts.length === 2) {
+          const n = parseFloat(parts[0]);
+          const d = parseFloat(parts[1]);
+          if (!isNaN(n) && !isNaN(d) && d !== 0) {
+            return { qty: firstNum + (n / d), consumed: 2 };
+          }
+        }
+      }
+    }
   }
 
   // Handle number with attached unicode fraction (e.g., "2½", "1¼")

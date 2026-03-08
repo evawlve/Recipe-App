@@ -10,58 +10,80 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-	// Skip execution during build time
-	if (process.env.NEXT_PHASE === 'phase-production-build' || 
-	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
-	    process.env.BUILD_TIME === 'true') {
-		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
-	}
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+    process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
 
-	// Import only when not in build mode
-	const { prisma } = await import("@/lib/db");
-	const { getCurrentUser } = await import("@/lib/auth");
-	
+  // Import only when not in build mode
+  const { prisma } = await import("@/lib/db");
+  const { getCurrentUser } = await import("@/lib/auth");
+  const { FATSECRET_CACHE_MODE } = await import('@/lib/fatsecret/config');
+  const { getCachedFoodWithRelations, buildCacheFoodResponse } = await import('@/lib/fatsecret/cache-search');
+
+
   try {
     const { id } = await params;
     if (!id) {
       return NextResponse.json({ success: false, error: 'Missing id' }, { status: 400 });
     }
 
-    const f = await prisma.food.findUnique({
-      where: { id },
-      include: { units: true }
-    });
+    // ACCURACY FIX: Check FatSecret cache FIRST (matching search behavior)
+    // This ensures modal results can be mapped correctly
+    let responsePayload: any | null = null;
 
-    if (!f) {
+    if (FATSECRET_CACHE_MODE !== 'legacy') {
+      const cachedFood = await getCachedFoodWithRelations(id);
+      if (cachedFood) {
+        const base = buildCacheFoodResponse(cachedFood, 1);
+        const { confidence, ...rest } = base;
+        responsePayload = rest;
+      }
+    }
+
+    // Fallback to legacy Food table if not found in cache
+    if (!responsePayload) {
+      const f = await prisma.food.findUnique({
+        where: { id },
+        include: { units: true }
+      });
+
+      if (f) {
+        const servingOptions = deriveServingOptions({
+          units: f.units?.map(u => ({ label: u.label, grams: u.grams })),
+          densityGml: f.densityGml ?? undefined,
+          categoryId: f.categoryId ?? null,
+        });
+        responsePayload = {
+          id: f.id,
+          name: f.name,
+          brand: f.brand,
+          categoryId: f.categoryId,
+          source: f.source,
+          verification: f.verification,
+          densityGml: f.densityGml,
+          kcal100: f.kcal100,
+          protein100: f.protein100,
+          carbs100: f.carbs100,
+          fat100: f.fat100,
+          fiber100: f.fiber100,
+          sugar100: f.sugar100,
+          popularity: f.popularity,
+          createdById: f.createdById,
+          servingOptions,
+        };
+      }
+    }
+
+    if (!responsePayload) {
       return NextResponse.json({ success: false, error: 'Food not found' }, { status: 404 });
     }
 
-    const servingOptions = deriveServingOptions({
-      units: f.units?.map(u => ({ label: u.label, grams: u.grams })),
-      densityGml: f.densityGml ?? undefined,
-      categoryId: f.categoryId ?? null,
-    });
-
     return NextResponse.json({
       success: true,
-      data: {
-        id: f.id,
-        name: f.name,
-        brand: f.brand,
-        categoryId: f.categoryId,
-        source: f.source,
-        verification: f.verification,
-        densityGml: f.densityGml,
-        kcal100: f.kcal100,
-        protein100: f.protein100,
-        carbs100: f.carbs100,
-        fat100: f.fat100,
-        fiber100: f.fiber100,
-        sugar100: f.sugar100,
-        popularity: f.popularity,
-        createdById: f.createdById,
-        servingOptions,
-      }
+      data: responsePayload,
     });
   } catch (error) {
     console.error('Food by id error:', error);
@@ -73,17 +95,17 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-	// Skip execution during build time
-	if (process.env.NEXT_PHASE === 'phase-production-build' || 
-	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
-	    process.env.BUILD_TIME === 'true') {
-		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
-	}
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+    process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
 
-	// Import only when not in build mode
-	const { prisma } = await import("@/lib/db");
-	const { getCurrentUser } = await import("@/lib/auth");
-	
+  // Import only when not in build mode
+  const { prisma } = await import("@/lib/db");
+  const { getCurrentUser } = await import("@/lib/auth");
+
   try {
     const user = await getCurrentUser();
     if (!user?.id) {
@@ -125,7 +147,7 @@ export async function DELETE(
     }
 
     // Check if user can delete this food
-    const canDelete = 
+    const canDelete =
       food.source === 'community' && // It's a community food
       (food.createdById === user.id || food.createdById === null); // User created it OR it's a legacy ingredient (created before fix)
 
@@ -138,34 +160,34 @@ export async function DELETE(
     });
 
     if (!canDelete) {
-      return NextResponse.json({ 
-        success: false, 
-        error: `You can only delete community ingredients you created. Created by: ${food.createdById}, Current user: ${user.id}, Source: ${food.source}` 
+      return NextResponse.json({
+        success: false,
+        error: `You can only delete community ingredients you created. Created by: ${food.createdById}, Current user: ${user.id}, Source: ${food.source}`
       }, { status: 403 });
     }
 
     // Check if there are mappings to other users' recipes
-    const mappingsToOtherRecipes = food.ingredientMaps.filter(mapping => 
+    const mappingsToOtherRecipes = food.ingredientMaps.filter(mapping =>
       mapping.ingredient.recipe.authorId !== user.id
     );
 
     if (mappingsToOtherRecipes.length > 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cannot delete ingredient that is mapped to other users\' recipes' 
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot delete ingredient that is mapped to other users\' recipes'
       }, { status: 403 });
     }
 
     // If recipeId is provided, only allow deletion if all mappings are to that recipe
     if (recipeId) {
-      const mappingsToOtherRecipes = food.ingredientMaps.filter(mapping => 
+      const mappingsToOtherRecipes = food.ingredientMaps.filter(mapping =>
         mapping.ingredient.recipeId !== recipeId
       );
 
       if (mappingsToOtherRecipes.length > 0) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Cannot delete ingredient that is mapped to other recipes' 
+        return NextResponse.json({
+          success: false,
+          error: 'Cannot delete ingredient that is mapped to other recipes'
         }, { status: 403 });
       }
     }
@@ -175,9 +197,9 @@ export async function DELETE(
       where: { id }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Ingredient deleted successfully' 
+    return NextResponse.json({
+      success: true,
+      message: 'Ingredient deleted successfully'
     });
   } catch (error) {
     console.error('Food deletion error:', error);

@@ -1,0 +1,62 @@
+c1601f15316b609998730160ab8caee4
+"use strict";
+/**
+ * Learned Patterns Cache
+ *
+ * Provides a sync getter for learned prep phrases from the IngredientCleanupPattern table.
+ * Call refreshLearnedPatterns() at entry points (recipe creation, batch import) to load patterns.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.refreshLearnedPatterns = refreshLearnedPatterns;
+exports.getLearnedPrepPhrases = getLearnedPrepPhrases;
+exports.hasLoadedPatterns = hasLoadedPatterns;
+const db_1 = require("../db");
+const logger_1 = require("../logger");
+// Module-level cache for learned prep phrases
+let learnedPrepPhrases = new Set();
+/**
+ * Refresh learned prep phrases from DB.
+ * Call this at entry points before parsing ingredients.
+ */
+async function refreshLearnedPatterns() {
+    try {
+        const patterns = await db_1.prisma.ingredientCleanupPattern.findMany({
+            where: {
+                patternType: 'PREP_PHRASE',
+                confidence: { gte: 0.7 },
+                // Only use patterns that have been proven or are new
+                OR: [
+                    { successRate: null },
+                    { successRate: { gte: 0.6 } }
+                ]
+            },
+            select: {
+                pattern: true
+            }
+        });
+        learnedPrepPhrases = new Set(patterns.map(p => p.pattern.toLowerCase()));
+        logger_1.logger.info('learned-patterns:refreshed', {
+            count: learnedPrepPhrases.size
+        });
+    }
+    catch (error) {
+        // Non-critical - log and continue with empty/stale cache
+        logger_1.logger.warn('learned-patterns:refresh-failed', {
+            error: error.message
+        });
+    }
+}
+/**
+ * Get cached learned prep phrases (sync).
+ * Returns empty set if refresh hasn't been called.
+ */
+function getLearnedPrepPhrases() {
+    return learnedPrepPhrases;
+}
+/**
+ * Check if patterns have been loaded.
+ */
+function hasLoadedPatterns() {
+    return learnedPrepPhrases.size > 0;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXHBhcnNlXFxsZWFybmVkLXBhdHRlcm5zLnRzIiwibWFwcGluZ3MiOiI7QUFBQTs7Ozs7R0FLRzs7QUFZSCx3REE0QkM7QUFNRCxzREFFQztBQUtELDhDQUVDO0FBckRELDhCQUErQjtBQUMvQixzQ0FBbUM7QUFFbkMsOENBQThDO0FBQzlDLElBQUksa0JBQWtCLEdBQWdCLElBQUksR0FBRyxFQUFFLENBQUM7QUFFaEQ7OztHQUdHO0FBQ0ksS0FBSyxVQUFVLHNCQUFzQjtJQUN4QyxJQUFJLENBQUM7UUFDRCxNQUFNLFFBQVEsR0FBRyxNQUFNLFdBQU0sQ0FBQyx3QkFBd0IsQ0FBQyxRQUFRLENBQUM7WUFDNUQsS0FBSyxFQUFFO2dCQUNILFdBQVcsRUFBRSxhQUFhO2dCQUMxQixVQUFVLEVBQUUsRUFBRSxHQUFHLEVBQUUsR0FBRyxFQUFFO2dCQUN4QixxREFBcUQ7Z0JBQ3JELEVBQUUsRUFBRTtvQkFDQSxFQUFFLFdBQVcsRUFBRSxJQUFJLEVBQUU7b0JBQ3JCLEVBQUUsV0FBVyxFQUFFLEVBQUUsR0FBRyxFQUFFLEdBQUcsRUFBRSxFQUFFO2lCQUNoQzthQUNKO1lBQ0QsTUFBTSxFQUFFO2dCQUNKLE9BQU8sRUFBRSxJQUFJO2FBQ2hCO1NBQ0osQ0FBQyxDQUFDO1FBRUgsa0JBQWtCLEdBQUcsSUFBSSxHQUFHLENBQUMsUUFBUSxDQUFDLEdBQUcsQ0FBQyxDQUFDLENBQUMsRUFBRSxDQUFDLENBQUMsQ0FBQyxPQUFPLENBQUMsV0FBVyxFQUFFLENBQUMsQ0FBQyxDQUFDO1FBRXpFLGVBQU0sQ0FBQyxJQUFJLENBQUMsNEJBQTRCLEVBQUU7WUFDdEMsS0FBSyxFQUFFLGtCQUFrQixDQUFDLElBQUk7U0FDakMsQ0FBQyxDQUFDO0lBQ1AsQ0FBQztJQUFDLE9BQU8sS0FBSyxFQUFFLENBQUM7UUFDYix5REFBeUQ7UUFDekQsZUFBTSxDQUFDLElBQUksQ0FBQyxpQ0FBaUMsRUFBRTtZQUMzQyxLQUFLLEVBQUcsS0FBZSxDQUFDLE9BQU87U0FDbEMsQ0FBQyxDQUFDO0lBQ1AsQ0FBQztBQUNMLENBQUM7QUFFRDs7O0dBR0c7QUFDSCxTQUFnQixxQkFBcUI7SUFDakMsT0FBTyxrQkFBa0IsQ0FBQztBQUM5QixDQUFDO0FBRUQ7O0dBRUc7QUFDSCxTQUFnQixpQkFBaUI7SUFDN0IsT0FBTyxrQkFBa0IsQ0FBQyxJQUFJLEdBQUcsQ0FBQyxDQUFDO0FBQ3ZDLENBQUMiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXHBhcnNlXFxsZWFybmVkLXBhdHRlcm5zLnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKlxyXG4gKiBMZWFybmVkIFBhdHRlcm5zIENhY2hlXHJcbiAqIFxyXG4gKiBQcm92aWRlcyBhIHN5bmMgZ2V0dGVyIGZvciBsZWFybmVkIHByZXAgcGhyYXNlcyBmcm9tIHRoZSBJbmdyZWRpZW50Q2xlYW51cFBhdHRlcm4gdGFibGUuXHJcbiAqIENhbGwgcmVmcmVzaExlYXJuZWRQYXR0ZXJucygpIGF0IGVudHJ5IHBvaW50cyAocmVjaXBlIGNyZWF0aW9uLCBiYXRjaCBpbXBvcnQpIHRvIGxvYWQgcGF0dGVybnMuXHJcbiAqL1xyXG5cclxuaW1wb3J0IHsgcHJpc21hIH0gZnJvbSAnLi4vZGInO1xyXG5pbXBvcnQgeyBsb2dnZXIgfSBmcm9tICcuLi9sb2dnZXInO1xyXG5cclxuLy8gTW9kdWxlLWxldmVsIGNhY2hlIGZvciBsZWFybmVkIHByZXAgcGhyYXNlc1xyXG5sZXQgbGVhcm5lZFByZXBQaHJhc2VzOiBTZXQ8c3RyaW5nPiA9IG5ldyBTZXQoKTtcclxuXHJcbi8qKlxyXG4gKiBSZWZyZXNoIGxlYXJuZWQgcHJlcCBwaHJhc2VzIGZyb20gREIuXHJcbiAqIENhbGwgdGhpcyBhdCBlbnRyeSBwb2ludHMgYmVmb3JlIHBhcnNpbmcgaW5ncmVkaWVudHMuXHJcbiAqL1xyXG5leHBvcnQgYXN5bmMgZnVuY3Rpb24gcmVmcmVzaExlYXJuZWRQYXR0ZXJucygpOiBQcm9taXNlPHZvaWQ+IHtcclxuICAgIHRyeSB7XHJcbiAgICAgICAgY29uc3QgcGF0dGVybnMgPSBhd2FpdCBwcmlzbWEuaW5ncmVkaWVudENsZWFudXBQYXR0ZXJuLmZpbmRNYW55KHtcclxuICAgICAgICAgICAgd2hlcmU6IHtcclxuICAgICAgICAgICAgICAgIHBhdHRlcm5UeXBlOiAnUFJFUF9QSFJBU0UnLFxyXG4gICAgICAgICAgICAgICAgY29uZmlkZW5jZTogeyBndGU6IDAuNyB9LFxyXG4gICAgICAgICAgICAgICAgLy8gT25seSB1c2UgcGF0dGVybnMgdGhhdCBoYXZlIGJlZW4gcHJvdmVuIG9yIGFyZSBuZXdcclxuICAgICAgICAgICAgICAgIE9SOiBbXHJcbiAgICAgICAgICAgICAgICAgICAgeyBzdWNjZXNzUmF0ZTogbnVsbCB9LFxyXG4gICAgICAgICAgICAgICAgICAgIHsgc3VjY2Vzc1JhdGU6IHsgZ3RlOiAwLjYgfSB9XHJcbiAgICAgICAgICAgICAgICBdXHJcbiAgICAgICAgICAgIH0sXHJcbiAgICAgICAgICAgIHNlbGVjdDoge1xyXG4gICAgICAgICAgICAgICAgcGF0dGVybjogdHJ1ZVxyXG4gICAgICAgICAgICB9XHJcbiAgICAgICAgfSk7XHJcblxyXG4gICAgICAgIGxlYXJuZWRQcmVwUGhyYXNlcyA9IG5ldyBTZXQocGF0dGVybnMubWFwKHAgPT4gcC5wYXR0ZXJuLnRvTG93ZXJDYXNlKCkpKTtcclxuXHJcbiAgICAgICAgbG9nZ2VyLmluZm8oJ2xlYXJuZWQtcGF0dGVybnM6cmVmcmVzaGVkJywge1xyXG4gICAgICAgICAgICBjb3VudDogbGVhcm5lZFByZXBQaHJhc2VzLnNpemVcclxuICAgICAgICB9KTtcclxuICAgIH0gY2F0Y2ggKGVycm9yKSB7XHJcbiAgICAgICAgLy8gTm9uLWNyaXRpY2FsIC0gbG9nIGFuZCBjb250aW51ZSB3aXRoIGVtcHR5L3N0YWxlIGNhY2hlXHJcbiAgICAgICAgbG9nZ2VyLndhcm4oJ2xlYXJuZWQtcGF0dGVybnM6cmVmcmVzaC1mYWlsZWQnLCB7XHJcbiAgICAgICAgICAgIGVycm9yOiAoZXJyb3IgYXMgRXJyb3IpLm1lc3NhZ2VcclxuICAgICAgICB9KTtcclxuICAgIH1cclxufVxyXG5cclxuLyoqXHJcbiAqIEdldCBjYWNoZWQgbGVhcm5lZCBwcmVwIHBocmFzZXMgKHN5bmMpLlxyXG4gKiBSZXR1cm5zIGVtcHR5IHNldCBpZiByZWZyZXNoIGhhc24ndCBiZWVuIGNhbGxlZC5cclxuICovXHJcbmV4cG9ydCBmdW5jdGlvbiBnZXRMZWFybmVkUHJlcFBocmFzZXMoKTogU2V0PHN0cmluZz4ge1xyXG4gICAgcmV0dXJuIGxlYXJuZWRQcmVwUGhyYXNlcztcclxufVxyXG5cclxuLyoqXHJcbiAqIENoZWNrIGlmIHBhdHRlcm5zIGhhdmUgYmVlbiBsb2FkZWQuXHJcbiAqL1xyXG5leHBvcnQgZnVuY3Rpb24gaGFzTG9hZGVkUGF0dGVybnMoKTogYm9vbGVhbiB7XHJcbiAgICByZXR1cm4gbGVhcm5lZFByZXBQaHJhc2VzLnNpemUgPiAwO1xyXG59XHJcbiJdLCJ2ZXJzaW9uIjozfQ==

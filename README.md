@@ -13,6 +13,7 @@ A full-featured recipe management application with:
 - **Row Level Security (RLS)** for database-level security
 - **Recipe editing** with ownership validation
 - **Modern UI/UX** with consistent branding
+- **FatSecret migration guide** captured in `docs/FATSECRET_MIGRATION.md` for the cache rollout plan
 
 ## 🚀 Features
 
@@ -87,6 +88,7 @@ A full-featured recipe management application with:
 - ✅ **USDA import** - 300K+ foods with deduplication, category mapping, and data validation
 - ✅ **Smart search** - Intelligent alias system, query normalization, and context-aware ranking
 - ✅ **Community foods** - Users create custom ingredients with auto-mapping and deletion controls
+- 🔄 **FatSecret Migration** - Phase 1 cache schema + hydrator scripts (`npm run fatsecret:cache:*`) are live. See `docs/FATSECRET_MIGRATION.md` for workflow + rollout timeline. Legacy food tables (`Food`, `FoodUnit`, `FoodAlias`, `PortionOverride`, etc.) will be replaced with FatSecret-sourced data during this migration.
 ### **Discovery & Feeds**
 - ✅ **Home page** - Trending recipes (4-day recency decay), suggested creators, For You/Following feeds
 - ✅ **Smart feeds** - Personalized For You (tag-based), Following, Most Popular (interaction scoring)
@@ -620,6 +622,7 @@ npm run cleanup-orphaned-users  # Clean up orphaned user data
 npm run features:backfill       # Backfill RecipeFeatureLite for existing recipes
 npm run rollup:interactions     # Run nightly interaction score rollup
 npm run similar:build           # Build recipe similarity graph from co-view data
+npm run reset:food-db           # Reset legacy food tables (after FatSecret cache migration)
 ```
 
 ### **Environment Variables**

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { RecipeCard } from "./RecipeCard";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -24,6 +24,13 @@ export function SelectableRecipeCard({
     onSelectionChange(recipe.id, checked);
   };
 
+  const handleCardClick = (e: MouseEvent) => {
+    if (!canSelect) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onSelectionChange(recipe.id, !isSelected);
+  };
+
   if (!canSelect) {
     return <RecipeCard recipe={recipe} currentUserId={currentUserId} />;
   }
@@ -35,9 +42,7 @@ export function SelectableRecipeCard({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Selection checkbox overlay */}
-      <div className={`absolute top-2 left-2 z-10 transition-opacity ${
-        isSelected || isHovered ? 'opacity-100' : 'opacity-0'
-      }`}>
+      <div className={`absolute top-2 left-2 z-10 transition-opacity ${isSelected || isHovered ? 'opacity-100' : 'opacity-0'}`}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={handleSelectionChange}
@@ -56,6 +61,14 @@ export function SelectableRecipeCard({
       <div className={isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}>
         <RecipeCard recipe={recipe} currentUserId={currentUserId} />
       </div>
+
+      {/* Full overlay to make the whole card selectable */}
+      <button
+        type="button"
+        className="absolute inset-0 z-[5] cursor-pointer bg-transparent"
+        aria-label={isSelected ? "Deselect recipe" : "Select recipe"}
+        onClick={handleCardClick}
+      />
     </div>
   );
 }

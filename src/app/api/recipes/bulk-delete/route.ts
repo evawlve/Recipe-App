@@ -92,6 +92,16 @@ export async function DELETE(request: NextRequest) {
       prisma.recipeTag.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
       prisma.collectionRecipe.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
       prisma.nutrition.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeView.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeInteractionDaily.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeSimilar.deleteMany({ 
+        where: { 
+          OR: [
+            { recipeId: { in: recipeIdsToDelete } },
+            { similarId: { in: recipeIdsToDelete } }
+          ]
+        } 
+      }),
       // Finally delete the recipes
       prisma.recipe.deleteMany({ where: { id: { in: recipeIdsToDelete } } }),
     ]);

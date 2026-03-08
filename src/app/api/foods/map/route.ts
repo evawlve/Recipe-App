@@ -9,32 +9,32 @@ export const runtime = 'nodejs';
  * Body: { ingredientId: string, foodId: string, confidence?: number, useOnce?: boolean }
  */
 export async function POST(req: NextRequest) {
-	// Skip execution during build time
-	if (process.env.NEXT_PHASE === 'phase-production-build' || 
-	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
-	    process.env.BUILD_TIME === 'true') {
-		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
-	}
+  // Skip execution during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+    process.env.BUILD_TIME === 'true') {
+    return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+  }
 
-	// Import only when not in build mode
-	const { prisma } = await import("@/lib/db");
-	const { getCurrentUser } = await import("@/lib/auth");
-	
+  // Import only when not in build mode
+  const { prisma } = await import("@/lib/db");
+  const { getCurrentUser } = await import("@/lib/auth");
+
   try {
     const user = await getCurrentUser();
     if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { ingredientId, foodId, confidence = 0.5, useOnce = false } = await req.json();
-    
+    const { ingredientId, foodId, servingGrams, confidence = 0.5, useOnce = false } = await req.json();
+
     if (!ingredientId || !foodId) {
       return NextResponse.json({ error: 'Ingredient ID and Food ID are required' }, { status: 400 });
     }
 
     // Verify the ingredient belongs to a recipe owned by the user
     const ingredient = await prisma.ingredient.findFirst({
-      where: { 
+      where: {
         id: ingredientId,
         recipe: { authorId: user.id }
       }
@@ -44,12 +44,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Ingredient not found' }, { status: 404 });
     }
 
-    // Verify the food exists
-    const food = await prisma.food.findUnique({
-      where: { id: foodId }
-    });
+    // NUTRITION FIX: Check both FatSecret cache AND legacy Food table
+    const { FATSECRET_CACHE_MODE } = await import('@/lib/fatsecret/config');
+    const { getCachedFoodWithRelations } = await import('@/lib/fatsecret/cache-search');
 
-    if (!food) {
+    let foodExists = false;
+
+    // Check FatSecret cache first
+    if (FATSECRET_CACHE_MODE !== 'legacy') {
+      const cachedFood = await getCachedFoodWithRelations(foodId);
+      if (cachedFood) {
+        foodExists = true;
+      }
+    }
+
+    // Fallback to legacy Food table
+    if (!foodExists) {
+      const food = await prisma.food.findUnique({
+        where: { id: foodId }
+      });
+      if (food) {
+        foodExists = true;
+      }
+    }
+
+    if (!foodExists) {
       return NextResponse.json({ error: 'Food not found' }, { status: 404 });
     }
 
@@ -64,16 +83,29 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // NUTRITION FIX: Determine if FatSecret or legacy Food
+    const isFatsecretId = /^\d+$/.test(foodId);
+
+    let mappingData: any = {
+      ingredientId,
+      mappedBy: user.id,
+      confidence,
+      useOnce,
+      isActive: true,
+    };
+
+    if (isFatsecretId) {
+      // FatSecret cache food - store grams for nutrition calculation
+      mappingData.fatsecretFoodId = foodId;
+      mappingData.fatsecretGrams = servingGrams || null;
+    } else {
+      // Legacy Food table
+      mappingData.foodId = foodId;
+    }
+
     // Create the new mapping
     const mapping = await prisma.ingredientFoodMap.create({
-      data: {
-        ingredientId,
-        foodId,
-        mappedBy: user.id,
-        confidence,
-        useOnce,
-        isActive: true,
-      }
+      data: mappingData
     });
 
     console.log('Created mapping:', {
@@ -82,7 +114,7 @@ export async function POST(req: NextRequest) {
       mappedBy: user.id,
       mappingId: mapping.id
     });
-    
+
     return NextResponse.json({
       success: true,
       data: mapping

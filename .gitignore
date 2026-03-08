@@ -21,8 +21,23 @@ build/
 *.sqlite
 
 # Logs
-logs
+logs/
 *.log
+
+# Development artifacts
+batch-import-log-*.json
+batch-import-results-summary.md
+api-test.txt
+connect-db.ps1
+*-analysis.md
+*-analysis.json
+test-results*
+temp-scripts.json
+data/fatsecret/*.log
+data/fatsecret/debug-*.json
+data/fatsecret/cache-seed.json
+reports/eval-*.json
+.claude/settings.local.json
 
 # Runtime data
 pids
@@ -96,3 +111,6 @@ data/usda/sr-legacy-sample.jsonl
 data/curated/tmp/**
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Git corrupted files
+.git.corrupted/

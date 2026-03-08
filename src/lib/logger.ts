@@ -2,6 +2,13 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 type LogContext = Record<string, unknown> | undefined;
 
+function normalize(value: unknown) {
+  if (value instanceof Error) {
+    return { name: value.name, message: value.message, stack: value.stack };
+  }
+  return value;
+}
+
 function format(level: LogLevel, msg: string, ctx?: LogContext) {
   const base = { level, msg, ts: new Date().toISOString() } as Record<string, unknown>;
   const merged = ctx ? { ...base, ...ctx } : base;
@@ -9,7 +16,10 @@ function format(level: LogLevel, msg: string, ctx?: LogContext) {
 }
 
 function log(level: LogLevel, msg: string, ctx?: LogContext) {
-  const line = format(level, msg, ctx);
+  const normalized = ctx
+    ? Object.fromEntries(Object.entries(ctx).map(([k, v]) => [k, normalize(v)]))
+    : undefined;
+  const line = format(level, msg, normalized);
   switch (level) {
     case "debug":
       if (process.env.NODE_ENV !== "production") console.debug(line);

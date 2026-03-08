@@ -18,12 +18,12 @@ export function IngredientMappingCard({
   onDelete,             // function to call when delete is clicked
 }: {
   ingredientName: string;
-  parsed?: { qty:number; multiplier:number; unit?:string|null; rawUnit?:string|null; name:string };
-  candidate: { 
-    id:string; 
-    name:string; 
-    brand?:string|null; 
-    confidence:number; 
+  parsed?: { qty: number; multiplier: number; unit?: string | null; rawUnit?: string | null; name: string };
+  candidate: {
+    id: string;
+    name: string;
+    brand?: string | null;
+    confidence: number;
     servingOptions: ServingOption[];
     kcal100: number;
     protein100: number;
@@ -39,7 +39,7 @@ export function IngredientMappingCard({
       assumedServingLabel: string;
     };
   };
-  onMap: (opts: { foodId:string; servingGrams:number; useOnce:boolean; confidence:number }) => void;
+  onMap: (opts: { foodId: string; servingGrams: number; useOnce: boolean; confidence: number }) => void;
   gramsResolved: number | null;
   usedFallbackServing?: boolean;
   isMapped?: boolean;
@@ -84,19 +84,18 @@ export function IngredientMappingCard({
 
   const handleCardClick = () => {
     if (isMapped) return; // Don't allow clicking if already mapped
-    
+
     const grams = effectiveGrams ?? parseFloat(manualGrams);
     if (!grams || Number.isNaN(grams)) return;
     onMap({ foodId: candidate.id, servingGrams: grams, useOnce, confidence: candidate.confidence });
   };
 
   return (
-    <div 
-      className={`rounded-xl border p-3 space-y-2 transition-all duration-200 ${
-        isMapped 
-          ? 'bg-green-50 border-green-200 cursor-default dark:bg-green-900/20 dark:border-green-700' 
+    <div
+      className={`rounded-xl border p-3 space-y-2 transition-all duration-200 ${isMapped
+          ? 'bg-green-50 border-green-200 cursor-default dark:bg-green-900/20 dark:border-green-700'
           : 'cursor-pointer hover:shadow-md hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 dark:border-gray-700 active:scale-[0.98]'
-      }`}
+        }`}
       onClick={handleCardClick}
     >
       <div className="flex items-center justify-between">
@@ -166,11 +165,16 @@ export function IngredientMappingCard({
         </div>
       )}
 
+      {/* Show grams for both mapped and unmapped states if available */}
+      {effectiveGrams != null && (
+        <div className="text-sm text-gray-700 dark:text-gray-300">
+          Using <span className="font-medium">{Math.round(effectiveGrams)} g</span> for this ingredient.
+        </div>
+      )}
+
       {!isMapped && (
         <>
-          {effectiveGrams != null ? (
-            <div className="text-sm text-gray-700">Using <span className="font-medium">{Math.round(effectiveGrams)} g</span> for this ingredient.</div>
-          ) : (
+          {effectiveGrams == null && (
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs text-gray-600">We couldn't infer grams — pick one:</span>
               <div className="relative">
@@ -187,7 +191,7 @@ export function IngredientMappingCard({
                   {servingOptions.map(s => <option key={s.label} value={s.label}>{s.label}</option>)}
                 </select>
               </div>
-              <button 
+              <button
                 className="text-sm border rounded px-2 py-1"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -216,13 +220,13 @@ export function IngredientMappingCard({
 
           <div className="flex items-center justify-between pt-1">
             <label className="flex items-center gap-2 text-sm">
-              <input 
-                type="checkbox" 
-                checked={useOnce} 
+              <input
+                type="checkbox"
+                checked={useOnce}
                 onChange={e => {
                   e.stopPropagation();
                   setUseOnce(e.target.checked);
-                }} 
+                }}
               />
               Use once (don't save mapping)
             </label>

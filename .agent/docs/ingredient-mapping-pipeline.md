@@ -1,0 +1,1452 @@
+# Ingredient Mapping Pipeline Documentation
+
+> **Purpose**: How the ingredient mapping system works, component interactions, and expected behavior.
+
+---
+
+## Table of Contents
+1. [Architecture Overview](#architecture-overview)
+2. [Database Schema](#database-schema)
+3. [Pipeline Flow](#pipeline-flow)
+4. [Candidate Gathering](#candidate-gathering)
+5. [Scoring & Selection](#scoring--selection)
+6. [Serving Selection & Backfill](#serving-selection--backfill)
+7. [Caching Strategy](#caching-strategy)
+8. [Normalization Rules](#normalization-rules)
+9. [Key Files](#key-files)
+10. [Debugging](#debugging-incorrect-mappings)
+11. [Determinism Mechanisms](#determinism-mechanisms-jan-9-fix)
+12. [Cache Normalization](#cache-normalization-jan-10-fix)
+13. [Cooking State Disambiguation](#cooking-state-disambiguation)
+14. [Batch Processing Optimizations](#batch-processing-optimizations-jan-14-fix)
+15. [Ambiguous Unit AI Estimation](#ambiguous-unit-handling-jan-15-fix)
+16. [Proactive Produce Backfill](#5-proactive-produce-size-backfill-jan-15-fix)
+17. [AI Cost Reduction Refactor](#ai-cost-reduction-refactor-jan-2026)
+18. [Local LLM Integration (RTX 3090)](#local-llm-integration-jan-2026---rtx-3090)
+19. [Accuracy Hardening (Jan 22)](#accuracy-hardening-jan-22-2026)
+
+---
+
+## Architecture Overview
+
+```mermaid
+flowchart TD
+    subgraph Input
+        A[Raw Ingredient Line] --> B{Check ValidatedMapping Cache}
+    end
+    
+    subgraph Cache_Hit["Cache Hit Path"]
+        B -->|Hit| C[Use Cached Food ID]
+        C --> D{Serving Available?}
+        D -->|Yes| E[Select Serving]
+        D -->|No| F[AI Backfill Serving]
+        F --> E
+        E --> G[Return Result]
+    end
+    
+    subgraph Cache_Miss["Cache Miss Path"]
+        B -->|Miss| H[AI Normalize / Parse]
+        H --> I[Gather Candidates]
+        I --> J[Filter Candidates]
+        J --> K[Score & Rank]
+        K --> L[Select Best Match]
+        L --> M[Hydrate to Cache]
+        M --> N[Backfill Missing Servings]
+        N --> O[Save to ValidatedMapping]
+        O --> D
+    end
+```
+
+### Core Principles
+1. **Speed First**: Cache hits skip candidate gathering, but still do serving selection
+2. **Accuracy**: AI-assisted normalization and reranking for first encounters
+3. **Consistency**: Synonym normalization ensures same food selection for equivalent queries
+4. **FDC Preference for Produce**: USDA data is more accurate for raw vegetables/fruits
+
+---
+
+## Database Schema
+
+### Primary Tables
+
+| Table | Purpose |
+|-------|---------|
+| `ValidatedMapping` | Maps ingredient → food with both raw line and normalized form |
+| `IngredientFoodMap` | Links recipe ingredients to nutrition data |
+| `AiNormalizeCache` | Caches AI-generated ingredient simplifications |
+
+### Food Cache Tables
+
+| Table | Purpose |
+|-------|---------|
+| `FatSecretFoodCache` | Cached FatSecret food entries |
+| `FatSecretServingCache` | Serving sizes for FatSecret foods |
+| `FdcFoodCache` | Cached USDA FoodData Central entries |
+| `FdcServingCache` | Serving sizes for FDC foods (uses `fdcId` as Int) |
+
+> **Important**: FDC foods use `FdcServingCache` with integer `fdcId`. FatSecret foods use `FatSecretServingCache` with string `foodId`. Never mix these.
+
+### Support Tables
+
+| Table | Purpose |
+|-------|---------|
+| `LearnedSynonym` | Synonym pairs learned from AI/user feedback |
+| `PortionOverride` | AI-estimated portions for ambiguous units (global) |
+
+---
+
+## Pipeline Flow
+
+### Phase 1: Cache Lookup (Normalized Form)
+
+Cache lookup uses **normalized form** as the primary key, eliminating "selection drift" where the same ingredient would map to different foods depending on exact phrasing.
+
+```
+Input: "2 cups chopped onions"
+
+1. Basic normalize → "onion" (strip qty, unit, prep phrases)
+2. Check ValidatedMapping for normalizedForm match ← PRIMARY LOOKUP
+3. If found → Use cached foodId, proceed to serving selection
+4. If not found → Continue to full pipeline
+5. On success → Save mapping keyed by normalizedForm
+```
+
+**Selection Drift Eliminated:**
+| Raw Line | Normalized Form | Result |
+|----------|-----------------|--------|
+| `1 cup chopped onion` | `onion` | Onions ✅ |
+| `2 cups diced onion` | `onion` | Onions ✅ |
+| `3 onions, minced` | `onion` | Onions ✅ |
+
+### Phase 2: Normalization
+
+#### Step 2a: Basic Parsing (`ingredient-line.ts`)
+
+```typescript
+Input: "2 cups chopped onions, divided"
+
+Output: {
+  qty: 2, unit: "cup", name: "chopped onions",
+  notes: "divided", prepPhrases: ["chopped"], qualifiers: []
+}
+```
+
+#### Step 2b: AI Normalize (`ai-normalize.ts`)
+
+Called for **all first-time ingredients** to ensure accurate mappings:
+
+1. Receives: `rawLine` + `cleanedInput` (from basic parsing)
+2. Returns: `normalizedName`, `prepPhrases`, `sizePhrases`, `synonyms`
+3. Preserves dietary modifiers: "lowfat", "sugar-free", fat percentages ("85%", "90%")
+4. Strips only prep phrases and measurements
+5. Generates British→American synonyms ("courgette" → "zucchini")
+6. Corrects common typos ("stberry" → "strawberry")
+
+**What Gets Stored in `AiNormalizeCache`:**
+```typescript
+{
+  rawLine: "2 cups chopped lowfat milk",
+  normalizedName: "lowfat milk",
+  synonyms: ["low-fat milk", "skim milk"],
+  prepPhrases: ["chopped"],
+  sizePhrases: ["2 cups"]
+}
+```
+
+#### AI-Learned Prep Phrase Sync
+
+At pipeline start, static rules are merged with AI-learned prep phrases:
+
+```mermaid
+flowchart LR
+    A[Pipeline Start] --> B[Load static rules.json]
+    A --> C[Query AiNormalizeCache.prepPhrases]
+    B --> D[Merge into in-memory Set]
+    C --> D
+    D --> E[normalizeIngredientName uses merged list]
+```
+
+**Key Functions in `normalization-rules.ts`:**
+| Function | Purpose |
+|----------|---------|
+| `refreshNormalizationRules()` | Merges static + AI-learned phrases at pipeline start |
+| `getMergedPrepPhrases()` | Returns merged list |
+
+**Prep Phrase Categories:**
+- **Stripped (no nutrition change)**: scrambled, boiled, grilled, chopped, diced, mashed
+- **Preserved (affects nutrition)**: fried, breaded, candied, buttered, sugar-free, lowfat
+
+### Phase 3: Candidate Gathering
+
+1. Build search queries with singular/plural variants
+2. Search FatSecret API (parallel)
+3. Search FDC API (parallel)
+4. Merge candidates from both sources
+
+### Phase 4: Filtering & Scoring
+
+1. Apply exclusion rules (e.g., "ice" ≠ "rice")
+2. Check required tokens present
+3. Score each candidate:
+   - Positional relevance from API
+   - Name similarity/overlap
+   - Modifier matching (lowfat, organic)
+   - Source preference (FDC for produce)
+   - Missing Query Term Penalty
+   - Unexpected Dish Term Penalty
+4. Select best match
+
+### Phase 5: Hydration & Backfill
+
+1. Hydrate winner to food cache
+2. Cache servings
+3. AI Backfill missing servings (count/volume/weight)
+4. Save to ValidatedMapping
+
+### Phase 6: Serving Selection
+
+1. Parse requested serving: "2 cups"
+2. Find matching serving in cache
+3. Calculate grams using conversion factor
+4. Compute nutrition from nutrientsPer100g
+
+---
+
+## Candidate Gathering
+
+### API Searches (Parallel)
+
+| Source | Endpoint | Priority |
+|--------|----------|----------|
+| FatSecret | `foods.search.v3` | General foods, branded products |
+| FDC | USDA FoodData Central | Produce, raw ingredients |
+
+### Positional Relevance
+- Position 1-3: Score boost for top results
+- FDC results get preference for produce categories
+
+---
+
+## Scoring & Selection
+
+### Score Components
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Position | High | Top 3 API results get bonus |
+| Name Match | High | Exact > partial > contains |
+| Modifier Match | Medium | "lowfat milk" prefers "Lowfat Milk" |
+| Source Preference | Medium | FDC preferred for produce |
+| Brand Penalty | Low | Generic slightly preferred for basics |
+
+### Exclusion Rules (`filter-candidates.ts`)
+
+```typescript
+const CATEGORY_EXCLUSIONS = [
+  { query: ['ice'], excludeIfContains: ['rice', 'ice cream', 'gum'] },
+  { query: ['cream'], excludeIfContains: ['ice cream'] },
+  // ... more rules
+];
+```
+
+---
+
+## Serving Selection & Backfill
+
+### Serving Types
+
+| Type | Examples | Selection Logic |
+|------|----------|-----------------|
+| Count | "1 egg", "2 tortillas" | Match unit to count servings |
+| Volume | "1 cup", "2 tbsp" | Convert using density |
+| Weight | "100g", "4 oz" | Direct conversion |
+
+### Recognized Count Units
+
+```typescript
+'slice', 'piece', 'item', 'each', 'unit',
+'packet', 'sachet', 'pouch', 'stick', 'bar', 'scoop',
+'envelope', 'container', 'can', 'serving', 'bottle',
+'tortilla', 'egg', 'bagel', 'patty', 'fillet',
+'clove', 'stalk', 'leaf', 'sprig',
+'cookie', 'cracker', 'chip', 'muffin',
+'small', 'medium', 'large', 'whole'
+```
+
+### Size-Aware Serving Selection
+
+For whole foods, the system extracts size qualifiers:
+
+```typescript
+// Input: "1 small banana"
+// Parser qualifiers: ["small"]
+// AI sizePhrases: ["small"]
+// selectServing() finds "small (6" to 6-7/8" long)" = 101g ✓
+
+// Input: "1 banana" (no size)
+// Default: Uses "medium" as fallback = 118g ✓
+```
+
+### AI Serving Backfill
+
+When a food lacks the requested serving type:
+
+```typescript
+// "1 packet monk fruit sweetener"
+// Available: [{ desc: "serving", grams: 8 }]
+// Requested: "packet" - NOT FOUND!
+
+// Flow:
+1. selectServing() returns null
+2. backfillOnDemand() triggered with targetUnit="packet"
+3. AI estimates: 1 packet = 1g
+4. New serving created in cache
+5. Future requests use cached serving
+```
+
+**Confidence Thresholds:**
+- Standard AI: 0.6 (60%)
+- On-demand backfill: 0.35 (35%) - user can override
+
+### Ambiguous Unit Handling (Jan 15 Fix)
+
+Units that have variable weights depending on brand/context require AI estimation:
+
+```typescript
+// AMBIGUOUS_UNITS - triggers AI estimation instead of API servings
+'container', 'scoop', 'bowl', 'handful', 'packet', 'package',
+'envelope', 'can', 'jar', 'bottle', 'carton', 'tub', 'box',
+'bag', 'pouch', 'egg', 'medium', 'large', 'small', 'whole'
+```
+
+**Flow for Ambiguous Units:**
+1. `selectServing()` returns `null` for ambiguous units (skips unreliable API data)
+2. `backfillOnDemand()` is also skipped (prevents generic serving creation)
+3. AI estimates weight based on food name and unit context
+4. Result saved to `FatSecretServingCache` (for FatSecret foods) or used inline (for FDC foods)
+
+**Before/After Examples:**
+| Input | Before | After |
+|-------|--------|-------|
+| `1 egg` | 100g | **50g** ✓ |
+| `1 packet sweetener` | 100g | **1g** ✓ |
+| `1 bowl oatmeal` | 100g | **235g** ✓ |
+| `1 jar peanut butter` | 100g | **454g** ✓ |
+
+> **Key Files**: `ambiguous-unit-backfill.ts`, `ambiguous-serving-estimator.ts`
+
+### Weight Serving Backfill (Jan 15 Fix)
+
+When the best-scored candidate lacks weight-based servings (g/oz), hydration can fail for weight-unit requests, causing fallback to lower-ranked candidates.
+
+**Problem Scenario:**
+```
+Input: "4 oz sugar substitute"
+
+1. Winner: Market Pantry (0 cal) - Score: 1.000 ✓
+2. Available servings: [serving, tsp, tbsp, cup] - NO gram serving!
+3. hydrateAndSelectServing() fails (no "oz" or "g" serving)
+4. Falls back to generic sweetener (300 cal) with "g" serving ✗
+```
+
+**Solution:** Before falling back to other candidates, try AI backfill for weight serving:
+
+```typescript
+// Step 5a in map-ingredient-with-fallback.ts
+if (!result && isWeightUnit && winner.source === 'fatsecret') {
+    await backfillWeightServing(winner.id);  // Creates 100g serving
+    result = await hydrateAndSelectServing(winner, ...);  // Retry
+}
+```
+
+**After Fix:**
+| Input | Before | After |
+|-------|--------|-------|
+| `4 oz sugar substitute` | 340 kcal | **0 kcal** ✓ |
+
+> **Key Files**: `ai-backfill.ts` (`backfillWeightServing`), `map-ingredient-with-fallback.ts` (Step 5a)
+
+---
+
+## Caching Strategy
+
+### Cache Layers
+
+| Layer | Purpose |
+|-------|---------|
+| `ValidatedMapping` | Fast path for known mappings |
+| `*FoodCache` | Food data (FatSecret/FDC) |
+| `*ServingCache` | Serving data |
+| `AiNormalizeCache` | Normalization results |
+
+### Cache Behavior
+
+| Scenario | Action |
+|----------|--------|
+| First encounter | Full pipeline, hydrate all caches |
+| Cache hit | Return immediately |
+| Synonym match | Use canonical form's mapping |
+
+### Parallel Processing Settings
+
+| Component | Setting | Default |
+|-----------|---------|---------|
+| `auto-map.ts` | `concurrency` | 100 |
+| `pilot-batch-import.ts` | `BATCH_SIZE` | 50 |
+| `deferred-hydration.ts` | `batchSize` | 50 |
+| `config.ts` | `CACHE_SYNC_BATCH_SIZE` | 100 |
+
+---
+
+## Normalization Rules
+
+### Synonym Rewrites (`normalization-rules.json`)
+
+```json
+{
+  "synonym_rewrites": [
+    { "from": "eggs", "to": "egg" },
+    { "from": "liquid", "to": "water" }
+  ]
+}
+```
+
+### Part-Whole Stripping
+
+| Pattern | Normalized | Rationale |
+|---------|------------|-----------|
+| `{herb} leaves` | `{herb}` | Leaves are default edible part |
+| `garlic clove(s)` | `garlic` | Cloves are default unit |
+| `celery stalk(s)` | `celery` | Stalks are default form |
+| `{citrus} zest` | `{citrus} peel` | API-friendly term |
+
+### Modifier Preservation
+
+Critical modifiers kept for accurate matching:
+- Fat: "lowfat", "nonfat", "reduced fat"
+- Diet: "sugar-free", "gluten-free", "unsweetened"
+- Color: "green", "red", "yellow"
+
+---
+
+## Key Files
+
+### Core Pipeline
+
+| File | Purpose |
+|------|---------|
+| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Main entry point |
+| `src/lib/fatsecret/gather-candidates.ts` | Searches APIs |
+| `src/lib/fatsecret/filter-candidates.ts` | Exclusion rules, token filtering |
+| `src/lib/fatsecret/ai-rerank.ts` | AI-powered reranking |
+
+### Normalization
+
+| File | Purpose |
+|------|---------|
+| `src/lib/fatsecret/normalization-rules.ts` | Prep phrase stripping, synonym rewrites |
+| `data/fatsecret/normalization-rules.json` | JSON config with prep phrases |
+| `src/lib/parse/ingredient-line.ts` | Parses raw ingredient |
+
+### Serving Selection
+
+| File | Purpose |
+|------|---------|
+| `src/lib/fatsecret/serving-backfill.ts` | On-demand serving backfill |
+| `src/lib/fatsecret/ambiguous-unit-backfill.ts` | AI estimation for ambiguous units |
+| `src/lib/ai/serving-estimator.ts` | AI serving size estimation |
+| `src/lib/ai/ambiguous-serving-estimator.ts` | AI prompt/schema for ambiguous units |
+| `src/lib/fatsecret/unit-type.ts` | Unit classification |
+
+### Recipe Import
+
+| File | Purpose |
+|------|---------|
+| `scripts/pilot-batch-import.ts` | Batch imports with analysis |
+| `scripts/clear-all-mappings.ts` | Clears mappings (keeps food cache) |
+| `src/lib/nutrition/auto-map.ts` | Recipe-level orchestration |
+
+### Running the Pilot Import
+
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/pilot-batch-import.ts <NUM>
+```
+
+> **Note**: Scripts require `tsconfig.scripts.json` (uses `moduleResolution: "node"` with CommonJS).
+
+---
+
+## Expected Behaviors
+
+### Example: "4 eggs"
+1. Normalize: "eggs" → "egg"
+2. Search FatSecret + FDC
+3. Select: "Egg" (50g per large)
+4. Calculate: 4 × 50g = 200g, 296 kcal
+
+### Example: "2 cups chopped onions"
+1. Parse: qty=2, unit=cup, name="chopped onions"
+2. Normalize: Remove "chopped" → "onions"
+3. Search, select "Onions" (FDC)
+4. Serving: "1 cup" = 160g
+5. Calculate: 2 × 160g = 320g
+
+### Example: "1 container low fat yogurt"
+1. Parse: qty=1, unit=container, name="low fat yogurt"
+2. Ambiguous unit detected
+3. AI estimates: 1 container ≈ 150g
+4. Save to PortionOverride
+5. Calculate: 1 × 150g = 150g, ~90 kcal
+
+### Example: "1 small banana"
+1. Parse qualifiers: ["small"]
+2. Size preference: "small"
+3. Select "Bananas" (FDC)
+4. Size-aware serving: 101g
+5. Calculate: 1 × 101g, 89 kcal
+
+---
+
+## Debugging Incorrect Mappings
+
+> **See also**: [Debugging Quick-Start Guide](./debugging-quickstart.md)
+
+### Log Files
+
+```bash
+$env:ENABLE_MAPPING_ANALYSIS='true'; npm run pilot-import 100
+```
+
+| File | Purpose |
+|------|---------|
+| `logs/mapping-summary-*.txt` | One line per ingredient with mapped food + macros |
+| `logs/mapping-analysis-*.json` | Top 5 candidates with scores |
+
+### Debug Script
+
+```bash
+# Debug a full ingredient line
+npx ts-node scripts/debug-mapping-issue.ts --ingredient "3 fl oz single cream"
+
+# Debug just a search query
+npx ts-node scripts/debug-mapping-issue.ts --search "light cream"
+
+# Load from analysis log
+npx ts-node scripts/debug-mapping-issue.ts --from-log logs/mapping-analysis-*.json --index 5
+```
+
+The script shows: Parsed Result, AI Normalized Name, Raw API Results, Post-Filter Candidates, Scored Candidates, Winner Selection.
+
+> **⚠️ Note**: Debug script runs fresh API searches without cache. If debug shows success but batch import fails, clear the mapping cache: `npx ts-node scripts/clear-all-mappings.ts`
+
+### Diagnosis Guide
+
+| If the correct food... | Problem is in... |
+|------------------------|------------------|
+| Never appears in API results | AI normalization or synonym expansion |
+| Appears but gets filtered out | `filter-candidates.ts` rules |
+| Appears but ranks low | `simple-rerank.ts` scoring weights |
+| Gets wrong nutrition/serving | Food cache or serving selection |
+
+---
+
+## Changelog Summary
+
+### January 2026 - Major Pipeline Improvements
+
+**Verified 99.7% success rate** (1080/1083 ingredients) after comprehensive fixes.
+
+#### AI Normalization Improvements
+- Preserved modifiers: `unsweetened`, `sweetened`, `no sugar added`
+- Joined existing: `lowfat`, `nonfat`, `reduced fat`, fat percentages
+
+#### Scoring Adjustments
+- Brand penalty: 0.3 → 0.1 (was over-penalizing accurate branded products)
+- Extra token penalty: 0.15 → 0.25 (better penalizes complex names)
+- Smarter brand logic: No penalty when branded item has full query coverage
+
+#### Macro Profile Filters
+| Profile | Constraints |
+|---------|-------------|
+| Fresh berries | max 60 kcal/100g |
+| Protein powders | min 40g protein/100g |
+| Unsweetened coconut milk | max 50 kcal/100g |
+
+#### Category Exclusions Added
+- `splenda`: stevia, naturals, monk fruit
+- `rolled oats`: quick, instant
+- `ice cubes`: moritz, chocolate
+- `mushroom`: stuffed, filled, with cheese
+- `coconut`: coconut milk, coconut water, coconut cream
+
+#### False Positive Fixes
+| Issue | Fix |
+|-------|-----|
+| Ice cubes → Candy | Added synonym expansion + exclusions |
+| Crimini → Stuffed dish | Exclusion for stuffed/filled |
+| Unsweetened coconut → Milk | Exclusion for liquids |
+
+#### Selection Drift Fix
+- Cache now uses `normalizedForm` as primary key
+- Multiple raw variations share single cache entry
+- Token-set matching handles word order variance
+
+#### Part-Whole Stripping
+- `parsley leaves` → `parsley`
+- `garlic cloves` → `garlic`
+- `celery stalks` → `celery`
+- `{citrus} zest` → `{citrus} peel`
+
+---
+
+## Cache Normalization (Jan 10 Fix)
+
+### Canonical Base for Cache Keys
+
+The `AiNormalizeCache` now includes a `canonicalBase` field that provides a stable cache key:
+
+| Raw Input | Normalized Name | Canonical Base |
+|-----------|-----------------|----------------|
+| `2 cup strawberry halves` | `strawberry halves` | `strawberries` |
+| `1 cup strawberries` | `strawberries` | `strawberries` |
+| `diced tomatoes` | `diced tomatoes` | `tomatoes` |
+| `1 medium tomato` | `tomato` | `tomatoes` |
+
+**Key Principle**: Strip prep/size words but **preserve nutrition-affecting modifiers**.
+
+### Modifier Preservation Rules
+
+| Modifier Type | Example | Action |
+|--------------|---------|--------|
+| Prep phrases | chopped, diced, sliced | ✅ Strip from canonical |
+| Size phrases | halves, cubes | ✅ Strip from canonical |
+| Fat modifiers | skinless, skim, 2%, reduced fat | ❌ Keep in canonical |
+| Lean % | 85% lean, 90/10 | ❌ Keep in canonical |
+| Form words | powder, flakes | ❌ Keep in canonical |
+
+### Examples
+
+| Input | Canonical Base | Why |
+|-------|----------------|-----|
+| `skinless chicken thighs` | `skinless chicken thighs` | Skinless = less fat |
+| `skim milk` | `skim milk` | Different nutrition than whole |
+| `85% lean ground beef` | `85% lean ground beef` | Lean % affects fat content |
+| `garlic powder` | `garlic powder` | Different product than garlic |
+
+### Dynamic Singular/Plural Matching
+
+Token filtering now uses dynamic `singularize()`/`pluralize()` helpers instead of static synonym lists:
+
+**File**: `filter-candidates.ts` (lines 99-142)
+
+```typescript
+// berries → berry, potatoes → potato
+function singularize(word: string): string { ... }
+
+// berry → berries, potato → potatoes  
+function pluralize(word: string): string { ... }
+
+// Returns all variants for token matching
+function getSingularPluralVariants(word: string): string[] { ... }
+```
+
+This ensures `strawberry` matches candidates containing `strawberries` automatically.
+
+### DISH_TERMS Expansion
+
+Added terms to penalize processed products when searching for raw ingredients:
+
+```typescript
+DISH_TERMS = [..., 'drink', 'beverage', 'flavored'];
+```
+
+This prevents `"stberry halves"` from mapping to `"Strawberry-Flavored Drink"`.
+
+### Test Suite
+
+```bash
+npx tsx scripts/test-canonical-base.ts
+```
+
+**22/22 tests pass** covering:
+- Plural matching (strawberry ↔ strawberries)
+- Nutritional modifier separation (skinless ≠ with skin)
+- Prep phrase consolidation (diced ↔ chopped)
+- Processed vs raw (smoothie ≠ fruit)
+
+---
+
+## Cooking State Disambiguation
+
+### Overview
+
+Recipes typically measure **raw** ingredients (cooking fat is listed separately). The pipeline defaults to raw/dry states unless "cooked" is explicitly stated.
+
+```
+"1 cup rice" → Raw rice (~360 kcal/100g)
+"1 cup cooked rice" → Cooked rice (~130 kcal/100g)
+```
+
+### Foods With Cooking State
+
+| Category | Examples |
+|----------|----------|
+| Grains/Pasta | quinoa, rice, pasta, oats, noodles |
+| Meats | chicken, beef, steak, pork, lamb |
+| Seafood | salmon, shrimp, fish |
+| Eggs | egg, eggs |
+| Legumes | lentils, beans, chickpeas |
+| Vegetables | potato, spinach, broccoli |
+
+**Key File**: `filter-candidates.ts` - `FOODS_WITH_COOKING_STATE` array
+
+### Detection Logic (`detectGrainCookingContext`)
+
+```typescript
+// Cooking keywords trigger preferCooked: true
+COOKING_KEYWORDS = ['cooked', 'boiled', 'steamed', 'grilled',
+  'roasted', 'baked', 'fried', 'scrambled', 'poached', ...]
+
+"2 cups cooked quinoa" → preferCooked: true
+"200g rice" → preferDry: true (default)
+```
+
+### Cooking Conversion Fallback
+
+When user requests cooked variant but database lacks explicit cooked products:
+
+1. Take best raw candidate
+2. Apply USDA-based conversion factor
+3. Append "(Cooked)" to food name
+4. Return with `isCookingEstimate: true`
+
+**USDA Conversion Factors** (`cooking-conversion.ts`):
+
+| Category | Factor | Rationale |
+|----------|--------|-----------|
+| Meats/Poultry | ×1.33 | 25% water loss concentrates calories |
+| Seafood | ×1.25 | Slight water loss |
+| Eggs | ×1.10 | Minimal water loss |
+| Grains/Pasta | ×0.33 | 200% water absorption dilutes calories |
+| Legumes | ×0.50 | 100% water absorption |
+| Vegetables | ×0.90 | Slight water loss |
+
+### Example: Cooking Fallback
+
+```
+Input: "1 cup cooked oatmeal"
+
+1. detectGrainCookingContext → preferCooked: true
+2. Filter rejects all raw "Oatmeal" candidates
+3. Fallback: Take "Oatmeal" (raw, 145 kcal/serving)
+4. Apply ×0.33 grains factor → 47 kcal/serving
+5. Return: foodName: "Oatmeal (Cooked)", isCookingEstimate: true
+```
+
+### Cache Validation
+
+Cache lookups validate cooking state to prevent stale raw mappings:
+
+```typescript
+// In cache validation (3 locations):
+if (isWrongCookingStateForGrain(rawLine, normalizedName, cached.foodName)) {
+    // Reject cached raw mapping when user wants cooked
+}
+```
+
+### Test Suite
+
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-cooking-state.ts
+```
+
+**37/37 tests pass** covering all food categories.
+
+---
+
+## Known Issues (Jan 2026)
+
+> **See also**: [Critical Handoff Document](./mapping-handoff-2026-01-09-critical.md)
+
+### 🔴 Critical: Non-Deterministic Results
+
+**Symptom**: Same ingredient text produces different mappings/calories across runs.
+
+| Issue | Status | Fix |
+|-------|--------|-----|
+| Tacos → Bean Burrito | ✅ FIXED | Removed taco exclusion rule (was filtering actual tacos) |
+| Quinoa inconsistency | ✅ FIXED | Added deterministic tiebreaker + in-flight lock |
+
+### 🟠 Product Type Mismatches (Remaining)
+
+| Query | Issue | Status |
+|-------|-------|--------|
+| "pineapple juice" | Maps to fruit | Open |
+
+---
+
+## Determinism Mechanisms (Jan 9 Fix)
+
+### 1. Deterministic Sort Tiebreaker
+**File**: `simple-rerank.ts:373-383`
+
+When candidates have equal scores, use multi-level tiebreaker:
+1. Score difference (primary)
+2. Prefer generic (non-branded) foods
+3. ID string comparison (absolute determinism)
+
+### 2. In-Flight Lock
+**File**: `map-ingredient-with-fallback.ts`
+
+Prevents parallel processing of identical normalized names:
+- First thread acquires lock, runs full pipeline
+- Other threads wait, then fetch from cache
+- Eliminates race conditions in batch processing
+
+### 3. Ordered Cache Retrieval
+**File**: `validated-mapping-helpers.ts:182-187`
+
+`findByTokenSet` now uses deterministic ordering:
+```typescript
+orderBy: [
+    { usedCount: 'desc' },
+    { createdAt: 'asc' },
+]
+```
+
+---
+
+## Candidate Validation Hardening (Jan 11 Fix)
+
+### Overview
+
+Three complementary mechanisms prevent simple ingredients from incorrectly mapping to compound/branded products (e.g., "chilli peppers" → "Chilli Peppers Cream Cheese (VIOLIFE)").
+
+### Route A: Token Bloat Penalty
+
+**File**: `simple-rerank.ts:162-199`
+
+Penalizes candidates with excessive tokens compared to query:
+
+```typescript
+// "chilli peppers" (2 tokens) → "Chilli Peppers Cream Cheese" (4 tokens)
+// Excess = 4 - 2 = 2, penalty = (2 - 2) * 0.10 = 0
+// But if candidate has 5 tokens: penalty = (5 - 2 - 2) * 0.10 = 0.10
+```
+
+| Excess Tokens | Penalty |
+|---------------|---------|
+| 0-2 | 0 |
+| 3 | 0.10 |
+| 4 | 0.20 |
+| 5+ | 0.30 (max) |
+
+### Route C: AI Nutrition Estimate Validation
+
+**File**: `simple-rerank.ts:255-329`
+
+Uses AI-estimated nutrition to reject candidates with mismatched macros:
+- AI estimates chilli peppers at ~40 kcal/100g
+- Candidate "Cream Cheese" has ~230 kcal/100g
+- Mismatch > 30% → score penalty applied
+
+Only applies when AI confidence ≥ 0.7.
+
+### Route E: Branded Detection (isBranded)
+
+**File**: `ai-normalize.ts`
+
+AI normalize now returns additional fields:
+
+| Field | Purpose |
+|-------|---------|
+| `isBranded` | User explicitly wants branded product |
+| `isMultiIngredient` | Input contains multiple distinct ingredients |
+| `splitIngredients` | List of separated ingredients (when multi) |
+
+**Behavior**:
+- `isBranded=true`: Relax token containment penalty (allow branded matches)
+- `isMultiIngredient=true`: Log warning, map first ingredient only
+
+### Test Cases
+
+```bash
+# Verify token bloat penalty
+npx ts-node -e "
+const { getTokenBloatPenalty } = require('./src/lib/fatsecret/simple-rerank');
+console.log('2→4 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese'));
+console.log('2→5 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese VIOLIFE Product'));
+"
+```
+
+---
+
+## Batch Processing Optimizations (Jan 14 Fix)
+
+### Overview
+
+Optimizations to speed up batch ingredient mapping while enriching the cache for manual mapping UX.
+
+**Verification Results (100-recipe batch):**
+
+| Metric | Value |
+|--------|-------|
+| Recipes | 100 |
+| Ingredients | 785 |
+| Success Rate | 88.8% |
+| Avg Confidence | 0.966 |
+| High Confidence | 100% |
+
+### 1. Parallel Recipe Processing
+
+**File**: `scripts/pilot-batch-import.ts`
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `RECIPE_CONCURRENCY` | 10 | Recipes processed simultaneously |
+| `Promise.allSettled` | Per recipe | All ingredients parallel within recipe |
+
+```typescript
+const recipeChunks = chunk(recipes, RECIPE_CONCURRENCY);
+for (const recipeChunk of recipeChunks) {
+    await Promise.allSettled(recipeChunk.map(async (recipe) => {
+        await Promise.allSettled(recipe.ingredients.map(...));
+    }));
+}
+```
+
+### 2. Skip-on-Lock Pattern
+
+**File**: `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+
+Prevents blocking when multiple threads map the same ingredient:
+
+```typescript
+export type MapIngredientPendingResult = {
+    status: 'pending';
+    lockKey: string;
+    rawLine: string;
+};
+
+// When skipOnLock: true and lock exists
+if (existingLock && skipOnLock) {
+    return { status: 'pending', lockKey, rawLine };  // Don't block
+}
+```
+
+Batch import retries pending items after first pass to ensure all are mapped.
+
+### 3. Fire-and-Forget Deferred Hydration
+
+**File**: `src/lib/fatsecret/deferred-hydration.ts`
+
+Runner-up candidates hydrate **immediately** when scored — no blocking:
+
+```typescript
+export function queueForDeferredHydration(candidates, excludeId, servingContext) {
+    // Fire and forget - kick off immediately, don't await
+    processImmediately(runnerUps, servingContext).catch(err => {
+        logger.error('deferred_hydration.fire_and_forget_failed', { error });
+    });
+}
+```
+
+### 4. Preemptive Serving Backfill
+
+**File**: `src/lib/fatsecret/serving-backfill.ts`
+
+Pre-fills common serving options based on food type for rich manual mapping UX:
+
+| Food Type | Servings Added |
+|-----------|----------------|
+| Discrete (apple, egg, banana) | whole, medium, large, piece |
+| Liquid (milk, juice, oil) | tbsp, cup, ml |
+| Default (powder, spice) | tsp, tbsp, cup |
+
+**Environment Variable**: `ENABLE_PREEMPTIVE_BACKFILL=true`
+
+**Key Function**: `backfillCommonServings(foodId, foodName, requestedUnit)`
+
+### 5. Proactive Produce Size Backfill (Jan 15 Fix)
+
+**Problem**: Produce items (fruits/vegetables) often need size-based servings (small/medium/large), but the first mapping only creates the requested size. Subsequent queries for different sizes trigger on-demand AI calls.
+
+**Solution**: Proactively backfill all three sizes (small/medium/large) after the first produce mapping.
+
+#### Produce Detection
+
+**File**: `src/lib/fatsecret/serving-backfill.ts`
+
+```typescript
+const PRODUCE_PATTERNS = [
+    /\b(apple|apples)\b/i,
+    /\b(banana|bananas)\b/i,
+    /\b(avocado|avocados)\b/i,
+    // ... 28 common fruits/vegetables
+];
+
+export function isProduce(name: string): boolean {
+    return PRODUCE_PATTERNS.some(p => p.test(name));
+}
+```
+
+#### Proactive Backfill Flow
+
+```mermaid
+flowchart TD
+    A[Ingredient Mapped Successfully] --> B{isProduce?}
+    B -->|No| C[Done]
+    B -->|Yes| D[proactiveProduceBackfill]
+    D --> E[Fire-and-Forget]
+    E --> F[estimateProduceSizes - 1 AI call]
+    F --> G[Save small/medium/large to cache]
+```
+
+**Key Files**:
+| File | Function |
+|------|----------|
+| `deferred-hydration.ts` | `proactiveProduceBackfill()` - triggered after winner mapping |
+| `serving-backfill.ts` | `isProduce()` - pattern-based detection |
+| `ambiguous-unit-backfill.ts` | `batchBackfillProduceSizes()` - batched saving |
+| `ambiguous-serving-estimator.ts` | `estimateProduceSizes()` - single AI call for all 3 sizes |
+
+#### Batched AI Estimation
+
+Instead of 3 separate AI calls per produce item, uses a single batched call:
+
+```typescript
+// Before: 3 AI calls
+await estimateAmbiguousServing(food, 'small');
+await estimateAmbiguousServing(food, 'medium');
+await estimateAmbiguousServing(food, 'large');
+
+// After: 1 AI call
+const result = await estimateProduceSizes(foodName);
+// Returns: { small: 101, medium: 118, large: 136, confidence: 0.85 }
+```
+
+**AI Prompt Examples**:
+```
+Examples:
+- Apple: small=150g, medium=182g, large=220g
+- Banana: small=101g, medium=118g, large=136g
+- Avocado: small=115g, medium=150g, large=200g
+- Potato: small=150g, medium=213g, large=300g
+```
+
+#### Batch Backfill Script
+
+For backfilling existing produce items in the cache:
+
+```bash
+# Dry run - see what would be backfilled
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-produce-sizes.ts --dry-run
+
+# Limit to N items (for testing)
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-produce-sizes.ts --limit 10
+
+# Full run
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/backfill-produce-sizes.ts
+```
+
+**Performance**:
+| Metric | Value |
+|--------|-------|
+| AI calls per item | 1 (not 3) |
+| Full backfill time | ~15-20 min for 200 items |
+| Savings | 66% fewer API calls |
+
+#### Analysis Script
+
+Check produce coverage in cache:
+
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/analyze-produce-cache.ts
+```
+
+Outputs:
+- Total produce items in FatSecret/FDC caches
+- Fully backfilled (all 3 sizes)
+- Partially backfilled (some sizes)
+- No size servings
+- Potential AI backfill calls needed
+
+---
+
+## AI Cost Reduction Refactor (Jan 2026)
+
+### Overview
+
+Implemented a "Heuristic-First, AI-Gated" pipeline to reduce LLM API costs by eliminating unnecessary AI normalization calls. The system uses candidate confidence scoring to decide whether LLM normalization is needed.
+
+### Verified Results (20-Recipe Import, Fresh Cache)
+
+```
+AI Call Summary:
+  Total Ingredients Processed: 436
+  Cache Hits: 9
+  Gate Skipped: 126
+  LLM Calls: 301
+    - Normalize: 0      ← 100% skipped by gate!
+    - Serving: 256
+    - Ambiguous: 45
+  Skip Rate: 31.0%
+```
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Normalize Gate | `normalize-gate.ts` | Decides if LLM normalize needed |
+| Modifier Constraints | `modifier-constraints.ts` | Enforces fat-free/unsweetened without AI |
+| AI Call Metrics | `structured-client.ts` | Tracks all LLM calls |
+| Mapping Logger | `mapping-logger.ts` | Logs cache hits + AI tags |
+
+### LLM Normalize Gate
+
+**File**: `src/lib/fatsecret/normalize-gate.ts`
+
+The gate evaluates candidate quality before calling AI normalization:
+
+```typescript
+interface GateDecision {
+    shouldCallLlm: boolean;
+    confidence: number;
+    reason: string;
+}
+
+function shouldNormalizeLlm(
+    rawLine: string,
+    candidates: UnifiedCandidate[],
+    topScore: number
+): GateDecision
+```
+
+**Skip Conditions**:
+- Top candidate score ≥ 0.85
+- Single-word ingredient with exact match
+- High-confidence match within top 3 candidates
+
+**Trigger Conditions**:
+- Multi-ingredient input detected ("salt and pepper")
+- Low candidate scores (< 0.7)
+- Complex modifiers requiring AI parsing
+
+### AI Call Metrics Tracking
+
+**File**: `src/lib/ai/structured-client.ts`
+
+Session-based metrics for cost analysis:
+
+```typescript
+const sessionMetrics = {
+    normalize: 0,      // AI normalization calls
+    serving: 0,        // Serving estimation calls
+    ambiguous: 0,      // Ambiguous unit estimation
+    produce: 0,        // Produce size estimation
+    skippedByGate: 0,  // Calls avoided by gate
+    cacheHits: 0       // Validated cache hits
+};
+
+// Functions
+getAiCallMetrics()       // Get current counts
+resetAiCallMetrics()     // Reset for new session
+incrementAiCall(purpose) // Auto-called on LLM success
+incrementSkippedByGate() // Track gate skips
+incrementCacheHit()      // Track cache hits
+getAiCallSummary()       // Human-readable summary
+```
+
+### Mapping Summary Tags
+
+With `ENABLE_MAPPING_ANALYSIS=true`, the summary shows AI status:
+
+```
+✓ {full_pipeline} [0.98] "1 banana" → "Banana" | 105kcal [AI:GATE]
+✓ {early_cache} [0.98] "1 egg" → "Egg" | 74kcal [AI:CACHE]
+```
+
+| Tag | Meaning |
+|-----|---------|
+| `[AI:GATE]` | Normalize LLM skipped by gate |
+| `[AI:CACHE]` | Cache hit, no pipeline run |
+| `[AI:NORM]` | LLM normalize was called |
+
+### Verification Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `test-normalize-gate.ts` | Verify gate skip logic |
+| `test-ai-metrics.ts` | Test metrics tracking |
+| `check-db-stats.ts` | Database status |
+| `clear-all-mappings.ts` | Clear cache for fresh test |
+
+### Running Cost Analysis
+
+```powershell
+# Clear all mappings for fresh test
+npm run ts scripts/clear-all-mappings.ts
+
+# Run pilot import with metrics
+$env:ENABLE_MAPPING_ANALYSIS='true'; npm run pilot-import 20
+
+# View results
+Get-Content logs/mapping-summary-*.txt | Select-Object -Last 30
+```
+
+---
+
+## Local LLM Integration (Jan 2026 - RTX 3090)
+
+### Overview
+
+Added **Ollama** as the first provider in the AI fallback chain, running locally on an RTX 3090 GPU. This reduces serving estimation costs to zero while maintaining full cloud fallback capability.
+
+### Provider Fallback Chain
+
+```mermaid
+flowchart LR
+    A[callStructuredLlm] --> B{Ollama Available?}
+    B -->|Yes| C[🖥️ Local RTX 3090<br/>qwen2.5:14b<br/>FREE]
+    B -->|No| D{OpenRouter Key?}
+    D -->|Yes| E[☁️ OpenRouter<br/>qwen-turbo<br/>$0.001/call]
+    D -->|No| F[☁️ OpenAI<br/>gpt-5-nano<br/>$0.01/call]
+    C --> G[Return Result]
+    E --> G
+    F --> G
+```
+
+### Configuration
+
+**File**: `src/lib/fatsecret/config.ts`
+
+```typescript
+// Local LLM configuration
+export const OLLAMA_ENABLED = getFlag('OLLAMA_ENABLED', true);
+export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
+export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:14b';
+export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?? '30000', 10);
+```
+
+**Environment Variables** (`.env`):
+```env
+OLLAMA_ENABLED=true
+OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_MODEL=qwen2.5:14b
+```
+
+### Setup Instructions
+
+```powershell
+# 1. Install Ollama (Windows)
+# Download from: https://ollama.com/download/windows
+
+# 2. Pull recommended model (9GB download)
+ollama pull qwen2.5:14b
+
+# 3. Verify API is running
+curl http://localhost:11434/v1/models
+```
+
+### Recommended Models
+
+| Model | Size | VRAM | Speed | Best For |
+|-------|------|------|-------|----------|
+| **Qwen2.5 14B** | 9GB | ~12GB | ~40 t/s | Highest accuracy |
+| Mistral 7B | 4GB | ~6GB | ~100 t/s | Faster, still excellent |
+| Llama 3.1 8B | 5GB | ~8GB | ~70 t/s | Good alternative |
+
+### Batch Backfill Script
+
+For backfilling serving options across the food cache:
+
+```bash
+# Dry run - preview only
+npx tsx scripts/backfill-servings-local.ts --dry-run --limit 100
+
+# Run backfill on 100 foods
+npx tsx scripts/backfill-servings-local.ts --limit 100
+
+# Full backfill (all foods with gaps)
+npx tsx scripts/backfill-servings-local.ts
+
+# Cache-specific backfill
+npx tsx scripts/backfill-servings-local.ts --cache fatsecret
+npx tsx scripts/backfill-servings-local.ts --cache fdc
+```
+
+**File**: `scripts/backfill-servings-local.ts`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/fatsecret/config.ts` | Ollama configuration variables |
+| `src/lib/ai/structured-client.ts` | Provider chain with Ollama first |
+| `scripts/backfill-servings-local.ts` | Batch backfill using local LLM |
+| `scripts/test-ollama-integration.ts` | Integration test script |
+
+### Cost Impact
+
+| Scenario | Before (Cloud) | After (Local) |
+|----------|----------------|---------------|
+| Per serving estimation | $0.001-0.01 | **$0** |
+| Batch of 1,000 items | $1-10 | **$0** |
+| Rate limits | API quotas apply | Unlimited |
+
+> **Note**: When Ollama is unavailable (not running), the system silently falls back to cloud providers (OpenRouter → OpenAI).
+
+---
+
+## Accuracy Hardening (Jan 22 2026)
+
+### Overview
+
+Comprehensive fixes to improve ingredient mapping accuracy for edge cases, dietary requirements, and confidence thresholds.
+
+### 1. Size Descriptor Parsing
+
+**File**: `src/lib/parse/qualifiers.ts`
+
+Size words are now extracted as qualifiers instead of being included in the search query:
+
+```typescript
+// Added to QUALIFIERS
+'long', 'short', 'tall', 'jumbo', 'xl'
+
+// SIZE_ALIASES for normalization
+export const SIZE_ALIASES: Record<string, string> = {
+    long: 'large',
+    short: 'small',
+};
+```
+
+**Before/After:**
+| Input | Before | After |
+|-------|--------|-------|
+| `1 long sweet potato` | Searches "long sweet potato" → Long Rice Noodles ✗ | Searches "sweet potato" → Sweet Potato ✓ |
+
+### 2. Noise Word Filtering
+
+**File**: `src/lib/fatsecret/gather-candidates.ts`
+
+Added `NOISE_WORDS` filter to `assessConfidence()` to prevent false token matches:
+
+```typescript
+const NOISE_WORDS = new Set([
+    'long', 'short', 'tall', 'baby', 'mini', 'fresh', 'raw',
+    'large', 'small', 'medium', 'whole', 'new'
+]);
+```
+
+These words are skipped when calculating token overlap confidence.
+
+### 3. Strict Dietary Constraint Filter
+
+**File**: `src/lib/fatsecret/filter-candidates.ts`
+
+New function `isDietaryConstraintViolation()` that REJECTS ALL meat/seafood candidates for vegetarian/vegan queries:
+
+```typescript
+// Trigger indicators (in query)
+'vegetarian', 'vegan', 'plant-based', 'meatless', 'meat-free'
+
+// Reject indicators (in candidate)
+'beef', 'pork', 'chicken', 'turkey', 'lamb', 'deer', 'game',
+'fish', 'salmon', 'shrimp', 'crab', 'bone marrow', ...
+```
+
+**Behavior:**
+- Query: "vegetarian mince" → 0 meat candidates survive
+- Fallback: AI simplification → "meatless crumbles"
+
+### 4. Minimum Confidence Thresholds
+
+**Files**: `simple-rerank.ts`, `map-ingredient-with-fallback.ts`
+
+Added 0.80 minimum confidence requirement:
+
+| Location | Threshold | Purpose |
+|----------|-----------|---------|
+| `simple-rerank.ts` | `MIN_RERANK_CONFIDENCE = 0.80` | Reject low-confidence rerank winners |
+| `map-ingredient-with-fallback.ts` | `MIN_FALLBACK_CONFIDENCE = 0.80` | Reject low-confidence fallback selections |
+
+**Before/After:**
+| Input | Before | After |
+|-------|--------|-------|
+| `burger relish` | Black Bean Burger (0.688) ✗ | Rejected → AI fallback |
+
+### 5. Produce Size Estimation Improvement
+
+**File**: `src/lib/ai/ambiguous-serving-estimator.ts`
+
+Improved `buildProduceSizePrompt()` with categorized examples:
+
+```
+HEAVY produce (150-300g): potato, sweet potato, avocado
+MEDIUM produce (100-200g): apple, tomato, orange
+THIN/LIGHT produce (10-30g): scallion, green onion, celery stalk
+TINY produce (3-10g): garlic clove, ginger knob
+```
+
+**Before/After:**
+| Input | Before | After |
+|-------|--------|-------|
+| `1 medium scallion` | 150g ✗ | ~15g ✓ |
+
+### 6. Pipeline Debug Script
+
+**File**: `scripts/debug-mapping-pipeline.ts`
+
+New comprehensive debug script for step-by-step pipeline tracing:
+
+```bash
+npx ts-node scripts/debug-mapping-pipeline.ts "ingredient" [--skip-cache] [--verbose]
+```
+
+**Output Steps:**
+1. **Parse**: Raw parsing result
+2. **Normalize**: Final search query
+3. **Cache**: Cache lookup result
+4. **Gather**: Candidate counts by source
+5. **Filter**: Kept/removed candidates with reasons
+6. **Gate**: Confidence gate decision
+7. **Rerank**: Winner selection with score
+8. **Fallback**: AI simplification if triggered
+
+### Key Files Modified
+
+| File | Changes |
+|------|---------|
+| `qualifiers.ts` | +12 lines (size qualifiers, SIZE_ALIASES) |
+| `gather-candidates.ts` | +25 lines (NOISE_WORDS filter) |
+| `filter-candidates.ts` | +100 lines (dietary filter, exclusions) |
+| `simple-rerank.ts` | +20 lines (confidence threshold) |
+| `map-ingredient-with-fallback.ts` | +10 lines (fallback threshold) |
+| `ambiguous-serving-estimator.ts` | +30 lines (produce examples) |
+| `debug-mapping-pipeline.ts` | **NEW** 290 lines |
+
+---
+
+## Future Improvements
+
+1. **Remove AI Normalize dependency**: Use improved parsing once cache is mature
+2. **Confidence decay**: Re-validate old mappings periodically
+3. **User feedback loop**: Learn from user corrections
+4. **Regional variations**: Handle UK vs US ingredient names
+5. **Eager AI Density Backfill**: Currently uses lazy backfill (category-based density from food name keywords). When logging feature ships, consider switching to eager AI backfill for more accurate density estimation - would call AI to estimate density for any ml-based serving without cached `FatSecretDensityEstimate`. See `density.ts:inferCategoryFromName()` for current implementation.
+
+
+---
+
+## Food Diary Integration (Future)
+
+The current pipeline is optimized for **recipe mapping** where cooking fat is listed separately. For a future **food diary** feature:
+
+| Mode | "grilled chicken breast" |
+|------|--------------------------|
+| Recipe | Maps to raw "chicken breast" (oil listed separately) |
+| Diary | Would map to "chicken breast grilled" (oil-inclusive) |
+
+The schema preserves `cookingModifier` in `AiNormalizeCache` for this future use.
+

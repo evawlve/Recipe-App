@@ -118,6 +118,11 @@ If flag toggle doesn't resolve issues:
 
 3. **Verify** system behavior
 
+## Database connectivity (Windows helpers)
+
+- PowerShell helper: use `.\connect-db.ps1 -Command "SELECT now();"` to run a query using `DIRECT_URL` from `.env` without tripping on connection-string parsing. Omit `-Command` for an interactive `psql` session.
+- Prisma commands: ensure `DIRECT_URL` points at the unpooled 5432 connection with `sslmode=require` (see `.env.example`). Run `npx prisma db pull` from a shell that can reach the Supabase host; avoid `prisma migrate` in this project to prevent accidental data loss when drift is detected (migrations are applied manually in Supabase).
+
 **Time to rollback**: < 15 minutes
 
 #### Migration Rollback

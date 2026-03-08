@@ -27,7 +27,7 @@ const FDC_BASE_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 // Simple in-memory LRU cache with TTL
 class LruTtlCache<K, V> {
   private map = new Map<K, { value: V; expiresAt: number }>();
-  constructor(private capacity: number, private ttlMs: number) {}
+  constructor(private capacity: number, private ttlMs: number) { }
 
   get(key: K): V | undefined {
     const entry = this.map.get(key);
@@ -148,6 +148,30 @@ class FdcApiClient {
 
     this.cache.set(cacheKey, json);
     return json;
+  }
+
+  async getFoodDetails(fdcId: number): Promise<any | null> {
+    if (!this.apiKey) return null;
+
+    const cacheKey = `details:${fdcId}`;
+    // We can reuse the LRU cache but we need to cast types or make it generic enough
+    // For simplicity, let's just use the same cache but with a prefix, assuming V is flexible or we ignore type safety for a moment
+    // Actually, LruTtlCache is typed <string, FdcSearchResponse>. We should probably make it <string, any> or add a separate cache.
+    // Let's just fetch directly for now to save time, or add a separate cache if needed.
+    // Rate limiting applies.
+
+    await this.limiter.take();
+
+    const url = `https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${this.apiKey}`;
+
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      console.error('FDC details error', e);
+      return null;
+    }
   }
 }
 

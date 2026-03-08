@@ -1,0 +1,15 @@
+FatSecret coverage report
+=========================
+IngredientFoodMap rows    : 10
+Mapped rows (fatsecret)   : 10
+Mapped rows (legacy)      : 0
+Row coverage (fatsecret)  : 100.00%
+
+Total ingredients         : 37
+Ingredients w/ fatsecret  : 10
+Ingredients w/ legacy     : 0
+Ingredients mapped (any)  : 10
+Unmapped ingredients      : 27
+Ingredients coverage (fatsecret): 27.03%
+
+Ingredients coverage (any): 27.03%
