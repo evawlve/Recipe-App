@@ -118,6 +118,68 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 ---
 
+### "Pepper" (spice) → Banana Pepper (vegetable)
+
+**Date**: Mar 2026  
+**Symptom**: "1 dash pepper" mapped to "Banana Raw Pepper" instead of black pepper  
+**Root Cause**: `isVegetablePepper` detection in `isWrongFormForContext()` didn't include banana pepper as a vegetable form. The spice context was correctly detected (via `SPICE_UNITS`), but the candidate wasn't being rejected.
+
+**Fix**: Added `banana pepper` and `(banana && pepper)` pattern to `isVegetablePepper` check.
+
+**Files**: `src/lib/fatsecret/filter-candidates.ts` (line ~252)
+
+---
+
+### Simple Ingredients → Branded Retail Products
+
+**Date**: Mar 2026  
+**Symptom**: "blood orange zest" → "Orange Zest Chicken (Healthy Choice)", "cinnamon sticks" → "Cinnamon Sticks White Icing Dipping Cup (Pizza Hut)"  
+**Root Cause**: (1) Brand detection list in `isBrandedProductForSimpleQuery()` didn't include frozen meal brands. (2) No `CATEGORY_EXCLUSIONS` for cinnamon→desserts or seasoning→boxed meal kits.
+
+**Fix**:  
+1. Added frozen meal brands: Healthy Choice, Pizza Hut, Lundberg, Stouffers, Lean Cuisine, etc.  
+2. Added new `CATEGORY_EXCLUSIONS` for cinnamon, seasoning blends, and zucchini.
+
+**Files**: `src/lib/fatsecret/filter-candidates.ts` (lines ~510, ~880)
+
+---
+
+### `excludeIfContains` Partial Match on Brand Names (Pastene/paste)
+
+**Date**: Mar 2026  
+**Symptom**: "Tomato and Green Chili Mix" excluded valid candidate "Green Chilies Diced Tomatoes with Green Chilies (Pastene)" because brand name "Pastene" contains substring "paste"  
+**Root Cause**: `isCategoryMismatch()` used `candidateLower.includes(excl)` for exclusion checks. The rule `excludeIfContains: ['paste']` matched "paste" inside "pastene" (the brand name was appended to `candidateLower`).
+
+**Fix**: Changed to word-boundary regex matching: `new RegExp(\`\\b${excl}\\b\`).test(candidateLower)` — this prevents partial matches while still catching actual "paste" terms.
+
+**Files**: `src/lib/fatsecret/filter-candidates.ts` (isCategoryMismatch function, ~line 1140)
+
+---
+
+### Compound Tomato+Chili Query → Raw Green Tomatoes
+
+**Date**: Mar 2026  
+**Symptom**: "Tomato and Green Chili Mix" mapped to "green raw tomatoes" (FDC) instead of Rotel-style diced tomatoes product  
+**Root Cause**: Two issues: (1) Pastene partial match bug excluded the best candidate (see above). (2) After fixing that, `green raw tomatoes` still won in `simpleRerank` because FDC produce items get short-name bonus + no-brand boost + FDC source boost, while the Rotel branded product gets token bloat + brand penalties.
+
+**Fix**: Added `CATEGORY_EXCLUSIONS` rule for compound tomato+chili queries (e.g., "tomatoes and green chili") that excludes candidates containing "raw". Scoped to explicit compound patterns to avoid affecting simple "tomatoes" queries where FDC "tomatoes red ripe raw" IS correct.
+
+**Files**: `src/lib/fatsecret/filter-candidates.ts` (CATEGORY_EXCLUSIONS array, ~line 840)
+
+---
+
+### Piece/Chunk Units → 100g Per-Piece (1800g for 18 olives)
+
+**Date**: Mar 2026  
+**Symptom**: "18 piece kalamata olives" → 1800g, "14 mango chunks" → 4704g  
+**Root Cause**: When unit is `piece/chunk/each`, `selectServing` picks the 100g reference serving (the only available one), making `gramsPerUnit = 100g`. The pipeline had no per-piece sanity check.
+
+**Fix**: Added AI-backed sanity check: when `gramsPerUnit > 50g` for count units, triggers `backfillOnDemand(foodId, 'count', unit)` to get an AI-estimated per-piece weight. Same approach for whole produce items with `grams < 30g` (avocado → 10g slice fix).
+
+**Files**: `src/lib/fatsecret/map-ingredient.ts` (lines ~1067-1130)
+
+---
+
 ## Parsing & Normalization
 
 ### Prep Phrase Stripped Inside Words

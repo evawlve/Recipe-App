@@ -36,6 +36,10 @@ export const AMBIGUOUS_UNITS = new Set([
     'egg', 'eggs',
     // Stock/bouillon cubes: API inconsistently uses dry vs prepared liquid weights
     'cube', 'cubes',
+    // Count units: "18 piece olives", "14 mango chunks" — 100g default is wrong
+    'piece', 'pieces', 'pc', 'pcs',
+    'chunk', 'chunks',
+    'each',
     // Size descriptors for whole produce (when no serving data exists)
     'medium', 'large', 'small', 'whole',
 ]);
