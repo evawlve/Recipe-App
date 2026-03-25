@@ -250,6 +250,10 @@ function isWrongFormForContext(rawLine: string, normalizedName: string, candidat
                     candLower.includes('bell pepper') ||
                     candLower.includes('sweet pepper') ||
                     candLower.includes('stuffed pepper') ||
+                    candLower.includes('banana pepper') ||
+                    (candLower.includes('banana') && candLower.includes('pepper')) ||
+                    candLower.includes('poblano') ||
+                    candLower.includes('jalape') ||  // jalapeno/jalapeño
                     // Generic "PEPPERS" brand name without spice qualifiers is likely vegetable
                     (candLower === 'peppers' || candLower.match(/^peppers?\s*\(/)) ||
                     // Color + pepper without any spice indicators is vegetable (e.g., "green bell pepper")
@@ -508,7 +512,11 @@ function isBrandedProductForSimpleQuery(
         const productBrands = [
             'bagel', 'bagels', 'bread', 'pizza', 'burrito', 'wrap', 'sandwich',
             'deli', 'bakery', 'restaurant', 'kitchen', 'cafe', 'grill',
-            'frozen', 'prepared', 'ready', 'meal', 'denny'
+            'frozen', 'prepared', 'ready', 'meal', 'denny',
+            // Frozen meal / retail brands
+            'healthy choice', 'pizza hut', 'lundberg', 'stouffers', 'lean cuisine',
+            'marie callender', 'banquet', 'hungry man', 'smart ones',
+            'boston market', 'birds eye', 'green giant',
         ];
         if (productBrands.some(b => brandLower.includes(b))) {
             return true; // Reject products masquerading as simple ingredients
@@ -574,8 +582,8 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
     { query: ['flour'], excludeIfContains: ['bread', 'cake', 'cookie', 'muffin', 'pie'] },
     // Oil should NOT match oil-based dressings/sauces (only pure oils wanted)
     { query: ['oil'], excludeIfContains: ['dressing', 'sauce', 'mayonnaise'] },
-    // Zest should NOT match cakes/desserts named with zest as flavor
-    { query: ['zest', 'lemon zest', 'orange zest', 'lime zest'], excludeIfContains: ['cake', 'cookie', 'bar', 'muffin', 'bread', 'pie', 'cream cheese'] },
+    // Zest should NOT match cakes/desserts/candy named with zest as flavor
+    { query: ['zest', 'lemon zest', 'orange zest', 'lime zest'], excludeIfContains: ['cake', 'cookie', 'bar', 'muffin', 'bread', 'pie', 'cream cheese', 'cocoa', 'chocolate', 'endurance gel', 'energy gel'] },
     // Extract should NOT match baked goods with that extract flavor
     { query: ['extract', 'vanilla extract', 'almond extract'], excludeIfContains: ['cake', 'cookie', 'bar', 'muffin', 'ice cream'] },
     // BEVERAGES should NOT match candy/confectionery
@@ -591,12 +599,14 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
     },
     // Chilies/peppers should NOT match mixed canned products OR cream cheese spreads
     // CRITICAL: Include both American (chili) and British (chilli) spellings
+    // BUT: If the query itself mentions "tomato", the user wants a tomato+chili mix product
     {
         query: ['chilies', 'chili', 'chilli', 'chillies', 'chili pepper', 'chilli pepper',
             'chili peppers', 'chilli peppers', 'green chilies', 'green chili',
             'jalapeno', 'serrano', 'hot pepper', 'hot peppers'],
         excludeIfContains: ['diced tomatoes', 'canned tomatoes', 'tomato sauce',
-            'cream cheese', 'cheese spread', 'dip', 'hummus', 'hazelnuts', 'mango']
+            'cream cheese', 'cheese spread', 'dip', 'hummus', 'hazelnuts', 'mango'],
+        skipIfQueryContains: ['tomato']
     },
     // Raw vegetables should NOT match juice/processed forms (unless query asks for juice)
     {
@@ -824,7 +834,19 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['tomato', 'tomatoes', 'cherry tomatoes', 'grape tomatoes', 'roma tomatoes'],
         excludeIfContains: ['crushed', 'diced', 'canned', 'stewed', 'sun dried', 'paste'],
         // Skip this rule if query already contains a canned/prepared modifier
-        skipIfQueryContains: ['fire roasted', 'fire-roasted', 'crushed', 'diced', 'canned', 'tinned', 'stewed', 'sun dried', 'sun-dried']
+        skipIfQueryContains: ['fire roasted', 'fire-roasted', 'crushed', 'diced', 'canned', 'tinned', 'stewed', 'sun dried', 'sun-dried',
+            'chili', 'chilli', 'green chili', 'green chilli']  // Don't strip diced/canned tomato candidates when query is a tomato+chili mix
+    },
+    // === NEW: Compound tomato+chili product queries should NOT match raw produce ===
+    // "Tomato and Green Chili Mix" → should map to Rotel-style diced tomatoes, NOT "green raw tomatoes"
+    // Only triggers for queries with BOTH tomato AND chili terms (compound products)
+    // Does NOT trigger for simple "tomatoes" (where FDC "tomatoes red ripe raw" IS correct)
+    {
+        query: ['tomatoes and green chili', 'tomato and green chili', 'tomatoes and chili',
+            'tomato and chili', 'tomatoes with green chili', 'tomato chili mix',
+            'tomatoes and green chilli', 'tomato and green chilli'],
+        excludeIfContains: ['raw'],
+        skipIfQueryContains: ['raw'],  // Don't exclude "raw" if user explicitly asks for it
     },
     // === NEW: Critical Mapping Failure Fixes (Jan 2026) ===
     // Sweet potato should NOT match noodles (fixes "long sweet potato" → "Long Rice Noodles")
@@ -875,6 +897,26 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         excludeIfContains: ['vanilla', 'strawberry', 'blueberry', 'peach', 'cherry', 'raspberry',
             'fruit', 'flavored', 'honey', 'maple', 'caramel', 'chocolate', 'banana',
             'mango', 'key lime', 'lemon', 'mixed berry', 'tropical']
+    },
+    // === NEW: Spice sticks should NOT match branded dessert products ===
+    // "cinnamon sticks" → raw spice, NOT "Cinnamon Sticks White Icing Dipping Cup (Pizza Hut)"
+    {
+        query: ['cinnamon sticks', 'cinnamon stick', 'cinnamon'],
+        excludeIfContains: ['icing', 'dipping', 'cookie', 'cake', 'roll', 'bun', 'pastry', 'toast crunch']
+    },
+    // === NEW: Seasoning blends should NOT match boxed meal kits ===
+    // "garlic & herb seasoning blend" → spice, NOT "quinoa blend rice & seasoning mix (Lundberg)"
+    {
+        query: ['seasoning', 'seasoning blend', 'herb seasoning', 'garlic herb seasoning',
+            'garlic & herb seasoning', 'spice blend'],
+        excludeIfContains: ['quinoa', 'rice mix', 'side dish', 'boxed', 'meal kit', 'rice blend']
+    },
+    // === NEW: Zucchini (single vegetable) should NOT match frozen mixed vegetable blends ===
+    // "2 large yellow zucchini" → fresh zucchini, NOT "Fresh Frozen Garden Blend Vegetables"
+    {
+        query: ['zucchini', 'yellow zucchini', 'yellow squash', 'summer squash'],
+        excludeIfContains: ['blend', 'medley', 'mixed vegetables', 'garden blend', 'frozen blend',
+            'stir fry mix', 'vegetable mix']
     },
 ];
 
@@ -1101,9 +1143,11 @@ export function isCategoryMismatch(
 
             // Check if candidate contains excluded categories
             // BUT skip if the query itself contains the excluded term!
+            // Use word-boundary regex to avoid partial matches (e.g., "paste" matching brand "Pastene")
             const hasExclusion = excludeIfContains.some(excl => {
-                const candidateHasExcl = candidateLower.includes(excl);
-                const queryAlsoHasExcl = queryLower.includes(excl);
+                const exclRegex = new RegExp(`\\b${excl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+                const candidateHasExcl = exclRegex.test(candidateLower);
+                const queryAlsoHasExcl = exclRegex.test(queryLower);
                 // Only exclude if candidate has it BUT query doesn't ask for it
                 return candidateHasExcl && !queryAlsoHasExcl;
             });
@@ -1433,7 +1477,10 @@ export function hasNullOrInvalidMacros(
         (nutrients.protein ?? 0) === 0 &&
         (nutrients.carbs ?? 0) === 0 &&
         (nutrients.fat ?? 0) === 0;
-    if (allZero && isFoodThatMustHaveCalories(candidateName)) {
+    // Foods explicitly labeled "no calorie" or "zero calorie" should never be rejected
+    const nameForCheck = (candidateName || '').toLowerCase();
+    const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck);
+    if (allZero && !isExplicitlyZeroCal && isFoodThatMustHaveCalories(candidateName)) {
         return true;
     }
 
@@ -1463,7 +1510,16 @@ export function hasNullOrInvalidMacros(
             // Case 2: calories = 0 but macros imply significant calories (> 10 kcal)
             // e.g., CRUSHED RED PEPPER CENTO: 0kcal but 91g carbs = 364 computed kcal
             // Allow small tolerance for trace amounts (< 10 computed kcal)
-            if (computedCalories > 10) {
+            //
+            // EXCEPTION: Zero-calorie sweeteners (Splenda, Stevia, etc.) legitimately have
+            // calories=0 with high carbs (e.g., 100g maltodextrin/dextrose bulking agent).
+            // The serving is tiny (~1g), so per-100g carbs are high but actual calories are 0.
+            const nameLower = (candidateName || '').toLowerCase();
+            const isSweetener = /\b(sweetener|stevia|splenda|sucralose|aspartame|saccharin|erythritol)\b/.test(nameLower)
+                || /\bno\s*calorie\b/.test(nameLower)
+                || /\bzero\s*calorie\b/.test(nameLower)
+                || /\bsugar\s*substitute\b/.test(nameLower);
+            if (computedCalories > 10 && !isSweetener) {
                 return true;  // Bad data - has macros but 0 calories
             }
         }
@@ -1750,6 +1806,143 @@ export function isMultiIngredientMismatch(normalizedName: string, candidateName:
 
     if (inAfter && !inBefore) {
         return true; // Mismatch - query is secondary ingredient
+    }
+
+    // REVERSE CHECK: If the QUERY contains "and"/"&"/"with" (is itself multi-ingredient),
+    // reject single-ingredient candidates that only match ONE component.
+    // e.g., "tomato and green chili mix" should NOT match "green raw tomatoes"
+    // (candidate only has "tomato" but not "chili")
+    const queryMultiMatch = queryLower.match(/^(.+?)\s+(&|and|with)\s+(.+)$/i);
+    if (queryMultiMatch) {
+        const queryBefore = queryMultiMatch[1];
+        const queryAfter = queryMultiMatch[3];
+        // Get significant words from each part
+        const beforeWords = queryBefore.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS_SET.has(w));
+        const afterWords = queryAfter.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS_SET.has(w));
+
+        if (beforeWords.length > 0 && afterWords.length > 0) {
+            const hasBeforeInCandidate = beforeWords.some(w => candidateLower.includes(w));
+            const hasAfterInCandidate = afterWords.some(w => candidateLower.includes(w));
+            // If candidate only matches ONE side of the "X and Y" query, it's incomplete
+            if ((hasBeforeInCandidate && !hasAfterInCandidate) || (!hasBeforeInCandidate && hasAfterInCandidate)) {
+                return true; // Mismatch - candidate only matches one component of multi-ingredient query
+            }
+        }
+    }
+
+    return false;
+}
+
+// Stop words set for multi-ingredient reverse check
+const STOP_WORDS_SET = new Set([
+    'raw', 'fresh', 'dried', 'dry', 'frozen', 'organic', 'natural', 'pure',
+    'whole', 'ground', 'chopped', 'diced', 'sliced', 'minced', 'crushed',
+    'green', 'red', 'yellow', 'white', 'black', 'mix',
+]);
+
+// ============================================================
+// Meal/Product Mismatch
+// ============================================================
+
+/**
+ * Detect if a raw ingredient query incorrectly matches a branded meal/dish.
+ * e.g., "orange zest" should NOT match "ORANGE ZEST CHICKEN (HEALTHY CHOICE)"
+ *       "cinnamon sticks" should NOT match "Cinnamon Sticks (DiGiorno)"
+ *       "yellow zucchini" should NOT match "Zucchini Lasagna"
+ */
+
+// Meal/dish words that indicate a prepared product, not a raw ingredient
+const MEAL_PRODUCT_WORDS = new Set([
+    // Proteins (these are DISHES, not to be confused with raw meat queries)
+    'chicken', 'beef', 'pork', 'turkey', 'lamb', 'steak', 'meatball',
+    'meatloaf', 'nugget', 'nuggets', 'tender', 'tenders', 'patty', 'patties',
+    // Prepared dishes
+    'lasagna', 'casserole', 'stew', 'risotto', 'paella', 'curry',
+    'burrito', 'taco', 'enchilada', 'quesadilla', 'fajita',
+    'pizza', 'calzone', 'stromboli',
+    'dumpling', 'dumplings', 'wonton', 'wontons',
+    // Baked goods
+    'cake', 'cookie', 'cookies', 'brownie', 'brownies',
+    'muffin', 'muffins', 'scone', 'scones', 'croissant',
+    'pie', 'pastry', 'pastries',
+    // Meal descriptors
+    'dinner', 'lunch', 'breakfast', 'entree', 'meal',
+    'bowl', 'wrap', 'sandwich',
+    // Processed/frozen
+    'frozen', 'medley', 'blend',
+    // Side dish products
+    'icing', 'frosting', 'dipping',
+]);
+
+// Queries that look like raw ingredients (should NOT match meal products)
+const RAW_INGREDIENT_INDICATORS = new Set([
+    'zest', 'peel', 'rind', 'skin', 'seed', 'seeds',
+    'stick', 'sticks', 'pod', 'pods', 'bark',
+    'leaf', 'leaves', 'sprig', 'sprigs', 'bunch',
+    'clove', 'cloves', 'bulb', 'root',
+    'powder', 'ground', 'whole', 'dried', 'fresh',
+    'raw', 'organic', 'pure',
+]);
+
+// Known restaurant/fast-food brands that sell prepared products, not raw ingredients
+const RESTAURANT_BRANDS = [
+    'digiorno', "digorno", 'pizza hut', 'dominos', "domino's",
+    'mcdonald', "mcdonald's", 'burger king', 'wendy', "wendy's",
+    'taco bell', 'subway', 'chick-fil-a', 'popeyes', "popeye's",
+    'kfc', 'panda express', 'chipotle', 'olive garden',
+    'applebee', "applebee's", 'chili\'s', 'outback',
+    'panera', 'starbucks', 'dunkin', "dunkin'",
+    'healthy choice', 'lean cuisine', 'stouffer', "stouffer's",
+    'marie callender', 'hot pocket', 'totino', "totino's",
+    'jack in the box', 'arby', "arby's", 'sonic',
+    'freshii', 'wingstop', 'five guys',
+    'el monterey', 'banquet', 'hungry-man',
+];
+
+export function isMealProductMismatch(
+    normalizedName: string,
+    candidateName: string,
+    candidateBrand?: string | null
+): boolean {
+    const queryLower = normalizedName.toLowerCase().trim();
+    const candidateLower = candidateName.toLowerCase().trim();
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 1);
+
+    // Skip if query itself mentions meal words (e.g., "chicken breast" should match chicken)
+    // Also skip if query has >4 words (complex queries are likely specific products)
+    if (queryWords.length > 4) return false;
+
+    // Check each meal/product word in the candidate
+    const candidateWords = candidateLower.split(/[\s,()]+/).filter(w => w.length > 2);
+
+    for (const word of candidateWords) {
+        if (!MEAL_PRODUCT_WORDS.has(word)) continue;
+
+        // If the query also contains this word, it's fine
+        // e.g., "chicken breast" query with "chicken" in candidate = OK
+        if (queryWords.includes(word)) continue;
+
+        // Candidate has a meal/dish word that the query doesn't mention.
+        // For short queries (≤4 words), this means the candidate is a
+        // prepared dish/meal, not the raw ingredient the user asked for.
+        // e.g., "yellow zucchini" → "Zucchini Lasagna" (extraneous "lasagna")
+        //       "orange zest" → "ORANGE ZEST CHICKEN" (extraneous "chicken")
+        return true;
+    }
+
+    // Check for known restaurant/fast-food brands
+    // These brands sell prepared products, not raw ingredients.
+    // e.g., "cinnamon sticks" → "Cinnamon Sticks (DiGiorno)" should be rejected
+    if (candidateBrand) {
+        const brandLower = candidateBrand.toLowerCase();
+        const isRestaurantBrand = RESTAURANT_BRANDS.some(b => brandLower.includes(b));
+        if (isRestaurantBrand) {
+            // Only reject if the query looks like a raw ingredient (short, no brand mention)
+            const queryHasBrand = queryLower.includes(brandLower);
+            if (!queryHasBrand) {
+                return true;
+            }
+        }
     }
 
     return false;
@@ -2235,6 +2428,18 @@ export function filterCandidatesByTokens(
                 logger.info('filter.candidates.food_type_mismatch', {
                     query: normalizedName,
                     candidate: candidate.name,
+                });
+            }
+            return false;
+        }
+
+        // Meal/product mismatch (e.g., "orange zest" vs "ORANGE ZEST CHICKEN")
+        if (isMealProductMismatch(normalizedName, candidate.name, candidate.brandName)) {
+            if (debug) {
+                logger.info('filter.candidates.meal_product_mismatch', {
+                    query: normalizedName,
+                    candidate: candidate.name,
+                    brand: candidate.brandName,
                 });
             }
             return false;

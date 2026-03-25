@@ -36,6 +36,9 @@ const COUNT_UNITS = new Set([
 
     // Generic counts
     'small', 'medium', 'large', 'whole',
+
+    // Spray/squirt (for cooking spray, oil sprays)
+    'spray', 'sprays', 'squirt', 'squirts',
 ]);
 
 // Volume-based units

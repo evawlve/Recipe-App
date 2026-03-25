@@ -41,7 +41,9 @@ export const AMBIGUOUS_UNITS = new Set([
     'chunk', 'chunks',
     'each',
     // Size descriptors for whole produce (when no serving data exists)
-    'medium', 'large', 'small', 'whole',
+    'mini', 'medium', 'large', 'small', 'whole',
+    // Spray/squirt units (for cooking spray, oil sprays)
+    'spray', 'sprays', 'squirt', 'squirts',
 ]);
 
 export interface AmbiguousServingRequest {
@@ -214,6 +216,15 @@ function buildPrompt(request: AmbiguousServingRequest): string {
         `- "bowl" of cereal: About 200-300g including milk, 30-60g dry`,
         `- "can" of soda: Usually 355ml`,
         `- "packet" of sweetener: About 1g`,
+        ``,
+        `For "piece" units with produce, pay attention to the variety:`,
+        `- 1 piece of GRAPE tomato: ~5-8g (tiny, bite-sized)`,
+        `- 1 piece of CHERRY tomato: ~10-17g (small, bite-sized)`,
+        `- 1 piece of regular tomato: ~123g (medium whole fruit)`,
+        `- 1 piece of olive: ~3-5g`,
+        `- 1 piece of baby carrot: ~8-10g`,
+        `- 1 piece of garlic clove: ~3g`,
+        `- CRITICAL: "grape" and "cherry" varieties are MUCH smaller than regular produce!`,
         ``,
         `Provide your best estimate with confidence level and reasoning.`,
     ].filter(Boolean);
@@ -398,9 +409,16 @@ function buildProduceSizePrompt(foodName: string, brandName?: string | null): st
         `- Avocado: small=115g, medium=150g, large=200g`,
         ``,
         `MEDIUM produce:`,
-        `- Tomato: small=91g, medium=123g, large=182g`,
+        `- Tomato (regular/beefsteak): small=91g, medium=123g, large=182g`,
         `- Banana: small=101g, medium=118g, large=136g`,
         `- Bell pepper: small=120g, medium=164g, large=186g`,
+        ``,
+        `SMALL PRODUCE VARIETIES (do NOT use regular tomato/carrot weights for these!):`,
+        `- Grape tomato: small=5g, medium=8g, large=12g`,
+        `- Cherry tomato: small=10g, medium=17g, large=25g`,
+        `- Baby carrot: small=8g, medium=10g, large=15g`,
+        `- Pearl onion: small=8g, medium=12g, large=18g`,
+        `- Olive: small=3g, medium=5g, large=8g`,
         ``,
         `THIN/LIGHT produce:`,
         `- Scallion/Green onion: small=10g, medium=15g, large=25g`,
@@ -411,6 +429,10 @@ function buildProduceSizePrompt(foodName: string, brandName?: string | null): st
         `TINY items:`,
         `- Garlic clove: small=2g, medium=3g, large=5g`,
         `- Strawberry: small=7g, medium=12g, large=18g`,
+        ``,
+        `CRITICAL: If the food name contains "grape", "cherry", "baby", "pearl", or "mini",`,
+        `use the SMALL PRODUCE VARIETIES weights, NOT the regular produce weights!`,
+        `A grape tomato weighs 5-12g, NOT 91-182g like a regular tomato.`,
         ``,
         `Provide estimates for all three sizes. Do NOT confuse thin produce with heavy produce!`,
     ].filter(Boolean);

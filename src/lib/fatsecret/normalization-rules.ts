@@ -126,6 +126,10 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'celery stalk', to: 'celery' },
     { from: 'garlic cloves', to: 'garlic' },
     { from: 'garlic clove', to: 'garlic' },
+    // Spice-form rewrites: whole vs ground spices are nutritionally equivalent
+    // APIs only have "ground cinnamon" or branded snacks called "cinnamon sticks"
+    { from: 'cinnamon sticks', to: 'cinnamon' },
+    { from: 'cinnamon stick', to: 'cinnamon' },
     { from: 'lemon zest', to: 'lemon peel' },
     { from: 'lime zest', to: 'lime peel' },
     { from: 'orange zest', to: 'orange peel' },
@@ -138,6 +142,10 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'meyer lemon zest', to: 'lemon peel' },
     { from: 'key lime peel', to: 'lime peel' },
     { from: 'key lime zest', to: 'lime peel' },
+    // Mixed product rewrites (guide toward correct product category)
+    { from: 'tomato and green chili mix', to: 'diced tomatoes with green chilies' },
+    { from: 'tomato & green chili mix', to: 'diced tomatoes with green chilies' },
+    { from: 'tomato green chili mix', to: 'diced tomatoes with green chilies' },
     // Fat level synonyms
     { from: 'extra light', to: 'fat free' },
     { from: 'extra-light', to: 'fat free' },
