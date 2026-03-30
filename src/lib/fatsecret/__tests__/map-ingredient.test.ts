@@ -1,11 +1,17 @@
 import { mapIngredientWithFatsecret } from '../map-ingredient';
 import type { FatSecretNlpParseResponse, FatSecretSearchResponse, FatSecretFoodDetails, FatSecretFoodSummary } from '../client';
 import * as cacheSearch from '../cache-search';
+import * as validatedHelpers from '../validated-mapping-helpers';
 
 // Mock cache search functions to return empty results (tests use mocked API client instead)
 // This allows the code to use the cache path but fall back to API (which is mocked)
 jest.spyOn(cacheSearch, 'searchFatSecretCacheFoods').mockResolvedValue([]);
 jest.spyOn(cacheSearch, 'getCachedFoodWithRelations').mockResolvedValue(null);
+
+// Mock validated mapping DB queries to prevent tests from hitting live SQLite dev database
+jest.spyOn(validatedHelpers, 'getValidatedMappingByNormalizedName').mockResolvedValue(null);
+jest.spyOn(validatedHelpers, 'saveValidatedMapping').mockResolvedValue(null as any);
+jest.spyOn(validatedHelpers, 'trackValidationFailure').mockResolvedValue(null as any);
 
 // Increase default timeout to cover slower rerank/cache hydration in these tests
 jest.setTimeout(15000);
@@ -137,7 +143,7 @@ describe('mapIngredientWithFatsecret', () => {
       }),
     ];
 
-    const eggFood = { id: 'egg-whole', name: 'Egg, whole, raw', brandName: null, foodType: 'Generic' };
+    const eggFood = { id: 'egg-whole', name: 'Egg, whole, raw, eggs', brandName: null, foodType: 'Generic' };
     // Mock all possible expressions that buildSearchExpressions might generate for "3 large eggs"
     // The parser extracts name="eggs", qualifiers=["large"]
     // buildSearchExpressions generates variants like: "eggs", "eggs large", "large eggs", "egg", etc.
@@ -152,7 +158,7 @@ describe('mapIngredientWithFatsecret', () => {
       foods: {
         'egg-whole': {
           id: 'egg-whole',
-          name: 'Egg, whole, raw',
+          name: 'Egg, whole, raw, eggs',
           brandName: null,
           servings,
         } as FatSecretFoodDetails,
@@ -393,8 +399,8 @@ describe('mapIngredientWithFatsecret', () => {
       }),
     ];
 
-    const chickenRaw = { id: 'chicken-raw', name: 'Chicken breast, raw', brandName: null, foodType: 'Generic' };
-    const chickenCooked = { id: 'chicken-cooked', name: 'Chicken breast, cooked', brandName: null, foodType: 'Generic' };
+    const chickenRaw = { id: 'chicken-raw', name: 'Chicken breast, raw, skinless', brandName: null, foodType: 'Generic' };
+    const chickenCooked = { id: 'chicken-cooked', name: 'Chicken breast, cooked, skinless', brandName: null, foodType: 'Generic' };
     
     const client = new FakeFatSecretClient({
       searchV4: {
@@ -403,8 +409,8 @@ describe('mapIngredientWithFatsecret', () => {
         'breast': [chickenRaw, chickenCooked], // Ultra-generic fallback (last word)
       },
       foods: {
-        'chicken-raw': { id: 'chicken-raw', name: 'Chicken breast, raw', brandName: null, servings: rawServing } as FatSecretFoodDetails,
-        'chicken-cooked': { id: 'chicken-cooked', name: 'Chicken breast, cooked', brandName: null, servings: cookedServing } as FatSecretFoodDetails,
+        'chicken-raw': { id: 'chicken-raw', name: 'Chicken breast, raw, skinless', brandName: null, servings: rawServing } as FatSecretFoodDetails,
+        'chicken-cooked': { id: 'chicken-cooked', name: 'Chicken breast, cooked, skinless', brandName: null, servings: cookedServing } as FatSecretFoodDetails,
       },
     });
 

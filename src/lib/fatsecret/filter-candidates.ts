@@ -629,6 +629,12 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['acai', 'acai puree', 'acai berry'],
         excludeIfContains: ['tomato', 'puree', 'paste', 'sauce']
     },
+    // === NEW: Fresh cherries should NOT match maraschino or dried cherries by default ===
+    {
+        query: ['cherries', 'cherry', 'pitted cherries', 'sweet cherries', 'sour cherries', 'fresh cherries'],
+        excludeIfContains: ['maraschino', 'dried', 'candied', 'syrup', 'pie filling', 'glazed'],
+        skipIfQueryContains: ['maraschino', 'dried', 'candied']
+    },
     // Plum tomatoes should NOT match plum fruit (the fruit, not the tomato variety)
     {
         query: ['plum tomatoes', 'plum tomato', 'roma tomatoes', 'roma tomato'],
@@ -681,6 +687,15 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
     {
         query: ['vegetable spread', 'vegetable oil spread', 'fat spread', 'margarine', 'butter substitute'],
         excludeIfContains: ['cream cheese', 'garden vegetable', 'hickory', 'dip', 'cheese spread']
+    },
+    // === NEW: Sour cream fat level exclusion (Batch 5, Mar 2026) ===
+    // Plain "sour cream" should NOT match light/reduced-fat variants
+    // Regular sour cream: ~193kcal/100g, Light: ~136kcal/100g (30% undercount)
+    {
+        query: ['sour cream', 'full fat sour cream'],
+        excludeIfContains: ['light sour cream', 'lite sour cream', 'low fat sour cream', 'lowfat sour cream',
+            'reduced fat sour cream', 'fat free sour cream', 'nonfat sour cream', 'non-fat sour cream'],
+        skipIfQueryContains: ['light', 'lite', 'low fat', 'lowfat', 'reduced fat', 'fat free', 'nonfat', 'non-fat']
     },
     // === NEW: Milk fat level exclusions ===
     // Lowfat milk should NOT match nonfat milk (different nutrition)
@@ -1197,10 +1212,10 @@ const INGREDIENT_MACRO_PROFILES: Array<{
             ingredients: ['potato', 'potatoes', 'carrot', 'carrots', 'broccoli', 'spinach', 'lettuce'],
             maxFatPer100g: 5,
         },
-        // Fresh berries should be low-calorie (catches processed/dried berry products like FRUTSTIX)
+        // Fresh berries & cherries should be low-calorie (catches processed/dried products like FRUTSTIX or dried sweetened cherries)
         {
-            ingredients: ['strawberry', 'strawberries', 'blueberry', 'blueberries', 'raspberry', 'raspberries', 'blackberry', 'blackberries', 'berry', 'berries'],
-            maxCalPer100g: 60,  // Fresh berries are ~30-50 kcal/100g
+            ingredients: ['strawberry', 'strawberries', 'blueberry', 'blueberries', 'raspberry', 'raspberries', 'blackberry', 'blackberries', 'berry', 'berries', 'cherry', 'cherries', 'pitted cherries', 'sweet cherries'],
+            maxCalPer100g: 80,  // Fresh berries are ~30-50, cherries ~63 kcal/100g. Dried are 300+
         },
         // Protein powders should have high protein, low carbs (catches wrong macro profiles)
         {

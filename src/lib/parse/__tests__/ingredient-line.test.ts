@@ -83,9 +83,11 @@ test('whitespace only returns null', () => {
   expect(p).toBeNull();
 });
 
-test('no quantity returns null', () => {
-  const p = parseIngredientLine('protein bar');
-  expect(p).toBeNull();
+test('no quantity returns default qty 1', () => {
+  const p = parseIngredientLine('protein bar')!;
+  expect(p).not.toBeNull();
+  expect(p.qty).toBe(1);
+  expect(p.name).toBe('protein bar');
 });
 
 // S1.1: Fractions attached to numbers
@@ -151,7 +153,8 @@ test('¼ tsp salt', () => {
 test('3 large boneless skinless chicken breasts', () => {
   const p = parseIngredientLine('3 large boneless skinless chicken breasts')!;
   expect(p.qty).toBeCloseTo(3);
-  expect(p.qualifiers).toEqual(['large', 'boneless', 'skinless']);
+  expect(p.unit).toBe('large');
+  expect(p.qualifiers).toEqual(['boneless', 'skinless']);
   expect(p.name).toBe('chicken breasts');
 });
 
@@ -164,9 +167,10 @@ test('1 cup onion (diced)', () => {
 });
 
 test('cilantro, finely chopped', () => {
-  const p = parseIngredientLine('cilantro, finely chopped');
-  // This should return null because there's no quantity
-  expect(p).toBeNull();
+  const p = parseIngredientLine('cilantro, finely chopped')!;
+  expect(p.qty).toBe(1);
+  expect(p.qualifiers).toContain('finely chopped');
+  expect(p.name).toBe('cilantro');
 });
 
 test('1 cup, packed, brown sugar', () => {
@@ -224,7 +228,7 @@ test('1 sheet nori', () => {
 test('2 egg yolks with qualifier', () => {
   const p = parseIngredientLine('2 large egg yolks')!;
   expect(p.qty).toBeCloseTo(2);
-  expect(p.qualifiers).toEqual(['large']);
+  expect(p.unit).toBe('large');
   expect(p.unitHint).toBe('yolk');
   expect(p.name).toBe('egg');
 });
@@ -297,14 +301,20 @@ test('separator line (===) returns null', () => {
   expect(p).toBeNull();
 });
 
-test('to taste salt returns null', () => {
-  const p = parseIngredientLine('to taste salt');
-  expect(p).toBeNull();
+test('to taste salt returns estimated quantity', () => {
+  const p = parseIngredientLine('to taste salt')!;
+  expect(p).not.toBeNull();
+  expect(p.qty).toBe(1);
+  expect(p.unit).toBe('tsp');
+  expect(p.isEstimatedQuantity).toBe(true);
 });
 
-test('salt to taste returns null', () => {
-  const p = parseIngredientLine('salt to taste');
-  expect(p).toBeNull();
+test('salt to taste returns estimated quantity', () => {
+  const p = parseIngredientLine('salt to taste')!;
+  expect(p).not.toBeNull();
+  expect(p.qty).toBe(1);
+  expect(p.unit).toBe('tsp');
+  expect(p.isEstimatedQuantity).toBe(true);
 });
 
 // S1.3: Pinch handling

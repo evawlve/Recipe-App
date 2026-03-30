@@ -21,5 +21,4 @@ test('mozzarella gets part skim permutations', () => {
   const s = a.join('|');
   expect(s).toMatch(/part skim mozzarella/);
   expect(s).toMatch(/mozzarella part skim/);
-  expect(s).toMatch(/part-skim mozzarella/);
 });

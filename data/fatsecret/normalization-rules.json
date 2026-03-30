@@ -329,12 +329,8 @@
       "to": "canned dark red kidney beans"
     },
     {
-      "from": "veggie spirals pasta",
-      "to": "vegetable rotini pasta"
-    },
-    {
-      "from": "veggie spirals",
-      "to": "vegetable rotini pasta"
+      "from": "veggie slices",
+      "to": "vegan cheese slices"
     },
     {
       "from": "splenda",
@@ -353,17 +349,50 @@
       "to": "dry white wine"
     },
 
-    {
-      "from": "center cut bacon",
-      "to": "bacon"
-    },
+
     {
       "from": "chunk chicken breast",
       "to": "chicken breast"
     },
     {
+      "from": "baby marrows",
+      "to": "zucchini"
+    },
+    {
+      "from": "corn kernels",
+      "to": "canned sweet corn"
+    },
+    {
+      "from": "kernels corn",
+      "to": "canned sweet corn"
+    },
+    {
+      "from": "light red kidney beans",
+      "to": "canned light red kidney beans"
+    },
+    {
+      "from": "kidney beans",
+      "to": "canned kidney beans"
+    },
+    {
+      "from": "cannellini beans",
+      "to": "canned cannellini beans"
+    },
+    {
+      "from": "canellini beans",
+      "to": "canned cannellini beans"
+    },
+    {
+      "from": "onion soup packet",
+      "to": "dry onion soup mix"
+    },
+    {
       "from": "yellow zucchini",
       "to": "zucchini"
+    },
+    {
+      "from": "seasoned rice vinegar",
+      "to": "seasoned rice wine vinegar"
     },
     {
       "from": "rice vinegar",
@@ -376,6 +405,147 @@
     {
       "from": "cooking spray",
       "to": "non-stick cooking spray"
+    },
+    {
+      "from": "pitted cherries",
+      "to": "sweet cherries"
+    },
+    {
+      "from": "plant-based protein rotini",
+      "to": "protein pasta rotini"
+    },
+    {
+      "from": "plant based protein rotini",
+      "to": "protein pasta rotini"
+    },
+    {
+      "from": "package bakers yeast",
+      "to": "packet active dry yeast"
+    },
+    {
+      "from": "chicken halves",
+      "to": "chicken half"
+    },
+
+    {
+      "from": "corn syrup",
+      "to": "light corn syrup"
+    },
+    {
+      "from": "quinoa mix",
+      "to": "quinoa"
+    },
+    {
+      "from": "chili powder",
+      "to": "chili powder spice"
+    },
+    {
+      "from": "lean ground turkey",
+      "to": "raw ground turkey"
+    },
+    {
+      "from": "onion powder",
+      "to": "onion powder spice"
+    },
+    {
+      "from": "garlic powder",
+      "to": "garlic powder spice"
+    },
+    {
+      "from": "vanilla",
+      "to": "vanilla extract"
+    },
+    {
+      "from": "red and plain quinoa mix",
+      "to": "quinoa"
+    },
+    {
+      "from": "corn syrup dark",
+      "to": "dark corn syrup"
+    },
+    {
+      "from": "creme brulee creamer",
+      "to": "creme brulee coffee creamer"
+    },
+    {
+      "from": "italian tomatoes",
+      "to": "canned whole tomatoes"
+    },
+    {
+      "from": "fennel",
+      "to": "fennel seed"
+    },
+    {
+      "from": "oatmeal",
+      "to": "rolled oats"
+    },
+    {
+      "from": "matcha green tea",
+      "to": "matcha tea powder"
+    },
+    {
+      "from": "dry mustard",
+      "to": "ground mustard powder"
+    },
+    {
+      "from": "ground thyme",
+      "to": "dried thyme"
+    },
+    {
+      "from": "red pepper crushed",
+      "to": "crushed red pepper flakes"
+    },
+    {
+      "from": "crushed red pepper",
+      "to": "crushed red pepper flakes"
+    },
+    {
+      "from": "plum tomato",
+      "to": "roma tomato"
+    },
+    {
+      "from": "plum tomatoes",
+      "to": "roma tomatoes"
+    },
+    {
+      "from": "freshly garlic",
+      "to": "garlic cloves"
+    },
+    {
+      "from": "almond milk vanilla",
+      "to": "vanilla almond milk"
+    },
+    {
+      "from": "creme brulee liquid coffee creamer",
+      "to": "creme brulee coffee creamer"
+    },
+    {
+      "from": "isolate whey protein",
+      "to": "whey protein isolate powder"
+    },
+    {
+      "from": "whey protein isolate",
+      "to": "whey protein isolate powder"
+    },
+    {
+      "from": "balsamic vinaigrette",
+      "to": "balsamic vinaigrette dressing"
+    },
+    {
+      "from": "cole slaw mix",
+      "to": "raw shredded cabbage"
+    },
+    {
+      "from": "italian dressing lite",
+      "to": "light italian dressing"
+    },
+    {
+      "from": "veggie spirals pasta",
+      "to": "zucchini noodles"
+    },
+    {
+      "from": "low carb baking mix",
+      "to": "keto baking mix"
     }
   ]
-}
+}

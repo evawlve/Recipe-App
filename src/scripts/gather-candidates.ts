@@ -65,12 +65,15 @@ async function main() {
     if (filtered.length > 0) {
         const rerankResult = simpleRerank(normalizedName, filtered as any);
 
-        if (rerankResult) {
+        if (rerankResult && rerankResult.winner) {
             console.log(`\n🏆 RERANK WINNER:\n`);
             const w = rerankResult.winner;
             const nutr = w.nutrition ? ` [${w.nutrition.kcal.toFixed(0)}kcal/100g]` : '';
             console.log(`  "${w.name}"${w.brandName ? ` (${w.brandName})` : ''}  [${w.source}]  score=${w.score.toFixed(3)}${nutr}`);
             console.log(`  Confidence: ${rerankResult.confidence.toFixed(3)}  |  Reason: ${rerankResult.reason}`);
+        } else if (rerankResult) {
+            console.log(`\n❌ RERANK WINNER REJECTED (Confidence: ${rerankResult.confidence.toFixed(3)} < Threshold)`);
+            console.log(`  Reason: ${rerankResult.reason}`);
         }
     }
 

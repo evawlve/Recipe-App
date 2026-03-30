@@ -2,8 +2,9 @@ const REPLACERS: Array<[RegExp, string]> = [
   [/fat[-\s]?free/gi, 'nonfat'],
   [/non[-\s]?fat/gi, 'nonfat'],
   
-  [/part[-\s]?skim/gi, 'part skim'],
-  [/\bskim\s*(milk)?\b/gi, 'nonfat'],  // treat skim as nonfat in practice
+  [/part[-\s]?skim/gi, 'part_skim_placeholder'],
+  [/\bskim\b/gi, 'nonfat'],  // treat skim as nonfat in practice
+  [/part_skim_placeholder/gi, 'part skim'],
 
   [/\b2\s*%|\b2\s*percent/gi, '2%'],
   [/\b1\s*%|\b1\s*percent/gi, '1%'],

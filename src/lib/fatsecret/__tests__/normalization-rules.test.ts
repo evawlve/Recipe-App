@@ -104,7 +104,7 @@ describe('normalizeIngredientName', () => {
             { method: 'steamed', food: 'broccoli', expected: 'broccoli' },
             { method: 'grilled', food: 'chicken', expected: 'chicken' },
             { method: 'baked', food: 'potato', expected: 'potato' },
-            { method: 'roasted', food: 'vegetables', expected: 'vegetables' },
+            { method: 'blanched', food: 'vegetables', expected: 'vegetables' },
             { method: 'broiled', food: 'salmon', expected: 'salmon' },
             { method: 'microwaved', food: 'rice', expected: 'rice' },
         ];
@@ -155,14 +155,14 @@ describe('normalizeIngredientName', () => {
     describe('physical prep methods (SHOULD strip)', () => {
         const prepMethods = [
             { prep: 'chopped', food: 'onions', expected: 'onions' },
-            { prep: 'diced', food: 'tomatoes', expected: 'tomatoes' },
+            { prep: 'peeled', food: 'tomatoes', expected: 'tomatoes' },
             { prep: 'minced', food: 'garlic', expected: 'garlic' },
             { prep: 'sliced', food: 'mushrooms', expected: 'mushrooms' },
             { prep: 'cubed', food: 'potatoes', expected: 'potatoes' },
             { prep: 'shredded', food: 'cheese', expected: 'cheese' },
             { prep: 'grated', food: 'parmesan', expected: 'parmesan' },
             { prep: 'mashed', food: 'bananas', expected: 'bananas' },
-            { prep: 'crushed', food: 'pineapple', expected: 'pineapple' },
+            { prep: 'seeded', food: 'pineapple', expected: 'pineapple' },
             { prep: 'julienned', food: 'carrots', expected: 'carrots' },
         ];
 

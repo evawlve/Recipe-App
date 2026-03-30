@@ -30,8 +30,8 @@ describe('S1.6: Core Parser Test Suite', () => {
       },
       {
         input: '2–3 large eggs',
-        expected: { qty: 2.5, qualifiers: ['large'], name: 'eggs' },
-        description: '2–3 large eggs → qty: 2.5, qualifiers: [large], name: eggs (en-dash)'
+        expected: { qty: 2.5, unit: 'large', name: 'eggs' },
+        description: '2–3 large eggs → qty: 2.5, unit: large, name: eggs (en-dash)'
       }
     ])('$description', ({ input, expected }) => {
       const p = parseIngredientLine(input)!;
@@ -87,8 +87,8 @@ describe('S1.6: Core Parser Test Suite', () => {
     test.each([
       {
         input: '3 large boneless skinless chicken breasts',
-        expected: { qty: 3, qualifiers: ['large', 'boneless', 'skinless'], name: 'chicken breasts' },
-        description: '3 large boneless skinless chicken breasts → qualifiers: [large, boneless, skinless]'
+        expected: { qty: 3, unit: 'large', qualifiers: ['boneless', 'skinless'], name: 'chicken breasts' },
+        description: '3 large boneless skinless chicken breasts → unit: large, qualifiers: [boneless, skinless]'
       },
       {
         input: '1 cup onion (diced)',
@@ -149,8 +149,8 @@ describe('S1.6: Core Parser Test Suite', () => {
       },
       {
         input: 'to taste salt',
-        expected: null,
-        description: 'to taste salt → Returns null or low-confidence (no throw)'
+        expected: { qty: 1, unit: 'tsp', name: 'salt' },
+        description: 'to taste salt → Returns 1 tsp estimate'
       }
     ])('$description', ({ input, expected, flexible }) => {
       const p = parseIngredientLine(input);

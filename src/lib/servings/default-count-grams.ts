@@ -76,7 +76,8 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'carrot': { grams: 72, confidence: 0.85, sizes: { small: 50, medium: 72, large: 85 }, aliases: ['carrots'] },
     'celery stalk': { grams: 40, confidence: 0.85, aliases: ['celery stalks', 'celery'] },
     'cucumber': { grams: 301, confidence: 0.85, aliases: ['cucumbers'] },
-    'bell pepper': { grams: 164, confidence: 0.85, sizes: { small: 119, medium: 164, large: 186 }, aliases: ['bell peppers', 'pepper'] },
+    'persian cucumber': { grams: 60, confidence: 0.85, sizes: { small: 40, medium: 60, large: 90 }, aliases: ['persian cucumbers', 'mini cucumber', 'mini cucumbers', 'baby cucumber', 'baby cucumbers'] },
+    'bell pepper': { grams: 164, confidence: 0.85, sizes: { small: 119, medium: 164, large: 186 }, aliases: ['bell peppers', 'pepper', 'peppers'] },
     'garlic clove': { grams: 3, confidence: 0.9, aliases: ['garlic cloves', 'clove garlic'] },
     'mushroom': { grams: 18, confidence: 0.8, aliases: ['mushrooms'] },
     'zucchini': { grams: 196, confidence: 0.85, sizes: { small: 118, medium: 196, large: 323 }, aliases: ['zucchinis', 'courgette'] },
@@ -99,10 +100,11 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'muffin': { grams: 113, confidence: 0.75, sizes: { small: 66, medium: 113, large: 139 }, aliases: ['muffins'] },
 
     // ===== DAIRY & CHEESE =====
-    'cheese slice': { grams: 21, confidence: 0.85, aliases: ['slice cheese', 'american cheese slice'] },
+    'cheese slice': { grams: 21, confidence: 0.85, aliases: ['slice cheese', 'american cheese slice', 'mozzarella slice', 'slice mozzarella', 'provolone slice', 'slice provolone'] },
     'cheese stick': { grams: 28, confidence: 0.85, aliases: ['string cheese', 'cheese sticks'] },
 
     // ===== MEAT & PROTEIN =====
+    'ham slice': { grams: 25, confidence: 0.85, aliases: ['slice ham', 'deli ham slice', 'sliced ham'] },
     'chicken breast': { grams: 174, confidence: 0.85, sizes: { small: 140, medium: 174, large: 225 }, aliases: ['chicken breasts'] },
     'chicken thigh': { grams: 116, confidence: 0.85, aliases: ['chicken thighs'] },
     'chicken wing': { grams: 34, confidence: 0.85, aliases: ['chicken wings', 'wing'] },
@@ -267,6 +269,8 @@ const SUB_PIECE_FRACTIONS: Record<string, number> = {
     'bites': 0.04,
     'wedge': 0.125,   // ~1/8 of whole (lemon wedge ~7g, apple wedge ~23g)
     'wedges': 0.125,
+    'slice': 0.05,    // ~1/20 of whole
+    'slices': 0.05,
     'strip': 0.03,    // ~1/33 of whole
     'strips': 0.03,
     'segment': 0.08,  // ~1/12 of whole (orange segment ~11g)

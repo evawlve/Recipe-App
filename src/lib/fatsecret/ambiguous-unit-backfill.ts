@@ -52,6 +52,29 @@ export async function getOrCreateAmbiguousServing(
         return { status: 'error', error: `"${unit}" is not an ambiguous unit` };
     }
 
+    // Attempt deterministic sub-piece lookup first (e.g. "strip", "chunk")
+    // This prevents expensive AI estimation for common fractions
+    try {
+        const { getSubPieceDefault } = await import('../servings/default-count-grams');
+        // Clean out sub-piece words from the food name so parent lookup succeeds
+        const cleanFoodName = foodName.replace(/\b(chunks?|pieces?|slices?|bites?|wedges?|strips?|segments?)\b/gi, '').trim();
+        const subPieceResult = getSubPieceDefault(cleanFoodName, normalizedUnit);
+        if (subPieceResult) {
+            logger.debug('ambiguous_backfill.sub_piece_deterministic', {
+                foodId,
+                unit: normalizedUnit,
+                grams: subPieceResult.grams,
+            });
+            return {
+                status: 'success',
+                grams: subPieceResult.grams,
+                confidence: subPieceResult.confidence,
+            };
+        }
+    } catch (e) {
+        // Ignore errors and fall through to cache/AI
+    }
+
     // Check for existing cached estimate in FatSecretServingCache
     const servingId = `ai_${foodId}_${normalizedUnit}`;
     const existingServing = await prisma.fatSecretServingCache.findUnique({

@@ -105,6 +105,7 @@ describe('computeTotals with FatSecret cache', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9,
             useOnce: false,
             food: {
@@ -155,6 +156,7 @@ describe('computeTotals with FatSecret cache', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9,
             useOnce: false,
             food: {

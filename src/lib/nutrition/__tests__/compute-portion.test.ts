@@ -36,6 +36,7 @@ describe('computeTotals portion resolver integration', () => {
         unit: 'white',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9,
             useOnce: false,
             food: {

@@ -350,14 +350,17 @@ export function confidenceGate(
     // NOTE: Words like 'rice' use word-boundary regex to avoid matching
     // compound foods where the word is a modifier (e.g., 'rice vinegar', 'rice paper')
     const BASIC_PRODUCE_PATTERNS: RegExp[] = [
-        /\bpotato(es)?\b/i, /\blentils?\b/i, /\bbeans?\b/i,
-        /\bchickpeas?\b/i, /\bspinach\b/i, /\bbroccoli\b/i, /\bcarrots?\b/i,
+        /\bpotato(es)?\b/i, /\bspinach\b/i, /\bbroccoli\b/i, /\bcarrots?\b/i,
         // 'rice' only when it's the core food, not a modifier
         // Matches: "rice", "brown rice", "fried rice", "jasmine rice"
         // Does NOT match: "rice vinegar", "rice wine", "rice paper", "rice noodles"
         /\brice\b(?!\s+(vinegar|wine|paper|noodle|flour|milk|bran|syrup|cake|cracker|wrapper))/i,
     ];
-    const isBasicProduce = BASIC_PRODUCE_PATTERNS.some(p => p.test(queryLower));
+    
+    // Explicitly prevent bypass for "canned", "cooked", "dried" variants, 
+    // as they have significantly different nutrition from raw counterparts
+    const isBasicProduce = BASIC_PRODUCE_PATTERNS.some(p => p.test(queryLower)) 
+        && !/\b(canned|cooked|dried)\b/i.test(queryLower);
 
     if (isBasicProduce && candidates.length > 0) {
         const top1 = candidates[0];

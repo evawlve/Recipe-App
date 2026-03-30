@@ -13,6 +13,7 @@ import {
 } from '../fatsecret/config';
 import { callStructuredLlm } from './structured-client';
 import { getFdcServingWeight } from '../fdc/fdc-servings';
+import { logger } from '../logger';
 import { getDefaultCountServing } from '../servings/default-count-grams';
 
 // Units that are inherently ambiguous and require AI estimation
@@ -42,6 +43,12 @@ export const AMBIGUOUS_UNITS = new Set([
     'each',
     // Size descriptors for whole produce (when no serving data exists)
     'mini', 'medium', 'large', 'small', 'whole',
+    // Whole-produce units (head of cabbage, lettuce, etc.)
+    'head', 'heads',
+    // Bunch units (bunch of spinach, herbs, etc.)
+    'bunch', 'bunches',
+    // Sub-piece units that vary wildly by food (e.g., strips of bacon = 12g, strips of pepper = 10g)
+    'strip', 'strips',
     // Spray/squirt units (for cooking spray, oil sprays)
     'spray', 'sprays', 'squirt', 'squirts',
 ]);
@@ -120,23 +127,29 @@ export async function estimateAmbiguousServing(
     }
 
     // Step 8: Try FDC serving lookup (uses cache)
-    try {
-        const fdcResult = await getFdcServingWeight(
-            foodName,
-            unit,
-            isSize ? sizeFromUnit : undefined
-        );
+    // CRITICAL: Skip FDC for deceptive retail containers (package, container, etc.)
+    // FDC often lists single-serve portions under these labels (e.g., tofu package = 140g instead of 400g)
+    const skipFdcUnits = new Set(['package', 'packages', 'container', 'containers', 'box', 'boxes', 'bag', 'bags', 'tub', 'tubs', 'jar', 'jars', 'can', 'cans', 'bottle', 'bottles']);
+    
+    if (!skipFdcUnits.has(unit.toLowerCase())) {
+        try {
+            const fdcResult = await getFdcServingWeight(
+                foodName,
+                unit,
+                isSize ? sizeFromUnit : undefined
+            );
 
-        if (fdcResult) {
-            return {
-                status: 'success',
-                estimatedGrams: fdcResult.grams,
-                confidence: 0.9, // High confidence for USDA data
-                reasoning: `From USDA FDC: ${fdcResult.label}`,
-            };
+            if (fdcResult) {
+                return {
+                    status: 'success',
+                    estimatedGrams: fdcResult.grams,
+                    confidence: 0.9, // High confidence for USDA data
+                    reasoning: `From USDA FDC: ${fdcResult.label}`,
+                };
+            }
+        } catch (err) {
+            // FDC lookup failed, continue to LLM
         }
-    } catch (err) {
-        // FDC lookup failed, continue to LLM
     }
 
     // Fall back to LLM if no defaults available
@@ -183,10 +196,33 @@ export async function estimateAmbiguousServing(
             };
         }
 
-        // Trust the AI estimate directly (no sanity check clamping)
+        // Unit-specific weight sanity caps (safety net for AI hallucinations)
+        // These prevent catastrophic misestimates like 100g/spray or 86g/scoop
+        const UNIT_MAX_GRAMS: Record<string, number> = {
+            // Micro-units: these should NEVER exceed a few grams
+            spray: 2, sprays: 2, squirt: 5, squirts: 5,
+            dash: 1, pinch: 0.5,
+            // Packet-like units: typically 1-10g
+            packet: 10, packets: 10,
+            // Scoops: protein powder scoops are 30-35g max, competition scoops up to 45g
+            scoop: 50, scoops: 50,
+            // Piece/strip/chunk: reasonable max for cut produce/meat
+            piece: 200, pieces: 200, strip: 50, strips: 50, chunk: 50, chunks: 50,
+        };
+
+        const maxGrams = UNIT_MAX_GRAMS[unit.toLowerCase()];
+        let clampedGrams = estimatedGrams;
+        if (maxGrams && estimatedGrams > maxGrams) {
+            logger.warn('ambiguous_estimation.clamped', {
+                foodName, unit, originalGrams: estimatedGrams, clampedTo: maxGrams,
+                reasoning,
+            });
+            clampedGrams = maxGrams;
+        }
+
         return {
             status: 'success',
-            estimatedGrams,
+            estimatedGrams: clampedGrams,
             confidence,
             reasoning,
         };
@@ -212,6 +248,7 @@ function buildPrompt(request: AmbiguousServingRequest): string {
         ``,
         `Example reasoning for different units:`,
         `- "container" of yogurt: Usually 5.3oz (150g) for single-serve, 16oz (453g) for larger`,
+        `- "package" of tofu: Typically 14oz (400g)`,
         `- "scoop" of protein powder: Typically 30-35g`,
         `- "bowl" of cereal: About 200-300g including milk, 30-60g dry`,
         `- "can" of soda: Usually 355ml`,

@@ -2260,7 +2260,11 @@ function deriveMustHaveTokens(normalizedName: string): string[] {
     'oz', 'ounce', 'ounces', 'g', 'gram', 'grams', 'kg', 'ml', 'l', 'liter', 'liters',
     'packet', 'packets'
   ]);
-  return normalizedName
+  
+  // Clean the name first to remove descriptor stopwords (like "pieces") and handle pluralization
+  const cleaned = cleanIngredientName(normalizedName);
+  
+  return cleaned
     .toLowerCase()
     .split(/[^\w]+/)
     .filter((t) => t.length > 2 && !STOP.has(t));
