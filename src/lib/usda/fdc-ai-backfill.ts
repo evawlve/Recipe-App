@@ -46,6 +46,7 @@ const COUNT_UNITS = new Set([
 
 // Size qualifiers for produce (small, medium, large, etc.)
 const SIZE_QUALIFIERS = new Set([
+    'mini',
     'small', 'sm',
     'medium', 'med',
     'large', 'lg',
@@ -96,6 +97,7 @@ export async function getOrCreateFdcSizeServings(
             // Standard ratios: small ≈ 70% of medium, large ≈ 140% of medium
             const mediumGrams = result.estimatedGrams;
             return {
+                'mini': Math.round(mediumGrams * 0.55),
                 'small': Math.round(mediumGrams * 0.70),
                 'sm': Math.round(mediumGrams * 0.70),
                 'medium': Math.round(mediumGrams),

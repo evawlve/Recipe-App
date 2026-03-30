@@ -68,6 +68,9 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'bulb': 'bulb', 'bulbs': 'bulb',  // For fennel, garlic
     'crown': 'crown', 'crowns': 'crown',  // For broccoli
     'floret': 'floret', 'florets': 'floret',  // For broccoli, cauliflower
+    'strip': 'strip', 'strips': 'strip', // For bell peppers, bacon
+    'spray': 'spray', 'sprays': 'spray', // For cooking spray, oil sprays
+    'squirt': 'squirt', 'squirts': 'squirt',
   };
 
   if (countUnits[token]) {

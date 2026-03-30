@@ -126,6 +126,10 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'celery stalk', to: 'celery' },
     { from: 'garlic cloves', to: 'garlic' },
     { from: 'garlic clove', to: 'garlic' },
+    // Spice-form rewrites: whole vs ground spices are nutritionally equivalent
+    // APIs only have "ground cinnamon" or branded snacks called "cinnamon sticks"
+    { from: 'cinnamon sticks', to: 'cinnamon' },
+    { from: 'cinnamon stick', to: 'cinnamon' },
     { from: 'lemon zest', to: 'lemon peel' },
     { from: 'lime zest', to: 'lime peel' },
     { from: 'orange zest', to: 'orange peel' },
@@ -138,6 +142,10 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'meyer lemon zest', to: 'lemon peel' },
     { from: 'key lime peel', to: 'lime peel' },
     { from: 'key lime zest', to: 'lime peel' },
+    // Mixed product rewrites (guide toward correct product category)
+    { from: 'tomato and green chili mix', to: 'diced tomatoes with green chilies' },
+    { from: 'tomato & green chili mix', to: 'diced tomatoes with green chilies' },
+    { from: 'tomato green chili mix', to: 'diced tomatoes with green chilies' },
     // Fat level synonyms
     { from: 'extra light', to: 'fat free' },
     { from: 'extra-light', to: 'fat free' },
@@ -300,6 +308,35 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     if (re.test(working)) {
       working = working.replace(re, rewrite.to);
     }
+  }
+
+  // ============================================================
+  // CONTEXT-AWARE BARE-WORD REWRITES
+  // These must NOT fire when the word is part of a compound term.
+  // ============================================================
+
+  // "pepper" alone → "black pepper" (American recipe default)
+  // But NOT: red pepper, bell pepper, cayenne pepper, chili pepper, etc.
+  const PEPPER_COMPOUNDS = /\b(red|bell|green|yellow|orange|cayenne|chili|chile|jalapeno|banana|hungarian|sweet|hot|white|black|crushed red)\s+pepper/i;
+  const PEPPER_SUFFIXES = /\bpepper\s+(flakes|sauce|jack|corn)/i;
+  if (!PEPPER_COMPOUNDS.test(working) && !PEPPER_SUFFIXES.test(working)) {
+    working = working.replace(/\bpepper\b/i, 'black pepper');
+  }
+
+  // NOTE: Bare "corn" mapping to kettle corn is now handled universally by the
+  // extreme calorie mismatch penalty in simple-rerank.ts (>200% diff → -0.35 penalty).
+
+  // "vanilla" alone → "vanilla extract" (recipe default)
+  // But NOT: vanilla extract, vanilla bean, vanilla ice cream, vanilla protein, etc.
+  if (/\bvanilla\b/i.test(working) && !/\bvanilla\s+(extract|bean|ice|protein|pudding|wafer|cake|yogurt|cream|frosting|powder|paste)/i.test(working)) {
+    working = working.replace(/\bvanilla\b/i, 'vanilla extract');
+  }
+
+  // "chicken breast" → "skinless chicken breast" (prevents branded seasoned products)
+  // 'raw' gets stripped by prep_phrases, so we use 'skinless' which is preserved
+  // But NOT: fried chicken breast, grilled chicken breast, skinless chicken breast, etc.
+  if (/\bchicken\s+breast\b/i.test(working) && !/\b(skinless|fried|grilled|baked|roasted|breaded|bbq|smoked)\s+chicken\s+breast/i.test(working)) {
+    working = working.replace(/\bchicken\s+breast\b/i, 'skinless chicken breast');
   }
 
   // Remove prep/size phrases using merged prep phrases (static + AI-learned)

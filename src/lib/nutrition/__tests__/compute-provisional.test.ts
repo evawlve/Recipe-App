@@ -56,6 +56,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8,
             useOnce: false,
           food: macroFood(364, {
@@ -93,6 +94,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8,
             useOnce: false,
           food: macroFood(100, {
@@ -112,6 +114,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9,
             useOnce: true, // Use-once mapping
           food: macroFood(800, {
@@ -141,6 +144,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8,
             useOnce: false,
           food: macroFood(100, {
@@ -160,6 +164,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.3, // Low confidence
             useOnce: false,
           food: macroFood(800, {
@@ -189,6 +194,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8,
             useOnce: false,
           food: macroFood(364, {
@@ -208,6 +214,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9,
             useOnce: false,
           food: macroFood(400, {
@@ -234,6 +241,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8,
             useOnce: false,
           food: macroFood(800, {
@@ -253,6 +261,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.3, // Low confidence
             useOnce: false,
           food: macroFood(800, {
@@ -282,6 +291,7 @@ describe('Provisional tracking in computeTotals', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.3, // Low confidence
             useOnce: false,
           food: macroFood(800, {

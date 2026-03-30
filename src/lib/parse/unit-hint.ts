@@ -99,6 +99,17 @@ const UNIT_HINT_PATTERNS = [
       );
       return filtered.join(' ') || tokens[0] || '';
     }
+  },
+  {
+    hint: 'chunk',
+    patterns: ['chunks', 'chunk'],
+    nameExtractor: (tokens: string[]) => {
+      // Remove "chunk"/"chunks", return remaining
+      const filtered = tokens.filter(t => 
+        !['chunk', 'chunks'].includes(t.toLowerCase())
+      );
+      return filtered.join(' ') || tokens[0] || '';
+    }
   }
 ];
 

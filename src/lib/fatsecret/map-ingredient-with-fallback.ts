@@ -223,11 +223,18 @@ export async function mapIngredientWithFallback(
         logger.debug('mapping.synonym_found', { rawLine: trimmed, canonicalName });
     }
 
+    // Step 0b: Pre-parse unit cleanup
+    // The parser doesn't recognize "second spray" as a unit (e.g., "0.33 second spray")
+    // Replace it with just "spray" before parsing so the quantity and "spray" unit separate cleanly.
+    let preProcessLine = effectiveQuery
+        .replace(/\bseconds?\s+(spray|squirt)s?\b/gi, '$1')
+        .replace(/\bsec\s+(spray|squirt)s?\b/gi, '$1');
+
     // Step 1: Parse and normalize
     // NOTE: Cache lookup now only happens after normalization (see "EARLY CACHE CHECK" below)
     // This eliminates "selection drift" where raw line variations would get different mappings
-    let parsed = parseIngredientLine(trimmed);
-    let baseName = parsed?.name?.trim() || trimmed;
+    let parsed = parseIngredientLine(preProcessLine);
+    let baseName = parsed?.name?.trim() || preProcessLine;
 
     // Step 1-AI-FALLBACK: If regex parser didn't detect a unit but input looks complex,
     // try AI to extract qty/unit/name. This handles edge cases like "1 5 floz serving red wine"
@@ -479,6 +486,7 @@ export async function mapIngredientWithFallback(
 
         let normalizedName = normalizeIngredientName(baseName).cleaned || baseName;
 
+
         // ============================================================
         // EARLY CACHE CHECK - Skip AI if we've seen this ingredient before
         // ============================================================
@@ -674,6 +682,17 @@ export async function mapIngredientWithFallback(
                     });
                 }
             }
+        }
+
+        // Context-dependent normalization: bare "pepper" in spice context → "black pepper"
+        // Applied AFTER AI normalization to prevent AI from overriding the rewrite.
+        // When the unit is a spice measure (dash, pinch, tsp, tbsp), the user means black pepper,
+        // not bell/poblano/hungarian peppers.
+        const SPICE_CONTEXT_UNITS_FB = new Set(['dash', 'pinch', 'tsp', 'tbsp', 'teaspoon', 'tablespoon']);
+        const parsedUnitForContextFB = parsed?.unit?.toLowerCase() ?? '';
+        if (/^pepper$/i.test(normalizedName.trim()) && SPICE_CONTEXT_UNITS_FB.has(parsedUnitForContextFB)) {
+            logger.info('fatsecret.map.pepper_spice_rewrite', { rawLine: trimmed, originalName: normalizedName, unit: parsedUnitForContextFB });
+            normalizedName = 'black pepper';
         }
 
         // Combine learned + AI synonyms (deduplicated)
@@ -947,8 +966,8 @@ export async function mapIngredientWithFallback(
                         const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
                         const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed);
 
-                        if (rerankResult) {
-                            const selected = filtered.find(c => c.id === rerankResult.winner.id);
+                        if (rerankResult && rerankResult.winner) {
+                            const selected = filtered.find(c => c.id === rerankResult.winner!.id);
                             if (selected) {
                                 winner = selected;
                                 confidence = rerankResult.confidence;
@@ -1545,29 +1564,23 @@ export async function mapIngredientWithFallback(
             if (searchCandidates.length > 0) {
                 const searchFilterResult = filterCandidatesByTokens(searchCandidates, normalizedName, { debug, rawLine: trimmed });
 
-                // Sort with FDC tiebreaker for basic produce (same logic as main selection)
-                const BASIC_PRODUCE = ['potato', 'potatoes', 'lentil', 'lentils', 'beans', 'chickpea', 'chickpeas', 'spinach', 'broccoli', 'carrot', 'carrots'];
-                const isBasicProduce = BASIC_PRODUCE.some(p => normalizedName.toLowerCase().includes(p));
-
-                const sortedFallbackCandidates = [...searchFilterResult.filtered].sort((a, b) => {
-                    const scoreDiff = b.score - a.score;
-                    if (Math.abs(scoreDiff) > 0.001) return scoreDiff;
-
-                    if (isBasicProduce) {
-                        const aNameLower = a.name.toLowerCase();
-                        const bNameLower = b.name.toLowerCase();
-                        const ingredientLower = normalizedName.toLowerCase();
-                        const ingredientSingular = ingredientLower.replace(/s$/, '');
-
-                        // Check for EXACT match only (potatoes = potatoes, or potato = potato)
-                        const aIsExactMatch = aNameLower === ingredientLower || aNameLower === ingredientSingular;
-                        const bIsExactMatch = bNameLower === ingredientLower || bNameLower === ingredientSingular;
-
-                        if (aIsExactMatch && a.source === 'fdc' && (!bIsExactMatch || b.source !== 'fdc')) return -1;
-                        if (bIsExactMatch && b.source === 'fdc' && (!aIsExactMatch || a.source !== 'fdc')) return 1;
-                    }
-                    return 0;
-                });
+                // Run reranker to ensure anomaly penalties (e.g. canned beans) are applied
+                const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
+                    id: c.id,
+                    name: c.name,
+                    brandName: c.brandName,
+                    foodType: c.foodType,
+                    score: c.score,
+                    source: c.source,
+                    nutrition: c.nutrition,
+                }));
+                const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
+                const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed);
+                
+                // simpleRerank returns the fully sorted list based on semantic score, nutrition ties, and FDC preferencing
+                const sortedFallbackCandidates = rerankResult.sortedCandidates.map(
+                    rerankCand => searchFilterResult.filtered.find(c => c.id === rerankCand.id)!
+                ).filter(Boolean);
 
                 // Try each candidate until one works
                 for (const candidate of sortedFallbackCandidates.slice(0, 5)) {
@@ -1912,6 +1925,32 @@ async function hydrateAndSelectServing(
     // Select best serving
     let servingResult = selectServing(parsed, details.servings, candidate.name);
 
+    // SANITY CHECK (Fix 82, Mar 2026): For UNITLESS ingredients, selectServing() may return
+    // a fallback "medium" serving from FatSecret with an implausibly large weight.
+    // E.g., "1 jalapeno pepper" → FatSecret "medium (4-1/8" long)" = 164g, but USDA = 14g.
+    // When the per-unit weight is unreasonably large for produce, discard the result so the
+    // code falls through to the unitless AI estimation path.
+    if (servingResult && parsed && !parsed.unit) {
+        const SMALL_PRODUCE = /\b(jalape[nñ]o|serrano|habanero|thai chili|cayenne|chipotle|poblano|anaheim|shallot|radish|clove|garlic|ginger|lime|lemon|kumquat|fig|date|olive|cherry|grape|plum|apricot|prune|scallion|green onion|chili pepper|chile pepper)\b/i;
+        const unitlessPUG = servingResult.gramsPerUnit ?? servingResult.baseGrams;
+        const isSmall = SMALL_PRODUCE.test(candidate.name) || SMALL_PRODUCE.test(parsed.name || '');
+        const maxGrams = isSmall ? 100 : 500;
+
+        if (unitlessPUG && unitlessPUG > maxGrams) {
+            logger.info('hydrate.unitless_serving_sanity_failed', {
+                foodId: candidate.id,
+                foodName: candidate.name,
+                parsedName: parsed.name,
+                perUnitGrams: unitlessPUG,
+                maxGrams,
+                isSmall,
+                matchedServing: servingResult.serving.measurementDescription || servingResult.serving.description,
+                reason: 'FatSecret serving weight implausibly large for produce, falling through to AI estimation',
+            });
+            servingResult = null;
+        }
+    }
+
     // If selection failed and we have a specific unit, try on-demand backfill
     // BUT skip for ambiguous units (egg, packet, etc.) - those need AI estimation
     if (!servingResult && parsed?.unit && !isAmbiguousUnit(parsed.unit)) {
@@ -1959,17 +1998,22 @@ async function hydrateAndSelectServing(
     // If selection failed for UNITLESS ingredient (no unit), try count backfill
     // e.g., "1 cucumber" needs a "medium" serving (~300g), not "slice" (7g)
     // Use 'medium' as target to get proper whole-item weight
+    // EXCEPTION: If the ingredient name contains "mini", use 'small' with a 0.8x reduction
+    const hasMiniModifier = parsed?.name?.toLowerCase().includes('mini');
+    const targetSizeUnit = hasMiniModifier ? 'small' : 'medium';
+
     if (!servingResult && parsed && !parsed.unit) {
         logger.info('hydrate.attempting_unitless_backfill', {
             foodId: candidate.id,
             ingredientName: parsed.name,
+            targetSizeUnit,
         });
 
-        // For unitless produce, request a 'medium' or 'whole' serving
+        // For unitless produce, request a 'medium' or 'small' serving
         const backfillRes = await backfillOnDemand(
             candidate.id,
             'count',
-            'medium'  // Request medium/whole serving for proper gram weight
+            targetSizeUnit  // 'small' for mini, 'medium' otherwise
         );
 
         if (backfillRes.success) {
@@ -1979,10 +2023,32 @@ async function hydrateAndSelectServing(
                 servingResult = selectServing(parsed, details.servings, candidate.name);
 
                 if (servingResult) {
-                    logger.info('hydrate.unitless_backfill_success', {
-                        foodId: candidate.id,
-                        serving: servingResult.serving.measurementDescription || servingResult.serving.description
-                    });
+                    // SANITY CHECK (Fix 82, Mar 2026): FatSecret "medium" servings for produce
+                    // can be wildly wrong for unitless ingredients. E.g., jalapeño "medium" = 164g
+                    // vs USDA = 14g. When per-unit weight is implausibly large, discard the
+                    // serving result and fall through to AI estimation instead.
+                    const SMALL_PRODUCE = /\b(jalape[nñ]o|serrano|habanero|thai chili|cayenne|chipotle|poblano|anaheim|shallot|radish|clove|garlic|ginger|lime|lemon|kumquat|fig|date|olive|cherry|grape|plum|apricot|prune|scallion|green onion)\b/i;
+                    const unitlessPerUnitGrams = servingResult.gramsPerUnit ?? servingResult.baseGrams;
+                    const isSmallProduceItem = SMALL_PRODUCE.test(candidate.name) || SMALL_PRODUCE.test(parsed.name || '');
+                    const maxReasonableUnitlessGrams = isSmallProduceItem ? 100 : 500;
+
+                    if (unitlessPerUnitGrams && unitlessPerUnitGrams > maxReasonableUnitlessGrams) {
+                        logger.info('hydrate.unitless_sanity_check_failed', {
+                            foodId: candidate.id,
+                            foodName: candidate.name,
+                            perUnitGrams: unitlessPerUnitGrams,
+                            maxReasonableUnitlessGrams,
+                            isSmallProduceItem,
+                            matchedServing: servingResult.serving.measurementDescription || servingResult.serving.description,
+                            reason: 'FatSecret serving weight implausibly large, falling through to AI estimation',
+                        });
+                        servingResult = null; // Discard — will trigger AI estimation at L2015
+                    } else {
+                        logger.info('hydrate.unitless_backfill_success', {
+                            foodId: candidate.id,
+                            serving: servingResult.serving.measurementDescription || servingResult.serving.description
+                        });
+                    }
                 }
             }
         } else {
@@ -1992,50 +2058,95 @@ async function hydrateAndSelectServing(
             });
         }
 
-        // If still no serving result for unitless produce, use AI to estimate "1 medium {food}" weight
+        // If still no serving result for unitless produce, use AI to estimate "1 {size} {food}" weight
         // This handles FDC entries that don't have medium/whole servings
         if (!servingResult && parsed) {
             logger.info('hydrate.attempting_unitless_ai_estimate', {
                 foodId: candidate.id,
                 foodName: candidate.name,
+                targetSizeUnit,
             });
 
             const ambiguousResult = await getOrCreateAmbiguousServing(
                 candidate.id,
                 candidate.name,
-                'medium',  // Ask AI: "what does 1 medium {foodName} weigh?"
+                targetSizeUnit,  // 'small' for mini, 'medium' otherwise
                 candidate.brandName
             );
 
             if (ambiguousResult.status === 'success' || ambiguousResult.status === 'cached') {
-                const estimatedGrams = ambiguousResult.grams!;
-                const qty = parsed.qty * parsed.multiplier;
-                const totalGrams = estimatedGrams * qty;
+                let estimatedGrams = ambiguousResult.grams!;
 
-                // Find ANY gram-based serving to calculate nutrition
-                const gramServing = details.servings.find(s =>
-                    s.metricServingUnit === 'g' ||
-                    s.measurementDescription?.toLowerCase().includes('gram') ||
-                    gramsForServing(s) != null
-                );
+                // SANITY CHECK (Fix 82, Mar 2026): The cached/estimated weight may be
+                // implausibly large for small produce. E.g., jalapeño "medium" cached at 164g
+                // (from a stale FatSecret serving) vs USDA ~14g. When implausible, delete the
+                // stale cache entry and re-estimate with a fresh AI call.
+                const SMALL_PRODUCE_SANITY = /\b(jalape[nñ]o|serrano|habanero|thai chili|cayenne|chipotle|poblano|anaheim|shallot|radish|clove|garlic|ginger|lime|lemon|kumquat|fig|date|olive|cherry|grape|plum|apricot|prune|scallion|green onion|chili pepper|chile pepper)\b/i;
+                const isSmallProduceAI = SMALL_PRODUCE_SANITY.test(candidate.name) || SMALL_PRODUCE_SANITY.test(parsed.name || '');
+                const maxAIGrams = isSmallProduceAI ? 100 : 500;
 
-                if (gramServing) {
-                    servingResult = {
-                        serving: gramServing,
-                        matchScore: 0.85,
-                        gramsPerUnit: estimatedGrams,
-                        unitsPerServing: 1,
-                        baseGrams: totalGrams,
-                        matchType: 'fallback' as const,
-                        warning: `AI-estimated: 1 medium ${candidate.name} ≈ ${estimatedGrams}g`,
-                    };
-
-                    logger.info('hydrate.unitless_ai_estimate_success', {
+                if (estimatedGrams > maxAIGrams) {
+                    logger.info('hydrate.unitless_ai_sanity_failed', {
                         foodId: candidate.id,
                         foodName: candidate.name,
                         estimatedGrams,
-                        totalGrams,
+                        maxAIGrams,
+                        isSmallProduceAI,
+                        cacheStatus: ambiguousResult.status,
+                        reason: 'Cached/estimated weight implausibly large, deleting stale cache and skipping',
                     });
+
+                    // Delete the stale cached AI entry so next run gets a fresh estimate
+                    try {
+                        const { prisma: prismaDb } = await import('../db');
+                        const staleId = `ai_${candidate.id}_${targetSizeUnit}`;
+                        await prismaDb.fatSecretServingCache.deleteMany({
+                            where: { id: staleId },
+                        });
+                        logger.info('hydrate.stale_ai_cache_deleted', { id: staleId });
+                    } catch (e) {
+                        // Ignore delete errors
+                    }
+
+                    // Don't use this result — fall through without setting servingResult
+                } else {
+                    // For "mini" modifier, reduce below "small" weight (mini ≈ 80% of small)
+                    if (hasMiniModifier) {
+                        estimatedGrams = Math.round(estimatedGrams * 0.8);
+                        logger.info('hydrate.mini_modifier_applied', {
+                            foodName: candidate.name,
+                            smallGrams: ambiguousResult.grams,
+                            miniGrams: estimatedGrams,
+                        });
+                    }
+                    const qty = parsed.qty * parsed.multiplier;
+                    const totalGrams = estimatedGrams * qty;
+
+                    // Find ANY gram-based serving to calculate nutrition
+                    const gramServing = details.servings.find(s =>
+                        s.metricServingUnit === 'g' ||
+                        s.measurementDescription?.toLowerCase().includes('gram') ||
+                        gramsForServing(s) != null
+                    );
+
+                    if (gramServing) {
+                        servingResult = {
+                            serving: gramServing,
+                            matchScore: 0.85,
+                            gramsPerUnit: estimatedGrams,
+                            unitsPerServing: 1,
+                            baseGrams: totalGrams,
+                            matchType: 'fallback' as const,
+                            warning: `AI-estimated: 1 medium ${candidate.name} ≈ ${estimatedGrams}g`,
+                        };
+
+                        logger.info('hydrate.unitless_ai_estimate_success', {
+                            foodId: candidate.id,
+                            foodName: candidate.name,
+                            estimatedGrams,
+                            totalGrams,
+                        });
+                    }
                 }
             } else {
                 logger.warn('hydrate.unitless_ai_estimate_failed', {
@@ -2046,8 +2157,10 @@ async function hydrateAndSelectServing(
         }
     }
 
-    // If selection failed and unit is AMBIGUOUS (container, scoop, etc.), try AI estimation
-    if (!servingResult && parsed?.unit && isAmbiguousUnit(parsed.unit)) {
+    const isStandardVolumeUnit = ['cup', 'cups', 'c', 'tbsp', 'tablespoon', 'tablespoons', 'tbs', 'tsp', 'teaspoon', 'teaspoons', 'floz', 'fl oz', 'fluid ounce', 'ml'].includes(parsed?.unit?.toLowerCase() || '');
+
+    // If selection failed and unit is AMBIGUOUS or a STANDARD VOLUME that failed, try AI estimation
+    if (!servingResult && parsed?.unit && (isAmbiguousUnit(parsed.unit) || isStandardVolumeUnit)) {
         logger.info('hydrate.attempting_ambiguous_unit_backfill', {
             foodId: candidate.id,
             foodName: candidate.name,
@@ -2165,7 +2278,258 @@ async function hydrateAndSelectServing(
     }
 
     // Calculate final grams for the result
-    const finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
+    let finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
+
+    // === UNIVERSAL PER-UNIT WEIGHT SANITY GUARD ===
+    // Catches implausible per-unit weights from ALL sources (FatSecret native, FDC, AI-generated,
+    // default 100g serving). E.g., "4 spray cooking spray" = 4 × 100g = 400g is clearly wrong.
+    // Also handles "1 serving 1 packet" where parse unit is "serving" but name has "packet".
+    if (qty > 0 && !targetGrams) {
+        const UNIT_MAX_GRAMS_PER_UNIT: Record<string, number> = {
+            // Micro-units: should NEVER exceed a few grams each
+            spray: 2, sprays: 2, squirt: 5, squirts: 5,
+            dash: 1, dashes: 1, pinch: 0.5, pinches: 0.5,
+            // Packet-like units: sweetener packets = 1g, sauce packets ≤ 10g
+            packet: 10, packets: 10,
+            // Scoops: protein powder scoops are 30-35g max
+            scoop: 50, scoops: 50,
+        };
+        
+        // Find the most restrictive applicable cap by checking both unit and name
+        const tokensToScan = [
+            ...(parsed?.unit ? [parsed.unit.toLowerCase()] : []),
+            ...(parsed?.name ? parsed.name.toLowerCase().split(/\s+/) : [])
+        ];
+        
+        let maxPerUnit: number | undefined;
+        let matchedCapUnit: string | undefined;
+        
+        for (const token of tokensToScan) {
+            const cap = UNIT_MAX_GRAMS_PER_UNIT[token];
+            if (cap && (maxPerUnit === undefined || cap < maxPerUnit)) {
+                maxPerUnit = cap;
+                matchedCapUnit = token;
+            }
+        }
+
+        if (maxPerUnit) {
+            const perUnitGrams = finalGrams / qty;
+            if (perUnitGrams > maxPerUnit) {
+                const cappedTotal = maxPerUnit * qty;
+                logger.warn('hydrate.unit_weight_sanity_capped', {
+                    foodId: candidate.id,
+                    foodName: candidate.name,
+                    matchedCapUnit,
+                    qty,
+                    originalPerUnit: perUnitGrams,
+                    cappedPerUnit: maxPerUnit,
+                    originalTotal: finalGrams,
+                    cappedTotal,
+                });
+                // Scale macros proportionally
+                const gramsRatio = cappedTotal / finalGrams;
+                macros.kcal *= gramsRatio;
+                macros.protein *= gramsRatio;
+                macros.carbs *= gramsRatio;
+                macros.fat *= gramsRatio;
+                finalGrams = cappedTotal;
+            }
+        }
+    }
+
+    // === MINI MODIFIER OVERRIDE ===
+    // When the ingredient name contains "mini" (e.g., "1 mini avocado") and the serving
+    // selection returned a standard-size weight (e.g., 201g for a medium avocado),
+    // override with the "small" weight × 0.8 from deterministic seed data.
+    if (hasMiniModifier && !targetGrams && !parsed?.unit) {
+        try {
+            const { getDefaultCountServing } = await import('../servings/default-count-grams');
+            // Strip "mini" from the name to match the base food (e.g., "mini avocado" → "avocado")
+            const baseFoodName = (parsed?.name || candidate.name)
+                .replace(/\bmini\b/i, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const smallDefault = getDefaultCountServing(baseFoodName, 'each', 'small');
+            if (smallDefault) {
+                const miniGrams = Math.round(smallDefault.grams * 0.8);
+                const newTotal = miniGrams * qty;
+                logger.info('hydrate.mini_override_applied', {
+                    foodName: candidate.name,
+                    parsedName: parsed?.name,
+                    baseFoodName,
+                    oldGrams: finalGrams,
+                    smallGrams: smallDefault.grams,
+                    miniGrams,
+                    newTotal,
+                });
+                // Scale macros proportionally to the weight reduction
+                const gramsRatio = newTotal / finalGrams;
+                macros.kcal *= gramsRatio;
+                macros.protein *= gramsRatio;
+                macros.carbs *= gramsRatio;
+                macros.fat *= gramsRatio;
+                finalGrams = newTotal;
+            }
+        } catch (err) {
+            // If lookup fails, keep the original finalGrams
+        }
+    }
+
+    // === OIL VOLUME OVERRIDE ===
+    // FDC contains bad data for some branded oils (e.g. Spectrum Avocado Oil) where 1 tbsp = 7.5g.
+    // Pure oil is ~14g per tbsp (~120 kcal) universally. 
+    // If we're mapping an oil with a volume unit and the weight is significantly off, fix it.
+    const isOil = (parsed?.name?.toLowerCase().trim().endsWith(' oil') || candidate.name.toLowerCase().trim().endsWith(' oil'));
+    if (isOil && (parsed?.unit === 'tbsp' || parsed?.unit === 'tsp' || parsed?.unit === 'cup') && !targetGrams) {
+        let expectedGramsPerUnit = 0;
+        if (parsed.unit === 'tbsp') expectedGramsPerUnit = 14;
+        else if (parsed.unit === 'tsp') expectedGramsPerUnit = 4.5;
+        else if (parsed.unit === 'cup') expectedGramsPerUnit = 224; // 14g * 16 tbsp
+        
+        const expectedTotal = Math.round(expectedGramsPerUnit * qty * 10) / 10;
+        
+        // If the matched serving is suspiciously light (less than 75% of expected weight)
+        if (expectedTotal > 0 && finalGrams < expectedTotal * 0.85) {
+            logger.info('hydrate.oil_weight_override_applied', {
+                foodName: candidate.name,
+                parsedUnit: parsed.unit,
+                oldGrams: finalGrams,
+                newTotal: expectedTotal,
+            });
+            const gramsRatio = expectedTotal / (finalGrams || 1);
+            macros.kcal *= gramsRatio;
+            macros.protein *= gramsRatio;
+            macros.carbs *= gramsRatio;
+            macros.fat *= gramsRatio;
+            finalGrams = expectedTotal;
+        }
+    }
+
+
+    // === SANITY CHECK: Unitless high-count items ===
+    // When no unit is specified and qty > 3, the serving resolution may have selected
+    // a whole-fruit "medium" serving (e.g., 336g for mango) and multiplied by qty,
+    // giving absurd totals like "14 mango chunks" → 4704g.
+    // For high-count unitless items with suspiciously high grams, estimate per-piece weight.
+    const MAX_UNITLESS_TOTAL_GRAMS = 500;
+    if (!parsed?.unit && qty > 3 && finalGrams > MAX_UNITLESS_TOTAL_GRAMS && !targetGrams) {
+        let corrected = false;
+
+        // 0. Try direct count-default lookup by food name
+        // e.g., "25 grape tomatoes" → grape tomato seed data = 5g each → 125g total
+        // This catches small count items that have their own seed data entries
+        try {
+            const { getDefaultCountServing } = await import('../servings/default-count-grams');
+            const itemName = parsed?.name || candidate.name;
+            const countDefault = getDefaultCountServing(itemName, 'each');
+            if (countDefault && countDefault.grams * qty < finalGrams * 0.5) {
+                // Seed data gives a much smaller per-unit weight than what we computed
+                const newGrams = qty * countDefault.grams;
+                logger.info('hydrate.count_default_correction', {
+                    foodName: candidate.name,
+                    itemName,
+                    perUnit: countDefault.grams,
+                    oldGrams: finalGrams,
+                    newGrams,
+                    qty,
+                });
+                const gramsRatio = newGrams / finalGrams;
+                macros.kcal *= gramsRatio;
+                macros.protein *= gramsRatio;
+                macros.carbs *= gramsRatio;
+                macros.fat *= gramsRatio;
+                finalGrams = newGrams;
+                corrected = true;
+            }
+        } catch (err) {
+            logger.warn('hydrate.count_default_lookup_error', {
+                foodName: candidate.name,
+                error: (err as Error).message,
+            });
+        }
+
+        // 1. Try deterministic sub-piece defaults first (cheaper & more reliable than AI)
+        const countUnit = parsed?.unitHint || '';
+        if (countUnit) {
+            try {
+                const { getSubPieceDefault } = await import('../servings/default-count-grams');
+                const cleanItemName = (parsed?.name || candidate.name)
+                    .replace(/\b(chunks?|pieces?|slices?|bites?|wedges?|strips?|segments?)\b/gi, '')
+                    .trim();
+                const subPieceDefault = getSubPieceDefault(
+                    cleanItemName || candidate.name,
+                    countUnit
+                );
+                if (subPieceDefault) {
+                    const newGrams = qty * subPieceDefault.grams;
+                    logger.info('hydrate.sub_piece_default_applied', {
+                        foodName: candidate.name,
+                        itemName: cleanItemName,
+                        unitHint: countUnit,
+                        perPiece: subPieceDefault.grams,
+                        oldGrams: finalGrams,
+                        newGrams,
+                        qty,
+                    });
+                    const gramsRatio = newGrams / finalGrams;
+                    macros.kcal *= gramsRatio;
+                    macros.protein *= gramsRatio;
+                    macros.carbs *= gramsRatio;
+                    macros.fat *= gramsRatio;
+                    finalGrams = newGrams;
+                    corrected = true;
+                }
+            } catch (err) {
+                logger.warn('hydrate.sub_piece_default_error', {
+                    foodName: candidate.name,
+                    error: (err as Error).message,
+                });
+            }
+        }
+
+        // 2. Fall back to AI estimation if no sub-piece default available
+        if (!corrected) {
+            try {
+                const { estimateAmbiguousServing } = await import('../ai/ambiguous-serving-estimator');
+                const itemName = parsed?.name || candidate.name;
+                // Use unitHint (e.g., "chunk") for more accurate AI estimation
+                // "1 chunk of mango" (~12g) vs "1 piece of mango" (336g, whole fruit)
+                const aiCountUnit = countUnit || 'piece';
+                // Strip count words from the name so AI sees "mango" not "mango chunks"
+                const cleanItemName = itemName.replace(/\b(chunks?|pieces?|slices?)\b/gi, '').trim();
+                const pieceResult = await estimateAmbiguousServing({
+                    foodName: cleanItemName || itemName,
+                    brandName: candidate.brandName,
+                    unit: aiCountUnit,
+                });
+
+                if (pieceResult.status === 'success' && pieceResult.estimatedGrams && pieceResult.estimatedGrams > 0) {
+                    const perPiece = pieceResult.estimatedGrams;
+                    const newGrams = qty * perPiece;
+                    logger.info('hydrate.unitless_high_count_correction', {
+                        foodName: candidate.name,
+                        itemName,
+                        oldGrams: finalGrams,
+                        perPiece,
+                        newGrams,
+                        qty,
+                    });
+                    // Recalculate macros proportionally
+                    const gramsRatio = newGrams / finalGrams;
+                    macros.kcal *= gramsRatio;
+                    macros.protein *= gramsRatio;
+                    macros.carbs *= gramsRatio;
+                    macros.fat *= gramsRatio;
+                    finalGrams = newGrams;
+                }
+            } catch (err) {
+                logger.warn('hydrate.unitless_high_count_error', {
+                    foodName: candidate.name,
+                    error: (err as Error).message,
+                });
+            }
+        }
+    }
 
     // Determine the correct serving description
     // For ambiguous unit fallbacks, use the parsed unit with gram weight (e.g., "package (227g)")
@@ -2224,12 +2588,23 @@ async function buildFdcResult(
 
     // Handle volume units - estimate grams based on typical density
     // Note: This is an approximation. Actual density varies by food.
+    const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(candidate.name) || /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(parsed?.name || '');
+    
     const volumeToGrams: Record<string, number> = {
-        'cup': 120,      // 1 cup ≈ 240ml × 0.5 g/ml ≈ 120g (for granular solids)
-        'tbsp': 7.5,     // 1 tbsp ≈ 15ml × 0.5 g/ml ≈ 7.5g
-        'tsp': 2.5,      // 1 tsp ≈ 5ml × 0.5 g/ml ≈ 2.5g
+        'cup': isLiquid ? 240 : 120,      // 1 cup ≈ 240ml ≈ 240g for liquids, 120g for granular solids
+        'tbsp': isLiquid ? 15 : 7.5,     // 1 tbsp ≈ 15ml ≈ 15g for liquids, 7.5g for solids
+        'tablespoon': isLiquid ? 15 : 7.5, 'tablespoons': isLiquid ? 15 : 7.5,
+        'tsp': isLiquid ? 5 : 2.5,      // 1 tsp ≈ 5ml ≈ 5g for liquids, 2.5g for solids
+        'teaspoon': isLiquid ? 5 : 2.5, 'teaspoons': isLiquid ? 5 : 2.5,
         'ml': 1,         // 1 ml ≈ 1g (for water-like liquids)
         'floz': 30,      // 1 fl oz ≈ 30ml
+        // Micro-volume units (spice measures)
+        'dash': 0.6,     // 1 dash ≈ 1/8 tsp ≈ 0.6ml ≈ 0.5-0.6g
+        'dashes': 0.6,
+        'pinch': 0.3,    // 1 pinch ≈ 1/16 tsp ≈ 0.3g
+        'pinches': 0.3,
+        'sprinkle': 0.2, // ~1/25 tsp
+        'shake': 0.2,
     };
 
     let grams: number = 100 * qty;
@@ -2304,50 +2679,89 @@ async function buildFdcResult(
                 fallbackGrams: grams,
             });
         }
-    } else if (!unit) {
-        // UNITLESS items — two cases:
-        //   LOW COUNT (qty <= 3):  "1 cucumber", "2 avocados" → estimate "medium" weight
-        //   HIGH COUNT (qty > 3):  "25 grape tomatoes", "14 mango chunks" → estimate per-PIECE weight
+    } else if (!unit || ['slice', 'slices', 'piece', 'pieces', 'chunk', 'chunks', 'wedge', 'wedges', 'strip', 'strips', 'segment', 'segments'].includes(unit)) {
+        // UNITLESS items or COUNT items (pieces/slices) — two cases:
+        //   LOW COUNT (qty <= 3 AND strictly unitless):  "1 cucumber", "2 avocados" → estimate "medium" weight
+        //   HIGH COUNT / COUNT UNITS: "4 slice ham", "25 grape tomatoes", "14 mango chunks" → estimate per-PIECE weight
         //
         // Fix 49 (Feb 2026): The "medium" estimation was giving ~182g for "grape raw tomatoes"
         // (a regular tomato size), causing 25 × 182 = 4550g. For high-count items, we need
         // per-individual-item weight, not per-medium-serving weight.
         const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
+        const isExplicitCountUnit = !!unit;
 
-        if (qty > 3) {
+        if (qty > 3 || isExplicitCountUnit) {
             // HIGH COUNT: user is counting individual items ("25 grape tomatoes")
             // Use per-piece estimation with the PARSED name for specificity
             // (parsed.name = "grape tomatoes" is more specific than candidate.name = "grape raw tomatoes")
             const itemName = parsed?.name || candidate.name;
             let resolved = false;
 
-            try {
-                const { estimateAmbiguousServing } = await import('../ai/ambiguous-serving-estimator');
-                const pieceResult = await estimateAmbiguousServing({
-                    foodName: itemName,
-                    brandName: candidate.brandName,
-                    unit: 'piece',  // "What does 1 piece of {itemName} weigh?"
-                });
-
-                if (pieceResult.status === 'success' && pieceResult.estimatedGrams && pieceResult.estimatedGrams > 0) {
-                    const gramsPerPiece = pieceResult.estimatedGrams;
-                    grams = qty * gramsPerPiece;
-                    servingDescription = `${qty} pieces (${gramsPerPiece}g each)`;
-                    resolved = true;
-                    logger.info('fdc.unitless_piece_resolved', {
+            // 1. Try deterministic sub-piece defaults first (cheaper & more reliable than AI)
+            const unitHint = parsed?.unitHint || '';
+            if (unitHint) {
+                try {
+                    const { getSubPieceDefault } = await import('../servings/default-count-grams');
+                    const cleanItemName = itemName
+                        .replace(/\b(chunks?|pieces?|slices?|bites?|wedges?|strips?|segments?)\b/gi, '')
+                        .trim();
+                    const subPieceDefault = getSubPieceDefault(
+                        cleanItemName || candidate.name,
+                        unitHint || unit || ''
+                    );
+                    if (subPieceDefault) {
+                        grams = qty * subPieceDefault.grams;
+                        servingDescription = `${qty} ${unitHint}s (${subPieceDefault.grams}g each)`;
+                        resolved = true;
+                        logger.info('fdc.sub_piece_default_applied', {
+                            foodName: candidate.name,
+                            parsedName: cleanItemName,
+                            unitHint,
+                            perPiece: subPieceDefault.grams,
+                            qty,
+                            totalGrams: grams,
+                        });
+                    }
+                } catch (err) {
+                    logger.warn('fdc.sub_piece_default_error', {
                         foodName: candidate.name,
-                        parsedName: itemName,
-                        gramsPerPiece,
-                        qty,
-                        totalGrams: grams,
-                        confidence: pieceResult.confidence,
+                        error: (err as Error).message,
                     });
                 }
-            } catch (err) {
-                logger.warn('fdc.unitless_piece_failed', {
-                    foodName: candidate.name,
-                    error: (err as Error).message,
-                });
+            }
+
+            // 2. Fall back to AI per-piece estimation
+            if (!resolved) {
+                try {
+                    const { estimateAmbiguousServing } = await import('../ai/ambiguous-serving-estimator');
+                    const cleanItemName = itemName.replace(/\b(chunks?|pieces?|slices?)\b/gi, '').trim();
+                    const aiCountUnit = unitHint || unit || 'piece';
+                    const pieceResult = await estimateAmbiguousServing({
+                        foodName: cleanItemName || itemName,
+                        brandName: candidate.brandName,
+                        unit: aiCountUnit,  // E.g. "What does 1 slice of {itemName} weigh?"
+                    });
+
+                    if (pieceResult.status === 'success' && pieceResult.estimatedGrams && pieceResult.estimatedGrams > 0) {
+                        const gramsPerPiece = pieceResult.estimatedGrams;
+                        grams = qty * gramsPerPiece;
+                        servingDescription = `${qty} pieces (${gramsPerPiece}g each)`;
+                        resolved = true;
+                        logger.info('fdc.unitless_piece_resolved', {
+                            foodName: candidate.name,
+                            parsedName: itemName,
+                            gramsPerPiece,
+                            qty,
+                            totalGrams: grams,
+                            confidence: pieceResult.confidence,
+                        });
+                    }
+                } catch (err) {
+                    logger.warn('fdc.unitless_piece_failed', {
+                        foodName: candidate.name,
+                        error: (err as Error).message,
+                    });
+                }
             }
 
             if (!resolved) {
@@ -2375,12 +2789,20 @@ async function buildFdcResult(
             // LOW COUNT: "1 cucumber", "2 avocados" → "medium" estimation
             const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
 
-            if (sizes && sizes['medium']) {
-                const gramsPerUnit = sizes['medium'];
+            // Apply mini override identical to hydrateAndSelectServing
+            const hasMiniModifier = parsed?.name?.toLowerCase().includes('mini');
+            const targetSize = hasMiniModifier ? 'small' : 'medium';
+
+            if (sizes && sizes[targetSize]) {
+                const baseGramsPerUnit = sizes[targetSize]!;
+                // For "mini" modifier, reduce below "small" weight (mini ≈ 80% of small)
+                const gramsPerUnit = hasMiniModifier ? Math.round(baseGramsPerUnit * 0.8) : baseGramsPerUnit;
+                
                 grams = qty * gramsPerUnit;
-                servingDescription = `${qty} medium (${gramsPerUnit}g each)`;
-                logger.info('fdc.unitless_medium_resolved', {
+                servingDescription = `${qty} ${hasMiniModifier ? 'mini' : targetSize} (${gramsPerUnit}g each)`;
+                logger.info('fdc.unitless_size_resolved', {
                     foodName: candidate.name,
+                    sizeUsed: targetSize,
                     gramsPerUnit,
                     totalGrams: grams,
                 });
@@ -2394,7 +2816,7 @@ async function buildFdcResult(
                 });
             }
         }
-    } else if (unit && isAmbiguousUnit(unit)) {
+    } else if (unit && (isAmbiguousUnit(unit) || ['cup', 'cups', 'c', 'tbsp', 'tablespoon', 'tablespoons', 'tbs', 'tsp', 'teaspoon', 'teaspoons', 'floz', 'fl oz', 'fluid ounce', 'ml'].includes(unit.toLowerCase()))) {
         // AMBIGUOUS UNITS (egg, packet, container, etc.) - use AI estimation
         const ambiguousResult = await getOrCreateAmbiguousServing(
             candidate.id,
@@ -2484,7 +2906,7 @@ function selectServing(
         // EXCEPTION: For size qualifiers (small/medium/large), first check if
         // an existing serving already contains that size with valid grams.
         // e.g., "medium (4-1/8" long)" with 15g should be used instead of AI.
-        const SIZE_QUALIFIERS = ['small', 'medium', 'large'];
+        const SIZE_QUALIFIERS = ['mini', 'small', 'medium', 'large'];
         if (SIZE_QUALIFIERS.includes(unit)) {
             const matchingServing = servings.find(s => {
                 const desc = (s.measurementDescription || s.description || '').toLowerCase();
@@ -2500,7 +2922,7 @@ function selectServing(
                 // Extract count from serving description (e.g., "10 large" → 10, "10 medium" → 10)
                 // This is critical because FatSecret often doesn't set numberOfUnits correctly
                 // for count-based servings, causing double-multiplication bugs
-                const countMatch = servingDesc.match(/^(\d+)\s+(small|medium|large|extra\s*large)/i);
+                const countMatch = servingDesc.match(/^(\d+)\s+(mini|small|medium|large|extra\s*large)/i);
                 let unitsPerServing = matchingServing.numberOfUnits && matchingServing.numberOfUnits > 0
                     ? matchingServing.numberOfUnits : 1;
 
@@ -2516,21 +2938,47 @@ function selectServing(
                     }
                 }
 
-                logger.debug('selectServing.size_qualifier_from_existing', {
-                    unit,
-                    matchedServing: matchingServing.measurementDescription || matchingServing.description,
-                    grams,
-                    unitsPerServing,
-                });
+                const perUnitGrams = grams / unitsPerServing;
 
-                return {
-                    serving: matchingServing,
-                    matchScore: 3.0,
-                    gramsPerUnit: grams / unitsPerServing,
-                    unitsPerServing,
-                    baseGrams: grams / unitsPerServing,
-                    matchType: 'exact' as const,
-                };
+                // SANITY CHECK (Batch 5, Mar 2026): FatSecret "medium" servings for produce
+                // can be wildly wrong. E.g., jalapeño "medium (4-1/8\" long)" = 164g, but
+                // USDA says a medium jalapeño = 14g. When the per-unit weight seems implausible,
+                // skip the FatSecret serving and fall through to AI estimation instead.
+                // Heuristic: small produce items (peppers, herbs, small fruits) should be <100g
+                // for "medium"; most produce should be <500g for "medium".
+                const SMALL_PRODUCE = /\b(jalape[nñ]o|serrano|habanero|thai chili|cayenne|chipotle|poblano|anaheim|shallot|radish|clove|garlic|ginger|lime|lemon|kumquat|fig|date|olive|cherry|grape|plum|apricot|prune|scallion|green onion)\b/i;
+                const foodNameForCheck = foodName || parsed?.name || '';
+                const isSmallProduce = SMALL_PRODUCE.test(foodNameForCheck);
+                const maxReasonableGrams = isSmallProduce ? 100 : 500;
+
+                if (perUnitGrams > maxReasonableGrams) {
+                    logger.info('selectServing.size_qualifier_sanity_failed', {
+                        unit,
+                        foodName: foodNameForCheck,
+                        matchedServing: servingDesc,
+                        perUnitGrams,
+                        maxReasonableGrams,
+                        isSmallProduce,
+                        reason: 'FatSecret serving weight implausibly large, falling through to AI estimation',
+                    });
+                    // Fall through to AI backfill instead of trusting FatSecret's data
+                } else {
+                    logger.debug('selectServing.size_qualifier_from_existing', {
+                        unit,
+                        matchedServing: matchingServing.measurementDescription || matchingServing.description,
+                        grams,
+                        unitsPerServing,
+                    });
+
+                    return {
+                        serving: matchingServing,
+                        matchScore: 3.0,
+                        gramsPerUnit: perUnitGrams,
+                        unitsPerServing,
+                        baseGrams: perUnitGrams,
+                        matchType: 'exact' as const,
+                    };
+                }
             }
         }
 
@@ -2960,6 +3408,35 @@ function selectServing(
                     grams: gramsForServing(wholeItemServing),
                 });
             }
+
+            // FALLBACK: If no standard whole-item pattern matched, try matching by food name
+            // e.g., for food "Avocado", the serving "avocado, NS as to Florida or California" (201g)
+            // contains the food name and represents a whole item
+            if (!selected && foodName) {
+                const foodNameLower = foodName.toLowerCase().replace(/\bcubed\b|\bsliced\b|\bchopped\b|\bdiced\b|\bminced\b/g, '').trim();
+                const foodNameTokens = foodNameLower.split(/\s+/).filter(w => w.length > 2);
+                const mainFoodToken = foodNameTokens[foodNameTokens.length - 1]; // Last word = main food
+
+                if (mainFoodToken) {
+                    const foodNameServing = servings.find(s => {
+                        const desc = (s.measurementDescription || s.description || '').toLowerCase();
+                        const g = gramsForServing(s);
+                        if (g == null || g <= 0) return false;
+                        // Must contain the food name and be a substantial serving (>50g for produce)
+                        return desc.includes(mainFoodToken) && g > 50;
+                    });
+
+                    if (foodNameServing) {
+                        selected = { serving: foodNameServing, score: 1.0, factor: 1 };
+                        matchType = 'same_type';
+                        logger.debug('selectServing.unitless_food_name_serving', {
+                            description: foodNameServing.measurementDescription || foodNameServing.description,
+                            grams: gramsForServing(foodNameServing),
+                            matchedToken: mainFoodToken,
+                        });
+                    }
+                }
+            }
         }
 
         // For discrete items without a default serving, use ANY serving with valid grams
@@ -2983,6 +3460,8 @@ function selectServing(
 
         // PRIORITY 2: Look for other count-based servings (clove, piece, slice, etc.)
         // These are for items where partial servings are default (garlic cloves, bread slices)
+        // GUARD: Skip partial-count servings for low-qty unitless queries (qty ≤ 3)
+        // "1 avocado" should NOT use "slice" (10g), it should trigger AI backfill for whole item
         if (!selected) {
             const countPatterns = [
                 /\bclove\b/i, /\bcloves\b/i,

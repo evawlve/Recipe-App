@@ -70,11 +70,14 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'potato': { grams: 213, confidence: 0.9, sizes: { small: 170, medium: 213, large: 284 }, aliases: ['potatoes'] },
     'sweet potato': { grams: 180, confidence: 0.9, sizes: { small: 130, medium: 180, large: 225 }, aliases: ['sweet potatoes'] },
     'tomato': { grams: 123, confidence: 0.9, sizes: { small: 91, medium: 123, large: 182 }, aliases: ['tomatoes'] },
+    'grape tomato': { grams: 5, confidence: 0.85, sizes: { small: 4, medium: 5, large: 7 }, aliases: ['grape tomatoes'] },
+    'cherry tomato': { grams: 17, confidence: 0.85, sizes: { small: 12, medium: 17, large: 22 }, aliases: ['cherry tomatoes'] },
     'onion': { grams: 150, confidence: 0.85, sizes: { small: 70, medium: 150, large: 225 }, aliases: ['onions'] },
     'carrot': { grams: 72, confidence: 0.85, sizes: { small: 50, medium: 72, large: 85 }, aliases: ['carrots'] },
     'celery stalk': { grams: 40, confidence: 0.85, aliases: ['celery stalks', 'celery'] },
     'cucumber': { grams: 301, confidence: 0.85, aliases: ['cucumbers'] },
-    'bell pepper': { grams: 164, confidence: 0.85, sizes: { small: 119, medium: 164, large: 186 }, aliases: ['bell peppers', 'pepper'] },
+    'persian cucumber': { grams: 60, confidence: 0.85, sizes: { small: 40, medium: 60, large: 90 }, aliases: ['persian cucumbers', 'mini cucumber', 'mini cucumbers', 'baby cucumber', 'baby cucumbers'] },
+    'bell pepper': { grams: 164, confidence: 0.85, sizes: { small: 119, medium: 164, large: 186 }, aliases: ['bell peppers', 'pepper', 'peppers'] },
     'garlic clove': { grams: 3, confidence: 0.9, aliases: ['garlic cloves', 'clove garlic'] },
     'mushroom': { grams: 18, confidence: 0.8, aliases: ['mushrooms'] },
     'zucchini': { grams: 196, confidence: 0.85, sizes: { small: 118, medium: 196, large: 323 }, aliases: ['zucchinis', 'courgette'] },
@@ -97,10 +100,11 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'muffin': { grams: 113, confidence: 0.75, sizes: { small: 66, medium: 113, large: 139 }, aliases: ['muffins'] },
 
     // ===== DAIRY & CHEESE =====
-    'cheese slice': { grams: 21, confidence: 0.85, aliases: ['slice cheese', 'american cheese slice'] },
+    'cheese slice': { grams: 21, confidence: 0.85, aliases: ['slice cheese', 'american cheese slice', 'mozzarella slice', 'slice mozzarella', 'provolone slice', 'slice provolone'] },
     'cheese stick': { grams: 28, confidence: 0.85, aliases: ['string cheese', 'cheese sticks'] },
 
     // ===== MEAT & PROTEIN =====
+    'ham slice': { grams: 25, confidence: 0.85, aliases: ['slice ham', 'deli ham slice', 'sliced ham'] },
     'chicken breast': { grams: 174, confidence: 0.85, sizes: { small: 140, medium: 174, large: 225 }, aliases: ['chicken breasts'] },
     'chicken thigh': { grams: 116, confidence: 0.85, aliases: ['chicken thighs'] },
     'chicken wing': { grams: 34, confidence: 0.85, aliases: ['chicken wings', 'wing'] },
@@ -132,6 +136,7 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'olive': { grams: 4, confidence: 0.8, sizes: { small: 3, medium: 4, large: 5 }, aliases: ['olives'] },
     'pickle': { grams: 35, confidence: 0.75, aliases: ['pickles'] },
     'ice cube': { grams: 30, confidence: 0.85, aliases: ['ice cubes', 'ice'] },
+    'spray': { grams: 0.25, confidence: 0.9, aliases: ['sprays', 'squirt', 'squirts'] },
 
     // ===== SUPPLEMENTS & POWDERS =====
     'protein powder scoop': { grams: 30, confidence: 0.9, aliases: ['scoop protein powder', 'protein scoop'] },
@@ -174,22 +179,36 @@ export function getDefaultCountServing(
     unit: string,
     size?: 'small' | 'medium' | 'large'
 ): CountDefault | null {
+    // Sub-piece units (chunk, bite, strip) represent CUT portions of a food item.
+    // Seed data has whole-item weights (e.g., mango = 336g) which would be wrong
+    // for "14 mango chunks" (~12g each). Skip defaults and let LLM estimate.
+    const SUB_PIECE_UNITS = new Set(['chunk', 'chunks', 'bite', 'bites', 'strip', 'strips', 'wedge', 'wedges', 'segment', 'segments']);
+    if (SUB_PIECE_UNITS.has(unit.toLowerCase().trim())) {
+        return null;
+    }
+
     const nameLower = foodName.toLowerCase().trim();
 
     // Find the canonical key
     let canonicalKey = ALIAS_MAP.get(nameLower);
 
     // If not found directly, try partial matching
+    // IMPORTANT: Try LONGER matches first! "organic grape tomatoes" should match
+    // "grape tomato" (5g) not "tomato" (123g). Checking last-word first would
+    // match "tomatoes" → "tomato" and miss the more specific "grape tomato" entry.
     if (!canonicalKey) {
-        // Try matching the last word (usually the ingredient)
         const words = nameLower.split(/\s+/);
-        const lastWord = words[words.length - 1];
-        canonicalKey = ALIAS_MAP.get(lastWord);
 
-        // Try last two words
-        if (!canonicalKey && words.length >= 2) {
+        // Try last two words first (more specific: "grape tomatoes" → "grape tomato")
+        if (words.length >= 2) {
             const lastTwo = words.slice(-2).join(' ');
             canonicalKey = ALIAS_MAP.get(lastTwo);
+        }
+
+        // Then try last word only (less specific: "tomatoes" → "tomato")
+        if (!canonicalKey) {
+            const lastWord = words[words.length - 1];
+            canonicalKey = ALIAS_MAP.get(lastWord);
         }
     }
 
@@ -233,4 +252,59 @@ export function getDefaultSizes(foodName: string): {
 
     const entry = COUNT_DEFAULTS[canonicalKey];
     return entry?.sizes || null;
+}
+
+// ============================================================
+// Sub-Piece Defaults
+// ============================================================
+
+/**
+ * Typical weight fraction for sub-piece units relative to whole-food weight.
+ * A "chunk" of mango (~336g whole) is roughly 1/16 of the fruit (~20g).
+ */
+const SUB_PIECE_FRACTIONS: Record<string, number> = {
+    'chunk': 0.06,    // ~1/16 of whole (mango chunk ~20g, apple chunk ~11g)
+    'chunks': 0.06,
+    'bite': 0.04,     // ~1/25 of whole
+    'bites': 0.04,
+    'wedge': 0.125,   // ~1/8 of whole (lemon wedge ~7g, apple wedge ~23g)
+    'wedges': 0.125,
+    'slice': 0.05,    // ~1/20 of whole
+    'slices': 0.05,
+    'strip': 0.03,    // ~1/33 of whole
+    'strips': 0.03,
+    'segment': 0.08,  // ~1/12 of whole (orange segment ~11g)
+    'segments': 0.08,
+};
+
+/**
+ * Get default grams for a sub-piece unit (chunk, bite, wedge, strip, segment).
+ * 
+ * Derives per-piece weight as a fraction of the whole-food weight from seed data.
+ * Used as a deterministic fallback before expensive & unreliable AI estimation.
+ *
+ * @example
+ * getSubPieceDefault("mango", "chunk")   // → { grams: 20, confidence: 0.7, source: 'derived' }
+ * getSubPieceDefault("apple", "wedge")   // → { grams: 23, confidence: 0.7, source: 'derived' }
+ * getSubPieceDefault("unknown", "chunk") // → null
+ */
+export function getSubPieceDefault(
+    foodName: string,
+    subUnit: string
+): CountDefault | null {
+    const fraction = SUB_PIECE_FRACTIONS[subUnit.toLowerCase().trim()];
+    if (fraction == null) return null;
+
+    // Find the parent food's whole weight using "each" lookup
+    // (passes through the existing alias/partial-match logic)
+    const wholeFoodDefault = getDefaultCountServing(foodName, 'each');
+    if (!wholeFoodDefault) return null;
+
+    const grams = Math.max(1, Math.round(wholeFoodDefault.grams * fraction));
+
+    return {
+        grams,
+        confidence: 0.7,  // Lower confidence since it's a proportion estimate
+        source: 'derived',
+    };
 }

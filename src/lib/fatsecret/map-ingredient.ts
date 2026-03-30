@@ -20,6 +20,7 @@ import { rerankFatsecretCandidates } from './ai-rerank';
 import { aiNormalizeIngredient } from './ai-normalize';
 import { normalizeIngredientName } from './normalization-rules';
 import { insertAiServing } from './ai-backfill';
+import { backfillOnDemand, isProduce as isProduceFn } from './serving-backfill';
 import { debugLogger } from './debug-logger';
 import { detectCookState } from './cook-state-detector';
 import { validateMappingWithAI } from './ai-validation';
@@ -623,6 +624,18 @@ export async function mapIngredientWithFatsecret(
     return value.replace(new RegExp(`^\\s*[\\d/.]+\\s*${UNIT_PATTERN}\\s+`, 'i'), '').trim();
   };
   normalizedName = stripLeadingQuantity(normalizedName);
+
+  // Context-dependent normalization: bare "pepper" in spice context → "black pepper"
+  // When the unit is a spice measure (dash, pinch, tsp, tbsp), the user means black pepper,
+  // not bell/poblano/hungarian peppers. Rewriting the search query here ensures both
+  // FatSecret and FDC APIs return spice results instead of vegetable varieties.
+  const SPICE_CONTEXT_UNITS = new Set(['dash', 'pinch', 'tsp', 'tbsp', 'teaspoon', 'tablespoon']);
+  const parsedUnitForContext = parsed?.unit?.toLowerCase() ?? '';
+  if (/^pepper$/i.test(normalizedName.trim()) && SPICE_CONTEXT_UNITS.has(parsedUnitForContext)) {
+    logger.info('fatsecret.map.pepper_spice_rewrite', { rawLine, originalName: normalizedName, unit: parsedUnitForContext });
+    normalizedName = 'black pepper';
+  }
+
   const extraSynonyms: string[] = [];
   const aiHint = await aiNormalizeIngredient(rawLine, normalization.cleaned);
   if (aiHint.status === 'success') {
@@ -1062,6 +1075,74 @@ export async function mapIngredientWithFatsecret(
     }
 
     grams = applyServingDefaults(parsed, rawLine, servingSelection, grams);
+
+    // === SANITY CHECK 1: Piece/chunk/each units with suspiciously high gramsPerUnit ===
+    // When unit is piece/chunk/each and gramsPerUnit > 50g, the serving is likely a full
+    // 100g reference serving, not a per-piece weight. Trigger AI backfill for accurate estimate.
+    const COUNT_UNIT_SET = new Set(['piece', 'pieces', 'each', 'chunk', 'chunks', 'pc', 'pcs']);
+    const parsedUnitLower = parsed?.unit?.toLowerCase() ?? '';
+    const isCountUnit = COUNT_UNIT_SET.has(parsedUnitLower);
+    const MAX_PIECE_GRAMS = 50;
+
+    if (isCountUnit && grams && qty > 0) {
+      const effectivePerPiece = servingSelection.gramsPerUnit ?? (grams / qty);
+      if (effectivePerPiece > MAX_PIECE_GRAMS) {
+      try {
+        const backfillResult = await backfillOnDemand(hydrated.id, 'count', parsedUnitLower);
+        if (backfillResult.success) {
+          // Re-hydrate to pick up the new AI-estimated serving
+          const rehydrated = await client.getFoodDetails(hydrated.id);
+          if (rehydrated?.servings && rehydrated.servings.length > 0) {
+            const newSelection = selectServing(parsed, rehydrated.servings);
+            if (newSelection && newSelection.gramsPerUnit && newSelection.gramsPerUnit <= MAX_PIECE_GRAMS) {
+              logger.info('fatsecret.map.piece_backfill_applied', {
+                rawLine,
+                foodName: hydrated.name,
+                oldGrams: grams,
+                newGramsPerUnit: newSelection.gramsPerUnit,
+                newGrams: newSelection.gramsPerUnit * qty,
+              });
+              servingSelection = newSelection;
+              grams = newSelection.gramsPerUnit * qty;
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn('fatsecret.map.piece_backfill_error', { rawLine, error: (err as Error).message });
+      }
+      }
+    }
+
+    // === SANITY CHECK 2: Whole produce items with suspiciously low grams ===
+    // When no unit is specified and the food is produce (avocado, mango, etc.),
+    // grams < 30g suggests a tiny slice serving was selected instead of a whole item.
+    const noExplicitUnit = !parsed?.unit;
+    const isProduceItem = isProduceFn(hydrated.name);
+    const MIN_WHOLE_PRODUCE_GRAMS = 30;
+
+    if (noExplicitUnit && isProduceItem && grams && grams > 0 && grams < MIN_WHOLE_PRODUCE_GRAMS) {
+      try {
+        const backfillResult = await backfillOnDemand(hydrated.id, 'count', 'whole');
+        if (backfillResult.success) {
+          const rehydrated = await client.getFoodDetails(hydrated.id);
+          if (rehydrated?.servings && rehydrated.servings.length > 0) {
+            const newSelection = selectServing(parsed, rehydrated.servings);
+            if (newSelection && newSelection.baseGrams && newSelection.baseGrams >= MIN_WHOLE_PRODUCE_GRAMS) {
+              logger.info('fatsecret.map.produce_backfill_applied', {
+                rawLine,
+                foodName: hydrated.name,
+                oldGrams: grams,
+                newGrams: newSelection.baseGrams * qty,
+              });
+              servingSelection = newSelection;
+              grams = (newSelection.gramsPerUnit ?? newSelection.baseGrams) * qty;
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn('fatsecret.map.produce_backfill_error', { rawLine, error: (err as Error).message });
+      }
+    }
 
     if (!grams || grams <= 0) continue;
 
@@ -2179,7 +2260,11 @@ function deriveMustHaveTokens(normalizedName: string): string[] {
     'oz', 'ounce', 'ounces', 'g', 'gram', 'grams', 'kg', 'ml', 'l', 'liter', 'liters',
     'packet', 'packets'
   ]);
-  return normalizedName
+  
+  // Clean the name first to remove descriptor stopwords (like "pieces") and handle pluralization
+  const cleaned = cleanIngredientName(normalizedName);
+  
+  return cleaned
     .toLowerCase()
     .split(/[^\w]+/)
     .filter((t) => t.length > 2 && !STOP.has(t));

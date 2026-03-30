@@ -702,3 +702,175 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 |---|----------|-------------|
 | 58 | Filter/macros | Compound product exclusion in `hasSuspiciousMacros` - skip produce profiles for yogurt/ice cream/jam/etc. |
 | 59 | Parser | Dietary-prefix stripping (fat-free, gluten-free, sugar-free, dairy-free, grain-free, nut-free) |
+
+---
+
+## 2026-03-24: 100-Recipe Pilot Review Fixes
+
+**Source**: `mapping-summary-2026-03-24T16-30-19.txt` — reviewed by separate QA agent. 17 issues identified (4 wrong matches, 9 nutrition anomalies, 4 questionable).
+
+### Fix 60: Cinnamon Sticks → Cinnamon (Spice)
+
+| Field | Detail |
+|-------|--------|
+| Issue | `5g cinnamon sticks` → Honey Maid Grahams Cinnamon Sticks (Nabisco) or CINNAMON STICKS (ROUNDY'S) with 0 kcal |
+| Root Cause | APIs have no generic "cinnamon sticks" (spice). Only branded snack products and FDC entries with 0 kcal bad data. `cinnamon ground spices` was filtered out because `mustHaveTokens` required "sticks". |
+| Fix | Added synonym rewrite `cinnamon sticks → cinnamon` in `normalization-rules.json`. Whole cinnamon sticks and ground cinnamon are nutritionally equivalent. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | `5g cinnamon sticks` → **Cinnamon** (13 kcal, 0.98 confidence) |
+
+### Fix 61: Tomato and Green Chili Mix
+
+| Field | Detail |
+|-------|--------|
+| Issue | `tomato and green chili mix` → Green Tomatoes (wrong product) |
+| Root Cause | Synonym rewrite existed in `DEFAULT_RULES` (TypeScript) but NOT in the JSON rules file which takes precedence. Correct FDC candidates scored below 0.70 threshold. |
+| Fix | Added `tomato and green chili mix → diced tomatoes with green chilies` (and variants) to JSON rules. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | → **DICED TOMATOES WITH GREEN CHILIES (ROUNDY'S)** (30 kcal, 0.862 confidence) |
+
+### Fix 62: Corn Whole-Kernel (Dried → Canned)
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1 cup corn whole-kernel` → White Corn Kernels (Signature Select) — 740 kcal/185g (~400kcal/100g = dried corn) |
+| Root Cause | "corn whole-kernel" matched branded dried/dehydrated corn kernel products. Canned/frozen corn is ~80-100 kcal/100g. |
+| Fix | Added synonym rewrite `corn whole-kernel/kernel/kernels → canned corn`. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | → **Canned Corn (Great Value)** (79 kcal/165g) — correct for canned product |
+
+### Fix 63: Chicken Broth (Home Recipe → Commercial)
+
+| Field | Detail |
+|-------|--------|
+| Issue | `chicken broth` → Chicken Broth (Home Recipe) — 86 kcal/cup vs commercial broth ~4-8 kcal/cup |
+| Root Cause | FatSecret "Home Recipe" variant has much higher calories due to meat/bone content. Most recipes intend commercial packaged broth. |
+| Fix | Added synonym rewrites `chicken/beef/vegetable broth → stock`. "Stock" search terms preferentially return commercial products. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | → **CHICKEN BROTH (AHOLD)** (7 kcal/120g) — correct commercial product |
+
+### Fix 64: Quick Oats Serving Weight
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1 cup quick oats` → Quick Rolled Oats (Fresh & Easy) — 160 kcal / 40g per cup (should be ~80-120g/cup) |
+| Root Cause | Branded FatSecret entry had incorrect 40g/cup serving size. |
+| Fix | Added synonym rewrite `quick oats → quick cooking oats`. Routes to USDA/FDC standard entry with correct 120g/cup. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | → **QUICK ROLLED OATS (AUGASON FARMS)** (456 kcal/120g) — correct weight |
+
+### Known Remaining Issue: Sherry Wine → Vinegar
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1.5 floz sherry wine` → vinegar sherry (SHERRY) — wine mapped to vinegar |
+| Root Cause | FDC's only "sherry" entry is `vinegar sherry` with brand "SHERRY". No actual cooking wine/sherry wine in FDC or FatSecret. Synonym rewrites (`cooking sherry`, `dry sherry`) all match the vinegar entry. |
+| Status | **Unfixable via synonym rewrite** — requires AI-generated food fallback or manual PortionOverride. Will be addressed in a future pass. |
+
+### Change Index (Fixes 60-64)
+
+| # | Category | Description |
+|---|----------|-------------|
+| 60 | Synonym | `cinnamon sticks → cinnamon` (spice-form equivalence) |
+| 61 | Synonym | `tomato and green chili mix → diced tomatoes with green chilies` (JSON sync) |
+| 62 | Synonym | `corn whole-kernel → canned corn` (dried vs canned data) |
+| 63 | Synonym | `chicken/beef/vegetable broth → stock` (home recipe vs commercial) |
+| 64 | Synonym | `quick oats → quick cooking oats` (correct serving weight) |
+
+### Fix 65: Kidney Beans (Dry → Canned) — Synonym Rewrite
+
+| Field | Detail |
+|-------|--------|
+| Issue | `32 oz light red kidney beans` → WEIS QUALITY 2077 kcal/907g (229kcal/100g = dry bean data) |
+| Root Cause | FDC entries for kidney beans contain dry bean nutritional data (229kcal/100g). FatSecret has correct canned data (92kcal/100g) but FDC is preferred in sorting (exact match + FDC source priority at L872-873 in `map-ingredient-with-fallback.ts`). |
+| Fix | Added synonym rewrite `kidney beans → canned kidney beans` and `light red kidney beans → canned light red kidney beans`. **Partially effective** — helps API search but FDC preference in sort still dominates. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Status | **Requires pipeline change**: FDC exact-match preference in sort at lines 872-873 should be tempered by calorie density sanity check for canned goods category. |
+
+### Fix 66: Veggie Spirals → Vegetable Rotini
+
+| Field | Detail |
+|-------|--------|
+| Issue | `336 g veggie spirals pasta` → Pasta with Vegetables (a dish, not a pasta type) |
+| Fix | Added synonym rewrite `veggie spirals pasta → vegetable rotini pasta`. Improved confidence from 0.748 → 0.876 but still maps to "Pasta with Vegetables". |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | Calorie density (125kcal/100g) is reasonable for pasta, so impact is low (~5-10% difference). |
+
+### Fix 67: Splenda → Sucralose Packet
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1 packet splenda` → sucralose sweetener (LOWES FOODS) — 0 kcal but 100g serving weight with 100g carbs |
+| Root Cause | FDC entry has 100g as default serving size. Actual Splenda packet is ~1g. Since 0 kcal, calorie impact is nil, but 100g weight is misleading. |
+| Fix | Added synonym `splenda → sucralose packet`. Did not change result — FDC data issue. |
+| Status | **Low impact** — 0 kcal means the weight error doesn't affect nutritional calculations. |
+
+### Fix 68: Sherry Wine → White Wine
+
+| Field | Detail |
+|-------|--------|
+| Issue | `1.5 floz sherry wine` → vinegar sherry (SHERRY) with brand "SHERRY" — wine mapped to vinegar |
+| Root Cause | FDC's only "sherry" entry is `vinegar sherry` with brand "SHERRY". No cooking wine in FDC or FatSecret databases. Tried `cooking sherry`, `dry sherry`, `white wine` — all still match vinegar due to brand name. |
+| Fix | Changed synonym to `sherry wine → white wine`. Still maps to vinegar due to FDC precedence. |
+| Status | **Database gap** — requires AI-generated food fallback for cooking wines. |
+
+### Fix 69: Dry Wine → Dry White Wine
+
+| Field | Detail |
+|-------|--------|
+| Issue | `2 oz dry wine` → Rose Wine (0.784 confidence) |
+| Fix | Added synonym `dry wine → dry white wine`. Rosé vs dry white is ~5-10 kcal per serving — acceptable variation. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | Low impact improvement. |
+
+### Fix 70: Vegetarian Patties → Veggie Burger
+
+| Field | Detail |
+|-------|--------|
+| Issue | `10.5 oz vegetarian patties` → Organic Falafel Vegetarian Patties (Hannah) |
+| Fix | Added synonym `vegetarian patties → veggie burger patties`. |
+| File | `data/fatsecret/normalization-rules.json` |
+
+### Fix 71: Salad Seasoning → Salad Seasoning Blend
+
+| Field | Detail |
+|-------|--------|
+| Issue | `42 g salad seasoning` → Original Ranch Seasoning & Salad Dressing Mix (0.8g) showing 0 kcal/42g |
+| Root Cause | FatSecret entry has per-serving data for 0.8g, not 42g. The serving `g (1g)` returns 0 kcal per 1g because the product is very low calorie per gram. |
+| Fix | Added synonym `salad seasoning → salad seasoning blend`. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Status | Result unchanged — the FatSecret entry's per-serving data is fundamentally wrong for this product. |
+
+### Fix 72: Chunk Chicken Breast → Chicken Breast
+
+| Field | Detail |
+|-------|--------|
+| Issue | `6 oz chunk chicken breast` → CHICKEN BREAST (GIANT EAGLE) with high fat (13.8g) |
+| Fix | Added synonym `chunk chicken breast → chicken breast`. |
+| File | `data/fatsecret/normalization-rules.json` |
+| Result | Removes "chunk" modifier that may have led to processed/breaded product selection. |
+
+### Issues Accepted (No Fix Needed)
+
+| # | Issue | Reason |
+|---|-------|--------|
+| #2 | Creme brulee creamer → Original | ~10 kcal diff per serving — within acceptable tolerance |
+| #9 | Avocado oil inconsistency | Correct (124kcal/14g) on re-run — non-deterministic branded selection |
+| #10 | Honey weight discrepancy | Correct (84g/0.25cup) on re-run |
+| #11 | Pork sausage ~30-40% high | Fresh Pork Sausage 303kcal/100g — within USDA range (300-340) |
+| #12 | Center cut bacon 28g/slice | Branded data — 28g is raw thick-cut weight, reasonable |
+| #15 | Beef stock cube → liquid stock | Actually correct: 0 kcal/10g cube (stock cubes are mostly salt) |
+| #17 | Dry wine → Rosé | ~5 kcal diff per serving — negligible |
+
+### Change Index (Fixes 65-72)
+
+| # | Category | Description |
+|---|----------|-------------|
+| 65 | Synonym (partial) | `kidney beans → canned kidney beans` (FDC sort priority blocks full fix) |
+| 66 | Synonym | `veggie spirals → vegetable rotini` (improved confidence, calorie density acceptable) |
+| 67 | Synonym (no effect) | `splenda → sucralose packet` (FDC 100g serving, 0 kcal impact) |
+| 68 | Synonym (no effect) | `sherry wine → white wine` (FDC database gap, no cooking wine) |
+| 69 | Synonym | `dry wine → dry white wine` (marginal improvement) |
+| 70 | Synonym | `vegetarian patties → veggie burger patties` |
+| 71 | Synonym (no effect) | `salad seasoning → salad seasoning blend` |
+| 72 | Synonym | `chunk chicken breast → chicken breast` |

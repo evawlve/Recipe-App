@@ -219,10 +219,20 @@ export async function computeTotals(
     ),
   );
 
+  const validFatsecretIds = mappedFatsecretIds.filter((id): id is string => id !== undefined);
+  const cacheOrConditions: any[] = [];
+  
+  if (validFatsecretIds.length > 0) {
+    cacheOrConditions.push({ id: { in: validFatsecretIds } });
+  }
+  if (preferFatsecretCache && mappedFoodIds.length > 0) {
+    cacheOrConditions.push({ legacyFoodId: { in: mappedFoodIds } });
+  }
+
   const fatsecretCacheLookup =
-    mappedFatsecretIds.length > 0
+    cacheOrConditions.length > 0
       ? await prisma.fatSecretFoodCache.findMany({
-        where: { id: { in: mappedFatsecretIds.filter((id): id is string => id !== undefined) } },
+        where: { OR: cacheOrConditions },
         include: {
           servings: true,
           densityEstimates: true,

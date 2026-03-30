@@ -36,15 +36,16 @@ describe('Provisional Totals Demo', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8, // High confidence
             useOnce: false,
             food: {
-              calories: 364,
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
+              kcal100: 364,
+              protein100: 10,
+              carbs100: 76,
+              fat100: 1,
+              fiber100: 3,
+              sugar100: 1
             }
           }
         ]
@@ -56,15 +57,16 @@ describe('Provisional Totals Demo', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.3, // Low confidence
             useOnce: false,
             food: {
-              calories: 800, // 800 * 0.5 = 400 calories
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 100,
-              fiberG: 0,
-              sugarG: 0
+              kcal100: 800, // 800 * 0.5 = 400 calories
+              protein100: 0,
+              carbs100: 0,
+              fat100: 100,
+              fiber100: 0,
+              sugar100: 0
             }
           }
         ]
@@ -109,15 +111,16 @@ describe('Provisional Totals Demo', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9, // High confidence
             useOnce: false,
             food: {
-              calories: 364, // 364 * 2 = 728 calories
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
+              kcal100: 364, // 364 * 2 = 728 calories
+              protein100: 10,
+              carbs100: 76,
+              fat100: 1,
+              fiber100: 3,
+              sugar100: 1
             }
           }
         ]
@@ -129,15 +132,16 @@ describe('Provisional Totals Demo', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8, // High confidence
             useOnce: true, // Use-once mapping
             food: {
-              calories: 800, // 800 * 1 = 800 calories
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 100,
-              fiberG: 0,
-              sugarG: 0
+              kcal100: 800, // 800 * 1 = 800 calories
+              protein100: 0,
+              carbs100: 0,
+              fat100: 100,
+              fiber100: 0,
+              sugar100: 0
             }
           }
         ]
@@ -172,15 +176,16 @@ describe('Provisional Totals Demo', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.9, // High confidence
             useOnce: false,
             food: {
-              calories: 364,
-              proteinG: 10,
-              carbsG: 76,
-              fatG: 1,
-              fiberG: 3,
-              sugarG: 1
+              kcal100: 364,
+              protein100: 10,
+              carbs100: 76,
+              fat100: 1,
+              fiber100: 3,
+              sugar100: 1
             }
           }
         ]
@@ -192,15 +197,16 @@ describe('Provisional Totals Demo', () => {
         unit: 'g',
         foodMaps: [
           {
+            isActive: true,
             confidence: 0.8, // High confidence
             useOnce: false,
             food: {
-              calories: 400, // 400 * 0.5 = 200 calories
-              proteinG: 0,
-              carbsG: 0,
-              fatG: 50,
-              fiberG: 0,
-              sugarG: 0
+              kcal100: 400, // 400 * 0.5 = 200 calories
+              protein100: 0,
+              carbs100: 0,
+              fat100: 50,
+              fiber100: 0,
+              sugar100: 0
             }
           }
         ]

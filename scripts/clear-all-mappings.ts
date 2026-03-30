@@ -14,6 +14,14 @@ import { prisma } from '../src/lib/db';
 async function main() {
     console.log('\n=== Clearing All Mapping Caches ===\n');
 
+    if (!process.argv.includes('--yes-i-want-to-wipe-all-mappings')) {
+        console.error('❌ ERROR: This is a destructive action that will wipe the entire mapping cache!');
+        console.error('   We want to progressively build our mapping dictionary.');
+        console.error('   To clear a specific ingredient, use: npx tsx src/scripts/check-cache-entry.ts "ingredient" --clear');
+        console.error('   If you REALLY need to wipe everything, run this script with the --yes-i-want-to-wipe-all-mappings flag.\n');
+        process.exit(1);
+    }
+
     // Get counts before
     const validatedBefore = await prisma.validatedMapping.count();
     const foodMapBefore = await prisma.ingredientFoodMap.count();
@@ -35,6 +43,16 @@ async function main() {
     // Clear AiNormalizeCache
     const normCacheResult = await prisma.aiNormalizeCache.deleteMany({});
     console.log(`✓ AiNormalizeCache: ${normCacheResult.count} deleted`);
+
+    // Clear AI-generated ambiguous unit serving caches
+    const aiServingResult = await prisma.fatSecretServingCache.deleteMany({
+        where: {
+            id: {
+                startsWith: 'ai_'
+            }
+        }
+    });
+    console.log(`✓ FatSecretServingCache (AI estimates): ${aiServingResult.count} deleted`);
 
     console.log('\n✅ All mapping caches cleared!');
     console.log('   Now run pilot import to test with fresh mappings.\n');

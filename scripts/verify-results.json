@@ -1,0 +1,32 @@
+[
+  {
+    "input": "24 oz cole slaw mix",
+    "name": "raw cabbage",
+    "grams": 680.4000000000001,
+    "kcal": 170.10000000000002
+  },
+  {
+    "input": "1 slice center cut bacon",
+    "name": "Center Cut Bacon",
+    "grams": 28,
+    "kcal": 130.6667
+  },
+  {
+    "input": "6 oz italian dressing lite",
+    "name": "Italian Dressing Light",
+    "grams": 170.10000000000002,
+    "kcal": 141.75000000000003
+  },
+  {
+    "input": "336 g veggie spirals pasta",
+    "name": "zucchini zucchini noodles",
+    "grams": 336,
+    "kcal": 60.48
+  },
+  {
+    "input": "2 cup low carb baking mix",
+    "name": "LOW CARB BAKING MIX",
+    "grams": 240,
+    "kcal": 559.1999999999999
+  }
+]

@@ -66,6 +66,8 @@ const WEIGHTS = {
     WORD_COVERAGE_BONUS: 0.15,        // Bonus for candidates containing ALL query words in order
     // Attribute contradiction penalty (Fix 49, Feb 2026)
     ATTRIBUTE_CONTRADICTION_PENALTY: 0.35,  // Penalty when query says "green" but candidate says "red"
+    // Missing cooking state penalty (Batch 4, Mar 2026)
+    MISSING_COOKING_STATE_PENALTY: 0.40, // Penalty when query says "fried" but candidate doesn't
 };
 
 
@@ -320,6 +322,9 @@ const CATEGORY_CHANGING_TOKENS = new Set([
     'peel', 'rind',
     // Dairy products (when not queried)
     'ice cream', 'yogurt', 'pudding', 'custard', 'mousse',
+    // Grain/legume cross-contamination (turn simple grain → multi-ingredient product)
+    // e.g., "quinoa" ≠ "Lentil Quinoa Rice Mix"
+    'lentil', 'lentils', 'rice',
     // ============================================================
     // Form-change tokens (Fix 49, Feb 2026)
     // ============================================================
@@ -453,6 +458,142 @@ function getAttributeContradictionPenalty(query: string, candidateName: string):
             });
             return WEIGHTS.ATTRIBUTE_CONTRADICTION_PENALTY * 0.5;
         }
+    }
+
+    return 0;
+}
+
+// ============================================================
+// Missing Cooking State Penalty (Batch 4, Mar 2026)
+// ============================================================
+// When the query explicitly asks for a cooking state (like "fried", "roasted", "baked")
+// and the candidate does not contain that state, apply a harsh penalty. This prevents
+// "fried shallots" from matching raw "Shallots" and losing all its oil density.
+
+const COOKING_STATES = new Set([
+    'fried', 'roasted', 'baked', 'steamed', 'boiled', 'grilled', 'smoked',
+    'poached', 'braised', 'toasted', 'caramelized', 'sautéed', 'sauteed'
+]);
+
+function getMissingCookingStatePenalty(query: string, candidateName: string): number {
+    const queryTokens = tokenize(query);
+    const candTokens = tokenize(candidateName);
+
+    // Find all explicitly requested cooking states in the query
+    const requestedStates = queryTokens.filter(t => COOKING_STATES.has(t));
+    
+    // If no specific cooking states were requested, no penalty
+    if (requestedStates.length === 0) return 0;
+
+    // Check if the candidate is missing ANY of the requested states
+    const missingState = requestedStates.some(state => !candTokens.includes(state));
+
+    if (missingState) {
+        logger.debug('getMissingCookingStatePenalty.fired', {
+            query,
+            candidate: candidateName,
+            requestedStates,
+            candTokens
+        });
+        return WEIGHTS.MISSING_COOKING_STATE_PENALTY;
+    }
+
+    return 0;
+}
+
+// ============================================================
+// Canned Bean Contradiction Penalty (Batch 4)
+// ============================================================
+// When the query requests "canned beans", penalize candidates with dry bean nutrition.
+// Canned beans are typically < 150 kcal/100g due to water weight.
+// Dry beans are typically > 300 kcal/100g.
+// This allows the AI to correctly choose branded canned beans (e.g. Bush's Best)
+// over raw FDC equivalents lacking the "canned" specification.
+function getCannedBeanContradictionPenalty(query: string, candidate: RerankCandidate): number {
+    const queryLower = query.toLowerCase();
+    
+    // Only apply if user requested legumes (using word boundaries to prevent 'pea' matching 'peanut')
+    const isLegumeRequest = /\b(bean|beans|chickpea|chickpeas|lentil|lentils|pea|peas)\b/.test(queryLower);
+    if (!isLegumeRequest) return 0;
+
+    // Do NOT penalize if the user explicitly requested dry/dried/raw forms 
+    // or if they specified "green beans" / "string beans" / "vanilla beans" / "coffee beans"
+    if (queryLower.includes('dry') || queryLower.includes('dried') || queryLower.includes('raw')) return 0;
+    if (/(vanilla|coffee|jelly|cocoa|castor)\s+bean/.test(queryLower)) return 0;
+    
+    // DEBUG: Let's see what the nutrition actually is!
+    logger.debug('getCannedBeanContradictionPenalty.checking', { candidate: candidate.name, nutrition: candidate.nutrition });
+
+    // If the candidate has > 200 kcal/100g, it is a dry legume.
+    if (candidate.nutrition && candidate.nutrition.per100g && candidate.nutrition.kcal != null) {
+        if (candidate.nutrition.kcal > 200) {
+            logger.debug('getCannedBeanContradictionPenalty.fired', {
+                query,
+                candidate: candidate.name,
+                kcal: candidate.nutrition.kcal,
+                reason: 'dry_bean_selected_for_canned_request',
+            });
+            // Massive penalty to forcefully override the FDC API bonus
+            return 0.6;
+        }
+    }
+    
+    return 0;
+}
+
+// ============================================================
+// Processed Meat Penalty (Batch 5, Mar 2026)
+// ============================================================
+// When the query is for plain/unprocessed meat or poultry (chicken breast, turkey,
+// ground beef, etc.), penalize candidates that have >2g carbs/100g. Plain raw meat
+// has near-zero carbs. Carbs indicate the product is breaded, seasoned, marinated,
+// or is processed deli meat (with fillers). This prevents:
+//   "chicken breast" → "CHICKEN BREAST (GIANT EAGLE)" (7.2g carbs, pre-seasoned)
+//   "lean ground turkey" → "LEAN TURKEY (HERITAGE FARM)" (16.2g carbs, seasoned)
+//   "chicken halves" → "CHICKEN (BUDDIG)" (16.1g carbs, deli lunch meat)
+
+const PLAIN_MEAT_QUERIES = [
+    'chicken', 'chicken breast', 'chicken thigh', 'chicken leg', 'chicken wing',
+    'chicken half', 'chicken halves', 'chicken quarter',
+    'turkey', 'turkey breast', 'ground turkey', 'lean turkey', 'lean ground turkey',
+    'beef', 'ground beef', 'steak', 'sirloin', 'ribeye', 'filet',
+    'pork', 'pork chop', 'pork loin', 'pork tenderloin', 'ground pork',
+    'lamb', 'lamb chop', 'ground lamb', 'veal',
+    'duck', 'duck breast', 'goose',
+];
+
+// Skip penalty if query contains these words (user wants processed/seasoned form)
+const PROCESSED_MEAT_SKIP_TERMS = [
+    'breaded', 'fried', 'seasoned', 'marinated', 'glazed', 'teriyaki',
+    'bbq', 'barbecue', 'buffalo', 'deli', 'lunch meat', 'lunchmeat',
+    'nugget', 'nuggets', 'tender', 'tenders', 'strip', 'strips',
+    'patty', 'patties', 'sausage', 'hot dog', 'jerky',
+];
+
+function getProcessedMeatPenalty(query: string, candidate: RerankCandidate): number {
+    const queryLower = query.toLowerCase();
+
+    // Only apply to plain meat queries
+    const isPlainMeatQuery = PLAIN_MEAT_QUERIES.some(term => queryLower.includes(term));
+    if (!isPlainMeatQuery) return 0;
+
+    // Skip if user explicitly wants processed form
+    if (PROCESSED_MEAT_SKIP_TERMS.some(term => queryLower.includes(term))) return 0;
+
+    // Check candidate nutrition for unexpected carbs
+    if (!candidate.nutrition?.per100g || candidate.nutrition.carbs == null) return 0;
+
+    // Plain meat has 0-1g carbs/100g. Anything >2g is processed/seasoned.
+    const carbsPer100g = candidate.nutrition.carbs;
+    if (carbsPer100g > 2) {
+        logger.debug('getProcessedMeatPenalty.fired', {
+            query,
+            candidate: candidate.name,
+            carbs: carbsPer100g,
+            reason: 'unexpected_carbs_in_meat',
+        });
+        // Scale penalty by how many carbs: 2-5g = moderate, >5g = heavy
+        return carbsPer100g > 5 ? 0.40 : 0.25;
     }
 
     return 0;
@@ -956,6 +1097,22 @@ function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     const contradictionPenalty = getAttributeContradictionPenalty(query, candidate.name);
     score -= contradictionPenalty;
 
+    // 2i. Missing cooking state penalty (Batch 4, Mar 2026)
+    // Heavy penalty when query explicitly specifies a cooking state and candidate doesn't match.
+    // e.g., "fried shallots" → "Shallots" gets penalty.
+    const cookingStatePenalty = getMissingCookingStatePenalty(query, candidate.name);
+    score -= cookingStatePenalty;
+    
+    // 2j. Canned Bean Contradiction Penalty (Batch 4, Mar 2026)
+    // Heavy penalty when the query asks for canned beans, but the candidate has dry bean nutrition (>200 kcal/100g).
+    const cannedBeanPenalty = getCannedBeanContradictionPenalty(query, candidate);
+    score -= cannedBeanPenalty;
+
+    // 2k. Processed Meat Penalty (Batch 5, Mar 2026)
+    // Penalize meat candidates with unexpected carbs (>2g/100g = breaded/seasoned/deli)
+    const processedMeatPenalty = getProcessedMeatPenalty(query, candidate);
+    score -= processedMeatPenalty;
+
     // 3. Source tiebreaker — FDC wins for produce and unprocessed meat
     // When name-match scores are equal, prefer FDC (USDA) for its authoritative
     // nutritional accuracy on raw produce and meats (e.g. Grape Tomatoes: FDC=35 kcal/100g
@@ -1066,8 +1223,15 @@ function computeNutritionScore(
             const closenessBonus = (1 - (calorieDiff / NUTRITION_CALORIE_VARIANCE_THRESHOLD));
             score += closenessBonus * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence;
             reasons.push(`kcal_match:+${(closenessBonus * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence).toFixed(3)}`);
+        } else if (calorieDiff > 2.0) {
+            // EXTREME mismatch (>200% off) — heavy penalty to reject wrong food categories
+            // e.g., kettle corn (545 kcal/100g) vs expected plain corn (~86 kcal/100g) = 533% off
+            // This penalty is strong enough to overcome API score advantages
+            const extremePenalty = 0.35 * aiEstimate.confidence;
+            score -= extremePenalty;
+            reasons.push(`kcal_extreme_mismatch:-${extremePenalty.toFixed(3)}`);
         } else {
-            // Outside threshold: penalty
+            // Outside threshold but not extreme: standard penalty
             const penaltyAmount = Math.min(calorieDiff, 1);  // Cap at 100% difference
             score -= penaltyAmount * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence;
             reasons.push(`kcal_mismatch:-${(penaltyAmount * WEIGHTS.NUTRITION_CALORIE_SCORING * aiEstimate.confidence).toFixed(3)}`);
@@ -1099,12 +1263,24 @@ function computeNutritionScore(
             reasons.push('protein_mismatch');
         }
     }
-    if (aiEstimate.fatPer100g > 5) {
+    if (aiEstimate.fatPer100g > 3) {
         const fatDiff = Math.abs(candidateFat - aiEstimate.fatPer100g) / aiEstimate.fatPer100g;
         if (fatDiff > macroDiffThreshold) {
             score -= WEIGHTS.NUTRITION_MACRO_SCORING * aiEstimate.confidence;
             reasons.push('fat_mismatch');
         }
+    }
+
+    // 4. Unexpected carbs in protein-dominant foods (Mar 2026)
+    // When AI expects near-zero carbs (<2g/100g) and high protein (>15g/100g) — typical
+    // of raw meat/poultry — but candidate shows meaningful carbs (>1g/100g), it's likely
+    // a seasoned/breaded/processed branded product, not the plain ingredient.
+    // e.g., CHICKEN BREAST (GIANT EAGLE) has 1% carbs → seasoned, not raw.
+    const aiExpectsNearZeroCarbs = aiEstimate.carbsPer100g < 2;
+    const aiExpectsHighProtein = aiEstimate.proteinPer100g > 15;
+    if (aiExpectsNearZeroCarbs && aiExpectsHighProtein && candidateCarbs > 1) {
+        score -= WEIGHTS.NUTRITION_MACRO_SCORING * aiEstimate.confidence;
+        reasons.push('unexpected_carbs_in_protein');
     }
 
     return {
@@ -1131,9 +1307,14 @@ export function simpleRerank(
     candidates: RerankCandidate[],
     aiNutritionEstimate?: AiNutritionEstimate,
     rawLine?: string
-): SimpleRerankResult | null {
+): { winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[] } {
     if (candidates.length === 0) {
-        return null;
+        return {
+            winner: null,
+            confidence: 0,
+            reason: 'no_candidates',
+            sortedCandidates: []
+        };
     }
 
     if (candidates.length === 1) {
@@ -1151,13 +1332,19 @@ export function simpleRerank(
                 threshold: MIN_SINGLE_CANDIDATE_CONFIDENCE,
                 reason: 'confidence_below_threshold'
             });
-            return null;  // Reject - let fallback handle it
+            return {
+                winner: null,
+                confidence: singleConfidence,
+                reason: 'confidence_below_threshold',
+                sortedCandidates: candidates
+            };
         }
 
         return {
             winner: candidates[0],
             confidence: singleConfidence,
             reason: 'single_candidate',
+            sortedCandidates: candidates
         };
     }
 
@@ -1367,13 +1554,19 @@ export function simpleRerank(
             threshold: MIN_RERANK_CONFIDENCE,
             reason: 'confidence_below_threshold'
         });
-        return null;  // Reject - let fallback handle it
+        return {
+            winner: null,
+            confidence,
+            reason: 'confidence_below_threshold',
+            sortedCandidates: scored.map(s => s.candidate),
+        };
     }
 
     return {
         winner: top.candidate,
         confidence,
         reason,
+        sortedCandidates: scored.map(s => s.candidate),
     };
 }
 

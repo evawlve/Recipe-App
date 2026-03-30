@@ -374,7 +374,7 @@ async function debugPipeline(rawLine: string) {
             rawLine
         );
 
-        if (rerankResult) {
+        if (rerankResult && rerankResult.winner) {
             success(`Winner: ${rerankResult.winner.name}`);
             info('Confidence', rerankResult.confidence.toFixed(3));
             info('Reason', rerankResult.reason);
