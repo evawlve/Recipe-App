@@ -1,12 +1,14 @@
 import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
 
-const testCases = [
-    '2 tbsp butter',
-    '2 salted butter',
-    '1 tsp lemon zest',
-    '2 chia seeds',
-    '2 tbsp cream cheese',
-    '3 tbsp vegetable oil spread',
+const cliArg = process.argv[2];
+const testCases = cliArg ? [cliArg] : [
+    '30 oz cannellini beans',
+    '3 cup oats',
+    '1 tbsp fried shallots',
+    '1 packet splenda',
+    'Palm Sugar',
+    'Rice Vinegar',
+    '4 tbsp fat free sun-dried tomato vinaigrette dressing',
 ];
 
 async function main() {
@@ -22,16 +24,23 @@ async function main() {
         try {
             const result = await mapIngredientWithFallback(testCase, { debug: false });
             if (result) {
-                results.push({
-                    input: testCase,
-                    status: '✅ SUCCESS',
-                    details: {
-                        food: result.foodName,
-                        serving: result.servingDescription,
-                        grams: result.grams.toFixed(1),
-                        kcal: result.kcal.toFixed(1),
-                    }
-                });
+                if ('status' in result && result.status === 'pending') {
+                    results.push({
+                        input: testCase,
+                        status: '⏳ PENDING AI FALLBACK'
+                    });
+                } else if ('foodName' in result) {
+                    results.push({
+                        input: testCase,
+                        status: '✅ SUCCESS',
+                        details: {
+                            food: result.foodName,
+                            serving: result.servingDescription,
+                            grams: result.grams.toFixed(1),
+                            kcal: result.kcal.toFixed(1),
+                        }
+                    });
+                }
             } else {
                 results.push({ input: testCase, status: '❌ FAILED (null)' });
             }
