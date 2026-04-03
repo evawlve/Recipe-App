@@ -127,9 +127,15 @@ export async function estimateAmbiguousServing(
     }
 
     // Step 8: Try FDC serving lookup (uses cache)
-    // CRITICAL: Skip FDC for deceptive retail containers (package, container, etc.)
-    // FDC often lists single-serve portions under these labels (e.g., tofu package = 140g instead of 400g)
-    const skipFdcUnits = new Set(['package', 'packages', 'container', 'containers', 'box', 'boxes', 'bag', 'bags', 'tub', 'tubs', 'jar', 'jars', 'can', 'cans', 'bottle', 'bottles']);
+    // CRITICAL: Skip FDC for deceptive retail containers AND single-serve packets.
+    // FDC often lists full-package serving data under these labels:
+    // - "package" of tofu = 140g single serving (not ~400g full block)
+    // - "packet" of sweetener = 100g (the full box!) not 1g (the actual sachet)
+    const skipFdcUnits = new Set([
+        'package', 'packages', 'container', 'containers', 'box', 'boxes',
+        'bag', 'bags', 'tub', 'tubs', 'jar', 'jars', 'can', 'cans', 'bottle', 'bottles',
+        'packet', 'packets', 'sachet', 'sachets', 'envelope', 'envelopes',
+    ]);
     
     if (!skipFdcUnits.has(unit.toLowerCase())) {
         try {
@@ -202,8 +208,13 @@ export async function estimateAmbiguousServing(
             // Micro-units: these should NEVER exceed a few grams
             spray: 2, sprays: 2, squirt: 5, squirts: 5,
             dash: 1, pinch: 0.5,
-            // Packet-like units: typically 1-10g
+            // True micro-volume units (drops of hot sauce, liquid stevia)
+            drop: 0.5, drops: 0.5,
+            // Cooking spray duration (0.4 second = ~0.25g oil)
+            second: 1, seconds: 1,
+            // Packet-like units: sweetener packet = 1g, ketchup packet = 9g max
             packet: 10, packets: 10,
+            sachet: 10, sachets: 10, envelope: 15, envelopes: 15,
             // Scoops: protein powder scoops are 30-35g max, competition scoops up to 45g
             scoop: 50, scoops: 50,
             // Piece/strip/chunk: reasonable max for cut produce/meat

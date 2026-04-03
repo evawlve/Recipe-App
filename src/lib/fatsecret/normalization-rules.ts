@@ -147,6 +147,20 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'tomato & green chili mix', to: 'diced tomatoes with green chilies' },
     { from: 'tomato green chili mix', to: 'diced tomatoes with green chilies' },
     { from: 'matcha green tea', to: 'matcha tea' }, // Preserve beverage context to prevent powder matches
+    // Complex Niche Ingredients -> Standard mappings
+    { from: 'dry mustard', to: 'mustard powder' },
+    { from: 'veggie sausage', to: 'vegetarian sausage' },
+    { from: 'vegetarian sausages', to: 'vegetarian sausage' },
+    { from: 'flaxseed milk', to: 'flax milk' },
+    { from: 'file powder', to: 'gumbo file' },
+    { from: 'gumbo file powder', to: 'gumbo file' },
+    { from: 'arrowroot powder', to: 'arrowroot starch' },
+    { from: 'spagetti sauce', to: 'spaghetti sauce' }, // Typo fix
+    { from: 'balsamic gravy sauce', to: 'balsamic glaze' },
+    { from: 'salad seasoning', to: 'salad dressing' },
+    { from: 'peas and carrots', to: 'mixed vegetables' },
+    { from: 'vegetable skallops', to: 'vegetarian scallops' },
+    { from: 'vegetable scallops', to: 'vegetarian scallops' },
     // Fat level synonyms — IMPORTANT: these must be SCOPED to avoid over-matching.
     // DO NOT rewrite bare "extra light" → "fat free" as it incorrectly maps
     // "extra light mayonnaise" to fat-free products (wrong macro profile).
@@ -157,6 +171,7 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'apple pie spice', to: 'apple pie spice blend' },
     { from: 'pie spice', to: 'pumpkin pie spice' },
     { from: 'gluten', to: 'vital wheat gluten' },
+    { from: 'lasagna', to: 'lasagna noodles' },
   ],
 };
 

@@ -221,12 +221,22 @@
       "to": "orange peel"
     },
     {
-      "from": "extra light",
-      "to": "fat free"
+      "from": "extra light mayonnaise",
+      "to": "light mayonnaise"
     },
     {
-      "from": "extra-light",
-      "to": "fat free"
+      "from": "extra-light mayonnaise",
+      "to": "light mayonnaise"
+    },
+    {
+      "_comment": "Semantic inversion guards: prevent gluten matching Gluten Free Oreos",
+      "from": "gluten",
+      "to": "vital wheat gluten"
+    },
+    {
+      "_comment": "Semantic inversion guard: prevent apple pie spice matching apple canned pie fillings",
+      "from": "apple pie spice",
+      "to": "apple pie spice seasoning"
     },
     {
       "from": "blood orange peel",
@@ -546,6 +556,10 @@
     {
       "from": "low carb baking mix",
       "to": "keto baking mix"
+    },
+    {
+      "from": "lasagna",
+      "to": "lasagna noodles"
     }
   ]
 }

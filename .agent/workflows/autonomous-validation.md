@@ -178,31 +178,35 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 ## Phase 6: Test Fix in Isolation
 
-1. Re-run debug script on the specific ingredient:
-   ```powershell
-   npx tsx src/scripts/check-cache-entry.ts "INGREDIENT_TEXT" --clear
-   npx tsx src/scripts/debug-ingredient.ts "INGREDIENT_TEXT" --verbose
+> ⚠️ **CRITICAL**: Do NOT run a full pilot import just to verify a localized synonym or filter fix. This wastes expensive API calls.
+
+1. Create or update a fast verification script (e.g. `tmp/test-fixes.ts`) to hit the pipeline directly rather than querying the database:
+   ```typescript
+   import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+
+   async function test() {
+     const result = await mapIngredientWithFallback('1 cup honey');
+     console.log('Result =>', result?.foodName, result?.brandName);
+   }
+
+   test().catch(console.error).finally(() => process.exit(0));
    ```
 
-2. Verify:
+2. Run it locally:
+   ```powershell
+   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register tmp/test-fixes.ts
+   ```
+
+3. Verify:
    - ✅ Correct food is now selected
    - ✅ Nutrition values are reasonable
-   - ✅ Confidence score is acceptable (≥0.80)
+   - ✅ Confidence score is acceptable
 
 ---
 
 ## Phase 7: Regression Test
 
-1. Clear relevant mappings if needed:
-   ```powershell
-   # Clear just the affected ingredient's cache (preferred — keeps other mappings intact)
-   npx tsx src/scripts/check-cache-entry.ts "INGREDIENT_TEXT" --clear
-
-   # Or wipe all mapping caches for a full re-run
-   npx tsx src/scripts/clear-all-cache.ts
-   ```
-
-2. Re-run pilot import:
+1. Re-run pilot import **ONLY** when regression testing a large batch of fixes, rather than single isolated problems:
    ```powershell
    $env:ENABLE_MAPPING_ANALYSIS='true'; npx tsx scripts/pilot-batch-import.ts --recipes 100
    ```
@@ -255,8 +259,6 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 | See candidates + scores | `npx tsx src/scripts/gather-candidates.ts "rice vinegar" --show-filtered` |
 | Check serving cache | `npx tsx src/scripts/check-food-servings.ts "mayonnaise"` |
 | Inspect & clear cache entry | `npx tsx src/scripts/check-cache-entry.ts "onion" --clear` |
-| Wipe all mapping caches | `npx tsx src/scripts/clear-all-cache.ts` |
-| Clear mappings (keep food cache) | `npx tsx scripts/clear-all-mappings.ts` |
 
 ---
 

@@ -24,7 +24,7 @@ export const FATSECRET_CACHE_SYNC_BATCH_SIZE = Number.parseInt(
 );
 export const FATSECRET_CACHE_DENSITY_AI_ENDPOINT =
   process.env.FATSECRET_CACHE_DENSITY_AI_ENDPOINT ?? '';
-export const FATSECRET_CACHE_AI_MODEL = process.env.FATSECRET_CACHE_AI_MODEL ?? 'gpt-4.1-mini';
+export const FATSECRET_CACHE_AI_MODEL = process.env.FATSECRET_CACHE_AI_MODEL ?? 'google/gemma-2-9b-it:free';
 export const FATSECRET_CACHE_AI_CONFIDENCE_MIN = Number.parseFloat(
   process.env.FATSECRET_CACHE_AI_CONFIDENCE_MIN ?? '0.6',
 );

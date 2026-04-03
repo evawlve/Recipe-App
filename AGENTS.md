@@ -11,6 +11,9 @@
 | [Known Issues](.agent/docs/known-issues.md) | Documented bugs, fixes, and gotchas |
 | [Debugging Quickstart](.agent/docs/debugging-quickstart.md) | How to diagnose mapping failures |
 | [Ingredient Mapping Pipeline](.agent/docs/ingredient-mapping-pipeline.md) | Full system documentation |
+| [Mapping Audit Review](.agent/workflows/mapping-audit-review.md) | How to conduct a chunk-by-chunk audit |
+| [Autonomous Validation](.agent/workflows/autonomous-validation.md) | How to run a pilot import and verify results |
+
 
 ---
 
@@ -95,6 +98,45 @@ npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/r
 
 ---
 
+## Mapping Audits
+
+After every pilot import, a `mapping-summary-*.txt` log is generated in `logs/`. **Always conduct a manual chunk-by-chunk review** — do not rely solely on automated scripts, as they miss subtle semantic inversions.
+
+### Step 1: Generate the grouped summary
+
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/group-mapping-summary.ts logs/<log-file>.txt
+```
+
+This produces `logs/grouped-<log-file>.txt` — all events grouped by their resolved food target, reducing ~13k lines to ~800 semantic groups.
+
+### Step 2: Review chunk-by-chunk (800 lines at a time)
+
+Read the grouped file using `view_file` with `StartLine`/`EndLine`. Watch for:
+
+| Red Flag | Example |
+|----------|---------|
+| Semantic inversion | `apple pie spice` → `apple chips` |
+| Category mismatch | `hamburger buns` → `saltine crackers` |
+| Extreme weight bloat | `1 bunch mint` → 1000g |
+| Fat modifier mismatch | `extra light` → `fat free` product |
+| Package vs serving | `1 packet sweetener` → 100g (should be 1g) |
+| Bare query | `Whey Protein` (no unit) → 3000g |
+
+### Step 3: Document & fix
+
+Write findings to a `mapping_audit_results.md` artifact; then create an implementation plan targeting:
+- `src/lib/fatsecret/normalization-rules.ts` — synonym rewrites
+- `src/lib/parse/unit.ts` — micro-unit types (`drop`, `second`)
+- `src/lib/units/unit-graph.ts` — ml equivalents for new units
+- `src/lib/servings/default-count-grams.ts` — gram seed data
+- `src/lib/ai/ambiguous-serving-estimator.ts` — packet routing
+- `src/lib/fatsecret/filter-candidates.ts` — negative category guards
+
+See [Mapping Audit Review](.agent/workflows/mapping-audit-review.md) for the full step-by-step workflow.
+
+---
+
 ## Testing
 
 ### Before Submitting Changes
@@ -110,11 +152,34 @@ npm run lint
 npm test
 ```
 
+### Verifying Specific Mapping Fixes
+
+> ⚠️ **CRITICAL**: Do NOT run a full pilot import just to verify a localized synonym or filter fix. This wastes expensive AI API calls and provides no guarantee that your specific problem ingredients will actually exist in the random recipe sample.
+
+Instead, create a fast verification script (e.g. `tmp/test-fixes.ts`) to hit the pipeline directly:
+
+```typescript
+import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+
+async function test() {
+  const result = await mapIngredientWithFallback('0.5 tsp nutmeg');
+  console.log('Result =>', result?.foodName, result?.brandName);
+}
+
+test().catch(console.error).finally(() => process.exit(0));
+```
+
+Run it locally to confirm the exact anomaly was resolved before running ANY large-batch validations:
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register tmp/test-fixes.ts
+```
+
 ### Pilot Import Testing
 
+**(Use ONLY for broad regression testing after accumulating many fixes)**
+
 ```bash
-# Clear cache and run fresh import
-npx ts-node scripts/clear-all-mappings.ts
+# Clear specific caches if necessary, then run the full pilot
 npx ts-node --project tsconfig.scripts.json scripts/pilot-batch-import.ts 100
 ```
 

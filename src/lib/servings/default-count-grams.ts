@@ -122,7 +122,11 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
 
     // ===== CONDIMENTS & SWEETENERS =====
     'sugar packet': { grams: 4, confidence: 0.9, aliases: ['packet sugar', 'sugar packets'] },
-    'sweetener packet': { grams: 1, confidence: 0.9, aliases: ['packet sweetener', 'sweetener packets', 'splenda packet'] },
+    'sweetener packet': { grams: 1, confidence: 0.9, aliases: [
+        'packet sweetener', 'sweetener packets', 'splenda packet',
+        // Bare-name aliases: "1 packet sweetener" often parses as foodName=sweetener, unit=packet
+        'sweetener', 'splenda', 'sucralose', 'stevia packet', 'aspartame packet',
+    ] },
     'ketchup packet': { grams: 9, confidence: 0.85, aliases: ['packet ketchup'] },
     'mayonnaise packet': { grams: 12, confidence: 0.85, aliases: ['mayo packet', 'packet mayo'] },
     'butter pat': { grams: 5, confidence: 0.9, aliases: ['pat butter', 'pat of butter'] },
@@ -137,6 +141,8 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'pickle': { grams: 35, confidence: 0.75, aliases: ['pickles'] },
     'ice cube': { grams: 30, confidence: 0.85, aliases: ['ice cubes', 'ice'] },
     'spray': { grams: 0.25, confidence: 0.9, aliases: ['sprays', 'squirt', 'squirts'] },
+    // Cooking spray duration: 1 second of spray ≈ 0.25g oil
+    'second': { grams: 0.25, confidence: 0.85, aliases: ['seconds'] },
 
     // ===== SUPPLEMENTS & POWDERS =====
     'protein powder scoop': { grams: 30, confidence: 0.9, aliases: ['scoop protein powder', 'protein scoop'] },

@@ -15,6 +15,7 @@ import { logger } from '../logger';
 export interface FilterOptions {
     debug?: boolean;
     rawLine?: string;  // Original input for modifier detection
+    relaxed?: boolean; // If true, apply a more lenient filter (used as a fallback)
 }
 
 export interface FilterResult {
@@ -568,6 +569,10 @@ function isBrandedProductForSimpleQuery(
 
 // Categories that should NOT be confused
 const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
+    // === NEW: Corn vs Kettle Corn / Popcorn (High calorie bloat) ===
+    { query: ['corn', 'sweet corn', 'canned corn', 'kernel corn'], excludeIfContains: ['kettle', 'kettle corn', 'popcorn', 'caramel'] },
+    // === NEW: Spice vs Root Beer / Beverages (Semantic Inversion) ===
+    { query: ['nutmeg', 'cinnamon', 'clove', 'cloves', 'allspice', 'cardamom', 'anise'], excludeIfContains: ['root beer', 'soda', 'beverage', 'drink', 'beer', 'ale'] },
     // Cream (dairy) should NOT match ice cream (frozen dessert)
     { query: ['cream', 'single cream', 'double cream', 'light cream', 'heavy cream'], excludeIfContains: ['ice cream', 'sherbet', 'gelato', 'frozen'] },
     // Ice (frozen water) should NOT match ice cream (dessert) or Ice Breakers/Ice Cubes (candy/gum brands)
@@ -2237,7 +2242,7 @@ export function filterCandidatesByTokens(
     normalizedName: string,
     options: FilterOptions = {}
 ): FilterResult {
-    const { debug = false, rawLine } = options;
+    const { debug = false, rawLine, relaxed = false } = options;
 
     // Use rawLine for modifier detection if available, otherwise fall back to normalizedName
     const modifierCheckSource = rawLine || normalizedName;
@@ -2247,7 +2252,12 @@ export function filterCandidatesByTokens(
     }
 
     // Extract must-have tokens
-    const mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    let mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    
+    // In relaxed mode, only require the very last non-modifier token (the primary noun)
+    if (relaxed && mustHaveTokens.length > 1) {
+        mustHaveTokens = [mustHaveTokens[mustHaveTokens.length - 1]];
+    }
 
     if (mustHaveTokens.length === 0) {
         // No tokens to filter by - keep all
@@ -2262,7 +2272,8 @@ export function filterCandidatesByTokens(
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
         // Does NOT block minor preferences like unsweetened, organic (handled by scoring)
-        if (rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source)) {
+        // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods
+        if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source)) {
             if (debug) {
                 logger.info('filter.candidates.critical_modifier_mismatch', {
                     query: rawLine,
@@ -2438,7 +2449,7 @@ export function filterCandidatesByTokens(
             return false;
         }
 
-        if (isFoodTypeMismatch(normalizedName, candidate.name, candidate.brandName)) {
+        if (!relaxed && isFoodTypeMismatch(normalizedName, candidate.name, candidate.brandName)) {
             if (debug) {
                 logger.info('filter.candidates.food_type_mismatch', {
                     query: normalizedName,

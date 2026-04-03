@@ -1,0 +1,108 @@
+﻿  console.log
+    === Deduplication Demo ===
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:38:13)
+
+  console.log
+    Original: "Olive Oil (Extra Virgin)" -> Canonical: "olive oil"
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:46:13)
+
+  console.log
+    Original: "olive oil, extra virgin" -> Canonical: "olive oil extra virgin"
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:47:13)
+
+  console.log
+    Match: false
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:48:13)
+
+  console.log
+    === Import Process Demo ===
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:77:13)
+
+  console.log
+    Import result: 3 created, 0 skipped, 0 errors
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:126:13)
+
+  console.log
+    Γ£à Import process working correctly
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:141:13)
+
+  console.log
+    === Duplicate Detection Demo ===
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:145:13)
+
+  console.log
+    Duplicate detection result: 0 created, 1 skipped
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:167:13)
+
+  console.log
+    Γ£à Duplicate detection working correctly
+
+      at Object.<anonymous> (src/ops/usda/__tests__/importer-demo.test.ts:175:13)
+
+node.exe : FAIL api 
+src/ops/usda/__tests__/importer-demo.test.ts
+At C:\nvm4w\nodejs\npx.ps1:16 char:5
++     & "$basedir/node$exe"  
+"$basedir/node_modules/npm/bin/npx-cli.js" 
+...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: 
+    (FAIL api src/op...er-demo.test.ts:Str  
+  ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommand 
+   Error
+ 
+  USDA Importer Demo
+    ├ù demo: deduplication logic (14 ms)
+    ΓêÜ demo: import process (3 ms)
+    ΓêÜ demo: duplicate detection (1 ms)
+
+  ΓùÅ USDA Importer Demo ΓÇ║ demo: 
+deduplication logic
+
+    expect(received).toBe(expected) // 
+Object.is equality
+
+    Expected: "olive oil extra virgin"
+    Received: "olive oil"
+
+    [0m [90m 48 |[39m     
+console[33m.[39mlog([32m`Match: 
+${canonical1 === 
+canonical2}`[39m)[33m;[39m
+     [90m 49 |[39m     
+    [31m[1m>[22m[39m[90m 50 |[39m     
+expect(canonical1)[33m.[39mtoBe(canonical2
+)[33m;[39m
+     [90m    |[39m                        
+[31m[1m^[22m[39m
+     [90m 51 |[39m     
+     [90m 52 |[39m     [90m// Test macro 
+fingerprint[39m
+     [90m 53 |[39m     [36mconst[39m 
+finger1 [33m=[39m 
+macroFingerprint([35m884[39m[33m,[39m 
+[35m0[39m[33m,[39m 
+[35m0[39m[33m,[39m 
+[35m100[39m)[33m;[39m [90m// Olive 
+oil[39m[0m
+
+      at Object.<anonymous> (src/ops/usda/__
+tests__/importer-demo.test.ts:50:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        0.379 s, estimated 1 s
+Ran all test suites matching /src\\ops\\usda
+\\__tests__\\importer-demo.test.ts/i.

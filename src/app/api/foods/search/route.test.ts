@@ -85,7 +85,8 @@ describe('/api/foods/search', () => {
       q: 'olive',
       resultCount: expect.any(Number),
       topId: 'seed_olive_oil',
-      topConfidence: expect.any(Number)
+      topConfidence: expect.any(Number),
+      cacheMode: 'legacy'
     });
   });
 

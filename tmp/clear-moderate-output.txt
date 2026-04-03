@@ -1,0 +1,31 @@
+﻿≡ƒº╣ Clearing moderate issue mappings...
+
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+prisma:query SELECT "public"."Ingredient"."id" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3)
+  Γ£ô IngredientFoodMap "fried shallots": 3 (3 ingredients)
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "shallots": 1
+prisma:query SELECT "public"."Ingredient"."id" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3)
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "parsley flakes": 1
+prisma:query SELECT "public"."Ingredient"."id" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3)
+  Γ£ô IngredientFoodMap "parsley flakes": 3 (3 ingredients)
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "sucralose": 1
+prisma:query SELECT "public"."Ingredient"."id" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6)
+  Γ£ô IngredientFoodMap "sucralose": 6 (6 ingredients)
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+prisma:query SELECT "public"."Ingredient"."id" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6)
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey" ILIKE $1
+  Γ£ô AiNormalizeCache "fried shallots": 1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey" ILIKE $1
+  Γ£ô AiNormalizeCache "parsley flakes": 1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey" ILIKE $1
+  Γ£ô AiNormalizeCache "sucralose sweetener": 1
+
+Γ£à Done! VM: 3, IFM: 12

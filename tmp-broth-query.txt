@@ -1,0 +1,204 @@
+prisma:query SELECT "public"."ValidatedMapping"."id", "public"."ValidatedMapping"."rawIngredient", "public"."ValidatedMapping"."normalizedForm", "public"."ValidatedMapping"."foodId", "public"."ValidatedMapping"."foodName", "public"."ValidatedMapping"."brandName", "public"."ValidatedMapping"."source", "public"."ValidatedMapping"."aiConfidence", "public"."ValidatedMapping"."validationReason", "public"."ValidatedMapping"."isAlias", "public"."ValidatedMapping"."canonicalRawIngredient", "public"."ValidatedMapping"."validatedAt", "public"."ValidatedMapping"."validatedBy", "public"."ValidatedMapping"."usedCount", "public"."ValidatedMapping"."lastUsedAt", "public"."ValidatedMapping"."createdAt", "public"."ValidatedMapping"."updatedAt" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 ORDER BY "public"."ValidatedMapping"."createdAt" DESC LIMIT $2 OFFSET $3
+[
+  {
+    "id": "vm_1774487170160_a0fz7l5ld",
+    "rawIngredient": " 2 cup chicken broth",
+    "normalizedForm": "chicken broth",
+    "foodId": "fdc_1909393",
+    "foodName": "CHICKEN BROTH",
+    "brandName": "AHOLD",
+    "source": "fatsecret",
+    "aiConfidence": 0.98,
+    "validationReason": "exact_match",
+    "isAlias": false,
+    "canonicalRawIngredient": null,
+    "validatedAt": "2026-03-26T01:06:10.161Z",
+    "validatedBy": "ai",
+    "usedCount": 5,
+    "lastUsedAt": "2026-03-26T01:06:10.656Z",
+    "createdAt": "2026-03-26T01:06:10.161Z",
+    "updatedAt": "2026-03-26T01:06:10.657Z"
+  }
+]
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE "public"."FdcFoodCache"."description"::text LIKE $1 ORDER BY "public"."FdcFoodCache"."id" ASC LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcServingCache"."id", "public"."FdcServingCache"."fdcId", "public"."FdcServingCache"."description", "public"."FdcServingCache"."grams", "public"."FdcServingCache"."volumeMl", "public"."FdcServingCache"."derivedViaDensity", "public"."FdcServingCache"."densityGml", "public"."FdcServingCache"."prepModifier", "public"."FdcServingCache"."source", "public"."FdcServingCache"."isAiEstimated", "public"."FdcServingCache"."confidence", "public"."FdcServingCache"."note" FROM "public"."FdcServingCache" WHERE "public"."FdcServingCache"."fdcId" IN ($1,$2,$3,$4,$5) OFFSET $6
+[
+  {
+    "id": 497207,
+    "description": "VEGETABLE BROTH",
+    "brandName": null,
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": 0,
+      "carbs": 0.83,
+      "fiber": 0,
+      "sodium": 267,
+      "protein": 0,
+      "calories": 4
+    },
+    "servingSize": null,
+    "servingSizeUnit": null,
+    "syncedAt": "2026-02-10T16:40:38.574Z",
+    "expiresAt": null,
+    "createdAt": "2026-02-10T16:40:38.574Z",
+    "updatedAt": "2026-02-10T16:40:38.574Z",
+    "servings": []
+  },
+  {
+    "id": 498006,
+    "description": "BROTH",
+    "brandName": null,
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": 0,
+      "carbs": 0.42,
+      "fiber": 0,
+      "sodium": 358,
+      "protein": 0.42,
+      "calories": 2
+    },
+    "servingSize": null,
+    "servingSizeUnit": null,
+    "syncedAt": "2026-03-25T22:47:11.688Z",
+    "expiresAt": null,
+    "createdAt": "2026-03-25T22:47:11.688Z",
+    "updatedAt": "2026-03-25T22:47:11.688Z",
+    "servings": []
+  },
+  {
+    "id": 1909393,
+    "description": "CHICKEN BROTH",
+    "brandName": "AHOLD",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": 0.21,
+      "carbs": 0.83,
+      "fiber": 0,
+      "sodium": 388,
+      "protein": 0.42,
+      "calories": 6
+    },
+    "servingSize": null,
+    "servingSizeUnit": null,
+    "syncedAt": "2026-02-02T16:22:07.204Z",
+    "expiresAt": null,
+    "createdAt": "2026-02-02T16:22:07.204Z",
+    "updatedAt": "2026-02-02T16:22:07.204Z",
+    "servings": [
+      {
+        "id": 5,
+        "fdcId": 1909393,
+        "description": "1 cup",
+        "grams": 236.58,
+        "volumeMl": 240,
+        "derivedViaDensity": true,
+        "densityGml": 0.98575,
+        "prepModifier": null,
+        "source": "ai",
+        "isAiEstimated": true,
+        "confidence": 0.95,
+        "note": "Chicken broth is a liquid and commonly measured in cups. A standard serving size of 1 cup is realistic and aligns with typical nutritional labeling for liquids. The estimated weight of 1 cup of chicken broth is approximately 236.58 grams."
+      },
+      {
+        "id": 1004,
+        "fdcId": 1909393,
+        "description": "1 fl oz",
+        "grams": 28.4,
+        "volumeMl": null,
+        "derivedViaDensity": false,
+        "densityGml": null,
+        "prepModifier": null,
+        "source": "ai",
+        "isAiEstimated": true,
+        "confidence": null,
+        "note": null
+      }
+    ]
+  },
+  {
+    "id": 1909969,
+    "description": "BEEF BROTH",
+    "brandName": "MANISCHEWITZ",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": 0.21,
+      "carbs": 0.42,
+      "fiber": 0,
+      "sodium": 329,
+      "protein": 0.42,
+      "calories": 6
+    },
+    "servingSize": null,
+    "servingSizeUnit": null,
+    "syncedAt": "2026-02-10T16:43:06.031Z",
+    "expiresAt": null,
+    "createdAt": "2026-02-10T16:43:06.031Z",
+    "updatedAt": "2026-02-10T16:43:06.031Z",
+    "servings": [
+      {
+        "id": 451,
+        "fdcId": 1909969,
+        "description": "cup",
+        "grams": 244,
+        "volumeMl": 240,
+        "derivedViaDensity": true,
+        "densityGml": 1.016666666666667,
+        "prepModifier": null,
+        "source": "ai",
+        "isAiEstimated": true,
+        "confidence": 0.95,
+        "note": "The typical serving size for beef broth is 1 cup. I've calculated the grams based on the density of broth, which is approximately 1g/ml."
+      }
+    ]
+  },
+  {
+    "id": 2009393,
+    "description": "CHICKEN BROTH",
+    "brandName": "SCHNUCKS",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": 0.41,
+      "carbs": 0.41,
+      "fiber": 0,
+      "sodium": 424,
+      "protein": 0.41,
+      "calories": 8
+    },
+    "servingSize": null,
+    "servingSizeUnit": null,
+    "syncedAt": "2026-02-02T16:22:07.548Z",
+    "expiresAt": null,
+    "createdAt": "2026-02-02T16:22:07.548Z",
+    "updatedAt": "2026-02-02T16:22:07.548Z",
+    "servings": [
+      {
+        "id": 409,
+        "fdcId": 2009393,
+        "description": "1 cup",
+        "grams": 240,
+        "volumeMl": null,
+        "derivedViaDensity": false,
+        "densityGml": null,
+        "prepModifier": null,
+        "source": "ai",
+        "isAiEstimated": true,
+        "confidence": null,
+        "note": null
+      },
+      {
+        "id": 410,
+        "fdcId": 2009393,
+        "description": "cup",
+        "grams": 240,
+        "volumeMl": 240,
+        "derivedViaDensity": true,
+        "densityGml": 1,
+        "prepModifier": null,
+        "source": "ai",
+        "isAiEstimated": true,
+        "confidence": 0.95,
+        "note": "Chicken broth is typically sold by volume, and the official label serving size is 1 cup (240g). This is a common and realistic serving size for broth."
+      }
+    ]
+  }
+]

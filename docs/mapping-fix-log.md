@@ -874,3 +874,34 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 | 70 | Synonym | `vegetarian patties → veggie burger patties` |
 | 71 | Synonym (no effect) | `salad seasoning → salad seasoning blend` |
 | 72 | Synonym | `chunk chicken breast → chicken breast` |
+
+---
+
+## 2026-04-03: Anomaly Resolution Session (Pre-500 Pilot)
+
+**Source**: Pre-pilot spot checks (Nutmeg, Corn, Lasagna failures)
+
+### Fix 73: Nutmeg Semantic Inversion
+| Field | Detail |
+|-------|--------|
+| Issue | `0.5 tsp nutmeg` → Virgil's Nutmeg Root Beer |
+| Fix | Forced strict exclusion of beverage/soda categories when searching for pure spices. |
+
+### Fix 74: Canned Corn Kettle Bloat
+| Field | Detail |
+|-------|--------|
+| Issue | `1 can corn` → Palmetto Kettle Corn (excessive macros per 100g) |
+| Fix | Disallowed popcorn/kettle variants when searching for generic canned corn vegetable entries. |
+
+### Fix 75: Lasagna Noodles Category Mismatch
+| Field | Detail |
+|-------|--------|
+| Issue | `4.5 oz lasagna` → Lasagna Entree (heavy pre-cooked dish) |
+| Fix | Directed generic "lasagna" queries to resolve strictly to dry pasta/noodles unless specific modifiers denote a finished meal. |
+
+### Change Index (Fixes 73-75)
+| # | Category | Description |
+|---|----------|-------------|
+| 73 | Filter | Nutmeg -> Root Beer semantic inversion blocked |
+| 74 | Filter | Corn -> Kettle Corn calorie bloat blocked |
+| 75 | Filter | Lasagna -> Lasagna Entree category mismatch fixed |

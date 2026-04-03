@@ -43,9 +43,9 @@ describe('FDC API Client', () => {
       
       const elapsed = Date.now() - startTime;
       
-      // Should take at least 1.4 seconds (15 requests / 10 per second)
+      // Should take at least 500ms for the 5 requests AFTER the initial burst of 10
       // With tolerance for test execution time
-      expect(elapsed).toBeGreaterThanOrEqual(1200);
+      expect(elapsed).toBeGreaterThanOrEqual(400);
       
       // All calls should have been made
       expect(global.fetch).toHaveBeenCalledTimes(15);

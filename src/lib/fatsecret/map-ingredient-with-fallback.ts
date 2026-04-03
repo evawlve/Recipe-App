@@ -514,12 +514,11 @@ export async function mapIngredientWithFallback(
                     if (cachedFdc?.nutrients) {
                         const rawFdc: any = cachedFdc.nutrients;
                         loadedFdcNutrition = {
-                            calories: rawFdc.energy ?? rawFdc.calories ?? 0,
+                            kcal: rawFdc.energy ?? rawFdc.calories ?? 0,
                             protein: rawFdc.protein ?? 0,
                             carbs: rawFdc.carbohydrate ?? rawFdc.carbs ?? 0,
                             fat: rawFdc.fat ?? 0,
-                            fiber: rawFdc.fiber ?? 0,
-                            sugar: rawFdc.sugars ?? rawFdc.sugar ?? 0
+                            per100g: true,
                         };
                         earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
                         if (earlyNutritionInvalid) {
@@ -541,12 +540,11 @@ export async function mapIngredientWithFallback(
                                     return n?.amount || 0;
                                 };
                                 loadedFdcNutrition = {
-                                    calories: getNutrient(1008),
+                                    kcal: getNutrient(1008),
                                     protein: getNutrient(1003),
                                     carbs: getNutrient(1005),
                                     fat: getNutrient(1004),
-                                    fiber: getNutrient(1079),
-                                    sugar: getNutrient(2000)
+                                    per100g: true,
                                 };
                                 earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
                             } else {
@@ -879,8 +877,23 @@ export async function mapIngredientWithFallback(
                 }
 
                 if (filtered.length === 0) {
-                    logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount: removedCount + coreFilterRemoved });
-                    // Fall through to Fallback
+                    // Retry with relaxed filtering before giving up
+                    const relaxedFilterResult = filterCandidatesByTokens(
+                        allCandidates,
+                        normalizedName,
+                        { debug, rawLine: trimmed, relaxed: true }
+                    );
+                    
+                    if (relaxedFilterResult.filtered.length > 0) {
+                        filtered = relaxedFilterResult.filtered;
+                        logger.info('mapping.relaxed_filter_recovery', {
+                            rawLine: trimmed,
+                            recoveredCount: filtered.length,
+                        });
+                    } else {
+                        logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount: removedCount + coreFilterRemoved });
+                        // Fall through to Fallback
+                    }
                 } else {
                     // Step 3a: Confidence Gate
                     // IMPORTANT: Sort by score with tiebreaker preferring FDC for basic produce
@@ -2478,6 +2491,10 @@ export async function hydrateAndSelectServing(
             // Micro-units: should NEVER exceed a few grams each
             spray: 2, sprays: 2, squirt: 5, squirts: 5,
             dash: 1, dashes: 1, pinch: 0.5, pinches: 0.5,
+            // True micro-volume units (drops of hot sauce, liquid stevia, etc.)
+            drop: 0.5, drops: 0.5,
+            // Cooking spray duration (0.4 second ≈ 0.25g oil)
+            second: 1, seconds: 1,
             // Packet-like units: sweetener packets = 1g, sauce packets ≤ 10g
             packet: 10, packets: 10,
             // Scoops: protein powder scoops are 30-35g max
@@ -2794,6 +2811,12 @@ async function buildFdcResult(
         'pinches': 0.3,
         'sprinkle': 0.2, // ~1/25 tsp
         'shake': 0.2,
+        // True micro-volume units (e.g., drops of hot sauce, liquid stevia)
+        'drop': 0.05,    // 1 drop ≈ 0.05ml ≈ 0.05g water-density liquid
+        'drops': 0.05,
+        // Cooking spray duration (s) — 1 second of spray ≈ 0.25g oil
+        'second': 0.25,
+        'seconds': 0.25,
     };
 
     let grams: number = 100 * qty;

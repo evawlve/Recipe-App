@@ -1,0 +1,26 @@
+[
+  {
+    "test": "1 scoop vanilla whey protein",
+    "food": "Whey Protein",
+    "grams": 30,
+    "kcal": 112.5
+  },
+  {
+    "test": "1 jalapeño pepper",
+    "food": "JALAPENO",
+    "grams": 20,
+    "kcal": 2
+  },
+  {
+    "test": "Palm Sugar",
+    "food": "PALM SUGAR",
+    "grams": 100,
+    "kcal": 337
+  },
+  {
+    "test": "0.5 floz rice vinegar 2 tbsp",
+    "food": "Rice Vinegar",
+    "grams": 15,
+    "kcal": 45
+  }
+]

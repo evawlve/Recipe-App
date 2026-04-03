@@ -77,10 +77,14 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     return { kind: 'count', unit: countUnits[token] };
   }
 
-  // Small volume units (pinch, dash, etc.)
+  // Small volume units (pinch, dash, drop, second, etc.)
   const smallVolumeUnits: Record<string, string> = {
     'pinch': 'pinch', 'pinches': 'pinch',
-    'dash': 'dash', 'dashes': 'dash'
+    'dash': 'dash', 'dashes': 'dash',
+    // Micro liquid units
+    'drop': 'drop', 'drops': 'drop',     // 1 drop ≈ 0.05ml (e.g., drops of tabasco, liquid stevia)
+    // Cooking spray duration — "0.4 second spray" is ~0.25ml of oil
+    'second': 'second', 'seconds': 'second',
   };
 
   if (smallVolumeUnits[token]) {
@@ -113,7 +117,9 @@ const VOLUME_IN_ML: Record<string, number> = {
   'floz': 29.57,
   'cup': 240, // Standard US cup for simplicity in this context
   'pinch': 0.3,
-  'dash': 0.6
+  'dash': 0.6,
+  'drop': 0.05,    // 1 drop (medicine dropper / sauce) ≈ 0.05ml
+  'second': 0.25,  // 1 second of cooking spray ≈ 0.25ml → ~0.23g oil
 };
 
 const MASS_IN_G: Record<string, number> = {

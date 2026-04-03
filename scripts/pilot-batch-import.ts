@@ -109,7 +109,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
     }> = [];
 
     const BATCH_SIZE = 50; // Max ingredients per chunk (for future use with very large recipes)
-    const RECIPE_CONCURRENCY = 10; // Process 10 recipes simultaneously
+    const RECIPE_CONCURRENCY = 50; // Process 50 recipes simultaneously
 
     // Helper to chunk array into batches
     function chunk<T>(arr: T[], size: number): T[][] {

@@ -1,0 +1,78 @@
+﻿≡ƒº╣ Clearing mappings for 14 critical audit issues...
+
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "powdered peanut butter": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "whey protein powder": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "whey protein": 3 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "canola oil": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "black pepper": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "palm sugar": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "rice vinegar": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "tortilla chips": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "cooking spray": 2 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "cauliflower": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+  Γ£ô ValidatedMapping "broccoli": 1 cleared
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm" ILIKE $1
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."rawIngredient" ILIKE $1
+  Γ£ô ValidatedMapping "100%" raw: 5 cleared
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+  Γ£ô IngredientFoodMap "powdered peanut butter": 19 cleared (19 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
+  Γ£ô IngredientFoodMap "sour cream": 28 cleared (28 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+  Γ£ô IngredientFoodMap "jalapeno": 14 cleared (14 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1)
+  Γ£ô IngredientFoodMap "jalape├▒o": 1 cleared (1 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,$53,$54,$55,$56,$57,$58,$59,$60,$61,$62,$63)
+  Γ£ô IngredientFoodMap "whey protein": 63 cleared (63 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5)
+  Γ£ô IngredientFoodMap "canola oil": 5 cleared (5 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42)
+  Γ£ô IngredientFoodMap "black pepper": 42 cleared (42 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6)
+  Γ£ô IngredientFoodMap "palm sugar": 6 cleared (6 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+  Γ£ô IngredientFoodMap "rice vinegar": 15 cleared (15 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3)
+  Γ£ô IngredientFoodMap "tortilla chip": 3 cleared (3 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+  Γ£ô IngredientFoodMap "cooking spray": 9 cleared (10 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6)
+  Γ£ô IngredientFoodMap "cauliflower": 6 cleared (6 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+  Γ£ô IngredientFoodMap "broccoli": 17 cleared (17 ingredients)
+prisma:query SELECT "public"."Ingredient"."id", "public"."Ingredient"."name" FROM "public"."Ingredient" WHERE "public"."Ingredient"."name" ILIKE $1 OFFSET $2
+prisma:query DELETE FROM "public"."IngredientFoodMap" WHERE "public"."IngredientFoodMap"."ingredientId" IN ($1,$2,$3,$4)
+  Γ£ô IngredientFoodMap "mango": 4 cleared (4 ingredients)
+
+Γ£à Done!
+   ValidatedMapping cleared: 19
+   IngredientFoodMap cleared: 232
+
+Run pilot-batch-import to remap these with the fixed pipeline.

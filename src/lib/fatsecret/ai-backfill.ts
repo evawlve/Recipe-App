@@ -36,6 +36,12 @@ const VOLUME_UNIT_TO_ML: Record<string, number> = {
     dashes: 0.625,
     pinch: 0.3,        // 1 pinch ≈ 1/16 tsp ≈ 0.3ml
     pinches: 0.3,
+    // Micro-volume units
+    drop: 0.05,        // 1 drop ≈ 0.05ml (medicine dropper / hot sauce)
+    drops: 0.05,
+    // Cooking spray duration
+    second: 0.25,      // 1 second of spray ≈ 0.25ml oil
+    seconds: 0.25,
 };
 
 // Count-based units - synced with unit-type.ts COUNT_UNITS
@@ -379,10 +385,25 @@ export async function insertAiServing(
             });
 
             if (!foodExists) {
-                logger.warn('ai_backfill.food_not_in_cache_skipping_fk_inserts', { foodId });
-                // Still create the serving but skip density estimate (no FK parent)
-                // Use create with try/catch to handle missing FK gracefully
-                return;
+                if (options.candidateData) {
+                    logger.info('ai_backfill.seeding_food_to_cache', { foodId });
+                    await tx.fatSecretFoodCache.create({
+                        data: {
+                            id: foodId,
+                            name: options.candidateData.name,
+                            brandName: options.candidateData.brandName ?? null,
+                            foodType: options.candidateData.foodType ?? 'Generic',
+                            source: options.candidateData.source,
+                            confidence: 0.95,
+                            hash: `seed_for_ai_${foodId}`,
+                            syncedAt: new Date(),
+                            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+                        }
+                    });
+                } else {
+                    logger.warn('ai_backfill.food_not_in_cache_no_data', { foodId });
+                    return;
+                }
             }
 
             if (density && volumeMl) {

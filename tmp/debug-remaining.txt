@@ -1,0 +1,7 @@
+"4  sprays butter cooking spray" => qty=4, unit=spray, name="butter cooking spray", mult=1
+"Butter Spray" => qty=1, unit=null, name="Butter Spray", mult=1
+"Palm Sugar" => qty=1, unit=null, name="Palm Sugar", mult=1
+"Tortilla Chips" => qty=1, unit=null, name="Tortilla Chips", mult=1
+"1 cup sour cream" => qty=1, unit=cup, name="sour cream", mult=1
+"1 tbsp fried shallots" => qty=1, unit=tbsp, name="fried shallots", mult=1
+"1 serving 1 packet sucralose sweetener" => qty=1, unit=serving, name="1 packet sucralose sweetener", mult=1
