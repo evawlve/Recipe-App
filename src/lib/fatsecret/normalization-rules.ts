@@ -146,9 +146,17 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'tomato and green chili mix', to: 'diced tomatoes with green chilies' },
     { from: 'tomato & green chili mix', to: 'diced tomatoes with green chilies' },
     { from: 'tomato green chili mix', to: 'diced tomatoes with green chilies' },
-    // Fat level synonyms
-    { from: 'extra light', to: 'fat free' },
-    { from: 'extra-light', to: 'fat free' },
+    { from: 'matcha green tea', to: 'matcha tea' }, // Preserve beverage context to prevent powder matches
+    // Fat level synonyms — IMPORTANT: these must be SCOPED to avoid over-matching.
+    // DO NOT rewrite bare "extra light" → "fat free" as it incorrectly maps
+    // "extra light mayonnaise" to fat-free products (wrong macro profile).
+    { from: 'extra light mayonnaise', to: 'light mayonnaise' },
+    { from: 'extra-light mayonnaise', to: 'light mayonnaise' },
+    // Semantic inversion guards: these prevent matching against unrelated branded products
+    // e.g. "gluten" → "Gluten Free (Oreo)", "apple pie spice" → "apple chips"
+    { from: 'apple pie spice', to: 'apple pie spice blend' },
+    { from: 'pie spice', to: 'pumpkin pie spice' },
+    { from: 'gluten', to: 'vital wheat gluten' },
   ],
 };
 
@@ -504,4 +512,147 @@ function collapseSpaces(value: string): string {
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ============================================================================
+// Singularization & Canonical Cache Key
+// ============================================================================
+
+/**
+ * Words that look plural (end in 's') but are already singular.
+ * These MUST NOT be singularized by stripping the trailing 's'.
+ */
+const SINGULAR_BLACKLIST = new Set([
+  // Grains & products that end in -s/-us/-ss
+  'hummus', 'couscous', 'quinoa', 'falafel',
+  'asparagus', 'molasses', 'citrus', 'hibiscus',
+  'meringues', // keep as-is; "meringue" is the singular but rarely used in recipes
+  // Herbs/plants ending in -s
+  'lemongrass', 'wheatgrass', 'cress', 'watercress',
+  // Cheese/dairy
+  'swiss', 'bris', 'gruyeres',
+  // Other food words ending in -s that are singular
+  'tahini', 'tzatziki', 'miso', 'tofu', // don't end in s but just in case
+  'jus', 'demiglace', 'fois', 'gras',
+  'cannabis', 'anise', 'licorice',
+  'aioli', 'chimichurris',
+  // Common suffixes that aren't plural
+  'plus', 'bonus', 'surplus', 'lotus', 'cactus', 'fungus', 'octopus',
+  'floss', 'gloss', 'moss', 'cross', 'boss', 'toss', 'loss',
+  'dress', 'press', 'stress', 'express',
+  'dips', 'chips', 'strips', 'tips', // compound product terms: "pita chips", etc
+]);
+
+/**
+ * Irregular plurals that need explicit mapping.
+ */
+const IRREGULAR_PLURALS: Record<string, string> = {
+  leaves: 'leaf',
+  halves: 'half',
+  loaves: 'loaf',
+  knives: 'knife',
+  lives: 'life',
+  wolves: 'wolf',
+  calves: 'calf',
+  shelves: 'shelf',
+  selves: 'self',
+  // Produce
+  dice: 'die',  // but "diced" is already stripped as prep
+};
+
+/**
+ * Singularize a single English word.
+ * 
+ * Rules (in priority order):
+ * 1. Blacklist — return as-is
+ * 2. Irregular plurals — explicit lookup
+ * 3. -ies → -y (berries → berry)
+ * 4. -ves → -f (leaves → leaf) — handled by irregular map
+ * 5. -oes → -o (tomatoes → tomato, potatoes → potato)
+ * 6. -ses, -xes, -zes, -ches, -shes → strip -es
+ * 7. -es (general, word > 4 chars) → strip -es
+ * 8. -s (word > 3 chars) → strip -s
+ */
+export function singularize(word: string): string {
+  const lower = word.toLowerCase();
+
+  // Too short to be plural
+  if (lower.length <= 2) return lower;
+
+  // Blacklist check
+  if (SINGULAR_BLACKLIST.has(lower)) return lower;
+
+  // Irregular plurals
+  if (IRREGULAR_PLURALS[lower]) return IRREGULAR_PLURALS[lower];
+
+  // -ies → -y (cherries → cherry, berries → berry)
+  // But NOT: "series" → protect
+  // But NOT: words where stem is -i (chilies → chili, NOT chily)
+  if (lower.endsWith('ies') && lower.length > 4 && lower !== 'series') {
+    // Known words ending in -i that pluralize with -es
+    const I_STEM_WORDS = new Set(['chili', 'broccoli', 'pierogi', 'biscotti', 'gnocchi', 'ravioli', 'linguini', 'zucchini', 'manicotti']);
+    const stem = lower.slice(0, -2); // "chilies" → "chili"
+    if (I_STEM_WORDS.has(stem)) {
+      return stem;
+    }
+    return lower.slice(0, -3) + 'y'; // "berries" → "berry"
+  }
+
+  // -oes → -o (tomatoes → tomato, potatoes → potato)
+  // But NOT: "shoes" → protect
+  if (lower.endsWith('oes') && lower.length > 4 && !['shoes', 'toes', 'hoes', 'does', 'goes'].includes(lower)) {
+    return lower.slice(0, -2);
+  }
+
+  // -ses, -xes, -zes, -ches, -shes → strip -es
+  if (lower.length > 4 && /(?:ses|xes|zes|ches|shes)$/.test(lower)) {
+    return lower.slice(0, -2);
+  }
+
+  // General -es (word > 4 chars) — but only if the stem looks like a real word
+  // Covers: "olives" → "olive", "noodles" → "noodle"
+  // Skip words already ending in double-s (e.g., "lemongrass") - caught by blacklist
+  if (lower.endsWith('es') && lower.length > 4 && !lower.endsWith('ss')) {
+    const stem = lower.slice(0, -1); // Try just stripping the final 's' first → "olives" → "olive"
+    // If stem ends in a consonant + 'e', the singular is the stem (olive, noodle)
+    return stem;
+  }
+
+  // General -s (word > 3 chars)
+  if (lower.endsWith('s') && lower.length > 3 && !lower.endsWith('ss') && !lower.endsWith('us')) {
+    return lower.slice(0, -1);
+  }
+
+  return lower;
+}
+
+/**
+ * Produce a deterministic canonical cache key from a normalized ingredient name.
+ * 
+ * Transformations:
+ * 1. Lowercase
+ * 2. Split into tokens
+ * 3. Singularize each token
+ * 4. Sort alphabetically
+ * 5. Join with space
+ * 
+ * This ensures:
+ * - "sour cream light" == "light sour cream" (word order)
+ * - "onions" == "onion" (singular/plural)
+ * - "Greek Yogurt" == "greek yogurt" (case)
+ * - "creamy peanut butter" != "peanut butter" (meaningful modifier preserved)
+ * - "red bell pepper" != "bell pepper" (color variant preserved)
+ */
+export function canonicalizeCacheKey(normalizedName: string): string {
+  if (!normalizedName) return '';
+
+  return normalizedName
+    .toLowerCase()
+    .replace(/[^a-z0-9%\s\-']/g, ' ')  // Keep %, hyphens, apostrophes
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .map(singularize)
+    .sort()
+    .join(' ')
+    .trim();
 }
