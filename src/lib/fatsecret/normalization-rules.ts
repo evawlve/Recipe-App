@@ -170,8 +170,17 @@ const DEFAULT_RULES: NormalizationRules = {
     // e.g. "gluten" → "Gluten Free (Oreo)", "apple pie spice" → "apple chips"
     { from: 'apple pie spice', to: 'apple pie spice blend' },
     { from: 'pie spice', to: 'pumpkin pie spice' },
-    { from: 'gluten', to: 'vital wheat gluten' },
     { from: 'lasagna', to: 'lasagna noodles' },
+    { from: 'ground thyme', to: 'dried thyme powder' },
+    { from: 'spice blend mustard', to: 'mustard powder' },
+    { from: 'lean hamburger', to: 'lean ground beef' },
+    { from: 'hamburger', to: 'ground beef' },
+    { from: 'mixed herbs', to: 'italian seasoning' },
+    { from: 'celtic salt', to: 'sea salt' },
+    { from: 'stroganoff mix', to: 'beef stroganoff seasoning mix' },
+    { from: 'non fat', to: 'nonfat' },
+    { from: 'cottage cheese non fat', to: 'nonfat cottage cheese' },
+    { from: 'skim yogurt', to: 'nonfat yogurt' },
   ],
 };
 
@@ -308,7 +317,8 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
 
   // Step 1: Strip percentage patterns >= 50% (e.g., "100% liquid" → "liquid")
   // BUT preserve low percentages like "2% milk" which are nutritionally significant
-  working = working.replace(/\b(100|[5-9]\d)%\s*/g, '');
+  // AND preserve leanness percentages like "93% lean"
+  working = working.replace(/\b(100|[5-9]\d)%(?!\s*lean\b)\s*/gi, '');
 
   // Step 2: Deduplicate consecutive repeated words/phrases
   // Handles typos like "ice cubes ice cubes" → "ice cubes"
@@ -349,6 +359,11 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   // NOTE: Bare "corn" mapping to kettle corn is now handled universally by the
   // extreme calorie mismatch penalty in simple-rerank.ts (>200% diff → -0.35 penalty).
 
+  // "gluten" alone -> "vital wheat gluten" (prevent replacing in "gluten free" or "gluten-free")
+  if (/\bgluten\b/i.test(working) && !/\bgluten[-\s]free\b/i.test(working)) {
+    working = working.replace(/\bgluten\b/gi, 'vital wheat gluten');
+  }
+
   // "vanilla" alone → "vanilla extract" (recipe default)
   // But NOT: vanilla extract, vanilla bean, vanilla ice cream, vanilla protein, etc.
   if (/\bvanilla\b/i.test(working) && !/\bvanilla\s+(extract|bean|ice|protein|pudding|wafer|cake|yogurt|cream|frosting|powder|paste)/i.test(working)) {
@@ -360,6 +375,16 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   // But NOT: fried chicken breast, grilled chicken breast, skinless chicken breast, etc.
   if (/\bchicken\s+breast\b/i.test(working) && !/\b(skinless|fried|grilled|baked|roasted|breaded|bbq|smoked)\s+chicken\s+breast/i.test(working)) {
     working = working.replace(/\bchicken\s+breast\b/i, 'skinless chicken breast');
+  }
+
+  // Standardize ground meat leanness to deterministic default percentages if not explicitly specified.
+  // We use both lean and fat percentages ("90% lean 10% fat") as FatSecret/FDC indexing often relies on the explicit full profile.
+  if (/(?:^|\s)lean ground\s+(beef|turkey|chicken|pork|meat)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working)) {
+    // "lean ground X" -> default to 90% lean 10% fat
+    working = working.replace(/\blean ground\b/gi, '90% lean 10% fat ground');
+  } else if (/(?:^|\s)ground\s+(beef|turkey|chicken|pork|meat)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working) && !/\blean\b/i.test(working)) {
+    // "ground X" (not lean) -> default to 85% lean 15% fat
+    working = working.replace(/\bground\b/gi, '85% lean 15% fat ground');
   }
 
   // Remove prep/size phrases using merged prep phrases (static + AI-learned)

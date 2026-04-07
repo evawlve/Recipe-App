@@ -623,6 +623,11 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['miso paste', 'tomato paste', 'curry paste'],
         excludeIfContains: ['soup', 'broth', 'stew']
     },
+    // Salt should NOT match caramel/chocolate
+    {
+        query: ['salt', 'sea salt', 'celtic salt', 'kosher salt'],
+        excludeIfContains: ['caramel', 'chocolate', 'chips']
+    },
     // === NEW: Priority 1 False Positive Fixes ===
     // Simple vinegar should NOT match dressings
     {
@@ -797,6 +802,27 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
     {
         query: ['burrito', 'burritos', 'beef burrito', 'chicken burrito', 'bean burrito'],
         excludeIfContains: ['taco', 'tacos', 'nacho', 'nachos']
+    },
+    // === NEW: Hamburger vs Fast Food ===
+    {
+        query: ['hamburger', 'lean hamburger', 'ground beef'],
+        excludeIfContains: ['mcdonald\'s', 'fast food', 'restaurant', 'subway', 'wendy\'s', 'burger king'],
+        skipIfQueryContains: ['mcdonald', 'burger']
+    },
+    // === NEW: Herb vs Tea ===
+    {
+        query: ['herbs', 'mixed herbs', 'herb', 'herb blend'],
+        excludeIfContains: ['tea', 'beverage', 'alaska native', 'laborador']
+    },
+    // === NEW: Pasta vs Crackers ===
+    {
+        query: ['macaroni', 'pasta', 'elbow macaroni', 'penne', 'spaghetti'],
+        excludeIfContains: ['cracker', 'crackers', 'saltines', 'saltine']
+    },
+    // === NEW: Plant-based cheese vs Meat balls ===
+    {
+        query: ['rice cheese', 'vegan cheese', 'mozzarella style'],
+        excludeIfContains: ['meat', 'rice balls', 'meatballs', 'beef', 'chicken']
     },
     // === Priority 2: Specialty Pasta/Flour Guards ===
     // Regular pasta should NOT match specialty pasta variants (different nutrition)
@@ -1497,9 +1523,10 @@ export function hasNullOrInvalidMacros(
         (nutrients.protein ?? 0) === 0 &&
         (nutrients.carbs ?? 0) === 0 &&
         (nutrients.fat ?? 0) === 0;
-    // Foods explicitly labeled "no calorie" or "zero calorie" should never be rejected
+    // Foods explicitly labeled "no calorie" or "zero calorie", or are known zero-calorie portions like cooking spray
     const nameForCheck = (candidateName || '').toLowerCase();
-    const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck);
+    const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck) ||
+        /\b(cooking\s*spray|pan\s*spray|baking\s*spray|spray\s*oil|oil\s*spray)\b/i.test(nameForCheck);
     if (allZero && !isExplicitlyZeroCal && isFoodThatMustHaveCalories(candidateName)) {
         return true;
     }
