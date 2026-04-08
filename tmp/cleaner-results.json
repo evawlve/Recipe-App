@@ -1,0 +1,57 @@
+[
+  {
+    "line": "4 sprays butter cooking spray",
+    "parsedUnit": "spray",
+    "parsedName": "butter cooking spray",
+    "result": {
+      "foodName": "butter non-stick cooking spray",
+      "servingDescription": "4 spray (0.25g each)",
+      "grams": 1,
+      "kcal": 0
+    }
+  },
+  {
+    "line": "4 sprays cooking spray",
+    "parsedUnit": "spray",
+    "parsedName": "cooking spray",
+    "result": {
+      "foodName": "COOKING SPRAY",
+      "servingDescription": "4 spray (0.25g each)",
+      "grams": 1,
+      "kcal": 0
+    }
+  },
+  {
+    "line": "1 bunch mint",
+    "parsedUnit": "bunch",
+    "parsedName": "mint",
+    "result": {
+      "foodName": "MINT",
+      "servingDescription": "1 bunch (30g each)",
+      "grams": 30,
+      "kcal": 0
+    }
+  },
+  {
+    "line": "Pancake Mix",
+    "parsedUnit": null,
+    "parsedName": "Pancake Mix",
+    "result": {
+      "foodName": "Complete Pancake Mix",
+      "servingDescription": "serving",
+      "grams": 39,
+      "kcal": 140
+    }
+  },
+  {
+    "line": "1 tbsp Pancake Mix",
+    "parsedUnit": "tbsp",
+    "parsedName": "Pancake Mix",
+    "result": {
+      "foodName": "Complete Pancake Mix",
+      "servingDescription": "1 tbsp",
+      "grams": 14,
+      "kcal": 50.2564
+    }
+  }
+]

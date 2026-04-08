@@ -181,6 +181,12 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'non fat', to: 'nonfat' },
     { from: 'cottage cheese non fat', to: 'nonfat cottage cheese' },
     { from: 'skim yogurt', to: 'nonfat yogurt' },
+    // Audit Fix: "cilantro seeds" is a lay term; correct culinary term is coriander
+    { from: 'cilantro seeds', to: 'coriander seeds' },
+    { from: 'cilantro seed', to: 'coriander seeds' },
+    // Audit Fix: Steer green beans away from Ranch Style pinto beans
+    { from: 'green beans', to: 'green string beans' },
+    { from: 'green bean', to: 'green string bean' },
   ],
 };
 
@@ -356,6 +362,14 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     working = working.replace(/\bpepper\b/i, 'black pepper');
   }
 
+  // Audit Fix: "red pepper" alone → "red bell pepper" (American produce default)
+  // But NOT: crushed red pepper, red pepper flakes, chili red pepper, cayenne red pepper, etc.
+  const RED_PEPPER_SPICE_PREFIX = /\b(crushed|flake|flakes|cayenne|chili|chile|hot|dried|ground)\s+red\s+pepper/i;
+  const RED_PEPPER_SPICE_SUFFIX = /\bred\s+pepper\s+(flakes|sauce|paste|powder|seeds)/i;
+  if (!RED_PEPPER_SPICE_PREFIX.test(working) && !RED_PEPPER_SPICE_SUFFIX.test(working)) {
+    working = working.replace(/\bred\s+pepper(s)?\b/gi, 'red bell pepper');
+  }
+
   // NOTE: Bare "corn" mapping to kettle corn is now handled universally by the
   // extreme calorie mismatch penalty in simple-rerank.ts (>200% diff → -0.35 penalty).
 
@@ -500,6 +514,12 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
       stripped.push(phrase);
       working = working.replace(re, ' ');
     }
+  }
+
+  // Audit Fix: If after all stripping, the remaining string is ONLY "ground"
+  // (a bare prep word left orphaned), clear it to avoid matching flaxseed/coffee.
+  if (/^ground$/i.test(working.trim())) {
+    working = '';
   }
 
   // Collapse whitespace

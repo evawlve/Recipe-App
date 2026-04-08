@@ -47,6 +47,10 @@ export const AMBIGUOUS_UNITS = new Set([
     'head', 'heads',
     // Bunch units (bunch of spinach, herbs, etc.)
     'bunch', 'bunches',
+    // Discrete count units (meat parts, baked goods, slices)
+    'breast', 'breasts', 'thigh', 'thighs', 'wing', 'wings', 'fillet', 'fillets',
+    'roll', 'rolls', 'tortilla', 'tortillas', 'biscuit', 'biscuits',
+    'patty', 'patties', 'slice', 'slices',
     // Sub-piece units that vary wildly by food (e.g., strips of bacon = 12g, strips of pepper = 10g)
     'strip', 'strips',
     // Spray/squirt units (for cooking spray, oil sprays)
@@ -100,6 +104,55 @@ export function isAmbiguousUnit(unit: string): boolean {
 }
 
 /**
+ * Returns a standard serving estimate for bare queries (no unit, qty=1).
+ * Prevents "Baking Flour" from defaulting to a 454g package or "Mayonnaise" to a 340g jar.
+ */
+export function getBareQueryDefault(foodName: string): { grams: number, description: string } | null {
+    const nameStr = foodName.toLowerCase();
+    
+    // Spices & Extracts: 1 tsp (approx 2.5g)
+    if (/\b(spice|cinnamon|nutmeg|paprika|chili powder|cumin|salt|pepper|extract|vanilla|seasoning)\b/.test(nameStr)) {
+        return { grams: 2.5, description: "1 tsp (standard bare query serving)" };
+    }
+    
+    // Condiments & Spreads: 1 tbsp (approx 14g)
+    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup)\b/.test(nameStr)) {
+        return { grams: 14, description: "1 tbsp (standard bare query serving)" };
+    }
+    
+    // Flours & Sugars (Baking Dry): 1 cup (approx 120-200g, using 120g as standard)
+    if (/\b(flour|sugar|cornstarch|baking soda|baking powder|cocoa powder)\b/.test(nameStr)) {
+        if (/\b(baking soda|baking powder)\b/.test(nameStr)) return { grams: 4, description: "1 tsp (standard bare query serving)" };
+        return { grams: 120, description: "1 cup (standard bare query serving)" };
+    }
+    
+    // Cheese (cream cheese, shredded): 1 oz / 28g
+    if (/\b(cheese)\b/.test(nameStr)) {
+        return { grams: 28, description: "1 oz (standard bare query serving)" };
+    }
+
+    // Liquids (milk, juice, broth): 1 cup / 240g
+    if (/\b(milk|juice|broth|stock|water)\b/.test(nameStr)) {
+        return { grams: 240, description: "1 cup (standard bare query serving)" };
+    }
+
+    return null;
+}
+
+/**
+ * Returns a serving estimate for unitless leafy greens with high counts.
+ * Prevents "8 lettuce" from defaulting to 8 full heads (4000g) by assuming leaves (10-15g).
+ */
+export function getDiscreteLeafyGreenDefault(foodName: string, qty: number): { grams: number, description: string } | null {
+    const nameStr = foodName.toLowerCase();
+    if (qty > 3 && /\b(lettuce|spinach|kale|cabbage|basil|mint|cilantro|parsley)\b/.test(nameStr)) {
+        // Assume smaller individual leaves or sprigs when count is high
+        return { grams: 10, description: "1 leaf/sprig (assumed from high unitless count)" };
+    }
+    return null;
+}
+
+/**
  * Estimates the weight of an ambiguous unit using AI
  * Step 8 optimization: Try FDC servings and count defaults before LLM
  */
@@ -108,23 +161,6 @@ export async function estimateAmbiguousServing(
 ): Promise<AmbiguousServingResult> {
     const { foodName, brandName, unit, foodType } = request;
 
-    // Step 8: Try count defaults first (no API call)
-    const sizeFromUnit = unit.toLowerCase() as 'small' | 'medium' | 'large' | undefined;
-    const isSize = ['small', 'medium', 'large'].includes(sizeFromUnit || '');
-    const countDefault = getDefaultCountServing(
-        foodName,
-        unit,
-        isSize ? sizeFromUnit : undefined
-    );
-
-    if (countDefault) {
-        return {
-            status: 'success',
-            estimatedGrams: countDefault.grams,
-            confidence: countDefault.confidence,
-            reasoning: `Default from ${countDefault.source} data`,
-        };
-    }
 
     // Step 8: Try FDC serving lookup (uses cache)
     // CRITICAL: Skip FDC for deceptive retail containers AND single-serve packets.
@@ -139,6 +175,9 @@ export async function estimateAmbiguousServing(
     
     if (!skipFdcUnits.has(unit.toLowerCase())) {
         try {
+            const sizeFromUnit = unit.toLowerCase() as 'small' | 'medium' | 'large';
+            const isSize = ['small', 'medium', 'large'].includes(sizeFromUnit);
+            
             const fdcResult = await getFdcServingWeight(
                 foodName,
                 unit,
@@ -217,8 +256,9 @@ export async function estimateAmbiguousServing(
             sachet: 10, sachets: 10, envelope: 15, envelopes: 15,
             // Scoops: protein powder scoops are 30-35g max, competition scoops up to 45g
             scoop: 50, scoops: 50,
-            // Piece/strip/chunk: reasonable max for cut produce/meat
+            // Pieces/strips/chunks/breasts: reasonable max for cut produce/meat
             piece: 200, pieces: 200, strip: 50, strips: 50, chunk: 50, chunks: 50,
+            breast: 300, breasts: 300, thigh: 200, thighs: 200,
         };
 
         const maxGrams = UNIT_MAX_GRAMS[unit.toLowerCase()];

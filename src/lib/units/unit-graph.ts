@@ -1,12 +1,14 @@
-export type Unit = 'g'|'oz'|'lb'|'ml'|'tsp'|'tbsp'|'cup'|'floz';
+export type Unit = 'g'|'oz'|'lb'|'ml'|'tsp'|'tbsp'|'cup'|'floz'|'pinch'|'dash'|'drop'|'second';
 
 const MASS_G: Record<Unit, number> = {
   g: 1, oz: 28.349523125, lb: 453.59237,
   ml: NaN, tsp: NaN, tbsp: NaN, cup: NaN, floz: NaN,
+  pinch: NaN, dash: NaN, drop: NaN, second: NaN,
 };
 
 const VOL_ML: Record<Unit, number> = {
   ml: 1, tsp: 4.92892159375, tbsp: 14.78676478125, cup: 240, floz: 29.5735295625,
+  pinch: 0.3, dash: 0.6, drop: 0.05, second: 0.25,
   g: NaN, oz: NaN, lb: NaN,
 };
 

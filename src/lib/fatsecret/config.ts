@@ -24,7 +24,7 @@ export const FATSECRET_CACHE_SYNC_BATCH_SIZE = Number.parseInt(
 );
 export const FATSECRET_CACHE_DENSITY_AI_ENDPOINT =
   process.env.FATSECRET_CACHE_DENSITY_AI_ENDPOINT ?? '';
-export const FATSECRET_CACHE_AI_MODEL = process.env.FATSECRET_CACHE_AI_MODEL ?? 'google/gemma-2-9b-it:free';
+export const FATSECRET_CACHE_AI_MODEL = process.env.FATSECRET_CACHE_AI_MODEL ?? 'mistralai/mistral-nemo';
 export const FATSECRET_CACHE_AI_CONFIDENCE_MIN = Number.parseFloat(
   process.env.FATSECRET_CACHE_AI_CONFIDENCE_MIN ?? '0.6',
 );
@@ -58,7 +58,7 @@ export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?
 
 // AI Nutrition Backfill configuration
 export const AI_NUTRITION_BACKFILL_ENABLED = getFlag('AI_NUTRITION_BACKFILL_ENABLED', true);
-export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'google/gemini-2.0-flash-lite';
+export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/mistral-nemo';
 export const AI_NUTRITION_MAX_PER_BATCH = Number.parseInt(process.env.AI_NUTRITION_MAX_PER_BATCH ?? '20', 10);
 
 export type FatSecretRegion = 'US' | 'GLOBAL';

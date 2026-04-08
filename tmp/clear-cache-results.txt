@@ -1,0 +1,121 @@
+﻿
+≡ƒº╣ Clearing poisoned cache entries from mapping audit...
+
+--- AI Normalize Cache: "regular" sour cream entries ---
+prisma:query SELECT "public"."AiNormalizeCache"."normalizedKey", "public"."AiNormalizeCache"."rawLine", "public"."AiNormalizeCache"."normalizedName", "public"."AiNormalizeCache"."canonicalBase", "public"."AiNormalizeCache"."synonyms", "public"."AiNormalizeCache"."prepPhrases", "public"."AiNormalizeCache"."sizePhrases", "public"."AiNormalizeCache"."cookingModifier", "public"."AiNormalizeCache"."estimatedCaloriesPer100g", "public"."AiNormalizeCache"."estimatedProteinPer100g", "public"."AiNormalizeCache"."estimatedCarbsPer100g", "public"."AiNormalizeCache"."estimatedFatPer100g", "public"."AiNormalizeCache"."nutritionConfidence", "public"."AiNormalizeCache"."createdAt", "public"."AiNormalizeCache"."lastUsedAt", "public"."AiNormalizeCache"."useCount" FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1 OFFSET $2
+  Found 21 entries to clear:
+    Γ¥î key="regular sour cream light" => name="sour cream light"
+    Γ¥î key="simplify 1 oz regular sour cream" => name="Low Fat Sour Cream"
+    Γ¥î key="lowfat regular sour cream 1 4 cup" => name="low fat sour cream"
+    Γ¥î key="simplify 8 oz regular sour cream fat free" => name="Fat Free Sour Cream"
+    Γ¥î key="low fat regular sour cream divided" => name="low fat sour cream"
+    Γ¥î key="simplify 5 oz regular sour cream fat free" => name="Fat Free Sour Cream"
+    Γ¥î key="regular sour cream reduced fat" => name="reduced fat sour cream"
+    Γ¥î key="simplify 0 5 cup regular sour cream" => name="Light Sour Cream"
+    Γ¥î key="non-dairy regular sour cream" => name="sour cream"
+    Γ¥î key="light regular sour cream" => name="light sour cream"
+    Γ¥î key="simplify 0 3333333333333333 oz regular sour cream" => name="Low Fat Sour Cream"
+    Γ¥î key="light regular sour cream 200 ml" => name="light sour cream"
+    Γ¥î key="simplify 1 tbsp regular sour cream" => name="Light Sour Cream"
+    Γ¥î key="reduced fat regular sour cream" => name="reduced fat sour cream"
+    Γ¥î key="simplify 1 cup regular sour cream" => name="Light Sour Cream"
+    Γ¥î key="simplify 2 oz regular sour cream" => name="Low Fat Sour Cream"
+    Γ¥î key="regular sour cream 200 ml" => name="light sour cream"
+    Γ¥î key="regular sour cream" => name="sour cream"
+    Γ¥î key="regular sour cream fat free" => name="sour cream"
+    Γ¥î key="fat free regular sour cream" => name="fat free sour cream"
+    Γ¥î key="simplify 8 oz regular sour cream" => name="Light Sour Cream"
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ£à Deleted 21 AI normalize cache entries
+
+--- ValidatedMapping: Affected ingredients ---
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "light yogurt" ΓåÆ deleted 1 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "skim yogurt" ΓåÆ deleted 2 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "okra" ΓåÆ deleted 1 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "herb" ΓåÆ deleted 4 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "lentil" ΓåÆ deleted 5 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "butter" ΓåÆ deleted 38 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+prisma:query DELETE FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1
+  Γ¥î "wonton" ΓåÆ deleted 1 mapping(s)
+prisma:query SELECT COUNT(*) FROM (SELECT "public"."ValidatedMapping"."id" FROM "public"."ValidatedMapping" WHERE "public"."ValidatedMapping"."normalizedForm"::text LIKE $1 OFFSET $2) AS "sub"
+  Γ£à Total ValidatedMapping entries deleted: 52
+
+--- AI Normalize Cache: light/lowfat variants ---
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "light butter" ΓåÆ deleted 2 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "light cream" ΓåÆ deleted 2 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "low fat" ΓåÆ deleted 9 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "lowfat" ΓåÆ deleted 14 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "nonfat mozzarella" ΓåÆ deleted 1 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "skim yogurt" ΓåÆ deleted 2 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "evaporated skim" ΓåÆ deleted 1 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "green string bean" ΓåÆ deleted 1 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "red pepper" ΓåÆ deleted 9 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "red bell pepper" ΓåÆ deleted 1 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "cilantro seed" ΓåÆ deleted 5 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "okra" ΓåÆ deleted 1 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "lentil" ΓåÆ deleted 7 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "herb" ΓåÆ deleted 15 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "wonton" ΓåÆ deleted 2 AI cache entries
+prisma:query DELETE FROM "public"."AiNormalizeCache" WHERE "public"."AiNormalizeCache"."normalizedKey"::text LIKE $1
+  Γ¥î "anaheim" ΓåÆ deleted 2 AI cache entries
+  Γ£à Total AI normalize cache entries deleted: 74
+
+Γ£à Cache clearing complete!
+

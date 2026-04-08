@@ -1,0 +1,557 @@
+﻿
+≡ƒöì Light/LowFat Ingredient Candidate Analysis
+
+======================================================================
+Goal: Is the failure a DATA GAP or a PIPELINE ERROR?
+
+
+======================================================================
+
+≡ƒÄ» Query: "light sour cream"
+
+   ≡ƒôª FatSecret Results for "light sour cream":
+      #1: Light Sour Cream (Daisy) [id=29381]
+          ≡ƒôè Serving (2 tbsp): 40kcal | P:2g C:undefinedg F:2.5g
+      #2: Light Sour Cream (Great Value) [id=4606000]
+          ≡ƒôè Serving (2 tbsp): 40kcal | P:2g C:undefinedg F:2.5g
+      #3: Light Sour Cream (Kroger) [id=30614964]
+          ≡ƒôè Serving (2 tbsp): 35kcal | P:2g C:undefinedg F:2.5g
+      #4: Light Sour Cream (Friendly Farms) [id=304074]
+          ≡ƒôè Serving (2 tbsp): 40kcal | P:1g C:undefinedg F:2g
+      #5: Light Sour Cream [id=1100]
+          ≡ƒôè Serving (1 tbsp): 22kcal | P:0.56g C:undefinedg F:1.7g
+      #6: Light Sour Cream (Trader Joe's) [id=96748]
+          ≡ƒôè Serving (2 tbsp): 40kcal | P:2g C:undefinedg F:2.5g
+      #7: Light Sour Cream (R.W. Knudsen Family) [id=79822]
+          ≡ƒôè Serving (2 tbsp): 30kcal | P:2g C:undefinedg F:2g
+      #8: Sour Cream (Fat Free) [id=33842]
+          ≡ƒôè Serving (1 oz): 21kcal | P:0.88g C:undefinedg F:0g
+
+   ≡ƒö¼ FDC Results for "light sour cream":
+      #1: Sour cream, light [fdcId=173443]
+          ≡ƒôè Per 100g: 136kcal | P:3.5g C:7.1g F:10.6g
+          Type: SR Legacy
+      #2: Cream, sour, cultured [fdcId=171257]
+          ≡ƒôè Per 100g: 198kcal | P:2.44g C:4.63g F:19.4g
+          Type: SR Legacy
+      #3: Cream, fluid, light (coffee cream or table cream) [fdcId=170857]
+          ≡ƒôè Per 100g: 195kcal | P:2.96g C:3.66g F:19.1g
+          Type: SR Legacy
+      #4: Cream, sour, full fat [fdcId=2346387]
+          ≡ƒôè Per 100g: 0kcal | P:3.07g C:5.56g F:18g
+          Type: Foundation
+      #5: Sour cream, fat free [fdcId=173444]
+          ≡ƒôè Per 100g: 74kcal | P:3.1g C:15.6g F:0g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "low fat cheddar cheese"
+
+   ≡ƒôª FatSecret Results for "low fat cheddar cheese":
+      #1: Cheddar Cheese (Reduced Fat) [id=33843]
+          ≡ƒôè Serving (1 oz): 80kcal | P:7.71g C:undefinedg F:5.19g
+      #2: Low Fat Cheddar Cheese (Lucerne) [id=57374]
+          ≡ƒôè Serving (1 oz): 60kcal | P:10g C:undefinedg F:2g
+      #3: Lowfat Cheddar or Colby Cheese [id=1277]
+          ≡ƒôè Serving (1 slice (1 oz)): 49kcal | P:6.9g C:undefinedg F:1.98g
+      #4: Reduced Fat American or Cheddar Type Processed Cheese Product Cheese [id=1303]
+          ≡ƒôè Serving (1 slice): 82kcal | P:5.98g C:undefinedg F:4.79g
+      #5: Lowfat American or Cheddar Type Processed Cheese [id=1302]
+          ≡ƒôè Serving (1 slice, NFS (.75 oz)): 38kcal | P:5.17g C:undefinedg F:1.47g
+      #6: Cheddar Cheese Soup (Canned( [id=1344]
+          ≡ƒôè Serving (1 cup): 311kcal | P:10.85g C:undefinedg F:20.95g
+      #7: Low Sodium Cheddar or Colby Cheese [id=1276]
+          ≡ƒôè Serving (100 g): 398kcal | P:24.35g C:undefinedg F:32.62g
+      #8: Cheddar or American Type Cheese [id=1241]
+          ≡ƒôè Serving (1 slice): 86kcal | P:5.02g C:undefinedg F:6.81g
+
+   ≡ƒö¼ FDC Results for "low fat cheddar cheese":
+      #1: Cheese, low fat, cheddar or colby [fdcId=173439]
+          ≡ƒôè Per 100g: 173kcal | P:24.4g C:1.91g F:7g
+          Type: SR Legacy
+      #2: Cheese, cream, low fat [fdcId=169079]
+          ≡ƒôè Per 100g: 208kcal | P:7.85g C:6.73g F:16.7g
+          Type: SR Legacy
+      #3: Cheese, monterey, low fat [fdcId=168098]
+          ≡ƒôè Per 100g: 313kcal | P:28.2g C:0.7g F:21.6g
+          Type: SR Legacy
+      #4: Cheese, muenster, low fat [fdcId=169050]
+          ≡ƒôè Per 100g: 271kcal | P:24.7g C:3.5g F:17.6g
+          Type: SR Legacy
+      #5: Cheese, swiss, low fat [fdcId=168141]
+          ≡ƒôè Per 100g: 179kcal | P:28.4g C:3.4g F:5.1g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "light cream"
+
+   ≡ƒôª FatSecret Results for "light cream":
+      #1: Light Cream [id=1076]
+          ≡ƒôè Serving (1 tbsp): 29kcal | P:0.4g C:undefinedg F:2.9g
+      #2: Light Cream (365) [id=27665343]
+          ≡ƒôè Serving (1 tbsp): 30kcal | P:0g C:undefinedg F:3g
+      #3: Light Cream (Great Value) [id=37708799]
+          ≡ƒôè Serving (1 tbsp): 30kcal | P:0g C:undefinedg F:3g
+      #4: Light Thick & Creamy Yogurt - Strawberry (Yoplait) [id=522828]
+          ≡ƒôè Serving (1 container): 100kcal | P:5g C:undefinedg F:0g
+      #5: Light Vanilla Ice Creams [id=39360]
+          ≡ƒôè Serving (100 g): 165kcal | P:4.78g C:undefinedg F:4.83g
+      #6: Light Cream (Upstate Farms) [id=31408704]
+          ≡ƒôè Serving (1 tbsp): 30kcal | P:0g C:undefinedg F:2.5g
+      #7: Light Cream (Harris Teeter) [id=54702381]
+          ≡ƒôè Serving (1 tbsp): 30kcal | P:0g C:undefinedg F:3g
+      #8: Light Creamy Potato with Bacon & Cheese (Progresso) [id=4242319]
+          ≡ƒôè Serving (1 cup): 190kcal | P:4g C:undefinedg F:7g
+
+   ≡ƒö¼ FDC Results for "light cream":
+      #1: Sour cream, light [fdcId=173443]
+          ≡ƒôè Per 100g: 136kcal | P:3.5g C:7.1g F:10.6g
+          Type: SR Legacy
+      #2: Cream, fluid, light (coffee cream or table cream) [fdcId=170857]
+          ≡ƒôè Per 100g: 195kcal | P:2.96g C:3.66g F:19.1g
+          Type: SR Legacy
+      #3: Cream substitute, liquid, light [fdcId=168097]
+          ≡ƒôè Per 100g: 71kcal | P:0.8g C:9.1g F:3.5g
+          Type: SR Legacy
+      #4: Cream substitute, powdered, light [fdcId=167688]
+          ≡ƒôè Per 100g: 431kcal | P:1.9g C:73.4g F:15.7g
+          Type: SR Legacy
+      #5: Cream, fluid, light whipping [fdcId=170858]
+          ≡ƒôè Per 100g: 292kcal | P:2.17g C:2.96g F:30.9g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "low fat monterey jack cheese"
+
+   ≡ƒôª FatSecret Results for "low fat monterey jack cheese":
+      #1: Monterey Jack Cheese [id=440073]
+          ≡ƒôè Serving (1 slice (1 oz)): 106kcal | P:6.94g C:undefinedg F:8.58g
+      #2: Monterey Cheese (Low Fat) [id=40604]
+          ≡ƒôè Serving (1 slice (1 oz)): 88kcal | P:7.9g C:undefinedg F:6.05g
+      #3: Monterey Cheese [id=1258]
+          ≡ƒôè Serving (1 slice (1 oz)): 106kcal | P:6.94g C:undefinedg F:8.58g
+      #4: Lowfat Monterey Cheese [id=1259]
+          ≡ƒôè Serving (1 slice (1 oz)): 89kcal | P:7.99g C:undefinedg F:6.12g
+      #5: Pepper Jack Cheese [id=7189818]
+          ≡ƒôè Serving (1 slice): 105kcal | P:6.87g C:undefinedg F:8.51g
+      #6: Colby Jack Cheese [id=1251]
+          ≡ƒôè Serving (1 slice (1 oz)): 109kcal | P:6.84g C:undefinedg F:8.85g
+      #7: Monterey Cheese [id=33705]
+          ≡ƒôè Serving (100 g): 373kcal | P:24.48g C:undefinedg F:30.28g
+      #8: Low Fat American Cheese [id=288338]
+          ≡ƒôè Serving (1 slice (1 oz)): 51kcal | P:6.97g C:undefinedg F:1.98g
+
+   ≡ƒö¼ FDC Results for "low fat monterey jack cheese":
+      #1: Cheese, monterey, low fat [fdcId=168098]
+          ≡ƒôè Per 100g: 313kcal | P:28.2g C:0.7g F:21.6g
+          Type: SR Legacy
+      #2: Cheese, monterey jack, solid [fdcId=2647438]
+          ≡ƒôè Per 100g: 0kcal | P:22.6g C:1.9g F:32.6g
+          Type: Foundation
+      #3: Cheese, cream, low fat [fdcId=169079]
+          ≡ƒôè Per 100g: 208kcal | P:7.85g C:6.73g F:16.7g
+          Type: SR Legacy
+      #4: Cheese, muenster, low fat [fdcId=169050]
+          ≡ƒôè Per 100g: 271kcal | P:24.7g C:3.5g F:17.6g
+          Type: SR Legacy
+      #5: Cheese, swiss, low fat [fdcId=168141]
+          ≡ƒôè Per 100g: 179kcal | P:28.4g C:3.4g F:5.1g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "light butter"
+
+   ≡ƒôª FatSecret Results for "light butter":
+      #1: Light Butter (Land O'Lakes) [id=77088]
+          ≡ƒôè Serving (1 tbsp): 50kcal | P:0g C:undefinedg F:6g
+      #2: Light Butter (Country Crock) [id=8570751]
+          ≡ƒôè Serving (1 tbsp): 35kcal | P:0g C:undefinedg F:4g
+      #3: I Can't Believe It's Not Butter Light (Bertolli) [id=2924299]
+          ≡ƒôè Serving (1 tbsp): 35kcal | P:0g C:undefinedg F:4g
+      #4: Light Butter (Blue Bonnet) [id=266273]
+          ≡ƒôè Serving (1 tbsp): 40kcal | P:0g C:undefinedg F:4.5g
+      #5: Light Butter (Stick with Salt) [id=34320]
+          ≡ƒôè Serving (100 g): 499kcal | P:3.3g C:undefinedg F:55.1g
+      #6: Light Butter Syrup (Richfood) [id=697075]
+          ≡ƒôè Serving (1/4 cup): 100kcal | P:0g C:undefinedg F:0g
+      #7: Light Butter Microwave Popcorn (61g bag) (Pop Weaver) [id=3312315]
+          ≡ƒôè Serving (1 bag popped): 230kcal | P:5g C:undefinedg F:6g
+      #8: Lighter Spreadable Butter (Lurpak) [id=43934]
+          ≡ƒôè Serving (1 serving): 54kcal | P:0.1g C:undefinedg F:6g
+
+   ≡ƒö¼ FDC Results for "light butter":
+      #1: Butter, light, stick, with salt [fdcId=173581]
+          ≡ƒôè Per 100g: 499kcal | P:3.3g C:0g F:55.1g
+          Type: SR Legacy
+      #2: Butter, light, stick, without salt [fdcId=172344]
+          ≡ƒôè Per 100g: 499kcal | P:3.3g C:0g F:55.1g
+          Type: SR Legacy
+      #3: Alcoholic beverage, beer, light, BUD LIGHT [fdcId=169572]
+          ≡ƒôè Per 100g: 29kcal | P:0.25g C:1.3g F:0g
+          Type: SR Legacy
+      #4: Rye flour, light [fdcId=168887]
+          ≡ƒôè Per 100g: 357kcal | P:9.82g C:76.7g F:1.33g
+          Type: SR Legacy
+      #5: Sour cream, light [fdcId=173443]
+          ≡ƒôè Per 100g: 136kcal | P:3.5g C:7.1g F:10.6g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "low fat cream of chicken soup"
+
+   ≡ƒôª FatSecret Results for "low fat cream of chicken soup":
+      #1: Low Fat Cream of Chicken Soup (Campbell's) [id=57667]
+          ≡ƒôè Serving (1/2 cup): 60kcal | P:3g C:undefinedg F:2g
+      #2: Cream of Chicken Noodle Soup [id=5218]
+          ≡ƒôè Serving (1 cup): 127kcal | P:7.2g C:undefinedg F:4.83g
+      #3: Cream of Chicken or Turkey Soup [id=3033]
+          ≡ƒôè Serving (1 cup): 142kcal | P:4.95g C:undefinedg F:8.39g
+      #4: Low Sodium Cream of Mushroom Soup (Prepared with Water) [id=6830]
+          ≡ƒôè Serving (1 cup): 129kcal | P:2.44g C:undefinedg F:9.03g
+      #5: Chicken Soup [id=3013]
+          ≡ƒôè Serving (1 cup): 75kcal | P:4.05g C:undefinedg F:2.46g
+      #6: Cream of Chicken or Turkey Soup (with Milk) [id=3034]
+          ≡ƒôè Serving (1 cup): 174kcal | P:7.02g C:undefinedg F:9.7g
+      #7: Cream of Soup [id=6818]
+          ≡ƒôè Serving (1 cup): 183kcal | P:5.98g C:undefinedg F:10.39g
+      #8: Cream of Chicken or Turkey Soup (with Water) [id=3035]
+          ≡ƒôè Serving (1 cup): 112kcal | P:2.98g C:undefinedg F:7.25g
+
+   ≡ƒö¼ FDC Results for "low fat cream of chicken soup":
+      #1: Cheese, cream, low fat [fdcId=169079]
+          ≡ƒôè Per 100g: 208kcal | P:7.85g C:6.73g F:16.7g
+          Type: SR Legacy
+      #2: Soup, chicken broth, low sodium, canned [fdcId=171609]
+          ≡ƒôè Per 100g: 16kcal | P:2g C:1.2g F:0.6g
+          Type: SR Legacy
+      #3: Soup, cream of mushroom, canned, prepared with equal volume low fat (2%) milk [fdcId=174540]
+          ≡ƒôè Per 100g: 65kcal | P:2.36g C:5.76g F:3.58g
+          Type: SR Legacy
+      #4: Soup, cream of shrimp, canned, prepared with equal volume low fat (2%) milk [fdcId=172898]
+          ≡ƒôè Per 100g: 61kcal | P:2.78g C:5.64g F:3.23g
+          Type: SR Legacy
+      #5: Soup, cream of chicken, canned, condensed [fdcId=171146]
+          ≡ƒôè Per 100g: 90kcal | P:2.38g C:7.16g F:5.77g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "low fat milk"
+
+   ≡ƒôª FatSecret Results for "low fat milk":
+      #1: Low Fat Milk [id=303408]
+          ≡ƒôè Serving (1 cup): 102kcal | P:8.22g C:undefinedg F:2.37g
+      #2: 1% Low Fat Milk (Giant Food) [id=805574]
+          ≡ƒôè Serving (1 cup): 110kcal | P:8g C:undefinedg F:2.5g
+      #3: 2% Reduced Fat Milk (Lowes Foods) [id=565220]
+          ≡ƒôè Serving (1 cup): 120kcal | P:10g C:undefinedg F:2.5g
+      #4: 1% Low Fat Milk (HEB) [id=11582831]
+          ≡ƒôè Serving (1 cup): 100kcal | P:8g C:undefinedg F:2.5g
+      #5: 1% Fat Milk [id=803]
+          ≡ƒôè Serving (1 cup): 102kcal | P:8.22g C:undefinedg F:2.37g
+      #6: Low Fat Milk (Alta Dena) [id=1774378]
+          ≡ƒôè Serving (1 cup): 130kcal | P:11g C:undefinedg F:2.5g
+      #7: Low Fat Milk (Horizon Organic) [id=22453541]
+          ≡ƒôè Serving (8 fl oz): 110kcal | P:8g C:undefinedg F:2.5g
+      #8: Cottage Cheese with Vegetables (Lowfat, 1% Milkfat) [id=40764]
+          ≡ƒôè Serving (1 cup): 151kcal | P:24.63g C:undefinedg F:2.26g
+
+   ≡ƒö¼ FDC Results for "low fat milk":
+      #1: Buttermilk, low fat [fdcId=2259792]
+          ≡ƒôè Per 100g: 0kcal | P:3.46g C:4.81g F:1.08g
+          Type: Foundation
+      #2: Bologna, beef, low fat [fdcId=168101]
+          ≡ƒôè Per 100g: 204kcal | P:11.8g C:5.2g F:14.8g
+          Type: SR Legacy
+      #3: Cheese, cream, low fat [fdcId=169079]
+          ≡ƒôè Per 100g: 208kcal | P:7.85g C:6.73g F:16.7g
+          Type: SR Legacy
+      #4: Cheese, monterey, low fat [fdcId=168098]
+          ≡ƒôè Per 100g: 313kcal | P:28.2g C:0.7g F:21.6g
+          Type: SR Legacy
+      #5: Cheese, muenster, low fat [fdcId=169050]
+          ≡ƒôè Per 100g: 271kcal | P:24.7g C:3.5g F:17.6g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "velveeta light"
+
+   ≡ƒôª FatSecret Results for "velveeta light":
+      #1: Reduced Fat American or Cheddar Type Processed Cheese Product Cheese [id=1303]
+          ≡ƒôè Serving (1 slice): 82kcal | P:5.98g C:undefinedg F:4.79g
+      #2: Light Velveeta Shells & Cheese (Kraft) [id=607977]
+          ≡ƒôè Serving (1 pack): 330kcal | P:14g C:undefinedg F:4.5g
+      #3: Velveeta Light Reduced Fat Pasteurized Processed Cheese Product (Kraft) [id=41078]
+          ≡ƒôè Serving (1 oz): 62kcal | P:5.5g C:undefinedg F:3g
+      #4: Light Cream [id=1076]
+          ≡ƒôè Serving (1 tbsp): 29kcal | P:0.4g C:undefinedg F:2.9g
+      #5: Light Wine [id=7729]
+          ≡ƒôè Serving (1 glass (3.5 fl oz)): 52kcal | P:0.07g C:undefinedg F:0g
+      #6: Light Ice Cream [id=1148]
+          ≡ƒôè Serving (1 cup): 212kcal | P:6.17g C:undefinedg F:5.97g
+      #7: Light Turkey Meat [id=1742]
+          ≡ƒôè Serving (1 thin slice (approx 3" x 2" x 1/8")): 27kcal | P:3.98g C:undefinedg F:1.16g
+      #8: Light Chocolate Syrup [id=7224]
+          ≡ƒôè Serving (1 tbsp): 25kcal | P:0.12g C:undefinedg F:0.09g
+
+   ≡ƒö¼ FDC Results for "velveeta light":
+      #1: KRAFT VELVEETA LIGHT Reduced Fat Pasteurized Process Cheese Product [fdcId=173449]
+          ≡ƒôè Per 100g: 222kcal | P:19.6g C:11.8g F:10.6g
+          Type: SR Legacy
+      #2: KRAFT VELVEETA Pasteurized Process Cheese Spread [fdcId=173448]
+          ≡ƒôè Per 100g: 303kcal | P:16.3g C:9.8g F:22g
+          Type: SR Legacy
+      #3: Alcoholic beverage, beer, light, BUD LIGHT [fdcId=169572]
+          ≡ƒôè Per 100g: 29kcal | P:0.25g C:1.3g F:0g
+          Type: SR Legacy
+      #4: Rye flour, light [fdcId=168887]
+          ≡ƒôè Per 100g: 357kcal | P:9.82g C:76.7g F:1.33g
+          Type: SR Legacy
+      #5: Sour cream, light [fdcId=173443]
+          ≡ƒôè Per 100g: 136kcal | P:3.5g C:7.1g F:10.6g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "nonfat mozzarella cheese"
+
+   ≡ƒôª FatSecret Results for "nonfat mozzarella cheese":
+      #1: Nonfat or Fat Free Mozzarella Cheese [id=1264]
+          ≡ƒôè Serving (1 stick): 42kcal | P:8.88g C:undefinedg F:0g
+      #2: Mozzarella Cheese (Nonfat) [id=40659]
+          ≡ƒôè Serving (100 g): 149kcal | P:31.7g C:undefinedg F:0g
+      #3: Mozzarella Cheese [id=1260]
+          ≡ƒôè Serving (1 slice (1 oz)): 86kcal | P:7.36g C:undefinedg F:5.68g
+      #4: Imitation Mozzarella Cheese [id=1319]
+          ≡ƒôè Serving (1 slice): 69kcal | P:3.21g C:undefinedg F:3.42g
+      #5: Low Sodium Mozzarella Cheese [id=1263]
+          ≡ƒôè Serving (1 slice (1 oz)): 79kcal | P:7.8g C:undefinedg F:4.85g
+      #6: Whole Milk Mozzarella Cheese [id=1261]
+          ≡ƒôè Serving (1 slice (1 oz)): 85kcal | P:6.29g C:undefinedg F:6.34g
+      #7: Part Skim Mozzarella Cheese [id=1262]
+          ≡ƒôè Serving (1 stick): 85kcal | P:7.27g C:undefinedg F:5.61g
+      #8: Mozzarella Cheese (Substitute) [id=33829]
+          ≡ƒôè Serving (1 cup shredded): 280kcal | P:12.96g C:undefinedg F:13.81g
+
+   ≡ƒö¼ FDC Results for "nonfat mozzarella cheese":
+      #1: Cheese, mozzarella, nonfat [fdcId=169051]
+          ≡ƒôè Per 100g: 141kcal | P:31.7g C:3.5g F:0g
+          Type: SR Legacy
+      #2: Cheese substitute, mozzarella [fdcId=172198]
+          ≡ƒôè Per 100g: 248kcal | P:11.5g C:23.7g F:12.2g
+          Type: SR Legacy
+      #3: Cheese, American, nonfat or fat free [fdcId=170863]
+          ≡ƒôè Per 100g: 126kcal | P:21g C:10.5g F:0g
+          Type: SR Legacy
+      #4: Cheese, cheddar, nonfat or fat free [fdcId=171295]
+          ≡ƒôè Per 100g: 157kcal | P:32.1g C:7.14g F:0g
+          Type: SR Legacy
+      #5: Cheese, Swiss, nonfat or fat free [fdcId=170897]
+          ≡ƒôè Per 100g: 127kcal | P:28.4g C:3.4g F:0g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "skim yogurt"
+
+   ≡ƒôª FatSecret Results for "skim yogurt":
+      #1: Plain Yogurt (Skim Milk) [id=33787]
+          ≡ƒôè Serving (100 g): 56kcal | P:5.73g C:undefinedg F:0.18g
+      #2: Skim Evaporated Milk [id=834]
+          ≡ƒôè Serving (1 cup): 100kcal | P:9.6g C:undefinedg F:0.24g
+      #3: Skim Chocolate Milk [id=890]
+          ≡ƒôè Serving (1 cup): 140kcal | P:8.55g C:undefinedg F:0.7g
+      #4: Yogurt [id=844]
+          ≡ƒôè Serving (100 g): 99kcal | P:3.98g C:undefinedg F:1.15g
+      #5: Coffee with Skim Milk [id=5238847]
+          ≡ƒôè Serving (1 coffee cup (6 fl oz)): 5kcal | P:0.34g C:undefinedg F:0.02g
+      #6: Soy Yogurt [id=3274]
+          ≡ƒôè Serving (100 g): 94kcal | P:3.5g C:undefinedg F:1.8g
+      #7: Plain Yogurt [id=845]
+          ≡ƒôè Serving (100 g): 63kcal | P:5.25g C:undefinedg F:1.55g
+      #8: Chocolate Yogurt [id=854]
+          ≡ƒôè Serving (1 6 oz container): 190kcal | P:6g C:undefinedg F:0g
+
+   ≡ƒö¼ FDC Results for "skim yogurt":
+      #1: Yogurt, plain, skim milk [fdcId=170887]
+          ≡ƒôè Per 100g: 56kcal | P:5.73g C:7.68g F:0.18g
+          Type: SR Legacy
+      #2: Cheese, mozzarella, part skim milk [fdcId=170847]
+          ≡ƒôè Per 100g: 254kcal | P:24.3g C:2.77g F:15.9g
+          Type: SR Legacy
+      #3: Cheese, ricotta, part skim milk [fdcId=171248]
+          ≡ƒôè Per 100g: 138kcal | P:11.4g C:5.14g F:7.91g
+          Type: SR Legacy
+      #4: Cheese, mozzarella, low moisture, part-skim [fdcId=329370]
+          ≡ƒôè Per 100g: 298kcal | P:23.7g C:4.44g F:20.4g
+          Type: Foundation
+      #5: Cheese, mozzarella, low moisture, part-skim [fdcId=171244]
+          ≡ƒôè Per 100g: 295kcal | P:23.8g C:5.58g F:19.8g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "evaporated skim milk"
+
+   ≡ƒôª FatSecret Results for "evaporated skim milk":
+      #1: Skim Evaporated Milk [id=834]
+          ≡ƒôè Serving (1 cup): 100kcal | P:9.6g C:undefinedg F:0.24g
+      #2: Skim Evaporated Milk (Undiluted) [id=836]
+          ≡ƒôè Serving (1 cup): 200kcal | P:19.33g C:undefinedg F:0.51g
+      #3: Skim Evaporated Milk (Diluted) [id=837]
+          ≡ƒôè Serving (1 cup): 100kcal | P:9.6g C:undefinedg F:0.24g
+      #4: Skim Evaporated Milk (Used in Coffee or Tea) [id=835]
+          ≡ƒôè Serving (1 cup): 200kcal | P:19.33g C:undefinedg F:0.51g
+      #5: Evaporated Milk [id=823]
+          ≡ƒôè Serving (1 cup): 168kcal | P:8.56g C:undefinedg F:9.52g
+      #6: Evaporated Milk (Undiluted) [id=825]
+          ≡ƒôè Serving (1 fl oz): 42kcal | P:2.15g C:undefinedg F:2.38g
+      #7: Evaporated Milk (Diluted) [id=826]
+          ≡ƒôè Serving (1 cup): 168kcal | P:8.56g C:undefinedg F:9.52g
+      #8: Whole Evaporated Milk [id=827]
+          ≡ƒôè Serving (1 fl oz): 21kcal | P:1.07g C:undefinedg F:1.19g
+
+   ≡ƒö¼ FDC Results for "evaporated skim milk":
+      #1: Milk, canned, evaporated, with added vitamin A [fdcId=172194]
+          ≡ƒôè Per 100g: 134kcal | P:6.81g C:10g F:7.56g
+          Type: SR Legacy
+      #2: Yogurt, plain, skim milk [fdcId=170887]
+          ≡ƒôè Per 100g: 56kcal | P:5.73g C:7.68g F:0.18g
+          Type: SR Legacy
+      #3: Cheese, mozzarella, part skim milk [fdcId=170847]
+          ≡ƒôè Per 100g: 254kcal | P:24.3g C:2.77g F:15.9g
+          Type: SR Legacy
+      #4: Cheese, ricotta, part skim milk [fdcId=171248]
+          ≡ƒôè Per 100g: 138kcal | P:11.4g C:5.14g F:7.91g
+          Type: SR Legacy
+      #5: Milk, canned, evaporated, nonfat, with added vitamin A and vitamin D [fdcId=170878]
+          ≡ƒôè Per 100g: 78kcal | P:7.55g C:11.4g F:0.2g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "sour cream"
+
+   ≡ƒôª FatSecret Results for "sour cream":
+      #1: Sour Cream [id=1097]
+          ≡ƒôè Serving (1 tbsp): 31kcal | P:0.46g C:undefinedg F:3.02g
+      #2: Sour Cream (Daisy) [id=70959]
+          ≡ƒôè Serving (2 tbsp): 60kcal | P:1g C:undefinedg F:5g
+      #3: Light Sour Cream (Daisy) [id=29381]
+          ≡ƒôè Serving (2 tbsp): 40kcal | P:2g C:undefinedg F:2.5g
+      #4: All Natural Sour Cream (Great Value) [id=233587]
+          ≡ƒôè Serving (2 tbsp): 60kcal | P:1g C:undefinedg F:5g
+      #5: Original Sour Cream (Kroger) [id=1979225]
+          ≡ƒôè Serving (2 tbsp): 60kcal | P:1g C:undefinedg F:6g
+      #6: Sour Cream (Friendly Farms) [id=94795]
+          ≡ƒôè Serving (2 tbsp): 60kcal | P:1g C:undefinedg F:5g
+      #7: All Natural Sour Cream (Breakstone's) [id=3398105]
+          ≡ƒôè Serving (2 tbsp): 60kcal | P:1g C:undefinedg F:5g
+      #8: Light Sour Cream [id=1100]
+          ≡ƒôè Serving (1 tbsp): 22kcal | P:0.56g C:undefinedg F:1.7g
+
+   ≡ƒö¼ FDC Results for "sour cream":
+      #1: Cream, sour, cultured [fdcId=171257]
+          ≡ƒôè Per 100g: 198kcal | P:2.44g C:4.63g F:19.4g
+          Type: SR Legacy
+      #2: Sour cream, light [fdcId=173443]
+          ≡ƒôè Per 100g: 136kcal | P:3.5g C:7.1g F:10.6g
+          Type: SR Legacy
+      #3: Cream, sour, full fat [fdcId=2346387]
+          ≡ƒôè Per 100g: 0kcal | P:3.07g C:5.56g F:18g
+          Type: Foundation
+      #4: Sour cream, fat free [fdcId=173444]
+          ≡ƒôè Per 100g: 74kcal | P:3.1g C:15.6g F:0g
+          Type: SR Legacy
+      #5: Sour cream, imitation, cultured [fdcId=170869]
+          ≡ƒôè Per 100g: 208kcal | P:2.4g C:6.63g F:19.5g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "cheddar cheese"
+
+   ≡ƒôª FatSecret Results for "cheddar cheese":
+      #1: Cheddar Cheese [id=33689]
+          ≡ƒôè Serving (1 slice (1 oz)): 113kcal | P:6.97g C:undefinedg F:9.28g
+      #2: Sharp Cheddar Cheese (Great Value) [id=59266]
+          ≡ƒôè Serving (1 oz): 110kcal | P:7g C:undefinedg F:9g
+      #3: Shredded Cheddar Cheese (Borden) [id=66537]
+          ≡ƒôè Serving (1/4 cup): 28kcal | P:1.75g C:undefinedg F:2.25g
+      #4: Deli Style Sliced Natural Cheddar Cheese (Sargento) [id=43824]
+          ≡ƒôè Serving (1 slice): 80kcal | P:5g C:undefinedg F:7g
+      #5: Medium Cheddar Cheese (Tillamook) [id=32838]
+          ≡ƒôè Serving (1 oz): 110kcal | P:6g C:undefinedg F:9g
+      #6: Finely Shredded Mild Cheddar Cheese (Kraft) [id=84680]
+          ≡ƒôè Serving (1/4 cup): 110kcal | P:6g C:undefinedg F:9g
+      #7: Extra Sharp Cheddar Cheese (Tillamook) [id=79488]
+          ≡ƒôè Serving (1 oz): 120kcal | P:6g C:undefinedg F:10g
+      #8: Medium Cheddar Cheese (Great Value) [id=427321]
+          ≡ƒôè Serving (1 oz): 110kcal | P:7g C:undefinedg F:9g
+
+   ≡ƒö¼ FDC Results for "cheddar cheese":
+      #1: Cheese, cheddar [fdcId=328637]
+          ≡ƒôè Per 100g: 408kcal | P:23.3g C:2.44g F:34g
+          Type: Foundation
+      #2: Cheese, american cheddar, imitation [fdcId=169901]
+          ≡ƒôè Per 100g: 239kcal | P:16.7g C:11.6g F:14g
+          Type: SR Legacy
+      #3: Cheese, cheddar, sharp, sliced [fdcId=170899]
+          ≡ƒôè Per 100g: 410kcal | P:24.2g C:2.13g F:33.8g
+          Type: SR Legacy
+      #4: Cheese, cheddar, nonfat or fat free [fdcId=171295]
+          ≡ƒôè Per 100g: 157kcal | P:32.1g C:7.14g F:0g
+          Type: SR Legacy
+      #5: Cheese, low fat, cheddar or colby [fdcId=173439]
+          ≡ƒôè Per 100g: 173kcal | P:24.4g C:1.91g F:7g
+          Type: SR Legacy
+
+======================================================================
+
+≡ƒÄ» Query: "monterey jack cheese"
+
+   ≡ƒôª FatSecret Results for "monterey jack cheese":
+      #1: Monterey Jack Cheese [id=440073]
+          ≡ƒôè Serving (1 slice (1 oz)): 106kcal | P:6.94g C:undefinedg F:8.58g
+      #2: Monterey Jack Cheese (Great Lakes Cheese) [id=2180285]
+          ≡ƒôè Serving (1 oz): 100kcal | P:7g C:undefinedg F:8g
+      #3: Monterey Jack Cheese (Great Value) [id=46210636]
+          ≡ƒôè Serving (1 oz): 100kcal | P:7g C:undefinedg F:8g
+      #4: Shredded Monterey Jack Cheese (Western Family) [id=4216633]
+          ≡ƒôè Serving (1/4 cup): 100kcal | P:7g C:undefinedg F:8g
+      #5: Monterey Jack Cheese (Tillamook) [id=197439]
+          ≡ƒôè Serving (1 slice): 80kcal | P:5g C:undefinedg F:7g
+      #6: Monterey Jack Cheese (Kroger) [id=128753]
+          ≡ƒôè Serving (1 oz): 100kcal | P:7g C:undefinedg F:8g
+      #7: Monterey Jack Cheese (Cabot) [id=77803]
+          ≡ƒôè Serving (1 oz): 110kcal | P:6g C:undefinedg F:8g
+      #8: Monterey Jack & Cheddar Shredded Cheese (Publix) [id=165650]
+          ≡ƒôè Serving (1/4 cup): 110kcal | P:6g C:undefinedg F:9g
+
+   ≡ƒö¼ FDC Results for "monterey jack cheese":
+      #1: Cheese, monterey jack, solid [fdcId=2647438]
+          ≡ƒôè Per 100g: 0kcal | P:22.6g C:1.9g F:32.6g
+          Type: Foundation
+      #2: Cheese, monterey [fdcId=170844]
+          ≡ƒôè Per 100g: 373kcal | P:24.5g C:0.68g F:30.3g
+          Type: SR Legacy
+      #3: Cheese, monterey, low fat [fdcId=168098]
+          ≡ƒôè Per 100g: 313kcal | P:28.2g C:0.7g F:21.6g
+          Type: SR Legacy
+      #4: Fish, mackerel, jack, canned, drained solids [fdcId=175121]
+          ≡ƒôè Per 100g: 156kcal | P:23.2g C:0g F:6.3g
+          Type: SR Legacy
+      #5: Fish, mackerel, Pacific and jack, mixed species, raw [fdcId=173672]
+          ≡ƒôè Per 100g: 158kcal | P:20.1g C:0g F:7.89g
+          Type: SR Legacy
+
+======================================================================
+
+Γ£à Analysis complete!
+

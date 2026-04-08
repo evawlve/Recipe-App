@@ -81,6 +81,22 @@
       "to": "light cream"
     },
     {
+      "from": "lean hamburger",
+      "to": "lean ground beef"
+    },
+    {
+      "from": "hamburger",
+      "to": "ground beef"
+    },
+    {
+      "from": "pie spice",
+      "to": "pumpkin pie spice"
+    },
+    {
+      "from": "mixed herbs",
+      "to": "italian seasoning"
+    },
+    {
       "from": "fl oz single cream",
       "to": "fl oz light cream"
     },
@@ -95,10 +111,6 @@
     {
       "from": "stberry",
       "to": "strawberries"
-    },
-    {
-      "from": "ground beef",
-      "to": "ground beef 85% lean"
     },
     {
       "from": "ice cubes",
@@ -358,8 +370,6 @@
       "from": "dry wine",
       "to": "dry white wine"
     },
-
-
     {
       "from": "chunk chicken breast",
       "to": "chicken breast"
@@ -408,10 +418,7 @@
       "from": "rice vinegar",
       "to": "plain rice vinegar"
     },
-    {
-      "from": "sour cream",
-      "to": "regular sour cream"
-    },
+
     {
       "from": "cooking spray",
       "to": "non-stick cooking spray"
@@ -436,7 +443,6 @@
       "from": "chicken halves",
       "to": "chicken half"
     },
-
     {
       "from": "corn syrup",
       "to": "light corn syrup"
@@ -448,10 +454,6 @@
     {
       "from": "chili powder",
       "to": "chili powder spice"
-    },
-    {
-      "from": "lean ground turkey",
-      "to": "raw ground turkey"
     },
     {
       "from": "onion powder",
@@ -499,7 +501,7 @@
     },
     {
       "from": "ground thyme",
-      "to": "dried thyme"
+      "to": "thyme powder"
     },
     {
       "from": "red pepper crushed",
@@ -560,6 +562,46 @@
     {
       "from": "lasagna",
       "to": "lasagna noodles"
+    },
+    {
+      "from": "spice blend mustard",
+      "to": "mustard powder"
+    },
+    {
+      "from": "cilantro seeds",
+      "to": "coriander seeds"
+    },
+    {
+      "from": "cilantro seed",
+      "to": "coriander seeds"
+    },
+    {
+      "from": "green beans",
+      "to": "green string beans"
+    },
+    {
+      "from": "green bean",
+      "to": "green string bean"
+    },
+    {
+      "from": "frozen peas and carrots",
+      "to": "frozen mixed vegetables"
+    },
+    {
+      "from": "peas and carrots",
+      "to": "mixed vegetables"
+    },
+    {
+      "from": "garlic salt",
+      "to": "salt"
+    },
+    {
+      "from": "peppers in adobo sauce",
+      "to": "chipotle peppers in adobo sauce"
+    },
+    {
+      "from": "omega blended cooking oil",
+      "to": "cooking oil"
     }
   ]
-}
+}

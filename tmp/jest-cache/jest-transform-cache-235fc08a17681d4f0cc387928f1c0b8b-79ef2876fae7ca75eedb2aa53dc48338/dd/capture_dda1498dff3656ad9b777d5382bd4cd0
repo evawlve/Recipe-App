@@ -1,0 +1,11 @@
+0dc6c32808c5e569faca9f608c4a5a59
+"use strict";
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from "@sentry/nextjs";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.capture = capture;
+function capture(err, context) {
+    // Sentry disabled - just log to console
+    console.error('Error captured:', err, context);
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiQzpcXERldlxcUmVjaXBlIEFwcFxcc3JjXFxsaWJcXG9ic1xcY2FwdHVyZS50cyIsIm1hcHBpbmdzIjoiO0FBQUEsb0RBQW9EO0FBQ3BELDRDQUE0Qzs7QUFFNUMsMEJBR0M7QUFIRCxTQUFnQixPQUFPLENBQUMsR0FBWSxFQUFFLE9BQTZCO0lBQ2pFLHdDQUF3QztJQUN4QyxPQUFPLENBQUMsS0FBSyxDQUFDLGlCQUFpQixFQUFFLEdBQUcsRUFBRSxPQUFPLENBQUMsQ0FBQztBQUNqRCxDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIkM6XFxEZXZcXFJlY2lwZSBBcHBcXHNyY1xcbGliXFxvYnNcXGNhcHR1cmUudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLy8gU2VudHJ5IGRpc2FibGVkIC0gY2FuIGJlIHJlLWVuYWJsZWQgaW4gdGhlIGZ1dHVyZVxuLy8gaW1wb3J0ICogYXMgU2VudHJ5IGZyb20gXCJAc2VudHJ5L25leHRqc1wiO1xuXG5leHBvcnQgZnVuY3Rpb24gY2FwdHVyZShlcnI6IHVua25vd24sIGNvbnRleHQ/OiBSZWNvcmQ8c3RyaW5nLCBhbnk+KSB7XG4gIC8vIFNlbnRyeSBkaXNhYmxlZCAtIGp1c3QgbG9nIHRvIGNvbnNvbGVcbiAgY29uc29sZS5lcnJvcignRXJyb3IgY2FwdHVyZWQ6JywgZXJyLCBjb250ZXh0KTtcbn1cblxuXG4iXSwidmVyc2lvbiI6M30=

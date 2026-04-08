@@ -71,6 +71,8 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'strip': 'strip', 'strips': 'strip', // For bell peppers, bacon
     'spray': 'spray', 'sprays': 'spray', // For cooking spray, oil sprays
     'squirt': 'squirt', 'squirts': 'squirt',
+    'breast': 'breast', 'breasts': 'breast', // For chicken breast
+    'thigh': 'thigh', 'thighs': 'thigh', // For chicken thigh
   };
 
   if (countUnits[token]) {

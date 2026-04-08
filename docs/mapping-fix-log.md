@@ -905,3 +905,118 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 | 73 | Filter | Nutmeg -> Root Beer semantic inversion blocked |
 | 74 | Filter | Corn -> Kettle Corn calorie bloat blocked |
 | 75 | Filter | Lasagna -> Lasagna Entree category mismatch fixed |
+
+---
+
+## 2026-04-03: Anomaly Resolution Session (Pre-500 Pilot Part 2)
+
+**Source**: Audit logs for weight bloat and semantic anomalies.
+**Files**: src/lib/fatsecret/normalization-rules.ts, src/lib/fatsecret/map-ingredient-with-fallback.ts
+
+### Fix 76: Semantic Inversion for Spices (Thyme, Mustard)
+| Field | Detail |
+|-------|--------|
+| Issue | "ground thyme" ? fresh thyme (massive caloric undervaluation); "spice blend mustard" ? unmapped |
+| Fix | Added exact synonym overrides: ground thyme ? dried thyme powder and spice blend mustard ? mustard powder. |
+
+### Fix 77: FDC Sub-Piece Parsing Bloat (Herb Bunches)
+| Field | Detail |
+|-------|--------|
+| Issue | "5 mint 1 bunch" ? 500g (AI fallback guessed 1 piece = 100g) because FDC pipeline bypassed heuristics. |
+| Fix | Re-wired FDC mapping block to parse trailing units (unch/head/stalk) and injected UNIT_HEURISTIC_DEFAULTS directly into uildFdcResult. "5 mint 1 bunch" is now accurately 150g (30g per bunch). |
+
+### Fix 78: Bare Query Fallback Enforcement
+| Field | Detail |
+|-------|--------|
+| Issue | "Pancake Mix" ? resolved to massive box sizes due to poisoned cache bypassing unitless heuristics. |
+| Fix | Confirmed heuristic actively functions; selectively cleared poisoned generic queries from cache to ensure 39g serving size triggers correctly. |
+
+### Fix 79: Cooking Spray Fixes
+| Field | Detail |
+|-------|--------|
+| Issue | 4 sprays cooking spray ? 400g can. |
+| Fix | UNIT_HEURISTIC_DEFAULTS handles spray as  .25g. "4 sprays" now yields 1g. |
+
+### Change Index (Fixes 76-79)
+| # | Category | Description |
+|---|----------|-------------|
+| 76 | Synonym | Added overrides for ground thyme and spice blend mustard |
+| 77 | Parser & FDC | Intercepted FDC unitless queries with UNIT_HEURISTIC_DEFAULTS to catch parser trailing units |
+| 78 | Cache Mgt | Cleared bare queries from ValidatedMapping |
+| 79 | Heuristic | Applied spray heuristic universally |
+
+---
+
+## 2026-04-05: Anomaly Resolution Session (Pre-500 Pilot Part 3)
+
+**Source**: Final hardening checks prior to 500-recipe pilot import.
+**Files**: src/lib/fatsecret/map-ingredient-with-fallback.ts, scripts/clear-ingredient-cache.ts
+
+### Fix 80: Unitless Discrete Produce Parsing Bug (e.g. Eggs)
+| Field | Detail |
+|-------|--------|
+| Issue | "1 extra egg" → fell back to 1g default weight instead of discrete weight. |
+| Root Cause | The `selectServing` function assigned `null` unit instead of the discrete `"piece"` when the parser returned `null` for `unit` but `isDiscreteItem` was true. This bypassed the count-based serving backfill system later in the pipeline. |
+| Fix | Updated `selectServing` to assign `'piece'` if `isDiscreteItem(ingredientName)` is true and `unit` is null. |
+
+### Fix 81: Canned Corn -> Sweet Corn context rewrite
+| Field | Detail |
+|-------|--------|
+| Issue | "1 can yellow corn" → mapped to "yellow corn grain" (raw dried grain at ~1400 kcal per can). |
+| Root Cause | "canned" modifier is often stripped in parsing. The FDC preferred "yellow corn grain" over canned sweet corn. |
+| Fix | Added context-dependent rewrite rule: if `parsed?.unit === 'can'` or `"canned"` is in raw string, rewrite "corn" to "sweet corn". "1 can yellow corn" → maps to "Yellow Sweet Corn" (~350-400 kcal/can). |
+
+### Fix 82: Early Cache skipCache Flag Ignoral
+| Field | Detail |
+|-------|--------|
+| Issue | The `earlyCacheHit` block at line 496 did not respect the `options.skipCache: true` argument. Fixing pipeline rules didn't affect cached results in the local debug script. |
+| Root Cause | The argument was missing from the check: `const earlyCacheHit = await getValidatedMappingByNormalizedName()`. |
+| Fix | Replaced with `const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName()`. |
+
+### Change Index (Fixes 80-82)
+| # | Category | Description |
+|---|----------|-------------|
+| 80 | Serving | Discrete items with null unit now default to "piece" unit. |
+| 81 | Synonym | "corn" with "can" unit context mapped to "sweet corn". |
+| 82 | Cache | Local debugging tool fixes bypasses local cache correctly. |
+
+
+
+---
+
+## 2026-04-07: Phase 3 Pipeline Hardening
+
+**Source**: 500-recipe pilot import summary review.
+**Files**: src/lib/fatsecret/map-ingredient-with-fallback.ts, src/lib/ai/ambiguous-serving-estimator.ts, data/fatsecret/normalization-rules.json
+
+### Fix 83: 404 Outage on FatSecret / OpenRouter Model Fallback
+| Field | Detail |
+|-------|--------|
+| Issue | The pipeline halted due to 404 errors streaming consistently from OpenRouter API. |
+| Fix | Updated .env directly to default to mistralai/mistral-nemo to restore AI generation capabilities natively to the pipeline. |
+
+### Fix 84: High-Count Leafy Greens Inflation (Lettuce & Cabbages)
+| Field | Detail |
+|-------|--------|
+| Issue | 8 lettuce mapped to 4000g (~500kcal) because 8 pieces assumes 8 whole heads of lettuce. |
+| Fix | Established getDiscreteLeafyGreenDefault() in ambiguous-serving-estimator.ts to assign leafy greens 10g weights automatically when the query is high-count and unitless. |
+
+### Fix 85: Late-Binding Macro Constraint Validation (MAJOR)
+| Field | Detail |
+|-------|--------|
+| Issue | 8 oz parmesan cheese fat free successfully mapped to Fat Free Parmesan Cheese Topping but allowed 11.5g of fat through the pipeline. |
+| Fix | Recreated hasCriticalModifierMismatch evaluation directly inside hydrateAndSelectServing. Once hydration computes accurate grams/macros, the pipeline immediately runs a calculated post-check. If >2g of fat is verified for a fat-free query, the candidate is definitively bounced back via null wrapper to the AI Fallback Estimator. |
+
+### Fix 86: Expanded Synonym Substitutions
+| Field | Detail |
+|-------|--------|
+| Issue | peppers in adobo sauce mapped poorly. |
+| Fix | Added dictionary rewrite vectors in normalization-rules.json: omega blended cooking oil -> cooking oil, peppers in adobo sauce -> chipotle peppers in adobo sauce, garlic salt -> salt. |
+
+### Change Index (Fixes 83-86)
+| # | Category | Description |
+|---|----------|-------------|
+| 83 | API Config | Replaced unavailable AI models with Mistral Nemo. |
+| 84 | Pipeline | Blocked leafy green weight-bloat via unitless inflation overrides. |
+| 85 | Logic Flow | Initiated late-binding macro verification on all API candidates post-hydration. |
+| 86 | Synonyms | Expanded dictionary entries for adobo and oils. |

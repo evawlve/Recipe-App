@@ -55,7 +55,7 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'banana': { grams: 118, confidence: 0.95, sizes: { small: 81, medium: 118, large: 136 }, aliases: ['bananas'] },
     'orange': { grams: 131, confidence: 0.9, sizes: { small: 96, medium: 131, large: 184 }, aliases: ['oranges'] },
     'lemon': { grams: 58, confidence: 0.85, aliases: ['lemons'] },
-    'lime': { grams: 67, confidence: 0.85, aliases: ['limes'] },
+    'lime': { grams: 67, confidence: 0.85, aliases: ['limes', 'lime juice'] },
     'avocado': { grams: 201, confidence: 0.9, sizes: { small: 136, medium: 201, large: 304 }, aliases: ['avocados'] },
     'peach': { grams: 150, confidence: 0.85, sizes: { small: 130, medium: 150, large: 175 }, aliases: ['peaches'] },
     'pear': { grams: 178, confidence: 0.85, sizes: { small: 148, medium: 178, large: 209 }, aliases: ['pears'] },
@@ -74,10 +74,16 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'cherry tomato': { grams: 17, confidence: 0.85, sizes: { small: 12, medium: 17, large: 22 }, aliases: ['cherry tomatoes'] },
     'onion': { grams: 150, confidence: 0.85, sizes: { small: 70, medium: 150, large: 225 }, aliases: ['onions'] },
     'carrot': { grams: 72, confidence: 0.85, sizes: { small: 50, medium: 72, large: 85 }, aliases: ['carrots'] },
+    'baby carrot': { grams: 10, confidence: 0.85, aliases: ['baby carrots', 'baby cut carrots', 'baby-cut carrots'] },
     'celery stalk': { grams: 40, confidence: 0.85, aliases: ['celery stalks', 'celery'] },
     'cucumber': { grams: 301, confidence: 0.85, aliases: ['cucumbers'] },
     'persian cucumber': { grams: 60, confidence: 0.85, sizes: { small: 40, medium: 60, large: 90 }, aliases: ['persian cucumbers', 'mini cucumber', 'mini cucumbers', 'baby cucumber', 'baby cucumbers'] },
     'bell pepper': { grams: 164, confidence: 0.85, sizes: { small: 119, medium: 164, large: 186 }, aliases: ['bell peppers', 'pepper', 'peppers'] },
+    'poblano pepper': { grams: 65, confidence: 0.85, aliases: ['poblano peppers', 'poblano'] },
+    'anaheim pepper': { grams: 45, confidence: 0.85, aliases: ['anaheim peppers', 'anaheim chili', 'anaheim chile'] },
+    'leek': { grams: 89, confidence: 0.85, aliases: ['leeks'] },
+    'lettuce leaf': { grams: 15, confidence: 0.85, aliases: ['lettuce leaves'] },
+    'lettuce head': { grams: 500, confidence: 0.85, aliases: ['lettuce', 'lettuce heads'] },
     'garlic clove': { grams: 3, confidence: 0.9, aliases: ['garlic cloves', 'clove garlic'] },
     'mushroom': { grams: 18, confidence: 0.8, aliases: ['mushrooms'] },
     'zucchini': { grams: 196, confidence: 0.85, sizes: { small: 118, medium: 196, large: 323 }, aliases: ['zucchinis', 'courgette'] },
@@ -88,6 +94,12 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'scallion': { grams: 15, confidence: 0.9, sizes: { small: 10, medium: 15, large: 25 }, aliases: ['scallions'] },
     'green onion': { grams: 15, confidence: 0.9, sizes: { small: 10, medium: 15, large: 25 }, aliases: ['green onions'] },
     'spring onion': { grams: 15, confidence: 0.9, sizes: { small: 10, medium: 15, large: 25 }, aliases: ['spring onions'] },
+    'mint': { grams: 30, confidence: 0.85, aliases: ['fresh mint', 'mint bunch'] },
+    'cilantro': { grams: 30, confidence: 0.85, aliases: ['fresh cilantro', 'cilantro bunch'] },
+    'parsley': { grams: 30, confidence: 0.85, aliases: ['fresh parsley', 'parsley bunch'] },
+    'basil': { grams: 30, confidence: 0.85, aliases: ['fresh basil', 'basil bunch'] },
+    'thyme': { grams: 15, confidence: 0.85, aliases: ['fresh thyme', 'thyme bunch'] },
+    'rosemary': { grams: 15, confidence: 0.85, aliases: ['fresh rosemary', 'rosemary bunch'] },
 
     // ===== BREAD & BAKED GOODS =====
     'bread slice': { grams: 30, confidence: 0.85, aliases: ['slice bread', 'bread'] },
@@ -98,6 +110,7 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'pancake': { grams: 38, confidence: 0.75, aliases: ['pancakes', 'hotcake'] },
     'waffle': { grams: 75, confidence: 0.8, aliases: ['waffles'] },
     'muffin': { grams: 113, confidence: 0.75, sizes: { small: 66, medium: 113, large: 139 }, aliases: ['muffins'] },
+    'wonton wrapper': { grams: 7, confidence: 0.85, aliases: ['wonton wrappers', 'wonton skin', 'wonton skins', 'wonton wrap'] },
 
     // ===== DAIRY & CHEESE =====
     'cheese slice': { grams: 21, confidence: 0.85, aliases: ['slice cheese', 'american cheese slice', 'mozzarella slice', 'slice mozzarella', 'provolone slice', 'slice provolone'] },
@@ -105,7 +118,7 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
 
     // ===== MEAT & PROTEIN =====
     'ham slice': { grams: 25, confidence: 0.85, aliases: ['slice ham', 'deli ham slice', 'sliced ham'] },
-    'chicken breast': { grams: 174, confidence: 0.85, sizes: { small: 140, medium: 174, large: 225 }, aliases: ['chicken breasts'] },
+    'chicken breast': { grams: 174, confidence: 0.85, sizes: { small: 140, medium: 174, large: 225 }, aliases: ['chicken breasts', 'breast', 'breasts'] },
     'chicken thigh': { grams: 116, confidence: 0.85, aliases: ['chicken thighs'] },
     'chicken wing': { grams: 34, confidence: 0.85, aliases: ['chicken wings', 'wing'] },
     'bacon strip': { grams: 12, confidence: 0.85, aliases: ['bacon strips', 'strip bacon', 'bacon slice'] },
@@ -128,8 +141,15 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
         'sweetener', 'splenda', 'sucralose', 'stevia packet', 'aspartame packet',
     ] },
     'ketchup packet': { grams: 9, confidence: 0.85, aliases: ['packet ketchup'] },
+    'mustard packet': { grams: 5, confidence: 0.85, aliases: ['packet mustard', 'mustard'] },
     'mayonnaise packet': { grams: 12, confidence: 0.85, aliases: ['mayo packet', 'packet mayo'] },
     'butter pat': { grams: 5, confidence: 0.9, aliases: ['pat butter', 'pat of butter'] },
+
+    // ===== PANTRY DEFAULTS (High Frequency) =====
+    'garlic salt teaspoon': { grams: 6, confidence: 0.95, aliases: ['tsp garlic salt', 'garlic salt tsp'] },
+    'garlic salt tbsp': { grams: 18, confidence: 0.95, aliases: ['tablespoon garlic salt', 'garlic salt tablespoon'] },
+    'omega blended cooking oil tablespoon': { grams: 14, confidence: 0.95, aliases: ['tbsp omega blended cooking oil', 'omega blended cooking oil tbsp', 'omega blended cooking oil tablespoon'] },
+    'omega blended cooking oil teaspoon': { grams: 4.7, confidence: 0.95, aliases: ['tsp omega blended cooking oil', 'omega blended cooking oil tsp', 'omega blended cooking oil teaspoon'] },
 
     // ===== STOCK & BOUILLON =====
     'bouillon cube': { grams: 4, confidence: 0.9, aliases: ['stock cube', 'broth cube', 'bullion cube'] },
@@ -138,6 +158,7 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'cookie': { grams: 30, confidence: 0.7, sizes: { small: 15, medium: 30, large: 45 }, aliases: ['cookies'] },
     'cracker': { grams: 4, confidence: 0.75, aliases: ['crackers'] },
     'olive': { grams: 4, confidence: 0.8, sizes: { small: 3, medium: 4, large: 5 }, aliases: ['olives'] },
+    'kalamata olive': { grams: 4, confidence: 0.8, sizes: { small: 3, medium: 4, large: 5 }, aliases: ['kalamata olives', 'kalamata'] },
     'pickle': { grams: 35, confidence: 0.75, aliases: ['pickles'] },
     'ice cube': { grams: 30, confidence: 0.85, aliases: ['ice cubes', 'ice'] },
     'spray': { grams: 0.25, confidence: 0.9, aliases: ['sprays', 'squirt', 'squirts'] },
@@ -194,9 +215,10 @@ export function getDefaultCountServing(
     }
 
     const nameLower = foodName.toLowerCase().trim();
+    const unitLower = (unit || '').toLowerCase().trim();
 
-    // Find the canonical key
-    let canonicalKey = ALIAS_MAP.get(nameLower);
+    // Find the canonical key using combined name + unit first (for specific unit overrides like "garlic salt tbsp")
+    let canonicalKey = ALIAS_MAP.get(`${nameLower} ${unitLower}`) || ALIAS_MAP.get(nameLower);
 
     // If not found directly, try partial matching
     // IMPORTANT: Try LONGER matches first! "organic grape tomatoes" should match
@@ -216,6 +238,11 @@ export function getDefaultCountServing(
             const lastWord = words[words.length - 1];
             canonicalKey = ALIAS_MAP.get(lastWord);
         }
+    }
+
+    // If no match found by food name, check if the unit itself has a default (e.g., 'spray', 'second')
+    if (!canonicalKey && unit) {
+        canonicalKey = ALIAS_MAP.get(unit.toLowerCase().trim());
     }
 
     if (!canonicalKey) return null;
@@ -281,6 +308,10 @@ const SUB_PIECE_FRACTIONS: Record<string, number> = {
     'strips': 0.03,
     'segment': 0.08,  // ~1/12 of whole (orange segment ~11g)
     'segments': 0.08,
+    'sprig': 0.1,     // ~1/10 of bunch for herbs
+    'sprigs': 0.1,
+    'leaf': 0.02,     // ~1/50 of bunch for herbs
+    'leaves': 0.02,
 };
 
 /**

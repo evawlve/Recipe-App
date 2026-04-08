@@ -47,11 +47,6 @@ export async function getOrCreateAmbiguousServing(
 ): Promise<AmbiguousBackfillResult> {
     const normalizedUnit = unit.toLowerCase().trim();
 
-    // Check if this is actually an ambiguous unit
-    if (!isAmbiguousUnit(normalizedUnit)) {
-        return { status: 'error', error: `"${unit}" is not an ambiguous unit` };
-    }
-
     // Attempt deterministic sub-piece lookup first (e.g. "strip", "chunk")
     // This prevents expensive AI estimation for common fractions
     try {
@@ -73,6 +68,37 @@ export async function getOrCreateAmbiguousServing(
         }
     } catch (e) {
         // Ignore errors and fall through to cache/AI
+    }
+
+    // Try primary deterministic count default (e.g. spray = 0.25g)
+    try {
+        const { getDefaultCountServing } = await import('../servings/default-count-grams');
+        const sizeFromUnit = normalizedUnit as 'small' | 'medium' | 'large';
+        const isSize = ['small', 'medium', 'large'].includes(sizeFromUnit);
+        const countDefault = getDefaultCountServing(
+            foodName,
+            normalizedUnit,
+            isSize ? sizeFromUnit : undefined
+        );
+        if (countDefault) {
+            logger.debug('ambiguous_backfill.count_deterministic', {
+                foodId,
+                unit: normalizedUnit,
+                grams: countDefault.grams,
+            });
+            return {
+                status: 'success',
+                grams: countDefault.grams,
+                confidence: countDefault.confidence,
+            };
+        }
+    } catch (e) {
+        // Ignore errors
+    }
+
+    // Check if this is actually an ambiguous unit - reject if not and no deterministic default exists
+    if (!isAmbiguousUnit(normalizedUnit)) {
+        return { status: 'error', error: `"${unit}" is not an ambiguous unit` };
     }
 
     // Check for existing cached estimate in FatSecretServingCache

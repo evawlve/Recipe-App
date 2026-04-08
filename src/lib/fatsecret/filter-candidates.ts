@@ -964,6 +964,43 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         excludeIfContains: ['blend', 'medley', 'mixed vegetables', 'garden blend', 'frozen blend',
             'stir fry mix', 'vegetable mix']
     },
+    // === Audit Fix: Green beans should NOT match Ranch Style or chili/pinto beans ===
+    // "green beans" → fresh/canned green beans, NOT "Ranch Style Beans (ConAgra)"
+    {
+        query: ['green beans', 'green bean', 'green string beans', 'green string bean',
+            'french green beans', 'haricots verts'],
+        excludeIfContains: ['ranch style', 'pinto', 'chili', 'refried', 'baked beans',
+            'kidney', 'black bean', 'navy', 'lima', 'cannellini']
+    },
+    // === Audit Fix: Butter (dairy) should NOT match nut butters ===
+    // "butter" → dairy butter, NOT "Peanut Butter" or "Almond Butter"
+    {
+        query: ['butter', 'light butter', 'salted butter', 'unsalted butter'],
+        excludeIfContains: ['peanut butter', 'almond butter', 'cashew butter', 'sunflower butter',
+            'cookie butter', 'apple butter', 'cocoa butter', 'shea butter', 'body butter'],
+        skipIfQueryContains: ['peanut', 'almond', 'cashew', 'sunflower', 'cookie', 'apple', 'cocoa']
+    },
+    // === Audit Fix: Okra should NOT match CookOut branded fried products ===
+    // "okra" → raw/frozen okra, NOT "Fried Okra (CookOut)"
+    {
+        query: ['okra', 'fresh okra', 'frozen okra'],
+        excludeIfContains: ['cookout', 'cook out', 'cook-out', 'fried okra'],
+        skipIfQueryContains: ['fried']
+    },
+    // === Audit Fix: Herbs should NOT match crackers or snack products ===
+    // "herbs" or "mixed herbs" → dried herbs/seasoning, NOT "Herb Crackers"
+    {
+        query: ['herbs', 'herb', 'mixed herbs', 'herb blend', 'dried herbs', 'fresh herbs'],
+        excludeIfContains: ['cracker', 'crackers', 'chip', 'chips', 'snack', 'pretzel',
+            'saltine', 'rice cake']
+    },
+    // === Audit Fix: Lentils should NOT match ARUJ brand (corrupted 0g protein data) ===
+    // Standard cooked lentils have ~9g protein/100g; ARUJ reports 0g
+    {
+        query: ['lentils', 'lentil', 'red lentils', 'brown lentils', 'green lentils',
+            'yellow lentils', 'french lentils'],
+        excludeIfContains: ['aruj']
+    },
 ];
 
 
@@ -2088,7 +2125,8 @@ const CALORIE_MODIFIERS = ['low calorie', 'low-calorie', 'diet', 'zero calorie',
 export function hasCriticalModifierMismatch(
     query: string,
     candidateName: string,
-    source: 'fatsecret' | 'fdc' | 'cache'
+    source: 'fatsecret' | 'fdc' | 'cache',
+    nutrition?: { fat: number, per100g: boolean }
 ): boolean {
     const queryLower = query.toLowerCase();
     const candLower = candidateName.toLowerCase();
@@ -2103,24 +2141,33 @@ export function hasCriticalModifierMismatch(
     }
 
     // Check low-fat modifiers - TIERED approach:
-    // - STRICT: nonfat, fat-free, fat free → candidate MUST have nonfat/fat-free (not just light)
+    // - STRICT: nonfat, fat-free, fat free, skim → candidate MUST have <=2g fat/100g OR nonfat/fat-free in name
     // - LENIENT: low-fat, reduced fat, light, lite → candidate can have any low-fat modifier
 
-    const STRICT_NONFAT = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'extra light', 'extra-light'];
-    const NONFAT_CANDIDATES = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'fat not added', '0% fat', 'zero fat'];
+    const STRICT_NONFAT = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'extra light', 'extra-light', 'skim'];
+    const NONFAT_CANDIDATES = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'fat not added', '0% fat', 'zero fat', 'skim'];
 
     const queryHasStrictNonfat = STRICT_NONFAT.some(m => queryLower.includes(m));
     const candHasNonfat = NONFAT_CANDIDATES.some(m => candLower.includes(m));
 
     if (queryHasStrictNonfat) {
-        // Query asks for nonfat/fat-free - REQUIRE nonfat/fat-free in candidate
-        // "Light Italian Dressing" does NOT satisfy "nonfat Italian dressing"
-        // EXCEPTION: Substitute/replacer products (e.g., "Egg Substitute", "Egg Beaters")
-        // are inherently fat-free even without "fat free" in the name
-        const REPLACER_EXEMPTION_TERMS = ['substitute', 'substitution', 'replacer', 'replacement'];
-        const candIsReplacer = REPLACER_EXEMPTION_TERMS.some(term => candLower.includes(term));
-        if (!candHasNonfat && !candIsReplacer) {
-            return true; // Reject - candidate doesn't meet strict nonfat requirement
+        // If we have nutrition data, use macro verification (fat <= 2g per 100g)
+        if (nutrition && nutrition.per100g && typeof nutrition.fat === 'number') {
+            console.log(`[DEBUG] hasCriticalModifierMismatch: Evaluating ${candidateName}. nutrition.fat=${nutrition.fat}`);
+            if (nutrition.fat > 2) {
+                console.log(`[DEBUG] hasCriticalModifierMismatch: REJECTED ${candidateName}`);
+                return true; // Reject: has too much fat for a nonfat request
+            }
+            // If fat <= 2g, it passes the nonfat requirement even without the word in the name
+        } else {
+            console.log(`[DEBUG] hasCriticalModifierMismatch: No valid nutrition for ${candidateName}. Proceeding to name check.`);
+            // Fallback to name-based check if nutrition is missing
+            const REPLACER_EXEMPTION_TERMS = ['substitute', 'substitution', 'replacer', 'replacement'];
+            const candIsReplacer = REPLACER_EXEMPTION_TERMS.some(term => candLower.includes(term));
+            
+            if (!candHasNonfat && !candIsReplacer) {
+                return true; // Reject - candidate doesn't meet strict nonfat requirement in name
+            }
         }
     }
 
@@ -2300,7 +2347,7 @@ export function filterCandidatesByTokens(
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
         // Does NOT block minor preferences like unsweetened, organic (handled by scoring)
         // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods
-        if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source)) {
+        if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition)) {
             if (debug) {
                 logger.info('filter.candidates.critical_modifier_mismatch', {
                     query: rawLine,
