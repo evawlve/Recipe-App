@@ -154,9 +154,10 @@ const SYSTEM_PROMPT = [
     '- All values must be per 100g of the RAW/UNCOOKED form unless the food is always consumed cooked (e.g., bread, pasta).',
     '- Use realistic values based on known foods. Do NOT make up unrealistic numbers.',
     '- Calories should approximately follow the Atwater equation: calories ≈ protein*4 + carbs*4 + fat*9.',
-    '- If the food is a dietary variant (fat-free, sugar-free, gluten-free), adjust macros accordingly from the base food.',
-    '- Confidence should be 0.9+ for well-known generic foods, 0.6-0.8 for variants/brands, <0.6 for obscure items.',
+    '- If the food is a dietary variant (fat-free, low-fat, reduced-fat, skim, light, lite, sugar-free), you MUST dramatically adjust macros accordingly from the base food. Example: For low-fat/fat-free, fatPer100g MUST be strictly reduced.',
     '- For serving size estimates, use standard US measuring cups (240ml) and tablespoons (15ml).',
+    '- If the food is a commonly counted discrete item (e.g., pepper, cracker, slice, clove, berry), you MUST provide a realistic gramsPerPiece estimate.',
+    '- Confidence should be 0.9+ for well-known generic foods, 0.6-0.8 for variants/brands, <0.6 for obscure items.',
 ].join('\n');
 
 // ============================================================

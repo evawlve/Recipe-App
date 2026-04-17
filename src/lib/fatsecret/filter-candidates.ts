@@ -2087,11 +2087,26 @@ function hasUnwantedModifier(normalizedName: string, candidateName: string): boo
     // If both have modifiers, check if they're compatible
     // e.g., "lowfat milk" should not match "nonfat milk" or "whole milk"
     if (queryMods.hasMod && candidateMods.hasMod) {
-        // Check if at least one of the query modifiers is present in candidate
+        // Define equivalence classes for modifiers
+        const MODIFIER_EQUIVALENCE = [
+            // Low fat group
+            ['lowfat', 'low-fat', 'low fat', 'reduced fat', 'reduced-fat', 'lite', 'light', 'part-skim', 'part skim'],
+            // Nonfat group
+            ['nonfat', 'non-fat', 'fat free', 'fat-free', 'skim'],
+            // Sugar free group
+            ['sugar free', 'sugar-free', 'no sugar', 'no added sugar', 'unsweetened'],
+            // Low calorie group
+            ['low calorie', 'low-calorie', 'diet', 'zero calorie', 'calorie free', 'calorie-free']
+        ];
+
+        const areModifiersEquivalent = (mod1: string, mod2: string) => {
+            if (mod1 === mod2 || mod1.includes(mod2) || mod2.includes(mod1)) return true;
+            return MODIFIER_EQUIVALENCE.some(group => group.includes(mod1) && group.includes(mod2));
+        };
+
+        // Check if at least one of the query modifiers is present in candidate (or equivalent)
         const hasMatchingMod = queryMods.modifiers.some(qMod =>
-            candidateMods.modifiers.some(cMod =>
-                qMod === cMod || cMod.includes(qMod) || qMod.includes(cMod)
-            )
+            candidateMods.modifiers.some(cMod => areModifiersEquivalent(qMod, cMod))
         );
         if (!hasMatchingMod) {
             return true;

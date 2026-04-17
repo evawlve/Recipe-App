@@ -1020,3 +1020,69 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 | 84 | Pipeline | Blocked leafy green weight-bloat via unitless inflation overrides. |
 | 85 | Logic Flow | Initiated late-binding macro verification on all API candidates post-hydration. |
 | 86 | Synonyms | Expanded dictionary entries for adobo and oils. |
+
+---
+
+## 2026-04-14: Phase 4 Pipeline Hardening (Audit Anomalies)
+
+**Source**: 500-recipe pilot import summary review.
+**Files**: `src/lib/fatsecret/filter-candidates.ts`, `src/lib/servings/default-count-grams.ts`, `data/fatsecret/normalization-rules.json`
+
+### Fix 87: Reverted Semantic Inversions in Synonyms
+| Field | Detail |
+|-------|--------|
+| Issue | `"garlic salt"` was stripped down to `"salt"` resulting in loss of caloric/nutritional integrity and rejecting proper garlic products. `"omega blended cooking oil"` dropped core properties. |
+| Fix | Removed `garlic salt -> salt` and `omega blended cooking oil -> cooking oil` from `normalization-rules.json`. The AI fallback is better equipped to handle these natively than a brute-force strip. |
+
+### Fix 88: Fat Modifier Equivalence Fix
+| Field | Detail |
+|-------|--------|
+| Issue | Query `"1 cup garlic and herb cream cheese low fat"` mapped to `"Light Herb Garlic Cream Cheese"` but emitted `[UNWANTED_FAT_MOD]` and `[MISSING_FAT_MOD]` because "low fat" did not mathematically equal "light". |
+| Fix | Replaced string-matching in `hasUnwantedModifier` with `MODIFIER_EQUIVALENCE` logical groups to ensure `light`, `lite`, `reduced-fat` and `lowfat` are treated as valid equivalents. |
+
+### Fix 89: Chicken Skin missing context Count weights
+| Field | Detail |
+|-------|--------|
+| Issue | `"16 small chicken leg skin eaten"` resulted in >7000kcal because "skin" fell back to massive 100g chunk assumptions. |
+| Fix | Explicitly added `chicken skin` to `default-count-grams.ts` at 15g to avoid 100g weight bloat. |
+
+### Fix 90: Lettuce Head vs Leaf Defaults
+| Field | Detail |
+|-------|--------|
+| Issue | `"8 lettuce"` mapped to 8 full heads (4000g). |
+| Fix | Changed `lettuce` base alias in `default-count-grams.ts` to map to `lettuce leaf` (15g). `lettuce heads` remains explicitly at 500g. |
+
+### Change Index (Fixes 87-90)
+| # | Category | Description |
+|---|----------|-------------|
+| 87 | Synonyms | Removed overly aggressive rewrites for semantic integrity |
+| 88 | Filters | Implemented MODIFIER_EQUIVALENCE arrays for fat descriptors in hasUnwantedModifier |
+| 89 | Data | Added discrete chicken skin fallback weights |
+| 90 | Data | Pointed bare lettuce discrete count fallback to leaves to prevent unitless bloat |
+
+---
+
+## 2026-04-17: Phase 5 AI Fallback Hardening (Audit Anomalies)
+
+**Source**: `logs/grouped-mapping-summary-2026-04-16T07-11-38.txt` - Pilot batch manual chunk review.
+**File**: `src/lib/fatsecret/ai-nutrition-backfill.ts`
+
+### Fix 91: Explicit Fat Modifier Constraints in AI Fallback
+| Field | Detail |
+|-------|--------|
+| Issue | `"Low Fat Milk"` generated an AI backfill reporting 3.8g fat per 100g (whole milk macros) because the LLM prompt did not explicitly instruct drastic reduction for fat descriptors. |
+| Fix | Updated `SYSTEM_PROMPT` in `ai-nutrition-backfill.ts` to strictly demand dramatic macro reduction for dietary variants (`low-fat`, `light`, `skim`, etc.). |
+| Result | Verified low fat requests accurately shrink the `fatPer100g` from the FDC base food. |
+
+### Fix 92: Extreme Validation Bloat on Discrete Count Fallbacks
+| Field | Detail |
+|-------|--------|
+| Issue | `"3 peppers in adobo sauce"` failed cache, went to AI fallback, and returned `null` for `gramsPerPiece`. The fail-safe assigned it 100g per pepper, resulting in 300g total and massive weight bloat. |
+| Fix | Added an explicit clause in the `SYSTEM_PROMPT` informing the LLM it MUST provide a realistic `gramsPerPiece` estimate for countable discrete items. |
+| Result | AI accurately assigned 15g per chipotle pepper, reducing mapped weight from 300g down to 45g. |
+
+### Change Index (Fixes 91-92)
+| # | Category | Description |
+|---|----------|-------------|
+| 91 | Prompts | Strictly constrained the LLM prompt to actively enforce `low-fat` semantic variants. |
+| 92 | Weight Logic | Added instructions demanding piece-based weights from LLM schema for discrete queries causing bloat. |
