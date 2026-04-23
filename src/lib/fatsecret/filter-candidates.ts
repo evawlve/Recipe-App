@@ -1001,6 +1001,86 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
             'yellow lentils', 'french lentils'],
         excludeIfContains: ['aruj']
     },
+
+    // === NEW: Compound dish pollution guard ===
+    // A single seasoning/spice/herb query should NOT resolve to a multi-ingredient
+    // prepared dish that merely *contains* that seasoning as a component.
+    // e.g. "garlic herb seasoning" → "Steam'ables Harvest Vegetables with Herb and Garlic Seasoning"
+    // e.g. "dark cocoa" → "Dark Cocoa Hazelnut Spread"
+    // e.g. "tart apples" → "Tart Apples & Salted Caramel"
+    {
+        query: ['garlic herb seasoning', 'garlic and herb seasoning', 'herb and garlic seasoning',
+            'garlic herb', 'herb garlic'],
+        excludeIfContains: ['steam\'ables', 'steamables', 'harvest vegetables', 'roasted red potato',
+            'vegetables with', 'side dish', 'meal kit', 'frozen meal']
+    },
+    // Plain cocoa/baking cocoa should NOT match chocolate-hazelnut spreads or candy
+    {
+        query: ['cocoa', 'dark cocoa', 'baking cocoa', 'cocoa powder'],
+        excludeIfContains: ['hazelnut', 'nutella', 'spread', 'butter', 'candy', 'bar'],
+        skipIfQueryContains: ['hazelnut', 'nutella', 'spread']
+    },
+    // Plain fruit should NOT match fruit + caramel/sauce compound products
+    {
+        query: ['apple', 'apples', 'tart apple', 'tart apples', 'green apple', 'red apple'],
+        excludeIfContains: ['salted caramel', 'caramel sauce', 'caramel dip', 'candy apple',
+            'apple pie', 'apple crisp', 'apple sauce', 'applesauce'],
+        skipIfQueryContains: ['caramel', 'pie', 'crisp', 'sauce']
+    },
+
+    // === NEW: Fried/prepared form guard ===
+    // When ingredient says "fried", prefer fried-form candidates.
+    // When ingredient is plain (no cooking method), reject explicitly fried versions
+    // that have significantly higher calorie density.
+    // e.g. "shallots" (raw) → should NOT match "Fried Shallots" (oil-added)
+    // e.g. "fried shallots" → SHOULD match fried version
+    {
+        query: ['shallots', 'shallot', 'fresh shallots'],
+        excludeIfContains: ['fried shallot', 'crispy shallot', 'fried onion', 'french fried onion'],
+        skipIfQueryContains: ['fried', 'crispy', 'crisp']
+    },
+    {
+        query: ['onion', 'onions', 'fresh onion', 'raw onion'],
+        excludeIfContains: ['french fried', 'crispy fried', 'fried onion string'],
+        skipIfQueryContains: ['fried', 'crispy']
+    },
+
+    // === NEW: Sweetened vs raw fruit guard ===
+    // "sweetened cranberries" → should NOT match "raw cranberries" (big calorie difference)
+    // "raw pineapple" / "fresh pineapple" → should NOT match "pineapple in syrup"
+    {
+        query: ['sweetened cranberries', 'dried sweetened cranberries', 'craisins'],
+        excludeIfContains: ['raw', 'fresh', 'frozen']
+    },
+    {
+        query: ['raw pineapple', 'fresh pineapple', 'pineapple chunks', 'pineapple slices'],
+        excludeIfContains: ['in syrup', 'in juice', 'sweetened', 'candied'],
+        skipIfQueryContains: ['syrup', 'juice', 'sweetened', 'canned', 'tinned']
+    },
+    // "pineapple in juice" (canned) should NOT match "Pineapple Juice" (a beverage)
+    {
+        query: ['pineapple in juice', 'canned pineapple'],
+        excludeIfContains: ['pineapple juice', 'juice only', 'juice beverage']
+    },
+
+    // === NEW: Uncooked/dry vs cooked candidate guard ===
+    // Reinforces the cooking-state detector with explicit CATEGORY_EXCLUSION rules
+    // for the most common offenders found in audits.
+    // These catch cases where the cooking-state function did not fire.
+    {
+        query: ['uncooked rice', 'dry rice', 'raw rice', 'uncooked long grain rice'],
+        excludeIfContains: ['cooked', 'prepared', 'mexican style', 'spanish rice', 'fried rice',
+            'ready to serve', 'microwaveable']
+    },
+    {
+        query: ['uncooked pasta', 'dry pasta', 'raw pasta', 'uncooked spaghetti', 'dry spaghetti'],
+        excludeIfContains: ['cooked', 'prepared', 'ready to serve']
+    },
+    {
+        query: ['dry pinto beans', 'uncooked pinto beans', 'raw pinto beans',
+            'dry black beans', 'uncooked black beans', 'dry navy beans', 'dry kidney beans'],
+        excludeIfContains: ['cooked', 'prepared', 'canned', 'ready to serve']
+    },
 ];
 
 

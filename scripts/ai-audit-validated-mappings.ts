@@ -144,8 +144,10 @@ async function enrichWithMacros(rows: Omit<MappingRow, 'macros' | 'macroMissing'
         }
     }
 
-    // Batch-fetch both caches
-    const [fatSecretCaches, fdcCaches] = await Promise.all([
+    // Batch-fetch all three caches (FatSecret, FDC, and AI-generated fallback)
+    // AiGeneratedFood is keyed by ingredientName (= foodName from the mapping)
+    const aiIngredientNames = rows.map(r => r.foodName);
+    const [fatSecretCaches, fdcCaches, aiCaches] = await Promise.all([
         fatSecretIds.length > 0
             ? prisma.fatSecretFoodCache.findMany({
                 where: { id: { in: fatSecretIds } },
@@ -158,10 +160,27 @@ async function enrichWithMacros(rows: Omit<MappingRow, 'macros' | 'macroMissing'
                 select: { id: true, nutrients: true },
             })
             : [],
+        // AiGeneratedFood: fallback for FDC entries with empty nutrients
+        prisma.aiGeneratedFood.findMany({
+            where: { ingredientName: { in: aiIngredientNames } },
+            select: { ingredientName: true, caloriesPer100g: true, proteinPer100g: true, carbsPer100g: true, fatPer100g: true },
+        }),
     ]);
 
-    const fsMap = new Map(fatSecretCaches.map(r => [r.id, r.nutrientsPer100g]));
+    const fsMap  = new Map(fatSecretCaches.map(r => [r.id, r.nutrientsPer100g]));
     const fdcMap = new Map(fdcCaches.map(r => [r.id, r.nutrients]));
+    // AiGeneratedFood: one record per ingredientName (use first match if duplicates)
+    const aiMap  = new Map<string, { kcal: number; protein: number; carbs: number; fat: number }>();
+    for (const ai of aiCaches) {
+        if (!aiMap.has(ai.ingredientName)) {
+            aiMap.set(ai.ingredientName, {
+                kcal:    ai.caloriesPer100g,
+                protein: ai.proteinPer100g,
+                carbs:   ai.carbsPer100g,
+                fat:     ai.fatPer100g,
+            });
+        }
+    }
 
     return rows.map(row => {
         let macros: Macros = { kcal: null, protein: null, carbs: null, fat: null };
@@ -172,15 +191,29 @@ async function enrichWithMacros(rows: Omit<MappingRow, 'macros' | 'macroMissing'
             const nutrients = fdcMap.get(numId);
             if (nutrients != null) {
                 macros = parseFdcMacros(nutrients);
-            } else {
-                macroMissing = true;
+            }
+            // If FDC cache has no macros, try AiGeneratedFood fallback
+            if (macros.kcal == null) {
+                const ai = aiMap.get(row.foodName);
+                if (ai) {
+                    macros = { kcal: ai.kcal, protein: ai.protein, carbs: ai.carbs, fat: ai.fat };
+                } else {
+                    macroMissing = true;
+                }
             }
         } else {
             const nutrients = fsMap.get(row.foodId);
             if (nutrients != null) {
                 macros = parseFatSecretMacros(nutrients);
-            } else {
-                macroMissing = true;
+            }
+            // If FatSecret cache has no macros, try AiGeneratedFood fallback
+            if (macros.kcal == null) {
+                const ai = aiMap.get(row.foodName);
+                if (ai) {
+                    macros = { kcal: ai.kcal, protein: ai.protein, carbs: ai.carbs, fat: ai.fat };
+                } else {
+                    macroMissing = true;
+                }
             }
         }
 
