@@ -203,7 +203,7 @@ function isWrongFormForContext(rawLine: string, normalizedName: string, candidat
     const normLower = normalizedName.toLowerCase();
     const candLower = candidateName.toLowerCase();
 
-    for (const [ambiguous, forms] of Object.entries(AMBIGUOUS_INGREDIENTS)) {
+    for (const [ambiguous, _forms] of Object.entries(AMBIGUOUS_INGREDIENTS)) {
         if (normLower.includes(ambiguous)) {
             const context = detectSpiceContext(rawLine);
 
@@ -444,7 +444,7 @@ const RAW_INGREDIENT_SUFFIXES = new Set([
  * Detect if a query ingredient would be a "flavor" in a compound product
  * e.g., "lemon zest" in "Blueberry & Lemon Zest Cream Cheese Spread"
  */
-function isCompoundProductMismatch(normalizedName: string, candidateName: string): boolean {
+function _isCompoundProductMismatch(normalizedName: string, candidateName: string): boolean {
     const queryLower = normalizedName.toLowerCase().trim();
     const candidateLower = candidateName.toLowerCase().trim();
 
@@ -492,7 +492,7 @@ function isCompoundProductMismatch(normalizedName: string, candidateName: string
  * - Candidate has a brand name with unrelated words
  * - The query word appears in a branded product context
  */
-function isBrandedProductForSimpleQuery(
+function _isBrandedProductForSimpleQuery(
     normalizedName: string,
     candidateName: string,
     candidateBrand?: string | null

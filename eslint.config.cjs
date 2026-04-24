@@ -22,6 +22,10 @@ module.exports = [
 			'tsconfig.tsbuildinfo',
 			'cleanup-orphaned-users.js',
 			'scripts/check-server-api-usage.*',
+			// Debug / scratch scripts — never part of the app
+			'tmp/**',
+			'tmp-*.ts',
+			'tmp_*.ts',
 		],
 	},
 	...nextFlat,
@@ -80,7 +84,7 @@ module.exports = [
 		},
 	// Removed broad global fetch restrictions to prevent false positives; the targeted selector above is sufficient
 	{
-		files: ['scripts/**/*.{js,ts}', 'eval/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js'],
+		files: ['scripts/**/*.{js,ts}', 'eval/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js', 'tmp/**/*.{js,ts}'],
 		rules: {
 			'no-console': 'off',
 		},
