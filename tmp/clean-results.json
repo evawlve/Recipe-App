@@ -1,0 +1,48 @@
+[
+  {
+    "input": "1 cup gluten free all purpose baking flour",
+    "foodName": "Gluten Free All Purpose Baking Flour",
+    "brandName": "Bob's Red Mill",
+    "grams": 120,
+    "kcal": 423.5294,
+    "source": "cache"
+  },
+  {
+    "input": "1 cup beef bouillon",
+    "foodName": "beef beef bouillon",
+    "brandName": "KNORR",
+    "grams": 120,
+    "kcal": 300,
+    "source": "fdc"
+  },
+  {
+    "input": "1 tbsp beef bouillon",
+    "foodName": "beef beef bouillon",
+    "brandName": "KNORR",
+    "grams": 7.5,
+    "kcal": 18.75,
+    "source": "fdc"
+  },
+  {
+    "input": "4 breasts bone and skin removed chicken breasts",
+    "foodName": "Chicken Breast",
+    "grams": 4,
+    "kcal": 7.8,
+    "source": "cache"
+  },
+  {
+    "input": "1 extra egg",
+    "foodName": "Egg",
+    "grams": 1,
+    "kcal": 1.47,
+    "source": "cache"
+  },
+  {
+    "input": "6 flour tortillas",
+    "foodName": "6\" Flour Tortillas",
+    "brandName": "Great Value",
+    "grams": 198,
+    "kcal": 480,
+    "source": "cache"
+  }
+]

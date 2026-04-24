@@ -3,14 +3,17 @@
  * Detailed Mapping Pipeline Debug Script
  * 
  * Usage:
- *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/debug-mapping-pipeline.ts "1 cup chopped onion"
- *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/debug-mapping-pipeline.ts --ingredient "3 medium scallions"
+ *   npx tsx scripts/debug-mapping-pipeline.ts "1 cup chopped onion"
+ *   npx tsx scripts/debug-mapping-pipeline.ts --ingredient "3 medium scallions"
+ * 
+ * DEFAULT MODE: Runs mapIngredientWithFallback (same as pilot import).
  * 
  * Options:
  *   --skip-cache     Skip cache lookups (force fresh search)
  *   --skip-fdc       Skip FDC (USDA) API
  *   --verbose        Show even more details
- *   --production     Run through ACTUAL mapIngredientWithFallback (matches pilot import exactly)
+ *   --debug-steps    Run step-by-step pipeline (parse → normalize → gather → filter → rerank)
+ *                    NOTE: This mode does NOT run serving selection or hydration!
  *   --with-cleanup   Apply database cleanup patterns before mapping (like pilot import)
  */
 
@@ -35,7 +38,7 @@ let ingredient = '';
 let skipCache = false;
 let skipFdc = false;
 let verbose = false;
-let productionMode = false;
+let debugStepsMode = false;
 let withCleanup = false;
 
 for (let i = 0; i < args.length; i++) {
@@ -48,8 +51,11 @@ for (let i = 0; i < args.length; i++) {
         skipFdc = true;
     } else if (args[i] === '--verbose') {
         verbose = true;
+    } else if (args[i] === '--debug-steps') {
+        debugStepsMode = true;
     } else if (args[i] === '--production') {
-        productionMode = true;
+        // Legacy alias — production is now the default, so this is a no-op
+        // Keep for backward compatibility
     } else if (args[i] === '--with-cleanup') {
         withCleanup = true;
     } else if (!args[i].startsWith('--')) {
@@ -59,7 +65,9 @@ for (let i = 0; i < args.length; i++) {
 
 if (!ingredient) {
     console.log(chalk.red('Usage: debug-mapping-pipeline.ts "ingredient line"'));
-    console.log(chalk.gray('  Options: --skip-cache, --skip-fdc, --verbose, --production, --with-cleanup'));
+    console.log(chalk.gray('  Options: --skip-cache, --skip-fdc, --verbose, --debug-steps, --with-cleanup'));
+    console.log(chalk.gray('  Default: runs mapIngredientWithFallback (same as pilot import)'));
+    console.log(chalk.gray('  --debug-steps: step-by-step pipeline (NO serving selection or hydration)'));
     process.exit(1);
 }
 
@@ -263,7 +271,7 @@ async function debugPipeline(rawLine: string) {
 
     const gatherOptions: GatherOptions = {
         client,
-        skipCache: true,  // Always skip cache for debug
+        skipCache,  // Respect CLI flag (was hardcoded to true — Bug 1 fix)
         skipLiveApi: false,
         skipFdc,
         aiSynonyms: [],
@@ -443,8 +451,9 @@ async function debugPipeline(rawLine: string) {
 }
 
 // Run
-if (productionMode) {
-    runProductionMode(ingredient).catch(console.error);
-} else {
+if (debugStepsMode) {
+    console.log(chalk.yellow('  ⚠ --debug-steps mode: NO serving selection or hydration. Use default mode for accurate results.'));
     debugPipeline(ingredient).catch(console.error);
+} else {
+    runProductionMode(ingredient).catch(console.error);
 }

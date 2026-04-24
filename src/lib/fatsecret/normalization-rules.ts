@@ -146,9 +146,47 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'tomato and green chili mix', to: 'diced tomatoes with green chilies' },
     { from: 'tomato & green chili mix', to: 'diced tomatoes with green chilies' },
     { from: 'tomato green chili mix', to: 'diced tomatoes with green chilies' },
-    // Fat level synonyms
-    { from: 'extra light', to: 'fat free' },
-    { from: 'extra-light', to: 'fat free' },
+    { from: 'matcha green tea', to: 'matcha tea' }, // Preserve beverage context to prevent powder matches
+    // Complex Niche Ingredients -> Standard mappings
+    { from: 'dry mustard', to: 'mustard powder' },
+    { from: 'veggie sausage', to: 'vegetarian sausage' },
+    { from: 'vegetarian sausages', to: 'vegetarian sausage' },
+    { from: 'flaxseed milk', to: 'flax milk' },
+    { from: 'file powder', to: 'gumbo file' },
+    { from: 'gumbo file powder', to: 'gumbo file' },
+    { from: 'arrowroot powder', to: 'arrowroot starch' },
+    { from: 'spagetti sauce', to: 'spaghetti sauce' }, // Typo fix
+    { from: 'balsamic gravy sauce', to: 'balsamic glaze' },
+    { from: 'salad seasoning', to: 'salad dressing' },
+    { from: 'peas and carrots', to: 'mixed vegetables' },
+    { from: 'vegetable skallops', to: 'vegetarian scallops' },
+    { from: 'vegetable scallops', to: 'vegetarian scallops' },
+    // Fat level synonyms — IMPORTANT: these must be SCOPED to avoid over-matching.
+    // DO NOT rewrite bare "extra light" → "fat free" as it incorrectly maps
+    // "extra light mayonnaise" to fat-free products (wrong macro profile).
+    { from: 'extra light mayonnaise', to: 'light mayonnaise' },
+    { from: 'extra-light mayonnaise', to: 'light mayonnaise' },
+    // Semantic inversion guards: these prevent matching against unrelated branded products
+    // e.g. "gluten" → "Gluten Free (Oreo)", "apple pie spice" → "apple chips"
+    { from: 'apple pie spice', to: 'apple pie spice blend' },
+    { from: 'pie spice', to: 'pumpkin pie spice' },
+    { from: 'lasagna', to: 'lasagna noodles' },
+    { from: 'ground thyme', to: 'dried thyme powder' },
+    { from: 'spice blend mustard', to: 'mustard powder' },
+    { from: 'lean hamburger', to: 'lean ground beef' },
+    { from: 'hamburger', to: 'ground beef' },
+    { from: 'mixed herbs', to: 'italian seasoning' },
+    { from: 'celtic salt', to: 'sea salt' },
+    { from: 'stroganoff mix', to: 'beef stroganoff seasoning mix' },
+    { from: 'non fat', to: 'nonfat' },
+    { from: 'cottage cheese non fat', to: 'nonfat cottage cheese' },
+    { from: 'skim yogurt', to: 'nonfat yogurt' },
+    // Audit Fix: "cilantro seeds" is a lay term; correct culinary term is coriander
+    { from: 'cilantro seeds', to: 'coriander seeds' },
+    { from: 'cilantro seed', to: 'coriander seeds' },
+    // Audit Fix: Steer green beans away from Ranch Style pinto beans
+    { from: 'green beans', to: 'green string beans' },
+    { from: 'green bean', to: 'green string bean' },
   ],
 };
 
@@ -285,7 +323,8 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
 
   // Step 1: Strip percentage patterns >= 50% (e.g., "100% liquid" → "liquid")
   // BUT preserve low percentages like "2% milk" which are nutritionally significant
-  working = working.replace(/\b(100|[5-9]\d)%\s*/g, '');
+  // AND preserve leanness percentages like "93% lean"
+  working = working.replace(/\b(100|[5-9]\d)%(?!\s*lean\b)\s*/gi, '');
 
   // Step 2: Deduplicate consecutive repeated words/phrases
   // Handles typos like "ice cubes ice cubes" → "ice cubes"
@@ -323,8 +362,21 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     working = working.replace(/\bpepper\b/i, 'black pepper');
   }
 
+  // Audit Fix: "red pepper" alone → "red bell pepper" (American produce default)
+  // But NOT: crushed red pepper, red pepper flakes, chili red pepper, cayenne red pepper, etc.
+  const RED_PEPPER_SPICE_PREFIX = /\b(crushed|flake|flakes|cayenne|chili|chile|hot|dried|ground)\s+red\s+pepper/i;
+  const RED_PEPPER_SPICE_SUFFIX = /\bred\s+pepper\s+(flakes|sauce|paste|powder|seeds)/i;
+  if (!RED_PEPPER_SPICE_PREFIX.test(working) && !RED_PEPPER_SPICE_SUFFIX.test(working)) {
+    working = working.replace(/\bred\s+pepper(s)?\b/gi, 'red bell pepper');
+  }
+
   // NOTE: Bare "corn" mapping to kettle corn is now handled universally by the
   // extreme calorie mismatch penalty in simple-rerank.ts (>200% diff → -0.35 penalty).
+
+  // "gluten" alone -> "vital wheat gluten" (prevent replacing in "gluten free" or "gluten-free")
+  if (/\bgluten\b/i.test(working) && !/\bgluten[-\s]free\b/i.test(working)) {
+    working = working.replace(/\bgluten\b/gi, 'vital wheat gluten');
+  }
 
   // "vanilla" alone → "vanilla extract" (recipe default)
   // But NOT: vanilla extract, vanilla bean, vanilla ice cream, vanilla protein, etc.
@@ -337,6 +389,16 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   // But NOT: fried chicken breast, grilled chicken breast, skinless chicken breast, etc.
   if (/\bchicken\s+breast\b/i.test(working) && !/\b(skinless|fried|grilled|baked|roasted|breaded|bbq|smoked)\s+chicken\s+breast/i.test(working)) {
     working = working.replace(/\bchicken\s+breast\b/i, 'skinless chicken breast');
+  }
+
+  // Standardize ground meat leanness to deterministic default percentages if not explicitly specified.
+  // We use both lean and fat percentages ("90% lean 10% fat") as FatSecret/FDC indexing often relies on the explicit full profile.
+  if (/(?:^|\s)lean ground\s+(beef|turkey|chicken|pork|meat)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working)) {
+    // "lean ground X" -> default to 90% lean 10% fat
+    working = working.replace(/\blean ground\b/gi, '90% lean 10% fat ground');
+  } else if (/(?:^|\s)ground\s+(beef|turkey|chicken|pork|meat)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working) && !/\blean\b/i.test(working)) {
+    // "ground X" (not lean) -> default to 85% lean 15% fat
+    working = working.replace(/\bground\b/gi, '85% lean 15% fat ground');
   }
 
   // Remove prep/size phrases using merged prep phrases (static + AI-learned)
@@ -454,6 +516,12 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     }
   }
 
+  // Audit Fix: If after all stripping, the remaining string is ONLY "ground"
+  // (a bare prep word left orphaned), clear it to avoid matching flaxseed/coffee.
+  if (/^ground$/i.test(working.trim())) {
+    working = '';
+  }
+
   // Collapse whitespace
   const cleaned = collapseSpaces(working);
 
@@ -504,4 +572,147 @@ function collapseSpaces(value: string): string {
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ============================================================================
+// Singularization & Canonical Cache Key
+// ============================================================================
+
+/**
+ * Words that look plural (end in 's') but are already singular.
+ * These MUST NOT be singularized by stripping the trailing 's'.
+ */
+const SINGULAR_BLACKLIST = new Set([
+  // Grains & products that end in -s/-us/-ss
+  'hummus', 'couscous', 'quinoa', 'falafel',
+  'asparagus', 'molasses', 'citrus', 'hibiscus',
+  'meringues', // keep as-is; "meringue" is the singular but rarely used in recipes
+  // Herbs/plants ending in -s
+  'lemongrass', 'wheatgrass', 'cress', 'watercress',
+  // Cheese/dairy
+  'swiss', 'bris', 'gruyeres',
+  // Other food words ending in -s that are singular
+  'tahini', 'tzatziki', 'miso', 'tofu', // don't end in s but just in case
+  'jus', 'demiglace', 'fois', 'gras',
+  'cannabis', 'anise', 'licorice',
+  'aioli', 'chimichurris',
+  // Common suffixes that aren't plural
+  'plus', 'bonus', 'surplus', 'lotus', 'cactus', 'fungus', 'octopus',
+  'floss', 'gloss', 'moss', 'cross', 'boss', 'toss', 'loss',
+  'dress', 'press', 'stress', 'express',
+  'dips', 'chips', 'strips', 'tips', // compound product terms: "pita chips", etc
+]);
+
+/**
+ * Irregular plurals that need explicit mapping.
+ */
+const IRREGULAR_PLURALS: Record<string, string> = {
+  leaves: 'leaf',
+  halves: 'half',
+  loaves: 'loaf',
+  knives: 'knife',
+  lives: 'life',
+  wolves: 'wolf',
+  calves: 'calf',
+  shelves: 'shelf',
+  selves: 'self',
+  // Produce
+  dice: 'die',  // but "diced" is already stripped as prep
+};
+
+/**
+ * Singularize a single English word.
+ * 
+ * Rules (in priority order):
+ * 1. Blacklist — return as-is
+ * 2. Irregular plurals — explicit lookup
+ * 3. -ies → -y (berries → berry)
+ * 4. -ves → -f (leaves → leaf) — handled by irregular map
+ * 5. -oes → -o (tomatoes → tomato, potatoes → potato)
+ * 6. -ses, -xes, -zes, -ches, -shes → strip -es
+ * 7. -es (general, word > 4 chars) → strip -es
+ * 8. -s (word > 3 chars) → strip -s
+ */
+export function singularize(word: string): string {
+  const lower = word.toLowerCase();
+
+  // Too short to be plural
+  if (lower.length <= 2) return lower;
+
+  // Blacklist check
+  if (SINGULAR_BLACKLIST.has(lower)) return lower;
+
+  // Irregular plurals
+  if (IRREGULAR_PLURALS[lower]) return IRREGULAR_PLURALS[lower];
+
+  // -ies → -y (cherries → cherry, berries → berry)
+  // But NOT: "series" → protect
+  // But NOT: words where stem is -i (chilies → chili, NOT chily)
+  if (lower.endsWith('ies') && lower.length > 4 && lower !== 'series') {
+    // Known words ending in -i that pluralize with -es
+    const I_STEM_WORDS = new Set(['chili', 'broccoli', 'pierogi', 'biscotti', 'gnocchi', 'ravioli', 'linguini', 'zucchini', 'manicotti']);
+    const stem = lower.slice(0, -2); // "chilies" → "chili"
+    if (I_STEM_WORDS.has(stem)) {
+      return stem;
+    }
+    return lower.slice(0, -3) + 'y'; // "berries" → "berry"
+  }
+
+  // -oes → -o (tomatoes → tomato, potatoes → potato)
+  // But NOT: "shoes" → protect
+  if (lower.endsWith('oes') && lower.length > 4 && !['shoes', 'toes', 'hoes', 'does', 'goes'].includes(lower)) {
+    return lower.slice(0, -2);
+  }
+
+  // -ses, -xes, -zes, -ches, -shes → strip -es
+  if (lower.length > 4 && /(?:ses|xes|zes|ches|shes)$/.test(lower)) {
+    return lower.slice(0, -2);
+  }
+
+  // General -es (word > 4 chars) — but only if the stem looks like a real word
+  // Covers: "olives" → "olive", "noodles" → "noodle"
+  // Skip words already ending in double-s (e.g., "lemongrass") - caught by blacklist
+  if (lower.endsWith('es') && lower.length > 4 && !lower.endsWith('ss')) {
+    const stem = lower.slice(0, -1); // Try just stripping the final 's' first → "olives" → "olive"
+    // If stem ends in a consonant + 'e', the singular is the stem (olive, noodle)
+    return stem;
+  }
+
+  // General -s (word > 3 chars)
+  if (lower.endsWith('s') && lower.length > 3 && !lower.endsWith('ss') && !lower.endsWith('us')) {
+    return lower.slice(0, -1);
+  }
+
+  return lower;
+}
+
+/**
+ * Produce a deterministic canonical cache key from a normalized ingredient name.
+ * 
+ * Transformations:
+ * 1. Lowercase
+ * 2. Split into tokens
+ * 3. Singularize each token
+ * 4. Sort alphabetically
+ * 5. Join with space
+ * 
+ * This ensures:
+ * - "sour cream light" == "light sour cream" (word order)
+ * - "onions" == "onion" (singular/plural)
+ * - "Greek Yogurt" == "greek yogurt" (case)
+ * - "creamy peanut butter" != "peanut butter" (meaningful modifier preserved)
+ * - "red bell pepper" != "bell pepper" (color variant preserved)
+ */
+export function canonicalizeCacheKey(normalizedName: string): string {
+  if (!normalizedName) return '';
+
+  return normalizedName
+    .toLowerCase()
+    .replace(/[^a-z0-9%\s\-']/g, ' ')  // Keep %, hyphens, apostrophes
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .map(singularize)
+    .sort()
+    .join(' ')
+    .trim();
 }

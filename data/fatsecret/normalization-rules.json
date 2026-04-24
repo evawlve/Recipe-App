@@ -81,6 +81,22 @@
       "to": "light cream"
     },
     {
+      "from": "lean hamburger",
+      "to": "lean ground beef"
+    },
+    {
+      "from": "hamburger",
+      "to": "ground beef"
+    },
+    {
+      "from": "pie spice",
+      "to": "pumpkin pie spice"
+    },
+    {
+      "from": "mixed herbs",
+      "to": "italian seasoning"
+    },
+    {
       "from": "fl oz single cream",
       "to": "fl oz light cream"
     },
@@ -95,10 +111,6 @@
     {
       "from": "stberry",
       "to": "strawberries"
-    },
-    {
-      "from": "ground beef",
-      "to": "ground beef 85% lean"
     },
     {
       "from": "ice cubes",
@@ -221,12 +233,22 @@
       "to": "orange peel"
     },
     {
-      "from": "extra light",
-      "to": "fat free"
+      "from": "extra light mayonnaise",
+      "to": "light mayonnaise"
     },
     {
-      "from": "extra-light",
-      "to": "fat free"
+      "from": "extra-light mayonnaise",
+      "to": "light mayonnaise"
+    },
+    {
+      "_comment": "Semantic inversion guards: prevent gluten matching Gluten Free Oreos",
+      "from": "gluten",
+      "to": "vital wheat gluten"
+    },
+    {
+      "_comment": "Semantic inversion guard: prevent apple pie spice matching apple canned pie fillings",
+      "from": "apple pie spice",
+      "to": "apple pie spice seasoning"
     },
     {
       "from": "blood orange peel",
@@ -348,8 +370,6 @@
       "from": "dry wine",
       "to": "dry white wine"
     },
-
-
     {
       "from": "chunk chicken breast",
       "to": "chicken breast"
@@ -398,10 +418,7 @@
       "from": "rice vinegar",
       "to": "plain rice vinegar"
     },
-    {
-      "from": "sour cream",
-      "to": "regular sour cream"
-    },
+
     {
       "from": "cooking spray",
       "to": "non-stick cooking spray"
@@ -426,7 +443,6 @@
       "from": "chicken halves",
       "to": "chicken half"
     },
-
     {
       "from": "corn syrup",
       "to": "light corn syrup"
@@ -438,10 +454,6 @@
     {
       "from": "chili powder",
       "to": "chili powder spice"
-    },
-    {
-      "from": "lean ground turkey",
-      "to": "raw ground turkey"
     },
     {
       "from": "onion powder",
@@ -489,7 +501,7 @@
     },
     {
       "from": "ground thyme",
-      "to": "dried thyme"
+      "to": "thyme powder"
     },
     {
       "from": "red pepper crushed",
@@ -546,6 +558,42 @@
     {
       "from": "low carb baking mix",
       "to": "keto baking mix"
+    },
+    {
+      "from": "lasagna",
+      "to": "lasagna noodles"
+    },
+    {
+      "from": "spice blend mustard",
+      "to": "mustard powder"
+    },
+    {
+      "from": "cilantro seeds",
+      "to": "coriander seeds"
+    },
+    {
+      "from": "cilantro seed",
+      "to": "coriander seeds"
+    },
+    {
+      "from": "green beans",
+      "to": "green string beans"
+    },
+    {
+      "from": "green bean",
+      "to": "green string bean"
+    },
+    {
+      "from": "frozen peas and carrots",
+      "to": "frozen mixed vegetables"
+    },
+    {
+      "from": "peas and carrots",
+      "to": "mixed vegetables"
+    },
+    {
+      "from": "peppers in adobo sauce",
+      "to": "chipotle peppers in adobo sauce"
     }
   ]
-}
+}

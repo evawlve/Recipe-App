@@ -15,6 +15,7 @@ import { logger } from '../logger';
 export interface FilterOptions {
     debug?: boolean;
     rawLine?: string;  // Original input for modifier detection
+    relaxed?: boolean; // If true, apply a more lenient filter (used as a fallback)
 }
 
 export interface FilterResult {
@@ -202,7 +203,7 @@ function isWrongFormForContext(rawLine: string, normalizedName: string, candidat
     const normLower = normalizedName.toLowerCase();
     const candLower = candidateName.toLowerCase();
 
-    for (const [ambiguous, forms] of Object.entries(AMBIGUOUS_INGREDIENTS)) {
+    for (const [ambiguous, _forms] of Object.entries(AMBIGUOUS_INGREDIENTS)) {
         if (normLower.includes(ambiguous)) {
             const context = detectSpiceContext(rawLine);
 
@@ -443,7 +444,7 @@ const RAW_INGREDIENT_SUFFIXES = new Set([
  * Detect if a query ingredient would be a "flavor" in a compound product
  * e.g., "lemon zest" in "Blueberry & Lemon Zest Cream Cheese Spread"
  */
-function isCompoundProductMismatch(normalizedName: string, candidateName: string): boolean {
+function _isCompoundProductMismatch(normalizedName: string, candidateName: string): boolean {
     const queryLower = normalizedName.toLowerCase().trim();
     const candidateLower = candidateName.toLowerCase().trim();
 
@@ -491,7 +492,7 @@ function isCompoundProductMismatch(normalizedName: string, candidateName: string
  * - Candidate has a brand name with unrelated words
  * - The query word appears in a branded product context
  */
-function isBrandedProductForSimpleQuery(
+function _isBrandedProductForSimpleQuery(
     normalizedName: string,
     candidateName: string,
     candidateBrand?: string | null
@@ -568,6 +569,10 @@ function isBrandedProductForSimpleQuery(
 
 // Categories that should NOT be confused
 const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
+    // === NEW: Corn vs Kettle Corn / Popcorn (High calorie bloat) ===
+    { query: ['corn', 'sweet corn', 'canned corn', 'kernel corn'], excludeIfContains: ['kettle', 'kettle corn', 'popcorn', 'caramel'] },
+    // === NEW: Spice vs Root Beer / Beverages (Semantic Inversion) ===
+    { query: ['nutmeg', 'cinnamon', 'clove', 'cloves', 'allspice', 'cardamom', 'anise'], excludeIfContains: ['root beer', 'soda', 'beverage', 'drink', 'beer', 'ale'] },
     // Cream (dairy) should NOT match ice cream (frozen dessert)
     { query: ['cream', 'single cream', 'double cream', 'light cream', 'heavy cream'], excludeIfContains: ['ice cream', 'sherbet', 'gelato', 'frozen'] },
     // Ice (frozen water) should NOT match ice cream (dessert) or Ice Breakers/Ice Cubes (candy/gum brands)
@@ -617,6 +622,11 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
     {
         query: ['miso paste', 'tomato paste', 'curry paste'],
         excludeIfContains: ['soup', 'broth', 'stew']
+    },
+    // Salt should NOT match caramel/chocolate
+    {
+        query: ['salt', 'sea salt', 'celtic salt', 'kosher salt'],
+        excludeIfContains: ['caramel', 'chocolate', 'chips']
     },
     // === NEW: Priority 1 False Positive Fixes ===
     // Simple vinegar should NOT match dressings
@@ -793,6 +803,27 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['burrito', 'burritos', 'beef burrito', 'chicken burrito', 'bean burrito'],
         excludeIfContains: ['taco', 'tacos', 'nacho', 'nachos']
     },
+    // === NEW: Hamburger vs Fast Food ===
+    {
+        query: ['hamburger', 'lean hamburger', 'ground beef'],
+        excludeIfContains: ['mcdonald\'s', 'fast food', 'restaurant', 'subway', 'wendy\'s', 'burger king'],
+        skipIfQueryContains: ['mcdonald', 'burger']
+    },
+    // === NEW: Herb vs Tea ===
+    {
+        query: ['herbs', 'mixed herbs', 'herb', 'herb blend'],
+        excludeIfContains: ['tea', 'beverage', 'alaska native', 'laborador']
+    },
+    // === NEW: Pasta vs Crackers ===
+    {
+        query: ['macaroni', 'pasta', 'elbow macaroni', 'penne', 'spaghetti'],
+        excludeIfContains: ['cracker', 'crackers', 'saltines', 'saltine']
+    },
+    // === NEW: Plant-based cheese vs Meat balls ===
+    {
+        query: ['rice cheese', 'vegan cheese', 'mozzarella style'],
+        excludeIfContains: ['meat', 'rice balls', 'meatballs', 'beef', 'chicken']
+    },
     // === Priority 2: Specialty Pasta/Flour Guards ===
     // Regular pasta should NOT match specialty pasta variants (different nutrition)
     // "linguini pasta" should NOT map to "chickpea pasta" or "lentil pasta"
@@ -932,6 +963,123 @@ const CATEGORY_EXCLUSIONS: CategoryExclusion[] = [
         query: ['zucchini', 'yellow zucchini', 'yellow squash', 'summer squash'],
         excludeIfContains: ['blend', 'medley', 'mixed vegetables', 'garden blend', 'frozen blend',
             'stir fry mix', 'vegetable mix']
+    },
+    // === Audit Fix: Green beans should NOT match Ranch Style or chili/pinto beans ===
+    // "green beans" → fresh/canned green beans, NOT "Ranch Style Beans (ConAgra)"
+    {
+        query: ['green beans', 'green bean', 'green string beans', 'green string bean',
+            'french green beans', 'haricots verts'],
+        excludeIfContains: ['ranch style', 'pinto', 'chili', 'refried', 'baked beans',
+            'kidney', 'black bean', 'navy', 'lima', 'cannellini']
+    },
+    // === Audit Fix: Butter (dairy) should NOT match nut butters ===
+    // "butter" → dairy butter, NOT "Peanut Butter" or "Almond Butter"
+    {
+        query: ['butter', 'light butter', 'salted butter', 'unsalted butter'],
+        excludeIfContains: ['peanut butter', 'almond butter', 'cashew butter', 'sunflower butter',
+            'cookie butter', 'apple butter', 'cocoa butter', 'shea butter', 'body butter'],
+        skipIfQueryContains: ['peanut', 'almond', 'cashew', 'sunflower', 'cookie', 'apple', 'cocoa']
+    },
+    // === Audit Fix: Okra should NOT match CookOut branded fried products ===
+    // "okra" → raw/frozen okra, NOT "Fried Okra (CookOut)"
+    {
+        query: ['okra', 'fresh okra', 'frozen okra'],
+        excludeIfContains: ['cookout', 'cook out', 'cook-out', 'fried okra'],
+        skipIfQueryContains: ['fried']
+    },
+    // === Audit Fix: Herbs should NOT match crackers or snack products ===
+    // "herbs" or "mixed herbs" → dried herbs/seasoning, NOT "Herb Crackers"
+    {
+        query: ['herbs', 'herb', 'mixed herbs', 'herb blend', 'dried herbs', 'fresh herbs'],
+        excludeIfContains: ['cracker', 'crackers', 'chip', 'chips', 'snack', 'pretzel',
+            'saltine', 'rice cake']
+    },
+    // === Audit Fix: Lentils should NOT match ARUJ brand (corrupted 0g protein data) ===
+    // Standard cooked lentils have ~9g protein/100g; ARUJ reports 0g
+    {
+        query: ['lentils', 'lentil', 'red lentils', 'brown lentils', 'green lentils',
+            'yellow lentils', 'french lentils'],
+        excludeIfContains: ['aruj']
+    },
+
+    // === NEW: Compound dish pollution guard ===
+    // A single seasoning/spice/herb query should NOT resolve to a multi-ingredient
+    // prepared dish that merely *contains* that seasoning as a component.
+    // e.g. "garlic herb seasoning" → "Steam'ables Harvest Vegetables with Herb and Garlic Seasoning"
+    // e.g. "dark cocoa" → "Dark Cocoa Hazelnut Spread"
+    // e.g. "tart apples" → "Tart Apples & Salted Caramel"
+    {
+        query: ['garlic herb seasoning', 'garlic and herb seasoning', 'herb and garlic seasoning',
+            'garlic herb', 'herb garlic'],
+        excludeIfContains: ['steam\'ables', 'steamables', 'harvest vegetables', 'roasted red potato',
+            'vegetables with', 'side dish', 'meal kit', 'frozen meal']
+    },
+    // Plain cocoa/baking cocoa should NOT match chocolate-hazelnut spreads or candy
+    {
+        query: ['cocoa', 'dark cocoa', 'baking cocoa', 'cocoa powder'],
+        excludeIfContains: ['hazelnut', 'nutella', 'spread', 'butter', 'candy', 'bar'],
+        skipIfQueryContains: ['hazelnut', 'nutella', 'spread']
+    },
+    // Plain fruit should NOT match fruit + caramel/sauce compound products
+    {
+        query: ['apple', 'apples', 'tart apple', 'tart apples', 'green apple', 'red apple'],
+        excludeIfContains: ['salted caramel', 'caramel sauce', 'caramel dip', 'candy apple',
+            'apple pie', 'apple crisp', 'apple sauce', 'applesauce'],
+        skipIfQueryContains: ['caramel', 'pie', 'crisp', 'sauce']
+    },
+
+    // === NEW: Fried/prepared form guard ===
+    // When ingredient says "fried", prefer fried-form candidates.
+    // When ingredient is plain (no cooking method), reject explicitly fried versions
+    // that have significantly higher calorie density.
+    // e.g. "shallots" (raw) → should NOT match "Fried Shallots" (oil-added)
+    // e.g. "fried shallots" → SHOULD match fried version
+    {
+        query: ['shallots', 'shallot', 'fresh shallots'],
+        excludeIfContains: ['fried shallot', 'crispy shallot', 'fried onion', 'french fried onion'],
+        skipIfQueryContains: ['fried', 'crispy', 'crisp']
+    },
+    {
+        query: ['onion', 'onions', 'fresh onion', 'raw onion'],
+        excludeIfContains: ['french fried', 'crispy fried', 'fried onion string'],
+        skipIfQueryContains: ['fried', 'crispy']
+    },
+
+    // === NEW: Sweetened vs raw fruit guard ===
+    // "sweetened cranberries" → should NOT match "raw cranberries" (big calorie difference)
+    // "raw pineapple" / "fresh pineapple" → should NOT match "pineapple in syrup"
+    {
+        query: ['sweetened cranberries', 'dried sweetened cranberries', 'craisins'],
+        excludeIfContains: ['raw', 'fresh', 'frozen']
+    },
+    {
+        query: ['raw pineapple', 'fresh pineapple', 'pineapple chunks', 'pineapple slices'],
+        excludeIfContains: ['in syrup', 'in juice', 'sweetened', 'candied'],
+        skipIfQueryContains: ['syrup', 'juice', 'sweetened', 'canned', 'tinned']
+    },
+    // "pineapple in juice" (canned) should NOT match "Pineapple Juice" (a beverage)
+    {
+        query: ['pineapple in juice', 'canned pineapple'],
+        excludeIfContains: ['pineapple juice', 'juice only', 'juice beverage']
+    },
+
+    // === NEW: Uncooked/dry vs cooked candidate guard ===
+    // Reinforces the cooking-state detector with explicit CATEGORY_EXCLUSION rules
+    // for the most common offenders found in audits.
+    // These catch cases where the cooking-state function did not fire.
+    {
+        query: ['uncooked rice', 'dry rice', 'raw rice', 'uncooked long grain rice'],
+        excludeIfContains: ['cooked', 'prepared', 'mexican style', 'spanish rice', 'fried rice',
+            'ready to serve', 'microwaveable']
+    },
+    {
+        query: ['uncooked pasta', 'dry pasta', 'raw pasta', 'uncooked spaghetti', 'dry spaghetti'],
+        excludeIfContains: ['cooked', 'prepared', 'ready to serve']
+    },
+    {
+        query: ['dry pinto beans', 'uncooked pinto beans', 'raw pinto beans',
+            'dry black beans', 'uncooked black beans', 'dry navy beans', 'dry kidney beans'],
+        excludeIfContains: ['cooked', 'prepared', 'canned', 'ready to serve']
     },
 ];
 
@@ -1492,9 +1640,10 @@ export function hasNullOrInvalidMacros(
         (nutrients.protein ?? 0) === 0 &&
         (nutrients.carbs ?? 0) === 0 &&
         (nutrients.fat ?? 0) === 0;
-    // Foods explicitly labeled "no calorie" or "zero calorie" should never be rejected
+    // Foods explicitly labeled "no calorie" or "zero calorie", or are known zero-calorie portions like cooking spray
     const nameForCheck = (candidateName || '').toLowerCase();
-    const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck);
+    const isExplicitlyZeroCal = /\b(no|zero)\s*calorie\b/i.test(nameForCheck) ||
+        /\b(cooking\s*spray|pan\s*spray|baking\s*spray|spray\s*oil|oil\s*spray)\b/i.test(nameForCheck);
     if (allZero && !isExplicitlyZeroCal && isFoodThatMustHaveCalories(candidateName)) {
         return true;
     }
@@ -2018,11 +2167,26 @@ function hasUnwantedModifier(normalizedName: string, candidateName: string): boo
     // If both have modifiers, check if they're compatible
     // e.g., "lowfat milk" should not match "nonfat milk" or "whole milk"
     if (queryMods.hasMod && candidateMods.hasMod) {
-        // Check if at least one of the query modifiers is present in candidate
+        // Define equivalence classes for modifiers
+        const MODIFIER_EQUIVALENCE = [
+            // Low fat group
+            ['lowfat', 'low-fat', 'low fat', 'reduced fat', 'reduced-fat', 'lite', 'light', 'part-skim', 'part skim'],
+            // Nonfat group
+            ['nonfat', 'non-fat', 'fat free', 'fat-free', 'skim'],
+            // Sugar free group
+            ['sugar free', 'sugar-free', 'no sugar', 'no added sugar', 'unsweetened'],
+            // Low calorie group
+            ['low calorie', 'low-calorie', 'diet', 'zero calorie', 'calorie free', 'calorie-free']
+        ];
+
+        const areModifiersEquivalent = (mod1: string, mod2: string) => {
+            if (mod1 === mod2 || mod1.includes(mod2) || mod2.includes(mod1)) return true;
+            return MODIFIER_EQUIVALENCE.some(group => group.includes(mod1) && group.includes(mod2));
+        };
+
+        // Check if at least one of the query modifiers is present in candidate (or equivalent)
         const hasMatchingMod = queryMods.modifiers.some(qMod =>
-            candidateMods.modifiers.some(cMod =>
-                qMod === cMod || cMod.includes(qMod) || qMod.includes(cMod)
-            )
+            candidateMods.modifiers.some(cMod => areModifiersEquivalent(qMod, cMod))
         );
         if (!hasMatchingMod) {
             return true;
@@ -2056,7 +2220,8 @@ const CALORIE_MODIFIERS = ['low calorie', 'low-calorie', 'diet', 'zero calorie',
 export function hasCriticalModifierMismatch(
     query: string,
     candidateName: string,
-    source: 'fatsecret' | 'fdc' | 'cache'
+    source: 'fatsecret' | 'fdc' | 'cache',
+    nutrition?: { fat: number, per100g: boolean }
 ): boolean {
     const queryLower = query.toLowerCase();
     const candLower = candidateName.toLowerCase();
@@ -2071,24 +2236,33 @@ export function hasCriticalModifierMismatch(
     }
 
     // Check low-fat modifiers - TIERED approach:
-    // - STRICT: nonfat, fat-free, fat free → candidate MUST have nonfat/fat-free (not just light)
+    // - STRICT: nonfat, fat-free, fat free, skim → candidate MUST have <=2g fat/100g OR nonfat/fat-free in name
     // - LENIENT: low-fat, reduced fat, light, lite → candidate can have any low-fat modifier
 
-    const STRICT_NONFAT = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'extra light', 'extra-light'];
-    const NONFAT_CANDIDATES = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'fat not added', '0% fat', 'zero fat'];
+    const STRICT_NONFAT = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'extra light', 'extra-light', 'skim'];
+    const NONFAT_CANDIDATES = ['nonfat', 'non-fat', 'fat free', 'fat-free', 'fatfree', 'fat not added', '0% fat', 'zero fat', 'skim'];
 
     const queryHasStrictNonfat = STRICT_NONFAT.some(m => queryLower.includes(m));
     const candHasNonfat = NONFAT_CANDIDATES.some(m => candLower.includes(m));
 
     if (queryHasStrictNonfat) {
-        // Query asks for nonfat/fat-free - REQUIRE nonfat/fat-free in candidate
-        // "Light Italian Dressing" does NOT satisfy "nonfat Italian dressing"
-        // EXCEPTION: Substitute/replacer products (e.g., "Egg Substitute", "Egg Beaters")
-        // are inherently fat-free even without "fat free" in the name
-        const REPLACER_EXEMPTION_TERMS = ['substitute', 'substitution', 'replacer', 'replacement'];
-        const candIsReplacer = REPLACER_EXEMPTION_TERMS.some(term => candLower.includes(term));
-        if (!candHasNonfat && !candIsReplacer) {
-            return true; // Reject - candidate doesn't meet strict nonfat requirement
+        // If we have nutrition data, use macro verification (fat <= 2g per 100g)
+        if (nutrition && nutrition.per100g && typeof nutrition.fat === 'number') {
+            console.log(`[DEBUG] hasCriticalModifierMismatch: Evaluating ${candidateName}. nutrition.fat=${nutrition.fat}`);
+            if (nutrition.fat > 2) {
+                console.log(`[DEBUG] hasCriticalModifierMismatch: REJECTED ${candidateName}`);
+                return true; // Reject: has too much fat for a nonfat request
+            }
+            // If fat <= 2g, it passes the nonfat requirement even without the word in the name
+        } else {
+            console.log(`[DEBUG] hasCriticalModifierMismatch: No valid nutrition for ${candidateName}. Proceeding to name check.`);
+            // Fallback to name-based check if nutrition is missing
+            const REPLACER_EXEMPTION_TERMS = ['substitute', 'substitution', 'replacer', 'replacement'];
+            const candIsReplacer = REPLACER_EXEMPTION_TERMS.some(term => candLower.includes(term));
+            
+            if (!candHasNonfat && !candIsReplacer) {
+                return true; // Reject - candidate doesn't meet strict nonfat requirement in name
+            }
         }
     }
 
@@ -2237,7 +2411,7 @@ export function filterCandidatesByTokens(
     normalizedName: string,
     options: FilterOptions = {}
 ): FilterResult {
-    const { debug = false, rawLine } = options;
+    const { debug = false, rawLine, relaxed = false } = options;
 
     // Use rawLine for modifier detection if available, otherwise fall back to normalizedName
     const modifierCheckSource = rawLine || normalizedName;
@@ -2247,7 +2421,12 @@ export function filterCandidatesByTokens(
     }
 
     // Extract must-have tokens
-    const mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    let mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    
+    // In relaxed mode, only require the very last non-modifier token (the primary noun)
+    if (relaxed && mustHaveTokens.length > 1) {
+        mustHaveTokens = [mustHaveTokens[mustHaveTokens.length - 1]];
+    }
 
     if (mustHaveTokens.length === 0) {
         // No tokens to filter by - keep all
@@ -2262,7 +2441,8 @@ export function filterCandidatesByTokens(
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
         // Does NOT block minor preferences like unsweetened, organic (handled by scoring)
-        if (rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source)) {
+        // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods
+        if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition)) {
             if (debug) {
                 logger.info('filter.candidates.critical_modifier_mismatch', {
                     query: rawLine,
@@ -2438,7 +2618,7 @@ export function filterCandidatesByTokens(
             return false;
         }
 
-        if (isFoodTypeMismatch(normalizedName, candidate.name, candidate.brandName)) {
+        if (!relaxed && isFoodTypeMismatch(normalizedName, candidate.name, candidate.brandName)) {
             if (debug) {
                 logger.info('filter.candidates.food_type_mismatch', {
                     query: normalizedName,

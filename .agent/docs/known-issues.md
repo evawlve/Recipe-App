@@ -180,6 +180,46 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 ---
 
+### Unitless Queries Falling Back to 1g (e.g. 0.5 leek → 0.5g)
+
+**Date**: April 2026  
+**Symptom**: "0.5 leek" mapped to 0.5g, and "1 pancake mix" mapped to 1g.  
+**Root Cause**: In `selectServing`, the `fallbackMatch` logic was catching `requestedUnitType === 'unknown'` for unitless queries. Whenever there was a generic `"g"` or `"100g"` serving, it scored higher than the native `"1 leek"` serving. The system awarded these 100g bags generic bonus points, causing standard count-like queries to erroneously use a mass unit, which effectively mapped them to 1 gram per count unit.
+
+**Fix**: Modified the condition for `fallbackMatch` to strictly ONLY allow `requestedUnitType === 'mass'` or `unknown` queries that actually declare a string (like "packet"). Unitless queries with `!effectiveUnit` bypass `fallbackMatch` entirely, which allows them to hit the dedicated `(!effectiveUnit)` pipeline. This results in standard unitless AI estimation via `ambiguous-unit-backfill`, hitting the proper seed dictionaries from `default-count-grams.ts` giving accurate (e.g., 89g) per item weights.
+
+**Files**: `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 3679)
+
+---
+
+### "Sour Cream" to "Regular Sour Cream" Rewrite Causes Systemic Light/Lowfat Failures
+
+**Date**: April 2026  
+**Symptom**: Around 20 light/low-fat/reduced-fat sour cream queries failed with LOW_CONF rejection. Also affected: light butter, light cream, low fat cheddar, low fat monterey jack, nonfat mozzarella, velveeta light, skim yogurt, evaporated skim milk.  
+**Root Cause**: normalization-rules.json contained a synonym rewrite from sour cream to regular sour cream. This injected the word regular into ALL queries containing sour cream. In modifier-constraints.ts, regular is explicitly defined as a CONFLICT for reduced-fat modifiers (light, lowfat, etc.), so queries like light regular sour cream self-contradicted and received a 0.6 penalty, triggering rejection.
+
+**Fix**:
+1. Deleted the harmful sour cream to regular sour cream rewrite from normalization-rules.json
+2. The existing fat-level exclusion rules in filter-candidates.ts already handled sour cream fat differentiation
+3. Cleared 21 poisoned AiNormalizeCache entries containing regular sour cream
+4. Cleared 52 ValidatedMapping entries for all affected ingredients
+
+**Files**: `data/fatsecret/normalization-rules.json`, `src/lib/fatsecret/filter-candidates.ts`
+
+---
+
+### Branded Product Drift in Category Guards
+
+**Date**: April 2026  
+**Symptom**: Multiple raw/simple ingredients mapping to branded processed products: green beans to Ranch Style Beans, butter to peanut/almond butter, okra to CookOut fried okra, herbs to herb crackers, lentils to ARUJ brand lentils.  
+**Root Cause**: No exclusion guards for these categories in filter-candidates.ts.
+
+**Fix**: Added 5 targeted CATEGORY_EXCLUSIONS entries to prevent branded product drift while preserving correct matches for actual branded queries.
+
+**Files**: `src/lib/fatsecret/filter-candidates.ts`
+
+---
+
 ## Parsing & Normalization
 
 ### Prep Phrase Stripped Inside Words
@@ -354,3 +394,15 @@ When you fix a bug, add it here using this template:
 
 - [Debugging Quickstart](./debugging-quickstart.md) - Step-by-step debugging workflow
 - [Ingredient Mapping Pipeline](./ingredient-mapping-pipeline.md) - Full system documentation
+
+
+### AI Estimator Overestimates Fat for Fat-Free Fallbacks
+
+**Date**: April 2026  
+**Symptom**: When a Fat-Free item is bounced successfully due to high macros and falls back to AI, the AI sometimes hallucinates macros that still technically violate fat-free constraints (e.g. 5.1% fat).  
+**Root Cause**: The AI Estimator prompt does not have hard enforcement mechanisms natively telling it what exactly fat-free means per 100g. It hallucinates macro profiles based purely on generic associations.
+
+**Fix**: None implemented yet. Needs to be resolved in src/lib/ai/nutrition-estimator.ts by adding a strict rule to clamp fat at <0.5g per serving for fat-free/non-fat named items.
+
+**Files**: src/lib/ai/nutrition-estimator.ts
+

@@ -1,0 +1,31 @@
+================
+C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient-validation.test.ts
+should use AI rerank and save to cache on success
+Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+Expected: "120g chicken", ObjectContaining {"foodId": "c2"}, ObjectContaining {"approved": true, "confidence": 0.9}
+
+Number of calls: 0
+    at Object.<anonymous> (C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient-validation.test.ts:82:38)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+================
+C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient-validation.test.ts
+should retry with refined query if initial search fails
+Error: expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+Expected: "120g refined chicken", Any<Object>
+Received
+       1: "bad chicken", {"maxResults": 15}
+       2: "chicken", {"maxResults": 15}
+       3: "refined chicken", {"maxResults": 10}
+
+Number of calls: 3
+    at Object.<anonymous> (C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient-validation.test.ts:112:42)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+================
+C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient-with-fallback.test.ts
+enforces low-fat modifiers in candidate selection
+Error: expect(received).not.toBeNull()
+
+Received: null
+    at Object.<anonymous> (C:\Dev\Recipe App\src\lib\fatsecret\__tests__\map-ingredient-with-fallback.test.ts:324:28)

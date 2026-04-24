@@ -267,8 +267,38 @@ export function applyModifierConstraints(
         );
 
         if (!hasRequired) {
-            // Don't reject outright, but apply penalty
-            // The candidate might just have a slightly different phrasing
+            // Determine if the missing required token is a fat-level modifier that was
+            // explicitly demanded by the user (nonfat, fat-free, low-fat, lean, etc.)
+            const FAT_LEVEL_TOKENS = new Set([
+                'fat free', 'fat-free', 'nonfat', 'non-fat', 'skim', '0%', 'zero fat',
+                'reduced fat', 'low fat', 'lowfat', 'low-fat', 'light', 'lite', '2%', '1%',
+                'extra lean', 'extra-lean', 'lean',
+                'unsweetened', 'no sugar', 'sugar free', 'sugar-free', 'zero sugar',
+            ]);
+            const requiredIsFatOrSugar = constraints.requiredTokens.some(r =>
+                FAT_LEVEL_TOKENS.has(r.toLowerCase())
+            );
+
+            // Only hard-reject if the candidate also has an explicitly contradicting fat level
+            const OPPOSING_FAT_TOKENS = [
+                'whole', 'full fat', 'full-fat', 'regular',
+                'sweetened', 'with sugar',
+                // Full-fat dairy indicators
+                'whole milk', '3.25%', '3.5%',
+            ];
+            const candidateHasOpposingFat = OPPOSING_FAT_TOKENS.some(t =>
+                candidateLower.includes(t)
+            );
+
+            if (requiredIsFatOrSugar && candidateHasOpposingFat) {
+                return {
+                    penalty: 1,
+                    rejected: true,
+                    reason: `fat/sugar modifier mismatch: query requires "${constraints.requiredTokens.slice(0, 2).join('/')}" but candidate has opposing modifier`,
+                };
+            }
+
+            // Otherwise soft penalty — candidate might just use different phrasing
             return {
                 penalty: 0.4,
                 rejected: false,

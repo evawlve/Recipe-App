@@ -15,7 +15,7 @@ import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
 import { parseIngredientLine } from '../parse/ingredient-line';
-import { normalizeIngredientName } from './normalization-rules';
+import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 
 /**
  * Retrieve a validated mapping from cache by RAW ingredient line
@@ -87,17 +87,33 @@ export async function getValidatedMappingByNormalizedName(
     rawLine?: string
 ): Promise<FatsecretMappedIngredient | null> {
     try {
-        // Phase 1: Exact match
+        // Canonicalize the lookup key (lowercase + singularize + sort tokens)
+        const canonicalKey = canonicalizeCacheKey(normalizedName);
+
+        // Phase 1: Exact match on canonical key
         let cached = await prisma.validatedMapping.findUnique({
             where: {
                 normalizedForm_source: {
-                    normalizedForm: normalizedName,
+                    normalizedForm: canonicalKey,
                     source,
                 },
             },
         });
 
-        // Phase 2: Token-set fallback (handles word order variance)
+        // Phase 2: Legacy fallback — try the raw normalizedName
+        // (handles entries saved before canonical key migration)
+        if (!cached) {
+            cached = await prisma.validatedMapping.findUnique({
+                where: {
+                    normalizedForm_source: {
+                        normalizedForm: normalizedName,
+                        source,
+                    },
+                },
+            });
+        }
+
+        // Phase 3: Token-set fallback (emergency — should rarely fire after migration)
         if (!cached) {
             cached = await findByTokenSet(normalizedName, source, rawLine);
             if (cached) {
@@ -124,6 +140,29 @@ export async function getValidatedMappingByNormalizedName(
                 cachedFood: cached.foodName,
             });
             return null;  // Reject cache hit, force fresh search
+        }
+
+        // Defense-in-depth: Reject cache hits where the cached food has nutritional
+        // modifiers NOT present in the query (e.g., query "peanut butter" but cached
+        // food is "Powdered Peanut Butter", or query "cheddar cheese" but cached
+        // food is "Cheddar Cheese (Reduced Fat)")
+        const NUTRITIONAL_MODIFIERS = [
+            'powdered', 'reduced fat', 'low fat', 'fat free', 'fat-free',
+            'sugar free', 'sugar-free', 'lite', 'light', 'diet',
+            'unsweetened', 'sweetened', 'whole wheat', 'whole grain',
+            'skim', 'nonfat', 'non-fat', '2%', '1%',
+        ];
+        const queryLower = normalizedName.toLowerCase();
+        const foodLower = cached.foodName.toLowerCase();
+        for (const mod of NUTRITIONAL_MODIFIERS) {
+            if (foodLower.includes(mod) && !queryLower.includes(mod)) {
+                logger.debug('validated_mapping.cache_nutritional_modifier_mismatch', {
+                    query: normalizedName,
+                    cachedFood: cached.foodName,
+                    modifier: mod,
+                });
+                return null;  // Reject cache hit, force fresh search
+            }
         }
 
         if (rawLine) {
@@ -255,7 +294,9 @@ export async function saveValidatedMapping(
 ): Promise<void> {
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
     // canonicalBase consolidates variations like "lemon zest", "lemon rind" -> "lemon peel"
-    const normalizedForm = options?.canonicalBase || options?.normalizedForm || normalizeQuery(rawIngredient);
+    const rawForm = options?.canonicalBase || options?.normalizedForm || normalizeQuery(rawIngredient);
+    // Canonicalize: lowercase + singularize + sort tokens
+    const normalizedForm = canonicalizeCacheKey(rawForm);
 
     // Pre-save validation: Reject mappings where core tokens from normalizedForm 
     // are missing from foodName (e.g., "dry brown rice" → "dry brown beans" is invalid

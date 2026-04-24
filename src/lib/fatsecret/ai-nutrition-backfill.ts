@@ -20,6 +20,7 @@ import { logger } from '../logger';
 import { callStructuredLlm } from '../ai/structured-client';
 import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_BATCH } from './config';
 import type { UnifiedCandidate } from './gather-candidates';
+import { extractModifierConstraints } from './modifier-constraints';
 
 // ============================================================
 // Types
@@ -154,9 +155,10 @@ const SYSTEM_PROMPT = [
     '- All values must be per 100g of the RAW/UNCOOKED form unless the food is always consumed cooked (e.g., bread, pasta).',
     '- Use realistic values based on known foods. Do NOT make up unrealistic numbers.',
     '- Calories should approximately follow the Atwater equation: calories ≈ protein*4 + carbs*4 + fat*9.',
-    '- If the food is a dietary variant (fat-free, sugar-free, gluten-free), adjust macros accordingly from the base food.',
-    '- Confidence should be 0.9+ for well-known generic foods, 0.6-0.8 for variants/brands, <0.6 for obscure items.',
+    '- If the food is a dietary variant (fat-free, low-fat, reduced-fat, skim, light, lite, sugar-free), you MUST dramatically adjust macros accordingly from the base food. Example: For low-fat/fat-free, fatPer100g MUST be strictly reduced.',
     '- For serving size estimates, use standard US measuring cups (240ml) and tablespoons (15ml).',
+    '- If the food is a commonly counted discrete item (e.g., pepper, cracker, slice, clove, berry), you MUST provide a realistic gramsPerPiece estimate.',
+    '- Confidence should be 0.9+ for well-known generic foods, 0.6-0.8 for variants/brands, <0.6 for obscure items.',
 ].join('\n');
 
 // ============================================================
@@ -176,6 +178,31 @@ function buildUserPrompt(ingredientName: string, baseFoodContext?: BaseFoodConte
         if (baseFoodContext.carbsPer100g != null) lines.push(`  - Carbs: ${baseFoodContext.carbsPer100g.toFixed(1)}g/100g`);
         if (baseFoodContext.fatPer100g != null) lines.push(`  - Fat: ${baseFoodContext.fatPer100g.toFixed(1)}g/100g`);
         lines.push('Use this as a starting point and adjust for the actual ingredient.');
+    }
+
+    const constraints = extractModifierConstraints(ingredientName);
+    
+    // Identify if the user strictly demanded something that contradicts a standard base food
+    let modifierAlert = '';
+    const isFatFree = constraints.requiredTokens.some(t => ['fat free', 'nonfat', 'skim', 'zero fat', '0%'].includes(t));
+    const isLowFat = constraints.requiredTokens.some(t => ['reduced fat', 'low fat', 'lowfat', 'light', 'lite', '2%', '1%'].includes(t));
+    const isSugarFree = constraints.requiredTokens.some(t => ['unsweetened', 'no sugar', 'sugar free', 'zero sugar'].includes(t));
+    const isLean = constraints.requiredTokens.some(t => ['lean', 'extra lean', '9', '8'].some(l => t.includes(l)));
+
+    if (isFatFree) {
+        modifierAlert = 'FAT FREE or NONFAT. You MUST aggressively lower the fat to ~0g and scale down calories from the reference food.';
+    } else if (isLowFat) {
+        modifierAlert = 'LOW FAT or LIGHT. You MUST significantly lower the fat and calories from the reference food.';
+    } else if (isSugarFree) {
+        modifierAlert = 'SUGAR FREE or UNSWEETENED. You MUST drop the sugar to ~0g and lower carbs/calories accordingly compared to the reference.';
+    } else if (isLean) {
+        modifierAlert = 'LEAN. Reduce fat and calories appropriately compared to the generic reference food.';
+    }
+
+    if (modifierAlert) {
+        lines.push('');
+        lines.push(`CRITICAL CONSTRAINT: The target food is ${modifierAlert}`);
+        lines.push(`Do NOT blindly copy the reference food's macros. Adjust them strictly to honor this constraint.`);
     }
 
     lines.push('');

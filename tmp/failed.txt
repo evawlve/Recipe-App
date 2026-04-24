@@ -1,0 +1,373 @@
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.81] "2 tsp crushed red pepper flakes" → "Crushed Red Pepper (Papa John's)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [0.98] "2 cup power greens" → "Power Greens (Simple Truth Organic)"
+✗ [0.98] "1 tbsp ghee" → "Ghee (Swad)"
+✗ [0.00] "0.5 tsp buttery cinnamon powder" → "" [LOW_CONF]
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "4 oz sour cream light" → "" [LOW_CONF]
+✗ [0.98] "1.5 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.00] "0.3333333333333333 cup stirred soy flour" → "" [LOW_CONF]
+✗ [0.82] "0.311625 cup ground golden flaxseed meal" → "Organic 100% Whole Ground Golden Flaxseed Meal (Bob's Red Mill)" [COMPLEX_PRODUCT]
+✗ [0.95] "3.5 cup fire roasted tomatoes" → "Fire Roasted Diced Tomatoes (Great Value)"
+✗ [0.00] "1  lemon yields lemon juice" → "" [LOW_CONF]
+✗ [1.00] "1 cup organic fire roasted tomatoes with green chiles" → "Organic Diced & Fire Roasted Tomatoes with Green Chiles (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "0.75 cup crushed graham cracker crumbs" → "" [LOW_CONF]
+✗ [0.98] "0.75 cup four cheese spaghetti sauce" → "Four Cheese Spaghetti Sauce (Del Monte)"
+✗ [0.98] "2 cup all-purpose flour" → "All-Purpose Flour (Gold Medal)"
+✗ [0.72] "0.75 cup sugar free cherry pie filling" → "No Sugar Added Cherry Pie Filling (Duncan Hines)" [COMPLEX_PRODUCT]
+✗ [0.98] "0.5 cup crumbled feta cheese" → "Crumbled Feta Cheese (Happy Farms)"
+✗ [0.00] "0.5  lemon yields lemon juice" → "" [LOW_CONF]
+✗ [0.98] "2 tsp cajun seasoning" → "Cajun Seasoning (Sheetz)"
+✗ [0.00] "2 cube vegetable boullion" → "" [LOW_CONF]
+✗ [0.98] "0.5 cup flour" → "All-Purpose Flour (Gold Medal)"
+✓ {full_pipeline} [1.00] "1 cup roasted vegetable pasta sauce" → "Cooked Vegetable Combinations with Butter Sauce and Pasta" | (230kcal/197g) = 230kcal P:7.5 C:35.6 F:7.5 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "0.125 tsp Himalayan pink salt crystals" → "Himalayan Pink Salt Crystals (Trader Joe's)"
+✗ [0.98] "1 can corn" → "Corn"
+✗ [0.00] "0.6666666666666666 tbsp burger relish" → "" [LOW_CONF]
+✗ [0.98] "4 tbsp nutritional yeast" → "Nutritional Yeast (Whole Foods Market)"
+✗ [1.00] "1  organic wheat pie shell" → "Organic Whole Wheat 9" Pie Shell (Wholly Wholesome)" [COMPLEX_PRODUCT]
+✗ [0.00] "6 oz vegetarian mince" → "" [LOW_CONF]
+✗ [0.00] "4.5 oz lasagna about six" → "" [LOW_CONF]
+✗ [0.00] "1 cup or ripe cherry tomatoes" → "" [LOW_CONF]
+✗ [1.00] "1 bunch spinach" → "Spinach"
+✗ [0.98] "0.12 cup flour" → "All-Purpose Flour (Gold Medal)"
+✗ [0.00] "1 tsp or 1 packet dry mustard" → "" [LOW_CONF]
+✗ [0.00] "1 tbsp rice vinegar" → "" [LOW_CONF]
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "4 slice crust not eaten bread" → "" [LOW_CONF]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✓ {full_pipeline} [0.95] "6 oz fat free cheddar cheese" → "Natural Shredded Fat Free Cheddar Cheese (Kraft)" | (273kcal/170.10000000000002g) = 273kcal P:54.7 C:12.2 F:0.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.00] "1 scoop vanilla whey protein" → "" [LOW_CONF]
+✗ [0.98] "2 tbsp flax seed" → "Flax Seed (Bob's Red Mill)"
+✗ [0.98] "1 cup gluten free baking flour" → "Gluten Free All Purpose Baking Flour (Bob's Red Mill)" [COMPLEX_PRODUCT]
+✗ [0.98] "2.25 tsp yeast" → "Yeast"
+✗ [0.98] "4 cup gluten free baking flour" → "Gluten Free All Purpose Baking Flour (Bob's Red Mill)" [COMPLEX_PRODUCT]
+✗ [0.98] "2 tbsp natural cane sugar" → "Natural Cane Sugar (Florida Crystals)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [0.00] "1 oz low fat sour cream divided" → "" [MISSING_FAT_MOD, LOW_CONF]
+✓ {full_pipeline} [0.98] "5 oz strawberry banana Greek yogurt" → "strawberry; banana strawberry banana greek yogurt (CHOBANI)" | (123kcal/141.75g) = 123kcal P:10.4 C:15.2 F:2.4 [AI:NORM] [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.98] "0.75 cup bran flakes" → "Bran Flakes (Trader Joe's)"
+✗ [0.85] "1 slice center cut bacon" → "Center Cut Bacon (Oscar Mayer)"
+✗ [0.00] "0.5 cup thinly red and green bell peppers" → "" [LOW_CONF]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.00] "1  6 oz container flavored yogurt low fat" → "" [MISSING_FAT_MOD, LOW_CONF]
+✗ [0.98] "1 cup natural applesauce" → "Natural Applesauce (Mott's)"
+✗ [0.81] "3 cup oats" → "Rolled Oats (Publix)"
+✗ [0.98] "1 scoop 100% whey protein" → "100% Whey Protein (Optimum Nutrition)"
+✓ {full_pipeline} [0.98] "0.5 cup fat free zesty Italian dressing" → "Fat Free Reduced Calorie Italian Dressing" | (55kcal/115.5g) = 55kcal P:1.1 C:10.1 F:1.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.94] "1 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [1.00] "2 tbsp ground flax seed" → "Organic Ground Flax Seed (Great Value)"
+✗ [0.00] "0.5 cup almond milk vanilla" → "" [LOW_CONF]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [1.00] "1 scoop protein evolution - chocolate" → "Protein Evolution - Chocolate (Intek)"
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.78] "1 scoop 100% whey - chocolate" → "Whey Chocolate (Hammer Nutrition)"
+✗ [0.98] "1 tbsp Italian seasoning" → "Italian Seasoning (Spice Classics)"
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.00] "0.5 cup almond milk vanilla" → "" [LOW_CONF]
+✗ [1.00] "1 scoop protein evolution - chocolate" → "Protein Evolution - Chocolate (Intek)"
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✓ {full_pipeline} [1.00] "10.5 oz low fat cream of chicken soup" → "Low Fat Cream of Chicken Soup (Campbell's)" | (143kcal/297.675g) = 143kcal P:7.1 C:26.2 F:4.8 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.00] "42 g salad seasoning" → "" [LOW_CONF]
+✗ [0.00] "2 cup pared cucumber" → "" [LOW_CONF]
+✗ [0.00] "42 g gluten-free salad seasoning" → "" [LOW_CONF]
+✗ [1.00] "1 tsp Old Bay Seasoning" → "Old Bay Seasoning (Old Bay)"
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.00] "0.5 cup almond milk vanilla" → "" [LOW_CONF]
+✗ [1.00] "1 scoop protein evolution - chocolate" → "Protein Evolution - Chocolate (Intek)"
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.78] "1 scoop 100% whey - chocolate" → "Whey Chocolate (Hammer Nutrition)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.00] "1 tbsp crumbled bay" → "" [LOW_CONF]
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✓ {full_pipeline} [0.81] "16.5 oz low sodium 100% vegetable juice" → "Mixed Vegetable Juice (Vegetables Other Than Tomato)" | (137kcal/467.77500000000003g) = 137kcal P:7.0 C:28.4 F:1.1 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "2  beef bouillon cubes" → "Beef Bouillon Cubes (Knorr)"
+✗ [0.98] "2  beef bouillon cubes" → "Beef Bouillon Cubes (Knorr)"
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.89] "1 cup corn whole-kernel" → "Yellow Sweet Corn (Whole Kernel, Drained Solids, Canned)" | (133kcal/164g) = 133kcal P:4.3 C:30.5 F:1.6 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.00] "1 cup crushed tortilla chips" → "" [LOW_CONF]
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "4  limes yield lime juice" → "" [LOW_CONF]
+✗ [0.98] "1 can tomato soup" → "Tomato Soup"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [0.00] "5 oz sour cream fat free" → "" [MISSING_FAT_MOD, LOW_CONF]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✓ {full_pipeline} [0.70] "1 cup kernels corn" → "Yellow Sweet Corn (Whole Kernel, Drained Solids, Canned)" | (133kcal/164g) = 133kcal P:4.3 C:30.5 F:1.6 [AI:NORM] [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.79] "2  breasts bone and skin removed chicken breasts" → "breast meat and skin raw chicken" | (254kcal/200g) = 254kcal P:42.8 C:-0.9 F:9.6 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.82] "1 packet onion soup" → "French Onion Soup"
+✗ [0.98] "1 can tomato soup" → "Tomato Soup"
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.00] "0.5 cup almond milk vanilla" → "" [LOW_CONF]
+✗ [0.00] "2 medium green onion cut into thin strips" → "" [LOW_CONF]
+✗ [0.00] "0.5 floz rice vinegar 2 tbsp" → "" [LOW_CONF]
+✗ [1.00] "1 scoop protein evolution - chocolate" → "Protein Evolution - Chocolate (Intek)"
+✗ [0.78] "1 scoop 100% whey - chocolate" → "Whey Chocolate (Hammer Nutrition)"
+✗ [0.98] "1 scoop 100% whey protein" → "100% Whey Protein (Optimum Nutrition)"
+✗ [0.94] "1 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.00] "7 oz light sour cream 200 ml" → "" [LOW_CONF]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "1 tbsp fried shallots" → "Fried Shallots (Trader Joe's)"
+✗ [0.00] "1  blood orange rind" → "" [LOW_CONF]
+✗ [0.00] "0.5 cup unpacked palm sugar" → "" [LOW_CONF]
+✗ [0.00] "3 tbsp rice vinegar" → "" [LOW_CONF]
+✗ [0.00] "2  limes yield limes rind and juice" → "" [LOW_CONF]
+✗ [1.00] "2 tbsp ground flax seed" → "Organic Ground Flax Seed (Great Value)"
+✗ [0.81] "0.25 tsp crushed red pepper flakes" → "Crushed Red Pepper (Papa John's)"
+✗ [0.76] "3  breasts bone and skin removed duck breast" → "Wild Duck Breast Meat and Skin" [COMPLEX_PRODUCT]
+✗ [0.00] "1 tbsp rice vinegar" → "" [LOW_CONF]
+✗ [0.00] "1 cup and cashew nuts" → "" [LOW_CONF]
+✗ [0.98] "0.5 cup flour" → "All-Purpose Flour (Gold Medal)"
+✗ [0.98] "3 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.76] "1 cup reduced fat Mexican cheese" → "Reduced Fat Mexican Style Shredded Cheese (Market Pantry)" [COMPLEX_PRODUCT]
+✗ [0.00] "1 large tomato desedded and" → "" [LOW_CONF]
+✗ [0.98] "0.5 cup egg beaters" → "Egg Beaters (ConAgra Foods)"
+✗ [0.00] "0.25 cup light sour cream" → "" [LOW_CONF]
+✗ [0.98] "1 cup reduced fat colby and monterey jack cheese" → "Reduced Fat Colby and Monterey Jack Cheese (Stop & Shop)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tbsp italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [0.98] "1.5 cup rolled oats" → "Rolled Oats (Trader Joe's)"
+✓ {early_cache} [0.90] "0.5 lb lean ground beef" → "Ground Beef (85% Lean / 15% Fat)" | (488kcal/226.8g) = 488kcal P:42.2 C:0.0 F:34.0 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "3  limes yield lime juice" → "" [LOW_CONF]
+✗ [0.98] "1 tbsp red pepper crushed" → "Crushed Red Pepper (Papa John's)"
+✓ {full_pipeline} [0.95] "1 cup cannellini beans kidney beans" → "cannellini canned sodium added drained and rinsed beans" | (138kcal/120g) = 138kcal P:8.9 C:22.6 F:1.4 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.00] "1 oz yields lime" → "" [LOW_CONF]
+✗ [0.98] "0.12 cup crumbled feta cheese" → "Crumbled Feta Cheese (Happy Farms)"
+✗ [0.98] "1 tsp Italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [0.85] "1 cup sour cream" → "Regular Sour Cream (Anderson Erickson)"
+✗ [0.98] "3 slice capocollo" → "Capocollo (Boar's Head)"
+✗ [0.98] "2 tsp fajita seasoning" → "Fajita Seasoning (Great Value)"
+✗ [0.92] "1 small head green cabbage" → "Green Cabbage"
+✗ [0.82] "1 tsp red pepper flakes" → "Red Pepper Flakes (Reg) (Jimmy John's)"
+✗ [0.98] "2 tbsp italian seasoning" → "Italian Seasoning (Spice Classics)"
+✓ {early_cache} [0.98] "0.5 cup fat free zesty Italian dressing" → "Fat Free Reduced Calorie Italian Dressing" | (55kcal/115.5g) = 55kcal P:1.1 C:10.1 F:1.0 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "3 oz black olives 1/2 can" → "" [LOW_CONF]
+✗ [0.00] "3 oz green olives 1/2 jar" → "" [LOW_CONF]
+✗ [0.00] "4 oz sour cream light" → "" [LOW_CONF]
+✗ [0.98] "2 cup all purpose flour" → "All-Purpose Flour (Gold Medal)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✓ {full_pipeline} [0.87] "14.5 oz tomatoes with green chilies" → "green chilies diced tomatoes with green chilies" | (70kcal/411.07500000000005g) = 70kcal P:3.4 C:13.6 F:0.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "1 tbsp Italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [0.00] "2  basil rolled up and" → "" [LOW_CONF]
+✗ [0.98] "0.25 cup egg substitute" → "Egg Substitute (Egg Beaters)"
+✗ [0.00] "2 medium zucchini thinly - cut in half length wise then about" → "" [LOW_CONF]
+✗ [0.00] "24 oz italian sausage links cut up or use ground" → "" [LOW_CONF]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.85] "0.3333333333333333 cup sour cream" → "Regular Sour Cream (Anderson Erickson)"
+✗ [0.00] "0.3333333333333333 cup fat free sour cream" → "" [MISSING_FAT_MOD, LOW_CONF]
+✓ {early_cache} [1.00] "10.5 oz low fat cream of chicken soup" → "Low Fat Cream of Chicken Soup (Campbell's)" | (143kcal/297.675g) = 143kcal P:7.1 C:26.2 F:4.8 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "4 oz sour cream light" → "" [LOW_CONF]
+✗ [0.00] "4  sprays butter cooking spray" → "" [LOW_CONF]
+✗ [0.00] "0.3333333333333333 cup stirred soy flour" → "" [LOW_CONF]
+✗ [0.98] "1.5 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "0.5 cup no calorie sweetener" → "No Calorie Sweetener (Ideal)"
+✗ [0.82] "0.311625 cup ground golden flaxseed meal" → "Organic 100% Whole Ground Golden Flaxseed Meal (Bob's Red Mill)" [COMPLEX_PRODUCT]
+✗ [0.98] "0.25 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✓ {full_pipeline} [0.87] "1.75 cup tomatoes with green chilies" → "green chilies diced tomatoes with green chilies" | (36kcal/210g) = 36kcal P:1.7 C:7.0 F:0.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "0.25 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.95] "1 cup hazelnut meal" → "Hazelnut Meal/Flour (Bob's Red Mill)"
+✗ [0.98] "3 tbsp yellow mustard" → "Yellow Mustard"
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✓ {full_pipeline} [0.98] "240 ml unsweetened vanilla almond milk" → "unsweetened vanilla unsweetened vanilla almond milk (H-E-B)" | (41kcal/240g) = 41kcal P:1.0 C:2.0 F:3.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.95] "1.75 cup fire roasted tomatoes" → "Fire Roasted Diced Tomatoes (Great Value)"
+✗ [0.95] "2 cup low carb baking mix" → "Keto Baking Mix (Just About Foods)"
+✗ [0.98] "0.75 cup almond meal" → "Almond Meal (Natural Grocers)"
+✗ [0.98] "1 cup tomato sauce no salt added" → "Tomato Sauce (No Salt Added) (Great Value)"
+✗ [0.98] "0.5 cup sharp cheddar cheese" → "Sharp Cheddar Cheese (Tillamook)"
+✗ [0.98] "2 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.00] "1  rounded scoop gold standard 100% whey - double rich chocolate" → "" [LOW_CONF]
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.95] "4 tbsp fat free sun-dried tomato vinaigrette dressing" → "fat free vinaigrette dressing sun-dried tomato sun-dried tomato ken's steak house (KEN'S STEAK HOUSE)" | (58kcal/30g) = 58kcal P:0.0 C:13.3 F:0.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.00] "0.5  lemon yields lemon juice" → "" [LOW_CONF]
+✗ [0.98] "0.25 cup Swiss cheese" → "Swiss Cheese"
+✗ [0.00] "1 cup sprigs dill" → "" [LOW_CONF]
+✓ {full_pipeline} [1.00] "0.5 cup toasted pecan halves" → "Oil Roasted Pecan Nuts (Without Salt Added)" | (394kcal/55g) = 394kcal P:5.1 C:7.2 F:41.4 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [1.00] "0.5 cup part skim mozzarella cheese" → "Low-moisture Part Skim Mozzarella Fancy Shredded Cheese (Albertsons)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tsp double acting baking powder" → "Double Acting Baking Powder (Bob's Red Mill)"
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.00] "0.3333333333333333  lemon yields lemon juice" → "" [LOW_CONF]
+✗ [0.00] "10 medium tomatillos husks removed" → "" [LOW_CONF]
+✗ [0.00] "4  lemons crosswise" → "" [LOW_CONF]
+✗ [0.00] "50 g lowfat sour cream 1/4 cup" → "" [MISSING_FAT_MOD, LOW_CONF]
+✗ [0.00] "0.25 tsp garlic & herb seasoning blend" → "" [LOW_CONF]
+✓ {full_pipeline} [0.75] "0.12 tsp coarse salt" → "coarse salt salted butter with coarse salt (ISIGNY STE MERE)" | (2kcal/0.3g) = 2kcal P:0.0 C:0.0 F:0.2 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.00] "1  unit chicken breast" → "" [LOW_CONF]
+✗ [0.00] "1 bunch oregano sprigs" → "" [LOW_CONF]
+✗ [0.00] "2  limes yield lime juice" → "" [LOW_CONF]
+✗ [0.98] "1 cup seasoned bread crumbs" → "Seasoned Bread Crumbs (Alessi)"
+✗ [0.75] "4  chicken halves" → "Half Chicken (El Pollo Regio)"
+✗ [0.98] "1 tbsp italian seasoning" → "Italian Seasoning (Spice Classics)"
+✓ {full_pipeline} [0.98] "15 g anchovies - flat fillets in olive oil" → "Anchovies - Flat Fillets in Olive Oil (Brunswick)" | (25kcal/15g) = 25kcal P:3.0 C:0.0 F:1.5 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "1 cup english cucumber" → "English Cucumber (Trader Joe's)"
+✗ [0.00] "1 cup and cashews" → "" [LOW_CONF]
+✗ [0.98] "1  jalapeño pepper" → "Jalapeno Peppers"
+✗ [1.00] "0.25 tsp spice blend mustard" → "Spice Blend Mustard (Sabrett)"
+✗ [0.00] "3 slice fully bacon" → "" [LOW_CONF]
+✗ [0.98] "1.333333333333333 cup organic quinoa" → "Organic Quinoa (Simply Nature)"
+✗ [0.98] "0.25 cup pumpkin seeds" → "Pumpkin Seeds (Great Value)"
+✗ [0.98] "1 cup drained capers" → "Capers"
+✓ {early_cache} [0.95] "6 oz fat free cheddar cheese" → "Natural Shredded Fat Free Cheddar Cheese (Kraft)" | (273kcal/170.10000000000002g) = 273kcal P:54.7 C:12.2 F:0.0 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "1 tsp dry mustard" → "" [LOW_CONF]
+✗ [0.00] "1 tsp garlic fine" → "" [LOW_CONF]
+✗ [0.00] "4 slice crust not eaten bread" → "" [LOW_CONF]
+✗ [0.00] "2 cup dry yields quinoa" → "" [LOW_CONF]
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [0.00] "1 cup red and plain quinoa mix" → "" [LOW_CONF]
+✗ [0.00] "1 scoop vanilla whey protein" → "" [LOW_CONF]
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "0.5 tsp coarse ground pepper" → "" [LOW_CONF]
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "0.5 cup thinly red and green bell peppers" → "" [LOW_CONF]
+✗ [0.00] "1 oz low fat sour cream divided" → "" [MISSING_FAT_MOD, LOW_CONF]
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✓ {full_pipeline} [0.75] "1 tsp coarse salt" → "coarse salt salted butter with coarse salt (ISIGNY STE MERE)" | (13kcal/2.5g) = 13kcal P:0.0 C:0.0 F:1.4 [AI:NORM] [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.98] "5 oz strawberry banana Greek yogurt" → "strawberry; banana strawberry banana greek yogurt (CHOBANI)" | (123kcal/141.75g) = 123kcal P:10.4 C:15.2 F:2.4 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "0.5 cup italian-style bread crumbs" → "Italian Style Bread Crumbs (Food Club)"
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.85] "1 slice center cut bacon" → "Center Cut Bacon (Oscar Mayer)"
+✓ {early_cache} [0.98] "0.5 cup fat free zesty Italian dressing" → "Fat Free Reduced Calorie Italian Dressing" | (55kcal/115.5g) = 55kcal P:1.1 C:10.1 F:1.0 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.98] "1 scoop 100% whey protein" → "100% Whey Protein (Optimum Nutrition)"
+✗ [0.00] "0.5 cup almond milk vanilla" → "" [LOW_CONF]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.94] "1 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [1.00] "1 scoop protein evolution - chocolate" → "Protein Evolution - Chocolate (Intek)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.78] "1 scoop 100% whey - chocolate" → "Whey Chocolate (Hammer Nutrition)"
+✗ [0.98] "1 tbsp Italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [1.00] "2 tbsp ground flax seed" → "Organic Ground Flax Seed (Great Value)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✓ {early_cache} [1.00] "10.5 oz low fat cream of chicken soup" → "Low Fat Cream of Chicken Soup (Campbell's)" | (143kcal/297.675g) = 143kcal P:7.1 C:26.2 F:4.8 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "2 cup pared cucumber" → "" [LOW_CONF]
+✗ [0.00] "42 g salad seasoning" → "" [LOW_CONF]
+✗ [0.00] "42 g gluten-free salad seasoning" → "" [LOW_CONF]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.98] "1 scoop 100% whey protein" → "100% Whey Protein (Optimum Nutrition)"
+✗ [0.78] "1 scoop 100% whey - chocolate" → "Whey Chocolate (Hammer Nutrition)"
+✗ [0.94] "1 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [1.00] "2 tbsp ground flax seed" → "Organic Ground Flax Seed (Great Value)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [1.00] "1 tsp Old Bay Seasoning" → "Old Bay Seasoning (Old Bay)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.00] "0.5 cup almond milk vanilla" → "" [LOW_CONF]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [1.00] "1 scoop protein evolution - chocolate" → "Protein Evolution - Chocolate (Intek)"
+✗ [0.00] "1 tbsp crumbled bay" → "" [LOW_CONF]
+✓ {full_pipeline} [0.81] "16.5 oz low sodium 100% vegetable juice" → "Mixed Vegetable Juice (Vegetables Other Than Tomato)" | (137kcal/467.77500000000003g) = 137kcal P:7.0 C:28.4 F:1.1 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [1.00] "2 tbsp ground flax seed" → "Organic Ground Flax Seed (Great Value)"
+✗ [0.98] "2  beef bouillon cubes" → "Beef Bouillon Cubes (Knorr)"
+✗ [0.94] "1 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "2  beef bouillon cubes" → "Beef Bouillon Cubes (Knorr)"
+✓ {early_cache} [0.89] "1 cup corn whole-kernel" → "Yellow Sweet Corn (Whole Kernel, Drained Solids, Canned)" | (133kcal/164g) = 133kcal P:4.3 C:30.5 F:1.6 [AI:CACHE] [COMPLEX_PRODUCT]
+✓ {full_pipeline} [0.70] "1 cup kernels corn" → "Yellow Sweet Corn (Whole Kernel, Drained Solids, Canned)" | (133kcal/164g) = 133kcal P:4.3 C:30.5 F:1.6 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.00] "4  limes yield lime juice" → "" [LOW_CONF]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.94] "2 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.00] "5 oz sour cream fat free" → "" [MISSING_FAT_MOD, LOW_CONF]
+✗ [1.00] "2 tbsp ground flax seed" → "Organic Ground Flax Seed (Great Value)"
+✗ [0.98] "1 can tomato soup" → "Tomato Soup"
+✗ [0.98] "1 cup greek nonfat yogurt plain" → "Greek Nonfat Yogurt Plain (Giant Food)"
+✗ [0.82] "1 packet onion soup" → "French Onion Soup"
+✗ [0.00] "1 cup crushed tortilla chips" → "" [LOW_CONF]
+✗ [0.98] "1 scoop whey protein" → "Whey Protein (HTLT)"
+✗ [0.94] "1 tsp baking powder sodium aluminum sulfate double acting" → "Baking Powder Aluminum Free & Double Acting (Trader Joe's)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 can tomato soup" → "Tomato Soup"
+✓ {full_pipeline} [0.91] "1 cup oats dry" → "whole grain rolled old fashioned oats" | (458kcal/120g) = 458kcal P:16.2 C:82.4 F:7.1 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.00] "1.4 oz vanilla protein powder" → "" [LOW_CONF]
+✗ [0.00] "3 tbsp rice vinegar" → "" [LOW_CONF]
+✗ [0.00] "2  limes yield limes rind and juice" → "" [LOW_CONF]
+✗ [0.78] "1 scoop 100% whey - chocolate" → "Whey Chocolate (Hammer Nutrition)"
+✗ [0.00] "7 oz light sour cream 200 ml" → "" [LOW_CONF]
+✗ [0.00] "0.5 cup unpacked palm sugar" → "" [LOW_CONF]
+✗ [0.00] "1  blood orange rind" → "" [LOW_CONF]
+✗ [0.98] "1 scoop 100% whey protein" → "100% Whey Protein (Optimum Nutrition)"
+✗ [0.00] "0.25  sec spray no stick canola oil cooking spray" → "" [LOW_CONF]
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.00] "0.5 floz rice vinegar 2 tbsp" → "" [LOW_CONF]
+✗ [0.75] "1 cup quick oats" → "Quick Rolled Oats (Malt-O-Meal)"
+✗ [0.00] "2 medium green onion cut into thin strips" → "" [LOW_CONF]
+✗ [0.00] "1 scoop vanilla protein powder" → "" [LOW_CONF]
+✗ [0.81] "0.25 tsp crushed red pepper flakes" → "Crushed Red Pepper (Papa John's)"
+✗ [0.76] "3  breasts bone and skin removed duck breast" → "Wild Duck Breast Meat and Skin" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tbsp fried shallots" → "Fried Shallots (Trader Joe's)"
+✗ [0.00] "1 tbsp rice vinegar" → "" [LOW_CONF]
+✓ {full_pipeline} [1.00] "2 tbsp sweet cooking rice wine seasoning" → "Aji-Mirin Sweet Cooking Rice Wine Seasoning (Kikkoman)" | (70kcal/30g) = 70kcal P:0.0 C:15.0 F:0.0 [AI:GATE] [COMPLEX_PRODUCT]
+✗ [0.00] "0.25 cup light sour cream" → "" [LOW_CONF]
+✗ [0.00] "1 large tomato desedded and" → "" [LOW_CONF]
+✗ [0.98] "3 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "0.5 cup flour" → "All-Purpose Flour (Gold Medal)"
+✗ [0.00] "2 tsp garlic microplaned" → "" [LOW_CONF]
+✗ [0.00] "1 cup and cashew nuts" → "" [LOW_CONF]
+✓ {full_pipeline} [0.86] "5 ml lemon juice from concentrate" → "bottled concord lemon juice from concentrate" | (1kcal/5g) = 1kcal P:0.0 C:0.3 F:0.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.76] "1 cup reduced fat Mexican cheese" → "Reduced Fat Mexican Style Shredded Cheese (Market Pantry)" [COMPLEX_PRODUCT]
+✗ [0.98] "1 tbsp italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [0.98] "0.5 cup egg beaters" → "Egg Beaters (ConAgra Foods)"
+✗ [0.00] "5 tbsp rice vinegar" → "" [LOW_CONF]
+✗ [1.00] "1.5 cup rolled oats" → "Rolled Oats - Gluten Free (Trader Joe's)"
+✗ [0.98] "1 cup reduced fat colby and monterey jack cheese" → "Reduced Fat Colby and Monterey Jack Cheese (Stop & Shop)" [COMPLEX_PRODUCT]
+✓ {early_cache} [0.90] "0.5 lb lean ground beef" → "Ground Beef (85% Lean / 15% Fat)" | (488kcal/226.8g) = 488kcal P:42.2 C:0.0 F:34.0 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "1 oz yields lime" → "" [LOW_CONF]
+✗ [0.98] "1 tbsp red pepper crushed" → "Crushed Red Pepper (Papa John's)"
+✗ [0.00] "3  limes yield lime juice" → "" [LOW_CONF]
+✗ [0.98] "1 tsp Italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [0.92] "1 small head green cabbage" → "Green Cabbage"
+✗ [0.98] "3 slice capocollo" → "Capocollo (Boar's Head)"
+✓ {full_pipeline} [0.95] "1 cup cannellini beans kidney beans" → "cannellini canned sodium added drained and rinsed beans" | (138kcal/120g) = 138kcal P:8.9 C:22.6 F:1.4 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.85] "1 cup sour cream" → "Regular Sour Cream (Anderson Erickson)"
+✗ [0.82] "1 tsp red pepper flakes" → "Red Pepper Flakes (Reg) (Jimmy John's)"
+✗ [0.98] "2 tbsp italian seasoning" → "Italian Seasoning (Spice Classics)"
+✓ {early_cache} [0.98] "0.5 cup fat free zesty Italian dressing" → "Fat Free Reduced Calorie Italian Dressing" | (55kcal/115.5g) = 55kcal P:1.1 C:10.1 F:1.0 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "3 oz green olives 1/2 jar" → "" [LOW_CONF]
+✗ [0.00] "2  basil rolled up and" → "" [LOW_CONF]
+✗ [0.00] "4 oz sour cream light" → "" [LOW_CONF]
+✗ [0.00] "2 medium zucchini thinly - cut in half length wise then about" → "" [LOW_CONF]
+✗ [0.00] "24 oz italian sausage links cut up or use ground" → "" [LOW_CONF]
+✗ [0.00] "3 oz black olives 1/2 can" → "" [LOW_CONF]
+✓ {full_pipeline} [0.87] "14.5 oz tomatoes with green chilies" → "green chilies diced tomatoes with green chilies" | (70kcal/411.07500000000005g) = 70kcal P:3.4 C:13.6 F:0.0 [AI:NORM] [COMPLEX_PRODUCT]
+✗ [0.98] "2 cup all purpose flour" → "All-Purpose Flour (Gold Medal)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "1 tbsp Italian seasoning" → "Italian Seasoning (Spice Classics)"
+✗ [0.98] "0.12 cup crumbled feta cheese" → "Crumbled Feta Cheese (Happy Farms)"
+✗ [0.85] "0.3333333333333333 cup sour cream" → "Regular Sour Cream (Anderson Erickson)"
+✗ [0.00] "0.3333333333333333 cup fat free sour cream" → "" [MISSING_FAT_MOD, LOW_CONF]
+✗ [0.98] "0.25 cup egg substitute" → "Egg Substitute (Egg Beaters)"
+✗ [0.98] "1 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✓ {early_cache} [1.00] "10.5 oz low fat cream of chicken soup" → "Low Fat Cream of Chicken Soup (Campbell's)" | (143kcal/297.675g) = 143kcal P:7.1 C:26.2 F:4.8 [AI:CACHE] [COMPLEX_PRODUCT]
+✗ [0.00] "4 oz sour cream light" → "" [LOW_CONF]
+✗ [0.00] "4 spray butter cooking spray" → "" [LOW_CONF]
+✗ [0.00] "0.3333333333333333 cup stirred soy flour" → "" [LOW_CONF]
+✗ [0.98] "0.25 tsp baking powder" → "Baking Powder (Clabber Girl)"
+✗ [0.98] "0.5 cup no calorie sweetener" → "No Calorie Sweetener (Ideal)"
+✗ [0.98] "0.25 tsp baking powder" → "Baking Powder (Clabber Girl)"

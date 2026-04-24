@@ -492,7 +492,7 @@ export async function mapIngredientWithFallback(
         // ============================================================
         // Check ValidatedMapping for normalized name BEFORE calling AI
         // This is the key optimization: "1 cup chopped onion" → normalized "onion" → cache hit!
-        const earlyCacheHit = await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
+        const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
 
@@ -500,24 +500,76 @@ export async function mapIngredientWithFallback(
             // Cached mappings from before filter improvements may have bad mappings
             const earlyCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName);
 
-            // ALSO validate nutrition data - reject cached mappings to foods with zero/null nutrition
-            // This catches bad products like Freshii "Green Onion" with all-zero macros
             let earlyNutritionInvalid = false;
+            let loadedFdcNutrition: any = null;
+
             if (!earlyCoreTokenMismatch) {
                 const { prisma } = await import('../db');
-                const cachedFood = await prisma.fatSecretFoodCache.findUnique({
-                    where: { id: earlyCacheHit.foodId },
-                    select: { nutrientsPer100g: true }
-                });
-                if (cachedFood?.nutrientsPer100g) {
-                    const nutrients = cachedFood.nutrientsPer100g as any;
-                    earlyNutritionInvalid = hasNullOrInvalidMacros(nutrients);
-                    if (earlyNutritionInvalid) {
-                        logger.warn('mapping.early_cache_bad_nutrition', {
-                            rawLine: trimmed,
-                            cachedFood: earlyCacheHit.foodName,
-                            nutrients,
-                        });
+                if (earlyCacheHit.foodId.startsWith('fdc_')) {
+                    const fdcId = parseInt(earlyCacheHit.foodId.replace('fdc_', ''), 10);
+                    const cachedFdc = await prisma.fdcFoodCache.findUnique({
+                        where: { id: fdcId },
+                        select: { nutrients: true }
+                    });
+                    if (cachedFdc?.nutrients) {
+                        const rawFdc: any = cachedFdc.nutrients;
+                        loadedFdcNutrition = {
+                            kcal: rawFdc.energy ?? rawFdc.calories ?? 0,
+                            protein: rawFdc.protein ?? 0,
+                            carbs: rawFdc.carbohydrate ?? rawFdc.carbs ?? 0,
+                            fat: rawFdc.fat ?? 0,
+                            per100g: true,
+                        };
+                        earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
+                        if (earlyNutritionInvalid) {
+                            logger.warn('mapping.early_cache_bad_nutrition', {
+                                rawLine: trimmed,
+                                cachedFood: earlyCacheHit.foodName,
+                                nutrients: loadedFdcNutrition,
+                            });
+                        }
+                    } else {
+                        try {
+                            const { fdcApi } = await import('../usda/fdc-api');
+                            const details = await fdcApi.getFoodDetails(fdcId);
+                            
+                            // Map FDC api array format
+                            if (details?.foodNutrients) {
+                                const getNutrient = (id: number) => {
+                                    const n = details.foodNutrients.find((x: any) => x.nutrient?.id === id || x.nutrientId === id);
+                                    return n?.amount || 0;
+                                };
+                                loadedFdcNutrition = {
+                                    kcal: getNutrient(1008),
+                                    protein: getNutrient(1003),
+                                    carbs: getNutrient(1005),
+                                    fat: getNutrient(1004),
+                                    per100g: true,
+                                };
+                                earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
+                            } else {
+                                earlyNutritionInvalid = true;
+                            }
+                        } catch (err) {
+                            logger.error('mapping.early_cache_fdc_fetch_failed', { fdcId, error: (err as Error).message });
+                            earlyNutritionInvalid = true;
+                        }
+                    }
+                } else {
+                    const cachedFood = await prisma.fatSecretFoodCache.findUnique({
+                        where: { id: earlyCacheHit.foodId },
+                        select: { nutrientsPer100g: true }
+                    });
+                    if (cachedFood?.nutrientsPer100g) {
+                        const nutrients = cachedFood.nutrientsPer100g as any;
+                        earlyNutritionInvalid = hasNullOrInvalidMacros(nutrients);
+                        if (earlyNutritionInvalid) {
+                            logger.warn('mapping.early_cache_bad_nutrition', {
+                                rawLine: trimmed,
+                                cachedFood: earlyCacheHit.foodName,
+                                nutrients,
+                            });
+                        }
                     }
                 }
             }
@@ -546,6 +598,7 @@ export async function mapIngredientWithFallback(
                     score: earlyCacheHit.confidence,
                     foodType: 'generic',
                     rawData: {},
+                    ...(loadedFdcNutrition ? { nutrition: loadedFdcNutrition } : {})
                 };
 
                 // Hydrate with current request's quantity/unit
@@ -645,7 +698,8 @@ export async function mapIngredientWithFallback(
                     candidateCount: quickCandidates.length
                 });
 
-                const aiHint = await aiNormalizeIngredient(rawLine, normalizedName);
+                // FIX: Pass baseName instead of rawLine so the LLM output is cached by the normalized quantity-free string
+                const aiHint = await aiNormalizeIngredient(baseName, normalizedName);
                 if (aiHint.status === 'success') {
                     if (aiHint.normalizedName) {
                         normalizedName = aiHint.normalizedName;
@@ -671,12 +725,13 @@ export async function mapIngredientWithFallback(
                 // (from a previous LLM call) for the reranker's nutrition tiebreaker.
                 // This is critical for cases like rice vinegar where all candidates
                 // score identically but have vastly different calorie profiles.
-                const cachedNormalize = await getAiNormalizeCache(rawLine);
+                // FIX: Use baseName instead of rawLine to hit the cache for quantity variations!
+                const cachedNormalize = await getAiNormalizeCache(baseName);
                 if (cachedNormalize?.nutritionEstimate) {
                     aiNutritionEstimate = cachedNormalize.nutritionEstimate;
                     aiCanonicalBase = cachedNormalize.canonicalBase;
                     logger.debug('normalize_gate.cached_nutrition_estimate', {
-                        rawLine: trimmed,
+                        baseName,
                         estimate: aiNutritionEstimate.caloriesPer100g,
                         confidence: aiNutritionEstimate.confidence,
                     });
@@ -693,6 +748,22 @@ export async function mapIngredientWithFallback(
         if (/^pepper$/i.test(normalizedName.trim()) && SPICE_CONTEXT_UNITS_FB.has(parsedUnitForContextFB)) {
             logger.info('fatsecret.map.pepper_spice_rewrite', { rawLine: trimmed, originalName: normalizedName, unit: parsedUnitForContextFB });
             normalizedName = 'black pepper';
+        }
+
+        // Context-dependent bouillon rewrite: "bouillon" with volume unit -> "broth"
+        // This prevents mapping "1 cup beef bouillon" to powdered concentrate and getting 300kcal/cup
+        const VOLUME_UNITS = new Set(['cup', 'cups', 'floz', 'fl oz', 'quart', 'quarts', 'gallon', 'gallons', 'ml', 'liter', 'liters', 'pint', 'pints']);
+        if (/\bbouillon\b/i.test(normalizedName) && VOLUME_UNITS.has(parsedUnitForContextFB)) {
+            logger.info('fatsecret.map.bouillon_broth_rewrite', { rawLine: trimmed, originalName: normalizedName, unit: parsedUnitForContextFB });
+            normalizedName = normalizedName.replace(/\bbouillon\b/gi, 'broth');
+        }
+
+        // Context-dependent corn rewrite: "corn" in a can should map to sweet corn, not dry corn grain
+        if (/\bcorn\b/i.test(normalizedName) && (parsedUnitForContextFB === 'can' || /\bcanned\b/i.test(trimmed))) {
+            logger.info('fatsecret.map.canned_corn_rewrite', { rawLine: trimmed, originalName: normalizedName });
+            if (!normalizedName.toLowerCase().includes('sweet')) {
+                normalizedName = normalizedName.replace(/\bcorn\b/gi, 'sweet corn');
+            }
         }
 
         // Combine learned + AI synonyms (deduplicated)
@@ -822,8 +893,23 @@ export async function mapIngredientWithFallback(
                 }
 
                 if (filtered.length === 0) {
-                    logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount: removedCount + coreFilterRemoved });
-                    // Fall through to Fallback
+                    // Retry with relaxed filtering before giving up
+                    const relaxedFilterResult = filterCandidatesByTokens(
+                        allCandidates,
+                        normalizedName,
+                        { debug, rawLine: trimmed, relaxed: true }
+                    );
+                    
+                    if (relaxedFilterResult.filtered.length > 0) {
+                        filtered = relaxedFilterResult.filtered;
+                        logger.info('mapping.relaxed_filter_recovery', {
+                            rawLine: trimmed,
+                            recoveredCount: filtered.length,
+                        });
+                    } else {
+                        logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount: removedCount + coreFilterRemoved });
+                        // Fall through to Fallback
+                    }
                 } else {
                     // Step 3a: Confidence Gate
                     // IMPORTANT: Sort by score with tiebreaker preferring FDC for basic produce
@@ -1628,22 +1714,119 @@ export async function mapIngredientWithFallback(
                 });
             }
 
+            // Attempt AI Nutrition Backfill if all API pipeline candidates failed hydration
+            if (AI_NUTRITION_BACKFILL_ENABLED) {
+                logger.info('mapping.pipeline_failed_attempting_ai_backfill', { rawLine: trimmed });
+                const baseFoodContext = extractBaseFoodContext(allCandidates);
+                const aiResult = await requestAiNutrition(normalizedName, {
+                    rawLine: trimmed,
+                    baseFoodContext,
+                    isBatchMode: true,
+                });
+
+                if (aiResult.status === 'success') {
+                    const parsedQty = parsed ? parsed.qty * parsed.multiplier : 1;
+                    const parsedUnit = parsed?.unit || 'serving';
+
+                    const servingResult = await getAiServingGrams(
+                        aiResult.foodId,
+                        parsedUnit,
+                        parsedQty,
+                    );
+
+                    const grams = servingResult?.grams ?? 100;
+                    const scale = grams / 100;
+
+                    const aiMapped: FatsecretMappedIngredient = {
+                        source: 'ai_generated',
+                        foodId: aiResult.foodId,
+                        foodName: aiResult.displayName,
+                        brandName: null,
+                        servingId: null,
+                        servingDescription: servingResult?.servingLabel ?? `${parsedQty} ${parsedUnit}`,
+                        grams,
+                        kcal: aiResult.caloriesPer100g * scale,
+                        protein: aiResult.proteinPer100g * scale,
+                        carbs: aiResult.carbsPer100g * scale,
+                        fat: aiResult.fatPer100g * scale,
+                        confidence: aiResult.confidence * 0.8,
+                        quality: aiResult.confidence >= 0.7 ? 'medium' : 'low',
+                        rawLine,
+                    };
+
+                    if (ENABLE_MAPPING_ANALYSIS) {
+                        logMappingAnalysis({
+                            rawIngredient: trimmed,
+                            parsed: {
+                                amount: parsed?.qty,
+                                unit: parsed?.unit,
+                                ingredient: parsed?.name,
+                            },
+                            topCandidates: [],
+                            selectedCandidate: {
+                                foodId: aiResult.foodId,
+                                foodName: aiResult.displayName,
+                                brandName: '',
+                                confidence: aiMapped.confidence,
+                                selectionReason: aiResult.cached ? 'ai_nutrition_cache_hit' : 'ai_nutrition_generated',
+                            },
+                            selectedNutrition: {
+                                calories: aiMapped.kcal,
+                                protein: aiMapped.protein,
+                                carbs: aiMapped.carbs,
+                                fat: aiMapped.fat,
+                                perGrams: aiMapped.grams,
+                            },
+                            servingSelection: {
+                                servingDescription: aiMapped.servingDescription || 'N/A',
+                                grams: aiMapped.grams,
+                                backfillUsed: true,
+                                backfillType: 'weight',
+                            },
+                            finalResult: 'success',
+                            source: 'full_pipeline',
+                            aiCalls: {
+                                normalize: {
+                                    called: !skippedLlmNormalize,
+                                    skipped: skippedLlmNormalize,
+                                },
+                            },
+                        });
+                    }
+
+                    logger.info('mapping.ai_nutrition_backfill_success_after_hydration_failure', {
+                        rawLine: trimmed,
+                        foodName: aiResult.displayName,
+                        confidence: aiMapped.confidence,
+                        cached: aiResult.cached,
+                    });
+
+                    return aiMapped;
+                } else {
+                    logger.warn('mapping.ai_nutrition_backfill_failed_after_hydration_failure', {
+                        rawLine: trimmed,
+                        reason: aiResult.reason,
+                    });
+                }
+            }
+
             return null;
         }
 
         // Step 6: Save to validated cache if high confidence
         if (confidence >= 0.85) {
-            // Use AI-derived canonicalBase if available, otherwise fall back to normalizedName
-            // (which has already been processed by normalizeIngredientName to strip prep phrases)
-            // This ensures cache lookups can find the entry by normalized form
-            const cacheKey = aiCanonicalBase || normalizedName;
+            // Use normalizedName (preserves nutritional modifiers like "powdered", "reduced fat")
+            // instead of canonicalBase (which collapses variants to a shared base).
+            // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
+            // caused 73+ subsequent "peanut butter" queries to return powdered PB.
+            const cacheKey = normalizedName;
 
             await saveValidatedMapping(rawLine, result, {
                 approved: true,
                 confidence,
                 reason: selectionReason,
             }, {
-                canonicalBase: cacheKey,  // Use canonical base for cache consolidation
+                canonicalBase: cacheKey,  // Use normalizedName as cache key
             });
 
             // Also save AI synonyms as aliases to enable future cache hits
@@ -1822,7 +2005,7 @@ export async function mapIngredientWithFallback(
 // Hydration & Serving Selection
 // ============================================================
 
-async function hydrateAndSelectServing(
+export async function hydrateAndSelectServing(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
     confidence: number,
@@ -1919,6 +2102,147 @@ async function hydrateAndSelectServing(
         // Final check
         if (!details?.servings?.length || !hasUsableServing(details.servings)) {
             return null;
+        }
+    }
+
+    // ============================================================
+    // UNIT HEURISTIC DEFAULTS (head, bunch, spray, cube)
+    // ============================================================
+    // For units like "head", "bunch", "spray", "cube" that have no serving equivalent
+    // in FatSecret, we intercept before selectServing and return a known weight.
+    const UNIT_HEURISTIC_DEFAULTS: Array<{ unit: string; pattern: RegExp; grams: number; notes: string }> = [
+        { unit: 'head', pattern: /\bcauliflower\b/i, grams: 600, notes: '1 head cauliflower (USDA)' },
+        { unit: 'head', pattern: /\bbroccoli\b/i, grams: 500, notes: '1 head broccoli (USDA)' },
+        { unit: 'head', pattern: /\b(iceberg|romaine|butter|boston|bibb)?\s*lettuce\b/i, grams: 600, notes: '1 head lettuce (USDA)' },
+        { unit: 'head', pattern: /\bcabbage\b/i, grams: 900, notes: '1 head cabbage (USDA)' },
+        { unit: 'head', pattern: /\bgarlic\b/i, grams: 40, notes: '1 head garlic (~12 cloves)' },
+        { unit: 'bunch', pattern: /\bbroccoli\b/i, grams: 250, notes: '1 bunch broccoli (est)' },
+        { unit: 'bunch', pattern: /\bspinach\b/i, grams: 340, notes: '1 bunch spinach (USDA)' },
+        { unit: 'bunch', pattern: /\b(cilantro|coriander)\b/i, grams: 50, notes: '1 bunch cilantro (est)' },
+        { unit: 'bunch', pattern: /\bparsley\b/i, grams: 60, notes: '1 bunch parsley (est)' },
+        { unit: 'bunch', pattern: /\bkale\b/i, grams: 250, notes: '1 bunch kale (est)' },
+        { unit: 'bunch', pattern: /\b(scallion|green\s+onion)s?\b/i, grams: 100, notes: '1 bunch scallions (est)' },
+        { unit: 'bunch', pattern: /\bmint\b/i, grams: 30, notes: '1 bunch mint (est)' },
+        { unit: 'bunch', pattern: /\bbasil\b/i, grams: 30, notes: '1 bunch basil (est)' },
+        { unit: 'bunch', pattern: /\bthyme\b/i, grams: 15, notes: '1 bunch thyme (est)' },
+        { unit: 'bunch', pattern: /\brosemary\b/i, grams: 15, notes: '1 bunch rosemary (est)' },
+        { unit: 'bunch', pattern: /\boregano\b/i, grams: 15, notes: '1 bunch oregano (est)' },
+        { unit: 'spray', pattern: /./i, grams: 0.25, notes: '1 spray (~0.25g)' },
+        { unit: 'cube', pattern: /\b(bouillon|stock)\b/i, grams: 3.5, notes: '1 bouillon/stock cube (~3.5g)' },
+        { unit: 'cube', pattern: /\bsugar\b/i, grams: 4, notes: '1 sugar cube (~4g)' },
+        { unit: 'packet', pattern: /\b(sucralose|stevia|sweetener|splenda|sugar substitute)\b/i, grams: 1, notes: '1 packet sweetener (~1g)' },
+        { unit: 'serving', pattern: /\b(sucralose|stevia|sweetener|splenda|sugar substitute)\b/i, grams: 1, notes: '1 serving sweetener (~1g)' },
+    ];
+
+    // FIX: Sometimes the parser fails to extract units like "bunch" or "head", leaving them in the name.
+    // E.g. "5 mint 1 bunch" => unit: null, name: "mint 1 bunch"
+    if (parsed && !parsed.unit && parsed.name) {
+        const trailingUnitMatch = parsed.name.match(/\b(bunch|head|stalk)\b/i);
+        if (trailingUnitMatch) {
+            parsed.unit = trailingUnitMatch[1].toLowerCase();
+        }
+    }
+
+    if (parsed && parsed.unit) {
+        const unitLower = parsed.unit.toLowerCase();
+        const nameToCheck = (parsed.name || candidate.name).toLowerCase();
+        const heuristicMatch = UNIT_HEURISTIC_DEFAULTS.find(
+            d => d.unit === unitLower && d.pattern.test(nameToCheck)
+        );
+        logger.info('hydrate.checking_unit_heuristics', {
+            unitLower,
+            nameToCheck,
+            isMatch: !!heuristicMatch,
+        });
+
+        if (heuristicMatch) {
+            const heuristicGrams = heuristicMatch.grams * parsed.qty * parsed.multiplier;
+            // Find any serving with gram data to derive macros
+            const gramServing = details.servings.find(s =>
+                s.metricServingUnit === 'g' ||
+                s.measurementDescription?.toLowerCase().includes('gram') ||
+                gramsForServing(s) != null
+            );
+
+            if (gramServing) {
+                const servingGrams = gramsForServing(gramServing) || 100;
+                const factor = heuristicGrams / servingGrams;
+                return {
+                    source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
+                    foodId: candidate.id,
+                    foodName: candidate.name,
+                    brandName: candidate.brandName,
+                    servingId: gramServing.id,
+                    servingDescription: `${parsed.qty * parsed.multiplier} ${parsed.unit} (${heuristicGrams.toFixed(1)}g, ${heuristicMatch.notes})`,
+                    grams: heuristicGrams,
+                    kcal: (gramServing.calories || 0) * factor,
+                    protein: (gramServing.protein || 0) * factor,
+                    carbs: (gramServing.carbohydrate || 0) * factor,
+                    fat: (gramServing.fat || 0) * factor,
+                    confidence,
+                    quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
+                    rawLine,
+                };
+            }
+        }
+    }
+
+    // ============================================================
+    // DETERMINISTIC COUNT & UNITLESS DEFAULTS (Almonds, Olives, Carrots)
+    // ============================================================
+    // For small count items, FatSecret often lacks a "1 each" serving and falls
+    // back to "1 oz" or "100g", causing 4 almonds to become 4 oz (113g).
+    // Try to intercept with deterministic seed data BEFORE we hit the general selection.
+    if (parsed && (!parsed.unit || parsed.unit === 'each' || parsed.unit === 'piece')) {
+        try {
+            const { getDefaultCountServing } = await import('../servings/default-count-grams');
+            // 'parsed.name' is more specific than 'candidate.name' but we should check both
+            // e.g. parsed.name = "baby carrots", candidate.name = "carrots raw"
+            const nameToCheck = parsed.name || candidate.name;
+            const countDefault = getDefaultCountServing(nameToCheck, parsed.unit || 'each');
+            
+            if (countDefault && countDefault.grams > 0) {
+                // If we found a known per-piece weight from seed data!
+                // Create a dummy serving since we'll override baseGrams anyway.
+                // We just need macros from any defined serving.
+                const gramServing = details.servings.find(s =>
+                    s.metricServingUnit === 'g' ||
+                    s.measurementDescription?.toLowerCase().includes('gram') ||
+                    gramsForServing(s) != null
+                ) || details.servings[0];
+
+                if (gramServing) {
+                    const totalGrams = countDefault.grams * parsed.qty * parsed.multiplier;
+                    const factor = totalGrams / (gramsForServing(gramServing) || 100);
+
+                    logger.info('hydrate.deterministic_count_intercept', {
+                        foodId: candidate.id,
+                        foodName: candidate.name,
+                        parsedName: nameToCheck,
+                        perPieceGrams: countDefault.grams,
+                        totalGrams
+                    });
+
+                    return {
+                        source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
+                        foodId: candidate.id,
+                        foodName: candidate.name,
+                        brandName: candidate.brandName,
+                        servingId: gramServing.id,
+                        servingDescription: `${parsed.qty * parsed.multiplier} ${parsed.unit || 'each'} (${totalGrams.toFixed(1)}g)`,
+                        grams: totalGrams,
+                        kcal: (gramServing.calories || 0) * factor,
+                        protein: (gramServing.protein || 0) * factor,
+                        carbs: (gramServing.carbohydrate || 0) * factor,
+                        fat: (gramServing.fat || 0) * factor,
+                        confidence,
+                        quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
+                        rawLine,
+                    };
+                }
+            }
+        } catch (err) {
+            // Ignore error and fall through
         }
     }
 
@@ -2122,12 +2446,26 @@ async function hydrateAndSelectServing(
                     const qty = parsed.qty * parsed.multiplier;
                     const totalGrams = estimatedGrams * qty;
 
+                    // Create a dummy serving if the item lacks servings entirely
+                    const dummyServing = {
+                        servingId: 0,
+                        servingDescription: 'Fallback Serving',
+                        metricServingUnit: 'g',
+                        metricServingAmount: estimatedGrams,
+                        numberOfUnits: 1,
+                        measurementDescription: parsed.unit || 'serving',
+                        calories: ((details as any).nutrientsPer100g?.calories || 0) * (estimatedGrams / 100),
+                        carbohydrate: ((details as any).nutrientsPer100g?.carbohydrate || 0) * (estimatedGrams / 100),
+                        protein: ((details as any).nutrientsPer100g?.protein || 0) * (estimatedGrams / 100),
+                        fat: ((details as any).nutrientsPer100g?.fat || 0) * (estimatedGrams / 100),
+                    } as any;
+
                     // Find ANY gram-based serving to calculate nutrition
-                    const gramServing = details.servings.find(s =>
+                    const gramServing = details.servings?.find(s =>
                         s.metricServingUnit === 'g' ||
                         s.measurementDescription?.toLowerCase().includes('gram') ||
                         gramsForServing(s) != null
-                    );
+                    ) || details.servings?.[0] || dummyServing;
 
                     if (gramServing) {
                         servingResult = {
@@ -2179,12 +2517,26 @@ async function hydrateAndSelectServing(
             const qty = parsed.qty * parsed.multiplier;
             const totalGrams = estimatedGrams * qty;
 
+            // Create a dummy serving if the item lacks servings entirely
+            const dummyServing = {
+                servingId: 0,
+                servingDescription: 'Fallback Serving',
+                metricServingUnit: 'g',
+                metricServingAmount: estimatedGrams,
+                numberOfUnits: 1,
+                measurementDescription: parsed.unit || 'serving',
+                calories: ((details as any).nutrientsPer100g?.calories || 0) * (estimatedGrams / 100),
+                carbohydrate: ((details as any).nutrientsPer100g?.carbohydrate || 0) * (estimatedGrams / 100),
+                protein: ((details as any).nutrientsPer100g?.protein || 0) * (estimatedGrams / 100),
+                fat: ((details as any).nutrientsPer100g?.fat || 0) * (estimatedGrams / 100),
+            } as any;
+
             // Find ANY gram-based serving to calculate nutrition
-            const gramServing = details.servings.find(s =>
+            const gramServing = details.servings?.find(s =>
                 s.metricServingUnit === 'g' ||
                 s.measurementDescription?.toLowerCase().includes('gram') ||
                 gramsForServing(s) != null
-            );
+            ) || details.servings?.[0] || dummyServing;
 
             if (gramServing) {
                 servingResult = {
@@ -2210,6 +2562,69 @@ async function hydrateAndSelectServing(
                 unit: parsed.unit,
                 error: ambiguousResult.error,
             });
+        }
+    }
+
+    // ============================================================
+    // COUNT-UNIT SANITY CHECK (Fix: bouillon cubes, sugar cubes, etc.)
+    // ============================================================
+    // When serving selection succeeds for a count unit but the per-unit weight
+    // is implausibly large (e.g., 100g per bouillon cube), attempt on-demand
+    // AI backfill to get a realistic estimate. This mirrors the fix in
+    // map-ingredient.ts (known-issues line 172-179) which wasn't ported here.
+    const MAX_REASONABLE_COUNT_GRAMS = 50; // No discrete "cube/piece" should be >50g
+    if (servingResult && parsed?.unit && classifyUnit(parsed.unit) === 'count') {
+        const countGramsPerUnit = servingResult.gramsPerUnit ?? servingResult.baseGrams;
+        if (countGramsPerUnit && countGramsPerUnit > MAX_REASONABLE_COUNT_GRAMS) {
+            logger.info('hydrate.count_unit_sanity_check', {
+                foodId: candidate.id,
+                foodName: candidate.name,
+                unit: parsed.unit,
+                gramsPerUnit: countGramsPerUnit,
+                maxReasonable: MAX_REASONABLE_COUNT_GRAMS,
+                reason: 'Per-unit weight implausibly large for count unit, attempting AI backfill',
+            });
+
+            // Attempt AI backfill for a realistic per-unit weight
+            const countBackfill = await backfillOnDemand(
+                candidate.id,
+                'count',
+                parsed.unit
+            );
+
+            if (countBackfill.success) {
+                // Refresh servings and re-select
+                const freshData = await getCachedFoodWithRelations(candidate.id);
+                if (freshData) {
+                    details = cacheFoodToDetails(freshData);
+                    const newResult = selectServing(parsed, details.servings, candidate.name);
+                    if (newResult) {
+                        const newGpu = newResult.gramsPerUnit ?? newResult.baseGrams;
+                        if (newGpu && newGpu <= MAX_REASONABLE_COUNT_GRAMS) {
+                            servingResult = newResult;
+                            logger.info('hydrate.count_unit_backfill_success', {
+                                foodId: candidate.id,
+                                unit: parsed.unit,
+                                oldGramsPerUnit: countGramsPerUnit,
+                                newGramsPerUnit: newGpu,
+                            });
+                        } else {
+                            logger.warn('hydrate.count_unit_backfill_still_large', {
+                                foodId: candidate.id,
+                                newGramsPerUnit: newGpu,
+                            });
+                            // Keep original servingResult — AI couldn't provide better
+                        }
+                    }
+                }
+            } else {
+                logger.warn('hydrate.count_unit_backfill_failed', {
+                    foodId: candidate.id,
+                    unit: parsed.unit,
+                    reason: countBackfill.reason,
+                });
+                // Keep original servingResult — graceful degradation
+            }
         }
     }
 
@@ -2277,8 +2692,55 @@ async function hydrateAndSelectServing(
         return null;
     }
 
+    let overrideServingDescription: string | null = null;
+
     // Calculate final grams for the result
     let finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
+
+    // === BARE QUERY INFLATION GUARD ===
+    // If the user didn't specify an amount or unit (e.g. "Baking Flour", "Mayonnaise"),
+    // FatSecret often defaults to the full package size (454g flour, 340g mayo).
+    // This intercepts bare queries and caps them to single standard servings.
+    // Also handles high-count discrete items like "8 lettuce" defaulting to leaves instead of heads.
+    if (parsed && !parsed.unit && !targetGrams) {
+        console.log("=== BARE QUERY GUARD: ENTERED ===", parsed.qty, finalGrams);
+        try {
+            const { getBareQueryDefault, getDiscreteLeafyGreenDefault } = await import('../ai/ambiguous-serving-estimator');
+            
+            let bareDefault = null;
+            let overrideGrams = 0;
+
+            if (parsed.qty === 1) {
+                bareDefault = getBareQueryDefault(parsed.name || candidate.name);
+                if (bareDefault) overrideGrams = bareDefault.grams;
+            } else if (parsed.qty > 3) {
+                bareDefault = getDiscreteLeafyGreenDefault(parsed.name || candidate.name, parsed.qty);
+                if (bareDefault) overrideGrams = bareDefault.grams * parsed.qty;
+            }
+            console.log("=== BARE QUERY GUARD: RESULTS ===", bareDefault, overrideGrams, finalGrams);
+
+            if (bareDefault && overrideGrams > 0 && finalGrams > overrideGrams * 2) { // Only override if it's significantly inflating
+                logger.info('hydrate.bare_query_inflation_capped', {
+                    foodName: candidate.name,
+                    oldGrams: finalGrams,
+                    newGrams: overrideGrams,
+                    description: bareDefault.description,
+                });
+                
+                const gramsRatio = overrideGrams / finalGrams;
+                macros.kcal *= gramsRatio;
+                macros.protein *= gramsRatio;
+                macros.carbs *= gramsRatio;
+                macros.fat *= gramsRatio;
+                finalGrams = overrideGrams;
+                
+                // Update the serving description to reflect the assumption
+                overrideServingDescription = parsed.qty === 1 ? bareDefault.description : `${parsed.qty} × ${bareDefault.description}`;
+            }
+        } catch (err) {
+            logger.error('hydrate.bare_query_guard_failed', { error: err instanceof Error ? err.message : String(err) });
+        }
+    }
 
     // === UNIVERSAL PER-UNIT WEIGHT SANITY GUARD ===
     // Catches implausible per-unit weights from ALL sources (FatSecret native, FDC, AI-generated,
@@ -2289,6 +2751,10 @@ async function hydrateAndSelectServing(
             // Micro-units: should NEVER exceed a few grams each
             spray: 2, sprays: 2, squirt: 5, squirts: 5,
             dash: 1, dashes: 1, pinch: 0.5, pinches: 0.5,
+            // True micro-volume units (drops of hot sauce, liquid stevia, etc.)
+            drop: 0.5, drops: 0.5,
+            // Cooking spray duration (0.4 second ≈ 0.25g oil)
+            second: 1, seconds: 1,
             // Packet-like units: sweetener packets = 1g, sauce packets ≤ 10g
             packet: 10, packets: 10,
             // Scoops: protein powder scoops are 30-35g max
@@ -2534,14 +3000,33 @@ async function hydrateAndSelectServing(
     // Determine the correct serving description
     // For ambiguous unit fallbacks, use the parsed unit with gram weight (e.g., "package (227g)")
     // instead of the anchor serving's description (e.g., "cup")
-    let finalServingDescription = serving.measurementDescription || serving.description;
-    if (servingResult.matchType === 'fallback' && parsed?.unit && servingResult.gramsPerUnit) {
+    let finalServingDescription = overrideServingDescription || serving.measurementDescription || serving.description;
+    if (!overrideServingDescription && servingResult.matchType === 'fallback' && parsed?.unit && servingResult.gramsPerUnit) {
         finalServingDescription = `${parsed.unit} (${Math.round(servingResult.gramsPerUnit)}g)`;
     }
 
     // Annotate food name for ground meat (so users see lean % when they just typed "ground beef")
+    // Annotate food name for ground meat (so users see lean % when they just typed "ground beef")
     const queryForAnnotation = parsed?.name?.toLowerCase() || rawLine.toLowerCase();
     const annotatedFoodName = annotateGroundMeatName(candidate.name, queryForAnnotation);
+
+    // LATE BINDING: Run hasCriticalModifierMismatch again now that we have FULL MACROS
+    // This catches FatSecret "Fat Free X" products that tricked the early name-based filter
+    // but actually have > 2g fat per 100g once their serving macros are fetched.
+    if (finalGrams > 0 && typeof macros.fat === 'number') {
+        const computedFatPer100g = (macros.fat / finalGrams) * 100;
+        if (hasCriticalModifierMismatch(rawLine, candidate.name, 'fatsecret', { 
+            fat: computedFatPer100g, 
+            per100g: true 
+        })) {
+            logger.warn('hydrate.late_critical_modifier_mismatch_rejected', {
+                rawLine,
+                foodName: candidate.name,
+                fatPer100g: computedFatPer100g,
+            });
+            return null; // Force pipeline to reject this hydrated candidate!
+        }
+    }
 
     return {
         source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
@@ -2576,7 +3061,65 @@ async function buildFdcResult(
     if (!candidate.nutrition) return null;
 
     const qty = parsed ? parsed.qty * parsed.multiplier : 1;
-    const unit = parsed?.unit?.toLowerCase();
+    let unit = parsed?.unit?.toLowerCase();
+
+    // FIX: Sometimes the parser fails to extract units like "bunch" or "head", leaving them in the name.
+    if (parsed && !unit && parsed.name) {
+        const trailingUnitMatch = parsed.name.match(/\b(bunch|head|stalk)\b/i);
+        if (trailingUnitMatch) {
+            unit = trailingUnitMatch[1].toLowerCase();
+        }
+    }
+
+    if (unit) {
+        const UNIT_HEURISTIC_DEFAULTS = [
+            { unit: 'head', pattern: /\bcauliflower\b/i, grams: 600, notes: '1 head cauliflower (USDA)' },
+            { unit: 'head', pattern: /\bbroccoli\b/i, grams: 500, notes: '1 head broccoli (USDA)' },
+            { unit: 'head', pattern: /\b(iceberg|romaine|butter|boston|bibb)?\s*lettuce\b/i, grams: 600, notes: '1 head lettuce (USDA)' },
+            { unit: 'head', pattern: /\bcabbage\b/i, grams: 900, notes: '1 head cabbage (USDA)' },
+            { unit: 'head', pattern: /\bgarlic\b/i, grams: 40, notes: '1 head garlic (~12 cloves)' },
+            { unit: 'bunch', pattern: /\bbroccoli\b/i, grams: 250, notes: '1 bunch broccoli (est)' },
+            { unit: 'bunch', pattern: /\bspinach\b/i, grams: 340, notes: '1 bunch spinach (USDA)' },
+            { unit: 'bunch', pattern: /\b(cilantro|coriander)\b/i, grams: 50, notes: '1 bunch cilantro (est)' },
+            { unit: 'bunch', pattern: /\bparsley\b/i, grams: 60, notes: '1 bunch parsley (est)' },
+            { unit: 'bunch', pattern: /\bkale\b/i, grams: 250, notes: '1 bunch kale (est)' },
+            { unit: 'bunch', pattern: /\b(scallion|green\s+onion)s?\b/i, grams: 100, notes: '1 bunch scallions (est)' },
+            { unit: 'bunch', pattern: /\bmint\b/i, grams: 30, notes: '1 bunch mint (est)' },
+            { unit: 'bunch', pattern: /\bbasil\b/i, grams: 30, notes: '1 bunch basil (est)' },
+            { unit: 'bunch', pattern: /\bthyme\b/i, grams: 15, notes: '1 bunch thyme (est)' },
+            { unit: 'bunch', pattern: /\brosemary\b/i, grams: 15, notes: '1 bunch rosemary (est)' },
+            { unit: 'bunch', pattern: /\boregano\b/i, grams: 15, notes: '1 bunch oregano (est)' },
+            { unit: 'spray', pattern: /./i, grams: 0.25, notes: '1 spray (~0.25g)' },
+            { unit: 'cube', pattern: /\b(bouillon|stock)\b/i, grams: 3.5, notes: '1 bouillon/stock cube (~3.5g)' },
+            { unit: 'cube', pattern: /\bsugar\b/i, grams: 4, notes: '1 sugar cube (~4g)' },
+        ];
+
+        const nameToCheck = (parsed?.name || candidate.name).toLowerCase();
+        const heuristicMatch = UNIT_HEURISTIC_DEFAULTS.find(
+            d => d.unit === unit && d.pattern.test(nameToCheck)
+        );
+
+        if (heuristicMatch) {
+            const grams = heuristicMatch.grams * qty;
+            const factor = grams / 100;
+            return {
+                source: candidate.source === 'cache' ? 'cache' : 'fdc',
+                foodId: candidate.id,
+                foodName: candidate.name,
+                brandName: candidate.brandName || null,
+                servingId: candidate.id + "_heuristic",
+                servingDescription: `${qty} ${unit} (${grams.toFixed(1)}g, ${heuristicMatch.notes})`,
+                grams: grams,
+                kcal: (candidate.nutrition.kcal || 0) * factor,
+                protein: (candidate.nutrition.protein || 0) * factor,
+                carbs: (candidate.nutrition.carbs || 0) * factor,
+                fat: (candidate.nutrition.fat || 0) * factor,
+                confidence,
+                quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
+                rawLine,
+            };
+        }
+    }
 
     // Handle weight units - convert qty in that unit to grams
     const weightToGrams: Record<string, number> = {
@@ -2605,6 +3148,12 @@ async function buildFdcResult(
         'pinches': 0.3,
         'sprinkle': 0.2, // ~1/25 tsp
         'shake': 0.2,
+        // True micro-volume units (e.g., drops of hot sauce, liquid stevia)
+        'drop': 0.05,    // 1 drop ≈ 0.05ml ≈ 0.05g water-density liquid
+        'drops': 0.05,
+        // Cooking spray duration (s) — 1 second of spray ≈ 0.25g oil
+        'second': 0.25,
+        'seconds': 0.25,
     };
 
     let grams: number = 100 * qty;
@@ -2766,7 +3315,8 @@ async function buildFdcResult(
 
             if (!resolved) {
                 // Fallback: try medium estimation (may overestimate for small items)
-                const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
+                // CRITICAL: Skip medium estimation for branded goods (like "Pancake Mix" or "Protein Powder")
+                const sizes = !candidate.brandName ? await getOrCreateFdcSizeServings(fdcId, candidate.name) : null;
                 if (sizes && sizes['medium']) {
                     const gramsPerUnit = sizes['medium'];
                     grams = qty * gramsPerUnit;
@@ -2851,6 +3401,62 @@ async function buildFdcResult(
         servingDescription = `${grams.toFixed(1)}g`;
     }
 
+    // === BARE QUERY INFLATION GUARD (FDC) ===
+    if (parsed && !parsed.unit && parsed.qty === 1) {
+        try {
+            const { getBareQueryDefault } = await import('../ai/ambiguous-serving-estimator');
+            const bareDefault = getBareQueryDefault(parsed.name || candidate.name);
+            if (bareDefault && grams > bareDefault.grams * 2) {
+                logger.info('fdc.bare_query_inflation_capped', {
+                    foodName: candidate.name,
+                    oldGrams: grams,
+                    newGrams: bareDefault.grams,
+                    description: bareDefault.description,
+                });
+                grams = bareDefault.grams;
+                servingDescription = bareDefault.description;
+            }
+        } catch (err) {
+            // Ignore
+        }
+    }
+
+    // === UNIVERSAL PER-UNIT WEIGHT SANITY GUARD (FDC) ===
+    if (qty > 0) {
+        const UNIT_MAX_GRAMS_PER_UNIT: Record<string, number> = {
+            spray: 2, sprays: 2, squirt: 5, squirts: 5,
+            dash: 1, dashes: 1, pinch: 0.5, pinches: 0.5,
+            drop: 0.5, drops: 0.5,
+            second: 1, seconds: 1,
+            packet: 10, packets: 10,
+            scoop: 50, scoops: 50,
+        };
+        const tokensToScan = [
+            ...(parsed?.unit ? [parsed.unit.toLowerCase()] : []),
+            ...(parsed?.name ? parsed.name.toLowerCase().split(/\s+/) : [])
+        ];
+        let maxPerUnit: number | undefined;
+        let matchedCapUnit: string | undefined;
+        for (const token of tokensToScan) {
+            const cap = UNIT_MAX_GRAMS_PER_UNIT[token];
+            if (cap && (maxPerUnit === undefined || cap < maxPerUnit)) {
+                maxPerUnit = cap; matchedCapUnit = token;
+            }
+        }
+        if (maxPerUnit) {
+            const perUnitGrams = grams / qty;
+            if (perUnitGrams > maxPerUnit) {
+                const cappedTotal = maxPerUnit * qty;
+                logger.warn('fdc.unit_weight_sanity_capped', {
+                    foodId: candidate.id, foodName: candidate.name, matchedCapUnit, qty,
+                    originalPerUnit: perUnitGrams, cappedPerUnit: maxPerUnit,
+                    originalTotal: grams, cappedTotal,
+                });
+                grams = cappedTotal;
+            }
+        }
+    }
+
     const factor = grams / 100;
 
     // Annotate food name for ground meat (so users see lean % when they just typed "ground beef")
@@ -2896,7 +3502,10 @@ function selectServing(
     if (!servings.length) return null;
 
     const qty = parsed ? parsed.qty * parsed.multiplier : 1;
-    const unit = parsed?.unit?.toLowerCase() ?? null;
+    const { isDiscreteItem } = require('./serving-backfill');
+    let unitRaw = parsed?.unit?.toLowerCase() ?? null;
+    const isCountLikely = !unitRaw && parsed?.qty && Number.isInteger(parsed.qty);
+    const unit = unitRaw || (isCountLikely && foodName && isDiscreteItem(foodName) ? 'piece' : null);
 
     // AMBIGUOUS UNITS: Skip normal serving selection and force AI backfill
     // Units like "packet", "container", "scoop", "medium" get wildly incorrect grams
@@ -3165,6 +3774,21 @@ function selectServing(
         // Award base score for having grams
         score += 0.5;
 
+        // === BARE QUERY (UNITLESS) HEURISTIC ===
+        // When no unit is specified (e.g. "Pancake Mix"), we want to avoid picking
+        // full package volumes like "1 box (425g)" and prefer "1 serving" or "100g".
+        if (requestedUnitType === 'unknown' && !effectiveUnit) {
+            if (/\b(box|package|bag|container|bottle|jar|tub|can|carton)\b/i.test(description)) {
+                score -= 5; // Heavy penalty for full retail packages
+            }
+            if (isGenericServing(description) || description === 'g' || description === '100g' || description === 'oz') {
+                score += 2; // Bonus for generic baseline servings
+            }
+            if (/\b(1\s*serving|serving)\b/i.test(description)) {
+                score += 1; // Extra bonus for an explicit "1 serving"
+            }
+        }
+
         // Exact unit match with stricter word boundary checking
         if (effectiveUnit && unitAliases.length > 0) {
             // Check for exact match with word boundaries to avoid partial matches
@@ -3292,8 +3916,10 @@ function selectServing(
             }
         }
 
-        // Non-matching serving (can only be used as fallback for unknown/mass units)
-        if (requestedUnitType !== 'count' && requestedUnitType !== 'volume') {
+        // Non-matching serving (can only be used as fallback for explicit mass units or unknown units WITH a specific string)
+        // DO NOT allow unitless queries (!effectiveUnit) to use generic fallbacks here,
+        // because they must fall through to the dedicated unitless handling logic below.
+        if (requestedUnitType === 'mass' || (requestedUnitType === 'unknown' && effectiveUnit)) {
             // Only allow generic fallback for mass units (where "g" serving is appropriate)
             if (!fallbackMatch || score > fallbackMatch.score) {
                 fallbackMatch = { serving, score, factor: 1 };
@@ -3312,7 +3938,7 @@ function selectServing(
     } else if (sameTypeMatch) {
         selected = sameTypeMatch;
         matchType = 'same_type';
-    } else if (fallbackMatch && effectiveUnit) {
+    } else if (fallbackMatch) {
         // For volume requests with no matching serving, try to estimate grams from common food densities
         // This is a best-effort fallback when no proper serving exists
         if (requestedUnitType === 'volume') {
@@ -3344,7 +3970,7 @@ function selectServing(
                 'serving': 100,  // Standard serving
                 'servings': 100,
             };
-            const unitLower = effectiveUnit.toLowerCase();
+            const unitLower = effectiveUnit?.toLowerCase() || '';
             if (countToGramsEstimate[unitLower]) {
                 const gramsPerUnit = countToGramsEstimate[unitLower];
                 const servingGrams = gramsForServing(fallbackMatch.serving) || 1;

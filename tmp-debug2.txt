@@ -1,0 +1,56 @@
+API Keys Status:
+  OPENAI_API_KEY: ✅
+  FATSECRET_CLIENT_ID: ✅
+  FATSECRET_CLIENT_SECRET: ✅
+
+prisma:query SELECT "public"."LearnedSynonym"."id", "public"."LearnedSynonym"."sourceTerm", "public"."LearnedSynonym"."targetTerm", "public"."LearnedSynonym"."locale", "public"."LearnedSynonym"."category", "public"."LearnedSynonym"."source", "public"."LearnedSynonym"."confidence", "public"."LearnedSynonym"."useCount", "public"."LearnedSynonym"."successCount", "public"."LearnedSynonym"."failureCount", "public"."LearnedSynonym"."createdAt", "public"."LearnedSynonym"."lastUsedAt" FROM "public"."LearnedSynonym" WHERE "public"."LearnedSynonym"."sourceTerm" = $1 ORDER BY "public"."LearnedSynonym"."useCount" DESC LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."ValidatedMapping"."id", "public"."ValidatedMapping"."rawIngredient", "public"."ValidatedMapping"."normalizedForm", "public"."ValidatedMapping"."foodId", "public"."ValidatedMapping"."foodName", "public"."ValidatedMapping"."brandName", "public"."ValidatedMapping"."source", "public"."ValidatedMapping"."aiConfidence", "public"."ValidatedMapping"."validationReason", "public"."ValidatedMapping"."isAlias", "public"."ValidatedMapping"."canonicalRawIngredient", "public"."ValidatedMapping"."validatedAt", "public"."ValidatedMapping"."validatedBy", "public"."ValidatedMapping"."usedCount", "public"."ValidatedMapping"."lastUsedAt", "public"."ValidatedMapping"."createdAt", "public"."ValidatedMapping"."updatedAt" FROM "public"."ValidatedMapping" WHERE (("public"."ValidatedMapping"."normalizedForm" = $1 AND "public"."ValidatedMapping"."source" = $2) AND 1=1) LIMIT $3 OFFSET $4
+prisma:query UPDATE "public"."ValidatedMapping" SET "usedCount" = ("public"."ValidatedMapping"."usedCount" + $1), "lastUsedAt" = $2, "updatedAt" = $3 WHERE ("public"."ValidatedMapping"."id" = $4 AND 1=1) RETURNING "public"."ValidatedMapping"."id", "public"."ValidatedMapping"."rawIngredient", "public"."ValidatedMapping"."normalizedForm", "public"."ValidatedMapping"."foodId", "public"."ValidatedMapping"."foodName", "public"."ValidatedMapping"."brandName", "public"."ValidatedMapping"."source", "public"."ValidatedMapping"."aiConfidence", "public"."ValidatedMapping"."validationReason", "public"."ValidatedMapping"."isAlias", "public"."ValidatedMapping"."canonicalRawIngredient", "public"."ValidatedMapping"."validatedAt", "public"."ValidatedMapping"."validatedBy", "public"."ValidatedMapping"."usedCount", "public"."ValidatedMapping"."lastUsedAt", "public"."ValidatedMapping"."createdAt", "public"."ValidatedMapping"."updatedAt"
+{"level":"debug","msg":"validated_mapping.normalized_cache_hit","ts":"2026-03-26T01:03:55.809Z","normalizedName":"yellow peppers","source":"fatsecret"}
+{"level":"info","msg":"mapping.early_cache_hit","ts":"2026-03-26T01:03:55.809Z","rawLine":"3 strips yellow peppers","normalizedName":"yellow peppers","foodName":"Yellow Sweet Peppers"}
+prisma:query SELECT "public"."FatSecretFoodCache"."id", "public"."FatSecretFoodCache"."nutrientsPer100g" FROM "public"."FatSecretFoodCache" WHERE ("public"."FatSecretFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FatSecretFoodCache"."id", "public"."FatSecretFoodCache"."name", "public"."FatSecretFoodCache"."brandName", "public"."FatSecretFoodCache"."foodType", "public"."FatSecretFoodCache"."country", "public"."FatSecretFoodCache"."description", "public"."FatSecretFoodCache"."defaultServingId", "public"."FatSecretFoodCache"."source", "public"."FatSecretFoodCache"."confidence", "public"."FatSecretFoodCache"."nutrientsPer100g", "public"."FatSecretFoodCache"."legacyFoodId", "public"."FatSecretFoodCache"."hash", "public"."FatSecretFoodCache"."syncedAt", "public"."FatSecretFoodCache"."expiresAt", "public"."FatSecretFoodCache"."createdAt", "public"."FatSecretFoodCache"."updatedAt" FROM "public"."FatSecretFoodCache" WHERE ("public"."FatSecretFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FatSecretServingCache"."id", "public"."FatSecretServingCache"."foodId", "public"."FatSecretServingCache"."measurementDescription", "public"."FatSecretServingCache"."numberOfUnits", "public"."FatSecretServingCache"."metricServingAmount", "public"."FatSecretServingCache"."metricServingUnit", "public"."FatSecretServingCache"."servingWeightGrams", "public"."FatSecretServingCache"."volumeMl", "public"."FatSecretServingCache"."isVolume", "public"."FatSecretServingCache"."isDefault", "public"."FatSecretServingCache"."derivedViaDensity", "public"."FatSecretServingCache"."densityEstimateId", "public"."FatSecretServingCache"."createdAt", "public"."FatSecretServingCache"."updatedAt", "public"."FatSecretServingCache"."source", "public"."FatSecretServingCache"."confidence", "public"."FatSecretServingCache"."note" FROM "public"."FatSecretServingCache" WHERE "public"."FatSecretServingCache"."foodId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."FatSecretFoodAlias"."id", "public"."FatSecretFoodAlias"."foodId", "public"."FatSecretFoodAlias"."alias", "public"."FatSecretFoodAlias"."locale", "public"."FatSecretFoodAlias"."source", "public"."FatSecretFoodAlias"."createdAt" FROM "public"."FatSecretFoodAlias" WHERE "public"."FatSecretFoodAlias"."foodId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."FatSecretDensityEstimate"."id", "public"."FatSecretDensityEstimate"."foodId", "public"."FatSecretDensityEstimate"."densityGml", "public"."FatSecretDensityEstimate"."source", "public"."FatSecretDensityEstimate"."confidence", "public"."FatSecretDensityEstimate"."notes", "public"."FatSecretDensityEstimate"."createdAt", "public"."FatSecretDensityEstimate"."updatedAt" FROM "public"."FatSecretDensityEstimate" WHERE "public"."FatSecretDensityEstimate"."foodId" IN ($1) OFFSET $2
+{"level":"info","msg":"hydrate.cache_incomplete","ts":"2026-03-26T01:03:56.613Z","foodId":"36970","name":"Yellow Sweet Peppers"}
+prisma:query SELECT "public"."FatSecretFoodCache"."id", "public"."FatSecretFoodCache"."name", "public"."FatSecretFoodCache"."brandName", "public"."FatSecretFoodCache"."foodType", "public"."FatSecretFoodCache"."country", "public"."FatSecretFoodCache"."description", "public"."FatSecretFoodCache"."defaultServingId", "public"."FatSecretFoodCache"."source", "public"."FatSecretFoodCache"."confidence", "public"."FatSecretFoodCache"."nutrientsPer100g", "public"."FatSecretFoodCache"."legacyFoodId", "public"."FatSecretFoodCache"."hash", "public"."FatSecretFoodCache"."syncedAt", "public"."FatSecretFoodCache"."expiresAt", "public"."FatSecretFoodCache"."createdAt", "public"."FatSecretFoodCache"."updatedAt" FROM "public"."FatSecretFoodCache" WHERE ("public"."FatSecretFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FatSecretServingCache"."id", "public"."FatSecretServingCache"."foodId", "public"."FatSecretServingCache"."measurementDescription", "public"."FatSecretServingCache"."numberOfUnits", "public"."FatSecretServingCache"."metricServingAmount", "public"."FatSecretServingCache"."metricServingUnit", "public"."FatSecretServingCache"."servingWeightGrams", "public"."FatSecretServingCache"."volumeMl", "public"."FatSecretServingCache"."isVolume", "public"."FatSecretServingCache"."isDefault", "public"."FatSecretServingCache"."derivedViaDensity", "public"."FatSecretServingCache"."densityEstimateId", "public"."FatSecretServingCache"."createdAt", "public"."FatSecretServingCache"."updatedAt", "public"."FatSecretServingCache"."source", "public"."FatSecretServingCache"."confidence", "public"."FatSecretServingCache"."note" FROM "public"."FatSecretServingCache" WHERE "public"."FatSecretServingCache"."foodId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."FatSecretFoodAlias"."id", "public"."FatSecretFoodAlias"."foodId", "public"."FatSecretFoodAlias"."alias", "public"."FatSecretFoodAlias"."locale", "public"."FatSecretFoodAlias"."source", "public"."FatSecretFoodAlias"."createdAt" FROM "public"."FatSecretFoodAlias" WHERE "public"."FatSecretFoodAlias"."foodId" IN ($1) OFFSET $2
+prisma:query SELECT "public"."FatSecretDensityEstimate"."id", "public"."FatSecretDensityEstimate"."foodId", "public"."FatSecretDensityEstimate"."densityGml", "public"."FatSecretDensityEstimate"."source", "public"."FatSecretDensityEstimate"."confidence", "public"."FatSecretDensityEstimate"."notes", "public"."FatSecretDensityEstimate"."createdAt", "public"."FatSecretDensityEstimate"."updatedAt" FROM "public"."FatSecretDensityEstimate" WHERE "public"."FatSecretDensityEstimate"."foodId" IN ($1) OFFSET $2
+{"level":"debug","msg":"selectServing.ambiguous_unit_skip","ts":"2026-03-26T01:03:57.686Z","unit":"strip","ingredientName":"yellow peppers","reason":"Forcing AI backfill for ambiguous unit"}
+{"level":"info","msg":"hydrate.attempting_ambiguous_unit_backfill","ts":"2026-03-26T01:03:57.686Z","foodId":"36970","foodName":"Yellow Sweet Peppers","unit":"strip"}
+{"level":"debug","msg":"ambiguous_backfill.sub_piece_deterministic","ts":"2026-03-26T01:03:57.687Z","foodId":"36970","unit":"strip","grams":5}
+{"level":"info","msg":"hydrate.ambiguous_unit_success","ts":"2026-03-26T01:03:57.687Z","foodId":"36970","unit":"strip","estimatedGrams":5,"totalGrams":15}
+
+📊 Mapping Analysis Session Started
+   Detailed log: C:\Dev\Recipe App\logs\mapping-analysis-2026-03-26T01-03-57.json
+   Quick summary: C:\Dev\Recipe App\logs\mapping-summary-2026-03-26T01-03-57.txt
+
+
+================================================================================
+📊 MAPPING: 3 strips yellow peppers
+================================================================================
+📝 Parsed: 3 strip yellow peppers
+
+🏆 Top Candidates:
+
+✓ Selected: Yellow Sweet Peppers
+  Confidence: 1.000
+  Reason: early_cache_hit_after_normalize
+  📊 Macros (per 15g): 4.050000000000001kcal | P:0.15000000000000002g C:0.9480000000000002g F:0.0315g
+
+📏 Serving: strip (5g) (15g)
+
+✅ Result: SUCCESS
+
+======================================================================
+MAPPING RESULTS SUMMARY
+======================================================================
+
+✅ SUCCESS " 3 strips yellow peppers"
+   → Yellow Sweet Peppers | strip (5g) | 15.0g | 4.1kcal
+
+======================================================================
+TOTAL: 1/1 successful
+======================================================================

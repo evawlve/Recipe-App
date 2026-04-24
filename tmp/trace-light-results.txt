@@ -1,0 +1,197 @@
+﻿
+≡ƒöì Pipeline Rejection Point Trace
+
+
+======================================================================
+≡ƒÄ» RAW QUERY: "light sour cream"
+
+  ≡ƒô¥ Normalized:
+     cleaned:  "light regular sour cream"
+     nounOnly: "light regular sour cream"
+     stripped: []
+
+  ≡ƒôª Gathering candidates...
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:08.308Z","query":"light regular sour cream","fetchedCount":16,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"light sour cream","origPos":0,"priority":20},{"name":"regular regular sour cream","origPos":1,"priority":20},{"name":"regular regular sour cream","origPos":2,"priority":20}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-08T00:24:08.364Z","rawLine":"light regular sour cream","liveCount":8,"fdcCount":8,"synonymMatches":0,"totalUnique":16}
+     Total candidates: 16
+     First 5 candidates:
+       - Light Sour Cream [fatsecret]
+       - Sour Cream (Light) [fatsecret]
+       - Sour Cream [fatsecret]
+       - Regular Cream Cheese  Spread [fatsecret]
+       - Light Cream [fatsecret]
+
+  ≡ƒöì Category mismatch checks:
+       Γ£à OK | Light Sour Cream
+       Γ£à OK | Sour Cream (Light)
+       Γ£à OK | Sour Cream
+       Γ£à OK | Regular Cream Cheese  Spread
+       Γ£à OK | Light Cream
+       Γ£à OK | Sour Cream (Sour Dressing, Nonbutterfat)
+       Γ£à OK | Sour Cream Dip
+       Γ¥î CAT | Light Ice Cream
+
+======================================================================
+≡ƒÄ» RAW QUERY: "low fat cheddar cheese"
+
+  ≡ƒô¥ Normalized:
+     cleaned:  "low fat cheddar cheese"
+     nounOnly: "fat cheddar cheese"
+     stripped: []
+
+  ≡ƒôª Gathering candidates...
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:10.387Z","query":"low fat cheddar cheese","fetchedCount":16,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"low fat cheddar or colby cheese","origPos":0,"priority":20},{"name":"cream low fat cheese","origPos":1,"priority":20},{"name":"monterey low fat cheese","origPos":2,"priority":20}]}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:12.404Z","query":"reduced fat cheddar cheese","fetchedCount":10,"promotedCount":2,"promoted":[{"name":"REDUCED FAT CHEDDAR CHEESE","from":8,"priority":100},{"name":"REDUCED FAT CHEDDAR CHEESE","from":9,"priority":100}],"finalTop3":[{"name":"REDUCED FAT CHEDDAR CHEESE","origPos":8,"priority":100},{"name":"REDUCED FAT CHEDDAR CHEESE","origPos":9,"priority":100},{"name":"american or cheddar cheese base reduced fat cheese spread","origPos":0,"priority":20}]}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:14.473Z","query":"lowfat cheddar cheese","fetchedCount":8,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"cheddar cheese","origPos":0,"priority":20},{"name":"cottage lowfat 1% milkfat cheese","origPos":1,"priority":20},{"name":"cottage lowfat 2% milkfat cheese","origPos":2,"priority":20}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-08T00:24:14.474Z","rawLine":"low fat cheddar cheese","liveCount":8,"fdcCount":8,"synonymMatches":16,"totalUnique":28}
+     Total candidates: 28
+     First 5 candidates:
+       - Cheddar Cheese (Reduced Fat) [fatsecret]
+       - Low Fat Cheddar Cheese (Lucerne) [fatsecret]
+       - Lowfat Cheddar or Colby Cheese [fatsecret]
+       - Reduced Fat American or Cheddar Type Processed Cheese Product Cheese [fatsecret]
+       - Lowfat American or Cheddar Type Processed Cheese [fatsecret]
+
+  ≡ƒöì Category mismatch checks:
+       Γ£à OK | Cheddar Cheese (Reduced Fat)
+       Γ£à OK | Low Fat Cheddar Cheese (Lucerne)
+       Γ£à OK | Lowfat Cheddar or Colby Cheese
+       Γ£à OK | Reduced Fat American or Cheddar Type Processed Cheese Product Cheese
+       Γ£à OK | Lowfat American or Cheddar Type Processed Cheese
+       Γ£à OK | Cheddar Cheese Soup (Canned(
+       Γ£à OK | Low Sodium Cheddar or Colby Cheese
+       Γ£à OK | Cheddar or American Type Cheese
+
+======================================================================
+≡ƒÄ» RAW QUERY: "low fat monterey jack cheese"
+
+  ≡ƒô¥ Normalized:
+     cleaned:  "low fat monterey jack cheese"
+     nounOnly: "fat monterey jack cheese"
+     stripped: []
+
+  ≡ƒôª Gathering candidates...
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:16.508Z","query":"low fat monterey jack cheese","fetchedCount":16,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"monterey low fat cheese","origPos":0,"priority":20},{"name":"monterey jack solid cheese","origPos":1,"priority":20},{"name":"cream low fat cheese","origPos":2,"priority":20}]}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:18.503Z","query":"reduced fat monterey jack cheese","fetchedCount":8,"promotedCount":1,"promoted":[{"name":"reduced fat monterey jack cheese tillamook","from":6,"priority":40}],"finalTop3":[{"name":"REDUCED FAT MONTEREY JACK CHEESE","origPos":0,"priority":100},{"name":"reduced fat monterey jack cheese tillamook","origPos":6,"priority":40},{"name":"monterey jack solid cheese","origPos":1,"priority":20}]}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:20.456Z","query":"lowfat monterey jack cheese","fetchedCount":8,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"monterey jack solid cheese","origPos":0,"priority":20},{"name":"monterey cheese","origPos":1,"priority":20},{"name":"monterey jack monterey jack cheese","origPos":2,"priority":20}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-08T00:24:20.457Z","rawLine":"low fat monterey jack cheese","liveCount":8,"fdcCount":8,"synonymMatches":16,"totalUnique":25}
+     Total candidates: 25
+     First 5 candidates:
+       - Monterey Jack Cheese [fatsecret]
+       - Monterey Cheese (Low Fat) [fatsecret]
+       - Monterey Cheese [fatsecret]
+       - Lowfat Monterey Cheese [fatsecret]
+       - Pepper Jack Cheese [fatsecret]
+
+  ≡ƒöì Category mismatch checks:
+       Γ£à OK | Monterey Jack Cheese
+       Γ£à OK | Monterey Cheese (Low Fat)
+       Γ£à OK | Monterey Cheese
+       Γ£à OK | Lowfat Monterey Cheese
+       Γ£à OK | Pepper Jack Cheese
+       Γ£à OK | Colby Jack Cheese
+       Γ£à OK | Monterey Cheese
+       Γ£à OK | Low Fat American Cheese
+
+======================================================================
+≡ƒÄ» RAW QUERY: "light butter"
+
+  ≡ƒô¥ Normalized:
+     cleaned:  "light butter"
+     nounOnly: "light butter"
+     stripped: []
+
+  ≡ƒôª Gathering candidates...
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:22.919Z","query":"light butter","fetchedCount":16,"promotedCount":4,"promoted":[{"name":"beer light alcoholic beverage","from":8,"priority":20},{"name":"wine light alcoholic beverage","from":9,"priority":20},{"name":"liquid light cream substitute","from":10,"priority":20}],"finalTop3":[{"name":"beer light bud light alcoholic beverage","origPos":2,"priority":20},{"name":"light sour cream","origPos":4,"priority":20},{"name":"corn light syrups","origPos":5,"priority":20}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-08T00:24:22.920Z","rawLine":"light butter","liveCount":8,"fdcCount":8,"synonymMatches":0,"totalUnique":16}
+     Total candidates: 16
+     First 5 candidates:
+       - Light Butter (Land O'Lakes) [fatsecret]
+       - Light Butter (Country Crock) [fatsecret]
+       - I Can't Believe It's Not Butter Light (Bertolli) [fatsecret]
+       - Light Butter (Blue Bonnet) [fatsecret]
+       - Light Butter (Stick with Salt) [fatsecret]
+
+  ≡ƒöì Category mismatch checks:
+       Γ£à OK | Light Butter (Land O'Lakes)
+       Γ£à OK | Light Butter (Country Crock)
+       Γ£à OK | I Can't Believe It's Not Butter Light (Bertolli)
+       Γ£à OK | Light Butter (Blue Bonnet)
+       Γ£à OK | Light Butter (Stick with Salt)
+       Γ£à OK | Light Butter Syrup (Richfood)
+       Γ£à OK | Light Butter Microwave Popcorn (61g bag) (Pop Weaver)
+       Γ£à OK | Lighter Spreadable Butter (Lurpak)
+
+======================================================================
+≡ƒÄ» RAW QUERY: "light cream"
+
+  ≡ƒô¥ Normalized:
+     cleaned:  "light cream"
+     nounOnly: "light cream"
+     stripped: []
+
+  ≡ƒôª Gathering candidates...
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:24.912Z","query":"light cream","fetchedCount":32,"promotedCount":8,"promoted":[{"name":"LIGHT CREAM","from":16,"priority":100},{"name":"LIGHT CREAM","from":17,"priority":100},{"name":"LIGHT CREAM","from":18,"priority":100}],"finalTop3":[{"name":"LIGHT CREAM","origPos":16,"priority":100},{"name":"LIGHT CREAM","origPos":17,"priority":100},{"name":"LIGHT CREAM","origPos":18,"priority":100}]}
+prisma:query SELECT 1
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query INSERT INTO "public"."FdcFoodCache" ("id","description","brandName","dataType","nutrients","syncedAt","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt"
+{"level":"debug","msg":"fdc.cached","ts":"2026-04-08T00:24:25.300Z","fdcId":1958151,"name":"LIGHT CREAM","dataType":"Branded"}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query INSERT INTO "public"."FdcFoodCache" ("id","description","brandName","dataType","nutrients","syncedAt","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt"
+{"level":"debug","msg":"fdc.cached","ts":"2026-04-08T00:24:25.480Z","fdcId":2052247,"name":"LIGHT CREAM","dataType":"Branded"}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query INSERT INTO "public"."FdcFoodCache" ("id","description","brandName","dataType","nutrients","syncedAt","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt"
+{"level":"debug","msg":"fdc.cached","ts":"2026-04-08T00:24:25.661Z","fdcId":2436045,"name":"LIGHT CREAM","dataType":"Branded"}
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:26.885Z","query":"half and half","fetchedCount":16,"promotedCount":4,"promoted":[{"name":"HALF AND HALF","from":8,"priority":100},{"name":"HALF AND HALF","from":9,"priority":100},{"name":"HALF AND HALF","from":10,"priority":100}],"finalTop3":[{"name":"HALF AND HALF","origPos":8,"priority":100},{"name":"HALF AND HALF","origPos":9,"priority":100},{"name":"HALF AND HALF","origPos":10,"priority":100}]}
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-08T00:24:29.087Z","query":"coffee cream","fetchedCount":8,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"fluid light (coffee cream or table cream) cream","origPos":0,"priority":40},{"name":"liqueur coffee with cream 34 proof alcoholic beverage","origPos":1,"priority":20},{"name":"soymilk silk coffee","origPos":2,"priority":20}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-08T00:24:29.087Z","rawLine":"light cream","liveCount":8,"fdcCount":8,"synonymMatches":16,"totalUnique":32}
+     Total candidates: 32
+     First 5 candidates:
+       - Light Cream [fatsecret]
+       - Light Cream (365) [fatsecret]
+       - Light Cream (Great Value) [fatsecret]
+       - Light Thick & Creamy Yogurt - Strawberry (Yoplait) [fatsecret]
+       - Light Vanilla Ice Creams [fatsecret]
+
+  ≡ƒöì Category mismatch checks:
+       Γ£à OK | Light Cream
+       Γ£à OK | Light Cream (365)
+       Γ£à OK | Light Cream (Great Value)
+       Γ£à OK | Light Thick & Creamy Yogurt - Strawberry (Yoplait)
+       Γ£à OK | Light Vanilla Ice Creams
+       Γ£à OK | Light Cream (Upstate Farms)
+       Γ£à OK | Light Cream (Harris Teeter)
+       Γ£à OK | Light Creamy Potato with Bacon & Cheese (Progresso)
+
+Γ£à Trace complete!
+
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."FdcFoodCache"."id", "public"."FdcFoodCache"."description", "public"."FdcFoodCache"."brandName", "public"."FdcFoodCache"."dataType", "public"."FdcFoodCache"."nutrients", "public"."FdcFoodCache"."servingSize", "public"."FdcFoodCache"."servingSizeUnit", "public"."FdcFoodCache"."syncedAt", "public"."FdcFoodCache"."expiresAt", "public"."FdcFoodCache"."createdAt", "public"."FdcFoodCache"."updatedAt" FROM "public"."FdcFoodCache" WHERE ("public"."FdcFoodCache"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3

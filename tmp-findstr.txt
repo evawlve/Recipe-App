@@ -1,0 +1,1 @@
+✓ {full_pipeline} [0.98] "2 cup chicken broth" → "CHICKEN BROTH" | (10kcal/240g) = 10kcal P:1.0 C:1.0 F:0.0 [AI:NORM]

@@ -1,0 +1,31 @@
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-04T01:07:35.967Z","query":"Pancake Mix","fetchedCount":28,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"buckwheat dry mix incomplete pancakes","origPos":0,"priority":10},{"name":"special dietary dry mix pancakes","origPos":1,"priority":10},{"name":"plain dry mix complete prepared pancakes","origPos":2,"priority":10}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-04T01:07:35.969Z","rawLine":"Pancake Mix","liveCount":8,"fdcCount":8,"synonymMatches":0,"totalUnique":16}
+{"level":"info","msg":"normalize_gate.calling_llm","ts":"2026-04-04T01:07:35.970Z","rawLine":"Pancake Mix","reason":"high_confidence_tie_needs_nutrition","candidateCount":16}
+{"level":"info","msg":"mapping.ai_synonyms","ts":"2026-04-04T01:07:36.366Z","rawLine":"Pancake Mix","synonyms":["pancake flour","pancake batter mix"]}
+{"level":"info","msg":"fdc.rerank","ts":"2026-04-04T01:07:36.655Z","query":"pancake mix","fetchedCount":28,"promotedCount":0,"promoted":[],"finalTop3":[{"name":"buckwheat dry mix incomplete pancakes","origPos":0,"priority":10},{"name":"special dietary dry mix pancakes","origPos":1,"priority":10},{"name":"plain dry mix complete prepared pancakes","origPos":2,"priority":10}]}
+{"level":"info","msg":"gather.candidates.complete","ts":"2026-04-04T01:07:36.985Z","rawLine":"Pancake Mix","liveCount":8,"fdcCount":8,"synonymMatches":4,"totalUnique":20}
+{"level":"debug","msg":"mapping.fdc_nutrition_fallback","ts":"2026-04-04T01:07:36.995Z","rawLine":"Pancake Mix","fdcName":"buckwheat dry mix incomplete pancakes","fdcId":"fdc_172774","estimate":340}
+{"level":"debug","msg":"simple_rerank.result","ts":"2026-04-04T01:07:37.011Z","query":"pancake mix","winner":"Complete Pancake Mix","winnerScore":"0.497","winnerBaseScore":"0.497","winnerNutritionScore":"0.000","runnerUp":"Buttermilk Pancake Mix","runnerUpScore":"0.496","effectiveRunnerUp":"Buttermilk Pancake Mix","effectiveRunnerUpScore":"0.496","gap":"0.001","confidence":"0.75","reason":"close_match"}
+{"level":"debug","msg":"deferred_hydration.fire_and_forget_start","ts":"2026-04-04T01:07:37.011Z","count":3,"hasServingContext":false}
+{"level":"debug","msg":"deferred_hydration.fire_and_forget_complete","ts":"2026-04-04T01:07:37.790Z","count":3}
+{"level":"info","msg":"hydrate.cache_incomplete","ts":"2026-04-04T01:07:38.254Z","foodId":"117618","name":"Complete Pancake Mix"}
+{"level":"debug","msg":"selectServing.start","ts":"2026-04-04T01:07:38.673Z","requestedQty":1,"requestedUnit":null,"ingredientName":"Pancake Mix","availableServings":[{"desc":"serving","grams":39}]}
+node.exe : {"level":"warn","msg":"selectServing.
+   level":"warn"...s":["serving"]}:String) [],  
+{"level":"info","msg":"hydrate.attempting_unitless_backfill","ts":"2026-04-04T01:07:38.675Z","foodId":"117618","ingredientName":"Pancake Mix","targetSizeUnit":"medium"}
+{"level":"debug","msg":"backfill.on_demand_skipped","ts":"2026-04-04T01:07:38.843Z","foodId":"117618","targetUnit":"medium","reason":"specific_unit_exists"}
+{"level":"debug","msg":"selectServing.start","ts":"2026-04-04T01:07:39.244Z","requestedQty":1,"requestedUnit":null,"ingredientName":"Pancake Mix","availableServings":[{"desc":"medium","grams":425},{"desc":"1 cup","grams":120},{"desc":"serving","grams":39},{"desc":"1 tbsp","grams":14}]}
+{"level":"debug","msg":"selectServing.unitless_whole_item_serving","ts":"2026-04-04T01:07:39.245Z","description":"medium","grams":425}
+{"level":"debug","msg":"selectServing.result","ts":"2026-04-04T01:07:39.245Z","requestedUnit":null,"requestedQty":1,"selectedServing":"medium","selectedGrams":425,"conversionFactor":1,"adjustedGrams":425,"matchType":"same_type","matchScore":1}
+{"level":"info","msg":"hydrate.unitless_backfill_success","ts":"2026-04-04T01:07:39.245Z","foodId":"117618","serving":"medium"}
+≡ƒôè MAPPING: Pancake Mix
+≡ƒô¥ Parsed: 1  Pancake Mix
+  1. [1.000] Buttermilk Complete Pancake Mix (Krusteaz) [fatsecret] [355.9322033898305kcal, 6.779661016949152p/76.27118644067797c/1.694915254237288f]
+  2. [1.000] Complete Buttermilk Pancake Mix (Great Value) [fatsecret] [350.8771929824561kcal, 7.017543859649122p/75.43859649122807c/2.631578947368421f]
+  3. [1.000] Complete Pancake Mix (Meijer) [fatsecret] [358.974358974359kcal, 7.692307692307693p/69.23076923076924c/5.128205128205129f]
+  4. [1.000] Buttermilk Pancake Mix (Fresh & Easy) [fatsecret] [375kcal, 7.5p/72.5c/1.25f]
+  5. [1.000] Gingerbread Pancake Mix (New Hope Mills) [fatsecret] [324.3243243243243kcal, 5.405405405405405p/75.67567567567568c/0f]
+Γ£ô Selected: Complete Pancake Mix (Meijer)
+--- PARSED: "Pancake Mix" ---
+  foodName: 'Complete Pancake Mix',
+  rawLine: 'Pancake Mix'

@@ -1,0 +1,126 @@
+[
+  {
+    "test": "4 sprays butter cooking spray",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Butter No-Stick Spray",
+      "grams": 1,
+      "kcal": 0,
+      "serving": "1 spray (~0.25g)"
+    }
+  },
+  {
+    "test": "1 cup sour cream",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Sour Cream Light",
+      "grams": 244,
+      "kcal": 284.6667,
+      "serving": "1 cup"
+    }
+  },
+  {
+    "test": "Palm Sugar",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "PALM SUGAR",
+      "grams": 15,
+      "kcal": 0,
+      "serving": "1 tbsp palm sugar default"
+    }
+  },
+  {
+    "test": "Tortilla Chips",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "TORTILLA CHIPS",
+      "grams": 28,
+      "kcal": 0,
+      "serving": "1 oz tortilla chips default"
+    }
+  },
+  {
+    "test": "fried shallots",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Shallots",
+      "grams": 15,
+      "kcal": 10.5,
+      "serving": "medium"
+    }
+  },
+  {
+    "test": "pitted cherries",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Sweet Cherries",
+      "grams": 100,
+      "kcal": 63.2479,
+      "serving": "medium"
+    }
+  },
+  {
+    "test": "sherry wine",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Riesling Wine",
+      "grams": 148,
+      "kcal": 120,
+      "serving": "medium"
+    }
+  },
+  {
+    "test": "Protein Powder",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "PROTEIN POWDER",
+      "grams": 30,
+      "kcal": 0,
+      "serving": "1 scoop protein powder default"
+    }
+  },
+  {
+    "test": "honey",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Honey",
+      "grams": 340,
+      "kcal": 1036.1905,
+      "serving": "medium"
+    }
+  },
+  {
+    "test": "1 packet sweetener",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "SWEETENER",
+      "grams": 1,
+      "kcal": 0,
+      "serving": "1 packet (1g each)"
+    }
+  },
+  {
+    "test": "4 parsley flakes",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "PARSLEY FLAKES",
+      "grams": 8,
+      "kcal": 0,
+      "serving": "4 medium (2g each)"
+    }
+  },
+  {
+    "test": "1 tbsp oil",
+    "status": "SUCCESS",
+    "result": {
+      "foodName": "Vegetable Oil",
+      "grams": 13.6,
+      "kcal": 120,
+      "serving": "tablespoon"
+    }
+  },
+  {
+    "test": "Salt and Pepper",
+    "status": "FAILED"
+  }
+]

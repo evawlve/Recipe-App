@@ -426,6 +426,12 @@ const VOLUME_UNIT_TO_ML: Record<string, number> = {
   'dashes': 0.625,
   'pinch': 0.3,     // 1 pinch ≈ 1/16 tsp
   'pinches': 0.3,
+  // Micro-volume units
+  'drop': 0.05,     // 1 drop ≈ 0.05ml (medicine dropper / hot sauce)
+  'drops': 0.05,
+  // Cooking spray duration
+  'second': 0.25,   // 1 second of spray ≈ 0.25ml oil
+  'seconds': 0.25,
 };
 
 function deriveVolumeMl(serving: FatSecretServing): number | null {

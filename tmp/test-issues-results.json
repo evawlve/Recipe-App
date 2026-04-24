@@ -1,0 +1,52 @@
+[
+  {
+    "line": "1 tsp garlic salt",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "3 peppers in adobo sauce",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "8 oz part-skim mozzarella",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "8 tbsp omega blended cooking oil",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "16 small chicken leg skin eaten",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "8 lettuce",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "1 cup garlic and herb cream cheese low fat",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "1 cup low-fat cottage cheese",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "4 tbsp reduced-fat sour cream",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  },
+  {
+    "line": "1  light creamy Swiss cheese wedge",
+    "status": "error",
+    "message": "\nInvalid `prisma.learnedSynonym.findFirst()` invocation in\nC:\\Dev\\Recipe App\\src\\lib\\fatsecret\\ai-synonym-generator.ts:423:49\n\n  420 const normalized = query.toLowerCase().trim();\n  421 \n  422 // Check database first\n→ 423 const synonym = await prisma.learnedSynonym.findFirst(\nCan't reach database server at `db.eptosewzwwpxiftbvosr.supabase.co:5432`\n\nPlease make sure your database server is running at `db.eptosewzwwpxiftbvosr.supabase.co:5432`."
+  }
+]

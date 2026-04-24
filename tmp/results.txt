@@ -1,0 +1,25 @@
+
+--- PARSED: "4 sprays butter cooking spray" ---
+Parsed Unit: spray
+Parsed Name: butter cooking spray
+RESULT: undefined | undefined | undefinedg | undefinedkcal
+
+--- PARSED: "0.5 tsp ground thyme" ---
+Parsed Unit: tsp
+Parsed Name: ground thyme
+RESULT: Thyme | tsp | 0.4g | 0.5kcal
+
+--- PARSED: "5 mint 1 bunch" ---
+Parsed Unit: null
+Parsed Name: mint 1 bunch
+RESULT: MINT | 5 pieces (200g each) | 1000g | 0kcal
+
+--- PARSED: "Pancake Mix" ---
+Parsed Unit: null
+Parsed Name: Pancake Mix
+RESULT: Complete Pancake Mix | medium | 425g | 1525.6412kcal
+
+--- PARSED: "0.25 tsp spice blend mustard" ---
+Parsed Unit: tsp
+Parsed Name: spice blend mustard
+RESULT: Mustard | teaspoon | 1.25g | 0.75kcal

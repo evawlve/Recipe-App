@@ -8,17 +8,21 @@ import { parseIngredientLine } from '../src/lib/parse/ingredient-line';
 import { autoMapIngredients } from '../src/lib/nutrition/auto-map';
 
 const KEYWORDS = [
-    // High protein combinations
-    'high protein breakfast', 'high protein lunch', 'high protein dinner',
-    'high protein salad', 'high protein soup', 'high protein snack',
-    // Healthy cuisine styles
-    'healthy asian', 'healthy mexican', 'healthy italian',
-    // Diet-focused
-    'low calorie dinner', 'low carb breakfast', 'lean protein meal',
-    // Specific healthy foods
-    'grilled chicken', 'salmon bowl', 'quinoa salad'
+    'avocado toast', 'chicken tikka masala', 'beef stroganoff', 'pad thai', 'fish tacos',
+    'falafel', 'crepe', 'miso soup', 'pho', 'ramen',
+    'biryani', 'paella', 'risotto', 'gnocchi', 'ratatouille',
+    'quiche', 'shakshuka', 'huevos rancheros', 'eggs benedict', 'clam chowder',
+    'lobster bisque', 'crab cakes', 'ceviche', 'poke bowl', 'jambalaya',
+    'gumbo', 'pulled pork', 'bbq ribs', 'brisket', 'cornbread',
+    'biscuits and gravy', 'chicken pot pie', 'shepherds pie', 'beef wellington', 'meatloaf',
+    'spaghetti bolognese', 'fettuccine alfredo', 'carbonara', 'pesto pasta', 'ravioli',
+    'margherita pizza', 'calzone', 'stromboli', 'garlic bread', 'bruschetta',
+    'caprese salad', 'caesar salad', 'cobb salad', 'waldorf salad', 'greek salad',
+    'french onion soup', 'tomato soup', 'chicken noodle soup', 'minestrone', 'gazpacho',
+    'chili con carne', 'enchiladas', 'fajitas', 'burritos', 'quesadillas',
+    'guacamole', 'pico de gallo', 'hummus', 'tzatziki', 'baba ganoush'
 ];
-const RECIPES_PER_KEYWORD = 10;
+const RECIPES_PER_KEYWORD = 5;
 const AUTHOR_ID = process.env.IMPORT_AUTHOR_ID || '279a6119-a377-42b4-9ee9-1f08169a8e71';
 
 async function main() {

@@ -183,6 +183,27 @@ This shows:
 
 ## Using the Debug Script
 
+### Verifying Local Fixes Fast
+
+> ⚠️ **CRITICAL**: Do NOT run a full pilot import just to verify a localized synonym or filter fix. This wastes expensive AI API calls and provides no guarantee that your specific problem ingredients will actually exist in the random recipe sample.
+
+Create a specific script (e.g. `tmp/test-fixes.ts`) to hit the pipeline directly:
+```typescript
+import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+
+async function test() {
+  const result = await mapIngredientWithFallback('your changed ingredient text');
+  console.log('Result =>', result?.foodName, result?.brandName);
+}
+
+test().catch(console.error).finally(() => process.exit(0));
+```
+
+Run it locally to verify the output:
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register tmp/test-fixes.ts
+```
+
 ### Debug a Full Ingredient Line
 
 ```bash

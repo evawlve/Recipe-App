@@ -1,7 +1,7 @@
 import { mapIngredientWithFatsecret } from '../map-ingredient';
 import { FatSecretClient } from '../client';
 import {
-    getValidatedMapping,
+    getValidatedMappingByNormalizedName,
     saveValidatedMapping,
     trackValidationFailure,
 } from '../validated-mapping-helpers';
@@ -12,6 +12,15 @@ import { aiNormalizeIngredient } from '../ai-normalize';
 // Mock dependencies
 jest.mock('../client');
 jest.mock('../validated-mapping-helpers');
+jest.mock('../ai-validation', () => ({
+    validateMappingWithAI: jest.fn().mockResolvedValue({
+        approved: true,
+        confidence: 0.9,
+        reason: 'mocked',
+        category: 'correct',
+        detectedIssues: []
+    })
+}));
 jest.mock('../ai-rerank');
 jest.mock('../ai-search-refine');
 jest.mock('../ai-normalize');
@@ -25,7 +34,7 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (aiNormalizeIngredient as jest.Mock).mockResolvedValue({ status: 'error', reason: 'not needed' });
-        (getValidatedMapping as jest.Mock).mockResolvedValue(null);
+        (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValue(null);
         (rerankFatsecretCandidates as jest.Mock).mockResolvedValue({ status: 'error', reason: 'skipped' });
         (refineSearchQuery as jest.Mock).mockResolvedValue(null);
 
@@ -33,7 +42,7 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
         mockClient.autocompleteFoods.mockResolvedValue([]);
         mockClient.searchFoodsV4.mockResolvedValue([]);
         mockClient.getFoodDetails.mockImplementation(async (id) => ({
-            id, name: 'Mock Food', brandName: null, foodType: 'Generic', description: '',
+            id, name: id.includes('chicken') ? 'Chicken' : 'Mock Food', brandName: null, foodType: 'Generic', description: '',
             servings: [{
                 id: 's1', measurementDescription: '1 serving', metricServingAmount: 100, metricServingUnit: 'g', servingWeightGrams: 100,
                 calories: 100, protein: 10, carbohydrate: 10, fat: 10
@@ -48,11 +57,11 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
             confidence: 0.95,
             source: 'cache',
         };
-        (getValidatedMapping as jest.Mock).mockResolvedValue(cachedMapping);
+        (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValue(cachedMapping);
 
         const result = await mapIngredientWithFatsecret('test ingredient', { client: mockClient });
 
-        expect(getValidatedMapping).toHaveBeenCalledWith('test ingredient');
+        expect(getValidatedMappingByNormalizedName).toHaveBeenCalledWith('test ingredient', 'fatsecret', 'test ingredient');
         expect(result).toEqual(cachedMapping);
         expect(mockClient.searchFoodsV4).not.toHaveBeenCalled();
     });
@@ -60,29 +69,30 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
     it('should use AI rerank and save to cache on success', async () => {
         // Setup: search returns multiple candidates
         const candidate1 = { id: 'c1', name: 'Chicken A', brandName: null, foodType: 'Generic' };
-        const candidate2 = { id: 'c2', name: 'Chicken B', brandName: null, foodType: 'Generic' };
+        const candidate2 = { id: 'chicken', name: 'Chicken B', brandName: null, foodType: 'Generic' };
         mockClient.searchFoodsV4.mockResolvedValue([candidate1, candidate2]);
 
         // Setup: AI rerank picks candidate 2
         (rerankFatsecretCandidates as jest.Mock).mockResolvedValue({
             status: 'success',
-            id: 'c2',
+            id: 'chicken',
             confidence: 0.9,
             rationale: 'Better match',
         });
 
-        const result = await mapIngredientWithFatsecret('chicken', { client: mockClient });
+        const result = await mapIngredientWithFatsecret('120g chicken', { client: mockClient });
 
         console.log('DEBUG TEST: result', JSON.stringify(result, null, 2));
         console.log('DEBUG TEST: rerank calls', (rerankFatsecretCandidates as jest.Mock).mock.calls.length);
         console.log('DEBUG TEST: save calls', (saveValidatedMapping as jest.Mock).mock.calls.length);
 
         expect(rerankFatsecretCandidates).toHaveBeenCalled();
-        expect(result?.foodId).toBe('c2');
+        expect(result?.foodId).toBe('chicken');
         expect(saveValidatedMapping).toHaveBeenCalledWith(
-            'chicken',
-            expect.objectContaining({ foodId: 'c2' }),
-            expect.objectContaining({ approved: true, confidence: 0.9 })
+            '120g chicken',
+            expect.objectContaining({ foodId: 'chicken' }),
+            expect.objectContaining({ approved: true, confidence: 0.9 }),
+            expect.any(Object)
         );
     });
 
@@ -90,7 +100,7 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
         // Setup: initial search returns nothing initially, but returns hit for refined query
         mockClient.searchFoodsV4.mockImplementation(async (query) => {
             if (query === 'refined chicken') {
-                return [{ id: 'r1', name: 'Refined Chicken', brandName: null, foodType: 'Generic' }];
+                return [{ id: 'chicken', name: 'Bad Refined Chicken', brandName: null, foodType: 'Generic' }];
             }
             return [];
         });
@@ -101,16 +111,11 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
             reason: 'typo fix',
         });
 
-        const result = await mapIngredientWithFatsecret('bad chicken', { client: mockClient });
+        const result = await mapIngredientWithFatsecret('120g bad chicken', { client: mockClient });
 
-        console.log('DEBUG TEST RETRY: result', JSON.stringify(result, null, 2));
-        console.log('DEBUG TEST RETRY: refine calls', (refineSearchQuery as jest.Mock).mock.calls.length);
-        console.log('DEBUG TEST RETRY: search calls', (mockClient.searchFoodsV4 as jest.Mock).mock.calls.length);
-        console.log('DEBUG TEST RETRY: search args', JSON.stringify((mockClient.searchFoodsV4 as jest.Mock).mock.calls, null, 2));
-
-        expect(refineSearchQuery).toHaveBeenCalledWith('bad chicken', expect.any(Array));
+        expect(refineSearchQuery).toHaveBeenCalledWith('120g bad chicken', expect.any(Array));
         expect(mockClient.searchFoodsV4).toHaveBeenCalledWith('refined chicken', expect.any(Object));
-        expect(result?.foodId).toBe('r1');
+        expect(result?.foodId).toBe('chicken');
     });
 
     it('should track failure if all attempts fail', async () => {
@@ -118,11 +123,11 @@ describe('mapIngredientWithFatsecret Validation Flow', () => {
         mockClient.searchFoodsV4.mockResolvedValue([]);
         (refineSearchQuery as jest.Mock).mockResolvedValue(null);
 
-        const result = await mapIngredientWithFatsecret('impossible query', { client: mockClient });
+        const result = await mapIngredientWithFatsecret('120g impossible query', { client: mockClient });
 
         expect(result).toBeNull();
         expect(trackValidationFailure).toHaveBeenCalledWith(
-            'impossible query',
+            '120g impossible query',
             expect.any(Object),
             expect.objectContaining({ approved: false, reason: 'no_candidates_found' })
         );

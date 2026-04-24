@@ -1,0 +1,32 @@
+[
+  {
+    "query": "2 large eggs",
+    "foodName": "EGGS",
+    "norm": "eggs",
+    "earlyCoreTokenMismatch": false,
+    "isCategoryMismatch": false,
+    "isMultiIngredientMismatch": false,
+    "hasCriticalModifierMismatch": false,
+    "isReplacementMismatch": false
+  },
+  {
+    "query": "1 medium onion",
+    "foodName": "raw onions",
+    "norm": "onion",
+    "earlyCoreTokenMismatch": false,
+    "isCategoryMismatch": false,
+    "isMultiIngredientMismatch": false,
+    "hasCriticalModifierMismatch": false,
+    "isReplacementMismatch": false
+  },
+  {
+    "query": "1 dash pepper",
+    "foodName": "pepper black spices",
+    "norm": "black pepper",
+    "earlyCoreTokenMismatch": false,
+    "isCategoryMismatch": false,
+    "isMultiIngredientMismatch": false,
+    "hasCriticalModifierMismatch": false,
+    "isReplacementMismatch": false
+  }
+]

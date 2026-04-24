@@ -1,23 +1,25 @@
 import { importUsdaGenerics } from '../importer';
 import { canonicalizeName, macroFingerprint, generateAliases } from '../dedupe';
 
-// Mock Prisma
-const mockPrisma = {
-  food: {
-    findFirst: jest.fn(),
-    create: jest.fn(),
-  },
-  foodAlias: {
-    create: jest.fn(),
-  },
-  foodUnit: {
-    create: jest.fn(),
-  }
-};
+import { prisma } from '../../../lib/db';
 
+// Mock Prisma
 jest.mock('../../../lib/db', () => ({
-  prisma: mockPrisma
+  prisma: {
+    food: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+    },
+    foodAlias: {
+      create: jest.fn(),
+    },
+    foodUnit: {
+      create: jest.fn(),
+    }
+  }
 }));
+
+const mockPrisma = prisma as jest.Mocked<any>;
 
 // Mock logger
 jest.mock('../../../lib/logger', () => ({
@@ -36,7 +38,7 @@ describe('USDA Importer Demo', () => {
     console.log('=== Deduplication Demo ===');
     
     // Test canonicalization
-    const name1 = 'Olive Oil (Extra Virgin)';
+    const name1 = 'Olive Oil, Extra Virgin';
     const name2 = 'olive oil, extra virgin';
     const canonical1 = canonicalizeName(name1);
     const canonical2 = canonicalizeName(name2);

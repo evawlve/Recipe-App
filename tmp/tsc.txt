@@ -1,0 +1,16 @@
+src/lib/fatsecret/map-ingredient-with-fallback.ts(1577,94): error TS2339: Property 'searchQuery' does not exist on type 'FilterResult'.
+src/lib/fatsecret/simple-rerank.ts(1227,9): error TS2322: Type 'null' is not assignable to type '{ winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[]; }'.
+src/lib/fatsecret/simple-rerank.ts(1245,13): error TS2322: Type 'null' is not assignable to type '{ winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[]; }'.
+src/lib/fatsecret/simple-rerank.ts(1248,9): error TS2741: Property 'sortedCandidates' is missing in type '{ winner: RerankCandidate; confidence: number; reason: string; }' but required in type '{ winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[]; }'.
+src/scripts/apply-batch4-overrides.ts(20,61): error TS2353: Object literal may only specify known properties, and 'fdcId' does not exist in type 'FoodWhereInput'.
+src/scripts/gather-candidates.ts(71,26): error TS18047: 'w' is possibly 'null'.
+src/scripts/gather-candidates.ts(71,45): error TS18047: 'w' is possibly 'null'.
+src/scripts/gather-candidates.ts(72,31): error TS18047: 'w' is possibly 'null'.
+src/scripts/gather-candidates.ts(72,41): error TS18047: 'w' is possibly 'null'.
+src/scripts/gather-candidates.ts(72,60): error TS18047: 'w' is possibly 'null'.
+src/scripts/gather-candidates.ts(72,85): error TS18047: 'w' is possibly 'null'.
+src/scripts/gather-candidates.ts(72,105): error TS18047: 'w' is possibly 'null'.
+tmp/check-cache.ts(4,59): error TS2322: Type '{ rawLine: string; }' is not assignable to type 'AiNormalizeCacheWhereUniqueInput'.
+  Type '{ rawLine: string; }' is not assignable to type '{ normalizedKey: string; } & { normalizedKey?: string | undefined; AND?: AiNormalizeCacheWhereInput | AiNormalizeCacheWhereInput[] | undefined; ... 16 more ...; useCount?: number | ... 1 more ... | undefined; }'.
+    Property 'normalizedKey' is missing in type '{ rawLine: string; }' but required in type '{ normalizedKey: string; }'.
+tmp/test-filter.ts(2,34): error TS2307: Cannot find module '@/lib/fatsecret/types' or its corresponding type declarations.

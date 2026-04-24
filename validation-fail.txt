@@ -1,0 +1,192 @@
+﻿  console.debug
+    {"level":"debug","msg":"fatsecret.map.ai_normalize_skipped","ts":"2026-04-02T01:36:33.196Z","rawLine":"120g chicken","reason":"not needed"}
+
+      at log (src/lib/logger.ts:25:58)
+
+  console.info
+    {"level":"info","msg":"fatsecret.map.ai_rerank_used","ts":"2026-04-02T01:36:33.217Z","rawLine":"120g chicken","pickedId":"chicken","aiConfidence":0.9,"isAmbiguous":true,"rationale":"Better match"}
+
+      at log (src/lib/logger.ts:28:15)
+
+  console.error
+    {"level":"error","msg":"ai_validation.error","ts":"2026-04-02T01:36:33.461Z","error":"OpenAI API error: 401 {\n  \"error\": {\n    \"message\": \"Incorrect API key provided: sk-or-v1*************************************************************a00e. You can find your API key at https://platform.openai.com/account/api-keys.\",\n    \"type\": \"invalid_request_error\",\n    \"code\": \"invalid_api_key\",\n    \"param\": null\n  },\n  \"status\": 401\n}","rawIngredient":"120g chicken"}
+
+    [0m [90m 32 |[39m       [36mbreak[39m[33m;[39m
+     [90m 33 |[39m     [36mcase[39m [32m"error"[39m[33m:[39m
+    [31m[1m>[22m[39m[90m 34 |[39m       console[33m.[39merror(line)[33m;[39m
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 35 |[39m       [36mbreak[39m[33m;[39m
+     [90m 36 |[39m   }
+     [90m 37 |[39m }[0m
+
+      at log (src/lib/logger.ts:34:15)
+      at Object.error (src/lib/logger.ts:43:45)
+      at validateMappingWithAI (src/lib/fatsecret/ai-validation.ts:203:16)
+      at mapIngredientWithFatsecret (src/lib/fatsecret/map-ingredient.ts:1430:27)
+      at Object.<anonymous> (src/lib/fatsecret/__tests__/map-ingredient-validation.test.ts:74:24)
+
+  console.log
+    DEBUG TEST: result {
+      "source": "fatsecret",
+      "foodId": "chicken",
+      "foodName": "Chicken",
+      "brandName": null,
+      "servingId": "s1",
+      "grams": 12000,
+      "kcal": 12000,
+      "protein": 1200,
+      "carbs": 1200,
+      "fat": 1200,
+      "confidence": 0.9407058823529413,
+      "quality": "high",
+      "rawLine": "120g chicken",
+      "aiValidation": {
+        "approved": true,
+        "confidence": 0.5,
+        "reason": "AI validation failed: OpenAI API error: 401 {\n  \"error\": {\n    \"message\": \"Incorrect API key provided: sk-or-v1*************************************************************a00e. You can find your API key at https://platform.openai.com/account/api-keys.\",\n    \"type\": \"invalid_request_error\",\n    \"code\": \"invalid_api_key\",\n    \"param\": null\n  },\n  \"status\": 401\n}",
+        "category": "correct",
+        "detectedIssues": [
+          "none"
+        ]
+      }
+    }
+
+      at Object.<anonymous> (src/lib/fatsecret/__tests__/map-ingredient-validation.test.ts:76:17)
+
+  console.log
+    DEBUG TEST: rerank calls 1
+
+      at Object.<anonymous> (src/lib/fatsecret/__tests__/map-ingredient-validation.test.ts:77:17)
+
+  console.log
+    DEBUG TEST: save calls 0
+
+      at Object.<anonymous> (src/lib/fatsecret/__tests__/map-ingredient-validation.test.ts:78:17)
+
+  console.debug
+    {"level":"debug","msg":"fatsecret.map.ai_normalize_skipped","ts":"2026-04-02T01:36:33.470Z","rawLine":"120g bad chicken","reason":"not needed"}
+
+      at log (src/lib/logger.ts:25:58)
+
+  console.info
+    {"level":"info","msg":"fatsecret.map.retry_with_refined_query","ts":"2026-04-02T01:36:33.471Z","rawLine":"120g bad chicken","refined":"refined chicken"}
+
+      at log (src/lib/logger.ts:28:15)
+
+  console.debug
+    {"level":"debug","msg":"fatsecret.map.ai_normalize_skipped","ts":"2026-04-02T01:36:33.473Z","rawLine":"120g impossible query","reason":"not needed"}
+
+      at log (src/lib/logger.ts:25:58)
+
+node.exe : FAIL api src/lib/fatsecret/__test
+s__/map-ingredient-validation.test.ts
+At C:\nvm4w\nodejs\npx.ps1:16 char:5
++     & "$basedir/node$exe"  
+"$basedir/node_modules/npm/bin/npx-cli.js" 
+...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: 
+    (FAIL api src/li...idation.test.ts:Str  
+  ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommand 
+   Error
+ 
+  mapIngredientWithFatsecret Validation Flow
+    ΓêÜ should return cached mapping 
+immediately if found (7 ms)
+    ├ù should use AI rerank and save to 
+cache on success (273 ms)
+    ├ù should retry with refined query if 
+initial search fails (3 ms)
+    ΓêÜ should track failure if all 
+attempts fail (1 ms)
+
+  ΓùÅ mapIngredientWithFatsecret Validation 
+Flow ΓÇ║ should use AI rerank and save to 
+cache on success
+
+    expect(jest.fn()).toHaveBeenCalledWith(.
+..expected)
+
+    Expected: "120g chicken", 
+ObjectContaining {"foodId": "chicken"}, 
+ObjectContaining {"approved": true, 
+"confidence": 0.9}
+
+    Number of calls: 0
+
+    [0m [90m 80 |[39m         expect(rera
+nkFatsecretCandidates)[33m.[39mtoHaveBeenC
+alled()[33m;[39m
+     [90m 81 |[39m         expect(result[
+33m?[39m[33m.[39mfoodId)[33m.[39mtoBe(
+[32m'chicken'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 82 |[39m     
+    expect(saveValidatedMapping)[33m.[39mt
+oHaveBeenCalledWith(
+     [90m    |[39m                        
+              [31m[1m^[22m[39m
+     [90m 83 |[39m             [32m'120g 
+chicken'[39m[33m,[39m
+     [90m 84 |[39m             
+expect[33m.[39mobjectContaining({ 
+foodId[33m:[39m [32m'chicken'[39m 
+})[33m,[39m
+     [90m 85 |[39m             
+expect[33m.[39mobjectContaining({ 
+approved[33m:[39m 
+[36mtrue[39m[33m,[39m 
+confidence[33m:[39m [35m0.9[39m })[0m
+
+      at Object.<anonymous> (src/lib/fatsecr
+et/__tests__/map-ingredient-validation.test.
+ts:82:38)
+
+  ΓùÅ mapIngredientWithFatsecret Validation 
+Flow ΓÇ║ should retry with refined query if 
+initial search fails
+
+    expect(jest.fn()).toHaveBeenCalledWith(.
+..expected)
+
+    Expected: "bad chicken", Any<Array>
+    Received: "120g bad chicken", []
+
+    Number of calls: 1
+
+    [0m [90m 104 |[39m         
+[36mconst[39m result [33m=[39m 
+[36mawait[39m 
+mapIngredientWithFatsecret([32m'120g bad 
+chicken'[39m[33m,[39m { 
+client[33m:[39m mockClient })[33m;[39m
+     [90m 105 |[39m
+    [31m[1m>[22m[39m[90m 106 |[39m    
+     expect(refineSearchQuery)[33m.[39mtoH
+aveBeenCalledWith([32m'bad 
+chicken'[39m[33m,[39m expect[33m.[39man
+y([33mArray[39m))[33m;[39m
+     [90m     |[39m                       
+            [31m[1m^[22m[39m
+     [90m 107 |[39m         expect(mockCli
+ent[33m.[39msearchFoodsV4)[33m.[39mtoHav
+eBeenCalledWith([32m'refined 
+chicken'[39m[33m,[39m expect[33m.[39man
+y([33mObject[39m))[33m;[39m
+     [90m 108 |[39m         expect(result
+[33m?[39m[33m.[39mfoodId)[33m.[39mtoBe(
+[32m'chicken'[39m)[33m;[39m
+     [90m 109 |[39m     })[33m;[39m[0m
+
+      at Object.<anonymous> (src/lib/fatsecr
+et/__tests__/map-ingredient-validation.test.
+ts:106:35)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+Snapshots:   0 total
+Time:        0.705 s, estimated 1 s
+Ran all test suites matching /src\\lib\\fats
+ecret\\__tests__\\map-ingredient-validation.
+test.ts/i.

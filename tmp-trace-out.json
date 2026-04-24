@@ -1,0 +1,59 @@
+[
+  {
+    "input": "2 large eggs",
+    "parsed": {
+      "qty": 2,
+      "multiplier": 1,
+      "unit": "large",
+      "rawUnit": "large",
+      "name": "eggs",
+      "notes": null,
+      "unitHint": null
+    },
+    "baseName": "eggs",
+    "norm": {
+      "cleaned": "eggs",
+      "nounOnly": "eggs",
+      "stripped": []
+    },
+    "mismatch": false
+  },
+  {
+    "input": "1 medium onion",
+    "parsed": {
+      "qty": 1,
+      "multiplier": 1,
+      "unit": "medium",
+      "rawUnit": "medium",
+      "name": "onion",
+      "notes": null,
+      "unitHint": null
+    },
+    "baseName": "onion",
+    "norm": {
+      "cleaned": "onion",
+      "nounOnly": "onion",
+      "stripped": []
+    },
+    "mismatch": false
+  },
+  {
+    "input": "1 dash pepper",
+    "parsed": {
+      "qty": 1,
+      "multiplier": 1,
+      "unit": "dash",
+      "rawUnit": "dash",
+      "name": "pepper",
+      "notes": null,
+      "unitHint": null
+    },
+    "baseName": "pepper",
+    "norm": {
+      "cleaned": "black pepper",
+      "nounOnly": "black pepper",
+      "stripped": []
+    },
+    "mismatch": false
+  }
+]
