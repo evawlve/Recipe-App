@@ -243,6 +243,7 @@ async function main() {
     const args = process.argv.slice(2);
     const isDryRun     = args.includes('--dry-run');
     const isReset      = args.includes('--reset');
+    const skipFatsecret = args.includes('--skip-fatsecret');
     const concurrency  = Number(args.find(a => a.startsWith('--concurrency='))?.split('=')[1] ?? '3');
     const limit        = Number(args.find(a => a.startsWith('--limit='))?.split('=')[1] ?? '0') || Infinity;
     const delayMs      = Number(args.find(a => a.startsWith('--delay-ms='))?.split('=')[1] ?? '400');
@@ -412,7 +413,7 @@ async function main() {
 
             const result = await mapIngredientWithFallback(`1 cup ${term}`, {
                 skipCache: false,
-                source: 'fatsecret',
+                source: skipFatsecret ? 'fdc' : 'fatsecret',
             });
 
             saveState(cacheKey); // Mark attempted regardless of result

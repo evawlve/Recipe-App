@@ -689,11 +689,60 @@ model AiNormalizeCache {
   estimatedCarbsPer100g    Float?               // AI estimate (g)
   estimatedFatPer100g      Float?               // AI estimate (g)
   nutritionConfidence      Float?               // 0-1 confidence for nutrition estimate
+  isBranded                Boolean  @default(false)  // Whether the AI identified this as a branded product
   createdAt                DateTime @default(now())
   lastUsedAt               DateTime @default(now())
   useCount                 Int      @default(0)
 
   @@index([lastUsedAt(sort: Desc)])
+}
+
+// ============================================================================
+// OpenFoodFacts Cache Tables
+// ============================================================================
+
+/// OpenFoodFacts product cache
+/// ID format: "off_<barcode>" (e.g., "off_021130126026")
+/// Source: https://world.openfoodfacts.org — free, no API key required
+model OpenFoodFactsCache {
+  id               String                      @id         // "off_<barcode>"
+  barcode          String                      @unique
+  name             String
+  brandName        String?
+  nutrientsPer100g Json?                                   // { calories, protein, carbs, fat, fiber, sugars, sodium }
+  servingSize      String?                                 // Raw string from OFF label, e.g., "1 container (170g)"
+  servingGrams     Float?                                  // Primary parsed gram weight for default serving
+  syncedAt         DateTime                    @default(now())
+  expiresAt        DateTime?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  servings         OpenFoodFactsServingCache[]
+
+  @@index([syncedAt])
+  @@index([name])
+  @@index([brandName])
+}
+
+/// AI-estimated or label-derived serving weights for OFF products
+/// Mirrors FdcServingCache structure exactly
+model OpenFoodFactsServingCache {
+  id                Int                    @id @default(autoincrement())
+  offId             String                                 // FK to OpenFoodFactsCache.id
+  description       String                                 // e.g., "1 cup", "1 container"
+  grams             Float
+  volumeMl          Float?
+  derivedViaDensity Boolean                @default(false)
+  densityGml        Float?
+  prepModifier      String?                                // e.g., "chopped", "minced"
+  source            String                 @default("openfoodfacts")
+  isAiEstimated     Boolean                @default(false)
+  confidence        Float?
+  note              String?
+  food              OpenFoodFactsCache     @relation(fields: [offId], references: [id], onDelete: Cascade)
+
+  @@unique([offId, description])
+  @@index([offId])
+  @@index([prepModifier])
 }
 
 /// Tracks search query patterns that AI identifies as problematic

@@ -156,7 +156,7 @@ export interface InsertAiServingOptions {
         name: string;
         brandName?: string | null;
         foodType?: string;
-        source: 'fatsecret' | 'fdc' | 'cache';
+        source: 'fatsecret' | 'fdc' | 'cache' | 'openfoodfacts';
         nutrition?: {
             kcal: number;
             protein: number;
@@ -207,8 +207,9 @@ export async function insertAiServing(
     gapType: ServingGapType,
     options: InsertAiServingOptions = {}
 ): Promise<{ success: boolean; reason?: string }> {
-    // Detect FDC vs FatSecret based on ID prefix
+    // Detect FDC vs FatSecret vs OpenFoodFacts based on ID prefix
     const isFdc = foodId.startsWith('fdc_');
+    const isOff = foodId.startsWith('off_');
     let food: UnifiedFoodForAi | null = null;
 
     // PRIORITY 1: Use passed candidate data (avoids DB race condition)
@@ -230,6 +231,33 @@ export async function insertAiServing(
             if (fdcFood) {
                 food = adaptFdcToUnified(fdcFood);
             }
+        } else if (isOff) {
+            // OpenFoodFacts: look up in OpenFoodFactsCache
+            const offFood = await prisma.openFoodFactsCache.findUnique({
+                where: { id: foodId },
+                include: { servings: true },
+            });
+            if (offFood) {
+                const nutrients = offFood.nutrientsPer100g as Record<string, number> | null;
+                food = {
+                    id: foodId,
+                    name: offFood.name,
+                    brandName: offFood.brandName,
+                    foodType: 'Branded',
+                    nutrientsPer100g: {
+                        calories: nutrients?.kcal ?? nutrients?.calories ?? undefined,
+                        protein: nutrients?.protein ?? undefined,
+                        carbohydrate: nutrients?.carbs ?? nutrients?.carbohydrate ?? undefined,
+                        fat: nutrients?.fat ?? undefined,
+                    },
+                    servings: offFood.servings.map(s => ({
+                        description: s.description,
+                        grams: s.grams,
+                        volumeMl: s.volumeMl ?? null,
+                    })),
+                    source: 'fatsecret', // Adapter type — OFF uses FS serving schema
+                };
+            }
         } else {
             const fsFood = await prisma.fatSecretFoodCache.findUnique({
                 where: { id: foodId },
@@ -242,7 +270,7 @@ export async function insertAiServing(
     }
 
     if (!food) {
-        logger.warn('Food missing from cache for AI serving backfill', { foodId, isFdc, hasCandidateData: !!options.candidateData });
+        logger.warn('Food missing from cache for AI serving backfill', { foodId, isFdc, isOff, hasCandidateData: !!options.candidateData });
         return { success: false, reason: 'food_missing' };
     }
 
@@ -374,6 +402,33 @@ export async function insertAiServing(
                     isAiEstimated: true,
                     confidence: suggestion.confidence,
                     note: suggestion.rationale,
+                },
+            });
+        } else if (isOff) {
+            // OpenFoodFacts: upsert into OpenFoodFactsServingCache
+            // OFF products are already hydrated into OpenFoodFactsCache by hydrateOffCandidate,
+            // so we only need to add the AI-derived serving entry here.
+            await tx.openFoodFactsServingCache.upsert({
+                where: {
+                    offId_description: {
+                        offId:       foodId,
+                        description: suggestion.servingLabel,
+                    },
+                },
+                create: {
+                    offId:         foodId,
+                    description:   suggestion.servingLabel,
+                    grams:         suggestion.grams,
+                    source:        'ai',
+                    isAiEstimated: true,
+                    confidence:    suggestion.confidence,
+                    note:          suggestion.rationale,
+                },
+                update: {
+                    grams:      suggestion.grams,
+                    source:     'ai',
+                    confidence: suggestion.confidence,
+                    note:       suggestion.rationale,
                 },
             });
         } else {
