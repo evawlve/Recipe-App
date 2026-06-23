@@ -250,7 +250,6 @@ export async function aiNormalizeIngredient(
       prepPhrases: normalizeResult.prepPhrases,
       sizePhrases: normalizeResult.sizePhrases,
       cookingModifier: normalizeResult.cookingModifier,
-      isBranded: normalizeResult.isBranded,
       nutritionEstimate: normalizeResult.nutritionEstimate,
     });
 

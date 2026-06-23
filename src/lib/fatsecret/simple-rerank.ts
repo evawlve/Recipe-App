@@ -989,7 +989,7 @@ export function isGenericGroundMeatQuery(query: string): boolean {
     return !LEAN_QUERY_PATTERNS.some(p => p.test(queryLower));
 }
 
-function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded?: boolean, targetBrand?: string): number {
+function computeSimpleScore(candidate: RerankCandidate, query: string): number {
     let score = 0;
 
     // Normalize candidate name for scoring: strip raw-state tokens when query doesn't specify.
@@ -1057,7 +1057,7 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
 
     // 2c. Token bloat penalty (catches compound products for simple queries)
     // e.g., "chilli peppers" (2 tokens) → "Chilli Peppers Cream Cheese" (4 tokens) = penalty
-    const tokenBloatPenalty = getTokenBloatPenalty(query, candidate.name, isBranded);
+    const tokenBloatPenalty = getTokenBloatPenalty(query, candidate.name);
     score -= tokenBloatPenalty;
 
     // 2c-2. Category-changing token penalty (Jan 2026)
@@ -1134,17 +1134,7 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
         const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower);
 
         if (queryContainsBrand) {
-            // User asked for this brand - give a positive bonus (not just zero penalty).
-            // This is the key fix for ties like "Tomato Ketchup (Heinz)" vs "TOMATO KETCHUP (WEIS)"
-            // when the query is "Heinz Tomato Ketchup".
-            if (isBranded) {
-                // Strong bonus: query explicitly names this brand AND we know it's a branded query.
-                score += 0.25;
-            } else if (targetBrand && brandLower === targetBrand.toLowerCase()) {
-                // Static brand detector matched this exact brand — moderate bonus
-                score += 0.15;
-            }
-            // If neither isBranded nor targetBrand: no penalty but no bonus either
+            // User asked for this brand - NO PENALTY
         } else {
             const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
             const candNameLower = candidate.name.toLowerCase();
@@ -1316,9 +1306,7 @@ export function simpleRerank(
     query: string,
     candidates: RerankCandidate[],
     aiNutritionEstimate?: AiNutritionEstimate,
-    rawLine?: string,
-    isBranded?: boolean,
-    targetBrand?: string
+    rawLine?: string
 ): { winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[] } {
     if (candidates.length === 0) {
         return {
@@ -1377,7 +1365,7 @@ export function simpleRerank(
                 return null;
             }
 
-            const baseScore = computeSimpleScore(c, query, isBranded, targetBrand);
+            const baseScore = computeSimpleScore(c, query);
             const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
 
             // Apply constraint penalty
@@ -1408,7 +1396,7 @@ export function simpleRerank(
         });
         // Re-score without constraint rejection (still apply penalties)
         const fallbackScored = candidates.map(c => {
-            const baseScore = computeSimpleScore(c, query, isBranded, targetBrand);
+            const baseScore = computeSimpleScore(c, query);
             const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
             return {
                 candidate: c,
@@ -1474,7 +1462,7 @@ export function simpleRerank(
             const overlap = computeTokenOverlap(query, scoringName) * WEIGHTS.TOKEN_OVERLAP;
             const catChange = getCategoryChangePenalty(query, s.candidate.name);
             const contradiction = getAttributeContradictionPenalty(query, s.candidate.name);
-            const bloat = getTokenBloatPenalty(query, s.candidate.name, isBranded);
+            const bloat = getTokenBloatPenalty(query, s.candidate.name);
             const phrase = getExactPhraseBoost(query, s.candidate.name);
             const modifier = getModifierMatchBoost(query, s.candidate.name);
             const coverage = getWordCoverageBonus(query, s.candidate.name);

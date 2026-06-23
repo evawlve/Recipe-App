@@ -57,6 +57,10 @@ export async function GET(req: NextRequest) {
 
     const q = query.trim();
 
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : 30;
+    const { getServingType } = await import('@/lib/nlp/resolve-payload');
+
     // Load current totals if impact is requested
     let currentTotals: any = null;
     let goal: any = 'general';
@@ -177,7 +181,7 @@ export async function GET(req: NextRequest) {
         kcalBand
       });
 
-      const data = ranked.slice(0, 30).map(({ candidate, confidence }) => {
+      const data = ranked.slice(0, limit).map(({ candidate, confidence }) => {
         const f = foodsById.get(candidate.food.id);
         if (!f) return null;
         const servingOptions = deriveServingOptions({
@@ -185,6 +189,13 @@ export async function GET(req: NextRequest) {
           densityGml: f.densityGml ?? undefined,
           categoryId: f.categoryId ?? null,
         });
+
+        const richServingOptions = servingOptions.map((o, idx) => ({
+          label: o.label,
+          grams: o.grams,
+          type: getServingType(o.label),
+          isDefault: idx === 0,
+        }));
 
         const item: any = {
           id: f.id,
@@ -202,7 +213,16 @@ export async function GET(req: NextRequest) {
           sugar100: f.sugar100,
           popularity: f.popularity,
           confidence,
-          servingOptions,
+          nutritionPer100g: {
+            kcal100: f.kcal100,
+            protein100: f.protein100,
+            carbs100: f.carbs100,
+            fat100: f.fat100,
+            fiber100: f.fiber100 ?? undefined,
+            sugar100: f.sugar100 ?? undefined,
+            sodium100: undefined,
+          },
+          servingOptions: richServingOptions,
         };
 
         const impactPayload = buildImpact(
@@ -234,10 +254,29 @@ export async function GET(req: NextRequest) {
       const candidates = cachedFoods.map(buildCacheCandidate);
       const ranked = rankCandidates(candidates as any, { query: q, kcalBand });
       const cacheById = new Map(cachedFoods.map((f) => [f.id, f]));
-      const data = ranked.slice(0, 30).map(({ candidate, confidence }) => {
+      const data = ranked.slice(0, limit).map(({ candidate, confidence }) => {
         const food = cacheById.get(candidate.food.id);
         if (!food) return null;
         const base = buildCacheFoodResponse(food, confidence);
+        const richServingOptions = base.servingOptions.map((o, idx) => ({
+          label: o.label,
+          grams: o.grams,
+          type: getServingType(o.label),
+          isDefault: idx === 0,
+        }));
+        const item = {
+          ...base,
+          nutritionPer100g: {
+            kcal100: base.kcal100,
+            protein100: base.protein100,
+            carbs100: base.carbs100,
+            fat100: base.fat100,
+            fiber100: base.fiber100 ?? undefined,
+            sugar100: base.sugar100 ?? undefined,
+            sodium100: undefined,
+          },
+          servingOptions: richServingOptions,
+        };
         const impactPayload = buildImpact(
           {
             kcal100: base.kcal100,
@@ -249,7 +288,7 @@ export async function GET(req: NextRequest) {
           },
           base.servingOptions,
         );
-        return impactPayload ? { ...base, impact: impactPayload } : base;
+        return impactPayload ? { ...item, impact: impactPayload } : item;
       }).filter(Boolean);
       return { data, count: cachedFoods.length };
     };

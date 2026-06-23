@@ -1,0 +1,112 @@
+﻿node.exe : FAIL api src/lib/fatsecret/__test
+s__/map-ingredient.test.ts (20.874 s)
+At C:\nvm4w\nodejs\npx.ps1:16 char:5
++     & "$basedir/node$exe"  
+"$basedir/node_modules/npm/bin/npx-cli.js" 
+...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: 
+    (FAIL api src/li...t.ts (20.874 s):Str  
+  ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommand 
+   Error
+ 
+  ΓùÅ mapIngredientWithFatsecret ΓÇ║ maps 
+simple egg line using search
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+    [0m [90m 168 |[39m     
+[36mconst[39m result [33m=[39m 
+[36mawait[39m 
+mapIngredientWithFatsecret([32m'3 large 
+eggs'[39m[33m,[39m { client[33m:[39m 
+client [36mas[39m any[33m,[39m 
+minConfidence[33m:[39m [35m0[39m 
+})[33m;[39m
+     [90m 169 |[39m     
+    [31m[1m>[22m[39m[90m 170 |[39m    
+ expect(result)[33m.[39mnot[33m.[39mtoBe
+Null()[33m;[39m
+     [90m     |[39m                       
+ [31m[1m^[22m[39m
+     [90m 171 |[39m     expect(result[33m
+?[39m[33m.[39mfoodName)[33m.[39mtoConta
+in([32m'Egg'[39m)[33m;[39m
+     [90m 172 |[39m     expect(result[33m
+?[39m[33m.[39mgrams)[33m.[39mtoBeCloseT
+o([35m150[39m[33m,[39m 
+[35m1[39m)[33m;[39m
+     [90m 173 |[39m     expect(result[33m
+?[39m[33m.[39mkcal)[33m.[39mtoBeCloseTo
+([35m216[39m[33m,[39m 
+[35m1[39m)[33m;[39m[0m
+
+      at Object.<anonymous> (src/lib/fatsecr
+et/__tests__/map-ingredient.test.ts:170:24)
+
+  ΓùÅ mapIngredientWithFatsecret ΓÇ║ 
+prefers raw entries for raw queries
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+    [0m [90m 416 |[39m
+     [90m 417 |[39m     [36mconst[39m 
+result [33m=[39m [36mawait[39m 
+mapIngredientWithFatsecret([32m'100g raw 
+chicken breast'[39m[33m,[39m { 
+client[33m:[39m client [36mas[39m any 
+})[33m;[39m
+    [31m[1m>[22m[39m[90m 418 |[39m    
+ expect(result)[33m.[39mnot[33m.[39mtoBe
+Null()[33m;[39m
+     [90m     |[39m                       
+ [31m[1m^[22m[39m
+     [90m 419 |[39m     expect(result[33m
+?[39m[33m.[39mfoodName[33m.[39mtoLowerC
+ase())[33m.[39mtoContain([32m'raw'[39m)
+[33m;[39m
+     [90m 420 |[39m     expect(result[33m
+?[39m[33m.[39mgrams)[33m.[39mtoBeCloseT
+o([35m100[39m[33m,[39m 
+[35m1[39m)[33m;[39m
+     [90m 421 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (src/lib/fatsecr
+et/__tests__/map-ingredient.test.ts:418:24)
+
+  ΓùÅ mapIngredientWithFatsecret ΓÇ║ strips 
+inch/prep noise from queries (chicken 
+breast)
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+    [0m [90m 611 |[39m     })[33m;[39m
+     [90m 612 |[39m
+    [31m[1m>[22m[39m[90m 613 |[39m    
+ expect(result)[33m.[39mnot[33m.[39mtoBe
+Null()[33m;[39m
+     [90m     |[39m                       
+ [31m[1m^[22m[39m
+     [90m 614 |[39m     expect(client[33m
+.[39msearchFoodsCalls[33m.[39msome(q 
+[33m=>[39m [35m/inch/[39m[33m.[39mtest
+(q)))[33m.[39mtoBe([36mfalse[39m)[33m;
+[39m
+     [90m 615 |[39m   })[33m;[39m
+     [90m 616 |[39m[0m
+
+      at Object.<anonymous> (src/lib/fatsecr
+et/__tests__/map-ingredient.test.ts:613:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 13 passed, 16 total
+Snapshots:   0 total
+Time:        21.028 s, estimated 22 s

@@ -114,3 +114,6 @@ data/curated/tmp/**
 
 # Git corrupted files
 .git.corrupted/
+
+# Syncthing
+.stfolder/
