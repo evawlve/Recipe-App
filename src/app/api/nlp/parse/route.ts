@@ -7,48 +7,73 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   // Skip execution during build time
   if (process.env.NEXT_PHASE === 'phase-production-build' ||
-    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
     process.env.BUILD_TIME === 'true') {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
   try {
+    // Validate required environment variables at request time
+    const requiredEnv = ['DATABASE_URL', 'FATSECRET_CLIENT_ID', 'FATSECRET_CLIENT_SECRET'];
+    const missingEnv = requiredEnv.filter(name => !process.env[name]);
+    if (missingEnv.length > 0) {
+      console.error('NLP Parse API Error: Missing environment variables:', missingEnv);
+      return NextResponse.json({
+        error: `Configuration error: missing environment variables: ${missingEnv.join(', ')}`
+      }, { status: 500 });
+    }
+
     const { callStructuredLlm } = await import('@/lib/ai/structured-client');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/fatsecret/map-ingredient-with-fallback');
     const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
 
     const body = await req.json();
-    const { text } = body;
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json({ error: 'text field is required and must be a string' }, { status: 400 });
+    const { text, items: inputItems } = body;
+    if ((!text || typeof text !== 'string') && (!inputItems || !Array.isArray(inputItems))) {
+      return NextResponse.json({ error: 'Either "text" (string) or "items" (array) field is required' }, { status: 400 });
     }
 
-    const NLP_SPLIT_SCHEMA = {
-      name: 'nlp_split',
-      schema: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          items: {
-            type: 'array',
-            items: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                rawText: { type: 'string' },
-                mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] }
-              },
-              required: ['rawText', 'mealType']
-            }
-          }
-        },
-        required: ['items']
-      },
-      strict: true
-    };
+    let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' }> = [];
 
-    const SYSTEM_PROMPT = `You are a nutrition assistant that splits unstructured text describing meals/foods into individual food items with their quantities and units, and identifies the meal type (breakfast, lunch, dinner, or snacks).
+    if (inputItems && Array.isArray(inputItems)) {
+      items = inputItems.map(item => {
+        if (typeof item === 'string') {
+          return { rawText: item, mealType: 'snacks' as const };
+        } else if (item && typeof item === 'object') {
+          const rawText = 'rawText' in item && typeof item.rawText === 'string' ? item.rawText : '';
+          const mealType = 'mealType' in item && typeof item.mealType === 'string' && ['breakfast', 'lunch', 'dinner', 'snacks'].includes(item.mealType)
+            ? (item.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks')
+            : 'snacks' as const;
+          return { rawText, mealType };
+        }
+        return null;
+      }).filter((x): x is { rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' } => x !== null && x.rawText.trim() !== '');
+    } else {
+      const NLP_SPLIT_SCHEMA = {
+        name: 'nlp_split',
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  rawText: { type: 'string' },
+                  mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] }
+                },
+                required: ['rawText', 'mealType']
+              }
+            }
+          },
+          required: ['items']
+        },
+        strict: true
+      };
+
+      const SYSTEM_PROMPT = `You are a nutrition assistant that splits unstructured text describing meals/foods into individual food items with their quantities and units, and identifies the meal type (breakfast, lunch, dinner, or snacks).
 Example: "2 scrambled eggs and 1 slice of wheat toast for breakfast"
 Output:
 {
@@ -59,18 +84,19 @@ Output:
 }
 If no meal type is explicitly specified or implied, default to 'snacks'.`;
 
-    const llmResult = await callStructuredLlm({
-      schema: NLP_SPLIT_SCHEMA,
-      systemPrompt: SYSTEM_PROMPT,
-      userPrompt: `Unstructured text: "${text}"`,
-      purpose: 'parse',
-    });
+      const llmResult = await callStructuredLlm({
+        schema: NLP_SPLIT_SCHEMA,
+        systemPrompt: SYSTEM_PROMPT,
+        userPrompt: `Unstructured text: "${text}"`,
+        purpose: 'parse',
+      });
 
-    if (llmResult.status === 'error') {
-      return NextResponse.json({ error: 'Failed to segment text' }, { status: 500 });
+      if (llmResult.status === 'error') {
+        return NextResponse.json({ error: 'Failed to segment text' }, { status: 500 });
+      }
+
+      items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' }>) || [];
     }
-
-    const items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' }>) || [];
     const parsedItems = [];
 
     for (const item of items) {
