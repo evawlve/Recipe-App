@@ -117,3 +117,7 @@ data/curated/tmp/**
 
 # Syncthing
 .stfolder/
+
+# Local Syncthing Documentation & Handoffs
+sync-docs/
+
