@@ -83,7 +83,7 @@ export async function getValidatedMapping(
  */
 export async function getValidatedMappingByNormalizedName(
     normalizedName: string,
-    source: 'fatsecret' | 'fdc' = 'fatsecret',
+    source: 'fatsecret' | 'fdc' | 'openfoodfacts' = 'fatsecret',
     rawLine?: string
 ): Promise<FatsecretMappedIngredient | null> {
     try {
@@ -91,26 +91,39 @@ export async function getValidatedMappingByNormalizedName(
         const canonicalKey = canonicalizeCacheKey(normalizedName);
 
         // Phase 1: Exact match on canonical key
-        let cached = await prisma.validatedMapping.findUnique({
-            where: {
-                normalizedForm_source: {
-                    normalizedForm: canonicalKey,
-                    source,
+        // Search the specified source first, then also check 'openfoodfacts' (so branded
+        // ingredients mapped by OFF on first lookup are found on subsequent calls).
+        const sourcesToSearch: string[] = source === 'openfoodfacts'
+            ? ['openfoodfacts', 'fatsecret']
+            : [source, 'openfoodfacts'];
+
+        let cached = null;
+        for (const src of sourcesToSearch) {
+            cached = await prisma.validatedMapping.findUnique({
+                where: {
+                    normalizedForm_source: {
+                        normalizedForm: canonicalKey,
+                        source: src,
+                    },
                 },
-            },
-        });
+            });
+            if (cached) break;
+        }
 
         // Phase 2: Legacy fallback — try the raw normalizedName
         // (handles entries saved before canonical key migration)
         if (!cached) {
-            cached = await prisma.validatedMapping.findUnique({
-                where: {
-                    normalizedForm_source: {
-                        normalizedForm: normalizedName,
-                        source,
+            for (const src of sourcesToSearch) {
+                cached = await prisma.validatedMapping.findUnique({
+                    where: {
+                        normalizedForm_source: {
+                            normalizedForm: normalizedName,
+                            source: src,
+                        },
                     },
-                },
-            });
+                });
+                if (cached) break;
+            }
         }
 
         // Phase 3: Token-set fallback (emergency — should rarely fire after migration)
@@ -188,13 +201,18 @@ export async function getValidatedMappingByNormalizedName(
 
         logger.debug('validated_mapping.normalized_cache_hit', { normalizedName, source });
 
-        // Convert cached data back to FatsecretMappedIngredient format
+        // Convert cached data back to FatsecretMappedIngredient format.
+        // Restore the actual source from the DB row so hydrateAndSelectServing can
+        // correctly route off_ IDs on second lookup (avoids 'cache' source masking 'openfoodfacts').
+        const restoredSource = (cached.source === 'openfoodfacts' || cached.foodId.startsWith('off_'))
+            ? 'openfoodfacts'
+            : 'cache';
         return {
             foodId: cached.foodId,
             foodName: cached.foodName,
             brandName: cached.brandName,
             confidence: cached.aiConfidence,
-            source: 'cache',
+            source: restoredSource,
         } as FatsecretMappedIngredient;
     } catch (error) {
         logger.error('validated_mapping.get_normalized_error', {
@@ -215,7 +233,7 @@ export async function getValidatedMappingByNormalizedName(
  */
 async function findByTokenSet(
     normalizedName: string,
-    source: 'fatsecret' | 'fdc',
+    source: 'fatsecret' | 'fdc' | 'openfoodfacts',
     rawLine?: string
 ) {
     const inputTokens = new Set(normalizedName.toLowerCase().split(/\s+/).filter(Boolean));
@@ -313,11 +331,18 @@ export async function saveValidatedMapping(
 
     try {
         // Save by normalizedForm (primary lookup key)
+        // Use mapping.source so OFF winners are stored as 'openfoodfacts' and found correctly
+        // on second lookup (prevents misrouting through FatSecret hydration path).
+        const mappingSource = (mapping.source === 'openfoodfacts' || mapping.foodId.startsWith('off_'))
+            ? 'openfoodfacts'
+            : (mapping.source === 'fdc' || mapping.foodId.startsWith('fdc_'))
+                ? 'fdc'
+                : 'fatsecret';
         await prisma.validatedMapping.upsert({
             where: {
                 normalizedForm_source: {
                     normalizedForm,
-                    source: 'fatsecret',
+                    source: mappingSource,
                 },
             },
             create: {
@@ -327,7 +352,7 @@ export async function saveValidatedMapping(
                 foodId: mapping.foodId,
                 foodName: mapping.foodName,
                 brandName: mapping.brandName,
-                source: 'fatsecret',
+                source: mappingSource,
                 aiConfidence: validation.confidence,
                 validationReason: validation.reason,
                 isAlias: options?.isAlias ?? false,
@@ -472,6 +497,7 @@ export async function getAiNormalizeCache(rawLine: string) {
             prepPhrases: cached.prepPhrases as string[],
             sizePhrases: cached.sizePhrases as string[],
             cookingModifier: cached.cookingModifier ?? undefined,
+            isBranded: cached.isBranded ?? false,
             nutritionEstimate: cached.estimatedCaloriesPer100g != null ? {
                 caloriesPer100g: cached.estimatedCaloriesPer100g,
                 proteinPer100g: cached.estimatedProteinPer100g ?? 0,
@@ -502,6 +528,7 @@ export async function saveAiNormalizeCache(
         prepPhrases: string[];
         sizePhrases: string[];
         cookingModifier?: string;
+        isBranded?: boolean;  // Whether AI identified this as a branded product query
         nutritionEstimate?: {
             caloriesPer100g: number;
             proteinPer100g: number;
@@ -524,6 +551,7 @@ export async function saveAiNormalizeCache(
                 prepPhrases: result.prepPhrases,
                 sizePhrases: result.sizePhrases,
                 cookingModifier: result.cookingModifier,
+                isBranded: result.isBranded ?? false,
                 estimatedCaloriesPer100g: result.nutritionEstimate?.caloriesPer100g,
                 estimatedProteinPer100g: result.nutritionEstimate?.proteinPer100g,
                 estimatedCarbsPer100g: result.nutritionEstimate?.carbsPer100g,
