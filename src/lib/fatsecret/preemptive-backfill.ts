@@ -9,6 +9,7 @@
 
 import { logger } from '../logger';
 import { insertAiServing, type InsertAiServingOptions } from './ai-backfill';
+import type { ServingGapType } from '../ai/serving-estimator';
 
 // ============================================================
 // Category-to-Serving Mappings
@@ -576,7 +577,7 @@ export async function generatePreemptiveServings(
         };
 
         try {
-            const effectiveGapType = servingDef.gapType ?? 'volume';
+            const effectiveGapType: ServingGapType = servingDef.gapType === 'count' ? 'volume' : (servingDef.gapType ?? 'volume');
             const aiResult = await insertAiServing(foodId, effectiveGapType, aiOptions);
 
             result.details.push({
