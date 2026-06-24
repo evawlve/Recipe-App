@@ -12,6 +12,7 @@ import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-
 import { normalizeIngredientName } from './normalization-rules';
 import { fdcApi } from '../usda/fdc-api';
 import { logger } from '../logger';
+import { searchOffSimple } from '../openfoodfacts/search';
 
 // Create a default client instance
 const defaultClient = new FatSecretClient();
@@ -22,7 +23,7 @@ const defaultClient = new FatSecretClient();
 
 export interface UnifiedCandidate {
     id: string;
-    source: 'cache' | 'fatsecret' | 'fdc';
+    source: 'cache' | 'fatsecret' | 'fdc' | 'openfoodfacts';
     name: string;
     brandName?: string | null;
     score: number;
@@ -49,6 +50,9 @@ export interface GatherOptions {
     skipFdc?: boolean;
     maxPerSource?: number;
     aiSynonyms?: string[];  // AI-generated synonyms for retry searches
+    skipOff?: boolean;     // Explicitly skip OpenFoodFacts (e.g. for quick gather gate checks)
+    isBrandedQuery?: boolean;  // When true, always include OFF regardless of OFF_ENABLED flag
+    targetBrand?: string;      // Matched brand name from static detector (e.g. "heinz") — used for FDC tiebreaking
 }
 
 // ============================================================
@@ -154,8 +158,14 @@ export async function gatherCandidates(
         client = defaultClient,
         skipLiveApi = false,
         skipFdc = false,
+        skipOff = false,
+        isBrandedQuery = false,
+        targetBrand,
         maxPerSource = 8,  // Get top 8 from each source to ensure we find generic names
     } = options;
+
+    // Feature flag: run OFF when explicitly branded OR env flag is set
+    const offEnabled = isBrandedQuery || process.env.OFF_ENABLED === 'true';
 
     const trimmed = rawLine.trim();
     if (!trimmed) return [];
@@ -177,7 +187,7 @@ export async function gatherCandidates(
     // Mixing cache results with API results pollutes rankings with previously cached items
     const searchPromises: Promise<UnifiedCandidate[]>[] = [
         skipLiveApi ? Promise.resolve([]) : searchFatSecretLiveSimple(client, primaryQuery, maxPerSource, rawLine),
-        skipFdc ? Promise.resolve([]) : searchFdcSimple(primaryQuery, maxPerSource, rawLine),
+        skipFdc ? Promise.resolve([]) : searchFdcSimple(primaryQuery, maxPerSource, rawLine, targetBrand),
     ];
 
     // Add British → American synonym searches (e.g., "single cream" → "light cream")
@@ -187,7 +197,7 @@ export async function gatherCandidates(
             searchPromises.push(searchFatSecretLiveSimple(client, britSyn, 4, rawLine));
         }
         if (!skipFdc) {
-            searchPromises.push(searchFdcSimple(britSyn, 4, rawLine));
+            searchPromises.push(searchFdcSimple(britSyn, 4, rawLine, targetBrand));
         }
     }
 
@@ -201,6 +211,17 @@ export async function gatherCandidates(
         if (!skipLiveApi) {
             searchPromises.push(searchFatSecretLiveSimple(client, syn, 2, rawLine)); // Limit synonym results to 2
         }
+    }
+
+    // Add OpenFoodFacts search for branded queries or when globally enabled
+    // skipOff=true is set during the quick gate check to save API quota
+    if (offEnabled && !skipOff) {
+        searchPromises.push(
+            searchOffSimple(primaryQuery, {
+                limit: maxPerSource,
+                isBrandedQuery,
+            })
+        );
     }
 
     const results = await Promise.allSettled(searchPromises);
@@ -236,6 +257,8 @@ export async function gatherCandidates(
         fdcCount: results[1].status === 'fulfilled' ? results[1].value.length : 0,
         synonymMatches: results.slice(2).reduce((sum, r) => sum + (r.status === 'fulfilled' ? r.value.length : 0), 0),
         totalUnique: candidates.length,
+        offEnabled,
+        isBrandedQuery,
     });
 
     return candidates;
@@ -647,7 +670,7 @@ function parseServingGramsFromDescription(description: string): number | null {
  * - 40:  Contains query somewhere
  * - 10:  Compound product (bread, flour, pancakes, etc.)
  */
-function computeFdcPriorityScore(query: string, foodName: string): number {
+function computeFdcPriorityScore(query: string, foodName: string, brandName?: string | null, targetBrand?: string): number {
     const queryLower = query.toLowerCase().trim();
     const nameLower = foodName.toLowerCase().trim();
 
@@ -675,38 +698,47 @@ function computeFdcPriorityScore(query: string, foodName: string): number {
     const nameFirstWord = nameWords[0] || '';
     const nameFirstSingular = singularize(nameFirstWord);
 
+    // Brand match tiebreaker: when a targetBrand is provided (from static brand detector),
+    // give a +5 bump to any candidate whose brandName field matches the target brand.
+    // This is intentionally a small delta — only resolves ties, doesn't override better matches.
+    const brandBonus = (
+        targetBrand &&
+        brandName &&
+        brandName.toLowerCase().includes(targetBrand.toLowerCase())
+    ) ? 20 : 0;
+
     // Exact match (potatoes === potatoes)
     if (nameLower === queryLower || nameLower === querySingular) {
-        return 100;
+        return 100 + brandBonus;
     }
 
     // Simple name match (1-2 words, query is primary)
     // e.g., "Potatoes" or "Potato" for query "potatoes"
     if (nameWords.length <= 2 && (nameFirstWord === queryLower || nameFirstWord === querySingular || nameFirstSingular === querySingular)) {
-        return 90;
+        return 90 + brandBonus;
     }
 
     // Raw/basic form variants (e.g., "Potatoes, flesh and skin, raw")
     const RAW_INDICATORS = ['raw', 'flesh', 'skin', 'fresh', 'plain', 'whole'];
     const hasRawIndicator = RAW_INDICATORS.some(ind => nameLower.includes(ind));
     if (hasRawIndicator && (nameFirstWord === queryLower || nameFirstWord === querySingular || nameFirstSingular === querySingular)) {
-        return 80;
+        return 80 + brandBonus;
     }
 
     // Query is first word (e.g., "Potatoes, baked, flesh")
     if (nameFirstWord === queryLower || nameFirstWord === querySingular || nameFirstSingular === querySingular) {
-        return 70;
+        return 70 + brandBonus;
     }
 
     // Contains query somewhere
     if (nameLower.includes(queryLower) || nameLower.includes(querySingular)) {
-        return 40;
+        return 40 + brandBonus;
     }
 
-    return 20; // Default
+    return 20 + brandBonus; // Default
 }
 
-async function searchFdcSimple(query: string, limit: number, rawLine: string): Promise<UnifiedCandidate[]> {
+async function searchFdcSimple(query: string, limit: number, rawLine: string, targetBrand?: string): Promise<UnifiedCandidate[]> {
     try {
         // Helper to get plural form (potato → potatoes)
         const pluralize = (word: string): string => {
@@ -766,7 +798,7 @@ async function searchFdcSimple(query: string, limit: number, rawLine: string): P
             const dataType = food.dataType || '';
             const isHighQuality = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'].some(t => dataType.includes(t));
             const baseScore = computePositionScore(query, food.description, position, { isHighQualityFdc: isHighQuality });
-            const priorityScore = computeFdcPriorityScore(query, food.description);
+            const priorityScore = computeFdcPriorityScore(query, food.description, food.brandName ?? null, targetBrand);
 
             return {
                 id: String(food.fdcId),
