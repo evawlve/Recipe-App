@@ -190,6 +190,8 @@ export interface MapIngredientOptions {
     _skipFallback?: boolean;
     /** If true, return 'pending' immediately when lock is held instead of blocking */
     skipOnLock?: boolean;
+    brand?: string;
+    normalizedForm?: string;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -236,7 +238,7 @@ export async function mapIngredientWithFallback(
     // NOTE: Cache lookup now only happens after normalization (see "EARLY CACHE CHECK" below)
     // This eliminates "selection drift" where raw line variations would get different mappings
     let parsed = parseIngredientLine(preProcessLine);
-    let baseName = parsed?.name?.trim() || preProcessLine;
+    let baseName = options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine;
 
     // Step 1-AI-FALLBACK: If regex parser didn't detect a unit but input looks complex,
     // try AI to extract qty/unit/name. This handles edge cases like "1 5 floz serving red wine"
@@ -488,10 +490,14 @@ export async function mapIngredientWithFallback(
 
         let normalizedName = normalizeIngredientName(baseName).cleaned || baseName;
 
-        // ── Brand detection (static list, no LLM required) ─────────────
+        // ── Brand detection (static list + AI passed brand) ─────────────
         // Must run before the early cache check so the brand guard is available
         // when validating cached results against the user's intended brand.
-        const brandDetection = detectBrandInQuery(rawLine);
+        const brandDetectionResult = detectBrandInQuery(rawLine);
+        const brandDetection = {
+            isBranded: brandDetectionResult.isBranded || !!options.brand?.trim(),
+            matchedBrand: options.brand?.trim() || brandDetectionResult.matchedBrand
+        };
         let isBrandedQuery = brandDetection.isBranded;
         if (brandDetection.isBranded) {
             logger.debug('brand_detector.matched', {
