@@ -33,21 +33,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Either "text" (string) or "items" (array) field is required' }, { status: 400 });
     }
 
-    let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' }> = [];
+    let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
     if (inputItems && Array.isArray(inputItems)) {
       items = inputItems.map(item => {
         if (typeof item === 'string') {
-          return { rawText: item, mealType: 'snacks' as const };
+          return { rawText: item, mealType: 'snacks' as const, brand: '', normalizedForm: '' };
         } else if (item && typeof item === 'object') {
           const rawText = 'rawText' in item && typeof item.rawText === 'string' ? item.rawText : '';
           const mealType = 'mealType' in item && typeof item.mealType === 'string' && ['breakfast', 'lunch', 'dinner', 'snacks'].includes(item.mealType)
             ? (item.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snacks')
             : 'snacks' as const;
-          return { rawText, mealType };
+          const brand = 'brand' in item && typeof item.brand === 'string' ? item.brand : '';
+          const normalizedForm = 'normalizedForm' in item && typeof item.normalizedForm === 'string' ? item.normalizedForm : '';
+          return { rawText, mealType, brand, normalizedForm };
         }
         return null;
-      }).filter((x): x is { rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' } => x !== null && x.rawText.trim() !== '');
+      }).filter((x): x is { rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string } => x !== null && x.rawText.trim() !== '');
     } else {
       const NLP_SPLIT_SCHEMA = {
         name: 'nlp_split',
@@ -62,9 +64,11 @@ export async function POST(req: NextRequest) {
                 additionalProperties: false,
                 properties: {
                   rawText: { type: 'string' },
-                  mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] }
+                  mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
+                  brand: { type: 'string' },
+                  normalizedForm: { type: 'string' }
                 },
-                required: ['rawText', 'mealType']
+                required: ['rawText', 'mealType', 'brand', 'normalizedForm']
               }
             }
           },
@@ -74,15 +78,21 @@ export async function POST(req: NextRequest) {
       };
 
       const SYSTEM_PROMPT = `You are a nutrition assistant that splits unstructured text describing meals/foods into individual food items with their quantities and units, and identifies the meal type (breakfast, lunch, dinner, or snacks).
+
+For each food item:
+- "rawText": The original chunk of text describing the food item (e.g. "2 scrambled eggs", "a cup of whole milk").
+- "mealType": The meal type ("breakfast", "lunch", "dinner", "snacks"). Default to 'snacks' if not specified or implied.
+- "brand": The explicit brand name if mentioned (e.g., "Heinz", "Quaker"). If no brand is mentioned, set this to an empty string "".
+- "normalizedForm": The simplified, canonical base food name. Remove quantities and units, but KEEP cooking/prep style modifiers (e.g., "scrambled", "grilled", "toasted", "whole") and sub-categories (e.g., "egg", "wheat toast", "whole milk") so the food type is specific. (Examples: "2 scrambled eggs" -> "scrambled eggs", "a cup of whole milk" -> "whole milk", "1 tbsp of Heinz ketchup" -> "ketchup").
+
 Example: "2 scrambled eggs and 1 slice of wheat toast for breakfast"
 Output:
 {
   "items": [
-    {"rawText": "2 scrambled eggs", "mealType": "breakfast"},
-    {"rawText": "1 slice of wheat toast", "mealType": "breakfast"}
+    {"rawText": "2 scrambled eggs", "mealType": "breakfast", "brand": "", "normalizedForm": "scrambled eggs"},
+    {"rawText": "1 slice of wheat toast", "mealType": "breakfast", "brand": "", "normalizedForm": "wheat toast"}
   ]
-}
-If no meal type is explicitly specified or implied, default to 'snacks'.`;
+}`;
 
       const llmResult = await callStructuredLlm({
         schema: NLP_SPLIT_SCHEMA,
@@ -95,19 +105,24 @@ If no meal type is explicitly specified or implied, default to 'snacks'.`;
         return NextResponse.json({ error: 'Failed to segment text' }, { status: 500 });
       }
 
-      items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks' }>) || [];
+      items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
     }
     const parsedItems = [];
 
     for (const item of items) {
       const rawText = item.rawText;
       const mealType = item.mealType;
+      const brand = item.brand;
+      const normalizedForm = item.normalizedForm;
 
       const parsed = parseIngredientLine(rawText);
       const qty = parsed?.qty ?? 1;
       const unit = parsed?.unit ?? '';
 
-      const mapped = await mapIngredientWithFallback(rawText);
+      const mapped = await mapIngredientWithFallback(rawText, {
+        brand: brand || undefined,
+        normalizedForm: normalizedForm || undefined
+      });
       if (!mapped || 'status' in mapped) {
         parsedItems.push({
           rawText,
