@@ -189,7 +189,7 @@ This shows:
 
 Create a specific script (e.g. `tmp/test-fixes.ts`) to hit the pipeline directly:
 ```typescript
-import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+import { mapIngredientWithFallback } from '../src/lib/mapping/map-ingredient-with-fallback';
 
 async function test() {
   const result = await mapIngredientWithFallback('your changed ingredient text');

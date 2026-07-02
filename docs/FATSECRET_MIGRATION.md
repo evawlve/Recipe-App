@@ -4,7 +4,7 @@ Last updated: 2025-11-24
 
 ## Current Snapshot
 - Mapping uses FatSecret cache + live API; legacy tables still exist but new maps are FatSecret-only.
-- Tests: `src/lib/fatsecret/__tests__/map-ingredient.test.ts` green.
+- Tests: `src/lib/mapping/__tests__/map-ingredient.test.ts` green.
 - Coverage (latest): 69 ingredients total, 50 mapped (≈72%), 19 unmapped (prep/synonym gaps like mostaccioli, mustard, onions w/ volume, jalapeno, sauerkraut, Polish sausage, curry paste, low-sodium soy).
 - Normalization rules live at `data/fatsecret/normalization-rules.json` (prep/size strips + synonym rewrites).
 - Automap helpers: `scripts/auto-map-recipe.ts <id>`, `scripts/auto-map-all-recipes.ts`, coverage `scripts/fatsecret-coverage-report.ts`.
@@ -15,7 +15,7 @@ Last updated: 2025-11-24
 - AI normalize hints: on map, we call `ai-normalize` once per raw line (cached) to add synonyms/cleaned names to search expressions; mapping still works without AI if the call fails.
 - Offline AI serving backfill exists:
   - Find gaps: `npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-serving-gaps.ts`
-  - Backfill via AI: `npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-backfill-servings.ts` (uses `src/lib/ai/serving-estimator.ts`; inserts `FatSecretServingCache` rows with `source='ai'`).
+  - Backfill via AI: `npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/fatsecret-cache-backfill-servings.ts` (uses `src/lib/ai/serving-estimator.ts`; inserts `FdcServing` rows with `source='ai'`).
 
 ## What’s Not Inline Yet
 - AI serving backfill during mapping/hydration (currently only via the offline scripts).

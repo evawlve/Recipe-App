@@ -8,8 +8,8 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { mapIngredientWithFatsecret } from '../lib/fatsecret/map-ingredient';
-import { validateMappingWithAI } from '../lib/fatsecret/ai-validation';
+import { mapIngredientWithFatsecret } from '../lib/mapping/map-ingredient';
+import { validateMappingWithAI } from '../lib/mapping/ai-validation';
 
 // Test cases from the failing pilot run
 const TEST_CASES = [

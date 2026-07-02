@@ -15,11 +15,11 @@ All scripts are run via `npx tsx src/scripts/<script>.ts`:
 | `debug-ingredient.ts` | Full pipeline trace: parse → normalize → search → filter → rerank → map |
 | `gather-candidates.ts` | Show raw, filtered, and ranked candidates for an ingredient |
 | `check-food-servings.ts` | Inspect cached serving data for any food |
-| `check-cache-entry.ts` | Inspect ValidatedMapping, AiNormalizeCache, IngredientFoodMap entries |
+| `check-cache-entry.ts` | Inspect FoodMapping, AiNormalizeCache, IngredientFoodMap entries |
 
 Root-level scripts (`npx tsx scripts/<script>.ts`):
 - `pilot-batch-import.ts` — Run pilot imports with `--recipes N`
-- `clear-all-mappings.ts` — Clear ValidatedMapping + AiNormalizeCache for clean re-test
+- `clear-all-mappings.ts` — Clear FoodMapping + AiNormalizeCache for clean re-test
 
 ## Diagnosis Workflow
 
@@ -58,7 +58,7 @@ These produce wildly incorrect calorie and gram values.
 | `5 dash black pepper` | 500g / 1255 kcal | ~2.5g / ~5 kcal |
 
 **Root cause:** When no serving matches "dash," the pipeline falls back to a 100g default.
-**Where to look:** `src/lib/fatsecret/map-ingredient.ts` — serving resolution logic, fallback path.
+**Where to look:** `src/lib/mapping/map-ingredient.ts` — serving resolution logic, fallback path.
 Also check `src/lib/nutrition/compute.ts` for the 100g default fallback.
 A "dash" should resolve to approximately 0.5g.
 
@@ -72,7 +72,7 @@ A "dash" should resolve to approximately 0.5g.
 
 **Root cause:** The pipeline uses the full-fruit weight for "piece" regardless of the qualifying adjective.
 "grape tomato" should use ~6g, not 123g. "chunks" should not multiply by whole-fruit weight.
-**Where to look:** `src/lib/fatsecret/map-ingredient.ts` — piece/unit weight resolution.
+**Where to look:** `src/lib/mapping/map-ingredient.ts` — piece/unit weight resolution.
 `src/lib/nutrition/compute.ts` — `resolveGramsForAmount()`.
 
 #### 1C. Avocado underestimation (10g)
@@ -101,8 +101,8 @@ These are incorrectly matched foods where the filter should have eliminated the 
 | `2 large yellow zucchini` | Fresh Frozen Garden Blend Vegetables | Mixed veg medley, not zucchini |
 
 **Root cause:** The filter/rerank pipeline doesn't penalize branded retail products enough when the query is a simple raw ingredient. The token overlap is high ("cinnamon sticks" matches "Cinnamon Sticks White Icing...") but the food category is completely wrong.
-**Where to look:** `src/lib/fatsecret/filter-candidates.ts` — branded product filtering.
-`src/lib/fatsecret/simple-rerank.ts` — scoring penalties for category mismatches.
+**Where to look:** `src/lib/mapping/filter-candidates.ts` — branded product filtering.
+`src/lib/mapping/simple-rerank.ts` — scoring penalties for category mismatches.
 
 #### 2B. "Pepper" (spice) → banana pepper (vegetable)
 
@@ -111,13 +111,13 @@ These are incorrectly matched foods where the filter should have eliminated the 
 | `1 dash pepper` | banana raw pepper |
 
 **Root cause:** "pepper" is ambiguous — the pipeline should prefer black/white pepper (spice) for small quantities with units like "dash" or "pinch."
-**Where to look:** `src/lib/fatsecret/gather-candidates.ts` — search query construction.
+**Where to look:** `src/lib/mapping/gather-candidates.ts` — search query construction.
 Consider adding a context-aware disambiguation: if unit is a spice-unit (dash, pinch, tsp), prefer the spice over the vegetable.
 
 #### 2C. "Tomato and Green Chili Mix" → green raw tomatoes
 
 **Root cause:** The pipeline stripped "mix" and matched to "green tomatoes" (unripe). Should match a prepared mix or salsa verde product.
-**Where to look:** `src/lib/fatsecret/ai-normalize.ts` — normalization may be stripping important qualifiers.
+**Where to look:** `src/lib/mapping/ai-normalize.ts` — normalization may be stripping important qualifiers.
 
 ---
 
@@ -128,7 +128,7 @@ Consider adding a context-aware disambiguation: if unit is a spice-unit (dash, p
 | `1 dash pepper` | White Pepper | Confidence 0.95 but marked as failure — investigate why |
 | `0.5 cup no calorie sweetener` | Altern No Calorie Sweetener (Great Value) | Confidence 1.00 but still marked ✗ — likely a validation rejection |
 
-**Where to look:** Check `src/lib/fatsecret/map-ingredient.ts` validation logic — these have high confidence but are still failing.
+**Where to look:** Check `src/lib/mapping/map-ingredient.ts` validation logic — these have high confidence but are still failing.
 
 ---
 
@@ -136,14 +136,14 @@ Consider adding a context-aware disambiguation: if unit is a spice-unit (dash, p
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/map-ingredient.ts` | Main mapping orchestrator, serving resolution |
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | FDC fallback path |
-| `src/lib/fatsecret/filter-candidates.ts` | Token-based candidate filtering |
-| `src/lib/fatsecret/simple-rerank.ts` | Scoring and reranking candidates |
-| `src/lib/fatsecret/gather-candidates.ts` | Search query construction, candidate gathering |
-| `src/lib/fatsecret/ai-normalize.ts` | AI-powered ingredient normalization |
+| `src/lib/mapping/map-ingredient.ts` | Main mapping orchestrator, serving resolution |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | FDC fallback path |
+| `src/lib/mapping/filter-candidates.ts` | Token-based candidate filtering |
+| `src/lib/mapping/simple-rerank.ts` | Scoring and reranking candidates |
+| `src/lib/mapping/gather-candidates.ts` | Search query construction, candidate gathering |
+| `src/lib/mapping/ai-normalize.ts` | AI-powered ingredient normalization |
 | `src/lib/nutrition/compute.ts` | Nutrition computation, gram resolution |
-| `src/lib/fatsecret/config.ts` | Pipeline configuration |
+| `src/lib/mapping/config.ts` | Pipeline configuration |
 | `docs/ingredient-mapping-pipeline.md` | Full pipeline documentation |
 | `.agent/docs/known-issues.md` | Known bugs and fixes |
 

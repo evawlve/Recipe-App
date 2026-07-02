@@ -21,7 +21,7 @@ Run 2 (04:07): "8 tacos" → "bean burrito taco bell" | (2508 kcal / 1200g)
 - Cache should be deterministic
 
 **Possible Causes**:
-- Multiple ValidatedMapping entries for same normalizedForm
+- Multiple FoodMapping entries for same normalizedForm
 - Race condition in concurrent writes
 - Non-deterministic portion calculation
 
@@ -69,12 +69,12 @@ Line 121: "4 1/2 cups quinoa" → "Quinoa (TJ's)"     (2880 kcal / 792g)
 
 The fact that the same input produces different outputs is a **critical bug**.
 
-### Check ValidatedMapping for Duplicates
+### Check FoodMapping for Duplicates
 
 ```sql
 SELECT "normalizedForm", COUNT(*) as cnt, 
        array_agg("foodName"), array_agg("id")
-FROM "ValidatedMapping" 
+FROM "FoodMapping" 
 WHERE "normalizedForm" IN ('taco', 'quinoa')
 GROUP BY "normalizedForm"
 HAVING COUNT(*) > 1;

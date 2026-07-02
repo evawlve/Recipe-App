@@ -7,7 +7,9 @@
 
 import { prisma } from '../db';
 import { logger } from '../logger';
-import type { UnifiedCandidate } from '../fatsecret/gather-candidates';
+import type { UnifiedCandidate } from '../mapping/gather-candidates';
+import { MEILISEARCH_ENABLED } from '../mapping/config';
+import { searchMeili } from '../search/meilisearch-client';
 
 // ============================================================
 // Scoring Helpers
@@ -102,6 +104,52 @@ export async function searchOffSimple(
     const { limit = 5, isBrandedQuery = false } = options;
 
     const queryLower = query.toLowerCase().trim();
+
+    if (MEILISEARCH_ENABLED) {
+        try {
+            const hits = await searchMeili('off_foods', query, limit * 2);
+            if (hits.length > 0) {
+                const candidates = hits
+                    .map(hit => {
+                        const n = (hit.nutrientsPer100g ?? {}) as Record<string, number>;
+                        const kcal    = n['calories'] ?? n['kcal'] ?? 0;
+                        const protein = n['protein']  ?? 0;
+                        const carbs   = n['carbs']    ?? 0;
+                        const fat     = n['fat']      ?? 0;
+                        const hasNutrition = kcal > 0 || protein > 0 || carbs > 0 || fat > 0;
+
+                        return {
+                            id:        `off_${hit.barcode}`,
+                            source:    'openfoodfacts' as const,
+                            name:      hit.name,
+                            brandName: hit.brandName || null,
+                            score:     computeOffScore(query, hit.name, hit.brandName, isBrandedQuery),
+                            nutrition: hasNutrition
+                                ? { kcal, protein, carbs, fat, per100g: true }
+                                : undefined,
+                            rawData: {
+                                barcode:         hit.barcode,
+                                name:            hit.name,
+                                brandName:       hit.brandName,
+                                nutrientsPer100g: hit.nutrientsPer100g,
+                                servingGrams:    hit.servingGrams,
+                                servingSize:     hit.servingSize,
+                            },
+                        };
+                    })
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, limit);
+                
+                logger.debug('off.search.meilisearch_hit', { query, count: candidates.length });
+                return candidates;
+            }
+        } catch (err) {
+            logger.warn('off.search.meilisearch_failed_fallback_to_postgres', {
+                query,
+                error: (err as Error).message,
+            });
+        }
+    }
 
     try {
         const results = await prisma.offFood.findMany({

@@ -54,7 +54,7 @@ export async function GET(
     }
 
     const { getServingType } = await import('@/lib/nlp/resolve-payload');
-    const { insertAiServing } = await import('@/lib/fatsecret/ai-backfill');
+    const { insertAiServing } = await import('@/lib/mapping/ai-backfill');
 
     // 1. Try to find cached serving first
     let serving = await findCachedServing(id, unit);

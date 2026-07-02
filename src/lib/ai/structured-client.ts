@@ -26,7 +26,7 @@ import {
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_MS,
     NUTRITION_AI_MODEL,
-} from '../fatsecret/config';
+} from '../mapping/config';
 
 // ============================================================
 // Types

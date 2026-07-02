@@ -11,21 +11,21 @@
 Three bugs were fixed in this session:
 
 ### 1. Recursive Deadlock (`_skipInFlightLock`)
-**Location**: `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+**Location**: `src/lib/mapping/map-ingredient-with-fallback.ts`
 
 When AI simplification returned a similar name (e.g., "2 tbsp salted butter" → "Salted Butter"), the recursive fallback call at line ~727 would try to acquire the same lock as the parent, causing deadlock.
 
 **Fix**: Added `_skipInFlightLock?: boolean` option that bypasses lock acquisition in recursive calls.
 
 ### 2. Infinite Fallback Loop (`_skipFallback`)
-**Location**: `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+**Location**: `src/lib/mapping/map-ingredient-with-fallback.ts`
 
 After fixing deadlock, fallback kept calling itself: fallback → fallback → fallback...
 
 **Fix**: Added `_skipFallback?: boolean` option that prevents recursive fallback calls.
 
 ### 3. Null Macro Filter Rejection
-**Location**: `src/lib/fatsecret/filter-candidates.ts` line ~1017
+**Location**: `src/lib/mapping/filter-candidates.ts` line ~1017
 
 `hasNullOrInvalidMacros()` returned `true` (invalid) when `nutrients` was null/undefined, rejecting ALL candidates without pre-populated nutrition data.
 
@@ -46,7 +46,7 @@ After fixing deadlock, fallback kept calling itself: fallback → fallback → f
 
 ### 1. Lock Contention Strategy
 
-**Current Behavior** (`src/lib/fatsecret/map-ingredient-with-fallback.ts` lines 280-314):
+**Current Behavior** (`src/lib/mapping/map-ingredient-with-fallback.ts` lines 280-314):
 ```typescript
 const lockKey = getLockKey(baseName);
 const existingLock = inFlightLocks.get(lockKey);
@@ -98,9 +98,9 @@ The batch orchestrator would:
 
 | File | Relevance |
 |------|-----------|
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Lock mechanism (lines 280-314), fallback (lines 710-780) |
-| `src/lib/fatsecret/gather-candidates.ts` | Parallel candidate gathering |
-| `src/lib/fatsecret/filter-candidates.ts` | Token filtering, `hasNullOrInvalidMacros` |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | Lock mechanism (lines 280-314), fallback (lines 710-780) |
+| `src/lib/mapping/gather-candidates.ts` | Parallel candidate gathering |
+| `src/lib/mapping/filter-candidates.ts` | Token filtering, `hasNullOrInvalidMacros` |
 | `scripts/pilot-batch-import.ts` | Batch orchestration with Promise.allSettled |
 
 ---
@@ -129,19 +129,19 @@ npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/r
 - All ingredients per recipe parallel via `Promise.allSettled`
 
 ### 2. Skip-on-Lock Pattern  
-**File**: `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+**File**: `src/lib/mapping/map-ingredient-with-fallback.ts`
 - Added `skipOnLock?: boolean` option and `MapIngredientPendingResult` type
 - Returns `{ status: 'pending' }` instead of blocking
 - Batch import retries pending items after first pass
 
 ### 3. Fire-and-Forget Deferred Hydration
-**File**: `src/lib/fatsecret/deferred-hydration.ts`
+**File**: `src/lib/mapping/deferred-hydration.ts`
 - `queueForDeferredHydration()` kicks off hydration immediately
 - Uses `.catch()` pattern — no await, no blocking
 - Runner-ups hydrated in background while mapping continues
 
 ### 4. Preemptive Serving Backfill
-**File**: `src/lib/fatsecret/serving-backfill.ts`
+**File**: `src/lib/mapping/serving-backfill.ts`
 - Added `backfillCommonServings()` function
 - Discrete items: whole, medium, large, piece
 - Liquids: tbsp, cup, ml

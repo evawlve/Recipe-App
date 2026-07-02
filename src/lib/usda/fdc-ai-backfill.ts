@@ -5,7 +5,7 @@ import { requestAiServing, type ServingGapType } from '../ai/serving-estimator';
 import {
     FATSECRET_CACHE_AI_MAX_DENSITY,
     FATSECRET_CACHE_AI_MIN_DENSITY,
-} from '../fatsecret/config';
+} from '../mapping/config';
 
 // Reusing volume conversion logic from fatsecret/ai-backfill.ts
 // Ideally this should be extracted to a shared utility

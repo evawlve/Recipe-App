@@ -1,7 +1,7 @@
 # Mapping Pipeline & VM Audit Handoff (July 2, 2026)
 
 ## 📌 Context & Objectives
-We audited and realigned the ingredient mapping pipeline on the consolidation VM to resolve database constraint failures and API mismatches introduced by the deprecation of the legacy `FatSecretFoodCache` schema.
+We audited and realigned the ingredient mapping pipeline on the consolidation VM to resolve database constraint failures and API mismatches introduced by the deprecation of the legacy `FdcFood` schema.
 
 Our target was to investigate why the pilot batch validation ran at a **78.4% success rate** with multiple crashes, fix the root causes, and establish a secure file-syncing pipeline using Syncthing.
 
@@ -10,24 +10,24 @@ Our target was to investigate why the pilot batch validation ran at a **78.4% su
 ## 🛠️ Work Accomplished & Root-Cause Fixes
 
 ### 1. FatSecret Cache Ingestion Realignment
-* **File modified**: [cache.ts](file:///home/diego/Recipe-App/src/lib/fatsecret/cache.ts)
-* **Issue**: The consolidated schema removed the legacy `FatSecretFoodCache` table in favor of `AiGeneratedFood`. The mapper failed to save incoming live API results, triggering foreign key violations when mapping.
-* **Fix**: Rewrote `ensureFoodCached` to dynamically parse and upsert FatSecret API payload results (macros per 100g and servings) into `AiGeneratedFood` and `AiGeneratedServing` tables using transactions.
+* **File modified**: [cache.ts](file:///home/diego/Recipe-App/src/lib/mapping/cache.ts)
+* **Issue**: The consolidated schema removed the legacy `FdcFood` table in favor of `AiGeneratedFood`. The mapper failed to save incoming live API results, triggering foreign key violations when mapping.
+* **Fix**: Rewrote `ensureFoodCached` to dynamically parse and upsert local FDC/OFF databases payload results (macros per 100g and servings) into `AiGeneratedFood` and `AiGeneratedServing` tables using transactions.
 
-### 2. Safely Querying FatSecret API
-* **Files modified**: [cache.ts](file:///home/diego/Recipe-App/src/lib/fatsecret/cache.ts) and [map-ingredient-with-fallback.ts](file:///home/diego/Recipe-App/src/lib/fatsecret/map-ingredient-with-fallback.ts)
+### 2. Safely Querying local FDC/OFF databases
+* **Files modified**: [cache.ts](file:///home/diego/Recipe-App/src/lib/mapping/cache.ts) and [map-ingredient-with-fallback.ts](file:///home/diego/Recipe-App/src/lib/mapping/map-ingredient-with-fallback.ts)
 * **Issue**: The mapper passed OpenFoodFacts barcodes (`off_...`), USDA IDs (`fdc_...`), and CUIDs (`cmr35d5...`) to the FatSecret client, yielding `FatSecret error 105: Invalid long value`.
 * **Fix**: Added validation gates targeting both hydration and check-incomplete cache operations. The pipeline now only executes `client.getFoodDetails` if the candidate ID is a purely numeric string (`/^\d+$/`).
 
 ### 3. Resolving Unique Constraint Violations
-* **Files modified**: [cache.ts](file:///home/diego/Recipe-App/src/lib/fatsecret/cache.ts) and [ai-backfill.ts](file:///home/diego/Recipe-App/src/lib/fatsecret/ai-backfill.ts)
+* **Files modified**: [cache.ts](file:///home/diego/Recipe-App/src/lib/mapping/cache.ts) and [ai-backfill.ts](file:///home/diego/Recipe-App/src/lib/mapping/ai-backfill.ts)
 * **Issue**: `AiGeneratedFood` enforces a `@unique` constraint on `ingredientName`. Multiple foods mapping to semantic duplicates (e.g. "Salt" and "salt") triggered unique constraint violations, crashing transactions and preventing caching.
 * **Fix**: 
   - Updated `upsertFoodFromDetails` to check if a record with the same `ingredientName` already exists, returning it early if present.
   - Realigned `insertAiServing` in the backfill flow to update the existing record (`targetFoodId`) instead of attempting to create a duplicate.
 
 ### 4. Database Foreign Key Reference Bindings
-* **File modified**: [map-ingredient-with-fallback.ts](file:///home/diego/Recipe-App/src/lib/fatsecret/map-ingredient-with-fallback.ts)
+* **File modified**: [map-ingredient-with-fallback.ts](file:///home/diego/Recipe-App/src/lib/mapping/map-ingredient-with-fallback.ts)
 * **Issue**: When the mapper fallback check triggered cache-upserts, it returned the raw candidate ID (e.g. `"33908"`) instead of the actual database row ID (e.g. `"salt"`), causing subsequent `IngredientFoodMap` creation to fail.
 * **Fix**: Added a stateful `targetFoodId` pointer that updates dynamically when a cache-lookup redirect or upsert occurs, guaranteeing correct mapping bindings.
 

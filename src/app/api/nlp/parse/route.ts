@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     const { callStructuredLlm } = await import('@/lib/ai/structured-client');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
-    const { mapIngredientWithFallback } = await import('@/lib/fatsecret/map-ingredient-with-fallback');
+    const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
 
     const body = await req.json();

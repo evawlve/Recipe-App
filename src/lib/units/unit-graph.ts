@@ -1,15 +1,17 @@
-export type Unit = 'g'|'oz'|'lb'|'ml'|'tsp'|'tbsp'|'cup'|'floz'|'pinch'|'dash'|'drop'|'second';
+export type Unit = 'g'|'oz'|'lb'|'ml'|'tsp'|'tbsp'|'cup'|'floz'|'pinch'|'dash'|'drop'|'second'|'kg'|'l'|'pint'|'quart'|'gallon';
 
 const MASS_G: Record<Unit, number> = {
-  g: 1, oz: 28.349523125, lb: 453.59237,
+  g: 1, oz: 28.349523125, lb: 453.59237, kg: 1000,
   ml: NaN, tsp: NaN, tbsp: NaN, cup: NaN, floz: NaN,
   pinch: NaN, dash: NaN, drop: NaN, second: NaN,
+  l: NaN, pint: NaN, quart: NaN, gallon: NaN,
 };
 
 const VOL_ML: Record<Unit, number> = {
   ml: 1, tsp: 4.92892159375, tbsp: 14.78676478125, cup: 240, floz: 29.5735295625,
   pinch: 0.3, dash: 0.6, drop: 0.05, second: 0.25,
-  g: NaN, oz: NaN, lb: NaN,
+  l: 1000, pint: 473.176473, quart: 946.352946, gallon: 3785.411784,
+  g: NaN, oz: NaN, lb: NaN, kg: NaN,
 };
 
 export const isMass   = (u: Unit) => !Number.isNaN(MASS_G[u]);

@@ -182,7 +182,7 @@ description: Autonomous ingredient mapping validation - run pilot import, verify
 
 1. Create or update a fast verification script (e.g. `tmp/test-fixes.ts`) to hit the pipeline directly rather than querying the database:
    ```typescript
-   import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+   import { mapIngredientWithFallback } from '../src/lib/mapping/map-ingredient-with-fallback';
 
    async function test() {
      const result = await mapIngredientWithFallback('1 cup honey');

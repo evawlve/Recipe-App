@@ -6,13 +6,13 @@
 
 ## Current State
 
-- **ValidatedMapping entries:** **1,440**
+- **FoodMapping entries:** **1,440**
 - Pipeline stability: Phase 5 hardening complete (fat modifier CRITICAL constraint injected into AI nutrition backfill prompts)
 - Latest pilot import: 841 recipes, mapping log at `logs/mapping-summary-2026-04-20T01-20-09.txt`
 
 ## Goals
 
-1. **Audit** all 1,440 `ValidatedMapping` entries for poisoned/redundant/stale/semantically-inverted cache entries
+1. **Audit** all 1,440 `FoodMapping` entries for poisoned/redundant/stale/semantically-inverted cache entries
 2. **Benchmark** every discrete stage of the mapping pipeline across a diverse ingredient matrix
 3. **Purge** confirmed bad entries and compact near-duplicate keys
 
@@ -33,7 +33,7 @@ See the full spec in the artifact:
 
 ## Pipeline Stages to Benchmark
 
-1. ValidatedMapping cache hit
+1. FoodMapping cache hit
 2. AiNormalizeCache hit (DB vs live LLM)
 3. Full cold pipeline (no cache)
 4. Full pipeline + weight serving backfill
@@ -45,8 +45,8 @@ See the full spec in the artifact:
 
 ## Key Files
 
-- `src/lib/fatsecret/map-ingredient-with-fallback.ts` — pipeline orchestrator
-- `src/lib/fatsecret/validated-mapping-helpers.ts` — cache lookup
-- `src/lib/fatsecret/ai-normalize.ts` — LLM normalize with cache
-- `src/lib/fatsecret/ai-nutrition-backfill.ts` — nutrition AI (updated April 20)
-- `src/lib/fatsecret/serving-backfill.ts` — serving gap detection
+- `src/lib/mapping/map-ingredient-with-fallback.ts` — pipeline orchestrator
+- `src/lib/mapping/validated-mapping-helpers.ts` — cache lookup
+- `src/lib/mapping/ai-normalize.ts` — LLM normalize with cache
+- `src/lib/mapping/ai-nutrition-backfill.ts` — nutrition AI (updated April 20)
+- `src/lib/mapping/serving-backfill.ts` — serving gap detection

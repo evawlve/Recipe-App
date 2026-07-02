@@ -3,7 +3,7 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
-import { FatSecretClient } from '../src/lib/fatsecret/client';
+import { FatSecretClient } from '../src/lib/mapping/client';
 import { parseIngredientLine } from '../src/lib/parse/ingredient-line';
 import { autoMapIngredients } from '../src/lib/nutrition/auto-map';
 

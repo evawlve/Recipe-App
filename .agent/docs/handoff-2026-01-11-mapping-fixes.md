@@ -17,7 +17,7 @@
 
 **Files Modified**:
 - `src/lib/units/density.ts` - Added `CATEGORY_KEYWORDS` and `inferCategoryFromName()`
-- `src/lib/fatsecret/map-ingredient-with-fallback.ts` - Updated `gramsForServing()` signature
+- `src/lib/mapping/map-ingredient-with-fallback.ts` - Updated `gramsForServing()` signature
 
 ---
 
@@ -37,7 +37,7 @@
 
 **Fix**: Added RICE DEFAULT rule to AI normalize system prompt.
 
-**File Modified**: `src/lib/fatsecret/ai-normalize.ts`
+**File Modified**: `src/lib/mapping/ai-normalize.ts`
 
 ---
 
@@ -109,9 +109,9 @@ Before accepting a candidate, validate nutrition profile:
 | File | Changes |
 |------|---------|
 | `src/lib/units/density.ts` | Added `inferCategoryFromName()` with keyword patterns |
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Updated `gramsForServing()` to use category density |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | Updated `gramsForServing()` to use category density |
 | `src/lib/parse/ingredient-line.ts` | "To taste" → 1 tsp default with flag |
-| `src/lib/fatsecret/ai-normalize.ts` | Rice defaults to white rice |
+| `src/lib/mapping/ai-normalize.ts` | Rice defaults to white rice |
 | `.agent/docs/ingredient-mapping-pipeline.md` | Added future improvement note |
 
 ---

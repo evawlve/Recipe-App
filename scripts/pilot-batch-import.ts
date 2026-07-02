@@ -3,11 +3,11 @@
 import 'dotenv/config';
 import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
-import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../src/lib/mapping/map-ingredient-with-fallback';
 import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
-import { refreshNormalizationRules } from '../src/lib/fatsecret/normalization-rules';
-import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/fatsecret/mapping-logger';
-import { drainPendingBackgroundTasks } from '../src/lib/fatsecret/deferred-hydration';
+import { refreshNormalizationRules } from '../src/lib/mapping/normalization-rules';
+import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/mapping/mapping-logger';
+import { drainPendingBackgroundTasks } from '../src/lib/mapping/deferred-hydration';
 
 // DEBUG: File-based logging to trace control flow
 const debugLog = fs.createWriteStream('logs/pilot-debug.log', { flags: 'w' });

@@ -37,7 +37,7 @@ npx ts-node scripts/your-import-script.ts
 If your script doesn't auto-initialize, add:
 
 ```typescript
-import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/fatsecret/mapping-logger';
+import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/mapping/mapping-logger';
 
 // At start of script
 initMappingAnalysisSession();

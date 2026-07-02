@@ -10,7 +10,7 @@
 import {
     FATSECRET_CACHE_AI_ENABLED,
     FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
-} from '../fatsecret/config';
+} from '../mapping/config';
 import { callStructuredLlm } from './structured-client';
 import { getFdcServingWeight } from '../fdc/fdc-servings';
 import { logger } from '../logger';

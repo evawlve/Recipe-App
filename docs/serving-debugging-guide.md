@@ -10,9 +10,9 @@ Reference for debugging and fixing serving-related issues in ingredient mapping.
 
 **Symptom:** `no_suitable_serving_found` for volume units like `cup`, `tbsp`
 
-**Root Cause:** FatSecret API stores volume serving metadata inconsistently:
-- A serving with `measurementDescription: "ml"` may have `metricServingUnit: "g"` (wrong)
-- This blocks the `volumeToMl[metricUnit]` lookup in `selectServing()`
+**Root Cause:** Food databases (like FDC/OFF) or custom cached servings can store volume serving metadata inconsistently:
+- A serving with description `"ml"` may have unit `"g"` (wrong)
+- This blocks the volume lookup in `selectServing()`
 
 **Solution:** The `extractServingVolumeUnit()` function now:
 1. Parses the description first (e.g., "2 tbsp", "100 ml")
@@ -29,9 +29,9 @@ Reference for debugging and fixing serving-related issues in ingredient mapping.
 
 **Debug Query:**
 ```sql
-SELECT measurementDescription, metricServingUnit, metricServingAmount, volumeMl 
-FROM "FatSecretServingCache" 
-WHERE foodId = '<id>';
+SELECT description, grams, "volumeMl" 
+FROM "FdcServing" 
+WHERE "fdcId" = <id>;
 ```
 
 ---
@@ -82,15 +82,14 @@ WHERE foodId = '<id>';
 
 ### Step 1: Check Serving Cache
 ```typescript
-const servings = await prisma.fatSecretServingCache.findMany({
-  where: { foodId: '<id>' }
+const servings = await prisma.fdcServing.findMany({
+  where: { fdcId: <id> }
 });
 servings.forEach(s => console.log({
-  desc: s.measurementDescription,
-  grams: s.servingWeightGrams,
-  isDefault: s.isDefault,
+  desc: s.description,
+  grams: s.grams,
   volumeMl: s.volumeMl,
-  metricUnit: s.metricServingUnit
+  source: s.source
 }));
 ```
 
@@ -104,9 +103,7 @@ servings.forEach(s => console.log({
 - Does `metricServingUnit` match (g vs ml)?
 
 ### Step 4: Run Debug Script
-```powershell
-npx ts-node scripts/debug-mapping-issue.ts --ingredient "1 cup honey"
-```
+Use a local verification script like `tmp/test-fixes.ts` to call `mapIngredientWithFallback` directly.
 
 ---
 
@@ -141,13 +138,25 @@ For **volume** units (cup, tbsp, tsp):
 
 ## Test Commands
 
-```powershell
-# Test volume conversion
-npx ts-node scripts/debug-mapping-issue.ts --ingredient "0.25 cup honey"
+Create a local verification script `tmp/test-fixes.ts` as follows:
 
-# Test discrete items
-npx ts-node scripts/test-beef-franks.ts
+```typescript
+import { mapIngredientWithFallback } from '../src/lib/mapping/map-ingredient-with-fallback';
 
-# Clear cached mapping before retesting
-npx ts-node -e "require('./src/lib/db').prisma.validatedMapping.deleteMany({where: {normalizedForm: 'honey'}})"
+async function test() {
+  const result = await mapIngredientWithFallback('0.5 tsp nutmeg');
+  console.log('Result =>', result);
+}
+
+test().catch(console.error).finally(() => process.exit(0));
+```
+
+Run the script locally:
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register tmp/test-fixes.ts
+```
+
+Clear cached mapping before retesting:
+```bash
+npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register -e "require('./src/lib/db').prisma.foodMapping.deleteMany({where: {normalizedForm: 'honey'}}).then(console.log)"
 ```

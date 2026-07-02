@@ -5,7 +5,7 @@ import { logger } from '../logger';
 import { HEALTH_SCORE_V2, ENABLE_PORTION_V2 } from '../flags';
 import { scoreV2 } from './score-v2';
 import { resolvePortion, PortionSource } from './portion';
-import { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } from '../fatsecret/config';
+import { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } from '../mapping/config';
 import { deriveServingOptions } from '../units/servings';
 
 function resolveFoodNutritionAndServings(foodId: string, resolvedFood: any) {

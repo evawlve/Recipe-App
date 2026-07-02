@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { deriveServingOptions } from '../units/servings';
-import { extractCacheNutrients, buildServingOptionsForCacheFood } from '../fatsecret/cache-search';
+import { extractCacheNutrients, buildServingOptionsForCacheFood } from '../mapping/cache-search';
 
 export function getServingType(label: string): 'weight' | 'volume' | 'count' {
   const normalized = label.toLowerCase().trim();

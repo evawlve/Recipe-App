@@ -13,7 +13,7 @@ import {
     FATSECRET_CACHE_AI_ENABLED,
     FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
     OPENAI_API_BASE_URL,
-} from '../fatsecret/config';
+} from '../mapping/config';
 import { logger } from '../logger';
 
 export interface SimpleServingEstimate {

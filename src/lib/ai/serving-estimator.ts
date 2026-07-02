@@ -5,7 +5,7 @@ import {
   FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
   FATSECRET_CACHE_AI_MAX_DENSITY,
   FATSECRET_CACHE_AI_MIN_DENSITY,
-} from '../fatsecret/config';
+} from '../mapping/config';
 import { callStructuredLlm } from './structured-client';
 
 export type ServingGapType = 'volume' | 'weight';

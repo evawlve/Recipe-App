@@ -15,7 +15,7 @@ This document summarizes the investigation into ingredient mapping discrepancies
 ## Issues Fixed ✅
 
 ### 1. Ground Meat → Steak Exclusion
-**File**: [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts)
+**File**: [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts)
 
 Added exclusion rule at ~line 498:
 ```typescript
@@ -28,7 +28,7 @@ Added exclusion rule at ~line 498:
 **Verification**: `debug-mapping-issue.ts --ingredient "2 lbs ground chuck"` → "Ground Chuck" @ 0.98 confidence
 
 ### 2. Taco → Baked Taco Shell Exclusion
-**File**: [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts)
+**File**: [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts)
 
 Enhanced existing taco exclusion to include `'baked taco'`:
 ```typescript
@@ -41,7 +41,7 @@ Enhanced existing taco exclusion to include `'baked taco'`:
 **Verification**: `debug-mapping-issue.ts --ingredient "8 tacos"` → "Crunchy Taco" @ 0.92 confidence
 
 ### 3. Macro Profiles Added
-**File**: [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts)
+**File**: [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts)
 
 Added profiles at ~line 690-707:
 - **Dried spices**: `maxCalPer100g: 400` (pure spices are ~280-320 kcal/100g)
@@ -192,10 +192,10 @@ $env:ENABLE_MAPPING_ANALYSIS='true'; npm run pilot-import 100
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/filter-candidates.ts` | Category exclusions, macro profiles |
-| `src/lib/fatsecret/simple-rerank.ts` | Candidate scoring and selection |
-| `src/lib/fatsecret/validated-mapping-helpers.ts` | Cache save/lookup logic |
-| `src/lib/fatsecret/serving-backfill.ts` | Serving size estimation |
+| `src/lib/mapping/filter-candidates.ts` | Category exclusions, macro profiles |
+| `src/lib/mapping/simple-rerank.ts` | Candidate scoring and selection |
+| `src/lib/mapping/validated-mapping-helpers.ts` | Cache save/lookup logic |
+| `src/lib/mapping/serving-backfill.ts` | Serving size estimation |
 | `src/lib/units/portion-overrides.ts` | Manual serving size overrides |
 
 ---
