@@ -397,6 +397,7 @@ export async function insertAiServing(
                 },
             });
         } else {
+            let targetFoodId = foodId;
             const foodExists = await tx.aiGeneratedFood.findUnique({
                 where: { id: foodId },
                 select: { id: true },
@@ -404,20 +405,29 @@ export async function insertAiServing(
 
             if (!foodExists) {
                 if (options.candidateData) {
-                    logger.info('ai_backfill.seeding_food_to_cache', { foodId });
-                    await tx.aiGeneratedFood.create({
-                        data: {
-                            id: foodId,
-                            ingredientName: options.candidateData.name,
-                            displayName: options.candidateData.name,
-                            caloriesPer100g: options.candidateData.nutrition?.kcal ?? 0,
-                            proteinPer100g: options.candidateData.nutrition?.protein ?? 0,
-                            carbsPer100g: options.candidateData.nutrition?.carbs ?? 0,
-                            fatPer100g: options.candidateData.nutrition?.fat ?? 0,
-                            aiConfidence: 0.95,
-                            aiModel: 'google/gemini-2.0-flash',
-                        }
+                    const existingByName = await tx.aiGeneratedFood.findUnique({
+                        where: { ingredientName: options.candidateData.name },
+                        select: { id: true },
                     });
+
+                    if (!existingByName) {
+                        logger.info('ai_backfill.seeding_food_to_cache', { foodId });
+                        await tx.aiGeneratedFood.create({
+                            data: {
+                                id: foodId,
+                                ingredientName: options.candidateData.name,
+                                displayName: options.candidateData.name,
+                                caloriesPer100g: options.candidateData.nutrition?.kcal ?? 0,
+                                proteinPer100g: options.candidateData.nutrition?.protein ?? 0,
+                                carbsPer100g: options.candidateData.nutrition?.carbs ?? 0,
+                                fatPer100g: options.candidateData.nutrition?.fat ?? 0,
+                                aiConfidence: 0.95,
+                                aiModel: 'google/gemini-2.0-flash',
+                            }
+                        });
+                    } else {
+                        targetFoodId = existingByName.id;
+                    }
                 } else {
                     logger.warn('ai_backfill.food_not_in_cache_no_data', { foodId });
                     return;
@@ -427,21 +437,21 @@ export async function insertAiServing(
             await tx.aiGeneratedServing.upsert({
                 where: {
                     foodId_label: {
-                        foodId,
+                        foodId: targetFoodId,
                         label: suggestion.servingLabel,
                     },
                 },
                 create: {
-                    foodId,
+                    foodId: targetFoodId,
                     label: suggestion.servingLabel,
                     grams: suggestion.grams,
-                    volumeMl,
+                    volumeMl: volumeMl,
                     aiConfidence: suggestion.confidence ?? 0.9,
                     aiNotes: suggestion.rationale,
                 },
                 update: {
                     grams: suggestion.grams,
-                    volumeMl,
+                    volumeMl: volumeMl,
                     aiConfidence: suggestion.confidence ?? 0.9,
                     aiNotes: suggestion.rationale,
                 },

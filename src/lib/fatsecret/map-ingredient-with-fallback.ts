@@ -2144,10 +2144,12 @@ export async function hydrateAndSelectServing(
 
     // For cache/fatsecret candidates, get full details with servings
     let details: FatSecretFoodDetails | null = null;
+    let targetFoodId = candidate.id;
 
     // Try cache first
     const cached = await getCachedFoodWithRelations(candidate.id);
     if (cached) {
+        targetFoodId = cached.id;
         details = cacheFoodToDetails(cached);
 
         // Check if cache has incomplete data (no nutrition)
@@ -2158,24 +2160,45 @@ export async function hydrateAndSelectServing(
 
         if (!hasNutrition) {
             logger.info('hydrate.cache_incomplete', { foodId: candidate.id, name: cached.displayName });
-            // Cache has food but no nutrition - try fresh API call
-            const freshDetails = await client.getFoodDetails(candidate.id);
-            if (freshDetails && freshDetails.servings?.some(s => s.calories != null)) {
-                details = freshDetails;
-                // Also update the cache with fresh data
-                await ensureFoodCached(candidate.id, { client });
+            // Cache has food but no nutrition - try fresh API call if numeric ID
+            const isNumeric = /^\d+$/.test(candidate.id);
+            if (isNumeric) {
+                try {
+                    const freshDetails = await client.getFoodDetails(candidate.id);
+                    if (freshDetails && freshDetails.servings?.some(s => s.calories != null)) {
+                        details = freshDetails;
+                        // Also update the cache with fresh data
+                        const cachedResult = await ensureFoodCached(candidate.id, { client });
+                        if (cachedResult) {
+                            targetFoodId = cachedResult.food.id;
+                        }
+                    }
+                } catch (err) {
+                    logger.warn('hydrate.fresh_details_failed', { foodId: candidate.id, error: (err as Error).message });
+                }
             }
         }
     }
 
     // Fall back to live API if not in cache at all
     if (!details) {
-        await ensureFoodCached(candidate.id, { client });
-        const refreshed = await getCachedFoodWithRelations(candidate.id);
-        if (refreshed) {
-            details = cacheFoodToDetails(refreshed);
-        } else {
-            details = await client.getFoodDetails(candidate.id);
+        const isNumeric = /^\d+$/.test(candidate.id);
+        if (isNumeric) {
+            try {
+                const cachedResult = await ensureFoodCached(candidate.id, { client });
+                if (cachedResult) {
+                    targetFoodId = cachedResult.food.id;
+                    const refreshed = await getCachedFoodWithRelations(targetFoodId);
+                    if (refreshed) {
+                        details = cacheFoodToDetails(refreshed);
+                    }
+                }
+                if (!details) {
+                    details = await client.getFoodDetails(candidate.id);
+                }
+            } catch (err) {
+                logger.warn('hydrate.live_details_failed', { foodId: candidate.id, error: (err as Error).message });
+            }
         }
     }
 
@@ -2292,7 +2315,7 @@ export async function hydrateAndSelectServing(
                 const factor = heuristicGrams / servingGrams;
                 return {
                     source: candidate.source,
-                    foodId: candidate.id,
+                    foodId: targetFoodId,
                     foodName: candidate.name,
                     brandName: candidate.brandName,
                     servingId: gramServing.id,
@@ -3165,7 +3188,7 @@ export async function hydrateAndSelectServing(
 
     return {
         source: candidate.source,
-        foodId: candidate.id,
+        foodId: targetFoodId,
         foodName: annotatedFoodName,
         brandName: candidate.brandName,
         servingId: serving.id,

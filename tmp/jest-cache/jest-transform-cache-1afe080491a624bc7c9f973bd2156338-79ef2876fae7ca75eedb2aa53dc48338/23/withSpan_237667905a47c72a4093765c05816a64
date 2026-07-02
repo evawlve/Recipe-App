@@ -1,0 +1,11 @@
+1ab0b0f7a9449e8f2c8c6cebd7c736ab
+"use strict";
+// Sentry disabled - can be re-enabled in the future
+// import * as Sentry from "@sentry/nextjs";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.withSpan = withSpan;
+async function withSpan(name, fn) {
+    // Sentry disabled - just execute the function
+    return fn();
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL2hvbWUvZGllZ28vUmVjaXBlLUFwcC9zcmMvbGliL29icy93aXRoU3Bhbi50cyIsIm1hcHBpbmdzIjoiO0FBQUEsb0RBQW9EO0FBQ3BELDRDQUE0Qzs7QUFFNUMsNEJBR0M7QUFITSxLQUFLLFVBQVUsUUFBUSxDQUFJLElBQVksRUFBRSxFQUFvQjtJQUNsRSw4Q0FBOEM7SUFDOUMsT0FBTyxFQUFFLEVBQUUsQ0FBQztBQUNkLENBQUMiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiL2hvbWUvZGllZ28vUmVjaXBlLUFwcC9zcmMvbGliL29icy93aXRoU3Bhbi50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvLyBTZW50cnkgZGlzYWJsZWQgLSBjYW4gYmUgcmUtZW5hYmxlZCBpbiB0aGUgZnV0dXJlXG4vLyBpbXBvcnQgKiBhcyBTZW50cnkgZnJvbSBcIkBzZW50cnkvbmV4dGpzXCI7XG5cbmV4cG9ydCBhc3luYyBmdW5jdGlvbiB3aXRoU3BhbjxUPihuYW1lOiBzdHJpbmcsIGZuOiAoKSA9PiBQcm9taXNlPFQ+KSB7XG4gIC8vIFNlbnRyeSBkaXNhYmxlZCAtIGp1c3QgZXhlY3V0ZSB0aGUgZnVuY3Rpb25cbiAgcmV0dXJuIGZuKCk7XG59XG5cblxuIl0sInZlcnNpb24iOjN9

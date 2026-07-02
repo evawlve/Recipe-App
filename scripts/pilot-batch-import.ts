@@ -294,16 +294,37 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                 // Save mapping to database
                 dbg(`ATTEMPTING CREATE for ${rawLine}`);
                 try {
+                    let fdcId: number | null = null;
+                    let offBarcode: string | null = null;
+                    let aiGeneratedFoodId: string | null = null;
+
+                    const foodId = result.foodId;
+                    if (foodId.startsWith('fdc:')) {
+                        fdcId = parseInt(foodId.split(':')[1], 10);
+                    } else if (foodId.startsWith('fdc_')) {
+                        fdcId = parseInt(foodId.split('_')[1], 10);
+                    } else if (foodId.startsWith('off_')) {
+                        offBarcode = foodId.replace('off_', '');
+                    } else if (result.source === 'ai_generated') {
+                        aiGeneratedFoodId = foodId;
+                    } else {
+                        if (result.source === 'openfoodfacts') {
+                            offBarcode = foodId.replace('off_', '');
+                        } else if (result.source === 'fdc') {
+                            fdcId = parseInt(foodId.replace('fdc_', ''), 10);
+                        } else {
+                            aiGeneratedFoodId = foodId;
+                        }
+                    }
+
                     await prisma.ingredientFoodMap.create({
                         data: {
                             ingredientId: ingredient.id,
-                            fatsecretFoodId: result.foodId,
-                            fatsecretServingId: result.servingId,
-                            fatsecretGrams: result.grams,
-                            fatsecretConfidence: confidence,
-                            fatsecretSource: result.source,
-                            aiGeneratedFoodId: result.source === 'ai_generated' ? result.foodId : undefined,
+                            fdcId,
+                            offBarcode,
+                            aiGeneratedFoodId,
                             mappedBy: 'ai_pilot',
+                            confidence: confidence,
                             isActive: true,
                         },
                     });
@@ -349,16 +370,37 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
 
                         if (confidence >= 0.5) {
                             console.log(`   - ${pending.rawLine}... ✅ (${confidence.toFixed(3)}) - ${result.foodName} [retry]`);
+                            let fdcId: number | null = null;
+                            let offBarcode: string | null = null;
+                            let aiGeneratedFoodId: string | null = null;
+
+                            const foodId = result.foodId;
+                            if (foodId.startsWith('fdc:')) {
+                                fdcId = parseInt(foodId.split(':')[1], 10);
+                            } else if (foodId.startsWith('fdc_')) {
+                                fdcId = parseInt(foodId.split('_')[1], 10);
+                            } else if (foodId.startsWith('off_')) {
+                                offBarcode = foodId.replace('off_', '');
+                            } else if (result.source === 'ai_generated') {
+                                aiGeneratedFoodId = foodId;
+                            } else {
+                                if (result.source === 'openfoodfacts') {
+                                    offBarcode = foodId.replace('off_', '');
+                                } else if (result.source === 'fdc') {
+                                    fdcId = parseInt(foodId.replace('fdc_', ''), 10);
+                                } else {
+                                    aiGeneratedFoodId = foodId;
+                                }
+                            }
+
                             await prisma.ingredientFoodMap.create({
                                 data: {
                                     ingredientId: pending.ingredient.id,
-                                    fatsecretFoodId: result.foodId,
-                                    fatsecretServingId: result.servingId,
-                                    fatsecretGrams: result.grams,
-                                    fatsecretConfidence: confidence,
-                                    fatsecretSource: result.source,
-                                    aiGeneratedFoodId: result.source === 'ai_generated' ? result.foodId : undefined,
+                                    fdcId,
+                                    offBarcode,
+                                    aiGeneratedFoodId,
                                     mappedBy: 'ai_pilot',
+                                    confidence: confidence,
                                     isActive: true,
                                 },
                             });

@@ -1,0 +1,75 @@
+544d6ac75a25ee577e872b663bc5f12a
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const rank_1 = require("../rank");
+test('nonfat cheddar ranks ahead of unrelated', () => {
+    const res = (0, rank_1.rankCandidates)([
+        {
+            food: {
+                id: 'x',
+                name: 'Olive Oil',
+                categoryId: 'oil',
+                source: 'usda',
+                verification: 'verified',
+                kcal100: 884,
+                protein100: 0,
+                carbs100: 0,
+                fat100: 100,
+                popularity: 50
+            },
+            aliases: []
+        },
+        {
+            food: {
+                id: 'y',
+                name: 'Cheese, cheddar, nonfat or fat free',
+                categoryId: 'cheese',
+                source: 'usda',
+                verification: 'verified',
+                kcal100: 280,
+                protein100: 25,
+                carbs100: 2,
+                fat100: 18,
+                popularity: 50
+            },
+            aliases: ['nonfat cheddar']
+        }
+    ], { query: 'nonfat cheddar' });
+    expect(res[0].candidate.food.id).toBe('y');
+});
+test('nonfat milk prefers the milk entry', () => {
+    const res = (0, rank_1.rankCandidates)([
+        {
+            food: {
+                id: 'a',
+                name: 'Greek Yogurt, nonfat',
+                categoryId: 'dairy',
+                source: 'usda',
+                verification: 'verified',
+                kcal100: 200,
+                protein100: 10,
+                carbs100: 5,
+                fat100: 15,
+                popularity: 50
+            },
+            aliases: ['nonfat yogurt']
+        },
+        {
+            food: {
+                id: 'b',
+                name: 'Milk, nonfat',
+                categoryId: 'dairy',
+                source: 'usda',
+                verification: 'verified',
+                kcal100: 34,
+                protein100: 3.4,
+                carbs100: 5,
+                fat100: 0.2,
+                popularity: 50
+            },
+            aliases: ['nonfat milk']
+        }
+    ], { query: 'nonfat milk' });
+    expect(res[0].candidate.food.id).toBe('b');
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL2hvbWUvZGllZ28vUmVjaXBlLUFwcC9zcmMvbGliL2Zvb2RzL19fdGVzdHNfXy9yYW5rLWRhaXJ5LnRlc3QudHMiLCJtYXBwaW5ncyI6Ijs7QUFBQSxrQ0FBeUM7QUFFekMsSUFBSSxDQUFDLHlDQUF5QyxFQUFFLEdBQUcsRUFBRTtJQUNuRCxNQUFNLEdBQUcsR0FBRyxJQUFBLHFCQUFjLEVBQUM7UUFDekI7WUFDRSxJQUFJLEVBQUU7Z0JBQ0osRUFBRSxFQUFFLEdBQUc7Z0JBQ1AsSUFBSSxFQUFFLFdBQVc7Z0JBQ2pCLFVBQVUsRUFBRSxLQUFLO2dCQUNqQixNQUFNLEVBQUUsTUFBTTtnQkFDZCxZQUFZLEVBQUUsVUFBVTtnQkFDeEIsT0FBTyxFQUFFLEdBQUc7Z0JBQ1osVUFBVSxFQUFFLENBQUM7Z0JBQ2IsUUFBUSxFQUFFLENBQUM7Z0JBQ1gsTUFBTSxFQUFFLEdBQUc7Z0JBQ1gsVUFBVSxFQUFFLEVBQUU7YUFDZjtZQUNELE9BQU8sRUFBRSxFQUFFO1NBQ1o7UUFDRDtZQUNFLElBQUksRUFBRTtnQkFDSixFQUFFLEVBQUUsR0FBRztnQkFDUCxJQUFJLEVBQUUscUNBQXFDO2dCQUMzQyxVQUFVLEVBQUUsUUFBUTtnQkFDcEIsTUFBTSxFQUFFLE1BQU07Z0JBQ2QsWUFBWSxFQUFFLFVBQVU7Z0JBQ3hCLE9BQU8sRUFBRSxHQUFHO2dCQUNaLFVBQVUsRUFBRSxFQUFFO2dCQUNkLFFBQVEsRUFBRSxDQUFDO2dCQUNYLE1BQU0sRUFBRSxFQUFFO2dCQUNWLFVBQVUsRUFBRSxFQUFFO2FBQ2Y7WUFDRCxPQUFPLEVBQUUsQ0FBQyxnQkFBZ0IsQ0FBQztTQUM1QjtLQUNGLEVBQUUsRUFBRSxLQUFLLEVBQUUsZ0JBQWdCLEVBQUUsQ0FBQyxDQUFDO0lBRWhDLE1BQU0sQ0FBQyxHQUFHLENBQUMsQ0FBQyxDQUFDLENBQUMsU0FBUyxDQUFDLElBQUksQ0FBQyxFQUFFLENBQUMsQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLENBQUM7QUFDN0MsQ0FBQyxDQUFDLENBQUM7QUFFSCxJQUFJLENBQUMsb0NBQW9DLEVBQUUsR0FBRyxFQUFFO0lBQzlDLE1BQU0sR0FBRyxHQUFHLElBQUEscUJBQWMsRUFBQztRQUN6QjtZQUNFLElBQUksRUFBRTtnQkFDSixFQUFFLEVBQUUsR0FBRztnQkFDUCxJQUFJLEVBQUUsc0JBQXNCO2dCQUM1QixVQUFVLEVBQUUsT0FBTztnQkFDbkIsTUFBTSxFQUFFLE1BQU07Z0JBQ2QsWUFBWSxFQUFFLFVBQVU7Z0JBQ3hCLE9BQU8sRUFBRSxHQUFHO2dCQUNaLFVBQVUsRUFBRSxFQUFFO2dCQUNkLFFBQVEsRUFBRSxDQUFDO2dCQUNYLE1BQU0sRUFBRSxFQUFFO2dCQUNWLFVBQVUsRUFBRSxFQUFFO2FBQ2Y7WUFDRCxPQUFPLEVBQUUsQ0FBQyxlQUFlLENBQUM7U0FDM0I7UUFDRDtZQUNFLElBQUksRUFBRTtnQkFDSixFQUFFLEVBQUUsR0FBRztnQkFDUCxJQUFJLEVBQUUsY0FBYztnQkFDcEIsVUFBVSxFQUFFLE9BQU87Z0JBQ25CLE1BQU0sRUFBRSxNQUFNO2dCQUNkLFlBQVksRUFBRSxVQUFVO2dCQUN4QixPQUFPLEVBQUUsRUFBRTtnQkFDWCxVQUFVLEVBQUUsR0FBRztnQkFDZixRQUFRLEVBQUUsQ0FBQztnQkFDWCxNQUFNLEVBQUUsR0FBRztnQkFDWCxVQUFVLEVBQUUsRUFBRTthQUNmO1lBQ0QsT0FBTyxFQUFFLENBQUMsYUFBYSxDQUFDO1NBQ3pCO0tBQ0YsRUFBRSxFQUFFLEtBQUssRUFBRSxhQUFhLEVBQUUsQ0FBQyxDQUFDO0lBRTdCLE1BQU0sQ0FBQyxHQUFHLENBQUMsQ0FBQyxDQUFDLENBQUMsU0FBUyxDQUFDLElBQUksQ0FBQyxFQUFFLENBQUMsQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLENBQUM7QUFDN0MsQ0FBQyxDQUFDLENBQUMiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiL2hvbWUvZGllZ28vUmVjaXBlLUFwcC9zcmMvbGliL2Zvb2RzL19fdGVzdHNfXy9yYW5rLWRhaXJ5LnRlc3QudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgcmFua0NhbmRpZGF0ZXMgfSBmcm9tICcuLi9yYW5rJztcblxudGVzdCgnbm9uZmF0IGNoZWRkYXIgcmFua3MgYWhlYWQgb2YgdW5yZWxhdGVkJywgKCkgPT4ge1xuICBjb25zdCByZXMgPSByYW5rQ2FuZGlkYXRlcyhbXG4gICAgeyBcbiAgICAgIGZvb2Q6IHsgXG4gICAgICAgIGlkOiAneCcsIFxuICAgICAgICBuYW1lOiAnT2xpdmUgT2lsJywgXG4gICAgICAgIGNhdGVnb3J5SWQ6ICdvaWwnLCBcbiAgICAgICAgc291cmNlOiAndXNkYScsXG4gICAgICAgIHZlcmlmaWNhdGlvbjogJ3ZlcmlmaWVkJyxcbiAgICAgICAga2NhbDEwMDogODg0LFxuICAgICAgICBwcm90ZWluMTAwOiAwLFxuICAgICAgICBjYXJiczEwMDogMCxcbiAgICAgICAgZmF0MTAwOiAxMDAsXG4gICAgICAgIHBvcHVsYXJpdHk6IDUwXG4gICAgICB9LFxuICAgICAgYWxpYXNlczogW11cbiAgICB9LFxuICAgIHsgXG4gICAgICBmb29kOiB7IFxuICAgICAgICBpZDogJ3knLCBcbiAgICAgICAgbmFtZTogJ0NoZWVzZSwgY2hlZGRhciwgbm9uZmF0IG9yIGZhdCBmcmVlJywgXG4gICAgICAgIGNhdGVnb3J5SWQ6ICdjaGVlc2UnLCBcbiAgICAgICAgc291cmNlOiAndXNkYScsXG4gICAgICAgIHZlcmlmaWNhdGlvbjogJ3ZlcmlmaWVkJyxcbiAgICAgICAga2NhbDEwMDogMjgwLFxuICAgICAgICBwcm90ZWluMTAwOiAyNSxcbiAgICAgICAgY2FyYnMxMDA6IDIsXG4gICAgICAgIGZhdDEwMDogMTgsXG4gICAgICAgIHBvcHVsYXJpdHk6IDUwXG4gICAgICB9LFxuICAgICAgYWxpYXNlczogWydub25mYXQgY2hlZGRhciddXG4gICAgfVxuICBdLCB7IHF1ZXJ5OiAnbm9uZmF0IGNoZWRkYXInIH0pO1xuICBcbiAgZXhwZWN0KHJlc1swXS5jYW5kaWRhdGUuZm9vZC5pZCkudG9CZSgneScpO1xufSk7XG5cbnRlc3QoJ25vbmZhdCBtaWxrIHByZWZlcnMgdGhlIG1pbGsgZW50cnknLCAoKSA9PiB7XG4gIGNvbnN0IHJlcyA9IHJhbmtDYW5kaWRhdGVzKFtcbiAgICB7IFxuICAgICAgZm9vZDogeyBcbiAgICAgICAgaWQ6ICdhJywgXG4gICAgICAgIG5hbWU6ICdHcmVlayBZb2d1cnQsIG5vbmZhdCcsIFxuICAgICAgICBjYXRlZ29yeUlkOiAnZGFpcnknLCBcbiAgICAgICAgc291cmNlOiAndXNkYScsXG4gICAgICAgIHZlcmlmaWNhdGlvbjogJ3ZlcmlmaWVkJyxcbiAgICAgICAga2NhbDEwMDogMjAwLFxuICAgICAgICBwcm90ZWluMTAwOiAxMCxcbiAgICAgICAgY2FyYnMxMDA6IDUsXG4gICAgICAgIGZhdDEwMDogMTUsXG4gICAgICAgIHBvcHVsYXJpdHk6IDUwXG4gICAgICB9LFxuICAgICAgYWxpYXNlczogWydub25mYXQgeW9ndXJ0J11cbiAgICB9LFxuICAgIHsgXG4gICAgICBmb29kOiB7IFxuICAgICAgICBpZDogJ2InLCBcbiAgICAgICAgbmFtZTogJ01pbGssIG5vbmZhdCcsIFxuICAgICAgICBjYXRlZ29yeUlkOiAnZGFpcnknLCBcbiAgICAgICAgc291cmNlOiAndXNkYScsXG4gICAgICAgIHZlcmlmaWNhdGlvbjogJ3ZlcmlmaWVkJyxcbiAgICAgICAga2NhbDEwMDogMzQsXG4gICAgICAgIHByb3RlaW4xMDA6IDMuNCxcbiAgICAgICAgY2FyYnMxMDA6IDUsXG4gICAgICAgIGZhdDEwMDogMC4yLFxuICAgICAgICBwb3B1bGFyaXR5OiA1MFxuICAgICAgfSxcbiAgICAgIGFsaWFzZXM6IFsnbm9uZmF0IG1pbGsnXVxuICAgIH1cbiAgXSwgeyBxdWVyeTogJ25vbmZhdCBtaWxrJyB9KTtcbiAgXG4gIGV4cGVjdChyZXNbMF0uY2FuZGlkYXRlLmZvb2QuaWQpLnRvQmUoJ2InKTtcbn0pO1xuIl0sInZlcnNpb24iOjN9
