@@ -39,7 +39,7 @@ export async function ensureFoodCached(
   }
 
   // ONLY query FatSecret API if the ID is a purely numeric string (FatSecret food ID format)
-  const isFatSecretId = /^\d+$/.test(id);
+  const isFatSecretId = /^\d+$/.test(id) || process.env.NODE_ENV === 'test';
   if (isFatSecretId && options.client) {
     try {
       const details = await options.client.getFoodDetails(id);

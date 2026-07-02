@@ -43,6 +43,7 @@ jest.mock('../deferred-hydration');
 jest.mock('../serving-backfill');
 jest.mock('../ai-backfill', () => ({
     insertAiServing: jest.fn(),
+    backfillWeightServing: jest.fn().mockResolvedValue({ success: false, reason: 'skip' }),
 }));
 
 function createServing(overrides: Partial<{
