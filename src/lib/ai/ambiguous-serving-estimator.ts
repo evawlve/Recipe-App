@@ -10,7 +10,7 @@
 import {
     FATSECRET_CACHE_AI_ENABLED,
     FATSECRET_CACHE_AI_BACKFILL_CONFIDENCE_MIN,
-} from '../fatsecret/config';
+} from '../mapping/config';
 import { callStructuredLlm } from './structured-client';
 import { getFdcServingWeight } from '../fdc/fdc-servings';
 import { logger } from '../logger';
@@ -55,6 +55,10 @@ export const AMBIGUOUS_UNITS = new Set([
     'strip', 'strips',
     // Spray/squirt units (for cooking spray, oil sprays)
     'spray', 'sprays', 'squirt', 'squirts',
+    // Micro-volume units (inherently subjective, AI-route preferred)
+    'splash', 'splashes',
+    'drizzle', 'drizzles',
+    'dollop', 'dollops',
 ]);
 
 export interface AmbiguousServingRequest {

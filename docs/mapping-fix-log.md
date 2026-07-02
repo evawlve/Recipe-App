@@ -64,12 +64,12 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 ## Files Modified
 
 - `src/lib/parse/ingredient-line.ts` - Dimension pattern stripping (lines 64-72), fl oz normalization, British→US terms
-- `src/lib/fatsecret/filter-candidates.ts` - Category exclusion rules, `skipIfQueryContains` for tomato guards
+- `src/lib/mapping/filter-candidates.ts` - Category exclusion rules, `skipIfQueryContains` for tomato guards
 - `src/lib/parse/unit.ts` - Added produce units (bunch, head, stalk, sprig, clove, leaf, ear, rib, bulb, crown, floret)
-- `src/lib/fatsecret/simple-rerank.ts` - Rebalanced scoring weights, added category-changing token detection, benign descriptor handling
-- `src/lib/fatsecret/filter-candidates.ts` - Added `hasCoreTokenMismatch()` for cache validation
-- `src/lib/fatsecret/map-ingredient-with-fallback.ts` - Added core token validation to all cache lookup paths
-- `src/lib/fatsecret/validated-mapping-helpers.ts` - Added core token validation to normalized cache lookups
+- `src/lib/mapping/simple-rerank.ts` - Rebalanced scoring weights, added category-changing token detection, benign descriptor handling
+- `src/lib/mapping/filter-candidates.ts` - Added `hasCoreTokenMismatch()` for cache validation
+- `src/lib/mapping/map-ingredient-with-fallback.ts` - Added core token validation to all cache lookup paths
+- `src/lib/mapping/validated-mapping-helpers.ts` - Added core token validation to normalized cache lookups
 
 ### Additional Fixes (Same Session)
 
@@ -101,7 +101,7 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Fix | Created `ai-parse.ts` with `aiParseIngredient` as fallback when unit detection fails |
 | Trigger | When regex parser returns `unit: null` but input matches `/\d+\s*(floz|oz|cup|tbsp|tsp|...)/` |
 | Test | `"1 5 floz serving red wine"` → `{qty: 5, unit: "floz", name: "red wine"}` → "Red Table Wine" (147g, 125kcal) |
-| File | `src/lib/fatsecret/ai-parse.ts`, integrated in `map-ingredient-with-fallback.ts` line 280 |
+| File | `src/lib/mapping/ai-parse.ts`, integrated in `map-ingredient-with-fallback.ts` line 280 |
 
 ---
 
@@ -223,7 +223,7 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Root Cause | Stale cache entries from before scoring improvements were not being rejected. Cache validation only checked category/modifier mismatches, not whether core ingredient tokens were present in cached food name |
 | Examples | "vegetable bouillon" → "Raw Vegetable" (missing "bouillon"), "golden flaxseed" → "Golden Delicious Apples" (missing "flaxseed") |
 | Fix | Added `hasCoreTokenMismatch()` function in `filter-candidates.ts` that validates core ingredient tokens (50+ proteins, grains, produce, seasonings) exist in cached food name. Uses synonym mapping (e.g., "marrows" → "zucchini", "flaxseed" → "flax"). Applied to ALL cache lookup paths in `map-ingredient-with-fallback.ts` and `validated-mapping-helpers.ts` |
-| Files | `src/lib/fatsecret/filter-candidates.ts`, `src/lib/fatsecret/map-ingredient-with-fallback.ts`, `src/lib/fatsecret/validated-mapping-helpers.ts` |
+| Files | `src/lib/mapping/filter-candidates.ts`, `src/lib/mapping/map-ingredient-with-fallback.ts`, `src/lib/mapping/validated-mapping-helpers.ts` |
 | Test | `hasCoreTokenMismatch('vegetable bouillon', 'Raw Vegetable')` → true (reject), `hasCoreTokenMismatch('vegetable bouillon', 'Vegetable Bouillon')` → false (accept), `hasCoreTokenMismatch('baby marrows', 'Baby Zucchini')` → false (accept via synonym) |
 
 ### Fix 27: Cache Key Fix When AI Normalize is Skipped (2026-01-23)
@@ -232,7 +232,7 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Root Cause | When `shouldNormalizeLlm()` decides to skip the AI call, `aiCanonicalBase` remains `undefined`. The save then falls back to `normalizeQuery(rawInput)` which does minimal cleaning, resulting in cache keys like `"0 311625 cup ground golden flaxseed meal"` instead of `"golden flaxseed meal"` |
 | Example | Input: `"0.311625 cup ground golden flaxseed meal"` → `normalize_gate.skipped_llm` → `normalizedForm` saved as `"0 311625 cup ground golden flaxseed meal"` (bad!) |
 | Fix | When saving to cache, use `aiCanonicalBase || normalizedName` where `normalizedName` is from `normalizeIngredientName()` which properly strips prep phrases. This ensures cache keys are always canonical forms like `"golden flaxseed meal"` |
-| Files | `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 1240-1250, 1285) |
+| Files | `src/lib/mapping/map-ingredient-with-fallback.ts` (lines 1240-1250, 1285) |
 | Before | `normalizedForm: "0 311625 cup ground golden flaxseed meal"` |
 | After | `normalizedForm: "golden flaxseed meal"` ✓ |
 
@@ -263,7 +263,7 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Examples | `"canned pineapple"` → `"canned pineapple"` ✅ | `"pineapple, canned"` → `"pineapple"` ✅ |
 | Before | `"Crushed Tomatoes"` → normalized to `"Tomatoes"` → API search `"Tomatoes"` → Winner: raw Tomatoes (0.592) → LOW_CONF |
 | After | `"Crushed Tomatoes"` → normalized to `"Crushed Tomatoes"` → API search `"Crushed Tomatoes"` → Winner: Crushed Tomatoes (Tuttorosso) (1.365) → **0.98 confidence** |
-| Files | `src/lib/fatsecret/normalization-rules.ts` |
+| Files | `src/lib/mapping/normalization-rules.ts` |
 | Test | `normalizeIngredientName("Canned Pineapple")` → `"Canned Pineapple"` (preserved) |
 | Test | `normalizeIngredientName("chopped onion")` → `"onion"` (stripped, "chopped" is prep) |
 
@@ -281,7 +281,7 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Fix | Added regex extraction in `selectServing()` to parse count from serving descriptions: `^(\d+)\s+(small|medium|large|extra\s*large)`. Extracts the count (e.g., "10" from "10 large") and uses it as `unitsPerServing`. |
 | Formula | Before: `gramsPerUnit = 46g / 1 = 46g each` → After: `gramsPerUnit = 46g / 10 = 4.6g each` |
 | Result | `finalGrams = 4.6g * 10 = 46g` ✅ |
-| Files | `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 2021-2048) |
+| Files | `src/lib/mapping/map-ingredient-with-fallback.ts` (lines 2021-2048) |
 | Test | `"10 large black olives"` → 46g (was 460g), `"8 medium red peppers"` → 952g (was 80g) |
 
 ### Fix 30: Yeast Variant Preference
@@ -290,10 +290,10 @@ This document tracks fixes applied to the ingredient mapping pipeline for future
 | Root Cause | Both "Bakers Yeast (Compressed)" and "Bakers Yeast (Active Dry)" returned from FatSecret with identical confidence (1.000). Compressed listed first in API results. Margin check failed (both 1.000), forcing `simpleRerank` which kept Compressed. |
 | Investigation | Compressed yeast comes in "cakes" (17g), Active Dry comes in "packets" (7g). Home bakers use packets, not fresh cakes. |
 | Fix | Added explicit preference in `confidenceGate()`: when query contains "yeast" and both "Compressed" and "Active Dry" are candidates, return Active Dry immediately with 0.95 confidence, bypassing margin check. |
-| Files | `src/lib/fatsecret/gather-candidates.ts` (lines 369-394) |
+| Files | `src/lib/mapping/gather-candidates.ts` (lines 369-394) |
 | Before | `"1 package bakers yeast"` → Compressed → 131kcal/125g |
 | After | `"1 package bakers yeast"` → Active Dry → 20kcal/7g ✅ |
-| Side Effect | Also deleted bad AI serving `ai_39077_package` (125g for Compressed) from FatSecretServingCache |
+| Side Effect | Also deleted bad AI serving `ai_39077_package` (125g for Compressed) from FdcServing |
 
 ### Fix 31: Live Candidate Core Token Validation
 | Issue | `"5 oz dry brown rice"` → `"dry brown (0% moisture) beans"` (completely wrong food) |
@@ -369,7 +369,7 @@ Run `npx tsx scripts/test-mapping-fixes.ts` to verify all fixes.
 ## 2026-02-23: Systemic Scoring Defects (simple-rerank.ts)
 
 **Source**: `mapping-summary-2026-02-11T17-25-24.txt` (200-recipe pilot, 2114 ingredients)
-**File**: `src/lib/fatsecret/simple-rerank.ts`
+**File**: `src/lib/mapping/simple-rerank.ts`
 
 Root cause was in `computeSimpleScore()` — three distinct defects allowing wrong prepared/processed food candidates to outscore the correct raw ingredient.
 
@@ -419,7 +419,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 ## 2026-02-23 (Part 2): FDC Source Bias Removal (simple-rerank.ts)
 
 **Source**: Follow-up investigation — `"1 plum tomato"` still failing after Fix 36 due to source scoring bias
-**File**: `src/lib/fatsecret/simple-rerank.ts`
+**File**: `src/lib/mapping/simple-rerank.ts`
 
 ### Fix 38: Reduce FatSecret Source Bonus
 
@@ -455,7 +455,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 
 ## 2026-02-23 (Part 3): Ingredient Line Parser + Cache Tooling
 
-**File**: `src/lib/parse/ingredient-line.ts`, `scripts/clear-ingredient-cache.ts`, `src/lib/fatsecret/simple-rerank.ts`
+**File**: `src/lib/parse/ingredient-line.ts`, `scripts/clear-ingredient-cache.ts`, `src/lib/mapping/simple-rerank.ts`
 
 ### Fix 41: Strip Alternative-Measurement Noise After Dash
 
@@ -485,7 +485,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 
 | Tool | `scripts/clear-ingredient-cache.ts` |
 |------|--------------------------------------|
-| Purpose | Clear `ValidatedMapping`, `IngredientFoodMap`, and `AiNormalizeCache` for specific ingredient terms without nuking the entire cache |
+| Purpose | Clear `FoodMapping`, `IngredientFoodMap`, and `AiNormalizeCache` for specific ingredient terms without nuking the entire cache |
 | Usage | `npx tsx scripts/clear-ingredient-cache.ts "mint" "canellini" "plum tomato"` |
 | Why | Enables verifying fixes via full pipeline (without `--skip-cache`) on just the affected ingredients |
 
@@ -496,7 +496,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Root Cause | `selectServing` used `numberOfUnits` from the DB to divide `servingWeightGrams`. FatSecret frequently omits this field (`numberOfUnits=0` or null) for count-based servings. When a serving description reads "5 grape tomatoes = 123g", `unitsPerServing` defaulted to 1, giving `gramsPerUnit=123`. Multiplied by `qty=20` → 2460g. |
 | Pre-existing partial fix | The `size_qualifiers` path (small/medium/large) already had a regex that extracted the count from the description (`/^(\d+)\s+(small|medium|large)/`). That path used `gramsPerUnit = grams / extractedCount`. The main return path did not. |
 | Fix | Extended the same count-extraction regex (`/^(\d+)\s+\S/`) to the **final `unitsPerServing` computation** in `selectServing` at the bottom of the function. Now, any serving whose description starts with a number (e.g., "5 grape tomatoes", "3 crackers") correctly divides by that count. |
-| File | `src/lib/fatsecret/map-ingredient-with-fallback.ts` |
+| File | `src/lib/mapping/map-ingredient-with-fallback.ts` |
 | Script | `scripts/test-grape-tomatoes.ts` — verifies fix |
 | Expected result | `"20 grape tomatoes"` → ~300–600g total (≈15–30g per tomato) |
 
@@ -508,7 +508,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Introduced by | Removing FatSecret source bias (Feb 2026). FatSecret's old +0.15 blanket bonus previously kept its popcorn candidates ahead of FDC dairy. Once both sources competed equally the latent filter flaw became decisive. |
 | Root Cause | `deriveMustHaveTokens("low fat popcorn")` returned `["low"]` because `"low"` was not in `MODIFIER_TOKENS`. `"low fat buttermilk"` passed trivially (it contains `"low"`); `"popcorn"` was never required. Separately, `"Lowfat Popcorn Popped in Oil"` (the best FatSecret candidate) was eliminated because `"lowfat"` (compound) ≠ token `"low"`, leaving only weaker FatSecret entries that the FDC +0.03 tiebreaker then overcame. |
 | Fix | `deriveMustHaveTokens` in `filter-candidates.ts`: (1) Added `'low', 'high', 'no', 'non', 'zero'` to `MODIFIER_TOKENS`. (2) Changed `slice(0,1)` → `slice(0,2)` — requires up to 2 core food noun tokens. `coreTokens=["popcorn"]` → buttermilk rejected at filter. |
-| File | `src/lib/fatsecret/filter-candidates.ts` |
+| File | `src/lib/mapping/filter-candidates.ts` |
 | Result | `"1 oz low fat popcorn"` → `"Oil Popped Popcorn (Low Fat)"` ✅ |
 | General principle | Fixes the whole class of `"[qualifier] [noun]"` queries. No hand-curated category-change list needed. |
 
@@ -539,7 +539,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Issue | `"2 freshly garlic"` → Freshly Chile-Garlic Pork Bowl (920kcal branded meal) |
 | Root Cause | `MODIFIER_TOKENS` had `'fresh'` but not `'freshly'` (adverb form). `deriveMustHaveTokens` kept `'freshly'` as a must-have token, filtering out all real garlic entries. Only branded "Freshly" meal products survived. |
 | Fix | Added `'freshly'` to `MODIFIER_TOKENS` in `deriveMustHaveTokens` (`filter-candidates.ts`) |
-| File | `src/lib/fatsecret/filter-candidates.ts` (L2367) |
+| File | `src/lib/mapping/filter-candidates.ts` (L2367) |
 | Result | `"2 freshly garlic"` → **raw garlic** (30g, 42.9 kcal) ✅ |
 
 ### Fix 50: Default-Ripeness Penalty for Green Tomato Candidates
@@ -549,7 +549,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Issue | `"Petite Tomatoes"` → green raw tomatoes (unripe/specialty item) |
 | Root Cause | `getAttributeContradictionPenalty` only fired when query explicitly specified a color. "Petite tomatoes" has no color → no penalty for "green" candidates. FDC "green raw tomatoes" (0.552) outscored "grape raw tomatoes" (0.477) on token overlap. |
 | Fix | Added default-ripeness penalty block in `getAttributeContradictionPenalty` (`simple-rerank.ts`): when query mentions `ASSUMED_RED_FOODS` (tomato/tomatoes) without specifying a color, apply 50% of `ATTRIBUTE_CONTRADICTION_PENALTY` to candidates containing `\bgreen\b`. |
-| File | `src/lib/fatsecret/simple-rerank.ts` (~L436) |
+| File | `src/lib/mapping/simple-rerank.ts` (~L436) |
 | Result | `"petite tomatoes"` → **grape raw tomatoes** (123g) ✅ |
 | Note | 50% penalty is intentionally softer to preserve explicit "green tomatoes" queries. `ASSUMED_RED_FOODS` list is extensible. |
 
@@ -569,7 +569,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Fix | Detail |
 |-----|--------|
 | B6 green peppers | Color contradiction filter + `MIN_RERANK_CONFIDENCE` 0.74→0.70 + fallback `!winner` guard (3 files) |
-| A1 dill regression | Cleared stale ValidatedMapping + AiNormalizeCache for "dill" → now maps to Dill herb |
+| A1 dill regression | Cleared stale FoodMapping + AiNormalizeCache for "dill" → now maps to Dill herb |
 | D1 strawberry halves | Fixed `-y→-ies` plural mismatch in `hasCoreTokenMismatch` regex |
 
 ### Change Index
@@ -595,7 +595,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Affected | 12+ summary lines (6 oil types × 2 attempts each) |
 | Root Cause | `hasNullOrInvalidMacros` rejects foods where `calories > 50 && protein === 0 && carbs === 0`. Designed to catch corrupted data (e.g., red lentils with P:0, C:0, F:2.86, kcal:314). But **pure oils legitimately have 0 protein, 0 carbs** — they are 100% fat (~860-930 kcal/100g). All 20 coconut oil candidates were killed by this filter. |
 | Fix | Added fat-exemption: when `fat > 50` (per 100g), the food is a pure fat/oil, and P=0/C=0 is valid nutritional data. |
-| File | `src/lib/fatsecret/filter-candidates.ts` (L1397) |
+| File | `src/lib/mapping/filter-candidates.ts` (L1397) |
 | Before | `if ((protein ?? 0) === 0 && (carbs ?? 0) === 0) return true;` |
 | After | `if ((protein ?? 0) === 0 && (carbs ?? 0) === 0 && fatValue <= 50) return true;` |
 | Result | `"coconut oil"` → **Organic Virgin Coconut Oil (Spectrum)** (0.765) ✅ |
@@ -608,7 +608,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Issue | `"1 medium potato"` → 0.00 confidence (no candidates survived) |
 | Root Cause | `INGREDIENT_MACRO_PROFILES` had `maxFatPer100g: 1` for potatoes. FDC reports raw potato at 2.4g fat/100g → flagged as `suspicious_macros` → rejected. After cooking-state filter removed baked/boiled/roasted variants, core token filter eliminated remaining branded candidates. |
 | Fix | Raised `maxFatPer100g` from 1 to 5 for the vegetables profile. |
-| File | `src/lib/fatsecret/filter-candidates.ts` (L1141) |
+| File | `src/lib/mapping/filter-candidates.ts` (L1141) |
 | Result | `"1 medium potato"` → **Potato** (1.000) ✅ |
 
 ### Fix 54: Strawberry Halves — "halves" Treated as Must-Have Token
@@ -618,7 +618,7 @@ Root cause was in `computeSimpleScore()` — three distinct defects allowing wro
 | Issue | `"2 cup strawberry halves"` → 0.00 confidence (18 candidates, 0 survived) |
 | Root Cause | `deriveMustHaveTokens("strawberry halves")` produced `["strawberry", "halves"]`. "halves" is a cut-shape descriptor, NOT a food identity token. No API candidate name contains "halves" → ALL 18 candidates rejected. Previous D1 fix (`-y→-ies` plural support) was correct but irrelevant — the actual failure was the must-have token filter. |
 | Fix | Added `'half', 'halves', 'quarter', 'quarters', 'third', 'thirds'` to `MODIFIER_TOKENS` in `deriveMustHaveTokens`. |
-| File | `src/lib/fatsecret/filter-candidates.ts` (L2369) |
+| File | `src/lib/mapping/filter-candidates.ts` (L2369) |
 | Result | `"strawberry halves"` → **Strawberries** (0.980) ✅ |
 
 ### Fix 55: Compound Word + Brand Spelling Normalization
@@ -911,7 +911,7 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 ## 2026-04-03: Anomaly Resolution Session (Pre-500 Pilot Part 2)
 
 **Source**: Audit logs for weight bloat and semantic anomalies.
-**Files**: src/lib/fatsecret/normalization-rules.ts, src/lib/fatsecret/map-ingredient-with-fallback.ts
+**Files**: src/lib/mapping/normalization-rules.ts, src/lib/mapping/map-ingredient-with-fallback.ts
 
 ### Fix 76: Semantic Inversion for Spices (Thyme, Mustard)
 | Field | Detail |
@@ -942,7 +942,7 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 |---|----------|-------------|
 | 76 | Synonym | Added overrides for ground thyme and spice blend mustard |
 | 77 | Parser & FDC | Intercepted FDC unitless queries with UNIT_HEURISTIC_DEFAULTS to catch parser trailing units |
-| 78 | Cache Mgt | Cleared bare queries from ValidatedMapping |
+| 78 | Cache Mgt | Cleared bare queries from FoodMapping |
 | 79 | Heuristic | Applied spray heuristic universally |
 
 ---
@@ -950,7 +950,7 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 ## 2026-04-05: Anomaly Resolution Session (Pre-500 Pilot Part 3)
 
 **Source**: Final hardening checks prior to 500-recipe pilot import.
-**Files**: src/lib/fatsecret/map-ingredient-with-fallback.ts, scripts/clear-ingredient-cache.ts
+**Files**: src/lib/mapping/map-ingredient-with-fallback.ts, scripts/clear-ingredient-cache.ts
 
 ### Fix 80: Unitless Discrete Produce Parsing Bug (e.g. Eggs)
 | Field | Detail |
@@ -970,8 +970,8 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 | Field | Detail |
 |-------|--------|
 | Issue | The `earlyCacheHit` block at line 496 did not respect the `options.skipCache: true` argument. Fixing pipeline rules didn't affect cached results in the local debug script. |
-| Root Cause | The argument was missing from the check: `const earlyCacheHit = await getValidatedMappingByNormalizedName()`. |
-| Fix | Replaced with `const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName()`. |
+| Root Cause | The argument was missing from the check: `const earlyCacheHit = await getFoodMappingByNormalizedName()`. |
+| Fix | Replaced with `const earlyCacheHit = skipCache ? null : await getFoodMappingByNormalizedName()`. |
 
 ### Change Index (Fixes 80-82)
 | # | Category | Description |
@@ -987,7 +987,7 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 ## 2026-04-07: Phase 3 Pipeline Hardening
 
 **Source**: 500-recipe pilot import summary review.
-**Files**: src/lib/fatsecret/map-ingredient-with-fallback.ts, src/lib/ai/ambiguous-serving-estimator.ts, data/fatsecret/normalization-rules.json
+**Files**: src/lib/mapping/map-ingredient-with-fallback.ts, src/lib/ai/ambiguous-serving-estimator.ts, data/fatsecret/normalization-rules.json
 
 ### Fix 83: 404 Outage on FatSecret / OpenRouter Model Fallback
 | Field | Detail |
@@ -1026,7 +1026,7 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 ## 2026-04-14: Phase 4 Pipeline Hardening (Audit Anomalies)
 
 **Source**: 500-recipe pilot import summary review.
-**Files**: `src/lib/fatsecret/filter-candidates.ts`, `src/lib/servings/default-count-grams.ts`, `data/fatsecret/normalization-rules.json`
+**Files**: `src/lib/mapping/filter-candidates.ts`, `src/lib/servings/default-count-grams.ts`, `data/fatsecret/normalization-rules.json`
 
 ### Fix 87: Reverted Semantic Inversions in Synonyms
 | Field | Detail |
@@ -1065,7 +1065,7 @@ Fix 55 brand synonyms + Fix 56 liquid in MODIFIER_TOKENS combined to resolve Spl
 ## 2026-04-17: Phase 5 AI Fallback Hardening (Audit Anomalies)
 
 **Source**: `logs/grouped-mapping-summary-2026-04-16T07-11-38.txt` - Pilot batch manual chunk review.
-**File**: `src/lib/fatsecret/ai-nutrition-backfill.ts`
+**File**: `src/lib/mapping/ai-nutrition-backfill.ts`
 
 ### Fix 91: Explicit Fat Modifier Constraints in AI Fallback
 | Field | Detail |

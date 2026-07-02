@@ -8,9 +8,9 @@ Implemented 3 mapping fixes from `mapping-summary-2026-01-10T03-00-36.txt` analy
 
 | Fix | File | Status |
 |-----|------|--------|
-| Ambiguous unit backfill integration | [map-ingredient-with-fallback.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/map-ingredient-with-fallback.ts#L1192-L1248) | ✅ Committed |
-| Dish term penalty (cheesecake, cupcake, pancake) | [gather-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/gather-candidates.ts#L1097) | ✅ Committed |
-| Ice/water zero-calorie early exit | [map-ingredient-with-fallback.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/map-ingredient-with-fallback.ts#L190-L231) | ✅ Committed |
+| Ambiguous unit backfill integration | [map-ingredient-with-fallback.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/map-ingredient-with-fallback.ts#L1192-L1248) | ✅ Committed |
+| Dish term penalty (cheesecake, cupcake, pancake) | [gather-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/gather-candidates.ts#L1097) | ✅ Committed |
+| Ice/water zero-calorie early exit | [map-ingredient-with-fallback.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/map-ingredient-with-fallback.ts#L190-L231) | ✅ Committed |
 
 **Commit:** `b951eaf` - "fix: add 3 mapping fixes - ambiguous unit backfill, dish term penalty, ice/water zero-cal"
 
@@ -84,13 +84,13 @@ npx tsx scripts/debug-mapping-issue.ts "2 cup stberry halves"
 
 | File | Changes |
 |------|---------|
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | +import ambiguous unit backfill, +ice/water early exit, +ambiguous unit handling in hydrateAndSelectServing |
-| `src/lib/fatsecret/gather-candidates.ts` | +cheesecake/cupcake/pancake to DISH_TERMS |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | +import ambiguous unit backfill, +ice/water early exit, +ambiguous unit handling in hydrateAndSelectServing |
+| `src/lib/mapping/gather-candidates.ts` | +cheesecake/cupcake/pancake to DISH_TERMS |
 | `scripts/test-mapping-fixes.ts` | New test script for verifying fixes |
 
 ## Related Files for Investigation
 
-- [ai-normalize.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/ai-normalize.ts) - AI normalization logic
-- [gather-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/gather-candidates.ts) - Candidate gathering and scoring
-- [simple-rerank.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/simple-rerank.ts) - Final reranking
-- [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts) - Candidate filtering
+- [ai-normalize.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/ai-normalize.ts) - AI normalization logic
+- [gather-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/gather-candidates.ts) - Candidate gathering and scoring
+- [simple-rerank.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/simple-rerank.ts) - Final reranking
+- [filter-candidates.ts](file:///C:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts) - Candidate filtering

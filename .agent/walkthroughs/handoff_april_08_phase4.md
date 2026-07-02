@@ -7,7 +7,7 @@
 In the previous session, we hardened the ingredient mapping pipeline to handle strict false modifiers and massive weight bloat:
 1. **Lettuce Guard**: Created `getDiscreteLeafyGreenDefault` internally to manage discrete leaf overrides, stopping "8 lettuce" from calculating to 4000g of massive head weights.
 2. **Late-Binding Macro Constraints**: Found that FatSecret searches hide actual macros UNTIL the `food.get.v2` hydration phase. Items like "Fat Free Parmesan Cheese" were passing the early filter layer but possessed 11.5g of fat once hydrated. We injected `hasCriticalModifierMismatch` a *second* time intimately inside `hydrateAndSelectServing` to intercept and safely `null` reject any hydrated constraints that violate macros. 
-3. **Cache Purge**: The test cases were successfully verified directly against script logic running `tmp/test-fixes.ts` after deeply cleaning all poisoned caching metrics from `ValidatedMapping` inside `scripts/clear-cache-variations.ts`.
+3. **Cache Purge**: The test cases were successfully verified directly against script logic running `tmp/test-fixes.ts` after deeply cleaning all poisoned caching metrics from `FoodMapping` inside `scripts/clear-cache-variations.ts`.
 
 ## Your Mission
 The newest mapping summary (`mapping-summary-2026-04-08T01-16-20.txt`) has been generated following the execution of our Phase 3 hardening. Your objective is to formally audit this file and review the pipeline's overall architecture against expected resolutions.

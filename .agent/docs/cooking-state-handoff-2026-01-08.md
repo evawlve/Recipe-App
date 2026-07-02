@@ -33,7 +33,7 @@ npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/r
 ## Key Files Modified
 
 ### Core Logic
-- **`src/lib/fatsecret/filter-candidates.ts`** - Cooking state filter implementation
+- **`src/lib/mapping/filter-candidates.ts`** - Cooking state filter implementation
   - `FOODS_WITH_COOKING_STATE` array (line ~235) - expanded to include meats, seafood, eggs, vegetables
   - `detectGrainCookingContext()` (line ~291) - detects cooking keywords in query
   - `isWrongCookingStateForGrain()` (line ~320) - rejects candidates with wrong cooking state

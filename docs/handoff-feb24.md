@@ -24,17 +24,17 @@ The debug script has **two modes** and they diverge:
 
 **Rule: Always verify fixes with `--production` mode AND a fresh pilot import. Debug mode is for _understanding_ the scoring, not for _validating_ fixes.**
 
-### Bug 2: The `--skip-cache` flag only controls Step 3 (ValidatedMapping cache)
+### Bug 2: The `--skip-cache` flag only controls Step 3 (FoodMapping cache)
 
-When you run `debug-mapping-pipeline.ts "dill" --skip-cache`, all it does is skip the `getValidatedMapping()` lookup at Step 3. But:
+When you run `debug-mapping-pipeline.ts "dill" --skip-cache`, all it does is skip the `getFoodMapping()` lookup at Step 3. But:
 - Step 4 Gather **always** skips cache (bug — `skipCache: true` is hardcoded in default mode)
-- The **food/serving caches** (`FatSecretFoodCache`, `FatSecretServingCache`, `FdcServingCache`) are never cleared
+- The **food/serving caches** (`FdcFood`, `FdcServing`, `FdcServingCache`) are never cleared
 - The **IngredientFoodMap** entries from previous pilot imports persist
 
-So after a fix, if you debug with `--skip-cache` and it looks good, but then run a pilot import, the import may still hit stale `ValidatedMapping` rows or stale food caches. **You must clear caches before verifying:**
+So after a fix, if you debug with `--skip-cache` and it looks good, but then run a pilot import, the import may still hit stale `FoodMapping` rows or stale food caches. **You must clear caches before verifying:**
 
 ```powershell
-npx tsx scripts/clear-all-mappings.ts                  # Clears ValidatedMapping + IngredientFoodMap + AiNormalizeCache
+npx tsx scripts/clear-all-mappings.ts                  # Clears FoodMapping + IngredientFoodMap + AiNormalizeCache
 npx tsx scripts/clear-ingredient-cache.ts "ingredient"  # Clears per-term food/serving cache
 ```
 
@@ -227,7 +227,7 @@ See **A2** above. Root cause: FDC now wins via Fix 47/48, but FDC's serving path
 
 ### D1: "Strawberry Halves" — 8 recipe pairs failing
 
-Most likely cause: "halves" is a cut-shape token (added to `BENIGN_DESCRIPTOR_TOKENS` in Fix 43) but may still be appearing in `mustHaveTokens`. Or the FatSecret API returns zero relevant results for "strawberry halves" and the word "halves" is causing search voids.
+Most likely cause: "halves" is a cut-shape token (added to `BENIGN_DESCRIPTOR_TOKENS` in Fix 43) but may still be appearing in `mustHaveTokens`. Or the local FDC/OFF databases returns zero relevant results for "strawberry halves" and the word "halves" is causing search voids.
 
 ```powershell
 npx tsx scripts/debug-mapping-pipeline.ts "1 cup strawberry halves" --skip-cache --verbose
@@ -302,10 +302,10 @@ Same `conf 1.00` but ✗ pattern as D7. Check if the AI serving estimator is fai
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/filter-candidates.ts` | Token filtering, modifier mismatch, macro checks |
-| `src/lib/fatsecret/simple-rerank.ts` | Scoring weights, token overlap, produce tiebreaker |
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Main pipeline, `selectServing`, FDC hydration |
-| `src/lib/fatsecret/deferred-hydration.ts` | Background hydration queue |
+| `src/lib/mapping/filter-candidates.ts` | Token filtering, modifier mismatch, macro checks |
+| `src/lib/mapping/simple-rerank.ts` | Scoring weights, token overlap, produce tiebreaker |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | Main pipeline, `selectServing`, FDC hydration |
+| `src/lib/mapping/deferred-hydration.ts` | Background hydration queue |
 | `scripts/debug-mapping-pipeline.ts` | Per-ingredient pipeline debugger |
 | `docs/mapping-fix-log.md` | Full history of all 48 fixes |
 | `logs/mapping-summary-2026-02-24T17-39-05.txt` | Current 300-recipe import results (188KB) |

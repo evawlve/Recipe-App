@@ -31,24 +31,24 @@
 
 | Pattern | Example |
 |---------|---------|
-| Cache tables | `FatSecretFoodCache`, `FdcServingCache` |
+| Cache tables | `FdcFood`, `OffFood` |
 | Override tables | `PortionOverride`, `UserPortionOverride` |
-| Mapping tables | `ValidatedMapping`, `IngredientFoodMap` |
+| Mapping tables | `FoodMapping`, `IngredientFoodMap` |
 | Learning tables | `LearnedSynonym`, `AiNormalizeCache` |
 
 ### Foreign Keys
 
-> ⚠️ **Critical**: FDC foods use integer `fdcId`, FatSecret uses string `foodId`. Never mix these.
+> ⚠️ **Critical**: FDC foods use integer `fdcId`, OFF uses string `barcode`. Never mix these.
 
 ```typescript
 // FDC: Integer ID
-model FdcServingCache {
-  fdcId Int  // Foreign key to FdcFoodCache.id
+model FdcServing {
+  fdcId Int  // Foreign key to FdcFood.fdcId
 }
 
-// FatSecret: String ID  
-model FatSecretServingCache {
-  foodId String  // Foreign key to FatSecretFoodCache.id
+// OFF: String Barcode  
+model OffServing {
+  barcode String  // Foreign key to OffFood.barcode
 }
 ```
 
@@ -86,8 +86,8 @@ npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/r
 
 ### Cache Behavior
 
-1. **ValidatedMapping** uses `normalizedForm` as primary lookup key (not raw ingredient)
-2. Clear mappings with `scripts/clear-all-mappings.ts` before testing changes
+1. **FoodMapping** uses `normalizedForm` as primary lookup key (not raw ingredient)
+2. Clear mappings with `scripts/clear-auto-mappings.ts` before testing changes
 3. Cache entries persist across recipes—one mapping serves all users
 
 ### Common Pitfalls
@@ -126,12 +126,12 @@ Read the grouped file using `view_file` with `StartLine`/`EndLine`. Watch for:
 ### Step 3: Document & fix
 
 Write findings to a `mapping_audit_results.md` artifact; then create an implementation plan targeting:
-- `src/lib/fatsecret/normalization-rules.ts` — synonym rewrites
+- `src/lib/mapping/normalization-rules.ts` — synonym rewrites
 - `src/lib/parse/unit.ts` — micro-unit types (`drop`, `second`)
 - `src/lib/units/unit-graph.ts` — ml equivalents for new units
 - `src/lib/servings/default-count-grams.ts` — gram seed data
 - `src/lib/ai/ambiguous-serving-estimator.ts` — packet routing
-- `src/lib/fatsecret/filter-candidates.ts` — negative category guards
+- `src/lib/mapping/filter-candidates.ts` — negative category guards
 
 See [Mapping Audit Review](.agent/workflows/mapping-audit-review.md) for the full step-by-step workflow.
 
@@ -159,7 +159,7 @@ npm test
 Instead, create a fast verification script (e.g. `tmp/test-fixes.ts`) to hit the pipeline directly:
 
 ```typescript
-import { mapIngredientWithFallback } from '../src/lib/fatsecret/map-ingredient-with-fallback';
+import { mapIngredientWithFallback } from '../src/lib/mapping/map-ingredient-with-fallback';
 
 async function test() {
   const result = await mapIngredientWithFallback('0.5 tsp nutmeg');

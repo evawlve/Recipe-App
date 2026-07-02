@@ -32,7 +32,7 @@ await prisma.fdcServingCache.create({ data: { fdcId: 12345, ... } })
 await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 ```
 
-**Files**: `src/lib/fatsecret/ai-backfill.ts`
+**Files**: `src/lib/mapping/ai-backfill.ts`
 
 ---
 
@@ -46,7 +46,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Added call to `hasSuspiciousMacros()` in `filterCandidatesByTokens()` function
 
-**Files**: `src/lib/fatsecret/filter-candidates.ts`
+**Files**: `src/lib/mapping/filter-candidates.ts`
 
 ---
 
@@ -59,7 +59,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 **Fix**: Added to preserved modifiers in AI system prompt:
 - `unsweetened`, `sweetened`, `no sugar added`
 
-**Files**: `src/lib/fatsecret/ai-normalize.ts`
+**Files**: `src/lib/mapping/ai-normalize.ts`
 
 ---
 
@@ -73,7 +73,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 - Reduced penalty from 0.3 → 0.1
 - Added logic: only penalize brands that don't have full query token coverage
 
-**Files**: `src/lib/fatsecret/simple-rerank.ts`
+**Files**: `src/lib/mapping/simple-rerank.ts`
 
 ---
 
@@ -102,7 +102,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
    - Was: Allow +2 extra tokens with no penalty
    - Now: Allow only +1 extra token with no penalty
 
-**Files**: `src/lib/fatsecret/simple-rerank.ts`
+**Files**: `src/lib/mapping/simple-rerank.ts`
 
 **Test Cases**:
 ```bash
@@ -126,7 +126,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Added `banana pepper` and `(banana && pepper)` pattern to `isVegetablePepper` check.
 
-**Files**: `src/lib/fatsecret/filter-candidates.ts` (line ~252)
+**Files**: `src/lib/mapping/filter-candidates.ts` (line ~252)
 
 ---
 
@@ -140,7 +140,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 1. Added frozen meal brands: Healthy Choice, Pizza Hut, Lundberg, Stouffers, Lean Cuisine, etc.  
 2. Added new `CATEGORY_EXCLUSIONS` for cinnamon, seasoning blends, and zucchini.
 
-**Files**: `src/lib/fatsecret/filter-candidates.ts` (lines ~510, ~880)
+**Files**: `src/lib/mapping/filter-candidates.ts` (lines ~510, ~880)
 
 ---
 
@@ -152,7 +152,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Changed to word-boundary regex matching: `new RegExp(\`\\b${excl}\\b\`).test(candidateLower)` — this prevents partial matches while still catching actual "paste" terms.
 
-**Files**: `src/lib/fatsecret/filter-candidates.ts` (isCategoryMismatch function, ~line 1140)
+**Files**: `src/lib/mapping/filter-candidates.ts` (isCategoryMismatch function, ~line 1140)
 
 ---
 
@@ -164,7 +164,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Added `CATEGORY_EXCLUSIONS` rule for compound tomato+chili queries (e.g., "tomatoes and green chili") that excludes candidates containing "raw". Scoped to explicit compound patterns to avoid affecting simple "tomatoes" queries where FDC "tomatoes red ripe raw" IS correct.
 
-**Files**: `src/lib/fatsecret/filter-candidates.ts` (CATEGORY_EXCLUSIONS array, ~line 840)
+**Files**: `src/lib/mapping/filter-candidates.ts` (CATEGORY_EXCLUSIONS array, ~line 840)
 
 ---
 
@@ -176,7 +176,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Added AI-backed sanity check: when `gramsPerUnit > 50g` for count units, triggers `backfillOnDemand(foodId, 'count', unit)` to get an AI-estimated per-piece weight. Same approach for whole produce items with `grams < 30g` (avocado → 10g slice fix).
 
-**Files**: `src/lib/fatsecret/map-ingredient.ts` (lines ~1067-1130)
+**Files**: `src/lib/mapping/map-ingredient.ts` (lines ~1067-1130)
 
 ---
 
@@ -188,7 +188,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Modified the condition for `fallbackMatch` to strictly ONLY allow `requestedUnitType === 'mass'` or `unknown` queries that actually declare a string (like "packet"). Unitless queries with `!effectiveUnit` bypass `fallbackMatch` entirely, which allows them to hit the dedicated `(!effectiveUnit)` pipeline. This results in standard unitless AI estimation via `ambiguous-unit-backfill`, hitting the proper seed dictionaries from `default-count-grams.ts` giving accurate (e.g., 89g) per item weights.
 
-**Files**: `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 3679)
+**Files**: `src/lib/mapping/map-ingredient-with-fallback.ts` (lines 3679)
 
 ---
 
@@ -202,9 +202,9 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 1. Deleted the harmful sour cream to regular sour cream rewrite from normalization-rules.json
 2. The existing fat-level exclusion rules in filter-candidates.ts already handled sour cream fat differentiation
 3. Cleared 21 poisoned AiNormalizeCache entries containing regular sour cream
-4. Cleared 52 ValidatedMapping entries for all affected ingredients
+4. Cleared 52 FoodMapping entries for all affected ingredients
 
-**Files**: `data/fatsecret/normalization-rules.json`, `src/lib/fatsecret/filter-candidates.ts`
+**Files**: `data/fatsecret/normalization-rules.json`, `src/lib/mapping/filter-candidates.ts`
 
 ---
 
@@ -216,7 +216,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 
 **Fix**: Added 5 targeted CATEGORY_EXCLUSIONS entries to prevent branded product drift while preserving correct matches for actual branded queries.
 
-**Files**: `src/lib/fatsecret/filter-candidates.ts`
+**Files**: `src/lib/mapping/filter-candidates.ts`
 
 ---
 
@@ -237,7 +237,7 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 /\braw\b/gi
 ```
 
-**Files**: `src/lib/fatsecret/normalization-rules.ts`
+**Files**: `src/lib/mapping/normalization-rules.ts`
 
 ---
 
@@ -267,17 +267,17 @@ await prisma.fatSecretServingCache.create({ data: { foodId: "abc123", ... } })
 const sorted = patterns.sort((a, b) => b.length - a.length);
 ```
 
-**Files**: `src/lib/fatsecret/normalization-rules.ts`
+**Files**: `src/lib/mapping/normalization-rules.ts`
 
 ---
 
 ## API & Caching
 
-### Stale ValidatedMapping Cache
+### Stale FoodMapping Cache
 
 **Date**: Jan 2026  
 **Symptom**: Debug script shows correct mapping, but batch import still fails  
-**Root Cause**: Old `ValidatedMapping` entry returning stale cached result
+**Root Cause**: Old `FoodMapping` entry returning stale cached result
 
 **Fix**: Clear mappings before testing:
 ```bash
@@ -309,8 +309,8 @@ npx ts-node scripts/clear-all-mappings.ts
    - `map-ingredient.ts` (old function still used by `resolve-ingredient.ts`)
 
 **Files**: 
-- `src/lib/fatsecret/map-ingredient-with-fallback.ts` (lines 1240-1250, 1285)
-- `src/lib/fatsecret/map-ingredient.ts` (line 1369)
+- `src/lib/mapping/map-ingredient-with-fallback.ts` (lines 1240-1250, 1285)
+- `src/lib/mapping/map-ingredient.ts` (line 1369)
 
 ---
 
@@ -332,9 +332,9 @@ npx ts-node scripts/clear-all-mappings.ts
 4. Applied to ALL cache lookup paths in both mapping functions
 
 **Files**: 
-- `src/lib/fatsecret/filter-candidates.ts` (added `CORE_FOOD_TOKENS`, `CORE_TOKEN_SYNONYMS`, `hasCoreTokenMismatch()`)
-- `src/lib/fatsecret/map-ingredient-with-fallback.ts` (6+ cache lookup points)
-- `src/lib/fatsecret/validated-mapping-helpers.ts`
+- `src/lib/mapping/filter-candidates.ts` (added `CORE_FOOD_TOKENS`, `CORE_TOKEN_SYNONYMS`, `hasCoreTokenMismatch()`)
+- `src/lib/mapping/map-ingredient-with-fallback.ts` (6+ cache lookup points)
+- `src/lib/mapping/validated-mapping-helpers.ts`
 
 ---
 
@@ -351,7 +351,7 @@ npx ts-node scripts/clear-all-mappings.ts
 
 **Files**: 
 - `src/lib/ai/ambiguous-serving-estimator.ts`
-- `src/lib/fatsecret/ambiguous-unit-backfill.ts`
+- `src/lib/mapping/ambiguous-unit-backfill.ts`
 
 ---
 

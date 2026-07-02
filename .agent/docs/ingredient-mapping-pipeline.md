@@ -32,7 +32,7 @@
 ```mermaid
 flowchart TD
     subgraph Input
-        A[Raw Ingredient Line] --> B{Check ValidatedMapping Cache}
+        A[Raw Ingredient Line] --> B{Check FoodMapping Cache}
     end
     
     subgraph Cache_Hit["Cache Hit Path"]
@@ -52,7 +52,7 @@ flowchart TD
         K --> L[Select Best Match]
         L --> M[Hydrate to Cache]
         M --> N[Backfill Missing Servings]
-        N --> O[Save to ValidatedMapping]
+        N --> O[Save to FoodMapping]
         O --> D
     end
 ```
@@ -71,7 +71,7 @@ flowchart TD
 
 | Table | Purpose |
 |-------|---------|
-| `ValidatedMapping` | Maps ingredient → food with both raw line and normalized form |
+| `FoodMapping` | Maps ingredient → food with both raw line and normalized form |
 | `IngredientFoodMap` | Links recipe ingredients to nutrition data |
 | `AiNormalizeCache` | Caches AI-generated ingredient simplifications |
 
@@ -79,12 +79,12 @@ flowchart TD
 
 | Table | Purpose |
 |-------|---------|
-| `FatSecretFoodCache` | Cached FatSecret food entries |
-| `FatSecretServingCache` | Serving sizes for FatSecret foods |
+| `FdcFood` | Cached FatSecret food entries |
+| `FdcServing` | Serving sizes for FatSecret foods |
 | `FdcFoodCache` | Cached USDA FoodData Central entries |
 | `FdcServingCache` | Serving sizes for FDC foods (uses `fdcId` as Int) |
 
-> **Important**: FDC foods use `FdcServingCache` with integer `fdcId`. FatSecret foods use `FatSecretServingCache` with string `foodId`. Never mix these.
+> **Important**: FDC foods use `FdcServingCache` with integer `fdcId`. FatSecret foods use `FdcServing` with string `foodId`. Never mix these.
 
 ### Support Tables
 
@@ -105,7 +105,7 @@ Cache lookup uses **normalized form** as the primary key, eliminating "selection
 Input: "2 cups chopped onions"
 
 1. Basic normalize → "onion" (strip qty, unit, prep phrases)
-2. Check ValidatedMapping for normalizedForm match ← PRIMARY LOOKUP
+2. Check FoodMapping for normalizedForm match ← PRIMARY LOOKUP
 3. If found → Use cached foodId, proceed to serving selection
 4. If not found → Continue to full pipeline
 5. On success → Save mapping keyed by normalizedForm
@@ -179,7 +179,7 @@ flowchart LR
 ### Phase 3: Candidate Gathering
 
 1. Build search queries with singular/plural variants
-2. Search FatSecret API (parallel)
+2. Search local FDC/OFF databases (parallel)
 3. Search FDC API (parallel)
 4. Merge candidates from both sources
 
@@ -201,7 +201,7 @@ flowchart LR
 1. Hydrate winner to food cache
 2. Cache servings
 3. AI Backfill missing servings (count/volume/weight)
-4. Save to ValidatedMapping
+4. Save to FoodMapping
 
 ### Phase 6: Serving Selection
 
@@ -323,7 +323,7 @@ Units that have variable weights depending on brand/context require AI estimatio
 1. `selectServing()` returns `null` for ambiguous units (skips unreliable API data)
 2. `backfillOnDemand()` is also skipped (prevents generic serving creation)
 3. AI estimates weight based on food name and unit context
-4. Result saved to `FatSecretServingCache` (for FatSecret foods) or used inline (for FDC foods)
+4. Result saved to `FdcServing` (for FatSecret foods) or used inline (for FDC foods)
 
 **Before/After Examples:**
 | Input | Before | After |
@@ -374,7 +374,7 @@ if (!result && isWeightUnit && winner.source === 'fatsecret') {
 
 | Layer | Purpose |
 |-------|---------|
-| `ValidatedMapping` | Fast path for known mappings |
+| `FoodMapping` | Fast path for known mappings |
 | `*FoodCache` | Food data (FatSecret/FDC) |
 | `*ServingCache` | Serving data |
 | `AiNormalizeCache` | Normalization results |
@@ -435,16 +435,16 @@ Critical modifiers kept for accurate matching:
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Main entry point |
-| `src/lib/fatsecret/gather-candidates.ts` | Searches APIs |
-| `src/lib/fatsecret/filter-candidates.ts` | Exclusion rules, token filtering |
-| `src/lib/fatsecret/ai-rerank.ts` | AI-powered reranking |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | Main entry point |
+| `src/lib/mapping/gather-candidates.ts` | Searches APIs |
+| `src/lib/mapping/filter-candidates.ts` | Exclusion rules, token filtering |
+| `src/lib/mapping/ai-rerank.ts` | AI-powered reranking |
 
 ### Normalization
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/normalization-rules.ts` | Prep phrase stripping, synonym rewrites |
+| `src/lib/mapping/normalization-rules.ts` | Prep phrase stripping, synonym rewrites |
 | `data/fatsecret/normalization-rules.json` | JSON config with prep phrases |
 | `src/lib/parse/ingredient-line.ts` | Parses raw ingredient |
 
@@ -452,11 +452,11 @@ Critical modifiers kept for accurate matching:
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/serving-backfill.ts` | On-demand serving backfill |
-| `src/lib/fatsecret/ambiguous-unit-backfill.ts` | AI estimation for ambiguous units |
+| `src/lib/mapping/serving-backfill.ts` | On-demand serving backfill |
+| `src/lib/mapping/ambiguous-unit-backfill.ts` | AI estimation for ambiguous units |
 | `src/lib/ai/serving-estimator.ts` | AI serving size estimation |
 | `src/lib/ai/ambiguous-serving-estimator.ts` | AI prompt/schema for ambiguous units |
-| `src/lib/fatsecret/unit-type.ts` | Unit classification |
+| `src/lib/mapping/unit-type.ts` | Unit classification |
 
 ### Recipe Import
 
@@ -873,7 +873,7 @@ AI normalize now returns additional fields:
 ```bash
 # Verify token bloat penalty
 npx ts-node -e "
-const { getTokenBloatPenalty } = require('./src/lib/fatsecret/simple-rerank');
+const { getTokenBloatPenalty } = require('./src/lib/mapping/simple-rerank');
 console.log('2→4 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese'));
 console.log('2→5 tokens:', getTokenBloatPenalty('chilli peppers', 'Chilli Peppers Cream Cheese VIOLIFE Product'));
 "
@@ -917,7 +917,7 @@ for (const recipeChunk of recipeChunks) {
 
 ### 2. Skip-on-Lock Pattern
 
-**File**: `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+**File**: `src/lib/mapping/map-ingredient-with-fallback.ts`
 
 Prevents blocking when multiple threads map the same ingredient:
 
@@ -938,7 +938,7 @@ Batch import retries pending items after first pass to ensure all are mapped.
 
 ### 3. Fire-and-Forget Deferred Hydration
 
-**File**: `src/lib/fatsecret/deferred-hydration.ts`
+**File**: `src/lib/mapping/deferred-hydration.ts`
 
 Runner-up candidates hydrate **immediately** when scored — no blocking:
 
@@ -953,7 +953,7 @@ export function queueForDeferredHydration(candidates, excludeId, servingContext)
 
 ### 4. Preemptive Serving Backfill
 
-**File**: `src/lib/fatsecret/serving-backfill.ts`
+**File**: `src/lib/mapping/serving-backfill.ts`
 
 Pre-fills common serving options based on food type for rich manual mapping UX:
 
@@ -975,7 +975,7 @@ Pre-fills common serving options based on food type for rich manual mapping UX:
 
 #### Produce Detection
 
-**File**: `src/lib/fatsecret/serving-backfill.ts`
+**File**: `src/lib/mapping/serving-backfill.ts`
 
 ```typescript
 const PRODUCE_PATTERNS = [
@@ -1104,7 +1104,7 @@ AI Call Summary:
 
 ### LLM Normalize Gate
 
-**File**: `src/lib/fatsecret/normalize-gate.ts`
+**File**: `src/lib/mapping/normalize-gate.ts`
 
 The gate evaluates candidate quality before calling AI normalization:
 
@@ -1218,7 +1218,7 @@ flowchart LR
 
 ### Configuration
 
-**File**: `src/lib/fatsecret/config.ts`
+**File**: `src/lib/mapping/config.ts`
 
 ```typescript
 // Local LLM configuration
@@ -1281,7 +1281,7 @@ npx tsx scripts/backfill-servings-local.ts --cache fdc
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/config.ts` | Ollama configuration variables |
+| `src/lib/mapping/config.ts` | Ollama configuration variables |
 | `src/lib/ai/structured-client.ts` | Provider chain with Ollama first |
 | `scripts/backfill-servings-local.ts` | Batch backfill using local LLM |
 | `scripts/test-ollama-integration.ts` | Integration test script |
@@ -1328,7 +1328,7 @@ export const SIZE_ALIASES: Record<string, string> = {
 
 ### 2. Noise Word Filtering
 
-**File**: `src/lib/fatsecret/gather-candidates.ts`
+**File**: `src/lib/mapping/gather-candidates.ts`
 
 Added `NOISE_WORDS` filter to `assessConfidence()` to prevent false token matches:
 
@@ -1343,7 +1343,7 @@ These words are skipped when calculating token overlap confidence.
 
 ### 3. Strict Dietary Constraint Filter
 
-**File**: `src/lib/fatsecret/filter-candidates.ts`
+**File**: `src/lib/mapping/filter-candidates.ts`
 
 New function `isDietaryConstraintViolation()` that REJECTS ALL meat/seafood candidates for vegetarian/vegan queries:
 

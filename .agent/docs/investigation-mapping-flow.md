@@ -18,19 +18,19 @@ The pilot-batch-import script was modified to use `mapIngredientWithFallback` in
 - Likely creates/updates `IngredientFoodMap` records
 
 ### mapIngredientWithFallback (Unified API)
-**File:** `src/lib/fatsecret/map-ingredient-with-fallback.ts`
+**File:** `src/lib/mapping/map-ingredient-with-fallback.ts`
 
 - Used by: `pilot-batch-import.ts` for testing
 - Entry point: Direct ingredient line to food mapping
 - Features:
-  - Unified candidate gathering (Cache + FatSecret API + FDC)
+  - Unified candidate gathering (Cache + local FDC/OFF databases + FDC)
   - AI reranking for best candidate selection
   - Deferred hydration (only winner hydrated immediately)
   - Serving selection with AI backfill
   - `skipAiValidation` option to bypass AI validation
 
 ### mapIngredientWithFatsecret (Legacy)
-**File:** `src/lib/fatsecret/map-ingredient.ts`
+**File:** `src/lib/mapping/map-ingredient.ts`
 
 - Older API, still exists
 - Does NOT have `skipAiValidation` option
@@ -47,7 +47,7 @@ The pilot-batch-import script was modified to use `mapIngredientWithFallback` in
 mapped = await mapIngredientWithFatsecret(cleanedLine, {...});
 ```
 
-This is the **legacy API** from `src/lib/fatsecret/map-ingredient.ts`, NOT `mapIngredientWithFallback`.
+This is the **legacy API** from `src/lib/mapping/map-ingredient.ts`, NOT `mapIngredientWithFallback`.
 
 ### 2. Are they using the same underlying pipeline?
 
@@ -85,8 +85,8 @@ Mitigation in place: `BATCH_SIZE=5` for parallel processing
 ## Files to Review
 
 - `src/lib/nutrition/auto-map.ts` - Entry point for production mapping
-- `src/lib/fatsecret/map-ingredient-with-fallback.ts` - Unified mapping API
-- `src/lib/fatsecret/map-ingredient.ts` - Legacy mapping API
+- `src/lib/mapping/map-ingredient-with-fallback.ts` - Unified mapping API
+- `src/lib/mapping/map-ingredient.ts` - Legacy mapping API
 - `scripts/pilot-batch-import.ts` - Test script (modified this session)
 
 ## Latest Pilot Import Results (5 recipes)

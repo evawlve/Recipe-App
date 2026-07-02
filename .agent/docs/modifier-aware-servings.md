@@ -49,13 +49,13 @@ model FdcServingCache {
   - etc.
 - AI prompt now includes modifier context and density hints
 
-### 3. AI Backfill (`src/lib/fatsecret/ai-backfill.ts`)
+### 3. AI Backfill (`src/lib/mapping/ai-backfill.ts`)
 
 - Updated `InsertAiServingOptions` to accept `prepModifier`
 - FDC servings now store `volumeMl`, `densityGml`, `prepModifier`
 - Uses upsert with unique constraint on `(fdcId, description)`
 
-### 4. Pre-emptive Backfill Helper (`src/lib/fatsecret/preemptive-backfill.ts`)
+### 4. Pre-emptive Backfill Helper (`src/lib/mapping/preemptive-backfill.ts`)
 
 New utility module providing:
 
@@ -64,7 +64,7 @@ New utility module providing:
 - **Modifier extraction**: `extractPrepModifier()` function
 - **Pre-emptive generation**: `generatePreemptiveServings()` for batch processing
 
-### 5. Mapping Pipeline (`src/lib/fatsecret/map-ingredient-with-fallback.ts`)
+### 5. Mapping Pipeline (`src/lib/mapping/map-ingredient-with-fallback.ts`)
 
 - Extracts prep modifier from `parsed.qualifiers` or raw ingredient line
 - Passes modifier to all `insertAiServing()` calls
@@ -165,9 +165,9 @@ extractPrepModifier('1/2 cup packed spinach');  // → 'packed'
 |------|---------|
 | `prisma/schema.prisma` | Added FDC density fields |
 | `src/lib/ai/serving-estimator.ts` | Added prepModifier support |
-| `src/lib/fatsecret/ai-backfill.ts` | Updated for both sources |
-| `src/lib/fatsecret/preemptive-backfill.ts` | **NEW** - Category mappings & utilities |
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Integrated modifier extraction |
+| `src/lib/mapping/ai-backfill.ts` | Updated for both sources |
+| `src/lib/mapping/preemptive-backfill.ts` | **NEW** - Category mappings & utilities |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | Integrated modifier extraction |
 
 ---
 

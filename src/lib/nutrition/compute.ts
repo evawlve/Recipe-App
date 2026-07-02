@@ -5,8 +5,86 @@ import { logger } from '../logger';
 import { HEALTH_SCORE_V2, ENABLE_PORTION_V2 } from '../flags';
 import { scoreV2 } from './score-v2';
 import { resolvePortion, PortionSource } from './portion';
-import { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } from '../fatsecret/config';
-import { buildServingOptionsForCacheFood, extractCacheNutrients } from '../fatsecret/cache-search';
+import { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } from '../mapping/config';
+import { deriveServingOptions } from '../units/servings';
+
+function resolveFoodNutritionAndServings(foodId: string, resolvedFood: any) {
+  let nutrients: any = null;
+  let servingOptions: Array<{ label: string; grams: number }> = [];
+  let densityGml: number | null = null;
+
+  if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
+    nutrients = resolvedFood.nutrientsPer100g;
+    const units = (resolvedFood.servings || []).map((s: any) => ({
+      label: s.description,
+      grams: s.grams,
+    }));
+    for (const s of resolvedFood.servings || []) {
+      if (s.grams && s.volumeMl && s.volumeMl > 0) {
+        densityGml = s.grams / s.volumeMl;
+      }
+    }
+    const derived = deriveServingOptions({
+      units,
+      densityGml: densityGml ?? undefined,
+      categoryId: null,
+    });
+    servingOptions = derived.length > 0 ? derived : [{ label: '100 g', grams: 100 }];
+  } else if (foodId.startsWith('off_')) {
+    nutrients = resolvedFood.nutrientsPer100g;
+    const units = (resolvedFood.servings || []).map((s: any) => ({
+      label: s.description,
+      grams: s.grams,
+    }));
+    for (const s of resolvedFood.servings || []) {
+      if (s.grams && s.volumeMl && s.volumeMl > 0) {
+        densityGml = s.grams / s.volumeMl;
+      }
+    }
+    const derived = deriveServingOptions({
+      units,
+      densityGml: densityGml ?? undefined,
+      categoryId: null,
+    });
+    servingOptions = derived.length > 0 ? derived : [{ label: '100 g', grams: 100 }];
+  } else {
+    nutrients = {
+      calories: resolvedFood.caloriesPer100g,
+      protein: resolvedFood.proteinPer100g,
+      carbs: resolvedFood.carbsPer100g,
+      fat: resolvedFood.fatPer100g,
+      fiber: resolvedFood.fiberPer100g,
+      sugar: resolvedFood.sugarPer100g,
+    };
+    const units = (resolvedFood.servings || []).map((s: any) => ({
+      label: s.label,
+      grams: s.grams,
+    }));
+    for (const s of resolvedFood.servings || []) {
+      if (s.grams && s.volumeMl && s.volumeMl > 0) {
+        densityGml = s.grams / s.volumeMl;
+      }
+    }
+    const derived = deriveServingOptions({
+      units,
+      densityGml: densityGml ?? undefined,
+      categoryId: null,
+    });
+    servingOptions = derived.length > 0 ? derived : [{ label: '100 g', grams: 100 }];
+  }
+
+  const rawNutrients = nutrients || {};
+  return {
+    calories: rawNutrients.calories ?? rawNutrients.energy ?? rawNutrients.kcal ?? 0,
+    protein: rawNutrients.protein ?? 0,
+    carbs: rawNutrients.carbohydrate ?? rawNutrients.carbs ?? 0,
+    fat: rawNutrients.fat ?? 0,
+    fiber: rawNutrients.fiber ?? 0,
+    sugar: rawNutrients.sugar ?? 0,
+    servingOptions,
+    densityGml,
+  };
+}
 
 export interface NutritionTotals {
   calories: number;
@@ -192,10 +270,10 @@ export async function computeTotals(
       .filter(map => map.isActive)  // FIX: Only consider active mappings
       .slice()
       .sort((a, b) => {
-        const aConf = (a as any).fatsecretConfidence ?? a.confidence ?? 0;
-        const bConf = (b as any).fatsecretConfidence ?? b.confidence ?? 0;
-        const aIsFat = Boolean((a as any).fatsecretFoodId);
-        const bIsFat = Boolean((b as any).fatsecretFoodId);
+        const aConf = a.confidence ?? 0;
+        const bConf = b.confidence ?? 0;
+        const aIsFat = Boolean(a.fdcId || a.offBarcode || a.aiGeneratedFoodId);
+        const bIsFat = Boolean(b.fdcId || b.offBarcode || b.aiGeneratedFoodId);
         if (aIsFat !== bIsFat) return aIsFat ? -1 : 1;
         return bConf - aConf;
       });
@@ -207,8 +285,14 @@ export async function computeTotals(
   const mappedFatsecretIds = Array.from(
     new Set(
       ingredientContexts
-        .map((ctx) => (ctx.bestMapping as any)?.fatsecretFoodId as string | undefined)
-        .filter(Boolean),
+        .map((ctx) => {
+          const bestMapping = ctx.bestMapping;
+          return bestMapping?.fdcId ? `fdc_${bestMapping.fdcId}`
+            : bestMapping?.offBarcode ? `off_${bestMapping.offBarcode}`
+            : bestMapping?.aiGeneratedFoodId ? bestMapping.aiGeneratedFoodId
+            : undefined;
+        })
+        .filter((id): id is string => Boolean(id)),
     ),
   );
   const mappedFoodIds = Array.from(
@@ -219,35 +303,53 @@ export async function computeTotals(
     ),
   );
 
-  const validFatsecretIds = mappedFatsecretIds.filter((id): id is string => id !== undefined);
-  const cacheOrConditions: any[] = [];
-  
-  if (validFatsecretIds.length > 0) {
-    cacheOrConditions.push({ id: { in: validFatsecretIds } });
-  }
-  if (preferFatsecretCache && mappedFoodIds.length > 0) {
-    cacheOrConditions.push({ legacyFoodId: { in: mappedFoodIds } });
+  const fdcIds = new Set<number>();
+  const offBarcodes = new Set<string>();
+  const aiGeneratedIds = new Set<string>();
+
+  mappedFatsecretIds.forEach(id => {
+    if (id.startsWith('fdc:')) {
+      const parsedId = parseInt(id.split(':')[1], 10);
+      if (!isNaN(parsedId)) fdcIds.add(parsedId);
+    } else if (id.startsWith('fdc_')) {
+      const parsedId = parseInt(id.split('_')[1], 10);
+      if (!isNaN(parsedId)) fdcIds.add(parsedId);
+    } else if (id.startsWith('off_')) {
+      const barcode = id.replace('off_', '');
+      offBarcodes.add(barcode);
+    } else {
+      aiGeneratedIds.add(id);
+    }
+  });
+
+  // Fetch from consolidated tables
+  let fdcFoods: Record<number, any> = {};
+  let offFoods: Record<string, any> = {};
+  let aiGeneratedFoods: Record<string, any> = {};
+
+  if (fdcIds.size > 0) {
+    const foods = await prisma.fdcFood.findMany({
+      where: { fdcId: { in: Array.from(fdcIds) } },
+      include: { servings: true }
+    });
+    foods.forEach(f => fdcFoods[f.fdcId] = f);
   }
 
-  const fatsecretCacheLookup =
-    cacheOrConditions.length > 0
-      ? await prisma.fatSecretFoodCache.findMany({
-        where: { OR: cacheOrConditions },
-        include: {
-          servings: true,
-          densityEstimates: true,
-          aliases: true,
-        },
-      })
-      : [];
-  const fatsecretCacheById = new Map(fatsecretCacheLookup.map((f) => [f.id, f]));
-  const fatsecretCacheByLegacyId = new Map(
-    preferFatsecretCache
-      ? fatsecretCacheLookup
-        .filter((f) => f.legacyFoodId)
-        .map((f) => [f.legacyFoodId as string, f])
-      : [],
-  );
+  if (offBarcodes.size > 0) {
+    const foods = await prisma.offFood.findMany({
+      where: { barcode: { in: Array.from(offBarcodes) } },
+      include: { servings: true }
+    });
+    foods.forEach(f => offFoods[f.barcode] = f);
+  }
+
+  if (aiGeneratedIds.size > 0) {
+    const foods = await prisma.aiGeneratedFood.findMany({
+      where: { id: { in: Array.from(aiGeneratedIds) } },
+      include: { servings: true }
+    });
+    foods.forEach(f => aiGeneratedFoods[f.id] = f);
+  }
 
   let userOverridesMap: Map<string, Array<{ unit: string; grams: number; label: string | null }>> | null = null;
   if (usePortionV2 && userId) {
@@ -304,26 +406,42 @@ export async function computeTotals(
   }
 
   const { parseIngredientLine } = await import('../parse/ingredient-line');
-  const { deriveServingOptions } = await import('../units/servings');
   const { resolveGramsFromParsed } = await import('./resolve-grams');
 
   for (const { ingredient, bestMapping } of ingredientContexts) {
 
-    const fatsecretFoodId = (bestMapping as any)?.fatsecretFoodId as string | undefined;
+    const fatsecretFoodId = bestMapping?.fdcId ? `fdc_${bestMapping.fdcId}`
+      : bestMapping?.offBarcode ? `off_${bestMapping.offBarcode}`
+      : bestMapping?.aiGeneratedFoodId ? bestMapping.aiGeneratedFoodId
+      : undefined;
     if (fatsecretFoodId) {
       if (portionStats) {
         portionStats.totalIngredients += 1;
       }
-      const cacheFood = fatsecretCacheById.get(fatsecretFoodId);
+
+      let cacheFood: any = null;
+      if (fatsecretFoodId.startsWith('fdc:') || fatsecretFoodId.startsWith('fdc_')) {
+        const id = fatsecretFoodId.startsWith('fdc:')
+          ? parseInt(fatsecretFoodId.split(':')[1], 10)
+          : parseInt(fatsecretFoodId.split('_')[1], 10);
+        cacheFood = fdcFoods[id];
+      } else if (fatsecretFoodId.startsWith('off_')) {
+        const barcode = fatsecretFoodId.replace('off_', '');
+        cacheFood = offFoods[barcode];
+      } else {
+        cacheFood = aiGeneratedFoods[fatsecretFoodId];
+      }
+
       if (!cacheFood) {
         unmappedCount++;
         continue;
       }
 
-      const nutrients = extractCacheNutrients(cacheFood as any);
-      const { servingOptions, densityGml } = buildServingOptionsForCacheFood(cacheFood as any);
+      const resolvedInfo = resolveFoodNutritionAndServings(fatsecretFoodId, cacheFood);
+      const servingOptions = resolvedInfo.servingOptions;
+      const densityGml = resolvedInfo.densityGml;
 
-      let grams: number | null = (bestMapping as any).fatsecretGrams ?? null;
+      let grams: number | null = null;
 
       const ingredientLine = ingredient.unit
         ? `${ingredient.qty} ${ingredient.unit} ${ingredient.name}`
@@ -354,12 +472,12 @@ export async function computeTotals(
       }
 
       const multiplier = grams / 100;
-      const kcal100 = nutrients?.calories ?? 0;
-      const protein100 = nutrients?.protein ?? 0;
-      const carbs100 = nutrients?.carbs ?? 0;
-      const fat100 = nutrients?.fat ?? 0;
-      const fiber100 = nutrients?.fiber ?? 0;
-      const sugar100 = nutrients?.sugar ?? 0;
+      const kcal100 = resolvedInfo.calories;
+      const protein100 = resolvedInfo.protein;
+      const carbs100 = resolvedInfo.carbs;
+      const fat100 = resolvedInfo.fat;
+      const fiber100 = resolvedInfo.fiber;
+      const sugar100 = resolvedInfo.sugar;
 
       const ingredientCalories = kcal100 * multiplier;
       totals.calories += ingredientCalories;
@@ -371,7 +489,7 @@ export async function computeTotals(
 
       totalCal += ingredientCalories;
 
-      const confidence = (bestMapping as any).fatsecretConfidence ?? bestMapping.confidence ?? 0;
+      const confidence = bestMapping.confidence ?? 0;
       const isUseOnce = bestMapping.useOnce || false;
       if (confidence < 0.5 || isUseOnce) {
         lowConfCal += ingredientCalories;
@@ -379,7 +497,8 @@ export async function computeTotals(
 
       if (portionStats) {
         portionStats.resolvedCount += 1;
-        portionStats.bySource['fatsecret'] = (portionStats.bySource['fatsecret'] || 0) + 1;
+        const source = bestMapping.offBarcode ? 'openfoodfacts' : bestMapping.fdcId ? 'fdc' : 'ai_generated';
+        portionStats.bySource[source] = (portionStats.bySource[source] || 0) + 1;
         portionConfidenceSum += confidence;
         if (recordSamples && portionStats.sample.length < 5) {
           portionStats.sample.push({
@@ -405,20 +524,11 @@ export async function computeTotals(
         portionStats.totalIngredients += 1;
       }
       const food = bestMapping.food;
-      const cacheFood = preferFatsecretCache ? fatsecretCacheByLegacyId.get(food.id) : undefined;
-      const cacheServingData = cacheFood ? buildServingOptionsForCacheFood(cacheFood as any) : null;
-      const cacheUnits =
-        cacheServingData?.servingOptions?.map((opt) => ({ label: opt.label, grams: opt.grams })) ??
-        null;
-      const cacheDensity = cacheServingData?.densityGml ?? undefined;
-      const cacheMacros = cacheFood ? extractCacheNutrients(cacheFood as any) : null;
-      if (preferFatsecretCache) {
-        if (cacheFood) {
-          cacheNutritionHits += 1;
-        } else {
-          cacheNutritionMisses += 1;
-        }
-      }
+      const cacheFood = undefined;
+      const cacheServingData = null;
+      const cacheUnits = null;
+      const cacheDensity = undefined;
+      const cacheMacros: any = null;
 
       let grams: number;
       const ingredientLine = ingredient.unit
@@ -600,14 +710,7 @@ export async function computeTotals(
     result.portionStats = portionStats;
   }
 
-  if (preferFatsecretCache) {
-    logger.info('fatsecret.nutrition.cache_usage', {
-      cacheMode: FATSECRET_CACHE_MODE,
-      mappedFoods: mappedFoodIds.length,
-      cacheHits: cacheNutritionHits,
-      cacheMisses: cacheNutritionMisses,
-    });
-  }
+
 
   return result;
 }
@@ -780,7 +883,7 @@ export async function getUnmappedIngredients(recipeId: string): Promise<Array<{ 
   });
 
   return ingredients
-    .filter(ing => ing.foodMaps.every(m => !(m as any).fatsecretFoodId && !m.foodId))
+    .filter(ing => ing.foodMaps.every(m => !m.fdcId && !m.offBarcode && !m.aiGeneratedFoodId && !m.foodId))
     .map(ing => ({
       id: ing.id,
       name: ing.name,

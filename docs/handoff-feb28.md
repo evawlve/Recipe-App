@@ -10,7 +10,7 @@ This session resolved **10 of 12** issues from the [handoff-feb24.md](file:///c:
 
 ### Fix 1: B2 — "freshly" as mustHaveToken kills real garlic candidates
 
-**File:** [filter-candidates.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts) (L2367)
+**File:** [filter-candidates.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts) (L2367)
 
 **Root Cause:** `deriveMustHaveTokens` splits "freshly garlic" into tokens `["freshly", "garlic"]`. The `MODIFIER_TOKENS` set included `'fresh'` but NOT `'freshly'` (the adverb form). So `'freshly'` survived as a must-have token, requiring ALL candidates to include the word "freshly" in their name. This filtered out every real garlic entry and only kept branded "Freshly Chile-Garlic Pork Bowl" meal products.
 
@@ -27,7 +27,7 @@ This session resolved **10 of 12** issues from the [handoff-feb24.md](file:///c:
 
 ### Fix 2: B3 — Petite tomatoes mapped to green (unripe) tomatoes
 
-**File:** [simple-rerank.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/simple-rerank.ts) (inside `getAttributeContradictionPenalty`, ~L436)
+**File:** [simple-rerank.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/simple-rerank.ts) (inside `getAttributeContradictionPenalty`, ~L436)
 
 **Root Cause:** For "petite tomatoes", the only surviving FDC candidates were "grape raw tomatoes" (0.477) and "green raw tomatoes" (0.552). The existing `getAttributeContradictionPenalty` only fires when the **query specifies a color** (`queryColors.length === 1`). Since "petite tomatoes" has no color, both scored normally and "green" won on token overlap.
 
@@ -102,8 +102,8 @@ unitNormalized = unitNormalized
 When multiple candidates score identically on name matching, use the AI nutrition estimate (from `AiNormalizeCache.estimatedCaloriesPer100g`) to break the tie. For "rice vinegar", the AI estimate should be ~18 kcal/100g. Kikkoman (0 kcal) is closest.
 
 **Key files to modify:**
-- [simple-rerank.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/simple-rerank.ts) — `computeSimpleScore` already has a `nutritionScore` component (currently 0.000 for these). The `nutritionScore` uses the AI nutrition estimate to penalize candidates whose macros deviate significantly from the expected profile.
-- [map-ingredient-with-fallback.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/map-ingredient-with-fallback.ts) — Where `AiNormalizeCache` results are available (check `estimatedCaloriesPer100g` availability).
+- [simple-rerank.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/simple-rerank.ts) — `computeSimpleScore` already has a `nutritionScore` component (currently 0.000 for these). The `nutritionScore` uses the AI nutrition estimate to penalize candidates whose macros deviate significantly from the expected profile.
+- [map-ingredient-with-fallback.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/map-ingredient-with-fallback.ts) — Where `AiNormalizeCache` results are available (check `estimatedCaloriesPer100g` availability).
 
 **Edge cases:**
 - "Seasoned" in the candidate name should be penalized when query doesn't say "seasoned" (existing `modifierBoost` logic already handles this partially — `"Seasoned Rice Vinegar"` scores 0.496 vs 1.066 for "Rice Vinegar")
@@ -143,9 +143,9 @@ npx tsx scripts/debug-mapping-pipeline.ts "0.5 cup toasted pecan halves" --skip-
 
 | File | Purpose | Lines of Interest |
 |------|---------|-------------------|
-| [filter-candidates.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts) | Candidate filtering, `deriveMustHaveTokens`, `hasNullOrInvalidMacros` | `MODIFIER_TOKENS` ~L2340, `MUST_HAVE_CALORIES_PATTERNS` L1305, `hasNullOrInvalidMacros` L1355 |
-| [simple-rerank.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/simple-rerank.ts) | Scoring, `computeSimpleScore`, `getAttributeContradictionPenalty` | `computeSimpleScore` ~L850, `getAttributeContradictionPenalty` ~L413, `WEIGHTS` near top |
-| [map-ingredient-with-fallback.ts](file:///c:/Dev/Recipe%20App/src/lib/fatsecret/map-ingredient-with-fallback.ts) | Main pipeline orchestration, fallback logic, AI normalization | Fallback condition ~L997, AI normalize gate ~L631 |
+| [filter-candidates.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts) | Candidate filtering, `deriveMustHaveTokens`, `hasNullOrInvalidMacros` | `MODIFIER_TOKENS` ~L2340, `MUST_HAVE_CALORIES_PATTERNS` L1305, `hasNullOrInvalidMacros` L1355 |
+| [simple-rerank.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/simple-rerank.ts) | Scoring, `computeSimpleScore`, `getAttributeContradictionPenalty` | `computeSimpleScore` ~L850, `getAttributeContradictionPenalty` ~L413, `WEIGHTS` near top |
+| [map-ingredient-with-fallback.ts](file:///c:/Dev/Recipe%20App/src/lib/mapping/map-ingredient-with-fallback.ts) | Main pipeline orchestration, fallback logic, AI normalization | Fallback condition ~L997, AI normalize gate ~L631 |
 | [ingredient-line.ts](file:///c:/Dev/Recipe%20App/src/lib/parse/ingredient-line.ts) | Ingredient line parser (qty, unit, name extraction) | juice/zest normalization ~L123 |
 
 ## Debugging Commands

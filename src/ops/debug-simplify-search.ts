@@ -4,8 +4,8 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { aiSimplifyIngredient } from '../lib/fatsecret/ai-simplify';
-import { FatSecretClient } from '../lib/fatsecret/client';
+import { aiSimplifyIngredient } from '../lib/mapping/ai-simplify';
+import { FatSecretClient } from '../lib/mapping/client';
 
 const failedIngredients = [
     "buttery cinnamon powder",

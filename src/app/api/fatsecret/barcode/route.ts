@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { lookupFatSecretBarcode } from '@/lib/fatsecret/barcode';
-import { FATSECRET_ENABLED } from '@/lib/fatsecret/config';
+import { lookupFatSecretBarcode } from '@/lib/mapping/barcode';
+import { FATSECRET_ENABLED } from '@/lib/mapping/config';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';

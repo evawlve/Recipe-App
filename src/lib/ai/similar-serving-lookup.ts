@@ -85,14 +85,58 @@ function getServingUnitPatterns(unit: string): string[] {
 /**
  * Find similar foods in FatSecret cache that have the target serving type
  */
-async function findSimilarServingsInFatSecret(
+async function findSimilarServingsInAi(
     baseFoodName: string,
     servingUnit: string
 ): Promise<SimilarServingMatch[]> {
     const unitPatterns = getServingUnitPatterns(servingUnit);
 
-    // Search for foods with similar names
-    const similarFoods = await prisma.fatSecretFoodCache.findMany({
+    const similarFoods = await prisma.aiGeneratedFood.findMany({
+        where: {
+            displayName: {
+                contains: baseFoodName,
+                mode: 'insensitive',
+            },
+        },
+        include: {
+            servings: true,
+        },
+        take: 20,
+    });
+
+    const matches: SimilarServingMatch[] = [];
+
+    for (const food of similarFoods) {
+        const servings = (food as any).servings || [];
+        for (const serving of servings) {
+            const desc = (serving.label || '').toLowerCase();
+            const matchesUnit = unitPatterns.some(pattern =>
+                desc.includes(pattern) || desc === pattern
+            );
+
+            if (matchesUnit && serving.grams && serving.grams > 0) {
+                matches.push({
+                    foodId: food.id,
+                    foodName: food.displayName,
+                    brandName: undefined,
+                    servingDescription: serving.label || servingUnit,
+                    grams: serving.grams,
+                    source: 'fatsecret',
+                });
+            }
+        }
+    }
+
+    return matches;
+}
+
+async function findSimilarServingsInOff(
+    baseFoodName: string,
+    servingUnit: string
+): Promise<SimilarServingMatch[]> {
+    const unitPatterns = getServingUnitPatterns(servingUnit);
+
+    const similarFoods = await prisma.offFood.findMany({
         where: {
             name: {
                 contains: baseFoodName,
@@ -108,19 +152,20 @@ async function findSimilarServingsInFatSecret(
     const matches: SimilarServingMatch[] = [];
 
     for (const food of similarFoods) {
-        for (const serving of food.servings) {
-            const desc = (serving.measurementDescription || '').toLowerCase();
+        const servings = (food as any).servings || [];
+        for (const serving of servings) {
+            const desc = (serving.description || '').toLowerCase();
             const matchesUnit = unitPatterns.some(pattern =>
                 desc.includes(pattern) || desc === pattern
             );
 
-            if (matchesUnit && serving.servingWeightGrams && serving.servingWeightGrams > 0) {
+            if (matchesUnit && serving.grams && serving.grams > 0) {
                 matches.push({
-                    foodId: food.id,
+                    foodId: `off_${food.barcode}`,
                     foodName: food.name,
                     brandName: food.brandName || undefined,
-                    servingDescription: serving.measurementDescription || servingUnit,
-                    grams: serving.servingWeightGrams,
+                    servingDescription: serving.description || servingUnit,
+                    grams: serving.grams,
                     source: 'fatsecret',
                 });
             }
@@ -130,17 +175,13 @@ async function findSimilarServingsInFatSecret(
     return matches;
 }
 
-/**
- * Find similar foods in FDC cache that have the target serving type
- */
 async function findSimilarServingsInFdc(
     baseFoodName: string,
     servingUnit: string
 ): Promise<SimilarServingMatch[]> {
     const unitPatterns = getServingUnitPatterns(servingUnit);
 
-    // Search for foods with similar names
-    const similarFoods = await prisma.fdcFoodCache.findMany({
+    const similarFoods = await prisma.fdcFood.findMany({
         where: {
             description: {
                 contains: baseFoodName,
@@ -164,10 +205,10 @@ async function findSimilarServingsInFdc(
 
             if (matchesUnit && serving.grams && serving.grams > 0) {
                 matches.push({
-                    foodId: `fdc_${food.id}`,
+                    foodId: `fdc_${food.fdcId}`,
                     foodName: food.description,
                     brandName: food.brandName || undefined,
-                    servingDescription: serving.description,
+                    servingDescription: serving.description || servingUnit,
                     grams: serving.grams,
                     source: 'fdc',
                 });
@@ -218,14 +259,15 @@ export async function findSimilarServings(
     });
 
     try {
-        // Search both FatSecret and FDC in parallel
-        const [fatSecretMatches, fdcMatches] = await Promise.all([
-            findSimilarServingsInFatSecret(baseName, targetServingUnit),
+        // Search all consolidated tables in parallel
+        const [fatSecretMatches, fdcMatches, offMatches] = await Promise.all([
+            findSimilarServingsInAi(baseName, targetServingUnit),
             findSimilarServingsInFdc(baseName, targetServingUnit),
+            findSimilarServingsInOff(baseName, targetServingUnit),
         ]);
 
-        // Combine and dedupe (exclude the food we're looking up for)
-        let allMatches = [...fatSecretMatches, ...fdcMatches];
+        // Combine and dedupe
+        let allMatches = [...fatSecretMatches, ...fdcMatches, ...offMatches];
 
         if (excludeFoodId) {
             allMatches = allMatches.filter(m => m.foodId !== excludeFoodId);

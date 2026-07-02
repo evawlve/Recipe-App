@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { lookupFatSecretBarcode } = await import('@/lib/fatsecret/barcode');
-    const { ensureFoodCached } = await import('@/lib/fatsecret/cache');
+    const { lookupFatSecretBarcode } = await import('@/lib/mapping/barcode');
+    const { ensureFoodCached } = await import('@/lib/mapping/cache');
     const { getOffProductByBarcode } = await import('@/lib/openfoodfacts/client');
     const { hydrateOffCandidate } = await import('@/lib/openfoodfacts/hydrate');
     const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');

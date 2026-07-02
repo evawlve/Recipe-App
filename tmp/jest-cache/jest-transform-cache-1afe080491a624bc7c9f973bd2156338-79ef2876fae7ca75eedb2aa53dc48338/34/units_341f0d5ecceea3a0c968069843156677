@@ -1,0 +1,58 @@
+b4a2dfd7400a55c42e3f1e28b8db3d8d
+"use strict";
+/**
+ * Unit normalization and conversion utilities
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.normalizeUnit = normalizeUnit;
+exports.toGramsByUnit = toGramsByUnit;
+/**
+ * Normalize unit strings to standard forms
+ */
+function normalizeUnit(u) {
+    const unit = u.toLowerCase().trim();
+    // Map synonyms to standard forms
+    const synonyms = {
+        "teaspoon": "tsp",
+        "teaspoons": "tsp",
+        "tablespoon": "tbsp",
+        "tablespoons": "tbsp",
+        "tbs": "tbsp",
+        "cups": "cup",
+        "ounce": "oz",
+        "ounces": "oz",
+        "pound": "lb",
+        "pounds": "lb",
+        "gram": "g",
+        "grams": "g",
+        "milliliter": "ml",
+        "millilitre": "ml",
+        "milliliters": "ml",
+        "millilitres": "ml"
+    };
+    return synonyms[unit] || unit;
+}
+/**
+ * Convert quantity and unit to grams (for weight units only)
+ * Returns null for volume units that need density
+ */
+function toGramsByUnit(qty, unit) {
+    const normalized = normalizeUnit(unit);
+    switch (normalized) {
+        case "g":
+            return qty;
+        case "kg":
+            return qty * 1000;
+        case "mg":
+            return qty / 1000;
+        case "oz":
+            return qty * 28.3495;
+        case "lb":
+            return qty * 453.592;
+        case "ml":
+            return qty; // water-like default
+        default:
+            return null; // Volume units (tsp/tbsp/cup/scoop) need density
+    }
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiL2hvbWUvZGllZ28vUmVjaXBlLUFwcC9zcmMvbGliL251dHJpdGlvbi91bml0cy50cyIsIm1hcHBpbmdzIjoiO0FBQUE7O0dBRUc7O0FBS0gsc0NBd0JDO0FBTUQsc0NBbUJDO0FBcEREOztHQUVHO0FBQ0gsU0FBZ0IsYUFBYSxDQUFDLENBQVM7SUFDckMsTUFBTSxJQUFJLEdBQUcsQ0FBQyxDQUFDLFdBQVcsRUFBRSxDQUFDLElBQUksRUFBRSxDQUFDO0lBRXBDLGlDQUFpQztJQUNqQyxNQUFNLFFBQVEsR0FBMkI7UUFDdkMsVUFBVSxFQUFFLEtBQUs7UUFDakIsV0FBVyxFQUFFLEtBQUs7UUFDbEIsWUFBWSxFQUFFLE1BQU07UUFDcEIsYUFBYSxFQUFFLE1BQU07UUFDckIsS0FBSyxFQUFFLE1BQU07UUFDYixNQUFNLEVBQUUsS0FBSztRQUNiLE9BQU8sRUFBRSxJQUFJO1FBQ2IsUUFBUSxFQUFFLElBQUk7UUFDZCxPQUFPLEVBQUUsSUFBSTtRQUNiLFFBQVEsRUFBRSxJQUFJO1FBQ2QsTUFBTSxFQUFFLEdBQUc7UUFDWCxPQUFPLEVBQUUsR0FBRztRQUNaLFlBQVksRUFBRSxJQUFJO1FBQ2xCLFlBQVksRUFBRSxJQUFJO1FBQ2xCLGFBQWEsRUFBRSxJQUFJO1FBQ25CLGFBQWEsRUFBRSxJQUFJO0tBQ3BCLENBQUM7SUFFRixPQUFPLFFBQVEsQ0FBQyxJQUFJLENBQUMsSUFBSSxJQUFJLENBQUM7QUFDaEMsQ0FBQztBQUVEOzs7R0FHRztBQUNILFNBQWdCLGFBQWEsQ0FBQyxHQUFXLEVBQUUsSUFBWTtJQUNyRCxNQUFNLFVBQVUsR0FBRyxhQUFhLENBQUMsSUFBSSxDQUFDLENBQUM7SUFFdkMsUUFBUSxVQUFVLEVBQUUsQ0FBQztRQUNuQixLQUFLLEdBQUc7WUFDTixPQUFPLEdBQUcsQ0FBQztRQUNiLEtBQUssSUFBSTtZQUNQLE9BQU8sR0FBRyxHQUFHLElBQUksQ0FBQztRQUNwQixLQUFLLElBQUk7WUFDUCxPQUFPLEdBQUcsR0FBRyxJQUFJLENBQUM7UUFDcEIsS0FBSyxJQUFJO1lBQ1AsT0FBTyxHQUFHLEdBQUcsT0FBTyxDQUFDO1FBQ3ZCLEtBQUssSUFBSTtZQUNQLE9BQU8sR0FBRyxHQUFHLE9BQU8sQ0FBQztRQUN2QixLQUFLLElBQUk7WUFDUCxPQUFPLEdBQUcsQ0FBQyxDQUFDLHFCQUFxQjtRQUNuQztZQUNFLE9BQU8sSUFBSSxDQUFDLENBQUMsaURBQWlEO0lBQ2xFLENBQUM7QUFDSCxDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIi9ob21lL2RpZWdvL1JlY2lwZS1BcHAvc3JjL2xpYi9udXRyaXRpb24vdW5pdHMudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBVbml0IG5vcm1hbGl6YXRpb24gYW5kIGNvbnZlcnNpb24gdXRpbGl0aWVzXG4gKi9cblxuLyoqXG4gKiBOb3JtYWxpemUgdW5pdCBzdHJpbmdzIHRvIHN0YW5kYXJkIGZvcm1zXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBub3JtYWxpemVVbml0KHU6IHN0cmluZyk6IFwiZ1wifFwia2dcInxcIm1nXCJ8XCJtbFwifFwidHNwXCJ8XCJ0YnNwXCJ8XCJjdXBcInxcIm96XCJ8XCJsYlwifFwic2Nvb3BcInxzdHJpbmcge1xuICBjb25zdCB1bml0ID0gdS50b0xvd2VyQ2FzZSgpLnRyaW0oKTtcbiAgXG4gIC8vIE1hcCBzeW5vbnltcyB0byBzdGFuZGFyZCBmb3Jtc1xuICBjb25zdCBzeW5vbnltczogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHtcbiAgICBcInRlYXNwb29uXCI6IFwidHNwXCIsXG4gICAgXCJ0ZWFzcG9vbnNcIjogXCJ0c3BcIiwgXG4gICAgXCJ0YWJsZXNwb29uXCI6IFwidGJzcFwiLFxuICAgIFwidGFibGVzcG9vbnNcIjogXCJ0YnNwXCIsXG4gICAgXCJ0YnNcIjogXCJ0YnNwXCIsXG4gICAgXCJjdXBzXCI6IFwiY3VwXCIsXG4gICAgXCJvdW5jZVwiOiBcIm96XCIsXG4gICAgXCJvdW5jZXNcIjogXCJvelwiLFxuICAgIFwicG91bmRcIjogXCJsYlwiLFxuICAgIFwicG91bmRzXCI6IFwibGJcIixcbiAgICBcImdyYW1cIjogXCJnXCIsXG4gICAgXCJncmFtc1wiOiBcImdcIixcbiAgICBcIm1pbGxpbGl0ZXJcIjogXCJtbFwiLFxuICAgIFwibWlsbGlsaXRyZVwiOiBcIm1sXCIsXG4gICAgXCJtaWxsaWxpdGVyc1wiOiBcIm1sXCIsXG4gICAgXCJtaWxsaWxpdHJlc1wiOiBcIm1sXCJcbiAgfTtcbiAgXG4gIHJldHVybiBzeW5vbnltc1t1bml0XSB8fCB1bml0O1xufVxuXG4vKipcbiAqIENvbnZlcnQgcXVhbnRpdHkgYW5kIHVuaXQgdG8gZ3JhbXMgKGZvciB3ZWlnaHQgdW5pdHMgb25seSlcbiAqIFJldHVybnMgbnVsbCBmb3Igdm9sdW1lIHVuaXRzIHRoYXQgbmVlZCBkZW5zaXR5XG4gKi9cbmV4cG9ydCBmdW5jdGlvbiB0b0dyYW1zQnlVbml0KHF0eTogbnVtYmVyLCB1bml0OiBzdHJpbmcpOiBudW1iZXIgfCBudWxsIHtcbiAgY29uc3Qgbm9ybWFsaXplZCA9IG5vcm1hbGl6ZVVuaXQodW5pdCk7XG4gIFxuICBzd2l0Y2ggKG5vcm1hbGl6ZWQpIHtcbiAgICBjYXNlIFwiZ1wiOlxuICAgICAgcmV0dXJuIHF0eTtcbiAgICBjYXNlIFwia2dcIjpcbiAgICAgIHJldHVybiBxdHkgKiAxMDAwO1xuICAgIGNhc2UgXCJtZ1wiOlxuICAgICAgcmV0dXJuIHF0eSAvIDEwMDA7XG4gICAgY2FzZSBcIm96XCI6XG4gICAgICByZXR1cm4gcXR5ICogMjguMzQ5NTtcbiAgICBjYXNlIFwibGJcIjpcbiAgICAgIHJldHVybiBxdHkgKiA0NTMuNTkyO1xuICAgIGNhc2UgXCJtbFwiOlxuICAgICAgcmV0dXJuIHF0eTsgLy8gd2F0ZXItbGlrZSBkZWZhdWx0XG4gICAgZGVmYXVsdDpcbiAgICAgIHJldHVybiBudWxsOyAvLyBWb2x1bWUgdW5pdHMgKHRzcC90YnNwL2N1cC9zY29vcCkgbmVlZCBkZW5zaXR5XG4gIH1cbn1cbiJdLCJ2ZXJzaW9uIjozfQ==

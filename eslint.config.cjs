@@ -84,7 +84,19 @@ module.exports = [
 		},
 	// Removed broad global fetch restrictions to prevent false positives; the targeted selector above is sufficient
 	{
-		files: ['scripts/**/*.{js,ts}', 'eval/**/*.{js,ts}', '**/*.test.{js,ts}', '**/*.spec.{js,ts}', 'prisma/**/*.js', 'tmp/**/*.{js,ts}'],
+		files: [
+			'scripts/**/*.{js,ts}',
+			'src/scripts/**/*.{js,ts}',
+			'src/ops/**/*.{js,ts}',
+			'eval/**/*.{js,ts}',
+			'**/*.test.{js,ts}',
+			'**/*.spec.{js,ts}',
+			'prisma/**/*.js',
+			'tmp/**/*.{js,ts}',
+			'src/lib/logger.ts',
+			'src/lib/perf.ts',
+			'src/lib/fatsecret/mapping-logger.ts',
+		],
 		rules: {
 			'no-console': 'off',
 		},

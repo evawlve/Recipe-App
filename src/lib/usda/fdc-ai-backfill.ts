@@ -5,7 +5,7 @@ import { requestAiServing, type ServingGapType } from '../ai/serving-estimator';
 import {
     FATSECRET_CACHE_AI_MAX_DENSITY,
     FATSECRET_CACHE_AI_MIN_DENSITY,
-} from '../fatsecret/config';
+} from '../mapping/config';
 
 // Reusing volume conversion logic from fatsecret/ai-backfill.ts
 // Ideally this should be extracted to a shared utility
@@ -146,8 +146,8 @@ export async function insertFdcAiServing(
     gapType: ServingGapType,
     options: InsertFdcAiServingOptions = {}
 ): Promise<{ success: boolean; reason?: string }> {
-    const food = await (prisma as any).fdcFoodCache.findUnique({
-        where: { id: fdcId },
+    const food = await prisma.fdcFood.findUnique({
+        where: { fdcId },
         include: { servings: true },
     });
 
@@ -158,7 +158,7 @@ export async function insertFdcAiServing(
 
     // Adapt FDC food to FatSecret structure expected by requestAiServing
     const mockFood: any = {
-        id: String(food.id),
+        id: String(food.fdcId),
         name: food.description,
         description: food.description,
         brandName: food.brandName,
@@ -229,14 +229,32 @@ export async function insertFdcAiServing(
         return { success: true };
     }
 
-    await (prisma as any).fdcServingCache.create({
-        data: {
-            fdcId: fdcId,
+    await prisma.fdcServing.upsert({
+        where: {
+            FdcServing_fdcId_description_key: {
+                fdcId,
+                description: suggestion.servingLabel,
+            },
+        },
+        create: {
+            fdcId,
             description: suggestion.servingLabel,
             grams: suggestion.grams,
             source: 'ai',
             isAiEstimated: true,
-        }
+            derivedViaDensity: !!density,
+            densityGml: density,
+            confidence: aiResult.status === 'success' ? suggestion.confidence : null,
+            note: aiResult.status === 'success' ? suggestion.rationale : null,
+        },
+        update: {
+            grams: suggestion.grams,
+            isAiEstimated: true,
+            derivedViaDensity: !!density,
+            densityGml: density,
+            confidence: aiResult.status === 'success' ? suggestion.confidence : null,
+            note: aiResult.status === 'success' ? suggestion.rationale : null,
+        },
     });
 
     logger.info('Inserted AI-derived FDC serving', {

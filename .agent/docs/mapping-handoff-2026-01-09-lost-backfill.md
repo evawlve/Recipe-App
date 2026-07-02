@@ -30,9 +30,9 @@ The staged version had extensive backfill integration in the `hydrateAndSelectSe
 
 These files exist and contain the backfill logic, they just need to be integrated:
 
-- `src/lib/fatsecret/ai-backfill.ts` - `insertAiServing` function
-- `src/lib/fatsecret/serving-backfill.ts` - `backfillOnDemand` function
-- `src/lib/fatsecret/ambiguous-unit-backfill.ts` - Ambiguous unit handling
+- `src/lib/mapping/ai-backfill.ts` - `insertAiServing` function
+- `src/lib/mapping/serving-backfill.ts` - `backfillOnDemand` function
+- `src/lib/mapping/ambiguous-unit-backfill.ts` - Ambiguous unit handling
 - `src/lib/ai/ambiguous-serving-estimator.ts` - AI estimation for containers, bags, etc.
 
 ## Recovery Options
@@ -40,16 +40,16 @@ These files exist and contain the backfill logic, they just need to be integrate
 ### Option 1: Restore from Staged (Recommended)
 The staged version has a complete implementation. Use git to get the relevant sections:
 ```bash
-git show :src/lib/fatsecret/map-ingredient-with-fallback.ts | grep -A 50 "backfill"
+git show :src/lib/mapping/map-ingredient-with-fallback.ts | grep -A 50 "backfill"
 ```
 
 ### Option 2: Merge Staged with Current Working
 ```bash
 # Create a backup of current working file (with quinoa fix)
-cp src/lib/fatsecret/map-ingredient-with-fallback.ts src/lib/fatsecret/map-ingredient-with-fallback.ts.working
+cp src/lib/mapping/map-ingredient-with-fallback.ts src/lib/mapping/map-ingredient-with-fallback.ts.working
 
 # View staged version
-git show :src/lib/fatsecret/map-ingredient-with-fallback.ts > staged-version.ts
+git show :src/lib/mapping/map-ingredient-with-fallback.ts > staged-version.ts
 
 # Manually merge the backfill sections from staged-version.ts into the working file
 ```

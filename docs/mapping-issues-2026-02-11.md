@@ -162,7 +162,7 @@ The following fixes from `docs/mapping-fix-log.md` appear to have **regressed** 
 |-----------|-----------------|
 | "crushed rejects fresh; fresh rejects crushed/diced/canned" | Line 982: `"1 cup or red tomato"` → Tomato & Red Pepper Bisque (not fresh tomato). Line 1182: `"1 plum tomato"` → Italian Plum Tomato Marinara (not raw plum tomato). |
 | **Diagnosis** | The guards work for explicit "crushed tomatoes" queries but don't protect **raw tomato queries** from mapping to branded sauce/soup products. The `isCategoryMismatch` logic doesn't have guards for "marinara", "bisque", "soup" as exclusions for raw tomato queries. |
-| **Possible Cache Issue** | These may be stale `ValidatedMapping` or `early_cache` entries from before Fix 7 was applied. Check `selectionReason` — if `{early_cache}`, the fix is being bypassed entirely. |
+| **Possible Cache Issue** | These may be stale `FoodMapping` or `early_cache` entries from before Fix 7 was applied. Check `selectionReason` — if `{early_cache}`, the fix is being bypassed entirely. |
 
 ### Fix 23: Category-Changing Token Detection — INCOMPLETE
 
@@ -207,10 +207,10 @@ The following fixes from `docs/mapping-fix-log.md` appear to have **regressed** 
 
 | Action | Target Files | Issue Numbers |
 |--------|-------------|---------------|
-| Add `patties`, `pickles`, `marinara`, `bisque`, `peel`, `soup`, `sausage`, `noodles` to `CATEGORY_CHANGING_TOKENS` | `src/lib/fatsecret/simple-rerank.ts` | #5, #9, #10, #2, #3, #4 |
+| Add `patties`, `pickles`, `marinara`, `bisque`, `peel`, `soup`, `sausage`, `noodles` to `CATEGORY_CHANGING_TOKENS` | `src/lib/mapping/simple-rerank.ts` | #5, #9, #10, #2, #3, #4 |
 | Add "canellini" → "cannellini" spelling correction | `src/lib/parse/ingredient-line.ts` or `gather-candidates.ts` | Failed mappings #1, #2 |
-| Add processing state guard: plain queries reject "fried", "roasted" (jarred), "creamed" candidates | `src/lib/fatsecret/filter-candidates.ts` | #6, #11, #13 |
-| Fix count-based serving for produce without size qualifiers (grape tomatoes, cherry tomatoes) | `src/lib/fatsecret/map-ingredient-with-fallback.ts` (`selectServing`) | 3a #3, #4 |
+| Add processing state guard: plain queries reject "fried", "roasted" (jarred), "creamed" candidates | `src/lib/mapping/filter-candidates.ts` | #6, #11, #13 |
+| Fix count-based serving for produce without size qualifiers (grape tomatoes, cherry tomatoes) | `src/lib/mapping/map-ingredient-with-fallback.ts` (`selectServing`) | 3a #3, #4 |
 | Add "water" → plain water shortcut or guard against "Water Spinach" for water queries | `filter-candidates.ts` or `gather-candidates.ts` | #1 |
 
 ### Priority 2 — MEDIUM Severity Fixes
@@ -227,7 +227,7 @@ The following fixes from `docs/mapping-fix-log.md` appear to have **regressed** 
 
 | Action | Purpose |
 |--------|---------|
-| Run `scripts/clear-all-mappings.ts` to purge all caches | Eliminate stale `ValidatedMapping` / `early_cache` entries that bypass new fixes |
+| Run `scripts/clear-all-mappings.ts` to purge all caches | Eliminate stale `FoodMapping` / `early_cache` entries that bypass new fixes |
 | Re-run pilot batch import with `ENABLE_MAPPING_ANALYSIS=true` | Verify fixes against full dataset |
 | Run `scripts/debug-mapping-pipeline.ts` on each HIGH severity item with `--skip-cache` | Confirm root cause before implementing fix |
 
