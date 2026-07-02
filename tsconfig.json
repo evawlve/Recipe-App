@@ -43,6 +43,7 @@
     "**/*.spec.tsx",
     "dangerfile.ts",
     "scripts/**/*",
-    "tmp/**/*"
+    "tmp/**/*",
+    "scratch/**/*"
   ]
 }
