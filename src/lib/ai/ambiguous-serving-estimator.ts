@@ -55,6 +55,10 @@ export const AMBIGUOUS_UNITS = new Set([
     'strip', 'strips',
     // Spray/squirt units (for cooking spray, oil sprays)
     'spray', 'sprays', 'squirt', 'squirts',
+    // Micro-volume units (inherently subjective, AI-route preferred)
+    'splash', 'splashes',
+    'drizzle', 'drizzles',
+    'dollop', 'dollops',
 ]);
 
 export interface AmbiguousServingRequest {

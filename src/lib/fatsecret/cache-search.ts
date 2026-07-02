@@ -1,8 +1,6 @@
 import type {
-  FatSecretFoodAlias,
-  FatSecretFoodCache,
-  FatSecretServingCache,
-  FatSecretDensityEstimate,
+  AiGeneratedFood,
+  AiGeneratedServing,
   Prisma,
 } from '@prisma/client';
 import { prisma } from '../db';
@@ -10,10 +8,8 @@ import { normalizeQuery, tokens } from '../search/normalize';
 import { deriveServingOptions } from '../units/servings';
 import { type FatSecretFoodSummary, type FatSecretFoodDetails, type FatSecretServing } from './client';
 
-export type CacheFoodRecord = FatSecretFoodCache & {
-  servings: FatSecretServingCache[];
-  aliases: FatSecretFoodAlias[];
-  densityEstimates: FatSecretDensityEstimate[];
+export type CacheFoodRecord = AiGeneratedFood & {
+  servings: AiGeneratedServing[];
 };
 
 function toNumber(value: unknown): number | null {
@@ -22,29 +18,21 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
-export function extractCacheNutrients(food: FatSecretFoodCache) {
-  const payload = (food.nutrientsPer100g as Prisma.JsonObject | null) ?? null;
-  const base = (payload ?? {}) as Record<string, unknown>;
+export function extractCacheNutrients(food: AiGeneratedFood) {
   return {
-    calories: toNumber(base.calories),
-    protein: toNumber(base.protein),
-    carbs: toNumber(base.carbs ?? base.carbohydrate),
-    fat: toNumber(base.fat),
-    fiber: toNumber(base.fiber),
-    sugar: toNumber(base.sugar),
+    calories: toNumber(food.caloriesPer100g),
+    protein: toNumber(food.proteinPer100g),
+    carbs: toNumber(food.carbsPer100g),
+    fat: toNumber(food.fatPer100g),
+    fiber: toNumber(food.fiberPer100g),
+    sugar: toNumber(food.sugarPer100g),
   };
 }
 
 function pickDensity(food: CacheFoodRecord): number | null {
-  if (food.densityEstimates?.length) {
-    const sorted = [...food.densityEstimates].sort(
-      (a, b) => (b.confidence ?? 0) - (a.confidence ?? 0),
-    );
-    return sorted[0]?.densityGml ?? null;
-  }
   for (const serving of food.servings) {
-    if (serving.servingWeightGrams && serving.volumeMl && serving.volumeMl > 0) {
-      return serving.servingWeightGrams / serving.volumeMl;
+    if (serving.grams && serving.volumeMl && serving.volumeMl > 0) {
+      return serving.grams / serving.volumeMl;
     }
   }
   return null;
@@ -53,15 +41,10 @@ function pickDensity(food: CacheFoodRecord): number | null {
 function buildUnitsFromServings(food: CacheFoodRecord) {
   const units: Array<{ label: string; grams: number }> = [];
   for (const serving of food.servings) {
-    if (!serving.servingWeightGrams || serving.servingWeightGrams <= 0) continue;
-    const label =
-      serving.measurementDescription?.trim() ||
-      (serving.numberOfUnits && serving.metricServingUnit
-        ? `${serving.numberOfUnits} ${serving.metricServingUnit}`
-        : 'FatSecret serving');
+    if (!serving.grams || serving.grams <= 0) continue;
     units.push({
-      label,
-      grams: Number(serving.servingWeightGrams),
+      label: serving.label,
+      grams: Number(serving.grams),
     });
   }
   return units;
@@ -83,10 +66,10 @@ export function buildServingOptionsForCacheFood(food: CacheFoodRecord) {
 
 function computeServingMacros(
   nutrients: ReturnType<typeof extractCacheNutrients>,
-  serving: FatSecretServingCache,
+  serving: AiGeneratedServing,
 ) {
   if (!nutrients) return { calories: null, protein: null, carbohydrate: null, fat: null };
-  const grams = serving.servingWeightGrams;
+  const grams = serving.grams;
   if (!grams || grams <= 0) {
     return { calories: null, protein: null, carbohydrate: null, fat: null };
   }
@@ -102,18 +85,18 @@ function computeServingMacros(
 }
 
 function convertServingToFatSecret(
-  serving: FatSecretServingCache,
+  serving: AiGeneratedServing,
   nutrients: ReturnType<typeof extractCacheNutrients>,
 ): FatSecretServing {
   const macros = computeServingMacros(nutrients, serving);
   return {
     id: serving.id,
-    description: serving.measurementDescription ?? undefined,
-    measurementDescription: serving.measurementDescription ?? undefined,
-    numberOfUnits: serving.numberOfUnits ?? null,
-    metricServingAmount: serving.metricServingAmount ?? null,
-    metricServingUnit: serving.metricServingUnit ?? null,
-    servingWeightGrams: serving.servingWeightGrams ?? null,
+    description: serving.label ?? undefined,
+    measurementDescription: serving.label ?? undefined,
+    numberOfUnits: 1,
+    metricServingAmount: serving.volumeMl ?? serving.grams ?? null,
+    metricServingUnit: serving.volumeMl ? 'ml' : 'g',
+    servingWeightGrams: serving.grams ?? null,
     calories: macros.calories,
     protein: macros.protein,
     carbohydrate: macros.carbohydrate,
@@ -127,11 +110,11 @@ export function cacheFoodToSummary(food: CacheFoodRecord): FatSecretFoodSummary 
   const nutrients = extractCacheNutrients(food);
   return {
     id: food.id,
-    name: food.name,
-    brandName: food.brandName,
-    foodType: food.foodType ?? undefined,
-    description: food.description ?? undefined,
-    country: food.country ?? undefined,
+    name: food.displayName,
+    brandName: undefined,
+    foodType: 'Generic',
+    description: food.displayName ?? undefined,
+    country: 'US',
     servings: food.servings.map((serving) => convertServingToFatSecret(serving, nutrients)),
   };
 }
@@ -152,21 +135,18 @@ export async function searchFatSecretCacheFoods(query: string, limit = 200): Pro
     ? {
       AND: toks.map((t) => ({
         OR: [
-          { name: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
+          { displayName: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
           { brandName: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
-          { aliases: { some: { alias: { contains: t, mode: 'insensitive' as Prisma.QueryMode } } } },
         ],
       })),
     }
     : {};
 
-  const foods = await prisma.fatSecretFoodCache.findMany({
+  const foods = await prisma.aiGeneratedFood.findMany({
     where,
     take: limit,
     include: {
       servings: true,
-      aliases: true,
-      densityEstimates: true,
     },
   });
   return foods as unknown as CacheFoodRecord[];
@@ -174,12 +154,10 @@ export async function searchFatSecretCacheFoods(query: string, limit = 200): Pro
 
 export async function getCachedFoodWithRelations(id: string) {
   if (!id) return null;
-  return prisma.fatSecretFoodCache.findUnique({
+  return prisma.aiGeneratedFood.findUnique({
     where: { id },
     include: {
       servings: true,
-      aliases: true,
-      densityEstimates: true,
     },
   });
 }
@@ -189,8 +167,8 @@ export function buildCacheCandidate(food: CacheFoodRecord) {
   return {
     food: {
       id: food.id,
-      name: food.name,
-      brand: food.brandName,
+      name: food.displayName,
+      brand: undefined,
       source: 'fatsecret-cache',
       verification: 'fatsecret',
       kcal100: nutrients.calories ?? 0,
@@ -201,7 +179,7 @@ export function buildCacheCandidate(food: CacheFoodRecord) {
       categoryId: null,
       popularity: 0,
     },
-    aliases: food.aliases?.map((a) => a.alias) ?? [],
+    aliases: [],
     barcodes: [],
     usedByUserCount: 0,
   };
@@ -216,9 +194,9 @@ export function buildCacheFoodResponse(
   return {
     id: food.id,
     fatsecretId: food.id,
-    legacyFoodId: food.legacyFoodId,
-    name: food.name,
-    brand: food.brandName ?? null,
+    legacyFoodId: food.id,
+    name: food.displayName,
+    brand: null,
     categoryId: null,
     source: 'fatsecret-cache',
     verification: 'fatsecret',

@@ -100,38 +100,51 @@ export function initMappingAnalysisSession() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const logsDir = path.join(process.cwd(), 'logs');
 
-    // Ensure logs directory exists
-    if (!fs.existsSync(logsDir)) {
-        fs.mkdirSync(logsDir, { recursive: true });
+    try {
+        // Ensure logs directory exists
+        if (!fs.existsSync(logsDir)) {
+            fs.mkdirSync(logsDir, { recursive: true });
+        }
+
+        logFilePath = path.join(logsDir, `mapping-analysis-${timestamp}.json`);
+        simpleSummaryPath = path.join(logsDir, `mapping-summary-${timestamp}.txt`);
+
+        currentSession = {
+            sessionId: `session-${timestamp}`,
+            startTime: new Date().toISOString(),
+            mappings: [],
+        };
+
+        // Initialize simple summary file with header
+        const header = [
+            '# Mapping Summary - Quick Review',
+            `# Generated: ${new Date().toISOString()}`,
+            '# Format: [CONF] "Raw Ingredient" → "Mapped Food"',
+            '#',
+            '# Look for:',
+            '#   - Mismatched modifiers (lowfat query → whole food)',
+            '#   - Complex products (simple ingredient → multi-ingredient product)',
+            '#   - Category mismatches (zest → cake, extract → cookie)',
+            '#',
+            '',
+        ].join('\n');
+        fs.writeFileSync(simpleSummaryPath, header, 'utf-8');
+        
+        console.log(`\n📊 Mapping Analysis Session Started`);
+        console.log(`   Detailed log: ${logFilePath}`);
+        console.log(`   Quick summary: ${simpleSummaryPath}\n`);
+    } catch (e) {
+        console.warn('[mapping-logger] Failed to initialize file session:', e);
+        logFilePath = null;
+        simpleSummaryPath = null;
+        
+        currentSession = {
+            sessionId: `session-${timestamp}`,
+            startTime: new Date().toISOString(),
+            mappings: [],
+        };
+        console.log(`\n📊 Mapping Analysis Session Started (In-Memory Only due to filesystem error)`);
     }
-
-    logFilePath = path.join(logsDir, `mapping-analysis-${timestamp}.json`);
-    simpleSummaryPath = path.join(logsDir, `mapping-summary-${timestamp}.txt`);
-
-    currentSession = {
-        sessionId: `session-${timestamp}`,
-        startTime: new Date().toISOString(),
-        mappings: [],
-    };
-
-    // Initialize simple summary file with header
-    const header = [
-        '# Mapping Summary - Quick Review',
-        `# Generated: ${new Date().toISOString()}`,
-        '# Format: [CONF] "Raw Ingredient" → "Mapped Food"',
-        '#',
-        '# Look for:',
-        '#   - Mismatched modifiers (lowfat query → whole food)',
-        '#   - Complex products (simple ingredient → multi-ingredient product)',
-        '#   - Category mismatches (zest → cake, extract → cookie)',
-        '#',
-        '',
-    ].join('\n');
-    fs.writeFileSync(simpleSummaryPath, header, 'utf-8');
-
-    console.log(`\n📊 Mapping Analysis Session Started`);
-    console.log(`   Detailed log: ${logFilePath}`);
-    console.log(`   Quick summary: ${simpleSummaryPath}\n`);
 }
 
 /**
@@ -232,7 +245,11 @@ function writeSessionToFile() {
         },
     };
 
-    fs.writeFileSync(logFilePath, JSON.stringify(output, null, 2), 'utf-8');
+    try {
+        fs.writeFileSync(logFilePath, JSON.stringify(output, null, 2), 'utf-8');
+    } catch (e) {
+        console.warn('[mapping-logger] Failed to write session to file:', e);
+    }
 }
 
 /**
@@ -334,7 +351,11 @@ function writeSimpleSummaryEntry(log: MappingAnalysisLog) {
 
     const line = `${status} ${sourceTag}[${conf}] "${raw}" → "${mapped}${brand}"${nutritionStr}${aiTag}${flagStr}\n`;
 
-    fs.appendFileSync(simpleSummaryPath, line, 'utf-8');
+    try {
+        fs.appendFileSync(simpleSummaryPath, line, 'utf-8');
+    } catch (e) {
+        console.warn('[mapping-logger] Failed to append simple summary entry:', e);
+    }
 }
 
 /**
@@ -363,8 +384,12 @@ export function finalizeMappingAnalysisSession() {
 
     // Write AI summary to the simple summary file
     if (simpleSummaryPath) {
-        fs.appendFileSync(simpleSummaryPath, '\n' + '='.repeat(50) + '\n', 'utf-8');
-        fs.appendFileSync(simpleSummaryPath, aiSummary + '\n', 'utf-8');
+        try {
+            fs.appendFileSync(simpleSummaryPath, '\n' + '='.repeat(50) + '\n', 'utf-8');
+            fs.appendFileSync(simpleSummaryPath, aiSummary + '\n', 'utf-8');
+        } catch (e) {
+            console.warn('[mapping-logger] Failed to finalize simple summary file:', e);
+        }
     }
 
     // Reset metrics for next session

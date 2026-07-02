@@ -12,7 +12,7 @@
  * - On-demand backfill for edge cases
  */
 
-import type { FatSecretServingCache, FatSecretFoodCache } from '@prisma/client';
+import type { AiGeneratedServing, AiGeneratedFood } from '@prisma/client';
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { insertAiServing } from './ai-backfill';
@@ -42,7 +42,7 @@ const DISCRETE_ITEMS = new Set([
     'link', 'links', 'wiener', 'wieners',
 
     // Other discrete items
-    'chip', 'chip', 'wafer', 'sheet', 'nugget', 'stick',
+    'chip', 'wafer', 'sheet', 'nugget', 'stick',
 ]);
 
 const DISCRETE_PATTERNS = [
@@ -88,23 +88,23 @@ export function isDiscreteItem(name: string): boolean {
 /**
  * Check if a serving is weight-based (grams).
  */
-export function isWeightServing(serving: Pick<FatSecretServingCache, 'metricServingUnit' | 'servingWeightGrams'>): boolean {
-    const unit = serving.metricServingUnit?.toLowerCase();
+export function isWeightServing(serving: Pick<AiGeneratedServing, 'label' | 'grams'>): boolean {
+    const unit = serving.label?.toLowerCase();
     return (
         unit === 'g' ||
         unit === 'gram' ||
         unit === 'grams' ||
         unit === 'oz' ||
         unit === 'ounce' ||
-        (serving.servingWeightGrams != null && serving.servingWeightGrams > 0)
+        (serving.grams != null && serving.grams > 0)
     );
 }
 
 /**
  * Check if a serving is volume-based (cups, tbsp, ml).
  */
-export function isVolumeServing(serving: Pick<FatSecretServingCache, 'metricServingUnit' | 'volumeMl'>): boolean {
-    const unit = serving.metricServingUnit?.toLowerCase();
+export function isVolumeServing(serving: Pick<AiGeneratedServing, 'label' | 'volumeMl'>): boolean {
+    const unit = serving.label?.toLowerCase();
     const volumeUnits = ['ml', 'cup', 'cups', 'tbsp', 'tablespoon', 'tsp', 'teaspoon', 'fl oz', 'liter', 'l'];
     return (
         (unit && volumeUnits.some(v => unit.includes(v))) ||
@@ -115,14 +115,13 @@ export function isVolumeServing(serving: Pick<FatSecretServingCache, 'metricServ
 /**
  * Check if a serving is count-based (1 tortilla, 1 egg).
  */
-export function isCountServing(serving: Pick<FatSecretServingCache, 'metricServingUnit' | 'measurementDescription'>): boolean {
-    const unit = serving.metricServingUnit?.toLowerCase() || '';
-    const desc = serving.measurementDescription?.toLowerCase() || '';
+export function isCountServing(serving: Pick<AiGeneratedServing, 'label'>): boolean {
+    const desc = serving.label?.toLowerCase() || '';
 
     const countIndicators = ['count', 'item', 'piece', 'each', 'whole', 'unit'];
 
     return (
-        countIndicators.some(c => unit.includes(c) || desc.includes(c)) ||
+        countIndicators.some(c => desc.includes(c)) ||
         DISCRETE_PATTERNS.some(p => p.test(desc))
     );
 }
@@ -130,7 +129,7 @@ export function isCountServing(serving: Pick<FatSecretServingCache, 'metricServi
 /**
  * Check if a serving is human-readable (volume OR count).
  */
-export function isHumanReadableServing(serving: Pick<FatSecretServingCache, 'metricServingUnit' | 'volumeMl' | 'measurementDescription'>): boolean {
+export function isHumanReadableServing(serving: Pick<AiGeneratedServing, 'label' | 'volumeMl'>): boolean {
     return isVolumeServing(serving) || isCountServing(serving);
 }
 
@@ -149,7 +148,7 @@ export interface ServingGaps {
  */
 export function detectServingGaps(
     foodName: string,
-    servings: Array<Pick<FatSecretServingCache, 'metricServingUnit' | 'servingWeightGrams' | 'volumeMl' | 'measurementDescription'>>
+    servings: Array<Pick<AiGeneratedServing, 'label' | 'grams' | 'volumeMl'>>
 ): ServingGaps {
     const hasWeight = servings.some(s => isWeightServing(s));
     const hasHumanReadable = servings.some(s => isHumanReadableServing(s));
@@ -192,7 +191,7 @@ export async function ensureServings(
     options: { skipAiBackfill?: boolean } = {}
 ): Promise<EnsureServingsResult> {
     // Fetch food with servings
-    const food = await prisma.fatSecretFoodCache.findUnique({
+    const food = await prisma.aiGeneratedFood.findUnique({
         where: { id: foodId },
         include: { servings: true },
     });
@@ -201,17 +200,17 @@ export async function ensureServings(
         return { status: 'error', error: 'food_not_found' };
     }
 
-    const gaps = detectServingGaps(food.name, food.servings);
+    const gaps = detectServingGaps(food.displayName, food.servings);
 
     // If no gaps, we're done
     if (!gaps.needsWeight && !gaps.needsHumanReadable) {
-        logger.debug('backfill.no_gaps', { foodId, name: food.name });
+        logger.debug('backfill.no_gaps', { foodId, name: food.displayName });
         return { status: 'ok' };
     }
 
     logger.info('backfill.gaps_detected', {
         foodId,
-        name: food.name,
+        name: food.displayName,
         needsWeight: gaps.needsWeight,
         needsHumanReadable: gaps.needsHumanReadable,
         suggestedType: gaps.suggestedType,
@@ -265,7 +264,7 @@ export async function backfillOnDemand(
     requestedType: 'count' | 'volume',
     targetUnit?: string
 ): Promise<{ success: boolean; reason?: string }> {
-    const food = await prisma.fatSecretFoodCache.findUnique({
+    const food = await prisma.aiGeneratedFood.findUnique({
         where: { id: foodId },
         include: { servings: true },
     });
@@ -279,9 +278,8 @@ export async function backfillOnDemand(
     if (targetUnit) {
         const targetLower = targetUnit.toLowerCase();
         const hasSpecificUnit = food.servings.some(s => {
-            const desc = (s.measurementDescription || '').toLowerCase();
-            const metricUnit = (s.metricServingUnit || '').toLowerCase();
-            return desc.includes(targetLower) || metricUnit === targetLower;
+            const desc = (s.label || '').toLowerCase();
+            return desc.includes(targetLower);
         });
 
         if (hasSpecificUnit) {
@@ -308,7 +306,7 @@ export async function backfillOnDemand(
         }
     }
 
-    logger.info('backfill.on_demand', { foodId, name: food.name, requestedType, targetUnit });
+    logger.info('backfill.on_demand', { foodId, name: food.displayName, requestedType, targetUnit });
 
     // Use AI to generate the serving - always pass 'volume' as gapType
     // The AI is smart enough to return count-based servings for discrete items

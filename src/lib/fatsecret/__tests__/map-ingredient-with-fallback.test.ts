@@ -10,6 +10,28 @@ import { queueForDeferredHydration } from '../deferred-hydration';
 import { backfillOnDemand } from '../serving-backfill';
 import { insertAiServing } from '../ai-backfill';
 
+jest.mock('../../db', () => ({
+  prisma: {
+    fdcFood: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    offFood: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    aiGeneratedFood: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
+    foodMapping: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    ingredient: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  },
+}));
+
 jest.mock('../ai-normalize');
 jest.mock('../validated-mapping-helpers');
 jest.mock('../ai-synonym-generator');

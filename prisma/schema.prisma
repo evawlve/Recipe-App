@@ -199,6 +199,11 @@ model Notification {
   @@index([userId, bumpedAt])
 }
 
+// ============================================================================
+// Legacy Food Tables (marked for future deprecation)
+// Still referenced by 15+ source files — do NOT delete yet
+// ============================================================================
+
 model Food {
   id                   String                @id @default(cuid())
   name                 String
@@ -236,139 +241,6 @@ model Food {
   @@index([categoryId, verification])
 }
 
-model FdcFoodCache {
-  id            Int                  @id
-  description   String
-  brandName     String?
-  dataType      String
-  nutrients     Json                 // nutrientsPer100g
-  servingSize   Float?
-  servingSizeUnit String?
-  syncedAt      DateTime             @default(now())
-  expiresAt     DateTime?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  servings      FdcServingCache[]
-  
-  @@index([syncedAt])
-  @@index([expiresAt])
-}
-
-model FdcServingCache {
-  id                Int            @id @default(autoincrement())
-  fdcId             Int
-  description       String
-  grams             Float
-  volumeMl          Float?         // Volume in ml (for density-based conversions)
-  derivedViaDensity Boolean        @default(false)
-  densityGml        Float?         // Density in g/ml (stored inline for FDC)
-  prepModifier      String?        // e.g., "cubed", "minced", "sliced"
-  source            String         @default("fdc")
-  isAiEstimated     Boolean        @default(false)
-  confidence        Float?         // AI confidence score
-  note              String?        // AI rationale or notes
-  food              FdcFoodCache   @relation(fields: [fdcId], references: [id], onDelete: Cascade)
-  
-  @@unique([fdcId, description], name: "FdcServingCache_fdcId_description_key")
-  @@index([fdcId])
-  @@index([prepModifier])
-}
-
-model FatSecretFoodCache {
-  id               String                     @id
-  name             String
-  brandName        String?
-  foodType         String?
-  country          String?
-  description      String?
-  defaultServingId String?
-  source           String?                    @default("food.get.v4")
-  confidence       Float?                     @default(0.9)
-  nutrientsPer100g Json?
-  legacyFoodId     String?                    @unique
-  hash             String?
-  syncedAt         DateTime                   @default(now())
-  expiresAt        DateTime?
-  createdAt        DateTime                   @default(now())
-  updatedAt        DateTime                   @updatedAt
-  densityEstimates FatSecretDensityEstimate[]
-  aliases          FatSecretFoodAlias[]
-  servings         FatSecretServingCache[]
-
-  @@index([syncedAt])
-  @@index([expiresAt])
-  @@index([hash])
-}
-
-model FatSecretServingCache {
-  id                     String                    @id
-  foodId                 String
-  measurementDescription String?
-  numberOfUnits          Float?
-  metricServingAmount    Float?
-  metricServingUnit      String?
-  servingWeightGrams     Float?
-  volumeMl               Float?
-  isVolume               Boolean                   @default(false)
-  isDefault              Boolean                   @default(false)
-  derivedViaDensity      Boolean                   @default(false)
-  densityEstimateId      String?
-  createdAt              DateTime                  @default(now())
-  updatedAt              DateTime                  @updatedAt
-  source                 String?                   @default("fatsecret")
-  confidence             Float?
-  note                   String?
-  densityEstimate        FatSecretDensityEstimate? @relation(fields: [densityEstimateId], references: [id])
-  food                   FatSecretFoodCache        @relation(fields: [foodId], references: [id], onDelete: Cascade)
-
-  @@index([foodId])
-  @@index([isDefault])
-  @@index([densityEstimateId])
-}
-
-model FatSecretFoodAlias {
-  id        String             @id @default(cuid())
-  foodId    String
-  alias     String
-  locale    String?            @db.VarChar(16)
-  source    String?            @default("fatsecret")
-  createdAt DateTime           @default(now())
-  food      FatSecretFoodCache @relation(fields: [foodId], references: [id], onDelete: Cascade)
-
-  @@unique([foodId, alias])
-  @@index([alias])
-}
-
-model FatSecretDensityEstimate {
-  id         String                  @id @default(cuid())
-  foodId     String
-  densityGml Float
-  source     String
-  confidence Float?                  @default(0)
-  notes      String?
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
-  food       FatSecretFoodCache      @relation(fields: [foodId], references: [id], onDelete: Cascade)
-  servings   FatSecretServingCache[]
-
-  @@index([foodId])
-  @@index([source])
-}
-
-model FatSecretCacheSyncRun {
-  id             String    @id @default(cuid())
-  status         String    @default("pending")
-  totalRequested Int       @default(0)
-  totalHydrated  Int       @default(0)
-  totalFailed    Int       @default(0)
-  startedAt      DateTime  @default(now())
-  finishedAt     DateTime?
-  error          String?
-  metadata       Json?
-
-  @@index([status, startedAt])
-}
-
 model FoodUnit {
   id     String @id @default(cuid())
   foodId String
@@ -382,32 +254,6 @@ model Barcode {
   gtin   String @unique
   foodId String
   Food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
-}
-
-model IngredientFoodMap {
-  id           String     @id @default(cuid())
-  ingredientId String
-  foodId       String?
-  fatsecretFoodId       String?
-  fatsecretServingId    String?
-  fatsecretGrams        Float?
-  fatsecretConfidence   Float?
-  fatsecretSource       String?
-  aiGeneratedFoodId     String?
-  pendingVolume         Boolean   @default(false)
-  mappedBy     String
-  confidence   Float      @default(0.0)
-  useOnce      Boolean    @default(false)
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  food         Food?      @relation(fields: [foodId], references: [id], onDelete: Cascade)
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  aiGeneratedFood AiGeneratedFood? @relation(fields: [aiGeneratedFoodId], references: [id], onDelete: SetNull)
-
-  @@index([ingredientId])
-  @@index([foodId])
-  @@index([fatsecretFoodId])
-  @@index([aiGeneratedFoodId])
 }
 
 model FoodAlias {
@@ -450,6 +296,294 @@ model UserPortionOverride {
   @@unique([userId, foodId, unit])
   @@index([userId, foodId])
 }
+
+// ============================================================================
+// Ingredient ↔ Food Mapping (per-recipe)
+// ============================================================================
+
+model IngredientFoodMap {
+  id                String     @id @default(cuid())
+  ingredientId      String
+  foodId            String?              // FK → legacy Food table
+  offBarcode        String?              // FK → OffFood.barcode
+  fdcId             Int?                 // FK → FdcFood.fdcId
+  aiGeneratedFoodId String?
+  pendingVolume     Boolean    @default(false)
+  mappedBy          String
+  confidence        Float      @default(0.0)
+  useOnce           Boolean    @default(false)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  food              Food?      @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  ingredient        Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  aiGeneratedFood   AiGeneratedFood? @relation(fields: [aiGeneratedFoodId], references: [id], onDelete: SetNull)
+
+  @@index([ingredientId])
+  @@index([foodId])
+  @@index([offBarcode])
+  @@index([fdcId])
+  @@index([aiGeneratedFoodId])
+}
+
+// ============================================================================
+// FDC (USDA FoodData Central) — locally seeded
+// ============================================================================
+
+model FdcFood {
+  fdcId           Int            @id           // USDA fdcId (integer)
+  description     String
+  brandName       String?
+  dataType        String                       // "SR Legacy", "Survey (FNDDS)", "Branded"
+  nutrientsPer100g Json                        // { kcal, protein, carbs, fat, fiber, sugar, sodium }
+  servingSize     Float?
+  servingSizeUnit String?
+  syncedAt        DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  servings        FdcServing[]
+  mappings        FoodMapping[]
+
+  @@index([syncedAt])
+  @@index([description])
+}
+
+model FdcServing {
+  id                Int        @id @default(autoincrement())
+  fdcId             Int                        // FK → FdcFood.fdcId
+  description       String
+  grams             Float
+  volumeMl          Float?
+  derivedViaDensity Boolean    @default(false)
+  densityGml        Float?
+  prepModifier      String?
+  source            String     @default("fdc")
+  isAiEstimated     Boolean    @default(false)
+  confidence        Float?
+  note              String?
+  food              FdcFood    @relation(fields: [fdcId], references: [fdcId], onDelete: Cascade)
+
+  @@unique([fdcId, description], name: "FdcServing_fdcId_description_key")
+  @@index([fdcId])
+  @@index([prepModifier])
+}
+
+// ============================================================================
+// Open Food Facts (OFF) — locally seeded via JSONL + daily Delta exports
+// ============================================================================
+
+model OffFood {
+  barcode          String        @id           // EAN/UPC barcode (no "off_" prefix)
+  name             String
+  brandName        String?
+  nutrientsPer100g Json?                       // { kcal, protein, carbs, fat, fiber, sugar, sodium }
+  servingSize      String?                     // Raw label string
+  servingGrams     Float?                      // Parsed default serving weight
+  imageUrl         String?                     // Product image from OFF
+  categories       String?                     // OFF categories CSV
+  syncedAt         DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  servings         OffServing[]
+  mappings         FoodMapping[]
+
+  @@index([name])
+  @@index([brandName])
+  @@index([syncedAt])
+}
+
+model OffServing {
+  id                Int        @id @default(autoincrement())
+  barcode           String                     // FK → OffFood.barcode
+  description       String                     // e.g., "1 cup", "1 container"
+  grams             Float
+  volumeMl          Float?
+  derivedViaDensity Boolean    @default(false)
+  densityGml        Float?
+  prepModifier      String?
+  source            String     @default("openfoodfacts")
+  isAiEstimated     Boolean    @default(false)
+  confidence        Float?
+  note              String?
+  food              OffFood    @relation(fields: [barcode], references: [barcode], onDelete: Cascade)
+
+  @@unique([barcode, description])
+  @@index([barcode])
+  @@index([prepModifier])
+}
+
+// ============================================================================
+// Canonical Food Mapping Cache (replaces ValidatedMapping)
+// normalizedForm is the primary lookup key — one mapping per ingredient concept
+// ============================================================================
+
+model FoodMapping {
+  normalizedForm  String   @id              // Canonical lookup key (e.g., "strawberry")
+  foodName        String
+  brandName       String?
+  source          String   @default("fdc")  // "fdc" | "openfoodfacts" | "ai_generated"
+  offBarcode      String?                   // FK → OffFood.barcode
+  fdcId           Int?                      // FK → FdcFood.fdcId
+  aiConfidence    Float
+  validatedAt     DateTime @default(now())
+  validatedBy     String   @default("ai")
+  usedCount       Int      @default(0)
+  lastUsedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  offFood         OffFood?  @relation(fields: [offBarcode], references: [barcode])
+  fdcFood         FdcFood?  @relation(fields: [fdcId], references: [fdcId])
+
+  @@index([fdcId])
+  @@index([offBarcode])
+  @@index([lastUsedAt(sort: Desc)])
+}
+
+// ============================================================================
+// Learned Cleanup Patterns (active — referenced by learned-patterns.ts)
+// ============================================================================
+
+model IngredientCleanupPattern {
+  id            String   @id @default(cuid())
+
+  // Pattern definition
+  pattern       String   @unique
+  patternType   PatternType
+  replacement   String
+  description   String?
+
+  // Learning metadata
+  source        PatternSource
+  confidence    Float    @default(0.8)
+
+  // Usage tracking
+  usageCount    Int      @default(0)
+  successCount  Int      @default(0)
+  failureCount  Int      @default(0)
+
+  // Computed metrics
+  successRate   Float?
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  lastUsed      DateTime @default(now())
+
+  @@index([patternType])
+  @@index([source])
+  @@index([confidence])
+  @@index([successRate])
+}
+
+// ============================================================================
+// AI Normalization Cache (source-agnostic)
+// ============================================================================
+
+model AiNormalizeCache {
+  normalizedKey            String   @id   // Normalized ingredient name for lookup
+  rawLine                  String?        // Original raw line (for reference/debugging only)
+  normalizedName           String
+  canonicalBase            String?        // Base ingredient for cache lookup
+  synonyms                 Json     @default("[]")
+  prepPhrases              Json     @default("[]")
+  sizePhrases              Json     @default("[]")
+  cookingModifier          String?        // Preserved for future food diary use
+  estimatedCaloriesPer100g Float?         // AI estimate (kcal)
+  estimatedProteinPer100g  Float?         // AI estimate (g)
+  estimatedCarbsPer100g    Float?         // AI estimate (g)
+  estimatedFatPer100g      Float?         // AI estimate (g)
+  nutritionConfidence      Float?         // 0-1 confidence for nutrition estimate
+  isBranded                Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  lastUsedAt               DateTime @default(now())
+  useCount                 Int      @default(0)
+
+  @@index([lastUsedAt(sort: Desc)])
+}
+
+// ============================================================================
+// Learned Synonyms
+// ============================================================================
+
+model LearnedSynonym {
+  id           String   @id @default(cuid())
+  sourceTerm   String
+  targetTerm   String
+  locale       String?  @db.VarChar(16)
+  category     String?  // e.g., "british_american", "spelling", "ingredient"
+  source       String   @default("ai") // "ai", "manual"
+  confidence   Float    @default(0.8)
+  useCount     Int      @default(0)
+  successCount Int      @default(0)
+  failureCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  @@unique([sourceTerm, targetTerm])
+  @@index([sourceTerm])
+  @@index([successCount(sort: Desc)])
+}
+
+// ============================================================================
+// AI-Generated Nutrition Data (fallback when no FDC/OFF match)
+// ============================================================================
+
+model AiGeneratedFood {
+  id                    String    @id @default(cuid())
+  ingredientName        String    @unique  // Normalized ingredient (cache key)
+  rawLine               String?            // Original raw line for reference
+  displayName           String             // Human-readable food name
+
+  // Nutrition per 100g
+  caloriesPer100g       Float
+  proteinPer100g        Float
+  carbsPer100g          Float
+  fatPer100g            Float
+  fiberPer100g          Float?    @default(0)
+  sugarPer100g          Float?    @default(0)
+  sodiumMgPer100g       Float?    @default(0)
+  saturatedFatPer100g   Float?    @default(0)
+  cholesterolMgPer100g  Float?    @default(0)
+
+  // AI metadata
+  aiConfidence          Float              // Self-assessed 0-1
+  aiModel               String             // e.g., "google/gemini-2.0-flash"
+  aiNotes               String?            // Caveats from the AI
+  baseFoodName          String?            // Reference food used
+  baseFoodSource        String?            // "fdc" | "openfoodfacts" | null
+
+  // Lifecycle
+  reviewStatus          String    @default("pending")  // "pending" | "approved" | "rejected"
+  expiresAt             DateTime?          // Optional, for scheduled re-evaluation
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  useCount              Int       @default(0)
+
+  servings              AiGeneratedServing[]
+  ingredientMaps        IngredientFoodMap[]
+
+  @@index([ingredientName])
+  @@index([reviewStatus])
+  @@index([createdAt(sort: Desc)])
+}
+
+model AiGeneratedServing {
+  id                String          @id @default(cuid())
+  foodId            String
+  label             String              // e.g., "cup", "tbsp", "packet"
+  grams             Float               // Estimated weight
+  volumeMl          Float?              // For volume units
+  aiConfidence      Float
+  aiNotes           String?
+  createdAt         DateTime        @default(now())
+  food              AiGeneratedFood @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@unique([foodId, label])
+  @@index([foodId])
+}
+
+// ============================================================================
+// Recipe Features & Analytics
+// ============================================================================
 
 model RecipeFeatureLite {
   recipeId          String   @id
@@ -508,6 +642,10 @@ model RecipeSimilar {
   @@index([similarId])
 }
 
+// ============================================================================
+// Enums
+// ============================================================================
+
 enum TagNamespace {
   MEAL_TYPE
   CUISINE
@@ -526,85 +664,6 @@ enum TagSource {
   AUTO_SUGGESTED
 }
 
-model GlobalIngredientMapping {
-  id                  String   @id @default(cuid())
-  normalizedName      String   @unique
-  fatsecretFoodId     String?
-  fatsecretServingId  String?
-  fdcId               Int?
-  source              String   // "fatsecret" | "fdc"
-  confidence          Float
-  usageCount          Int      @default(1)
-  lastUsed            DateTime @default(now())
-  createdBy           String?
-  isUserOverride      Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  
-  @@index([normalizedName])
-  @@index([confidence])
-}
-
-model IngredientCleanupPattern {
-  id            String   @id @default(cuid())
-  
-  // Pattern definition
-  pattern       String   @unique
-  patternType   PatternType
-  replacement   String
-  description   String?
-  
-  // Learning metadata
-  source        PatternSource
-  confidence    Float    @default(0.8)
-  
-  // Usage tracking
-  usageCount    Int      @default(0)
-  successCount  Int      @default(0)
-  failureCount  Int      @default(0)
-  
-  // Computed metrics
-  successRate   Float?
-  
-  // Timestamps
-  createdAt     DateTime @default(now())
-  lastUsed      DateTime @default(now())
-  
-  // Relations
-  appliedTo     IngredientCleanupApplication[]
-  
-  @@index([patternType])
-  @@index([source])
-  @@index([confidence])
-  @@index([successRate])
-}
-
-model IngredientCleanupApplication {
-  id               String   @id @default(cuid())
-  
-  // What was cleaned
-  rawInput         String
-  cleanedOutput    String
-  
-  // Which pattern was used
-  patternId        String
-  pattern          IngredientCleanupPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
-  
-  // Context
-  recipeId         String?
-  ingredientId     String?
-  
-  // Outcome
-  mappingSucceeded Boolean?
-  confidenceScore  Float?
-  
-  // Timestamp
-  appliedAt        DateTime @default(now())
-  
-  @@index([patternId])
-  @@index([mappingSucceeded])
-  @@index([appliedAt])
-}
-
 enum PatternType {
   MEASUREMENT_PREFIX
   MEASUREMENT_SUFFIX
@@ -620,227 +679,4 @@ enum PatternSource {
   MANUAL
   AUTO_DETECTED
   USER_FEEDBACK
-}
-
-// ============================================================================
-// AI-Validated Mapping Tables
-// ============================================================================
-
-model ValidatedMapping {
-  id                      String   @id @default(cuid())
-  rawIngredient           String
-  normalizedForm          String
-  foodId                  String
-  foodName                String
-  brandName               String?
-  source                  String   @default("fatsecret")
-  aiConfidence            Float
-  validationReason        String?
-  isAlias                 Boolean  @default(false)
-  canonicalRawIngredient  String?
-  validatedAt             DateTime @default(now())
-  validatedBy             String   @default("ai")
-  usedCount               Int      @default(0)
-  lastUsedAt              DateTime @default(now())
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
-  @@unique([rawIngredient, source])
-  @@unique([normalizedForm, source], map: "ValidatedMapping_normalizedForm_source_key")
-  @@index([rawIngredient])
-  @@index([normalizedForm])
-  @@index([isAlias, canonicalRawIngredient])
-  @@index([foodId])
-  @@index([lastUsedAt(sort: Desc)])
-}
-
-model MappingValidationFailure {
-  id                      String   @id @default(cuid())
-  rawIngredient           String
-  attemptedFoodId         String
-  attemptedFoodName       String
-  ourConfidence           Float
-  aiConfidence            Float
-  aiRejectionReason       String
-  aiFailureCategory       String
-  failureType             String
-  aiSuggestedAlternative  String?
-  retrySucceeded          Boolean?
-  scoringDetails          Json?
-  createdAt               DateTime @default(now())
-
-  @@index([aiFailureCategory])
-  @@index([failureType])
-  @@index([rawIngredient])
-  @@index([createdAt(sort: Desc)])
-}
-
-model AiNormalizeCache {
-  normalizedKey            String   @id   // Normalized ingredient name for lookup (computed from rawLine)
-  rawLine                  String?        // Original raw line (for reference/debugging only)
-  normalizedName           String
-  canonicalBase            String?              // Base ingredient for cache lookup (e.g., 'strawberries' for 'strawberry halves')
-  synonyms                 Json     @default("[]")
-  prepPhrases              Json     @default("[]")
-  sizePhrases              Json     @default("[]")
-  cookingModifier          String?              // Preserved for future food diary use
-  estimatedCaloriesPer100g Float?               // AI estimate (kcal)
-  estimatedProteinPer100g  Float?               // AI estimate (g)
-  estimatedCarbsPer100g    Float?               // AI estimate (g)
-  estimatedFatPer100g      Float?               // AI estimate (g)
-  nutritionConfidence      Float?               // 0-1 confidence for nutrition estimate
-  isBranded                Boolean  @default(false)  // Whether the AI identified this as a branded product
-  createdAt                DateTime @default(now())
-  lastUsedAt               DateTime @default(now())
-  useCount                 Int      @default(0)
-
-  @@index([lastUsedAt(sort: Desc)])
-}
-
-// ============================================================================
-// OpenFoodFacts Cache Tables
-// ============================================================================
-
-/// OpenFoodFacts product cache
-/// ID format: "off_<barcode>" (e.g., "off_021130126026")
-/// Source: https://world.openfoodfacts.org — free, no API key required
-model OpenFoodFactsCache {
-  id               String                      @id         // "off_<barcode>"
-  barcode          String                      @unique
-  name             String
-  brandName        String?
-  nutrientsPer100g Json?                                   // { calories, protein, carbs, fat, fiber, sugars, sodium }
-  servingSize      String?                                 // Raw string from OFF label, e.g., "1 container (170g)"
-  servingGrams     Float?                                  // Primary parsed gram weight for default serving
-  syncedAt         DateTime                    @default(now())
-  expiresAt        DateTime?
-  createdAt        DateTime                    @default(now())
-  updatedAt        DateTime                    @updatedAt
-  servings         OpenFoodFactsServingCache[]
-
-  @@index([syncedAt])
-  @@index([name])
-  @@index([brandName])
-}
-
-/// AI-estimated or label-derived serving weights for OFF products
-/// Mirrors FdcServingCache structure exactly
-model OpenFoodFactsServingCache {
-  id                Int                    @id @default(autoincrement())
-  offId             String                                 // FK to OpenFoodFactsCache.id
-  description       String                                 // e.g., "1 cup", "1 container"
-  grams             Float
-  volumeMl          Float?
-  derivedViaDensity Boolean                @default(false)
-  densityGml        Float?
-  prepModifier      String?                                // e.g., "chopped", "minced"
-  source            String                 @default("openfoodfacts")
-  isAiEstimated     Boolean                @default(false)
-  confidence        Float?
-  note              String?
-  food              OpenFoodFactsCache     @relation(fields: [offId], references: [id], onDelete: Cascade)
-
-  @@unique([offId, description])
-  @@index([offId])
-  @@index([prepModifier])
-}
-
-
-/// Tracks search query patterns that AI identifies as problematic
-/// Used to improve parser and search logic based on AI feedback
-model SearchQueryPattern {
-  id               String   @id @default(cuid())
-  rawIngredient    String   // Original ingredient line
-  searchQuery      String   // The query that was used
-  suggestedQuery   String?  // AI's suggested alternative 
-  detectedIssues   Json     @default("[]") // Array of issue types
-  aiReason         String   // AI's explanation
-  aiCategory       String   // validation category: search_query_issue, search_scoring_issue, etc.
-  occurrences      Int      @default(1) // How many times we've seen this pattern
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@unique([searchQuery, aiCategory])
-  @@index([aiCategory])
-  @@index([occurrences(sort: Desc)])
-  @@index([createdAt(sort: Desc)])
-}
-
-/// Learned synonym pairs from AI normalization
-/// Used to speed up future lookups by caching synonym relationships
-model LearnedSynonym {
-  id           String   @id @default(cuid())
-  sourceTerm   String   // The original term
-  targetTerm   String   // The synonym
-  locale       String?  @db.VarChar(16)
-  category     String?  // e.g., "british_american", "spelling", "ingredient"
-  source       String   @default("ai") // "ai", "manual", "fatsecret_alias"
-  confidence   Float    @default(0.8)
-  useCount     Int      @default(0)
-  successCount Int      @default(0)
-  failureCount Int      @default(0)
-  createdAt    DateTime @default(now())
-  lastUsedAt   DateTime @default(now())
-
-  @@unique([sourceTerm, targetTerm])
-  @@index([sourceTerm])
-  @@index([successCount(sort: Desc)])
-}
-
-// ============================================================================
-// AI-Generated Nutrition Data
-// ============================================================================
-
-model AiGeneratedFood {
-  id                    String    @id @default(cuid())
-  ingredientName        String    @unique  // Normalized ingredient (cache key)
-  rawLine               String?             // Original raw line for reference
-  displayName           String              // Human-readable food name
-
-  // Nutrition per 100g
-  caloriesPer100g       Float
-  proteinPer100g        Float
-  carbsPer100g          Float
-  fatPer100g            Float
-  fiberPer100g          Float?    @default(0)
-  sugarPer100g          Float?    @default(0)
-  sodiumMgPer100g       Float?    @default(0)
-  saturatedFatPer100g   Float?    @default(0)
-  cholesterolMgPer100g  Float?    @default(0)
-
-  // AI metadata
-  aiConfidence          Float               // Self-assessed 0-1
-  aiModel               String              // e.g., "google/gemini-2.0-flash"
-  aiNotes               String?             // Caveats from the AI
-  baseFoodName          String?             // Reference food used (e.g., "salad seasoning")
-  baseFoodSource        String?             // "fatsecret" | "fdc" | null
-
-  // Lifecycle
-  reviewStatus          String    @default("pending")  // "pending" | "approved" | "rejected"
-  expiresAt             DateTime?           // Optional, for scheduled re-evaluation
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  useCount              Int       @default(0)
-
-  servings              AiGeneratedServing[]
-  ingredientMaps        IngredientFoodMap[]
-
-  @@index([ingredientName])
-  @@index([reviewStatus])
-  @@index([createdAt(sort: Desc)])
-}
-
-model AiGeneratedServing {
-  id                String          @id @default(cuid())
-  foodId            String
-  label             String              // e.g., "cup", "tbsp", "packet"
-  grams             Float               // Estimated weight
-  volumeMl          Float?              // For volume units
-  aiConfidence      Float
-  aiNotes           String?
-  createdAt         DateTime        @default(now())
-  food              AiGeneratedFood @relation(fields: [foodId], references: [id], onDelete: Cascade)
-
-  @@unique([foodId, label])
-  @@index([foodId])
 }

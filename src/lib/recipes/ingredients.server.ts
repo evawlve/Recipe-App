@@ -23,8 +23,9 @@ export async function getRecipeIngredients(recipeId: string) {
   }
 
   // Collect IDs for batch fetching
-  const fatsecretIds = new Set<string>();
   const fdcIds = new Set<number>();
+  const offBarcodes = new Set<string>();
+  const aiGeneratedIds = new Set<string>();
 
   recipe.ingredients.forEach(ing => {
     const best = ing.foodMaps
@@ -32,33 +33,40 @@ export async function getRecipeIngredients(recipeId: string) {
       .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
 
     if (best && !best.food) {
-      if (best.fatsecretFoodId) {
-        if (best.fatsecretFoodId.startsWith('fdc:')) {
-          const id = parseInt(best.fatsecretFoodId.split(':')[1]);
-          if (!isNaN(id)) fdcIds.add(id);
-        } else {
-          fatsecretIds.add(best.fatsecretFoodId);
-        }
+      if (best.fdcId) {
+        fdcIds.add(best.fdcId);
+      } else if (best.offBarcode) {
+        offBarcodes.add(best.offBarcode);
+      } else if (best.aiGeneratedFoodId) {
+        aiGeneratedIds.add(best.aiGeneratedFoodId);
       }
     }
   });
 
-  // Fetch from caches
-  let fatsecretFoods: Record<string, any> = {};
+  // Fetch from consolidated tables
   let fdcFoods: Record<number, any> = {};
-
-  if (fatsecretIds.size > 0) {
-    const foods = await prisma.fatSecretFoodCache.findMany({
-      where: { id: { in: Array.from(fatsecretIds) } }
-    });
-    foods.forEach(f => fatsecretFoods[f.id] = f);
-  }
+  let offFoods: Record<string, any> = {};
+  let aiGeneratedFoods: Record<string, any> = {};
 
   if (fdcIds.size > 0) {
-    const foods = await (prisma as any).fdcFoodCache.findMany({
-      where: { id: { in: Array.from(fdcIds) } }
+    const foods = await prisma.fdcFood.findMany({
+      where: { fdcId: { in: Array.from(fdcIds) } }
     });
-    foods.forEach((f: any) => fdcFoods[f.id] = f);
+    foods.forEach(f => fdcFoods[f.fdcId] = f);
+  }
+
+  if (offBarcodes.size > 0) {
+    const foods = await prisma.offFood.findMany({
+      where: { barcode: { in: Array.from(offBarcodes) } }
+    });
+    foods.forEach(f => offFoods[f.barcode] = f);
+  }
+
+  if (aiGeneratedIds.size > 0) {
+    const foods = await prisma.aiGeneratedFood.findMany({
+      where: { id: { in: Array.from(aiGeneratedIds) } }
+    });
+    foods.forEach(f => aiGeneratedFoods[f.id] = f);
   }
 
   // Transform the data to include mapping status and nutrition
@@ -91,55 +99,52 @@ export async function getRecipeIngredients(recipeId: string) {
           fiberG: (bestMapping.food.fiber100 || 0) * multiplier,
           sugarG: (bestMapping.food.sugar100 || 0) * multiplier,
         };
-      } else if (bestMapping.fatsecretFoodId) {
-        foodId = bestMapping.fatsecretFoodId;
+      } else {
+        let resolvedFood: any = null;
+        let nutrients: any = null;
 
-        if (bestMapping.fatsecretFoodId.startsWith('fdc:')) {
-          // FDC Cache
-          const fdcId = parseInt(bestMapping.fatsecretFoodId.split(':')[1]);
-          const fdcFood = fdcFoods[fdcId];
-
-          if (fdcFood) {
-            foodName = fdcFood.description;
-            foodBrand = fdcFood.brandName;
-
-            // Extract nutrients from FDC JSON
-            const nutrients = fdcFood.nutrients as any[];
-            const getNutrient = (id: number) => {
-              const n = nutrients.find((x: any) => x.nutrient?.id === id || x.nutrientId === id);
-              return n?.amount || 0;
-            };
-
-            nutrition = {
-              calories: Math.round(getNutrient(1008) * multiplier),
-              proteinG: getNutrient(1003) * multiplier,
-              carbsG: getNutrient(1005) * multiplier,
-              fatG: getNutrient(1004) * multiplier,
-              fiberG: getNutrient(1079) * multiplier,
-              sugarG: getNutrient(2000) * multiplier,
-            };
+        if (bestMapping.fdcId) {
+          foodId = `fdc_${bestMapping.fdcId}`;
+          resolvedFood = fdcFoods[bestMapping.fdcId];
+          if (resolvedFood) {
+            foodName = resolvedFood.description;
+            foodBrand = resolvedFood.brandName;
+            nutrients = resolvedFood.nutrientsPer100g;
           }
-        } else {
-          // FatSecret Cache
-          const fsFood = fatsecretFoods[bestMapping.fatsecretFoodId];
-
-          if (fsFood) {
-            foodName = fsFood.name;
-            foodBrand = fsFood.brandName;
-
-            // Extract nutrients from FatSecret JSON
-            // Assuming nutrientsPer100g is { calories: number, protein: number, ... }
-            const n = fsFood.nutrientsPer100g as any || {};
-
-            nutrition = {
-              calories: Math.round((n.calories || 0) * multiplier),
-              proteinG: (n.protein || 0) * multiplier,
-              carbsG: (n.carbohydrate || 0) * multiplier,
-              fatG: (n.fat || 0) * multiplier,
-              fiberG: (n.fiber || 0) * multiplier,
-              sugarG: (n.sugar || 0) * multiplier,
-            };
+        } else if (bestMapping.offBarcode) {
+          foodId = `off_${bestMapping.offBarcode}`;
+          resolvedFood = offFoods[bestMapping.offBarcode];
+          if (resolvedFood) {
+            foodName = resolvedFood.foodName;
+            foodBrand = resolvedFood.brandName;
+            nutrients = resolvedFood.nutrientsPer100g;
           }
+        } else if (bestMapping.aiGeneratedFoodId) {
+          foodId = bestMapping.aiGeneratedFoodId;
+          resolvedFood = aiGeneratedFoods[bestMapping.aiGeneratedFoodId];
+          if (resolvedFood) {
+            foodName = resolvedFood.displayName;
+            foodBrand = resolvedFood.brandName;
+            nutrients = resolvedFood.nutrientsPer100g;
+          }
+        }
+
+        if (resolvedFood && nutrients) {
+          const kcal = nutrients.calories ?? nutrients.energy ?? nutrients.kcal ?? 0;
+          const protein = nutrients.protein ?? 0;
+          const carbs = nutrients.carbohydrate ?? nutrients.carbs ?? 0;
+          const fat = nutrients.fat ?? 0;
+          const fiber = nutrients.fiber ?? 0;
+          const sugar = nutrients.sugar ?? 0;
+
+          nutrition = {
+            calories: Math.round(kcal * multiplier),
+            proteinG: protein * multiplier,
+            carbsG: carbs * multiplier,
+            fatG: fat * multiplier,
+            fiberG: fiber * multiplier,
+            sugarG: sugar * multiplier,
+          };
         }
       }
     }

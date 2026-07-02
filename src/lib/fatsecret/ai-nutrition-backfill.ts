@@ -54,7 +54,7 @@ export type AiNutritionOutcome = AiNutritionResult | AiNutritionError;
 
 export interface BaseFoodContext {
     name: string;
-    source: 'fatsecret' | 'fdc' | 'cache' | 'openfoodfacts';
+    source: 'fatsecret' | 'fdc' | 'cache' | 'openfoodfacts' | 'ai_generated';
     kcalPer100g?: number;
     proteinPer100g?: number;
     carbsPer100g?: number;

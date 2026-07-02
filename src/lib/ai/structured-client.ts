@@ -162,7 +162,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
  * - All other purposes: Cloud providers only (OpenRouter → OpenAI) - for complex reasoning
  * - forceProvider: Overrides purpose-based routing to use a single specific provider
  */
-function getProviderChain(
+export function getProviderChain(
     purpose: StructuredLlmPurpose,
     forceProvider?: StructuredLlmProvider
 ): ProviderConfig[] {
@@ -203,53 +203,45 @@ function getProviderChain(
     }
 
     // Purpose-based routing:
-    // 'parse' = Ollama only (simple structural extraction, no cloud fallback)
-    // All other purposes = Cloud only (complex reasoning, skip local Ollama)
-    const useOllamaOnly = purpose === 'parse';
-    const useCloudOnly = !useOllamaOnly;
-    const useCapableModel = purpose === 'nutrition';
-
-    // Local Ollama (for 'parse' purpose only)
-    if (OLLAMA_ENABLED && useOllamaOnly) {
+    // 1. Local Ollama (first in chain for 'parse' purpose if enabled)
+    if (OLLAMA_ENABLED && purpose === 'parse') {
         chain.push({
             name: 'ollama',
             baseUrl: OLLAMA_BASE_URL,
-            apiKey: 'ollama',  // Ollama doesn't require an API key
+            apiKey: 'ollama',
             model: OLLAMA_MODEL,
         });
-        // 'parse' purpose: Ollama only, no cloud fallback
-        return chain;
     }
 
-    // Cloud providers for all non-parse purposes
-    if (useCloudOnly) {
-        // OpenRouter primary (cheap cloud)
-        if (OPENROUTER_API_KEY) {
-            chain.push({
-                name: 'openrouter',
-                baseUrl: OPENROUTER_BASE_URL,
-                apiKey: OPENROUTER_API_KEY,
-                model: useCapableModel ? NUTRITION_AI_MODEL : CHEAP_AI_MODEL_PRIMARY,
-            });
+    // 2. Cloud providers (OpenRouter -> OpenAI fallback)
+    const useCapableModel = purpose === 'nutrition';
 
-            // OpenRouter fallback (also cheap, different model)
-            chain.push({
-                name: 'openrouter',
-                baseUrl: OPENROUTER_BASE_URL,
-                apiKey: OPENROUTER_API_KEY,
-                model: useCapableModel ? CHEAP_AI_MODEL_PRIMARY : CHEAP_AI_MODEL_FALLBACK,
-            });
-        }
+    // OpenRouter primary (cheap cloud)
+    if (OPENROUTER_API_KEY) {
+        chain.push({
+            name: 'openrouter',
+            baseUrl: OPENROUTER_BASE_URL,
+            apiKey: OPENROUTER_API_KEY,
+            model: useCapableModel ? NUTRITION_AI_MODEL : CHEAP_AI_MODEL_PRIMARY,
+        });
 
-        // OpenAI fallback (reliable but more expensive)
-        if (OPENAI_API_KEY) {
-            chain.push({
-                name: 'openai',
-                baseUrl: OPENAI_API_BASE_URL,
-                apiKey: OPENAI_API_KEY,
-                model: FATSECRET_CACHE_AI_MODEL,
-            });
-        }
+        // OpenRouter fallback (also cheap, different model)
+        chain.push({
+            name: 'openrouter',
+            baseUrl: OPENROUTER_BASE_URL,
+            apiKey: OPENROUTER_API_KEY,
+            model: useCapableModel ? CHEAP_AI_MODEL_PRIMARY : CHEAP_AI_MODEL_FALLBACK,
+        });
+    }
+
+    // OpenAI fallback (reliable but more expensive)
+    if (OPENAI_API_KEY) {
+        chain.push({
+            name: 'openai',
+            baseUrl: OPENAI_API_BASE_URL,
+            apiKey: OPENAI_API_KEY,
+            model: FATSECRET_CACHE_AI_MODEL,
+        });
     }
 
     return chain;
@@ -409,9 +401,7 @@ export async function callStructuredLlm(
         if (providerChain.length === 0) {
             return {
                 status: 'error',
-                error: purpose === 'parse'
-                    ? 'Ollama not available for parse assist (set OLLAMA_ENABLED=true)'
-                    : 'No API keys configured (need OPENROUTER_API_KEY or OPENAI_API_KEY)',
+                error: 'No API keys configured (need OPENROUTER_API_KEY or OPENAI_API_KEY)',
                 provider: 'openai',
                 model: 'none',
                 durationMs: Date.now() - startTime,

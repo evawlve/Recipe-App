@@ -32,7 +32,7 @@ import {
 import { refineSearchQuery } from './ai-search-refine';
 
 export type FatsecretMappedIngredient = {
-  source: 'fatsecret' | 'fdc' | 'cache' | 'ai_generated';
+  source: 'fatsecret' | 'fdc' | 'cache' | 'ai_generated' | 'openfoodfacts';
   foodId: string;
   foodName: string;
   brandName?: string | null;

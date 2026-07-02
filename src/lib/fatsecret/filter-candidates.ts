@@ -2220,7 +2220,7 @@ const CALORIE_MODIFIERS = ['low calorie', 'low-calorie', 'diet', 'zero calorie',
 export function hasCriticalModifierMismatch(
     query: string,
     candidateName: string,
-    source: 'fatsecret' | 'fdc' | 'cache' | 'openfoodfacts',
+    source: 'fatsecret' | 'fdc' | 'cache' | 'openfoodfacts' | 'ai_generated',
     nutrition?: { fat: number, per100g: boolean }
 ): boolean {
     const queryLower = query.toLowerCase();

@@ -54,12 +54,13 @@ export async function hydrateOffCandidate(candidate: {
     }
 
     // ── 2. Cache-first: return immediately if already hydrated ───────────
-    const existing = await prisma.openFoodFactsCache.findUnique({
-        where: { id: candidate.id },
+    const barcode = candidate.id.replace(/^off_/, '');
+    const existing = await prisma.offFood.findUnique({
+        where: { barcode },
     });
     if (existing) {
         return {
-            foodId:          existing.id,
+            foodId:          candidate.id,
             foodName:        existing.name,
             brandName:       existing.brandName,
             nutrientsPer100g: existing.nutrientsPer100g as Record<string, number> | null,
@@ -84,7 +85,7 @@ export async function hydrateOffCandidate(candidate: {
         // rawData is a cached row — re-shape it into OFFProduct for processing
         const nutrients = (rawData['nutrientsPer100g'] ?? {}) as Record<string, number>;
         product = {
-            code:             (rawData['barcode'] as string) ?? candidate.id.replace(/^off_/, ''),
+            code:             (rawData['barcode'] as string) ?? barcode,
             product_name:     (rawData['name'] as string)    ?? candidate.name,
             brands:           (rawData['brandName'] as string | undefined) ?? undefined,
             serving_size:     rawData['servingSize'] as string | undefined,
@@ -101,8 +102,6 @@ export async function hydrateOffCandidate(candidate: {
         };
     }
 
-    const barcode = candidate.id.replace(/^off_/, '');
-
     // ── 4. Extract and validate nutrients ─────────────────────────────────
     const nutrientsPer100g = extractAndValidateNutrients(product.nutriments);
 
@@ -112,35 +111,38 @@ export async function hydrateOffCandidate(candidate: {
 
     const primaryBrand = product.brands?.split(',')[0].trim() ?? null;
 
-    // ── 6. Upsert into OpenFoodFactsCache ─────────────────────────────────
-    await prisma.openFoodFactsCache.upsert({
-        where:  { id: candidate.id },
+    // ── 6. Upsert into OffFood ─────────────────────────────────
+    await prisma.offFood.upsert({
+        where:  { barcode },
         create: {
-            id:               candidate.id,
             barcode,
             name:             product.product_name,
             brandName:        primaryBrand,
             nutrientsPer100g: nutrientsPer100g ?? undefined,
             servingSize:      product.serving_size ?? null,
             servingGrams:     servingGrams ?? null,
-            expiresAt:        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
         },
         update: {
-            syncedAt: new Date(),
+            name:             product.product_name,
+            brandName:        primaryBrand,
+            nutrientsPer100g: nutrientsPer100g ?? undefined,
+            servingSize:      product.serving_size ?? null,
+            servingGrams:     servingGrams ?? null,
+            updatedAt:        new Date(),
         },
     });
 
-    // ── 7. Upsert label-derived serving into OpenFoodFactsServingCache ────
+    // ── 7. Upsert label-derived serving into OffServing ────
     if (servingGrams && servingDescription) {
-        await prisma.openFoodFactsServingCache.upsert({
+        await prisma.offServing.upsert({
             where: {
-                offId_description: {
-                    offId:       candidate.id,
+                barcode_description: {
+                    barcode,
                     description: servingDescription,
                 },
             },
             create: {
-                offId:       candidate.id,
+                barcode,
                 description: servingDescription,
                 grams:       servingGrams,
                 source:      'openfoodfacts',

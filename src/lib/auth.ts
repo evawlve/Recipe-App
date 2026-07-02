@@ -25,18 +25,6 @@ async function retryDatabaseOperation<T>(
 
 export async function getCurrentUser() {
   try {
-    let jwt: string | undefined;
-    try {
-      const { headers } = await import('next/headers');
-      const reqHeaders = await headers();
-      const authHeader = reqHeaders.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        jwt = authHeader.substring(7);
-      }
-    } catch (err) {
-      // Ignore if headers() throws or is not available
-    }
-
     const supabase = await createSupabaseServerClient();
     
     if (!supabase) {
@@ -45,9 +33,7 @@ export async function getCurrentUser() {
     }
     
     // Get the user from the server (more secure than getSession)
-    const { data: { user: authUser }, error: userError } = jwt
-      ? await supabase.auth.getUser(jwt)
-      : await supabase.auth.getUser();
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
       // Handle specific auth errors

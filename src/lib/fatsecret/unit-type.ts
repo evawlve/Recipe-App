@@ -39,6 +39,9 @@ const COUNT_UNITS = new Set([
 
     // Spray/squirt (for cooking spray, oil sprays)
     'spray', 'sprays', 'squirt', 'squirts',
+
+    // Micro-volume (subjective amounts, routed through ambiguous estimation)
+    'splash', 'splashes', 'drizzle', 'drizzles', 'dollop', 'dollops',
 ]);
 
 // Volume-based units

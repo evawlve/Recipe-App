@@ -1,102 +1,61 @@
-import type { Metadata } from 'next';
+import { getTrendingRecipes } from '@/lib/feeds/trending';
+import { HomeSection } from '@/components/home/HomeSection';
+import { TrendingRail } from '@/components/home/TrendingRail';
+import { SearchBar } from '@/components/home/SearchBar';
+import { RecipeCard } from '@/components/recipe/RecipeCard';
+import { getCurrentUser } from '@/lib/auth';
+import { ErrorBoundary as ClientErrorBoundary } from '@/components/obs/ErrorBoundary';
+// Lazy-loaded components
+import { FollowingEmpty } from '@/components/home/FollowingEmpty';
+import { FeedTabs } from '@/components/home/FeedTabs';
 
-export const metadata: Metadata = {
-  title: 'Kinda Healthy Resolution API',
-  description: 'Stateless NLP, food search, barcode, and serving resolution engine.',
-};
+// Enable ISR with 60-second revalidation for better performance
+export const revalidate = 60;
 
-export default function HomePage() {
+// Allow dynamic user content while caching the rest
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  // Note: OAuth callbacks with code parameter are handled by middleware
+  // which rewrites them to /auth/callback route handler
+  // This page should never receive a code parameter due to the middleware rewrite
+  
+  // Parallelize data fetching for better performance
+  const [trending, currentUser] = await Promise.all([
+    getTrendingRecipes({ limit: 12 }),
+    getCurrentUser().catch(() => null), // Don't fail if user fetch fails
+  ]);
+
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-950 text-neutral-100 font-sans antialiased selection:bg-teal-500 selection:text-neutral-950">
-      {/* Header */}
-      <header className="border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center font-bold text-neutral-950 shadow-lg shadow-teal-500/20">
-              KH
+    <div className="mx-auto max-w-6xl px-4 py-6 space-y-10">
+      {/* Search bar */}
+      <SearchBar />
+
+      <HomeSection title="Trending Recipes" href="/recipes?sort=new">
+        <TrendingRail>
+          {trending.map((r, index) => (
+            <div key={r.id} className="min-w-[280px] max-w-[320px] snap-start">
+              <RecipeCard
+                recipe={r}
+                currentUserId={currentUser?.id || null}
+                isPriority={index < 3}
+              />
             </div>
-            <span className="font-semibold text-lg tracking-tight">Kinda Healthy API</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-sm font-medium text-emerald-400">All Systems Operational</span>
-          </div>
-        </div>
-      </header>
+          ))}
+        </TrendingRail>
+      </HomeSection>
 
-      {/* Hero Section */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-16 space-y-16">
-        <section className="space-y-6 max-w-3xl">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            Stateless Portion & Portability Engine
-          </h1>
-          <p className="text-neutral-400 text-lg leading-relaxed">
-            The core resolution engine for the Kinda Healthy mobile app. Fully decoupled, stateless, and powered by cached FatSecret, USDA FDC, OpenFoodFacts, and portion estimation models.
-          </p>
-        </section>
+      {currentUser && (
+        <HomeSection title="Suggested Creators">
+          <FollowingEmpty />
+        </HomeSection>
+      )}
 
-        {/* API Routes Docs */}
-        <section className="space-y-8">
-          <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
-            <h2 className="text-xl font-semibold tracking-tight">Active API Contracts</h2>
-            <span className="text-xs text-neutral-500 uppercase tracking-widest font-mono">v1.2.0</span>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Route 1 */}
-            <div className="p-6 rounded-2xl bg-neutral-900/40 border border-neutral-900 hover:border-neutral-800 transition duration-300 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 text-xs font-bold font-mono rounded bg-teal-500/10 text-teal-400 uppercase">POST</span>
-                <code className="text-neutral-200 font-mono text-sm">/api/nlp/parse</code>
-              </div>
-              <p className="text-sm text-neutral-400">
-                Resolves unstructured natural language food entries into raw food structures with scaled macronutrients, grams, and available servings.
-              </p>
-            </div>
-
-            {/* Route 2 */}
-            <div className="p-6 rounded-2xl bg-neutral-900/40 border border-neutral-900 hover:border-neutral-800 transition duration-300 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 text-xs font-bold font-mono rounded bg-emerald-500/10 text-emerald-400 uppercase">GET</span>
-                <code className="text-neutral-200 font-mono text-sm">/api/foods/search</code>
-              </div>
-              <p className="text-sm text-neutral-400">
-                Searches cache food templates and cached items from FatSecret and USDA. Returns a ranked list with type-tagged serving options.
-              </p>
-            </div>
-
-            {/* Route 3 */}
-            <div className="p-6 rounded-2xl bg-neutral-900/40 border border-neutral-900 hover:border-neutral-800 transition duration-300 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 text-xs font-bold font-mono rounded bg-emerald-500/10 text-emerald-400 uppercase">GET</span>
-                <code className="text-neutral-200 font-mono text-sm">/api/foods/barcode</code>
-              </div>
-              <p className="text-sm text-neutral-400">
-                Looks up barcodes across cached OpenFoodFacts and FatSecret. Automatically triggers cache hydration and returns rich macro and serving metadata.
-              </p>
-            </div>
-
-            {/* Route 4 */}
-            <div className="p-6 rounded-2xl bg-neutral-900/40 border border-neutral-900 hover:border-neutral-800 transition duration-300 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 text-xs font-bold font-mono rounded bg-emerald-500/10 text-emerald-400 uppercase">GET</span>
-                <code className="text-neutral-200 font-mono text-sm">/api/foods/:foodId/serving</code>
-              </div>
-              <p className="text-sm text-neutral-400">
-                Estimates custom portion weights (e.g. tablespoons, scoops) using density and category-aware portion backfills.
-              </p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-neutral-900 bg-neutral-950 py-8">
-        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-neutral-600">
-          &copy; {new Date().getFullYear()} Kinda Healthy. All rights reserved.
-        </div>
-      </footer>
+      <HomeSection title={currentUser ? 'For you · Following' : 'For you'}>
+        <ClientErrorBoundary>
+          <FeedTabs signedIn={!!currentUser} currentUserId={currentUser?.id || null} />
+        </ClientErrorBoundary>
+      </HomeSection>
     </div>
   );
 }
-

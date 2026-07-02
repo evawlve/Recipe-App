@@ -88,46 +88,71 @@ function matchesFilters(row: RawUsda, f: UsdaSaturationFilters, categoryId?: str
   return true;
 }
 
-async function upsertFood(per100: any, meta: {name: string; brand?: string|null; categoryId: string|null}) {
-  const idName = canonicalName(meta.name).replace(/\s+/g,'_').slice(0,80);
-  const existing = await prisma.food.findFirst({
-    where: {
-      OR: [
-        { name: meta.name },
-        { aliases: { some: { alias: canonicalName(meta.name) } } }
-      ]
-    }
+async function upsertFdcFood(
+  fdcId: number,
+  description: string,
+  dataType: string,
+  brandName: string | null,
+  nutrientsPer100g: any,
+  portions: any[]
+) {
+  // Check if exists
+  const existing = await prisma.fdcFood.findUnique({
+    where: { fdcId }
   });
 
-  const units = CATEGORY_DEFAULTS[meta.categoryId || '']?.units ?? [];
-  const data = {
-    name: meta.name,
-    brand: meta.brand ?? null,
-    categoryId: meta.categoryId,
-    source: 'usda' as const,
-    verification: 'verified' as const,
-    densityGml: CATEGORY_DEFAULTS[meta.categoryId || '']?.densityGml ?? null,
-    kcal100: per100.kcal100, protein100: per100.protein100, carbs100: per100.carbs100, fat100: per100.fat100,
-    fiber100: per100.fiber100 ?? null, sugar100: per100.sugar100 ?? null,
-    popularity: 50,
-    units: units.length ? { create: units } : undefined,
+  const foodData = {
+    fdcId,
+    description,
+    brandName,
+    dataType,
+    nutrientsPer100g,
   };
 
   if (!existing) {
-    const created = await prisma.food.create({ data });
-    
-    // Create aliases for the new food
-    const extraAliases = [canonicalAlias(meta.name), ...generateAliasesForFood(meta.name, meta.categoryId)];
-    await prisma.foodAlias.createMany({
-      data: extraAliases.map(alias => ({ foodId: created.id, alias })),
-      skipDuplicates: true
+    await prisma.fdcFood.create({
+      data: foodData
     });
-    
-    return { created: 1, updated: 0 };
   } else {
-    await prisma.food.update({ where: { id: existing.id }, data });
-    return { created: 0, updated: 1 };
+    await prisma.fdcFood.update({
+      where: { fdcId },
+      data: {
+        description,
+        brandName,
+        dataType,
+        nutrientsPer100g,
+      }
+    });
   }
+
+  // Handle portions/servings
+  if (portions && portions.length > 0) {
+    for (const portion of portions) {
+      const label = portion.modifier || portion.measureUnit?.name || 'serving';
+      const grams = portion.gramWeight || 0;
+      if (grams <= 0) continue;
+
+      await prisma.fdcServing.upsert({
+        where: {
+          FdcServing_fdcId_description_key: {
+            fdcId,
+            description: label,
+          }
+        },
+        create: {
+          fdcId,
+          description: label,
+          grams,
+          source: 'usda_fdc',
+        },
+        update: {
+          grams,
+        }
+      });
+    }
+  }
+
+  return { created: existing ? 0 : 1, updated: existing ? 1 : 0 };
 }
 
 async function processRows(rows: RawUsda[], opt: Options) {
@@ -243,26 +268,33 @@ async function processRows(rows: RawUsda[], opt: Options) {
   }
 
   // Second pass: check database and insert
-  for (const { per100, metaName, cat } of crossDatasetMap.values()) {
+  for (const { row, per100, metaName, cat } of crossDatasetMap.values()) {
     // Database duplicate check
-    const canonical = canonicalName(metaName);
-    const exists = await prisma.food.findFirst({
-      where: {
-        AND: [
-          { OR: [{ name: metaName }, { aliases: { some: { alias: canonical } } }] },
-          { kcal100: { gte: per100.kcal100-10, lte: per100.kcal100+10 } },
-          { protein100: { gte: per100.protein100-2, lte: per100.protein100+2 } },
-          { carbs100: { gte: per100.carbs100-2, lte: per100.carbs100+2 } },
-          { fat100: { gte: per100.fat100-2, lte: per100.fat100+2 } },
-        ]
-      }
+    const exists = await prisma.fdcFood.findUnique({
+      where: { fdcId: row.fdcId }
     });
     
     if (exists) { duped++; continue; }
 
     if (opt.dryRun) { created++; continue; }
     
-    const res = await upsertFood(per100, { name: metaName, brand: null, categoryId: cat });
+    const nutrientsPer100g = {
+      calories: per100.kcal100,
+      protein: per100.protein100,
+      carbs: per100.carbs100,
+      fat: per100.fat100,
+      fiber: per100.fiber100 ?? 0,
+      sugar: per100.sugar100 ?? 0,
+    };
+    
+    const res = await upsertFdcFood(
+      row.fdcId,
+      metaName,
+      row.dataType || 'SR Legacy',
+      row.brandOwner || null,
+      nutrientsPer100g,
+      row.foodPortions || []
+    );
     created += res.created;
     updated += res.updated;
   }

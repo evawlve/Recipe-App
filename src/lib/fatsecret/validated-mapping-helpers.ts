@@ -25,48 +25,9 @@ export async function getValidatedMapping(
     rawIngredient: string,
     source: 'fatsecret' | 'fdc' = 'fatsecret'
 ): Promise<FatsecretMappedIngredient | null> {
-    try {
-        const cached = await prisma.validatedMapping.findUnique({
-            where: {
-                rawIngredient_source: {
-                    rawIngredient,
-                    source,
-                },
-            },
-        });
-
-        if (!cached) {
-            return null;
-        }
-
-        // Update usage stats
-        await prisma.validatedMapping.update({
-            where: { id: cached.id },
-            data: {
-                usedCount: { increment: 1 },
-                lastUsedAt: new Date(),
-            },
-        });
-
-        logger.debug('validated_mapping.cache_hit', { rawIngredient, source });
-
-        // Convert cached data back to FatsecretMappedIngredient format
-        return {
-            foodId: cached.foodId,
-            foodName: cached.foodName,
-            brandName: cached.brandName,
-            confidence: cached.aiConfidence,
-            source: 'cache',
-            // Note: We don't store full serving details in validated cache
-            // This is just for quick lookups - actual serving selection happens after
-        } as FatsecretMappedIngredient;
-    } catch (error) {
-        logger.error('validated_mapping.get_error', {
-            error: (error as Error).message,
-            rawIngredient,
-        });
-        return null;
-    }
+    const rawForm = normalizeQuery(rawIngredient);
+    const normalizedForm = canonicalizeCacheKey(rawForm);
+    return getValidatedMappingByNormalizedName(normalizedForm, source === 'fdc' ? 'fdc' : 'openfoodfacts', rawIngredient);
 }
 
 /**
@@ -78,42 +39,30 @@ export async function getValidatedMapping(
  * 2. Token-set fallback (handles word order variance)
  * 
  * @param normalizedName - The normalized ingredient name to look up
- * @param source - Data source ('fatsecret' or 'fdc')
+ * @param source - Data source ('fatsecret' or 'fdc' or 'openfoodfacts')
  * @param rawLine - Optional raw ingredient line for cooking state/modifier validation
  */
 export async function getValidatedMappingByNormalizedName(
     normalizedName: string,
-    source: 'fatsecret' | 'fdc' = 'fatsecret',
+    source: 'fatsecret' | 'fdc' | 'openfoodfacts' = 'fatsecret',
     rawLine?: string
 ): Promise<FatsecretMappedIngredient | null> {
     try {
         // Canonicalize the lookup key (lowercase + singularize + sort tokens)
         const canonicalKey = canonicalizeCacheKey(normalizedName);
 
-        // Phase 1: Exact match on canonical key
-        let cached = await prisma.validatedMapping.findUnique({
-            where: {
-                normalizedForm_source: {
-                    normalizedForm: canonicalKey,
-                    source,
-                },
-            },
+        let cached = await prisma.foodMapping.findUnique({
+            where: { normalizedForm: canonicalKey },
         });
 
         // Phase 2: Legacy fallback — try the raw normalizedName
-        // (handles entries saved before canonical key migration)
         if (!cached) {
-            cached = await prisma.validatedMapping.findUnique({
-                where: {
-                    normalizedForm_source: {
-                        normalizedForm: normalizedName,
-                        source,
-                    },
-                },
+            cached = await prisma.foodMapping.findUnique({
+                where: { normalizedForm: normalizedName },
             });
         }
 
-        // Phase 3: Token-set fallback (emergency — should rarely fire after migration)
+        // Phase 3: Token-set fallback
         if (!cached) {
             cached = await findByTokenSet(normalizedName, source, rawLine);
             if (cached) {
@@ -133,7 +82,6 @@ export async function getValidatedMappingByNormalizedName(
             await import('./filter-candidates');
 
         // Always check core token coverage (Jan 2026)
-        // e.g., "vegetable bouillon" → "Raw Vegetable" should be rejected
         if (hasCoreTokenMismatch(normalizedName, cached.foodName, cached.brandName)) {
             logger.debug('validated_mapping.cache_core_token_mismatch', {
                 query: normalizedName,
@@ -142,10 +90,7 @@ export async function getValidatedMappingByNormalizedName(
             return null;  // Reject cache hit, force fresh search
         }
 
-        // Defense-in-depth: Reject cache hits where the cached food has nutritional
-        // modifiers NOT present in the query (e.g., query "peanut butter" but cached
-        // food is "Powdered Peanut Butter", or query "cheddar cheese" but cached
-        // food is "Cheddar Cheese (Reduced Fat)")
+        // Defense-in-depth: Reject cache hits where the cached food has nutritional modifiers NOT present in the query
         const NUTRITIONAL_MODIFIERS = [
             'powdered', 'reduced fat', 'low fat', 'fat free', 'fat-free',
             'sugar free', 'sugar-free', 'lite', 'light', 'diet',
@@ -178,8 +123,8 @@ export async function getValidatedMappingByNormalizedName(
         }
 
         // Update usage stats
-        await prisma.validatedMapping.update({
-            where: { id: cached.id },
+        await prisma.foodMapping.update({
+            where: { normalizedForm: cached.normalizedForm },
             data: {
                 usedCount: { increment: 1 },
                 lastUsedAt: new Date(),
@@ -188,13 +133,37 @@ export async function getValidatedMappingByNormalizedName(
 
         logger.debug('validated_mapping.normalized_cache_hit', { normalizedName, source });
 
-        // Convert cached data back to FatsecretMappedIngredient format
+        // Build mapping food ID correctly from FDC ID, OFF barcode, or AI generated food
+        let foodId = '';
+        if (cached.fdcId) {
+            foodId = `fdc_${cached.fdcId}`;
+        } else if (cached.offBarcode) {
+            foodId = `off_${cached.offBarcode}`;
+        } else {
+            const aiFood = await prisma.aiGeneratedFood.findFirst({
+                where: {
+                    OR: [
+                        { ingredientName: cached.normalizedForm },
+                        { displayName: cached.foodName }
+                    ]
+                },
+                select: { id: true }
+            });
+            if (aiFood) {
+                foodId = aiFood.id;
+            } else {
+                foodId = cached.normalizedForm;
+            }
+        }
+
         return {
-            foodId: cached.foodId,
+            foodId,
             foodName: cached.foodName,
             brandName: cached.brandName,
             confidence: cached.aiConfidence,
-            source: 'cache',
+            source: cached.source === 'openfoodfacts' ? 'openfoodfacts'
+                    : cached.source === 'fdc' ? 'fdc'
+                    : 'ai_generated',
         } as FatsecretMappedIngredient;
     } catch (error) {
         logger.error('validated_mapping.get_normalized_error', {
@@ -215,7 +184,7 @@ export async function getValidatedMappingByNormalizedName(
  */
 async function findByTokenSet(
     normalizedName: string,
-    source: 'fatsecret' | 'fdc',
+    source: 'fatsecret' | 'fdc' | 'openfoodfacts',
     rawLine?: string
 ) {
     const inputTokens = new Set(normalizedName.toLowerCase().split(/\s+/).filter(Boolean));
@@ -225,9 +194,11 @@ async function findByTokenSet(
     const tokenArray = [...inputTokens];
     const firstToken = tokenArray[0];
 
-    const candidates = await prisma.validatedMapping.findMany({
+    const mappingSource = source === 'fatsecret' ? 'ai_generated' : source;
+
+    const candidates = await prisma.foodMapping.findMany({
         where: {
-            source,
+            source: mappingSource,
             normalizedForm: { contains: firstToken }
         },
         take: 50,
@@ -293,14 +264,11 @@ export async function saveValidatedMapping(
     }
 ): Promise<void> {
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
-    // canonicalBase consolidates variations like "lemon zest", "lemon rind" -> "lemon peel"
     const rawForm = options?.canonicalBase || options?.normalizedForm || normalizeQuery(rawIngredient);
     // Canonicalize: lowercase + singularize + sort tokens
     const normalizedForm = canonicalizeCacheKey(rawForm);
 
-    // Pre-save validation: Reject mappings where core tokens from normalizedForm 
-    // are missing from foodName (e.g., "dry brown rice" → "dry brown beans" is invalid
-    // because "rice" is a core token that must appear in the food name)
+    // Pre-save validation: Reject mappings where core tokens from normalizedForm are missing from foodName
     if (hasCoreTokenMismatch(normalizedForm, mapping.foodName, mapping.brandName)) {
         logger.warn('validated_mapping.save_rejected_core_token_mismatch', {
             rawIngredient,
@@ -312,26 +280,29 @@ export async function saveValidatedMapping(
     }
 
     try {
-        // Save by normalizedForm (primary lookup key)
-        await prisma.validatedMapping.upsert({
+        let fdcId: number | null = null;
+        let offBarcode: string | null = null;
+
+        if (mapping.foodId.startsWith('fdc_')) {
+            fdcId = parseInt(mapping.foodId.replace('fdc_', ''), 10);
+        } else if (mapping.foodId.startsWith('off_')) {
+            offBarcode = mapping.foodId.replace('off_', '');
+        }
+
+        const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'ai_generated';
+
+        await prisma.foodMapping.upsert({
             where: {
-                normalizedForm_source: {
-                    normalizedForm,
-                    source: 'fatsecret',
-                },
+                normalizedForm,
             },
             create: {
-                id: `vm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                rawIngredient,  // Store for reference/debugging
                 normalizedForm,
-                foodId: mapping.foodId,
                 foodName: mapping.foodName,
                 brandName: mapping.brandName,
-                source: 'fatsecret',
+                source: mappingSource,
+                offBarcode,
+                fdcId,
                 aiConfidence: validation.confidence,
-                validationReason: validation.reason,
-                isAlias: options?.isAlias ?? false,
-                canonicalRawIngredient: options?.canonicalRawIngredient,
                 validatedBy: 'ai',
                 usedCount: 1,
             },
@@ -370,41 +341,12 @@ export async function trackValidationFailure(
         suggestedQuery: string;
     }
 ): Promise<void> {
-    try {
-        const failureType = classifyFailureType(validation, retryResult);
-
-        await prisma.mappingValidationFailure.create({
-            data: {
-                id: `mvf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                rawIngredient,
-                attemptedFoodId: attemptedMapping.foodId,
-                attemptedFoodName: attemptedMapping.foodName,
-                ourConfidence: attemptedMapping.confidence,
-                aiConfidence: validation.confidence,
-                aiRejectionReason: validation.reason,
-                aiFailureCategory: validation.category || 'unknown',
-                failureType,
-                aiSuggestedAlternative: validation.suggestedAlternative,
-                retrySucceeded: retryResult?.succeeded,
-                scoringDetails: {
-                    searchExpressions: (attemptedMapping as any).searchExpressions,
-                    candidateCount: (attemptedMapping as any).candidateCount,
-                },
-            },
-        });
-
-        logger.warn('validated_mapping.failure_tracked', {
-            rawIngredient,
-            category: validation.category,
-            failureType,
-            retrySucceeded: retryResult?.succeeded,
-        });
-    } catch (error) {
-        logger.error('validated_mapping.track_failure_error', {
-            error: (error as Error).message,
-            rawIngredient,
-        });
-    }
+    // No-op since MappingValidationFailure table was dropped in the new schema
+    logger.warn('validated_mapping.failure_detected', {
+        rawIngredient,
+        category: validation.category,
+        aiRejectionReason: validation.reason,
+    });
 }
 
 /**
@@ -472,6 +414,7 @@ export async function getAiNormalizeCache(rawLine: string) {
             prepPhrases: cached.prepPhrases as string[],
             sizePhrases: cached.sizePhrases as string[],
             cookingModifier: cached.cookingModifier ?? undefined,
+            isBranded: cached.isBranded ?? false,
             nutritionEstimate: cached.estimatedCaloriesPer100g != null ? {
                 caloriesPer100g: cached.estimatedCaloriesPer100g,
                 proteinPer100g: cached.estimatedProteinPer100g ?? 0,
@@ -502,6 +445,7 @@ export async function saveAiNormalizeCache(
         prepPhrases: string[];
         sizePhrases: string[];
         cookingModifier?: string;
+        isBranded?: boolean;  // Whether AI identified this as a branded product query
         nutritionEstimate?: {
             caloriesPer100g: number;
             proteinPer100g: number;
@@ -524,6 +468,7 @@ export async function saveAiNormalizeCache(
                 prepPhrases: result.prepPhrases,
                 sizePhrases: result.sizePhrases,
                 cookingModifier: result.cookingModifier,
+                isBranded: result.isBranded ?? false,
                 estimatedCaloriesPer100g: result.nutritionEstimate?.caloriesPer100g,
                 estimatedProteinPer100g: result.nutritionEstimate?.proteinPer100g,
                 estimatedCarbsPer100g: result.nutritionEstimate?.carbsPer100g,

@@ -46,6 +46,8 @@ import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-clie
 import { extractPrepModifier, generatePreemptiveServings } from './preemptive-backfill';
 import { requestAiNutrition, extractBaseFoodContext, getAiServingGrams } from './ai-nutrition-backfill';
 import { AI_NUTRITION_BACKFILL_ENABLED } from './config';
+import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
+import { detectBrandInQuery } from './brand-detector';
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -141,7 +143,7 @@ function annotateGroundMeatName(foodName: string, query: string): string {
 // ============================================================
 
 export type FatsecretMappedIngredient = {
-    source: 'fatsecret' | 'fdc' | 'cache' | 'ai_generated';
+    source: 'fatsecret' | 'fdc' | 'cache' | 'ai_generated' | 'openfoodfacts';
     foodId: string;
     foodName: string;
     brandName?: string | null;
@@ -188,6 +190,8 @@ export interface MapIngredientOptions {
     _skipFallback?: boolean;
     /** If true, return 'pending' immediately when lock is held instead of blocking */
     skipOnLock?: boolean;
+    brand?: string;
+    normalizedForm?: string;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -234,7 +238,7 @@ export async function mapIngredientWithFallback(
     // NOTE: Cache lookup now only happens after normalization (see "EARLY CACHE CHECK" below)
     // This eliminates "selection drift" where raw line variations would get different mappings
     let parsed = parseIngredientLine(preProcessLine);
-    let baseName = parsed?.name?.trim() || preProcessLine;
+    let baseName = options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine;
 
     // Step 1-AI-FALLBACK: If regex parser didn't detect a unit but input looks complex,
     // try AI to extract qty/unit/name. This handles edge cases like "1 5 floz serving red wine"
@@ -395,7 +399,7 @@ export async function mapIngredientWithFallback(
                 id: cachedAfterLock.foodId,
                 name: cachedAfterLock.foodName,
                 brandName: cachedAfterLock.brandName || undefined,
-                source: 'cache',
+                source: cachedAfterLock.source as any,
                 score: cachedAfterLock.confidence,
                 foodType: 'generic',
                 rawData: {},
@@ -486,6 +490,22 @@ export async function mapIngredientWithFallback(
 
         let normalizedName = normalizeIngredientName(baseName).cleaned || baseName;
 
+        // ── Brand detection (static list + AI passed brand) ─────────────
+        // Must run before the early cache check so the brand guard is available
+        // when validating cached results against the user's intended brand.
+        const brandDetectionResult = detectBrandInQuery(rawLine);
+        const brandDetection = {
+            isBranded: brandDetectionResult.isBranded || !!options.brand?.trim(),
+            matchedBrand: options.brand?.trim() || brandDetectionResult.matchedBrand
+        };
+        let isBrandedQuery = brandDetection.isBranded;
+        if (brandDetection.isBranded) {
+            logger.debug('brand_detector.matched', {
+                rawLine,
+                matchedBrand: brandDetection.matchedBrand,
+            });
+        }
+
 
         // ============================================================
         // EARLY CACHE CHECK - Skip AI if we've seen this ingredient before
@@ -507,14 +527,14 @@ export async function mapIngredientWithFallback(
                 const { prisma } = await import('../db');
                 if (earlyCacheHit.foodId.startsWith('fdc_')) {
                     const fdcId = parseInt(earlyCacheHit.foodId.replace('fdc_', ''), 10);
-                    const cachedFdc = await prisma.fdcFoodCache.findUnique({
-                        where: { id: fdcId },
-                        select: { nutrients: true }
+                    const cachedFdc = await prisma.fdcFood.findUnique({
+                        where: { fdcId },
+                        select: { nutrientsPer100g: true }
                     });
-                    if (cachedFdc?.nutrients) {
-                        const rawFdc: any = cachedFdc.nutrients;
+                    if (cachedFdc?.nutrientsPer100g) {
+                        const rawFdc: any = cachedFdc.nutrientsPer100g;
                         loadedFdcNutrition = {
-                            kcal: rawFdc.energy ?? rawFdc.calories ?? 0,
+                            kcal: rawFdc.calories ?? rawFdc.energy ?? rawFdc.kcal ?? 0,
                             protein: rawFdc.protein ?? 0,
                             carbs: rawFdc.carbohydrate ?? rawFdc.carbs ?? 0,
                             fat: rawFdc.fat ?? 0,
@@ -528,41 +548,48 @@ export async function mapIngredientWithFallback(
                                 nutrients: loadedFdcNutrition,
                             });
                         }
-                    } else {
-                        try {
-                            const { fdcApi } = await import('../usda/fdc-api');
-                            const details = await fdcApi.getFoodDetails(fdcId);
-                            
-                            // Map FDC api array format
-                            if (details?.foodNutrients) {
-                                const getNutrient = (id: number) => {
-                                    const n = details.foodNutrients.find((x: any) => x.nutrient?.id === id || x.nutrientId === id);
-                                    return n?.amount || 0;
-                                };
-                                loadedFdcNutrition = {
-                                    kcal: getNutrient(1008),
-                                    protein: getNutrient(1003),
-                                    carbs: getNutrient(1005),
-                                    fat: getNutrient(1004),
-                                    per100g: true,
-                                };
-                                earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
-                            } else {
-                                earlyNutritionInvalid = true;
-                            }
-                        } catch (err) {
-                            logger.error('mapping.early_cache_fdc_fetch_failed', { fdcId, error: (err as Error).message });
-                            earlyNutritionInvalid = true;
-                        }
                     }
                 } else {
-                    const cachedFood = await prisma.fatSecretFoodCache.findUnique({
-                        where: { id: earlyCacheHit.foodId },
-                        select: { nutrientsPer100g: true }
-                    });
-                    if (cachedFood?.nutrientsPer100g) {
-                        const nutrients = cachedFood.nutrientsPer100g as any;
-                        earlyNutritionInvalid = hasNullOrInvalidMacros(nutrients);
+                    let nutrients: any = null;
+                    if (earlyCacheHit.foodId.startsWith('off_')) {
+                        const barcode = earlyCacheHit.foodId.replace('off_', '');
+                        const off = await prisma.offFood.findUnique({
+                            where: { barcode },
+                            select: { nutrientsPer100g: true }
+                        });
+                        nutrients = off?.nutrientsPer100g;
+                    } else {
+                        const ai = await prisma.aiGeneratedFood.findUnique({
+                            where: { id: earlyCacheHit.foodId },
+                            select: {
+                                caloriesPer100g: true,
+                                proteinPer100g: true,
+                                carbsPer100g: true,
+                                fatPer100g: true,
+                                fiberPer100g: true,
+                                sugarPer100g: true,
+                            }
+                        });
+                        if (ai) {
+                            nutrients = {
+                                calories: ai.caloriesPer100g,
+                                protein: ai.proteinPer100g,
+                                carbs: ai.carbsPer100g,
+                                fat: ai.fatPer100g,
+                                fiber: ai.fiberPer100g,
+                                sugar: ai.sugarPer100g,
+                            };
+                        }
+                    }
+                    if (nutrients) {
+                        const loadedNutrition = {
+                            kcal: nutrients.calories ?? nutrients.energy ?? nutrients.kcal ?? 0,
+                            protein: nutrients.protein ?? 0,
+                            carbs: nutrients.carbohydrate ?? nutrients.carbs ?? 0,
+                            fat: nutrients.fat ?? 0,
+                            per100g: true,
+                        };
+                        earlyNutritionInvalid = hasNullOrInvalidMacros(loadedNutrition);
                         if (earlyNutritionInvalid) {
                             logger.warn('mapping.early_cache_bad_nutrition', {
                                 rawLine: trimmed,
@@ -579,7 +606,15 @@ export async function mapIngredientWithFallback(
                 isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
                 isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ||
                 hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ||
-                isReplacementMismatch(trimmed, earlyCacheHit.foodName, earlyCacheHit.brandName)) {
+                isReplacementMismatch(trimmed, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
+                // Branded query guard: if a target brand is detected (e.g. "heinz") and the cached
+                // food belongs to a DIFFERENT brand (e.g. WEIS), reject the cache hit so the full
+                // pipeline runs and finds the correct brand.
+                (isBrandedQuery &&
+                    brandDetection.matchedBrand != null &&
+                    earlyCacheHit.brandName != null &&
+                    !earlyCacheHit.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
+                )) {
                 logger.warn('mapping.early_cache_filter_mismatch', {
                     rawLine: trimmed,
                     cachedFood: earlyCacheHit.foodName,
@@ -594,7 +629,7 @@ export async function mapIngredientWithFallback(
                     id: earlyCacheHit.foodId,
                     name: earlyCacheHit.foodName,
                     brandName: earlyCacheHit.brandName || undefined,
-                    source: 'cache',
+                    source: earlyCacheHit.source as any,
                     score: earlyCacheHit.confidence,
                     foodType: 'generic',
                     rawData: {},
@@ -676,14 +711,18 @@ export async function mapIngredientWithFallback(
         let aiNutritionEstimate: { caloriesPer100g: number; proteinPer100g: number; carbsPer100g: number; fatPer100g: number; confidence: number } | undefined;
         let aiCanonicalBase: string | undefined;  // For cache key consolidation
         let skippedLlmNormalize = false;
+        // ── Brand detection (already computed above, available here too) ────
+        // isBrandedQuery and brandDetection are set before the early cache check.
+        // The LLM result below may upgrade isBrandedQuery to true if the AI
+        // returns isBranded=true even when the static detector missed it.
 
         if (!usedGenericFallback) {
             // First gather candidates to check if LLM is needed
             const quickGatherOptions: GatherOptions = {
                 client,
                 skipCache,
-                skipLiveApi: !allowLiveFallback,
                 skipFdc,
+                skipOff: true,  // Always skip OFF during quick gate check (saves API quota)
                 aiSynonyms: learnedSynonyms,  // Use only learned synonyms for quick check
             };
 
@@ -710,6 +749,7 @@ export async function mapIngredientWithFallback(
                         logger.info('mapping.ai_synonyms', { rawLine: trimmed, synonyms: aiSynonyms });
                     }
                     aiNutritionEstimate = aiHint.nutritionEstimate;
+                    isBrandedQuery = aiHint.isBranded ?? false;  // Capture brand signal for scoring
                 }
             } else {
                 logger.info('normalize_gate.skipped_llm', {
@@ -735,6 +775,10 @@ export async function mapIngredientWithFallback(
                         estimate: aiNutritionEstimate.caloriesPer100g,
                         confidence: aiNutritionEstimate.confidence,
                     });
+                }
+                // Also restore isBranded from cached normalize result
+                if (cachedNormalize) {
+                    isBrandedQuery = (cachedNormalize as any).isBranded ?? false;
                 }
             }
         }
@@ -795,13 +839,54 @@ export async function mapIngredientWithFallback(
                 let normalizedNutritionInvalid = false;
                 if (!normalizedCoreTokenMismatch) {
                     const { prisma } = await import('../db');
-                    const cachedFood = await prisma.fatSecretFoodCache.findUnique({
-                        where: { id: normalizedCache.foodId },
-                        select: { nutrientsPer100g: true }
-                    });
-                    if (cachedFood?.nutrientsPer100g) {
-                        const nutrients = cachedFood.nutrientsPer100g as any;
-                        normalizedNutritionInvalid = hasNullOrInvalidMacros(nutrients);
+                    let nutrients: any = null;
+                    if (normalizedCache.foodId.startsWith('fdc_')) {
+                        const fdcId = parseInt(normalizedCache.foodId.replace('fdc_', ''), 10);
+                        const fdc = await prisma.fdcFood.findUnique({
+                            where: { fdcId },
+                            select: { nutrientsPer100g: true }
+                        });
+                        nutrients = fdc?.nutrientsPer100g;
+                    } else if (normalizedCache.foodId.startsWith('off_')) {
+                        const barcode = normalizedCache.foodId.replace('off_', '');
+                        const off = await prisma.offFood.findUnique({
+                            where: { barcode },
+                            select: { nutrientsPer100g: true }
+                        });
+                        nutrients = off?.nutrientsPer100g;
+                    } else {
+                        const ai = await prisma.aiGeneratedFood.findUnique({
+                            where: { id: normalizedCache.foodId },
+                            select: {
+                                caloriesPer100g: true,
+                                proteinPer100g: true,
+                                carbsPer100g: true,
+                                fatPer100g: true,
+                                fiberPer100g: true,
+                                sugarPer100g: true,
+                            }
+                        });
+                        if (ai) {
+                            nutrients = {
+                                calories: ai.caloriesPer100g,
+                                protein: ai.proteinPer100g,
+                                carbs: ai.carbsPer100g,
+                                fat: ai.fatPer100g,
+                                fiber: ai.fiberPer100g,
+                                sugar: ai.sugarPer100g,
+                            };
+                        }
+                    }
+
+                    if (nutrients) {
+                        const mappedNutrients = {
+                            kcal: nutrients.calories ?? nutrients.energy ?? nutrients.kcal ?? 0,
+                            protein: nutrients.protein ?? 0,
+                            carbs: nutrients.carbohydrate ?? nutrients.carbs ?? 0,
+                            fat: nutrients.fat ?? 0,
+                            per100g: true,
+                        };
+                        normalizedNutritionInvalid = hasNullOrInvalidMacros(mappedNutrients);
                         if (normalizedNutritionInvalid) {
                             logger.warn('mapping.normalized_cache_bad_nutrition', {
                                 rawLine: trimmed,
@@ -816,8 +901,26 @@ export async function mapIngredientWithFallback(
                     normalizedNutritionInvalid ||
                     isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
                     isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ||
-                    hasCriticalModifierMismatch(trimmed, normalizedCache.foodName, 'cache') ||
-                    isReplacementMismatch(trimmed, normalizedCache.foodName, normalizedCache.brandName)) {
+                    // For branded queries: skip modifier mismatch when the cached food's brand
+                    // matches the detected brand (e.g. "Oikos" query → "Oikos Triple Zero Vanilla Nonfat"
+                    // should not be rejected just because "nonfat" is in the food name but not the query).
+                    (!isBrandedQuery || !(
+                        normalizedCache.brandName &&
+                        brandDetection.matchedBrand &&
+                        normalizedCache.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
+                    )
+                        ? hasCriticalModifierMismatch(trimmed, normalizedCache.foodName, 'cache')
+                        : false
+                    ) ||
+                    isReplacementMismatch(trimmed, normalizedCache.foodName, normalizedCache.brandName) ||
+                    // For branded queries with a known target brand: reject cached results from a
+                    // DIFFERENT brand. e.g. "Heinz Tomato Ketchup" query must not serve a cached
+                    // "TOMATO KETCHUP (WEIS)" result — force a fresh pipeline run to find Heinz.
+                    (isBrandedQuery &&
+                        brandDetection.matchedBrand != null &&
+                        normalizedCache.brandName != null &&
+                        !normalizedCache.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
+                    )) {
                     logger.warn('mapping.normalized_cache_filter_mismatch', {
                         rawLine: trimmed,
                         cachedFood: normalizedCache.foodName,
@@ -830,7 +933,7 @@ export async function mapIngredientWithFallback(
                         id: normalizedCache.foodId,
                         name: normalizedCache.foodName,
                         brandName: normalizedCache.brandName || undefined,
-                        source: 'cache',
+                        source: normalizedCache.source as any,
                         score: normalizedCache.confidence,
                         foodType: 'generic', // Assumption
                         rawData: {},
@@ -849,8 +952,9 @@ export async function mapIngredientWithFallback(
             const gatherOptions: GatherOptions = {
                 client,
                 skipCache,
-                skipLiveApi: !allowLiveFallback,
                 skipFdc,
+                isBrandedQuery,
+                targetBrand: brandDetection.matchedBrand ?? undefined,
                 aiSynonyms: allSynonyms,
             };
 
@@ -980,32 +1084,33 @@ export async function mapIngredientWithFallback(
                         // Use filtered (not sortedFiltered) to ensure high-overlap candidates aren't pushed out
                         // simpleRerank will do its own scoring based on token overlap + other factors
 
-                        // Enrich FatSecret candidates with cached nutrition data.
-                        // FatSecret live search doesn't return per-100g nutrition, but
-                        // previously hydrated foods have it in FatSecretFoodCache.
+                        // Enrich Generic candidates with cached nutrition data.
                         const candidatesForRerank = filtered.slice(0, 10);
                         const fsCandidatesMissingNutr = candidatesForRerank
-                            .filter(c => c.source === 'fatsecret' && !c.nutrition);
+                            .filter(c => c.source === 'ai_generated' && !c.nutrition);
                         if (fsCandidatesMissingNutr.length > 0) {
                             const { prisma } = await import('../db');
                             const fsIds = fsCandidatesMissingNutr.map(c => c.id);
-                            const cachedFoods = await prisma.fatSecretFoodCache.findMany({
+                            const cachedFoods = await prisma.aiGeneratedFood.findMany({
                                 where: { id: { in: fsIds } },
-                                select: { id: true, nutrientsPer100g: true },
+                                select: {
+                                    id: true,
+                                    caloriesPer100g: true,
+                                    proteinPer100g: true,
+                                    carbsPer100g: true,
+                                    fatPer100g: true,
+                                },
                             });
                             for (const cf of cachedFoods) {
-                                const nutrients = cf.nutrientsPer100g as any;
-                                if (nutrients && nutrients.calories != null) {
-                                    const cand = candidatesForRerank.find(c => c.id === cf.id);
-                                    if (cand && !cand.nutrition) {
-                                        cand.nutrition = {
-                                            kcal: nutrients.calories ?? 0,
-                                            protein: nutrients.protein ?? 0,
-                                            carbs: nutrients.carbs ?? 0,
-                                            fat: nutrients.fat ?? 0,
-                                            per100g: true,
-                                        };
-                                    }
+                                const cand = candidatesForRerank.find(c => c.id === cf.id);
+                                if (cand && !cand.nutrition) {
+                                    cand.nutrition = {
+                                        kcal: cf.caloriesPer100g,
+                                        protein: cf.proteinPer100g,
+                                        carbs: cf.carbsPer100g,
+                                        fat: cf.fatPer100g,
+                                        per100g: true,
+                                    };
                                 }
                             }
                         }
@@ -1050,7 +1155,7 @@ export async function mapIngredientWithFallback(
                         // nutritional modifiers), fall back to local prep-word stripping.
                         // The raw line (trimmed) is still passed for modifier constraint extraction.
                         const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
-                        const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed);
+                        const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined);
 
                         if (rerankResult && rerankResult.winner) {
                             const selected = filtered.find(c => c.id === rerankResult.winner!.id);
@@ -1097,7 +1202,7 @@ export async function mapIngredientWithFallback(
                 // Check if we already have size servings cached (use FDC table, not FatSecret!)
                 const fdcIdNumber = parseInt(winner.id, 10);
                 if (!isNaN(fdcIdNumber)) {
-                    const existingSizes = await prisma.fdcServingCache.findFirst({
+                    const existingSizes = await prisma.fdcServing.findFirst({
                         where: {
                             fdcId: fdcIdNumber,
                             description: { contains: 'medium', mode: 'insensitive' },
@@ -1124,35 +1229,35 @@ export async function mapIngredientWithFallback(
 
                             // Create size servings in FdcServingCache (skip if already exists)
                             for (const { desc, grams } of sizeServings) {
-                                const existingServing = await prisma.fdcServingCache.findFirst({
-                                    where: {
-                                        fdcId: fdcIdNumber,
-                                        description: desc,
-                                    },
+                                const fdcFoodExists = await prisma.fdcFood.findUnique({
+                                    where: { fdcId: fdcIdNumber },
                                 });
 
-                                if (!existingServing) {
-                                    // First ensure the FDC food exists in FdcFoodCache
-                                    const fdcFoodExists = await prisma.fdcFoodCache.findUnique({
-                                        where: { id: fdcIdNumber },
-                                    });
-
-                                    if (fdcFoodExists) {
-                                        await prisma.fdcServingCache.create({
-                                            data: {
+                                if (fdcFoodExists) {
+                                    await prisma.fdcServing.upsert({
+                                        where: {
+                                            FdcServing_fdcId_description_key: {
                                                 fdcId: fdcIdNumber,
                                                 description: desc,
-                                                grams: grams,
-                                                source: 'ai',
-                                                isAiEstimated: true,
                                             },
-                                        });
-                                    } else {
-                                        logger.warn('proactive_size_estimation.fdc_food_not_cached', {
+                                        },
+                                        create: {
                                             fdcId: fdcIdNumber,
-                                            food: winner.name,
-                                        });
-                                    }
+                                            description: desc,
+                                            grams: grams,
+                                            source: 'ai',
+                                            isAiEstimated: true,
+                                        },
+                                        update: {
+                                            grams: grams,
+                                            isAiEstimated: true,
+                                        },
+                                    });
+                                } else {
+                                    logger.warn('proactive_size_estimation.fdc_food_not_cached', {
+                                        fdcId: fdcIdNumber,
+                                        food: winner.name,
+                                    });
                                 }
                             }
 
@@ -1243,7 +1348,8 @@ export async function mapIngredientWithFallback(
                             id: fbr.foodId,
                             name: fbr.foodName,
                             brandName: fbr.brandName || undefined,
-                            source: fbr.foodId.startsWith('fdc_') ? 'fdc' : 'cache',
+                            source: fbr.foodId.startsWith('fdc_') ? 'fdc' :
+                                    fbr.foodId.startsWith('off_') ? 'openfoodfacts' : 'ai_generated',
                             score: fbr.confidence * 0.85,
                             foodType: 'generic',
                             rawData: {},
@@ -1473,7 +1579,7 @@ export async function mapIngredientWithFallback(
         // This prevents falling back to lower-ranked candidates just because they have gram servings.
         const isWeightUnit = parsed?.unit && /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms)$/i.test(parsed.unit);
 
-        if (!result && isWeightUnit && winner.source === 'fatsecret') {
+        if (!result && isWeightUnit && winner.source === 'ai_generated') {
             logger.info('mapping.weight_backfill_attempt', {
                 foodId: winner.id,
                 foodName: winner.name,
@@ -1512,7 +1618,7 @@ export async function mapIngredientWithFallback(
         const prepModifier = extractPrepModifier(rawLine, parsed?.qualifiers);
 
         // Enable AI backfill for BOTH FatSecret and FDC sources (FDC often lacks volume servings)
-        if (!result && isVolumeUnit && (winner.source === 'fatsecret' || winner.source === 'fdc')) {
+        if (!result && isVolumeUnit && (winner.source === 'ai_generated' || winner.source === 'fdc')) {
             logger.info('mapping.volume_backfill_attempt', {
                 foodId: winner.id,
                 foodName: winner.name,
@@ -1582,7 +1688,7 @@ export async function mapIngredientWithFallback(
                 );
 
                 // If hydration failed for a FatSecret candidate, try backfill before giving up
-                if (!fallbackResult && fallback.source === 'fatsecret') {
+                if (!fallbackResult && fallback.source === 'ai_generated') {
                     if (isVolumeUnit) {
                         logger.info('mapping.fallback_volume_backfill_attempt', {
                             foodId: fallback.id,
@@ -1640,8 +1746,9 @@ export async function mapIngredientWithFallback(
             const searchGatherOptions: GatherOptions = {
                 client,
                 skipCache,
-                skipLiveApi: !allowLiveFallback,
                 skipFdc,
+                isBrandedQuery,
+                targetBrand: brandDetection.matchedBrand ?? undefined,
                 aiSynonyms: allSynonyms,
             };
 
@@ -1661,7 +1768,7 @@ export async function mapIngredientWithFallback(
                     nutrition: c.nutrition,
                 }));
                 const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
-                const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed);
+                const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined);
                 
                 // simpleRerank returns the fully sorted list based on semantic score, nutrition ties, and FDC preferencing
                 const sortedFallbackCandidates = rerankResult.sortedCandidates.map(
@@ -1819,7 +1926,18 @@ export async function mapIngredientWithFallback(
             // instead of canonicalBase (which collapses variants to a shared base).
             // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
             // caused 73+ subsequent "peanut butter" queries to return powdered PB.
-            const cacheKey = normalizedName;
+            let cacheKey = normalizedName;
+
+            // Brand-Prefixed normalizedForm (Option A)
+            // If the query is branded and we have a targetBrand, prefix the cache key
+            // with the brand name so that it doesn't overwrite generic cache entries.
+            // e.g., "heinz tomato ketchup" instead of "tomato ketchup"
+            if (isBrandedQuery && brandDetection.matchedBrand) {
+                const brandPrefix = brandDetection.matchedBrand.toLowerCase();
+                if (!cacheKey.toLowerCase().includes(brandPrefix)) {
+                    cacheKey = `${brandPrefix} ${cacheKey}`;
+                }
+            }
 
             await saveValidatedMapping(rawLine, result, {
                 approved: true,
@@ -2019,6 +2137,11 @@ export async function hydrateAndSelectServing(
         return await buildFdcResult(candidate, parsed, confidence, rawLine);
     }
 
+    // Handle OpenFoodFacts candidates (off_ prefix)
+    if (candidate.source === 'openfoodfacts' || candidate.id.startsWith('off_')) {
+        return await buildOffResult(candidate, parsed, confidence, rawLine);
+    }
+
     // For cache/fatsecret candidates, get full details with servings
     let details: FatSecretFoodDetails | null = null;
 
@@ -2034,7 +2157,7 @@ export async function hydrateAndSelectServing(
         );
 
         if (!hasNutrition) {
-            logger.info('hydrate.cache_incomplete', { foodId: candidate.id, name: cached.name });
+            logger.info('hydrate.cache_incomplete', { foodId: candidate.id, name: cached.displayName });
             // Cache has food but no nutrition - try fresh API call
             const freshDetails = await client.getFoodDetails(candidate.id);
             if (freshDetails && freshDetails.servings?.some(s => s.calories != null)) {
@@ -2168,7 +2291,7 @@ export async function hydrateAndSelectServing(
                 const servingGrams = gramsForServing(gramServing) || 100;
                 const factor = heuristicGrams / servingGrams;
                 return {
-                    source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
+                    source: candidate.source,
                     foodId: candidate.id,
                     foodName: candidate.name,
                     brandName: candidate.brandName,
@@ -2224,7 +2347,7 @@ export async function hydrateAndSelectServing(
                     });
 
                     return {
-                        source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
+                        source: candidate.source,
                         foodId: candidate.id,
                         foodName: candidate.name,
                         brandName: candidate.brandName,
@@ -2424,10 +2547,22 @@ export async function hydrateAndSelectServing(
                     try {
                         const { prisma: prismaDb } = await import('../db');
                         const staleId = `ai_${candidate.id}_${targetSizeUnit}`;
-                        await prismaDb.fatSecretServingCache.deleteMany({
-                            where: { id: staleId },
-                        });
-                        logger.info('hydrate.stale_ai_cache_deleted', { id: staleId });
+                        if (candidate.id.startsWith('fdc_')) {
+                            const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
+                            await prismaDb.fdcServing.deleteMany({
+                                where: { fdcId, description: targetSizeUnit },
+                            });
+                        } else if (candidate.id.startsWith('off_')) {
+                            const barcode = candidate.id.replace('off_', '');
+                            await prismaDb.offServing.deleteMany({
+                                where: { barcode, description: targetSizeUnit },
+                            });
+                        } else {
+                            await prismaDb.aiGeneratedServing.deleteMany({
+                                where: { foodId: candidate.id, label: targetSizeUnit },
+                            });
+                        }
+                        logger.info('hydrate.stale_ai_cache_deleted', { foodId: candidate.id, targetSizeUnit });
                     } catch (e) {
                         // Ignore delete errors
                     }
@@ -3029,7 +3164,7 @@ export async function hydrateAndSelectServing(
     }
 
     return {
-        source: candidate.source === 'cache' ? 'cache' : 'fatsecret',
+        source: candidate.source,
         foodId: candidate.id,
         foodName: annotatedFoodName,
         brandName: candidate.brandName,
@@ -3103,7 +3238,7 @@ async function buildFdcResult(
             const grams = heuristicMatch.grams * qty;
             const factor = grams / 100;
             return {
-                source: candidate.source === 'cache' ? 'cache' : 'fdc',
+                source: candidate.source,
                 foodId: candidate.id,
                 foodName: candidate.name,
                 brandName: candidate.brandName || null,
@@ -3176,7 +3311,7 @@ async function buildFdcResult(
                 if (aiResult.success) {
                     // Fetch the AI-created serving from cache
                     const { prisma: prismaDb } = await import('../db');
-                    const aiServing = await prismaDb.fdcServingCache.findFirst({
+                    const aiServing = await prismaDb.fdcServing.findFirst({
                         where: { fdcId, isAiEstimated: true },
                         orderBy: { id: 'desc' },
                     });
@@ -3481,6 +3616,124 @@ async function buildFdcResult(
     };
 }
 
+// ============================================================
+// OpenFoodFacts Result Builder
+// ============================================================
+
+/**
+ * Build a FatsecretMappedIngredient from an OpenFoodFacts candidate.
+ * Hydrates the candidate into the local DB, resolves grams from the parsed unit,
+ * and falls back to AI nutrition backfill when the Atwater gate rejects label data.
+ */
+async function buildOffResult(
+    candidate: UnifiedCandidate,
+    parsed: ParsedIngredient | null,
+    confidence: number,
+    rawLine: string
+): Promise<FatsecretMappedIngredient | null> {
+    // 1. Hydrate into local DB
+    let hydrated;
+    try {
+        hydrated = await hydrateOffCandidate(candidate);
+    } catch (err) {
+        logger.warn('off.build_result.hydrate_failed', {
+            foodId: candidate.id,
+            error: (err as Error).message,
+        });
+        return null;
+    }
+
+    const qty = parsed ? parsed.qty * parsed.multiplier : 1;
+    const unit = parsed?.unit?.toLowerCase();
+
+    // 2. Resolve serving grams
+    const weightToGrams: Record<string, number> = {
+        'g': 1, 'gram': 1, 'grams': 1,
+        'oz': 28.35, 'ounce': 28.35, 'ounces': 28.35,
+        'lb': 453.6, 'lbs': 453.6, 'pound': 453.6, 'pounds': 453.6,
+        'kg': 1000, 'kilogram': 1000,
+    };
+    const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(candidate.name);
+    const volumeToGrams: Record<string, number> = {
+        'cup': isLiquid ? 240 : 120, 'cups': isLiquid ? 240 : 120,
+        'tbsp': isLiquid ? 15 : 7.5, 'tablespoon': isLiquid ? 15 : 7.5, 'tablespoons': isLiquid ? 15 : 7.5,
+        'tsp': isLiquid ? 5 : 2.5,  'teaspoon': isLiquid ? 5 : 2.5,  'teaspoons': isLiquid ? 5 : 2.5,
+        'ml': 1, 'floz': 30, 'fl oz': 30,
+        'dash': 0.6, 'dashes': 0.6, 'pinch': 0.3, 'pinches': 0.3,
+    };
+
+    let grams: number;
+    let servingDescription: string;
+
+    if (unit && weightToGrams[unit]) {
+        grams = qty * weightToGrams[unit];
+        servingDescription = `${grams.toFixed(1)}g`;
+    } else if (unit && volumeToGrams[unit]) {
+        grams = qty * volumeToGrams[unit];
+        servingDescription = `${qty} ${unit}`;
+    } else if (hydrated.servingGrams && hydrated.servingGrams > 0) {
+        grams = qty * hydrated.servingGrams;
+        servingDescription = `${qty} serving (${hydrated.servingGrams}g each)`;
+    } else {
+        grams = 100 * qty;
+        servingDescription = `${grams.toFixed(1)}g`;
+    }
+
+    const factor = grams / 100;
+    const n = hydrated.nutrientsPer100g;
+
+    // 3. Direct nutrients (passed Atwater gate)
+    if (n && n['calories'] != null) {
+        return {
+            source: 'openfoodfacts',
+            foodId: candidate.id,
+            foodName: hydrated.foodName,
+            brandName: hydrated.brandName,
+            servingId: null,
+            servingDescription,
+            grams,
+            kcal:    (n['calories'] || 0) * factor,
+            protein: (n['protein']  || 0) * factor,
+            carbs:   (n['carbs']    || 0) * factor,
+            fat:     (n['fat']      || 0) * factor,
+            confidence,
+            quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
+            rawLine,
+        };
+    }
+
+    // 4. AI nutrition backfill (Atwater gate rejected label data)
+    if (!AI_NUTRITION_BACKFILL_ENABLED) {
+        logger.warn('off.build_result.no_nutrients_no_backfill', { foodId: candidate.id });
+        return null;
+    }
+
+    const aiNutrition = await requestAiNutrition(hydrated.foodName, { rawLine });
+    if (aiNutrition.status !== 'success') {
+        logger.warn('off.build_result.ai_nutrition_failed', {
+            foodId: candidate.id,
+            reason: aiNutrition.reason,
+        });
+        return null;
+    }
+
+    return {
+        source: 'openfoodfacts',
+        foodId: candidate.id,
+        foodName: hydrated.foodName,
+        brandName: hydrated.brandName,
+        servingId: null,
+        servingDescription,
+        grams,
+        kcal:    aiNutrition.caloriesPer100g * factor,
+        protein: aiNutrition.proteinPer100g  * factor,
+        carbs:   aiNutrition.carbsPer100g    * factor,
+        fat:     aiNutrition.fatPer100g      * factor,
+        confidence: confidence * aiNutrition.confidence,
+        quality: 'low',
+        rawLine,
+    };
+}
 
 // ============================================================
 // Serving Selection (simplified from map-ingredient.ts)

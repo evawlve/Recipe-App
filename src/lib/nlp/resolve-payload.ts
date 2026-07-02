@@ -36,19 +36,19 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
 
   if (foodId.startsWith('fdc_')) {
     const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
-    const fdcFood = await prisma.fdcFoodCache.findUnique({
-      where: { id: fdcId },
+    const fdcFood = await prisma.fdcFood.findUnique({
+      where: { fdcId },
       include: { servings: true }
     });
     if (fdcFood) {
       name = fdcFood.description;
       brandName = fdcFood.brandName ?? null;
       source = 'fdc';
-      const nutrients = (fdcFood.nutrients as any) || {};
+      const nutrients = (fdcFood.nutrientsPer100g as any) || {};
       nutritionPer100g = {
-        kcal100: nutrients.calories ?? nutrients.energy ?? 0,
+        kcal100: nutrients.calories ?? nutrients.kcal ?? nutrients.energy ?? 0,
         protein100: nutrients.protein ?? 0,
-        carbs100: nutrients.carbohydrate ?? nutrients.carbs ?? 0,
+        carbs100: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
         fat100: nutrients.fat ?? nutrients.totalFat ?? 0,
         fiber100: nutrients.fiber ?? 0,
         sugar100: nutrients.sugar ?? 0,
@@ -66,8 +66,9 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
       });
     }
   } else if (foodId.startsWith('off_')) {
-    const offFood = await prisma.openFoodFactsCache.findUnique({
-      where: { id: foodId },
+    const barcode = foodId.replace('off_', '');
+    const offFood = await prisma.offFood.findUnique({
+      where: { barcode },
       include: { servings: true }
     });
     if (offFood) {
@@ -76,7 +77,7 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
       source = 'openfoodfacts';
       const nutrients = (offFood.nutrientsPer100g as any) || {};
       nutritionPer100g = {
-        kcal100: nutrients.kcal ?? nutrients.calories ?? 0,
+        kcal100: nutrients.kcal ?? nutrients.calories ?? nutrients.energy ?? 0,
         protein100: nutrients.protein ?? 0,
         carbs100: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
         fat100: nutrients.fat ?? 0,
@@ -96,32 +97,34 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
       });
     }
   } else {
-    // FatSecret food cache
-    const fsFood = await prisma.fatSecretFoodCache.findUnique({
+    // AI generated food details lookup
+    const aiFood = await prisma.aiGeneratedFood.findUnique({
       where: { id: foodId },
-      include: {
-        servings: true,
-        densityEstimates: true,
-        aliases: true
-      }
+      include: { servings: true }
     });
-    if (fsFood) {
-      name = fsFood.name;
-      brandName = fsFood.brandName ?? null;
-      source = 'fatsecret';
-      const nutrients = extractCacheNutrients(fsFood);
+    if (aiFood) {
+      name = aiFood.displayName;
+      brandName = null;
+      source = 'ai_estimated';
       nutritionPer100g = {
-        kcal100: nutrients.calories ?? 0,
-        protein100: nutrients.protein ?? 0,
-        carbs100: nutrients.carbs ?? 0,
-        fat100: nutrients.fat ?? 0,
-        fiber100: nutrients.fiber ?? 0,
-        sugar100: nutrients.sugar ?? 0,
-        sodium100: 0,
+        kcal100: aiFood.caloriesPer100g,
+        protein100: aiFood.proteinPer100g,
+        carbs100: aiFood.carbsPer100g,
+        fat100: aiFood.fatPer100g,
+        fiber100: aiFood.fiberPer100g ?? 0,
+        sugar100: aiFood.sugarPer100g ?? 0,
+        sodium100: aiFood.sodiumMgPer100g ?? 0,
       };
       
-      const { servingOptions } = buildServingOptionsForCacheFood(fsFood as any);
-      rawServingOptions = servingOptions;
+      const units = aiFood.servings.map(s => ({
+        label: s.label,
+        grams: s.grams
+      }));
+      rawServingOptions = deriveServingOptions({
+        units,
+        densityGml: null,
+        categoryId: null
+      });
     }
   }
 

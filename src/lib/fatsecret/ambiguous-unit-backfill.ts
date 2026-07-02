@@ -4,8 +4,7 @@
  * Handles backfill for ambiguous units (container, scoop, bowl, etc.)
  * that require AI estimation to determine weight.
  * 
- * Saves to FatSecretServingCache for FatSecret foods (most common case)
- * or falls back to PortionOverride for legacy Food table entries.
+ * Saves to fdcServing, offServing, or aiGeneratedServing.
  * Uses simpler AI prompt focused on package/portion size estimation.
  */
 
@@ -26,18 +25,117 @@ export interface AmbiguousBackfillResult {
     error?: string;
 }
 
+async function findExistingServing(foodId: string, normalizedUnit: string) {
+    if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
+        const id = foodId.startsWith('fdc:') ? parseInt(foodId.split(':')[1], 10) : parseInt(foodId.split('_')[1], 10);
+        const s = await prisma.fdcServing.findUnique({
+            where: {
+                FdcServing_fdcId_description_key: { fdcId: id, description: normalizedUnit }
+            }
+        });
+        return s ? { grams: s.grams } : null;
+    } else if (foodId.startsWith('off_')) {
+        const barcode = foodId.replace('off_', '');
+        const s = await prisma.offServing.findUnique({
+            where: {
+                barcode_description: { barcode, description: normalizedUnit }
+            }
+        });
+        return s ? { grams: s.grams } : null;
+    } else {
+        const s = await prisma.aiGeneratedServing.findUnique({
+            where: {
+                foodId_label: { foodId, label: normalizedUnit }
+            }
+        });
+        return s ? { grams: s.grams } : null;
+    }
+}
+
+async function upsertServing(foodId: string, normalizedUnit: string, grams: number, confidence: number, note?: string) {
+    if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
+        const id = foodId.startsWith('fdc:') ? parseInt(foodId.split(':')[1], 10) : parseInt(foodId.split('_')[1], 10);
+        await prisma.fdcServing.upsert({
+            where: {
+                FdcServing_fdcId_description_key: { fdcId: id, description: normalizedUnit }
+            },
+            create: {
+                fdcId: id,
+                description: normalizedUnit,
+                grams,
+                source: 'ai',
+                isAiEstimated: true
+            },
+            update: {
+                grams,
+                isAiEstimated: true
+            }
+        });
+    } else if (foodId.startsWith('off_')) {
+        const barcode = foodId.replace('off_', '');
+        await prisma.offServing.upsert({
+            where: {
+                barcode_description: { barcode, description: normalizedUnit }
+            },
+            create: {
+                barcode,
+                description: normalizedUnit,
+                grams,
+                source: 'ai',
+                isAiEstimated: true
+            },
+            update: {
+                grams,
+                isAiEstimated: true
+            }
+        });
+    } else {
+        await prisma.aiGeneratedServing.upsert({
+            where: {
+                foodId_label: { foodId, label: normalizedUnit }
+            },
+            create: {
+                foodId,
+                label: normalizedUnit,
+                grams,
+                aiConfidence: confidence,
+                aiNotes: note
+            },
+            update: {
+                grams,
+                aiConfidence: confidence,
+                aiNotes: note
+            }
+        });
+    }
+}
+
+async function getExistingServingDescriptions(foodId: string): Promise<string[]> {
+    if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
+        const id = foodId.startsWith('fdc:') ? parseInt(foodId.split(':')[1], 10) : parseInt(foodId.split('_')[1], 10);
+        const servings = await prisma.fdcServing.findMany({
+            where: { fdcId: id },
+            select: { description: true }
+        });
+        return servings.map(s => s.description);
+    } else if (foodId.startsWith('off_')) {
+        const barcode = foodId.replace('off_', '');
+        const servings = await prisma.offServing.findMany({
+            where: { barcode },
+            select: { description: true }
+        });
+        return servings.map(s => s.description);
+    } else {
+        const servings = await prisma.aiGeneratedServing.findMany({
+            where: { foodId },
+            select: { label: true }
+        });
+        return servings.map(s => s.label);
+    }
+}
+
 /**
- * Get or create a PortionOverride for an ambiguous unit.
- * 
- * Flow:
- * 1. Check if UserPortionOverride exists (highest priority) - not done here, caller should check
- * 2. Check if PortionOverride exists (cached global default)
- * 3. If not, call AI to estimate and save to PortionOverride
- * 
- * @param foodId - The food ID (from legacy Food table)
- * @param foodName - The name of the food for AI context
- * @param unit - The ambiguous unit (e.g., "container", "scoop")
- * @param brandName - Optional brand name for better AI context
+ * Get or create an ambiguous serving.
  */
 export async function getOrCreateAmbiguousServing(
     foodId: string,
@@ -47,11 +145,8 @@ export async function getOrCreateAmbiguousServing(
 ): Promise<AmbiguousBackfillResult> {
     const normalizedUnit = unit.toLowerCase().trim();
 
-    // Attempt deterministic sub-piece lookup first (e.g. "strip", "chunk")
-    // This prevents expensive AI estimation for common fractions
     try {
         const { getSubPieceDefault } = await import('../servings/default-count-grams');
-        // Clean out sub-piece words from the food name so parent lookup succeeds
         const cleanFoodName = foodName.replace(/\b(chunks?|pieces?|slices?|bites?|wedges?|strips?|segments?)\b/gi, '').trim();
         const subPieceResult = getSubPieceDefault(cleanFoodName, normalizedUnit);
         if (subPieceResult) {
@@ -67,10 +162,9 @@ export async function getOrCreateAmbiguousServing(
             };
         }
     } catch (e) {
-        // Ignore errors and fall through to cache/AI
+        // Ignore
     }
 
-    // Try primary deterministic count default (e.g. spray = 0.25g)
     try {
         const { getDefaultCountServing } = await import('../servings/default-count-grams');
         const sizeFromUnit = normalizedUnit as 'small' | 'medium' | 'large';
@@ -93,52 +187,28 @@ export async function getOrCreateAmbiguousServing(
             };
         }
     } catch (e) {
-        // Ignore errors
+        // Ignore
     }
 
-    // Check if this is actually an ambiguous unit - reject if not and no deterministic default exists
     if (!isAmbiguousUnit(normalizedUnit)) {
         return { status: 'error', error: `"${unit}" is not an ambiguous unit` };
     }
 
-    // Check for existing cached estimate in FatSecretServingCache
-    const servingId = `ai_${foodId}_${normalizedUnit}`;
-    const existingServing = await prisma.fatSecretServingCache.findUnique({
-        where: { id: servingId },
-    });
-
-    if (existingServing?.servingWeightGrams) {
+    // Check existing
+    const existing = await findExistingServing(foodId, normalizedUnit);
+    if (existing?.grams) {
         logger.debug('ambiguous_backfill.cache_hit', {
             foodId,
             unit: normalizedUnit,
-            grams: existingServing.servingWeightGrams,
-            source: 'fatsecret_serving_cache',
+            grams: existing.grams,
         });
         return {
             status: 'cached',
-            grams: existingServing.servingWeightGrams,
+            grams: existing.grams,
         };
     }
 
-    // Also check legacy PortionOverride (for backward compatibility)
-    try {
-        const legacyOverride = await prisma.portionOverride.findUnique({
-            where: { foodId_unit: { foodId, unit: normalizedUnit } },
-        });
-        if (legacyOverride) {
-            logger.debug('ambiguous_backfill.cache_hit', {
-                foodId,
-                unit: normalizedUnit,
-                grams: legacyOverride.grams,
-                source: 'portion_override',
-            });
-            return { status: 'cached', grams: legacyOverride.grams };
-        }
-    } catch {
-        // foodId might not exist in Food table - expected for FatSecret-only foods
-    }
-
-    // No cached value - call AI to estimate
+    // Call AI
     logger.info('ambiguous_backfill.estimating', { foodId, foodName, unit: normalizedUnit });
 
     const result = await estimateAmbiguousServing({
@@ -157,25 +227,9 @@ export async function getOrCreateAmbiguousServing(
         return { status: 'error', error: result.error ?? 'AI estimation failed' };
     }
 
-    // Save to FatSecretServingCache (works for all FatSecret foods)
+    // Save
     try {
-        await prisma.fatSecretServingCache.upsert({
-            where: { id: servingId },
-            create: {
-                id: servingId,
-                foodId,
-                measurementDescription: normalizedUnit,
-                servingWeightGrams: result.estimatedGrams,
-                source: 'ai_ambiguous',
-                confidence: result.confidence,
-                note: result.reasoning?.slice(0, 200),
-            },
-            update: {
-                servingWeightGrams: result.estimatedGrams,
-                confidence: result.confidence,
-                note: result.reasoning?.slice(0, 200),
-            },
-        });
+        await upsertServing(foodId, normalizedUnit, result.estimatedGrams, result.confidence ?? 1, result.reasoning?.slice(0, 200));
 
         logger.info('ambiguous_backfill.saved', {
             foodId,
@@ -183,10 +237,8 @@ export async function getOrCreateAmbiguousServing(
             unit: normalizedUnit,
             grams: result.estimatedGrams,
             confidence: result.confidence,
-            source: 'fatsecret_serving_cache',
         });
     } catch (error) {
-        // If FatSecretFoodCache doesn't exist, log and continue
         logger.warn('ambiguous_backfill.save_failed', {
             foodId,
             unit: normalizedUnit,
@@ -203,11 +255,6 @@ export async function getOrCreateAmbiguousServing(
 
 /**
  * Check for user-specific portion override first, then fall back to global.
- * 
- * @param userId - The user ID to check for overrides
- * @param foodId - The food ID
- * @param unit - The unit to look up
- * @returns The grams value if found, null otherwise
  */
 export async function getUserOrGlobalPortionOverride(
     userId: string | null | undefined,
@@ -216,7 +263,6 @@ export async function getUserOrGlobalPortionOverride(
 ): Promise<{ grams: number; source: 'user' | 'global' } | null> {
     const normalizedUnit = unit.toLowerCase().trim();
 
-    // 1. Check user-specific override first (highest priority)
     if (userId) {
         const userOverride = await prisma.userPortionOverride.findUnique({
             where: {
@@ -229,33 +275,14 @@ export async function getUserOrGlobalPortionOverride(
         }
     }
 
-    // 2. Check FatSecretServingCache for AI-estimated ambiguous units
-    const servingId = `ai_${foodId}_${normalizedUnit}`;
-    const aiServing = await prisma.fatSecretServingCache.findUnique({
-        where: { id: servingId },
-    });
-    if (aiServing?.servingWeightGrams) {
-        return { grams: aiServing.servingWeightGrams, source: 'global' };
-    }
-
-    // 3. Check legacy PortionOverride
-    try {
-        const globalOverride = await prisma.portionOverride.findUnique({
-            where: { foodId_unit: { foodId, unit: normalizedUnit } },
-        });
-        if (globalOverride) {
-            return { grams: globalOverride.grams, source: 'global' };
-        }
-    } catch {
-        // Food might not exist in Food table
+    // 2. Check global / cached estimates
+    const existing = await findExistingServing(foodId, normalizedUnit);
+    if (existing?.grams) {
+        return { grams: existing.grams, source: 'global' };
     }
 
     return null;
 }
-
-// ============================================================
-// Batched Produce Size Backfill (single AI call for all 3 sizes)
-// ============================================================
 
 import { estimateProduceSizes } from '../ai/ambiguous-serving-estimator';
 
@@ -268,11 +295,6 @@ export interface BatchedProduceBackfillResult {
 
 /**
  * Backfill small/medium/large servings for a produce item in a SINGLE AI call.
- * Much more efficient than calling getOrCreateAmbiguousServing() 3 times.
- * 
- * @param foodId - The FatSecret food ID
- * @param foodName - The name of the produce item
- * @param brandName - Optional brand/variety name
  */
 export async function batchBackfillProduceSizes(
     foodId: string,
@@ -283,22 +305,13 @@ export async function batchBackfillProduceSizes(
     const created: { size: string; grams: number }[] = [];
     const skipped: string[] = [];
 
-    // Check which sizes already exist
-    const existingServings = await prisma.fatSecretServingCache.findMany({
-        where: { foodId },
-        select: { measurementDescription: true },
-    });
-
-    const existingSizes = new Set(
-        existingServings
-            .map(s => s.measurementDescription?.toLowerCase())
-            .filter(Boolean)
-    );
+    // Check existing
+    const existingDescriptions = await getExistingServingDescriptions(foodId);
+    const existingSizes = new Set(existingDescriptions.map(d => d.toLowerCase()));
 
     const missingSizes = SIZE_UNITS.filter(size => !existingSizes.has(size));
 
     if (missingSizes.length === 0) {
-        // All sizes already exist
         return {
             status: 'success',
             created: [],
@@ -306,7 +319,6 @@ export async function batchBackfillProduceSizes(
         };
     }
 
-    // Call AI once for all sizes
     logger.info('batch_produce_backfill.estimating', {
         foodId,
         foodName,
@@ -326,30 +338,11 @@ export async function batchBackfillProduceSizes(
 
     const { estimates } = result;
 
-    // Save each missing size
     for (const size of missingSizes) {
         const grams = estimates[size];
-        const servingId = `ai_${foodId}_${size}`;
 
         try {
-            await prisma.fatSecretServingCache.upsert({
-                where: { id: servingId },
-                create: {
-                    id: servingId,
-                    foodId,
-                    measurementDescription: size,
-                    servingWeightGrams: grams,
-                    source: 'ai_ambiguous',
-                    confidence: estimates.confidence,
-                    note: estimates.reasoning?.slice(0, 200),
-                },
-                update: {
-                    servingWeightGrams: grams,
-                    confidence: estimates.confidence,
-                    note: estimates.reasoning?.slice(0, 200),
-                },
-            });
-
+            await upsertServing(foodId, size, grams, estimates.confidence ?? 1, estimates.reasoning?.slice(0, 200));
             created.push({ size, grams });
 
             logger.info('batch_produce_backfill.saved', {
@@ -367,7 +360,6 @@ export async function batchBackfillProduceSizes(
         }
     }
 
-    // Mark already existing sizes as skipped
     for (const size of SIZE_UNITS) {
         if (existingSizes.has(size)) {
             skipped.push(size);

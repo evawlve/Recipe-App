@@ -1,0 +1,121 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
+export async function DELETE(request: NextRequest) {
+	// Skip execution during build time
+	if (process.env.NEXT_PHASE === 'phase-production-build' || 
+	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+	    process.env.BUILD_TIME === 'true') {
+		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
+	}
+
+	// Import only when not in build mode
+	const { prisma } = await import("@/lib/db");
+	const { getCurrentUser } = await import("@/lib/auth");
+	const { S3Client, DeleteObjectsCommand } = await import("@aws-sdk/client-s3");
+	
+  try {
+    const body = await request.json();
+    const { recipeIds } = body;
+
+    if (!Array.isArray(recipeIds) || recipeIds.length === 0) {
+      return NextResponse.json({ error: "Invalid recipe IDs" }, { status: 400 });
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    const region = process.env.AWS_REGION;
+    const bucket = process.env.S3_BUCKET;
+    
+    if (!region || !bucket) {
+      return NextResponse.json({ error: "Missing AWS_REGION or S3_BUCKET" }, { status: 500 });
+    }
+
+    // Get all recipes that belong to the current user
+    const recipes = await prisma.recipe.findMany({
+      where: {
+        id: { in: recipeIds },
+        authorId: user.id, // Only allow deleting own recipes
+      },
+      include: { photos: true },
+    });
+
+    if (recipes.length === 0) {
+      return NextResponse.json({ error: "No recipes found or not authorized" }, { status: 404 });
+    }
+
+    // Collect all S3 keys for deletion
+    const allS3Keys = recipes.flatMap(recipe => 
+      recipe.photos.map(photo => photo.s3Key)
+    );
+
+    // Delete S3 objects
+    try {
+      if (allS3Keys.length > 0) {
+        const s3 = new S3Client({ 
+          region,
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+          }
+        });
+        await s3.send(
+          new DeleteObjectsCommand({
+            Bucket: bucket,
+            Delete: {
+              Objects: allS3Keys.map(key => ({ Key: key })),
+              Quiet: true,
+            },
+          })
+        );
+      }
+    } catch (error) {
+      console.error("S3 delete error:", error);
+      // Continue with DB cleanup even if S3 delete fails
+    }
+
+    // Delete all related data in transactions
+    const recipeIdsToDelete = recipes.map(r => r.id);
+    
+    await prisma.$transaction([
+      // Delete all related data first
+      prisma.photo.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.ingredient.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.comment.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.like.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeTag.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.collectionRecipe.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.nutrition.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeView.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeInteractionDaily.deleteMany({ where: { recipeId: { in: recipeIdsToDelete } } }),
+      prisma.recipeSimilar.deleteMany({ 
+        where: { 
+          OR: [
+            { recipeId: { in: recipeIdsToDelete } },
+            { similarId: { in: recipeIdsToDelete } }
+          ]
+        } 
+      }),
+      // Finally delete the recipes
+      prisma.recipe.deleteMany({ where: { id: { in: recipeIdsToDelete } } }),
+    ]);
+
+    return NextResponse.json({ 
+      success: true, 
+      deletedCount: recipes.length 
+    });
+
+  } catch (error) {
+    console.error("Bulk delete error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete recipes" },
+      { status: 500 }
+    );
+  }
+}

@@ -8,22 +8,25 @@ async function findCachedServing(foodId: string, unit: string) {
   const { prisma } = await import('@/lib/db');
   const normalizedUnit = unit.toLowerCase().trim();
 
-  if (foodId.startsWith('fdc_')) {
-    const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
-    const servings = await prisma.fdcServingCache.findMany({
+  if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
+    const fdcId = foodId.startsWith('fdc:')
+      ? parseInt(foodId.split(':')[1], 10)
+      : parseInt(foodId.replace('fdc_', ''), 10);
+    const servings = await prisma.fdcServing.findMany({
       where: { fdcId }
     });
     return servings.find(s => s.description.toLowerCase().includes(normalizedUnit)) || null;
   } else if (foodId.startsWith('off_')) {
-    const servings = await prisma.openFoodFactsServingCache.findMany({
-      where: { offId: foodId }
+    const barcode = foodId.replace('off_', '');
+    const servings = await prisma.offServing.findMany({
+      where: { barcode }
     });
     return servings.find(s => s.description.toLowerCase().includes(normalizedUnit)) || null;
   } else {
-    const servings = await prisma.fatSecretServingCache.findMany({
+    const servings = await prisma.aiGeneratedServing.findMany({
       where: { foodId }
     });
-    return servings.find(s => s.measurementDescription?.toLowerCase().includes(normalizedUnit)) || null;
+    return servings.find(s => s.label.toLowerCase().includes(normalizedUnit)) || null;
   }
 }
 
@@ -42,7 +45,6 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(req.url);
     const unit = searchParams.get('unit');
-    const source = searchParams.get('source') || 'fatsecret';
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'foodId is required' }, { status: 400 });
@@ -82,8 +84,10 @@ export async function GET(
     }
 
     // Map fields depending on source model
-    const label = 'measurementDescription' in serving ? serving.measurementDescription : serving.description;
-    const grams = 'servingWeightGrams' in serving ? serving.servingWeightGrams : serving.grams;
+    const label = 'label' in serving ? (serving as any).label : (serving as any).description;
+    const grams = (serving as any).grams;
+    const confidence = 'aiConfidence' in serving ? (serving as any).aiConfidence : 0.85;
+    const warning = 'aiNotes' in serving ? (serving as any).aiNotes : null;
 
     return NextResponse.json({
       success: true,
@@ -91,8 +95,8 @@ export async function GET(
         label: label || unit,
         grams: grams || 0,
         type: getServingType(label || unit),
-        confidence: serving.confidence ?? 0.85,
-        warning: serving.note ?? null
+        confidence: confidence ?? 0.85,
+        warning: warning ?? null
       }
     });
   } catch (error) {
