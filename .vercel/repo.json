@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_hY3o8BtvEKXvP3cKriEyjkstWyXs",
+      "name": "recipe-app",
+      "directory": ".",
+      "orgId": "team_WjHNlbVoN6hqOiRGLTLgKbDE"
+    }
+  ]
+}

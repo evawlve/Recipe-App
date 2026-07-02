@@ -1,0 +1,118 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# Development artifacts
+batch-import-log-*.json
+batch-import-results-summary.md
+api-test.txt
+connect-db.ps1
+*-analysis.md
+*-analysis.json
+test-results*
+temp-scripts.json
+data/fatsecret/*.log
+data/fatsecret/debug-*.json
+data/fatsecret/cache-seed.json
+reports/eval-*.json
+.claude/settings.local.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.local
+.env*.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+prisma/migrations/dev.db*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cusor
+.cursorrules
+.cursorignore
+
+client_secret.json
+
+# Large datasets (not committed)
+src/data/usda/**
+!src/data/usda/.keep
+
+# Large USDA data files (keep only mini test files)
+data/usda/sr-legacy.jsonl
+data/usda/survey.jsonl
+data/usda/FoodData_Central_sr_legacy_food_json_2018-04.json
+data/usda/FoodData_Central_foundation_food_json_2025-04-24.json
+data/usda/fdc.json
+data/usda/fdc.jsonl
+data/usda/sr-legacy-sample.jsonl
+
+# Local CSV exports you don't want to commit accidentally
+data/curated/tmp/**
+# Sentry Config File
+.env.sentry-build-plugin
+
+# Git corrupted files
+.git.corrupted/
+.vercel
+.env*
