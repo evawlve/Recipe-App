@@ -86,10 +86,18 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         sodium100: nutrients.sodium ?? 0,
       };
 
+      const parseIntServingGrams = offFood.servingGrams ? Number(offFood.servingGrams) : null;
       const units = offFood.servings.map(s => ({
         label: s.description,
         grams: s.grams
       }));
+      if (parseIntServingGrams && !units.some(u => u.label.toLowerCase().includes('serving'))) {
+        units.push({
+          label: offFood.servingSize || '1 serving',
+          grams: parseIntServingGrams
+        });
+      }
+
       rawServingOptions = deriveServingOptions({
         units,
         densityGml: null,
