@@ -18,7 +18,7 @@ export type ParsedIngredient = {
 function resolvePackageMultipliers(line: string): string {
   // Pattern to match: qty1 [delimiter] ( qty2 unit ) [package_type]
   // e.g. 1/2 (12 oz) package, 2 x 15-ounce cans, 3 (4 oz) containers, 2 15 oz cans
-  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)\s*[-x×*(\s]?\s*(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:can|cans|package|packages|container|containers|pouch|pouches|box|boxes|bag|bags|bottle|bottles|packet|packets|envelope|envelopes|sachet|sachets|jar|jars|tub|tubs|carton|cartons)/gi;
+  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)\s*[-x×*(\s]?\s*(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)/gi;
 
   return line.replace(packageRegex, (match, qty1Str, qty2Str, unit) => {
     const qty1 = parseFraction(qty1Str);

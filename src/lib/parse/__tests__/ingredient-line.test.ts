@@ -331,3 +331,19 @@ test('1 pinch salt', () => {
   expect(p.unit).toBe('pinch');
   expect(p.name).toBe('salt');
 });
+
+describe('resolvePackageMultipliers package resolution rules', () => {
+  test('does not resolve package multiplier if qty1 is 1 (e.g., 1 (14 oz) can)', () => {
+    const p = parseIngredientLine('1 (14 oz) can tomatoes')!;
+    expect(p.qty).toBeCloseTo(1);
+    expect(p.name).toContain('tomatoes');
+  });
+
+  test('resolves package multiplier if qty1 > 1 (e.g., 2 x 15 oz cans)', () => {
+    const p = parseIngredientLine('2 x 15 oz cans tomatoes')!;
+    // 2 * 15 = 30 oz
+    expect(p.qty).toBeCloseTo(30);
+    expect(p.unit).toBe('oz');
+    expect(p.name).toBe('tomatoes');
+  });
+});
