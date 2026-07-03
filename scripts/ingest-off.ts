@@ -161,7 +161,6 @@ async function main() {
       const offId = `off_${barcode}`;
 
       foodBatch.push({
-        id: offId,
         barcode: String(barcode),
         name: rawName,
         brandName: brand,
@@ -178,10 +177,10 @@ async function main() {
         servingGrams,
       });
 
-      // If a standard serving size was extracted, prepare an OpenFoodFactsServingCache record
+      // If a standard serving size was extracted, prepare an OffServing record
       if (servingSize && servingGrams) {
         servingBatch.push({
-          offId: offId,
+          barcode: String(barcode),
           description: servingSize,
           grams: servingGrams,
           source: 'openfoodfacts',
@@ -223,14 +222,14 @@ async function main() {
 async function flushBatch(foods: any[], servings: any[]) {
   try {
     // Insert foods (ignore conflicts/duplicates if run repeatedly)
-    await prisma.openFoodFactsCache.createMany({
+    await prisma.offFood.createMany({
       data: foods,
       skipDuplicates: true,
     });
 
     // Insert servings matching the foods
     if (servings.length > 0) {
-      await prisma.openFoodFactsServingCache.createMany({
+      await prisma.offServing.createMany({
         data: servings,
         skipDuplicates: true,
       });

@@ -85,11 +85,11 @@ async function main() {
       const servingSizeUnit = product.servingSizeUnit || null;
 
       foodBatch.push({
-        id: fdcId,
+        fdcId: fdcId,
         description: product.description,
         brandName: product.brandName || null,
         dataType: product.dataType || 'Branded',
-        nutrients: nutrients,
+        nutrientsPer100g: nutrients,
         servingSize,
         servingSizeUnit,
       });
@@ -140,7 +140,7 @@ async function main() {
 async function flushBatch(foods: any[], servings: any[]) {
   try {
     // Insert foods (ignore conflicts/duplicates if run repeatedly)
-    await prisma.fdcFoodCache.createMany({
+    await prisma.fdcFood.createMany({
       data: foods,
       skipDuplicates: true,
     });
@@ -156,7 +156,7 @@ async function flushBatch(foods: any[], servings: any[]) {
         }
       }
       
-      await prisma.fdcServingCache.createMany({
+      await prisma.fdcServing.createMany({
         data: Array.from(uniqueServingsMap.values()),
         skipDuplicates: true,
       });
