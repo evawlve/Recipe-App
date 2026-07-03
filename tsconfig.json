@@ -45,6 +45,7 @@
     "scripts/**/*",
     "src/scripts/**/*",
     "tmp/**/*",
-    "tmp*.ts"
+    "tmp*.ts",
+    "scratch/**/*"
   ]
 }
