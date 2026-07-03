@@ -12,7 +12,7 @@ import { ENABLE_PORTION_V2 } from '@/lib/flags';
 import { rankCandidates, Candidate } from '@/lib/foods/rank';
 import { batchFetchAliases } from '@/lib/foods/alias-cache';
 import { resolveIngredient } from '@/lib/nutrition/resolve-ingredient';
-import { FATSECRET_STRICT_MODE } from '@/lib/fatsecret/config';
+import { FATSECRET_STRICT_MODE } from '@/lib/mapping/config';
 
 interface GoldRow {
   id: string;

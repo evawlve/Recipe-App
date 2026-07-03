@@ -6,8 +6,8 @@ import { kcalBandForQuery } from '../foods/plausibility';
 import { deriveServingOptions } from '../units/servings';
 import { resolvePortion } from './portion';
 import { resolveGramsFromParsed } from './resolve-grams';
-import { mapIngredientWithFatsecret, type FatsecretMappedIngredient } from '../fatsecret/map-ingredient';
-import { FATSECRET_ENABLED, FATSECRET_MIN_CONFIDENCE, FATSECRET_STRICT_MODE } from '../fatsecret/config';
+import { mapIngredientWithFatsecret, type FatsecretMappedIngredient } from '../mapping/map-ingredient';
+import { FATSECRET_ENABLED, FATSECRET_MIN_CONFIDENCE, FATSECRET_STRICT_MODE } from '../mapping/config';
 
 export type ResolvedIngredient = {
   source: 'fatsecret' | 'local';

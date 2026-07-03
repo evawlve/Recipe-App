@@ -1,7 +1,7 @@
 import { fdcApi } from './fdc-api';
 import { parseIngredientLine } from '../parse/ingredient-line';
-import { normalizeIngredientName } from '../fatsecret/normalization-rules';
-import { debugLogger } from '../fatsecret/debug-logger';
+import { normalizeIngredientName } from '../mapping/normalization-rules';
+import { debugLogger } from '../mapping/debug-logger';
 import { prisma } from '../db';
 import { insertFdcAiServing } from './fdc-ai-backfill';
 

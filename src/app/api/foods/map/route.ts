@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
     }
 
     // NUTRITION FIX: Check both FatSecret cache AND legacy Food table
-    const { FATSECRET_CACHE_MODE } = await import('@/lib/fatsecret/config');
-    const { getCachedFoodWithRelations } = await import('@/lib/fatsecret/cache-search');
+    const { FATSECRET_CACHE_MODE } = await import('@/lib/mapping/config');
+    const { getCachedFoodWithRelations } = await import('@/lib/mapping/cache-search');
 
     let foodExists = false;
 

@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.git.corrupted
+data
+tmp
+logs
+out
+build
+.vscode
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

@@ -23,7 +23,7 @@
 ```mermaid
 flowchart TD
     subgraph Input
-        A[Raw Ingredient Line] --> B{Check ValidatedMapping Cache}
+        A[Raw Ingredient Line] --> B{Check FoodMapping Cache}
     end
     
     subgraph Cache_Hit["Cache Hit Path"]
@@ -43,7 +43,7 @@ flowchart TD
         K --> L[Select Best Match]
         L --> M[Hydrate to Cache]
         M --> N[Pre-emptive Backfill]
-        N --> O[Save to ValidatedMapping]
+        N --> O[Save to FoodMapping]
         O --> D
     end
 ```
@@ -62,7 +62,7 @@ flowchart TD
 
 | Table | Purpose |
 |-------|---------|
-| `ValidatedMapping` | Maps ingredient → food with both raw line and normalized form |
+| `FoodMapping` | Maps ingredient → food with both raw line and normalized form |
 | `IngredientFoodMap` | Links recipe ingredients to nutrition data |
 | `AiNormalizeCache` | Caches AI-generated ingredient simplifications |
 
@@ -70,12 +70,12 @@ flowchart TD
 
 | Table | Purpose |
 |-------|---------|
-| `FatSecretFoodCache` | Cached FatSecret food entries |
-| `FatSecretServingCache` | Serving sizes for FatSecret foods |
+| `FdcFood` | Cached FatSecret food entries |
+| `FdcServing` | Serving sizes for FatSecret foods |
 | `FdcFoodCache` | Cached USDA FoodData Central entries |
 | `FdcServingCache` | Serving sizes for FDC foods (uses `fdcId` as Int) |
 
-> **Important**: FDC foods use `FdcServingCache` with integer `fdcId`. FatSecret foods use `FatSecretServingCache` with string `foodId`. Never mix these.
+> **Important**: FDC foods use `FdcServingCache` with integer `fdcId`. FatSecret foods use `FdcServing` with string `foodId`. Never mix these.
 
 ### Support Tables
 
@@ -98,7 +98,7 @@ Cache lookup uses **normalized form** as the primary key, eliminating "selection
 Input: "2 cups chopped onions"
 
 1. Basic normalize → "onion" (strip qty, unit, prep phrases)
-2. Check ValidatedMapping for normalizedForm match ← PRIMARY LOOKUP
+2. Check FoodMapping for normalizedForm match ← PRIMARY LOOKUP
 3. If found → Use cached foodId, proceed to serving selection
 4. If not found → Continue to full pipeline
 5. On success → Save mapping keyed by normalizedForm
@@ -121,7 +121,7 @@ Output: { qty: 2, unit: "cup", name: "chopped onions", notes: "divided" }
 ### Phase 3: Candidate Gathering
 
 1. Build search queries with singular/plural variants
-2. Search FatSecret API (parallel)
+2. Search local FDC/OFF databases (parallel)
 3. Search FDC API (parallel)
 4. Merge candidates, cache top FDC results proactively
 
@@ -140,7 +140,7 @@ Output: { qty: 2, unit: "cup", name: "chopped onions", notes: "divided" }
 3. **Pre-emptive backfill** (if `ENABLE_PREEMPTIVE_BACKFILL=true`):
    - Generate category-specific servings (produce: cup cubed/diced/sliced, aromatics: tbsp minced)
    - Runs in background, non-blocking
-4. Save to ValidatedMapping
+4. Save to FoodMapping
 
 ### Phase 6: Serving Selection
 
@@ -210,7 +210,7 @@ Units with variable weights trigger AI estimation instead of unreliable API data
 
 When `ENABLE_PREEMPTIVE_BACKFILL=true`, newly cached foods trigger category-specific serving generation:
 
-**File**: `src/lib/fatsecret/preemptive-backfill.ts`
+**File**: `src/lib/mapping/preemptive-backfill.ts`
 
 | Category | Servings Generated |
 |----------|-------------------|
@@ -260,7 +260,7 @@ Produce items (fruits/vegetables) proactively get small/medium/large servings af
 
 | Layer | Purpose |
 |-------|---------|
-| `ValidatedMapping` | Fast path for known mappings |
+| `FoodMapping` | Fast path for known mappings |
 | `*FoodCache` | Food data (FatSecret/FDC) |
 | `*ServingCache` | Serving data |
 | `AiNormalizeCache` | Normalization results |
@@ -341,28 +341,28 @@ When a modifier appears as the **first word**, it indicates a different product:
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/map-ingredient-with-fallback.ts` | Main entry point |
-| `src/lib/fatsecret/gather-candidates.ts` | Searches APIs, caches FDC results |
-| `src/lib/fatsecret/filter-candidates.ts` | Exclusion rules, token filtering |
-| `src/lib/fatsecret/simple-rerank.ts` | Scoring and ranking |
-| `src/lib/fatsecret/ai-nutrition-backfill.ts` | LLM-generated nutrition (last-resort fallback) |
+| `src/lib/mapping/map-ingredient-with-fallback.ts` | Main entry point |
+| `src/lib/mapping/gather-candidates.ts` | Searches APIs, caches FDC results |
+| `src/lib/mapping/filter-candidates.ts` | Exclusion rules, token filtering |
+| `src/lib/mapping/simple-rerank.ts` | Scoring and ranking |
+| `src/lib/mapping/ai-nutrition-backfill.ts` | LLM-generated nutrition (last-resort fallback) |
 
 ### Serving & Backfill
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/serving-backfill.ts` | On-demand serving backfill |
-| `src/lib/fatsecret/preemptive-backfill.ts` | Category-specific pre-emptive servings |
-| `src/lib/fatsecret/hydrate-cache.ts` | Food hydration + pre-emptive trigger |
-| `src/lib/fatsecret/ambiguous-unit-backfill.ts` | AI estimation for ambiguous units |
+| `src/lib/mapping/serving-backfill.ts` | On-demand serving backfill |
+| `src/lib/mapping/preemptive-backfill.ts` | Category-specific pre-emptive servings |
+| `src/lib/mapping/hydrate-cache.ts` | Food hydration + pre-emptive trigger |
+| `src/lib/mapping/ambiguous-unit-backfill.ts` | AI estimation for ambiguous units |
 
 ### Normalization
 
 | File | Purpose |
 |------|---------|
-| `src/lib/fatsecret/normalization-rules.ts` | Prep phrase stripping, synonym rewrites |
+| `src/lib/mapping/normalization-rules.ts` | Prep phrase stripping, synonym rewrites |
 | `src/lib/parse/ingredient-line.ts` | Parses raw ingredient |
-| `src/lib/fatsecret/ai-normalize.ts` | AI-powered normalization |
+| `src/lib/mapping/ai-normalize.ts` | AI-powered normalization |
 
 ### Recipe Import (`scripts/`)
 
@@ -380,8 +380,8 @@ All debug scripts accept CLI arguments — no need to edit files.
 | `debug-ingredient.ts` | `npx tsx src/scripts/debug-ingredient.ts "1 cup honey" [--skip-fdc] [--verbose]` | Full pipeline trace: parse → normalize → map → result |
 | `gather-candidates.ts` | `npx tsx src/scripts/gather-candidates.ts "rice vinegar" [--skip-fdc] [--show-filtered]` | Show raw candidates, filter pass/fail, reranker winner |
 | `check-food-servings.ts` | `npx tsx src/scripts/check-food-servings.ts "mayonnaise" [--exact] [--limit 20]` | Inspect FatSecret serving cache for any food |
-| `check-cache-entry.ts` | `npx tsx src/scripts/check-cache-entry.ts "onion" [--clear]` | Inspect ValidatedMapping, AiNormalizeCache, IngredientFoodMap entries; optionally clear |
-| `clear-all-cache.ts` | `npx tsx src/scripts/clear-all-cache.ts` | Wipe all mapping caches (ValidatedMapping, IngredientFoodMap, AiNormalizeCache) |
+| `check-cache-entry.ts` | `npx tsx src/scripts/check-cache-entry.ts "onion" [--clear]` | Inspect FoodMapping, AiNormalizeCache, IngredientFoodMap entries; optionally clear |
+| `clear-all-cache.ts` | `npx tsx src/scripts/clear-all-cache.ts` | Wipe all mapping caches (FoodMapping, IngredientFoodMap, AiNormalizeCache) |
 | `clear-cache.ts` | `npx tsx src/scripts/clear-cache.ts` | Selective cache clear |
 
 > **Diagnosis workflow**: Run `gather-candidates.ts` first to see if the correct food ever appears. If it does but maps wrong, run `debug-ingredient.ts --verbose` to trace scoring. If serving data looks wrong, use `check-food-servings.ts`.

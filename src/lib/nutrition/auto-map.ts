@@ -1,13 +1,13 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { parseIngredientLine } from '../parse/ingredient-line';
-import { mapIngredientWithFallback, type FatsecretMappedIngredient } from '../fatsecret/map-ingredient-with-fallback';
+import { mapIngredientWithFallback, type FatsecretMappedIngredient } from '../mapping/map-ingredient-with-fallback';
 import { mapIngredientWithFdc } from '../usda/map-ingredient-fdc';
-import { createFoodAlias } from '../fatsecret/alias-manager';
-import { normalizeIngredientName, refreshNormalizationRules } from '../fatsecret/normalization-rules';
+import { createFoodAlias } from '../mapping/alias-manager';
+import { normalizeIngredientName, refreshNormalizationRules } from '../mapping/normalization-rules';
 import { applyCleanupPatterns, recordCleanupOutcome } from '../ingredients/cleanup';
 import { learnPatternsFromAI } from '../ingredients/pattern-learner';
-import { aiNormalizeIngredient } from '../fatsecret/ai-normalize';
+import { aiNormalizeIngredient } from '../mapping/ai-normalize';
 
 // Align with pilot importer: allow candidates down to 0.5 but gate on AI validation
 const MIN_AUTOMAP_CONFIDENCE = 0.5;

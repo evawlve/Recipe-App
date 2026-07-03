@@ -8,7 +8,7 @@ We have successfully deployed a final series of systemic heuristics and deployed
    - `"bouillon"` rewrites to `"broth"` when volumetrically quantified.
    - `"corn"` rewrites to `"sweet corn"` when unit is `"can"`.
 2. **Discrete Produce Tracking:** `selectServing` now intercepts unitless items flagged by `isDiscreteItem` and assigns them the `"piece"` unit so they pass into the count-based serving backfill rather than defaulting to `1g`.
-3. **Cache Fixes:** Patched `earlyCacheHit` to respect the `--skip-cache` argument to ensure test scripts don't pull poisoned cache anomalies. We specifically cleared prior ValidatedMappings for `"mint"`, `"pancake mix"`, `"bouillon"`, etc., prior to this import.
+3. **Cache Fixes:** Patched `earlyCacheHit` to respect the `--skip-cache` argument to ensure test scripts don't pull poisoned cache anomalies. We specifically cleared prior FoodMappings for `"mint"`, `"pancake mix"`, `"bouillon"`, etc., prior to this import.
 
 The pilot batch import successfully concluded, creating:
 - Raw Log: `logs/mapping-summary-2026-04-05T21-39-37.txt`

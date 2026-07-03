@@ -43,12 +43,12 @@ export async function GET(req: NextRequest) {
   const { computeTotals } = await import("@/lib/nutrition/compute");
   const { computeImpactPreview } = await import("@/lib/nutrition/impact");
   const { tokens, normalizeQuery } = await import("@/lib/search/normalize");
-  const { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } = await import('@/lib/fatsecret/config');
+  const { FATSECRET_CACHE_MODE, FATSECRET_CACHE_MODE_HELPERS } = await import('@/lib/mapping/config');
   const {
     searchFatSecretCacheFoods,
     buildCacheCandidate,
     buildCacheFoodResponse,
-  } = await import('@/lib/fatsecret/cache-search');
+  } = await import('@/lib/mapping/cache-search');
 
   try {
     const { searchParams } = new URL(req.url);

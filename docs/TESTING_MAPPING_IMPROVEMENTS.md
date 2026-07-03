@@ -8,22 +8,22 @@ This guide covers how to test the ingredient mapping improvements, including uni
 
 ```bash
 # Using npm (recommended)
-npm test -- src/lib/fatsecret/__tests__/map-ingredient.test.ts -t "chicken sausage"
+npm test -- src/lib/mapping/__tests__/map-ingredient.test.ts -t "chicken sausage"
 
 # Using npx (alternative)
-npx jest src/lib/fatsecret/__tests__/map-ingredient.test.ts -t "chicken sausage"
+npx jest src/lib/mapping/__tests__/map-ingredient.test.ts -t "chicken sausage"
 
 # Run all map-ingredient tests
-npm test -- src/lib/fatsecret/__tests__/map-ingredient.test.ts
+npm test -- src/lib/mapping/__tests__/map-ingredient.test.ts
 
 # Run in watch mode (auto-reruns on file changes)
-npm test -- --watch src/lib/fatsecret/__tests__/map-ingredient.test.ts
+npm test -- --watch src/lib/mapping/__tests__/map-ingredient.test.ts
 ```
 
 ### Run All FatSecret Mapping Tests
 
 ```bash
-npm test -- src/lib/fatsecret
+npm test -- src/lib/mapping
 ```
 
 ### Run All Tests
@@ -241,7 +241,7 @@ After these changes, you should see:
 
 ```bash
 # Run with verbose output
-npm test -- --verbose src/lib/fatsecret/__tests__/map-ingredient.test.ts
+npm test -- --verbose src/lib/mapping/__tests__/map-ingredient.test.ts
 
 # Run specific test
 npm test -- -t "maps chicken sausage"

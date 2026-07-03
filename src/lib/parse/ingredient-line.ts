@@ -15,12 +15,53 @@ export type ParsedIngredient = {
   isEstimatedQuantity?: boolean;  // True when qty is AI-estimated (e.g., "to taste" -> 1 tsp)
 };
 
+function resolvePackageMultipliers(line: string): string {
+  // Pattern to match: qty1 [delimiter] ( qty2 unit ) [package_type]
+  // e.g. 1/2 (12 oz) package, 2 x 15-ounce cans, 3 (4 oz) containers, 2 15 oz cans
+  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)\s*[-x×*(\s]?\s*(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)/gi;
+
+  return line.replace(packageRegex, (match, qty1Str, qty2Str, unit) => {
+    const qty1 = parseFraction(qty1Str);
+    if (qty1 === 1) {
+      return match; // Do not resolve if quantity is 1 to preserve package count structure (e.g. 1 (14 oz) can)
+    }
+    const qty2 = parseFraction(qty2Str);
+    const product = qty1 * qty2;
+    const formattedProduct = Number(product.toFixed(3));
+    return `${formattedProduct} ${unit}`;
+  });
+}
+
+function parseFraction(str: string): number {
+  const trimmed = str.trim().toLowerCase();
+  if (trimmed.includes('and')) {
+    const parts = trimmed.split(/\s+and\s+/);
+    return parseFraction(parts[0]) + parseFraction(parts[1]);
+  }
+  if (trimmed.includes(' ') && trimmed.includes('/')) {
+    const parts = trimmed.split(/\s+/);
+    return parseFraction(parts[0]) + parseFraction(parts[1]);
+  }
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    const num = parseFloat(parts[0]);
+    const den = parseFloat(parts[1]);
+    if (!isNaN(num) && !isNaN(den) && den !== 0) {
+      return num / den;
+    }
+  }
+  const parsed = parseFloat(trimmed);
+  return isNaN(parsed) ? 1 : parsed;
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
+  // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
+  const processedLine = resolvePackageMultipliers(line);
+
   // Handle non-ingredient noise: separators, emojis, etc.
-  // Check for common separators that indicate this is not an ingredient
-  const trimmed = line.trim();
+  const trimmed = processedLine.trim();
   if (trimmed === '---' || trimmed === '---' || trimmed.match(/^[-=]{3,}$/)) {
     return null; // Separator line
   }
@@ -54,7 +95,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Normalize unicode spaces (thin space, non-breaking space, etc.) to regular spaces
   // This handles cases like "2 ½" where there might be a thin space
-  let normalizedLine = line
+  let normalizedLine = processedLine
     .replace(/\u2009/g, ' ') // thin space
     .replace(/\u00A0/g, ' ') // non-breaking space
     .replace(/\u2000/g, ' ') // en quad

@@ -16,7 +16,8 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
   const massUnits: Record<string, string> = {
     'g': 'g', 'gram': 'g', 'grams': 'g',
     'oz': 'oz', 'ounce': 'oz', 'ounces': 'oz',
-    'lb': 'lb', 'lbs': 'lb', 'pound': 'lb', 'pounds': 'lb'
+    'lb': 'lb', 'lbs': 'lb', 'pound': 'lb', 'pounds': 'lb',
+    'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg'
   };
 
   if (massUnits[token]) {
@@ -29,7 +30,11 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'tbsp': 'tbsp', 'tbsps': 'tbsp', 'tablespoon': 'tbsp', 'tablespoons': 'tbsp',
     'cup': 'cup', 'cups': 'cup',
     'ml': 'ml', 'milliliter': 'ml', 'milliliters': 'ml',
-    'floz': 'floz', 'fl oz': 'floz', 'fluid ounce': 'floz', 'fluid ounces': 'floz'
+    'floz': 'floz', 'fl oz': 'floz', 'fluid ounce': 'floz', 'fluid ounces': 'floz',
+    'l': 'l', 'liter': 'l', 'liters': 'l',
+    'pint': 'pint', 'pints': 'pint',
+    'quart': 'quart', 'quarts': 'quart',
+    'gallon': 'gallon', 'gallons': 'gallon'
   };
 
   if (volumeUnits[token]) {
@@ -54,6 +59,8 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'container': 'container', 'containers': 'container',
     'envelope': 'envelope', 'envelopes': 'envelope',  // For gelatin, yeast packets
     'serving': 'serving', 'servings': 'serving',  // Generic serving unit
+    'box': 'box', 'boxes': 'box',
+    'bag': 'bag', 'bags': 'bag',
     // Size descriptors for whole produce (triggers AI backfill for realistic weights)
     'small': 'small', 'medium': 'medium', 'large': 'large', 'whole': 'whole',
     // Produce-specific units (bunch, head, stalk, etc.)
@@ -122,12 +129,17 @@ const VOLUME_IN_ML: Record<string, number> = {
   'dash': 0.6,
   'drop': 0.05,    // 1 drop (medicine dropper / sauce) ≈ 0.05ml
   'second': 0.25,  // 1 second of cooking spray ≈ 0.25ml → ~0.23g oil
+  'l': 1000,
+  'pint': 473.176,
+  'quart': 946.353,
+  'gallon': 3785.41
 };
 
 const MASS_IN_G: Record<string, number> = {
   'g': 1,
   'oz': 28.35,
-  'lb': 453.6
+  'lb': 453.6,
+  'kg': 1000
 };
 
 export function convertUnit(qty: number, fromUnit: string, toUnit: string): number | null {

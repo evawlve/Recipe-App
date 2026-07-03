@@ -105,18 +105,6 @@ export async function recordCleanupOutcome(
 ): Promise<void> {
     // Record application for each pattern
     for (const patternId of patternIds) {
-        await prisma.ingredientCleanupApplication.create({
-            data: {
-                rawInput,
-                cleanedOutput,
-                patternId,
-                mappingSucceeded,
-                confidenceScore,
-                recipeId: context?.recipeId,
-                ingredientId: context?.ingredientId
-            }
-        });
-
         // Update pattern stats
         await prisma.ingredientCleanupPattern.update({
             where: { id: patternId },

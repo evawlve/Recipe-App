@@ -20,8 +20,8 @@ export async function GET(
   // Import only when not in build mode
   const { prisma } = await import("@/lib/db");
   const { getCurrentUser } = await import("@/lib/auth");
-  const { FATSECRET_CACHE_MODE } = await import('@/lib/fatsecret/config');
-  const { getCachedFoodWithRelations, buildCacheFoodResponse } = await import('@/lib/fatsecret/cache-search');
+  const { FATSECRET_CACHE_MODE } = await import('@/lib/mapping/config');
+  const { getCachedFoodWithRelations, buildCacheFoodResponse } = await import('@/lib/mapping/cache-search');
 
 
   try {

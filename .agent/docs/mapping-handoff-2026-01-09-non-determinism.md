@@ -8,7 +8,7 @@
 ## Changes Made
 
 ### 1. Taco Exclusion Removed ✅
-**File**: [filter-candidates.ts:640-645](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/filter-candidates.ts#L640-L645)
+**File**: [filter-candidates.ts:640-645](file:///C:/Dev/Recipe%20App/src/lib/mapping/filter-candidates.ts#L640-L645)
 
 **Problem**: The taco exclusion rule was backwards:
 - Filtered out actual tacos ("Taco with Beef, Cheese")
@@ -19,7 +19,7 @@
 ---
 
 ### 2. Deterministic Tiebreaker Added ✅
-**File**: [simple-rerank.ts:373-383](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/simple-rerank.ts#L373-L383)
+**File**: [simple-rerank.ts:373-383](file:///C:/Dev/Recipe%20App/src/lib/mapping/simple-rerank.ts#L373-L383)
 
 **Problem**: When candidates had equal scores, JS `sort()` was non-deterministic.
 
@@ -40,7 +40,7 @@ scored.sort((a, b) => {
 ---
 
 ### 3. In-Flight Lock Added ⚠️ NEEDS TESTING
-**File**: [map-ingredient-with-fallback.ts:87-101, 261-298, 405-420, 1273-1280](file:///C:/Dev/Recipe%20App/src/lib/fatsecret/map-ingredient-with-fallback.ts)
+**File**: [map-ingredient-with-fallback.ts:87-101, 261-298, 405-420, 1273-1280](file:///C:/Dev/Recipe%20App/src/lib/mapping/map-ingredient-with-fallback.ts)
 
 **Problem**: Parallel batch processing caused race conditions:
 - Thread A and Thread B both map "quinoa" simultaneously

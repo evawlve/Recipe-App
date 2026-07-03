@@ -45,12 +45,12 @@ For each finding, record:
 ### Step 4: Transition to planning
 
 After the audit, create a new implementation_plan.md (if changes are needed) to address the systemic failures. Reference the specific files to modify:
-- `src/lib/fatsecret/normalization-rules.ts` — synonym rewrites
+- `src/lib/mapping/normalization-rules.ts` — synonym rewrites
 - `src/lib/parse/unit.ts` — micro-unit types (drop, second)
 - `src/lib/units/unit-graph.ts` — ml equivalents for new units
 - `src/lib/servings/default-count-grams.ts` — gram seed data for new units
 - `src/lib/ai/ambiguous-serving-estimator.ts` — packet routing fix
-- `src/lib/fatsecret/filter-candidates.ts` — negative category filters
+- `src/lib/mapping/filter-candidates.ts` — negative category filters
 
 ### Notes
 

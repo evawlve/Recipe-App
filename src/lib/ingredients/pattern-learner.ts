@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
-import { aiNormalizeIngredient } from '../fatsecret/ai-normalize';
+import { aiNormalizeIngredient } from '../mapping/ai-normalize';
 
 function escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

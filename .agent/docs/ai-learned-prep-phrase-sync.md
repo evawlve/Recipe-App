@@ -49,7 +49,7 @@ This means:
 Create function to aggregate unique prep phrases from `AiNormalizeCache`:
 
 ```typescript
-// src/lib/fatsecret/normalization-rules.ts
+// src/lib/mapping/normalization-rules.ts
 
 export async function getAiLearnedPrepPhrases(): Promise<string[]> {
     const cached = await prisma.aiNormalizeCache.findMany({
@@ -69,7 +69,7 @@ export async function getAiLearnedPrepPhrases(): Promise<string[]> {
 ### 2. Add Refresh Mechanism
 
 ```typescript
-// src/lib/fatsecret/normalization-rules.ts
+// src/lib/mapping/normalization-rules.ts
 
 let mergedPrepPhrases: string[] | null = null;
 
@@ -110,7 +110,7 @@ Change from using static rules to merged rules:
 
 **Pilot Batch Import** (`scripts/pilot-batch-import.ts`):
 ```typescript
-import { refreshNormalizationRules } from '../src/lib/fatsecret/normalization-rules';
+import { refreshNormalizationRules } from '../src/lib/mapping/normalization-rules';
 
 async function main() {
     await refreshNormalizationRules(); // Refresh before processing
@@ -132,7 +132,7 @@ export async function autoMapIngredients(recipeId: string) {
 
 | File | Changes |
 |------|---------|
-| `src/lib/fatsecret/normalization-rules.ts` | Add `getAiLearnedPrepPhrases()`, `refreshNormalizationRules()`, `getMergedPrepPhrases()` |
+| `src/lib/mapping/normalization-rules.ts` | Add `getAiLearnedPrepPhrases()`, `refreshNormalizationRules()`, `getMergedPrepPhrases()` |
 | `scripts/pilot-batch-import.ts` | Call `refreshNormalizationRules()` at start |
 | `src/lib/nutrition/auto-map.ts` | Call `refreshNormalizationRules()` at start |
 
@@ -144,7 +144,7 @@ After implementation:
 
 1. Run pilot import with new ingredient: "1 cup freshly grated parmesan"
 2. AI returns `prepPhrases: ["freshly grated"]`
-3. Clear ValidatedMapping for that ingredient
+3. Clear FoodMapping for that ingredient
 4. Run again - verify static parser now strips "freshly grated" (from merged cache)
 
 ---
