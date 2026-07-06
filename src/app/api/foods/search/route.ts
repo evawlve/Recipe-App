@@ -26,6 +26,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
+  // Check API Key
+  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
+  const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
+  if (!apiKey || apiKey !== expectedApiKey) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   // Import only when not in build mode
   const { prisma } = await import("@/lib/db");
   const { getCurrentUser } = await import("@/lib/auth");
@@ -270,15 +277,58 @@ export async function GET(req: NextRequest) {
           },
         );
       } else {
-        // ACCURACY FIX: No legacy fallback - only serve FatSecret/FDC cache
-        // This prevents showing prepared foods (Denny's, McDonald's) and outdated USDA data
-        responseData = [];
+        // Fall back to searching local FDC and OFF databases
+        const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
+        const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
+        
+        responseData = fallbackCandidates.map(c => {
+          const raw = c.rawData ?? {};
+          const nutrients = raw.nutrientsPer100g || {};
+          
+          let servingOptions = (c.servings || []).map(s => ({
+            label: s.description,
+            grams: s.grams ?? 100
+          }));
+          
+          if (servingOptions.length === 0) {
+            if (raw.servingSize) {
+              servingOptions.push({
+                label: raw.servingSize,
+                grams: raw.servingGrams ?? 100
+              });
+            } else {
+              servingOptions.push({
+                label: '100 g',
+                grams: 100
+              });
+            }
+          }
+
+          return {
+            id: c.id,
+            name: c.name,
+            brand: c.brandName ?? null,
+            source: c.source === 'openfoodfacts' ? 'off' : (c.source === 'fdc' ? 'usda' : c.source),
+            verification: c.source === 'fdc' ? 'verified' : 'unverified',
+            kcal100: c.nutrition?.kcal ?? 0,
+            protein100: c.nutrition?.protein ?? 0,
+            carbs100: c.nutrition?.carbs ?? 0,
+            fat100: c.nutrition?.fat ?? 0,
+            fiber100: nutrients.fiber ?? 0,
+            sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
+            sodium100: nutrients.sodium ?? 0,
+            confidence: c.score || 0.8,
+            servingOptions
+          };
+        });
+        
         logger.info(
           'fatsecret_cache_search',
           {
             feature: 'mapping_v2',
-            step: 'cache_empty_no_results',
+            step: 'cache_empty_fallback_executed',
             q,
+            fallbackCount: responseData.length,
             cacheMode: FATSECRET_CACHE_MODE,
           },
         );

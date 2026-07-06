@@ -136,7 +136,6 @@ export async function searchFatSecretCacheFoods(query: string, limit = 200): Pro
       AND: toks.map((t) => ({
         OR: [
           { displayName: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
-          { brandName: { contains: t, mode: 'insensitive' as Prisma.QueryMode } },
         ],
       })),
     }
