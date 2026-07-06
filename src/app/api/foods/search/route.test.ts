@@ -49,7 +49,7 @@ describe('/api/foods/search', () => {
 
     prisma.food.findMany.mockResolvedValue([mockOliveOil]);
 
-    const request = new NextRequest('http://localhost:3000/api/foods/search?s=olive');
+    const request = new NextRequest('http://localhost:3000/api/foods/search?s=olive&api_key=adminAPI_dev_key_bypass');
     const response = await GET(request);
     
     expect(response.status).toBe(200);
@@ -91,7 +91,7 @@ describe('/api/foods/search', () => {
   });
 
   test('should return 400 for short query', async () => {
-    const request = new NextRequest('http://localhost:3000/api/foods/search?s=a');
+    const request = new NextRequest('http://localhost:3000/api/foods/search?s=a&api_key=adminAPI_dev_key_bypass');
     const response = await GET(request);
     
     expect(response.status).toBe(400);
@@ -102,7 +102,7 @@ describe('/api/foods/search', () => {
   test('should return empty array when no foods found', async () => {
     prisma.food.findMany.mockResolvedValue([]);
 
-    const request = new NextRequest('http://localhost:3000/api/foods/search?s=nonexistent');
+    const request = new NextRequest('http://localhost:3000/api/foods/search?s=nonexistent&api_key=adminAPI_dev_key_bypass');
     const response = await GET(request);
     
     expect(response.status).toBe(200);

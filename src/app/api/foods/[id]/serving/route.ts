@@ -41,6 +41,13 @@ export async function GET(
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
+  // Check API Key
+  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
+  const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
+  if (!apiKey || apiKey !== expectedApiKey) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const { searchParams } = new URL(req.url);

@@ -317,7 +317,7 @@ export async function GET(req: NextRequest) {
             fiber100: nutrients.fiber ?? 0,
             sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
             sodium100: nutrients.sodium ?? 0,
-            confidence: c.score || 0.8,
+            confidence: Math.min(1.0, Math.max(0.1, (c.score || 8) / 10)),
             servingOptions
           };
         });
