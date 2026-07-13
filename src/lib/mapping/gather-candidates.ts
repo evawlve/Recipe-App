@@ -10,7 +10,7 @@ import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-
 import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
 import { searchOffSimple } from '../openfoodfacts/search';
-import { MEILISEARCH_ENABLED } from './config';
+import { MEILISEARCH_ENABLED, SEARCH_PROVIDER } from './config';
 import { searchMeili } from '../search/meilisearch-client';
 
 // ============================================================
@@ -143,42 +143,57 @@ export function buildQueryVariants(
 // Main Gather Function
 // ============================================================
 
+function mapFdcHitToCandidate(hit: any, query: string, position: number, targetBrand?: string) {
+    let nutrients = hit.nutrientsPer100g || {};
+    if (typeof nutrients === 'string') {
+        try { nutrients = JSON.parse(nutrients); } catch (e) {}
+    }
+    let servings = hit.servings || [];
+    if (typeof servings === 'string') {
+        try { servings = JSON.parse(servings); } catch (e) {}
+    }
+
+    const dataType = hit.dataType || '';
+    const isHighQuality = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'].some(t => dataType.includes(t));
+    const baseScore = computePositionScore(query, hit.description, position, { isHighQualityFdc: isHighQuality });
+    const priorityScore = computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand);
+
+    return {
+        id: `fdc_${hit.fdcId}`,
+        source: 'fdc' as const,
+        name: normalizeFdcName(hit.description),
+        brandName: hit.brandName || null,
+        score: baseScore,
+        foodType: dataType || 'Generic',
+        nutrition: {
+            kcal: nutrients.calories ?? nutrients.kcal ?? nutrients.energy ?? 0,
+            protein: nutrients.protein ?? 0,
+            carbs: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
+            fat: nutrients.fat ?? nutrients.totalFat ?? 0,
+            per100g: true,
+        },
+        servings: servings.map((s: any) => ({
+            description: s.description,
+            grams: s.grams
+        })),
+        rawData: {
+            ...hit,
+            nutrientsPer100g: nutrients,
+            servings: servings
+        },
+        _priorityScore: priorityScore,
+        _originalPosition: position,
+    };
+}
+
 async function searchFdcLocal(query: string, limit: number, rawLine: string, targetBrand?: string): Promise<UnifiedCandidate[]> {
-    if (MEILISEARCH_ENABLED) {
+    const provider = SEARCH_PROVIDER;
+    
+    if (provider === 'meilisearch' && MEILISEARCH_ENABLED) {
         try {
             const hits = await searchMeili('fdc_foods', query, limit * 2);
             if (hits.length > 0) {
-                const allCandidates = hits.map((hit, position) => {
-                    const dataType = hit.dataType || '';
-                    const isHighQuality = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'].some(t => dataType.includes(t));
-                    const baseScore = computePositionScore(query, hit.description, position, { isHighQualityFdc: isHighQuality });
-                    const priorityScore = computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand);
-
-                    const nutrients = (hit.nutrientsPer100g as any) || {};
-
-                    return {
-                        id: `fdc_${hit.fdcId}`,
-                        source: 'fdc' as const,
-                        name: normalizeFdcName(hit.description),
-                        brandName: hit.brandName || null,
-                        score: baseScore,
-                        foodType: dataType || 'Generic',
-                        nutrition: {
-                            kcal: nutrients.calories ?? nutrients.kcal ?? nutrients.energy ?? 0,
-                            protein: nutrients.protein ?? 0,
-                            carbs: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
-                            fat: nutrients.fat ?? nutrients.totalFat ?? 0,
-                            per100g: true,
-                        },
-                        servings: (hit.servings || []).map((s: any) => ({
-                            description: s.description,
-                            grams: s.grams
-                        })),
-                        rawData: hit,
-                        _priorityScore: priorityScore,
-                        _originalPosition: position,
-                    };
-                });
+                const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
 
                 // Stable sort by priorityScore (descending), then original position (ascending)
                 allCandidates.sort((a, b) => {
@@ -193,6 +208,46 @@ async function searchFdcLocal(query: string, limit: number, rawLine: string, tar
             }
         } catch (err) {
             logger.warn('gather.fdc.meilisearch_failed_fallback_to_postgres', { query, error: (err as Error).message });
+        }
+    } else if (provider === 'typesense') {
+        try {
+            const { searchTypesense } = await import('../search/typesense-client');
+            const hits = await searchTypesense('fdc_foods', query, 'description,brandName', limit * 2);
+            if (hits.length > 0) {
+                const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
+
+                allCandidates.sort((a, b) => {
+                    const priorityDiff = b._priorityScore - a._priorityScore;
+                    if (priorityDiff !== 0) return priorityDiff;
+                    return a._originalPosition - b._originalPosition;
+                });
+
+                const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
+                logger.debug('gather.fdc.typesense_hit', { query, count: mappedHits.length });
+                return mappedHits;
+            }
+        } catch (err) {
+            logger.warn('gather.fdc.typesense_failed_fallback_to_postgres', { query, error: (err as Error).message });
+        }
+    } else if (provider === 'redisearch') {
+        try {
+            const { searchRediSearch } = await import('../search/redisearch-client');
+            const hits = await searchRediSearch('fdc_foods', query, limit * 2);
+            if (hits.length > 0) {
+                const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
+
+                allCandidates.sort((a, b) => {
+                    const priorityDiff = b._priorityScore - a._priorityScore;
+                    if (priorityDiff !== 0) return priorityDiff;
+                    return a._originalPosition - b._originalPosition;
+                });
+
+                const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
+                logger.debug('gather.fdc.redisearch_hit', { query, count: mappedHits.length });
+                return mappedHits;
+            }
+        } catch (err) {
+            logger.warn('gather.fdc.redisearch_failed_fallback_to_postgres', { query, error: (err as Error).message });
         }
     }
 

@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
     const recipeId = searchParams.get('recipeId');
     const verification = searchParams.get('verification');
     const source = searchParams.get('source');
+    const isLocalSearch = searchParams.get('local') === 'true' || searchParams.get('bypassCache') === 'true';
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ error: 'Search query must be at least 2 characters' }, { status: 400 });
@@ -261,8 +262,136 @@ export async function GET(req: NextRequest) {
       return { data, count: cachedFoods.length };
     };
 
+    const runLocalSearch = async () => {
+      const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
+      const { mapUsdaToCategory } = await import('@/ops/usda/category-map');
+      const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
+      
+      const category = mapUsdaToCategory(q);
+      const isProduceQuery = category === 'fruit' || category === 'veg';
+
+      // Sort and filter candidates
+      let sortedCandidates = [...fallbackCandidates];
+
+      // If it is a generic produce query, filter out openfoodfacts entries that have 0/null macros
+      if (isProduceQuery) {
+        sortedCandidates = sortedCandidates.filter(c => {
+          if (c.source === 'openfoodfacts') {
+            const hasMacros = c.nutrition && (c.nutrition.kcal > 0 || c.nutrition.protein > 0 || c.nutrition.carbs > 0);
+            return hasMacros;
+          }
+          return true;
+        });
+      }
+
+      sortedCandidates.sort((a, b) => {
+        // 1. If it's a produce query, prioritize FDC (USDA) generic foods
+        if (isProduceQuery) {
+          if (a.source === 'fdc' && b.source !== 'fdc') return -1;
+          if (b.source === 'fdc' && a.source !== 'fdc') return 1;
+        }
+
+        // 2. Prioritize candidates that have macro data over those that have zero macros
+        const aHasMacros = a.nutrition && (a.nutrition.kcal > 0 || a.nutrition.protein > 0 || a.nutrition.carbs > 0);
+        const bHasMacros = b.nutrition && (b.nutrition.kcal > 0 || b.nutrition.protein > 0 || b.nutrition.carbs > 0);
+        if (aHasMacros && !bHasMacros) return -1;
+        if (bHasMacros && !aHasMacros) return 1;
+
+        // 3. Otherwise maintain candidate scoring order
+        return (b.score || 0) - (a.score || 0);
+      });
+
+      // Collapse near-duplicate entries (same normalized name + macro signature)
+      // so generic queries like "grapes" return one representative per food
+      // instead of 15+ near-identical OFF rows.
+      const { dedupeCandidates } = await import('@/lib/search/dedupe-candidates');
+      const beforeDedupe = sortedCandidates.length;
+      sortedCandidates = dedupeCandidates(sortedCandidates);
+      if (sortedCandidates.length < beforeDedupe) {
+        logger.info('local_search_dedupe', {
+          feature: 'mapping_v2',
+          step: 'local_search_dedupe',
+          q,
+          beforeCount: beforeDedupe,
+          afterCount: sortedCandidates.length,
+        });
+      }
+
+      const data = sortedCandidates.map(c => {
+        const raw = c.rawData ?? {};
+        const nutrients = raw.nutrientsPer100g || {};
+        
+        let servingOptions = (c.servings || []).map(s => ({
+          label: s.description,
+          grams: s.grams ?? 100
+        }));
+        
+        if (servingOptions.length === 0) {
+          if (raw.servingSize) {
+            servingOptions.push({
+              label: raw.servingSize,
+              grams: raw.servingGrams ?? 100
+            });
+          } else {
+            servingOptions.push({
+              label: '100 g',
+              grams: 100
+            });
+          }
+        }
+
+        const item: any = {
+          id: c.id,
+          name: c.name,
+          brand: c.brandName ?? null,
+          source: c.source === 'openfoodfacts' ? 'off' : (c.source === 'fdc' ? 'usda' : c.source),
+          verification: c.source === 'fdc' ? 'verified' : 'unverified',
+          kcal100: c.nutrition?.kcal ?? 0,
+          protein100: c.nutrition?.protein ?? 0,
+          carbs100: c.nutrition?.carbs ?? 0,
+          fat100: c.nutrition?.fat ?? 0,
+          fiber100: nutrients.fiber ?? 0,
+          sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
+          sodium100: nutrients.sodium ?? 0,
+          confidence: Math.min(1.0, Math.max(0.1, (c.score || 8) / 10)),
+          servingOptions
+        };
+
+        const impactPayload = buildImpact(
+          {
+            kcal100: item.kcal100,
+            protein100: item.protein100,
+            carbs100: item.carbs100,
+            fat100: item.fat100,
+            fiber100: item.fiber100,
+            sugar100: item.sugar100
+          },
+          servingOptions,
+        );
+        if (impactPayload) {
+          item.impact = impactPayload;
+        }
+
+        return item;
+      });
+
+      return { data, count: sortedCandidates.length };
+    };
+
     let responseData: any[] = [];
-    if (shouldServeCache) {
+    if (isLocalSearch) {
+      const localResult = await runLocalSearch();
+      responseData = localResult.data;
+      logger.info(
+        'local_search_direct',
+        {
+          feature: 'mapping_v2',
+          step: 'local_search_direct_executed',
+          q,
+          resultCount: responseData.length,
+        },
+      );
+    } else if (shouldServeCache) {
       const cacheResult = await runCacheSearch();
       if (cacheResult.data.length > 0) {
         responseData = cacheResult.data;
@@ -277,51 +406,8 @@ export async function GET(req: NextRequest) {
           },
         );
       } else {
-        // Fall back to searching local FDC and OFF databases
-        const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
-        const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
-        
-        responseData = fallbackCandidates.map(c => {
-          const raw = c.rawData ?? {};
-          const nutrients = raw.nutrientsPer100g || {};
-          
-          let servingOptions = (c.servings || []).map(s => ({
-            label: s.description,
-            grams: s.grams ?? 100
-          }));
-          
-          if (servingOptions.length === 0) {
-            if (raw.servingSize) {
-              servingOptions.push({
-                label: raw.servingSize,
-                grams: raw.servingGrams ?? 100
-              });
-            } else {
-              servingOptions.push({
-                label: '100 g',
-                grams: 100
-              });
-            }
-          }
-
-          return {
-            id: c.id,
-            name: c.name,
-            brand: c.brandName ?? null,
-            source: c.source === 'openfoodfacts' ? 'off' : (c.source === 'fdc' ? 'usda' : c.source),
-            verification: c.source === 'fdc' ? 'verified' : 'unverified',
-            kcal100: c.nutrition?.kcal ?? 0,
-            protein100: c.nutrition?.protein ?? 0,
-            carbs100: c.nutrition?.carbs ?? 0,
-            fat100: c.nutrition?.fat ?? 0,
-            fiber100: nutrients.fiber ?? 0,
-            sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
-            sodium100: nutrients.sodium ?? 0,
-            confidence: Math.min(1.0, Math.max(0.1, (c.score || 8) / 10)),
-            servingOptions
-          };
-        });
-        
+        const localResult = await runLocalSearch();
+        responseData = localResult.data;
         logger.info(
           'fatsecret_cache_search',
           {
