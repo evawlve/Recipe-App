@@ -109,6 +109,9 @@ data/usda/sr-legacy-sample.jsonl
 
 # Local CSV exports you don't want to commit accidentally
 data/curated/tmp/**
+
+# Runtime state for scripts/ingest-off-delta.ts (per-machine progress cursor)
+data/off-delta-state.json
 # Sentry Config File
 .env.sentry-build-plugin
 

@@ -30,7 +30,7 @@ export PATH="$HOME/.local/bin:$HOME/.nvm/versions/node/v24.18.0/bin:$PATH"
 
 cd "$REPO"
 export DATABASE_URL="${DATABASE_URL:-$(grep -E '^DATABASE_URL=' .env | head -1 | cut -d= -f2- | tr -d '"')}"
-export OFF_COUNTRIES="${OFF_COUNTRIES:-united-states}"
+export OFF_COUNTRIES="${OFF_COUNTRIES:-united-states,canada,united-kingdom,ireland,australia,new-zealand}"
 
 echo "[$(date -Is)] Downloading Parquet export..."
 curl -fsSL --retry 3 -o "$PARQUET.tmp" "$PARQUET_URL"

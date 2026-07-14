@@ -16,17 +16,21 @@ export const SKIP_CATEGORY_PATTERNS = [
 // huge share of rows, so category patterns alone let supplements through. These
 // match the product name as a backstop. Kept conservative to avoid dropping real
 // foods (e.g. "calcium-fortified milk" won't match a bare "Calcium" pattern).
+// NOTE: protein powder and collagen peptides are deliberately NOT here —
+// they're calorie-bearing products users log like any food (decided
+// 2026-07-13 after "Ghost Whey Protein Powder Oreo" got skipped).
 export const SKIP_NAME_PATTERNS = [
   /\b(dietary\s+)?supplement\b/i,
   /\b(multi)?vitamins?\b/i,
   /\bprebiotic\b/i,
-  /\bcollagen\s+peptides?\b/i,
-  /\bprotein\s+powder\b/i,
 ];
 
 // Geographic filter: keep only products sold in these OFF country slugs.
+// Default is the English-speaking markets (~1.16M macro-complete rows vs
+// 782k US-only, measured 2026-07-13) so product names stay searchable.
 // Set OFF_COUNTRIES="" to disable and ingest every country.
-export const KEEP_COUNTRIES = (process.env.OFF_COUNTRIES ?? 'united-states')
+export const KEEP_COUNTRIES = (process.env.OFF_COUNTRIES
+  ?? 'united-states,canada,united-kingdom,ireland,australia,new-zealand')
   .split(',')
   .map(s => s.trim().toLowerCase())
   .filter(Boolean);
@@ -68,7 +72,10 @@ export function parseServingGrams(servingQuantity: any, servingSize: string): nu
   return null;
 }
 
-/** Atwater check: estimated kcal from macros should be within 30% of labeled kcal.
+/** Atwater check: labeled kcal should be within [0.65x, 1.40x] of the
+ * macro-derived estimate. (Was 0.7–1.3; widened 2026-07-13 to admit label
+ * rounding / alcohol / sugar-alcohol discrepancies while still rejecting
+ * self-contradictory rows like 110 kcal with 49g carbs per 100g.)
  *
  * Fiber's caloric density varies by type: fermentable fiber contributes ~2 kcal/g,
  * but the resistant/modified-starch fiber used in keto products (Mission Carb
@@ -78,13 +85,16 @@ export function parseServingGrams(servingQuantity: any, servingSize: string): nu
  * value is plausible (fiber <= carbs) so junk rows with impossible fiber
  * (e.g. 1200g/100g) can't sneak in through the more permissive formula.
  */
+const ATWATER_BAND_LOW = 0.65;
+const ATWATER_BAND_HIGH = 1.40;
+
 export function atwaterValid(kcal: number, protein: number, carbs: number, fat: number, fiber: number): boolean {
   if (kcal <= 0) return false;
   const netCarbs = Math.max(0, carbs - fiber);
   const base = protein * 4 + netCarbs * 4 + fat * 9;
   const estFiber2 = base + fiber * 2;
-  if (estFiber2 > 0 && kcal >= estFiber2 * 0.7 && kcal <= estFiber2 * 1.3) return true;
-  if (fiber > 0 && fiber <= carbs && base > 0 && kcal >= base * 0.7 && kcal <= base * 1.3) return true;
+  if (estFiber2 > 0 && kcal >= estFiber2 * ATWATER_BAND_LOW && kcal <= estFiber2 * ATWATER_BAND_HIGH) return true;
+  if (fiber > 0 && fiber <= carbs && base > 0 && kcal >= base * ATWATER_BAND_LOW && kcal <= base * ATWATER_BAND_HIGH) return true;
   return false;
 }
 
