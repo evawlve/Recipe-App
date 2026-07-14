@@ -8,7 +8,7 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
 import type { UnifiedCandidate } from '../mapping/gather-candidates';
-import { MEILISEARCH_ENABLED } from '../mapping/config';
+import { MEILISEARCH_ENABLED, SEARCH_PROVIDER } from '../mapping/config';
 import { searchMeili } from '../search/meilisearch-client';
 
 // ============================================================
@@ -47,7 +47,22 @@ function computeOffScore(
         }
     }
 
+    // Penalize excessively long titles to favor clean, concise names (document length normalization)
+    const wordCount = nameLower.split(/\s+/).filter(Boolean).length;
+    score -= wordCount * 0.05;
+
     return score;
+}
+
+function decodeHtmlEntities(str: string): string {
+    if (!str) return '';
+    return str
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'");
 }
 
 /**
@@ -65,22 +80,58 @@ function cachedRowToCandidate(
     const fat     = n['fat']      ?? 0;
     const hasNutrition = kcal > 0 || protein > 0 || carbs > 0 || fat > 0;
 
+    const decodedName = decodeHtmlEntities(row.name);
+
     return {
         id:        `off_${row.barcode}`,
         source:    'openfoodfacts',
-        name:      row.name,
+        name:      decodedName,
         brandName: row.brandName,
-        score:     computeOffScore(query, row.name, row.brandName, isBrandedQuery),
+        score:     computeOffScore(query, decodedName, row.brandName, isBrandedQuery),
         nutrition: hasNutrition
             ? { kcal, protein, carbs, fat, per100g: true }
             : undefined,
         rawData: {
             barcode:         row.barcode,
-            name:            row.name,
+            name:            decodedName,
             brandName:       row.brandName,
             nutrientsPer100g: row.nutrientsPer100g,
             servingGrams:    row.servingGrams,
             servingSize:     row.servingSize,
+        },
+    };
+}
+
+function mapOffHitToCandidate(hit: any, query: string, isBrandedQuery: boolean): UnifiedCandidate {
+    let n = hit.nutrientsPer100g || {};
+    if (typeof n === 'string') {
+        try { n = JSON.parse(n); } catch (e) {}
+    }
+
+    const kcal    = n['calories'] ?? n['kcal'] ?? 0;
+    const protein = n['protein']  ?? 0;
+    const carbs   = n['carbs']    ?? 0;
+    const fat     = n['fat']      ?? 0;
+    const hasNutrition = kcal > 0 || protein > 0 || carbs > 0 || fat > 0;
+
+    const decodedName = decodeHtmlEntities(hit.name);
+
+    return {
+        id:        `off_${hit.barcode}`,
+        source:    'openfoodfacts' as const,
+        name:      decodedName,
+        brandName: hit.brandName || null,
+        score:     computeOffScore(query, decodedName, hit.brandName, isBrandedQuery),
+        nutrition: hasNutrition
+            ? { kcal, protein, carbs, fat, per100g: true }
+            : undefined,
+        rawData: {
+            barcode:         hit.barcode,
+            name:            hit.name,
+            brandName:       hit.brandName,
+            nutrientsPer100g: n,
+            servingGrams:    hit.servingGrams,
+            servingSize:     hit.servingSize,
         },
     };
 }
@@ -104,39 +155,14 @@ export async function searchOffSimple(
     const { limit = 5, isBrandedQuery = false } = options;
 
     const queryLower = query.toLowerCase().trim();
+    const provider = SEARCH_PROVIDER;
 
-    if (MEILISEARCH_ENABLED) {
+    if (provider === 'meilisearch' && MEILISEARCH_ENABLED) {
         try {
             const hits = await searchMeili('off_foods', query, limit * 2);
             if (hits.length > 0) {
                 const candidates = hits
-                    .map(hit => {
-                        const n = (hit.nutrientsPer100g ?? {}) as Record<string, number>;
-                        const kcal    = n['calories'] ?? n['kcal'] ?? 0;
-                        const protein = n['protein']  ?? 0;
-                        const carbs   = n['carbs']    ?? 0;
-                        const fat     = n['fat']      ?? 0;
-                        const hasNutrition = kcal > 0 || protein > 0 || carbs > 0 || fat > 0;
-
-                        return {
-                            id:        `off_${hit.barcode}`,
-                            source:    'openfoodfacts' as const,
-                            name:      hit.name,
-                            brandName: hit.brandName || null,
-                            score:     computeOffScore(query, hit.name, hit.brandName, isBrandedQuery),
-                            nutrition: hasNutrition
-                                ? { kcal, protein, carbs, fat, per100g: true }
-                                : undefined,
-                            rawData: {
-                                barcode:         hit.barcode,
-                                name:            hit.name,
-                                brandName:       hit.brandName,
-                                nutrientsPer100g: hit.nutrientsPer100g,
-                                servingGrams:    hit.servingGrams,
-                                servingSize:     hit.servingSize,
-                            },
-                        };
-                    })
+                    .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
                     .sort((a, b) => b.score - a.score)
                     .slice(0, limit);
                 
@@ -145,6 +171,44 @@ export async function searchOffSimple(
             }
         } catch (err) {
             logger.warn('off.search.meilisearch_failed_fallback_to_postgres', {
+                query,
+                error: (err as Error).message,
+            });
+        }
+    } else if (provider === 'typesense') {
+        try {
+            const { searchTypesense } = await import('../search/typesense-client');
+            const hits = await searchTypesense('off_foods', query, 'name,brandName', limit * 2);
+            if (hits.length > 0) {
+                const candidates = hits
+                    .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, limit);
+                
+                logger.debug('off.search.typesense_hit', { query, count: candidates.length });
+                return candidates;
+            }
+        } catch (err) {
+            logger.warn('off.search.typesense_failed_fallback_to_postgres', {
+                query,
+                error: (err as Error).message,
+            });
+        }
+    } else if (provider === 'redisearch') {
+        try {
+            const { searchRediSearch } = await import('../search/redisearch-client');
+            const hits = await searchRediSearch('off_foods', query, limit * 2);
+            if (hits.length > 0) {
+                const candidates = hits
+                    .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, limit);
+                
+                logger.debug('off.search.redisearch_hit', { query, count: candidates.length });
+                return candidates;
+            }
+        } catch (err) {
+            logger.warn('off.search.redisearch_failed_fallback_to_postgres', {
                 query,
                 error: (err as Error).message,
             });

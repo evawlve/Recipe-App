@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(req: NextRequest) {
   // Skip execution during build time
@@ -11,11 +17,95 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key
+  // Check API Key first (Dev bypass)
   const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
   const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
-  if (!apiKey || apiKey !== expectedApiKey) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  let isDevBypass = false;
+
+  if (apiKey && apiKey === expectedApiKey) {
+    isDevBypass = true;
+  }
+
+  let userId: string | null = null;
+  let userEmail: string | null = null;
+
+  if (!isDevBypass) {
+    // If not local dev bypass, we authenticate using Supabase JWT Bearer token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+    }
+    const token = authHeader.substring(7);
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized: Invalid authentication session' }, { status: 401 });
+      }
+      userId = user.id;
+      userEmail = user.email || null;
+
+      // Check if user email qualifies for dev/test bypass (e.g. google_test_user@kindahealthy.com)
+      if (userEmail && (
+        userEmail === 'google_test_user@kindahealthy.com' ||
+        userEmail.endsWith('@google.com') ||
+        userEmail.includes('test') ||
+        userEmail.includes('dev') ||
+        userEmail === 'diego@example.com'
+      )) {
+        isDevBypass = true;
+      }
+    } catch (err) {
+      return NextResponse.json({ error: 'Unauthorized: Auth service validation failed' }, { status: 401 });
+    }
+  }
+
+  // Rate Limiting Enforcement (skipped for dev/test bypass users)
+  if (!isDevBypass && userId) {
+    try {
+      const now = new Date();
+      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      // Perform parallel count queries using Prisma
+      const [recentRequests, dailyRequests] = await Promise.all([
+        prisma.nlpRequestLog.count({
+          where: {
+            userId,
+            createdAt: { gte: oneMinuteAgo }
+          }
+        }),
+        prisma.nlpRequestLog.count({
+          where: {
+            userId,
+            createdAt: { gte: oneDayAgo }
+          }
+        })
+      ]);
+
+      if (recentRequests >= 3) {
+        return NextResponse.json({
+          error: 'Too many requests. Please wait a minute before making another food log attempt.'
+        }, { status: 429 });
+      }
+
+      if (dailyRequests >= 20) {
+        return NextResponse.json({
+          error: 'Daily NLP log limit reached (20 logs). Please try again tomorrow!'
+        }, { status: 429 });
+      }
+
+      // Log this request
+      await prisma.nlpRequestLog.create({
+        data: {
+          userId
+        }
+      });
+    } catch (dbErr) {
+      console.error('NLP Parse Rate Limiter DB Error:', dbErr);
+      // Fail open in case of DB tracking error to avoid blocking active users
+    }
   }
 
   try {

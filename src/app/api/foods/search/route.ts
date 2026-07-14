@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
     const recipeId = searchParams.get('recipeId');
     const verification = searchParams.get('verification');
     const source = searchParams.get('source');
+    const isLocalSearch = searchParams.get('local') === 'true' || searchParams.get('bypassCache') === 'true';
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ error: 'Search query must be at least 2 characters' }, { status: 400 });
@@ -261,8 +262,159 @@ export async function GET(req: NextRequest) {
       return { data, count: cachedFoods.length };
     };
 
+    const runLocalSearch = async () => {
+      const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
+      const { mapUsdaToCategory } = await import('@/ops/usda/category-map');
+      const { queryTokenCoverage } = await import('@/lib/search/query-token-coverage');
+      const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
+
+      const category = mapUsdaToCategory(q);
+      const isProduceQuery = category === 'fruit' || category === 'veg';
+
+      // FDC and OFF scores live on different scales (computePositionScore
+      // ~0–1.5 vs computeOffScore ~0–10), so they can't be compared or fed
+      // into the confidence formula raw. Normalize each per source, and
+      // weight FDC by how much of the query its name actually covers —
+      // engine typo-expansion can surface FDC rows that share no real
+      // token with the query (e.g. "ryse" pulling in "rye flour").
+      const relevanceById = new Map<string, { coverage: number; relevance: number }>();
+      for (const c of fallbackCandidates) {
+        const coverage = queryTokenCoverage(q, c.name, c.brandName);
+        const relevance = c.source === 'fdc'
+          ? Math.min(1, (c.score || 0) / 1.5) * coverage
+          : Math.min(1, Math.max(0, (c.score || 0) / 10));
+        relevanceById.set(c.id, { coverage, relevance });
+      }
+      const relevanceOf = (c: typeof fallbackCandidates[number]) =>
+        relevanceById.get(c.id) ?? { coverage: 0, relevance: 0 };
+
+      // Sort and filter candidates
+      let sortedCandidates = [...fallbackCandidates];
+
+      // If it is a generic produce query, filter out openfoodfacts entries that have 0/null macros
+      if (isProduceQuery) {
+        sortedCandidates = sortedCandidates.filter(c => {
+          if (c.source === 'openfoodfacts') {
+            const hasMacros = c.nutrition && (c.nutrition.kcal > 0 || c.nutrition.protein > 0 || c.nutrition.carbs > 0);
+            return hasMacros;
+          }
+          return true;
+        });
+      }
+
+      sortedCandidates.sort((a, b) => {
+        // 1. If it's a produce query, prioritize FDC (USDA) generic foods —
+        //    but only ones matching every query token, so a produce word
+        //    inside a branded query ("ryse blueberry muffin") can't hoist
+        //    unrelated USDA rows above a near-exact branded match
+        if (isProduceQuery) {
+          const aFdcMatch = a.source === 'fdc' && relevanceOf(a).coverage >= 1;
+          const bFdcMatch = b.source === 'fdc' && relevanceOf(b).coverage >= 1;
+          if (aFdcMatch && !bFdcMatch) return -1;
+          if (bFdcMatch && !aFdcMatch) return 1;
+        }
+
+        // 2. Prioritize candidates that have macro data over those that have zero macros
+        const aHasMacros = a.nutrition && (a.nutrition.kcal > 0 || a.nutrition.protein > 0 || a.nutrition.carbs > 0);
+        const bHasMacros = b.nutrition && (b.nutrition.kcal > 0 || b.nutrition.protein > 0 || b.nutrition.carbs > 0);
+        if (aHasMacros && !bHasMacros) return -1;
+        if (bHasMacros && !aHasMacros) return 1;
+
+        // 3. Otherwise rank by normalized relevance
+        return relevanceOf(b).relevance - relevanceOf(a).relevance;
+      });
+
+      // Collapse near-duplicate entries (same normalized name + macro signature)
+      // so generic queries like "grapes" return one representative per food
+      // instead of 15+ near-identical OFF rows.
+      const { dedupeCandidates } = await import('@/lib/search/dedupe-candidates');
+      const beforeDedupe = sortedCandidates.length;
+      sortedCandidates = dedupeCandidates(sortedCandidates);
+      if (sortedCandidates.length < beforeDedupe) {
+        logger.info('local_search_dedupe', {
+          feature: 'mapping_v2',
+          step: 'local_search_dedupe',
+          q,
+          beforeCount: beforeDedupe,
+          afterCount: sortedCandidates.length,
+        });
+      }
+
+      const data = sortedCandidates.map(c => {
+        const raw = c.rawData ?? {};
+        const nutrients = raw.nutrientsPer100g || {};
+        
+        let servingOptions = (c.servings || []).map(s => ({
+          label: s.description,
+          grams: s.grams ?? 100
+        }));
+        
+        if (servingOptions.length === 0) {
+          if (raw.servingSize) {
+            servingOptions.push({
+              label: raw.servingSize,
+              grams: raw.servingGrams ?? 100
+            });
+          } else {
+            servingOptions.push({
+              label: '100 g',
+              grams: 100
+            });
+          }
+        }
+
+        const item: any = {
+          id: c.id,
+          name: c.name,
+          brand: c.brandName ?? null,
+          source: c.source === 'openfoodfacts' ? 'off' : (c.source === 'fdc' ? 'usda' : c.source),
+          verification: c.source === 'fdc' ? 'verified' : 'unverified',
+          kcal100: c.nutrition?.kcal ?? 0,
+          protein100: c.nutrition?.protein ?? 0,
+          carbs100: c.nutrition?.carbs ?? 0,
+          fat100: c.nutrition?.fat ?? 0,
+          fiber100: nutrients.fiber ?? 0,
+          sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
+          sodium100: nutrients.sodium ?? 0,
+          confidence: Math.min(1.0, Math.max(0.1, relevanceOf(c).relevance)),
+          servingOptions
+        };
+
+        const impactPayload = buildImpact(
+          {
+            kcal100: item.kcal100,
+            protein100: item.protein100,
+            carbs100: item.carbs100,
+            fat100: item.fat100,
+            fiber100: item.fiber100,
+            sugar100: item.sugar100
+          },
+          servingOptions,
+        );
+        if (impactPayload) {
+          item.impact = impactPayload;
+        }
+
+        return item;
+      });
+
+      return { data, count: sortedCandidates.length };
+    };
+
     let responseData: any[] = [];
-    if (shouldServeCache) {
+    if (isLocalSearch) {
+      const localResult = await runLocalSearch();
+      responseData = localResult.data;
+      logger.info(
+        'local_search_direct',
+        {
+          feature: 'mapping_v2',
+          step: 'local_search_direct_executed',
+          q,
+          resultCount: responseData.length,
+        },
+      );
+    } else if (shouldServeCache) {
       const cacheResult = await runCacheSearch();
       if (cacheResult.data.length > 0) {
         responseData = cacheResult.data;
@@ -277,15 +429,15 @@ export async function GET(req: NextRequest) {
           },
         );
       } else {
-        // ACCURACY FIX: No legacy fallback - only serve FatSecret/FDC cache
-        // This prevents showing prepared foods (Denny's, McDonald's) and outdated USDA data
-        responseData = [];
+        const localResult = await runLocalSearch();
+        responseData = localResult.data;
         logger.info(
           'fatsecret_cache_search',
           {
             feature: 'mapping_v2',
-            step: 'cache_empty_no_results',
+            step: 'cache_empty_fallback_executed',
             q,
+            fallbackCount: responseData.length,
             cacheMode: FATSECRET_CACHE_MODE,
           },
         );

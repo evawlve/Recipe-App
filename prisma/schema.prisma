@@ -643,6 +643,16 @@ model RecipeSimilar {
   @@index([similarId])
 }
 
+model NlpRequestLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("nlp_requests_log")
+}
+
 // ============================================================================
 // Enums
 // ============================================================================
