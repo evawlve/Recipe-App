@@ -29,7 +29,7 @@ export function normalizeNameKey(name: string): string {
     return [...new Set(tokens)].sort().join(' ');
 }
 
-function singularize(token: string): string {
+export function singularize(token: string): string {
     if (token.length <= 3 || token.endsWith('ss')) return token;
     if (token.endsWith('ies')) return token.slice(0, -3) + 'y';
     if (token.endsWith('oes') || token.endsWith('shes') || token.endsWith('ches')) {

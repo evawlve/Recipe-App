@@ -265,10 +265,28 @@ export async function GET(req: NextRequest) {
     const runLocalSearch = async () => {
       const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
       const { mapUsdaToCategory } = await import('@/ops/usda/category-map');
+      const { queryTokenCoverage } = await import('@/lib/search/query-token-coverage');
       const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
-      
+
       const category = mapUsdaToCategory(q);
       const isProduceQuery = category === 'fruit' || category === 'veg';
+
+      // FDC and OFF scores live on different scales (computePositionScore
+      // ~0–1.5 vs computeOffScore ~0–10), so they can't be compared or fed
+      // into the confidence formula raw. Normalize each per source, and
+      // weight FDC by how much of the query its name actually covers —
+      // engine typo-expansion can surface FDC rows that share no real
+      // token with the query (e.g. "ryse" pulling in "rye flour").
+      const relevanceById = new Map<string, { coverage: number; relevance: number }>();
+      for (const c of fallbackCandidates) {
+        const coverage = queryTokenCoverage(q, c.name, c.brandName);
+        const relevance = c.source === 'fdc'
+          ? Math.min(1, (c.score || 0) / 1.5) * coverage
+          : Math.min(1, Math.max(0, (c.score || 0) / 10));
+        relevanceById.set(c.id, { coverage, relevance });
+      }
+      const relevanceOf = (c: typeof fallbackCandidates[number]) =>
+        relevanceById.get(c.id) ?? { coverage: 0, relevance: 0 };
 
       // Sort and filter candidates
       let sortedCandidates = [...fallbackCandidates];
@@ -285,10 +303,15 @@ export async function GET(req: NextRequest) {
       }
 
       sortedCandidates.sort((a, b) => {
-        // 1. If it's a produce query, prioritize FDC (USDA) generic foods
+        // 1. If it's a produce query, prioritize FDC (USDA) generic foods —
+        //    but only ones matching every query token, so a produce word
+        //    inside a branded query ("ryse blueberry muffin") can't hoist
+        //    unrelated USDA rows above a near-exact branded match
         if (isProduceQuery) {
-          if (a.source === 'fdc' && b.source !== 'fdc') return -1;
-          if (b.source === 'fdc' && a.source !== 'fdc') return 1;
+          const aFdcMatch = a.source === 'fdc' && relevanceOf(a).coverage >= 1;
+          const bFdcMatch = b.source === 'fdc' && relevanceOf(b).coverage >= 1;
+          if (aFdcMatch && !bFdcMatch) return -1;
+          if (bFdcMatch && !aFdcMatch) return 1;
         }
 
         // 2. Prioritize candidates that have macro data over those that have zero macros
@@ -297,8 +320,8 @@ export async function GET(req: NextRequest) {
         if (aHasMacros && !bHasMacros) return -1;
         if (bHasMacros && !aHasMacros) return 1;
 
-        // 3. Otherwise maintain candidate scoring order
-        return (b.score || 0) - (a.score || 0);
+        // 3. Otherwise rank by normalized relevance
+        return relevanceOf(b).relevance - relevanceOf(a).relevance;
       });
 
       // Collapse near-duplicate entries (same normalized name + macro signature)
@@ -353,7 +376,7 @@ export async function GET(req: NextRequest) {
           fiber100: nutrients.fiber ?? 0,
           sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
           sodium100: nutrients.sodium ?? 0,
-          confidence: Math.min(1.0, Math.max(0.1, (c.score || 8) / 10)),
+          confidence: Math.min(1.0, Math.max(0.1, relevanceOf(c).relevance)),
           servingOptions
         };
 
