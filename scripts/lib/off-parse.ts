@@ -134,12 +134,19 @@ export type ParseResult =
  * Extract + filter a single raw OFF product JSON object (one line of the
  * JSONL dump or a delta file — same schema either way).
  */
+// Postgres text columns reject NUL bytes (`invalid byte sequence for encoding
+// "UTF8": 0x00`), and one bad row poisons its whole createMany batch — a
+// 2026-07-13 ingest lost ~404 rows to a single NUL-carrying product name.
+function stripNul(s: string): string {
+  return s.includes('\u0000') ? s.replace(/\u0000/g, '') : s;
+}
+
 export function parseOffProduct(product: any): ParseResult {
-  const barcode = product.code || product._id || '';
-  const rawName = product.product_name || product.product_name_en || '';
-  const brand = product.brands ? String(product.brands).split(',')[0].trim() : '';
+  const barcode = stripNul(String(product.code || product._id || ''));
+  const rawName = stripNul(String(product.product_name || product.product_name_en || ''));
+  const brand = product.brands ? stripNul(String(product.brands)).split(',')[0].trim() : '';
   const categories = product.categories || product.categories_en || '';
-  const servingSize = product.serving_size || '';
+  const servingSize = stripNul(String(product.serving_size || ''));
   const servingQuantity = product.serving_quantity || '';
   const countriesTags: string[] = Array.isArray(product.countries_tags) ? product.countries_tags : [];
 
