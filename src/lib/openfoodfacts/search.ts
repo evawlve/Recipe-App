@@ -137,6 +137,68 @@ function mapOffHitToCandidate(hit: any, query: string, isBrandedQuery: boolean):
 }
 
 // ============================================================
+// Semantic (vector) Search
+// ============================================================
+
+// Hits below this cosine similarity are noise, not matches. Verified
+// similarities for good matches ran 0.87–0.96 during the 2026-07-13 backfill.
+const SEMANTIC_MIN_SIMILARITY = 0.72;
+
+/**
+ * Semantic nearest-neighbor search over the OFF corpus (only source with
+ * embeddings today). Recall net for queries whose wording doesn't match
+ * product names ("protein yogurt" → "Oikos Triple Zero").
+ *
+ * Returns [] whenever semantic search is disabled or any stage fails —
+ * the keyword path must never depend on this.
+ */
+export async function searchOffSemantic(
+    query: string,
+    options: SearchOffOptions = {},
+): Promise<UnifiedCandidate[]> {
+    const { limit = 5, isBrandedQuery = false } = options;
+
+    try {
+        const { embedQuery } = await import('../search/query-embedding');
+        const embedding = await embedQuery(query);
+        if (!embedding) return [];
+
+        const { vectorSearchTypesense } = await import('../search/typesense-client');
+        const hits = await vectorSearchTypesense('off_foods', embedding, limit * 2);
+
+        const candidates: UnifiedCandidate[] = [];
+        for (const hit of hits) {
+            const similarity = 1 - (hit._vectorDistance ?? 1);
+            if (similarity < SEMANTIC_MIN_SIMILARITY) continue;
+
+            const candidate = mapOffHitToCandidate(hit, query, isBrandedQuery);
+            // Keyword score can go negative on semantic-only matches (little
+            // token overlap); similarity is the honest signal for these.
+            candidate.score = Math.max(candidate.score, similarity);
+            candidate.semanticSimilarity = similarity;
+            candidates.push(candidate);
+        }
+
+        const top = candidates
+            .sort((a, b) => (b.semanticSimilarity ?? 0) - (a.semanticSimilarity ?? 0))
+            .slice(0, limit);
+
+        logger.debug('off.search.semantic_hit', {
+            query,
+            count: top.length,
+            topSimilarity: top[0]?.semanticSimilarity ?? null,
+        });
+        return top;
+    } catch (err) {
+        logger.warn('off.search.semantic_failed', {
+            query,
+            error: (err as Error).message,
+        });
+        return [];
+    }
+}
+
+// ============================================================
 // Main Export
 // ============================================================
 

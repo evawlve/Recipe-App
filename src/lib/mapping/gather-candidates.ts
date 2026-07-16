@@ -9,9 +9,14 @@ import { prisma } from '../db';
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
-import { searchOffSimple } from '../openfoodfacts/search';
+import { searchOffSimple, searchOffSemantic } from '../openfoodfacts/search';
 import { MEILISEARCH_ENABLED, SEARCH_PROVIDER } from './config';
 import { searchMeili } from '../search/meilisearch-client';
+import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
+
+// Start loading the ONNX query-embedding model as soon as the mapping
+// subsystem is loaded, so the first magic-log request doesn't pay for it.
+warmupEmbedder();
 
 // ============================================================
 // Types
@@ -23,6 +28,8 @@ export interface UnifiedCandidate {
     name: string;
     brandName?: string | null;
     score: number;
+    /** Cosine similarity from semantic (vector) search, when the candidate was found or confirmed by it. */
+    semanticSimilarity?: number;
     foodType?: string;
     nutrition?: {
         kcal: number;
@@ -362,12 +369,23 @@ export async function gatherCandidates(
         );
     }
 
+    // Semantic recall over the OFF embeddings — catches phrasings keyword
+    // search misses ("protein yogurt" → "Oikos Triple Zero"). No-op unless
+    // SEMANTIC_SEARCH_ENABLED=true.
+    if (offEnabled && !skipOff && SEMANTIC_SEARCH_ENABLED) {
+        searchPromises.push(
+            searchOffSemantic(primaryQuery, {
+                limit: maxPerSource,
+                isBrandedQuery,
+            })
+        );
+    }
 
     const results = await Promise.allSettled(searchPromises);
 
     // Collect candidates (deduplicate by ID)
     const candidates: UnifiedCandidate[] = [];
-    const seenIds = new Set<string>();
+    const byId = new Map<string, UnifiedCandidate>();
 
     for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -377,9 +395,18 @@ export async function gatherCandidates(
                     id = `fdc_${id}`;
                 }
 
-                if (!seenIds.has(id)) {
-                    seenIds.add(id);
-                    candidates.push({ ...c, id });
+                const existing = byId.get(id);
+                if (!existing) {
+                    const candidate = { ...c, id };
+                    byId.set(id, candidate);
+                    candidates.push(candidate);
+                } else if (c.semanticSimilarity !== undefined) {
+                    // Keyword and semantic search agree on this candidate —
+                    // keep the keyword version but carry the similarity signal.
+                    existing.semanticSimilarity = Math.max(
+                        existing.semanticSimilarity ?? 0,
+                        c.semanticSimilarity
+                    );
                 }
             }
         }

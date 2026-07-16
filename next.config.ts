@@ -23,8 +23,10 @@ const nextConfig = {
     domains: ['localhost'],
     unoptimized: false
   },
-  // Prevent API routes from being executed during build
-  serverExternalPackages: ['@prisma/client'],
+  // Prevent API routes from being executed during build.
+  // @huggingface/transformers + onnxruntime-node ship native .node binaries
+  // (query-time embedding model) that webpack must not try to bundle.
+  serverExternalPackages: ['@prisma/client', '@huggingface/transformers', 'onnxruntime-node'],
   env: {
     BUILD_TIME: process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ? 'true' : 'false',
   },

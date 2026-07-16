@@ -73,6 +73,44 @@ export async function searchTypesense(
 }
 
 /**
+ * Nearest-neighbor search against a collection's `embedding` field.
+ * Returns raw documents (embedding excluded) with `_vectorDistance` attached —
+ * cosine distance, so similarity = 1 - _vectorDistance for normalized vectors.
+ */
+export async function vectorSearchTypesense(
+    collectionName: string,
+    embedding: number[],
+    k: number = 8
+): Promise<any[]> {
+    try {
+        const body = {
+            searches: [{
+                collection: collectionName,
+                q: '*',
+                vector_query: `embedding:([${embedding.join(',')}], k:${k})`,
+                per_page: k,
+                exclude_fields: 'embedding',
+            }],
+        };
+        const res = await typesenseReq('/multi_search', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+        const result = res?.results?.[0];
+        if (result?.error) {
+            throw new Error(`Typesense vector search error: ${result.error}`);
+        }
+        return (result?.hits || []).map((hit: any) => ({
+            ...hit.document,
+            _vectorDistance: hit.vector_distance,
+        }));
+    } catch (err) {
+        logger.warn('typesense.vector_search_failed', { collectionName, error: (err as Error).message });
+        throw err;
+    }
+}
+
+/**
  * Creates a collection using a Typesense schema
  */
 export async function createTypesenseCollection(schema: any): Promise<any> {
