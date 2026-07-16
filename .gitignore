@@ -142,3 +142,6 @@ tmp/
 
 # Syncthing conflict copies
 *.sync-conflict-*
+
+# Eval harness run outputs (timestamped JSON, diffed manually)
+scripts/eval/results/
