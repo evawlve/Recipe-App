@@ -57,7 +57,11 @@ async function main() {
             { name: 'nutrientsPer100g', type: 'string', optional: true, index: false },
             { name: 'servingGrams', type: 'float', optional: true, index: false },
             { name: 'servingSize', type: 'string', optional: true, index: false },
-            { name: 'categories', type: 'string', optional: true, index: false }
+            { name: 'categories', type: 'string', optional: true, index: false },
+            // Semantic-search vector (bge-small-en-v1.5). Bring-your-own vectors
+            // (embedded externally on the GPU box); optional so rows without an
+            // embedding still index for keyword search.
+            { name: 'embedding', type: 'float[]', num_dim: 384, optional: true }
         ]
     };
 
@@ -99,41 +103,62 @@ async function main() {
     const offStart = performance.now();
 
     let offset = 0;
-    const batchSize = 25000; // Typesense is extremely fast with bulk imports
+    let lastBarcode = '';
+    // Smaller batches than the old 25k: each doc now carries a 384-float vector
+    // (~1.6KB), so 10k keeps the import payload ~16MB. Keyset pagination on the
+    // barcode PK avoids the growing cost of OFFSET on a 1M-row table.
+    const batchSize = 10000;
+    let embedded = 0;
 
     while (true) {
-        const batch = await prisma.offFood.findMany({
-            skip: offset,
-            take: batchSize,
-            select: {
-                barcode: true,
-                name: true,
-                brandName: true,
-                nutrientsPer100g: true,
-                servingGrams: true,
-                servingSize: true,
-                categories: true
-            },
-            orderBy: { barcode: 'asc' }
-        });
+        // Raw SQL because `embedding` is a Prisma `Unsupported("vector(384)")`
+        // column and can't be selected via the typed client. embedding::text
+        // yields pgvector's '[f1,f2,...]' form, which is valid JSON -> number[].
+        const batch = await prisma.$queryRaw<Array<{
+            barcode: string;
+            name: string;
+            brandName: string | null;
+            nutrientsPer100g: unknown;
+            servingGrams: number | null;
+            servingSize: string | null;
+            categories: string | null;
+            embedding: string | null;
+        }>>`
+            SELECT barcode, name, "brandName", "nutrientsPer100g",
+                   "servingGrams", "servingSize", categories,
+                   embedding::text AS embedding
+            FROM "OffFood"
+            WHERE barcode > ${lastBarcode}
+            ORDER BY barcode ASC
+            LIMIT ${batchSize}
+        `;
 
         if (batch.length === 0) break;
+        lastBarcode = batch[batch.length - 1].barcode;
 
-        const offDocs = batch.map(f => ({
-            barcode: String(f.barcode),
-            name: f.name,
-            brandName: f.brandName || '',
-            nutrientsPer100g: JSON.stringify(f.nutrientsPer100g || {}),
-            servingGrams: f.servingGrams != null ? Number(f.servingGrams) : null,
-            servingSize: f.servingSize || '',
-            categories: f.categories || ''
-        }));
+        const offDocs = batch.map(f => {
+            const doc: Record<string, unknown> = {
+                id: String(f.barcode), // key TS doc by barcode so upserts are idempotent (no duplicates)
+                barcode: String(f.barcode),
+                name: f.name,
+                brandName: f.brandName || '',
+                nutrientsPer100g: JSON.stringify(f.nutrientsPer100g || {}),
+                servingGrams: f.servingGrams != null ? Number(f.servingGrams) : null,
+                servingSize: f.servingSize || '',
+                categories: f.categories || ''
+            };
+            if (f.embedding) {
+                doc.embedding = JSON.parse(f.embedding) as number[];
+                embedded++;
+            }
+            return doc;
+        });
 
         await importTypesenseDocuments('off_foods', offDocs);
-        console.log(`Ingested OFF batch ${offset.toLocaleString()} to ${(offset + batch.length).toLocaleString()}`);
-        
         offset += batch.length;
+        console.log(`Ingested OFF ${offset.toLocaleString()} rows (last barcode ${lastBarcode})`);
     }
+    console.log(`  of which ${embedded.toLocaleString()} carried an embedding.`);
 
     const offTime = (performance.now() - offStart) / 1000;
     console.log(`✅ OffFood synchronization complete in ${offTime.toFixed(2)}s.`);
