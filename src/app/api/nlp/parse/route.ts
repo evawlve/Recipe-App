@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { callStructuredLlm } = await import('@/lib/ai/structured-client');
+    const { segmentTextHeuristically, forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
@@ -187,61 +188,87 @@ export async function POST(req: NextRequest) {
       // return it unchanged after ~1-5s. Skip straight to mapping.
       items = [singleItemFromText(text)!];
     } else {
-      const NLP_SPLIT_SCHEMA = {
-        name: 'nlp_split',
-        schema: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            items: {
-              type: 'array',
+      // Heuristic-first segmentation: clearly-delimited multi-item logs
+      // ("2 eggs, toast with butter and a glass of orange juice") are split
+      // deterministically in <1ms; only genuinely ambiguous text (unclear
+      // "with" attachments, hedged run-ons) falls through to the LLM.
+      const heuristic = segmentTextHeuristically(text);
+      if (heuristic.status === 'ok') {
+        items = heuristic.items;
+        console.log(`[nlp-parse] heuristic segmentation: ${items.length} item(s), LLM skipped`);
+      } else {
+        console.log(`[nlp-parse] heuristic deferred to LLM: ${heuristic.reason}`);
+
+        const NLP_SPLIT_SCHEMA = {
+          name: 'nlp_split',
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
               items: {
-                type: 'object',
-                additionalProperties: false,
-                properties: {
-                  rawText: { type: 'string' },
-                  mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
-                  brand: { type: 'string' },
-                  normalizedForm: { type: 'string' }
-                },
-                required: ['rawText', 'mealType', 'brand', 'normalizedForm']
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    rawText: { type: 'string' },
+                    mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
+                    brand: { type: 'string' },
+                    normalizedForm: { type: 'string' }
+                  },
+                  required: ['rawText', 'mealType', 'brand', 'normalizedForm']
+                }
               }
-            }
+            },
+            required: ['items']
           },
-          required: ['items']
-        },
-        strict: true
-      };
+          strict: true
+        };
 
-      const SYSTEM_PROMPT = `You are a nutrition assistant that splits unstructured text describing meals/foods into individual food items with their quantities and units, and identifies the meal type (breakfast, lunch, dinner, or snacks).
+        // Minimal prompt: the JSON schema already constrains the output shape,
+        // so the prompt only needs the field semantics and one example.
+        const SYSTEM_PROMPT = `Split the food-log text into individual food items. Per item:
+- rawText: original chunk incl. quantity/unit (e.g. "2 scrambled eggs")
+- mealType: breakfast|lunch|dinner|snacks (default "snacks")
+- brand: explicit brand name, else ""
+- normalizedForm: base food name without quantity/unit, keep prep modifiers ("2 scrambled eggs" -> "scrambled eggs", "1 tbsp Heinz ketchup" -> "ketchup")
+Attached condiments stay with their item ("toast with butter" = 1 item); distinct foods are separate items.
+Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs","mealType":"breakfast","brand":"","normalizedForm":"eggs"},{"rawText":"wheat toast","mealType":"breakfast","brand":"","normalizedForm":"wheat toast"}]}`;
 
-For each food item:
-- "rawText": The original chunk of text describing the food item (e.g. "2 scrambled eggs", "a cup of whole milk").
-- "mealType": The meal type ("breakfast", "lunch", "dinner", "snacks"). Default to 'snacks' if not specified or implied.
-- "brand": The explicit brand name if mentioned (e.g., "Heinz", "Quaker"). If no brand is mentioned, set this to an empty string "".
-- "normalizedForm": The simplified, canonical base food name. Remove quantities and units, but KEEP cooking/prep style modifiers (e.g., "scrambled", "grilled", "toasted", "whole") and sub-categories (e.g., "egg", "wheat toast", "whole milk") so the food type is specific. (Examples: "2 scrambled eggs" -> "scrambled eggs", "a cup of whole milk" -> "whole milk", "1 tbsp of Heinz ketchup" -> "ketchup").
+        // Per-attempt timeout 6s, overall deadline 8s: a hung provider chain
+        // (previously up to 15s+) now degrades to the lenient heuristic split
+        // instead of stalling the request or returning a 500.
+        const LLM_ATTEMPT_TIMEOUT_MS = 6000;
+        const LLM_OVERALL_DEADLINE_MS = 8000;
 
-Example: "2 scrambled eggs and 1 slice of wheat toast for breakfast"
-Output:
-{
-  "items": [
-    {"rawText": "2 scrambled eggs", "mealType": "breakfast", "brand": "", "normalizedForm": "scrambled eggs"},
-    {"rawText": "1 slice of wheat toast", "mealType": "breakfast", "brand": "", "normalizedForm": "wheat toast"}
-  ]
-}`;
+        let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+        const llmResult = await Promise.race([
+          callStructuredLlm({
+            schema: NLP_SPLIT_SCHEMA,
+            systemPrompt: SYSTEM_PROMPT,
+            userPrompt: `Unstructured text: "${text}"`,
+            purpose: 'parse',
+            timeout: LLM_ATTEMPT_TIMEOUT_MS,
+            maxTokens: 600,
+          }),
+          new Promise<null>((resolve) => {
+            deadlineTimer = setTimeout(() => resolve(null), LLM_OVERALL_DEADLINE_MS);
+          }),
+        ]);
+        if (deadlineTimer) clearTimeout(deadlineTimer);
 
-      const llmResult = await callStructuredLlm({
-        schema: NLP_SPLIT_SCHEMA,
-        systemPrompt: SYSTEM_PROMPT,
-        userPrompt: `Unstructured text: "${text}"`,
-        purpose: 'parse',
-      });
-
-      if (llmResult.status === 'error') {
-        return NextResponse.json({ error: 'Failed to segment text' }, { status: 500 });
+        if (!llmResult || llmResult.status === 'error') {
+          console.warn(
+            `[nlp-parse] LLM segmentation ${llmResult ? `failed: ${llmResult.error}` : `deadline exceeded (${LLM_OVERALL_DEADLINE_MS}ms)`} — using lenient heuristic split`
+          );
+          items = forceSegmentText(text);
+        } else {
+          items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
+          if (items.length === 0) {
+            items = forceSegmentText(text);
+          }
+        }
       }
-
-      items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
     }
     // Map all items concurrently — each mapping is independent, and identical
     // items are deduplicated by the pipeline's in-flight lock.

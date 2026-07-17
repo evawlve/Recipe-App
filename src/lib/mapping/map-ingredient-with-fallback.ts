@@ -45,6 +45,7 @@ import { requestAiNutrition, extractBaseFoodContext, getAiServingGrams } from '.
 import { AI_NUTRITION_BACKFILL_ENABLED } from './config';
 import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
+import { assessMacroPlausibility } from './macro-plausibility';
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -592,6 +593,17 @@ export async function mapIngredientWithFallback(
                                 nutrients,
                             });
                         }
+                    } else if (earlyCacheHit.foodId.startsWith('off_')) {
+                        // The cached mapping points at an OFF row that is missing or has
+                        // no nutrition at all (corrupt legacy rows, e.g. a normalized name
+                        // ingested as a barcode). Treat as invalid so the full pipeline
+                        // re-maps instead of serving null-backed nutrition.
+                        earlyNutritionInvalid = true;
+                        logger.warn('mapping.early_cache_missing_nutrition', {
+                            rawLine: trimmed,
+                            cachedFood: earlyCacheHit.foodName,
+                            foodId: earlyCacheHit.foodId,
+                        });
                     }
                 }
             }
@@ -1023,6 +1035,41 @@ export async function mapIngredientWithFallback(
                         remaining: macroValid.length,
                     });
                     filtered = macroValid;
+                }
+
+                // Step 3d: Macro plausibility gate. Physically impossible
+                // per-100g values (negative macros, sum > 105g, kcal > 900)
+                // are dropped; implausible-but-conceivable values (0-protein
+                // beans, 224 kcal spinach) are penalized in ranking so better
+                // data wins without eliminating the candidate outright.
+                // If every candidate would be dropped, keep the original list.
+                const plausibilityChecked = filtered.map(c => {
+                    if (!c.nutrition?.per100g) return c;
+                    const assessment = assessMacroPlausibility(normalizedName, c.name, c.nutrition);
+                    if (assessment.plausible) return c;
+                    if (assessment.impossible) {
+                        logger.warn('mapping.macro_implausible_dropped', {
+                            rawLine: trimmed,
+                            candidate: c.name,
+                            source: c.source,
+                            reasons: assessment.reasons,
+                        });
+                        return null;
+                    }
+                    logger.warn('mapping.macro_implausible_penalized', {
+                        rawLine: trimmed,
+                        candidate: c.name,
+                        source: c.source,
+                        reasons: assessment.reasons,
+                        penalty: assessment.penalty,
+                    });
+                    return { ...c, score: c.score * assessment.penalty };
+                });
+                const plausibleCandidates = plausibilityChecked.filter(
+                    (c): c is NonNullable<typeof c> => c !== null
+                );
+                if (plausibleCandidates.length > 0) {
+                    filtered = plausibleCandidates;
                 }
 
                 if (filtered.length === 0) {
@@ -3656,16 +3703,32 @@ async function buildOffResult(
         'kg': 1000, 'kilogram': 1000,
     };
     const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(candidate.name);
+    // Dense pastes/spreads (~1g/ml): the dry-goods 7.5g/tbsp default badly
+    // undercounts them (2 tbsp peanut butter is ~32g, not 15g).
+    const isPaste = !isLiquid && /butter|spread|hummus|yogurt|yoghurt|honey|mayo|mayonnaise|jam|jelly|nutella|tahini|cream cheese|sour cream|ricotta|paste|dressing|ketchup|mustard/i.test(candidate.name);
+    const cupG  = isLiquid ? 240 : isPaste ? 250 : 120;
+    const tbspG = isLiquid ? 15  : isPaste ? 16  : 7.5;
+    const tspG  = isLiquid ? 5   : isPaste ? 5.3 : 2.5;
     const volumeToGrams: Record<string, number> = {
-        'cup': isLiquid ? 240 : 120, 'cups': isLiquid ? 240 : 120,
-        'tbsp': isLiquid ? 15 : 7.5, 'tablespoon': isLiquid ? 15 : 7.5, 'tablespoons': isLiquid ? 15 : 7.5,
-        'tsp': isLiquid ? 5 : 2.5,  'teaspoon': isLiquid ? 5 : 2.5,  'teaspoons': isLiquid ? 5 : 2.5,
+        'cup': cupG, 'cups': cupG,
+        'tbsp': tbspG, 'tablespoon': tbspG, 'tablespoons': tbspG,
+        'tsp': tspG,  'teaspoon': tspG,  'teaspoons': tspG,
         'ml': 1, 'floz': 30, 'fl oz': 30,
         'dash': 0.6, 'dashes': 0.6, 'pinch': 0.3, 'pinches': 0.3,
     };
 
-    let grams: number;
-    let servingDescription: string;
+    let grams: number | null = null;
+    let servingDescription: string | null = null;
+
+    // Units where the product's own label serving IS the thing the user asked
+    // for ("1 container of yogurt" → the container size on the label). For these,
+    // trust servingGrams over estimation.
+    const PACKAGE_LIKE_UNITS = new Set([
+        'serving', 'servings', 'portion', 'portions',
+        'container', 'containers', 'packet', 'packets', 'package', 'packages',
+        'pack', 'packs', 'bottle', 'bottles', 'jar', 'jars', 'pouch', 'pouches',
+        'tub', 'tubs', 'box', 'boxes', 'bag', 'bags', 'sachet', 'sachets',
+    ]);
 
     if (unit && weightToGrams[unit]) {
         grams = qty * weightToGrams[unit];
@@ -3673,12 +3736,61 @@ async function buildOffResult(
     } else if (unit && volumeToGrams[unit]) {
         grams = qty * volumeToGrams[unit];
         servingDescription = `${qty} ${unit}`;
-    } else if (hydrated.servingGrams && hydrated.servingGrams > 0) {
+    } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && hydrated.servingGrams && hydrated.servingGrams > 0) {
         grams = qty * hydrated.servingGrams;
-        servingDescription = `${qty} serving (${hydrated.servingGrams}g each)`;
-    } else {
-        grams = 100 * qty;
-        servingDescription = `${grams.toFixed(1)}g`;
+        servingDescription = `${qty} ${unit} (${hydrated.servingGrams}g each)`;
+    } else if (unit && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
+        // Count/size/unknown units ("slice", "medium", "can", "knob", "rasher"):
+        // deterministic count defaults + cached per-food servings + AI estimation.
+        const ambiguous = await getOrCreateAmbiguousServing(
+            candidate.id, hydrated.foodName, unit, hydrated.brandName ?? null
+        );
+        if ((ambiguous.status === 'success' || ambiguous.status === 'cached')
+            && ambiguous.grams && ambiguous.grams > 0) {
+            grams = qty * ambiguous.grams;
+            servingDescription = `${qty} ${unit} (${ambiguous.grams.toFixed(1)}g each)`;
+            logger.info('off.build_result.unit_serving_resolved', {
+                foodId: candidate.id,
+                unit,
+                perUnitGrams: ambiguous.grams,
+                status: ambiguous.status,
+            });
+        } else {
+            logger.warn('off.build_result.unit_serving_unresolved', {
+                foodId: candidate.id,
+                unit,
+                error: ambiguous.error,
+            });
+        }
+    } else if (!unit && parsed && Number.isInteger(parsed.qty) && parsed.qty >= 1) {
+        // Unitless integer count ("3 baby carrots"): if the food is a discrete
+        // item with a known per-piece weight, use it instead of the label
+        // serving (label serving for baby carrots is a ~100g portion, not 1 carrot).
+        try {
+            const { getDefaultCountServing } = await import('../servings/default-count-grams');
+            const countDefault = getDefaultCountServing(parsed.name || hydrated.foodName, 'each');
+            if (countDefault && countDefault.grams > 0) {
+                grams = qty * countDefault.grams;
+                servingDescription = `${qty} each (${countDefault.grams.toFixed(1)}g each)`;
+                logger.info('off.build_result.unitless_count_default', {
+                    foodId: candidate.id,
+                    name: parsed.name || hydrated.foodName,
+                    perPieceGrams: countDefault.grams,
+                });
+            }
+        } catch {
+            // fall through to label-serving / 100g defaults
+        }
+    }
+
+    if (grams == null || servingDescription == null) {
+        if (hydrated.servingGrams && hydrated.servingGrams > 0) {
+            grams = qty * hydrated.servingGrams;
+            servingDescription = `${qty} serving (${hydrated.servingGrams}g each)`;
+        } else {
+            grams = 100 * qty;
+            servingDescription = `${grams.toFixed(1)}g`;
+        }
     }
 
     const factor = grams / 100;

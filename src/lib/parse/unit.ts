@@ -61,6 +61,12 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'serving': 'serving', 'servings': 'serving',  // Generic serving unit
     'box': 'box', 'boxes': 'box',
     'bag': 'bag', 'bags': 'bag',
+    'sleeve': 'sleeve', 'sleeves': 'sleeve',  // For crackers, cookies
+    'tub': 'tub', 'tubs': 'tub',  // For yogurt, spreads
+    'carton': 'carton', 'cartons': 'carton',  // For eggs, milk
+    'jar': 'jar', 'jars': 'jar',
+    'bottle': 'bottle', 'bottles': 'bottle',
+    'tray': 'tray', 'trays': 'tray',
     // Size descriptors for whole produce (triggers AI backfill for realistic weights)
     'small': 'small', 'medium': 'medium', 'large': 'large', 'whole': 'whole',
     // Produce-specific units (bunch, head, stalk, etc.)

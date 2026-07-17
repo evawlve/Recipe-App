@@ -22,6 +22,8 @@ export interface CountDefault {
     confidence: number;
     /** Source of this default */
     source: 'seed' | 'derived' | 'usda';
+    /** Canonical seed key that matched (e.g. 'bread slice' for alias 'bread') */
+    key?: string;
 }
 
 interface SeedEntry {
@@ -218,14 +220,27 @@ export function getDefaultCountServing(
     const nameLower = foodName.toLowerCase().trim();
     const unitLower = (unit || '').toLowerCase().trim();
 
+    // Container/multi-piece units: a per-piece seed weight ('cracker' = 4g) must
+    // never answer "1 sleeve of crackers". Only an exact "<name> <unit>" seed
+    // entry (or the unit-only fallback below) may match for these.
+    const CONTAINER_UNITS = new Set([
+        'sleeve', 'sleeves', 'box', 'boxes', 'bag', 'bags', 'pack', 'packs',
+        'package', 'packages', 'carton', 'cartons', 'tray', 'trays', 'tube', 'tubes',
+        'roll', 'rolls', 'tin', 'tins', 'case', 'cases', 'jar', 'jars',
+        'bottle', 'bottles', 'can', 'cans', 'pouch', 'pouches', 'tub', 'tubs',
+        'container', 'containers',
+    ]);
+    const isContainerUnit = CONTAINER_UNITS.has(unitLower);
+
     // Find the canonical key using combined name + unit first (for specific unit overrides like "garlic salt tbsp")
-    let canonicalKey = ALIAS_MAP.get(`${nameLower} ${unitLower}`) || ALIAS_MAP.get(nameLower);
+    let canonicalKey = ALIAS_MAP.get(`${nameLower} ${unitLower}`)
+        || (isContainerUnit ? undefined : ALIAS_MAP.get(nameLower));
 
     // If not found directly, try partial matching
     // IMPORTANT: Try LONGER matches first! "organic grape tomatoes" should match
     // "grape tomato" (5g) not "tomato" (123g). Checking last-word first would
     // match "tomatoes" → "tomato" and miss the more specific "grape tomato" entry.
-    if (!canonicalKey) {
+    if (!canonicalKey && !isContainerUnit) {
         const words = nameLower.split(/\s+/);
 
         // Try last two words first (more specific: "grape tomatoes" → "grape tomato")
@@ -261,6 +276,7 @@ export function getDefaultCountServing(
         grams,
         confidence: entry.confidence,
         source: 'seed',
+        key: canonicalKey,
     };
 }
 
@@ -337,6 +353,19 @@ export function getSubPieceDefault(
     // (passes through the existing alias/partial-match logic)
     const wholeFoodDefault = getDefaultCountServing(foodName, 'each');
     if (!wholeFoodDefault) return null;
+
+    // Some aliases resolve to a seed entry that is ALREADY per-sub-piece
+    // ('bread' → 'bread slice' = 30g). Applying the fraction again would
+    // double-discount (bread slice → 1.5g), so return the seed weight as-is.
+    const unitWord = subUnit.toLowerCase().trim().replace(/s$/, '');
+    if (wholeFoodDefault.key && wholeFoodDefault.key.includes(unitWord)) {
+        return {
+            grams: wholeFoodDefault.grams,
+            confidence: wholeFoodDefault.confidence,
+            source: 'seed',
+            key: wholeFoodDefault.key,
+        };
+    }
 
     const grams = Math.max(1, Math.round(wholeFoodDefault.grams * fraction));
 
