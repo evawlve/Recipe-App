@@ -160,7 +160,7 @@ export async function getValidatedMappingByNormalizedName(
             foodId,
             foodName: cached.foodName,
             brandName: cached.brandName,
-            confidence: cached.aiConfidence,
+            confidence: Math.max(0, Math.min(1, cached.aiConfidence)),
             source: cached.source === 'openfoodfacts' ? 'openfoodfacts'
                     : cached.source === 'fdc' ? 'fdc'
                     : 'ai_generated',
@@ -290,6 +290,7 @@ export async function saveValidatedMapping(
         }
 
         const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'ai_generated';
+        const clampedConfidence = Math.max(0, Math.min(1, validation.confidence));
 
         await prisma.foodMapping.upsert({
             where: {
@@ -302,7 +303,7 @@ export async function saveValidatedMapping(
                 source: mappingSource,
                 offBarcode,
                 fdcId,
-                aiConfidence: validation.confidence,
+                aiConfidence: clampedConfidence,
                 validatedBy: 'ai',
                 usedCount: 1,
             },
@@ -318,7 +319,7 @@ export async function saveValidatedMapping(
             normalizedForm,
             foodName: mapping.foodName,
             isAlias: options?.isAlias ?? false,
-            aiConfidence: validation.confidence,
+            aiConfidence: clampedConfidence,
         });
     } catch (error) {
         logger.error('validated_mapping.save_error', {
