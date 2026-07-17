@@ -25,10 +25,7 @@ import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGround
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
-import { FatSecretClient, type FatSecretFoodDetails, type FatSecretServing } from './client';
-
-// Create a default client instance
-const defaultClient = new FatSecretClient();
+import type { FatSecretFoodDetails, FatSecretServing } from './client';
 import { getCachedFoodWithRelations, cacheFoodToDetails } from './cache-search';
 import { insertAiServing, backfillWeightServing } from './ai-backfill';
 import { aiNormalizeIngredient } from './ai-normalize';
@@ -176,7 +173,6 @@ export type MapIngredientPendingResult = {
 };
 
 export interface MapIngredientOptions {
-    client?: FatSecretClient;
     minConfidence?: number;
     allowLiveFallback?: boolean;
     debug?: boolean;
@@ -204,7 +200,6 @@ export async function mapIngredientWithFallback(
     options: MapIngredientOptions = {}
 ): Promise<FatsecretMappedIngredient | MapIngredientPendingResult | null> {
     const {
-        client = defaultClient,
         minConfidence = 0,
         debug = false,
         skipCache = false,
@@ -404,7 +399,7 @@ export async function mapIngredientWithFallback(
                 rawData: {},
             };
             const hydratedResult = await hydrateAndSelectServing(
-                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine, client
+                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine
             );
             if (hydratedResult) {
                 // Track and log cache hit
@@ -640,8 +635,7 @@ export async function mapIngredientWithFallback(
                     cachedCandidate,
                     parsed,
                     earlyCacheHit.confidence,
-                    trimmed,
-                    client
+                    trimmed
                 );
 
                 if (hydratedResult) {
@@ -723,7 +717,6 @@ export async function mapIngredientWithFallback(
         if (!usedGenericFallback) {
             // First gather candidates to check if LLM is needed
             const quickGatherOptions: GatherOptions = {
-                client,
                 skipCache,
                 skipFdc,
                 skipOff: true,  // Always skip OFF during quick gate check (saves API quota)
@@ -967,7 +960,6 @@ export async function mapIngredientWithFallback(
                 !isBrandedQuery;
 
             const gatherOptions: GatherOptions = {
-                client,
                 skipCache,
                 skipFdc: skipFdc || canReuseQuickGather,
                 isBrandedQuery,
@@ -1409,8 +1401,7 @@ export async function mapIngredientWithFallback(
                             fallbackCandidate,
                             parsed,  // Use original parsed input with qty/unit!
                             fallbackCandidate.score,
-                            rawLine,
-                            client
+                            rawLine
                         );
 
                         if (rehydratedResult) {
@@ -1566,7 +1557,7 @@ export async function mapIngredientWithFallback(
 
         // Step 4a: Hydrate ONLY the selected candidate immediately
         // Queue remaining candidates for deferred hydration after all mappings complete
-        hydrateSingleCandidate(winner, client).catch(err => {
+        hydrateSingleCandidate(winner).catch(err => {
             logger.debug('mapping.winner_hydration_failed', { error: (err as Error).message });
         });
         queueForDeferredHydration(allCandidates, winner.id, parsed?.unit ? {
@@ -1608,7 +1599,7 @@ export async function mapIngredientWithFallback(
         }
 
         // Step 5: Hydrate and select serving with fallback to next candidates
-        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, client);
+        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine);
 
         // Step 5a: If hydration failed and user requested a weight unit (oz, g, lb),
         // try AI backfill for weight serving on the winner BEFORE falling back to other candidates.
@@ -1626,7 +1617,7 @@ export async function mapIngredientWithFallback(
 
             if (backfillResult.success) {
                 // Retry hydration now that we have a weight serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, client);
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine);
 
                 if (result) {
                     logger.info('mapping.weight_backfill_success', {
@@ -1671,7 +1662,7 @@ export async function mapIngredientWithFallback(
 
             if (volumeBackfillResult.success) {
                 // Retry hydration now that we have a volume serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, client);
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine);
 
                 if (result) {
                     logger.info('mapping.volume_backfill_success', {
@@ -1720,7 +1711,7 @@ export async function mapIngredientWithFallback(
 
 
                 let fallbackResult = await hydrateAndSelectServing(
-                    fallback, parsed, confidence * 0.95, rawLine, client
+                    fallback, parsed, confidence * 0.95, rawLine
                 );
 
                 // If hydration failed for a FatSecret candidate, try backfill before giving up
@@ -1739,7 +1730,7 @@ export async function mapIngredientWithFallback(
                         });
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine, client
+                                fallback, parsed, confidence * 0.95, rawLine
                             );
                         }
                     } else if (isWeightUnit) {
@@ -1751,7 +1742,7 @@ export async function mapIngredientWithFallback(
                         const backfillResult = await backfillWeightServing(fallback.id);
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine, client
+                                fallback, parsed, confidence * 0.95, rawLine
                             );
                         }
                     }
@@ -1780,7 +1771,6 @@ export async function mapIngredientWithFallback(
 
             // Run full search to find candidates with working servings
             const searchGatherOptions: GatherOptions = {
-                client,
                 skipCache,
                 skipFdc,
                 isBrandedQuery,
@@ -1813,7 +1803,7 @@ export async function mapIngredientWithFallback(
 
                 // Try each candidate until one works
                 for (const candidate of sortedFallbackCandidates.slice(0, 5)) {
-                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine, client);
+                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine);
                     if (retryResult) {
                         logger.info('mapping.cache_fallback_search_success', {
                             originalId: winner.id,
@@ -2163,8 +2153,7 @@ export async function hydrateAndSelectServing(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
     confidence: number,
-    rawLine: string,
-    client: FatSecretClient
+    rawLine: string
 ): Promise<FatsecretMappedIngredient | null> {
     // Handle FDC candidates (already have nutrition data)
     // Also check for fdc_ prefix in ID - cached ValidatedMappings may have source='cache' but FDC IDs

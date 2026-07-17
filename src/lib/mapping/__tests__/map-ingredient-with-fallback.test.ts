@@ -266,7 +266,6 @@ describe('mapIngredientWithFallback filtering', () => {
         });
 
         const result = await mapIngredientWithFallback('1 cup ice', {
-            client: client as any,
             minConfidence: 0,
             skipFdc: true,
             debug: true,

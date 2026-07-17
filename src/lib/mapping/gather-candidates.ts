@@ -53,7 +53,6 @@ export interface GatherOptions {
     skipOff?: boolean;     // Explicitly skip OpenFoodFacts (e.g. for quick gather gate checks)
     isBrandedQuery?: boolean;  // When true, always include OFF regardless of OFF_ENABLED flag
     targetBrand?: string;      // Matched brand name from static detector (e.g. "heinz") — used for FDC tiebreaking
-    client?: any;
     skipCache?: boolean;
     /**
      * Candidates from an earlier gather pass (e.g. the quick normalize-gate

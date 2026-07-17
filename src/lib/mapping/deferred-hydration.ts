@@ -11,7 +11,6 @@
  */
 
 import { logger } from '../logger';
-import { FatSecretClient } from './client';
 import type { UnifiedCandidate } from './gather-candidates';
 
 // ============================================================
@@ -147,14 +146,13 @@ async function processImmediately(
 ): Promise<void> {
     const { hydrateSingleCandidate } = await import('./hydrate-cache');
     const { backfillCommonServings } = await import('./serving-backfill');
-    const client = new FatSecretClient();
 
     // Process all candidates in parallel
     await Promise.allSettled(
         candidates.map(async (candidate) => {
             try {
                 // 1. Hydrate to cache
-                await hydrateSingleCandidate(candidate, client);
+                await hydrateSingleCandidate(candidate);
 
                 // 2. Backfill common servings (only if enabled via env var)
                 // Set ENABLE_PREEMPTIVE_BACKFILL=true to pre-fill serving options
@@ -198,19 +196,15 @@ export function clearQueue(): void {
 // Queue Processing
 // ============================================================
 
-const defaultClient = new FatSecretClient();
-
 /**
  * Process the deferred hydration queue.
  * Called after batch mapping completes.
  * Parallelizes hydration and serving backfill for speed.
- * 
+ *
  * @param batchSize - Number of candidates to process at once
- * @param client - FatSecret client for hydration
  */
 export async function processDeferredQueue(
-    batchSize: number = 50,
-    client: FatSecretClient = defaultClient
+    batchSize: number = 50
 ): Promise<{ processed: number; remaining: number }> {
     if (isProcessingQueue) {
         logger.debug('deferred_hydration.already_processing');
@@ -240,7 +234,7 @@ export async function processDeferredQueue(
         const results = await Promise.allSettled(
             batch.map(async (item) => {
                 // 1. Hydrate the candidate to cache
-                await hydrateSingleCandidate(item.candidate, client);
+                await hydrateSingleCandidate(item.candidate);
 
                 // 2. Backfill common servings based on food type
                 const { backfillCommonServings } = await import('./serving-backfill');
@@ -278,8 +272,7 @@ export async function processDeferredQueue(
  * Use after all mappings complete.
  */
 export async function drainQueue(
-    batchSize: number = 50,
-    client: FatSecretClient = defaultClient
+    batchSize: number = 50
 ): Promise<{ totalProcessed: number }> {
     let totalProcessed = 0;
 
@@ -288,7 +281,7 @@ export async function drainQueue(
     });
 
     while (hydrationQueue.length > 0) {
-        const result = await processDeferredQueue(batchSize, client);
+        const result = await processDeferredQueue(batchSize);
         totalProcessed += result.processed;
 
         // Small delay between batches to not overwhelm APIs
