@@ -240,20 +240,19 @@ export function shouldNormalizeLlm(
     const secondScore = sorted.length > 1 ? sorted[1].score : 0;
     const scoreGap = bestScore - secondScore;
 
-    // If best score is very high, skip LLM — UNLESS top candidates are tied.
-    // Tied high-confidence candidates (e.g., 3 branded "Rice Vinegar" variants)
-    // need the LLM's nutrition estimate to break the tie.
+    // If best score is very high, skip LLM — even when top candidates are tied.
+    // Ties among high-confidence candidates (e.g., 3 branded "Rice Vinegar"
+    // variants) are broken downstream by simpleRerank's nutrition tiebreaker,
+    // which falls back to the best FDC candidate's per-100g macros when no LLM
+    // estimate exists. With a 1M+ product corpus nearly every common food has
+    // tied ~1.0 keyword matches, so calling the LLM here meant one slow cloud
+    // call per ingredient for no accuracy gain.
     if (bestScore >= HIGH_CONFIDENCE_THRESHOLD) {
-        if (scoreGap < MIN_SCORE_GAP && sorted.length > 1) {
-            return {
-                shouldCallLlm: true,
-                reason: 'high_confidence_tie_needs_nutrition',
-                confidence: 0.7,
-            };
-        }
         return {
             shouldCallLlm: false,
-            reason: 'high_confidence_match',
+            reason: scoreGap < MIN_SCORE_GAP && sorted.length > 1
+                ? 'high_confidence_tie_fdc_tiebreak'
+                : 'high_confidence_match',
             confidence: bestScore,
         };
     }

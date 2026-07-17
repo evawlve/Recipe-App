@@ -55,6 +55,12 @@ export interface GatherOptions {
     targetBrand?: string;      // Matched brand name from static detector (e.g. "heinz") — used for FDC tiebreaking
     client?: any;
     skipCache?: boolean;
+    /**
+     * Candidates from an earlier gather pass (e.g. the quick normalize-gate
+     * check) to merge in instead of re-running the same searches. Use with
+     * skipFdc when the seed already covers the FDC keyword sources.
+     */
+    seedCandidates?: UnifiedCandidate[];
 }
 
 // ============================================================
@@ -386,6 +392,14 @@ export async function gatherCandidates(
     // Collect candidates (deduplicate by ID)
     const candidates: UnifiedCandidate[] = [];
     const byId = new Map<string, UnifiedCandidate>();
+
+    // Seed with candidates from a previous gather pass (already id-prefixed)
+    for (const c of options.seedCandidates ?? []) {
+        if (!byId.has(c.id)) {
+            byId.set(c.id, c);
+            candidates.push(c);
+        }
+    }
 
     for (const result of results) {
         if (result.status === 'fulfilled') {

@@ -204,9 +204,9 @@ Output:
 
       items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
     }
-    const parsedItems = [];
-
-    for (const item of items) {
+    // Map all items concurrently — each mapping is independent, and identical
+    // items are deduplicated by the pipeline's in-flight lock.
+    const parsedItems = await Promise.all(items.map(async (item) => {
       const rawText = item.rawText;
       const mealType = item.mealType;
       const brand = item.brand;
@@ -221,7 +221,7 @@ Output:
         normalizedForm: normalizedForm || undefined
       });
       if (!mapped || 'status' in mapped) {
-        parsedItems.push({
+        return {
           rawText,
           foodName: parsed?.name ?? rawText,
           brandName: null,
@@ -252,8 +252,7 @@ Output:
             sodium100: 0,
           },
           servingOptions: [],
-        });
-        continue;
+        };
       }
 
       const details = await resolveFoodDetails(mapped.foodId, mapped.servingDescription);
@@ -279,7 +278,7 @@ Output:
         standardSource = 'ai_estimated';
       }
 
-      parsedItems.push({
+      return {
         rawText,
         foodName: mapped.foodName,
         brandName: mapped.brandName ?? null,
@@ -295,8 +294,8 @@ Output:
         nutrition,
         nutritionPer100g: details.nutritionPer100g,
         servingOptions: details.servingOptions,
-      });
-    }
+      };
+    }));
 
     return NextResponse.json(parsedItems);
   } catch (error) {

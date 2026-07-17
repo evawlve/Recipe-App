@@ -715,6 +715,11 @@ export async function mapIngredientWithFallback(
         // The LLM result below may upgrade isBrandedQuery to true if the AI
         // returns isBranded=true even when the static detector missed it.
 
+        // Kept from the quick gate check so the full gather can reuse the FDC
+        // results instead of re-running identical searches.
+        let quickGatherCandidates: UnifiedCandidate[] | null = null;
+        let quickGatherName = '';
+
         if (!usedGenericFallback) {
             // First gather candidates to check if LLM is needed
             const quickGatherOptions: GatherOptions = {
@@ -726,6 +731,8 @@ export async function mapIngredientWithFallback(
             };
 
             const quickCandidates = await gatherCandidates(rawLine, parsed, normalizedName, quickGatherOptions);
+            quickGatherCandidates = quickCandidates;
+            quickGatherName = normalizedName;
             const modConstraints = extractModifierConstraints(trimmed);
             const gateDecision = shouldNormalizeLlm(trimmed, quickCandidates, modConstraints);
 
@@ -948,13 +955,25 @@ export async function mapIngredientWithFallback(
 
         // Step 2: Gather all candidates (If not found in cache)
         if (!winner) {
+            // Reuse the quick-gate gather's FDC results when nothing changed
+            // since that pass: same normalized name (no AI/context rewrite),
+            // no new AI synonyms, and not a branded query (the quick gather ran
+            // without targetBrand, so its FDC ranking lacks the brand boost).
+            // The full gather then only adds OFF + semantic.
+            const canReuseQuickGather =
+                quickGatherCandidates !== null &&
+                quickGatherName === normalizedName &&
+                aiSynonyms.length === 0 &&
+                !isBrandedQuery;
+
             const gatherOptions: GatherOptions = {
                 client,
                 skipCache,
-                skipFdc,
+                skipFdc: skipFdc || canReuseQuickGather,
                 isBrandedQuery,
                 targetBrand: brandDetection.matchedBrand ?? undefined,
                 aiSynonyms: allSynonyms,
+                seedCandidates: canReuseQuickGather ? quickGatherCandidates! : undefined,
             };
 
             allCandidates = await gatherCandidates(rawLine, parsed, normalizedName, gatherOptions);
@@ -993,6 +1012,24 @@ export async function mapIngredientWithFallback(
                         removed: coreFilterRemoved,
                         remaining: filtered.length,
                     });
+                }
+
+                // Step 3c: Drop candidates whose inline nutrition is clearly
+                // corrupted (all-zero macros on foods that must have calories,
+                // e.g. "1 Dozen Farm Fresh Eggs" with 0g protein). Candidates
+                // without inline nutrition pass through — they're validated
+                // after hydration. If every candidate fails, keep the original
+                // list rather than returning nothing.
+                const macroValid = filtered.filter(c =>
+                    !c.nutrition?.per100g || !hasNullOrInvalidMacros(c.nutrition, c.name)
+                );
+                if (macroValid.length > 0 && macroValid.length < filtered.length) {
+                    logger.info('mapping.zero_macro_filter_applied', {
+                        rawLine: trimmed,
+                        removed: filtered.length - macroValid.length,
+                        remaining: macroValid.length,
+                    });
+                    filtered = macroValid;
                 }
 
                 if (filtered.length === 0) {
