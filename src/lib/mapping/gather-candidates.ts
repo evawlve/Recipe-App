@@ -522,7 +522,9 @@ export function confidenceGate(
         return {
             skipAiRerank: true,
             selected: top1,
-            confidence: top1.score,
+            // Raw engine scores are not on the confidence scale (OFF ~0-10,
+            // FDC ~0-1.5) — clamp so the bypass can't report confidence > 1
+            confidence: Math.max(0, Math.min(1, top1.score)),
             reason: 'basic_produce_bypass'
         };
     }
