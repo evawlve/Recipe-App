@@ -9,8 +9,6 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { logger } from '../logger';
 import type { UnifiedCandidate } from '../mapping/gather-candidates';
-import { MEILISEARCH_ENABLED, SEARCH_PROVIDER } from '../mapping/config';
-import { searchMeili } from '../search/meilisearch-client';
 
 // ============================================================
 // Scoring Helpers
@@ -234,67 +232,25 @@ export async function searchOffSimple(
     const { limit = 5, isBrandedQuery = false } = options;
 
     const queryLower = query.toLowerCase().trim();
-    const provider = SEARCH_PROVIDER;
 
-    if (provider === 'meilisearch' && MEILISEARCH_ENABLED) {
-        try {
-            const hits = await searchMeili('off_foods', query, limit * 2);
-            if (hits.length > 0) {
-                const candidates = hits
-                    .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
-                    .filter(candidateHasUsableNutrition)
-                    .sort((a, b) => b.score - a.score)
-                    .slice(0, limit);
+    try {
+        const { searchTypesense } = await import('../search/typesense-client');
+        const hits = await searchTypesense('off_foods', query, 'name,brandName', limit * 2);
+        if (hits.length > 0) {
+            const candidates = hits
+                .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+                .filter(candidateHasUsableNutrition)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit);
 
-                logger.debug('off.search.meilisearch_hit', { query, count: candidates.length });
-                return candidates;
-            }
-        } catch (err) {
-            logger.warn('off.search.meilisearch_failed_fallback_to_postgres', {
-                query,
-                error: (err as Error).message,
-            });
+            logger.debug('off.search.typesense_hit', { query, count: candidates.length });
+            return candidates;
         }
-    } else if (provider === 'typesense') {
-        try {
-            const { searchTypesense } = await import('../search/typesense-client');
-            const hits = await searchTypesense('off_foods', query, 'name,brandName', limit * 2);
-            if (hits.length > 0) {
-                const candidates = hits
-                    .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
-                    .filter(candidateHasUsableNutrition)
-                    .sort((a, b) => b.score - a.score)
-                    .slice(0, limit);
-
-                logger.debug('off.search.typesense_hit', { query, count: candidates.length });
-                return candidates;
-            }
-        } catch (err) {
-            logger.warn('off.search.typesense_failed_fallback_to_postgres', {
-                query,
-                error: (err as Error).message,
-            });
-        }
-    } else if (provider === 'redisearch') {
-        try {
-            const { searchRediSearch } = await import('../search/redisearch-client');
-            const hits = await searchRediSearch('off_foods', query, limit * 2);
-            if (hits.length > 0) {
-                const candidates = hits
-                    .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
-                    .filter(candidateHasUsableNutrition)
-                    .sort((a, b) => b.score - a.score)
-                    .slice(0, limit);
-
-                logger.debug('off.search.redisearch_hit', { query, count: candidates.length });
-                return candidates;
-            }
-        } catch (err) {
-            logger.warn('off.search.redisearch_failed_fallback_to_postgres', {
-                query,
-                error: (err as Error).message,
-            });
-        }
+    } catch (err) {
+        logger.warn('off.search.typesense_failed_fallback_to_postgres', {
+            query,
+            error: (err as Error).message,
+        });
     }
 
     try {

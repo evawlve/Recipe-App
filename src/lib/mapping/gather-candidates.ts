@@ -10,8 +10,6 @@ import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-
 import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
 import { searchOffSimple, searchOffSemantic } from '../openfoodfacts/search';
-import { MEILISEARCH_ENABLED, SEARCH_PROVIDER } from './config';
-import { searchMeili } from '../search/meilisearch-client';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
 
 // Start loading the ONNX query-embedding model as soon as the mapping
@@ -199,68 +197,25 @@ function mapFdcHitToCandidate(hit: any, query: string, position: number, targetB
 }
 
 async function searchFdcLocal(query: string, limit: number, rawLine: string, targetBrand?: string): Promise<UnifiedCandidate[]> {
-    const provider = SEARCH_PROVIDER;
-    
-    if (provider === 'meilisearch' && MEILISEARCH_ENABLED) {
-        try {
-            const hits = await searchMeili('fdc_foods', query, limit * 2);
-            if (hits.length > 0) {
-                const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
+    try {
+        const { searchTypesense } = await import('../search/typesense-client');
+        const hits = await searchTypesense('fdc_foods', query, 'description,brandName', limit * 2);
+        if (hits.length > 0) {
+            const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
 
-                // Stable sort by priorityScore (descending), then original position (ascending)
-                allCandidates.sort((a, b) => {
-                    const priorityDiff = b._priorityScore - a._priorityScore;
-                    if (priorityDiff !== 0) return priorityDiff;
-                    return a._originalPosition - b._originalPosition;
-                });
+            // Stable sort by priorityScore (descending), then original position (ascending)
+            allCandidates.sort((a, b) => {
+                const priorityDiff = b._priorityScore - a._priorityScore;
+                if (priorityDiff !== 0) return priorityDiff;
+                return a._originalPosition - b._originalPosition;
+            });
 
-                const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
-                logger.debug('gather.fdc.meilisearch_hit', { query, count: mappedHits.length });
-                return mappedHits;
-            }
-        } catch (err) {
-            logger.warn('gather.fdc.meilisearch_failed_fallback_to_postgres', { query, error: (err as Error).message });
+            const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
+            logger.debug('gather.fdc.typesense_hit', { query, count: mappedHits.length });
+            return mappedHits;
         }
-    } else if (provider === 'typesense') {
-        try {
-            const { searchTypesense } = await import('../search/typesense-client');
-            const hits = await searchTypesense('fdc_foods', query, 'description,brandName', limit * 2);
-            if (hits.length > 0) {
-                const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
-
-                allCandidates.sort((a, b) => {
-                    const priorityDiff = b._priorityScore - a._priorityScore;
-                    if (priorityDiff !== 0) return priorityDiff;
-                    return a._originalPosition - b._originalPosition;
-                });
-
-                const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
-                logger.debug('gather.fdc.typesense_hit', { query, count: mappedHits.length });
-                return mappedHits;
-            }
-        } catch (err) {
-            logger.warn('gather.fdc.typesense_failed_fallback_to_postgres', { query, error: (err as Error).message });
-        }
-    } else if (provider === 'redisearch') {
-        try {
-            const { searchRediSearch } = await import('../search/redisearch-client');
-            const hits = await searchRediSearch('fdc_foods', query, limit * 2);
-            if (hits.length > 0) {
-                const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
-
-                allCandidates.sort((a, b) => {
-                    const priorityDiff = b._priorityScore - a._priorityScore;
-                    if (priorityDiff !== 0) return priorityDiff;
-                    return a._originalPosition - b._originalPosition;
-                });
-
-                const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
-                logger.debug('gather.fdc.redisearch_hit', { query, count: mappedHits.length });
-                return mappedHits;
-            }
-        } catch (err) {
-            logger.warn('gather.fdc.redisearch_failed_fallback_to_postgres', { query, error: (err as Error).message });
-        }
+    } catch (err) {
+        logger.warn('gather.fdc.typesense_failed_fallback_to_postgres', { query, error: (err as Error).message });
     }
 
     try {
