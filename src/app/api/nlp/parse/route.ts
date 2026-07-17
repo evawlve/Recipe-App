@@ -10,6 +10,41 @@ const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+type ParsedInputItem = {
+  rawText: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+  brand: string;
+  normalizedForm: string;
+};
+
+const MEAL_SUFFIX = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/i;
+const MULTI_ITEM_SIGNALS = /[,;\n+&]|\b(?:and|with|plus)\b/i;
+
+/**
+ * Short text with no list separators describes exactly one food item; the
+ * LLM split would echo it back after seconds of latency. Returns the item
+ * (with any trailing "for breakfast"-style meal marker extracted) when the
+ * text is unambiguously single-item, or null to fall through to the LLM.
+ */
+function singleItemFromText(text: string): ParsedInputItem | null {
+  const trimmed = text.trim();
+  if (trimmed.length === 0 || trimmed.length > 60) return null;
+
+  let mealType: ParsedInputItem['mealType'] = 'snacks';
+  let rawText = trimmed;
+  const mealMatch = trimmed.match(MEAL_SUFFIX);
+  if (mealMatch) {
+    const meal = mealMatch[1].toLowerCase();
+    mealType = meal === 'snack' ? 'snacks' : (meal as ParsedInputItem['mealType']);
+    rawText = trimmed.slice(0, mealMatch.index).trim();
+  }
+
+  if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(rawText)) return null;
+  if (rawText.split(/\s+/).length > 6) return null;
+
+  return { rawText, mealType, brand: '', normalizedForm: '' };
+}
+
 export async function POST(req: NextRequest) {
   // Skip execution during build time
   if (process.env.NEXT_PHASE === 'phase-production-build' ||
@@ -110,7 +145,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Validate required environment variables at request time
-    const requiredEnv = ['DATABASE_URL', 'FATSECRET_CLIENT_ID', 'FATSECRET_CLIENT_SECRET'];
+    const requiredEnv = ['DATABASE_URL'];
     const missingEnv = requiredEnv.filter(name => !process.env[name]);
     if (missingEnv.length > 0) {
       console.error('NLP Parse API Error: Missing environment variables:', missingEnv);
@@ -147,6 +182,10 @@ export async function POST(req: NextRequest) {
         }
         return null;
       }).filter((x): x is { rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string } => x !== null && x.rawText.trim() !== '');
+    } else if (singleItemFromText(text)) {
+      // Short text with no separators is one food item — the LLM split would
+      // return it unchanged after ~1-5s. Skip straight to mapping.
+      items = [singleItemFromText(text)!];
     } else {
       const NLP_SPLIT_SCHEMA = {
         name: 'nlp_split',

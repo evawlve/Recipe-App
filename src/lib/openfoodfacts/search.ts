@@ -5,6 +5,7 @@
  * Returns results shaped as UnifiedCandidate.
  */
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { logger } from '../logger';
 import type { UnifiedCandidate } from '../mapping/gather-candidates';
@@ -52,6 +53,21 @@ function computeOffScore(
     score -= wordCount * 0.05;
 
     return score;
+}
+
+/**
+ * A candidate with no nutrition data at all can never produce usable macros —
+ * drop it at the source. Rows with explicit zeros are kept: zero-calorie
+ * products (water, diet soda) are legitimate, and the contextual zero-macro
+ * filter downstream handles the suspicious ones.
+ */
+function hasUsableNutrition(n: unknown): boolean {
+    if (!n || typeof n !== 'object') return false;
+    return Object.values(n).some(v => typeof v === 'number' && Number.isFinite(v));
+}
+
+function candidateHasUsableNutrition(c: UnifiedCandidate): boolean {
+    return hasUsableNutrition((c.rawData as any)?.nutrientsPer100g);
 }
 
 function decodeHtmlEntities(str: string): string {
@@ -172,6 +188,7 @@ export async function searchOffSemantic(
             if (similarity < SEMANTIC_MIN_SIMILARITY) continue;
 
             const candidate = mapOffHitToCandidate(hit, query, isBrandedQuery);
+            if (!candidateHasUsableNutrition(candidate)) continue;
             // Keyword score can go negative on semantic-only matches (little
             // token overlap); similarity is the honest signal for these.
             candidate.score = Math.max(candidate.score, similarity);
@@ -225,9 +242,10 @@ export async function searchOffSimple(
             if (hits.length > 0) {
                 const candidates = hits
                     .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+                    .filter(candidateHasUsableNutrition)
                     .sort((a, b) => b.score - a.score)
                     .slice(0, limit);
-                
+
                 logger.debug('off.search.meilisearch_hit', { query, count: candidates.length });
                 return candidates;
             }
@@ -244,9 +262,10 @@ export async function searchOffSimple(
             if (hits.length > 0) {
                 const candidates = hits
                     .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+                    .filter(candidateHasUsableNutrition)
                     .sort((a, b) => b.score - a.score)
                     .slice(0, limit);
-                
+
                 logger.debug('off.search.typesense_hit', { query, count: candidates.length });
                 return candidates;
             }
@@ -263,9 +282,10 @@ export async function searchOffSimple(
             if (hits.length > 0) {
                 const candidates = hits
                     .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+                    .filter(candidateHasUsableNutrition)
                     .sort((a, b) => b.score - a.score)
                     .slice(0, limit);
-                
+
                 logger.debug('off.search.redisearch_hit', { query, count: candidates.length });
                 return candidates;
             }
@@ -280,6 +300,7 @@ export async function searchOffSimple(
     try {
         const results = await prisma.offFood.findMany({
             where: {
+                nutrientsPer100g: { not: Prisma.DbNull },
                 OR: [
                     { name:      { contains: queryLower, mode: 'insensitive' } },
                     { brandName: { contains: queryLower, mode: 'insensitive' } },
@@ -291,6 +312,7 @@ export async function searchOffSimple(
 
         const candidates = results
             .map(row => cachedRowToCandidate(row, query, isBrandedQuery))
+            .filter(candidateHasUsableNutrition)
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
 

@@ -265,8 +265,31 @@ export async function GET(req: NextRequest) {
     const runLocalSearch = async () => {
       const { gatherCandidates } = await import('@/lib/mapping/gather-candidates');
       const { mapUsdaToCategory } = await import('@/ops/usda/category-map');
-      const { queryTokenCoverage } = await import('@/lib/search/query-token-coverage');
+      const { queryTokenCoverage, coverageTokens, findMisspelledTokens } =
+        await import('@/lib/search/query-token-coverage');
       const fallbackCandidates = await gatherCandidates(q, null, q, { isBrandedQuery: true });
+
+      // Detect likely typos by using the curated FDC candidates as the
+      // dictionary: a fuzzy-eligible query token that no FDC name contains
+      // but that sits one edit budget away from one ("yougurt" ~ "yogurt")
+      // is a misspelling. Products literally *named* with the misspelling
+      // are junk entries riding the typo — demote them so the correctly
+      // spelled food they're shadowing can win.
+      const fdcVocab = new Set<string>();
+      for (const c of fallbackCandidates) {
+        if (c.source === 'fdc') {
+          for (const t of coverageTokens(c.name)) fdcVocab.add(t);
+        }
+      }
+      const misspelledToks = findMisspelledTokens(q, fdcVocab);
+      const isJunkNamed = (c: typeof fallbackCandidates[number]) => {
+        if (misspelledToks.size === 0) return false;
+        const nameToks = new Set(coverageTokens(c.name));
+        for (const t of misspelledToks) {
+          if (nameToks.has(t)) return true;
+        }
+        return false;
+      };
 
       const category = mapUsdaToCategory(q);
       const isProduceQuery = category === 'fruit' || category === 'veg';
@@ -280,9 +303,10 @@ export async function GET(req: NextRequest) {
       const relevanceById = new Map<string, { coverage: number; relevance: number }>();
       for (const c of fallbackCandidates) {
         const coverage = queryTokenCoverage(q, c.name, c.brandName);
-        const relevance = c.source === 'fdc'
+        let relevance = c.source === 'fdc'
           ? Math.min(1, (c.score || 0) / 1.5) * coverage
           : Math.min(1, Math.max(0, (c.score || 0) / 10));
+        if (isJunkNamed(c)) relevance *= 0.5;
         relevanceById.set(c.id, { coverage, relevance });
       }
       const relevanceOf = (c: typeof fallbackCandidates[number]) =>
