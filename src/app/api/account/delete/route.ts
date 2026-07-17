@@ -8,7 +8,6 @@ export async function DELETE() {
   try {
     // Skip execution during build time - more comprehensive check
     if (process.env.NEXT_PHASE === 'phase-production-build' || 
-        process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
         process.env.BUILD_TIME === 'true' ||
         process.env.NODE_ENV === 'production' && process.env.VERCEL === '1' && !process.env.VERCEL_ENV ||
         typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {

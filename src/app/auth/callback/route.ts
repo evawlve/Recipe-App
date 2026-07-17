@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   // Skip execution during build time
   if (process.env.NEXT_PHASE === 'phase-production-build' || 
-      process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
       process.env.BUILD_TIME === 'true') {
     return NextResponse.redirect(new URL('/', request.url));
   }
