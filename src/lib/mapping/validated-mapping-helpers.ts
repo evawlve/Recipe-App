@@ -9,7 +9,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import type { FatsecretMappedIngredient } from './map-ingredient';
+import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
 import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';

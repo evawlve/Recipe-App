@@ -1,5 +1,5 @@
 import { resolveIngredient, type ResolvedIngredient } from '../resolve-ingredient';
-import type { FatsecretMappedIngredient } from '../../mapping/map-ingredient';
+import type { FatsecretMappedIngredient } from '../../mapping/map-ingredient-with-fallback';
 
 describe('resolveIngredient', () => {
   const localResult: ResolvedIngredient = {
