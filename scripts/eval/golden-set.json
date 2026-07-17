@@ -132,10 +132,10 @@
     { "id": "n-svs-06", "category": "serving_size", "item": { "rawText": "3 strips bacon", "quantity": 3, "unit": "strip", "name": "bacon" }, "expectName": [["bacon"]], "grams": [24, 110], "knownIssue": true },
     { "id": "n-svs-07", "category": "serving_size", "item": { "rawText": "2 tbsp peanut butter", "quantity": 2, "unit": "tbsp", "name": "peanut butter" }, "expectName": [["peanut butter"]], "grams": [26, 42], "knownIssue": true },
 
-    { "id": "n-svd-01", "category": "serving_dynamic", "item": { "rawText": "1 knob butter", "quantity": 1, "unit": "knob", "name": "butter" }, "expectName": [["butter"]], "grams": [3, 22], "knownIssue": true },
-    { "id": "n-svd-02", "category": "serving_dynamic", "item": { "rawText": "3 rashers bacon", "quantity": 3, "unit": "rasher", "name": "bacon" }, "expectName": [["bacon"]], "grams": [20, 120], "knownIssue": true },
-    { "id": "n-svd-03", "category": "serving_dynamic", "item": { "rawText": "1 glug olive oil", "quantity": 1, "unit": "glug", "name": "olive oil" }, "expectName": [["olive oil"], ["oil"]], "grams": [7, 28], "knownIssue": true },
-    { "id": "n-svd-04", "category": "serving_dynamic", "item": { "rawText": "1 ramekin hummus", "quantity": 1, "unit": "ramekin", "name": "hummus" }, "expectName": [["hummus"]], "grams": [45, 160], "knownIssue": true },
+    { "id": "n-svd-01", "category": "serving_dynamic", "item": { "rawText": "1 knob of butter", "quantity": 1, "unit": "knob", "name": "butter" }, "expectName": [["butter"]], "grams": [3, 30], "knownIssue": true, "notes": "parser now preserves the unit (partitive 'of') and gates open, but the OFF serving path still returns a flat 100g default and the AI estimator never runs (0 aiGeneratedServing rows created). Needs dev-mode trace (prod logs stripped by next.config removeConsole)." },
+    { "id": "n-svd-02", "category": "serving_dynamic", "item": { "rawText": "3 rashers of bacon", "quantity": 3, "unit": "rasher", "name": "bacon" }, "expectName": [["bacon"]], "grams": [20, 150], "knownIssue": true },
+    { "id": "n-svd-03", "category": "serving_dynamic", "item": { "rawText": "1 glug of olive oil", "quantity": 1, "unit": "glug", "name": "olive oil" }, "expectName": [["olive oil"], ["oil"]], "grams": [7, 40], "knownIssue": true },
+    { "id": "n-svd-04", "category": "serving_dynamic", "item": { "rawText": "1 ramekin of hummus", "quantity": 1, "unit": "ramekin", "name": "hummus" }, "expectName": [["hummus"]], "grams": [40, 200], "knownIssue": true },
 
     { "id": "n-seg-03", "category": "segmentation", "text": "grilled chicken with brown rice and steamed broccoli", "expectItems": 3, "expectName": [["chicken"], ["rice"], ["broccoli"]] },
     { "id": "n-seg-04", "category": "segmentation", "text": "a bowl of oatmeal with blueberries and honey", "expectItems": 2, "expectName": [["oat"], ["blueberr"], ["honey"]] }

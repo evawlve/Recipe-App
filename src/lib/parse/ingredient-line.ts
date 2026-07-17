@@ -386,9 +386,21 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
           i++;
         }
       }
+    } else if (firstNormalized.kind === 'unknown') {
+      // Unknown tokens are normally left in the name (e.g. "5 romaine leaves" —
+      // "romaine" is not a unit). BUT a partitive "of" is a reliable signal that
+      // the unknown token IS a measure word: "1 knob of butter", "3 rashers of
+      // bacon", "a glug of olive oil". In that case consume it as the (unknown)
+      // unit so serving resolution routes it to AI estimation (isAmbiguousUnit
+      // now covers unrecognised units) instead of swallowing the portion into
+      // the name. Without a following "of" we keep the old name-token behavior.
+      const nextIsOf = i + 1 < mergedTokens.length && mergedTokens[i + 1].toLowerCase() === 'of';
+      if (nextIsOf) {
+        unit = firstNormalized.raw;
+        rawUnit = firstToken;
+        i += 2; // consume the unknown unit token and the "of"
+      }
     }
-    // For 'unknown' tokens, don't consume them as units - they're part of the name
-    // This handles cases like "5 romaine leaves" where "romaine" shouldn't be a unit
   }
 
   // Check for compound ingredients like "0.25 cup & 1 tbsp"

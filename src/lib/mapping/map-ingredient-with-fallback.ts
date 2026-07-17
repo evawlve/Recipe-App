@@ -36,6 +36,7 @@ import { findCanonicalName, getKnownSynonyms, saveSynonyms } from './ai-synonym-
 import { backfillOnDemand, isDiscreteItem } from './serving-backfill';
 import { classifyUnit } from './unit-type';
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
+import { isEstimableUnknownUnit } from '../ai/ambiguous-serving-estimator';
 import { shouldNormalizeLlm } from './normalize-gate';
 import { extractModifierConstraints } from './modifier-constraints';
 import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
@@ -3889,6 +3890,18 @@ function selectServing(
             }
         }
     }
+    // Genuinely-unknown (uncatalogued) units — e.g. "knob", "rasher", "glug",
+    // "ramekin" — must never match an existing or generic serving. Force a null
+    // return so the caller routes them to AI weight estimation (the ambiguous-unit
+    // backfill), instead of this selector handing back a wrong generic 100g serving.
+    if (isEstimableUnknownUnit(effectiveUnit)) {
+        logger.info('selectServing.estimable_unknown_unit_forcing_ai', {
+            effectiveUnit,
+            foodName,
+        });
+        return null;
+    }
+
     const requestedUnitType = classifyUnit(effectiveUnit);
 
     // Common unit mappings
