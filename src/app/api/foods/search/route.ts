@@ -309,6 +309,35 @@ export async function GET(req: NextRequest) {
         if (isJunkNamed(c)) relevance *= 0.5;
         relevanceById.set(c.id, { coverage, relevance });
       }
+
+      // Hybrid vector fallback: when no candidate genuinely matches the
+      // query's wording (weak keyword relevance across the board), the
+      // semantic hits are the honest signal — rank them by cosine
+      // similarity instead of the near-zero keyword-normalized score that
+      // would otherwise bury them. Junk-named candidates stay demoted.
+      const bestKeywordRelevance = fallbackCandidates.reduce(
+        (best, c) => Math.max(best, relevanceById.get(c.id)?.relevance ?? 0), 0);
+      if (bestKeywordRelevance < 0.45) {
+        let promoted = 0;
+        for (const c of fallbackCandidates) {
+          const sim = c.semanticSimilarity;
+          if (sim === undefined || isJunkNamed(c)) continue;
+          const entry = relevanceById.get(c.id);
+          if (entry && sim > entry.relevance) {
+            entry.relevance = Math.min(0.9, sim);
+            promoted++;
+          }
+        }
+        if (promoted > 0) {
+          logger.info('local_search_semantic_fallback', {
+            feature: 'mapping_v2',
+            step: 'semantic_fallback_promoted',
+            q,
+            promoted,
+            bestKeywordRelevance: Number(bestKeywordRelevance.toFixed(3)),
+          });
+        }
+      }
       const relevanceOf = (c: typeof fallbackCandidates[number]) =>
         relevanceById.get(c.id) ?? { coverage: 0, relevance: 0 };
 
