@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log, items[] bypasses AI segmentation unless 'text' is used). Match rule: a case passes if any result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. Macro ranges are per-100g sanity bands, deliberately loose — they catch wrong-food mappings, not data noise.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise.",
   "search": [
     { "id": "s-gen-01", "category": "generic_staples", "query": "chicken breast", "rank": 3, "match": [["chicken breast"]] },
     { "id": "s-gen-02", "category": "generic_staples", "query": "brown rice", "rank": 3, "match": [["brown rice"]] },
@@ -35,16 +35,65 @@
     { "id": "s-reg-03", "category": "regressions", "query": "spinach", "rank": 1, "match": [["spinach"]] },
     { "id": "s-mod-01", "category": "modifiers", "query": "fat free milk", "rank": 3, "match": [["fat free", "milk"], ["nonfat", "milk"], ["skim", "milk"], ["fat-free", "milk"]] },
     { "id": "s-mod-02", "category": "modifiers", "query": "unsweetened almond milk", "rank": 3, "match": [["unsweetened", "almond"]] },
-    { "id": "s-mod-03", "category": "modifiers", "query": "low fat cottage cheese", "rank": 3, "match": [["cottage cheese"]] }
+    { "id": "s-mod-03", "category": "modifiers", "query": "low fat cottage cheese", "rank": 3, "match": [["cottage cheese"]] },
+
+    { "id": "s-prod-01", "category": "foundation_produce", "query": "apple", "rank": 5, "match": [["apple"]] },
+    { "id": "s-prod-02", "category": "foundation_produce", "query": "kale", "rank": 5, "match": [["kale"]] },
+    { "id": "s-prod-03", "category": "foundation_produce", "query": "strawberries", "rank": 5, "match": [["strawberr"]] },
+    { "id": "s-prod-04", "category": "foundation_produce", "query": "blueberries", "rank": 5, "match": [["blueberr"]] },
+    { "id": "s-prod-05", "category": "foundation_produce", "query": "cucumber", "rank": 5, "match": [["cucumber"]] },
+    { "id": "s-prod-06", "category": "foundation_produce", "query": "avocado", "rank": 5, "match": [["avocado"]] },
+    { "id": "s-prod-07", "category": "foundation_produce", "query": "carrot", "rank": 5, "match": [["carrot"]] },
+    { "id": "s-prod-08", "category": "foundation_produce", "query": "tomato", "rank": 5, "match": [["tomato"]] },
+    { "id": "s-prod-09", "category": "foundation_produce", "query": "bell pepper", "rank": 5, "match": [["pepper"]] },
+    { "id": "s-prod-10", "category": "foundation_produce", "query": "zucchini", "rank": 5, "match": [["zucchini"], ["courgette"]] },
+    { "id": "s-prod-11", "category": "foundation_produce", "query": "asparagus", "rank": 5, "match": [["asparagus"]] },
+    { "id": "s-prod-12", "category": "foundation_produce", "query": "cauliflower", "rank": 5, "match": [["cauliflower"]] },
+
+    { "id": "s-prot-01", "category": "foundation_protein", "query": "chicken thigh", "rank": 5, "match": [["chicken thigh"], ["chicken", "thigh"]] },
+    { "id": "s-prot-02", "category": "foundation_protein", "query": "pork chop", "rank": 5, "match": [["pork chop"], ["pork", "chop"]] },
+    { "id": "s-prot-03", "category": "foundation_protein", "query": "tofu", "rank": 5, "match": [["tofu"]] },
+    { "id": "s-prot-04", "category": "foundation_protein", "query": "shrimp", "rank": 5, "match": [["shrimp"], ["prawn"]] },
+    { "id": "s-prot-05", "category": "foundation_protein", "query": "tuna", "rank": 5, "match": [["tuna"]] },
+    { "id": "s-prot-06", "category": "foundation_protein", "query": "turkey breast", "rank": 5, "match": [["turkey"]] },
+    { "id": "s-prot-07", "category": "foundation_protein", "query": "black beans", "rank": 5, "match": [["black bean"]] },
+    { "id": "s-prot-08", "category": "foundation_protein", "query": "lentils", "rank": 5, "match": [["lentil"]] },
+    { "id": "s-prot-09", "category": "foundation_protein", "query": "tilapia", "rank": 5, "match": [["tilapia"]] },
+    { "id": "s-prot-10", "category": "foundation_protein", "query": "cottage cheese", "rank": 5, "match": [["cottage cheese"]] },
+
+    { "id": "s-brand-09", "category": "branded", "query": "doritos", "rank": 5, "match": [["doritos"]] },
+    { "id": "s-brand-10", "category": "branded", "query": "gatorade", "rank": 5, "match": [["gatorade"]] },
+    { "id": "s-brand-11", "category": "branded", "query": "clif bar", "rank": 5, "match": [["clif"]] },
+    { "id": "s-brand-12", "category": "branded", "query": "red bull", "rank": 5, "match": [["red bull"]] },
+    { "id": "s-brand-13", "category": "branded", "query": "pop tarts", "rank": 5, "match": [["pop", "tart"], ["pop-tart"]] },
+    { "id": "s-brand-14", "category": "branded", "query": "nature valley granola bar", "rank": 5, "match": [["nature valley"]] },
+    { "id": "s-brand-15", "category": "branded", "query": "ben and jerrys", "rank": 5, "match": [["ben", "jerry"]] },
+    { "id": "s-brand-16", "category": "branded", "query": "premier protein shake", "rank": 5, "match": [["premier protein"], ["premier", "protein"]] },
+
+    { "id": "s-typo-05", "category": "misspellings", "query": "yoghurt", "rank": 5, "match": [["yogurt"], ["yoghurt"]] },
+    { "id": "s-typo-06", "category": "misspellings", "query": "tumeric", "rank": 5, "match": [["turmeric"]] },
+    { "id": "s-typo-07", "category": "misspellings", "query": "quinnoa", "rank": 5, "match": [["quinoa"]] },
+    { "id": "s-typo-08", "category": "misspellings", "query": "banna", "rank": 5, "match": [["banana"]], "knownIssue": true, "notes": "typo hijacked by literal 'banna'-named junk products in OFF corpus (banna yoghurt/bread); should correct to banana" },
+    { "id": "s-typo-09", "category": "misspellings", "query": "cauliflour", "rank": 5, "match": [["cauliflower"]] },
+    { "id": "s-typo-10", "category": "misspellings", "query": "spinch", "rank": 5, "match": [["spinach"]] },
+
+    { "id": "s-uni-01", "category": "unicode", "query": "jalapeño", "rank": 5, "match": [["jalape"]] },
+    { "id": "s-uni-02", "category": "unicode", "query": "açaí", "rank": 5, "match": [["acai"], ["açaí"]] },
+    { "id": "s-uni-03", "category": "unicode", "query": "crème fraîche", "rank": 5, "match": [["creme"], ["crème"], ["cream"]] },
+
+    { "id": "s-edge-01", "category": "edge", "query": "egg", "rank": 5, "match": [["egg"]] },
+    { "id": "s-edge-02", "category": "edge", "query": "chocolate", "rank": 5, "match": [["chocolate"]] },
+    { "id": "s-edge-03", "category": "edge", "query": "water", "rank": 5, "match": [["water"]] },
+    { "id": "s-edge-04", "category": "edge", "query": "coffee", "rank": 5, "match": [["coffee"]] }
   ],
   "nlp": [
     { "id": "n-gen-01", "category": "generic_staples", "item": { "rawText": "200g chicken breast", "quantity": 200, "unit": "g", "name": "chicken breast" }, "expectName": [["chicken"]], "macros": { "protein100": [15, 40] } },
     { "id": "n-gen-02", "category": "generic_staples", "item": { "rawText": "1 cup brown rice", "quantity": 1, "unit": "cup", "name": "brown rice" }, "expectName": [["rice"]], "macros": { "carbs100": [15, 85] } },
-    { "id": "n-gen-03", "category": "generic_staples", "item": { "rawText": "2 eggs", "quantity": 2, "unit": "", "name": "eggs" }, "expectName": [["egg"]], "macros": { "protein100": [9, 16] } },
+    { "id": "n-gen-03", "category": "generic_staples", "item": { "rawText": "2 eggs", "quantity": 2, "unit": "", "name": "eggs" }, "expectName": [["egg"]], "macros": { "protein100": [9, 16] }, "grams": [88, 140] },
     { "id": "n-gen-04", "category": "generic_staples", "item": { "rawText": "1 banana", "quantity": 1, "unit": "", "name": "banana" }, "expectName": [["banana"]], "macros": { "kcal100": [60, 130] } },
     { "id": "n-gen-05", "category": "generic_staples", "item": { "rawText": "1 tbsp olive oil", "quantity": 1, "unit": "tbsp", "name": "olive oil" }, "expectName": [["olive oil"], ["oil"]], "macros": { "fat100": [85, 101] } },
     { "id": "n-gen-06", "category": "generic_staples", "item": { "rawText": "1 cup greek yogurt", "quantity": 1, "unit": "cup", "name": "greek yogurt" }, "expectName": [["yogurt"], ["yoghurt"]], "macros": { "protein100": [3, 15] } },
-    { "id": "n-gen-07", "category": "generic_staples", "item": { "rawText": "100g salmon", "quantity": 100, "unit": "g", "name": "salmon" }, "expectName": [["salmon"]], "macros": { "protein100": [15, 28] } },
+    { "id": "n-gen-07", "category": "generic_staples", "item": { "rawText": "100g salmon", "quantity": 100, "unit": "g", "name": "salmon" }, "expectName": [["salmon"]], "macros": { "protein100": [15, 28] }, "grams": [95, 105] },
     { "id": "n-gen-08", "category": "generic_staples", "item": { "rawText": "100g sweet potato", "quantity": 100, "unit": "g", "name": "sweet potato" }, "expectName": [["sweet potato"]], "macros": { "kcal100": [65, 115] } },
     { "id": "n-gen-09", "category": "generic_staples", "item": { "rawText": "1 cup broccoli", "quantity": 1, "unit": "cup", "name": "broccoli" }, "expectName": [["broccoli"]], "macros": { "kcal100": [20, 60] } },
     { "id": "n-gen-10", "category": "generic_staples", "item": { "rawText": "2 slices whole wheat bread", "quantity": 2, "unit": "slice", "name": "whole wheat bread" }, "expectName": [["bread"]], "macros": { "carbs100": [30, 60] } },
@@ -57,6 +106,38 @@
     { "id": "n-mod-02", "category": "modifiers", "item": { "rawText": "1 cup unsweetened almond milk", "quantity": 1, "unit": "cup", "name": "unsweetened almond milk" }, "expectName": [["almond"]], "macros": { "kcal100": [10, 45] } },
     { "id": "n-brand-01", "category": "branded", "item": { "rawText": "30g ghost oreo protein", "quantity": 30, "unit": "g", "name": "ghost oreo protein" }, "expectName": [["ghost"], ["oreo", "protein"]], "macros": { "protein100": [50, 95] } },
     { "id": "n-seg-01", "category": "segmentation", "text": "2 scrambled eggs and a slice of whole wheat toast for breakfast", "expectItems": 2, "expectName": [["egg"], ["toast"], ["bread"]] },
-    { "id": "n-seg-02", "category": "segmentation", "text": "grilled chicken salad with a tablespoon of olive oil for lunch", "expectItems": 2, "expectName": [["chicken"], ["olive oil"], ["salad"]] }
+    { "id": "n-seg-02", "category": "segmentation", "text": "grilled chicken salad with a tablespoon of olive oil for lunch", "expectItems": 2, "expectName": [["chicken"], ["olive oil"], ["salad"]] },
+
+    { "id": "n-prot-01", "category": "foundation_protein", "item": { "rawText": "100g chicken thigh", "quantity": 100, "unit": "g", "name": "chicken thigh" }, "expectName": [["chicken"]], "macros": { "protein100": [12, 28] }, "grams": [95, 105] },
+    { "id": "n-prot-02", "category": "foundation_protein", "item": { "rawText": "100g tofu", "quantity": 100, "unit": "g", "name": "tofu" }, "expectName": [["tofu"]], "macros": { "protein100": [5, 22] } },
+    { "id": "n-prot-03", "category": "foundation_protein", "item": { "rawText": "100g shrimp", "quantity": 100, "unit": "g", "name": "shrimp" }, "expectName": [["shrimp"], ["prawn"]], "macros": { "protein100": [13, 28] } },
+    { "id": "n-prot-04", "category": "foundation_protein", "item": { "rawText": "100g black beans", "quantity": 100, "unit": "g", "name": "black beans" }, "expectName": [["black bean"], ["bean"]], "macros": { "protein100": [5, 25] }, "knownIssue": true, "notes": "implausible-macro mapping: matches an OFF 'BLACK BEANS' row with protein100=0; null-nutrition filter drops all-null rows but not implausible-zero macros" },
+    { "id": "n-prot-05", "category": "foundation_protein", "item": { "rawText": "100g lentils", "quantity": 100, "unit": "g", "name": "lentils" }, "expectName": [["lentil"]], "macros": { "protein100": [5, 30] } },
+
+    { "id": "n-prod-01", "category": "foundation_produce", "item": { "rawText": "100g apple", "quantity": 100, "unit": "g", "name": "apple" }, "expectName": [["apple"]], "macros": { "kcal100": [35, 75] } },
+    { "id": "n-prod-02", "category": "foundation_produce", "item": { "rawText": "100g spinach", "quantity": 100, "unit": "g", "name": "spinach" }, "expectName": [["spinach"]], "macros": { "kcal100": [12, 45] }, "knownIssue": true, "notes": "implausible-macro mapping: matches an OFF 'Spinach' row at 224 kcal/100g (dried/powder or bad data); fresh spinach is ~23 kcal" },
+    { "id": "n-prod-03", "category": "foundation_produce", "item": { "rawText": "100g avocado", "quantity": 100, "unit": "g", "name": "avocado" }, "expectName": [["avocado"]], "macros": { "fat100": [10, 25] } },
+
+    { "id": "n-svk-01", "category": "serving_known", "item": { "rawText": "1 container greek yogurt", "quantity": 1, "unit": "container", "name": "greek yogurt" }, "expectName": [["yogurt"], ["yoghurt"]], "grams": [140, 520] },
+    { "id": "n-svk-02", "category": "serving_known", "item": { "rawText": "2 scoops whey protein", "quantity": 2, "unit": "scoop", "name": "whey protein" }, "expectName": [["protein"], ["whey"]], "grams": [40, 80] },
+    { "id": "n-svk-03", "category": "serving_known", "item": { "rawText": "1 medium banana", "quantity": 1, "unit": "medium", "name": "banana" }, "expectName": [["banana"]], "grams": [80, 150] },
+    { "id": "n-svk-04", "category": "serving_known", "item": { "rawText": "4 oz ground beef", "quantity": 4, "unit": "oz", "name": "ground beef" }, "expectName": [["beef"], ["burger"]], "grams": [108, 118] },
+    { "id": "n-svk-05", "category": "serving_known", "item": { "rawText": "1 sleeve saltine crackers", "quantity": 1, "unit": "sleeve", "name": "saltine crackers" }, "expectName": [["saltine"], ["cracker"]], "grams": [70, 170] },
+
+    { "id": "n-svs-01", "category": "serving_size", "item": { "rawText": "1 slice bread", "quantity": 1, "unit": "slice", "name": "bread" }, "expectName": [["bread"]], "grams": [18, 55], "knownIssue": true },
+    { "id": "n-svs-02", "category": "serving_size", "item": { "rawText": "1 large apple", "quantity": 1, "unit": "large", "name": "apple" }, "expectName": [["apple"]], "grams": [170, 280], "knownIssue": true },
+    { "id": "n-svs-03", "category": "serving_size", "item": { "rawText": "1 medium avocado", "quantity": 1, "unit": "medium", "name": "avocado" }, "expectName": [["avocado"]], "grams": [110, 230], "knownIssue": true },
+    { "id": "n-svs-04", "category": "serving_size", "item": { "rawText": "3 baby carrots", "quantity": 3, "unit": "", "name": "baby carrots" }, "expectName": [["carrot"]], "grams": [12, 70], "knownIssue": true },
+    { "id": "n-svs-05", "category": "serving_size", "item": { "rawText": "1 can coca cola", "quantity": 1, "unit": "can", "name": "coca cola" }, "expectName": [["cola"], ["coca"], ["coke"]], "grams": [320, 400], "knownIssue": true },
+    { "id": "n-svs-06", "category": "serving_size", "item": { "rawText": "3 strips bacon", "quantity": 3, "unit": "strip", "name": "bacon" }, "expectName": [["bacon"]], "grams": [24, 110], "knownIssue": true },
+    { "id": "n-svs-07", "category": "serving_size", "item": { "rawText": "2 tbsp peanut butter", "quantity": 2, "unit": "tbsp", "name": "peanut butter" }, "expectName": [["peanut butter"]], "grams": [26, 42], "knownIssue": true },
+
+    { "id": "n-svd-01", "category": "serving_dynamic", "item": { "rawText": "1 knob butter", "quantity": 1, "unit": "knob", "name": "butter" }, "expectName": [["butter"]], "grams": [3, 22], "knownIssue": true },
+    { "id": "n-svd-02", "category": "serving_dynamic", "item": { "rawText": "3 rashers bacon", "quantity": 3, "unit": "rasher", "name": "bacon" }, "expectName": [["bacon"]], "grams": [20, 120], "knownIssue": true },
+    { "id": "n-svd-03", "category": "serving_dynamic", "item": { "rawText": "1 glug olive oil", "quantity": 1, "unit": "glug", "name": "olive oil" }, "expectName": [["olive oil"], ["oil"]], "grams": [7, 28], "knownIssue": true },
+    { "id": "n-svd-04", "category": "serving_dynamic", "item": { "rawText": "1 ramekin hummus", "quantity": 1, "unit": "ramekin", "name": "hummus" }, "expectName": [["hummus"]], "grams": [45, 160], "knownIssue": true },
+
+    { "id": "n-seg-03", "category": "segmentation", "text": "grilled chicken with brown rice and steamed broccoli", "expectItems": 3, "expectName": [["chicken"], ["rice"], ["broccoli"]] },
+    { "id": "n-seg-04", "category": "segmentation", "text": "a bowl of oatmeal with blueberries and honey", "expectItems": 2, "expectName": [["oat"], ["blueberr"], ["honey"]] }
   ]
 }

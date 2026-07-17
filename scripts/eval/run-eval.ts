@@ -43,9 +43,20 @@ interface CaseResult {
     ms: number;
     detail: string;
     confidence?: number;
+    /** Documented-but-unfixed defect: failure is expected and does NOT fail the suite. */
+    knownIssue?: boolean;
 }
 
 const results: CaseResult[] = [];
+
+const MACRO_KEYS = ['kcal100', 'protein100', 'carbs100', 'fat100'];
+function hasNum(v: unknown): boolean {
+    return typeof v === 'number' && Number.isFinite(v);
+}
+/** A search hit with NO finite macro at all — the null-nutrition rows the OFF filter should drop. */
+function nutritionMissing(h: any): boolean {
+    return !MACRO_KEYS.some(k => hasNum(h?.[k]));
+}
 
 function textOf(hit: any): string {
     return `${hit.name ?? hit.foodName ?? ''} ${hit.brandName ?? ''}`.toLowerCase();
@@ -80,9 +91,15 @@ async function runSearchCase(c: any): Promise<CaseResult> {
         detail = pass
             ? `hit: "${hits.find((h: any) => matchesAlt(textOf(h), c.match))?.name}"`
             : `top${c.rank ?? 3}: [${topN.map(h => `"${h.name}"`).join(', ') || 'EMPTY'}]`;
-        return { id: c.id, kind: 'search', category: c.category, query: c.query, pass, ms, detail, confidence };
+        // Invariant (unless opted out): no returned hit may lack all nutrition — verifies
+        // the OFF null-nutrition filter keeps junk rows out of manual search results.
+        if (c.requireNutrition !== false && topN.length) {
+            const bad = topN.find(nutritionMissing);
+            if (bad) { pass = false; detail = `NULL-NUTRITION "${bad.name}" | ${detail}`; }
+        }
+        return { id: c.id, kind: 'search', category: c.category, query: c.query, pass, ms, detail, confidence, knownIssue: c.knownIssue };
     } catch (err) {
-        return { id: c.id, kind: 'search', category: c.category, query: c.query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}` };
+        return { id: c.id, kind: 'search', category: c.category, query: c.query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue };
     }
 }
 
@@ -127,15 +144,24 @@ async function runNlpCase(c: any): Promise<CaseResult> {
             }
         }
 
+        // Resolved serving weight: asserts the total grams for the requested unit/quantity.
+        // This is what catches serving-estimation defects (e.g. "1 slice bread" → 100g).
+        if (c.grams) {
+            const g = items[0]?.grams;
+            if (typeof g !== 'number' || g < c.grams[0] || g > c.grams[1]) {
+                failures.push(`grams=${typeof g === 'number' ? g : String(g)} outside [${c.grams[0]}, ${c.grams[1]}] (unit "${c.item?.unit ?? ''}", mapped "${items[0]?.foodName}")`);
+            }
+        }
+
         const confidence = items[0]?.matchConfidence;
         return {
             id: c.id, kind: 'nlp', category: c.category, query,
             pass: failures.length === 0, ms,
-            detail: failures.length ? failures.join('; ') : `mapped: "${items[0]?.foodName}" conf=${confidence?.toFixed(2)}`,
-            confidence,
+            detail: failures.length ? failures.join('; ') : `mapped: "${items[0]?.foodName}" grams=${items[0]?.grams} conf=${confidence?.toFixed(2)}`,
+            confidence, knownIssue: c.knownIssue,
         };
     } catch (err) {
-        return { id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}` };
+        return { id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue };
     }
 }
 
@@ -148,15 +174,22 @@ async function main() {
     // Warm the API (dev-mode compile, embedding model) so case 1 isn't penalized.
     await fetch(`${BASE}/api/foods/search?s=warmup&local=true`, { headers: { 'x-api-key': API_KEY } }).catch(() => {});
 
+    const mark = (r: CaseResult) =>
+        r.pass ? (r.knownIssue ? '🟢' : '✅') : (r.knownIssue ? '🟡' : '❌');
+    const line = (r: CaseResult) => {
+        const nowPassing = r.pass && r.knownIssue ? ' (known-issue NOW PASSING — promote it)' : '';
+        console.log(`${mark(r)} [${r.id}] "${r.query}" (${r.ms}ms) ${r.pass ? '' : '— ' + r.detail}${nowPassing}`);
+    };
+
     for (const c of searchCases) {
         const r = await runSearchCase(c);
         results.push(r);
-        console.log(`${r.pass ? '✅' : '❌'} [${r.id}] "${r.query}" (${r.ms}ms) ${r.pass ? '' : '— ' + r.detail}`);
+        line(r);
     }
     for (const c of nlpCases) {
         const r = await runNlpCase(c);
         results.push(r);
-        console.log(`${r.pass ? '✅' : '❌'} [${r.id}] "${r.query}" (${r.ms}ms) ${r.pass ? '' : '— ' + r.detail}`);
+        line(r);
     }
 
     // ---- Summary ----
@@ -170,7 +203,7 @@ async function main() {
         const lat = rs.map(r => r.ms).sort((a, b) => a - b);
         summary.kinds[kind] = {
             pass: passed, total: rs.length,
-            p50ms: percentile(lat, 50), p95ms: percentile(lat, 95), maxMs: lat[lat.length - 1],
+            p50ms: percentile(lat, 50), p95ms: percentile(lat, 95), p99ms: percentile(lat, 99), maxMs: lat[lat.length - 1],
         };
     }
     for (const r of results) {
@@ -180,9 +213,15 @@ async function main() {
         if (r.pass) summary.categories[key].pass++;
     }
 
+    const realFails = results.filter(r => !r.pass && !r.knownIssue);
+    const knownFails = results.filter(r => !r.pass && r.knownIssue);
+    const knownNowPassing = results.filter(r => r.pass && r.knownIssue);
+    summary.realFailures = realFails.length;
+    summary.knownIssues = knownFails.length;
+
     console.log('\n================ SUMMARY ================');
     for (const [kind, s] of Object.entries(summary.kinds) as [string, any][]) {
-        console.log(`${kind.padEnd(7)} ${s.pass}/${s.total} pass  |  p50 ${s.p50ms}ms  p95 ${s.p95ms}ms  max ${s.maxMs}ms`);
+        console.log(`${kind.padEnd(7)} ${s.pass}/${s.total} pass  |  p50 ${s.p50ms}ms  p95 ${s.p95ms}ms  p99 ${s.p99ms}ms  max ${s.maxMs}ms`);
     }
     console.log('---- by category ----');
     for (const [cat, s] of Object.entries(summary.categories) as [string, any][]) {
@@ -190,14 +229,24 @@ async function main() {
         console.log(`${flag}${cat.padEnd(28)} ${s.pass}/${s.total}`);
     }
 
+    if (knownFails.length) {
+        console.log(`\n---- 🟡 known issues (${knownFails.length}, documented, NOT blocking) ----`);
+        for (const r of knownFails) console.log(`   [${r.id}] "${r.query}" — ${r.detail}`);
+    }
+    if (knownNowPassing.length) {
+        console.log(`\n---- 🟢 known issues NOW PASSING (${knownNowPassing.length} — promote to hard assertions) ----`);
+        for (const r of knownNowPassing) console.log(`   [${r.id}] "${r.query}"`);
+    }
+
     const outDir = path.join(__dirname, 'results');
     fs.mkdirSync(outDir, { recursive: true });
     const outPath = path.join(outDir, `eval-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
     fs.writeFileSync(outPath, JSON.stringify({ summary, results }, null, 2));
     console.log(`\nResults written to ${path.relative(process.cwd(), outPath)}`);
+    console.log(`\n${realFails.length ? '❌' : '✅'} ${realFails.length} real failures, 🟡 ${knownFails.length} known issues (expected).`);
 
-    const failed = results.filter(r => !r.pass).length;
-    process.exit(failed > 0 ? 1 : 0);
+    // Only genuine (non-known-issue) failures fail the suite.
+    process.exit(realFails.length > 0 ? 1 : 0);
 }
 
 main().catch(err => { console.error(err); process.exit(2); });
