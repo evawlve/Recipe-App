@@ -1108,6 +1108,165 @@
         ]
       ],
       "notes": "Regression pin: was falsely flagged as a brand-token hijack by the same eval-harness 'brand' vs 'brandName' field bug. ONE-branded records actually rank 1-3 with conf 1.0."
+    },
+    {
+      "id": "s-supp-09",
+      "category": "branded_supplements",
+      "query": "ghost cinnamon roll protein",
+      "rank": 3,
+      "match": [
+        [
+          "ghost"
+        ]
+      ],
+      "notes": "Pattern 1/4 (brand hijack via flavor suffix + core-token rescue), SEARCH stage. 'cinnamon roll' flavor collides with generic/competitor cinnamon-roll protein records; manual search has no 6-word segmenter cap, so this exercises ranking (query-token-coverage gating + brand-rescue), not segmentation. CURRENT: expected to rank Ghost top-3 post-fix. Hard assertion."
+    },
+    {
+      "id": "s-supp-10",
+      "category": "branded_supplements",
+      "query": "quest birthday cake",
+      "rank": 3,
+      "match": [
+        [
+          "quest"
+        ]
+      ],
+      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'birthday cake' is a widely-shared flavor across brands; assert Quest-branded record still wins top-3. Hard assertion."
+    },
+    {
+      "id": "s-supp-11",
+      "category": "branded_supplements",
+      "query": "ryse cinnamon toast crunch",
+      "rank": 3,
+      "match": [
+        [
+          "ryse"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'cinnamon toast crunch' is a strong cereal-brand collision that can hijack the whole query off the RYSE brand token. CURRENT (aspirational): should rank a RYSE record top-3; KNOWN GAP if the cereal collision wins. Non-gating. NOTE: RYSE may be sparsely present in the corpus — verify before promoting."
+    },
+    {
+      "id": "s-supp-12",
+      "category": "branded_supplements",
+      "query": "gatorade cool blue",
+      "rank": 5,
+      "match": [
+        [
+          "gatorade"
+        ]
+      ],
+      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'cool blue' flavor vs generic blue drinks; assert Gatorade wins top-5 (brand confirmed in corpus via s-brand-10). Hard assertion."
+    },
+    {
+      "id": "s-supp-13",
+      "category": "branded_supplements",
+      "query": "optimum nutrition cookies and cream",
+      "rank": 3,
+      "match": [
+        [
+          "optimum"
+        ],
+        [
+          "gold standard"
+        ]
+      ],
+      "notes": "Pattern 1 (flavor-suffix collision with in-flavor 'and'), SEARCH. 'cookies and cream' is a generic flavor; assert an Optimum Nutrition record wins top-3 rather than a no-brand cookies-and-cream record. Hard assertion."
+    },
+    {
+      "id": "s-supp-14",
+      "category": "branded_supplements",
+      "query": "core power vanilla",
+      "rank": 3,
+      "match": [
+        [
+          "core power"
+        ],
+        [
+          "fairlife"
+        ]
+      ],
+      "notes": "Pattern 4 (core-token/brand-rescue), SEARCH. 'vanilla' core token would otherwise pull in generic vanilla shakes; assert the fairlife Core Power record survives (brand confirmed via s-trap-01). Hard assertion."
+    },
+    {
+      "id": "s-supp-15",
+      "category": "branded_supplements",
+      "query": "premier protein vanilla",
+      "rank": 3,
+      "match": [
+        [
+          "premier protein"
+        ],
+        [
+          "premier",
+          "protein"
+        ]
+      ],
+      "notes": "Pattern 5 (NO_BRAND bonus suppression), SEARCH. A generic 'protein vanilla' record would otherwise win on the +0.05 no-brand bonus; assert the branded Premier Protein record wins top-3 (bonus suppressed in simpleRerank). Hard assertion."
+    },
+    {
+      "id": "s-supp-16",
+      "category": "branded_supplements",
+      "query": "muscle milk chocolate",
+      "rank": 3,
+      "match": [
+        [
+          "muscle milk"
+        ]
+      ],
+      "notes": "Pattern 5 (NO_BRAND bonus suppression), SEARCH. Assert the Muscle Milk brand beats a generic 'chocolate protein shake' no-brand record. Hard assertion."
+    },
+    {
+      "id": "s-typo-11",
+      "category": "misspellings",
+      "query": "chesse",
+      "rank": 5,
+      "match": [
+        [
+          "cheese"
+        ]
+      ],
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'chesse' -> cheese. Hard assertion."
+    },
+    {
+      "id": "s-typo-12",
+      "category": "misspellings",
+      "query": "yogrt",
+      "rank": 5,
+      "match": [
+        [
+          "yogurt"
+        ],
+        [
+          "yoghurt"
+        ]
+      ],
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'yogrt' -> yogurt. Hard assertion."
+    },
+    {
+      "id": "s-typo-13",
+      "category": "misspellings",
+      "query": "brocoli",
+      "rank": 5,
+      "match": [
+        [
+          "broccoli"
+        ]
+      ],
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'brocoli' -> broccoli (single-c variant; complements s-typo-01 'brocolli'). Hard assertion."
+    },
+    {
+      "id": "s-typo-14",
+      "category": "misspellings",
+      "query": "banan",
+      "rank": 5,
+      "match": [
+        [
+          "banana"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'banan' -> banana. KNOWN GAP, same family as s-typo-08 'banna': truncated/misspelled banana queries get hijacked by literal 'banan'/'banna'-named junk products in the OFF corpus. Non-gating until the banana typo cluster is fixed."
     }
   ],
   "nlp": [
@@ -2658,6 +2817,491 @@
           "sandwich"
         ]
       ]
+    },
+    {
+      "id": "n-seg-21",
+      "category": "segmentation",
+      "text": "2 scoops ghost protein cinnamon roll",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "ghost"
+        ]
+      ],
+      "notes": "Pattern 1 (brand hijack via flavor suffix), SEGMENTATION-stage boundary pin: LOW side. 6 words -> under the 6-word single-item cap, so the segmenter keeps the 'ghost' brand token. CURRENT: works (maps to a Ghost record). Hard assertion — pins that the sub-cap phrasing does NOT hijack. Paired with n-seg-22 (7 words) which currently DOES hijack."
+    },
+    {
+      "id": "n-seg-22",
+      "category": "segmentation",
+      "text": "2 scoops ghost vegan protein cinnamon roll",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "ghost"
+        ]
+      ],
+      "notes": "Pattern 1 (brand hijack via flavor suffix), SEGMENTATION-stage boundary pin: HIGH side (7 words, over the 6-word single-item cap -> LLM segmenter). FIXED 2026-07-18 by the mapper brand-preservation guard: when the segmenter's normalizedForm drops a brand-lexicon token present in rawLine, baseName is re-derived from rawLine so candidate retrieval stays brand-aware. Now maps to Ghost 'Vegan Protein' 0.888/70g. Promoted to hard assertion."
+    },
+    {
+      "id": "n-seg-23",
+      "category": "segmentation",
+      "text": "1 quest bar birthday cake",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "quest"
+        ]
+      ],
+      "notes": "Pattern 1, SEGMENTATION boundary LOW side (5 words). Sub-cap phrasing keeps 'quest' brand token despite the shared 'birthday cake' flavor. CURRENT: works. Hard assertion."
+    },
+    {
+      "id": "n-seg-24",
+      "category": "segmentation",
+      "text": "1 quest protein bar birthday cake flavor",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "quest"
+        ]
+      ],
+      "notes": "Pattern 1, SEGMENTATION boundary HIGH side (7 words, over the 6-word cap). FIXED 2026-07-18 by the mapper brand-preservation guard — the 'birthday cake' flavor no longer hijacks off the Quest brand token. Promoted to hard assertion."
+    },
+    {
+      "id": "n-seg-25",
+      "category": "segmentation",
+      "text": "1 scoop ryse protein cinnamon toast crunch",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "ryse"
+        ]
+      ],
+      "notes": "Pattern 1, SEGMENTATION (7 words, over the 6-word cap). FIXED 2026-07-18 by the mapper brand-preservation guard — the 'cinnamon toast crunch' cereal-brand collision no longer drops the RYSE brand token. Promoted to hard assertion."
+    },
+    {
+      "id": "n-seg-26",
+      "category": "segmentation",
+      "text": "1 scoop optimum nutrition cookies and cream",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "optimum"
+        ],
+        [
+          "gold standard"
+        ]
+      ],
+      "notes": "Pattern 1 (flavor suffix) + Pattern 7 (in-flavor 'and'), SEGMENTATION (7 words). Two stacked failure modes, both FIXED 2026-07-18: (a) 'cookies and cream' added to ATOMIC_AND_PHRASES so it is no longer spuriously split on ' and '; (b) mapper brand-preservation guard keeps the Optimum Nutrition brand token past the 6-word cap. Now one Optimum Nutrition item. Promoted to hard assertion."
+    },
+    {
+      "id": "n-seg-27",
+      "category": "segmentation",
+      "text": "mac and cheese",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "mac"
+        ],
+        [
+          "cheese"
+        ],
+        [
+          "macaroni"
+        ]
+      ],
+      "notes": "Pattern 7 (atomic 'and' phrase must stay ONE item). 'mac and cheese' is a single dish, not mac + cheese. Hard assertion (expectItems is a minimum of 1; the real check is that a mac/cheese/macaroni record is returned)."
+    },
+    {
+      "id": "n-seg-28",
+      "category": "segmentation",
+      "text": "toast with butter",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "toast"
+        ],
+        [
+          "bread"
+        ]
+      ],
+      "notes": "Pattern 7 ('with' condiment attachment = 1 item). Butter is a condiment on the toast, not a standalone logged food. Hard assertion. Paired with n-seg-29 ('with' as a genuine two-food separator)."
+    },
+    {
+      "id": "n-seg-29",
+      "category": "segmentation",
+      "text": "chicken with brown rice",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "chicken"
+        ],
+        [
+          "rice"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "Pattern 7 ('with' as a genuine two-food separator = 2 items). Contrast with n-seg-28 where 'with' attaches a condiment. KNOWN GAP (non-gating): 'brown rice' is not a condiment tail so the heuristic segmenter defers to the LLM, which keeps 'chicken with brown rice' as ONE item. Same aspirational family as n-seg-16/18 (ambiguous 'with'-attachment splitting). Promote once the LLM/heuristic reliably splits standalone-food 'with' tails."
+    },
+    {
+      "id": "n-seg-30",
+      "category": "segmentation",
+      "text": "oatmeal with 2 tbsp peanut butter",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "oat"
+        ],
+        [
+          "peanut butter"
+        ]
+      ],
+      "notes": "Pattern 7 ('with <qty> <measure>' split). The measured 'with 2 tbsp peanut butter' clause is its own item. Hard assertion."
+    },
+    {
+      "id": "n-seg-31",
+      "category": "segmentation",
+      "text": "breakfast: 3 eggs and toast",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "egg"
+        ],
+        [
+          "toast"
+        ],
+        [
+          "bread"
+        ]
+      ],
+      "notes": "Pattern 7 (meal-label PREFIX stripping). 'breakfast:' is a label, not a food; expect 2 items (eggs, toast). Hard assertion."
+    },
+    {
+      "id": "n-seg-32",
+      "category": "segmentation",
+      "text": "grilled salmon and asparagus for dinner",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "salmon"
+        ],
+        [
+          "asparagus"
+        ]
+      ],
+      "notes": "Pattern 7 (meal-label SUFFIX stripping). '... for dinner' is a label, not a food. Hard assertion."
+    },
+    {
+      "id": "n-seg-33",
+      "category": "segmentation",
+      "text": "i had a chicken caesar salad and a diet coke",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "salad"
+        ],
+        [
+          "coke"
+        ],
+        [
+          "cola"
+        ]
+      ],
+      "notes": "Pattern 7 (leading conversational filler 'i had ...'). Filler must be dropped and the line split into salad + diet coke. Hard assertion (expectItems minimum 2; over-splitting the salad is tolerated)."
+    },
+    {
+      "id": "n-seg-34",
+      "category": "segmentation",
+      "text": "- 2 eggs\n- 1 banana\n- black coffee",
+      "expectItems": 3,
+      "expectName": [
+        [
+          "egg"
+        ],
+        [
+          "banana"
+        ],
+        [
+          "coffee"
+        ]
+      ],
+      "notes": "Pattern 7 (dash-bulleted list). Each bullet is its own item. Hard assertion."
+    },
+    {
+      "id": "n-seg-35",
+      "category": "segmentation",
+      "text": "1) chicken breast 2) white rice 3) broccoli",
+      "expectItems": 3,
+      "expectName": [
+        [
+          "chicken"
+        ],
+        [
+          "rice"
+        ],
+        [
+          "broccoli"
+        ]
+      ],
+      "notes": "Pattern 7 (numbered list '1) ... 2) ...'). Numbering markers stripped; 3 items. Hard assertion."
+    },
+    {
+      "id": "n-seg-36",
+      "category": "segmentation",
+      "text": "peanut butter and jelly",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "peanut butter"
+        ],
+        [
+          "sandwich"
+        ],
+        [
+          "jelly"
+        ]
+      ],
+      "notes": "Pattern 7 (atomic 'and' phrase). Bare 'peanut butter and jelly' (no 'sandwich' token, unlike n-seg-20) should still resolve as ONE composite item, not split into peanut butter + jelly. Hard assertion (expectItems minimum 1)."
+    },
+    {
+      "id": "n-supp-08",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "2 scoops optimum nutrition gold standard whey",
+        "quantity": 2,
+        "unit": "scoop",
+        "name": "optimum nutrition gold standard whey"
+      },
+      "expectName": [
+        [
+          "gold standard"
+        ],
+        [
+          "optimum"
+        ]
+      ],
+      "grams": [
+        56,
+        76
+      ],
+      "notes": "Pattern 2 (multi-scoop count resolution). 2 scoops must be 2x the label scoop (~30-32g each) = ~60-64g, NOT a flat 100g and NOT one scoop. Mirrors fixed single-scoop n-supp-02 ([28,38]) doubled. Hard assertion."
+    },
+    {
+      "id": "n-supp-09",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 quest bar",
+        "quantity": 1,
+        "unit": "bar",
+        "name": "quest bar"
+      },
+      "expectName": [
+        [
+          "quest"
+        ]
+      ],
+      "grams": [
+        50,
+        65
+      ],
+      "notes": "Pattern 2 (unitless/discrete branded item). A Quest bar is ~60g, not the 100g no-serving fallback. Exercises the buildOffResult discrete-unit inference + sibling/label serving fix (see n-supp-03). Hard assertion."
+    },
+    {
+      "id": "n-supp-10",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 pure protein bar",
+        "quantity": 1,
+        "unit": "bar",
+        "name": "pure protein bar"
+      },
+      "expectName": [
+        [
+          "pure protein"
+        ]
+      ],
+      "grams": [
+        40,
+        70
+      ],
+      "notes": "Pattern 2 (single discrete branded bar). Pure Protein bar ~50g label serving, not 100g default. Hard assertion."
+    },
+    {
+      "id": "n-supp-11",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 scoop muscle milk chocolate",
+        "quantity": 1,
+        "unit": "scoop",
+        "name": "muscle milk chocolate"
+      },
+      "expectName": [
+        [
+          "muscle milk"
+        ]
+      ],
+      "grams": [
+        28,
+        45
+      ],
+      "notes": "Pattern 3 (sibling-serving borrow). The 'chocolate' Muscle Milk SKU may carry no genuine scoop serving; a same-brand sibling's scoop (~30-35g, per n-supp-05 [30,40]) should be borrowed (median, outlier-guarded) rather than defaulting to 100g. Hard assertion, widened band."
+    },
+    {
+      "id": "n-supp-12",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 scoop ghost whey",
+        "quantity": 1,
+        "unit": "scoop",
+        "name": "ghost whey"
+      },
+      "expectName": [
+        [
+          "ghost"
+        ]
+      ],
+      "grams": [
+        28,
+        45
+      ],
+      "knownIssue": true,
+      "notes": "Pattern 3 (sibling-serving borrow across a many-flavor brand). KNOWN GAP (non-gating): 'ghost whey' currently maps to 'Ghost Clear Whey Blue Raspberry' at 22g/scoop — a plausible clear-whey scoop, but (a) which Ghost whey SKU is intended is a product-selection nuance (regular Whey Protein vs Clear Whey) like n-supp-06, and (b) the [28,45] band was an unverified guess. Revisit band + product selection before promoting."
+    },
+    {
+      "id": "n-supp-13",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 bottle premier protein caramel shake",
+        "quantity": 1,
+        "unit": "bottle",
+        "name": "premier protein caramel shake"
+      },
+      "expectName": [
+        [
+          "premier protein"
+        ],
+        [
+          "premier",
+          "protein"
+        ]
+      ],
+      "grams": [
+        300,
+        360
+      ],
+      "notes": "Pattern 6 (AI-simplify brand preservation). A complex branded line ('premier protein caramel shake') forces the simplify path; assert the 'premier' brand is NOT stripped to a generic 'caramel shake' (which would hijack via the no-brand bonus). Bottle ~325g. Hard assertion."
+    },
+    {
+      "id": "n-supp-14",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 scoop ghost vegan protein powder chocolate flavor",
+        "quantity": 1,
+        "unit": "scoop",
+        "name": "ghost vegan protein powder chocolate flavor"
+      },
+      "expectName": [
+        [
+          "ghost"
+        ]
+      ],
+      "grams": [
+        28,
+        45
+      ],
+      "notes": "Pattern 6 (AI-simplify brand preservation). A long, noisy branded line ('powder chocolate flavor' padding) that heavily exercises the simplify path. FIXED 2026-07-18: the Ghost brand survives (namespaced simplify cache key + mapper brand-preservation guard) and a real scoop serving is used. Promoted to hard assertion."
+    },
+    {
+      "id": "n-supp-15",
+      "category": "branded_supplements",
+      "item": {
+        "rawText": "1 scoop orgain organic protein powder vanilla",
+        "quantity": 1,
+        "unit": "scoop",
+        "name": "orgain organic protein powder vanilla"
+      },
+      "expectName": [
+        [
+          "orgain"
+        ]
+      ],
+      "grams": [
+        20,
+        30
+      ],
+      "knownIssue": true,
+      "notes": "Pattern 9 (base SKU vs variant product-selection nuance). Same residual as n-supp-06: query can map to the 'Orgain Organic Protein + Oatmilk' SKU (~45g/scoop) instead of the base 'Orgain Organic Protein Powder' (~23g/scoop) this [20,30] band targets. Both are real Orgain SKUs; the pick is genuinely ambiguous without product-line disambiguation. KNOWN GAP, non-gating."
+    },
+    {
+      "id": "n-qty-01",
+      "category": "quantity_parsing",
+      "text": "1/2 cup white rice",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "notes": "Pattern 10 (ASCII fractional quantity '1/2'). Asserts the fraction does not break segmentation/mapping (one rice item). ASPIRATIONAL (not asserted to avoid corpus-serving noise): grams should reflect a half-cup (~90g), not a full cup. Hard assertion on name/segmentation only."
+    },
+    {
+      "id": "n-qty-02",
+      "category": "quantity_parsing",
+      "text": "½ avocado",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "avocado"
+        ]
+      ],
+      "notes": "Pattern 10 (unicode fraction '½'). Asserts the unicode fraction parses to one avocado item without crashing segmentation. ASPIRATIONAL: grams ~half an avocado (~75-100g). Hard assertion on name/segmentation only."
+    },
+    {
+      "id": "n-qty-03",
+      "category": "quantity_parsing",
+      "text": "two eggs",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "grams": [
+        88,
+        140
+      ],
+      "knownIssue": true,
+      "notes": "Pattern 10 (word-number 'two'). KNOWN GAP (same defect as n-seg-07): the word 'two' is not honored, so 'two eggs' resolves to ~50g (a single small egg) instead of ~100-120g. Non-gating; promote when word-number quantities are parsed."
+    },
+    {
+      "id": "n-qty-04",
+      "category": "quantity_parsing",
+      "text": "three slices of bacon",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "bacon"
+        ]
+      ],
+      "grams": [
+        24,
+        120
+      ],
+      "notes": "Pattern 10 (word-number 'three' + count-of-slices). Band spans 1-3 slices; currently PASSING (word-number quantity honored). Hard assertion."
+    },
+    {
+      "id": "n-qty-05",
+      "category": "quantity_parsing",
+      "text": "greek yogurt",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "yogurt"
+        ],
+        [
+          "yoghurt"
+        ]
+      ],
+      "notes": "Pattern 10 (no explicit quantity -> default to 1 serving). Bare food name with no number/unit must still map to one yogurt item. Hard assertion on name/segmentation."
     }
   ]
 }
