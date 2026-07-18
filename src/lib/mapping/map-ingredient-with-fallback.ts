@@ -236,6 +236,33 @@ export async function mapIngredientWithFallback(
     let parsed = parseIngredientLine(preProcessLine);
     let baseName = options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine;
 
+    // Brand-preservation guard.
+    // A segmenter — especially the LLM splitter in /api/nlp/parse — can hand us a
+    // normalizedForm that dropped the query's brand token
+    // ("2 scoops ghost vegan protein cinnamon roll" -> "vegan protein cinnamon roll").
+    // baseName is the primary search term, so a brand-blind baseName retrieves
+    // brand-blind candidates and a same-flavor competitor ("Optimum Nutrition
+    // Cinnamon Roll Protein") hijacks the match — even though brand detection
+    // downstream still flags the query as branded. If the raw line names a brand
+    // (explicit `brand` hint or one detected in rawLine) that the chosen baseName
+    // lost, re-derive baseName from the raw line (the mapper is proven robust on
+    // the raw line) so the brand token survives into candidate retrieval.
+    if (options.normalizedForm?.trim()) {
+        const targetBrand = options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand;
+        if (targetBrand && !baseName.toLowerCase().includes(targetBrand.toLowerCase())) {
+            const rederived = parsed?.name?.trim() || preProcessLine;
+            baseName = rederived.toLowerCase().includes(targetBrand.toLowerCase())
+                ? rederived
+                : `${targetBrand} ${rederived}`.trim();
+            logger.debug('mapping.normalizedform_dropped_brand', {
+                rawLine,
+                normalizedForm: options.normalizedForm,
+                targetBrand,
+                rederivedBaseName: baseName,
+            });
+        }
+    }
+
     // Step 1-AI-FALLBACK: If regex parser didn't detect a unit but input looks complex,
     // try AI to extract qty/unit/name. This handles edge cases like "1 5 floz serving red wine"
     // where the parser gets confused by the leading "1" serving count.

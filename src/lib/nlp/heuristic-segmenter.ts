@@ -61,6 +61,25 @@ const ATOMIC_AND_PHRASES = [
     'chips and guacamole',
     'chips and guac',
     'pork and beans',
+    // Single-product FLAVOR names — the " and " is internal to one product
+    // (a protein bar / chip / cereal flavor), never an item delimiter. Kept
+    // distinct from meal combos like "bacon and eggs", which SHOULD split into
+    // two separately-logged foods.
+    'cookies and cream',
+    'cookies and creme',
+    'milk and cookies',
+    'peaches and cream',
+    'peaches and creme',
+    'strawberries and cream',
+    'bananas and cream',
+    'banana and cream',
+    'oats and honey',
+    'honey and oats',
+    'apples and cinnamon',
+    'apple and cinnamon',
+    'salt and vinegar',
+    'sweet and salty',
+    'chocolate and peanut butter',
 ];
 
 /**
