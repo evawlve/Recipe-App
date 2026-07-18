@@ -3,6 +3,21 @@ import path from 'path';
 const nextConfig = {
   // Ensure Next.js traces from this project root (prevents parent lockfile confusion on Windows/OneDrive)
   outputFileTracingRoot: path.join(process.cwd()),
+  // Keep the ONNX/transformers stack (~390MB of per-platform native binaries +
+  // WASM) OUT of the serverless function bundle. It's only reachable via the
+  // optional query-time embedder (SEMANTIC_SEARCH_ENABLED, default off), which
+  // is lazy-imported at runtime and cannot function on Vercel anyway (it needs
+  // the self-hosted Typesense/pgvector). Without this, output-file-tracing
+  // copies all of it into api/foods/search, pushing the function to 444MB and
+  // over Vercel's 250MB uncompressed limit. Semantic search stays available on
+  // the self-hosted deployment, where node_modules is present at runtime.
+  outputFileTracingExcludes: {
+    '**': [
+      'node_modules/@huggingface/**',
+      'node_modules/onnxruntime-node/**',
+      'node_modules/onnxruntime-web/**',
+    ],
+  },
   // Enable production optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
