@@ -9,9 +9,12 @@ import { prisma } from '../db';
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
-import { searchOffSimple } from '../openfoodfacts/search';
-import { MEILISEARCH_ENABLED } from './config';
-import { searchMeili } from '../search/meilisearch-client';
+import { searchOffSimple, searchOffSemantic } from '../openfoodfacts/search';
+import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
+
+// Start loading the ONNX query-embedding model as soon as the mapping
+// subsystem is loaded, so the first magic-log request doesn't pay for it.
+warmupEmbedder();
 
 // ============================================================
 // Types
@@ -23,6 +26,8 @@ export interface UnifiedCandidate {
     name: string;
     brandName?: string | null;
     score: number;
+    /** Cosine similarity from semantic (vector) search, when the candidate was found or confirmed by it. */
+    semanticSimilarity?: number;
     foodType?: string;
     nutrition?: {
         kcal: number;
@@ -46,8 +51,13 @@ export interface GatherOptions {
     skipOff?: boolean;     // Explicitly skip OpenFoodFacts (e.g. for quick gather gate checks)
     isBrandedQuery?: boolean;  // When true, always include OFF regardless of OFF_ENABLED flag
     targetBrand?: string;      // Matched brand name from static detector (e.g. "heinz") — used for FDC tiebreaking
-    client?: any;
     skipCache?: boolean;
+    /**
+     * Candidates from an earlier gather pass (e.g. the quick normalize-gate
+     * check) to merge in instead of re-running the same searches. Use with
+     * skipFdc when the seed already covers the FDC keyword sources.
+     */
+    seedCandidates?: UnifiedCandidate[];
 }
 
 // ============================================================
@@ -143,57 +153,69 @@ export function buildQueryVariants(
 // Main Gather Function
 // ============================================================
 
+function mapFdcHitToCandidate(hit: any, query: string, position: number, targetBrand?: string) {
+    let nutrients = hit.nutrientsPer100g || {};
+    if (typeof nutrients === 'string') {
+        try { nutrients = JSON.parse(nutrients); } catch (e) {}
+    }
+    let servings = hit.servings || [];
+    if (typeof servings === 'string') {
+        try { servings = JSON.parse(servings); } catch (e) {}
+    }
+
+    const dataType = hit.dataType || '';
+    const isHighQuality = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'].some(t => dataType.includes(t));
+    const baseScore = computePositionScore(query, hit.description, position, { isHighQualityFdc: isHighQuality });
+    const priorityScore = computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand);
+
+    return {
+        id: `fdc_${hit.fdcId}`,
+        source: 'fdc' as const,
+        name: normalizeFdcName(hit.description),
+        brandName: hit.brandName || null,
+        score: baseScore,
+        foodType: dataType || 'Generic',
+        nutrition: {
+            kcal: nutrients.calories ?? nutrients.kcal ?? nutrients.energy ?? 0,
+            protein: nutrients.protein ?? 0,
+            carbs: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
+            fat: nutrients.fat ?? nutrients.totalFat ?? 0,
+            per100g: true,
+        },
+        servings: servings.map((s: any) => ({
+            description: s.description,
+            grams: s.grams
+        })),
+        rawData: {
+            ...hit,
+            nutrientsPer100g: nutrients,
+            servings: servings
+        },
+        _priorityScore: priorityScore,
+        _originalPosition: position,
+    };
+}
+
 async function searchFdcLocal(query: string, limit: number, rawLine: string, targetBrand?: string): Promise<UnifiedCandidate[]> {
-    if (MEILISEARCH_ENABLED) {
-        try {
-            const hits = await searchMeili('fdc_foods', query, limit * 2);
-            if (hits.length > 0) {
-                const allCandidates = hits.map((hit, position) => {
-                    const dataType = hit.dataType || '';
-                    const isHighQuality = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'].some(t => dataType.includes(t));
-                    const baseScore = computePositionScore(query, hit.description, position, { isHighQualityFdc: isHighQuality });
-                    const priorityScore = computeFdcPriorityScore(query, hit.description, hit.brandName ?? null, targetBrand);
+    try {
+        const { searchTypesense } = await import('../search/typesense-client');
+        const hits = await searchTypesense('fdc_foods', query, 'description,brandName', limit * 2);
+        if (hits.length > 0) {
+            const allCandidates = hits.map((hit, position) => mapFdcHitToCandidate(hit, query, position, targetBrand));
 
-                    const nutrients = (hit.nutrientsPer100g as any) || {};
+            // Stable sort by priorityScore (descending), then original position (ascending)
+            allCandidates.sort((a, b) => {
+                const priorityDiff = b._priorityScore - a._priorityScore;
+                if (priorityDiff !== 0) return priorityDiff;
+                return a._originalPosition - b._originalPosition;
+            });
 
-                    return {
-                        id: `fdc_${hit.fdcId}`,
-                        source: 'fdc' as const,
-                        name: normalizeFdcName(hit.description),
-                        brandName: hit.brandName || null,
-                        score: baseScore,
-                        foodType: dataType || 'Generic',
-                        nutrition: {
-                            kcal: nutrients.calories ?? nutrients.kcal ?? nutrients.energy ?? 0,
-                            protein: nutrients.protein ?? 0,
-                            carbs: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
-                            fat: nutrients.fat ?? nutrients.totalFat ?? 0,
-                            per100g: true,
-                        },
-                        servings: (hit.servings || []).map((s: any) => ({
-                            description: s.description,
-                            grams: s.grams
-                        })),
-                        rawData: hit,
-                        _priorityScore: priorityScore,
-                        _originalPosition: position,
-                    };
-                });
-
-                // Stable sort by priorityScore (descending), then original position (ascending)
-                allCandidates.sort((a, b) => {
-                    const priorityDiff = b._priorityScore - a._priorityScore;
-                    if (priorityDiff !== 0) return priorityDiff;
-                    return a._originalPosition - b._originalPosition;
-                });
-
-                const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
-                logger.debug('gather.fdc.meilisearch_hit', { query, count: mappedHits.length });
-                return mappedHits;
-            }
-        } catch (err) {
-            logger.warn('gather.fdc.meilisearch_failed_fallback_to_postgres', { query, error: (err as Error).message });
+            const mappedHits = allCandidates.slice(0, limit).map(({ _priorityScore, _originalPosition, ...candidate }) => candidate);
+            logger.debug('gather.fdc.typesense_hit', { query, count: mappedHits.length });
+            return mappedHits;
         }
+    } catch (err) {
+        logger.warn('gather.fdc.typesense_failed_fallback_to_postgres', { query, error: (err as Error).message });
     }
 
     try {
@@ -307,12 +329,31 @@ export async function gatherCandidates(
         );
     }
 
+    // Semantic recall over the OFF embeddings — catches phrasings keyword
+    // search misses ("protein yogurt" → "Oikos Triple Zero"). No-op unless
+    // SEMANTIC_SEARCH_ENABLED=true.
+    if (offEnabled && !skipOff && SEMANTIC_SEARCH_ENABLED) {
+        searchPromises.push(
+            searchOffSemantic(primaryQuery, {
+                limit: maxPerSource,
+                isBrandedQuery,
+            })
+        );
+    }
 
     const results = await Promise.allSettled(searchPromises);
 
     // Collect candidates (deduplicate by ID)
     const candidates: UnifiedCandidate[] = [];
-    const seenIds = new Set<string>();
+    const byId = new Map<string, UnifiedCandidate>();
+
+    // Seed with candidates from a previous gather pass (already id-prefixed)
+    for (const c of options.seedCandidates ?? []) {
+        if (!byId.has(c.id)) {
+            byId.set(c.id, c);
+            candidates.push(c);
+        }
+    }
 
     for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -322,9 +363,18 @@ export async function gatherCandidates(
                     id = `fdc_${id}`;
                 }
 
-                if (!seenIds.has(id)) {
-                    seenIds.add(id);
-                    candidates.push({ ...c, id });
+                const existing = byId.get(id);
+                if (!existing) {
+                    const candidate = { ...c, id };
+                    byId.set(id, candidate);
+                    candidates.push(candidate);
+                } else if (c.semanticSimilarity !== undefined) {
+                    // Keyword and semantic search agree on this candidate —
+                    // keep the keyword version but carry the similarity signal.
+                    existing.semanticSimilarity = Math.max(
+                        existing.semanticSimilarity ?? 0,
+                        c.semanticSimilarity
+                    );
                 }
             }
         }
@@ -472,7 +522,9 @@ export function confidenceGate(
         return {
             skipAiRerank: true,
             selected: top1,
-            confidence: top1.score,
+            // Raw engine scores are not on the confidence scale (OFF ~0-10,
+            // FDC ~0-1.5) — clamp so the bypass can't report confidence > 1
+            confidence: Math.max(0, Math.min(1, top1.score)),
             reason: 'basic_produce_bypass'
         };
     }

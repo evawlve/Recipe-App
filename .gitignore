@@ -109,6 +109,9 @@ data/usda/sr-legacy-sample.jsonl
 
 # Local CSV exports you don't want to commit accidentally
 data/curated/tmp/**
+
+# Runtime state for scripts/ingest-off-delta.ts (per-machine progress cursor)
+data/off-delta-state.json
 # Sentry Config File
 .env.sentry-build-plugin
 
@@ -121,3 +124,24 @@ data/curated/tmp/**
 # Local Syncthing Documentation & Handoffs
 sync-docs/
 
+
+# --- Cleanup 2026-07-13: build artifacts, raw data dumps, scratch/tmp, Syncthing conflicts ---
+# TypeScript incremental build info
+*.tsbuildinfo
+dist/*.tsbuildinfo
+
+# Large raw data dumps (source CSVs/exports, not committed)
+data/*.csv
+data/*.csv.gz
+data/usda/*.csv
+data/usda/*.xlsx
+
+# Scratch & temp working dirs (ad-hoc scripts, audit outputs)
+scratch/
+tmp/
+
+# Syncthing conflict copies
+*.sync-conflict-*
+
+# Eval harness run outputs (timestamped JSON, diffed manually)
+scripts/eval/results/

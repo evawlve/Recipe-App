@@ -100,11 +100,55 @@ const SYSTEM_PROMPT = [
     'If you cannot make a reasonable estimate, return an error message.',
 ].join(' ');
 
+// Deterministic units with EXACT conversions (mass, volume, dimensionless
+// serving/portion) — these must NEVER be routed to AI estimation.
+const DETERMINISTIC_UNITS = new Set([
+    // mass
+    'g', 'gram', 'grams', 'kg', 'kilogram', 'kilograms', 'oz', 'ounce', 'ounces',
+    'lb', 'lbs', 'pound', 'pounds', 'mg', 'milligram', 'milligrams',
+    // volume
+    'cup', 'cups', 'c', 'tbsp', 'tablespoon', 'tablespoons', 'tbs',
+    'tsp', 'teaspoon', 'teaspoons',
+    'ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres',
+    'l', 'liter', 'liters', 'litre', 'litres',
+    'floz', 'fl oz', 'fluid ounce', 'fluid ounces',
+    'pint', 'pints', 'quart', 'quarts', 'gallon', 'gallons',
+    // dimensionless — already grams or a canonical serving
+    'serving', 'servings', 'portion', 'portions',
+]);
+
 /**
- * Checks if a unit is ambiguous and requires AI estimation
+ * A unit is "estimable-unknown" when it needs weight estimation but is NOT in
+ * the curated AMBIGUOUS_UNITS set: a real, word-like unit token we've never
+ * catalogued — e.g. "knob", "rasher", "glug", "sleeve", "ramekin", "floret".
+ *
+ * This is what makes the ambiguous-unit vocabulary self-extending: instead of a
+ * frozen allowlist where any unseen unit silently falls back to a wrong flat
+ * 100g default, an unrecognised unit routes to AI estimation (which is capped
+ * and cached per food+unit, so the grams get learned once and reused forever).
+ *
+ * Excluded: deterministic mass/volume units (exact conversions), blank/numeric
+ * tokens, and anything that doesn't look like a unit word (letters, optional
+ * single internal space/hyphen, 2–20 chars).
+ */
+export function isEstimableUnknownUnit(unit: string | null | undefined): boolean {
+    if (!unit) return false;
+    const u = unit.toLowerCase().trim();
+    if (!u) return false;
+    if (AMBIGUOUS_UNITS.has(u)) return false;      // handled by the curated fast-path
+    if (DETERMINISTIC_UNITS.has(u)) return false;  // exact conversion — never estimate
+    if (/\d/.test(u)) return false;                // numeric tokens aren't units
+    return /^[a-z][a-z .-]{1,19}$/.test(u);        // word-like unit only
+}
+
+/**
+ * Checks if a unit requires AI weight estimation — either an explicitly
+ * curated ambiguous unit OR an unrecognised (but word-like) unit. The curated
+ * set is now a fast-path; unknown units are handled dynamically.
  */
 export function isAmbiguousUnit(unit: string): boolean {
-    return AMBIGUOUS_UNITS.has(unit.toLowerCase().trim());
+    const u = unit.toLowerCase().trim();
+    return AMBIGUOUS_UNITS.has(u) || isEstimableUnknownUnit(u);
 }
 
 /**
@@ -265,7 +309,12 @@ export async function estimateAmbiguousServing(
             breast: 300, breasts: 300, thigh: 200, thighs: 200,
         };
 
-        const maxGrams = UNIT_MAX_GRAMS[unit.toLowerCase()];
+        // Novel (estimable-unknown) units have no curated cap — bound them
+        // generously so a hallucinated weight can't produce absurd calories,
+        // while still allowing legitimately large portions (bowl, plate, etc.).
+        const GENERIC_UNKNOWN_MAX = 600;
+        const maxGrams = UNIT_MAX_GRAMS[unit.toLowerCase()]
+            ?? (isEstimableUnknownUnit(unit) ? GENERIC_UNKNOWN_MAX : undefined);
         let clampedGrams = estimatedGrams;
         if (maxGrams && estimatedGrams > maxGrams) {
             logger.warn('ambiguous_estimation.clamped', {

@@ -188,6 +188,9 @@ Respond with:
 
         const json = await response.json();
         const result: AIValidationResult = JSON.parse(json.choices[0].message.content);
+        // LLMs occasionally return confidence on the wrong scale (e.g. 1.9 or 90);
+        // everything downstream (cache writes, API responses) assumes [0,1]
+        result.confidence = Math.max(0, Math.min(1, Number(result.confidence) || 0));
 
         logger.info('ai_validation.completed', {
             rawIngredient,

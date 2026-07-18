@@ -6,8 +6,19 @@ import { kcalBandForQuery } from '../foods/plausibility';
 import { deriveServingOptions } from '../units/servings';
 import { resolvePortion } from './portion';
 import { resolveGramsFromParsed } from './resolve-grams';
-import { mapIngredientWithFatsecret, type FatsecretMappedIngredient } from '../mapping/map-ingredient';
+import { mapIngredientWithFallback, type FatsecretMappedIngredient } from '../mapping/map-ingredient-with-fallback';
 import { FATSECRET_ENABLED, FATSECRET_MIN_CONFIDENCE, FATSECRET_STRICT_MODE } from '../mapping/config';
+
+/**
+ * Adapter over the unified local mapping engine (the same one the magic log
+ * uses). Replaces the retired remote-FatSecret engine; a 'pending' lock
+ * result is treated as no-match so recipe resolution falls back locally.
+ */
+async function mapWithUnifiedEngine(rawLine: string): Promise<FatsecretMappedIngredient | null> {
+  const result = await mapIngredientWithFallback(rawLine);
+  if (!result || 'status' in result) return null;
+  return result;
+}
 
 export type ResolvedIngredient = {
   source: 'fatsecret' | 'local';
@@ -29,7 +40,7 @@ export type ResolvedIngredient = {
 };
 
 export interface ResolveIngredientDependencies {
-  mapWithFatsecret?: typeof mapIngredientWithFatsecret;
+  mapWithFatsecret?: (rawLine: string) => Promise<FatsecretMappedIngredient | null>;
   resolveLocally?: (rawLine: string) => Promise<ResolvedIngredient>;
 }
 
@@ -40,7 +51,7 @@ export interface ResolveIngredientOptions {
 }
 
 const defaultDependencies: ResolveIngredientDependencies = {
-  mapWithFatsecret: mapIngredientWithFatsecret,
+  mapWithFatsecret: mapWithUnifiedEngine,
   resolveLocally: resolveIngredientWithLocalSystem,
 };
 

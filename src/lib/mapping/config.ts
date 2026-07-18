@@ -87,8 +87,9 @@ export const BAD_FOOD_IDS = new Set([
   '35976', // STRAWBERRY (TONY'S) - 113g carbs
 ]);
 
-// Meilisearch Configuration
-export const MEILISEARCH_ENABLED = getFlag('MEILISEARCH_ENABLED', false);
-export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST ?? 'http://localhost:7700';
-export const MEILISEARCH_API_KEY = process.env.MEILISEARCH_API_KEY ?? '';
+// Search Configuration — Typesense is the sole engine (Postgres is the
+// in-code fallback when it's unreachable)
+export const TYPESENSE_HOST = process.env.TYPESENSE_HOST ?? 'http://localhost:8108';
+export const TYPESENSE_API_KEY = process.env.TYPESENSE_API_KEY ?? 'xyzapikey';
+
 

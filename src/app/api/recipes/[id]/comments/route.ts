@@ -9,7 +9,6 @@ import { nanoid } from "nanoid";
 export async function POST(req: Request, { params }: any) {
 	// Skip execution during build time
 	if (process.env.NEXT_PHASE === 'phase-production-build' || 
-	    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
 	    process.env.BUILD_TIME === 'true') {
 		return NextResponse.json({ error: "Not available during build" }, { status: 503 });
 	}

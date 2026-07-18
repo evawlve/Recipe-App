@@ -82,6 +82,16 @@ export function classifyUnit(unit: string | null | undefined): UnitType {
         return 'count';  // Size descriptors typically mean count
     }
 
+    // Unrecognised but word-like tokens (e.g. "knob", "rasher", "glug",
+    // "ramekin", "sleeve") are unlisted MEASURE words — the parser only routes a
+    // token here when it's genuinely in a unit position (a known unit, or an
+    // unknown token followed by a partitive "of"). Classify them as 'count' so
+    // serving resolution routes them to AI weight estimation instead of a flat
+    // 100g default. Numeric/blank/garbage tokens stay 'unknown'.
+    if (/^[a-z][a-z .-]{1,19}$/.test(normalized) && !/\d/.test(normalized)) {
+        return 'count';
+    }
+
     return 'unknown';
 }
 

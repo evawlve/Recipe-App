@@ -1,8 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+type ParsedInputItem = {
+  rawText: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+  brand: string;
+  normalizedForm: string;
+};
+
+const MEAL_SUFFIX = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/i;
+const MULTI_ITEM_SIGNALS = /[,;\n+&]|\b(?:and|with|plus)\b/i;
+
+/**
+ * Short text with no list separators describes exactly one food item; the
+ * LLM split would echo it back after seconds of latency. Returns the item
+ * (with any trailing "for breakfast"-style meal marker extracted) when the
+ * text is unambiguously single-item, or null to fall through to the LLM.
+ */
+function singleItemFromText(text: string): ParsedInputItem | null {
+  const trimmed = text.trim();
+  if (trimmed.length === 0 || trimmed.length > 60) return null;
+
+  let mealType: ParsedInputItem['mealType'] = 'snacks';
+  let rawText = trimmed;
+  const mealMatch = trimmed.match(MEAL_SUFFIX);
+  if (mealMatch) {
+    const meal = mealMatch[1].toLowerCase();
+    mealType = meal === 'snack' ? 'snacks' : (meal as ParsedInputItem['mealType']);
+    rawText = trimmed.slice(0, mealMatch.index).trim();
+  }
+
+  if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(rawText)) return null;
+  if (rawText.split(/\s+/).length > 6) return null;
+
+  return { rawText, mealType, brand: '', normalizedForm: '' };
+}
 
 export async function POST(req: NextRequest) {
   // Skip execution during build time
@@ -11,16 +52,100 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key
+  // Check API Key first (Dev bypass)
   const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
   const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
-  if (!apiKey || apiKey !== expectedApiKey) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  let isDevBypass = false;
+
+  if (apiKey && apiKey === expectedApiKey) {
+    isDevBypass = true;
+  }
+
+  let userId: string | null = null;
+  let userEmail: string | null = null;
+
+  if (!isDevBypass) {
+    // If not local dev bypass, we authenticate using Supabase JWT Bearer token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+    }
+    const token = authHeader.substring(7);
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized: Invalid authentication session' }, { status: 401 });
+      }
+      userId = user.id;
+      userEmail = user.email || null;
+
+      // Check if user email qualifies for dev/test bypass (e.g. google_test_user@kindahealthy.com)
+      if (userEmail && (
+        userEmail === 'google_test_user@kindahealthy.com' ||
+        userEmail.endsWith('@google.com') ||
+        userEmail.includes('test') ||
+        userEmail.includes('dev') ||
+        userEmail === 'diego@example.com'
+      )) {
+        isDevBypass = true;
+      }
+    } catch (err) {
+      return NextResponse.json({ error: 'Unauthorized: Auth service validation failed' }, { status: 401 });
+    }
+  }
+
+  // Rate Limiting Enforcement (skipped for dev/test bypass users)
+  if (!isDevBypass && userId) {
+    try {
+      const now = new Date();
+      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      // Perform parallel count queries using Prisma
+      const [recentRequests, dailyRequests] = await Promise.all([
+        prisma.nlpRequestLog.count({
+          where: {
+            userId,
+            createdAt: { gte: oneMinuteAgo }
+          }
+        }),
+        prisma.nlpRequestLog.count({
+          where: {
+            userId,
+            createdAt: { gte: oneDayAgo }
+          }
+        })
+      ]);
+
+      if (recentRequests >= 3) {
+        return NextResponse.json({
+          error: 'Too many requests. Please wait a minute before making another food log attempt.'
+        }, { status: 429 });
+      }
+
+      if (dailyRequests >= 20) {
+        return NextResponse.json({
+          error: 'Daily NLP log limit reached (20 logs). Please try again tomorrow!'
+        }, { status: 429 });
+      }
+
+      // Log this request
+      await prisma.nlpRequestLog.create({
+        data: {
+          userId
+        }
+      });
+    } catch (dbErr) {
+      console.error('NLP Parse Rate Limiter DB Error:', dbErr);
+      // Fail open in case of DB tracking error to avoid blocking active users
+    }
   }
 
   try {
     // Validate required environment variables at request time
-    const requiredEnv = ['DATABASE_URL', 'FATSECRET_CLIENT_ID', 'FATSECRET_CLIENT_SECRET'];
+    const requiredEnv = ['DATABASE_URL'];
     const missingEnv = requiredEnv.filter(name => !process.env[name]);
     if (missingEnv.length > 0) {
       console.error('NLP Parse API Error: Missing environment variables:', missingEnv);
@@ -30,6 +155,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { callStructuredLlm } = await import('@/lib/ai/structured-client');
+    const { segmentTextHeuristically, forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
@@ -57,66 +183,96 @@ export async function POST(req: NextRequest) {
         }
         return null;
       }).filter((x): x is { rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string } => x !== null && x.rawText.trim() !== '');
+    } else if (singleItemFromText(text)) {
+      // Short text with no separators is one food item — the LLM split would
+      // return it unchanged after ~1-5s. Skip straight to mapping.
+      items = [singleItemFromText(text)!];
     } else {
-      const NLP_SPLIT_SCHEMA = {
-        name: 'nlp_split',
-        schema: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            items: {
-              type: 'array',
+      // Heuristic-first segmentation: clearly-delimited multi-item logs
+      // ("2 eggs, toast with butter and a glass of orange juice") are split
+      // deterministically in <1ms; only genuinely ambiguous text (unclear
+      // "with" attachments, hedged run-ons) falls through to the LLM.
+      const heuristic = segmentTextHeuristically(text);
+      if (heuristic.status === 'ok') {
+        items = heuristic.items;
+        console.log(`[nlp-parse] heuristic segmentation: ${items.length} item(s), LLM skipped`);
+      } else {
+        console.log(`[nlp-parse] heuristic deferred to LLM: ${heuristic.reason}`);
+
+        const NLP_SPLIT_SCHEMA = {
+          name: 'nlp_split',
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
               items: {
-                type: 'object',
-                additionalProperties: false,
-                properties: {
-                  rawText: { type: 'string' },
-                  mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
-                  brand: { type: 'string' },
-                  normalizedForm: { type: 'string' }
-                },
-                required: ['rawText', 'mealType', 'brand', 'normalizedForm']
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    rawText: { type: 'string' },
+                    mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
+                    brand: { type: 'string' },
+                    normalizedForm: { type: 'string' }
+                  },
+                  required: ['rawText', 'mealType', 'brand', 'normalizedForm']
+                }
               }
-            }
+            },
+            required: ['items']
           },
-          required: ['items']
-        },
-        strict: true
-      };
+          strict: true
+        };
 
-      const SYSTEM_PROMPT = `You are a nutrition assistant that splits unstructured text describing meals/foods into individual food items with their quantities and units, and identifies the meal type (breakfast, lunch, dinner, or snacks).
+        // Minimal prompt: the JSON schema already constrains the output shape,
+        // so the prompt only needs the field semantics and one example.
+        const SYSTEM_PROMPT = `Split the food-log text into individual food items. Per item:
+- rawText: original chunk incl. quantity/unit (e.g. "2 scrambled eggs")
+- mealType: breakfast|lunch|dinner|snacks (default "snacks")
+- brand: explicit brand name, else ""
+- normalizedForm: base food name without quantity/unit, keep prep modifiers ("2 scrambled eggs" -> "scrambled eggs", "1 tbsp Heinz ketchup" -> "ketchup")
+Attached condiments stay with their item ("toast with butter" = 1 item); distinct foods are separate items.
+Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs","mealType":"breakfast","brand":"","normalizedForm":"eggs"},{"rawText":"wheat toast","mealType":"breakfast","brand":"","normalizedForm":"wheat toast"}]}`;
 
-For each food item:
-- "rawText": The original chunk of text describing the food item (e.g. "2 scrambled eggs", "a cup of whole milk").
-- "mealType": The meal type ("breakfast", "lunch", "dinner", "snacks"). Default to 'snacks' if not specified or implied.
-- "brand": The explicit brand name if mentioned (e.g., "Heinz", "Quaker"). If no brand is mentioned, set this to an empty string "".
-- "normalizedForm": The simplified, canonical base food name. Remove quantities and units, but KEEP cooking/prep style modifiers (e.g., "scrambled", "grilled", "toasted", "whole") and sub-categories (e.g., "egg", "wheat toast", "whole milk") so the food type is specific. (Examples: "2 scrambled eggs" -> "scrambled eggs", "a cup of whole milk" -> "whole milk", "1 tbsp of Heinz ketchup" -> "ketchup").
+        // Per-attempt timeout 6s, overall deadline 8s: a hung provider chain
+        // (previously up to 15s+) now degrades to the lenient heuristic split
+        // instead of stalling the request or returning a 500.
+        const LLM_ATTEMPT_TIMEOUT_MS = 6000;
+        const LLM_OVERALL_DEADLINE_MS = 8000;
 
-Example: "2 scrambled eggs and 1 slice of wheat toast for breakfast"
-Output:
-{
-  "items": [
-    {"rawText": "2 scrambled eggs", "mealType": "breakfast", "brand": "", "normalizedForm": "scrambled eggs"},
-    {"rawText": "1 slice of wheat toast", "mealType": "breakfast", "brand": "", "normalizedForm": "wheat toast"}
-  ]
-}`;
+        let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+        const llmResult = await Promise.race([
+          callStructuredLlm({
+            schema: NLP_SPLIT_SCHEMA,
+            systemPrompt: SYSTEM_PROMPT,
+            userPrompt: `Unstructured text: "${text}"`,
+            purpose: 'parse',
+            timeout: LLM_ATTEMPT_TIMEOUT_MS,
+            maxTokens: 600,
+          }),
+          new Promise<null>((resolve) => {
+            deadlineTimer = setTimeout(() => resolve(null), LLM_OVERALL_DEADLINE_MS);
+          }),
+        ]);
+        if (deadlineTimer) clearTimeout(deadlineTimer);
 
-      const llmResult = await callStructuredLlm({
-        schema: NLP_SPLIT_SCHEMA,
-        systemPrompt: SYSTEM_PROMPT,
-        userPrompt: `Unstructured text: "${text}"`,
-        purpose: 'parse',
-      });
-
-      if (llmResult.status === 'error') {
-        return NextResponse.json({ error: 'Failed to segment text' }, { status: 500 });
+        if (!llmResult || llmResult.status === 'error') {
+          console.warn(
+            `[nlp-parse] LLM segmentation ${llmResult ? `failed: ${llmResult.error}` : `deadline exceeded (${LLM_OVERALL_DEADLINE_MS}ms)`} — using lenient heuristic split`
+          );
+          items = forceSegmentText(text);
+        } else {
+          items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
+          if (items.length === 0) {
+            items = forceSegmentText(text);
+          }
+        }
       }
-
-      items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
     }
-    const parsedItems = [];
-
-    for (const item of items) {
+    // Map all items concurrently — each mapping is independent, and identical
+    // items are deduplicated by the pipeline's in-flight lock.
+    const parsedItems = await Promise.all(items.map(async (item) => {
       const rawText = item.rawText;
       const mealType = item.mealType;
       const brand = item.brand;
@@ -131,7 +287,7 @@ Output:
         normalizedForm: normalizedForm || undefined
       });
       if (!mapped || 'status' in mapped) {
-        parsedItems.push({
+        return {
           rawText,
           foodName: parsed?.name ?? rawText,
           brandName: null,
@@ -162,8 +318,7 @@ Output:
             sodium100: 0,
           },
           servingOptions: [],
-        });
-        continue;
+        };
       }
 
       const details = await resolveFoodDetails(mapped.foodId, mapped.servingDescription);
@@ -189,7 +344,7 @@ Output:
         standardSource = 'ai_estimated';
       }
 
-      parsedItems.push({
+      return {
         rawText,
         foodName: mapped.foodName,
         brandName: mapped.brandName ?? null,
@@ -205,8 +360,8 @@ Output:
         nutrition,
         nutritionPer100g: details.nutritionPer100g,
         servingOptions: details.servingOptions,
-      });
-    }
+      };
+    }));
 
     return NextResponse.json(parsedItems);
   } catch (error) {

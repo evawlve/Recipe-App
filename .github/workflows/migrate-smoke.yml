@@ -11,7 +11,9 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        # pgvector image (matches prod): migrations create the `vector` extension,
+        # which plain postgres:15 lacks the control file for (P3006 on shadow DB).
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

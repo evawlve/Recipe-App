@@ -383,6 +383,7 @@ model OffFood {
   syncedAt         DateTime      @default(now())
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+  embedding        Unsupported("vector(384)")? // bge-small-en-v1.5 semantic vector; written via raw SQL, NULL until embedded
   servings         OffServing[]
   mappings         FoodMapping[]
 
@@ -640,6 +641,16 @@ model RecipeSimilar {
   @@id([recipeId, similarId])
   @@index([recipeId, score])
   @@index([similarId])
+}
+
+model NlpRequestLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("nlp_requests_log")
 }
 
 // ============================================================================

@@ -48,6 +48,8 @@ export interface StructuredLlmOptions {
     timeout?: number;
     /** Force a specific provider (bypasses purpose-based routing) */
     forceProvider?: StructuredLlmProvider;
+    /** Optional max_tokens cap for the completion (omitted from the request when unset) */
+    maxTokens?: number;
 }
 
 export interface StructuredLlmResult {
@@ -293,7 +295,8 @@ async function makeRequest(
     schema: object,
     systemPrompt: string,
     userPrompt: string,
-    timeout: number
+    timeout: number,
+    maxTokens?: number
 ): Promise<RequestResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -320,6 +323,7 @@ async function makeRequest(
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt },
                 ],
+                ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
             }),
             signal: controller.signal,
         });
@@ -391,7 +395,7 @@ async function makeRequest(
 export async function callStructuredLlm(
     options: StructuredLlmOptions
 ): Promise<StructuredLlmResult> {
-    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider } = options;
+    const { schema, systemPrompt, userPrompt, purpose, timeout = STRUCTURED_LLM_TIMEOUT_MS, forceProvider, maxTokens } = options;
     const limiter = limiters[purpose];
     const startTime = Date.now();
 
@@ -415,7 +419,7 @@ export async function callStructuredLlm(
             lastProvider = provider;
 
             for (let attempt = 0; attempt < STRUCTURED_LLM_MAX_RETRIES; attempt++) {
-                const result = await makeRequest(provider, schema, systemPrompt, userPrompt, timeout);
+                const result = await makeRequest(provider, schema, systemPrompt, userPrompt, timeout, maxTokens);
 
                 if (result.success) {
                     const durationMs = Date.now() - startTime;
