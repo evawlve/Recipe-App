@@ -20,6 +20,21 @@ export interface OffServingResult {
     grams: number | null;
     /** Human-readable serving description, e.g. "1 container" or "2 tbsp" */
     description: string;
+    /**
+     * Number of units the `grams`/`description` cover — e.g. "2 scoops (46g)"
+     * yields unitCount=2 (so per-scoop = 23g). Defaults to 1. Consumers that
+     * resolve a requested unit to grams MUST divide by this before multiplying
+     * by the requested quantity, or multi-unit label servings double-count.
+     */
+    unitCount: number;
+}
+
+/** Extract the leading quantity from a serving description ("2 scoops" → 2). */
+function leadingCount(description: string): number {
+    const m = description.match(/^\s*(\d+(?:\.\d+)?)/);
+    if (!m) return 1;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
 /**
@@ -38,7 +53,7 @@ export function parseOffServingSize(
         const description = servingSize
             ? normalizeServingDescription(servingSize)
             : '1 serving';
-        return { grams: servingQuantity, description };
+        return { grams: servingQuantity, description, unitCount: leadingCount(description) };
     }
 
     // ── Priority 2: regex extract grams from serving_size string ───────────
@@ -48,13 +63,14 @@ export function parseOffServingSize(
         if (gramMatch) {
             const grams = parseFloat(gramMatch[1]);
             const description = normalizeServingDescription(servingSize);
-            return { grams, description };
+            return { grams, description, unitCount: leadingCount(description) };
         }
     }
 
     // ── Priority 3: no gram anchor found ───────────────────────────────────
     // Caller should trigger AI serving backfill.
-    return { grams: null, description: servingSize ?? '1 serving' };
+    const description = servingSize ?? '1 serving';
+    return { grams: null, description, unitCount: leadingCount(description) };
 }
 
 // ============================================================

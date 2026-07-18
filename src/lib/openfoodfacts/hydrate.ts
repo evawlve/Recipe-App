@@ -24,6 +24,10 @@ export interface HydratedOffFood {
     brandName: string | null;
     nutrientsPer100g: Record<string, number> | null; // null → AI nutrition backfill will fill
     servingGrams: number | null;
+    /** Label serving description, e.g. "2 scoops" or "1 container". null if none. */
+    servingDescription: string | null;
+    /** Units the label serving covers ("2 scoops" → 2). Divide servingGrams by this for per-unit weight. */
+    servingUnitCount: number;
 }
 
 // ============================================================
@@ -59,12 +63,15 @@ export async function hydrateOffCandidate(candidate: {
         where: { barcode },
     });
     if (existing) {
+        const existingServing = parseOffServingSize(existing.servingSize, existing.servingGrams);
         return {
             foodId:          candidate.id,
             foodName:        existing.name,
             brandName:       existing.brandName,
             nutrientsPer100g: existing.nutrientsPer100g as Record<string, number> | null,
             servingGrams:    existing.servingGrams,
+            servingDescription: existing.servingGrams ? existingServing.description : null,
+            servingUnitCount:   existingServing.unitCount,
         };
     }
 
@@ -106,7 +113,7 @@ export async function hydrateOffCandidate(candidate: {
     const nutrientsPer100g = extractAndValidateNutrients(product.nutriments);
 
     // ── 5. Parse serving size ─────────────────────────────────────────────
-    const { grams: servingGrams, description: servingDescription } =
+    const { grams: servingGrams, description: servingDescription, unitCount: servingUnitCount } =
         parseOffServingSize(product.serving_size, product.serving_quantity);
 
     const primaryBrand = product.brands?.split(',')[0].trim() ?? null;
@@ -168,6 +175,8 @@ export async function hydrateOffCandidate(candidate: {
         brandName:        primaryBrand,
         nutrientsPer100g,
         servingGrams:     servingGrams ?? null,
+        servingDescription: servingGrams ? servingDescription : null,
+        servingUnitCount:   servingUnitCount,
     };
 }
 

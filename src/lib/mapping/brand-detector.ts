@@ -355,10 +355,20 @@ const KNOWN_BRANDS: string[] = [
 // Build lookup structure (run once at module load)
 // ============================================================
 
+/**
+ * Data-derived brand lexicon: OFF brands appearing on >= 50 distinct products
+ * (built by scripts/build-brand-lexicon.ts). Unioned with the curated
+ * KNOWN_BRANDS list so brands the curated list misses — e.g. "ghost" — are
+ * still detected without an LLM `isBranded` hint. Precision is guarded at build
+ * time by a stoplist + frequency floor so generic food words never slip in.
+ */
+import brandLexicon from './brand-lexicon.json';
+
 /** Set of all brand names (lowercased, trimmed) for O(1) lookup */
-const BRAND_SET = new Set<string>(
-    KNOWN_BRANDS.map(b => b.toLowerCase().trim())
-);
+const BRAND_SET = new Set<string>([
+    ...KNOWN_BRANDS.map(b => b.toLowerCase().trim()),
+    ...(brandLexicon as string[]).map(b => b.toLowerCase().trim()),
+]);
 
 // ============================================================
 // Public API

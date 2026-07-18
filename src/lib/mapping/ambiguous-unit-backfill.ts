@@ -12,6 +12,7 @@ import { prisma } from '../db';
 import { logger } from '../logger';
 import {
     isAmbiguousUnit,
+    isEstimableUnknownUnit,
     estimateAmbiguousServing,
     AMBIGUOUS_UNITS,
 } from '../ai/ambiguous-serving-estimator';
@@ -52,7 +53,15 @@ async function findExistingServing(foodId: string, normalizedUnit: string) {
     }
 }
 
-async function upsertServing(foodId: string, normalizedUnit: string, grams: number, confidence: number, note?: string) {
+async function upsertServing(
+    foodId: string,
+    normalizedUnit: string,
+    grams: number,
+    confidence: number,
+    note?: string,
+    source: string = 'ai',
+    isAiEstimated: boolean = true,
+) {
     if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
         const id = foodId.startsWith('fdc:') ? parseInt(foodId.split(':')[1], 10) : parseInt(foodId.split('_')[1], 10);
         await prisma.fdcServing.upsert({
@@ -63,12 +72,13 @@ async function upsertServing(foodId: string, normalizedUnit: string, grams: numb
                 fdcId: id,
                 description: normalizedUnit,
                 grams,
-                source: 'ai',
-                isAiEstimated: true
+                source,
+                isAiEstimated
             },
             update: {
                 grams,
-                isAiEstimated: true
+                source,
+                isAiEstimated
             }
         });
     } else if (foodId.startsWith('off_')) {
@@ -81,12 +91,13 @@ async function upsertServing(foodId: string, normalizedUnit: string, grams: numb
                 barcode,
                 description: normalizedUnit,
                 grams,
-                source: 'ai',
-                isAiEstimated: true
+                source,
+                isAiEstimated
             },
             update: {
                 grams,
-                isAiEstimated: true
+                source,
+                isAiEstimated
             }
         });
     } else {
@@ -132,6 +143,99 @@ async function getExistingServingDescriptions(foodId: string): Promise<string[]>
         });
         return servings.map(s => s.label);
     }
+}
+
+// ============================================================
+// Sibling-serving borrow
+// ============================================================
+
+function siblingSingularize(w: string): string {
+    const s = w.toLowerCase();
+    if (s.endsWith('ies')) return s.slice(0, -3) + 'y';
+    if (s.endsWith('sses')) return s.slice(0, -2);
+    if (s.endsWith('s') && !s.endsWith('ss')) return s.slice(0, -1);
+    return s;
+}
+
+function siblingLeadingCount(description: string): number {
+    const m = description.match(/^\s*(\d+(?:\.\d+)?)/);
+    if (!m) return 1;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+function median(nums: number[]): number {
+    const sorted = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/** Confidence scales with the number of sibling samples backing the borrow. */
+function siblingConfidence(sampleCount: number): number {
+    return Math.min(0.6 + 0.1 * sampleCount, 0.95);
+}
+
+/**
+ * Before AI-estimating an ambiguous serving, look for a GENUINE (label-derived)
+ * serving of the same unit on another product from the SAME brand. Within a
+ * brand's product line a "bar" or "scoop" is near-constant, so this resolves
+ * the weight deterministically from real label data. OFF-only for v1.
+ *
+ * The requested unit self-segments the product line: only bar SKUs carry a
+ * "bar" serving and only powders carry a "scoop", so brand + unit isolates the
+ * right sub-line without name-token clustering.
+ */
+async function borrowSiblingServing(
+    foodId: string,
+    brandName: string | null | undefined,
+    normalizedUnit: string,
+): Promise<{ grams: number; sampleCount: number } | null> {
+    if (!foodId.startsWith('off_')) return null;          // OFF-only (v1)
+    const brand = brandName?.trim();
+    if (!brand || brand.length < 2) return null;          // no brand → no product line
+    const unitStem = siblingSingularize(normalizedUnit).replace(/[^a-z]/g, '');
+    if (!unitStem) return null;
+    const selfBarcode = foodId.replace('off_', '');
+
+    // Genuine servings only (isAiEstimated=false AND source='openfoodfacts') so
+    // borrowed rows (source='sibling_borrow') never seed further borrows — that
+    // exclusion is what prevents transitive estimate drift.
+    let rows: Array<{ grams: number; description: string }>;
+    try {
+        rows = await prisma.$queryRaw<Array<{ grams: number; description: string }>>`
+            SELECT s.grams, s.description
+            FROM "OffServing" s
+            JOIN "OffFood" f ON s.barcode = f.barcode
+            WHERE lower(f."brandName") = ${brand.toLowerCase()}
+              AND s."isAiEstimated" = false
+              AND s.source = 'openfoodfacts'
+              AND s.barcode <> ${selfBarcode}
+              AND s.description ~* ${'\\m' + unitStem + 's?\\M'}
+            LIMIT 50
+        `;
+    } catch (e) {
+        logger.warn('ambiguous_backfill.sibling_query_failed', {
+            foodId, unit: normalizedUnit, error: (e as Error).message,
+        });
+        return null;
+    }
+    if (!rows.length) return null;
+
+    // Per-unit grams = serving grams / leading count ("2 scoops (46g)" → 23g).
+    const perUnit: number[] = [];
+    for (const r of rows) {
+        const count = siblingLeadingCount(r.description);
+        const g = r.grams / (count > 0 ? count : 1);
+        if (g >= 0.2 && g <= 600) perUnit.push(g);
+    }
+    if (!perUnit.length) return null;
+
+    // Median, then drop values outside [0.5x, 2x] of it and re-median — robust
+    // to a few mislabeled sibling SKUs.
+    const m0 = median(perUnit);
+    const keep = perUnit.filter(g => g >= 0.5 * m0 && g <= 2 * m0);
+    if (!keep.length) return null;
+    return { grams: median(keep), sampleCount: keep.length };
 }
 
 /**
@@ -190,8 +294,12 @@ export async function getOrCreateAmbiguousServing(
         // Ignore
     }
 
-    if (!isAmbiguousUnit(normalizedUnit)) {
-        return { status: 'error', error: `"${unit}" is not an ambiguous unit` };
+    // Accept both the curated ambiguous set AND estimable unknown units (e.g.
+    // "bar", "cookie") — discrete packaged items need a weight estimate too, and
+    // sibling-borrow below can often resolve them deterministically from a
+    // same-brand product's genuine label serving.
+    if (!isAmbiguousUnit(normalizedUnit) && !isEstimableUnknownUnit(normalizedUnit)) {
+        return { status: 'error', error: `"${unit}" is not an estimable unit` };
     }
 
     // Check existing
@@ -206,6 +314,29 @@ export async function getOrCreateAmbiguousServing(
             status: 'cached',
             grams: existing.grams,
         };
+    }
+
+    // Sibling-serving borrow: before paying for an AI estimate, try to borrow a
+    // genuine label serving of this unit from another same-brand product.
+    const sibling = await borrowSiblingServing(foodId, brandName, normalizedUnit);
+    if (sibling) {
+        const confidence = siblingConfidence(sibling.sampleCount);
+        try {
+            await upsertServing(
+                foodId, normalizedUnit, sibling.grams, confidence,
+                `sibling-borrowed from ${sibling.sampleCount} ${brandName ?? 'brand'} product(s)`,
+                'sibling_borrow', false,
+            );
+        } catch (error) {
+            logger.warn('ambiguous_backfill.sibling_save_failed', {
+                foodId, unit: normalizedUnit, error: (error as Error).message,
+            });
+        }
+        logger.info('ambiguous_backfill.sibling_borrow', {
+            foodId, foodName, unit: normalizedUnit,
+            grams: sibling.grams, samples: sibling.sampleCount,
+        });
+        return { status: 'success', grams: sibling.grams, confidence };
     }
 
     // Call AI
