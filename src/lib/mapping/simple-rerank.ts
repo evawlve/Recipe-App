@@ -1124,7 +1124,14 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
 
     // 4. Prefer generic over branded (but smarter about it)
     if (!candidate.brandName) {
-        score += WEIGHTS.NO_BRAND;
+        // Prefer generic ONLY when the user didn't name a brand. When the query
+        // names a brand (isBranded, or the static/lexicon detector matched one),
+        // a brandless candidate is a WORSE match — granting it the no-brand bonus
+        // is what let brandless records beat "ghost" et al. Suppress it here so
+        // the brand-match bonus below wins deterministically without the LLM.
+        if (!isBranded && !targetBrand) {
+            score += WEIGHTS.NO_BRAND;
+        }
     } else {
         const brandLower = candidate.brandName.toLowerCase().trim();
         const queryLower = query.toLowerCase().trim();
@@ -1435,10 +1442,22 @@ export function simpleRerank(
         const bPhraseBst = getExactPhraseBoost(query, b.candidate.name) > 0 ? 1 : 0;
         if (bPhraseBst !== aPhraseBst) return bPhraseBst - aPhraseBst;
 
-        // Tiebreaker 2: prefer non-branded (generic) foods
-        const aHasBrand = a.candidate.brandName ? 1 : 0;
-        const bHasBrand = b.candidate.brandName ? 1 : 0;
-        if (aHasBrand !== bHasBrand) return aHasBrand - bHasBrand;
+        // Tiebreaker 2: brand preference.
+        // When the query names a brand, prefer the candidate whose brand matches
+        // it (a brandless record is the wrong answer for "ghost ..."). Otherwise
+        // fall back to the historical preference for generic/non-branded foods.
+        const namedBrand = (targetBrand ?? '').toLowerCase().trim();
+        if (isBranded || namedBrand) {
+            const aMatchesBrand = a.candidate.brandName && namedBrand
+                && a.candidate.brandName.toLowerCase().includes(namedBrand) ? 1 : 0;
+            const bMatchesBrand = b.candidate.brandName && namedBrand
+                && b.candidate.brandName.toLowerCase().includes(namedBrand) ? 1 : 0;
+            if (aMatchesBrand !== bMatchesBrand) return bMatchesBrand - aMatchesBrand;
+        } else {
+            const aHasBrand = a.candidate.brandName ? 1 : 0;
+            const bHasBrand = b.candidate.brandName ? 1 : 0;
+            if (aHasBrand !== bHasBrand) return aHasBrand - bHasBrand;
+        }
 
         // Tiebreaker 3: nutrition closeness — prefer candidate whose per-100g
         // calories are closest to the AI estimate. This resolves cases like

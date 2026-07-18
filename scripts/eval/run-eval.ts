@@ -59,7 +59,7 @@ function nutritionMissing(h: any): boolean {
 }
 
 function textOf(hit: any): string {
-    return `${hit.name ?? hit.foodName ?? ''} ${hit.brandName ?? ''}`.toLowerCase();
+    return `${hit.name ?? hit.foodName ?? ''} ${hit.brand ?? hit.brandName ?? ''}`.toLowerCase();
 }
 
 /** True if any of the alternatives (each = list of required substrings) matches the text. */

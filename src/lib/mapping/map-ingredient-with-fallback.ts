@@ -999,16 +999,34 @@ export async function mapIngredientWithFallback(
                 // Step 3b: Apply core token validation to filtered candidates
                 // This catches cases like "dry brown rice" → "dry brown beans" (missing "rice" token)
                 const beforeCoreFilter = filtered.length;
+                const rescueBrand = brandDetection.matchedBrand?.toLowerCase().trim();
                 filtered = filtered.filter(c => {
                     const mismatch = hasCoreTokenMismatch(normalizedName, c.name, c.brandName);
-                    if (mismatch && debug) {
+                    if (!mismatch) return true;
+
+                    // Brand rescue: if the query names a brand and THIS candidate
+                    // carries it, don't hard-drop for a missing core token — the
+                    // "missing" token is usually a flavor the brand spells
+                    // differently ("cinnamon" vs a "Cinnabon" product name).
+                    // simpleRerank still ranks it on token overlap, so a genuinely
+                    // wrong match won't win. (The Ghost cinnamon-roll drop.)
+                    if (rescueBrand && c.brandName?.toLowerCase().includes(rescueBrand)) {
+                        if (debug) {
+                            logger.debug('mapping.core_token_brand_rescued', {
+                                normalizedName, candidate: c.name, brand: c.brandName,
+                            });
+                        }
+                        return true;
+                    }
+
+                    if (debug) {
                         logger.debug('mapping.core_token_filtered', {
                             normalizedName,
                             candidate: c.name,
                             reason: 'core_token_mismatch',
                         });
                     }
-                    return !mismatch;
+                    return false;
                 });
                 const coreFilterRemoved = beforeCoreFilter - filtered.length;
                 if (coreFilterRemoved > 0) {
@@ -1090,7 +1108,14 @@ export async function mapIngredientWithFallback(
                         logger.warn('mapping.all_filtered', { rawLine: trimmed, removedCount: removedCount + coreFilterRemoved });
                         // Fall through to Fallback
                     }
-                } else {
+                }
+
+                // Run selection on ANY surviving candidates — whether they passed
+                // the strict filter above OR were recovered by the relaxed retry.
+                // Previously this block was the `else` of the empty-check, so
+                // relaxed-recovered candidates were never reranked: winner stayed
+                // null → brand-stripping aiSimplify fallback (the ghost-protein bug).
+                if (filtered.length > 0) {
                     // Step 3a: Confidence Gate
                     // IMPORTANT: Sort by score with tiebreaker preferring FDC for basic produce
                     const searchQuery = parsed?.name || normalizedName;
@@ -1400,7 +1425,7 @@ export async function mapIngredientWithFallback(
             const { aiSimplifyIngredient } = await import('./ai-simplify');
 
             try {
-                const result = await aiSimplifyIngredient(trimmed);
+                const result = await aiSimplifyIngredient(trimmed, brandDetection.matchedBrand ?? undefined);
 
                 if (result && result.simplified && result.simplified !== normalizedName) {
                     logger.info('mapping.fallback_simplification', { original: trimmed, simplified: result.simplified });
@@ -2887,7 +2912,6 @@ export async function hydrateAndSelectServing(
     // This intercepts bare queries and caps them to single standard servings.
     // Also handles high-count discrete items like "8 lettuce" defaulting to leaves instead of heads.
     if (parsed && !parsed.unit && !targetGrams) {
-        console.log("=== BARE QUERY GUARD: ENTERED ===", parsed.qty, finalGrams);
         try {
             const { getBareQueryDefault, getDiscreteLeafyGreenDefault } = await import('../ai/ambiguous-serving-estimator');
             
@@ -2901,7 +2925,6 @@ export async function hydrateAndSelectServing(
                 bareDefault = getDiscreteLeafyGreenDefault(parsed.name || candidate.name, parsed.qty);
                 if (bareDefault) overrideGrams = bareDefault.grams * parsed.qty;
             }
-            console.log("=== BARE QUERY GUARD: RESULTS ===", bareDefault, overrideGrams, finalGrams);
 
             if (bareDefault && overrideGrams > 0 && finalGrams > overrideGrams * 2) { // Only override if it's significantly inflating
                 logger.info('hydrate.bare_query_inflation_capped', {
@@ -3674,6 +3697,33 @@ async function buildFdcResult(
  * Hydrates the candidate into the local DB, resolves grams from the parsed unit,
  * and falls back to AI nutrition backfill when the Atwater gate rejects label data.
  */
+/** Minimal unit singularizer for label/serving unit words ("scoops" → "scoop"). */
+function singularizeUnit(w: string): string {
+    const s = w.toLowerCase();
+    if (s.endsWith('ies')) return s.slice(0, -3) + 'y';
+    if (s.endsWith('sses')) return s.slice(0, -2);
+    if (s.endsWith('s') && !s.endsWith('ss')) return s.slice(0, -1);
+    return s;
+}
+
+/** The unit word of a label serving description ("2 scoops" → "scoop", "1 container" → "container"). */
+function extractLabelServingUnit(description: string | null): string | null {
+    if (!description) return null;
+    const m = description.match(/^\s*\d*\.?\d*\s*([a-z]+)/i);
+    if (!m) return null;
+    return singularizeUnit(m[1]);
+}
+
+// Discrete packaged-snack nouns: when a unitless branded item names one of these
+// and has no genuine serving, estimate that unit's weight (sibling-borrow / AI)
+// rather than defaulting to a flat 100g. Deliberately excludes ambiguous words
+// like "cup"/"pack"/"slice" that collide with volume/package handling.
+const DISCRETE_ITEM_UNIT_RE = /\b(bars?|cookies?|brownies?|patties|patty|nuggets?|puffs?|wafers?|biscuits?|muffins?)\b/i;
+function inferDiscreteUnit(name: string): string | null {
+    const m = name.match(DISCRETE_ITEM_UNIT_RE);
+    return m ? singularizeUnit(m[1]) : null;
+}
+
 async function buildOffResult(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
@@ -3720,6 +3770,15 @@ async function buildOffResult(
     let grams: number | null = null;
     let servingDescription: string | null = null;
 
+    // Label serving unit info: e.g. label "2 scoops (46g)" → unit "scoop",
+    // count 2, per-unit 23g. Divides multi-unit label servings so "2 scoops"
+    // of a 46g/2-scoop product resolves to 46g, not 92g.
+    const labelUnitCount = hydrated.servingUnitCount && hydrated.servingUnitCount > 0
+        ? hydrated.servingUnitCount : 1;
+    const labelUnitWord = extractLabelServingUnit(hydrated.servingDescription);
+    const perLabelUnitGrams = hydrated.servingGrams && hydrated.servingGrams > 0
+        ? hydrated.servingGrams / labelUnitCount : null;
+
     // Units where the product's own label serving IS the thing the user asked
     // for ("1 container of yogurt" → the container size on the label). For these,
     // trust servingGrams over estimation.
@@ -3736,6 +3795,18 @@ async function buildOffResult(
     } else if (unit && volumeToGrams[unit]) {
         grams = qty * volumeToGrams[unit];
         servingDescription = `${qty} ${unit}`;
+    } else if (unit && labelUnitWord && perLabelUnitGrams && singularizeUnit(unit) === labelUnitWord) {
+        // Requested unit matches the product's OWN label serving unit — the label
+        // is authoritative for THIS product. Use per-unit grams (label grams /
+        // label unit-count) so a "2 scoops (46g)" tub yields 23g/scoop, not 46g.
+        grams = qty * perLabelUnitGrams;
+        servingDescription = `${qty} ${unit} (${perLabelUnitGrams.toFixed(1)}g each)`;
+        logger.info('off.build_result.label_unit_matched', {
+            foodId: candidate.id,
+            unit,
+            perUnitGrams: perLabelUnitGrams,
+            labelUnitCount,
+        });
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && hydrated.servingGrams && hydrated.servingGrams > 0) {
         grams = qty * hydrated.servingGrams;
         servingDescription = `${qty} ${unit} (${hydrated.servingGrams}g each)`;
@@ -3779,7 +3850,30 @@ async function buildOffResult(
                 });
             }
         } catch {
-            // fall through to label-serving / 100g defaults
+            // fall through to discrete-unit backfill / label-serving / 100g defaults
+        }
+
+        // No deterministic per-piece weight and no genuine label serving: if the
+        // product names a discrete packaged item (a protein "bar", "cookie"...),
+        // estimate that unit's weight via sibling-borrow / AI instead of the flat
+        // 100g default (a 60g Quest bar must not log as 100g).
+        if (grams == null && (!hydrated.servingGrams || hydrated.servingGrams <= 0)) {
+            const discreteUnit = inferDiscreteUnit(parsed.name || hydrated.foodName);
+            if (discreteUnit) {
+                const amb = await getOrCreateAmbiguousServing(
+                    candidate.id, hydrated.foodName, discreteUnit, hydrated.brandName ?? null
+                );
+                if ((amb.status === 'success' || amb.status === 'cached') && amb.grams && amb.grams > 0) {
+                    grams = qty * amb.grams;
+                    servingDescription = `${qty} ${discreteUnit} (${amb.grams.toFixed(1)}g each)`;
+                    logger.info('off.build_result.discrete_unit_backfill', {
+                        foodId: candidate.id,
+                        unit: discreteUnit,
+                        perUnitGrams: amb.grams,
+                        status: amb.status,
+                    });
+                }
+            }
         }
     }
 

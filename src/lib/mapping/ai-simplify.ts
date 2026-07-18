@@ -35,7 +35,7 @@ const SYSTEM_PROMPT = [
     '',
     'RULES:',
     '1. Remove non-essential adjectives (fluffy, organic, premium, delicious).',
-    '2. Remove brands unless the item IS the brand (e.g. Nutella).',
+    '2. Remove brands unless the item IS the brand (e.g. Nutella) OR the brand is preserved per the note below.',
     '3. ALWAYS preserve fat/calorie/sodium/lean modifiers - they affect nutrition values!',
     '4. Remove fabricated flavor descriptors (buttery, tangy, zesty) that don\'t exist as real products.',
     '5. For use-case words (burger, hot dog, taco), identify the actual ingredient being described.',
@@ -61,8 +61,14 @@ type AiSimplifyResult = {
     rationale: string;
 } | null;
 
-export async function aiSimplifyIngredient(rawLine: string): Promise<AiSimplifyResult> {
-    const cacheKey = CACHE_PREFIX + rawLine;
+export async function aiSimplifyIngredient(
+    rawLine: string,
+    preserveBrand?: string | null,
+): Promise<AiSimplifyResult> {
+    const brand = preserveBrand?.trim() || null;
+    // Namespace the cache key when preserving a brand so brand-preserving results
+    // never collide with (or return) older brand-stripped rows for the same line.
+    const cacheKey = CACHE_PREFIX + (brand ? `B:${brand.toLowerCase()}:` : '') + rawLine;
 
     // 1. Check Cache
     const cached = await getAiNormalizeCache(cacheKey);
@@ -73,11 +79,18 @@ export async function aiSimplifyIngredient(rawLine: string): Promise<AiSimplifyR
         };
     }
 
+    // When the query named a known food brand, keep it: stripping it (as the
+    // default rules do) is what let generic records hijack branded queries.
+    const systemPrompt = brand
+        ? SYSTEM_PROMPT + `\n\nNOTE: "${brand}" is a known food brand — KEEP it in the`
+            + ` simplified name (e.g. "${brand} Vegan Protein"). Do NOT strip it.`
+        : SYSTEM_PROMPT;
+
     // 2. Call structured LLM with OpenRouter → OpenAI fallback
     try {
         const result = await callStructuredLlm({
             schema: JSON_SCHEMA,
-            systemPrompt: SYSTEM_PROMPT,
+            systemPrompt,
             userPrompt: `Ingredient: ${rawLine}`,
             purpose: 'simplify',
         });
