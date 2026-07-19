@@ -4015,8 +4015,7 @@
         10,
         60
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable, dramatic): '10 mission tortilla chips' resolves to 1000g (each chip billed at the 100g default -> 10x100). A tortilla chip is ~2g so 10 chips is ~20g; 1000g is a kilo of chips, ~50x too high. Count-based discrete unit is NOT resolved to a per-piece weight for this record; the count is instead multiplied against the 100g no-serving fallback. Highest-value failure mode found. Expected ~10-60g; observed 1000g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A). Was 1000g (100xcount, the most dramatic failure found). Added a 'tortilla chip' seed (~2g), matched via last-two-word alias -> 10 x 2 = 20g. Hard assertion."
     },
     {
       "id": "n-serv-16",
@@ -4039,8 +4038,7 @@
         12,
         40
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '2 rice cakes' resolves to 200g (each rice cake billed at the 100g default -> 2x100). A plain rice cake is ~9g so 2 is ~18g; 200g is ~11x too high. Same count-x-100g-default failure as n-serv-15. Expected ~12-40g; observed 200g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A). Was 200g (100xcount). Added a 'rice cake' seed (~9g) -> 2 x 9 = 18g. Hard assertion."
     },
     {
       "id": "n-serv-17",
@@ -4063,8 +4061,7 @@
         3,
         20
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '10 goldfish crackers' resolves to 40g (~4g/goldfish). A Goldfish cracker is ~0.5g (a 30g serving is ~55 pieces), so 10 is ~5g; 40g is ~8x too high. Per-piece weight for tiny count units is over-estimated. Expected ~3-20g; observed 40g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 40g (matched the generic 'cracker' seed = 4g). Added a specific 'goldfish cracker' seed (~0.5g), which wins via last-two-word alias -> 10 x 0.5 = 5g. Hard assertion."
     },
     {
       "id": "n-serv-18",
@@ -4087,8 +4084,7 @@
         30,
         60
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '4 oreo cookies' resolves to 120g (~30g/cookie). A single Oreo is ~11.3g (label serving is 3 cookies = 34g), so 4 is ~45g; 120g is ~2.7x too high. Likely the per-3-cookie label serving is billed per single 'cookie' count. Expected ~30-60g; observed 120g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 120g (matched the generic 'cookie' seed = 30g). Added a specific 'oreo' seed (~11.3g) -> 4 x 11.3 = 45.2g. Hard assertion."
     },
     {
       "id": "n-serv-19",
@@ -4111,8 +4107,333 @@
         50,
         90
       ],
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 150g (matched the generic 'waffle' seed = 75g). Added a specific 'eggo waffle' seed (~35g) -> 2 x 35 = 70g. Hard assertion."
+    },
+    {
+      "id": "n-serv-20",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "15 pretzels",
+        "quantity": 15,
+        "unit": "",
+        "name": "pretzels",
+        "brand": "",
+        "normalizedForm": "pretzels",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "pretzel"
+        ]
+      ],
+      "grams": [
+        8,
+        45
+      ],
+      "notes": "FIXED 2026-07-18 (Cluster A). '15 pretzels' was 1500g (100xcount). Added a 'pretzel' seed (~2g/piece) -> 15 x 2 = 30g. Hard assertion. The structural 100xcount guard in buildOffResult also bounds any unseeded count food to one serving."
+    },
+    {
+      "id": "n-serv-21",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "12 m&ms",
+        "quantity": 12,
+        "unit": "",
+        "name": "m&ms",
+        "brand": "m&ms",
+        "normalizedForm": "m&ms",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "m&m"
+        ]
+      ],
+      "grams": [
+        6,
+        25
+      ],
+      "notes": "FIXED 2026-07-18 (Cluster A). '12 m&ms' was 1200g (100xcount). Added an 'm&m' seed (~0.9g) -> 12 x 0.9 = 10.8g. Hard assertion (deterministic seed path, ~50ms)."
+    },
+    {
+      "id": "n-serv-22",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "10 grapes",
+        "quantity": 10,
+        "unit": "",
+        "name": "grapes",
+        "brand": "",
+        "normalizedForm": "grapes",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "grape"
+        ]
+      ],
+      "grams": [
+        30,
+        90
+      ],
+      "notes": "FIXED 2026-07-18 (Cluster A). '10 grapes' was 1000g (100xcount on a whole food). Added a 'grape' seed (~5g) -> 10 x 5 = 50g. Hard assertion."
+    },
+    {
+      "id": "n-serv-23",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 gatorade",
+        "quantity": 1,
+        "unit": "bottle",
+        "name": "gatorade",
+        "brand": "gatorade",
+        "normalizedForm": "sports drink",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "gatorade"
+        ]
+      ],
+      "grams": [
+        300,
+        650
+      ],
       "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '2 eggo waffles' resolves to 150g (~75g/waffle). A single Eggo waffle is ~35g (label serving is 2 waffles = 70g), so 2 is ~70g; 150g is ~2x too high. Same per-count over-billing as n-serv-18. Correct brand/product ('Eggo waffles', Kellogg's). Expected ~50-90g; observed 150g. Non-gating."
+      "notes": "CENSUS BUG (Cluster A, Defect 3 = flat-100 package, most extreme UNDER: ratio ~0.2x). '1 gatorade' -> 100g: unitless branded bottle (~591g for 20oz, ~355g for 12oz) not backfilled to a container serving; falls to the 100g no-serving fallback. Target [300,650]; observed 100g. Fix = route unitless packages (bottle/can/pouch) to the ambiguous-unit backfill."
+    },
+    {
+      "id": "n-serv-24",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 capri sun",
+        "quantity": 1,
+        "unit": "pouch",
+        "name": "capri sun",
+        "brand": "capri sun",
+        "normalizedForm": "juice pouch",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "capri"
+        ]
+      ],
+      "grams": [
+        130,
+        200
+      ],
+      "knownIssue": true,
+      "notes": "CENSUS BUG (Cluster A, Defect 3 = flat-100 package). '1 capri sun' -> 100g: a pouch is ~177g (6 fl oz). Target [130,200]; observed 100g. Same flat-100 fallback as n-serv-23/celsius/chobani; the pouch package size is never resolved."
+    },
+    {
+      "id": "n-serv-25",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 handful almonds",
+        "quantity": 1,
+        "unit": "handful",
+        "name": "almonds",
+        "brand": "",
+        "normalizedForm": "almonds",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "almond"
+        ]
+      ],
+      "grams": [
+        18,
+        45
+      ],
+      "knownIssue": true,
+      "notes": "CENSUS BUG (Cluster A, Defect 4 = ambiguous unit not resolved, extreme UNDER). '1 handful almonds' -> 1.2g: 'handful' is treated as a single almond (~1.2g) instead of a handful portion (~28-35g). Target [18,45]; observed 1.2g. Contrast n-serv-31 '1 scoop whey' which DOES resolve. 'handful'/'bowl' need portion backfill; 'scoop'/'glass' already work."
+    },
+    {
+      "id": "n-serv-26",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 bowl cereal",
+        "quantity": 1,
+        "unit": "bowl",
+        "name": "cereal",
+        "brand": "",
+        "normalizedForm": "cereal",
+        "mealType": "breakfast"
+      },
+      "expectName": [
+        [
+          "cereal"
+        ]
+      ],
+      "grams": [
+        25,
+        70
+      ],
+      "knownIssue": true,
+      "notes": "CENSUS BUG (Cluster A, Defect 4 = ambiguous unit not resolved). '1 bowl cereal' -> 100g flat: 'bowl' is not resolved to a portion; a bowl of dry cereal is ~40-60g. Target [25,70]; observed 100g. Same ambiguous-unit gap as n-serv-25 (handful)."
+    },
+    {
+      "id": "n-serv-27",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 red bull",
+        "quantity": 1,
+        "unit": "can",
+        "name": "red bull",
+        "brand": "red bull",
+        "normalizedForm": "energy drink",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "red bull"
+        ]
+      ],
+      "grams": [
+        200,
+        300
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 250g). Branded can WITH a genuine OFF serving resolves properly (~250g / 8.4 fl oz). Hard assertion -- the Cluster A fix must NOT regress packages that already resolve. Contrast n-serv-23 gatorade (no usable serving -> 100g)."
+    },
+    {
+      "id": "n-serv-28",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 clif bar",
+        "quantity": 1,
+        "unit": "bar",
+        "name": "clif bar",
+        "brand": "clif",
+        "normalizedForm": "bar",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "clif"
+        ]
+      ],
+      "grams": [
+        55,
+        82
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 68g). Branded bar with a genuine serving (~68g). Hard assertion; the fix must preserve this. Contrast the over-billed generic-seed bars (n-serv-18 oreo, n-serv-19 eggo)."
+    },
+    {
+      "id": "n-serv-29",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 string cheese",
+        "quantity": 1,
+        "unit": "stick",
+        "name": "string cheese",
+        "brand": "",
+        "normalizedForm": "string cheese",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "cheese"
+        ]
+      ],
+      "grams": [
+        18,
+        36
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 28g). A string cheese stick (~28g) resolves via a genuine serving even though 'stick' is a discrete unit. Hard assertion; contrast n-serv-28-family chomps 'stick' which falls to 100g -- the fix must lift chomps WITHOUT breaking this."
+    },
+    {
+      "id": "n-serv-30",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "20 almonds",
+        "quantity": 20,
+        "unit": "",
+        "name": "almonds",
+        "brand": "",
+        "normalizedForm": "almonds",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "almond"
+        ]
+      ],
+      "grams": [
+        16,
+        34
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 24g). Unitless count WITH a genuine per-piece resolution (~1.2g/almond x 20). Hard assertion -- proves the count path works when a real per-piece weight exists; the 100xcount fix must not disturb it."
+    },
+    {
+      "id": "n-serv-31",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "5 strawberries",
+        "quantity": 5,
+        "unit": "",
+        "name": "strawberries",
+        "brand": "",
+        "normalizedForm": "strawberries",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "strawberr"
+        ]
+      ],
+      "grams": [
+        38,
+        88
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 60g). Whole-food count with a genuine per-piece weight (~12g/berry x 5). Hard assertion; guards the count path alongside n-serv-30."
+    },
+    {
+      "id": "n-serv-32",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 scoop whey protein",
+        "quantity": 1,
+        "unit": "scoop",
+        "name": "whey protein",
+        "brand": "",
+        "normalizedForm": "whey protein",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "whey"
+        ]
+      ],
+      "grams": [
+        22,
+        42
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 30g). Ambiguous unit 'scoop' resolves to a real scoop portion (~30g). Hard assertion -- 'scoop'/'glass' work; the fix for the broken ambiguous units (n-serv-25 handful, n-serv-26 bowl) must not regress the working ones."
+    },
+    {
+      "id": "n-serv-33",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 glass milk",
+        "quantity": 1,
+        "unit": "glass",
+        "name": "milk",
+        "brand": "",
+        "normalizedForm": "milk",
+        "mealType": "breakfast"
+      },
+      "expectName": [
+        [
+          "milk"
+        ]
+      ],
+      "grams": [
+        200,
+        290
+      ],
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 250g). Ambiguous unit 'glass' resolves to a real glass portion (~244g). Hard assertion; guards the working ambiguous-unit path alongside n-serv-32."
     }
   ]
 }
