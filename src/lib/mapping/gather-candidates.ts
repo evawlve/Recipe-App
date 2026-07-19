@@ -11,6 +11,7 @@ import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
 import { searchOffSimple, searchOffSemantic } from '../openfoodfacts/search';
 import { countedPieceNoun } from './count-label';
+import { detectGrainCookingContext } from './filter-candidates';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
 
 // Start loading the ONNX query-embedding model as soon as the mapping
@@ -334,6 +335,48 @@ export async function gatherCandidates(
         );
     }
 
+    // Cooked-record retrieval (cooked-vs-dry fix, Jul 2026): a volume-unit
+    // grain line ("1 cup white rice") prefers the cooked basis, but keyword
+    // search on the bare name returns almost exclusively dry records — the
+    // cooked FDC records ("white rice cooked...") never enter the pool. Add a
+    // "cooked <name>" FDC search so the rerank cooked preference has something
+    // to rank up. Grains with no cooked record in the corpus (quinoa, oats)
+    // are unaffected: the extra search returns dry/nothing and rerank falls
+    // back to existing behavior.
+    if (!skipFdc && detectGrainCookingContext(rawLine, searchQuery).softCooked) {
+        // Derive the food name from the RAW line: both the parser and the
+        // normalizer strip variety adjectives ("1 cup white rice" → "rice"),
+        // and the cooked search must keep them so the right variety's cooked
+        // records are fetched ("cooked white rice", not "cooked rice" which
+        // top-ranks wild rice).
+        const cookedBase = rawLine.toLowerCase()
+            .replace(/[⅛¼⅓⅜½⅝⅔¾⅞]/g, ' ')
+            .replace(/^\s*(a|an|one|two|three)?\s*[\d./]*\s*/, '')
+            .replace(/^\s*(cups?|bowls?|servings?)\s*(of\s+)?/, '')
+            .trim() || primaryQuery;
+        searchPromises.push(searchFdcLocal(`cooked ${cookedBase}`, 4, rawLine, targetBrand));
+    }
+
+    // Brand-targeted retrieval (brand-hijack fix, Jul 2026): full-line keyword
+    // search can return only cross-brand flavor-token collisions (ON "Cinnamon
+    // Roll Protein" for "ghost protein cinnamon roll") — the named brand's own
+    // SKUs never enter the pool, and no ranking fix can recover a candidate
+    // that was never retrieved. When a brand is detected, also search
+    // "<brand> <first non-brand token>" so same-brand SKUs compete in rerank.
+    if (offEnabled && !skipOff && isBrandedQuery && targetBrand) {
+        const brandTokens = new Set(targetBrand.toLowerCase().split(/\s+/).filter(Boolean));
+        const nonBrandTokens = searchQuery.toLowerCase().split(/\s+/)
+            .filter(t => t.length > 2 && !brandTokens.has(t));
+        if (nonBrandTokens.length > 0) {
+            const brandQuery = `${targetBrand} ${nonBrandTokens[0]}`;
+            if (brandQuery.toLowerCase() !== searchQuery.toLowerCase().trim()) {
+                searchPromises.push(
+                    searchOffSimple(brandQuery, { limit: 4, isBrandedQuery: true })
+                );
+            }
+        }
+    }
+
     // Semantic recall over the OFF embeddings — catches phrasings keyword
     // search misses ("protein yogurt" → "Oikos Triple Zero"). No-op unless
     // SEMANTIC_SEARCH_ENABLED=true.
@@ -487,7 +530,8 @@ export function assessConfidence(query: string, candidate: UnifiedCandidate): nu
  */
 export function confidenceGate(
     query: string,
-    candidates: UnifiedCandidate[]
+    candidates: UnifiedCandidate[],
+    rawLine?: string
 ): ConfidenceGateResult {
     if (candidates.length === 0) {
         return {
@@ -498,6 +542,19 @@ export function confidenceGate(
     }
 
     const queryLower = query.toLowerCase();
+
+    // Cooked-vs-dry fix (Jul 2026): a volume-unit grain line prefers the
+    // cooked basis, but every shortcut in this gate (basic-produce bypass,
+    // exact-match margin skip) locks in the DRY top1 — "rice" == "Rice" is a
+    // perfect-confidence match to the wrong cooking state. Force the full
+    // rerank so the cooked partition can decide.
+    if (detectGrainCookingContext(rawLine ?? query, query).softCooked) {
+        return {
+            skipAiRerank: false,
+            confidence: 0,
+            reason: 'soft_cooked_grain_full_rerank'
+        };
+    }
 
     // BASIC PRODUCE: Always skip AI rerank - FDC/USDA data is more reliable
     // AI tends to select FatSecret candidates with inflated fat values
@@ -511,9 +568,9 @@ export function confidenceGate(
         /\brice\b(?!\s+(vinegar|wine|paper|noodle|flour|milk|bran|syrup|cake|cracker|wrapper))/i,
     ];
     
-    // Explicitly prevent bypass for "canned", "cooked", "dried" variants, 
+    // Explicitly prevent bypass for "canned", "cooked", "dried" variants,
     // as they have significantly different nutrition from raw counterparts
-    const isBasicProduce = BASIC_PRODUCE_PATTERNS.some(p => p.test(queryLower)) 
+    const isBasicProduce = BASIC_PRODUCE_PATTERNS.some(p => p.test(queryLower))
         && !/\b(canned|cooked|dried)\b/i.test(queryLower);
 
     if (isBasicProduce && candidates.length > 0) {

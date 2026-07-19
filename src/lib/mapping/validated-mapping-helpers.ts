@@ -14,6 +14,7 @@ import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
+import { detectBrandInQuery } from './brand-detector';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 
@@ -270,13 +271,31 @@ export async function saveValidatedMapping(
 
     // Pre-save validation: Reject mappings where core tokens from normalizedForm are missing from foodName
     if (hasCoreTokenMismatch(normalizedForm, mapping.foodName, mapping.brandName)) {
-        logger.warn('validated_mapping.save_rejected_core_token_mismatch', {
+        // Brand rescue (mirrors the runtime core-token brand rescue): when the
+        // query names a brand and the mapped food carries it — in its brand
+        // field or embedded in its name — the "missing" core token is usually
+        // a flavor the brand spells differently ("cinnamon" vs "Cinnabon").
+        // Rejecting the save forces a full re-resolution on every request.
+        const rescueBrand = detectBrandInQuery(rawIngredient).matchedBrand?.toLowerCase().trim();
+        const carriesBrand = !!rescueBrand && (
+            mapping.brandName?.toLowerCase().includes(rescueBrand) ||
+            new RegExp(`\\b${rescueBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(mapping.foodName.toLowerCase())
+        );
+        if (!carriesBrand) {
+            logger.warn('validated_mapping.save_rejected_core_token_mismatch', {
+                rawIngredient,
+                normalizedForm,
+                foodName: mapping.foodName,
+                brandName: mapping.brandName,
+            });
+            return; // Don't save this invalid mapping
+        }
+        logger.info('validated_mapping.save_core_token_brand_rescued', {
             rawIngredient,
             normalizedForm,
             foodName: mapping.foodName,
             brandName: mapping.brandName,
         });
-        return; // Don't save this invalid mapping
     }
 
     try {
@@ -308,7 +327,18 @@ export async function saveValidatedMapping(
                 usedCount: 1,
             },
             update: {
-                // If mapping already exists, just increment usage
+                // Store the newly resolved food, not just usage: the cache
+                // escapes (count-label, brand-guard, cooked-grain) exist to
+                // supersede a stale cached food with a re-resolution, and an
+                // increment-only update kept the stale row forever — every
+                // subsequent request paid the full re-resolution cost.
+                foodName: mapping.foodName,
+                brandName: mapping.brandName,
+                source: mappingSource,
+                offBarcode,
+                fdcId,
+                aiConfidence: clampedConfidence,
+                validatedBy: 'ai',
                 usedCount: { increment: 1 },
                 lastUsedAt: new Date(),
             },

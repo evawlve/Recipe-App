@@ -7,6 +7,7 @@
 
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
+import { detectGrainCookingContext } from './filter-candidates';
 
 export interface RerankCandidate {
     id: string;
@@ -77,6 +78,10 @@ const WEIGHTS = {
     MISSING_COOKING_STATE_PENALTY: 0.40, // Penalty when query says "fried" but candidate doesn't
     // Count-labeled SKU preference (Cluster A pt2, Jul 2026)
     COUNT_LABEL_BOOST: 0.08,  // Tie-break toward SKUs whose label declares a per-piece count when the user is counting pieces. Deliberately small: must not beat EXACT_MATCH or token penalties.
+    // Decisive same-brand preference (brand-hijack fix, Jul 2026)
+    DECISIVE_BRAND_BOOST: 0.35,  // Only fires behind hasDecisiveBrandContext + non-brand token coverage; a cross-brand candidate must not win on flavor-token coverage alone when the user named a brand unambiguously.
+    // Cooked-grain preference for volume-unit lines (cooked-vs-dry fix, Jul 2026)
+    GRAIN_COOKED_VOLUME_BOOST: 0.35,  // Fires only under softCooked grain context; paired with a partition tiebreak because a dry exact-match ("White Rice", ~350 kcal/100g) otherwise outscores any cooked record on name quality.
 };
 
 
@@ -1316,6 +1321,72 @@ function computeNutritionScore(
 }
 
 // ============================================================
+// Decisive Brand Gate (brand-hijack fix, Jul 2026)
+// ============================================================
+
+/**
+ * Product-form tokens that, adjacent to a detected single-word brand token,
+ * make the brand reading unambiguous ("ghost protein", "built bar") as opposed
+ * to coincidental English usage ("ghost pepper", "one apple").
+ */
+const BRAND_PRODUCT_CONTEXT_TOKENS = new Set([
+    'protein', 'whey', 'isolate', 'casein', 'powder', 'shake', 'bar', 'bars',
+    'energy', 'drink', 'preworkout', 'pre-workout', 'bcaa', 'aminos',
+    'creatine', 'gamer', 'greens', 'electrolytes', 'hydration',
+]);
+
+/**
+ * A brand hit is "decisive" only when the evidence spans two words: either the
+ * detected brand itself is multi-word ("one bar", "optimum nutrition"), or the
+ * single brand token sits directly next to a product-form token in the text.
+ * Single-word brands that double as common English words ("ghost", "one",
+ * "built") never qualify on their own.
+ */
+function hasDecisiveBrandContext(text: string, targetBrand: string): boolean {
+    const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (brandTokens.length === 0) return false;
+    if (brandTokens.length >= 2) return true;
+    const tokens = text.toLowerCase().split(/[\s,()[\]{}]+/).filter(t => t.length > 0);
+    const idx = tokens.indexOf(brandTokens[0]);
+    if (idx === -1) return false;
+    const prev = tokens[idx - 1];
+    const next = tokens[idx + 1];
+    return (prev !== undefined && BRAND_PRODUCT_CONTEXT_TOKENS.has(prev))
+        || (next !== undefined && BRAND_PRODUCT_CONTEXT_TOKENS.has(next));
+}
+
+/**
+ * Whole-token brand match: the candidate must carry the detected brand's first
+ * token as a full word — in its brand field OR its name, because OFF records
+ * often embed the brand in the name with an empty brand field ("Ghost Whey
+ * Protein (Cinnabon)", brand ""). Substring matching is unsafe ("one" would
+ * match "Toblerone"); requiring every detected token is too strict because
+ * lexicon entries can be brand+form ("one bar" vs brand "ONE Brands").
+ */
+function candidateMatchesTargetBrand(brandName: string | undefined, candidateName: string, targetBrand: string): boolean {
+    const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (brandTokens.length === 0) return false;
+    const candTokens = `${candidateName} ${brandName ?? ''}`.toLowerCase()
+        .split(/[\s,()[\]{}]+/).filter(Boolean);
+    return candTokens.includes(brandTokens[0]);
+}
+
+/**
+ * The decisive boost additionally requires the same-brand candidate to look
+ * like the product the user described: its NAME (not brand) must cover at
+ * least one non-brand query token. Keeps "Ghost Energy Drink" from hijacking
+ * "ghost protein cinnamon roll" just for sharing the brand.
+ */
+function coversNonBrandQueryToken(candidateName: string, query: string, targetBrand: string): boolean {
+    const brandTokens = new Set(targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean));
+    const queryTokens = query.toLowerCase().split(/[\s,()[\]{}]+/)
+        .filter(t => t.length > 2 && !brandTokens.has(t));
+    if (queryTokens.length === 0) return false;
+    const nameLower = candidateName.toLowerCase();
+    return queryTokens.some(t => nameLower.includes(t));
+}
+
+// ============================================================
 // Main Rerank Function
 // ============================================================
 
@@ -1380,6 +1451,62 @@ export function simpleRerank(
     // Step 4: Extract modifier constraints from the raw line (or query)
     const constraints = extractModifierConstraints(rawLine || query);
 
+    // Decisive brand gate (brand-hijack fix, Jul 2026): when the query names a
+    // brand with two-word evidence, same-brand candidates that also cover a
+    // non-brand query token get a boost big enough to overturn a cross-brand
+    // competitor's flavor-token coverage lead (the n-seg-21 / n-brand-02 class).
+    const decisiveBrandActive = !!targetBrand
+        && hasDecisiveBrandContext(rawLine || query, targetBrand);
+    const isDecisiveBrandCandidate = (c: RerankCandidate): boolean =>
+        decisiveBrandActive
+        && candidateMatchesTargetBrand(c.brandName, c.name, targetBrand!)
+        && coversNonBrandQueryToken(c.name, query, targetBrand!);
+
+    // Cooked-grain preference (cooked-vs-dry fix, Jul 2026): a volume-unit
+    // grain line prefers cooked records. A candidate "looks cooked" by name
+    // OR by nutrition — cooked grains sit at ~100-170 kcal/100g while dry ones
+    // are ~330-380, a clean separation — because many cooked records are
+    // neutrally named ("White Rice" at 162 kcal/100g).
+    // Variety guard: the normalizer strips variety adjectives from the query
+    // ("white rice" → "rice"), so check the RAW line — "1 cup white rice" must
+    // not partition up "cooked wild rice" over a cooked white-rice record.
+    const grainSoftCooked = !!detectGrainCookingContext(rawLine || query, query).softCooked;
+    const GRAIN_VARIETY_TOKENS = ['white', 'brown', 'wild', 'jasmine', 'basmati', 'black', 'red', 'glutinous', 'sticky'];
+    const rawLower = (rawLine || query).toLowerCase();
+    const queryVarieties = grainSoftCooked
+        ? GRAIN_VARIETY_TOKENS.filter(v => new RegExp(`\\b${v}\\b`).test(rawLower))
+        : [];
+    // Raw-line food tokens for the within-partition tiebreak ("white rice
+    // cooked" covers 2 of {white, rice}; "cream of rice cooked" covers 1).
+    const GRAIN_LINE_NOISE = new Set(['cup', 'cups', 'bowl', 'bowls', 'serving', 'servings', 'one', 'two', 'three', 'and', 'with', 'the']);
+    const rawFoodTokens = grainSoftCooked
+        ? rawLower.split(/[^a-z]+/).filter(t => t.length > 2 && !GRAIN_LINE_NOISE.has(t))
+        : [];
+    const isCookedGrainCandidate = (c: RerankCandidate): boolean => {
+        if (!grainSoftCooked) return false;
+        // Nutrition window: cooked grains run ~97-170 kcal with carbs >= ~20;
+        // dry grains ~330-380. The carbs floor keeps low-kcal NON-grain rows
+        // (rice milk at 47 kcal / 9g carbs) out of the partition.
+        const looksCooked = /\b(cooked|boiled|steamed|prepared)\b/i.test(c.name)
+            || (c.nutrition?.per100g === true
+                && c.nutrition.kcal > 60 && c.nutrition.kcal <= 250
+                && c.nutrition.carbs >= 12);
+        if (!looksCooked) return false;
+        if (queryVarieties.length > 0) {
+            const nameLower = c.name.toLowerCase();
+            const candVarieties = GRAIN_VARIETY_TOKENS.filter(v => new RegExp(`\\b${v}\\b`).test(nameLower));
+            if (candVarieties.length > 0 && !candVarieties.some(v => queryVarieties.includes(v))) {
+                return false;
+            }
+        }
+        return true;
+    };
+    const grainRawCoverage = (c: RerankCandidate): number => {
+        if (rawFoodTokens.length === 0) return 0;
+        const nameLower = c.name.toLowerCase();
+        return rawFoodTokens.filter(t => new RegExp(`\\b${t}\\b`).test(nameLower)).length;
+    };
+
     // Score all candidates (base score + nutrition score + modifier constraints)
     const scored = candidates
         .map(c => {
@@ -1401,16 +1528,21 @@ export function simpleRerank(
             const constraintPenalty = constraintResult.penalty * 0.5; // Scale penalty to reasonable range
 
             const countLabelBoost = (preferCountLabeled && c.countLabelMatch) ? WEIGHTS.COUNT_LABEL_BOOST : 0;
+            const decisiveBrandBoost = isDecisiveBrandCandidate(c) ? WEIGHTS.DECISIVE_BRAND_BOOST : 0;
+            const grainCookedBoost = isCookedGrainCandidate(c) ? WEIGHTS.GRAIN_COOKED_VOLUME_BOOST : 0;
 
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost,
+                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost + decisiveBrandBoost + grainCookedBoost,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
                 constraintPenalty,
                 constraintReason: constraintResult.reason,
                 countLabelBoost,
+                decisiveBrandBoost,
+                grainCookedBoost,
+                grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
             };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
@@ -1431,15 +1563,20 @@ export function simpleRerank(
             const baseScore = computeSimpleScore(c, query, isBranded, targetBrand);
             const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
             const countLabelBoost = (preferCountLabeled && c.countLabelMatch) ? WEIGHTS.COUNT_LABEL_BOOST : 0;
+            const decisiveBrandBoost = isDecisiveBrandCandidate(c) ? WEIGHTS.DECISIVE_BRAND_BOOST : 0;
+            const grainCookedBoost = isCookedGrainCandidate(c) ? WEIGHTS.GRAIN_COOKED_VOLUME_BOOST : 0;
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score + countLabelBoost,
+                score: baseScore + nutritionResult.score + countLabelBoost + decisiveBrandBoost + grainCookedBoost,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
                 constraintPenalty: 0,
                 constraintReason: 'fallback_no_rejection',
                 countLabelBoost,
+                decisiveBrandBoost,
+                grainCookedBoost,
+                grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
             };
         });
         scored.push(...fallbackScored);
@@ -1448,6 +1585,31 @@ export function simpleRerank(
     // Sort by score descending, with deterministic tiebreaker (ID) to ensure stable results
     // This prevents non-determinism when candidates have equal scores
     scored.sort((a, b) => {
+        // Decisive brand partition: when the gate is active, gated same-brand
+        // candidates always rank above cross-brand ones — a hijacker's exact
+        // flavor-name coverage must not outscore the brand the user named.
+        // Within the partition, normal score order still picks the best record.
+        if (decisiveBrandActive) {
+            const aDecisive = a.decisiveBrandBoost > 0 ? 1 : 0;
+            const bDecisive = b.decisiveBrandBoost > 0 ? 1 : 0;
+            if (aDecisive !== bDecisive) return bDecisive - aDecisive;
+        }
+
+        // Cooked-grain partition: same pattern — under softCooked context a
+        // cooked record must beat a dry exact-match ("White Rice" @350 kcal)
+        // whose name quality otherwise outscores any boost. Within the
+        // partition, prefer candidates covering more raw-line food tokens
+        // ("white rice cooked" over "cream of rice cooked" for "white rice"),
+        // then fall through to score order.
+        if (grainSoftCooked) {
+            const aCooked = a.grainCookedBoost > 0 ? 1 : 0;
+            const bCooked = b.grainCookedBoost > 0 ? 1 : 0;
+            if (aCooked !== bCooked) return bCooked - aCooked;
+            if (aCooked && bCooked && a.grainCookedCoverage !== b.grainCookedCoverage) {
+                return b.grainCookedCoverage - a.grainCookedCoverage;
+            }
+        }
+
         const scoreDiff = b.score - a.score;
         if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
 
@@ -1527,7 +1689,7 @@ export function simpleRerank(
                 `phrase=${phrase.toFixed(2)} mod=${modifier.toFixed(2)} cover=${coverage.toFixed(2)} ` +
                 `fdc=${fdcBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
                 `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
-                `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} src=${s.candidate.source}`
+                `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} dbrand=${((s as any).decisiveBrandBoost ?? 0).toFixed(2)} src=${s.candidate.source}`
             );
         });
         console.log();
@@ -1566,6 +1728,24 @@ export function simpleRerank(
         reason = 'clear_winner';
     } else if (gap < 0.05) {
         reason = 'close_match';
+    }
+
+    // A cooked-partition winner's low name-match score is EXPECTED (query
+    // "rice" vs "white medium-grain cooked unenriched rice") — floor its
+    // confidence so the deliberate cooked preference isn't discarded by the
+    // minimum-confidence rejection below and re-replaced with the dry top1.
+    if (grainSoftCooked && top.grainCookedBoost > 0) {
+        confidence = Math.max(confidence, 0.75);
+        reason = 'cooked_grain_preference';
+    }
+
+    if (decisiveBrandActive && top.decisiveBrandBoost > 0) {
+        logger.info('simple_rerank.decisive_brand_winner', {
+            query,
+            targetBrand,
+            winner: top.candidate.name,
+            winnerBrand: top.candidate.brandName,
+        });
     }
 
     logger.debug('simple_rerank.result', {

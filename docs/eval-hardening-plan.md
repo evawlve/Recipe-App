@@ -80,6 +80,34 @@ set bands from observed-correct values — never guess bands.**
 - **Cooked-vs-dry staples** — GRAINS only (rice/pasta/quinoa/oats default DRY; legumes already cooked). Root: `detectGrainCookingContext` (filter-candidates.ts:345) ignores the unit; `basic_produce_bypass` (gather-candidates.ts:516) locks the dry top1; `cook-state-detector.ts` is DEAD CODE. Quinoa/oats also corpus-blocked. Lock-ins `n-cook-01/02/03`; defects `n-cook-04/05/06`. Fix HIGH-risk (recipe cups logged dry).
 - **Brand-hijack** — brand is a tiebreaker behind `simple-rerank.ts:1452` + weak +0.25 bonus. Ranking-fixable: `n-seg-21`, `n-brand-02`. Ingest/detection-blocked: `s-supp-11`, `n-brand-05` (c4), `n-brand-06` (bang; both absent from brand-lexicon.json), `s-supp-17`. Positive controls `n-brand-03/04` added hard. Fix risks generic-word over-fire → needs 2-gram brand guard.
 
+## Progress — round 3 (2026-07-19 pt6): both deferred fixes SHIPPED
+
+**Full eval after deploy: 0 real failures; n-seg-21, n-brand-02, n-cook-04 all promoted to hard.**
+
+**1. Brand-hijack — fixed as retrieval + rescue + ranking (root cause was retrieval, not just ranking):**
+- **Decisive brand gate** (`simple-rerank.ts`): 2-gram brand evidence (multi-word brand hit, or unigram brand adjacent to a product-form token — "ghost protein" yes, "ghost pepper" no) + same-brand candidate covering ≥1 non-brand query token → `DECISIVE_BRAND_BOOST` 0.35 + a partition tiebreak above cross-brand candidates. Brand match is whole-token against brand field OR name (OFF often embeds brand in name with empty brand field).
+- **Brand-targeted retrieval** (`gather-candidates.ts`): live characterization showed the pool for "ghost protein cinnamon roll" contained ZERO Ghost candidates — no ranking fix can lift what isn't retrieved. Added a "<brand> <first non-brand token>" OFF search when a brand is detected.
+- **Core-token brand rescue extended to name-embedded brands** (`map-ingredient-with-fallback.ts`) — "Ghost Whey Protein (Cinnabon)" (brand field empty) was being dropped for missing the "cinnamon" core token.
+- **Save-path rescue** (`validated-mapping-helpers.ts`): same rescue at `saveValidatedMapping`, so the corrected mapping caches instead of re-resolving every request.
+- Result: "2 scoops ghost protein cinnamon roll" → **Ghost Whey Protein (Cinnabon)** (the exact record from the characterization); "one bar birthday cake" → ONE Brands bar. Positive controls n-brand-03/04 green.
+- **Deliberately skipped**: adding bare `c4`/`bang` to the brand lexicon (n-brand-05/06 stay knownIssue) — those unigrams would flip `isBranded` on lines like "bang bang shrimp" for zero eval gain since the SKUs are ingest-blocked anyway.
+
+**2. Cooked-vs-dry grains — fixed as a SOFT preference (grains only, volume units only):**
+- `detectGrainCookingContext` gains a `softCooked` branch: HEAD-NOUN true grain (rice/pasta/quinoa/oats/… — "rice vinegar" excluded) + eaten-portion volume unit (cup/bowl/serving) + no dry signal (dry/uncooked/raw/flour/…/any weight unit) → prefer cooked, softly.
+- Soft mode NEVER hard-rejects dry candidates (`isWrongCookingStateForGrain` returns false) — quinoa/oats have no cooked record and would empty the pool (n-cook-05/06 stay knownIssue, corpus-blocked).
+- **Cooked retrieval**: gather adds a `cooked <raw-line food name>` FDC search (raw line, because BOTH the parser and normalizer strip variety adjectives: "1 cup white rice" parses to "rice" — searching "cooked rice" top-ranks WILD rice).
+- **Rerank cooked partition** with (a) nutrition-window cooked detection (kcal 60–250 AND carbs ≥ 12 — keeps rice milk out; many cooked records are neutrally named), (b) variety guard vs the raw line (white ≠ wild/brown), (c) within-partition raw-token-coverage tiebreak, (d) a 0.75 confidence floor for cooked winners (their verbose FDC names score below the 0.70 rerank minimum and the winner was being discarded for the dry top1).
+- **confidenceGate returns early under softCooked** — BOTH the basic-produce bypass AND the exact-match margin skip ("rice"=="Rice" at confidence 1.0) otherwise lock the dry top1 before rerank runs.
+- **Cache escapes** at both FoodMapping checkpoints when the cached food doesn't demonstrably look cooked.
+- Result: "1 cup white rice" → white medium-grain cooked unenriched rice, **158g/cup, carbs100 28.6** (band [26,36]). Weight lines ("200g rice") still resolve dry; explicit-cooked lock-ins n-cook-01/02/03 green; legumes untouched.
+- `cook-state-detector.ts` (dead code, zero importers) deleted.
+
+**3. FoodMapping upsert now stores the re-resolved food on update** (`validated-mapping-helpers.ts`): the update clause only incremented `usedCount`, so every cache escape (count-label, brand-guard, cooked-grain) re-resolved on EVERY request forever instead of once — stale rows could never be replaced. All rows are `validatedBy='ai'`, so overwrite is safe.
+
+**Known trade-off (documented, accepted):** recipe-style "2 cups rice" (measured dry) now resolves cooked — the meal-logging reading wins for volume units. Weight units keep the dry/recipe basis. The FoodMapping key doesn't encode cooking context, so alternating cup/weight lines for the same grain flip the cached row and re-resolve each flip (correctness preserved by the read-time state checks; latency cost only).
+
+**Promotions this round:** n-seg-21, n-brand-02, n-cook-04 (fixed), plus s-supp-17, n-supp-15, n-serv-06 (3 consecutive passing runs). n-seg-07/16/18/29 left as knownIssue — n-seg-18 flapped back to failing this round, confirming segmentation cases are AI-flaky.
+
 ## How to run
 
 ```

@@ -1278,8 +1278,7 @@
           "ghost"
         ]
       ],
-      "knownIssue": true,
-      "notes": "DEFECT (flavor-ingest-blocked), SEARCH. Ghost Gamer line IS in corpus (off_0810028292666 'Gamer' brand 'Ghost') but the 'sour patch' flavor is not; nearest is 'Sour Watermelon' with an empty brand field. Not ranking-fixable without the flavor SKU. knownIssue, non-gating."
+      "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs (Ghost Gamer in corpus, ranking stable). | Previously: DEFECT (flavor-ingest-blocked), SEARCH. Ghost Gamer line IS in corpus (off_0810028292666 'Gamer' brand 'Ghost') but the 'sour patch' flavor is not; nearest is 'Sour Watermelon' with an empty brand field. Not ranking-fixable without the flavor SKU. knownIssue, non-gating."
     }
   ],
   "nlp": [
@@ -2841,8 +2840,7 @@
           "ghost"
         ]
       ],
-      "knownIssue": true,
-      "notes": "KNOWN ISSUE (branded-competitor hijack, RANKING-FIXABLE). '2 scoops ghost protein cinnamon roll' maps to Optimum Nutrition 'Cinnamon Roll Protein' (off_0748927070545). VERIFIED 2026-07-19: a Ghost-branded cinnamon protein IS in corpus but under the flavor name 'Cinnabon' (off_0810169602454 / off_0810128902335), so 'cinnamon roll' vs 'cinnabon' share no flavor tokens -> only a decisive brand gate can flip it (right-brand/near-flavor, not exact). Root: simple-rerank.ts:1452 brand is a tiebreaker behind the score short-circuit + weak +0.25 bonus. Fix has generic-word over-fire risk. knownIssue."
+      "notes": "FIXED 2026-07-19 (decisive brand gate + brand-targeted retrieval + core-token brand rescue): maps to Ghost Whey Protein (Cinnabon) off_0810128902335, the exact record the characterization named. Promoted hard. | Previously: KNOWN ISSUE (branded-competitor hijack, RANKING-FIXABLE). '2 scoops ghost protein cinnamon roll' maps to Optimum Nutrition 'Cinnamon Roll Protein' (off_0748927070545). VERIFIED 2026-07-19: a Ghost-branded cinnamon protein IS in corpus but under the flavor name 'Cinnabon' (off_0810169602454 / off_0810128902335), so 'cinnamon roll' vs 'cinnabon' share no flavor tokens -> only a decisive brand gate c"
     },
     {
       "id": "n-seg-22",
@@ -3242,8 +3240,7 @@
         20,
         30
       ],
-      "knownIssue": true,
-      "notes": "Pattern 9 (base SKU vs variant product-selection nuance). Same residual as n-supp-06: query can map to the 'Orgain Organic Protein + Oatmilk' SKU (~45g/scoop) instead of the base 'Orgain Organic Protein Powder' (~23g/scoop) this [20,30] band targets. Both are real Orgain SKUs; the pick is genuinely ambiguous without product-line disambiguation. KNOWN GAP, non-gating."
+      "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: Pattern 9 (base SKU vs variant product-selection nuance). Same residual as n-supp-06: query can map to the 'Orgain Organic Protein + Oatmilk' SKU (~45g/scoop) instead of the base 'Orgain Organic Protein Powder' (~23g/scoop) this [20,30] band targets. Both are real Orgain SKUs; the pick is genuinely ambiguous without product-line disambiguation. KNOWN GAP, non-gating."
     },
     {
       "id": "n-qty-01",
@@ -3804,8 +3801,7 @@
         230,
         320
       ],
-      "knownIssue": true,
-      "notes": "KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/cup -> 277.5g, in [230,320]), others a ~240g/cup record (-> 360g, out of band). The mixed-number fraction parses correctly (1.5); the flip is in which quinoa serving/record wins. Kept knownIssue so the flip never fails the suite; belongs with the serving-resolution/buildOffResult follow-up."
+      "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/cup -> 277.5g, in [230,320]), others a ~240g/cup record (-> 360g, out of band). The mixed-number fraction parses correctly (1.5); the flip is in which quinoa serving/re"
     },
     {
       "id": "n-serv-07",
@@ -4987,8 +4983,7 @@
           36
         ]
       },
-      "knownIssue": true,
-      "notes": "DEFECT (cooked-vs-dry, 2026-07-19). Bare 'white rice' resolves to DRY OFF 'Rice' (kcal100=347, carbs100=81.6) instead of cooked. Isolates the rice half of n-mq-22. Band = observed cooked-rice carbs100 (31.3). Root cause: detectGrainCookingContext (filter-candidates.ts) ignores the unit + basic_produce_bypass (gather-candidates.ts:516) locks the dry top1. HIGH-risk fix (recipe 'cups' logged dry), deferred. knownIssue, non-gating."
+      "notes": "FIXED 2026-07-19 (softCooked grain context: volume-unit grain -> cooked FDC record via cooked-retrieval + rerank cooked partition + confidence-gate skip + cache escape): 'white medium-grain cooked unenriched rice', 158g/cup, carbs100=28.6. Promoted hard. | Previously: DEFECT (cooked-vs-dry, 2026-07-19). Bare 'white rice' resolves to DRY OFF 'Rice' (kcal100=347, carbs100=81.6) instead of cooked. Isolates the rice half of n-mq-22. Band = observed cooked-rice carbs100 (31.3). Root cause: detectGrainCookingContext (filter-candidates.ts) ignores the unit + basic_produce_bypass (gather-candidates.ts:516) locks the dry top1. HIGH-risk fix (recipe 'cups' logged dry), d"
     },
     {
       "id": "n-cook-05",
@@ -5037,8 +5032,7 @@
         ]
       ],
       "expectItems": 1,
-      "knownIssue": true,
-      "notes": "DEFECT (branded-competitor hijack, RANKING-FIXABLE). Maps to 'Birthday Cake' brand 'Cake Cup' (off_0810257005259); correct 'One Birthday Cake Protein bar' brand 'ONE Brands' (off_0788434107730) IS in corpus and tops the search. Same class as n-seg-21. Root: simple-rerank.ts brand match is only a tiebreaker behind a score short-circuit (:1452) + a weak +0.25 bonus. Fix risks 'one'/'ghost'/'built' generic-word over-fire; needs 2-gram brand guard. knownIssue, non-gating."
+      "notes": "FIXED 2026-07-19 (decisive brand gate): 'One birthday cake protein bars' (ONE Brands) beats the Cake Cup hijacker. Promoted hard. | Previously: DEFECT (branded-competitor hijack, RANKING-FIXABLE). Maps to 'Birthday Cake' brand 'Cake Cup' (off_0810257005259); correct 'One Birthday Cake Protein bar' brand 'ONE Brands' (off_0788434107730) IS in corpus and tops the search. Same class as n-seg-21. Root: simple-rerank.ts brand match is only a tiebreaker behind a score short-circuit (:1452) + a weak +0.25 bonus. Fix risks 'one'/'ghost'/'built' g"
     },
     {
       "id": "n-brand-03",

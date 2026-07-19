@@ -20,6 +20,7 @@ import {
     validateAliasMapping,
     hasCoreTokenMismatch,
     hasNullOrInvalidMacros,
+    detectGrainCookingContext,
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery, stripPrepModifiers } from './simple-rerank';
 import {
@@ -551,6 +552,8 @@ export async function mapIngredientWithFallback(
             let earlyNutritionInvalid = false;
             let loadedFdcNutrition: any = null;
             let cachedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
+            let cachedKcal100: number | null = null;
+            let cachedCarbs100: number | null = null;
 
             if (!earlyCoreTokenMismatch) {
                 const { prisma } = await import('../db');
@@ -569,6 +572,8 @@ export async function mapIngredientWithFallback(
                             fat: rawFdc.fat ?? 0,
                             per100g: true,
                         };
+                        cachedKcal100 = loadedFdcNutrition.kcal || null;
+                        cachedCarbs100 = loadedFdcNutrition.carbs || null;
                         earlyNutritionInvalid = hasNullOrInvalidMacros(loadedFdcNutrition);
                         if (earlyNutritionInvalid) {
                             logger.warn('mapping.early_cache_bad_nutrition', {
@@ -621,6 +626,8 @@ export async function mapIngredientWithFallback(
                             fat: nutrients.fat ?? 0,
                             per100g: true,
                         };
+                        cachedKcal100 = loadedNutrition.kcal || null;
+                        cachedCarbs100 = loadedNutrition.carbs || null;
                         earlyNutritionInvalid = hasNullOrInvalidMacros(loadedNutrition);
                         if (earlyNutritionInvalid) {
                             logger.warn('mapping.early_cache_bad_nutrition', {
@@ -654,9 +661,22 @@ export async function mapIngredientWithFallback(
                 && earlyCacheHit.foodId.startsWith('off_')
                 && !servingLabelCountsPiece(cachedOffServing?.servingSize, cachedOffServing?.servingGrams, earlyCountedNoun);
 
+            // Cooked-grain cache escape (cooked-vs-dry fix, Jul 2026): the line
+            // is a volume-unit grain (prefers cooked basis) but the cached food
+            // doesn't demonstrably look cooked — no cooked token in its name
+            // and its nutrition is outside the cooked-grain window. Fall
+            // through so the full pipeline's cooked preference re-resolves;
+            // the write-back makes this a one-time re-resolution per name.
+            const earlyCachedLooksCooked = /\b(cooked|boiled|steamed|prepared)\b/i.test(earlyCacheHit.foodName)
+                || (cachedKcal100 != null && cachedKcal100 > 60 && cachedKcal100 <= 250
+                    && cachedCarbs100 != null && cachedCarbs100 >= 12);
+            const earlyGrainCookedEscape = detectGrainCookingContext(trimmed, normalizedName).softCooked === true
+                && !earlyCachedLooksCooked;
+
             if (earlyCoreTokenMismatch ||
                 earlyNutritionInvalid ||
                 earlyCountLabelEscape ||
+                earlyGrainCookedEscape ||
                 isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
                 isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ||
                 hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ||
@@ -676,6 +696,7 @@ export async function mapIngredientWithFallback(
                     coreTokenMismatch: earlyCoreTokenMismatch,
                     nutritionInvalid: earlyNutritionInvalid,
                     countLabelEscape: earlyCountLabelEscape,
+                    grainCookedEscape: earlyGrainCookedEscape,
                 });
                 // Fall through to normal search - don't use stale cached mapping
             } else {
@@ -898,6 +919,8 @@ export async function mapIngredientWithFallback(
                 // Validate nutrition data - reject cached mappings to foods with zero/null nutrition
                 let normalizedNutritionInvalid = false;
                 let normalizedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
+                let normalizedCachedKcal100: number | null = null;
+                let normalizedCachedCarbs100: number | null = null;
                 if (!normalizedCoreTokenMismatch) {
                     const { prisma } = await import('../db');
                     let nutrients: any = null;
@@ -950,6 +973,8 @@ export async function mapIngredientWithFallback(
                             fat: nutrients.fat ?? 0,
                             per100g: true,
                         };
+                        normalizedCachedKcal100 = mappedNutrients.kcal || null;
+                        normalizedCachedCarbs100 = mappedNutrients.carbs || null;
                         normalizedNutritionInvalid = hasNullOrInvalidMacros(mappedNutrients);
                         if (normalizedNutritionInvalid) {
                             logger.warn('mapping.normalized_cache_bad_nutrition', {
@@ -969,9 +994,17 @@ export async function mapIngredientWithFallback(
                     && normalizedCache.foodId.startsWith('off_')
                     && !servingLabelCountsPiece(normalizedOffServing?.servingSize, normalizedOffServing?.servingGrams, normalizedCountedNoun);
 
+                // Cooked-grain cache escape — same rationale as the early-cache check.
+                const normalizedCachedLooksCooked = /\b(cooked|boiled|steamed|prepared)\b/i.test(normalizedCache.foodName)
+                    || (normalizedCachedKcal100 != null && normalizedCachedKcal100 > 60 && normalizedCachedKcal100 <= 250
+                        && normalizedCachedCarbs100 != null && normalizedCachedCarbs100 >= 12);
+                const normalizedGrainCookedEscape = detectGrainCookingContext(trimmed, normalizedName).softCooked === true
+                    && !normalizedCachedLooksCooked;
+
                 if (normalizedCoreTokenMismatch ||
                     normalizedNutritionInvalid ||
                     normalizedCountLabelEscape ||
+                    normalizedGrainCookedEscape ||
                     isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
                     isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ||
                     // For branded queries: skip modifier mismatch when the cached food's brand
@@ -1071,7 +1104,13 @@ export async function mapIngredientWithFallback(
                     // differently ("cinnamon" vs a "Cinnabon" product name).
                     // simpleRerank still ranks it on token overlap, so a genuinely
                     // wrong match won't win. (The Ghost cinnamon-roll drop.)
-                    if (rescueBrand && c.brandName?.toLowerCase().includes(rescueBrand)) {
+                    // OFF records often embed the brand in the NAME with an empty
+                    // brand field ("Ghost Whey Protein (Cinnabon)", brand "") —
+                    // check both.
+                    if (rescueBrand && (
+                        c.brandName?.toLowerCase().includes(rescueBrand) ||
+                        new RegExp(`\\b${rescueBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(c.name.toLowerCase())
+                    )) {
                         if (debug) {
                             logger.debug('mapping.core_token_brand_rescued', {
                                 normalizedName, candidate: c.name, brand: c.brandName,
@@ -1235,7 +1274,7 @@ export async function mapIngredientWithFallback(
                         return 0;
                     });
 
-                    const gateResult = confidenceGate(searchQuery, sortedFiltered);
+                    const gateResult = confidenceGate(searchQuery, sortedFiltered, trimmed);
 
                     if (gateResult.skipAiRerank && gateResult.selected) {
                         winner = gateResult.selected;
