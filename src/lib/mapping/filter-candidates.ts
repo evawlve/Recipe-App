@@ -332,17 +332,43 @@ const FOODS_WITH_COOKING_STATE = [
 ];
 
 /**
+ * TRUE grains whose bare name defaults to the DRY record even when the user is
+ * clearly logging an eaten (cooked) portion. Scoped tight on purpose: legumes
+ * already resolve cooked, and meats/produce have their own handling.
+ */
+const VOLUME_COOKED_GRAINS = [
+    'rice', 'pasta', 'spaghetti', 'macaroni', 'quinoa',
+    'oats', 'oatmeal', 'couscous', 'barley', 'farro',
+];
+
+/** Volume units that signal an eaten portion of a grain (cooked basis). */
+const COOKED_VOLUME_UNIT_RE = /\b(cups?|bowls?|servings?)\b/i;
+
+/**
+ * Tokens that pin a grain line to the dry basis regardless of unit: explicit
+ * dry-state words, milled forms, or any weight unit (weighed grain portions in
+ * recipes are measured dry).
+ */
+const GRAIN_DRY_SIGNAL_RE = /\b(dry|uncooked|raw|flour|meal|grits|bran|g|gram|grams|kg|oz|ounce|ounces|lb|lbs|pound|pounds)\b/i;
+
+/**
  * Check if grain query explicitly specifies cooking state.
- * 
+ *
  * RULE: Recipes typically measure raw/dry ingredients.
  * Default to RAW/DRY unless user explicitly says "cooked", "prepared", etc.
- * 
+ *
+ * EXCEPTION (cooked-vs-dry fix, Jul 2026): a bare TRUE-grain name logged by an
+ * eaten-portion volume unit ("1 cup white rice", "a bowl of oatmeal") prefers
+ * the cooked basis — nobody eats a cup of dry rice. This preference is SOFT
+ * (softCooked): it must rank cooked records up, never hard-reject dry ones,
+ * because some grains (quinoa, oats) have no cooked record in the corpus.
+ *
  * Examples:
- * - "4 cups quinoa" → DRY (will be cooked as part of recipe)
- * - "2 cups cooked quinoa" → COOKED (explicitly stated)
- * - "200g rice" → DRY
+ * - "4 cups quinoa" → COOKED (soft; volume portion of a true grain)
+ * - "2 cups cooked quinoa" → COOKED (explicitly stated, hard)
+ * - "200g rice" → DRY (weight units stay dry — recipes weigh dry)
  */
-export function detectGrainCookingContext(rawLine: string, normalizedName: string): { preferCooked: boolean; preferDry: boolean } {
+export function detectGrainCookingContext(rawLine: string, normalizedName: string): { preferCooked: boolean; preferDry: boolean; softCooked?: boolean } {
     const lower = rawLine.toLowerCase();
     const normLower = normalizedName.toLowerCase();
 
@@ -370,6 +396,18 @@ export function detectGrainCookingContext(rawLine: string, normalizedName: strin
         return { preferCooked: true, preferDry: false };
     }
 
+    // Soft cooked preference: TRUE grain + eaten-portion volume unit + no dry signal.
+    // The grain must be the HEAD NOUN ("white rice" yes, "rice vinegar" no).
+    const nameTokens = normLower.split(/\s+/).filter(Boolean);
+    const headNoun = nameTokens[nameTokens.length - 1] ?? '';
+    const isVolumeCookedGrain = VOLUME_COOKED_GRAINS.includes(headNoun);
+    if (isVolumeCookedGrain
+        && COOKED_VOLUME_UNIT_RE.test(lower)
+        && !GRAIN_DRY_SIGNAL_RE.test(lower)
+        && !GRAIN_DRY_SIGNAL_RE.test(normLower)) {
+        return { preferCooked: true, preferDry: false, softCooked: true };
+    }
+
     // DEFAULT: Prefer dry/raw for all grains (recipes measure raw ingredients)
     return { preferCooked: false, preferDry: true };
 }
@@ -386,6 +424,14 @@ export function isWrongCookingStateForGrain(rawLine: string, normalizedName: str
 
     // If no preference (not a food with cooking state), don't filter
     if (!context.preferCooked && !context.preferDry) {
+        return false;
+    }
+
+    // Soft cooked preference (volume-unit grains) must never hard-reject:
+    // some grains have no cooked record in the corpus (quinoa, oats) and
+    // rejecting the dry ones would empty the pool. The preference is applied
+    // as a rerank boost instead.
+    if (context.softCooked) {
         return false;
     }
 
