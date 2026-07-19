@@ -145,7 +145,7 @@ export async function insertFdcAiServing(
     fdcId: number,
     gapType: ServingGapType,
     options: InsertFdcAiServingOptions = {}
-): Promise<{ success: boolean; reason?: string }> {
+): Promise<{ success: boolean; reason?: string; grams?: number; servingLabel?: string }> {
     const food = await prisma.fdcFood.findUnique({
         where: { fdcId },
         include: { servings: true },
@@ -261,5 +261,9 @@ export async function insertFdcAiServing(
         fdcId: String(fdcId), gapType, label: suggestion.servingLabel,
     });
 
-    return { success: true };
+    // Return the grams we just computed for THIS requested unit. Callers must use
+    // this rather than re-reading the fdcServing table by id — a food can have
+    // several AI volume servings (tbsp/tsp/cup) and an id-ordered readback would
+    // grab an arbitrary one, decoupling the result from the requested unit. (honey tbsp→7g bug)
+    return { success: true, grams: suggestion.grams, servingLabel: suggestion.servingLabel };
 }

@@ -124,6 +124,13 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     'chicken thigh': { grams: 116, confidence: 0.85, aliases: ['chicken thighs'] },
     'chicken wing': { grams: 34, confidence: 0.85, aliases: ['chicken wings', 'wing'] },
     'chicken skin': { grams: 15, confidence: 0.85, aliases: ['chicken skins', 'skin'] },
+    // Breaded chicken pieces: the label serving is often a multi-piece "portion"
+    // (e.g. Real Good "1 portion (112g)" ≈ 3 tenders), so a counted piece must use a
+    // per-piece weight, NOT the whole portion — otherwise "3 tenders" bills 3×112=336g.
+    // ~37g/tender matches USDA breaded chicken strip. Fully-qualified `chicken …`
+    // aliases only, so "steak strips"/"beef tenderloin" can't be hijacked. (n-mq-21)
+    'chicken tender': { grams: 37, confidence: 0.85, aliases: ['chicken tenders', 'chicken strip', 'chicken strips', 'chicken finger', 'chicken fingers', 'chicken tenderloin', 'chicken tenderloins'] },
+    'chicken nugget': { grams: 18, confidence: 0.85, aliases: ['chicken nuggets'] },
     'bacon strip': { grams: 12, confidence: 0.85, aliases: ['bacon strips', 'strip bacon', 'bacon slice'] },
     'sausage link': { grams: 45, confidence: 0.8, aliases: ['sausage links', 'breakfast sausage'] },
     'sausage patty': { grams: 27, confidence: 0.8, aliases: ['sausage patties'] },

@@ -99,6 +99,21 @@ export function categoryDensity(categoryId?: string | null): number | undefined 
     CATEGORY_DENSITY_GML[categoryId.toLowerCase()];
 }
 
+// Categories whose volume→grams density is unambiguous for a DRY, granular solid.
+// Gates the volume conversion in the mapper: applying category density to THESE
+// corrects dense dry solids (sugar billed 2.5g/tsp → 4.25g, n-serv-14) without
+// disturbing categories where a volume→grams bump collides with something else:
+//   - rice/grain/legume: cooked-vs-dry nutrition ambiguity — a bigger dry-cup weight
+//     compounds a wrong cooked/dry record pick (n-mq-22), and dry-grain density
+//     overshoots cooked servings (cooked-rice cup 204g > real ~180g).
+//   - dairy/cheese/protein/vegetable/fruit/condiment/liquid/beverage: high-water
+//     foods that should use liquid/paste/label servings, not a granular-solid density.
+// Uncategorized solids (salt, cinnamon) and the excluded categories keep the flat
+// 0.5 g/ml solid default, so nothing that was calibrated to it regresses.
+export const DRY_GRANULE_DENSITY_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
+  'sugar', 'flour', 'starch', 'oats', 'powder', 'whey', 'nut', 'seed',
+]);
+
 /**
  * Resolve density with metadata about source (for user alerts)
  */

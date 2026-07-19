@@ -3417,15 +3417,37 @@ async function buildFdcResult(
     // Handle volume units - estimate grams based on typical density
     // Note: This is an approximation. Actual density varies by food.
     const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(candidate.name) || /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(parsed?.name || '');
-    
+
+    // Resolve a food-specific density (g/ml) instead of a flat liquid/solid guess.
+    // The old binary split billed every non-liquid solid at 0.5 g/ml, which is fine
+    // for light powders (flour ~0.53, cocoa ~0.55) but under-weights DENSE solids by
+    // ~40%: granulated/brown sugar (~0.85), packed grains, etc. Reuse the category
+    // density table (density.ts) — the same one gramsForServing() already trusts — and
+    // only fall back to the old liquid=1.0 / solid=0.5 defaults when no category is
+    // inferred, so uncategorized spices (cinnamon) keep their correct ~0.5. (n-serv-14:
+    // "1 tsp sugar" 2.5g → 4.25g; "1 cup sugar" 120g → 204g.)
+    let densityGml = isLiquid ? 1.0 : 0.5;
+    try {
+        const { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } = require('../units/density');
+        const inferredCategory = inferCategoryFromName(candidate.name) || inferCategoryFromName(parsed?.name || '');
+        // Only override for unambiguous dry-granular categories (sugar/flour/…) so
+        // cooked/dry-ambiguous grains and high-water foods keep the flat default.
+        if (inferredCategory && DRY_GRANULE_DENSITY_CATEGORIES.has(inferredCategory)) {
+            const catDensity = categoryDensity(inferredCategory);
+            if (catDensity && catDensity > 0) densityGml = catDensity;
+        }
+    } catch {
+        // density.ts unavailable — keep the flat liquid/solid default
+    }
+
     const volumeToGrams: Record<string, number> = {
-        'cup': isLiquid ? 240 : 120,      // 1 cup ≈ 240ml ≈ 240g for liquids, 120g for granular solids
-        'tbsp': isLiquid ? 15 : 7.5,     // 1 tbsp ≈ 15ml ≈ 15g for liquids, 7.5g for solids
-        'tablespoon': isLiquid ? 15 : 7.5, 'tablespoons': isLiquid ? 15 : 7.5,
-        'tsp': isLiquid ? 5 : 2.5,      // 1 tsp ≈ 5ml ≈ 5g for liquids, 2.5g for solids
-        'teaspoon': isLiquid ? 5 : 2.5, 'teaspoons': isLiquid ? 5 : 2.5,
-        'ml': 1,         // 1 ml ≈ 1g (for water-like liquids)
-        'floz': 30,      // 1 fl oz ≈ 30ml
+        'cup': 240 * densityGml,       // 1 cup ≈ 240ml × density
+        'tbsp': 15 * densityGml,       // 1 tbsp ≈ 15ml × density
+        'tablespoon': 15 * densityGml, 'tablespoons': 15 * densityGml,
+        'tsp': 5 * densityGml,         // 1 tsp ≈ 5ml × density
+        'teaspoon': 5 * densityGml, 'teaspoons': 5 * densityGml,
+        'ml': densityGml,              // 1 ml × density
+        'floz': 30 * densityGml,       // 1 fl oz ≈ 30ml × density
         // Micro-volume units (spice measures)
         'dash': 0.6,     // 1 dash ≈ 1/8 tsp ≈ 0.6ml ≈ 0.5-0.6g
         'dashes': 0.6,
@@ -3458,21 +3480,17 @@ async function buildFdcResult(
             try {
                 const { insertFdcAiServing } = await import('../usda/fdc-ai-backfill');
                 const aiResult = await insertFdcAiServing(fdcId, 'volume', { targetUnit: unit });
-                if (aiResult.success) {
-                    // Fetch the AI-created serving from cache
-                    const { prisma: prismaDb } = await import('../db');
-                    const aiServing = await prismaDb.fdcServing.findFirst({
-                        where: { fdcId, isAiEstimated: true },
-                        orderBy: { id: 'desc' },
+                // Use the grams the estimator computed for THIS unit. The old code
+                // re-read fdcServing by `orderBy id desc`, which ignored `unit` and
+                // grabbed an arbitrary AI serving — for honey (tbsp/tsp/cup all AI)
+                // that surfaced "1 tsp"=7g for a tbsp query. (n-serv-05)
+                if (aiResult.success && aiResult.grams && aiResult.grams > 0) {
+                    grams = qty * aiResult.grams;
+                    servingDescription = `${qty} ${unit}`;
+                    aiEstimated = true;
+                    logger.info('fdc.volume_ai_estimated', {
+                        foodName: candidate.name, unit, gramsPerUnit: aiResult.grams, totalGrams: grams,
                     });
-                    if (aiServing && aiServing.grams > 0) {
-                        grams = qty * aiServing.grams;
-                        servingDescription = `${qty} ${unit}`;
-                        aiEstimated = true;
-                        logger.info('fdc.volume_ai_estimated', {
-                            foodName: candidate.name, unit, gramsPerUnit: aiServing.grams, totalGrams: grams,
-                        });
-                    }
                 }
             } catch (err) {
                 logger.warn('fdc.volume_ai_failed', { foodName: candidate.name, unit, error: (err as Error).message });
@@ -3879,9 +3897,28 @@ async function buildOffResult(
     // Dense pastes/spreads (~1g/ml): the dry-goods 7.5g/tbsp default badly
     // undercounts them (2 tbsp peanut butter is ~32g, not 15g).
     const isPaste = !isLiquid && /butter|spread|hummus|yogurt|yoghurt|honey|mayo|mayonnaise|jam|jelly|nutella|tahini|cream cheese|sour cream|ricotta|paste|dressing|ketchup|mustard/i.test(candidate.name);
-    const cupG  = isLiquid ? 240 : isPaste ? 250 : 120;
-    const tbspG = isLiquid ? 15  : isPaste ? 16  : 7.5;
-    const tspG  = isLiquid ? 5   : isPaste ? 5.3 : 2.5;
+    // Dry-solid density (g/ml): prefer the food's category density (sugar 0.85,
+    // flour 0.53, oats 0.36, rice 0.85 …) over a flat 0.5, which under-weighted
+    // DENSE solids ~40% — granulated/brown sugar billed 2.5g/tsp instead of ~4.25g
+    // (n-serv-14). Uncategorized solids (salt, cinnamon) keep the 0.5 default, so
+    // light spices/powders don't regress. Liquids and pastes keep their tuned values.
+    let solidDensity = 0.5;
+    try {
+        const { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } = require('../units/density');
+        const solidCategory = inferCategoryFromName(candidate.name);
+        // Only override for unambiguous dry-granular categories (sugar/flour/…);
+        // rice/grain/dairy stay at 0.5 to avoid overshooting cooked servings and
+        // tripping serving bands (n-serv-01/03/04).
+        if (solidCategory && DRY_GRANULE_DENSITY_CATEGORIES.has(solidCategory)) {
+            const solidCatDensity = categoryDensity(solidCategory);
+            if (solidCatDensity && solidCatDensity > 0) solidDensity = solidCatDensity;
+        }
+    } catch {
+        // density.ts unavailable — keep the flat 0.5 g/ml solid default
+    }
+    const cupG  = isLiquid ? 240 : isPaste ? 250 : 240 * solidDensity;
+    const tbspG = isLiquid ? 15  : isPaste ? 16  : 15 * solidDensity;
+    const tspG  = isLiquid ? 5   : isPaste ? 5.3 : 5 * solidDensity;
     const volumeToGrams: Record<string, number> = {
         'cup': cupG, 'cups': cupG,
         'tbsp': tbspG, 'tablespoon': tbspG, 'tablespoons': tbspG,

@@ -125,6 +125,18 @@ const MUST_HAVE_PROTEIN_PATTERN = new RegExp(
 const PROTEIN_EXEMPT_PATTERN =
     /\b(broth|stock|bouillon|seasonings?|flavou?r(?:ed|ing)?|extract|oil|fat|sauce|vinaigrette|dressing|marinade|rub|spice)\b/i;
 
+/**
+ * Lean animal-muscle cuts queried by name: cooked protein reliably >25g/100g,
+ * raw >20g. A "chicken breast" candidate at 14.6g protein is a deli/roll/luncheon
+ * product, not the muscle cut, and should be demoted. Deliberately scoped to
+ * poultry breast/thigh + specific red-meat cuts — NOT generic "chicken"/"fish"/
+ * bare "filet" (cod/haddock fillets legitimately sit near the floor).
+ */
+const LEAN_PROTEIN_CUT_PATTERN =
+    /\b(chicken breast|chicken thigh|turkey breast|pork chop|pork loin|pork tenderloin|beef tenderloin|sirloin|ribeye)\b/i;
+/** g protein/100g floor: below raw breast (~22) and cooked (~31), above deli rolls (~14-16). */
+const LEAN_CUT_PROTEIN_FLOOR = 18;
+
 /** Alcohol carries 7 kcal/g that never shows up in P/C/F — exempt from the high-side Atwater check. */
 const ALCOHOL_PATTERN =
     /\b(beer|wine|vodka|whiske?y|rum|gin|tequila|liqueur|brandy|cognac|sake|cider|cocktail|margarita|sangria|champagne|prosecco|bourbon|scotch|mead|soju|alcoholic?|spirits?|ale|lager|stout|ipa)\b/i;
@@ -248,6 +260,20 @@ export function assessMacroPlausibility(
         !PROTEIN_EXEMPT_PATTERN.test(combinedNames)
     ) {
         reasons.push(`category:protein_food_with_zero_protein`);
+    }
+
+    // 3c. Lean muscle cuts queried by name must clear a protein FLOOR. Catches the
+    //     "chicken breast" → deli/roll product (14.6g) case that 3b's >0 rule misses.
+    //     Soft-penalize (never drop): if the low-protein record is the only candidate
+    //     it still surfaces. Broth/soup/sauce stay exempt via PROTEIN_EXEMPT_PATTERN.
+    if (
+        protein != null &&
+        protein > 0 &&
+        protein < LEAN_CUT_PROTEIN_FLOOR &&
+        LEAN_PROTEIN_CUT_PATTERN.test(query) &&
+        !PROTEIN_EXEMPT_PATTERN.test(combinedNames)
+    ) {
+        reasons.push(`category:lean_cut_protein_below_floor(${round1(protein)})`);
     }
 
     if (reasons.length > 0) {

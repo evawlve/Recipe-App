@@ -268,4 +268,51 @@ describe('assessMacroPlausibility', () => {
         expect(assessMacroPlausibility('spinach', 'Spinach', null).plausible).toBe(true);
         expect(assessMacroPlausibility('spinach', 'Spinach', undefined).plausible).toBe(true);
     });
+
+    // ============================================================
+    // Lean-cut protein floor (golden n-mq-22)
+    // ============================================================
+    describe('lean-cut protein floor (n-mq-22)', () => {
+        it('flags a "grilled chicken breast" deli/roll record at 14.6g protein', () => {
+            const r = assessMacroPlausibility(
+                'grilled chicken breast',
+                'roll oven-roasted chicken breast',
+                { kcal: 134, protein: 14.6, carbs: 1.79, fat: 7.65 }
+            );
+            expect(r.plausible).toBe(false);
+            expect(r.impossible).toBe(false); // penalize, never drop
+            expect(r.penalty).toBe(IMPLAUSIBLE_MACRO_PENALTY);
+            expect(r.reasons.some(x => x.startsWith('category:lean_cut_protein_below_floor'))).toBe(true);
+        });
+
+        it('does NOT flag a real grilled chicken breast at 29.5g', () => {
+            const r = assessMacroPlausibility(
+                'grilled chicken breast',
+                'cooked grilled chicken breast',
+                { kcal: 165, protein: 29.5, carbs: 0, fat: 3.6 }
+            );
+            expect(r.plausible).toBe(true);
+        });
+
+        it('does NOT apply the cut-floor to legumes/tofu (uses >0 rule only)', () => {
+            const r = assessMacroPlausibility('tofu', 'Firm Tofu', { kcal: 76, protein: 8, carbs: 2, fat: 4.8 });
+            expect(r.plausible).toBe(true); // 8g is fine for tofu
+        });
+
+        it('still exempts chicken breast broth/soup from the floor', () => {
+            const r = assessMacroPlausibility('chicken breast broth', 'Chicken Broth', {
+                kcal: 4,
+                protein: 0.5,
+                carbs: 0.5,
+                fat: 0.1,
+            });
+            expect(r.reasons.some(x => x.includes('lean_cut'))).toBe(false);
+        });
+
+        it('does NOT apply the cut-floor to bare "chicken" (unscoped)', () => {
+            // generic "chicken" is not a named lean cut → floor must not fire
+            const r = assessMacroPlausibility('chicken', 'Chicken Nuggets', { kcal: 250, protein: 14, carbs: 15, fat: 15 });
+            expect(r.reasons.some(x => x.includes('lean_cut'))).toBe(false);
+        });
+    });
 });

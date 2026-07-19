@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams \u2014 the RESOLVED serving weight). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect \u2014 its failure is EXPECTED, reported as \ud83d\udfe1, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise.",
   "search": [
     {
       "id": "s-gen-01",
@@ -860,7 +860,7 @@
     {
       "id": "s-uni-01",
       "category": "unicode",
-      "query": "jalape\u00f1o",
+      "query": "jalapeño",
       "rank": 5,
       "match": [
         [
@@ -871,28 +871,28 @@
     {
       "id": "s-uni-02",
       "category": "unicode",
-      "query": "a\u00e7a\u00ed",
+      "query": "açaí",
       "rank": 5,
       "match": [
         [
           "acai"
         ],
         [
-          "a\u00e7a\u00ed"
+          "açaí"
         ]
       ]
     },
     {
       "id": "s-uni-03",
       "category": "unicode",
-      "query": "cr\u00e8me fra\u00eeche",
+      "query": "crème fraîche",
       "rank": 5,
       "match": [
         [
           "creme"
         ],
         [
-          "cr\u00e8me"
+          "crème"
         ],
         [
           "cream"
@@ -1144,7 +1144,7 @@
         ]
       ],
       "knownIssue": true,
-      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'cinnamon toast crunch' is a strong cereal-brand collision that can hijack the whole query off the RYSE brand token. CURRENT (aspirational): should rank a RYSE record top-3; KNOWN GAP if the cereal collision wins. Non-gating. NOTE: RYSE may be sparsely present in the corpus — verify before promoting."
+      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. VERIFIED 2026-07-19: INGEST-BLOCKED, not ranking-fixable. RYSE brand IS in corpus (Ryse Clear Protein, RYSE Loaded Protein Banana Pudding) but NO Cinnamon-Toast-Crunch flavor SKU exists, so nothing RYSE can be ranked up; the query lands on generic cereal records. Needs the flavor SKU ingested before any ranking fix engages. knownIssue, non-gating."
     },
     {
       "id": "s-supp-12",
@@ -1267,6 +1267,19 @@
       ],
       "knownIssue": true,
       "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'banan' -> banana. KNOWN GAP, same family as s-typo-08 'banna': truncated/misspelled banana queries get hijacked by literal 'banan'/'banna'-named junk products in the OFF corpus. Non-gating until the banana typo cluster is fixed."
+    },
+    {
+      "id": "s-supp-17",
+      "category": "branded_supplements",
+      "query": "ghost gamer sour patch",
+      "rank": 3,
+      "match": [
+        [
+          "ghost"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "DEFECT (flavor-ingest-blocked), SEARCH. Ghost Gamer line IS in corpus (off_0810028292666 'Gamer' brand 'Ghost') but the 'sour patch' flavor is not; nearest is 'Sour Watermelon' with an empty brand field. Not ranking-fixable without the flavor SKU. knownIssue, non-gating."
     }
   ],
   "nlp": [
@@ -2580,7 +2593,7 @@
           "coffee"
         ]
       ],
-      "notes": "segmenter keeps this as one composite item mapped to 'Iced Coffee with sugar and cream' \u2014 defensible (composite record covers all components), so expectation relaxed to 1 item."
+      "notes": "segmenter keeps this as one composite item mapped to 'Iced Coffee with sugar and cream' — defensible (composite record covers all components), so expectation relaxed to 1 item."
     },
     {
       "id": "n-seg-07",
@@ -2829,7 +2842,7 @@
         ]
       ],
       "knownIssue": true,
-      "notes": "KNOWN ISSUE (branded-competitor hijack, mapper ranking gap — demoted from hard 2026-07-18 after live re-probe contradicted the old 'CURRENT: works' note). 6 words -> under the single-item cap, so segmentation is NOT involved; the mapper receives the full brand-bearing raw line yet still maps to Optimum Nutrition 'Cinnamon Roll Protein' 0.78775/62g. Holds even with an explicit brand:'ghost' hint. Root cause: the query's non-brand tokens (protein/cinnamon/roll, 3) are fully covered by a BRANDED competitor whose SKU is literally named 'Cinnamon Roll Protein', while Ghost's real SKU 'Ghost Vegan Protein' covers only 2 (ghost/protein); the brand-match signal is not decisive enough to overturn the higher-coverage competitor. Sibling n-seg-22 passes only because adding 'vegan' gives Ghost a TYING token count so the brand tiebreak flips it. Fix belongs in the mapper ranking pass (stronger brand gating when the query names a corpus-present brand), not segmentation — bundled with the deferred buildOffResult/ranking follow-up."
+      "notes": "KNOWN ISSUE (branded-competitor hijack, RANKING-FIXABLE). '2 scoops ghost protein cinnamon roll' maps to Optimum Nutrition 'Cinnamon Roll Protein' (off_0748927070545). VERIFIED 2026-07-19: a Ghost-branded cinnamon protein IS in corpus but under the flavor name 'Cinnabon' (off_0810169602454 / off_0810128902335), so 'cinnamon roll' vs 'cinnabon' share no flavor tokens -> only a decisive brand gate can flip it (right-brand/near-flavor, not exact). Root: simple-rerank.ts:1452 brand is a tiebreaker behind the score short-circuit + weak +0.25 bonus. Fix has generic-word over-fire risk. knownIssue."
     },
     {
       "id": "n-seg-22",
@@ -3988,8 +4001,7 @@
         4,
         6
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED (stable across 2 probes): '1 tsp sugar' -> 'Granulated sugar' resolves to 2.5g. A level tsp of granulated sugar is ~4.2g, so the tsp volume is under-weighted (~40% low) for this dense solid. Expected ~4-6g; observed 2.5g. Minor but stable serving-density gap. Non-gating. (Also saw matchConfidence flip between 1 and 6.9 across runs — an out-of-range confidence to investigate separately; not asserted here since it is nondeterministic.)"
+      "notes": "FIXED 2026-07-19 (dry-solid density). '1 tsp sugar' was 2.5g (flat 0.5 g/ml solid default); buildOffResult/generic volume paths now use the sugar category density (0.85 g/ml) for allowlisted dry-granular categories -> 4.25g. Item-form, deterministic. Hard assertion. See density.ts DRY_GRANULE_DENSITY_CATEGORIES."
     },
     {
       "id": "n-serv-15",
@@ -4220,7 +4232,7 @@
         200
       ],
       "knownIssue": true,
-      "notes": "KNOWN ISSUE (improved 2026-07-19, kept known). Was flat capped-100g; now bills the Capri Sun brand-median package (330ml \u2014 some Capri Suns ARE 330ml PETs) via the product_quantity backfill. The [130,200] band presumes the iconic US 177ml pouch, which needs the MATCHED SKU itself to carry pouch-level package data (it has none). Revisit if a pouch-size Capri Sun SKU with product_quantity becomes the match."
+      "notes": "KNOWN ISSUE (improved 2026-07-19, kept known). Was flat capped-100g; now bills the Capri Sun brand-median package (330ml — some Capri Suns ARE 330ml PETs) via the product_quantity backfill. The [130,200] band presumes the iconic US 177ml pouch, which needs the MATCHED SKU itself to carry pouch-level package data (it has none). Revisit if a pouch-size Capri Sun SKU with product_quantity becomes the match."
     },
     {
       "id": "n-serv-25",
@@ -4458,6 +4470,621 @@
         70
       ],
       "notes": "COUNT-LABELED SKU RETRIEVAL + RERANK (Cluster A pt2 lever, 2026-07-19). The generic 'tortilla chips' candidate pool has NO count-labeled SKUs by plain name relevance, so gatherCandidates runs a secondary Typesense query filtered to hasCountServing:=true (33.6k flagged docs), the rerank COUNT_LABEL_BOOST prefers a count-labeled SKU among near-ties, and buildOffResult derives per-piece from ITS label (verified live: 'Tortilla Chips' 16 chips (45g) -> 2.81g/chip -> 36.6g). Range [28,70] deliberately EXCLUDES the 2g/chip generic seed answer (26g): this case fails if the retrieval/rerank lever regresses to seed. Also exercises the counted-piece FoodMapping cache escape (label-less cached winner is bypassed once, count-labeled winner is written back). Hard assertion."
+    },
+    {
+      "id": "n-mq-01",
+      "category": "match_quality",
+      "text": "4oz real good chicken tenders",
+      "expectName": [
+        [
+          "chicken",
+          "tender"
+        ]
+      ],
+      "grams": [
+        105,
+        120
+      ],
+      "macros": {
+        "protein100": [
+          16,
+          25
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in (2026-07-19 characterization). Branded low-carb SKU (Real Good) with explicit weight; 4oz -> 113.4g exact, macros plausible (obs 161kcal/100g, 20.5p). Guards that an explicit-weight branded line resolves grams deterministically AND carries the brand's own macros, not a generic tender."
+    },
+    {
+      "id": "n-mq-02",
+      "category": "match_quality",
+      "text": "2 rxbar chocolate sea salt",
+      "expectName": [
+        [
+          "rxbar"
+        ],
+        [
+          "chocolate",
+          "sea",
+          "salt"
+        ]
+      ],
+      "grams": [
+        95,
+        115
+      ],
+      "macros": {
+        "protein100": [
+          18,
+          28
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in. 2 bars -> 104g (2x52g), obs 385kcal/100g 23p. Multi-count branded bar."
+    },
+    {
+      "id": "n-mq-03",
+      "category": "match_quality",
+      "text": "1 chomps original beef stick",
+      "expectName": [
+        [
+          "chomps"
+        ],
+        [
+          "beef",
+          "stick"
+        ]
+      ],
+      "grams": [
+        28,
+        38
+      ],
+      "macros": {
+        "protein100": [
+          24,
+          34
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in. Confirms the shipped chomps serving fix (32.6g, obs 281kcal/100g 28p) holds via the full text path."
+    },
+    {
+      "id": "n-mq-04",
+      "category": "match_quality",
+      "text": "1 premier protein cafe latte shake",
+      "expectName": [
+        [
+          "latte"
+        ]
+      ],
+      "grams": [
+        300,
+        340
+      ],
+      "macros": {
+        "protein100": [
+          7,
+          12
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in. RTD shake -> 325g (=11 fl oz) with per-100g kcal ~49 (160/shake), 9.2p. Guards liquid-serving resolution for a branded shake."
+    },
+    {
+      "id": "n-mq-05",
+      "category": "match_quality",
+      "text": "1 tbsp peanut butter",
+      "expectName": [
+        [
+          "peanut",
+          "butter"
+        ]
+      ],
+      "grams": [
+        14,
+        20
+      ],
+      "macros": {
+        "kcal100": [
+          520,
+          650
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in (condiment density). tbsp -> 16g, obs 594kcal/100g. Correct nut-butter density."
+    },
+    {
+      "id": "n-mq-06",
+      "category": "match_quality",
+      "text": "1 tsp honey",
+      "expectName": [
+        [
+          "honey"
+        ]
+      ],
+      "grams": [
+        6,
+        9
+      ],
+      "macros": {
+        "kcal100": [
+          280,
+          340
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in + companion to n-serv-14 (sugar tsp KNOWN-ISSUE). honey tsp -> 7g CORRECT (dense), obs 304kcal/100g. Proves the tsp density gap is SUGAR-SPECIFIC, not a blanket volume->density hole; if honey ever regresses to the light ~2.5g sugar value, this fails."
+    },
+    {
+      "id": "n-mq-07",
+      "category": "match_quality",
+      "text": "handful of cashews",
+      "expectName": [
+        [
+          "cashew"
+        ]
+      ],
+      "grams": [
+        18,
+        40
+      ],
+      "notes": "MATCH-QUALITY lock-in (portion unit). Confirms shipped 'handful' estimator (obs 28g) holds via full text path."
+    },
+    {
+      "id": "n-mq-08",
+      "category": "match_quality",
+      "text": "1 quest chocolate chip protein bar",
+      "expectName": [
+        [
+          "quest"
+        ]
+      ],
+      "grams": [
+        50,
+        70
+      ],
+      "macros": {
+        "protein100": [
+          25,
+          40
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in (loose). Quest bar -> 60g, obs 300kcal/100g 33p. Branded protein-bar SKU precision."
+    },
+    {
+      "id": "n-mq-09",
+      "category": "match_quality",
+      "text": "1 built puff protein bar",
+      "expectName": [
+        [
+          "built"
+        ]
+      ],
+      "grams": [
+        32,
+        46
+      ],
+      "macros": {
+        "protein100": [
+          34,
+          48
+        ]
+      },
+      "notes": "MATCH-QUALITY lock-in (loose). Built Puff -> 40g, obs 350kcal/100g 42.5p."
+    },
+    {
+      "id": "n-mq-10",
+      "category": "weak_brand_fallback",
+      "text": "1 ghugh's protein cookie",
+      "expectName": [
+        [
+          "cookie"
+        ]
+      ],
+      "grams": [
+        25,
+        80
+      ],
+      "notes": "GRACEFUL-DEGRADE guard. Unknown/fake brand ('ghugh's') is stripped and the line degrades to a sane generic 'Protein cookie' (obs 50g) instead of crashing or mis-billing. Guards weak-brand robustness."
+    },
+    {
+      "id": "n-mq-11",
+      "category": "weak_brand_fallback",
+      "text": "2 tbsp ghugh's sugar free honey mustard",
+      "expectName": [
+        [
+          "mustard"
+        ]
+      ],
+      "grams": [
+        20,
+        45
+      ],
+      "notes": "GRACEFUL-DEGRADE guard. Fake brand stripped -> generic 'Honey Mustard' with sane tbsp density (obs 32g = 2x16g). Note the 'sugar free' qualifier is dropped (generic has 20g carb/100g) -- acceptable fallback, tracked here so a future qualifier-aware match can be measured against it."
+    },
+    {
+      "id": "n-mq-20",
+      "category": "match_quality",
+      "text": "1 mission carb balance tortilla",
+      "expectName": [
+        [
+          "tortilla"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          130,
+          190
+        ]
+      },
+      "knownIssue": true,
+      "notes": "DEFECT (found 2026-07-19 characterization) — MACRO-PLAUSIBILITY. Grams correct (45g) but the matched OFF row reports per-100g kcal=70 with carb=19g -- internally impossible (19g carb alone = 76 kcal), i.e. per-SERVING values mislabeled as per-100g. Logging it under-counts calories ~2x. Band [130,190] is the CORRECT per-100g range for a Mission Carb Balance tortilla; case flips green when a macro-plausibility gate rejects self-inconsistent records regardless of name match. This is a WRONG-RECORD (match-quality) defect, not a serving-math one."
+    },
+    {
+      "id": "n-mq-21",
+      "category": "match_quality",
+      "text": "3 real good chicken tenders",
+      "expectName": [
+        [
+          "chicken",
+          "tender"
+        ]
+      ],
+      "grams": [
+        90,
+        150
+      ],
+      "notes": "FIXED 2026-07-19 (hard assertion): COUNT OVER-BILL residual (Cluster A family). Was 336g = ~3x one serving; multi-piece serving ('3 tenders (~112g)') was billed per-piece x count. Fix = per-piece count seeds (chicken tender=37g, nugget=18g) in src/lib/servings/default-count-grams.ts so a counted piece uses a per-piece weight, not the whole portion. Now 3->111g (deterministic); 4oz control still 113g (n-mq-01)."
+    },
+    {
+      "id": "n-mq-22",
+      "category": "match_quality",
+      "text": "grilled chicken breast with white rice and broccoli",
+      "expectItems": 3,
+      "expectName": [
+        [
+          "chicken"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          25,
+          38
+        ]
+      },
+      "knownIssue": true,
+      "notes": "DEFECT (found 2026-07-19) — GENERIC MATCH QUALITY. PARTIALLY IMPROVED 2026-07-19: shipped lean-cut protein FLOOR (18g/100g, macro-plausibility.ts) which demoted the worst deli 'roll' (14.6p) -> now 'sliced chicken breast' 16.8p, but STILL below [25,38] because the real ~30g grilled-breast record is NOT retrieved for this phrasing (word-order-sensitive candidate gathering; 'chicken breast grilled' finds 29.5p but 'grilled chicken breast' does not). 'white rice' still resolves to 45g DRY vs ~150g cooked. REMAINING (deferred, own PR behind full eval): (a) cooked-default for bare staples [HIGH risk — cook-state-detector.ts is dead code, gather-candidates.ts:~516 auto-bypasses bare 'rice' to dry top1], (b) retrieval/rerank so the grilled-breast record enters the pool order-independently."
+    },
+    {
+      "id": "n-dens-01",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 tbsp sugar",
+        "quantity": 1,
+        "unit": "tbsp",
+        "name": "sugar",
+        "brand": "",
+        "normalizedForm": "sugar",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "sugar"
+        ]
+      ],
+      "grams": [
+        11,
+        14
+      ],
+      "notes": "Dry-solid density lock-in. Observed 12.75g (15ml x 0.85 sugar). Was 7.5g before the fix. Hard."
+    },
+    {
+      "id": "n-dens-02",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 cup sugar",
+        "quantity": 1,
+        "unit": "cup",
+        "name": "sugar",
+        "brand": "",
+        "normalizedForm": "sugar",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "sugar"
+        ]
+      ],
+      "grams": [
+        190,
+        215
+      ],
+      "notes": "Dry-solid density lock-in. Observed 204g (240ml x 0.85). Real 1 cup granulated sugar ~200g. Was 120g. Hard."
+    },
+    {
+      "id": "n-dens-03",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 tsp brown sugar",
+        "quantity": 1,
+        "unit": "tsp",
+        "name": "brown sugar",
+        "brand": "",
+        "normalizedForm": "brown sugar",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "sugar"
+        ]
+      ],
+      "grams": [
+        3.5,
+        5.5
+      ],
+      "notes": "Dry-solid density lock-in. Observed 4.25g (sugar category). Was 2.5g. Hard."
+    },
+    {
+      "id": "n-dens-04",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 cup flour",
+        "quantity": 1,
+        "unit": "cup",
+        "name": "flour",
+        "brand": "",
+        "normalizedForm": "flour",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "flour"
+        ]
+      ],
+      "grams": [
+        120,
+        135
+      ],
+      "notes": "Dry-solid density lock-in. Observed 127.2g (240ml x 0.53 flour). Real AP flour 1 cup ~125g. Light-powder side of the fix (barely moved from 120). Hard."
+    },
+    {
+      "id": "n-dens-05",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 cup rolled oats",
+        "quantity": 1,
+        "unit": "cup",
+        "name": "rolled oats",
+        "brand": "",
+        "normalizedForm": "rolled oats",
+        "mealType": "breakfast"
+      },
+      "expectName": [
+        [
+          "oat"
+        ]
+      ],
+      "grams": [
+        78,
+        95
+      ],
+      "notes": "Dry-solid density lock-in. Observed 86.4g (240ml x 0.36 oats). Real 1 cup rolled oats (dry) ~85g. Hard. (Cooked-oatmeal nutrition is a separate corpus gap, see n-cook-07.)"
+    },
+    {
+      "id": "n-dens-06",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 tbsp peanut butter",
+        "quantity": 1,
+        "unit": "tbsp",
+        "name": "peanut butter",
+        "brand": "",
+        "normalizedForm": "peanut butter",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "peanut"
+        ]
+      ],
+      "grams": [
+        14,
+        18
+      ],
+      "notes": "REGRESSION GUARD for the density fix. Peanut butter is isPaste (16g/tbsp), NOT allowlisted dry-granular, so the density change must NOT touch it. Observed 16g unchanged. Hard."
+    },
+    {
+      "id": "n-dens-07",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "1 tsp salt",
+        "quantity": 1,
+        "unit": "tsp",
+        "name": "salt",
+        "brand": "",
+        "normalizedForm": "salt",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "salt"
+        ]
+      ],
+      "grams": [
+        2,
+        3.5
+      ],
+      "notes": "REGRESSION GUARD for the density fix. 'salt' infers NO density category, so it must keep the flat 0.5 g/ml solid default (2.5g), not regress. Confirms uncategorized spices/salt are untouched. Hard."
+    },
+    {
+      "id": "n-cook-01",
+      "category": "match_quality",
+      "text": "1 cup cooked rice",
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          120,
+          170
+        ],
+        "carbs100": [
+          26,
+          36
+        ]
+      },
+      "notes": "Lock-in. Cooked rice resolves to FDC 'brown parboiled cooked uncle bens rice' (kcal100=147, carbs100=31.3), STABLE across 3 rounds. Freezes correct cooked-grain behavior so a future cooked-vs-dry ranking change can't silently regress it."
+    },
+    {
+      "id": "n-cook-02",
+      "category": "match_quality",
+      "text": "1 cup cooked pasta",
+      "expectName": [
+        [
+          "pasta"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          110,
+          155
+        ],
+        "carbs100": [
+          20,
+          30
+        ]
+      },
+      "notes": "Lock-in. Cooked pasta -> FDC 'spinach cooked pasta' (kcal100=130, carbs100=25), record stable (grams wobble 150-200, macros stable). Hard."
+    },
+    {
+      "id": "n-cook-03",
+      "category": "match_quality",
+      "text": "1 cup cooked black beans",
+      "expectName": [
+        [
+          "bean"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          110,
+          150
+        ],
+        "carbs100": [
+          20,
+          29
+        ]
+      },
+      "notes": "Lock-in. Cooked black beans -> FDC 'black turtle...cooked' (kcal100=130, carbs100=24.4), stable. Legumes already resolve cooked (unlike grains). Hard."
+    },
+    {
+      "id": "n-cook-04",
+      "category": "match_quality",
+      "text": "1 cup white rice",
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "macros": {
+        "carbs100": [
+          26,
+          36
+        ]
+      },
+      "knownIssue": true,
+      "notes": "DEFECT (cooked-vs-dry, 2026-07-19). Bare 'white rice' resolves to DRY OFF 'Rice' (kcal100=347, carbs100=81.6) instead of cooked. Isolates the rice half of n-mq-22. Band = observed cooked-rice carbs100 (31.3). Root cause: detectGrainCookingContext (filter-candidates.ts) ignores the unit + basic_produce_bypass (gather-candidates.ts:516) locks the dry top1. HIGH-risk fix (recipe 'cups' logged dry), deferred. knownIssue, non-gating."
+    },
+    {
+      "id": "n-cook-05",
+      "category": "match_quality",
+      "text": "1 cup cooked quinoa",
+      "expectName": [
+        [
+          "quinoa"
+        ]
+      ],
+      "macros": {
+        "carbs100": [
+          18,
+          28
+        ]
+      },
+      "knownIssue": true,
+      "notes": "DEFECT + CORPUS-BLOCKED. Explicit 'cooked quinoa' still returns FDC 'uncooked quinoa' (kcal100=368, carbs100=64.2) because NO cooked-quinoa record is retrievable. Band is a TARGET (cooked quinoa ~21g carb/100g), NOT observed-correct. Same root as n-serv-06's nutrition. Needs ingest, not ranking. knownIssue, non-gating."
+    },
+    {
+      "id": "n-cook-06",
+      "category": "match_quality",
+      "text": "1 cup cooked oats",
+      "expectName": [
+        [
+          "oat"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          45,
+          95
+        ]
+      },
+      "knownIssue": true,
+      "notes": "DEFECT + CORPUS-BLOCKED. 'cooked oats'/'oatmeal' returns DRY 'Rolled Oats' (kcal100=361) — no cooked-oatmeal record in corpus, explicit-cooked token ignored. Band is a TARGET (cooked oatmeal ~70 kcal/100g), NOT observed. Needs ingest. knownIssue, non-gating."
+    },
+    {
+      "id": "n-brand-02",
+      "category": "match_quality",
+      "text": "one bar birthday cake",
+      "expectName": [
+        [
+          "one",
+          "birthday"
+        ]
+      ],
+      "expectItems": 1,
+      "knownIssue": true,
+      "notes": "DEFECT (branded-competitor hijack, RANKING-FIXABLE). Maps to 'Birthday Cake' brand 'Cake Cup' (off_0810257005259); correct 'One Birthday Cake Protein bar' brand 'ONE Brands' (off_0788434107730) IS in corpus and tops the search. Same class as n-seg-21. Root: simple-rerank.ts brand match is only a tiebreaker behind a score short-circuit (:1452) + a weak +0.25 bonus. Fix risks 'one'/'ghost'/'built' generic-word over-fire; needs 2-gram brand guard. knownIssue, non-gating."
+    },
+    {
+      "id": "n-brand-03",
+      "category": "match_quality",
+      "text": "premier protein cafe latte",
+      "expectName": [
+        [
+          "premier"
+        ]
+      ],
+      "notes": "POSITIVE CONTROL (hard). Correctly maps to Premier Protein Cafe Latte (off_0643843759386, conf 0.98). Guards the blast radius of any future brand-gating fix — must stay green."
+    },
+    {
+      "id": "n-brand-04",
+      "category": "match_quality",
+      "text": "rxbar chocolate sea salt",
+      "expectName": [
+        [
+          "rxbar"
+        ]
+      ],
+      "notes": "POSITIVE CONTROL (hard). Correctly maps to Chocolate Sea Salt RXBAR (off_0193908007926, conf 0.98). Guards against brand-gate over-correction — must stay green."
+    },
+    {
+      "id": "n-brand-05",
+      "category": "match_quality",
+      "text": "c4 fruit punch pre workout",
+      "expectName": [
+        [
+          "c4"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "DEFECT (DETECTION + INGEST-BLOCKED). Bare 'c4' is NOT in brand-lexicon.json (only 'c4 energy'/'cellucor c4'), so isBranded/targetBrand never fire; degrades to generic 'fruit punch' (off_03855334, brand ''). No C4 SKU surfaced either. Needs a lexicon entry AND ingest before ranking could engage. knownIssue, non-gating."
+    },
+    {
+      "id": "n-brand-06",
+      "category": "match_quality",
+      "text": "bang cotton candy",
+      "expectName": [
+        [
+          "bang"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "DEFECT (DETECTION + INGEST-BLOCKED). 'bang' not in brand lexicon; maps to generic 'Cotton candy' (off_0609015727782, brand ''). Same class as n-brand-05. knownIssue, non-gating."
     }
   ]
 }
