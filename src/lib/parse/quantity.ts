@@ -206,6 +206,29 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
     return { qty: 1.5, consumed: 3 };
   }
 
+  // Handle word-number quantities: "two eggs" -> 2, "a dozen eggs" -> 12,
+  // "a couple of eggs" -> 2. Deliberately placed AFTER the "one and a half" /
+  // "1 and 1/2" blocks above so those still match the literal "one"/"a" tokens.
+  // "a"/"an" is NOT a number on its own (bare "a bagel" already defaults to
+  // qty 1); it only counts here as the article in "a dozen"/"a couple".
+  const WORD_NUMBERS: Record<string, number> = {
+    one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+    nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12, couple: 2,
+  };
+  const article = tokens[0].toLowerCase();
+  const hasArticle =
+    (article === 'a' || article === 'an') &&
+    tokens.length >= 2 &&
+    (tokens[1].toLowerCase() === 'dozen' || tokens[1].toLowerCase() === 'couple');
+  const numIdx = hasArticle ? 1 : 0;
+  const word = tokens[numIdx].toLowerCase();
+  if (WORD_NUMBERS[word] !== undefined) {
+    let wordConsumed = numIdx + 1;
+    // Consume an optional partitive "of": "a couple of eggs", "couple of eggs".
+    if (tokens[wordConsumed]?.toLowerCase() === 'of') wordConsumed += 1;
+    return { qty: WORD_NUMBERS[word], consumed: wordConsumed };
+  }
+
   // Handle "number fraction" pattern (e.g., "1 1/2", "4 1/2")
   if (tokens.length >= 2) {
     const firstNum = parseFloat(tokens[0]);

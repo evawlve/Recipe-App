@@ -144,3 +144,57 @@ test('range with both fractions "1½-2½"', () => {
   expect(r?.qty).toBeCloseTo(2.0); // (1.5 + 2.5) / 2
   expect(r?.consumed).toBe(3);
 });
+// Word-number quantities ("two eggs" -> 2, "a dozen eggs" -> 12)
+test('word-number "two"', () => {
+  const r = parseQuantityTokens(['two', 'eggs']);
+  expect(r?.qty).toBe(2);
+  expect(r?.consumed).toBe(1);
+});
+
+test('word-number "three"', () => {
+  const r = parseQuantityTokens(['three', 'eggs']);
+  expect(r?.qty).toBe(3);
+  expect(r?.consumed).toBe(1);
+});
+
+test('word-number "ten"', () => {
+  const r = parseQuantityTokens(['ten', 'wings']);
+  expect(r?.qty).toBe(10);
+  expect(r?.consumed).toBe(1);
+});
+
+test('word-number "one" is consumed (frees the unit)', () => {
+  const r = parseQuantityTokens(['one', 'cup', 'flour']);
+  expect(r?.qty).toBe(1);
+  expect(r?.consumed).toBe(1);
+});
+
+test('"a dozen" -> 12 (article consumed)', () => {
+  const r = parseQuantityTokens(['a', 'dozen', 'eggs']);
+  expect(r?.qty).toBe(12);
+  expect(r?.consumed).toBe(2);
+});
+
+test('"a couple of" -> 2 (article + partitive "of" consumed)', () => {
+  const r = parseQuantityTokens(['a', 'couple', 'of', 'eggs']);
+  expect(r?.qty).toBe(2);
+  expect(r?.consumed).toBe(3);
+});
+
+test('"couple of" -> 2 (bare, partitive "of" consumed)', () => {
+  const r = parseQuantityTokens(['couple', 'of', 'eggs']);
+  expect(r?.qty).toBe(2);
+  expect(r?.consumed).toBe(2);
+});
+
+test('bare article "a" is NOT a number word', () => {
+  // "a bagel" must fall through so the caller applies its qty=1 default
+  const r = parseQuantityTokens(['a', 'bagel']);
+  expect(r).toBeNull();
+});
+
+test('word-number does not break "one and a half"', () => {
+  const r = parseQuantityTokens(['one', 'and', 'a', 'half']);
+  expect(r?.qty).toBeCloseTo(1.5);
+  expect(r?.consumed).toBe(4);
+});

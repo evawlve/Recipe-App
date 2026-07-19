@@ -2600,7 +2600,7 @@
         140
       ],
       "knownIssue": true,
-      "notes": "word-quantity defect: 'two eggs' resolves to 50g total (a single small egg) \u2014 the word 'two' is not honored \u2014 and maps to an 'Eggs White' record instead of whole egg. Splitting itself is fine (bagel+cream cheese composite is a real record). expectItems relaxed to 2."
+      "notes": "The word-quantity half is FIXED 2026-07-18 (quantity.ts WORD_NUMBERS): 'two eggs' now = qty 2 -> ~100g. Kept knownIssue because this is a multi-item text case ('and' + 'with') that runs the LLM segmenter first, so item count/order and which item the grams band checks are segmentation-nondeterministic. The deterministic word-number assertion lives in n-qty-03. Promote once always-AI-first segmentation is proven stable on this phrasing."
     },
     {
       "id": "n-seg-08",
@@ -3270,8 +3270,7 @@
         88,
         140
       ],
-      "knownIssue": true,
-      "notes": "Pattern 10 (word-number 'two'). KNOWN GAP (same defect as n-seg-07): the word 'two' is not honored, so 'two eggs' resolves to ~50g (a single small egg) instead of ~100-120g. Non-gating; promote when word-number quantities are parsed."
+      "notes": "Pattern 10 (word-number 'two'). FIXED 2026-07-18 (quantity.ts WORD_NUMBERS map): the word 'two' is now honored -> 'two eggs' = qty 2 -> ~100g (2 x 50g egg default). Deterministic single-item path (no 'and'/'with', <=6 words -> singleItemFromText bypass, no LLM), so promoted from knownIssue to hard assertion."
     },
     {
       "id": "n-qty-04",
@@ -3303,6 +3302,38 @@
         ]
       ],
       "notes": "Pattern 10 (no explicit quantity -> default to 1 serving). Bare food name with no number/unit must still map to one yogurt item. Hard assertion on name/segmentation."
+    },
+    {
+      "id": "n-qty-06",
+      "category": "quantity_parsing",
+      "text": "three eggs",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "grams": [
+        130,
+        170
+      ],
+      "notes": "Pattern 10 (word-number 'three'). Added 2026-07-18 with the quantity.ts WORD_NUMBERS fix: 'three eggs' = qty 3 -> ~150g (3 x 50g egg default). Deterministic single-item path (singleItemFromText bypass, no LLM). Hard assertion."
+    },
+    {
+      "id": "n-qty-07",
+      "category": "quantity_parsing",
+      "text": "a dozen eggs",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "grams": [
+        520,
+        700
+      ],
+      "notes": "Pattern 10 (collective word-number 'a dozen' -> 12, article + word consumed). Added 2026-07-18 with the quantity.ts WORD_NUMBERS fix: 'a dozen eggs' = qty 12 -> ~600g (12 x ~50g egg default). Deterministic single-item path. Hard assertion; band widened to tolerate a 44-58g per-egg record serving."
     },
     {
       "id": "n-supp-16",
