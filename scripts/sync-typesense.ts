@@ -7,6 +7,7 @@ import {
     importTypesenseDocuments,
     isTypesenseAvailable
 } from '../src/lib/search/typesense-client';
+import { servingLabelHasPieceCount } from '../src/lib/mapping/count-label';
 
 async function main() {
     console.log('🚀 Starting Typesense database synchronization...');
@@ -58,6 +59,10 @@ async function main() {
             { name: 'servingGrams', type: 'float', optional: true, index: false },
             { name: 'servingSize', type: 'string', optional: true, index: false },
             { name: 'categories', type: 'string', optional: true, index: false },
+            // Label serving enumerates >=2 pieces with a sane per-piece weight
+            // ("14 chips (28g)", "15 pieces (28g)"). Filterable so counted-piece
+            // queries can pull count-labeled SKUs into the candidate pool.
+            { name: 'hasCountServing', type: 'bool', optional: true },
             // Semantic-search vector (bge-small-en-v1.5). Bring-your-own vectors
             // (embedded externally on the GPU box); optional so rows without an
             // embedding still index for keyword search.
@@ -145,7 +150,8 @@ async function main() {
                 nutrientsPer100g: JSON.stringify(f.nutrientsPer100g || {}),
                 servingGrams: f.servingGrams != null ? Number(f.servingGrams) : null,
                 servingSize: f.servingSize || '',
-                categories: f.categories || ''
+                categories: f.categories || '',
+                hasCountServing: servingLabelHasPieceCount(f.servingSize, f.servingGrams != null ? Number(f.servingGrams) : null)
             };
             if (f.embedding) {
                 doc.embedding = JSON.parse(f.embedding) as number[];

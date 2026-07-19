@@ -22,6 +22,13 @@ export interface RerankCandidate {
         fat: number;
         per100g: boolean;
     };
+    /**
+     * True when the query counts pieces ("13 tortilla chips") and this
+     * candidate's OFF label serving natively enumerates that same piece
+     * ("14 chips (28g)"). Precomputed by the mapper; earns COUNT_LABEL_BOOST
+     * when the caller passes preferCountLabeled.
+     */
+    countLabelMatch?: boolean;
 }
 
 export interface AiNutritionEstimate {
@@ -68,6 +75,8 @@ const WEIGHTS = {
     ATTRIBUTE_CONTRADICTION_PENALTY: 0.35,  // Penalty when query says "green" but candidate says "red"
     // Missing cooking state penalty (Batch 4, Mar 2026)
     MISSING_COOKING_STATE_PENALTY: 0.40, // Penalty when query says "fried" but candidate doesn't
+    // Count-labeled SKU preference (Cluster A pt2, Jul 2026)
+    COUNT_LABEL_BOOST: 0.08,  // Tie-break toward SKUs whose label declares a per-piece count when the user is counting pieces. Deliberately small: must not beat EXACT_MATCH or token penalties.
 };
 
 
@@ -1325,7 +1334,8 @@ export function simpleRerank(
     aiNutritionEstimate?: AiNutritionEstimate,
     rawLine?: string,
     isBranded?: boolean,
-    targetBrand?: string
+    targetBrand?: string,
+    preferCountLabeled?: boolean
 ): { winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[] } {
     if (candidates.length === 0) {
         return {
@@ -1390,14 +1400,17 @@ export function simpleRerank(
             // Apply constraint penalty
             const constraintPenalty = constraintResult.penalty * 0.5; // Scale penalty to reasonable range
 
+            const countLabelBoost = (preferCountLabeled && c.countLabelMatch) ? WEIGHTS.COUNT_LABEL_BOOST : 0;
+
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score - constraintPenalty,
+                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
                 constraintPenalty,
                 constraintReason: constraintResult.reason,
+                countLabelBoost,
             };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
@@ -1417,14 +1430,16 @@ export function simpleRerank(
         const fallbackScored = candidates.map(c => {
             const baseScore = computeSimpleScore(c, query, isBranded, targetBrand);
             const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
+            const countLabelBoost = (preferCountLabeled && c.countLabelMatch) ? WEIGHTS.COUNT_LABEL_BOOST : 0;
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score,
+                score: baseScore + nutritionResult.score + countLabelBoost,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
                 constraintPenalty: 0,
                 constraintReason: 'fallback_no_rejection',
+                countLabelBoost,
             };
         });
         scored.push(...fallbackScored);
@@ -1512,7 +1527,7 @@ export function simpleRerank(
                 `phrase=${phrase.toFixed(2)} mod=${modifier.toFixed(2)} cover=${coverage.toFixed(2)} ` +
                 `fdc=${fdcBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
                 `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
-                `src=${s.candidate.source}`
+                `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} src=${s.candidate.source}`
             );
         });
         console.log();
@@ -1619,6 +1634,7 @@ export function toRerankCandidate(candidate: {
         fat: number;
         per100g: boolean;
     };
+    countLabelMatch?: boolean;
 }): RerankCandidate {
     // Some FDC entries have doubled descriptions (a known FDC data quality issue).
     // e.g. "peeled plum tomatoes peeled plum tomatoes" → "peeled plum tomatoes"
@@ -1641,5 +1657,6 @@ export function toRerankCandidate(candidate: {
         score: candidate.score,
         source: candidate.source,
         nutrition: candidate.nutrition,
+        countLabelMatch: candidate.countLabelMatch,
     };
 }

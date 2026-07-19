@@ -175,3 +175,70 @@ describe('nutrition tiebreaker', () => {
         expect(result!.winner.id).toBe('food_0');
     });
 });
+
+describe('count-labeled SKU preference (Cluster A pt2)', () => {
+    // Identically-named OFF candidates: the null-serving one is generic (earns
+    // the NO_BRAND +0.05), the count-labeled one is branded. Only the boost
+    // (+0.08) can flip the winner, so these tests isolate it exactly.
+    function makeChipCandidates(): RerankCandidate[] {
+        return [
+            {
+                id: 'off_null_serving',
+                name: 'Tortilla Chips',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+            },
+            {
+                id: 'off_count_label',
+                name: 'Tortilla Chips',
+                brandName: 'BrandB',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+                countLabelMatch: true,
+            },
+        ];
+    }
+
+    it('prefers the count-labeled SKU when preferCountLabeled is set', () => {
+        const result = simpleRerank(
+            'tortilla chips', makeChipCandidates(), undefined, '13 tortilla chips',
+            undefined, undefined, true
+        );
+        expect(result.winner).not.toBeNull();
+        expect(result.winner!.id).toBe('off_count_label');
+    });
+
+    it('boost is inert when preferCountLabeled is not set', () => {
+        const result = simpleRerank(
+            'tortilla chips', makeChipCandidates(), undefined, 'tortilla chips'
+        );
+        expect(result.winner).not.toBeNull();
+        // Generic (brandless) candidate keeps its NO_BRAND edge.
+        expect(result.winner!.id).toBe('off_null_serving');
+    });
+
+    it('boost does not overcome a clearly better name match', () => {
+        const candidates: RerankCandidate[] = [
+            {
+                id: 'off_exact',
+                name: 'Tortilla Chips',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+            },
+            {
+                id: 'off_bloated_count_label',
+                name: 'Zesty Ranch Flavored Party Mix Snack Blend',
+                brandName: 'BrandC',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+                countLabelMatch: true,
+            },
+        ];
+        const result = simpleRerank(
+            'tortilla chips', candidates, undefined, '13 tortilla chips',
+            undefined, undefined, true
+        );
+        expect(result.winner).not.toBeNull();
+        expect(result.winner!.id).toBe('off_exact');
+    });
+});

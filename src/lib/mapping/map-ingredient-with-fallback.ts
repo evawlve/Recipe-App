@@ -22,6 +22,11 @@ import {
     hasNullOrInvalidMacros,
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery, stripPrepModifiers } from './simple-rerank';
+import {
+    singularizeUnit, extractLabelServingUnit,
+    LABEL_COUNT_PIECE_NOUNS, GENERIC_PIECE_WORDS,
+    pieceNounInName, labelPieceMatchesItem, countedPieceNoun, servingLabelCountsPiece,
+} from './count-label';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
@@ -545,6 +550,7 @@ export async function mapIngredientWithFallback(
 
             let earlyNutritionInvalid = false;
             let loadedFdcNutrition: any = null;
+            let cachedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
 
             if (!earlyCoreTokenMismatch) {
                 const { prisma } = await import('../db');
@@ -578,9 +584,12 @@ export async function mapIngredientWithFallback(
                         const barcode = earlyCacheHit.foodId.replace('off_', '');
                         const off = await prisma.offFood.findUnique({
                             where: { barcode },
-                            select: { nutrientsPer100g: true }
+                            select: { nutrientsPer100g: true, servingSize: true, servingGrams: true }
                         });
                         nutrients = off?.nutrientsPer100g;
+                        if (off) {
+                            cachedOffServing = { servingSize: off.servingSize, servingGrams: off.servingGrams };
+                        }
                     } else {
                         const ai = await prisma.aiGeneratedFood.findUnique({
                             where: { id: earlyCacheHit.foodId },
@@ -635,8 +644,19 @@ export async function mapIngredientWithFallback(
                 }
             }
 
+            // Counted-piece cache escape (Cluster A pt2, Jul 2026): the user is
+            // counting pieces but the cached OFF food's label can't provide a
+            // per-piece weight. Fall through to the full pipeline so rerank's
+            // count-label preference can pick a SKU that can; the write-back to
+            // FoodMapping makes this a one-time re-resolution per name.
+            const earlyCountedNoun = countedPieceNoun(parsed);
+            const earlyCountLabelEscape = earlyCountedNoun != null
+                && earlyCacheHit.foodId.startsWith('off_')
+                && !servingLabelCountsPiece(cachedOffServing?.servingSize, cachedOffServing?.servingGrams, earlyCountedNoun);
+
             if (earlyCoreTokenMismatch ||
                 earlyNutritionInvalid ||
+                earlyCountLabelEscape ||
                 isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
                 isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ||
                 hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ||
@@ -655,6 +675,7 @@ export async function mapIngredientWithFallback(
                     normalized: normalizedName,
                     coreTokenMismatch: earlyCoreTokenMismatch,
                     nutritionInvalid: earlyNutritionInvalid,
+                    countLabelEscape: earlyCountLabelEscape,
                 });
                 // Fall through to normal search - don't use stale cached mapping
             } else {
@@ -876,6 +897,7 @@ export async function mapIngredientWithFallback(
 
                 // Validate nutrition data - reject cached mappings to foods with zero/null nutrition
                 let normalizedNutritionInvalid = false;
+                let normalizedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
                 if (!normalizedCoreTokenMismatch) {
                     const { prisma } = await import('../db');
                     let nutrients: any = null;
@@ -890,9 +912,12 @@ export async function mapIngredientWithFallback(
                         const barcode = normalizedCache.foodId.replace('off_', '');
                         const off = await prisma.offFood.findUnique({
                             where: { barcode },
-                            select: { nutrientsPer100g: true }
+                            select: { nutrientsPer100g: true, servingSize: true, servingGrams: true }
                         });
                         nutrients = off?.nutrientsPer100g;
+                        if (off) {
+                            normalizedOffServing = { servingSize: off.servingSize, servingGrams: off.servingGrams };
+                        }
                     } else {
                         const ai = await prisma.aiGeneratedFood.findUnique({
                             where: { id: normalizedCache.foodId },
@@ -936,8 +961,17 @@ export async function mapIngredientWithFallback(
                     }
                 }
 
+                // Counted-piece cache escape — same rationale as the early-cache
+                // check: without it this layer would re-pin the label-less food
+                // the early check just escaped from.
+                const normalizedCountedNoun = countedPieceNoun(parsed);
+                const normalizedCountLabelEscape = normalizedCountedNoun != null
+                    && normalizedCache.foodId.startsWith('off_')
+                    && !servingLabelCountsPiece(normalizedOffServing?.servingSize, normalizedOffServing?.servingGrams, normalizedCountedNoun);
+
                 if (normalizedCoreTokenMismatch ||
                     normalizedNutritionInvalid ||
+                    normalizedCountLabelEscape ||
                     isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
                     isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ||
                     // For branded queries: skip modifier mismatch when the cached food's brand
@@ -1212,8 +1246,22 @@ export async function mapIngredientWithFallback(
                         // Use filtered (not sortedFiltered) to ensure high-overlap candidates aren't pushed out
                         // simpleRerank will do its own scoring based on token overlap + other factors
 
+                        // Count-labeled SKU preference (Cluster A pt2, Jul 2026): when the
+                        // user is counting pieces, nudge rerank toward SKUs whose label
+                        // declares that piece's count — their per-piece weight is
+                        // authoritative via the label-count-derived path in buildOffResult.
+                        const countedNoun = countedPieceNoun(parsed);
+
                         // Enrich Generic candidates with cached nutrition data.
                         const candidatesForRerank = filtered.slice(0, 10);
+                        // Counted queries: let count-labeled SKUs below the top-10 cutoff
+                        // compete too (they still have to win the rerank on merit).
+                        if (countedNoun) {
+                            for (const c of filtered.slice(10)) {
+                                if (candidatesForRerank.length >= 13) break;
+                                if (candidateHasCountLabel(c, countedNoun)) candidatesForRerank.push(c);
+                            }
+                        }
                         const fsCandidatesMissingNutr = candidatesForRerank
                             .filter(c => c.source === 'ai_generated' && !c.nutrition);
                         if (fsCandidatesMissingNutr.length > 0) {
@@ -1277,13 +1325,14 @@ export async function mapIngredientWithFallback(
                             score: c.score,
                             source: c.source,
                             nutrition: c.nutrition,  // Include for Route C macro sanity check + nutrition tiebreaker
+                            countLabelMatch: countedNoun ? candidateHasCountLabel(c, countedNoun) : undefined,
                         }));
 
                         // Hybrid prep stripping: prefer AI canonicalBase (strips prep but preserves
                         // nutritional modifiers), fall back to local prep-word stripping.
                         // The raw line (trimmed) is still passed for modifier constraint extraction.
                         const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
-                        const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined);
+                        const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNoun != null);
 
                         if (rerankResult && rerankResult.winner) {
                             const selected = filtered.find(c => c.id === rerankResult.winner!.id);
@@ -1884,6 +1933,7 @@ export async function mapIngredientWithFallback(
                 const searchFilterResult = filterCandidatesByTokens(searchCandidates, normalizedName, { debug, rawLine: trimmed });
 
                 // Run reranker to ensure anomaly penalties (e.g. canned beans) are applied
+                const countedNounFB = countedPieceNoun(parsed);
                 const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
                     id: c.id,
                     name: c.name,
@@ -1892,9 +1942,10 @@ export async function mapIngredientWithFallback(
                     score: c.score,
                     source: c.source,
                     nutrition: c.nutrition,
+                    countLabelMatch: countedNounFB ? candidateHasCountLabel(c, countedNounFB) : undefined,
                 }));
                 const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
-                const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined);
+                const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
                 
                 // simpleRerank returns the fully sorted list based on semantic score, nutrition ties, and FDC preferencing
                 const sortedFallbackCandidates = rerankResult.sortedCandidates.map(
@@ -3724,23 +3775,6 @@ async function buildFdcResult(
  * Hydrates the candidate into the local DB, resolves grams from the parsed unit,
  * and falls back to AI nutrition backfill when the Atwater gate rejects label data.
  */
-/** Minimal unit singularizer for label/serving unit words ("scoops" → "scoop"). */
-function singularizeUnit(w: string): string {
-    const s = w.toLowerCase();
-    if (s.endsWith('ies')) return s.slice(0, -3) + 'y';
-    if (s.endsWith('sses')) return s.slice(0, -2);
-    if (s.endsWith('s') && !s.endsWith('ss')) return s.slice(0, -1);
-    return s;
-}
-
-/** The unit word of a label serving description ("2 scoops" → "scoop", "1 container" → "container"). */
-function extractLabelServingUnit(description: string | null): string | null {
-    if (!description) return null;
-    const m = description.match(/^\s*\d*\.?\d*\s*([a-z]+)/i);
-    if (!m) return null;
-    return singularizeUnit(m[1]);
-}
-
 // Discrete packaged-snack nouns: when a unitless branded item names one of these
 // and has no genuine serving, estimate that unit's weight (sibling-borrow / AI)
 // rather than defaulting to a flat 100g. Deliberately excludes ambiguous words
@@ -3751,27 +3785,17 @@ function inferDiscreteUnit(name: string): string | null {
     return m ? singularizeUnit(m[1]) : null;
 }
 
-// Packaged-snack nouns whose OFF label serving natively enumerates pieces
-// ("14 chips (28g)", "10 pretzels (28g)"). ~64k OFF records carry such counts.
-// When a matched product's label declares its own per-piece weight AND that piece
-// word is what the user is counting, that per-piece (servingGrams / labelUnitCount)
-// is authoritative for THIS SKU and beats the generic seed — it self-adjusts to
-// the actual product (a thin baked chip vs a thick kettle chip). Kept to packaged
-// snacks where label counts are common and a single seed average is least reliable;
-// whole-food produce (almond/grape/strawberry) stays on the curated seed table.
-const LABEL_COUNT_PIECE_NOUNS = new Set([
-    'chip', 'crisp', 'cracker', 'pretzel', 'cookie',
-    'wafer', 'biscuit', 'nugget', 'puff', 'tot', 'gummy',
-]);
-
-/** True if the label's piece word is literally one of the words the user is counting. */
-function labelPieceMatchesItem(labelWord: string | null, itemName: string): boolean {
-    if (!labelWord || !itemName) return false;
-    const target = singularizeUnit(labelWord);
-    return itemName
-        .toLowerCase()
-        .split(/[^a-z&]+/)
-        .some((tok) => tok !== '' && singularizeUnit(tok) === target);
+/**
+ * True when an OFF search candidate's raw label serving enumerates >=2 of the
+ * counted piece with a sane per-piece weight ("14 chips (28g)" for a chip
+ * count, or the generic multi-piece counter "15 pieces (28g)"). Such SKUs carry
+ * their own authoritative per-piece grams, so rerank prefers them over
+ * null-serving SKUs that would fall to the generic seed.
+ */
+function candidateHasCountLabel(candidate: UnifiedCandidate, pieceNoun: string): boolean {
+    if (candidate.source !== 'openfoodfacts') return false;
+    const raw = candidate.rawData as { servingSize?: string | null; servingGrams?: number | null } | undefined;
+    return servingLabelCountsPiece(raw?.servingSize, raw?.servingGrams, pieceNoun);
 }
 
 async function buildOffResult(
@@ -3894,19 +3918,26 @@ async function buildOffResult(
         const itemNameForCount = parsed.name || hydrated.foodName;
 
         // (A) PRODUCT'S OWN LABEL COUNT — most authoritative. If the matched SKU's
-        // label enumerates pieces ("14 chips (28g)") and that piece word is what the
-        // user is counting, derive per-piece from the label (servingGrams / count).
-        // Self-adjusts per product and uses count data present on ~64k OFF records
-        // that the generic seed can only average. Gated tightly (packaged-snack
-        // piece nouns + the label word must appear in the item name + sane per-piece
-        // band) so "13 chips" never divides by a "1 container (170g)" label.
+        // label enumerates pieces ("14 chips (28g)", or the generic "15 pieces
+        // (28g)" phrasing) and that piece is what the user is counting, derive
+        // per-piece from the label (servingGrams / count). Self-adjusts per
+        // product and uses count data present on ~64k OFF records that the
+        // generic seed can only average. Gated tightly (packaged-snack piece
+        // nouns + sane per-piece band; generic "pieces" additionally requires a
+        // multi-piece label) so "13 chips" never divides by a "1 container
+        // (170g)" label.
+        const genericPieceNoun = labelUnitWord && GENERIC_PIECE_WORDS.has(labelUnitWord)
+            && labelUnitCount >= 2 ? pieceNounInName(itemNameForCount) : null;
+        const labelCountsUserPiece = labelUnitWord != null && (
+            (LABEL_COUNT_PIECE_NOUNS.has(labelUnitWord) && labelPieceMatchesItem(labelUnitWord, itemNameForCount)) ||
+            genericPieceNoun != null
+        );
         if (
             perLabelUnitGrams != null && perLabelUnitGrams >= 0.2 && perLabelUnitGrams <= 500 &&
-            labelUnitWord && LABEL_COUNT_PIECE_NOUNS.has(labelUnitWord) &&
-            labelPieceMatchesItem(labelUnitWord, itemNameForCount)
+            labelCountsUserPiece
         ) {
             grams = qty * perLabelUnitGrams;
-            servingDescription = `${qty} ${labelUnitWord} (${perLabelUnitGrams.toFixed(1)}g each)`;
+            servingDescription = `${qty} ${genericPieceNoun ?? labelUnitWord} (${perLabelUnitGrams.toFixed(1)}g each)`;
             logger.info('off.build_result.label_count_derived', {
                 foodId: candidate.id,
                 name: itemNameForCount,

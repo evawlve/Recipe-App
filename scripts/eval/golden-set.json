@@ -4449,6 +4449,21 @@
         12
       ],
       "notes": "LABEL-COUNT-DERIVED path (Cluster A pt2, 2026-07-18). Full-pipeline text case: the matched 'Tzatziki Hummus Chips' SKU declares its OWN per-piece count on the label ('18 chips (28 g)' -> 1.56g/chip); buildOffResult derives 5 x 1.56 = 7.78g from servingGrams/labelUnitCount instead of the generic 'chip' seed. Proves the unitless-count path prefers a product's own declared count when present (~64k OFF records carry such counts). Hard assertion. Note: the STRUCTURED item form ('name: tzatziki chips') matches a generic 'Chips' SKU with a null serving and falls to the seed (5g) -- the label path needs the full-pipeline match, hence text-type."
+    },
+    {
+      "id": "n-serv-35",
+      "category": "serving_unit",
+      "text": "13 tortilla chips",
+      "expectName": [
+        [
+          "chip"
+        ]
+      ],
+      "grams": [
+        28,
+        70
+      ],
+      "notes": "COUNT-LABELED SKU RETRIEVAL + RERANK (Cluster A pt2 lever, 2026-07-19). The generic 'tortilla chips' candidate pool has NO count-labeled SKUs by plain name relevance, so gatherCandidates runs a secondary Typesense query filtered to hasCountServing:=true (33.6k flagged docs), the rerank COUNT_LABEL_BOOST prefers a count-labeled SKU among near-ties, and buildOffResult derives per-piece from ITS label (verified live: 'Tortilla Chips' 16 chips (45g) -> 2.81g/chip -> 36.6g). Range [28,70] deliberately EXCLUDES the 2g/chip generic seed answer (26g): this case fails if the retrieval/rerank lever regresses to seed. Also exercises the counted-piece FoodMapping cache escape (label-less cached winner is bypassed once, count-labeled winner is written back). Hard assertion."
     }
   ]
 }

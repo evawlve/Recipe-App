@@ -220,6 +220,45 @@ export async function searchOffSemantic(
 export interface SearchOffOptions {
     limit?: number;
     isBrandedQuery?: boolean;
+    /**
+     * Set when the user's line counts pieces of a packaged snack ("13 tortilla
+     * chips"). Adds a secondary Typesense query filtered to SKUs whose label
+     * serving enumerates pieces (hasCountServing) so those candidates reach the
+     * rerank pool even when plain name relevance wouldn't surface them.
+     */
+    countedPieceQuery?: boolean;
+}
+
+/** Extra count-labeled SKUs appended to the pool for counted-piece queries. */
+const COUNT_LABELED_EXTRA = 3;
+
+/**
+ * Secondary retrieval for counted-piece queries: same keyword search, but
+ * filtered to count-labeled SKUs. Failure (e.g. the hasCountServing field is
+ * not in the collection schema yet) is non-fatal — the primary results stand.
+ */
+async function searchOffCountLabeled(
+    query: string,
+    isBrandedQuery: boolean,
+): Promise<UnifiedCandidate[]> {
+    try {
+        const { searchTypesense } = await import('../search/typesense-client');
+        const hits = await searchTypesense(
+            'off_foods', query, 'name,brandName', COUNT_LABELED_EXTRA * 2, 'hasCountServing:=true');
+        const candidates = hits
+            .map(hit => mapOffHitToCandidate(hit, query, isBrandedQuery))
+            .filter(candidateHasUsableNutrition)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, COUNT_LABELED_EXTRA);
+        logger.debug('off.search.count_labeled_hit', { query, count: candidates.length });
+        return candidates;
+    } catch (err) {
+        logger.debug('off.search.count_labeled_failed', {
+            query,
+            error: (err as Error).message,
+        });
+        return [];
+    }
 }
 
 /**
@@ -229,7 +268,7 @@ export async function searchOffSimple(
     query: string,
     options: SearchOffOptions = {},
 ): Promise<UnifiedCandidate[]> {
-    const { limit = 5, isBrandedQuery = false } = options;
+    const { limit = 5, isBrandedQuery = false, countedPieceQuery = false } = options;
 
     const queryLower = query.toLowerCase().trim();
 
@@ -242,6 +281,15 @@ export async function searchOffSimple(
                 .filter(candidateHasUsableNutrition)
                 .sort((a, b) => b.score - a.score)
                 .slice(0, limit);
+
+            // Counted-piece queries: append count-labeled SKUs the primary
+            // search didn't surface. They still have to win rerank on merit.
+            if (countedPieceQuery) {
+                const seen = new Set(candidates.map(c => c.id));
+                for (const extra of await searchOffCountLabeled(query, isBrandedQuery)) {
+                    if (!seen.has(extra.id)) candidates.push(extra);
+                }
+            }
 
             logger.debug('off.search.typesense_hit', { query, count: candidates.length });
             return candidates;

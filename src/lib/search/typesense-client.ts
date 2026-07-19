@@ -55,14 +55,16 @@ export async function searchTypesense(
     collectionName: string,
     query: string,
     queryBy: string,
-    limit: number = 5
+    limit: number = 5,
+    filterBy?: string
 ): Promise<any[]> {
     try {
         // typo_tokens_threshold: by default Typesense stops expanding typo-corrected
         // variants as soon as it finds 1 result, which starves fuzzy recall on
         // misspellings relative to Meilisearch. Raise it so we keep collecting
         // typo-corrected candidates up to `limit`; the caller re-scores/dedupes anyway.
-        const url = `/collections/${collectionName}/documents/search?q=${encodeURIComponent(query)}&query_by=${queryBy}&limit=${limit}&typo_tokens_threshold=${limit}`;
+        const url = `/collections/${collectionName}/documents/search?q=${encodeURIComponent(query)}&query_by=${queryBy}&limit=${limit}&typo_tokens_threshold=${limit}`
+            + (filterBy ? `&filter_by=${encodeURIComponent(filterBy)}` : '');
         const res = await typesenseReq(url, { method: 'GET' });
         // Map Typesense's hit layout to raw document layout so it matches the expected candidates layout
         return (res.hits || []).map((hit: any) => hit.document);
@@ -118,6 +120,35 @@ export async function createTypesenseCollection(schema: any): Promise<any> {
     return typesenseReq('/collections', {
         method: 'POST',
         body: JSON.stringify(schema),
+    });
+}
+
+/**
+ * Partial-update every document matching a filter with the same field values.
+ * PATCH /collections/<name>/documents?filter_by=... — returns {num_updated}.
+ * Needed when doc ids are unknown/auto-assigned (the live off_foods collection
+ * predates id=barcode keying) but an indexed field can address the docs.
+ */
+export async function updateTypesenseDocumentsByFilter(
+    collectionName: string,
+    filterBy: string,
+    partialDoc: Record<string, unknown>
+): Promise<{ num_updated: number }> {
+    return typesenseReq(
+        `/collections/${collectionName}/documents?filter_by=${encodeURIComponent(filterBy)}`,
+        { method: 'PATCH', body: JSON.stringify(partialDoc) }
+    );
+}
+
+/**
+ * Alter an existing collection's schema (e.g. add a new optional field).
+ * PATCH /collections/<name> with {"fields": [...]}.
+ */
+export async function updateTypesenseCollection(collectionName: string, patch: any): Promise<any> {
+    logger.info('typesense.updating_collection', { collectionName });
+    return typesenseReq(`/collections/${collectionName}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
     });
 }
 
