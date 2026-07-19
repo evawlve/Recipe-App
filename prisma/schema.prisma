@@ -378,6 +378,8 @@ model OffFood {
   nutrientsPer100g Json?                       // { kcal, protein, carbs, fat, fiber, sugar, sodium }
   servingSize      String?                     // Raw label string
   servingGrams     Float?                      // Parsed default serving weight
+  packageQuantity  Float?                      // OFF product_quantity: net package quantity (see packageQuantityUnit)
+  packageQuantityUnit String?                  // 'g' | 'ml', inferred from the OFF quantity label string; null when unknown
   imageUrl         String?                     // Product image from OFF
   categories       String?                     // OFF categories CSV
   syncedAt         DateTime      @default(now())

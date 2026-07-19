@@ -28,6 +28,10 @@ export interface HydratedOffFood {
     servingDescription: string | null;
     /** Units the label serving covers ("2 scoops" → 2). Divide servingGrams by this for per-unit weight. */
     servingUnitCount: number;
+    /** Net package quantity (OFF product_quantity backfill); interpret per packageQuantityUnit. */
+    packageQuantity: number | null;
+    /** 'g' | 'ml', or null when the label didn't say. */
+    packageQuantityUnit: string | null;
 }
 
 // ============================================================
@@ -72,6 +76,8 @@ export async function hydrateOffCandidate(candidate: {
             servingGrams:    existing.servingGrams,
             servingDescription: existing.servingGrams ? existingServing.description : null,
             servingUnitCount:   existingServing.unitCount,
+            packageQuantity:     existing.packageQuantity,
+            packageQuantityUnit: existing.packageQuantityUnit,
         };
     }
 
@@ -177,6 +183,11 @@ export async function hydrateOffCandidate(candidate: {
         servingGrams:     servingGrams ?? null,
         servingDescription: servingGrams ? servingDescription : null,
         servingUnitCount:   servingUnitCount,
+        // Fresh hydrates have no package data (search candidates don't carry
+        // it); the CSV backfill populates it on the OffFood row, so the
+        // cache-first path above picks it up from the next request on.
+        packageQuantity:     null,
+        packageQuantityUnit: null,
     };
 }
 

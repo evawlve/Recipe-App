@@ -3595,8 +3595,7 @@
         300,
         400
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable across 2 probes): '1 celsius' (a 12 fl oz / ~355 ml canned drink) resolves to the 100g no-serving fallback, not a full can (~355g). Unitless branded canned drink is NOT backfilled to a can serving. Per-100g nutrition is fine (~2.8 kcal/100g); only the serving weight is wrong. Expected ~300-400g; observed 100g. Non-gating until discrete-drink serving backfill covers canned beverages."
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 3). Matched Celsius SKU has null brandName + no serving; brand guessed from the food name's first token, sibling-borrow finds the ~355ml can median. Was flat 100g."
     },
     {
       "id": "n-supp-27",
@@ -3619,8 +3618,7 @@
         140,
         180
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '1 chobani greek yogurt' (a single-serve container is ~150g / 5.3 oz) resolves to the 100g no-serving fallback instead of one container (~150g). Correct brand/product ('Chobani Greek Yogurt'), wrong serving. Expected ~140-180g; observed 100g. Same discrete-unit-not-backfilled family as n-supp-26/28. Non-gating."
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 3). Majority-vote sibling package median: Chobani's hundreds of ~150g cups outvote its half-gallon drinkable line (an ml-first heuristic billed 709g). Was flat 100g."
     },
     {
       "id": "n-supp-28",
@@ -3643,8 +3641,7 @@
         28,
         55
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): unitless 'chomps beef stick' (a Chomps stick is ~35g / 1.15 oz) resolves to the 100g no-serving fallback. Also: input brand='chomps' but brandName comes back null (brand not attached), even though foodName='Chomps original beef stick'. Contrast n-supp-25 (clif) which DOES backfill a discrete bar serving. Expected ~28-55g; observed 100g. Non-gating."
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 3). Chomps stick via brand-guess sibling package median (~32g single-stick 'g'-band). Was flat 100g."
     },
     {
       "id": "n-serv-01",
@@ -4199,8 +4196,7 @@
         300,
         650
       ],
-      "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 3 = flat-100 package, most extreme UNDER: ratio ~0.2x). '1 gatorade' -> 100g: unitless branded bottle (~591g for 20oz, ~355g for 12oz) not backfilled to a container serving; falls to the 100g no-serving fallback. Target [300,650]; observed 100g. Fix = route unitless packages (bottle/can/pouch) to the ambiguous-unit backfill."
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 3). '1 gatorade' (unitless branded count) now bills the same-brand median package via the OFF product_quantity backfill (207k rows) + sibling-borrow: ~500-600ml bottle. Was flat capped-100g."
     },
     {
       "id": "n-serv-24",
@@ -4224,7 +4220,7 @@
         200
       ],
       "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 3 = flat-100 package). '1 capri sun' -> 100g: a pouch is ~177g (6 fl oz). Target [130,200]; observed 100g. Same flat-100 fallback as n-serv-23/celsius/chobani; the pouch package size is never resolved."
+      "notes": "KNOWN ISSUE (improved 2026-07-19, kept known). Was flat capped-100g; now bills the Capri Sun brand-median package (330ml \u2014 some Capri Suns ARE 330ml PETs) via the product_quantity backfill. The [130,200] band presumes the iconic US 177ml pouch, which needs the MATCHED SKU itself to carry pouch-level package data (it has none). Revisit if a pouch-size Capri Sun SKU with product_quantity becomes the match."
     },
     {
       "id": "n-serv-25",
@@ -4247,8 +4243,7 @@
         18,
         45
       ],
-      "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 4 = ambiguous unit not resolved, extreme UNDER). '1 handful almonds' -> 1.2g: 'handful' is treated as a single almond (~1.2g) instead of a handful portion (~28-35g). Target [18,45]; observed 1.2g. Contrast n-serv-31 '1 scoop whey' which DOES resolve. 'handful'/'bowl' need portion backfill; 'scoop'/'glass' already work."
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 4). 'handful' is now a recognized parse unit routed to the AI estimator with a 10g floor; previously it parsed as a unitless count of 'handful almonds' and billed ONE almond's 1.2g seed weight."
     },
     {
       "id": "n-serv-26",
@@ -4271,8 +4266,7 @@
         25,
         70
       ],
-      "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 4 = ambiguous unit not resolved). '1 bowl cereal' -> 100g flat: 'bowl' is not resolved to a portion; a bowl of dry cereal is ~40-60g. Target [25,70]; observed 100g. Same ambiguous-unit gap as n-serv-25 (handful)."
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 4). 'bowl' is now a recognized parse unit routed to the AI estimator (25g floor, dry-cereal anchor). Was flat 100g."
     },
     {
       "id": "n-serv-27",

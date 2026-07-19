@@ -302,18 +302,33 @@ export async function getOrCreateAmbiguousServing(
         return { status: 'error', error: `"${unit}" is not an estimable unit` };
     }
 
-    // Check existing
+    // Check existing — but reject cached servings outside the unit's sanity
+    // bounds (a poisoned "handful" row of 1.2g is a per-piece weight in
+    // disguise; fall through so the estimator overwrites it).
     const existing = await findExistingServing(foodId, normalizedUnit);
     if (existing?.grams) {
-        logger.debug('ambiguous_backfill.cache_hit', {
-            foodId,
-            unit: normalizedUnit,
-            grams: existing.grams,
-        });
-        return {
-            status: 'cached',
-            grams: existing.grams,
-        };
+        const { getAmbiguousUnitBounds } = await import('../ai/ambiguous-serving-estimator');
+        const bounds = getAmbiguousUnitBounds(normalizedUnit);
+        const outOfBounds = (bounds.min != null && existing.grams < bounds.min)
+            || (bounds.max != null && existing.grams > bounds.max);
+        if (outOfBounds) {
+            logger.warn('ambiguous_backfill.cached_out_of_bounds', {
+                foodId,
+                unit: normalizedUnit,
+                grams: existing.grams,
+                bounds,
+            });
+        } else {
+            logger.debug('ambiguous_backfill.cache_hit', {
+                foodId,
+                unit: normalizedUnit,
+                grams: existing.grams,
+            });
+            return {
+                status: 'cached',
+                grams: existing.grams,
+            };
+        }
     }
 
     // Sibling-serving borrow: before paying for an AI estimate, try to borrow a

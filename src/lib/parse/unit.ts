@@ -86,6 +86,13 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'squirt': 'squirt', 'squirts': 'squirt',
     'breast': 'breast', 'breasts': 'breast', // For chicken breast
     'thigh': 'thigh', 'thighs': 'thigh', // For chicken thigh
+    // Portion units (Cluster A pt2 Defect 4, Jul 2026): previously unrecognized,
+    // so "1 handful almonds" parsed as a unitless count of "handful almonds"
+    // and billed ONE almond's seed weight. As count units they route to the
+    // ambiguous-serving estimator, which has portion floors for them.
+    'handful': 'handful', 'handfuls': 'handful',
+    'bowl': 'bowl', 'bowls': 'bowl',
+    'plate': 'plate', 'plates': 'plate',
   };
 
   if (countUnits[token]) {
