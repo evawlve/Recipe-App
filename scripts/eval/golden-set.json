@@ -3801,7 +3801,8 @@
         230,
         320
       ],
-      "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/cup -> 277.5g, in [230,320]), others a ~240g/cup record (-> 360g, out of band). The mixed-number fraction parses correctly (1.5); the flip is in which quinoa serving/re"
+      "notes": "DEMOTED back to knownIssue 2026-07-19 (over-promoted same day after 3 passing runs; flapped on run 4: grams=360 vs [230,320], and record flips between 'cooked quinoa' and 'uncooked quinoa' 150-360g across identical requests). Same root as n-cook-05: NO stable cooked-quinoa record in corpus, serving is AI-estimated and nondeterministic. Do NOT promote until the quinoa ingest gap is fixed. | PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/",
+      "knownIssue": true
     },
     {
       "id": "n-serv-07",
