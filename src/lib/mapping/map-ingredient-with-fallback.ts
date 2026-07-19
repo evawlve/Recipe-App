@@ -3751,6 +3751,29 @@ function inferDiscreteUnit(name: string): string | null {
     return m ? singularizeUnit(m[1]) : null;
 }
 
+// Packaged-snack nouns whose OFF label serving natively enumerates pieces
+// ("14 chips (28g)", "10 pretzels (28g)"). ~64k OFF records carry such counts.
+// When a matched product's label declares its own per-piece weight AND that piece
+// word is what the user is counting, that per-piece (servingGrams / labelUnitCount)
+// is authoritative for THIS SKU and beats the generic seed — it self-adjusts to
+// the actual product (a thin baked chip vs a thick kettle chip). Kept to packaged
+// snacks where label counts are common and a single seed average is least reliable;
+// whole-food produce (almond/grape/strawberry) stays on the curated seed table.
+const LABEL_COUNT_PIECE_NOUNS = new Set([
+    'chip', 'crisp', 'cracker', 'pretzel', 'cookie',
+    'wafer', 'biscuit', 'nugget', 'puff', 'tot', 'gummy',
+]);
+
+/** True if the label's piece word is literally one of the words the user is counting. */
+function labelPieceMatchesItem(labelWord: string | null, itemName: string): boolean {
+    if (!labelWord || !itemName) return false;
+    const target = singularizeUnit(labelWord);
+    return itemName
+        .toLowerCase()
+        .split(/[^a-z&]+/)
+        .some((tok) => tok !== '' && singularizeUnit(tok) === target);
+}
+
 async function buildOffResult(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
@@ -3867,23 +3890,51 @@ async function buildOffResult(
             });
         }
     } else if (!unit && parsed && Number.isInteger(parsed.qty) && parsed.qty >= 1) {
-        // Unitless integer count ("3 baby carrots"): if the food is a discrete
-        // item with a known per-piece weight, use it instead of the label
-        // serving (label serving for baby carrots is a ~100g portion, not 1 carrot).
-        try {
-            const { getDefaultCountServing } = await import('../servings/default-count-grams');
-            const countDefault = getDefaultCountServing(parsed.name || hydrated.foodName, 'each');
-            if (countDefault && countDefault.grams > 0) {
-                grams = qty * countDefault.grams;
-                servingDescription = `${qty} each (${countDefault.grams.toFixed(1)}g each)`;
-                logger.info('off.build_result.unitless_count_default', {
-                    foodId: candidate.id,
-                    name: parsed.name || hydrated.foodName,
-                    perPieceGrams: countDefault.grams,
-                });
+        // Unitless integer count ("3 baby carrots", "13 tortilla chips").
+        const itemNameForCount = parsed.name || hydrated.foodName;
+
+        // (A) PRODUCT'S OWN LABEL COUNT — most authoritative. If the matched SKU's
+        // label enumerates pieces ("14 chips (28g)") and that piece word is what the
+        // user is counting, derive per-piece from the label (servingGrams / count).
+        // Self-adjusts per product and uses count data present on ~64k OFF records
+        // that the generic seed can only average. Gated tightly (packaged-snack
+        // piece nouns + the label word must appear in the item name + sane per-piece
+        // band) so "13 chips" never divides by a "1 container (170g)" label.
+        if (
+            perLabelUnitGrams != null && perLabelUnitGrams >= 0.2 && perLabelUnitGrams <= 500 &&
+            labelUnitWord && LABEL_COUNT_PIECE_NOUNS.has(labelUnitWord) &&
+            labelPieceMatchesItem(labelUnitWord, itemNameForCount)
+        ) {
+            grams = qty * perLabelUnitGrams;
+            servingDescription = `${qty} ${labelUnitWord} (${perLabelUnitGrams.toFixed(1)}g each)`;
+            logger.info('off.build_result.label_count_derived', {
+                foodId: candidate.id,
+                name: itemNameForCount,
+                labelUnitWord,
+                labelUnitCount,
+                perPieceGrams: perLabelUnitGrams,
+            });
+        }
+
+        // (B) GENERIC SEED TABLE — curated per-piece for common discrete items with
+        // no usable label count (label serving for baby carrots is a ~100g portion,
+        // not 1 carrot).
+        if (grams == null) {
+            try {
+                const { getDefaultCountServing } = await import('../servings/default-count-grams');
+                const countDefault = getDefaultCountServing(itemNameForCount, 'each');
+                if (countDefault && countDefault.grams > 0) {
+                    grams = qty * countDefault.grams;
+                    servingDescription = `${qty} each (${countDefault.grams.toFixed(1)}g each)`;
+                    logger.info('off.build_result.unitless_count_default', {
+                        foodId: candidate.id,
+                        name: itemNameForCount,
+                        perPieceGrams: countDefault.grams,
+                    });
+                }
+            } catch {
+                // fall through to discrete-unit backfill / label-serving / 100g defaults
             }
-        } catch {
-            // fall through to discrete-unit backfill / label-serving / 100g defaults
         }
 
         // No deterministic per-piece weight and no genuine label serving: if the

@@ -4434,6 +4434,21 @@
         290
       ],
       "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 250g). Ambiguous unit 'glass' resolves to a real glass portion (~244g). Hard assertion; guards the working ambiguous-unit path alongside n-serv-32."
+    },
+    {
+      "id": "n-serv-34",
+      "category": "serving_unit",
+      "text": "5 tzatziki chips",
+      "expectName": [
+        [
+          "chip"
+        ]
+      ],
+      "grams": [
+        6,
+        12
+      ],
+      "notes": "LABEL-COUNT-DERIVED path (Cluster A pt2, 2026-07-18). Full-pipeline text case: the matched 'Tzatziki Hummus Chips' SKU declares its OWN per-piece count on the label ('18 chips (28 g)' -> 1.56g/chip); buildOffResult derives 5 x 1.56 = 7.78g from servingGrams/labelUnitCount instead of the generic 'chip' seed. Proves the unitless-count path prefers a product's own declared count when present (~64k OFF records carry such counts). Hard assertion. Note: the STRUCTURED item form ('name: tzatziki chips') matches a generic 'Chips' SKU with a null serving and falls to the seed (5g) -- the label path needs the full-pipeline match, hence text-type."
     }
   ]
 }
