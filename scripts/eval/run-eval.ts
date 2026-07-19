@@ -153,6 +153,22 @@ async function runNlpCase(c: any): Promise<CaseResult> {
             }
         }
 
+        // Billed totals for the requested quantity — the grams-scaled `nutrition`
+        // block the app actually logs. This is the end-to-end assertion a per-100g
+        // band can't provide: a wrong record, wrong serving, or wrong scaling all
+        // surface as a wrong billed total ("1 tbsp olive oil" must bill ~119 kcal,
+        // whether the failure was density, record choice, or grams math).
+        // Keys: calories | protein | carbs | fat (also fiber/sugar/sodium).
+        if (c.total) {
+            const tot = items[0]?.nutrition ?? {};
+            for (const [key, range] of Object.entries(c.total) as [string, [number, number]][]) {
+                const v = tot[key];
+                if (typeof v !== 'number' || v < range[0] || v > range[1]) {
+                    failures.push(`total.${key}=${typeof v === 'number' ? v.toFixed(1) : v} outside [${range[0]}, ${range[1]}] (grams=${items[0]?.grams}, mapped: "${items[0]?.foodName}")`);
+                }
+            }
+        }
+
         const confidence = items[0]?.matchConfidence;
         return {
             id: c.id, kind: 'nlp', category: c.category, query,
