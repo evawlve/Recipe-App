@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { callStructuredLlm } = await import('@/lib/ai/structured-client');
-    const { segmentTextHeuristically, forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
+    const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
@@ -188,16 +188,19 @@ export async function POST(req: NextRequest) {
       // return it unchanged after ~1-5s. Skip straight to mapping.
       items = [singleItemFromText(text)!];
     } else {
-      // Heuristic-first segmentation: clearly-delimited multi-item logs
-      // ("2 eggs, toast with butter and a glass of orange juice") are split
-      // deterministically in <1ms; only genuinely ambiguous text (unclear
-      // "with" attachments, hedged run-ons) falls through to the LLM.
-      const heuristic = segmentTextHeuristically(text);
-      if (heuristic.status === 'ok') {
-        items = heuristic.items;
-        console.log(`[nlp-parse] heuristic segmentation: ${items.length} item(s), LLM skipped`);
-      } else {
-        console.log(`[nlp-parse] heuristic deferred to LLM: ${heuristic.reason}`);
+      // AI-first segmentation: the cheap LLM splitter (gemini-2.0-flash via
+      // OpenRouter, ~$0.0003/call, magic-log is rate-capped) is the
+      // unconditional first step for any multi-token / delimited log. The
+      // deterministic heuristic is deliberately NOT on the primary path — it
+      // survives only as forceSegmentText, the fallback used when the LLM
+      // errors or exceeds its deadline. This removes the class of silent
+      // heuristic mis-splits (flavor "and" like "cookies and cream", ambiguous
+      // "with" attachments) that a static phrase whitelist could never keep up
+      // with. The mapper is then fed clean, AI-segmented food names while
+      // quantity/units stay deterministic — the goal being fewer AI guesses in
+      // the *mapping* stage, not the (cheap) segmentation stage.
+      {
+        console.log('[nlp-parse] AI-first segmentation');
 
         const NLP_SPLIT_SCHEMA = {
           name: 'nlp_split',
@@ -233,6 +236,7 @@ export async function POST(req: NextRequest) {
 - brand: explicit brand name, else ""
 - normalizedForm: base food name without quantity/unit, keep prep modifiers ("2 scrambled eggs" -> "scrambled eggs", "1 tbsp Heinz ketchup" -> "ketchup")
 Attached condiments stay with their item ("toast with butter" = 1 item); distinct foods are separate items.
+Two distinct whole foods joined by "and" are SEPARATE items ("chicken and rice" -> 2, "eggs and bacon" -> 2, "rice and beans" -> 2). Keep "and" together ONLY when the whole phrase names ONE product or a single flavor ("cookies and cream", "peaches and cream", "mac and cheese", "peanut butter and jelly" = 1 item).
 Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs","mealType":"breakfast","brand":"","normalizedForm":"eggs"},{"rawText":"wheat toast","mealType":"breakfast","brand":"","normalizedForm":"wheat toast"}]}`;
 
         // Per-attempt timeout 6s, overall deadline 8s: a hung provider chain
