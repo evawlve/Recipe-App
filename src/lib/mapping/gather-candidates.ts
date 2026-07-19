@@ -10,6 +10,7 @@ import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-
 import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
 import { searchOffSimple, searchOffSemantic } from '../openfoodfacts/search';
+import { countedPieceNoun } from './count-label';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
 
 // Start loading the ONNX query-embedding model as soon as the mapping
@@ -325,6 +326,10 @@ export async function gatherCandidates(
             searchOffSimple(primaryQuery, {
                 limit: maxPerSource,
                 isBrandedQuery,
+                // Counted-piece lines ("13 tortilla chips") also pull SKUs whose
+                // label enumerates pieces, so their authoritative per-piece
+                // weight can compete in rerank.
+                countedPieceQuery: countedPieceNoun(parsed) != null,
             })
         );
     }
