@@ -655,6 +655,35 @@ model NlpRequestLog {
   @@map("nlp_requests_log")
 }
 
+/// Per-line mapping telemetry (Phase 0 of the cache-accuracy flywheel).
+/// One row per ingredient line handled by /api/nlp/parse: which cache path
+/// served it, which serving-resolution tier billed the grams, and the billed
+/// totals — ground truth for warming corpora, tier-coverage audits, and
+/// cold-vs-warm parity runs.
+model MappingEventLog {
+  id             String   @id @default(cuid())
+  rawLine        String
+  normalizedForm String?  // mapper's cache key input (post-normalization), not the segmenter hint
+  cacheHit       String?  // 'early' | 'normalized'; null = full pipeline resolved it
+  cacheEscape    String?  // reason a cached row was bypassed (core_token_mismatch, grain_cooked, ...)
+  foodId         String?
+  foodName       String?
+  brandName      String?
+  source         String?  // fdc | openfoodfacts | ai_estimated
+  confidence     Float?
+  servingTier    String?  // gram-resolution branch that billed (weight_unit, label_count_derived, flat_100g_default, ...)
+  grams          Float?
+  totalKcal      Float?
+  latencyMs      Int?
+  noCache        Boolean  @default(false) // request ran with the admin nocache flag (cold run)
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([normalizedForm])
+  @@index([cacheHit])
+  @@index([servingTier])
+}
+
 // ============================================================================
 // Enums
 // ============================================================================

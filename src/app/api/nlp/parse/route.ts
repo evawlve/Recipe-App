@@ -166,6 +166,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Either "text" (string) or "items" (array) field is required' }, { status: 400 });
     }
 
+    // Cold-run flag for cache audits (Phase 0 flywheel): bypasses BOTH
+    // FoodMapping cache layers so cold-vs-warm parity runs measure the full
+    // pipeline. Admin-only — regular users must never pay cold latency.
+    const noCache = isDevBypass &&
+      (req.nextUrl.searchParams.get('nocache') === '1' || body.nocache === true);
+
     let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
     if (inputItems && Array.isArray(inputItems)) {
@@ -274,6 +280,18 @@ Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs"
         }
       }
     }
+    // Per-line telemetry rows (MappingEventLog), written in one createMany
+    // after mapping. Fail-open: telemetry must never break a user request.
+    type EventRow = {
+      rawLine: string; normalizedForm: string | null; cacheHit: string | null;
+      cacheEscape: string | null; foodId: string | null; foodName: string | null;
+      brandName: string | null; source: string | null; confidence: number | null;
+      servingTier: string | null; grams: number | null; totalKcal: number | null;
+      latencyMs: number; noCache: boolean;
+    };
+    const eventRows: EventRow[] = [];
+    const telemetryEnabled = process.env.MAPPING_EVENT_LOG_ENABLED !== 'false';
+
     // Map all items concurrently — each mapping is independent, and identical
     // items are deduplicated by the pipeline's in-flight lock.
     const parsedItems = await Promise.all(items.map(async (item) => {
@@ -286,10 +304,35 @@ Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs"
       const qty = parsed?.qty ?? 1;
       const unit = parsed?.unit ?? '';
 
+      const telemetry: import('@/lib/mapping/map-ingredient-with-fallback').MappingTelemetry = {};
+      const mapStart = Date.now();
       const mapped = await mapIngredientWithFallback(rawText, {
         brand: brand || undefined,
-        normalizedForm: normalizedForm || undefined
+        normalizedForm: normalizedForm || undefined,
+        skipCache: noCache,
+        telemetry,
       });
+      const mapLatencyMs = Date.now() - mapStart;
+      const isMapped = !!mapped && !('status' in mapped);
+      if (telemetryEnabled) {
+        eventRows.push({
+          rawLine: rawText,
+          normalizedForm: telemetry.normalizedForm ?? null,
+          cacheHit: telemetry.cacheHit ?? null,
+          cacheEscape: telemetry.cacheEscape ?? null,
+          foodId: isMapped ? (mapped as any).foodId : null,
+          foodName: isMapped ? (mapped as any).foodName : null,
+          brandName: isMapped ? ((mapped as any).brandName ?? null) : null,
+          source: isMapped ? (mapped as any).source : null,
+          confidence: isMapped ? (mapped as any).confidence : null,
+          servingTier: isMapped ? ((mapped as any).servingTier ?? null) : null,
+          grams: isMapped ? (mapped as any).grams : null,
+          totalKcal: isMapped ? (mapped as any).kcal : null,
+          latencyMs: mapLatencyMs,
+          noCache,
+        });
+      }
+
       if (!mapped || 'status' in mapped) {
         return {
           rawText,
@@ -366,6 +409,16 @@ Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs"
         servingOptions: details.servingOptions,
       };
     }));
+
+    // One round trip for all lines; awaited so serverless runtimes can't kill
+    // the write after the response, but failures never fail the request.
+    if (eventRows.length > 0) {
+      try {
+        await prisma.mappingEventLog.createMany({ data: eventRows });
+      } catch (telemetryErr) {
+        console.warn('[nlp-parse] MappingEventLog write failed (non-fatal):', telemetryErr);
+      }
+    }
 
     return NextResponse.json(parsedItems);
   } catch (error) {

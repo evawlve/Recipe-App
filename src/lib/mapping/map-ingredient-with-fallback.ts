@@ -168,7 +168,29 @@ export type FatsecretMappedIngredient = {
         category?: string;
         detectedIssues?: string[];
     };
+    /**
+     * Gram-resolution branch that billed this result (weight_unit,
+     * label_count_derived, flat_100g_default, ...). Recorded in
+     * MappingEventLog; undefined on the legacy fatsecret/ai serving path.
+     */
+    servingTier?: string;
 };
+
+/**
+ * Telemetry sink for MappingEventLog: the caller passes an empty object via
+ * options and the mapper mutates it with cache-path facts (which cache layer
+ * served the line, or why a cached row was bypassed). Mutation-based so the
+ * facts survive the mapper's many internal return paths without threading
+ * them through every result construction.
+ */
+export interface MappingTelemetry {
+    /** The mapper's own cache-key input (post-normalization), not the segmenter hint. */
+    normalizedForm?: string;
+    /** Set when a FoodMapping row served the line: which cache layer hit. */
+    cacheHit?: 'early' | 'normalized';
+    /** Set when a cached row existed but was bypassed: 'early:grain_cooked', 'normalized:core_token_mismatch', ... */
+    cacheEscape?: string;
+}
 
 /**
  * Returned when skipOnLock is true and the ingredient is currently locked.
@@ -195,6 +217,8 @@ export interface MapIngredientOptions {
     skipOnLock?: boolean;
     brand?: string;
     normalizedForm?: string;
+    /** Optional telemetry sink — mutated with cache-path facts (see MappingTelemetry). */
+    telemetry?: MappingTelemetry;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -216,6 +240,7 @@ export async function mapIngredientWithFallback(
         _skipInFlightLock = false,
         _skipFallback = false,
         skipOnLock = false,
+        telemetry,
     } = options;
 
     const trimmed = rawLine.trim();
@@ -541,6 +566,7 @@ export async function mapIngredientWithFallback(
         // ============================================================
         // Check ValidatedMapping for normalized name BEFORE calling AI
         // This is the key optimization: "1 cup chopped onion" → normalized "onion" → cache hit!
+        if (telemetry) telemetry.normalizedForm = normalizedName;
         const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
@@ -698,6 +724,14 @@ export async function mapIngredientWithFallback(
                     countLabelEscape: earlyCountLabelEscape,
                     grainCookedEscape: earlyGrainCookedEscape,
                 });
+                if (telemetry) {
+                    telemetry.cacheEscape = 'early:' + (
+                        earlyCoreTokenMismatch ? 'core_token_mismatch'
+                        : earlyNutritionInvalid ? 'nutrition_invalid'
+                        : earlyCountLabelEscape ? 'count_label'
+                        : earlyGrainCookedEscape ? 'grain_cooked'
+                        : 'filter_mismatch');
+                }
                 // Fall through to normal search - don't use stale cached mapping
             } else {
                 // Create synthetic candidate from cached result
@@ -723,6 +757,7 @@ export async function mapIngredientWithFallback(
                 if (hydratedResult) {
                     // Track cache hit for metrics
                     incrementCacheHit();
+                    if (telemetry) telemetry.cacheHit = 'early';
 
                     // Log the early cache hit
                     if (ENABLE_MAPPING_ANALYSIS) {
@@ -911,7 +946,11 @@ export async function mapIngredientWithFallback(
         // Step 1c: Check validated cache for normalized name (User Optimization)
         // "1 cup chopped onion" -> normalized "onion" -> checks cache for "onion"
         if (!winner) {
-            const normalizedCache = await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
+            if (telemetry) telemetry.normalizedForm = normalizedName;
+            // skipCache must gate this layer too — without it a "cold" (nocache)
+            // run would still serve cached rows via step 1c and parity runs
+            // against the cache would be meaningless.
+            const normalizedCache = skipCache ? null : await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
                 const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
@@ -1034,6 +1073,14 @@ export async function mapIngredientWithFallback(
                         coreTokenMismatch: normalizedCoreTokenMismatch,
                         nutritionInvalid: normalizedNutritionInvalid,
                     });
+                    if (telemetry) {
+                        telemetry.cacheEscape = 'normalized:' + (
+                            normalizedCoreTokenMismatch ? 'core_token_mismatch'
+                            : normalizedNutritionInvalid ? 'nutrition_invalid'
+                            : normalizedCountLabelEscape ? 'count_label'
+                            : normalizedGrainCookedEscape ? 'grain_cooked'
+                            : 'filter_mismatch');
+                    }
                 } else {
                     winner = {
                         id: normalizedCache.foodId,
@@ -1046,6 +1093,7 @@ export async function mapIngredientWithFallback(
                     };
                     confidence = normalizedCache.confidence;
                     selectionReason = 'normalized_cache_hit';
+                    if (telemetry) telemetry.cacheHit = 'normalized';
                 }
             }
 
@@ -1661,6 +1709,7 @@ export async function mapIngredientWithFallback(
                         confidence: aiResult.confidence * 0.8,  // Penalize slightly vs API matches
                         quality: aiResult.confidence >= 0.7 ? 'medium' : 'low',
                         rawLine,
+                        servingTier: servingResult?.grams != null ? 'ai_generated_serving' : 'flat_100g_default',
                     };
 
                     if (ENABLE_MAPPING_ANALYSIS) {
@@ -2075,6 +2124,7 @@ export async function mapIngredientWithFallback(
                         confidence: aiResult.confidence * 0.8,
                         quality: aiResult.confidence >= 0.7 ? 'medium' : 'low',
                         rawLine,
+                        servingTier: servingResult?.grams != null ? 'ai_generated_serving' : 'flat_100g_default',
                     };
 
                     if (ENABLE_MAPPING_ANALYSIS) {
@@ -3441,6 +3491,7 @@ async function buildFdcResult(
                 confidence,
                 quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
                 rawLine,
+                servingTier: 'fdc_unit_heuristic',
             };
         }
     }
@@ -3504,12 +3555,16 @@ async function buildFdcResult(
 
     let grams: number = 100 * qty;
     let servingDescription: string = `${grams.toFixed(1)}g`;
+    // Telemetry: which branch below billed the grams (MappingEventLog.servingTier).
+    // Starts at the flat default; every resolving branch overwrites it.
+    let servingTier = 'flat_100g_default';
 
     if (unit && weightToGrams[unit]) {
         // Unit is a weight unit - convert qty to grams
         // e.g., "16 oz" → 16 * 28.35 = 453.6g
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
+        servingTier = 'weight_unit';
     } else if (unit && volumeToGrams[unit]) {
         // Unit is a volume unit - try AI estimation first for food-specific density
         const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
@@ -3527,6 +3582,7 @@ async function buildFdcResult(
                     grams = qty * aiResult.grams;
                     servingDescription = `${qty} ${unit}`;
                     aiEstimated = true;
+                    servingTier = 'fdc_volume_ai';
                     logger.info('fdc.volume_ai_estimated', {
                         foodName: candidate.name, unit, gramsPerUnit: aiResult.grams, totalGrams: grams,
                     });
@@ -3540,6 +3596,7 @@ async function buildFdcResult(
             // Fallback to hardcoded density estimate
             grams = qty * volumeToGrams[unit];
             servingDescription = `${qty} ${unit}`;
+            servingTier = 'volume_unit';
             logger.info('fdc.volume_hardcoded_fallback', {
                 foodName: candidate.name, unit, gramsPerUnit: volumeToGrams[unit], totalGrams: grams,
             });
@@ -3554,6 +3611,7 @@ async function buildFdcResult(
             const gramsPerUnit = unit ? sizes[unit] : undefined;
             grams = qty * (gramsPerUnit ?? 100);
             servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
+            servingTier = 'fdc_size_qualifier';
             logger.info('fdc.size_qualifier_resolved', {
                 foodName: candidate.name,
                 size: unit,
@@ -3604,6 +3662,7 @@ async function buildFdcResult(
                         grams = qty * subPieceDefault.grams;
                         servingDescription = `${qty} ${unitHint}s (${subPieceDefault.grams}g each)`;
                         resolved = true;
+                        servingTier = 'fdc_sub_piece_default';
                         logger.info('fdc.sub_piece_default_applied', {
                             foodName: candidate.name,
                             parsedName: cleanItemName,
@@ -3638,6 +3697,7 @@ async function buildFdcResult(
                         grams = qty * gramsPerPiece;
                         servingDescription = `${qty} pieces (${gramsPerPiece}g each)`;
                         resolved = true;
+                        servingTier = 'fdc_piece_ai';
                         logger.info('fdc.unitless_piece_resolved', {
                             foodName: candidate.name,
                             parsedName: itemName,
@@ -3663,6 +3723,7 @@ async function buildFdcResult(
                     const gramsPerUnit = sizes['medium'];
                     grams = qty * gramsPerUnit;
                     servingDescription = `${qty} medium (${gramsPerUnit}g each)`;
+                    servingTier = 'fdc_medium_estimate';
                     logger.info('fdc.unitless_medium_resolved', {
                         foodName: candidate.name,
                         gramsPerUnit,
@@ -3692,6 +3753,7 @@ async function buildFdcResult(
                 
                 grams = qty * gramsPerUnit;
                 servingDescription = `${qty} ${hasMiniModifier ? 'mini' : targetSize} (${gramsPerUnit}g each)`;
+                servingTier = 'fdc_size_estimate';
                 logger.info('fdc.unitless_size_resolved', {
                     foodName: candidate.name,
                     sizeUsed: targetSize,
@@ -3721,6 +3783,7 @@ async function buildFdcResult(
             const gramsPerUnit = ambiguousResult.grams!;
             grams = qty * gramsPerUnit;
             servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
+            servingTier = ambiguousResult.status === 'cached' ? 'count_unit_cached' : 'count_unit_ai';
             logger.info('fdc.ambiguous_unit_resolved', {
                 foodName: candidate.name,
                 unit,
@@ -3757,6 +3820,7 @@ async function buildFdcResult(
                 });
                 grams = bareDefault.grams;
                 servingDescription = bareDefault.description;
+                servingTier = 'bare_query_default';
             }
         } catch (err) {
             // Ignore
@@ -3820,6 +3884,7 @@ async function buildFdcResult(
         confidence,
         quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
         rawLine,
+        servingTier,
     };
 }
 
@@ -3968,6 +4033,8 @@ async function buildOffResult(
 
     let grams: number | null = null;
     let servingDescription: string | null = null;
+    // Telemetry: which branch below billed the grams (MappingEventLog.servingTier).
+    let servingTier: string | undefined;
     // Set when the item is a unitless integer count ("15 pretzels") for which no
     // per-piece weight could be resolved (no seed, no discrete-unit backfill, no
     // genuine label serving). Such counts must NOT bill the 100g no-serving
@@ -4021,15 +4088,18 @@ async function buildOffResult(
     if (unit && weightToGrams[unit]) {
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
+        servingTier = 'weight_unit';
     } else if (unit && volumeToGrams[unit]) {
         grams = qty * volumeToGrams[unit];
         servingDescription = `${qty} ${unit}`;
+        servingTier = 'volume_unit';
     } else if (unit && labelUnitWord && perLabelUnitGrams && singularizeUnit(unit) === labelUnitWord) {
         // Requested unit matches the product's OWN label serving unit — the label
         // is authoritative for THIS product. Use per-unit grams (label grams /
         // label unit-count) so a "2 scoops (46g)" tub yields 23g/scoop, not 46g.
         grams = qty * perLabelUnitGrams;
         servingDescription = `${qty} ${unit} (${perLabelUnitGrams.toFixed(1)}g each)`;
+        servingTier = 'label_unit_match';
         logger.info('off.build_result.label_unit_matched', {
             foodId: candidate.id,
             unit,
@@ -4039,6 +4109,7 @@ async function buildOffResult(
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && hydrated.servingGrams && hydrated.servingGrams > 0) {
         grams = qty * hydrated.servingGrams;
         servingDescription = `${qty} ${unit} (${hydrated.servingGrams}g each)`;
+        servingTier = 'label_serving_package_unit';
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && packageFallbackGrams != null) {
         // Package-like unit with NO label serving ("1 bottle gatorade" on a
         // SKU without servingGrams): the SKU's own net quantity — or the
@@ -4047,6 +4118,7 @@ async function buildOffResult(
         // no-serving default.
         grams = qty * packageFallbackGrams;
         servingDescription = `${qty} ${unit} (${packageFallbackGrams.toFixed(0)}g each)`;
+        servingTier = packageGrams != null ? 'package_quantity_own' : 'package_quantity_sibling';
         logger.info('off.build_result.package_quantity_fallback', {
             foodId: candidate.id,
             unit,
@@ -4063,6 +4135,7 @@ async function buildOffResult(
             && ambiguous.grams && ambiguous.grams > 0) {
             grams = qty * ambiguous.grams;
             servingDescription = `${qty} ${unit} (${ambiguous.grams.toFixed(1)}g each)`;
+            servingTier = ambiguous.status === 'cached' ? 'count_unit_cached' : 'count_unit_ai';
             logger.info('off.build_result.unit_serving_resolved', {
                 foodId: candidate.id,
                 unit,
@@ -4101,6 +4174,7 @@ async function buildOffResult(
         ) {
             grams = qty * perLabelUnitGrams;
             servingDescription = `${qty} ${genericPieceNoun ?? labelUnitWord} (${perLabelUnitGrams.toFixed(1)}g each)`;
+            servingTier = 'label_count_derived';
             logger.info('off.build_result.label_count_derived', {
                 foodId: candidate.id,
                 name: itemNameForCount,
@@ -4120,6 +4194,7 @@ async function buildOffResult(
                 if (countDefault && countDefault.grams > 0) {
                     grams = qty * countDefault.grams;
                     servingDescription = `${qty} each (${countDefault.grams.toFixed(1)}g each)`;
+                    servingTier = 'seed_count_default';
                     logger.info('off.build_result.unitless_count_default', {
                         foodId: candidate.id,
                         name: itemNameForCount,
@@ -4144,6 +4219,7 @@ async function buildOffResult(
                 if ((amb.status === 'success' || amb.status === 'cached') && amb.grams && amb.grams > 0) {
                     grams = qty * amb.grams;
                     servingDescription = `${qty} ${discreteUnit} (${amb.grams.toFixed(1)}g each)`;
+                    servingTier = 'discrete_unit_backfill';
                     logger.info('off.build_result.discrete_unit_backfill', {
                         foodId: candidate.id,
                         unit: discreteUnit,
@@ -4171,6 +4247,7 @@ async function buildOffResult(
             if (pkg != null) {
                 grams = qty * pkg;
                 servingDescription = `${qty} package (${pkg.toFixed(0)}g each)`;
+                servingTier = packageGrams != null ? 'package_count_own' : 'package_count_sibling';
                 logger.info('off.build_result.package_count', {
                     foodId: candidate.id,
                     name: itemNameForCount,
@@ -4195,6 +4272,7 @@ async function buildOffResult(
             // there is NO serving at all (handled below).
             grams = qty * hydrated.servingGrams;
             servingDescription = `${qty} serving (${hydrated.servingGrams}g each)`;
+            servingTier = 'label_serving_default';
         } else if (unitlessCountUnresolved) {
             // Unitless count with NO per-piece weight AND no label serving: we
             // cannot honor the count, so bill ONE bounded 100g serving rather
@@ -4202,6 +4280,7 @@ async function buildOffResult(
             // foods from exploding into kilograms ("15 pretzels" was 1500g).
             grams = 100;
             servingDescription = `1 serving (count unresolved, 100.0g)`;
+            servingTier = 'count_unresolved_floor';
             logger.info('off.build_result.unitless_count_unresolved_capped', {
                 foodId: candidate.id,
                 requestedQty: qty,
@@ -4210,6 +4289,7 @@ async function buildOffResult(
         } else {
             grams = 100 * qty;
             servingDescription = `${grams.toFixed(1)}g`;
+            servingTier = 'flat_100g_default';
         }
     }
 
@@ -4233,6 +4313,7 @@ async function buildOffResult(
             confidence,
             quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
             rawLine,
+            servingTier,
         };
     }
 
@@ -4266,6 +4347,7 @@ async function buildOffResult(
         confidence: confidence * aiNutrition.confidence,
         quality: 'low',
         rawLine,
+        servingTier,
     };
 }
 

@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise.",
   "search": [
     {
       "id": "s-gen-01",
@@ -5080,6 +5080,131 @@
       ],
       "knownIssue": true,
       "notes": "DEFECT (DETECTION + INGEST-BLOCKED). 'bang' not in brand lexicon; maps to generic 'Cotton candy' (off_0609015727782, brand ''). Same class as n-brand-05. knownIssue, non-gating."
+    },
+    {
+      "id": "n-tot-01",
+      "category": "total_macros",
+      "item": {
+        "rawText": "1 tbsp olive oil",
+        "quantity": 1,
+        "unit": "tbsp",
+        "name": "olive oil"
+      },
+      "expectName": [
+        [
+          "olive oil"
+        ],
+        [
+          "oil"
+        ]
+      ],
+      "total": {
+        "calories": [
+          100,
+          140
+        ],
+        "fat": [
+          11,
+          16
+        ]
+      },
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). First end-to-end billed-total case: 1 tbsp (~13.5-15g) of ~884kcal/100g oil must bill ~119-133 kcal. Catches wrong-record, wrong-density, and wrong-scaling failures that the per-100g fat band (n-gen-05) is blind to."
+    },
+    {
+      "id": "n-tot-02",
+      "category": "total_macros",
+      "item": {
+        "rawText": "1 cup white rice",
+        "quantity": 1,
+        "unit": "cup",
+        "name": "white rice"
+      },
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "total": {
+        "calories": [
+          160,
+          260
+        ]
+      },
+      "knownIssue": true,
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). Volume-unit grain prefers a COOKED basis (PR #104): ~158g cooked at ~130kcal/100g bills ~205 kcal; band [160,260] also rejects dry-basis billing (300+). DEFECT FOUND AT AUTHORING (live, stable, conf 1.0): 'white rice' serves cached FoodMapping row -> FDC 'brown parboiled cooked uncle bens rice', 195-200g, ~287-294 kcal. Wrong-record hijack the grams band can't see: record IS cooked (so the grain-cooked cache escape correctly stays quiet) but is BROWN parboiled branded rice for a WHITE rice query — the white/brown modifier is not treated as critical. Fix path: Phase 2 identity audit purges the row + white-vs-brown modifier guard; promote to hard once stable."
+    },
+    {
+      "id": "n-tot-03",
+      "category": "total_macros",
+      "item": {
+        "rawText": "1 quest protein bar",
+        "quantity": 1,
+        "unit": "",
+        "name": "quest protein bar"
+      },
+      "expectName": [
+        [
+          "quest"
+        ],
+        [
+          "protein bar"
+        ]
+      ],
+      "total": {
+        "calories": [
+          140,
+          230
+        ],
+        "protein": [
+          14,
+          25
+        ]
+      },
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). Unitless count of a discrete branded bar (~60g, ~180-200 kcal, ~20g protein). Exercises the inferDiscreteUnit('bar') backfill / label-serving tier; the flat-100g failure mode bills ~330 kcal and the count-explosion mode even more — both outside band."
+    },
+    {
+      "id": "n-tot-04",
+      "category": "total_macros",
+      "item": {
+        "rawText": "1 mission carb balance tortilla",
+        "quantity": 1,
+        "unit": "",
+        "name": "mission carb balance tortilla"
+      },
+      "expectName": [
+        [
+          "carb balance"
+        ],
+        [
+          "mission",
+          "tortilla"
+        ]
+      ],
+      "total": {
+        "calories": [
+          50,
+          120
+        ]
+      },
+      "knownIssue": true,
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). A Carb Balance flour tortilla is ~42-45g and ~70-80 kcal (high-fiber net-carb product). OBSERVED AT AUTHORING (live): grams resolve CORRECTLY (45g) but billed only 31.5 kcal — the OFF record ('Mission, carb, balance, tortilla') stores ~70 kcal as PER-100G when it is really the PER-SERVING(45g) value, i.e. the per-serving-as-100g ingest corruption class (n-mq-20). So the defect here is nutrition DATA, on top of the known 'tortilla'-missing-from-LABEL_COUNT_PIECE_NOUNS lexicon gap. Fix path: Phase 2 nutritional-plausibility audit (a 155kcal/100g tortilla stored at 70 fails the category prior) + n-mq-20 ingest cross-check. Promote to hard once it passes 3 consecutive runs."
+    },
+    {
+      "id": "n-tot-05",
+      "category": "total_macros",
+      "text": "13 tortilla chips",
+      "expectName": [
+        [
+          "chip"
+        ]
+      ],
+      "total": {
+        "calories": [
+          130,
+          320
+        ]
+      },
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). Companion to n-serv-35 (same query, grams band): asserts the BILLED kcal for a 13-count chip line (~28-70g of ~490-530kcal/100g chips → 140-350 kcal; band trimmed to reject edge inflation). The flat-100g failure bills ~500 kcal and the 13x100g count explosion ~6500 — both far outside band. Short text takes the single-item fast path, no LLM segmentation cost."
     }
   ]
 }
