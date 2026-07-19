@@ -3796,6 +3796,12 @@ async function buildOffResult(
 
     let grams: number | null = null;
     let servingDescription: string | null = null;
+    // Set when the item is a unitless integer count ("15 pretzels") for which no
+    // per-piece weight could be resolved (no seed, no discrete-unit backfill, no
+    // genuine label serving). Such counts must NOT bill the 100g no-serving
+    // default per piece (15 x 100 = 1500g); the fallback bills one bounded
+    // serving instead.
+    let unitlessCountUnresolved = false;
 
     // Label serving unit info: e.g. label "2 scoops (46g)" → unit "scoop",
     // count 2, per-unit 23g. Divides multi-unit label servings so "2 scoops"
@@ -3902,12 +3908,34 @@ async function buildOffResult(
                 }
             }
         }
+
+        // Still no per-piece weight for a counted item: flag it so the fallback
+        // below bills a single bounded serving instead of 100g * count.
+        if (grams == null) {
+            unitlessCountUnresolved = true;
+        }
     }
 
     if (grams == null || servingDescription == null) {
         if (hydrated.servingGrams && hydrated.servingGrams > 0) {
+            // Genuine label serving exists: honor the count against it. For a
+            // discrete item whose piece IS its serving this is correct ("2 rx
+            // bars" -> 2 x 52g = 104g); the per-piece defect only bites when
+            // there is NO serving at all (handled below).
             grams = qty * hydrated.servingGrams;
             servingDescription = `${qty} serving (${hydrated.servingGrams}g each)`;
+        } else if (unitlessCountUnresolved) {
+            // Unitless count with NO per-piece weight AND no label serving: we
+            // cannot honor the count, so bill ONE bounded 100g serving rather
+            // than 100g * count. This stops the long tail of unseeded count
+            // foods from exploding into kilograms ("15 pretzels" was 1500g).
+            grams = 100;
+            servingDescription = `1 serving (count unresolved, 100.0g)`;
+            logger.info('off.build_result.unitless_count_unresolved_capped', {
+                foodId: candidate.id,
+                requestedQty: qty,
+                billedGrams: grams,
+            });
         } else {
             grams = 100 * qty;
             servingDescription = `${grams.toFixed(1)}g`;

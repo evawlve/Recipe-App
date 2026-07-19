@@ -4015,8 +4015,7 @@
         10,
         60
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable, dramatic): '10 mission tortilla chips' resolves to 1000g (each chip billed at the 100g default -> 10x100). A tortilla chip is ~2g so 10 chips is ~20g; 1000g is a kilo of chips, ~50x too high. Count-based discrete unit is NOT resolved to a per-piece weight for this record; the count is instead multiplied against the 100g no-serving fallback. Highest-value failure mode found. Expected ~10-60g; observed 1000g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A). Was 1000g (100xcount, the most dramatic failure found). Added a 'tortilla chip' seed (~2g), matched via last-two-word alias -> 10 x 2 = 20g. Hard assertion."
     },
     {
       "id": "n-serv-16",
@@ -4039,8 +4038,7 @@
         12,
         40
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '2 rice cakes' resolves to 200g (each rice cake billed at the 100g default -> 2x100). A plain rice cake is ~9g so 2 is ~18g; 200g is ~11x too high. Same count-x-100g-default failure as n-serv-15. Expected ~12-40g; observed 200g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A). Was 200g (100xcount). Added a 'rice cake' seed (~9g) -> 2 x 9 = 18g. Hard assertion."
     },
     {
       "id": "n-serv-17",
@@ -4063,8 +4061,7 @@
         3,
         20
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '10 goldfish crackers' resolves to 40g (~4g/goldfish). A Goldfish cracker is ~0.5g (a 30g serving is ~55 pieces), so 10 is ~5g; 40g is ~8x too high. Per-piece weight for tiny count units is over-estimated. Expected ~3-20g; observed 40g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 40g (matched the generic 'cracker' seed = 4g). Added a specific 'goldfish cracker' seed (~0.5g), which wins via last-two-word alias -> 10 x 0.5 = 5g. Hard assertion."
     },
     {
       "id": "n-serv-18",
@@ -4087,8 +4084,7 @@
         30,
         60
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '4 oreo cookies' resolves to 120g (~30g/cookie). A single Oreo is ~11.3g (label serving is 3 cookies = 34g), so 4 is ~45g; 120g is ~2.7x too high. Likely the per-3-cookie label serving is billed per single 'cookie' count. Expected ~30-60g; observed 120g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 120g (matched the generic 'cookie' seed = 30g). Added a specific 'oreo' seed (~11.3g) -> 4 x 11.3 = 45.2g. Hard assertion."
     },
     {
       "id": "n-serv-19",
@@ -4111,8 +4107,7 @@
         50,
         90
       ],
-      "knownIssue": true,
-      "notes": "DISCOVERED BUG (stable): '2 eggo waffles' resolves to 150g (~75g/waffle). A single Eggo waffle is ~35g (label serving is 2 waffles = 70g), so 2 is ~70g; 150g is ~2x too high. Same per-count over-billing as n-serv-18. Correct brand/product ('Eggo waffles', Kellogg's). Expected ~50-90g; observed 150g. Non-gating."
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 150g (matched the generic 'waffle' seed = 75g). Added a specific 'eggo waffle' seed (~35g) -> 2 x 35 = 70g. Hard assertion."
     },
     {
       "id": "n-serv-20",
@@ -4135,8 +4130,7 @@
         8,
         45
       ],
-      "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 1 = 100xcount, most extreme found: ratio ~100x). '15 pretzels' -> 1500g: buildOffResult unitless-count branch finds no seed and no discrete-regex match, so bills 100g per piece (15 x 100). A mini pretzel is ~1.2g so 15 is ~18g. Target [8,45]; observed 1500g. Fix = intercept the per-unit==100 no-serving fallback (prefer label per-unit / ambiguous backfill / per-unit cap)."
+      "notes": "FIXED 2026-07-18 (Cluster A). '15 pretzels' was 1500g (100xcount). Added a 'pretzel' seed (~2g/piece) -> 15 x 2 = 30g. Hard assertion. The structural 100xcount guard in buildOffResult also bounds any unseeded count food to one serving."
     },
     {
       "id": "n-serv-21",
@@ -4159,8 +4153,7 @@
         6,
         25
       ],
-      "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 1 = 100xcount). '12 m&ms' -> 1200g (12 x 100g default). One M&M is ~0.9g so 12 is ~11g. Target [6,25]; observed 1200g. Same 100xcount root as n-serv-20."
+      "notes": "FIXED 2026-07-18 (Cluster A). '12 m&ms' was 1200g (100xcount). Added an 'm&m' seed (~0.9g) -> 12 x 0.9 = 10.8g. Hard assertion (deterministic seed path, ~50ms)."
     },
     {
       "id": "n-serv-22",
@@ -4183,8 +4176,7 @@
         30,
         90
       ],
-      "knownIssue": true,
-      "notes": "CENSUS BUG (Cluster A, Defect 1 = 100xcount on a WHOLE FOOD). '10 grapes' -> 1000g (10 x 100g default). A grape is ~5g so 10 is ~50g. Target [30,90]; observed 1000g. Shows the 100xcount defect is not brand-specific -- any count food lacking a per-piece seed/serving over-bills."
+      "notes": "FIXED 2026-07-18 (Cluster A). '10 grapes' was 1000g (100xcount on a whole food). Added a 'grape' seed (~5g) -> 10 x 5 = 50g. Hard assertion."
     },
     {
       "id": "n-serv-23",

@@ -168,6 +168,26 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     // Cooking spray duration: 1 second of spray ≈ 0.25g oil
     'second': { grams: 0.25, confidence: 0.85, aliases: ['seconds'] },
 
+    // ===== COUNT SNACKS (small discrete pieces) =====
+    // Curated per-piece weights for common count-logged snacks. Without these,
+    // buildOffResult's unitless-count branch found no per-piece and billed the
+    // 100g no-serving default PER PIECE ("10 tortilla chips" → 1000g). Specific
+    // entries also override generic seeds that were too heavy for a branded item
+    // (goldfish vs the 4g 'cracker' seed; oreo vs the 30g 'cookie' seed; a 35g
+    // Eggo vs the 75g 'waffle' seed). More-specific last-two-word aliases win
+    // over the generic last-word match, so these take precedence.
+    'tortilla chip': { grams: 2, confidence: 0.75, aliases: ['tortilla chips'] },
+    'potato chip': { grams: 1, confidence: 0.7, aliases: ['potato chips', 'chips', 'chip'] },
+    'pretzel': { grams: 2, confidence: 0.7, sizes: { small: 1, medium: 2, large: 6 }, aliases: ['pretzels', 'mini pretzel', 'mini pretzels'] },
+    'rice cake': { grams: 9, confidence: 0.8, aliases: ['rice cakes'] },
+    'goldfish cracker': { grams: 0.5, confidence: 0.8, aliases: ['goldfish crackers', 'goldfish'] },
+    'oreo': { grams: 11.3, confidence: 0.8, aliases: ['oreos', 'oreo cookie', 'oreo cookies'] },
+    'eggo waffle': { grams: 35, confidence: 0.8, aliases: ['eggo waffles', 'eggo', 'eggos'] },
+    'tater tot': { grams: 10, confidence: 0.75, aliases: ['tater tots', 'tots'] },
+    'grape': { grams: 5, confidence: 0.8, sizes: { small: 3, medium: 5, large: 8 }, aliases: ['grapes'] },
+    'm&m': { grams: 0.9, confidence: 0.7, aliases: ['m&ms', 'm and m', 'm and ms', 'mnm', 'mnms'] },
+    'gummy bear': { grams: 2.3, confidence: 0.7, aliases: ['gummy bears'] },
+
     // ===== SUPPLEMENTS & POWDERS =====
     'protein powder scoop': { grams: 30, confidence: 0.9, aliases: ['scoop protein powder', 'protein scoop'] },
     'whey protein scoop': { grams: 30, confidence: 0.9, aliases: ['scoop whey protein', 'whey scoop'] },
