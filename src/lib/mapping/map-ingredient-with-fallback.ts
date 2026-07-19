@@ -3798,6 +3798,55 @@ function candidateHasCountLabel(candidate: UnifiedCandidate, pieceNoun: string):
     return servingLabelCountsPiece(raw?.servingSize, raw?.servingGrams, pieceNoun);
 }
 
+// Plausible single-retail-unit bands for package quantities. 'ml' is the
+// beverage archetype (a bottle/can/pouch someone counts as one drink); 'g'
+// is capped low so multi-serve family packages (a 432g Oreo package) never
+// pass as one piece — only single-serve cups/sticks/bars do.
+const PACKAGE_BAND: Record<'ml' | 'g', { min: number; max: number }> = {
+    ml: { min: 100, max: 1000 },
+    g: { min: 20, max: 250 },
+};
+
+function packageGramsInBand(qty: number | null | undefined, unitKind: string | null | undefined): number | null {
+    if (qty == null || (unitKind !== 'ml' && unitKind !== 'g')) return null;
+    const band = PACKAGE_BAND[unitKind];
+    return qty >= band.min && qty <= band.max ? qty : null;
+}
+
+/**
+ * Median same-brand package quantity from the OFF product_quantity backfill
+ * (Cluster A pt2 Defect 3). Lets "1 gatorade" resolve to ~a bottle even when
+ * the matched SKU itself lacks package data — its brand siblings know. The
+ * unit class (ml vs g) is decided by MAJORITY VOTE across in-band siblings:
+ * Chobani's hundreds of 150g cups must outvote its handful of half-gallon
+ * drinkables, and Gatorade's ml bottles outvote its powder tubs. Requires
+ * >=2 sibling SKUs in the winning class.
+ */
+async function borrowSiblingPackageGrams(
+    brandName: string | null | undefined
+): Promise<number | null> {
+    const brand = brandName?.trim();
+    if (!brand) return null;
+    try {
+        const { prisma } = await import('../db');
+        const rows = await prisma.$queryRaw<Array<{ unit: string; med: number | null; n: number }>>`
+            SELECT "packageQuantityUnit" AS unit,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY "packageQuantity") AS med,
+                   count(*)::int AS n
+            FROM "OffFood"
+            WHERE "brandName" ILIKE ${brand}
+              AND (("packageQuantityUnit" = 'ml' AND "packageQuantity" BETWEEN ${PACKAGE_BAND.ml.min} AND ${PACKAGE_BAND.ml.max})
+                OR ("packageQuantityUnit" = 'g'  AND "packageQuantity" BETWEEN ${PACKAGE_BAND.g.min} AND ${PACKAGE_BAND.g.max}))
+            GROUP BY 1
+            ORDER BY count(*) DESC`;
+        const winner = rows[0];
+        if (!winner?.med || winner.n < 2) return null;
+        return winner.med;
+    } catch {
+        return null;
+    }
+}
+
 async function buildOffResult(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
@@ -3867,7 +3916,31 @@ async function buildOffResult(
         'container', 'containers', 'packet', 'packets', 'package', 'packages',
         'pack', 'packs', 'bottle', 'bottles', 'jar', 'jars', 'pouch', 'pouches',
         'tub', 'tubs', 'box', 'boxes', 'bag', 'bags', 'sachet', 'sachets',
+        'can', 'cans', 'carton', 'cartons',
     ]);
+
+    // SKU's own net quantity (OFF product_quantity backfill, 207k rows).
+    // Used ONLY when the label serving is absent — for multipack SKUs
+    // product_quantity is the OUTER box (a 10-pouch Capri Sun = 1774ml), so
+    // the label serving must always win when present. ml ≈ g is close enough
+    // for beverages (±6%); PACKAGE_BAND keeps corrupt values and multi-serve
+    // family packages out. When this SKU lacks package data, borrow the
+    // same-brand median (Gatorade's siblings know a bottle is ~591ml).
+    const packageGrams = packageGramsInBand(hydrated.packageQuantity, hydrated.packageQuantityUnit);
+    // Brand for sibling-borrowing package sizes. OFF rows sometimes carry a
+    // null brandName even for clearly branded products ("Celsius", "Chomps
+    // original beef stick") — fall back to the food name's first token; the
+    // borrow itself requires >=2 exact-brand-match SKUs with in-band package
+    // data, which filters bogus guesses.
+    const brandForBorrow = hydrated.brandName ?? (() => {
+        const tok = (hydrated.foodName || '').trim().split(/\s+/)[0] ?? '';
+        return tok.length >= 4 ? tok : null;
+    })();
+    let packageFallbackGrams: number | null = null;
+    if (unit && PACKAGE_LIKE_UNITS.has(unit) && !(hydrated.servingGrams && hydrated.servingGrams > 0)) {
+        packageFallbackGrams = packageGrams
+            ?? await borrowSiblingPackageGrams(brandForBorrow);
+    }
 
     if (unit && weightToGrams[unit]) {
         grams = qty * weightToGrams[unit];
@@ -3890,6 +3963,20 @@ async function buildOffResult(
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && hydrated.servingGrams && hydrated.servingGrams > 0) {
         grams = qty * hydrated.servingGrams;
         servingDescription = `${qty} ${unit} (${hydrated.servingGrams}g each)`;
+    } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && packageFallbackGrams != null) {
+        // Package-like unit with NO label serving ("1 bottle gatorade" on a
+        // SKU without servingGrams): the SKU's own net quantity — or the
+        // same-brand median package — is the best available answer. Cluster A
+        // pt2 Defect 3 (Jul 2026): these previously fell to the flat 100g
+        // no-serving default.
+        grams = qty * packageFallbackGrams;
+        servingDescription = `${qty} ${unit} (${packageFallbackGrams.toFixed(0)}g each)`;
+        logger.info('off.build_result.package_quantity_fallback', {
+            foodId: candidate.id,
+            unit,
+            packageGrams: packageFallbackGrams,
+            ownLabel: packageGrams != null,
+        });
     } else if (unit && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
         // Count/size/unknown units ("slice", "medium", "can", "knob", "rasher"):
         // deterministic count defaults + cached per-food servings + AI estimation.
@@ -3988,6 +4075,32 @@ async function buildOffResult(
                         status: amb.status,
                     });
                 }
+            }
+        }
+
+        // (D) WHOLE-PACKAGE COUNT — "1 gatorade", "2 celsius": a unitless count
+        // of a BRANDED packaged product that names no piece noun is a count of
+        // retail units. Bill the SKU's own net quantity, or the same-brand
+        // median package when this SKU lacks it (Cluster A pt2 Defect 3,
+        // Jul 2026 — previously the flat capped-100g default). Gated to
+        // branded, label-serving-less matches and PACKAGE_BAND sizes, so
+        // "2 oreos" can never bill two 432g family packages.
+        if (
+            grams == null && brandForBorrow
+            && (!hydrated.servingGrams || hydrated.servingGrams <= 0)
+            && pieceNounInName(itemNameForCount) == null
+        ) {
+            const pkg = packageGrams
+                ?? await borrowSiblingPackageGrams(brandForBorrow);
+            if (pkg != null) {
+                grams = qty * pkg;
+                servingDescription = `${qty} package (${pkg.toFixed(0)}g each)`;
+                logger.info('off.build_result.package_count', {
+                    foodId: candidate.id,
+                    name: itemNameForCount,
+                    perPackageGrams: pkg,
+                    ownLabel: packageGrams != null,
+                });
             }
         }
 

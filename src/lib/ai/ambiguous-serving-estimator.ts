@@ -61,6 +61,43 @@ export const AMBIGUOUS_UNITS = new Set([
     'dollop', 'dollops',
 ]);
 
+// Unit-specific weight sanity floors (Cluster A pt2 Defect 4, Jul 2026).
+// A "handful" or "bowl" is inherently a multi-piece/portion quantity — an
+// estimate (or poisoned cached serving) below these is a per-piece weight in
+// disguise ("handful of almonds" = 1.2g) and must not be served.
+export const UNIT_MIN_GRAMS: Record<string, number> = {
+    handful: 10, handfuls: 10,
+    bowl: 25, bowls: 25,
+    plate: 50, plates: 50,
+};
+
+/** Sanity bounds for an ambiguous unit's per-unit grams; either side may be undefined. */
+export function getAmbiguousUnitBounds(unit: string): { min?: number; max?: number } {
+    const u = unit.toLowerCase().trim();
+    return { min: UNIT_MIN_GRAMS[u], max: UNIT_MAX_GRAMS[u] };
+}
+
+// Unit-specific weight sanity caps (safety net for AI hallucinations).
+// These prevent catastrophic misestimates like 100g/spray or 86g/scoop.
+// Module scope so getAmbiguousUnitBounds can validate cached servings too.
+const UNIT_MAX_GRAMS: Record<string, number> = {
+    // Micro-units: these should NEVER exceed a few grams
+    spray: 2, sprays: 2, squirt: 5, squirts: 5,
+    dash: 1, pinch: 0.5,
+    // True micro-volume units (drops of hot sauce, liquid stevia)
+    drop: 0.5, drops: 0.5,
+    // Cooking spray duration (0.4 second = ~0.25g oil)
+    second: 1, seconds: 1,
+    // Packet-like units: sweetener packet = 1g, ketchup packet = 9g max
+    packet: 10, packets: 10,
+    sachet: 10, sachets: 10, envelope: 15, envelopes: 15,
+    // Scoops: protein powder scoops are 30-35g max, competition scoops up to 45g
+    scoop: 50, scoops: 50,
+    // Pieces/strips/chunks/breasts: reasonable max for cut produce/meat
+    piece: 200, pieces: 200, strip: 50, strips: 50, chunk: 50, chunks: 50,
+    breast: 300, breasts: 300, thigh: 200, thighs: 200,
+};
+
 export interface AmbiguousServingRequest {
     foodName: string;
     brandName?: string | null;
@@ -289,26 +326,6 @@ export async function estimateAmbiguousServing(
             };
         }
 
-        // Unit-specific weight sanity caps (safety net for AI hallucinations)
-        // These prevent catastrophic misestimates like 100g/spray or 86g/scoop
-        const UNIT_MAX_GRAMS: Record<string, number> = {
-            // Micro-units: these should NEVER exceed a few grams
-            spray: 2, sprays: 2, squirt: 5, squirts: 5,
-            dash: 1, pinch: 0.5,
-            // True micro-volume units (drops of hot sauce, liquid stevia)
-            drop: 0.5, drops: 0.5,
-            // Cooking spray duration (0.4 second = ~0.25g oil)
-            second: 1, seconds: 1,
-            // Packet-like units: sweetener packet = 1g, ketchup packet = 9g max
-            packet: 10, packets: 10,
-            sachet: 10, sachets: 10, envelope: 15, envelopes: 15,
-            // Scoops: protein powder scoops are 30-35g max, competition scoops up to 45g
-            scoop: 50, scoops: 50,
-            // Pieces/strips/chunks/breasts: reasonable max for cut produce/meat
-            piece: 200, pieces: 200, strip: 50, strips: 50, chunk: 50, chunks: 50,
-            breast: 300, breasts: 300, thigh: 200, thighs: 200,
-        };
-
         // Novel (estimable-unknown) units have no curated cap — bound them
         // generously so a hallucinated weight can't produce absurd calories,
         // while still allowing legitimately large portions (bowl, plate, etc.).
@@ -322,6 +339,16 @@ export async function estimateAmbiguousServing(
                 reasoning,
             });
             clampedGrams = maxGrams;
+        }
+        // Floor guard: a portion unit estimated below its floor is a per-piece
+        // weight in disguise ("handful of almonds" → 1.2g). Clamp up.
+        const minGrams = UNIT_MIN_GRAMS[unit.toLowerCase()];
+        if (minGrams && clampedGrams < minGrams) {
+            logger.warn('ambiguous_estimation.clamped_low', {
+                foodName, unit, originalGrams: estimatedGrams, clampedTo: minGrams,
+                reasoning,
+            });
+            clampedGrams = minGrams;
         }
 
         return {
@@ -355,6 +382,7 @@ function buildPrompt(request: AmbiguousServingRequest): string {
         `- "package" of tofu: Typically 14oz (400g)`,
         `- "scoop" of protein powder: Typically 30-35g`,
         `- "bowl" of cereal: About 200-300g including milk, 30-60g dry`,
+        `- "handful" of nuts, chips, or snacks: About 28-40g — a handful is MANY pieces, NEVER the weight of a single piece`,
         `- "can" of soda: Usually 355ml`,
         `- "packet" of sweetener: About 1g`,
         ``,

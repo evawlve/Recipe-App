@@ -249,6 +249,11 @@ export function getDefaultCountServing(
         'roll', 'rolls', 'tin', 'tins', 'case', 'cases', 'jar', 'jars',
         'bottle', 'bottles', 'can', 'cans', 'pouch', 'pouches', 'tub', 'tubs',
         'container', 'containers',
+        // Portion units (Cluster A pt2 Defect 4, Jul 2026): a per-piece seed
+        // ('almond' = 1.2g) must never answer "1 handful of almonds" — a
+        // handful is many pieces. Same only-exact-"<name> <unit>"-seed
+        // contract as container units; the AI estimator handles them instead.
+        'handful', 'handfuls', 'bowl', 'bowls', 'plate', 'plates',
     ]);
     const isContainerUnit = CONTAINER_UNITS.has(unitLower);
 
