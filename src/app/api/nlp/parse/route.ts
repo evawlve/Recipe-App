@@ -194,8 +194,9 @@ export async function POST(req: NextRequest) {
       // return it unchanged after ~1-5s. Skip straight to mapping.
       items = [singleItemFromText(text)!];
     } else {
-      // AI-first segmentation: the cheap LLM splitter (gemini-2.0-flash via
-      // OpenRouter, ~$0.0003/call, magic-log is rate-capped) is the
+      // AI-first segmentation: the cheap LLM splitter (CHEAP_AI_MODEL_PRIMARY
+      // via OpenRouter — gpt-4o-mini, ~$0.0003/call, magic-log is
+      // rate-capped) is the
       // unconditional first step for any multi-token / delimited log. The
       // deterministic heuristic is deliberately NOT on the primary path — it
       // survives only as forceSegmentText, the fallback used when the LLM
