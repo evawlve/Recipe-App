@@ -14,6 +14,8 @@ import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
+import { assessSaveTimePlausibility } from './macro-plausibility';
+import type { MacroPlausibilityInput, ExpectedNutritionPer100g } from './macro-plausibility';
 import { detectBrandInQuery } from './brand-detector';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
@@ -262,6 +264,8 @@ export async function saveValidatedMapping(
         canonicalRawIngredient?: string;
         normalizedForm?: string;  // If provided, uses this; otherwise normalizes rawIngredient
         canonicalBase?: string;   // AI-derived base form for cache key consolidation (highest priority)
+        nutrientsPer100g?: MacroPlausibilityInput | null;      // Pick's per-100g macros for the save-time gate
+        expectedNutrition?: ExpectedNutritionPer100g | null;   // AI normalize estimate to cross-check against
     }
 ): Promise<void> {
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
@@ -296,6 +300,31 @@ export async function saveValidatedMapping(
             foodName: mapping.foodName,
             brandName: mapping.brandName,
         });
+    }
+
+    // Save-time macro-plausibility gate (PR D, Jul 2026): picks that survive
+    // ranking can still carry corrupt nutrition — the 2026-07-20 parity sweep
+    // cached "granulated sugar" at 16 kcal/100g and "blueberry" at 8.7 g
+    // protein — and a bad row then poisons every request until the next sweep.
+    // When the caller provides the pick's per-100g macros, block the write
+    // instead; the mapping still serves THIS request, it just isn't cached.
+    if (options?.nutrientsPer100g) {
+        const gate = assessSaveTimePlausibility(
+            normalizedForm,
+            mapping.foodName,
+            options.nutrientsPer100g,
+            options.expectedNutrition ?? null,
+        );
+        if (!gate.save) {
+            logger.warn('validated_mapping.save_rejected_implausible_macros', {
+                rawIngredient,
+                normalizedForm,
+                foodName: mapping.foodName,
+                brandName: mapping.brandName,
+                reasons: gate.reasons,
+            });
+            return;
+        }
     }
 
     try {

@@ -8,7 +8,7 @@
  * (avocado, dried spinach powder, olive oil, diet soda, alcohol, fiber foods).
  */
 
-import { assessMacroPlausibility, IMPLAUSIBLE_MACRO_PENALTY } from '../macro-plausibility';
+import { assessMacroPlausibility, assessSaveTimePlausibility, IMPLAUSIBLE_MACRO_PENALTY } from '../macro-plausibility';
 
 describe('assessMacroPlausibility', () => {
     // ============================================================
@@ -314,5 +314,203 @@ describe('assessMacroPlausibility', () => {
             const r = assessMacroPlausibility('chicken', 'Chicken Nuggets', { kcal: 250, protein: 14, carbs: 15, fat: 15 });
             expect(r.reasons.some(x => x.includes('lean_cut'))).toBe(false);
         });
+    });
+});
+
+describe('assessSaveTimePlausibility', () => {
+    // ============================================================
+    // The four rows the 2026-07-20 parity sweep actually cached
+    // ============================================================
+
+    it('rejects "granulated sugar" at 16 kcal/100g vs estimate ~387', () => {
+        const r = assessSaveTimePlausibility(
+            'granulated sugar', 'Granulated Sugar',
+            { kcal: 16, protein: 0, carbs: 4, fat: 0 },
+            { caloriesPer100g: 387, proteinPer100g: 0, confidence: 0.9 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.startsWith('estimate:kcal_'))).toBe(true);
+    });
+
+    it('rejects "grape" at 5 kcal/100g vs estimate ~69', () => {
+        const r = assessSaveTimePlausibility(
+            'grape', 'Grape drink',
+            { kcal: 5, protein: 0, carbs: 1.2, fat: 0 },
+            { caloriesPer100g: 69, proteinPer100g: 0.7, confidence: 0.85 }
+        );
+        expect(r.save).toBe(false);
+    });
+
+    it('rejects "lentil" at 20.9 kcal/100g vs estimate ~116', () => {
+        const r = assessSaveTimePlausibility(
+            'lentil', 'Lentil soup base',
+            { kcal: 20.9, protein: 1.2, carbs: 3.5, fat: 0.3 },
+            { caloriesPer100g: 116, proteinPer100g: 9, confidence: 0.85 }
+        );
+        expect(r.save).toBe(false);
+    });
+
+    it('rejects "blueberry" at 8.7g protein/100g vs estimate ~0.7', () => {
+        const r = assessSaveTimePlausibility(
+            'blueberry', 'Blueberry protein blend',
+            { kcal: 60, protein: 8.7, carbs: 5, fat: 0.5 },
+            { caloriesPer100g: 57, proteinPer100g: 0.7, confidence: 0.85 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.includes('protein') && x.includes('over_expected'))).toBe(true);
+    });
+
+    // ============================================================
+    // Deterministic floors — simple staple queries skip the LLM
+    // normalize step, so these must fire WITHOUT an estimate
+    // (live-verified 2026-07-20: the sugar probe had no estimate
+    // and the corrupt row is internally consistent, so only a
+    // floor can catch it)
+    // ============================================================
+
+    it('rejects whole-query sweetener under the kcal floor without an estimate', () => {
+        const r = assessSaveTimePlausibility(
+            'granulated sugar', 'Granulated sugar',
+            { kcal: 16, protein: 0, carbs: 4, fat: 0 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.startsWith('floor:sweetener_kcal_'))).toBe(true);
+    });
+
+    it('does NOT apply the sweetener floor to compound queries like "honey ham"', () => {
+        const r = assessSaveTimePlausibility(
+            'honey ham', 'Honey Ham',
+            { kcal: 122, protein: 17, carbs: 6, fat: 3 }
+        );
+        expect(r.save).toBe(true);
+    });
+
+    it('rejects fresh produce under the kcal floor without an estimate (grape → 5 kcal drink)', () => {
+        const r = assessSaveTimePlausibility(
+            'grape', 'Grape drink',
+            { kcal: 5, protein: 0, carbs: 1.2, fat: 0 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.startsWith('floor:produce_kcal_'))).toBe(true);
+    });
+
+    it('does NOT flag real low-cal produce (celery at 14 kcal)', () => {
+        const r = assessSaveTimePlausibility(
+            'celery', 'Celery, raw',
+            { kcal: 14, protein: 0.7, carbs: 3, fat: 0.2 }
+        );
+        expect(r.save).toBe(true);
+    });
+
+    it('rejects protein-dense produce hijack without an estimate (blueberry → 8.7g protein)', () => {
+        const r = assessSaveTimePlausibility(
+            'blueberry', 'Blueberry blend',
+            { kcal: 60, protein: 8.7, carbs: 5, fat: 0.5 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.startsWith('floor:produce_protein_'))).toBe(true);
+    });
+
+    it('rejects legume under the kcal floor without an estimate (lentil → 20.9 kcal)', () => {
+        const r = assessSaveTimePlausibility(
+            'lentil', 'Lentil base',
+            { kcal: 20.9, protein: 1.2, carbs: 3.5, fat: 0.3 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.startsWith('floor:legume_kcal_'))).toBe(true);
+    });
+
+    it('exempts lentil SOUP from the legume floor', () => {
+        const r = assessSaveTimePlausibility(
+            'lentil soup', 'Lentil Soup',
+            { kcal: 44, protein: 2.5, carbs: 6.5, fat: 1 }
+        );
+        expect(r.save).toBe(true);
+    });
+
+    // ============================================================
+    // Strictness: soft ranking failures also block the write
+    // ============================================================
+
+    it('blocks the write on a soft (penalty-only) ranking failure', () => {
+        // "black beans" with 0 protein soft-penalizes in ranking but must not be cached
+        const r = assessSaveTimePlausibility(
+            'black beans', 'BLACK BEANS',
+            { kcal: 91, protein: 0, carbs: 16, fat: 0.5 }
+        );
+        expect(r.save).toBe(false);
+    });
+
+    it('rejects protein-dense query mapped to a near-zero-protein record', () => {
+        // wrong-record class: "chicken breast"-style query landing on broth-like data
+        const r = assessSaveTimePlausibility(
+            'grilled chicken', 'Chicken flavor base',
+            { kcal: 40, protein: 2, carbs: 4, fat: 1.5 },
+            { caloriesPer100g: 165, proteinPer100g: 31, confidence: 0.9 }
+        );
+        expect(r.save).toBe(false);
+        expect(r.reasons.some((x: string) => x.includes('under_expected') || x.startsWith('estimate:kcal_'))).toBe(true);
+    });
+
+    // ============================================================
+    // Must-save negatives (no false positives)
+    // ============================================================
+
+    it('saves a clean pick close to the estimate', () => {
+        const r = assessSaveTimePlausibility(
+            'banana', 'Bananas, raw',
+            { kcal: 89, protein: 1.1, carbs: 22.8, fat: 0.3 },
+            { caloriesPer100g: 105, proteinPer100g: 1.3, confidence: 0.9 }
+        );
+        expect(r.save).toBe(true);
+        expect(r.reasons).toEqual([]);
+    });
+
+    it('ignores the estimate cross-check below the confidence gate', () => {
+        // Corrupt-looking cheese numbers with a LOW-confidence estimate → the
+        // estimate check must not run, and no deterministic floor covers
+        // cheese, so the save goes through (conservative fail-open).
+        const r = assessSaveTimePlausibility(
+            'cheddar cheese', 'Cheddar Cheese',
+            { kcal: 50, protein: 3, carbs: 1, fat: 4 },
+            { caloriesPer100g: 403, proteinPer100g: 23, confidence: 0.5 }
+        );
+        expect(r.save).toBe(true);
+    });
+
+    it('saves when no nutrition data is provided (missing data is not this gate\'s job)', () => {
+        const r = assessSaveTimePlausibility('olive oil', 'Olive Oil', null, {
+            caloriesPer100g: 884, proteinPer100g: 0, confidence: 0.9,
+        });
+        expect(r.save).toBe(true);
+    });
+
+    it('does not fire the kcal band on near-zero foods (abs-diff floor)', () => {
+        // diet soda: expected 2 kcal, actual 0 — ratio is extreme, diff is trivial
+        const r = assessSaveTimePlausibility(
+            'diet soda', 'Diet Cola',
+            { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+            { caloriesPer100g: 2, proteinPer100g: 0, confidence: 0.9 }
+        );
+        expect(r.save).toBe(true);
+    });
+
+    it('tolerates cooked-vs-label variance inside the 4x band', () => {
+        // carrot cached at 24 kcal vs estimate 41 — questionable but inside the
+        // band; the gate is deliberately conservative (ratio 1.7x)
+        const r = assessSaveTimePlausibility(
+            'carrot', 'Carrots',
+            { kcal: 24, protein: 0.6, carbs: 5.3, fat: 0.1 },
+            { caloriesPer100g: 41, proteinPer100g: 0.9, confidence: 0.9 }
+        );
+        expect(r.save).toBe(true);
+    });
+
+    it('still hard-rejects physically impossible values without any estimate', () => {
+        const r = assessSaveTimePlausibility(
+            'mystery food', 'Mystery',
+            { kcal: 1200, protein: 10, carbs: 10, fat: 10 }
+        );
+        expect(r.save).toBe(false);
     });
 });

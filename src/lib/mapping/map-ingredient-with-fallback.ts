@@ -1802,6 +1802,13 @@ export async function mapIngredientWithFallback(
             unitType: classifyUnit(parsed.unit),
         } as any : undefined);
 
+        // Retrieval/boost scores are open-scale (winner.score reached 8.85 in
+        // the 2026-07-20 parity sweep), but everything downstream treats
+        // confidence as a probability: the >=0.85 cache-save gate, the API's
+        // matchConfidence field, and FoodMapping.aiConfidence. Clamp once here
+        // so no raw score escapes the selection cascade.
+        confidence = Math.max(0, Math.min(1, confidence));
+
         // Step 4b: Reject if confidence is too low (avoid garbage matches)
         const MIN_ACCEPTABLE_CONFIDENCE = 0.3;
         if (confidence < MIN_ACCEPTABLE_CONFIDENCE) {
@@ -2205,12 +2212,29 @@ export async function mapIngredientWithFallback(
                 }
             }
 
+            // Per-100g macros of the pick + the AI estimate feed the save-time
+            // plausibility gate inside saveValidatedMapping (PR D): corrupt
+            // picks still serve this request but are not cached.
+            const savedNutrientsPer100g = result.grams > 0 ? {
+                kcal: (result.kcal / result.grams) * 100,
+                protein: (result.protein / result.grams) * 100,
+                carbs: (result.carbs / result.grams) * 100,
+                fat: (result.fat / result.grams) * 100,
+            } : undefined;
+            const expectedNutrition = aiNutritionEstimate ? {
+                caloriesPer100g: aiNutritionEstimate.caloriesPer100g,
+                proteinPer100g: aiNutritionEstimate.proteinPer100g,
+                confidence: aiNutritionEstimate.confidence,
+            } : undefined;
+
             await saveValidatedMapping(rawLine, result, {
                 approved: true,
                 confidence,
                 reason: selectionReason,
             }, {
                 canonicalBase: cacheKey,  // Use normalizedName as cache key
+                nutrientsPer100g: savedNutrientsPer100g,
+                expectedNutrition,
             });
 
             // Also save AI synonyms as aliases to enable future cache hits
@@ -2224,12 +2248,7 @@ export async function mapIngredientWithFallback(
                 if (synLower === rawLower || synLower.length < 3) continue;
 
                 // Validate alias before saving - prevent cascade poisoning
-                const aliasNutrients = result.grams > 0 ? {
-                    kcal: (result.kcal / result.grams) * 100,
-                    protein: (result.protein / result.grams) * 100,
-                    carbs: (result.carbs / result.grams) * 100,
-                    fat: (result.fat / result.grams) * 100,
-                } : undefined;
+                const aliasNutrients = savedNutrientsPer100g;
 
                 const validation = validateAliasMapping(synonym, result.foodName, aliasNutrients);
                 if (!validation.valid) {
@@ -2250,6 +2269,8 @@ export async function mapIngredientWithFallback(
                     isAlias: true,
                     canonicalRawIngredient: trimmed,
                     canonicalBase: cacheKey,  // Use same cache key for consolidation
+                    nutrientsPer100g: savedNutrientsPer100g,
+                    expectedNutrition,
                 }).catch(() => { }); // Best effort, ignore duplicates
             }
         }
