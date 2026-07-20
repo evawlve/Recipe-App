@@ -45,8 +45,8 @@ export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://a
 // OpenRouter configuration for cheap-first LLM fallback (Jan 2026)
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? '';
 export const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1';
-export const CHEAP_AI_MODEL_PRIMARY = process.env.CHEAP_AI_MODEL_PRIMARY ?? 'qwen/qwen-turbo';
-export const CHEAP_AI_MODEL_FALLBACK = process.env.CHEAP_AI_MODEL_FALLBACK ?? 'mistralai/mistral-nemo';
+export const CHEAP_AI_MODEL_PRIMARY = process.env.CHEAP_AI_MODEL_PRIMARY ?? 'openai/gpt-4o-mini';
+export const CHEAP_AI_MODEL_FALLBACK = process.env.CHEAP_AI_MODEL_FALLBACK ?? 'google/gemini-2.5-flash';
 export const STRUCTURED_LLM_TIMEOUT_MS = Number.parseInt(process.env.STRUCTURED_LLM_TIMEOUT_MS ?? '15000', 10);
 export const STRUCTURED_LLM_MAX_RETRIES = Number.parseInt(process.env.STRUCTURED_LLM_MAX_RETRIES ?? '3', 10);
 
