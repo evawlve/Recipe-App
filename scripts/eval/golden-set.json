@@ -4746,6 +4746,26 @@
       "notes": "DEFECT (found 2026-07-19) — GENERIC MATCH QUALITY. PARTIALLY IMPROVED 2026-07-19: shipped lean-cut protein FLOOR (18g/100g, macro-plausibility.ts) which demoted the worst deli 'roll' (14.6p) -> now 'sliced chicken breast' 16.8p, but STILL below [25,38] because the real ~30g grilled-breast record is NOT retrieved for this phrasing (word-order-sensitive candidate gathering; 'chicken breast grilled' finds 29.5p but 'grilled chicken breast' does not). 'white rice' still resolves to 45g DRY vs ~150g cooked. REMAINING (deferred, own PR behind full eval): (a) cooked-default for bare staples [HIGH risk — cook-state-detector.ts is dead code, gather-candidates.ts:~516 auto-bypasses bare 'rice' to dry top1], (b) retrieval/rerank so the grilled-breast record enters the pool order-independently."
     },
     {
+      "id": "n-mq-23",
+      "category": "match_quality",
+      "item": {
+        "rawText": "1 scoop ryse protein",
+        "quantity": 1,
+        "unit": "scoop",
+        "name": "ryse protein",
+        "brand": "ryse",
+        "normalizedForm": "protein powder",
+        "mealType": "snacks"
+      },
+      "expectName": [
+        [
+          "ryse"
+        ]
+      ],
+      "knownIssue": true,
+      "notes": "IDENTITY-HIJACK GUARD (PR D pt2, 2026-07-20). The parity sweep's cold re-resolution mapped 'protein ryse' to 'Protein Rice' (ryse fuzzy->rice). The save-time brand-mismatch gate now refuses to CACHE a cross-brand pick for a decisive brand query, but retrieval can still SERVE one when no Ryse SKU surfaces. Promote to hard once retrieval reliably surfaces Ryse protein SKUs."
+    },
+    {
       "id": "n-dens-01",
       "category": "serving_unit",
       "item": {

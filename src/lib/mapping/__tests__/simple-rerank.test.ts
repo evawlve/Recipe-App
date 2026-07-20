@@ -242,3 +242,78 @@ describe('count-labeled SKU preference (Cluster A pt2)', () => {
         expect(result.winner!.id).toBe('off_exact');
     });
 });
+
+describe('serving-labeled record preference (PR D pt2)', () => {
+    it('prefers the serving-labeled record between identically-named branded candidates', () => {
+        // The parity-sweep "red bull" class: same name, same score — only the
+        // serving label distinguishes them, and losing it bills 100g flat.
+        const candidates: RerankCandidate[] = [
+            {
+                id: 'off_no_serving',
+                name: 'Red Bull',
+                brandName: 'BrandA',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+            },
+            {
+                id: 'off_can_label',
+                name: 'Red Bull',
+                brandName: 'BrandB',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+                servingLabelMatch: true,
+            },
+        ];
+        const result = simpleRerank('red bull', candidates, undefined, '1 red bull');
+        expect(result.winner).not.toBeNull();
+        expect(result.winner!.id).toBe('off_can_label');
+    });
+
+    it('does not overcome a clearly better name match', () => {
+        const candidates: RerankCandidate[] = [
+            {
+                id: 'off_exact',
+                name: 'Red Bull',
+                brandName: 'BrandA',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+            },
+            {
+                id: 'off_bloated_with_label',
+                name: 'Zesty Tropical Energy Drink Party Variety Pack',
+                brandName: 'BrandB',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+                servingLabelMatch: true,
+            },
+        ];
+        const result = simpleRerank('red bull', candidates, undefined, '1 red bull');
+        expect(result.winner).not.toBeNull();
+        expect(result.winner!.id).toBe('off_exact');
+    });
+
+    it('does not override the generic-record preference on its own', () => {
+        // Boost (+0.05) exactly matches NO_BRAND (+0.05): a branded record's
+        // serving label alone must not beat an equally-good generic record —
+        // the score ties and the brand tiebreaker keeps the generic winner.
+        const candidates: RerankCandidate[] = [
+            {
+                id: 'off_generic',
+                name: 'Peanut Butter',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+            },
+            {
+                id: 'off_branded_with_label',
+                name: 'Peanut Butter',
+                brandName: 'BrandB',
+                score: 1.0,
+                source: 'openfoodfacts' as const,
+                servingLabelMatch: true,
+            },
+        ];
+        const result = simpleRerank('peanut butter', candidates, undefined, 'peanut butter');
+        expect(result.winner).not.toBeNull();
+        expect(result.winner!.id).toBe('off_generic');
+    });
+});
