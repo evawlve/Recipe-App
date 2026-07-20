@@ -30,6 +30,15 @@ export interface RerankCandidate {
      * when the caller passes preferCountLabeled.
      */
     countLabelMatch?: boolean;
+    /**
+     * True when this candidate carries genuine gram-quantified serving data
+     * (OFF label servingGrams, or FDC servings with grams) AND the request's
+     * shape would actually bill by serving (unitless / count / container —
+     * not an explicit weight or volume). Precomputed by the mapper; earns
+     * SERVING_LABEL_BOOST so a serving-less record can't win a near-tie and
+     * silently flatten a can/bar/sleeve request to 100g.
+     */
+    servingLabelMatch?: boolean;
 }
 
 export interface AiNutritionEstimate {
@@ -78,6 +87,8 @@ const WEIGHTS = {
     MISSING_COOKING_STATE_PENALTY: 0.40, // Penalty when query says "fried" but candidate doesn't
     // Count-labeled SKU preference (Cluster A pt2, Jul 2026)
     COUNT_LABEL_BOOST: 0.08,  // Tie-break toward SKUs whose label declares a per-piece count when the user is counting pieces. Deliberately small: must not beat EXACT_MATCH or token penalties.
+    // Serving-shape preference (PR D pt2, Jul 2026)
+    SERVING_LABEL_BOOST: 0.05,  // Tie-break toward records with real serving data when the request bills by serving. Smaller than COUNT_LABEL_BOOST: it must only break near-ties (equal-name "Red Bull" with vs without a 250ml label), never override identity signals.
     // Decisive same-brand preference (brand-hijack fix, Jul 2026)
     DECISIVE_BRAND_BOOST: 0.35,  // Only fires behind hasDecisiveBrandContext + non-brand token coverage; a cross-brand candidate must not win on flavor-token coverage alone when the user named a brand unambiguously.
     // Cooked-grain preference for volume-unit lines (cooked-vs-dry fix, Jul 2026)
@@ -1342,7 +1353,7 @@ const BRAND_PRODUCT_CONTEXT_TOKENS = new Set([
  * Single-word brands that double as common English words ("ghost", "one",
  * "built") never qualify on their own.
  */
-function hasDecisiveBrandContext(text: string, targetBrand: string): boolean {
+export function hasDecisiveBrandContext(text: string, targetBrand: string): boolean {
     const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (brandTokens.length === 0) return false;
     if (brandTokens.length >= 2) return true;
@@ -1363,7 +1374,7 @@ function hasDecisiveBrandContext(text: string, targetBrand: string): boolean {
  * match "Toblerone"); requiring every detected token is too strict because
  * lexicon entries can be brand+form ("one bar" vs brand "ONE Brands").
  */
-function candidateMatchesTargetBrand(brandName: string | undefined, candidateName: string, targetBrand: string): boolean {
+export function candidateMatchesTargetBrand(brandName: string | undefined, candidateName: string, targetBrand: string): boolean {
     const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (brandTokens.length === 0) return false;
     const candTokens = `${candidateName} ${brandName ?? ''}`.toLowerCase()
@@ -1528,12 +1539,13 @@ export function simpleRerank(
             const constraintPenalty = constraintResult.penalty * 0.5; // Scale penalty to reasonable range
 
             const countLabelBoost = (preferCountLabeled && c.countLabelMatch) ? WEIGHTS.COUNT_LABEL_BOOST : 0;
+            const servingLabelBoost = c.servingLabelMatch ? WEIGHTS.SERVING_LABEL_BOOST : 0;
             const decisiveBrandBoost = isDecisiveBrandCandidate(c) ? WEIGHTS.DECISIVE_BRAND_BOOST : 0;
             const grainCookedBoost = isCookedGrainCandidate(c) ? WEIGHTS.GRAIN_COOKED_VOLUME_BOOST : 0;
 
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost + decisiveBrandBoost + grainCookedBoost,
+                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost + servingLabelBoost + decisiveBrandBoost + grainCookedBoost,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
@@ -1563,11 +1575,12 @@ export function simpleRerank(
             const baseScore = computeSimpleScore(c, query, isBranded, targetBrand);
             const nutritionResult = computeNutritionScore(c, aiNutritionEstimate);
             const countLabelBoost = (preferCountLabeled && c.countLabelMatch) ? WEIGHTS.COUNT_LABEL_BOOST : 0;
+            const servingLabelBoost = c.servingLabelMatch ? WEIGHTS.SERVING_LABEL_BOOST : 0;
             const decisiveBrandBoost = isDecisiveBrandCandidate(c) ? WEIGHTS.DECISIVE_BRAND_BOOST : 0;
             const grainCookedBoost = isCookedGrainCandidate(c) ? WEIGHTS.GRAIN_COOKED_VOLUME_BOOST : 0;
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score + countLabelBoost + decisiveBrandBoost + grainCookedBoost,
+                score: baseScore + nutritionResult.score + countLabelBoost + servingLabelBoost + decisiveBrandBoost + grainCookedBoost,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
@@ -1815,6 +1828,7 @@ export function toRerankCandidate(candidate: {
         per100g: boolean;
     };
     countLabelMatch?: boolean;
+    servingLabelMatch?: boolean;
 }): RerankCandidate {
     // Some FDC entries have doubled descriptions (a known FDC data quality issue).
     // e.g. "peeled plum tomatoes peeled plum tomatoes" → "peeled plum tomatoes"
@@ -1838,5 +1852,6 @@ export function toRerankCandidate(candidate: {
         source: candidate.source,
         nutrition: candidate.nutrition,
         countLabelMatch: candidate.countLabelMatch,
+        servingLabelMatch: candidate.servingLabelMatch,
     };
 }

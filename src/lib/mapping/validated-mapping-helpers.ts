@@ -17,6 +17,7 @@ import { hasCoreTokenMismatch } from './filter-candidates';
 import { assessSaveTimePlausibility } from './macro-plausibility';
 import type { MacroPlausibilityInput, ExpectedNutritionPer100g } from './macro-plausibility';
 import { detectBrandInQuery } from './brand-detector';
+import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 
@@ -273,6 +274,29 @@ export async function saveValidatedMapping(
     // Canonicalize: lowercase + singularize + sort tokens
     const normalizedForm = canonicalizeCacheKey(rawForm);
 
+    const detectedBrand = detectBrandInQuery(rawIngredient).matchedBrand;
+
+    // Brand-mismatch save gate (PR D pt2, Jul 2026): the parity sweep cached
+    // "protein ryse" as "Protein Rice". When the query names a brand
+    // decisively (multi-word brand, or brand token adjacent to a product-form
+    // word like "protein") and the mapped food carries that brand in neither
+    // its brand field nor its name, the identity is wrong — or a generic
+    // substitute that shouldn't answer a brand query from cache. Reuses the
+    // rerank's decisive-context + whole-token matching so ranking and caching
+    // agree on what "named a brand" means. The pick still serves THIS request.
+    if (detectedBrand
+        && hasDecisiveBrandContext(rawIngredient, detectedBrand)
+        && !candidateMatchesTargetBrand(mapping.brandName ?? undefined, mapping.foodName, detectedBrand)) {
+        logger.warn('validated_mapping.save_rejected_brand_mismatch', {
+            rawIngredient,
+            normalizedForm,
+            foodName: mapping.foodName,
+            brandName: mapping.brandName,
+            namedBrand: detectedBrand,
+        });
+        return;
+    }
+
     // Pre-save validation: Reject mappings where core tokens from normalizedForm are missing from foodName
     if (hasCoreTokenMismatch(normalizedForm, mapping.foodName, mapping.brandName)) {
         // Brand rescue (mirrors the runtime core-token brand rescue): when the
@@ -280,7 +304,7 @@ export async function saveValidatedMapping(
         // field or embedded in its name — the "missing" core token is usually
         // a flavor the brand spells differently ("cinnamon" vs "Cinnabon").
         // Rejecting the save forces a full re-resolution on every request.
-        const rescueBrand = detectBrandInQuery(rawIngredient).matchedBrand?.toLowerCase().trim();
+        const rescueBrand = detectedBrand?.toLowerCase().trim();
         const carriesBrand = !!rescueBrand && (
             mapping.brandName?.toLowerCase().includes(rescueBrand) ||
             new RegExp(`\\b${rescueBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(mapping.foodName.toLowerCase())
@@ -339,6 +363,44 @@ export async function saveValidatedMapping(
 
         const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'ai_generated';
         const clampedConfidence = Math.max(0, Math.min(1, validation.confidence));
+
+        // Serving-shape downgrade guard (PR D pt2, Jul 2026): the parity sweep
+        // showed record swaps silently replacing a cache row whose OFF record
+        // carries real serving data ("red bull" with its 250ml can label) with
+        // a record that has none — every later serving-billed request then
+        // falls to flat_100g_default. When an overwrite would change the OFF
+        // barcode, keep the old row if the new record would lose all serving
+        // shape. The new pick still serves THIS request, it just isn't cached.
+        if (offBarcode) {
+            const existing = await prisma.foodMapping.findUnique({
+                where: { normalizedForm },
+                select: { offBarcode: true },
+            });
+            if (existing?.offBarcode && existing.offBarcode !== offBarcode) {
+                const [oldOff, newOff] = await Promise.all([
+                    prisma.offFood.findUnique({
+                        where: { barcode: existing.offBarcode },
+                        select: { servingGrams: true, packageQuantity: true },
+                    }),
+                    prisma.offFood.findUnique({
+                        where: { barcode: offBarcode },
+                        select: { servingGrams: true, packageQuantity: true },
+                    }),
+                ]);
+                const hasServingShape = (f: { servingGrams: number | null; packageQuantity: number | null } | null) =>
+                    !!f && ((f.servingGrams ?? 0) > 0 || (f.packageQuantity ?? 0) > 0);
+                if (hasServingShape(oldOff) && !hasServingShape(newOff)) {
+                    logger.warn('validated_mapping.save_rejected_serving_downgrade', {
+                        rawIngredient,
+                        normalizedForm,
+                        foodName: mapping.foodName,
+                        keptBarcode: existing.offBarcode,
+                        rejectedBarcode: offBarcode,
+                    });
+                    return;
+                }
+            }
+        }
 
         await prisma.foodMapping.upsert({
             where: {

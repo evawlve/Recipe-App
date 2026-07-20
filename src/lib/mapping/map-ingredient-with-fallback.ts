@@ -1404,6 +1404,7 @@ export async function mapIngredientWithFallback(
                             }
                         }
 
+                        const billsByServing = requestBillsByServing(parsed);
                         const rerankCandidates = candidatesForRerank.map(c => toRerankCandidate({
                             id: c.id,
                             name: c.name,
@@ -1413,6 +1414,7 @@ export async function mapIngredientWithFallback(
                             source: c.source,
                             nutrition: c.nutrition,  // Include for Route C macro sanity check + nutrition tiebreaker
                             countLabelMatch: countedNoun ? candidateHasCountLabel(c, countedNoun) : undefined,
+                            servingLabelMatch: billsByServing ? candidateHasServingData(c) : undefined,
                         }));
 
                         // Hybrid prep stripping: prefer AI canonicalBase (strips prep but preserves
@@ -2029,6 +2031,7 @@ export async function mapIngredientWithFallback(
 
                 // Run reranker to ensure anomaly penalties (e.g. canned beans) are applied
                 const countedNounFB = countedPieceNoun(parsed);
+                const billsByServingFB = requestBillsByServing(parsed);
                 const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
                     id: c.id,
                     name: c.name,
@@ -2038,6 +2041,7 @@ export async function mapIngredientWithFallback(
                     source: c.source,
                     nutrition: c.nutrition,
                     countLabelMatch: countedNounFB ? candidateHasCountLabel(c, countedNounFB) : undefined,
+                    servingLabelMatch: billsByServingFB ? candidateHasServingData(c) : undefined,
                 }));
                 const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
                 const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
@@ -3939,6 +3943,36 @@ function candidateHasCountLabel(candidate: UnifiedCandidate, pieceNoun: string):
     if (candidate.source !== 'openfoodfacts') return false;
     const raw = candidate.rawData as { servingSize?: string | null; servingGrams?: number | null } | undefined;
     return servingLabelCountsPiece(raw?.servingSize, raw?.servingGrams, pieceNoun);
+}
+
+/**
+ * Explicit weight/volume units bill deterministically from grams/ml, so a
+ * record's serving-label richness is irrelevant to those requests. Everything
+ * else — unitless ("1 red bull"), counts, container words ("can", "bar",
+ * "sleeve") — resolves through the record's own serving data, where a
+ * label-less winner falls to flat_100g_default and mis-bills.
+ */
+const EXPLICIT_MEASURE_UNIT_RE = /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ml|milliliter|milliliters|l|liter|liters|floz|fl\s*oz|fluid\s*ounces?|pint|pints|quart|quarts|gallon|gallons)$/i;
+function requestBillsByServing(parsed: ParsedIngredient | null): boolean {
+    return !(parsed?.unit && EXPLICIT_MEASURE_UNIT_RE.test(parsed.unit.trim()));
+}
+
+/**
+ * True when the candidate carries genuine gram-quantified serving data:
+ * an OFF label servingGrams, or any FDC serving with grams. Feeds the
+ * rerank SERVING_LABEL_BOOST tie-break (PR D pt2) so a serving-less record
+ * can't win a near-tie and flatten a serving-billed request to 100g —
+ * the parity sweep's "red bull lost its can" class.
+ */
+function candidateHasServingData(candidate: UnifiedCandidate): boolean {
+    if (candidate.source === 'openfoodfacts') {
+        const raw = candidate.rawData as { servingGrams?: number | null } | undefined;
+        return typeof raw?.servingGrams === 'number' && raw.servingGrams > 0;
+    }
+    if (candidate.source === 'fdc') {
+        return !!candidate.servings?.some(s => typeof s.grams === 'number' && s.grams > 0);
+    }
+    return false;
 }
 
 // Plausible single-retail-unit bands for package quantities. 'ml' is the
