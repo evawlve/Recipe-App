@@ -282,6 +282,138 @@ export function assessMacroPlausibility(
     return { plausible: true, impossible: false, penalty: 1, reasons };
 }
 
+// ============================================================
+// Save-time gate
+// ============================================================
+
+/** AI-estimated per-100g expectation used to cross-check a pick before caching it. */
+export interface ExpectedNutritionPer100g {
+    caloriesPer100g?: number | null;
+    proteinPer100g?: number | null;
+    /** AI normalize estimate confidence; the cross-check only runs at >= 0.7. */
+    confidence: number;
+}
+
+// Only trust the AI estimate at/above rerank's nutrition gate (NUTRITION_CONFIDENCE_GATE).
+const SAVE_GATE_ESTIMATE_MIN_CONFIDENCE = 0.7;
+// kcal outside [expected/4, expected*4] AND off by >30 kcal absolute → reject.
+// The ratio catches order-of-magnitude corruption (sugar at 16 kcal vs ~387);
+// the absolute floor keeps near-zero foods (diet soda 0 vs 2 kcal) from firing.
+const SAVE_GATE_KCAL_RATIO = 4;
+const SAVE_GATE_KCAL_MIN_ABS_DIFF = 30;
+// Protein overshoot slack keeps low-protein noise from firing (est 0.7 → bound 7.8).
+const SAVE_GATE_PROTEIN_OVERSHOOT_SLACK_G = 5;
+// Protein undershoot only fires when the food is expected to be protein-dense.
+const SAVE_GATE_PROTEIN_UNDER_MIN_EXPECTED_G = 10;
+
+// ---- Deterministic save-time floors (no estimate needed) ----
+// Simple staple queries usually skip the LLM normalize step, so the estimate
+// cross-check has no anchor for exactly the foods the 2026-07-20 sweep
+// corrupted. These floors are query-driven and deliberately tight in scope.
+
+// Whole-query concentrated sweeteners: pure sugar/honey/syrup is never under
+// ~250 kcal/100g (sucrose 387, honey 304, maple syrup 260). Anchored to the
+// FULL query (optional form adjectives + the sweetener) so "honey ham" or
+// "sugar free jam" never match.
+const WHOLE_QUERY_SWEETENER_PATTERN =
+    /^(?:(?:granulated|powdered|confectioners'?|brown|white|cane|coconut|raw|turbinado|demerara|icing|caster|light|dark|pure|golden|maple|corn)\s+)*(?:sugar|honey|syrup|molasses|agave(?:\s+nectar)?)$/i;
+const SWEETENER_MIN_KCAL = 250;
+
+// Fresh produce queried by name is never under ~12 kcal/100g (celery 14,
+// cucumber 15, lettuce 15 are the real floor) — a lower value is a diluted
+// drink/broth record (grape → 5 kcal grape drink).
+const FRESH_PRODUCE_MIN_KCAL = 12;
+// ...and never protein-dense (peas top out ~5.4 g) — higher means a fortified
+// or protein-blend product hijacked the row (blueberry → 8.7 g protein).
+const FRESH_PRODUCE_MAX_PROTEIN = 6;
+
+// Legumes queried by name (cooked/canned) sit at ~90-165 kcal/100g; under 50
+// is a soup/broth/sprout record. Soups and sprouts are exempted explicitly.
+const LEGUME_QUERY_PATTERN =
+    /\b(black beans?|kidney beans?|pinto beans?|navy beans?|white beans?|refried beans?|lima beans?|fava beans?|cannellini|lentils?|chickpeas?|garbanzos?|edamame)\b/i;
+const LEGUME_EXEMPT_PATTERN = /\b(soup|broth|stock|sprouts?|juice|water)\b/i;
+const LEGUME_MIN_KCAL = 50;
+
+/**
+ * Decide whether a resolved mapping is clean enough to WRITE to the
+ * FoodMapping cache. Stricter than ranking on purpose: a rejected save only
+ * costs a re-resolution on the next request, while a bad cached row poisons
+ * every request until the next parity sweep. So ANY fired check — including
+ * the soft (penalty-only) ranking checks — blocks the write, and when the AI
+ * nutrition estimate is trustworthy the pick is also cross-checked against it
+ * (the 2026-07-20 sweep wrote "granulated sugar" 16 kcal/100g, "grape" 5,
+ * "lentil" 20.9, "blueberry" 8.7 g protein — all internally consistent enough
+ * to pass the general bounds/Atwater checks).
+ */
+export function assessSaveTimePlausibility(
+    queryName: string,
+    foodName: string,
+    nutrientsPer100g?: MacroPlausibilityInput | null,
+    expected?: ExpectedNutritionPer100g | null
+): { save: boolean; reasons: string[] } {
+    const base = assessMacroPlausibility(queryName, foodName, nutrientsPer100g);
+    const reasons = [...base.reasons];
+
+    const kcal = nutrientsPer100g?.kcal ?? nutrientsPer100g?.calories ?? null;
+    const protein = nutrientsPer100g?.protein ?? null;
+    const query = (queryName || '').toLowerCase();
+    const combinedNames = `${query} ${(foodName || '').toLowerCase()}`;
+
+    // Deterministic floors — these run with or without an AI estimate, because
+    // the simple staple queries they protect rarely have one.
+    if (WHOLE_QUERY_SWEETENER_PATTERN.test(query.trim())) {
+        if (kcal != null && kcal < SWEETENER_MIN_KCAL) {
+            reasons.push(`floor:sweetener_kcal_${round1(kcal)}_below_${SWEETENER_MIN_KCAL}`);
+        }
+    }
+    const isFreshProduceQuery =
+        FRESH_PRODUCE_PATTERN.test(query) && !CONCENTRATED_FORM_PATTERN.test(combinedNames);
+    if (isFreshProduceQuery) {
+        if (kcal != null && kcal < FRESH_PRODUCE_MIN_KCAL) {
+            reasons.push(`floor:produce_kcal_${round1(kcal)}_below_${FRESH_PRODUCE_MIN_KCAL}`);
+        }
+        if (protein != null && protein > FRESH_PRODUCE_MAX_PROTEIN) {
+            reasons.push(`floor:produce_protein_${round1(protein)}_over_${FRESH_PRODUCE_MAX_PROTEIN}`);
+        }
+    }
+    if (
+        LEGUME_QUERY_PATTERN.test(query) &&
+        !LEGUME_EXEMPT_PATTERN.test(combinedNames) &&
+        kcal != null &&
+        kcal < LEGUME_MIN_KCAL
+    ) {
+        reasons.push(`floor:legume_kcal_${round1(kcal)}_below_${LEGUME_MIN_KCAL}`);
+    }
+
+    if (expected != null && expected.confidence >= SAVE_GATE_ESTIMATE_MIN_CONFIDENCE) {
+        const expKcal = expected.caloriesPer100g ?? null;
+        if (kcal != null && expKcal != null && expKcal > 0) {
+            const outsideBand =
+                kcal <= 0 ||
+                kcal / expKcal > SAVE_GATE_KCAL_RATIO ||
+                kcal / expKcal < 1 / SAVE_GATE_KCAL_RATIO;
+            if (outsideBand && Math.abs(kcal - expKcal) > SAVE_GATE_KCAL_MIN_ABS_DIFF) {
+                reasons.push(`estimate:kcal_${round1(kcal)}_vs_expected_${round1(expKcal)}`);
+            }
+        }
+
+        const expProtein = expected.proteinPer100g ?? null;
+        if (protein != null && expProtein != null && expProtein >= 0) {
+            if (protein > expProtein * SAVE_GATE_KCAL_RATIO + SAVE_GATE_PROTEIN_OVERSHOOT_SLACK_G) {
+                reasons.push(`estimate:protein_${round1(protein)}_over_expected_${round1(expProtein)}`);
+            }
+            if (
+                expProtein >= SAVE_GATE_PROTEIN_UNDER_MIN_EXPECTED_G &&
+                protein < expProtein / SAVE_GATE_KCAL_RATIO
+            ) {
+                reasons.push(`estimate:protein_${round1(protein)}_under_expected_${round1(expProtein)}`);
+            }
+        }
+    }
+
+    return { save: reasons.length === 0, reasons };
+}
+
 function round1(n: number): number {
     return Math.round(n * 10) / 10;
 }
