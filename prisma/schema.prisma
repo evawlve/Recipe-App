@@ -380,6 +380,7 @@ model OffFood {
   servingGrams     Float?                      // Parsed default serving weight
   packageQuantity  Float?                      // OFF product_quantity: net package quantity (see packageQuantityUnit)
   packageQuantityUnit String?                  // 'g' | 'ml', inferred from the OFF quantity label string; null when unknown
+  duplicateOfBarcode String?                   // Near-dup marking (scripts/dedupe-off-mark.ts): barcode of the surviving representative; null = representative/unique. Search paths filter marked rows; direct barcode lookups don't.
   imageUrl         String?                     // Product image from OFF
   categories       String?                     // OFF categories CSV
   syncedAt         DateTime      @default(now())
@@ -392,6 +393,7 @@ model OffFood {
   @@index([name])
   @@index([brandName])
   @@index([syncedAt])
+  @@index([duplicateOfBarcode])
 }
 
 model OffServing {
