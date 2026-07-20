@@ -305,6 +305,7 @@ export async function searchOffSimple(
         const results = await prisma.offFood.findMany({
             where: {
                 nutrientsPer100g: { not: Prisma.DbNull },
+                duplicateOfBarcode: null,
                 OR: [
                     { name:      { contains: queryLower, mode: 'insensitive' } },
                     { brandName: { contains: queryLower, mode: 'insensitive' } },

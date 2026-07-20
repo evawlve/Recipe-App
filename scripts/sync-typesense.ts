@@ -134,6 +134,7 @@ async function main() {
                    embedding::text AS embedding
             FROM "OffFood"
             WHERE barcode > ${lastBarcode}
+              AND "duplicateOfBarcode" IS NULL
             ORDER BY barcode ASC
             LIMIT ${batchSize}
         `;
