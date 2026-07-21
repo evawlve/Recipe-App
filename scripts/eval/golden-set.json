@@ -5391,6 +5391,31 @@
       "notes": "PR D pt3 class (c) KNOWN ISSUE — COOKED-BASIS, rewrite DEFERRED. 'oatmeal' still collapses to rolled-oats and maps DRY oats (~380 kcal/100g); prepared oatmeal is ~70 kcal/100g. Bound expressed as cooked-basis per-100g kcal <=150 (closest expressible form: fails any dry record, passes any prepared one). Ranking/ingest gap — useless to rewrite until a cooked-oats record surfaces. Promote when it does."
     },
     {
+      "id": "n-mq-37",
+      "category": "match_quality",
+      "item": {
+        "rawText": "canned tuna in water",
+        "quantity": 1,
+        "name": "canned tuna in water"
+      },
+      "expectName": [
+        [
+          "tuna"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          60,
+          250
+        ],
+        "protein100": [
+          10,
+          35
+        ]
+      },
+      "notes": "WATER FAST-PATH ANCHOR (2026-07-21, HIGH triage). Regression pin for the zero-calorie fast-path bug: ZERO_CALORIE_INGREDIENTS matched 'water' as a suffix/last word of the line, so 'canned tuna in water' short-circuited to the water_default 0-kcal result BEFORE mapping ever ran. Fix anchors the match to the whole line (after qty/unit stripping). This line must map a real tuna record with tuna-like macros (water-packed tuna ~86-130 kcal/100g, ~19-26p); the water_default result (kcal100=0, name 'Water') fails both bands AND expectName. Hard."
+    },
+    {
       "id": "n-dens-01",
       "category": "serving_unit",
       "item": {
@@ -5847,6 +5872,28 @@
         ]
       },
       "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). Companion to n-serv-35 (same query, grams band): asserts the BILLED kcal for a 13-count chip line (~28-70g of ~490-530kcal/100g chips → 140-350 kcal; band trimmed to reject edge inflation). The flat-100g failure bills ~500 kcal and the 13x100g count explosion ~6500 — both far outside band. Short text takes the single-item fast path, no LLM segmentation cost."
+    },
+    {
+      "id": "n-tot-06",
+      "category": "total_macros",
+      "item": {
+        "rawText": "16 oz water",
+        "quantity": 16,
+        "unit": "oz",
+        "name": "water"
+      },
+      "expectName": [
+        [
+          "water"
+        ]
+      ],
+      "total": {
+        "calories": [
+          0,
+          1
+        ]
+      },
+      "notes": "WATER FAST-PATH companion to n-mq-37 (2026-07-21): a line that IS entirely a water query (after qty/unit stripping) must still take the zero-calorie fast-path and bill ~0 kcal — guards against over-tightening the whole-line anchor. 16 fl-oz → ~473g water_default, 0 kcal. Hard."
     }
   ]
 }
