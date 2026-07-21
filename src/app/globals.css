@@ -9,6 +9,103 @@
   }
 }
 
+@layer components {
+  /* "Chunky" surfaces — web port of the mobile app's ChunkyCard/ChunkyButton
+     (2px border, 20px radius, 4px darker depth lip below). */
+  .chunky-card {
+    border-radius: 20px;
+    border: 2px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    box-shadow: 0 4px 0 hsl(var(--border-dark));
+  }
+
+  .chunky-card-primary {
+    border-radius: 20px;
+    border: 2px solid hsl(var(--primary));
+    background-color: hsl(var(--card));
+    box-shadow: 0 4px 0 hsl(var(--primary-depth));
+  }
+
+  .chunky-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fff;
+    background-color: hsl(var(--primary));
+    border: 2px solid hsl(var(--primary-depth));
+    box-shadow: 0 4px 0 hsl(var(--primary-depth));
+    transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+  }
+  .chunky-btn:hover {
+    filter: brightness(1.06);
+  }
+  .chunky-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 hsl(var(--primary-depth));
+  }
+
+  .chunky-btn-gray {
+    color: hsl(var(--text));
+    background-color: hsl(var(--surface));
+    border-color: hsl(var(--border-dark));
+    box-shadow: 0 4px 0 hsl(var(--border-dark));
+  }
+  .chunky-btn-gray:active {
+    box-shadow: 0 0 0 hsl(var(--border-dark));
+  }
+
+  /* Progress bar with the mobile app's glossy top sheen */
+  .chunky-bar {
+    position: relative;
+    height: 12px;
+    border-radius: 9999px;
+    background-color: hsl(var(--track));
+    overflow: hidden;
+  }
+  .chunky-bar-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 9999px;
+  }
+  .chunky-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2%;
+    width: 96%;
+    height: 25%;
+    border-radius: 9999px;
+    background-color: rgba(255, 255, 255, 0.35);
+  }
+
+  /* Official fatsecret badge wrapper: sizes the (unmodified) badge snippet
+     and swaps brand/dark variants with the theme. */
+  .fatsecret-badge {
+    display: inline-flex;
+  }
+  .fatsecret-badge img {
+    height: var(--fs-badge-h, 20px);
+    width: auto;
+  }
+  .fatsecret-badge .fs-dark {
+    display: none;
+  }
+  .dark .fatsecret-badge .fs-dark {
+    display: inline-flex;
+  }
+  .dark .fatsecret-badge .fs-brand {
+    display: none;
+  }
+}
+
 @layer utilities {
   .filter {
     filter: invert(1) brightness(2);

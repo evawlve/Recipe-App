@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -7,6 +8,19 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          'var(--font-nunito)',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
+      },
       colors: {
         background: 'hsl(var(--bg))',
         foreground: 'hsl(var(--text))',
@@ -21,6 +35,7 @@ module.exports = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          depth: 'hsl(var(--primary-depth))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -39,7 +54,23 @@ module.exports = {
           foreground: 'hsl(var(--destructive-foreground))',
         },
         border: 'hsl(var(--border))',
+        'border-dark': 'hsl(var(--border-dark))',
+        surface: 'hsl(var(--surface))',
+        track: 'hsl(var(--track))',
         ring: 'hsl(var(--ring))',
+        // Mobile-app macro colors (P/C/F + calories)
+        macro: {
+          protein: 'hsl(var(--macro-protein))',
+          carbs: 'hsl(var(--macro-carbs))',
+          fat: 'hsl(var(--macro-fat))',
+          calories: 'hsl(var(--macro-calories))',
+        },
+        // Soft section tints (foodLogLight / profileLight / recipesLight)
+        tint: {
+          green: 'hsl(var(--tint-green))',
+          blue: 'hsl(var(--tint-blue))',
+          orange: 'hsl(var(--tint-orange))',
+        },
         // FitFood dark mode specific colors
         'search-bg': 'hsl(var(--search-bg))',
         'search-text': 'hsl(var(--search-text))',
