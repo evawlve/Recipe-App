@@ -20,9 +20,15 @@ export default async function HomePage() {
   // which rewrites them to /auth/callback route handler
   // This page should never receive a code parameter due to the middleware rewrite
   
-  // Parallelize data fetching for better performance
+  // Parallelize data fetching for better performance.
+  // Trending must not take down the whole page: the Vercel deployment's
+  // database can lag behind the self-hosted schema (e.g. missing Like/Comment
+  // tables → P2021), and the homepage still needs to render without it.
   const [trending, currentUser] = await Promise.all([
-    getTrendingRecipes({ limit: 12 }),
+    getTrendingRecipes({ limit: 12 }).catch((err) => {
+      console.error('getTrendingRecipes failed; rendering homepage without trending rail:', err);
+      return [];
+    }),
     getCurrentUser().catch(() => null), // Don't fail if user fetch fails
   ]);
 
@@ -31,19 +37,21 @@ export default async function HomePage() {
       {/* Search bar */}
       <SearchBar />
 
-      <HomeSection title="Trending Recipes" href="/recipes?sort=new">
-        <TrendingRail>
-          {trending.map((r, index) => (
-            <div key={r.id} className="min-w-[280px] max-w-[320px] snap-start">
-              <RecipeCard
-                recipe={r}
-                currentUserId={currentUser?.id || null}
-                isPriority={index < 3}
-              />
-            </div>
-          ))}
-        </TrendingRail>
-      </HomeSection>
+      {trending.length > 0 && (
+        <HomeSection title="Trending Recipes" href="/recipes?sort=new">
+          <TrendingRail>
+            {trending.map((r, index) => (
+              <div key={r.id} className="min-w-[280px] max-w-[320px] snap-start">
+                <RecipeCard
+                  recipe={r}
+                  currentUserId={currentUser?.id || null}
+                  isPriority={index < 3}
+                />
+              </div>
+            ))}
+          </TrendingRail>
+        </HomeSection>
+      )}
 
       {currentUser && (
         <HomeSection title="Suggested Creators">
