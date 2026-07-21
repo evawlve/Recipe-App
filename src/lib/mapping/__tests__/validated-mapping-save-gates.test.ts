@@ -147,6 +147,40 @@ describe('serving-downgrade save guard', () => {
         expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
     });
 
+    it('bypasses the guard when the incumbent record is corrupt-marked', async () => {
+        // Zombie-row fix (mark-corrupt PR): live-verified on "beans" — the
+        // marked record 8681820101348 had serving shape, the clean re-pick
+        // didn't, and the guard kept re-protecting the corrupt row forever.
+        setupExistingRow(
+            { servingGrams: 250, packageQuantity: null, corruptReason: 'panel-inflated:direct' } as any,
+            { servingGrams: null, packageQuantity: null },
+        );
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: `off_${NEW_BARCODE}`, foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the guard when corrupt exclusion is kill-switched off', async () => {
+        process.env.CORRUPT_RECORD_EXCLUSION = '0';
+        try {
+            setupExistingRow(
+                { servingGrams: 250, packageQuantity: null, corruptReason: 'panel-inflated:direct' } as any,
+                { servingGrams: null, packageQuantity: null },
+            );
+            await saveValidatedMapping(
+                'red bull',
+                makeMapping({ foodId: `off_${NEW_BARCODE}`, foodName: 'Red Bull Energy Drink' }),
+                validation,
+            );
+            expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        } finally {
+            delete process.env.CORRUPT_RECORD_EXCLUSION;
+        }
+    });
+
     it('allows the swap when the old record had no serving data either', async () => {
         setupExistingRow(
             { servingGrams: null, packageQuantity: null },
