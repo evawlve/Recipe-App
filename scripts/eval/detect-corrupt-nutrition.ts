@@ -77,7 +77,7 @@ const BATCH = 20000;
  *  Word-bounded so "salted caramel" is guarded (conservative skip) but
  *  "sardines" is not. Guarded rows are reported for later triage, not flagged. */
 const SODIUM_GUARD_PATTERN =
-    /\b(salts?|salted|seasonings?|bouill?[oi]ll?on|broth|stock|base|cubes?|rub|mix|blend|gravy|marinade|sazon|adobo|msg|dashi|miso|electrolytes?|hydration|brine[ds]?|cure[ds]?|curing)\b/i;
+    /\b(salts?|salted|seasonings?|bouillon|bouillion|boullion|bullion|bouilion|broth|stock|base|cubes?|rub|mix|blend|gravy|marinade|sazon|adobo|msg|dashi|miso|electrolytes?|hydration|hydrate|brine[ds]?|cure[ds]?|curing)\b/i;
 
 /** Sibling sodium medians above this are sauce/seasoning groups where a high
  *  row is plausible; the outlier rule only trusts clearly-food-like medians. */
@@ -189,7 +189,12 @@ async function main() {
                 continue;
             }
             if (kcal != null && kcal >= KJ_MIN_KCAL && protein != null && fat != null && carbs != null) {
-                const atwater = 4 * protein + 9 * fat + 4 * carbs;
+                // EU-style labels exclude fiber from carbs, and fiber still
+                // carries ~2 kcal/g — without the fiber term, psyllium husk /
+                // xanthan / inulin records (kcal ~200, carbs ~0) dominate the
+                // class as false positives. Real kJ slips (4.184x) survive it.
+                const fiber = readNum(nutrients, 'fiber') ?? 0;
+                const atwater = 4 * protein + 9 * fat + 4 * carbs + 2 * fiber;
                 if (atwater > 0 && kcal > KJ_ATWATER_MIN_RATIO * atwater && !ALCOHOL_PATTERN.test(names)) {
                     flagged.push({
                         ...base, direction: 'kj-as-kcal', value: kcal,
@@ -202,11 +207,17 @@ async function main() {
             if (na != null && na >= MIN_SODIUM_OUTLIER_G) {
                 const m = sodiumMedians.get(normalizeNameKey(r.name));
                 if (m && m.med > 0 && m.med <= MAX_OUTLIER_SANE_MEDIAN && na >= MIN_SODIUM_OUTLIER_RATIO * m.med) {
-                    flagged.push({
-                        ...base, direction: 'sodium-sibling-outlier', value: na,
-                        ratio: na / m.med, siblingMedian: m.med, groupSize: m.n,
-                        check: { field: 'sodium', value: na },
-                    });
+                    // Dry gravy/soup mixes legitimately sit 10-20x above their
+                    // prepared same-name siblings — same guard as the band rule.
+                    if (SODIUM_GUARD_PATTERN.test(names)) {
+                        guarded.push({ barcode: r.barcode, name: r.name, brandName: r.brandName, sodium: na });
+                    } else {
+                        flagged.push({
+                            ...base, direction: 'sodium-sibling-outlier', value: na,
+                            ratio: na / m.med, siblingMedian: m.med, groupSize: m.n,
+                            check: { field: 'sodium', value: na },
+                        });
+                    }
                 }
             }
         }
