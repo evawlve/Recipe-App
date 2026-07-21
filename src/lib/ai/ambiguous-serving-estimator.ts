@@ -212,7 +212,11 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
     }
 
     // Condiments & Spreads: 1 tbsp (approx 14g)
-    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup|ghee|lard|tallow|miso|mirin|tahini|pesto|hummus|nutella|hazelnut spread)\b/.test(nameStr)) {
+    // 'honey' carries a lookahead so cereal/product names ('honey nut
+    // cheerios', 'honey bunches of oats') keep their own categories — bare
+    // honey otherwise flaps on the AI size estimate (21g vs the 340g bottle,
+    // eval n-serv-49 2026-07-21).
+    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup|ghee|lard|tallow|miso|mirin|tahini|pesto|hummus|nutella|hazelnut spread|honey(?!\s+(nut|bunche?s|smacks|graham|oats?|roasted|glazed|bbq|barbecue)))\b/.test(nameStr)) {
         return { grams: 14, description: "1 tbsp (standard bare query serving)" };
     }
 

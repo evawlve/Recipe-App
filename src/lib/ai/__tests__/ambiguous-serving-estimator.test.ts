@@ -44,8 +44,8 @@ describe('getBareQueryDefault — ordering regression (pre-existing entries unch
         expect(grams(name as string)).toBe(expected);
     });
 
-    it('honey still has NO entry (n-serv-49 relies on the no-op)', () => {
-        expect(getBareQueryDefault('honey')).toBeNull();
+    it('honey gained a condiment entry 2026-07-21 (n-serv-49 flapped on the AI size estimate without it)', () => {
+        expect(grams('honey')).toBe(14);
     });
 
     it.each([
@@ -200,5 +200,18 @@ describe('getBareQueryDefault — token-containment guards (warm-2026-07-21 regr
     it('nutella is a spread (14g), capping the 200g package serve', () => {
         expect(grams('nutella')).toBe(14);
         expect(grams('hazelnut spread')).toBe(14);
+    });
+
+    it('bare honey is a condiment (14g) so the AI size estimate stops flapping to the 340g bottle', () => {
+        expect(grams('honey')).toBe(14);
+        expect(grams('raw honey')).toBe(14);
+        expect(grams('manuka honey')).toBe(14);
+    });
+
+    it('honey-flavored product names skip the honey token (own category or guard no-op)', () => {
+        expect(getBareQueryDefault('honey nut cheerios')).toBeNull(); // no rule — label serving kept
+        expect(grams('honey bunches of oats')).toBe(40);   // oats-dry rule
+        expect(grams('honey graham crackers')).toBe(28);   // salty snack (crackers)
+        expect(grams('honey mustard')).toBe(14);           // still a condiment via mustard
     });
 });

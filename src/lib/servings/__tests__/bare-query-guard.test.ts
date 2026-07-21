@@ -179,7 +179,19 @@ describe('applyOffBareQueryGuard — REPLACE tiers (fabricated grams)', () => {
         expect(r!.servingTier).toBe('bare_category_default');
     });
 
-    it('is a no-op when neither name has a lexicon entry (honey, n-serv-49)', () => {
+    it('is a no-op when neither name has a lexicon entry (greek yogurt)', () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 100,
+            servingTier: 'flat_100g_default',
+            parsed: bare('greek yogurt'),
+            rawLine: 'greek yogurt',
+            queryName: 'greek yogurt',
+            foodName: 'Chobani Greek Yogurt',
+        }));
+        expect(r).toBeNull();
+    });
+
+    it('honey replaces the flat floor since its 2026-07-21 condiment entry (n-serv-49 flap fix)', () => {
         const r = applyOffBareQueryGuard(input({
             grams: 100,
             servingTier: 'flat_100g_default',
@@ -188,7 +200,11 @@ describe('applyOffBareQueryGuard — REPLACE tiers (fabricated grams)', () => {
             queryName: 'honey',
             foodName: 'Raw Wildflower Honey',
         }));
-        expect(r).toBeNull();
+        expect(r).toEqual({
+            grams: 14,
+            servingTier: 'bare_category_default',
+            servingDescription: '1 serving (~14g)',
+        });
     });
 });
 
