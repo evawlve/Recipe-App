@@ -39,6 +39,8 @@ export type CorruptDirection =
     // detect-corrupt-nutrition.ts
     | 'kcal-impossible'
     | 'macro-sum-impossible'
+    | 'fiber-impossible'
+    | 'sugars-impossible'
     | 'sodium-impossible'
     | 'sodium-implausible'
     | 'kj-as-kcal'
@@ -48,7 +50,7 @@ export type CorruptDirection =
  *  against the scan-time value before writing (the corpus may have changed).
  *  'macroSum' is computed as protein + fat + carbs from the live row. */
 export interface CorruptScanCheck {
-    field: 'calories' | 'sodium' | 'macroSum';
+    field: 'calories' | 'sodium' | 'macroSum' | 'fiber' | 'sugars';
     value: number;
 }
 
@@ -94,6 +96,8 @@ export const MIN_INFLATED_GROUP_SIZE = 8;
 export const MAX_KCAL_100G = 905;
 /** Protein + fat + carbs cannot exceed 100 g per 100 g; 105 allows label rounding. */
 export const MAX_MACRO_SUM_100G = 105;
+/** No single gram-basis component (fiber, sugars) can exceed 100 g per 100 g. */
+export const MAX_COMPONENT_100G = 105;
 /** Pure salt is 39.3 g sodium/100g; no food can exceed it. */
 export const MAX_SODIUM_100G = 39.4;
 /** Only salts, bouillon/stock concentrates, and seasoning powders live above
@@ -148,6 +152,12 @@ export function decideMark(flag: CorruptScanFlag): MarkDecision {
             return { mark: true, reason: `${flag.direction}:${flag.tier}` };
         case 'macro-sum-impossible':
             if ((flag.value ?? 0) <= MAX_MACRO_SUM_100G) {
+                return { mark: false, skip: 'value_below_threshold' };
+            }
+            return { mark: true, reason: `${flag.direction}:${flag.tier}` };
+        case 'fiber-impossible':
+        case 'sugars-impossible':
+            if ((flag.value ?? 0) <= MAX_COMPONENT_100G) {
                 return { mark: false, skip: 'value_below_threshold' };
             }
             return { mark: true, reason: `${flag.direction}:${flag.tier}` };

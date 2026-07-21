@@ -12,6 +12,9 @@
  *                          live sizing found ~14k unmarked rows, many holding
  *                          mg-scale or per-package junk like 81,818 kcal)
  *   macro-sum-impossible   protein+fat+carbs > 105 g/100g
+ *   fiber-impossible       fiber > 105 g/100g (often paired with kJ-as-kcal
+ *                          on the same row — chicken with "fiber 260")
+ *   sugars-impossible      sugars > 105 g/100g
  *   sodium-impossible      sodium > 39.4 g/100g (pure salt is 39.3 — nothing
  *                          edible exceeds it; jerky at "1285 g" = mg-as-g)
  *   sodium-implausible     sodium in (10, 39.4] g/100g on foods that are NOT
@@ -52,6 +55,7 @@ import {
     CorruptScanFlag,
     MAX_KCAL_100G,
     MAX_MACRO_SUM_100G,
+    MAX_COMPONENT_100G,
     MAX_SODIUM_100G,
     SODIUM_IMPLAUSIBLE_100G,
     KJ_ATWATER_MIN_RATIO,
@@ -176,6 +180,16 @@ async function main() {
                 flagged.push({ ...base, direction: 'macro-sum-impossible', value: macroSum, check: { field: 'macroSum', value: macroSum } });
                 continue;
             }
+            const fiber = readNum(nutrients, 'fiber');
+            if (fiber != null && fiber > MAX_COMPONENT_100G) {
+                flagged.push({ ...base, direction: 'fiber-impossible', value: fiber, check: { field: 'fiber', value: fiber } });
+                continue;
+            }
+            const sugars = readNum(nutrients, 'sugars');
+            if (sugars != null && sugars > MAX_COMPONENT_100G) {
+                flagged.push({ ...base, direction: 'sugars-impossible', value: sugars, check: { field: 'sugars', value: sugars } });
+                continue;
+            }
             if (na != null && na > MAX_SODIUM_100G) {
                 flagged.push({ ...base, direction: 'sodium-impossible', value: na, check: { field: 'sodium', value: na } });
                 continue;
@@ -193,8 +207,11 @@ async function main() {
                 // carries ~2 kcal/g — without the fiber term, psyllium husk /
                 // xanthan / inulin records (kcal ~200, carbs ~0) dominate the
                 // class as false positives. Real kJ slips (4.184x) survive it.
-                const fiber = readNum(nutrients, 'fiber') ?? 0;
-                const atwater = 4 * protein + 9 * fat + 4 * carbs + 2 * fiber;
+                // Only trust fiber that fits in 100g alongside the macros:
+                // multi-field-corrupt rows (chicken with fiber 260) otherwise
+                // launder their kJ kcal through the fiber credit.
+                const fiberCredit = fiber != null && macroSum + fiber <= MAX_MACRO_SUM_100G ? fiber : 0;
+                const atwater = 4 * protein + 9 * fat + 4 * carbs + 2 * fiberCredit;
                 if (atwater > 0 && kcal > KJ_ATWATER_MIN_RATIO * atwater && !ALCOHOL_PATTERN.test(names)) {
                     flagged.push({
                         ...base, direction: 'kj-as-kcal', value: kcal,

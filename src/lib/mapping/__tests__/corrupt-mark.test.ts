@@ -103,6 +103,15 @@ describe('decideMark — nutrition-scale directions (detect-corrupt-nutrition.ts
         expect(d).toEqual({ mark: true, reason: 'macro-sum-impossible:direct' });
     });
 
+    it('marks impossible single components (fiber 260, sugars 2000)', () => {
+        expect(decideMark(flag({ direction: 'fiber-impossible', value: 260 })))
+            .toEqual({ mark: true, reason: 'fiber-impossible:direct' });
+        expect(decideMark(flag({ direction: 'sugars-impossible', value: 2000 })))
+            .toEqual({ mark: true, reason: 'sugars-impossible:direct' });
+        expect(decideMark(flag({ direction: 'fiber-impossible', value: 90 })))
+            .toEqual({ mark: false, skip: 'value_below_threshold' });
+    });
+
     it('marks sodium above pure salt (mg-entered-as-g family)', () => {
         // Real case: beef jerky storing "1285.71 g" sodium — the mg value.
         const d = decideMark(flag({ direction: 'sodium-impossible', value: 1285.71 }));

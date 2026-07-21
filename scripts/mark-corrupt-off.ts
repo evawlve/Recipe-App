@@ -66,6 +66,8 @@ function checkValueOf(nutrients: unknown, field: CorruptScanCheck['field']): num
     const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : null);
     if (field === 'calories') return num(n.calories ?? n.energy ?? n.kcal);
     if (field === 'sodium') return num(n.sodium);
+    if (field === 'fiber') return num(n.fiber);
+    if (field === 'sugars') return num(n.sugars ?? n.sugar);
     return (num(n.protein) ?? 0) + (num(n.fat) ?? 0) + (num(n.carbs) ?? 0);
 }
 
