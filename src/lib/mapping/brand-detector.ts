@@ -344,7 +344,11 @@ const KNOWN_BRANDS: string[] = [
     'sweet baby rays', 'stubbs', 'bulls eye', 'kc masterpiece', 'open pit', 'jack daniels bbq', 'famous daves', 'bone suckin', 'g hughes', 'primal kitchen', 'terrapin ridge', 'stonewall kitchen', 'harry & david', 'rothar', 'a1', 'a.1.', 'heinz 57', 'hp sauce', 'pickapeppa', 'daddies', 'branston', 'colmans', 'pommery', 'maille', 'moutarde de meaux', 'zatarains', 'slap ya mama', 'tony chacheres', 'chef paul prudhommes', 'old bay', 'lawrys', 'cavenders', 'mrs dash', 'badia',
     'de cecco', 'garofalo', 'rummo', 'la molisana', 'rustichella', 'segiano', 'montebello', 'bionaturae', 'jovial', 'tinkyada', 'banza', 'explore cuisine', 'cybeles', 'capello\'s', 'rao\'s', 'raos', 'lucini', 'victoria', 'michalels', 'cucina antica', 'mezetta', 'carbone', 'patsys', 'lidia\'s', 'paesana', 'mid\'s', 'mids', 'silver palate', 'don pepino', 'mutti', 'cento', 'tuttorosso', 'red gold', 'pomi', 'san marzano', 'bianco dinapoli', 'muirglen',
     'frito lay', 'cape cod', 'kettle brand', 'zapps', 'utz', 'wise', 'herrs', 'mikesells', 'chifles', 'plant snacks', 'popchips', 'popcorners', 'snack factory', 'pretzel crisps', 'snyders of hanover', 'snyders', 'rolld gold', 'rold gold', 'dot\'s', 'dots pretzels', 'quinn', 'unique pretzels', 'barkthins', 'brownie brittle', 'stacys', 'stacy\'s', 'toufayan', 'joseph\'s', 'mission', 'guerrero', 'la banderita', 'el milagro', 'cabo chips', 'late july', 'rw garcia', 'garden of eatin', 'xochitl',
-    'coca-cola', 'pepsi', 'dr pepper', 'sprite', 'mountain dew', '7up', 'fanta', 'canada dry', 'schweppes', 'seagrams', 'vernors', 'aw root beer', 'a&w', 'mug root beer', 'barqs', 'fresca', 'squirt', 'crush', 'sunkist', 'welchs', 'ocean spray', 'motts', 'martinelli\'s', 'martinellis', 'langers', 'juicy juice', 'rw knudsen', 'santa cruz organic', 'lakewood', 'pom wonderful', 'naked', 'odwalla', 'suja', 'evolution fresh', 'bolthouse',
+    'coca-cola', 'pepsi', 'dr pepper', 'sprite', 'mountain dew', '7up', '7-up', 'fanta',
+    // Digit-leading brands (see digit-brands.ts for the parser-side qty guard).
+    // NOTE: mid-line n-gram detection filters 1-char tokens, so space forms
+    // ("7 up", "5 hour energy") rely on the digit-brand prefix check instead.
+    '5-hour energy', 'musketeers', 'canada dry', 'schweppes', 'seagrams', 'vernors', 'aw root beer', 'a&w', 'mug root beer', 'barqs', 'fresca', 'squirt', 'crush', 'sunkist', 'welchs', 'ocean spray', 'motts', 'martinelli\'s', 'martinellis', 'langers', 'juicy juice', 'rw knudsen', 'santa cruz organic', 'lakewood', 'pom wonderful', 'naked', 'odwalla', 'suja', 'evolution fresh', 'bolthouse',
     'boar\'s head', 'boars head', 'dietz & watson', 'dietz and watson', 'applegate farms', 'foster farms', 'tyson', 'perdue', 'sanderson farms', 'butterball', 'jennie-o', 'honeysuckle white', 'smithfield', 'hormel', 'jimmy dean', 'johnsonville', 'hillshire farm', 'ball park', 'hebrew national', 'nathan\'s', 'nathans', 'oscar mayer', 'bar-s', 'buddig', 'land o frost', 'carl budding', 'schaller & weber', 'volpi', 'columbus', 'fiorucci', 'creminelli', 'olipop', 'poppi',
     'chobani', 'fage', 'oikos', 'siggis', 'stonyfield', 'dannon', 'yoplait', 'brown cow', 'nancy\'s', 'nancys', 'liberte', 'noosa', 'wallaby', 'kite hill', 'forager project', 'silk', 'almond breeze', 'oatly', 'califia farms', 'planet oat', 'chobani oat', 'elmhurst', 'malk', 'three trees', 'ripple', 'notmilk', 'vital farms', 'pete & gerrys', 'pete and gerrys', 'nellies', 'happy egg', 'handsome brook', 'eggland\'s best', 'egglands best',
     'cava', 'sweetgreen', 'roti', 'nando\'s', 'nandos', 'jollibee', 'halal guys', 'torchy\'s', 'torchys', 'velvet taco', 'hopdoddy', 'freebirds', 'waba grill', 'flame broiler', 'the habit', 'habit burger', 'fatburger', 'fuddruckers', 'johnny rockets', 'baja fresh', 'rubio\'s', 'rubios', 'wahoo\'s', 'wahoos', 'church\'s', 'churchs chicken', 'golden chick', 'bush\'s chicken', 'roy rogers', 'arther treachers', 'long john silvers', 'captain d\'s', 'white castle', 'krystal',
@@ -363,6 +367,7 @@ const KNOWN_BRANDS: string[] = [
  * time by a stoplist + frequency floor so generic food words never slip in.
  */
 import brandLexicon from './brand-lexicon.json';
+import { matchDigitBrandPrefix } from './digit-brands';
 
 /** Set of all brand names (lowercased, trimmed) for O(1) lookup */
 const BRAND_SET = new Set<string>([
@@ -397,11 +402,21 @@ export function detectBrandInQuery(rawLine: string): BrandDetectionResult {
         return { isBranded: false, matchedBrand: null };
     }
 
+    // Digit-leading brand check ("7up", "7 up", "5 hour energy"): the leading-
+    // quantity strip below would eat the brand's digits ("7up" → "up"), so
+    // these are matched against the raw line first.
+    const digitBrand = matchDigitBrandPrefix(rawLine);
+    if (digitBrand) {
+        return { isBranded: true, matchedBrand: digitBrand };
+    }
+
     // Strip leading qty/unit tokens (numbers, fractions, unit abbreviations)
-    // so "1 cup Heinz ketchup" → tokens ["cup", "heinz", "ketchup"]
+    // so "1 cup Heinz ketchup" → tokens ["cup", "heinz", "ketchup"].
+    // Only a STANDALONE leading number is a quantity — digit-leading name
+    // tokens ("7up") must survive to the n-gram scan below.
     const cleaned = rawLine
         .replace(/[⅛¼⅓⅜½⅝⅔¾⅞]/g, '')    // Unicode fractions
-        .replace(/^\s*[\d./]+\s*/g, '')       // Leading qty
+        .replace(/^\s*[\d./]+(?:\s+|$)/g, '')  // Leading qty (whole token only)
         .trim();
 
     const tokens = cleaned
