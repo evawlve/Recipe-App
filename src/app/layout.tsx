@@ -7,6 +7,7 @@ import { AuthHeader } from '@/components/auth/AuthHeader';
 import { WelcomeNotification } from '@/components/WelcomeNotification';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SignupGuard } from '@/components/SignupGuard';
+import { SiteFooter } from '@/components/SiteFooter';
 import ThemeScript from '@/components/ThemeScript';
 import { Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <AuthHeader />
               </Suspense>
               <main className="min-h-screen pt-20">{children}</main>
+              <SiteFooter />
               <Suspense fallback={null}>
                 <WelcomeNotification />
               </Suspense>
