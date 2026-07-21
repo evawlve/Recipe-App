@@ -53,6 +53,7 @@ import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
+import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveCacheKeyName } from './cache-key';
 import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
 
@@ -758,6 +759,7 @@ export async function mapIngredientWithFallback(
             const earlyCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName);
 
             let earlyNutritionInvalid = false;
+            let earlyCorruptMarked = false;
             let loadedFdcNutrition: any = null;
             let cachedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
             let cachedKcal100: number | null = null;
@@ -797,11 +799,12 @@ export async function mapIngredientWithFallback(
                         const barcode = earlyCacheHit.foodId.replace('off_', '');
                         const off = await prisma.offFood.findUnique({
                             where: { barcode },
-                            select: { nutrientsPer100g: true, servingSize: true, servingGrams: true }
+                            select: { nutrientsPer100g: true, servingSize: true, servingGrams: true, corruptReason: true }
                         });
                         nutrients = off?.nutrientsPer100g;
                         if (off) {
                             cachedOffServing = { servingSize: off.servingSize, servingGrams: off.servingGrams };
+                            earlyCorruptMarked = off.corruptReason != null && isCorruptExclusionEnabled();
                         }
                     } else {
                         const ai = await prisma.aiGeneratedFood.findUnique({
@@ -885,7 +888,8 @@ export async function mapIngredientWithFallback(
             // former catch-all 'filter_mismatch' into per-condition labels).
             // Same predicates, same evaluation order as the former || chain.
             let earlyEscapeReason =
-                earlyCoreTokenMismatch ? 'core_token_mismatch'
+                earlyCorruptMarked ? 'corrupt_record'
+                : earlyCoreTokenMismatch ? 'core_token_mismatch'
                 : earlyNutritionInvalid ? 'nutrition_invalid'
                 : earlyCountLabelEscape ? 'count_label'
                 : earlyGrainCookedEscape ? 'grain_cooked'
@@ -906,9 +910,9 @@ export async function mapIngredientWithFallback(
             // Read-time trust (PR D pt3, HUMAN_ROW_TRUST): human-triage rows
             // are deliberate identity repoints — the five NAME-heuristic
             // escapes must not evict them (see isTrustedHumanRow). Kept
-            // active for ALL rows: core_token_mismatch, nutrition_invalid,
-            // count_label and grain_cooked — a repoint fixes identity, not
-            // per-piece/cooked serving shape.
+            // active for ALL rows: corrupt_record, core_token_mismatch,
+            // nutrition_invalid, count_label and grain_cooked — a repoint
+            // fixes identity, not data validity or serving shape.
             if (earlyEscapeReason
                 && isHumanTrustSkippableEscape(earlyEscapeReason)
                 && isTrustedHumanRow(earlyCacheHit.validatedBy)) {
@@ -1160,6 +1164,7 @@ export async function mapIngredientWithFallback(
 
                 // Validate nutrition data - reject cached mappings to foods with zero/null nutrition
                 let normalizedNutritionInvalid = false;
+                let normalizedCorruptMarked = false;
                 let normalizedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
                 let normalizedCachedKcal100: number | null = null;
                 let normalizedCachedCarbs100: number | null = null;
@@ -1177,11 +1182,12 @@ export async function mapIngredientWithFallback(
                         const barcode = normalizedCache.foodId.replace('off_', '');
                         const off = await prisma.offFood.findUnique({
                             where: { barcode },
-                            select: { nutrientsPer100g: true, servingSize: true, servingGrams: true }
+                            select: { nutrientsPer100g: true, servingSize: true, servingGrams: true, corruptReason: true }
                         });
                         nutrients = off?.nutrientsPer100g;
                         if (off) {
                             normalizedOffServing = { servingSize: off.servingSize, servingGrams: off.servingGrams };
+                            normalizedCorruptMarked = off.corruptReason != null && isCorruptExclusionEnabled();
                         }
                     } else {
                         const ai = await prisma.aiGeneratedFood.findUnique({
@@ -1247,7 +1253,8 @@ export async function mapIngredientWithFallback(
                 // the former catch-all 'filter_mismatch' into per-condition
                 // labels). Same predicates, same order as the former || chain.
                 let normalizedEscapeReason =
-                    normalizedCoreTokenMismatch ? 'core_token_mismatch'
+                    normalizedCorruptMarked ? 'corrupt_record'
+                    : normalizedCoreTokenMismatch ? 'core_token_mismatch'
                     : normalizedNutritionInvalid ? 'nutrition_invalid'
                     : normalizedCountLabelEscape ? 'count_label'
                     : normalizedGrainCookedEscape ? 'grain_cooked'
@@ -1277,8 +1284,9 @@ export async function mapIngredientWithFallback(
 
                 // Read-time trust (PR D pt3, HUMAN_ROW_TRUST) — same rationale
                 // as the early-cache block: name-heuristic escapes skipped for
-                // human-triage rows; core-token, nutrition-invalid and
-                // serving-shape escapes stay active for all rows.
+                // human-triage rows; corrupt-record, core-token,
+                // nutrition-invalid and serving-shape escapes stay active for
+                // all rows.
                 if (normalizedEscapeReason
                     && isHumanTrustSkippableEscape(normalizedEscapeReason)
                     && isTrustedHumanRow(normalizedCache.validatedBy)) {

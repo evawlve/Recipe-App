@@ -8,6 +8,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { logger } from '../logger';
+import { isCorruptExclusionEnabled } from '../mapping/corrupt-mark';
 import type { UnifiedCandidate } from '../mapping/gather-candidates';
 
 // ============================================================
@@ -306,6 +307,7 @@ export async function searchOffSimple(
             where: {
                 nutrientsPer100g: { not: Prisma.DbNull },
                 duplicateOfBarcode: null,
+                ...(isCorruptExclusionEnabled() ? { corruptReason: null } : {}),
                 OR: [
                     { name:      { contains: queryLower, mode: 'insensitive' } },
                     { brandName: { contains: queryLower, mode: 'insensitive' } },

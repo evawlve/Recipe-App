@@ -14,6 +14,7 @@ import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
+import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { assessSaveTimePlausibility } from './macro-plausibility';
 import type { MacroPlausibilityInput, ExpectedNutritionPer100g } from './macro-plausibility';
 import { detectBrandInQuery } from './brand-detector';
@@ -61,9 +62,9 @@ export function isTrustedHumanRow(validatedBy?: string | null): boolean {
  * belongs here: human repoints routinely cross naming conventions (key
  * 'prawns' → FDC "Crustaceans, shrimp, ..."), and the helper-side core-token
  * skip would be moot if the mapper twin still escaped the row. Deliberately
- * excludes nutrition_invalid, count_label and grain_cooked: those escapes
- * fire for every row regardless of provenance (a repoint fixes identity,
- * not nutrition validity or serving shape).
+ * excludes corrupt_record, nutrition_invalid, count_label and grain_cooked:
+ * those escapes fire for every row regardless of provenance (a repoint fixes
+ * identity, not data validity or serving shape).
  */
 const HUMAN_TRUST_SKIPPABLE_ESCAPES = new Set([
     'category_mismatch',
@@ -509,7 +510,7 @@ export async function saveValidatedMapping(
                 const [oldOff, newOff] = await Promise.all([
                     prisma.offFood.findUnique({
                         where: { barcode: existing.offBarcode },
-                        select: { servingGrams: true, packageQuantity: true },
+                        select: { servingGrams: true, packageQuantity: true, corruptReason: true },
                     }),
                     prisma.offFood.findUnique({
                         where: { barcode: offBarcode },
@@ -518,7 +519,19 @@ export async function saveValidatedMapping(
                 ]);
                 const hasServingShape = (f: { servingGrams: number | null; packageQuantity: number | null } | null) =>
                     !!f && ((f.servingGrams ?? 0) > 0 || (f.packageQuantity ?? 0) > 0);
-                if (hasServingShape(oldOff) && !hasServingShape(newOff)) {
+                // A corrupt-marked incumbent forfeits the guard: keeping it
+                // would zombie the row — every hit escapes ('corrupt_record'),
+                // re-resolves, and lands right back here. Serving shape on a
+                // corrupt panel is not worth preserving.
+                const incumbentCorrupt = oldOff?.corruptReason != null && isCorruptExclusionEnabled();
+                if (incumbentCorrupt) {
+                    logger.info('validated_mapping.downgrade_guard_bypassed_corrupt_incumbent', {
+                        normalizedForm,
+                        keptBarcode: offBarcode,
+                        evictedBarcode: existing.offBarcode,
+                        corruptReason: oldOff?.corruptReason,
+                    });
+                } else if (hasServingShape(oldOff) && !hasServingShape(newOff)) {
                     logger.warn('validated_mapping.save_rejected_serving_downgrade', {
                         rawIngredient,
                         normalizedForm,
