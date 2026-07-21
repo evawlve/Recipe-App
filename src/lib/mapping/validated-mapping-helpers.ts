@@ -61,9 +61,9 @@ export function isTrustedHumanRow(validatedBy?: string | null): boolean {
  * belongs here: human repoints routinely cross naming conventions (key
  * 'prawns' → FDC "Crustaceans, shrimp, ..."), and the helper-side core-token
  * skip would be moot if the mapper twin still escaped the row. Deliberately
- * excludes nutrition_invalid, count_label and grain_cooked: those escapes
- * fire for every row regardless of provenance (a repoint fixes identity,
- * not nutrition validity or serving shape).
+ * excludes corrupt_record, nutrition_invalid, count_label and grain_cooked:
+ * those escapes fire for every row regardless of provenance (a repoint fixes
+ * identity, not data validity or serving shape).
  */
 const HUMAN_TRUST_SKIPPABLE_ESCAPES = new Set([
     'category_mismatch',

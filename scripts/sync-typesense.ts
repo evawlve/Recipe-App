@@ -135,6 +135,7 @@ async function main() {
             FROM "OffFood"
             WHERE barcode > ${lastBarcode}
               AND "duplicateOfBarcode" IS NULL
+              AND "corruptReason" IS NULL
             ORDER BY barcode ASC
             LIMIT ${batchSize}
         `;
