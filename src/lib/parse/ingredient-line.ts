@@ -2,6 +2,7 @@ import { parseQuantityTokens } from './quantity';
 import { normalizeUnitToken, convertUnit } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
+import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 
 export type ParsedIngredient = {
   qty: number;
@@ -219,9 +220,11 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     if (token === '(' || token === ')' || token === ',') {
       tokens.push(token);
     } else {
-      // Check if token is like "200g" (number+unit)
+      // Check if token is like "200g" (number+unit) — but NOT a digit-leading
+      // brand token ("7up"): splitting that would turn the brand's digit into
+      // a quantity ("7up" -> 7 x "up").
       const match = token.match(/^(\d+(?:\.\d+)?)([a-z]+)$/i);
-      if (match) {
+      if (match && !isDigitBrandToken(token)) {
         tokens.push(match[1]); // number
         tokens.push(match[2]); // unit
       } else {
@@ -277,8 +280,16 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     }
   }
 
-  // Parse quantity (if not starting with unit)
-  if (!startsWithUnit) {
+  // Digit-leading brand guard ("7up", "7 up", "5 hour energy", "3 musketeers"):
+  // when the line STARTS with a known digit-leading brand, the digits are part
+  // of the food name — skip quantity extraction entirely (qty stays 1) and let
+  // the brand tokens flow into the name. An explicit count before the brand
+  // still parses normally ("2 7up" -> qty 2 of "7up"), because then the brand
+  // no longer sits at the quantity position.
+  const startsWithDigitBrand = matchDigitBrandTokens(mergedTokens, i) > 0;
+
+  // Parse quantity (if not starting with unit or a digit-leading brand)
+  if (!startsWithUnit && !startsWithDigitBrand) {
     const qtyResult = parseQuantityTokens(mergedTokens.slice(i));
     if (qtyResult) {
       qty = qtyResult.qty;
