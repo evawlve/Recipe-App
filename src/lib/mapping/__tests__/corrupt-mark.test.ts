@@ -9,6 +9,15 @@ import {
     CorruptScanFlag,
     MAX_TRUSTABLE_SIBLING_MEDIAN,
     MIN_INFLATED_GROUP_SIZE,
+    MAX_KCAL_100G,
+    MAX_MACRO_SUM_100G,
+    MAX_SODIUM_100G,
+    SODIUM_IMPLAUSIBLE_100G,
+    KJ_ATWATER_MIN_RATIO,
+    KJ_MIN_KCAL,
+    MIN_SODIUM_OUTLIER_GROUP,
+    MIN_SODIUM_OUTLIER_RATIO,
+    MIN_SODIUM_OUTLIER_G,
 } from '../corrupt-mark';
 
 function flag(overrides: Partial<CorruptScanFlag>): CorruptScanFlag {
@@ -74,6 +83,91 @@ describe('decideMark', () => {
     it('does NOT apply the group-size floor to panel-low flags (direct serving evidence)', () => {
         const d = decideMark(flag({ direction: 'panel-low', groupSize: 4 }));
         expect(d.mark).toBe(true);
+    });
+});
+
+describe('decideMark — nutrition-scale directions (detect-corrupt-nutrition.ts)', () => {
+    it('marks kcal above the physical ceiling', () => {
+        // Real case from the 2026-07-21 sizing: "Bomb Burrito" at 81,818 kcal/100g.
+        const d = decideMark(flag({ direction: 'kcal-impossible', value: 81818 }));
+        expect(d).toEqual({ mark: true, reason: 'kcal-impossible:direct' });
+    });
+
+    it('re-verifies the kcal threshold from the flag value (stale/hand-edited scan defense)', () => {
+        const d = decideMark(flag({ direction: 'kcal-impossible', value: MAX_KCAL_100G }));
+        expect(d).toEqual({ mark: false, skip: 'value_below_threshold' });
+    });
+
+    it('marks macro sums over 100g/100g', () => {
+        const d = decideMark(flag({ direction: 'macro-sum-impossible', value: MAX_MACRO_SUM_100G + 1 }));
+        expect(d).toEqual({ mark: true, reason: 'macro-sum-impossible:direct' });
+    });
+
+    it('marks impossible single components (fiber 260, sugars 2000)', () => {
+        expect(decideMark(flag({ direction: 'fiber-impossible', value: 260 })))
+            .toEqual({ mark: true, reason: 'fiber-impossible:direct' });
+        expect(decideMark(flag({ direction: 'sugars-impossible', value: 2000 })))
+            .toEqual({ mark: true, reason: 'sugars-impossible:direct' });
+        expect(decideMark(flag({ direction: 'fiber-impossible', value: 90 })))
+            .toEqual({ mark: false, skip: 'value_below_threshold' });
+    });
+
+    it('marks sodium above pure salt (mg-entered-as-g family)', () => {
+        // Real case: beef jerky storing "1285.71 g" sodium — the mg value.
+        const d = decideMark(flag({ direction: 'sodium-impossible', value: 1285.71 }));
+        expect(d).toEqual({ mark: true, reason: 'sodium-impossible:direct' });
+    });
+
+    it('marks unguarded sodium in the implausible band', () => {
+        // Real case: "Banoffee Pie" at 12.6 g sodium/100g (= 31 g salt).
+        const d = decideMark(flag({ direction: 'sodium-implausible', value: 12.6 }));
+        expect(d).toEqual({ mark: true, reason: 'sodium-implausible:direct' });
+    });
+
+    it('skips sodium-implausible at or below the band floor', () => {
+        const d = decideMark(flag({ direction: 'sodium-implausible', value: SODIUM_IMPLAUSIBLE_100G }));
+        expect(d).toEqual({ mark: false, skip: 'value_below_threshold' });
+    });
+
+    it('marks kJ-as-kcal Atwater mismatches', () => {
+        // The n-mq-27 lemon class: 383 "kcal"/100g vs ~40 from macros (~9.6x).
+        const d = decideMark(flag({ direction: 'kj-as-kcal', value: 383, ratio: 9.6 }));
+        expect(d).toEqual({ mark: true, reason: 'kj-as-kcal:direct' });
+    });
+
+    it('skips kj-as-kcal below the ratio or kcal floors', () => {
+        expect(decideMark(flag({ direction: 'kj-as-kcal', value: 383, ratio: KJ_ATWATER_MIN_RATIO - 0.1 })))
+            .toEqual({ mark: false, skip: 'value_below_threshold' });
+        expect(decideMark(flag({ direction: 'kj-as-kcal', value: KJ_MIN_KCAL - 1, ratio: 9.6 })))
+            .toEqual({ mark: false, skip: 'value_below_threshold' });
+    });
+
+    it('marks the mayo-class sodium sibling outlier', () => {
+        // off_9348905001434: mayonnaise sodium 5.33 g/100g vs sibling median ~0.6 (~8.9x).
+        const d = decideMark(flag({
+            direction: 'sodium-sibling-outlier', value: 5.33, ratio: 8.9,
+            siblingMedian: 0.6, groupSize: 12,
+        }));
+        expect(d).toEqual({ mark: true, reason: 'sodium-sibling-outlier:direct' });
+    });
+
+    it('skips sibling outliers from small groups', () => {
+        const d = decideMark(flag({
+            direction: 'sodium-sibling-outlier', value: 5.33, ratio: 8.9,
+            groupSize: MIN_SODIUM_OUTLIER_GROUP - 1,
+        }));
+        expect(d).toEqual({ mark: false, skip: 'outlier_group_too_small' });
+    });
+
+    it('skips sibling outliers below the ratio or absolute floors', () => {
+        expect(decideMark(flag({
+            direction: 'sodium-sibling-outlier', value: 5.33,
+            ratio: MIN_SODIUM_OUTLIER_RATIO - 0.5, groupSize: 12,
+        }))).toEqual({ mark: false, skip: 'outlier_below_thresholds' });
+        expect(decideMark(flag({
+            direction: 'sodium-sibling-outlier', value: MIN_SODIUM_OUTLIER_G - 0.1,
+            ratio: 8.9, groupSize: 12,
+        }))).toEqual({ mark: false, skip: 'outlier_below_thresholds' });
     });
 });
 
