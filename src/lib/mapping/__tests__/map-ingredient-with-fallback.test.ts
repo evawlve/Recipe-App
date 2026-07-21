@@ -366,6 +366,134 @@ describe('mapIngredientWithFallback filtering', () => {
         expect(result?.foodName.toLowerCase()).toContain('substitute');
     });
 
+    it('fires the zero-calorie fast-path only when the whole line is a water query', async () => {
+        // Positive: plain water and water with qty/unit prefixes (qty/unit are
+        // stripped by parsing, so baseName is exactly "water").
+        for (const line of ['water', '2 cups water', '16 oz water']) {
+            const result = await mapIngredientWithFallback(line, {
+                minConfidence: 0,
+                skipFdc: true,
+            });
+            expect(result).not.toBeNull();
+            expect(result?.foodId).toBe('water_default');
+            expect(result?.kcal).toBe(0);
+        }
+    });
+
+    it('fires the zero-calorie fast-path for whole-line water beverage variants', async () => {
+        for (const line of ['sparkling water', 'ice water', 'still water']) {
+            const result = await mapIngredientWithFallback(line, {
+                minConfidence: 0,
+                skipFdc: true,
+            });
+            expect(result).not.toBeNull();
+            expect(result?.foodId).toBe('water_default');
+            expect(result?.kcal).toBe(0);
+        }
+    });
+
+    it('does NOT fast-path "canned tuna in water"', async () => {
+        // "canned tuna in water" billed 0 kcal because the old check matched
+        // "water" as a suffix/last word of the line. It must map normally.
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'tuna-water', source: 'ai_generated', name: 'Tuna in Water, Canned', brandName: null, score: 0.9, rawData: {} }
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
+            id: 'tuna-water',
+            displayName: 'Tuna in Water, Canned',
+            ingredientName: 'canned tuna in water',
+            caloriesPer100g: 90,
+            proteinPer100g: 20,
+            carbsPer100g: 0,
+            fatPer100g: 1,
+            servings: [{ id: 'srv-tuna', label: '1 can', grams: 120 }]
+        });
+
+        const result = await mapIngredientWithFallback('100g canned tuna in water', {
+            minConfidence: 0,
+            skipFdc: true,
+        });
+        expect(result).not.toBeNull();
+        expect(result?.foodId).not.toBe('water_default');
+        expect(result?.foodName.toLowerCase()).toContain('tuna');
+        expect(result?.kcal).toBeGreaterThan(0);
+    });
+
+    it('does NOT fast-path "tuna in spring water"', async () => {
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'tuna-spring', source: 'ai_generated', name: 'Tuna in Spring Water', brandName: null, score: 0.9, rawData: {} }
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
+            id: 'tuna-spring',
+            displayName: 'Tuna in Spring Water',
+            ingredientName: 'tuna in spring water',
+            caloriesPer100g: 99,
+            proteinPer100g: 23,
+            carbsPer100g: 0,
+            fatPer100g: 0.8,
+            servings: [{ id: 'srv-tuna-sp', label: '1 can', grams: 120 }]
+        });
+
+        const result = await mapIngredientWithFallback('100g tuna in spring water', {
+            minConfidence: 0,
+            skipFdc: true,
+        });
+        expect(result).not.toBeNull();
+        expect(result?.foodId).not.toBe('water_default');
+        expect(result?.foodName.toLowerCase()).toContain('tuna');
+        expect(result?.kcal).toBeGreaterThan(0);
+    });
+
+    it('does NOT fast-path "chicken packed in water"', async () => {
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'chicken-water', source: 'ai_generated', name: 'Chicken Breast, Canned in Water', brandName: null, score: 0.9, rawData: {} }
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
+            id: 'chicken-water',
+            displayName: 'Chicken Breast, Canned in Water',
+            ingredientName: 'chicken packed in water',
+            caloriesPer100g: 105,
+            proteinPer100g: 22,
+            carbsPer100g: 0,
+            fatPer100g: 2,
+            servings: [{ id: 'srv-chx', label: '1 can', grams: 140 }]
+        });
+
+        const result = await mapIngredientWithFallback('100g chicken packed in water', {
+            minConfidence: 0,
+            skipFdc: true,
+        });
+        expect(result).not.toBeNull();
+        expect(result?.foodId).not.toBe('water_default');
+        expect(result?.foodName.toLowerCase()).toContain('chicken');
+        expect(result?.kcal).toBeGreaterThan(0);
+    });
+
+    it('does NOT treat watermelon as water', async () => {
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'melon-1', source: 'ai_generated', name: 'Watermelon', brandName: null, score: 0.9, rawData: {} }
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
+            id: 'melon-1',
+            displayName: 'Watermelon',
+            ingredientName: 'watermelon',
+            caloriesPer100g: 30,
+            proteinPer100g: 0.6,
+            carbsPer100g: 7.6,
+            fatPer100g: 0.2,
+            servings: [{ id: 'srv-melon', label: '1 cup', grams: 152 }]
+        });
+
+        const result = await mapIngredientWithFallback('100g watermelon', {
+            minConfidence: 0,
+            skipFdc: true,
+        });
+        expect(result).not.toBeNull();
+        expect(result?.foodId).not.toBe('water_default');
+        expect(result?.foodName.toLowerCase()).toContain('watermelon');
+        expect(result?.kcal).toBeGreaterThan(0);
+    });
+
     it('enforces low-fat modifiers in candidate selection', async () => {
         (gatherCandidates as jest.Mock).mockResolvedValue([
             { id: 'cream-cheese', source: 'ai_generated', name: 'Cream Cheese', brandName: null, score: 0.9, rawData: {} },
