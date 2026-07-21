@@ -1,15 +1,18 @@
 /**
- * mark-corrupt-off.ts — write OffFood.corruptReason from a corrupt-panel scan.
+ * mark-corrupt-off.ts — write OffFood.corruptReason from a corrupt-record scan.
  *
  * Input: a results/corrupt-panel-scan-*.json produced by
- * scripts/eval/detect-corrupt-panel.ts. Each flagged entry is passed through
- * the shared trust rules (src/lib/mapping/corrupt-mark.ts):
+ * scripts/eval/detect-corrupt-panel.ts, or a results/corrupt-nutrition-scan-*.json
+ * produced by scripts/eval/detect-corrupt-nutrition.ts. Each flagged entry is
+ * passed through the shared trust rules (src/lib/mapping/corrupt-mark.ts):
  *   - panel-low flags whose sibling median exceeds the physical ceiling are
  *     skipped (the SIBLING group is the corrupt one — kJ-as-kcal family);
- *   - panel-inflated flags from groups smaller than 8 are skipped.
+ *   - panel-inflated flags from groups smaller than 8 are skipped;
+ *   - nutrition-scale flags are re-verified against their own thresholds.
  * Surviving flags are re-checked against the live row (barcode still exists,
- * stored kcal/100g still matches the scan within 0.5 — the corpus may have
- * changed since the scan) and then written as corruptReason = "<direction>:<tier>".
+ * stored value of the flag's check field still matches the scan within 0.5 —
+ * the corpus may have changed since the scan) and then written as
+ * corruptReason = "<direction>:<tier>".
  *
  * corruptReason is a SEPARATE column from duplicateOfBarcode on purpose:
  * dedupe-off-mark.ts clears and recomputes duplicate marks on every run.
@@ -38,7 +41,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { decideMark, CorruptScanFlag } from '../src/lib/mapping/corrupt-mark';
+import { decideMark, CorruptScanFlag, CorruptScanCheck } from '../src/lib/mapping/corrupt-mark';
 
 const prisma = new PrismaClient();
 
@@ -55,11 +58,15 @@ const FILE = argValue('--file');
 const FETCH_CHUNK = 1000;
 const WRITE_BATCH = 5000;
 
-function kcalOf(nutrients: unknown): number | null {
+/** Live value of the field a flag's staleness re-check compares against.
+ *  Panel-scan flags carry no `check` payload — they default to calories. */
+function checkValueOf(nutrients: unknown, field: CorruptScanCheck['field']): number | null {
     if (!nutrients || typeof nutrients !== 'object') return null;
     const n = nutrients as Record<string, unknown>;
-    const v = n.calories ?? n.energy ?? n.kcal;
-    return typeof v === 'number' ? v : null;
+    const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : null);
+    if (field === 'calories') return num(n.calories ?? n.energy ?? n.kcal);
+    if (field === 'sodium') return num(n.sodium);
+    return (num(n.protein) ?? 0) + (num(n.fat) ?? 0) + (num(n.carbs) ?? 0);
 }
 
 async function clearMarks(): Promise<void> {
@@ -128,8 +135,10 @@ async function main(): Promise<void> {
             const entry = markable.get(barcode)!;
             if (!row) { missing++; continue; }
             if (row.corruptReason != null) { alreadyMarked++; continue; }
-            const liveKcal = kcalOf(row.nutrientsPer100g);
-            if (liveKcal == null || Math.abs(liveKcal - entry.flag.kcal100) > 0.5) {
+            const check: CorruptScanCheck =
+                entry.flag.check ?? { field: 'calories', value: entry.flag.kcal100 };
+            const live = checkValueOf(row.nutrientsPer100g, check.field);
+            if (live == null || Math.abs(live - check.value) > 0.5) {
                 stale++;
                 continue;
             }

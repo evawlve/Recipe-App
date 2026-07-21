@@ -143,8 +143,9 @@ const LEAN_PROTEIN_CUT_PATTERN =
 /** g protein/100g floor: below raw breast (~22) and cooked (~31), above deli rolls (~14-16). */
 const LEAN_CUT_PROTEIN_FLOOR = 18;
 
-/** Alcohol carries 7 kcal/g that never shows up in P/C/F — exempt from the high-side Atwater check. */
-const ALCOHOL_PATTERN =
+/** Alcohol carries 7 kcal/g that never shows up in P/C/F — exempt from the high-side Atwater check.
+ *  Exported for detect-corrupt-nutrition.ts, whose kJ-as-kcal rule needs the same exemption. */
+export const ALCOHOL_PATTERN =
     /\b(beer|wine|vodka|whiske?y|rum|gin|tequila|liqueur|brandy|cognac|sake|cider|cocktail|margarita|sangria|champagne|prosecco|bourbon|scotch|mead|soju|alcoholic?|spirits?|ale|lager|stout|ipa)\b/i;
 
 // ============================================================
