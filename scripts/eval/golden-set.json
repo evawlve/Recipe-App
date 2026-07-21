@@ -3342,6 +3342,50 @@
       "notes": "Pattern 10 (collective word-number 'a dozen' -> 12, article + word consumed). Added 2026-07-18 with the quantity.ts WORD_NUMBERS fix: 'a dozen eggs' = qty 12 -> ~600g (12 x ~50g egg default). Deterministic single-item path. Hard assertion; band widened to tolerate a 44-58g per-egg record serving."
     },
     {
+      "id": "n-qty-08",
+      "category": "quantity_parsing",
+      "text": "7up",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "7up"
+        ],
+        [
+          "7 up"
+        ],
+        [
+          "seven up"
+        ]
+      ],
+      "grams": [
+        240,
+        500
+      ],
+      "notes": "DIGIT-BRAND QUANTITY GUARD (fix 2026-07-21, digit-brands.ts). '7up' must be qty 1 of the soda, NOT qty 7 x 355ml can (~2,485g billed pre-fix). Band = one can/bottle serving (240ml default to 500ml PET), same class as n-serv-46 bare 'coca cola'. Deterministic single-item path (singleItemFromText bypass, no LLM). Hard assertion."
+    },
+    {
+      "id": "n-qty-09",
+      "category": "quantity_parsing",
+      "text": "2 7up",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "7up"
+        ],
+        [
+          "7 up"
+        ],
+        [
+          "seven up"
+        ]
+      ],
+      "grams": [
+        480,
+        1100
+      ],
+      "notes": "DIGIT-BRAND QUANTITY GUARD companion to n-qty-08: an explicit count BEFORE the digit-leading brand must still be honored — '2 7up' = qty 2 -> ~710g (2 x 355ml can), band spans 2x240ml to 2x500ml packages. Guards against the over-correction failure (guard eating the real count -> ~355g) and against flat-100g under-billing (200g, below band). Hard assertion."
+    },
+    {
       "id": "n-supp-16",
       "category": "branded_supplements",
       "item": {
