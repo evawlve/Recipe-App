@@ -165,3 +165,40 @@ describe('getBareQueryDefault — new entries (PR D pt3)', () => {
         expect(getBareQueryDefault('ribeye')).toBeNull();
     });
 });
+
+describe('getBareQueryDefault — token-containment guards (warm-2026-07-21 regressions)', () => {
+    it('bell peppers are produce, not the pepper spice', () => {
+        expect(getBareQueryDefault('bell pepper')).toBeNull();
+        expect(getBareQueryDefault('red bell pepper')).toBeNull();
+        expect(getBareQueryDefault('yellow bell pepper')).toBeNull();
+        // The spice itself and non-bell forms keep the 2.5g default.
+        expect(grams('black pepper')).toBe(2.5);
+        expect(grams('pepper')).toBe(2.5);
+        expect(grams('ground pepper')).toBe(2.5);
+    });
+
+    it('cinnamon-flavored product names skip the spice rule; the spice itself does not', () => {
+        expect(getBareQueryDefault('ghost vegan protein cinnamon roll')).toBeNull();
+        expect(getBareQueryDefault('cinnamon toast crunch')).toBeNull();
+        expect(grams('cinnamon')).toBe(2.5);
+        expect(grams('ground cinnamon')).toBe(2.5);
+    });
+
+    it("bare 'vanilla' is a flavor word — only 'extract' carries the spice default", () => {
+        expect(getBareQueryDefault('vanilla')).toBeNull();
+        expect(grams('orgain organic protein powder vanilla')).toBe(35);
+        expect(grams('vanilla extract')).toBe(2.5);
+    });
+
+    it('cottage/ricotta keep their ~125g label servings (no 28g hard-cheese default)', () => {
+        expect(getBareQueryDefault('cottage cheese')).toBeNull();
+        expect(getBareQueryDefault('ricotta cheese')).toBeNull();
+        expect(grams('cream cheese')).toBe(28);
+        expect(grams('cheddar cheese')).toBe(28);
+    });
+
+    it('nutella is a spread (14g), capping the 200g package serve', () => {
+        expect(grams('nutella')).toBe(14);
+        expect(grams('hazelnut spread')).toBe(14);
+    });
+});

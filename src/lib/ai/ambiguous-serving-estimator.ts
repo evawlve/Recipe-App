@@ -195,8 +195,12 @@ export function isAmbiguousUnit(unit: string): boolean {
 export function getBareQueryDefault(foodName: string): { grams: number, description: string } | null {
     const nameStr = foodName.toLowerCase();
     
-    // Spices & Extracts: 1 tsp (approx 2.5g)
-    if (/\b(spice|cinnamon|nutmeg|paprika|chili powder|cumin|salt|pepper|extract|vanilla|seasoning)\b/.test(nameStr)) {
+    // Spices & Extracts: 1 tsp (approx 2.5g). Guards keep the rule off queries
+    // that merely CONTAIN a spice token (warm-2026-07-21 regressions): bell
+    // peppers are produce, 'cinnamon roll/toast/…' are flavor names, and bare
+    // 'vanilla' is a flavor word on countless products ('vanilla extract'
+    // stays covered by the extract token).
+    if (/\b(spice|cinnamon(?!\s*(roll|bun|toast|crunch|swirl))|nutmeg|paprika|chili powder|cumin|salt|(?<!bell\s)pepper|extract|seasoning)\b/.test(nameStr)) {
         return { grams: 2.5, description: "1 tsp (standard bare query serving)" };
     }
     
@@ -208,7 +212,7 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
     }
 
     // Condiments & Spreads: 1 tbsp (approx 14g)
-    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup|ghee|lard|tallow|miso|mirin|tahini|pesto|hummus)\b/.test(nameStr)) {
+    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup|ghee|lard|tallow|miso|mirin|tahini|pesto|hummus|nutella|hazelnut spread)\b/.test(nameStr)) {
         return { grams: 14, description: "1 tbsp (standard bare query serving)" };
     }
 
@@ -224,8 +228,10 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
         return { grams: 120, description: "1 cup (standard bare query serving)" };
     }
     
-    // Cheese (cream cheese, shredded): 1 oz / 28g
-    if (/\b(cheese)\b/.test(nameStr)) {
+    // Cheese (cream cheese, shredded): 1 oz / 28g. Cottage/ricotta are spoon
+    // foods with a ~110-125g label serving — the 28g hard-cheese default would
+    // make the inflation cap clobber a correct label (warm-2026-07-21).
+    if (/\b(?<!cottage\s)(?<!ricotta\s)cheese\b/.test(nameStr)) {
         return { grams: 28, description: "1 oz (standard bare query serving)" };
     }
 
