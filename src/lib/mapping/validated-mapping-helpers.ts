@@ -32,6 +32,53 @@ export type CachedMappedIngredient = FatsecretMappedIngredient & {
 };
 
 /**
+ * Read-time trust for human-triage rows (PR D pt3, B6).
+ *
+ * FoodMapping rows stamped validatedBy='human-triage' are deliberate triage
+ * repoints — a person chose the record identity. The NAME-heuristic cache
+ * rejections (core-token coverage, NUTRITIONAL_MODIFIERS, cooking-state /
+ * critical-modifier) compare query text against the food name and kill
+ * legitimate repoints (e.g. a 'mayonnaise' → 'Light Mayonnaise' repoint dies
+ * on the 'light' modifier), so trusted human rows skip them. Nutrition-invalid
+ * checks and serving-shape escapes (counted-piece, cooked-grain — mapper
+ * level) stay active for ALL rows: a human repoint fixes identity, not
+ * per-piece/cooked serving shape.
+ *
+ * Trade-off (accepted, per plan): combined with the save-side write-guard, a
+ * WRONG human repoint is sticky — nothing at read or save time evicts it, so
+ * the only way out is re-running apply-repoints. No TTL in this PR.
+ *
+ * Kill-switch: HUMAN_ROW_TRUST === '0' disables trust (default on). Read at
+ * call time so the flag can be flipped without a restart of test harnesses.
+ */
+export function isTrustedHumanRow(validatedBy?: string | null): boolean {
+    return validatedBy === 'human-triage' && process.env.HUMAN_ROW_TRUST !== '0';
+}
+
+/**
+ * Mapper-level cache-escape reasons that read-time trust may skip for
+ * human-triage rows — the NAME-heuristic identity checks. core_token_mismatch
+ * belongs here: human repoints routinely cross naming conventions (key
+ * 'prawns' → FDC "Crustaceans, shrimp, ..."), and the helper-side core-token
+ * skip would be moot if the mapper twin still escaped the row. Deliberately
+ * excludes nutrition_invalid, count_label and grain_cooked: those escapes
+ * fire for every row regardless of provenance (a repoint fixes identity,
+ * not nutrition validity or serving shape).
+ */
+const HUMAN_TRUST_SKIPPABLE_ESCAPES = new Set([
+    'category_mismatch',
+    'multi_ingredient',
+    'modifier_mismatch',
+    'replacement_mismatch',
+    'brand_guard',
+    'core_token_mismatch',
+]);
+
+export function isHumanTrustSkippableEscape(reason: string): boolean {
+    return HUMAN_TRUST_SKIPPABLE_ESCAPES.has(reason);
+}
+
+/**
  * Retrieve a validated mapping from cache by RAW ingredient line
  * @deprecated Use getValidatedMappingByNormalizedName for new code
  */
@@ -95,13 +142,23 @@ export async function getValidatedMappingByNormalizedName(
         const { isWrongCookingStateForGrain, hasCriticalModifierMismatch, hasCoreTokenMismatch } =
             await import('./filter-candidates');
 
+        // Read-time trust (PR D pt3, HUMAN_ROW_TRUST): human-triage rows skip
+        // the NAME-heuristic rejections below — see isTrustedHumanRow. The
+        // first rejection that WOULD have fired is recorded so telemetry can
+        // count trust saves.
+        const humanRowTrusted = isTrustedHumanRow(cached.validatedBy);
+        let trustSkippedRejection: string | null = null;
+
         // Always check core token coverage (Jan 2026)
         if (hasCoreTokenMismatch(normalizedName, cached.foodName, cached.brandName)) {
-            logger.debug('validated_mapping.cache_core_token_mismatch', {
-                query: normalizedName,
-                cachedFood: cached.foodName,
-            });
-            return null;  // Reject cache hit, force fresh search
+            if (!humanRowTrusted) {
+                logger.debug('validated_mapping.cache_core_token_mismatch', {
+                    query: normalizedName,
+                    cachedFood: cached.foodName,
+                });
+                return null;  // Reject cache hit, force fresh search
+            }
+            trustSkippedRejection = 'core_token_mismatch';
         }
 
         // Defense-in-depth: Reject cache hits where the cached food has nutritional modifiers NOT present in the query
@@ -115,24 +172,31 @@ export async function getValidatedMappingByNormalizedName(
         const foodLower = cached.foodName.toLowerCase();
         for (const mod of NUTRITIONAL_MODIFIERS) {
             if (foodLower.includes(mod) && !queryLower.includes(mod)) {
-                logger.debug('validated_mapping.cache_nutritional_modifier_mismatch', {
-                    query: normalizedName,
-                    cachedFood: cached.foodName,
-                    modifier: mod,
-                });
-                return null;  // Reject cache hit, force fresh search
+                if (!humanRowTrusted) {
+                    logger.debug('validated_mapping.cache_nutritional_modifier_mismatch', {
+                        query: normalizedName,
+                        cachedFood: cached.foodName,
+                        modifier: mod,
+                    });
+                    return null;  // Reject cache hit, force fresh search
+                }
+                trustSkippedRejection = trustSkippedRejection ?? `nutritional_modifier:${mod}`;
+                break;
             }
         }
 
         if (rawLine) {
             if (isWrongCookingStateForGrain(rawLine, normalizedName, cached.foodName) ||
                 hasCriticalModifierMismatch(rawLine, cached.foodName, 'cache')) {
-                logger.debug('validated_mapping.cache_context_mismatch', {
-                    query: normalizedName,
-                    rawLine,
-                    cachedFood: cached.foodName,
-                });
-                return null;  // Reject cache hit, force fresh search
+                if (!humanRowTrusted) {
+                    logger.debug('validated_mapping.cache_context_mismatch', {
+                        query: normalizedName,
+                        rawLine,
+                        cachedFood: cached.foodName,
+                    });
+                    return null;  // Reject cache hit, force fresh search
+                }
+                trustSkippedRejection = trustSkippedRejection ?? 'context_mismatch';
             }
         }
 
@@ -168,6 +232,14 @@ export async function getValidatedMappingByNormalizedName(
             } else {
                 foodId = cached.normalizedForm;
             }
+        }
+
+        if (trustSkippedRejection) {
+            logger.debug('cache.human_row_trusted', {
+                key: cached.normalizedForm,
+                foodId,
+                skippedRejection: trustSkippedRejection,
+            });
         }
 
         return {

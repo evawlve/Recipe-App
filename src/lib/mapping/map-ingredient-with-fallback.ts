@@ -28,7 +28,7 @@ import {
     LABEL_COUNT_PIECE_NOUNS, GENERIC_PIECE_WORDS,
     pieceNounInName, labelPieceMatchesItem, countedPieceNoun, servingLabelCountsPiece,
 } from './count-label';
-import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache } from './validated-mapping-helpers';
+import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from './client';
@@ -884,7 +884,7 @@ export async function mapIngredientWithFallback(
             // Escape reason doubles as the telemetry label (PR D pt3 split the
             // former catch-all 'filter_mismatch' into per-condition labels).
             // Same predicates, same evaluation order as the former || chain.
-            const earlyEscapeReason =
+            let earlyEscapeReason =
                 earlyCoreTokenMismatch ? 'core_token_mismatch'
                 : earlyNutritionInvalid ? 'nutrition_invalid'
                 : earlyCountLabelEscape ? 'count_label'
@@ -902,6 +902,23 @@ export async function mapIngredientWithFallback(
                     !earlyCacheHit.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
                 ) ? 'brand_guard'
                 : null;
+
+            // Read-time trust (PR D pt3, HUMAN_ROW_TRUST): human-triage rows
+            // are deliberate identity repoints — the five NAME-heuristic
+            // escapes must not evict them (see isTrustedHumanRow). Kept
+            // active for ALL rows: core_token_mismatch, nutrition_invalid,
+            // count_label and grain_cooked — a repoint fixes identity, not
+            // per-piece/cooked serving shape.
+            if (earlyEscapeReason
+                && isHumanTrustSkippableEscape(earlyEscapeReason)
+                && isTrustedHumanRow(earlyCacheHit.validatedBy)) {
+                logger.info('cache.human_row_trusted', {
+                    key: normalizedName,
+                    foodId: earlyCacheHit.foodId,
+                    skippedRejection: 'early:' + earlyEscapeReason,
+                });
+                earlyEscapeReason = null;
+            }
 
             if (earlyEscapeReason) {
                 logger.warn('mapping.early_cache_filter_mismatch', {
@@ -1229,7 +1246,7 @@ export async function mapIngredientWithFallback(
                 // Escape reason doubles as the telemetry label (PR D pt3 split
                 // the former catch-all 'filter_mismatch' into per-condition
                 // labels). Same predicates, same order as the former || chain.
-                const normalizedEscapeReason =
+                let normalizedEscapeReason =
                     normalizedCoreTokenMismatch ? 'core_token_mismatch'
                     : normalizedNutritionInvalid ? 'nutrition_invalid'
                     : normalizedCountLabelEscape ? 'count_label'
@@ -1257,6 +1274,21 @@ export async function mapIngredientWithFallback(
                         !normalizedCache.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
                     ) ? 'brand_guard'
                     : null;
+
+                // Read-time trust (PR D pt3, HUMAN_ROW_TRUST) — same rationale
+                // as the early-cache block: name-heuristic escapes skipped for
+                // human-triage rows; core-token, nutrition-invalid and
+                // serving-shape escapes stay active for all rows.
+                if (normalizedEscapeReason
+                    && isHumanTrustSkippableEscape(normalizedEscapeReason)
+                    && isTrustedHumanRow(normalizedCache.validatedBy)) {
+                    logger.info('cache.human_row_trusted', {
+                        key: normalizedName,
+                        foodId: normalizedCache.foodId,
+                        skippedRejection: 'normalized:' + normalizedEscapeReason,
+                    });
+                    normalizedEscapeReason = null;
+                }
 
                 if (normalizedEscapeReason) {
                     logger.warn('mapping.normalized_cache_filter_mismatch', {
