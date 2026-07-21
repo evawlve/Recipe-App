@@ -28,6 +28,10 @@ const CAP_TIERS = new Set([
     'package_quantity_own',
     'package_quantity_sibling',
     'label_serving_default',
+    // Seed-table per-piece grams can hijack a bare query whose name merely
+    // CONTAINS a countable noun ("black pepper" → the 164g bell-pepper seed).
+    // Real count servings sit under 2x the category default and pass through.
+    'seed_count_default',
 ]);
 
 /**

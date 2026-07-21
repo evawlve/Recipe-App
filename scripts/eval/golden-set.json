@@ -5197,7 +5197,8 @@
           40
         ]
       },
-      "notes": "PR D pt3 class (b) — kJ-as-kcal corruption (warm-2026-07-20: lemon billed 383 kcal/100g = kJ value in the kcal field). Produce kcal floor partition + denylist must surface a plausible ~29 kcal record. PLAN CONTINGENCY: flip to knownIssue pre-merge if the first run shows no plausible lemon record in the corpus surfaces. Hard."
+      "knownIssue": true,
+      "notes": "PR D pt3 class (b) — kJ-as-kcal corruption (warm-2026-07-20: lemon billed 383 kcal/100g = kJ value in the kcal field). Denylist works (0840609112113 no longer wins) but the corpus has NO plausible raw-lemon record at all — 2026-07-21 deploy probe: retrieval top-8 = lemon-pepper turkey, danish pastry, Fanta Lemon, Ritz Lemon crackers; winner off_0651544502002 at 108.7 kcal/100g. Ingest/ranking-gap class (with salt/cinnamon/oatmeal). Flip back to hard once a raw-lemon record is ingested."
     },
     {
       "id": "n-mq-28",

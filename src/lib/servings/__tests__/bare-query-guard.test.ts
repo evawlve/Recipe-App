@@ -31,6 +31,7 @@ const CAP_TIERS = [
     'package_quantity_own',
     'package_quantity_sibling',
     'label_serving_default',
+    'seed_count_default',
 ];
 const REPLACE_TIERS = ['flat_100g_default', 'count_unresolved_floor'];
 const UNTOUCHED_TIERS = [
@@ -42,7 +43,6 @@ const UNTOUCHED_TIERS = [
     'count_unit_cached',
     'count_unit_ai',
     'label_count_derived',
-    'seed_count_default',
 ];
 
 describe('applyOffBareQueryGuard — CAP tiers (ratio-gated inflation)', () => {
@@ -53,6 +53,34 @@ describe('applyOffBareQueryGuard — CAP tiers (ratio-gated inflation)', () => {
             servingTier: 'bare_category_default',
             servingDescription: '1 serving (~14g)',
         });
+    });
+
+    it("caps the bell-pepper seed hijack on bare 'black pepper' (164g seed vs 2.5g spice, n-serv-38)", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 164,
+            servingTier: 'seed_count_default',
+            parsed: bare('black pepper'),
+            rawLine: 'black pepper',
+            queryName: 'black pepper',
+            foodName: 'Black Pepper',
+        }));
+        expect(r).toEqual({
+            grams: 2.5,
+            servingTier: 'bare_category_default',
+            servingDescription: '1 serving (~2.5g)',
+        });
+    });
+
+    it("keeps a legit seed-count serving under the ratio gate ('almond' 1.2g seed vs 28g default)", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 1.2,
+            servingTier: 'seed_count_default',
+            parsed: bare('almond'),
+            rawLine: 'almond',
+            queryName: 'almond',
+            foodName: 'Almonds',
+        }));
+        expect(r).toBeNull();
     });
 
     it('leaves grams within 2x the default alone (ketchup 15g label, n-serv-48)', () => {
