@@ -1,49 +1,75 @@
 :root {
-  /* FitFuel light tokens derived from Figma */
-  --bg: 180 29% 98%;            /* #F7FAFA / #F8FBFA */
+  /* Mealspire light tokens — mirrors the mobile app palette
+     (KindaHealthyMobile src/constants/theme.ts). Cards share the page
+     background; 2px borders + 4px "chunky" depth lips define surfaces. */
+  --bg: 0 0% 100%;               /* #FFFFFF */
   --card: 0 0% 100%;
   --popover: 0 0% 100%;
-  --text: 150 30% 8%;            /* #0D1A12 */
-  --muted: 143 29% 45%;          /* #52946B */
-  --primary: 144 73% 55%;        /* #38E07B */
+  --text: 0 0% 0%;               /* #000000 */
+  --muted: 220 6% 40%;           /* #60646C textSecondary */
+  --primary: 94 98% 40%;         /* #58CC02 foodLogPrimary */
   --primary-foreground: 0 0% 100%;
-  --secondary: 150 20% 94%;      /* light mint grays (e8f2ed/e5e8eb) */
-  --secondary-foreground: 150 30% 8%;
-  --accent: 144 73% 55%;
+  --primary-depth: 95 98% 32%;   /* #46A302 foodLogDark — depth lip */
+  --secondary: 240 12% 95%;      /* #F0F0F3 backgroundElement */
+  --secondary-foreground: 0 0% 0%;
+  --accent: 199 92% 54%;         /* #1CB0F6 profilePrimary (blue) */
   --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
+  --destructive: 0 82% 54%;      /* #EA2B2B */
   --destructive-foreground: 0 0% 100%;
-  --border: 147 28% 86%;         /* #D1E5D9 */
-  --ring: 144 73% 55%;           /* match primary */
-  --radius-xl: 1.25rem;          /* ~20px for inputs */
+  --border: 0 0% 90%;            /* #E5E5E5 */
+  --border-dark: 0 0% 75%;       /* #C0C0C0 neutral depth lip */
+  --surface: 240 12% 95%;        /* #F0F0F3 chips / inputs */
+  --track: 0 0% 90%;             /* #E5E5E5 progress track */
+  --ring: 94 98% 40%;
+  --macro-protein: 258 90% 66%;  /* #8B5CF6 */
+  --macro-carbs: 189 94% 43%;    /* #06B6D4 */
+  --macro-fat: 350 89% 60%;      /* #F43F5E */
+  --macro-calories: 38 92% 50%;  /* #F59E0B */
+  --tint-green: 89 77% 90%;      /* #E5F9D0 foodLogLight */
+  --tint-blue: 199 100% 93%;     /* #DDF4FF profileLight */
+  --tint-orange: 38 100% 92%;    /* #FFF0D6 recipesLight */
+  --radius-xl: 1.25rem;          /* ~20px for cards */
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
   --radius-sm: 0.5rem;
-  --shadow: 150 3% 30%;
+  --shadow: 0 0% 75%;
+  --search-bg: 240 12% 95%;
+  --search-text: 0 0% 0%;
+  --search-placeholder: 220 6% 40%;
+  --light-gray: 210 20% 90%;
 }
 
 .dark {
-  /* New FitFood dark mode palette from Figma */
-  --bg: 15 50% 10%;              /* #211412 - very dark brown/black */
-  --card: 15 33% 15%;            /* slightly lighter than bg */
-  --popover: 15 33% 15%;         /* same as card */
-  --text: 0 0% 100%;             /* #FFFFFF - white text */
-  --muted: 15 25% 70%;           /* #C99E91 - light brown/orange */
-  --primary: 144 73% 55%;        /* Keep green accent for buttons */
+  /* Mobile app dark palette — neutral near-black, green accent kept */
+  --bg: 220 7% 8%;               /* #131416 */
+  --card: 220 7% 8%;
+  --popover: 225 6% 14%;
+  --text: 0 0% 100%;             /* #FFFFFF */
+  --muted: 216 7% 71%;           /* #B0B4BA */
+  --primary: 94 98% 40%;         /* #58CC02 — same green both modes */
   --primary-foreground: 0 0% 100%;
-  --secondary: 15 33% 22%;       /* #472B24 - dark brown */
+  --primary-depth: 96 97% 28%;   /* #3A8C02 */
+  --secondary: 225 6% 14%;       /* #212225 */
   --secondary-foreground: 0 0% 100%;
-  --accent: 144 73% 55%;         /* Keep green accent */
+  --accent: 199 92% 54%;
   --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
+  --destructive: 0 82% 54%;
   --destructive-foreground: 0 0% 100%;
-  --border: 15 33% 22%;           /* #472B24 - dark brown */
-  --ring: 144 73% 55%;           /* Keep green accent for focus rings */
-  --shadow: 15 50% 5%;           /* Very dark shadow */
-  
-  /* Additional FitFood dark mode colors from Figma */
-  --search-bg: 15 33% 22%;       /* #472B24 - dark brown for search bars */
-  --search-text: 0 0% 100%;      /* #FFFFFF - white text in search */
-  --search-placeholder: 15 25% 70%; /* #C99E91 - light brown/orange for placeholder */
-  --light-gray: 210 20% 90%;     /* #E5E8EB - light gray for subtle elements */
+  --border: 220 6% 21%;          /* #333539 */
+  --border-dark: 210 6% 13%;     /* #1E2022 */
+  --surface: 225 6% 14%;         /* #212225 */
+  --track: 225 6% 14%;
+  --ring: 94 98% 40%;
+  --macro-protein: 255 92% 76%;  /* #A78BFA */
+  --macro-carbs: 187 86% 53%;    /* #22D3EE */
+  --macro-fat: 351 95% 71%;      /* #FB7185 */
+  --macro-calories: 43 96% 56%;  /* #FBBF24 */
+  --tint-green: 96 47% 12%;      /* #1B2C10 */
+  --tint-blue: 203 55% 12%;      /* #0E2330 */
+  --tint-orange: 33 58% 11%;     /* #2D1E0C */
+  --shadow: 210 6% 13%;
+  --search-bg: 225 6% 14%;
+  --search-text: 0 0% 100%;
+  --search-placeholder: 216 7% 71%;
+  --light-gray: 210 20% 90%;
 }
