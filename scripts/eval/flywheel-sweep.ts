@@ -9,6 +9,10 @@
  *      (become extra warm seeds — real demand replaces guesswork corpora),
  *      never-cache-hit "attention" keys, cache-escape reasons, thrash keys
  *      (≥2 distinct foodIds resolved for one key), servingTier distribution.
+ *      1b. STUCK KEYS — sub-gate keys (all-miss, max confidence < 0.85) that
+ *      the cache can never save and so never surface for review; writes
+ *      results/stuck-keys-<ts>.json (triage-batch input) + a trend line vs the
+ *      previous stuck-keys report. Logic: src/lib/ops/stuck-keys.ts.
  *   2. WARM       — standard warm-cache corpus + telemetry seeds through
  *      /api/nlp/parse on the normal cache-first path (save gates apply).
  *   3. DIFF       — compare against the previous warm-*.json report: identity
@@ -28,6 +32,9 @@
  *     scripts/eval/flywheel-sweep.ts --base http://localhost:3000 \
  *     [--days 7] [--top 100] [--concurrency 4] [--allow-fail n-mq-10] \
  *     [--skip-warm] [--skip-eval] [--publish-dir sync-docs]
+ *
+ * --stuck-keys-only runs JUST the stuck-key report (read-only against the DB,
+ * writes only results/stuck-keys-<ts>.json) — no warm, no eval, no publish.
  */
 
 import * as fs from 'fs';
@@ -35,6 +42,10 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import { assembleSeeds, runWarm, WarmResult, WarmRunReport } from './warm-cache';
+import {
+    collectStuckKeys, computeStuckTrend, findPreviousStuckReport, formatStuckKeysSection,
+    StuckKeysReport, StuckTrend,
+} from '../../src/lib/ops/stuck-keys';
 
 const args = process.argv.slice(2);
 function argValue(flag: string): string | undefined {
@@ -49,6 +60,7 @@ const CONCURRENCY = Number(argValue('--concurrency') ?? 4);
 const ALLOW_FAIL = (argValue('--allow-fail') ?? 'n-mq-10').split(',').map(s => s.trim()).filter(Boolean);
 const SKIP_WARM = args.includes('--skip-warm');
 const SKIP_EVAL = args.includes('--skip-eval');
+const STUCK_ONLY = args.includes('--stuck-keys-only');
 const PUBLISH_DIR = argValue('--publish-dir');
 
 const RESULTS_DIR = path.join(__dirname, 'results');
@@ -129,6 +141,49 @@ async function collectTelemetry(): Promise<Telemetry> {
     } finally {
         await prisma.$disconnect().catch(() => {});
     }
+}
+
+// ---------------------------------------------------------------------------
+// 1b. Stuck keys (sub-gate, never cached) — logic in src/lib/ops/stuck-keys.ts
+// ---------------------------------------------------------------------------
+
+interface StuckKeysRun {
+    report: StuckKeysReport;
+    trend: StuckTrend;
+    /** results/stuck-keys-<ts>.json (triage-batch input); null when the query failed. */
+    outPath: string | null;
+}
+
+async function runStuckKeysReport(ranAt: string, stamp: string): Promise<StuckKeysRun> {
+    const prisma = new PrismaClient();
+    const since = new Date(Date.now() - DAYS * 24 * 3600 * 1000);
+    let report: StuckKeysReport;
+    try {
+        report = await collectStuckKeys(prisma, { since, windowDays: DAYS });
+    } finally {
+        await prisma.$disconnect().catch(() => {});
+    }
+
+    // Locate the previous report BEFORE writing this run's file (trend input).
+    const prev = findPreviousStuckReport(RESULTS_DIR);
+    const trend = computeStuckTrend(report.count, prev);
+
+    let outPath: string | null = null;
+    if (report.ok) {
+        // Zero rows is a valid (great) result and still worth a trend datapoint;
+        // a failed query writes nothing so it can't fake an empty population.
+        fs.mkdirSync(RESULTS_DIR, { recursive: true });
+        outPath = path.join(RESULTS_DIR, `stuck-keys-${stamp}.json`);
+        fs.writeFileSync(outPath, JSON.stringify({
+            ranAt,
+            windowDays: report.windowDays,
+            confidenceGate: report.confidenceGate,
+            count: report.count,
+            trend,
+            rows: report.rows,
+        }, null, 1));
+    }
+    return { report, trend, outPath };
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +311,8 @@ function fmtTable(rows: string[][], header: string[]): string {
 }
 
 function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport | null,
-    seedCount: number, telemetrySeedCount: number, diff: WarmDiff | null, gate: EvalGate | null): string {
+    seedCount: number, telemetrySeedCount: number, diff: WarmDiff | null, gate: EvalGate | null,
+    stuck: StuckKeysRun | null): string {
     const lines: string[] = [];
     lines.push(`# Flywheel sweep — ${ranAt}`);
     lines.push('');
@@ -341,6 +397,12 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
             [t.reason, String(t.n), `${(100 * t.n / totalTier).toFixed(1)}%`]), ['tier', 'events', 'share']));
     }
     lines.push('');
+
+    if (stuck) {
+        lines.push(...formatStuckKeysSection(stuck.report, stuck.trend));
+        if (stuck.outPath) lines.push('', `Triage input: \`${path.basename(stuck.outPath)}\``);
+        lines.push('');
+    }
     return lines.join('\n');
 }
 
@@ -349,6 +411,16 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
 async function main() {
     const ranAt = new Date().toISOString();
     const stamp = ranAt.replace(/[:.]/g, '-');
+
+    if (STUCK_ONLY) {
+        console.log(`Stuck-keys-only report @ ${ranAt} (window ${DAYS}d)`);
+        const stuck = await runStuckKeysReport(ranAt, stamp);
+        console.log('');
+        console.log(formatStuckKeysSection(stuck.report, stuck.trend).join('\n'));
+        if (stuck.outPath) console.log(`\nJSON: ${stuck.outPath}`);
+        return;
+    }
+
     console.log(`Flywheel sweep @ ${ranAt} → ${BASE} (window ${DAYS}d)`);
 
     console.log('\n[1/4] Telemetry…');
@@ -356,6 +428,14 @@ async function main() {
     console.log(telemetry.ok
         ? `  ${telemetry.events} events, ${telemetry.topKeys.length} traffic keys, ${telemetry.thrash.length} thrash, ${telemetry.attentionKeys.length} attention`
         : `  unavailable: ${telemetry.error}`);
+
+    console.log('\n[1b] Stuck keys (sub-gate, never cached)…');
+    const stuck = await runStuckKeysReport(ranAt, stamp);
+    console.log(stuck.report.ok
+        ? `  ${stuck.report.count} stuck keys (${stuck.trend.previous === null
+            ? 'first run'
+            : `prev ${stuck.trend.previousCount}, Δ ${stuck.trend.delta}`})`
+        : `  unavailable: ${stuck.report.error}`);
 
     let warm: WarmRunReport | null = null;
     let diff: WarmDiff | null = null;
@@ -391,9 +471,15 @@ async function main() {
         ranAt, base: BASE, days: DAYS, allowFail: ALLOW_FAIL,
         telemetry, warmSummary: warm?.summary ?? null, warmReport: warm?.outPath ?? null,
         diff, gate,
+        // Rows live in the dedicated stuck-keys-<ts>.json (triage-batch input);
+        // the sweep JSON carries the summary + pointer, like warmReport.
+        stuckKeys: {
+            ok: stuck.report.ok, error: stuck.report.error,
+            count: stuck.report.count, trend: stuck.trend, report: stuck.outPath,
+        },
     }, null, 1));
 
-    const md = buildMarkdown(ranAt, telemetry, warm, seedCount, telemetrySeeds.length, diff, gate);
+    const md = buildMarkdown(ranAt, telemetry, warm, seedCount, telemetrySeeds.length, diff, gate, stuck);
     const mdPath = path.join(RESULTS_DIR, `flywheel-${stamp}.md`);
     fs.writeFileSync(mdPath, md);
     console.log(`\nReport: ${mdPath}`);
