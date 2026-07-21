@@ -1,0 +1,14 @@
+[Unit]
+Description=Food-cache flywheel sweep (telemetry + warm + diff + eval gate)
+After=network-online.target recipe-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Recipe-App
+Environment=NODE_ENV=production
+Environment=PATH=%h/.nvm/versions/node/v24.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=%h/.nvm/versions/node/v24.18.0/bin/npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/flywheel-sweep.ts --base http://localhost:3000 --publish-dir sync-docs
+TimeoutStartSec=5400
+StandardOutput=append:%h/Recipe-App/logs/flywheel-sweep.log
+StandardError=append:%h/Recipe-App/logs/flywheel-sweep.log

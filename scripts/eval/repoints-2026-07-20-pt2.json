@@ -1,0 +1,8 @@
+[
+ {"seed": "bell pepper", "key": "capsicum", "target": "off_0699058010682", "class": "identity", "severity": "high", "wasFood": "CAPSICUM & ROASTED GARLIC"},
+ {"seed": "fresh ginger", "key": "ginger", "target": "fdc_169231", "class": "nutrition", "severity": "high", "wasFood": "Ginger"},
+ {"seed": "sheet nori", "key": "nori", "target": "off_9310432400103", "class": "nutrition", "severity": "low", "wasFood": "Nori"},
+ {"seed": "shrimp", "key": "prawns", "target": "fdc_175180", "class": "identity", "severity": "medium", "wasFood": "Prawns"},
+ {"seed": "butternut squash cubes", "key": "butternut squash", "target": "fdc_169295", "class": "identity", "severity": "low", "wasFood": "Butternut squash"},
+ {"seed": "canned pumpkin", "key": "pumpkin", "target": "off_0074027078113", "class": "identity", "severity": "medium", "wasFood": "Pumpkin"}
+]

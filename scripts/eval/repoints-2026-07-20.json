@@ -1,0 +1,387 @@
+[
+ {
+  "seed": "egg yolk",
+  "target": "fdc_748236",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Egg"
+ },
+ {
+  "seed": "egg white",
+  "target": "fdc_747997",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Egg"
+ },
+ {
+  "seed": "whole milk",
+  "target": "off_0853655005056",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Milk"
+ },
+ {
+  "seed": "roma tomato",
+  "target": "off_0856122001841",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "ROMA SINCE 1951 CHOPPED TOMATOES NRICH TOMATO JUIC"
+ },
+ {
+  "seed": "greek yogurt",
+  "target": "off_9340955111613",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Greek yogurt"
+ },
+ {
+  "seed": "coconut milk",
+  "target": "off_9556041640992",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "coconut milk sweetened fortified with calcium vitamins a b12 d2 beverages"
+ },
+ {
+  "seed": "cucumber slices",
+  "target": "fdc_168409",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Cucumber"
+ },
+ {
+  "seed": "cooked white rice",
+  "target": "off_8801007129495",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "brown parboiled cooked uncle bens rice"
+ },
+ {
+  "seed": "cooked quinoa",
+  "target": "fdc_168917",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "uncooked quinoa"
+ },
+ {
+  "seed": "brown rice",
+  "target": "fdc_169704",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Brown rice"
+ },
+ {
+  "seed": "canned pumpkin",
+  "target": "off_0074027078113",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Pumpkin"
+ },
+ {
+  "seed": "chickpeas",
+  "target": "fdc_173757",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "Chickpeas"
+ },
+ {
+  "seed": "butternut squash cubes",
+  "target": "fdc_169295",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "Butternut squash"
+ },
+ {
+  "seed": "tomato sauce",
+  "target": "fdc_169074",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Tomato sauce"
+ },
+ {
+  "seed": "tofu",
+  "target": "off_9421902400629",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Tofu"
+ },
+ {
+  "seed": "shrimp",
+  "target": "fdc_175180",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Prawns"
+ },
+ {
+  "seed": "pre workout",
+  "target": "off_9354444002610",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Pre workout"
+ },
+ {
+  "seed": "white rice",
+  "target": "off_5063334013028",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Rice"
+ },
+ {
+  "seed": "celsius energy drink",
+  "target": "off_0889392021417",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Energy drink"
+ },
+ {
+  "seed": "eggo waffles",
+  "target": "off_0038000940644",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "Eggo - Cinnamon Toast Waffle"
+ },
+ {
+  "seed": "bell pepper",
+  "target": "off_0699058010682",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "CAPSICUM & ROASTED GARLIC"
+ },
+ {
+  "seed": "cucumber",
+  "target": "fdc_168409",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Cucumber"
+ },
+ {
+  "seed": "capri sun",
+  "target": "off_5449000008497",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Capri sun"
+ },
+ {
+  "seed": "tuna",
+  "target": "fdc_175158",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "Tuna"
+ },
+ {
+  "seed": "parmesan",
+  "target": "fdc_170848",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "Parmesan"
+ },
+ {
+  "seed": "mustard",
+  "target": "off_72729595",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "Mustard"
+ },
+ {
+  "seed": "nature valley",
+  "target": "off_8410076801470",
+  "class": "identity",
+  "severity": "low",
+  "wasFood": "Nature Valley"
+ },
+ {
+  "seed": "quinoa",
+  "target": "fdc_168917",
+  "class": "identity",
+  "severity": "high",
+  "wasFood": "uncooked quinoa"
+ },
+ {
+  "seed": "ghost protein",
+  "target": "off_0857640006172",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "Ghost Protein Cereal"
+ },
+ {
+  "seed": "starbucks",
+  "target": "off_0012000103681",
+  "class": "identity",
+  "severity": "medium",
+  "wasFood": "starbucks"
+ },
+ {
+  "seed": "avocado",
+  "target": "fdc_171705",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Avocado"
+ },
+ {
+  "seed": "fresh ginger",
+  "target": "fdc_169231",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Ginger"
+ },
+ {
+  "seed": "sheet nori",
+  "target": "off_9310432400103",
+  "class": "nutrition",
+  "severity": "low",
+  "wasFood": "Nori"
+ },
+ {
+  "seed": "pinto beans",
+  "target": "fdc_175200",
+  "class": "nutrition",
+  "severity": "medium",
+  "wasFood": "Pinto beans"
+ },
+ {
+  "seed": "plain bagel",
+  "target": "fdc_175051",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Plain Bagel"
+ },
+ {
+  "seed": "low carb tortilla",
+  "target": "off_0027331084486",
+  "class": "nutrition",
+  "severity": "medium",
+  "wasFood": "low carb tortilla"
+ },
+ {
+  "seed": "broccoli",
+  "target": "fdc_170379",
+  "class": "nutrition",
+  "severity": "low",
+  "wasFood": "Broccoli"
+ },
+ {
+  "seed": "pure protein bar",
+  "target": "off_0749826785837",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Pure protein bar"
+ },
+ {
+  "seed": "premier protein caramel shake",
+  "target": "off_0643843715573",
+  "class": "nutrition",
+  "severity": "low",
+  "wasFood": "Caramel Protein Shake"
+ },
+ {
+  "seed": "muscle milk chocolate",
+  "target": "off_0872163002012",
+  "class": "nutrition",
+  "severity": "medium",
+  "wasFood": "Muscle milk chocolate"
+ },
+ {
+  "seed": "mission carb balance tortilla",
+  "target": "off_0073731071090",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Mission, carb, balance, tortilla"
+ },
+ {
+  "seed": "tomato",
+  "target": "off_0004656702273",
+  "class": "nutrition",
+  "severity": "low",
+  "wasFood": "Tomatoes"
+ },
+ {
+  "seed": "oat milk",
+  "target": "off_9315090215014",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Oat Milk"
+ },
+ {
+  "seed": "lamb",
+  "target": "fdc_175264",
+  "class": "nutrition",
+  "severity": "medium",
+  "wasFood": "Lamb"
+ },
+ {
+  "seed": "oreo",
+  "target": "off_7622210635105",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "oreo"
+ },
+ {
+  "seed": "lays",
+  "target": "off_06047719",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Lays \u03bf\u03bb\u03b9\u03ba\u03ae\u03c2"
+ },
+ {
+  "seed": "coke zero",
+  "target": "off_93556101",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Coke Zero"
+ },
+ {
+  "seed": "monster energy",
+  "target": "off_5060166694777",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Monster Energy"
+ },
+ {
+  "seed": "nutella",
+  "target": "off_8000500397466",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Nutella"
+ },
+ {
+  "seed": "jif",
+  "target": "off_0051500750056",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Jif Creamy"
+ },
+ {
+  "seed": "goldfish",
+  "target": "off_71124421",
+  "class": "nutrition",
+  "severity": "high",
+  "wasFood": "Goldfish"
+ },
+ {
+  "seed": "table salt",
+  "target": "off_0024600010993",
+  "class": "ranking-gap",
+  "severity": "high",
+  "wasFood": "table blends corn refiner and sugar syrups"
+ },
+ {
+  "seed": "salt",
+  "target": "off_0024600010993",
+  "class": "ranking-gap",
+  "severity": "high",
+  "wasFood": "Sea Salt"
+ },
+ {
+  "seed": "oatmeal",
+  "target": "fdc_173905",
+  "class": "ranking-gap",
+  "severity": "high",
+  "wasFood": "Rolled Oats"
+ },
+ {
+  "seed": "cinnamon",
+  "target": "off_0041250666707",
+  "class": "ranking-gap",
+  "severity": "high",
+  "wasFood": "Cinnamon"
+ }
+]
