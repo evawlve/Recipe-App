@@ -554,17 +554,21 @@ export async function mapIngredientWithFallback(
     // ============================================================
     // Step 1-WATER: Early exit for ice/water - always zero calories
     // ============================================================
-    // These ingredients have no nutritional value and should never map to food
+    // These ingredients have no nutritional value and should never map to food.
+    // IMPORTANT: the match is anchored to the WHOLE line (after qty/unit stripping) —
+    // the old suffix/last-word matching made "canned tuna in water" bill 0 kcal.
+    // Lines that merely CONTAIN water phrasing must proceed through normal mapping.
     // Note: "liquid" added to handle ambiguous inputs like "100% liquid" that normalize to just "liquid"
-    const ZERO_CALORIE_INGREDIENTS = ['ice', 'ice cubes', 'crushed ice', 'shaved ice', 'water', 'tap water', 'cold water', 'hot water', 'ice water', 'liquid'];
-    const baseNameLowerForWaterCheck = baseName.toLowerCase().trim();
-    // Also extract the last word to handle "100% liquid" → "liquid"
-    const lastWordForWaterCheck = baseNameLowerForWaterCheck.split(/\s+/).pop() || '';
-    if (ZERO_CALORIE_INGREDIENTS.some(term =>
-        baseNameLowerForWaterCheck === term ||
-        baseNameLowerForWaterCheck.endsWith(' ' + term) ||
-        lastWordForWaterCheck === term  // <-- NEW: Handles "100% liquid"
-    )) {
+    const ZERO_CALORIE_INGREDIENTS = [
+        'ice', 'ice cubes', 'crushed ice', 'shaved ice',
+        'water', 'tap water', 'cold water', 'hot water', 'warm water', 'ice water', 'iced water',
+        'still water', 'sparkling water', 'mineral water', 'spring water', 'carbonated water',
+        'filtered water', 'drinking water',
+        'liquid',
+    ];
+    // Strip leading "100%"-style prefixes so "100% liquid" → "liquid" still matches whole-line
+    const baseNameLowerForWaterCheck = baseName.toLowerCase().trim().replace(/^\d+(?:\.\d+)?\s*%\s*/, '');
+    if (ZERO_CALORIE_INGREDIENTS.includes(baseNameLowerForWaterCheck)) {
         logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName });
 
         // Calculate grams from parsed quantity using standard conversions
