@@ -22,13 +22,23 @@ import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 
 /**
+ * Cache read result: the mapped ingredient plus row provenance. `validatedBy`
+ * (FoodMapping.validatedBy: 'ai' | 'human-triage') is threaded through reads
+ * for the HUMAN_ROW_TRUST read-time trust follow-up — populated here, not yet
+ * consumed by any skip logic.
+ */
+export type CachedMappedIngredient = FatsecretMappedIngredient & {
+    validatedBy?: string;
+};
+
+/**
  * Retrieve a validated mapping from cache by RAW ingredient line
  * @deprecated Use getValidatedMappingByNormalizedName for new code
  */
 export async function getValidatedMapping(
     rawIngredient: string,
     source: 'fatsecret' | 'fdc' = 'fatsecret'
-): Promise<FatsecretMappedIngredient | null> {
+): Promise<CachedMappedIngredient | null> {
     const rawForm = normalizeQuery(rawIngredient);
     const normalizedForm = canonicalizeCacheKey(rawForm);
     return getValidatedMappingByNormalizedName(normalizedForm, source === 'fdc' ? 'fdc' : 'openfoodfacts', rawIngredient);
@@ -50,7 +60,7 @@ export async function getValidatedMappingByNormalizedName(
     normalizedName: string,
     source: 'fatsecret' | 'fdc' | 'openfoodfacts' = 'fatsecret',
     rawLine?: string
-): Promise<FatsecretMappedIngredient | null> {
+): Promise<CachedMappedIngredient | null> {
     try {
         // Canonicalize the lookup key (lowercase + singularize + sort tokens)
         const canonicalKey = canonicalizeCacheKey(normalizedName);
@@ -168,7 +178,8 @@ export async function getValidatedMappingByNormalizedName(
             source: cached.source === 'openfoodfacts' ? 'openfoodfacts'
                     : cached.source === 'fdc' ? 'fdc'
                     : 'ai_generated',
-        } as FatsecretMappedIngredient;
+            validatedBy: cached.validatedBy,
+        } as CachedMappedIngredient;
     } catch (error) {
         logger.error('validated_mapping.get_normalized_error', {
             error: (error as Error).message,
@@ -364,6 +375,56 @@ export async function saveValidatedMapping(
         const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'ai_generated';
         const clampedConfidence = Math.max(0, Math.min(1, validation.confidence));
 
+        // Existing-row lookup, hoisted ahead of EVERY upsert (PR D pt3): the
+        // human-row write-guard below and the OFF serving-downgrade guard both
+        // need the current row, so fetch it once.
+        const existing = await prisma.foodMapping.findUnique({
+            where: { normalizedForm },
+            select: { offBarcode: true, fdcId: true, foodName: true, validatedBy: true },
+        });
+
+        // Human-row write-guard (PR D pt3): rows stamped validatedBy=
+        // 'human-triage' are triage repoints — a fresh AI resolution must not
+        // overwrite their identity, and the update branch's validatedBy:'ai'
+        // stamp was exactly the escape→overwrite mechanism that reverted the
+        // 2026-07-20 repoints. Same record → bump usage only, PRESERVE the
+        // human provenance. Different record → skip the write entirely (the
+        // pick still serves THIS request, it just isn't cached). 'ai' rows
+        // keep the full supersede-stale semantics of the upsert below.
+        if (existing?.validatedBy === 'human-triage') {
+            const existingFoodId = existing.offBarcode
+                ? `off_${existing.offBarcode}`
+                : existing.fdcId != null
+                    ? `fdc_${existing.fdcId}`
+                    : null;
+            const sameRecord = existingFoodId != null
+                ? existingFoodId === mapping.foodId
+                // ai_generated rows carry no id columns — match on food name.
+                : existing.foodName === mapping.foodName;
+            if (sameRecord) {
+                await prisma.foodMapping.update({
+                    where: { normalizedForm },
+                    data: {
+                        usedCount: { increment: 1 },
+                        lastUsedAt: new Date(),
+                    },
+                });
+                logger.debug('validated_mapping.human_row_usage_bumped', {
+                    normalizedForm,
+                    foodId: mapping.foodId,
+                });
+            } else {
+                logger.warn('save.skipped_human_row', {
+                    rawIngredient,
+                    normalizedForm,
+                    existingFoodId: existingFoodId ?? existing.foodName,
+                    attemptedFoodId: mapping.foodId,
+                    attemptedFoodName: mapping.foodName,
+                });
+            }
+            return;
+        }
+
         // Serving-shape downgrade guard (PR D pt2, Jul 2026): the parity sweep
         // showed record swaps silently replacing a cache row whose OFF record
         // carries real serving data ("red bull" with its 250ml can label) with
@@ -372,10 +433,6 @@ export async function saveValidatedMapping(
         // barcode, keep the old row if the new record would lose all serving
         // shape. The new pick still serves THIS request, it just isn't cached.
         if (offBarcode) {
-            const existing = await prisma.foodMapping.findUnique({
-                where: { normalizedForm },
-                select: { offBarcode: true },
-            });
             if (existing?.offBarcode && existing.offBarcode !== offBarcode) {
                 const [oldOff, newOff] = await Promise.all([
                     prisma.offFood.findUnique({

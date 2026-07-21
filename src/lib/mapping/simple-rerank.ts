@@ -8,6 +8,8 @@
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
 import { detectGrainCookingContext } from './filter-candidates';
+import { assessRankTimePlausibility } from './macro-plausibility';
+import { isDenylistedOffRecord } from './corrupt-denylist';
 
 export interface RerankCandidate {
     id: string;
@@ -1518,6 +1520,25 @@ export function simpleRerank(
         return rawFoodTokens.filter(t => new RegExp(`\\b${t}\\b`).test(nameLower)).length;
     };
 
+    // Plausibility partition (PR D pt3): a candidate whose per-100g macros trip
+    // a deterministic floor for this query (sweetener kcal<250, produce kcal<12
+    // or >150, legume kcal<50, lean-cut protein<18, zero-protein protein food)
+    // — or whose OFF record is on the triage-confirmed corrupt denylist — must
+    // never outrank a plausible candidate on raw score alone (the lemon-383
+    // kJ-as-kcal class). Floor-hits are sorted BELOW, never dropped: an
+    // all-floor pool is a comparative no-op, so corpus-gap queries can't
+    // strand. The denylist check here is rerank-side demotion only — the
+    // mapper-side hard drop lives with the filter stage.
+    // Kill-switch: RANK_PLAUSIBILITY_PARTITION="0" restores today's ordering.
+    const plausibilityPartitionActive = process.env.RANK_PLAUSIBILITY_PARTITION !== '0';
+    const isPlausibilityFloorHit = (c: RerankCandidate): boolean => {
+        if (!plausibilityPartitionActive) return false;
+        if (isDenylistedOffRecord(c.id)) return true;
+        // No per-100g nutrition → nothing to assess → not flagged.
+        if (!c.nutrition?.per100g) return false;
+        return assessRankTimePlausibility(query, c.name, c.nutrition).floorHit;
+    };
+
     // Score all candidates (base score + nutrition score + modifier constraints)
     const scored = candidates
         .map(c => {
@@ -1555,6 +1576,7 @@ export function simpleRerank(
                 decisiveBrandBoost,
                 grainCookedBoost,
                 grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
+                plausibilityFloorHit: isPlausibilityFloorHit(c),
             };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
@@ -1590,6 +1612,7 @@ export function simpleRerank(
                 decisiveBrandBoost,
                 grainCookedBoost,
                 grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
+                plausibilityFloorHit: isPlausibilityFloorHit(c),
             };
         });
         scored.push(...fallbackScored);
@@ -1621,6 +1644,17 @@ export function simpleRerank(
             if (aCooked && bCooked && a.grainCookedCoverage !== b.grainCookedCoverage) {
                 return b.grainCookedCoverage - a.grainCookedCoverage;
             }
+        }
+
+        // Plausibility partition (PR D pt3): strictly BELOW the decisive-brand
+        // and cooked-grain partitions — those deliberate preferences may pick
+        // a floor-hit record, but among ordinary candidates an implausible or
+        // denylisted one only wins when nothing plausible exists (all-floor is
+        // a no-op by construction). No-floor sorts first.
+        if (plausibilityPartitionActive) {
+            const aFloor = a.plausibilityFloorHit ? 1 : 0;
+            const bFloor = b.plausibilityFloorHit ? 1 : 0;
+            if (aFloor !== bFloor) return aFloor - bFloor;
         }
 
         const scoreDiff = b.score - a.score;
@@ -1702,7 +1736,8 @@ export function simpleRerank(
                 `phrase=${phrase.toFixed(2)} mod=${modifier.toFixed(2)} cover=${coverage.toFixed(2)} ` +
                 `fdc=${fdcBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
                 `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
-                `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} dbrand=${((s as any).decisiveBrandBoost ?? 0).toFixed(2)} src=${s.candidate.source}`
+                `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} dbrand=${((s as any).decisiveBrandBoost ?? 0).toFixed(2)} ` +
+                `floor=${s.plausibilityFloorHit ? 1 : 0} src=${s.candidate.source}`
             );
         });
         console.log();
@@ -1775,6 +1810,7 @@ export function simpleRerank(
         gap: gap.toFixed(3),
         confidence: confidence.toFixed(2),
         reason,
+        winnerPlausibilityFloorHit: top.plausibilityFloorHit,
     });
 
     // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
