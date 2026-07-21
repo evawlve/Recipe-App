@@ -8,7 +8,12 @@
  * (avocado, dried spinach powder, olive oil, diet soda, alcohol, fiber foods).
  */
 
-import { assessMacroPlausibility, assessSaveTimePlausibility, IMPLAUSIBLE_MACRO_PENALTY } from '../macro-plausibility';
+import {
+    assessMacroPlausibility,
+    assessRankTimePlausibility,
+    assessSaveTimePlausibility,
+    IMPLAUSIBLE_MACRO_PENALTY,
+} from '../macro-plausibility';
 
 describe('assessMacroPlausibility', () => {
     // ============================================================
@@ -512,5 +517,175 @@ describe('assessSaveTimePlausibility', () => {
             { kcal: 1200, protein: 10, carbs: 10, fat: 10 }
         );
         expect(r.save).toBe(false);
+    });
+});
+
+describe('assessRankTimePlausibility', () => {
+    // ============================================================
+    // Floor parity with the save-time gate (single source of truth)
+    // ============================================================
+
+    it('fires exactly the same floor:* reasons as the save-time gate (shared floors)', () => {
+        // One input per deterministic floor + one clean input. Both functions
+        // consume collectDeterministicFloorReasons — the floor verdicts must
+        // agree exactly on identical inputs.
+        const cases: Array<[string, string, { kcal: number; protein: number; carbs: number; fat: number }]> = [
+            ['granulated sugar', 'Granulated sugar', { kcal: 16, protein: 0, carbs: 4, fat: 0 }],
+            ['grape', 'Grape drink', { kcal: 5, protein: 0, carbs: 1.2, fat: 0 }],
+            ['blueberry', 'Blueberry blend', { kcal: 60, protein: 8.7, carbs: 5, fat: 0.5 }],
+            ['lentil', 'Lentil base', { kcal: 20.9, protein: 1.2, carbs: 3.5, fat: 0.3 }],
+            ['banana', 'Bananas, raw', { kcal: 89, protein: 1.1, carbs: 22.8, fat: 0.3 }],
+        ];
+        for (const [query, name, macros] of cases) {
+            const rank = assessRankTimePlausibility(query, name, macros);
+            const save = assessSaveTimePlausibility(query, name, macros);
+            const rankFloors = rank.reasons.filter((r) => r.startsWith('floor:'));
+            const saveFloors = save.reasons.filter((r) => r.startsWith('floor:'));
+            expect(rankFloors).toEqual(saveFloors);
+            expect(rank.floorHit).toBe(rankFloors.length > 0 || rank.reasons.some((r) => r.startsWith('category:')));
+        }
+    });
+
+    // ============================================================
+    // Floor-grade classification
+    // ============================================================
+
+    it('classifies the sweetener kcal floor as floorHit', () => {
+        const r = assessRankTimePlausibility('granulated sugar', 'Granulated sugar', {
+            kcal: 16, protein: 0, carbs: 4, fat: 0,
+        });
+        expect(r.impossible).toBe(false);
+        expect(r.floorHit).toBe(true);
+        expect(r.reasons.some((x) => x.startsWith('floor:sweetener_kcal_'))).toBe(true);
+    });
+
+    it('classifies produce kcal-under and protein-over floors as floorHit', () => {
+        const under = assessRankTimePlausibility('grape', 'Grape drink', {
+            kcal: 5, protein: 0, carbs: 1.2, fat: 0,
+        });
+        expect(under.floorHit).toBe(true);
+        const protein = assessRankTimePlausibility('blueberry', 'Blueberry blend', {
+            kcal: 60, protein: 8.7, carbs: 5, fat: 0.5,
+        });
+        expect(protein.floorHit).toBe(true);
+    });
+
+    it('classifies the produce kcal-over-150 category prior as floorHit (lemon 383 kJ-as-kcal class)', () => {
+        const r = assessRankTimePlausibility('lemon', 'Lemon', {
+            kcal: 383, protein: 25, carbs: 46.7, fat: 13.3,
+        });
+        expect(r.impossible).toBe(false);
+        expect(r.floorHit).toBe(true);
+        expect(r.reasons.some((x) => x.startsWith('category:fresh_produce_kcal_'))).toBe(true);
+    });
+
+    it('classifies the legume kcal floor as floorHit', () => {
+        const r = assessRankTimePlausibility('lentil', 'Lentil base', {
+            kcal: 20.9, protein: 1.2, carbs: 3.5, fat: 0.3,
+        });
+        expect(r.floorHit).toBe(true);
+        expect(r.reasons.some((x) => x.startsWith('floor:legume_kcal_'))).toBe(true);
+    });
+
+    it('classifies zero-protein protein food as floorHit, not soft (golden n-prot-04)', () => {
+        const r = assessRankTimePlausibility('black beans', 'BLACK BEANS', {
+            kcal: 91, protein: 0, carbs: 16, fat: 0.5,
+        });
+        expect(r.floorHit).toBe(true);
+        expect(r.softPenalty).toBe(false); // no Atwater reason fired here
+        expect(r.reasons).toContain('category:protein_food_with_zero_protein');
+    });
+
+    it('classifies the lean-cut protein floor as floorHit, not soft (golden n-mq-22)', () => {
+        const r = assessRankTimePlausibility(
+            'grilled chicken breast',
+            'roll oven-roasted chicken breast',
+            { kcal: 134, protein: 14.6, carbs: 1.79, fat: 7.65 }
+        );
+        expect(r.floorHit).toBe(true);
+        expect(r.softPenalty).toBe(false);
+        expect(r.reasons.some((x) => x.startsWith('category:lean_cut_protein_below_floor'))).toBe(true);
+    });
+
+    // ============================================================
+    // Atwater stays soft
+    // ============================================================
+
+    it('keeps Atwater high-side failures soft — never floorHit', () => {
+        // computed = 4*5 + 4*10 + 9*2 = 78 kcal, stated 500
+        const r = assessRankTimePlausibility('granola bar', 'Some Bar', {
+            kcal: 500, protein: 5, carbs: 10, fat: 2,
+        });
+        expect(r.softPenalty).toBe(true);
+        expect(r.floorHit).toBe(false);
+        expect(r.impossible).toBe(false);
+    });
+
+    it('keeps Atwater low-side failures soft — never floorHit', () => {
+        // floor = 4*30 + 9*20 = 300 kcal; stated 50
+        const r = assessRankTimePlausibility('protein bar', 'Broken Data Bar', {
+            kcal: 50, protein: 30, carbs: 10, fat: 20,
+        });
+        expect(r.softPenalty).toBe(true);
+        expect(r.floorHit).toBe(false);
+    });
+
+    // ============================================================
+    // Impossible passthrough + clean passthrough
+    // ============================================================
+
+    it('passes impossible bounds violations through as impossible', () => {
+        const r = assessRankTimePlausibility('oil', 'Mystery Oil', {
+            kcal: 1200, protein: 0, carbs: 0, fat: 100,
+        });
+        expect(r.impossible).toBe(true);
+        expect(r.floorHit).toBe(false);
+        expect(r.softPenalty).toBe(false);
+    });
+
+    it('returns fully clean for a plausible record', () => {
+        const r = assessRankTimePlausibility('avocado', 'Avocado, raw', {
+            kcal: 160, protein: 2, carbs: 9, fat: 15,
+        });
+        expect(r).toEqual({ impossible: false, floorHit: false, softPenalty: false, reasons: [] });
+    });
+
+    // ============================================================
+    // Lean fish/seafood extension (PR D pt3 critic amendment).
+    // These are FLOOR-GRADE (sort-below), NOT drops: a battered/fried
+    // fish record merely ranks below plausible ones and still surfaces
+    // when nothing better exists — so extending the pattern is safe.
+    // ============================================================
+
+    it('floors the corrupt tuna record at 5.66g protein/100g (barcode 0859710005238 class)', () => {
+        const r = assessRankTimePlausibility('tuna', 'Tuna', {
+            kcal: 94, protein: 5.66, carbs: 10.38, fat: 3.77,
+        });
+        expect(r.floorHit).toBe(true);
+        expect(r.impossible).toBe(false); // sort-below, never a drop
+        expect(r.reasons.some((x) => x.startsWith('category:lean_cut_protein_below_floor'))).toBe(true);
+    });
+
+    it('passes salmon at 20g protein/100g clean', () => {
+        const r = assessRankTimePlausibility('salmon', 'Atlantic Salmon, raw', {
+            kcal: 208, protein: 20, carbs: 0, fat: 13,
+        });
+        expect(r.floorHit).toBe(false);
+        expect(r.reasons).toEqual([]);
+    });
+
+    it('applies the fish floor to other named lean fish (tilapia)', () => {
+        const r = assessRankTimePlausibility('tilapia', 'Tilapia meal kit', {
+            kcal: 120, protein: 6, carbs: 12, fat: 4,
+        });
+        expect(r.floorHit).toBe(true);
+    });
+
+    it('still exempts fish-derived fats/sauces from the floor (cod liver oil)', () => {
+        const r = assessRankTimePlausibility('cod liver oil', 'Cod Liver Oil', {
+            kcal: 900, protein: 0, carbs: 0, fat: 100,
+        });
+        expect(r.reasons.some((x) => x.includes('lean_cut'))).toBe(false);
+        expect(r.reasons.some((x) => x.includes('protein_food_with_zero_protein'))).toBe(false);
     });
 });

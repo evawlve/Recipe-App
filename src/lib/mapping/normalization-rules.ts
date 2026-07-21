@@ -483,6 +483,12 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     'apple butter',
     'coconut milk',
     'coconut cream',
+    // "whole" as identity (not prep): whole milk is a distinct product from
+    // milk; whole wheat/grain are distinct from refined. Deliberately NOT
+    // listed: "whole chicken"/"whole almonds" ("whole" is prep there).
+    'whole milk',
+    'whole wheat',
+    'whole grain',
   ];
 
   const protectedPhrasesInInput = PROTECTED_PRODUCT_PHRASES.filter(p =>

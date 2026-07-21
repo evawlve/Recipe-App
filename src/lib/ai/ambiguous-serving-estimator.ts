@@ -195,25 +195,54 @@ export function isAmbiguousUnit(unit: string): boolean {
 export function getBareQueryDefault(foodName: string): { grams: number, description: string } | null {
     const nameStr = foodName.toLowerCase();
     
-    // Spices & Extracts: 1 tsp (approx 2.5g)
-    if (/\b(spice|cinnamon|nutmeg|paprika|chili powder|cumin|salt|pepper|extract|vanilla|seasoning)\b/.test(nameStr)) {
+    // Spices & Extracts: 1 tsp (approx 2.5g). Guards keep the rule off queries
+    // that merely CONTAIN a spice token (warm-2026-07-21 regressions): bell
+    // peppers are produce, 'cinnamon roll/toast/…' are flavor names, and bare
+    // 'vanilla' is a flavor word on countless products ('vanilla extract'
+    // stays covered by the extract token).
+    if (/\b(spice|cinnamon(?!\s*(roll|bun|toast|crunch|swirl))|nutmeg|paprika|chili powder|cumin|salt|(?<!bell\s)pepper|extract|seasoning)\b/.test(nameStr)) {
         return { grams: 2.5, description: "1 tsp (standard bare query serving)" };
     }
     
+    // Peanut/nut butters: 2 tbsp (approx 32g). Must precede the condiment rule:
+    // the 14g condiment default would make the inflation cap fire on peanut
+    // butter's legitimate 32g label serving (32 > 2x14).
+    if (/\b(peanut butter|nut butter)\b/.test(nameStr)) {
+        return { grams: 32, description: "2 tbsp (standard bare query serving)" };
+    }
+
     // Condiments & Spreads: 1 tbsp (approx 14g)
-    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup)\b/.test(nameStr)) {
+    // 'honey' carries a lookahead so cereal/product names ('honey nut
+    // cheerios', 'honey bunches of oats') keep their own categories — bare
+    // honey otherwise flaps on the AI size estimate (21g vs the 340g bottle,
+    // eval n-serv-49 2026-07-21).
+    if (/\b(mayo|mayonnaise|mustard|ketchup|relish|jam|jelly|peanut butter|butter|oil|vinegar|sauce|dressing|syrup|ghee|lard|tallow|miso|mirin|tahini|pesto|hummus|nutella|hazelnut spread|honey(?!\s+(nut|bunche?s|smacks|graham|oats?|roasted|glazed|bbq|barbecue)))\b/.test(nameStr)) {
         return { grams: 14, description: "1 tbsp (standard bare query serving)" };
     }
-    
-    // Flours & Sugars (Baking Dry): 1 cup (approx 120-200g, using 120g as standard)
-    if (/\b(flour|sugar|cornstarch|baking soda|baking powder|cocoa powder)\b/.test(nameStr)) {
+
+    // Sugars & thick sweeteners: 1 tsp (approx 4g). The lookahead keeps
+    // "sugar snap peas" (produce) out.
+    if (/\b(sugar(?!\s*snap)|molasses)\b/.test(nameStr)) {
+        return { grams: 4, description: "1 tsp (standard bare query serving)" };
+    }
+
+    // Flours (Baking Dry): 1 cup (approx 120-200g, using 120g as standard)
+    if (/\b(flour|cornstarch|baking soda|baking powder|cocoa powder)\b/.test(nameStr)) {
         if (/\b(baking soda|baking powder)\b/.test(nameStr)) return { grams: 4, description: "1 tsp (standard bare query serving)" };
         return { grams: 120, description: "1 cup (standard bare query serving)" };
     }
     
-    // Cheese (cream cheese, shredded): 1 oz / 28g
-    if (/\b(cheese)\b/.test(nameStr)) {
+    // Cheese (cream cheese, shredded): 1 oz / 28g. Cottage/ricotta are spoon
+    // foods with a ~110-125g label serving — the 28g hard-cheese default would
+    // make the inflation cap clobber a correct label (warm-2026-07-21).
+    if (/\b(?<!cottage\s)(?<!ricotta\s)cheese\b/.test(nameStr)) {
         return { grams: 28, description: "1 oz (standard bare query serving)" };
+    }
+
+    // Muscle Milk is an RTD can (414ml), not dairy — must precede the \bmilk\b
+    // liquids rule (first-match-wins would otherwise half-fix it at 240g).
+    if (/\bmuscle milk\b/.test(nameStr)) {
+        return { grams: 414, description: "1 can (standard bare query serving)" };
     }
 
     // Liquids (milk, juice, broth): 1 cup / 240g
@@ -221,6 +250,57 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
         return { grams: 240, description: "1 cup (standard bare query serving)" };
     }
 
+    // --- Entries below are APPENDED (first-match-wins: previously-matching
+    // names above keep their outputs byte-identical) ---
+
+    // Nuts & seeds: 1 oz (approx 28g)
+    if (/\b(almond|cashew|peanut(?!\s*butter)|pecan|walnut|pistachio|macadamia|hazelnut|(sunflower|pumpkin|chia|flax|sesame|hemp) seeds?|trail mix)s?\b/.test(nameStr)) {
+        return { grams: 28, description: "1 oz (standard bare query serving)" };
+    }
+
+    // Pre-workout / creatine: 1 scoop (approx 12g)
+    if (/pre.?workout|creatine/.test(nameStr)) {
+        return { grams: 12, description: "1 scoop (standard bare query serving)" };
+    }
+
+    // Protein & supplement powders: 1 scoop (approx 35g)
+    if (/\b(protein (powder|mix|shake mix)|whey|casein|collagen|greens powder|mass gainer)\b/.test(nameStr)) {
+        return { grams: 35, description: "1 scoop (standard bare query serving)" };
+    }
+
+    // Salty snacks: 1 oz (approx 28g)
+    if (/\b(chips?|crisps?|crackers?|pretzels?|goldfish|popcorn|cheetos|doritos)\b/.test(nameStr)) {
+        return { grams: 28, description: "1 oz (standard bare query serving)" };
+    }
+
+    // Cured / breakfast meats: 1 oz (approx 28g)
+    if (/\b(bacon|sausage link|salami|pepperoni|prosciutto|jerky)\b/.test(nameStr)) {
+        return { grams: 28, description: "1 oz (standard bare query serving)" };
+    }
+
+    // Cereals: ~3/4 cup (approx 40g)
+    if (/\b(cereal|granola|muesli)\b/.test(nameStr)) {
+        return { grams: 40, description: "3/4 cup (standard bare query serving)" };
+    }
+
+    // Oats, dry basis: 1/2 cup (approx 40g)
+    if (/\b(oats|oatmeal|rolled oats)\b/.test(nameStr)) {
+        return { grams: 40, description: "1/2 cup dry (standard bare query serving)" };
+    }
+
+    // Dry grains: approx 45g dry (~1/4 cup)
+    if (/\b(couscous|bulgur|barley|polenta|farro)\b/.test(nameStr)) {
+        return { grams: 45, description: "1/4 cup dry (standard bare query serving)" };
+    }
+
+    // Canned/bottled beverages: 1 can (approx 355g)
+    if (/\b(cola|coke|soda|soft drink|energy drink|sports drink|kombucha|lemonade|iced tea)\b/.test(nameStr)) {
+        return { grams: 355, description: "1 can (standard bare query serving)" };
+    }
+
+    // Deliberately ABSENT categories — do not add: yogurt, bars, eggs, produce,
+    // whole-meat cuts. Their label/hydrated servings (or the 100g floor) are the
+    // better answer; a category default here would override real label data.
     return null;
 }
 

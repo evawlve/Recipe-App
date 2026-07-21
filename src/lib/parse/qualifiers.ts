@@ -19,6 +19,16 @@ const QUALIFIERS = new Set([
   'stemmed', 'destemmed'
 ]);
 
+// Qualifiers that change the IDENTITY of the food (not just its prep/size).
+// Used by deriveCacheKeyName (src/lib/mapping/cache-key.ts) to append
+// discriminators to cache keys: "whole milk" must not share a key with "milk",
+// "cooked quinoa" must not share a key with "quinoa" (dry).
+// Keep this list tiny — every entry splits the cache keyspace.
+export const IDENTITY_QUALIFIERS = new Set([
+  'cooked',
+  'whole',
+]);
+
 // Multi-word qualifiers (must be checked in order)
 const MULTI_WORD_QUALIFIERS = [
   'finely chopped',

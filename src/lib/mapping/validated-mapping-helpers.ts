@@ -22,13 +22,70 @@ import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 
 /**
+ * Cache read result: the mapped ingredient plus row provenance. `validatedBy`
+ * (FoodMapping.validatedBy: 'ai' | 'human-triage') is threaded through reads
+ * for the HUMAN_ROW_TRUST read-time trust follow-up — populated here, not yet
+ * consumed by any skip logic.
+ */
+export type CachedMappedIngredient = FatsecretMappedIngredient & {
+    validatedBy?: string;
+};
+
+/**
+ * Read-time trust for human-triage rows (PR D pt3, B6).
+ *
+ * FoodMapping rows stamped validatedBy='human-triage' are deliberate triage
+ * repoints — a person chose the record identity. The NAME-heuristic cache
+ * rejections (core-token coverage, NUTRITIONAL_MODIFIERS, cooking-state /
+ * critical-modifier) compare query text against the food name and kill
+ * legitimate repoints (e.g. a 'mayonnaise' → 'Light Mayonnaise' repoint dies
+ * on the 'light' modifier), so trusted human rows skip them. Nutrition-invalid
+ * checks and serving-shape escapes (counted-piece, cooked-grain — mapper
+ * level) stay active for ALL rows: a human repoint fixes identity, not
+ * per-piece/cooked serving shape.
+ *
+ * Trade-off (accepted, per plan): combined with the save-side write-guard, a
+ * WRONG human repoint is sticky — nothing at read or save time evicts it, so
+ * the only way out is re-running apply-repoints. No TTL in this PR.
+ *
+ * Kill-switch: HUMAN_ROW_TRUST === '0' disables trust (default on). Read at
+ * call time so the flag can be flipped without a restart of test harnesses.
+ */
+export function isTrustedHumanRow(validatedBy?: string | null): boolean {
+    return validatedBy === 'human-triage' && process.env.HUMAN_ROW_TRUST !== '0';
+}
+
+/**
+ * Mapper-level cache-escape reasons that read-time trust may skip for
+ * human-triage rows — the NAME-heuristic identity checks. core_token_mismatch
+ * belongs here: human repoints routinely cross naming conventions (key
+ * 'prawns' → FDC "Crustaceans, shrimp, ..."), and the helper-side core-token
+ * skip would be moot if the mapper twin still escaped the row. Deliberately
+ * excludes nutrition_invalid, count_label and grain_cooked: those escapes
+ * fire for every row regardless of provenance (a repoint fixes identity,
+ * not nutrition validity or serving shape).
+ */
+const HUMAN_TRUST_SKIPPABLE_ESCAPES = new Set([
+    'category_mismatch',
+    'multi_ingredient',
+    'modifier_mismatch',
+    'replacement_mismatch',
+    'brand_guard',
+    'core_token_mismatch',
+]);
+
+export function isHumanTrustSkippableEscape(reason: string): boolean {
+    return HUMAN_TRUST_SKIPPABLE_ESCAPES.has(reason);
+}
+
+/**
  * Retrieve a validated mapping from cache by RAW ingredient line
  * @deprecated Use getValidatedMappingByNormalizedName for new code
  */
 export async function getValidatedMapping(
     rawIngredient: string,
     source: 'fatsecret' | 'fdc' = 'fatsecret'
-): Promise<FatsecretMappedIngredient | null> {
+): Promise<CachedMappedIngredient | null> {
     const rawForm = normalizeQuery(rawIngredient);
     const normalizedForm = canonicalizeCacheKey(rawForm);
     return getValidatedMappingByNormalizedName(normalizedForm, source === 'fdc' ? 'fdc' : 'openfoodfacts', rawIngredient);
@@ -50,7 +107,7 @@ export async function getValidatedMappingByNormalizedName(
     normalizedName: string,
     source: 'fatsecret' | 'fdc' | 'openfoodfacts' = 'fatsecret',
     rawLine?: string
-): Promise<FatsecretMappedIngredient | null> {
+): Promise<CachedMappedIngredient | null> {
     try {
         // Canonicalize the lookup key (lowercase + singularize + sort tokens)
         const canonicalKey = canonicalizeCacheKey(normalizedName);
@@ -85,13 +142,23 @@ export async function getValidatedMappingByNormalizedName(
         const { isWrongCookingStateForGrain, hasCriticalModifierMismatch, hasCoreTokenMismatch } =
             await import('./filter-candidates');
 
+        // Read-time trust (PR D pt3, HUMAN_ROW_TRUST): human-triage rows skip
+        // the NAME-heuristic rejections below — see isTrustedHumanRow. The
+        // first rejection that WOULD have fired is recorded so telemetry can
+        // count trust saves.
+        const humanRowTrusted = isTrustedHumanRow(cached.validatedBy);
+        let trustSkippedRejection: string | null = null;
+
         // Always check core token coverage (Jan 2026)
         if (hasCoreTokenMismatch(normalizedName, cached.foodName, cached.brandName)) {
-            logger.debug('validated_mapping.cache_core_token_mismatch', {
-                query: normalizedName,
-                cachedFood: cached.foodName,
-            });
-            return null;  // Reject cache hit, force fresh search
+            if (!humanRowTrusted) {
+                logger.debug('validated_mapping.cache_core_token_mismatch', {
+                    query: normalizedName,
+                    cachedFood: cached.foodName,
+                });
+                return null;  // Reject cache hit, force fresh search
+            }
+            trustSkippedRejection = 'core_token_mismatch';
         }
 
         // Defense-in-depth: Reject cache hits where the cached food has nutritional modifiers NOT present in the query
@@ -105,24 +172,31 @@ export async function getValidatedMappingByNormalizedName(
         const foodLower = cached.foodName.toLowerCase();
         for (const mod of NUTRITIONAL_MODIFIERS) {
             if (foodLower.includes(mod) && !queryLower.includes(mod)) {
-                logger.debug('validated_mapping.cache_nutritional_modifier_mismatch', {
-                    query: normalizedName,
-                    cachedFood: cached.foodName,
-                    modifier: mod,
-                });
-                return null;  // Reject cache hit, force fresh search
+                if (!humanRowTrusted) {
+                    logger.debug('validated_mapping.cache_nutritional_modifier_mismatch', {
+                        query: normalizedName,
+                        cachedFood: cached.foodName,
+                        modifier: mod,
+                    });
+                    return null;  // Reject cache hit, force fresh search
+                }
+                trustSkippedRejection = trustSkippedRejection ?? `nutritional_modifier:${mod}`;
+                break;
             }
         }
 
         if (rawLine) {
             if (isWrongCookingStateForGrain(rawLine, normalizedName, cached.foodName) ||
                 hasCriticalModifierMismatch(rawLine, cached.foodName, 'cache')) {
-                logger.debug('validated_mapping.cache_context_mismatch', {
-                    query: normalizedName,
-                    rawLine,
-                    cachedFood: cached.foodName,
-                });
-                return null;  // Reject cache hit, force fresh search
+                if (!humanRowTrusted) {
+                    logger.debug('validated_mapping.cache_context_mismatch', {
+                        query: normalizedName,
+                        rawLine,
+                        cachedFood: cached.foodName,
+                    });
+                    return null;  // Reject cache hit, force fresh search
+                }
+                trustSkippedRejection = trustSkippedRejection ?? 'context_mismatch';
             }
         }
 
@@ -160,6 +234,14 @@ export async function getValidatedMappingByNormalizedName(
             }
         }
 
+        if (trustSkippedRejection) {
+            logger.debug('cache.human_row_trusted', {
+                key: cached.normalizedForm,
+                foodId,
+                skippedRejection: trustSkippedRejection,
+            });
+        }
+
         return {
             foodId,
             foodName: cached.foodName,
@@ -168,7 +250,8 @@ export async function getValidatedMappingByNormalizedName(
             source: cached.source === 'openfoodfacts' ? 'openfoodfacts'
                     : cached.source === 'fdc' ? 'fdc'
                     : 'ai_generated',
-        } as FatsecretMappedIngredient;
+            validatedBy: cached.validatedBy,
+        } as CachedMappedIngredient;
     } catch (error) {
         logger.error('validated_mapping.get_normalized_error', {
             error: (error as Error).message,
@@ -364,6 +447,56 @@ export async function saveValidatedMapping(
         const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'ai_generated';
         const clampedConfidence = Math.max(0, Math.min(1, validation.confidence));
 
+        // Existing-row lookup, hoisted ahead of EVERY upsert (PR D pt3): the
+        // human-row write-guard below and the OFF serving-downgrade guard both
+        // need the current row, so fetch it once.
+        const existing = await prisma.foodMapping.findUnique({
+            where: { normalizedForm },
+            select: { offBarcode: true, fdcId: true, foodName: true, validatedBy: true },
+        });
+
+        // Human-row write-guard (PR D pt3): rows stamped validatedBy=
+        // 'human-triage' are triage repoints — a fresh AI resolution must not
+        // overwrite their identity, and the update branch's validatedBy:'ai'
+        // stamp was exactly the escape→overwrite mechanism that reverted the
+        // 2026-07-20 repoints. Same record → bump usage only, PRESERVE the
+        // human provenance. Different record → skip the write entirely (the
+        // pick still serves THIS request, it just isn't cached). 'ai' rows
+        // keep the full supersede-stale semantics of the upsert below.
+        if (existing?.validatedBy === 'human-triage') {
+            const existingFoodId = existing.offBarcode
+                ? `off_${existing.offBarcode}`
+                : existing.fdcId != null
+                    ? `fdc_${existing.fdcId}`
+                    : null;
+            const sameRecord = existingFoodId != null
+                ? existingFoodId === mapping.foodId
+                // ai_generated rows carry no id columns — match on food name.
+                : existing.foodName === mapping.foodName;
+            if (sameRecord) {
+                await prisma.foodMapping.update({
+                    where: { normalizedForm },
+                    data: {
+                        usedCount: { increment: 1 },
+                        lastUsedAt: new Date(),
+                    },
+                });
+                logger.debug('validated_mapping.human_row_usage_bumped', {
+                    normalizedForm,
+                    foodId: mapping.foodId,
+                });
+            } else {
+                logger.warn('save.skipped_human_row', {
+                    rawIngredient,
+                    normalizedForm,
+                    existingFoodId: existingFoodId ?? existing.foodName,
+                    attemptedFoodId: mapping.foodId,
+                    attemptedFoodName: mapping.foodName,
+                });
+            }
+            return;
+        }
+
         // Serving-shape downgrade guard (PR D pt2, Jul 2026): the parity sweep
         // showed record swaps silently replacing a cache row whose OFF record
         // carries real serving data ("red bull" with its 250ml can label) with
@@ -372,10 +505,6 @@ export async function saveValidatedMapping(
         // barcode, keep the old row if the new record would lose all serving
         // shape. The new pick still serves THIS request, it just isn't cached.
         if (offBarcode) {
-            const existing = await prisma.foodMapping.findUnique({
-                where: { normalizedForm },
-                select: { offBarcode: true },
-            });
             if (existing?.offBarcode && existing.offBarcode !== offBarcode) {
                 const [oldOff, newOff] = await Promise.all([
                     prisma.offFood.findUnique({

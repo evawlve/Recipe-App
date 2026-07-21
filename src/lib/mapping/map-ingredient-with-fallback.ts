@@ -28,7 +28,7 @@ import {
     LABEL_COUNT_PIECE_NOUNS, GENERIC_PIECE_WORDS,
     pieceNounInName, labelPieceMatchesItem, countedPieceNoun, servingLabelCountsPiece,
 } from './count-label';
-import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache } from './validated-mapping-helpers';
+import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from './client';
@@ -51,7 +51,10 @@ import { requestAiNutrition, extractBaseFoodContext, getAiServingGrams } from '.
 import { AI_NUTRITION_BACKFILL_ENABLED } from './config';
 import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
-import { assessMacroPlausibility } from './macro-plausibility';
+import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
+import { isDenylistedOffRecord } from './corrupt-denylist';
+import { deriveCacheKeyName } from './cache-key';
+import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -222,6 +225,180 @@ export interface MapIngredientOptions {
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
+
+// ============================================================
+// Rank-time plausibility partition + denylist (PR D pt3, Lever B)
+// Pure helpers, exported for tests. Kill-switch RANK_PLAUSIBILITY_PARTITION='0'
+// disables the floor-hit reordering AND the denylist drop together.
+// ============================================================
+
+function isRankPlausibilityPartitionEnabled(): boolean {
+    return process.env.RANK_PLAUSIBILITY_PARTITION !== '0';
+}
+
+/**
+ * Ids of candidates whose per-100g macros hit a floor-grade plausibility check
+ * for this query. Candidates without inline per-100g nutrition are never
+ * flagged (they rank as plausible). `normalizedName` must keep original word
+ * order — never a token-sorted cache key (see assessRankTimePlausibility).
+ */
+export function computeFloorHitIds(
+    normalizedName: string,
+    candidates: UnifiedCandidate[]
+): Set<string> {
+    const ids = new Set<string>();
+    if (!isRankPlausibilityPartitionEnabled()) return ids;
+    for (const c of candidates) {
+        if (!c.nutrition?.per100g) continue;
+        if (assessRankTimePlausibility(normalizedName, c.name, c.nutrition).floorHit) {
+            ids.add(c.id);
+        }
+    }
+    return ids;
+}
+
+/** Floor-hit check for a single fallback-loop candidate (same kill-switch). */
+export function candidateHitsPlausibilityFloor(
+    normalizedName: string,
+    candidate: UnifiedCandidate
+): boolean {
+    if (!isRankPlausibilityPartitionEnabled()) return false;
+    if (!candidate.nutrition?.per100g) return false;
+    return assessRankTimePlausibility(normalizedName, candidate.name, candidate.nutrition).floorHit;
+}
+
+/**
+ * Drop triage-confirmed corrupt OFF records. All-drop restore: if every
+ * candidate is denylisted, keep the original list (same pattern as the
+ * plausibility escape) so corpus-gap queries cannot strand.
+ */
+export function dropDenylistedCandidates(
+    candidates: UnifiedCandidate[],
+    rawLine: string
+): UnifiedCandidate[] {
+    if (!isRankPlausibilityPartitionEnabled()) return candidates;
+    const kept = candidates.filter(c => !isDenylistedOffRecord(c.id));
+    if (kept.length === candidates.length || kept.length === 0) return candidates;
+    for (const c of candidates) {
+        if (isDenylistedOffRecord(c.id)) {
+            logger.warn('mapping.denylisted_candidate_dropped', {
+                rawLine,
+                candidate: c.name,
+                foodId: c.id,
+            });
+        }
+    }
+    return kept;
+}
+
+/**
+ * Comparator for the pre-confidenceGate sort. Floor-hit candidates rank
+ * strictly below plausible ones REGARDLESS of raw score: OFF raw scores
+ * (~0-10) dwarf FDC's (~0-1.5), so a score multiply alone can never demote a
+ * corrupt high-score OFF record below a plausible FDC one — and this ordering
+ * is exactly what confidenceGate's basic_produce_bypass consumes (finding 1).
+ * All-floor-hit input degrades to the plain score sort (pure comparative).
+ * Pass an empty floorHitIds set to get the pre-PR-D-pt3 ordering.
+ */
+export function makeSortedFilteredComparator(
+    normalizedName: string,
+    isBasicProduce: boolean,
+    floorHitIds: ReadonlySet<string>
+): (a: UnifiedCandidate, b: UnifiedCandidate) => number {
+    return (a, b) => {
+        const aFloor = floorHitIds.has(a.id);
+        const bFloor = floorHitIds.has(b.id);
+        if (aFloor !== bFloor) return aFloor ? 1 : -1;
+
+        // Primary: sort by score descending
+        const scoreDiff = b.score - a.score;
+        if (Math.abs(scoreDiff) > 0.001) return scoreDiff;
+
+        // Tiebreaker for basic produce: prefer FDC (USDA data) over FatSecret
+        // BUT only if FDC candidate name EXACTLY matches the ingredient (not "potato bread")
+        if (isBasicProduce) {
+            const aNameLower = a.name.toLowerCase();
+            const bNameLower = b.name.toLowerCase();
+            const ingredientLower = normalizedName.toLowerCase();
+
+            // Helper to singularize words (handles -oes → -o, -es → empty, -s → empty)
+            const singularize = (word: string): string => {
+                if (word.endsWith('oes')) return word.slice(0, -2);  // potatoes → potato
+                if (word.endsWith('es')) return word.slice(0, -2);   // tomatoes → tomato (also handles -ches, etc.)
+                if (word.endsWith('s')) return word.slice(0, -1);    // carrots → carrot
+                return word;
+            };
+            // Helper to pluralize words (handles -o → -oes, others → -s)
+            const pluralize = (word: string): string => {
+                if (word.endsWith('o')) return word + 'es';  // potato → potatoes
+                return word + 's';
+            };
+
+            const ingredientSingular = singularize(ingredientLower);
+            const ingredientPlural = pluralize(ingredientSingular);
+            const aNameSingular = singularize(aNameLower);
+            const bNameSingular = singularize(bNameLower);
+
+            // Check for EXACT match (considering singular/plural variants)
+            // e.g., "potato" matches "potatoes", "potatoes" matches "potato"
+            const aIsExactMatch = aNameLower === ingredientLower ||
+                aNameLower === ingredientSingular ||
+                aNameLower === ingredientPlural ||
+                aNameSingular === ingredientLower ||
+                aNameSingular === ingredientSingular;
+            const bIsExactMatch = bNameLower === ingredientLower ||
+                bNameLower === ingredientSingular ||
+                bNameLower === ingredientPlural ||
+                bNameSingular === ingredientLower ||
+                bNameSingular === ingredientSingular;
+
+            // Prefer FDC only when it's an exact name match
+            if (aIsExactMatch && a.source === 'fdc' && (!bIsExactMatch || b.source !== 'fdc')) return -1;
+            if (bIsExactMatch && b.source === 'fdc' && (!aIsExactMatch || a.source !== 'fdc')) return 1;
+        }
+
+        return 0;
+    };
+}
+
+// ============================================================
+// Bare-plural request detection (PR D pt3, Lever A3)
+// ============================================================
+
+// Snack-style names that read plural without plural morphology ("goldfish").
+const BARE_PLURAL_STYLE_NAMES = /\b(goldfish|chex mix|trail mix|popcorn|granola)\b/i;
+
+/**
+ * True when the token is a plain -s plural. singularizeUnit alone is NOT a
+ * plural test: 'hummus'→'hummu', 'couscous'→'couscou', 'molasses'→'molass'
+ * all change without being plural. Require an -s ending that is not one of
+ * the pseudo-plural shapes 'ss' (swiss), 'us' (hummus/couscous), 'is'
+ * (debris), 'sses' (molasses — the plain 'ss' check misses it).
+ */
+function isMorphologicalPluralToken(token: string): boolean {
+    const t = token.toLowerCase();
+    if (t.length < 3 || !t.endsWith('s')) return false;
+    if (t.endsWith('ss') || t.endsWith('us') || t.endsWith('is') || t.endsWith('sses')) return false;
+    return singularizeUnit(t) !== t;
+}
+
+/**
+ * A bare-plural request ("almonds", "goldfish") is a digitless unitless qty-1
+ * line whose food name is plural: the user asked for A SERVING of the food,
+ * not one piece. Explicit counts ("3 almonds" — digit gate), singular bare
+ * queries ("almond"), and unit-carrying lines never qualify.
+ */
+export function isBarePluralRequest(
+    parsed: ParsedIngredient | null,
+    rawLine: string,
+    itemNameForCount: string
+): boolean {
+    if (!parsed || parsed.unit || parsed.qty !== 1) return false;
+    if (/\d/.test(rawLine)) return false;
+    const tokens = (parsed.name || '').trim().split(/\s+/).filter(t => t.length > 0);
+    const lastFoodToken = tokens[tokens.length - 1] ?? '';
+    return isMorphologicalPluralToken(lastFoodToken) || BARE_PLURAL_STYLE_NAMES.test(itemNameForCount);
+}
 
 // ============================================================
 // Main Entry Point
@@ -567,7 +744,12 @@ export async function mapIngredientWithFallback(
         // Check ValidatedMapping for normalized name BEFORE calling AI
         // This is the key optimization: "1 cup chopped onion" → normalized "onion" → cache hit!
         if (telemetry) telemetry.normalizedForm = normalizedName;
-        const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
+        // PR D pt3 (C1): lookup key carries identity discriminators (egg
+        // white/yolk, cooked, whole) so identity-distinct senses stop fighting
+        // over one row. Computed identically at the step-1c lookup and the
+        // Step-6 save key — lookup and save must stay the same function of
+        // (normalizedName, parsed).
+        const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(deriveCacheKeyName(normalizedName, parsed), 'fatsecret', trimmed);
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
 
@@ -699,22 +881,46 @@ export async function mapIngredientWithFallback(
             const earlyGrainCookedEscape = detectGrainCookingContext(trimmed, normalizedName).softCooked === true
                 && !earlyCachedLooksCooked;
 
-            if (earlyCoreTokenMismatch ||
-                earlyNutritionInvalid ||
-                earlyCountLabelEscape ||
-                earlyGrainCookedEscape ||
-                isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
-                isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ||
-                hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ||
-                isReplacementMismatch(trimmed, earlyCacheHit.foodName, earlyCacheHit.brandName) ||
+            // Escape reason doubles as the telemetry label (PR D pt3 split the
+            // former catch-all 'filter_mismatch' into per-condition labels).
+            // Same predicates, same evaluation order as the former || chain.
+            let earlyEscapeReason =
+                earlyCoreTokenMismatch ? 'core_token_mismatch'
+                : earlyNutritionInvalid ? 'nutrition_invalid'
+                : earlyCountLabelEscape ? 'count_label'
+                : earlyGrainCookedEscape ? 'grain_cooked'
+                : isCategoryMismatch(normalizedName, earlyCacheHit.foodName, earlyCacheHit.brandName) ? 'category_mismatch'
+                : isMultiIngredientMismatch(normalizedName, earlyCacheHit.foodName) ? 'multi_ingredient'
+                : hasCriticalModifierMismatch(trimmed, earlyCacheHit.foodName, 'cache') ? 'modifier_mismatch'
+                : isReplacementMismatch(trimmed, earlyCacheHit.foodName, earlyCacheHit.brandName) ? 'replacement_mismatch'
                 // Branded query guard: if a target brand is detected (e.g. "heinz") and the cached
                 // food belongs to a DIFFERENT brand (e.g. WEIS), reject the cache hit so the full
                 // pipeline runs and finds the correct brand.
-                (isBrandedQuery &&
+                : (isBrandedQuery &&
                     brandDetection.matchedBrand != null &&
                     earlyCacheHit.brandName != null &&
                     !earlyCacheHit.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
-                )) {
+                ) ? 'brand_guard'
+                : null;
+
+            // Read-time trust (PR D pt3, HUMAN_ROW_TRUST): human-triage rows
+            // are deliberate identity repoints — the five NAME-heuristic
+            // escapes must not evict them (see isTrustedHumanRow). Kept
+            // active for ALL rows: core_token_mismatch, nutrition_invalid,
+            // count_label and grain_cooked — a repoint fixes identity, not
+            // per-piece/cooked serving shape.
+            if (earlyEscapeReason
+                && isHumanTrustSkippableEscape(earlyEscapeReason)
+                && isTrustedHumanRow(earlyCacheHit.validatedBy)) {
+                logger.info('cache.human_row_trusted', {
+                    key: normalizedName,
+                    foodId: earlyCacheHit.foodId,
+                    skippedRejection: 'early:' + earlyEscapeReason,
+                });
+                earlyEscapeReason = null;
+            }
+
+            if (earlyEscapeReason) {
                 logger.warn('mapping.early_cache_filter_mismatch', {
                     rawLine: trimmed,
                     cachedFood: earlyCacheHit.foodName,
@@ -725,12 +931,7 @@ export async function mapIngredientWithFallback(
                     grainCookedEscape: earlyGrainCookedEscape,
                 });
                 if (telemetry) {
-                    telemetry.cacheEscape = 'early:' + (
-                        earlyCoreTokenMismatch ? 'core_token_mismatch'
-                        : earlyNutritionInvalid ? 'nutrition_invalid'
-                        : earlyCountLabelEscape ? 'count_label'
-                        : earlyGrainCookedEscape ? 'grain_cooked'
-                        : 'filter_mismatch');
+                    telemetry.cacheEscape = 'early:' + earlyEscapeReason;
                 }
                 // Fall through to normal search - don't use stale cached mapping
             } else {
@@ -950,7 +1151,9 @@ export async function mapIngredientWithFallback(
             // skipCache must gate this layer too — without it a "cold" (nocache)
             // run would still serve cached rows via step 1c and parity runs
             // against the cache would be meaningless.
-            const normalizedCache = skipCache ? null : await getValidatedMappingByNormalizedName(normalizedName, 'fatsecret', trimmed);
+            // PR D pt3 (C1): same derived key as the early lookup — recomputed
+            // here because AI normalize may have replaced normalizedName.
+            const normalizedCache = skipCache ? null : await getValidatedMappingByNormalizedName(deriveCacheKeyName(normalizedName, parsed), 'fatsecret', trimmed);
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
                 const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
@@ -1040,32 +1243,54 @@ export async function mapIngredientWithFallback(
                 const normalizedGrainCookedEscape = detectGrainCookingContext(trimmed, normalizedName).softCooked === true
                     && !normalizedCachedLooksCooked;
 
-                if (normalizedCoreTokenMismatch ||
-                    normalizedNutritionInvalid ||
-                    normalizedCountLabelEscape ||
-                    normalizedGrainCookedEscape ||
-                    isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ||
-                    isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ||
+                // Escape reason doubles as the telemetry label (PR D pt3 split
+                // the former catch-all 'filter_mismatch' into per-condition
+                // labels). Same predicates, same order as the former || chain.
+                let normalizedEscapeReason =
+                    normalizedCoreTokenMismatch ? 'core_token_mismatch'
+                    : normalizedNutritionInvalid ? 'nutrition_invalid'
+                    : normalizedCountLabelEscape ? 'count_label'
+                    : normalizedGrainCookedEscape ? 'grain_cooked'
+                    : isCategoryMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName) ? 'category_mismatch'
+                    : isMultiIngredientMismatch(normalizedName, normalizedCache.foodName) ? 'multi_ingredient'
                     // For branded queries: skip modifier mismatch when the cached food's brand
                     // matches the detected brand (e.g. "Oikos" query → "Oikos Triple Zero Vanilla Nonfat"
                     // should not be rejected just because "nonfat" is in the food name but not the query).
-                    (!isBrandedQuery || !(
+                    : ((!isBrandedQuery || !(
                         normalizedCache.brandName &&
                         brandDetection.matchedBrand &&
                         normalizedCache.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
                     )
                         ? hasCriticalModifierMismatch(trimmed, normalizedCache.foodName, 'cache')
                         : false
-                    ) ||
-                    isReplacementMismatch(trimmed, normalizedCache.foodName, normalizedCache.brandName) ||
+                    )) ? 'modifier_mismatch'
+                    : isReplacementMismatch(trimmed, normalizedCache.foodName, normalizedCache.brandName) ? 'replacement_mismatch'
                     // For branded queries with a known target brand: reject cached results from a
                     // DIFFERENT brand. e.g. "Heinz Tomato Ketchup" query must not serve a cached
                     // "TOMATO KETCHUP (WEIS)" result — force a fresh pipeline run to find Heinz.
-                    (isBrandedQuery &&
+                    : (isBrandedQuery &&
                         brandDetection.matchedBrand != null &&
                         normalizedCache.brandName != null &&
                         !normalizedCache.brandName.toLowerCase().includes(brandDetection.matchedBrand.toLowerCase())
-                    )) {
+                    ) ? 'brand_guard'
+                    : null;
+
+                // Read-time trust (PR D pt3, HUMAN_ROW_TRUST) — same rationale
+                // as the early-cache block: name-heuristic escapes skipped for
+                // human-triage rows; core-token, nutrition-invalid and
+                // serving-shape escapes stay active for all rows.
+                if (normalizedEscapeReason
+                    && isHumanTrustSkippableEscape(normalizedEscapeReason)
+                    && isTrustedHumanRow(normalizedCache.validatedBy)) {
+                    logger.info('cache.human_row_trusted', {
+                        key: normalizedName,
+                        foodId: normalizedCache.foodId,
+                        skippedRejection: 'normalized:' + normalizedEscapeReason,
+                    });
+                    normalizedEscapeReason = null;
+                }
+
+                if (normalizedEscapeReason) {
                     logger.warn('mapping.normalized_cache_filter_mismatch', {
                         rawLine: trimmed,
                         cachedFood: normalizedCache.foodName,
@@ -1074,12 +1299,7 @@ export async function mapIngredientWithFallback(
                         nutritionInvalid: normalizedNutritionInvalid,
                     });
                     if (telemetry) {
-                        telemetry.cacheEscape = 'normalized:' + (
-                            normalizedCoreTokenMismatch ? 'core_token_mismatch'
-                            : normalizedNutritionInvalid ? 'nutrition_invalid'
-                            : normalizedCountLabelEscape ? 'count_label'
-                            : normalizedGrainCookedEscape ? 'grain_cooked'
-                            : 'filter_mismatch');
+                        telemetry.cacheEscape = 'normalized:' + normalizedEscapeReason;
                     }
                 } else {
                     winner = {
@@ -1238,6 +1458,10 @@ export async function mapIngredientWithFallback(
                     filtered = plausibleCandidates;
                 }
 
+                // Step 3e (PR D pt3): drop triage-confirmed corrupt OFF
+                // records (all-drop restore inside the helper).
+                filtered = dropDenylistedCandidates(filtered, trimmed);
+
                 if (filtered.length === 0) {
                     // Retry with relaxed filtering before giving up
                     const relaxedFilterResult = filterCandidatesByTokens(
@@ -1270,57 +1494,17 @@ export async function mapIngredientWithFallback(
                     const BASIC_PRODUCE = ['potato', 'potatoes', 'lentil', 'lentils', 'beans', 'chickpea', 'chickpeas', 'spinach', 'broccoli', 'carrot', 'carrots'];
                     const isBasicProduce = BASIC_PRODUCE.some(p => normalizedName.toLowerCase().includes(p));
 
-
-                    const sortedFiltered = [...filtered].sort((a, b) => {
-                        // Primary: sort by score descending
-                        const scoreDiff = b.score - a.score;
-                        if (Math.abs(scoreDiff) > 0.001) return scoreDiff;
-
-                        // Tiebreaker for basic produce: prefer FDC (USDA data) over FatSecret
-                        // BUT only if FDC candidate name EXACTLY matches the ingredient (not "potato bread")
-                        if (isBasicProduce) {
-                            const aNameLower = a.name.toLowerCase();
-                            const bNameLower = b.name.toLowerCase();
-                            const ingredientLower = normalizedName.toLowerCase();
-
-                            // Helper to singularize words (handles -oes → -o, -es → empty, -s → empty)
-                            const singularize = (word: string): string => {
-                                if (word.endsWith('oes')) return word.slice(0, -2);  // potatoes → potato
-                                if (word.endsWith('es')) return word.slice(0, -2);   // tomatoes → tomato (also handles -ches, etc.)
-                                if (word.endsWith('s')) return word.slice(0, -1);    // carrots → carrot
-                                return word;
-                            };
-                            // Helper to pluralize words (handles -o → -oes, others → -s)
-                            const pluralize = (word: string): string => {
-                                if (word.endsWith('o')) return word + 'es';  // potato → potatoes
-                                return word + 's';
-                            };
-
-                            const ingredientSingular = singularize(ingredientLower);
-                            const ingredientPlural = pluralize(ingredientSingular);
-                            const aNameSingular = singularize(aNameLower);
-                            const bNameSingular = singularize(bNameLower);
-
-                            // Check for EXACT match (considering singular/plural variants)
-                            // e.g., "potato" matches "potatoes", "potatoes" matches "potato"
-                            const aIsExactMatch = aNameLower === ingredientLower ||
-                                aNameLower === ingredientSingular ||
-                                aNameLower === ingredientPlural ||
-                                aNameSingular === ingredientLower ||
-                                aNameSingular === ingredientSingular;
-                            const bIsExactMatch = bNameLower === ingredientLower ||
-                                bNameLower === ingredientSingular ||
-                                bNameLower === ingredientPlural ||
-                                bNameSingular === ingredientLower ||
-                                bNameSingular === ingredientSingular;
-
-                            // Prefer FDC only when it's an exact name match
-                            if (aIsExactMatch && a.source === 'fdc' && (!bIsExactMatch || b.source !== 'fdc')) return -1;
-                            if (bIsExactMatch && b.source === 'fdc' && (!aIsExactMatch || a.source !== 'fdc')) return 1;
-                        }
-
-                        return 0;
-                    });
+                    // PR D pt3 (Lever B, finding 1): floor-hit candidates sort
+                    // strictly below plausible ones — computed HERE (not at the
+                    // step-3d block) so relaxed-recovery candidates are covered
+                    // too, and applied inside THIS sort because it rebuilds
+                    // ordering from scratch right before confidenceGate
+                    // consumes it (a partition of `filtered` upstream would be
+                    // destroyed by the score sort and never reach the bypass).
+                    const floorHitIds = computeFloorHitIds(normalizedName, filtered);
+                    const sortedFiltered = [...filtered].sort(
+                        makeSortedFilteredComparator(normalizedName, isBasicProduce, floorHitIds)
+                    );
 
                     const gateResult = confidenceGate(searchQuery, sortedFiltered, trimmed);
 
@@ -1941,21 +2125,8 @@ export async function mapIngredientWithFallback(
                 .filter(c => c.id !== winner.id)
                 .slice(0, 3);
 
-            for (const fallback of fallbackCandidates) {
-                // CRITICAL: Validate semantic relevance before accepting fallback
-                // This prevents "golden flaxseed meal" → "Golden Delicious Apples" syndrome
-                // where the fallback is selected just because it has the right serving, 
-                // despite being semantically unrelated to the query
-                if (hasCoreTokenMismatch(normalizedName, fallback.name, fallback.brandName)) {
-                    logger.debug('mapping.fallback_rejected_token_mismatch', {
-                        query: normalizedName,
-                        fallbackName: fallback.name,
-                        fallbackBrand: fallback.brandName,
-                    });
-                    continue; // Skip this fallback, try next one
-                }
-
-
+            const failedWinnerId = winner.id;
+            const tryFallbackCandidate = async (fallback: UnifiedCandidate): Promise<boolean> => {
                 let fallbackResult = await hydrateAndSelectServing(
                     fallback, parsed, confidence * 0.95, rawLine
                 );
@@ -1996,13 +2167,60 @@ export async function mapIngredientWithFallback(
 
                 if (fallbackResult) {
                     logger.info('mapping.fallback_success', {
-                        originalId: winner.id,
+                        originalId: failedWinnerId,
                         fallbackId: fallback.id,
                         fallbackName: fallback.name,
                     });
                     result = fallbackResult;
                     selectionReason = 'fallback_after_serving_failure';
-                    break;
+                    return true;
+                }
+                return false;
+            };
+
+            // PR D pt3 (B4): floor-hit fallbacks are set aside and only tried
+            // as a last resort; denylisted records are never accepted.
+            const floorRejectedFallbacks: UnifiedCandidate[] = [];
+
+            for (const fallback of fallbackCandidates) {
+                // CRITICAL: Validate semantic relevance before accepting fallback
+                // This prevents "golden flaxseed meal" → "Golden Delicious Apples" syndrome
+                // where the fallback is selected just because it has the right serving,
+                // despite being semantically unrelated to the query
+                if (hasCoreTokenMismatch(normalizedName, fallback.name, fallback.brandName)) {
+                    logger.debug('mapping.fallback_rejected_token_mismatch', {
+                        query: normalizedName,
+                        fallbackName: fallback.name,
+                        fallbackBrand: fallback.brandName,
+                    });
+                    continue; // Skip this fallback, try next one
+                }
+                if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(fallback.id)) {
+                    logger.warn('mapping.denylisted_candidate_dropped', {
+                        rawLine: trimmed,
+                        candidate: fallback.name,
+                        foodId: fallback.id,
+                    });
+                    continue;
+                }
+                if (candidateHitsPlausibilityFloor(normalizedName, fallback)) {
+                    logger.debug('mapping.fallback_rejected_plausibility_floor', {
+                        query: normalizedName,
+                        fallbackName: fallback.name,
+                    });
+                    floorRejectedFallbacks.push(fallback);
+                    continue;
+                }
+
+                if (await tryFallbackCandidate(fallback)) break;
+            }
+
+            // Last resort: every acceptable fallback was floor-hit — a
+            // floor-hit record still beats returning nothing (floors demote,
+            // never drop).
+            if (!result) {
+                for (const fallback of floorRejectedFallbacks) {
+                    if (await tryFallbackCandidate(fallback)) break;
                 }
             }
         }
@@ -2051,18 +2269,45 @@ export async function mapIngredientWithFallback(
                     rerankCand => searchFilterResult.filtered.find(c => c.id === rerankCand.id)!
                 ).filter(Boolean);
 
-                // Try each candidate until one works
-                for (const candidate of sortedFallbackCandidates.slice(0, 5)) {
+                // Try each candidate until one works — denylisted records are
+                // never accepted; floor-hit ones only as a last resort (PR D pt3 B4).
+                const failedCacheWinnerId = winner.id;
+                const tryCacheFallbackCandidate = async (candidate: UnifiedCandidate): Promise<boolean> => {
                     const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine);
-                    if (retryResult) {
-                        logger.info('mapping.cache_fallback_search_success', {
-                            originalId: winner.id,
-                            fallbackId: candidate.id,
+                    if (!retryResult) return false;
+                    logger.info('mapping.cache_fallback_search_success', {
+                        originalId: failedCacheWinnerId,
+                        fallbackId: candidate.id,
+                        fallbackName: candidate.name,
+                    });
+                    result = retryResult;
+                    selectionReason = 'fallback_search_after_cache_failure';
+                    return true;
+                };
+
+                const floorRejectedRetries: UnifiedCandidate[] = [];
+                for (const candidate of sortedFallbackCandidates.slice(0, 5)) {
+                    if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(candidate.id)) {
+                        logger.warn('mapping.denylisted_candidate_dropped', {
+                            rawLine: trimmed,
+                            candidate: candidate.name,
+                            foodId: candidate.id,
+                        });
+                        continue;
+                    }
+                    if (candidateHitsPlausibilityFloor(normalizedName, candidate)) {
+                        logger.debug('mapping.fallback_rejected_plausibility_floor', {
+                            query: normalizedName,
                             fallbackName: candidate.name,
                         });
-                        result = retryResult;
-                        selectionReason = 'fallback_search_after_cache_failure';
-                        break;
+                        floorRejectedRetries.push(candidate);
+                        continue;
+                    }
+                    if (await tryCacheFallbackCandidate(candidate)) break;
+                }
+                if (!result) {
+                    for (const candidate of floorRejectedRetries) {
+                        if (await tryCacheFallbackCandidate(candidate)) break;
                     }
                 }
             }
@@ -2198,12 +2443,23 @@ export async function mapIngredientWithFallback(
         }
 
         // Step 6: Save to validated cache if high confidence
-        if (confidence >= 0.85) {
+        if (confidence >= 0.85 && selectionReason === 'normalized_cache_hit') {
+            // PR D pt3 (B6): a cache hit must NOT re-save itself — the resave
+            // is what let the escape→overwrite loop churn rows. Mirrors the
+            // early-cache path, which returns before ever reaching Step 6.
+            logger.debug('mapping.cache_hit_resave_skipped', {
+                rawLine: trimmed,
+                normalizedName,
+                foodId: result.foodId,
+            });
+        } else if (confidence >= 0.85) {
             // Use normalizedName (preserves nutritional modifiers like "powdered", "reduced fat")
             // instead of canonicalBase (which collapses variants to a shared base).
             // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
             // caused 73+ subsequent "peanut butter" queries to return powdered PB.
-            let cacheKey = normalizedName;
+            // PR D pt3 (C1): the key adds the parser's identity discriminators —
+            // the SAME function of (normalizedName, parsed) as both cache lookups.
+            let cacheKey = deriveCacheKeyName(normalizedName, parsed);
 
             // Brand-Prefixed normalizedForm (Option A)
             // If the query is branded and we have a targetBrand, prefix the cache key
@@ -4024,7 +4280,8 @@ async function borrowSiblingPackageGrams(
     }
 }
 
-async function buildOffResult(
+// Exported for tests (tier cascade + bare-query guard wire-in).
+export async function buildOffResult(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
     confidence: number,
@@ -4208,6 +4465,28 @@ async function buildOffResult(
         // Unitless integer count ("3 baby carrots", "13 tortilla chips").
         const itemNameForCount = parsed.name || hydrated.foodName;
 
+        // Bare-plural inversion (PR D pt3, A3): a digitless qty-1 plural
+        // ("almonds", "goldfish") asks for A SERVING, not one piece —
+        // per-piece resolution ((A) label count, (B) seed table, (C) discrete
+        // unit backfill) would bill one almond (1.2g) or one grape (5g), so
+        // all three are suppressed below. (D) package-count stays reachable:
+        // the bare-query guard's CAP fixes its inflation. When the label
+        // serving is a sane single-serving size, use it directly; otherwise
+        // fall through to the label/floor defaults, where the bare-query
+        // guard applies the category default.
+        const barePluralRequest = isBarePluralRequest(parsed, rawLine, itemNameForCount);
+        if (barePluralRequest && hydrated.servingGrams
+            && hydrated.servingGrams >= 10 && hydrated.servingGrams <= 150) {
+            grams = hydrated.servingGrams;
+            servingDescription = `1 serving (${hydrated.servingGrams}g)`;
+            servingTier = 'bare_plural_serving';
+            logger.info('off.build_result.bare_plural_serving', {
+                foodId: candidate.id,
+                name: itemNameForCount,
+                servingGrams: hydrated.servingGrams,
+            });
+        }
+
         // (A) PRODUCT'S OWN LABEL COUNT — most authoritative. If the matched SKU's
         // label enumerates pieces ("14 chips (28g)", or the generic "15 pieces
         // (28g)" phrasing) and that piece is what the user is counting, derive
@@ -4224,6 +4503,7 @@ async function buildOffResult(
             genericPieceNoun != null
         );
         if (
+            !barePluralRequest &&
             perLabelUnitGrams != null && perLabelUnitGrams >= 0.2 && perLabelUnitGrams <= 500 &&
             labelCountsUserPiece
         ) {
@@ -4242,7 +4522,7 @@ async function buildOffResult(
         // (B) GENERIC SEED TABLE — curated per-piece for common discrete items with
         // no usable label count (label serving for baby carrots is a ~100g portion,
         // not 1 carrot).
-        if (grams == null) {
+        if (grams == null && !barePluralRequest) {
             try {
                 const { getDefaultCountServing } = await import('../servings/default-count-grams');
                 const countDefault = getDefaultCountServing(itemNameForCount, 'each');
@@ -4265,7 +4545,7 @@ async function buildOffResult(
         // product names a discrete packaged item (a protein "bar", "cookie"...),
         // estimate that unit's weight via sibling-borrow / AI instead of the flat
         // 100g default (a 60g Quest bar must not log as 100g).
-        if (grams == null && (!hydrated.servingGrams || hydrated.servingGrams <= 0)) {
+        if (grams == null && !barePluralRequest && (!hydrated.servingGrams || hydrated.servingGrams <= 0)) {
             const discreteUnit = inferDiscreteUnit(parsed.name || hydrated.foodName);
             if (discreteUnit) {
                 const amb = await getOrCreateAmbiguousServing(
@@ -4346,6 +4626,30 @@ async function buildOffResult(
             servingDescription = `${grams.toFixed(1)}g`;
             servingTier = 'flat_100g_default';
         }
+    }
+
+    // Bare-query serving guard (PR D pt3, Lever A): a bare unitless qty-1
+    // request that the cascade above billed at package scale or a fabricated
+    // floor is overridden to the category default. Runs AFTER the whole tier
+    // cascade (no branch above changes); null keeps the cascade's result.
+    const bareOverride = applyOffBareQueryGuard({
+        grams,
+        servingTier,
+        parsed,
+        rawLine,
+        queryName: parsed?.name || '',
+        foodName: hydrated.foodName,
+    });
+    if (bareOverride) {
+        logger.info('off.build_result.bare_category_default', {
+            foodId: candidate.id,
+            previousTier: servingTier,
+            previousGrams: grams,
+            grams: bareOverride.grams,
+        });
+        grams = bareOverride.grams;
+        servingDescription = bareOverride.servingDescription;
+        servingTier = bareOverride.servingTier;
     }
 
     const factor = grams / 100;

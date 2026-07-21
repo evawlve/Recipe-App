@@ -244,6 +244,38 @@ describe('normalizeIngredientName', () => {
     });
 
     // ======================================================================
+    // PROTECTED "WHOLE" PHRASES (PR D pt3, Lever C — C3)
+    // "whole" is identity for milk/wheat/grain, prep everywhere else
+    // ======================================================================
+    describe('protected "whole" product phrases', () => {
+        it('preserves "whole" in "whole milk"', () => {
+            const result = normalizeIngredientName('whole milk');
+            expect(result.cleaned.toLowerCase()).toContain('whole');
+            expect(result.cleaned.toLowerCase()).toContain('milk');
+        });
+
+        it('preserves "whole wheat" in "whole wheat bread"', () => {
+            const result = normalizeIngredientName('whole wheat bread');
+            expect(result.cleaned.toLowerCase()).toContain('whole wheat');
+        });
+
+        it('preserves "whole grain" in "whole grain oats"', () => {
+            const result = normalizeIngredientName('whole grain oats');
+            expect(result.cleaned.toLowerCase()).toContain('whole grain');
+        });
+
+        it('still strips "whole" from "whole chicken" (prep, not identity)', () => {
+            const result = normalizeIngredientName('whole chicken');
+            expect(result.cleaned.toLowerCase()).toBe('chicken');
+        });
+
+        it('still strips "whole" from "whole almonds" (prep, not identity)', () => {
+            const result = normalizeIngredientName('whole almonds');
+            expect(result.cleaned.toLowerCase()).toBe('almonds');
+        });
+    });
+
+    // ======================================================================
     // SYNONYM REWRITES
     // ======================================================================
     describe('synonym rewrites', () => {

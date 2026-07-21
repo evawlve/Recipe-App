@@ -129,11 +129,17 @@ const PROTEIN_EXEMPT_PATTERN =
  * Lean animal-muscle cuts queried by name: cooked protein reliably >25g/100g,
  * raw >20g. A "chicken breast" candidate at 14.6g protein is a deli/roll/luncheon
  * product, not the muscle cut, and should be demoted. Deliberately scoped to
- * poultry breast/thigh + specific red-meat cuts — NOT generic "chicken"/"fish"/
- * bare "filet" (cod/haddock fillets legitimately sit near the floor).
+ * poultry breast/thigh + specific red-meat cuts + named lean fish/seafood —
+ * NOT generic "chicken"/"fish"/bare "filet".
+ *
+ * Fish/seafood extension (PR D pt3): a "tuna" candidate at 5.66g protein/100g
+ * is a sauced/blended product panel, not the fish (triage 2026-07-20, barcode
+ * 0859710005238). The floor is FLOOR-GRADE (sort-below / save-block), never a
+ * drop — a battered or fried record merely ranks below plausible ones, so
+ * near-floor raw records (haddock ~16g) are demoted, not lost.
  */
 const LEAN_PROTEIN_CUT_PATTERN =
-    /\b(chicken breast|chicken thigh|turkey breast|pork chop|pork loin|pork tenderloin|beef tenderloin|sirloin|ribeye)\b/i;
+    /\b(chicken breast|chicken thigh|turkey breast|pork chop|pork loin|pork tenderloin|beef tenderloin|sirloin|ribeye|tuna|salmon|cod|tilapia|halibut|haddock|mahi[\s-]?mahi|shrimp|prawns?)\b/i;
 /** g protein/100g floor: below raw breast (~22) and cooked (~31), above deli rolls (~14-16). */
 const LEAN_CUT_PROTEIN_FLOOR = 18;
 
@@ -306,10 +312,13 @@ const SAVE_GATE_PROTEIN_OVERSHOOT_SLACK_G = 5;
 // Protein undershoot only fires when the food is expected to be protein-dense.
 const SAVE_GATE_PROTEIN_UNDER_MIN_EXPECTED_G = 10;
 
-// ---- Deterministic save-time floors (no estimate needed) ----
+// ---- Deterministic floors (no estimate needed) ----
 // Simple staple queries usually skip the LLM normalize step, so the estimate
 // cross-check has no anchor for exactly the foods the 2026-07-20 sweep
 // corrupted. These floors are query-driven and deliberately tight in scope.
+// SINGLE SOURCE OF TRUTH: consumed by BOTH assessSaveTimePlausibility and
+// assessRankTimePlausibility via collectDeterministicFloorReasons (PR #109
+// precedent — never duplicate a floor inline).
 
 // Whole-query concentrated sweeteners: pure sugar/honey/syrup is never under
 // ~250 kcal/100g (sucrose 387, honey 304, maple syrup 260). Anchored to the
@@ -335,32 +344,26 @@ const LEGUME_EXEMPT_PATTERN = /\b(soup|broth|stock|sprouts?|juice|water)\b/i;
 const LEGUME_MIN_KCAL = 50;
 
 /**
- * Decide whether a resolved mapping is clean enough to WRITE to the
- * FoodMapping cache. Stricter than ranking on purpose: a rejected save only
- * costs a re-resolution on the next request, while a bad cached row poisons
- * every request until the next parity sweep. So ANY fired check — including
- * the soft (penalty-only) ranking checks — blocks the write, and when the AI
- * nutrition estimate is trustworthy the pick is also cross-checked against it
- * (the 2026-07-20 sweep wrote "granulated sugar" 16 kcal/100g, "grape" 5,
- * "lentil" 20.9, "blueberry" 8.7 g protein — all internally consistent enough
- * to pass the general bounds/Atwater checks).
+ * Deterministic query-driven floors — the shared implementation behind both
+ * the save-time gate and the rank-time assessment. Returns `floor:*` reasons.
+ *
+ * NOTE: WHOLE_QUERY_SWEETENER_PATTERN is anchored to the FULL query and is
+ * word-order-sensitive ("granulated sugar" matches, "sugar granulated" does
+ * not) — callers must pass the normalized query name with original word order
+ * preserved (normalizedName), never a canonicalized/token-sorted cache key.
  */
-export function assessSaveTimePlausibility(
+function collectDeterministicFloorReasons(
     queryName: string,
     foodName: string,
-    nutrientsPer100g?: MacroPlausibilityInput | null,
-    expected?: ExpectedNutritionPer100g | null
-): { save: boolean; reasons: string[] } {
-    const base = assessMacroPlausibility(queryName, foodName, nutrientsPer100g);
-    const reasons = [...base.reasons];
+    nutrientsPer100g?: MacroPlausibilityInput | null
+): string[] {
+    const reasons: string[] = [];
 
     const kcal = nutrientsPer100g?.kcal ?? nutrientsPer100g?.calories ?? null;
     const protein = nutrientsPer100g?.protein ?? null;
     const query = (queryName || '').toLowerCase();
     const combinedNames = `${query} ${(foodName || '').toLowerCase()}`;
 
-    // Deterministic floors — these run with or without an AI estimate, because
-    // the simple staple queries they protect rarely have one.
     if (WHOLE_QUERY_SWEETENER_PATTERN.test(query.trim())) {
         if (kcal != null && kcal < SWEETENER_MIN_KCAL) {
             reasons.push(`floor:sweetener_kcal_${round1(kcal)}_below_${SWEETENER_MIN_KCAL}`);
@@ -384,6 +387,37 @@ export function assessSaveTimePlausibility(
     ) {
         reasons.push(`floor:legume_kcal_${round1(kcal)}_below_${LEGUME_MIN_KCAL}`);
     }
+
+    return reasons;
+}
+
+/**
+ * Decide whether a resolved mapping is clean enough to WRITE to the
+ * FoodMapping cache. Stricter than ranking on purpose: a rejected save only
+ * costs a re-resolution on the next request, while a bad cached row poisons
+ * every request until the next parity sweep. So ANY fired check — including
+ * the soft (penalty-only) ranking checks — blocks the write, and when the AI
+ * nutrition estimate is trustworthy the pick is also cross-checked against it
+ * (the 2026-07-20 sweep wrote "granulated sugar" 16 kcal/100g, "grape" 5,
+ * "lentil" 20.9, "blueberry" 8.7 g protein — all internally consistent enough
+ * to pass the general bounds/Atwater checks).
+ */
+export function assessSaveTimePlausibility(
+    queryName: string,
+    foodName: string,
+    nutrientsPer100g?: MacroPlausibilityInput | null,
+    expected?: ExpectedNutritionPer100g | null
+): { save: boolean; reasons: string[] } {
+    const base = assessMacroPlausibility(queryName, foodName, nutrientsPer100g);
+    const reasons = [...base.reasons];
+
+    const kcal = nutrientsPer100g?.kcal ?? nutrientsPer100g?.calories ?? null;
+    const protein = nutrientsPer100g?.protein ?? null;
+
+    // Deterministic floors — these run with or without an AI estimate, because
+    // the simple staple queries they protect rarely have one. Shared with
+    // assessRankTimePlausibility (single source of truth).
+    reasons.push(...collectDeterministicFloorReasons(queryName, foodName, nutrientsPer100g));
 
     if (expected != null && expected.confidence >= SAVE_GATE_ESTIMATE_MIN_CONFIDENCE) {
         const expKcal = expected.caloriesPer100g ?? null;
@@ -412,6 +446,80 @@ export function assessSaveTimePlausibility(
     }
 
     return { save: reasons.length === 0, reasons };
+}
+
+// ============================================================
+// Rank-time assessment (PR D pt3)
+// ============================================================
+
+export interface RankTimePlausibilityResult {
+    /**
+     * Physically impossible bounds violation (same semantics as
+     * MacroPlausibilityResult.impossible) — the only verdict that warrants a
+     * hard drop. When true, floorHit/softPenalty are not evaluated.
+     */
+    impossible: boolean;
+    /**
+     * Floor-grade failure: the candidate should be STABLE-PARTITIONED / sorted
+     * strictly below non-floor candidates — never dropped (a floor-hit record
+     * still surfaces when nothing better exists). Fired by:
+     *   - deterministic floors (sweetener kcal<250, produce kcal<12 /
+     *     protein>6, legume kcal<50)
+     *   - produce kcal>150 (category:fresh_produce_kcal_*)
+     *   - lean-cut protein<18 (category:lean_cut_protein_below_floor)
+     *   - protein food with zero protein (category:protein_food_with_zero_protein)
+     */
+    floorHit: boolean;
+    /**
+     * Soft (Atwater-only) failure: keep the existing IMPLAUSIBLE_MACRO_PENALTY
+     * score multiply — never floor-grade.
+     */
+    softPenalty: boolean;
+    /** Machine-readable reasons for every check that fired. */
+    reasons: string[];
+}
+
+/**
+ * assessMacroPlausibility reasons that are floor-grade at rank time. Atwater
+ * high/low deliberately stay soft (data-noise-prone; a soft ×0.3 is enough).
+ */
+const FLOOR_GRADE_CATEGORY_PREFIXES = [
+    'category:fresh_produce_kcal_',
+    'category:protein_food_with_zero_protein',
+    'category:lean_cut_protein_below_floor',
+];
+
+/**
+ * Rank-time plausibility: composes assessMacroPlausibility with the SAME
+ * deterministic floors as the save-time gate (collectDeterministicFloorReasons
+ * — single source of truth), classifying every fired reason as impossible /
+ * floor-grade / soft so ranking can stable-partition instead of dropping.
+ *
+ * INPUT EXPECTATION: `queryName` must be the normalized query with original
+ * word order preserved (normalizedName). WHOLE_QUERY_SWEETENER_PATTERN is
+ * anchored to the full query and word-order-sensitive — "granulated sugar"
+ * matches, a token-sorted cache key like "sugar granulated" silently does not.
+ */
+export function assessRankTimePlausibility(
+    queryName: string,
+    candidateName: string,
+    macrosPer100g?: MacroPlausibilityInput | null
+): RankTimePlausibilityResult {
+    const base = assessMacroPlausibility(queryName, candidateName, macrosPer100g);
+
+    if (base.impossible) {
+        return { impossible: true, floorHit: false, softPenalty: false, reasons: base.reasons };
+    }
+
+    const floorReasons = collectDeterministicFloorReasons(queryName, candidateName, macrosPer100g);
+    const reasons = [...base.reasons, ...floorReasons];
+
+    const floorHit =
+        floorReasons.length > 0 ||
+        base.reasons.some((r) => FLOOR_GRADE_CATEGORY_PREFIXES.some((p) => r.startsWith(p)));
+    const softPenalty = reasons.some((r) => r.startsWith('atwater:'));
+
+    return { impossible: false, floorHit, softPenalty, reasons };
 }
 
 function round1(n: number): number {

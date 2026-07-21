@@ -512,7 +512,12 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Extract unit hint (e.g., "egg yolks" -> unitHint: "yolk", name: "egg")
   // This should happen after qualifier extraction
-  const hintResult = extractUnitHint(remainingTokens);
+  // Pass the parsed unit as context: in "3 egg whites", "egg" was consumed as
+  // a count unit above, so the egg-scoped 'white' gate needs it as context.
+  const hintResult = extractUnitHint(
+    remainingTokens,
+    [unit, rawUnit].filter((t): t is string => typeof t === 'string' && t.length > 0)
+  );
   const unitHint = hintResult.unitHint;
   let finalRemainingTokens = hintResult.coreName.split(/\s+/).filter(t => t.length > 0);
 
