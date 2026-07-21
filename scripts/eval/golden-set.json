@@ -4469,6 +4469,347 @@
       "notes": "COUNT-LABELED SKU RETRIEVAL + RERANK (Cluster A pt2 lever, 2026-07-19). The generic 'tortilla chips' candidate pool has NO count-labeled SKUs by plain name relevance, so gatherCandidates runs a secondary Typesense query filtered to hasCountServing:=true (33.6k flagged docs), the rerank COUNT_LABEL_BOOST prefers a count-labeled SKU among near-ties, and buildOffResult derives per-piece from ITS label (verified live: 'Tortilla Chips' 16 chips (45g) -> 2.81g/chip -> 36.6g). Range [28,70] deliberately EXCLUDES the 2g/chip generic seed answer (26g): this case fails if the retrieval/rerank lever regresses to seed. Also exercises the counted-piece FoodMapping cache escape (label-less cached winner is bypassed once, count-labeled winner is written back). Hard assertion."
     },
     {
+      "id": "n-serv-36",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "olive oil",
+        "quantity": 1,
+        "name": "olive oil"
+      },
+      "expectName": [
+        [
+          "olive",
+          "oil"
+        ]
+      ],
+      "grams": [
+        10,
+        20
+      ],
+      "notes": "PR D pt3 class (a) — OFF bare-serving CAP (warm-2026-07-20: billed 250g, whole-bottle package tier). Bare unitless qty-1 'olive oil' must cap the package/label tier to the condiment default (~14g). Hard."
+    },
+    {
+      "id": "n-serv-37",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "sugar",
+        "quantity": 1,
+        "name": "sugar"
+      },
+      "expectName": [
+        [
+          "sugar"
+        ]
+      ],
+      "grams": [
+        3,
+        10
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving guard + new tsp-scale sweetener lexicon entry (warm-2026-07-20: billed 155g package tier). Bare 'sugar' must land ~4g (1 tsp), NOT the 120g flour-scale default it previously shared. Explicit-unit sugar cases (n-serv-14, n-dens-01) are unaffected by design. Hard."
+    },
+    {
+      "id": "n-serv-38",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "black pepper",
+        "quantity": 1,
+        "name": "black pepper"
+      },
+      "expectName": [
+        [
+          "pepper"
+        ]
+      ],
+      "grams": [
+        0.5,
+        5
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving CAP (warm-2026-07-20: billed 164g, whole grinder/package). A bare spice query must bill a pinch/tsp-scale amount (~2.5g), never the container. Hard."
+    },
+    {
+      "id": "n-serv-39",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "mayonnaise",
+        "quantity": 1,
+        "name": "mayonnaise"
+      },
+      "expectName": [
+        [
+          "mayo"
+        ]
+      ],
+      "grams": [
+        10,
+        20
+      ],
+      "total": {
+        "calories": [
+          60,
+          180
+        ]
+      },
+      "notes": "PR D pt3 class (a) — bare-serving REPLACE of fabricated flat_100g_default (warm-2026-07-20: billed 100g flat). Bare 'mayonnaise' must bill the condiment default (~14g); total.calories band also catches a wrong (e.g. light/corrupt) record billed at right grams. Hard."
+    },
+    {
+      "id": "n-serv-40",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "almonds",
+        "quantity": 1,
+        "name": "almonds"
+      },
+      "expectName": [
+        [
+          "almond"
+        ]
+      ],
+      "grams": [
+        20,
+        45
+      ],
+      "notes": "PR D pt3 class (a) — bare-PLURAL inversion (warm-2026-07-20: billed 1.2g = ONE almond; per-piece seed applied to a bare plural). Bare plural 'almonds' means a serving (~28g label), not a single piece. Counted '20 almonds' (n-serv-30) and singular piece paths must be unaffected. Hard."
+    },
+    {
+      "id": "n-serv-41",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "mission tortilla chips",
+        "quantity": 1,
+        "name": "mission tortilla chips"
+      },
+      "expectName": [
+        [
+          "tortilla"
+        ]
+      ],
+      "grams": [
+        20,
+        45
+      ],
+      "notes": "PR D pt3 class (a) — bare-PLURAL inversion, branded (warm-2026-07-20: billed 2.8g = ONE chip via per-piece label derivation). Bare plural 'mission tortilla chips' means a serving (~28g), not one chip. Counted '13 tortilla chips' (n-serv-35) keeps the per-piece path. Hard."
+    },
+    {
+      "id": "n-serv-42",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "doritos",
+        "quantity": 1,
+        "name": "doritos"
+      },
+      "expectName": [
+        [
+          "dorito"
+        ],
+        [
+          "tortilla",
+          "chip"
+        ]
+      ],
+      "grams": [
+        25,
+        50
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving CAP, brand-only query (warm-2026-07-20: billed 130g bag/package tier). Salty-snack lexicon default (~28g) caps the package tier; foodName fallback lets brand-only 'doritos' hit via '...Tortilla Chips'. Hard."
+    },
+    {
+      "id": "n-serv-43",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "ghost pre workout",
+        "quantity": 1,
+        "name": "ghost pre workout"
+      },
+      "expectName": [
+        [
+          "ghost"
+        ],
+        [
+          "pre",
+          "workout"
+        ]
+      ],
+      "grams": [
+        8,
+        25
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving CAP kills the fl-oz/ml package leak (warm-2026-07-20: billed 473.088g = 16 fl oz treated as grams). Pre-workout lexicon default (~12g scoop) caps it. Hard."
+    },
+    {
+      "id": "n-serv-44",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "orgain organic protein powder",
+        "quantity": 1,
+        "name": "orgain organic protein powder"
+      },
+      "expectName": [
+        [
+          "orgain"
+        ],
+        [
+          "protein"
+        ]
+      ],
+      "grams": [
+        30,
+        55
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving CAP (warm-2026-07-20: billed 325.3g, container package tier). Protein-powder scoop lexicon default (~35g) caps the tub. Explicit '1 scoop whey' (n-serv-32) already correct and untouched. Hard."
+    },
+    {
+      "id": "n-serv-45",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "bacon",
+        "quantity": 1,
+        "name": "bacon"
+      },
+      "expectName": [
+        [
+          "bacon"
+        ]
+      ],
+      "grams": [
+        10,
+        40
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving REPLACE of flat_100g_default (warm-2026-07-20: billed 100g flat). Cured/breakfast-meat lexicon default (~28g) replaces the fabricated flat-100 tier. Hard."
+    },
+    {
+      "id": "n-serv-46",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "coca cola",
+        "quantity": 1,
+        "name": "coca cola"
+      },
+      "expectName": [
+        [
+          "coca"
+        ],
+        [
+          "cola"
+        ],
+        [
+          "coke"
+        ]
+      ],
+      "grams": [
+        240,
+        500
+      ],
+      "total": {
+        "calories": [
+          90,
+          220
+        ]
+      },
+      "notes": "PR D pt3 class (a) — bare-serving REPLACE in the RAISE direction (warm-2026-07-20: billed 100g flat = under-billing a soda). Beverage-can lexicon default (~355g) replaces flat-100; total.calories band also catches a zero/diet record mismatched to regular coke. Hard."
+    },
+    {
+      "id": "n-serv-47",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "fish sauce",
+        "quantity": 1,
+        "name": "fish sauce"
+      },
+      "expectName": [
+        [
+          "fish",
+          "sauce"
+        ]
+      ],
+      "grams": [
+        10,
+        20
+      ],
+      "notes": "PR D pt3 class (a) — bare-serving CAP (warm-2026-07-20: billed 170g, whole bottle package tier). Condiment lexicon default (~14g) caps it. Hard."
+    },
+    {
+      "id": "n-serv-48",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "ketchup",
+        "quantity": 1,
+        "name": "ketchup"
+      },
+      "expectName": [
+        [
+          "ketchup"
+        ]
+      ],
+      "grams": [
+        12,
+        20
+      ],
+      "notes": "PR D pt3 REGRESSION GUARD (warm-2026-07-20: 15g CORRECT via genuine label serving). The CAP is ratio-gated (fires only when grams > 2x lexicon default = 28g), so a real 15g label must SURVIVE the new bare-serving guard untouched. Hard."
+    },
+    {
+      "id": "n-serv-49",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "honey",
+        "quantity": 1,
+        "name": "honey"
+      },
+      "expectName": [
+        [
+          "honey"
+        ]
+      ],
+      "grams": [
+        14,
+        30
+      ],
+      "notes": "PR D pt3 REGRESSION GUARD (warm-2026-07-20: 21g CORRECT). Honey deliberately has NO bare-query lexicon entry, so the guard must be a complete no-op (null default -> no CAP, no REPLACE). Guards lexicon-absence safety alongside chobani/rx-bar. Hard."
+    },
+    {
+      "id": "n-serv-50",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "peanut butter",
+        "quantity": 1,
+        "name": "peanut butter"
+      },
+      "expectName": [
+        [
+          "peanut",
+          "butter"
+        ]
+      ],
+      "grams": [
+        28,
+        36
+      ],
+      "notes": "PR D pt3 REGRESSION GUARD (warm-2026-07-20: 32g CORRECT label serving). The dedicated 'peanut butter' -> 32g lexicon entry (placed BEFORE the 14g condiment rule) keeps the CAP inert (32 <= 2x32); without it the condiment 14g default would wrongly cap 32 -> 14. Hard."
+    },
+    {
+      "id": "n-serv-51",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "ribeye",
+        "quantity": 1,
+        "name": "ribeye"
+      },
+      "expectName": [
+        [
+          "ribeye"
+        ],
+        [
+          "rib",
+          "eye"
+        ]
+      ],
+      "grams": [
+        150,
+        350
+      ],
+      "knownIssue": true,
+      "notes": "PR D pt3 class (a) KNOWN ISSUE — bare whole-meat-cut raise DEFERRED (warm-2026-07-20: billed 100g floor; a real ribeye portion is ~225g). Whole-meat cuts are deliberately ABSENT from the bare-query lexicon this PR (raise direction needs its own design). Promote when a steak-portion default ships."
+    },
+    {
       "id": "n-mq-01",
       "category": "match_quality",
       "text": "4oz real good chicken tenders",
@@ -4764,6 +5105,301 @@
       ],
       "knownIssue": true,
       "notes": "IDENTITY-HIJACK GUARD (PR D pt2, 2026-07-20). The parity sweep's cold re-resolution mapped 'protein ryse' to 'Protein Rice' (ryse fuzzy->rice). The save-time brand-mismatch gate now refuses to CACHE a cross-brand pick for a decisive brand query, but retrieval can still SERVE one when no Ryse SKU surfaces. Promote to hard once retrieval reliably surfaces Ryse protein SKUs."
+    },
+    {
+      "id": "n-mq-24",
+      "category": "match_quality",
+      "item": {
+        "rawText": "tuna",
+        "quantity": 1,
+        "name": "tuna"
+      },
+      "expectName": [
+        [
+          "tuna"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          20,
+          45
+        ]
+      },
+      "notes": "PR D pt3 class (b) — corrupt/wrong-record nutrition (warm-2026-07-20: winning tuna record had 5.66g protein/100g, barcode 0859710005238 denylisted). Rank-time plausibility (lean-protein floor) + denylist + repoint must surface a real tuna panel (>=20g protein/100g; canned ~25). Range upper bound 45 = generous one-sided '>=20'. Hard."
+    },
+    {
+      "id": "n-mq-25",
+      "category": "match_quality",
+      "item": {
+        "rawText": "greek yogurt",
+        "quantity": 1,
+        "name": "greek yogurt"
+      },
+      "expectName": [
+        [
+          "greek",
+          "yogurt"
+        ]
+      ],
+      "macros": {
+        "carbs100": [
+          0,
+          8
+        ]
+      },
+      "notes": "PR D pt3 class (b) — wrong-record nutrition (warm-2026-07-20 triage: dessert-style/corrupt record with implausible carbs won). Plain greek yogurt is <=8g carbs/100g (~3.6 typical); repoint + human-row write-guard keep the fixed pick from being overwritten by the escape->overwrite loop. Hard."
+    },
+    {
+      "id": "n-mq-26",
+      "category": "match_quality",
+      "item": {
+        "rawText": "jif",
+        "quantity": 1,
+        "name": "jif"
+      },
+      "expectName": [
+        [
+          "jif"
+        ],
+        [
+          "peanut",
+          "butter"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          20,
+          28
+        ],
+        "fat100": [
+          45,
+          70
+        ]
+      },
+      "notes": "PR D pt3 class (b) — corrupt per-serving-panel-as-per-100g record (warm-2026-07-20: jif barcode 0080000515568 denylisted). A real PB panel is ~22-25g protein AND >=45g fat per 100g; compound bound expressed as two macro ranges (fat upper 70 = generous one-sided '>=45'). Hard."
+    },
+    {
+      "id": "n-mq-27",
+      "category": "match_quality",
+      "item": {
+        "rawText": "lemon",
+        "quantity": 1,
+        "name": "lemon"
+      },
+      "expectName": [
+        [
+          "lemon"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          40
+        ]
+      },
+      "notes": "PR D pt3 class (b) — kJ-as-kcal corruption (warm-2026-07-20: lemon billed 383 kcal/100g = kJ value in the kcal field). Produce kcal floor partition + denylist must surface a plausible ~29 kcal record. PLAN CONTINGENCY: flip to knownIssue pre-merge if the first run shows no plausible lemon record in the corpus surfaces. Hard."
+    },
+    {
+      "id": "n-mq-28",
+      "category": "match_quality",
+      "item": {
+        "rawText": "onion",
+        "quantity": 1,
+        "name": "onion"
+      },
+      "expectName": [
+        [
+          "onion"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          120
+        ]
+      },
+      "notes": "PR D pt3 class (b) — kJ-as-kcal corruption (warm-2026-07-20: onion billed 289 kcal/100g = kJ-as-kcal; real onion ~40). Loose <=120 bound tolerates fried/dehydrated-adjacent records while still failing the kJ record. Same pre-merge knownIssue contingency as n-mq-27 if no plausible record surfaces. Hard."
+    },
+    {
+      "id": "n-mq-29",
+      "category": "match_quality",
+      "item": {
+        "rawText": "salt",
+        "quantity": 1,
+        "name": "salt"
+      },
+      "expectName": [
+        [
+          "salt"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          5
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (b) KNOWN ISSUE — ranking/corpus gap (2026-07-20 triage): a plausible ~0 kcal plain-salt record is not reliably retrieved for bare 'salt'; caloric seasoned/blend records win. Rank-time floors cannot fix retrieval absence. Promote when the ranking-gap/ingest work lands."
+    },
+    {
+      "id": "n-mq-30",
+      "category": "match_quality",
+      "item": {
+        "rawText": "bell pepper",
+        "quantity": 1,
+        "name": "bell pepper"
+      },
+      "expectName": [
+        [
+          "pepper"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          45
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (b) KNOWN ISSUE — pt2 repoint staged but pending: the fix row sits in repoints-2026-07-20-pt2.json under key 'capsicum' and lands with the post-deploy data-ops batch. Real bell pepper ~26-31 kcal/100g. Promote after the batch is applied and 2 stable runs."
+    },
+    {
+      "id": "n-mq-31",
+      "category": "match_quality",
+      "item": {
+        "rawText": "egg whites",
+        "quantity": 1,
+        "name": "egg whites"
+      },
+      "expectName": [
+        [
+          "egg",
+          "white"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          9,
+          20
+        ],
+        "fat100": [
+          0,
+          1
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity collapse (2026-07-20 triage: 'egg whites' served whole-egg macros via collapsed 'egg' cache key). Cache-key discriminator (unitHint 'white') + data-ops repoint (fdc_747997) give whites their own key; ~11g protein / ~0.2g fat per 100g. Compound bound = two macro ranges. Promote after the data-ops batch + 2 stable runs (n-serv-06 flap precedent)."
+    },
+    {
+      "id": "n-mq-32",
+      "category": "match_quality",
+      "item": {
+        "rawText": "egg yolk",
+        "quantity": 1,
+        "name": "egg yolk"
+      },
+      "expectName": [
+        [
+          "egg",
+          "yolk"
+        ]
+      ],
+      "macros": {
+        "fat100": [
+          20,
+          40
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity collapse sibling of n-mq-31 (yolk served whole-egg/white macros under the collapsed base key). Discriminated key (unitHint 'yolk') + data-ops repoint (fdc_748236); real yolk ~27g fat/100g (upper 40 = generous one-sided '>=20'). Promote after the data-ops batch + 2 stable runs."
+    },
+    {
+      "id": "n-mq-33",
+      "category": "match_quality",
+      "item": {
+        "rawText": "egg",
+        "quantity": 1,
+        "name": "egg"
+      },
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "macros": {
+        "fat100": [
+          8,
+          13
+        ]
+      },
+      "notes": "PR D pt3 class (c) ANTI-SIBLING-POISON TRIPWIRE — deliberately HARD while its siblings (n-mq-31/32) are knownIssue. After the white/yolk cache-key split, the BASE 'egg' key must keep WHOLE-egg macros (~9.5g fat/100g): [8,13] fails if a white repoint (fat ~0) or yolk repoint (fat ~27) bleeds onto the base key. Guards the C-lever migration invariant that base-key rows stay whole-food."
+    },
+    {
+      "id": "n-mq-34",
+      "category": "match_quality",
+      "item": {
+        "rawText": "whole milk",
+        "quantity": 1,
+        "name": "whole milk"
+      },
+      "expectName": [
+        [
+          "milk"
+        ]
+      ],
+      "macros": {
+        "fat100": [
+          3,
+          10
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity qualifier stripped (2026-07-20 triage: 'whole milk' collapsed to the bare 'milk' key and could serve skim/low-fat macros). 'whole' joins IDENTITY_QUALIFIERS in the cache key (+ PROTECTED_PRODUCT_PHRASES keeps it through the segmenter); whole milk >=3.25g fat/100g (upper 10 = one-sided '>=3'). Promote after the data-ops batch + 2 stable runs."
+    },
+    {
+      "id": "n-mq-35",
+      "category": "match_quality",
+      "item": {
+        "rawText": "cooked quinoa",
+        "quantity": 1,
+        "name": "cooked quinoa"
+      },
+      "expectName": [
+        [
+          "quinoa"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          100,
+          140
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — INGEST GAP. 'cooked' becomes a key discriminator (stops sibling-poisoning the bare 'quinoa' key immediately) but no cooked-quinoa record exists in the corpus (FDC 168917 ~120 kcal/100g not ingested), so dry ~368 kcal keeps winning and the case churns until the ingest lands. Promote after cooked-record ingest + 2 stable runs."
+    },
+    {
+      "id": "n-mq-36",
+      "category": "match_quality",
+      "item": {
+        "rawText": "oatmeal",
+        "quantity": 1,
+        "name": "oatmeal"
+      },
+      "expectName": [
+        [
+          "oat"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          150
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — COOKED-BASIS, rewrite DEFERRED. 'oatmeal' still collapses to rolled-oats and maps DRY oats (~380 kcal/100g); prepared oatmeal is ~70 kcal/100g. Bound expressed as cooked-basis per-100g kcal <=150 (closest expressible form: fails any dry record, passes any prepared one). Ranking/ingest gap — useless to rewrite until a cooked-oats record surfaces. Promote when it does."
     },
     {
       "id": "n-dens-01",
