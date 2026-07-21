@@ -254,12 +254,12 @@ export async function GET(request: NextRequest) {
           // Always include google=true for Google OAuth users, and newUser=true if this is a new user
           const googleParam = finalIsGoogleOAuth ? '&google=true' : '';
           const newUserParam = isNewUser ? '&newUser=true' : '';
-          const redirectUrl = `${origin}/signup?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}${newUserParam}`;
+          const redirectUrl = `${origin}/?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}${newUserParam}`;
           console.log('Final Redirect URL:', redirectUrl);
           return NextResponse.redirect(redirectUrl);
         } else {
           // User has completed profile setup, redirect to app
-          const finalRedirectTo = redirectTo || '/recipes';
+          const finalRedirectTo = redirectTo || '/';
           console.log('Redirecting user to app:', finalRedirectTo);
           return NextResponse.redirect(`${origin}${finalRedirectTo}`);
         }
@@ -273,15 +273,15 @@ export async function GET(request: NextRequest) {
         const googleParam = finalIsGoogleOAuth ? '&google=true' : '';
         const newUserParam = isNewUser ? '&newUser=true' : '';
         console.log('Database error - finalIsGoogleOAuth:', finalIsGoogleOAuth);
-        console.log('Database error - Redirect URL:', `${origin}/signup?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}${newUserParam}`);
-        return NextResponse.redirect(`${origin}/signup?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}${newUserParam}`);
+        console.log('Database error - Redirect URL:', `${origin}/?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}${newUserParam}`);
+        return NextResponse.redirect(`${origin}/?verified=true&email=${encodeURIComponent(data.user.email || '')}${googleParam}${newUserParam}`);
       }
     } else {
       console.error('OAuth callback error:', error);
-      return NextResponse.redirect(`${origin}/signin?error=auth_callback_error&message=${encodeURIComponent(error?.message || 'Authentication failed')}`);
+      return NextResponse.redirect(`${origin}/?error=auth_callback_error&message=${encodeURIComponent(error?.message || 'Authentication failed')}`);
     }
   }
 
   // If there's an error or no code, redirect to signin
-  return NextResponse.redirect(`${origin}/signin?error=auth_callback_error&message=${encodeURIComponent('No verification code provided')}`);
+  return NextResponse.redirect(`${origin}/?error=auth_callback_error&message=${encodeURIComponent('No verification code provided')}`);
 }

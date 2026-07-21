@@ -3,7 +3,7 @@
 // Badge, unmodified, linked to platform.fatsecret.com. Do not edit the badge
 // markup — the snippet must match https://platform.fatsecret.com/attribution
 // exactly, and "fatsecret" must always be written in lowercase.
-const FATSECRET_BADGE_HTML = `<a href="https://platform.fatsecret.com"><img alt="Nutrition information provided by fatsecret Platform API" src="https://platform.fatsecret.com/api/static/images/powered_by_fatsecret_horizontal_brand.svg" border="0"/></a>`;
+export const FATSECRET_BADGE_HTML = `<a href="https://platform.fatsecret.com"><img alt="Nutrition information provided by fatsecret Platform API" src="https://platform.fatsecret.com/api/static/images/powered_by_fatsecret_horizontal_brand.svg" border="0"/></a>`;
 
 export function SiteFooter() {
   return (
