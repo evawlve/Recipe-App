@@ -2611,8 +2611,7 @@
         88,
         140
       ],
-      "knownIssue": true,
-      "notes": "The word-quantity half is FIXED 2026-07-18 (quantity.ts WORD_NUMBERS): 'two eggs' now = qty 2 -> ~100g. Kept knownIssue because this is a multi-item text case ('and' + 'with') that runs the LLM segmenter first, so item count/order and which item the grams band checks are segmentation-nondeterministic. The deterministic word-number assertion lives in n-qty-03. Promote once always-AI-first segmentation is proven stable on this phrasing."
+      "notes": "The word-quantity half is FIXED 2026-07-18 (quantity.ts WORD_NUMBERS): 'two eggs' now = qty 2 -> ~100g. Kept knownIssue because this is a multi-item text case ('and' + 'with') that runs the LLM segmenter first, so item count/order and which item the grams band checks are segmentation-nondeterministic. The deterministic word-number assertion lives in n-qty-03. Promote once always-AI-first segmentation is proven stable on this phrasing. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-seg-08",
@@ -2763,8 +2762,7 @@
           "milk"
         ]
       ],
-      "knownIssue": true,
-      "notes": "NONDETERMINISTIC composite collapse (kept knownIssue). IMPROVED by always-AI-first segmentation (2026-07-18): the LLM now usually splits 'cereal with milk' into cereal + milk; the older heuristic-first path confidently returned ONE item mapped to a candy bar ('Nestle crunch ... crisp cereals bar'). Passes recent runs but is LLM-segmentation-dependent, so NOT promoted to a hard assertion (would risk flaky CI). Same family as n-seg-18/29."
+      "notes": "NONDETERMINISTIC composite collapse (kept knownIssue). IMPROVED by always-AI-first segmentation (2026-07-18): the LLM now usually splits 'cereal with milk' into cereal + milk; the older heuristic-first path confidently returned ONE item mapped to a candy bar ('Nestle crunch ... crisp cereals bar'). Passes recent runs but is LLM-segmentation-dependent, so NOT promoted to a hard assertion (would risk flaky CI). Same family as n-seg-18/29. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-seg-17",
@@ -3801,8 +3799,7 @@
         230,
         320
       ],
-      "notes": "DEMOTED back to knownIssue 2026-07-19 (over-promoted same day after 3 passing runs; flapped on run 4: grams=360 vs [230,320], and record flips between 'cooked quinoa' and 'uncooked quinoa' 150-360g across identical requests). Same root as n-cook-05: NO stable cooked-quinoa record in corpus, serving is AI-estimated and nondeterministic. Do NOT promote until the quinoa ingest gap is fixed. | PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/",
-      "knownIssue": true
+      "notes": "DEMOTED back to knownIssue 2026-07-19 (over-promoted same day after 3 passing runs; flapped on run 4: grams=360 vs [230,320], and record flips between 'cooked quinoa' and 'uncooked quinoa' 150-360g across identical requests). Same root as n-cook-05: NO stable cooked-quinoa record in corpus, serving is AI-estimated and nondeterministic. Do NOT promote until the quinoa ingest gap is fixed. | PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/ PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-serv-07",
@@ -5048,8 +5045,7 @@
           190
         ]
       },
-      "knownIssue": true,
-      "notes": "DEFECT (found 2026-07-19 characterization) — MACRO-PLAUSIBILITY. Grams correct (45g) but the matched OFF row reports per-100g kcal=70 with carb=19g -- internally impossible (19g carb alone = 76 kcal), i.e. per-SERVING values mislabeled as per-100g. Logging it under-counts calories ~2x. Band [130,190] is the CORRECT per-100g range for a Mission Carb Balance tortilla; case flips green when a macro-plausibility gate rejects self-inconsistent records regardless of name match. This is a WRONG-RECORD (match-quality) defect, not a serving-math one."
+      "notes": "DEFECT (found 2026-07-19 characterization) — MACRO-PLAUSIBILITY. Grams correct (45g) but the matched OFF row reports per-100g kcal=70 with carb=19g -- internally impossible (19g carb alone = 76 kcal), i.e. per-SERVING values mislabeled as per-100g. Logging it under-counts calories ~2x. Band [130,190] is the CORRECT per-100g range for a Mission Carb Balance tortilla; case flips green when a macro-plausibility gate rejects self-inconsistent records regardless of name match. This is a WRONG-RECORD (match-quality) defect, not a serving-math one. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-21",
@@ -5103,8 +5099,7 @@
           "ryse"
         ]
       ],
-      "knownIssue": true,
-      "notes": "IDENTITY-HIJACK GUARD (PR D pt2, 2026-07-20). The parity sweep's cold re-resolution mapped 'protein ryse' to 'Protein Rice' (ryse fuzzy->rice). The save-time brand-mismatch gate now refuses to CACHE a cross-brand pick for a decisive brand query, but retrieval can still SERVE one when no Ryse SKU surfaces. Promote to hard once retrieval reliably surfaces Ryse protein SKUs."
+      "notes": "IDENTITY-HIJACK GUARD (PR D pt2, 2026-07-20). The parity sweep's cold re-resolution mapped 'protein ryse' to 'Protein Rice' (ryse fuzzy->rice). The save-time brand-mismatch gate now refuses to CACHE a cross-brand pick for a decisive brand query, but retrieval can still SERVE one when no Ryse SKU surfaces. Promote to hard once retrieval reliably surfaces Ryse protein SKUs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-24",
@@ -5240,8 +5235,7 @@
           5
         ]
       },
-      "knownIssue": true,
-      "notes": "PR D pt3 class (b) KNOWN ISSUE — ranking/corpus gap (2026-07-20 triage): a plausible ~0 kcal plain-salt record is not reliably retrieved for bare 'salt'; caloric seasoned/blend records win. Rank-time floors cannot fix retrieval absence. Promote when the ranking-gap/ingest work lands."
+      "notes": "PR D pt3 class (b) KNOWN ISSUE — ranking/corpus gap (2026-07-20 triage): a plausible ~0 kcal plain-salt record is not reliably retrieved for bare 'salt'; caloric seasoned/blend records win. Rank-time floors cannot fix retrieval absence. Promote when the ranking-gap/ingest work lands. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-30",
@@ -5262,8 +5256,7 @@
           45
         ]
       },
-      "knownIssue": true,
-      "notes": "PR D pt3 class (b) KNOWN ISSUE — pt2 repoint staged but pending: the fix row sits in repoints-2026-07-20-pt2.json under key 'capsicum' and lands with the post-deploy data-ops batch. Real bell pepper ~26-31 kcal/100g. Promote after the batch is applied and 2 stable runs."
+      "notes": "PR D pt3 class (b) KNOWN ISSUE — pt2 repoint staged but pending: the fix row sits in repoints-2026-07-20-pt2.json under key 'capsicum' and lands with the post-deploy data-ops batch. Real bell pepper ~26-31 kcal/100g. Promote after the batch is applied and 2 stable runs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-31",
@@ -5289,8 +5282,7 @@
           1
         ]
       },
-      "knownIssue": true,
-      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity collapse (2026-07-20 triage: 'egg whites' served whole-egg macros via collapsed 'egg' cache key). Cache-key discriminator (unitHint 'white') + data-ops repoint (fdc_747997) give whites their own key; ~11g protein / ~0.2g fat per 100g. Compound bound = two macro ranges. Promote after the data-ops batch + 2 stable runs (n-serv-06 flap precedent)."
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity collapse (2026-07-20 triage: 'egg whites' served whole-egg macros via collapsed 'egg' cache key). Cache-key discriminator (unitHint 'white') + data-ops repoint (fdc_747997) give whites their own key; ~11g protein / ~0.2g fat per 100g. Compound bound = two macro ranges. Promote after the data-ops batch + 2 stable runs (n-serv-06 flap precedent). PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-32",
@@ -5312,8 +5304,7 @@
           40
         ]
       },
-      "knownIssue": true,
-      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity collapse sibling of n-mq-31 (yolk served whole-egg/white macros under the collapsed base key). Discriminated key (unitHint 'yolk') + data-ops repoint (fdc_748236); real yolk ~27g fat/100g (upper 40 = generous one-sided '>=20'). Promote after the data-ops batch + 2 stable runs."
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity collapse sibling of n-mq-31 (yolk served whole-egg/white macros under the collapsed base key). Discriminated key (unitHint 'yolk') + data-ops repoint (fdc_748236); real yolk ~27g fat/100g (upper 40 = generous one-sided '>=20'). Promote after the data-ops batch + 2 stable runs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-33",
@@ -5377,8 +5368,7 @@
           140
         ]
       },
-      "knownIssue": true,
-      "notes": "PR D pt3 class (c) KNOWN ISSUE — INGEST GAP. 'cooked' becomes a key discriminator (stops sibling-poisoning the bare 'quinoa' key immediately) but no cooked-quinoa record exists in the corpus (FDC 168917 ~120 kcal/100g not ingested), so dry ~368 kcal keeps winning and the case churns until the ingest lands. Promote after cooked-record ingest + 2 stable runs."
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — INGEST GAP. 'cooked' becomes a key discriminator (stops sibling-poisoning the bare 'quinoa' key immediately) but no cooked-quinoa record exists in the corpus (FDC 168917 ~120 kcal/100g not ingested), so dry ~368 kcal keeps winning and the case churns until the ingest lands. Promote after cooked-record ingest + 2 stable runs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-mq-36",
@@ -5658,8 +5648,7 @@
           28
         ]
       },
-      "knownIssue": true,
-      "notes": "DEFECT + CORPUS-BLOCKED. Explicit 'cooked quinoa' still returns FDC 'uncooked quinoa' (kcal100=368, carbs100=64.2) because NO cooked-quinoa record is retrievable. Band is a TARGET (cooked quinoa ~21g carb/100g), NOT observed-correct. Same root as n-serv-06's nutrition. Needs ingest, not ranking. knownIssue, non-gating."
+      "notes": "DEFECT + CORPUS-BLOCKED. Explicit 'cooked quinoa' still returns FDC 'uncooked quinoa' (kcal100=368, carbs100=64.2) because NO cooked-quinoa record is retrievable. Band is a TARGET (cooked quinoa ~21g carb/100g), NOT observed-correct. Same root as n-serv-06's nutrition. Needs ingest, not ranking. knownIssue, non-gating. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-cook-06",
@@ -5787,8 +5776,7 @@
           260
         ]
       },
-      "knownIssue": true,
-      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). Volume-unit grain prefers a COOKED basis (PR #104): ~158g cooked at ~130kcal/100g bills ~205 kcal; band [160,260] also rejects dry-basis billing (300+). DEFECT FOUND AT AUTHORING (live, stable, conf 1.0): 'white rice' serves cached FoodMapping row -> FDC 'brown parboiled cooked uncle bens rice', 195-200g, ~287-294 kcal. Wrong-record hijack the grams band can't see: record IS cooked (so the grain-cooked cache escape correctly stays quiet) but is BROWN parboiled branded rice for a WHITE rice query — the white/brown modifier is not treated as critical. Fix path: Phase 2 identity audit purges the row + white-vs-brown modifier guard; promote to hard once stable."
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). Volume-unit grain prefers a COOKED basis (PR #104): ~158g cooked at ~130kcal/100g bills ~205 kcal; band [160,260] also rejects dry-basis billing (300+). DEFECT FOUND AT AUTHORING (live, stable, conf 1.0): 'white rice' serves cached FoodMapping row -> FDC 'brown parboiled cooked uncle bens rice', 195-200g, ~287-294 kcal. Wrong-record hijack the grams band can't see: record IS cooked (so the grain-cooked cache escape correctly stays quiet) but is BROWN parboiled branded rice for a WHITE rice query — the white/brown modifier is not treated as critical. Fix path: Phase 2 identity audit purges the row + white-vs-brown modifier guard; promote to hard once stable. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-tot-03",
@@ -5843,8 +5831,7 @@
           120
         ]
       },
-      "knownIssue": true,
-      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). A Carb Balance flour tortilla is ~42-45g and ~70-80 kcal (high-fiber net-carb product). OBSERVED AT AUTHORING (live): grams resolve CORRECTLY (45g) but billed only 31.5 kcal — the OFF record ('Mission, carb, balance, tortilla') stores ~70 kcal as PER-100G when it is really the PER-SERVING(45g) value, i.e. the per-serving-as-100g ingest corruption class (n-mq-20). So the defect here is nutrition DATA, on top of the known 'tortilla'-missing-from-LABEL_COUNT_PIECE_NOUNS lexicon gap. Fix path: Phase 2 nutritional-plausibility audit (a 155kcal/100g tortilla stored at 70 fails the category prior) + n-mq-20 ingest cross-check. Promote to hard once it passes 3 consecutive runs."
+      "notes": "TOTAL-MACRO assertion (Phase 0 flywheel, 2026-07-19). A Carb Balance flour tortilla is ~42-45g and ~70-80 kcal (high-fiber net-carb product). OBSERVED AT AUTHORING (live): grams resolve CORRECTLY (45g) but billed only 31.5 kcal — the OFF record ('Mission, carb, balance, tortilla') stores ~70 kcal as PER-100G when it is really the PER-SERVING(45g) value, i.e. the per-serving-as-100g ingest corruption class (n-mq-20). So the defect here is nutrition DATA, on top of the known 'tortilla'-missing-from-LABEL_COUNT_PIECE_NOUNS lexicon gap. Fix path: Phase 2 nutritional-plausibility audit (a 155kcal/100g tortilla stored at 70 fails the category prior) + n-mq-20 ingest cross-check. Promote to hard once it passes 3 consecutive runs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
     },
     {
       "id": "n-tot-05",
