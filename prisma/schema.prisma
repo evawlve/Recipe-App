@@ -680,12 +680,34 @@ model MappingEventLog {
   totalKcal      Float?
   latencyMs      Int?
   noCache        Boolean  @default(false) // request ran with the admin nocache flag (cold run)
+  segCacheHit    Boolean? // true = segmentation served from SegmentationCache; false = AI segmentation ran; null = line never reached AI segmentation (item-form input or single-item fast path)
   createdAt      DateTime @default(now())
 
   @@index([createdAt])
   @@index([normalizedForm])
   @@index([cacheHit])
   @@index([servingTier])
+}
+
+// AI segmentation-result cache (magic-log): repeat free-text lines skip the
+// ~2-4s LLM split. Keyed by canonicalized line (src/lib/nlp/seg-line-key.ts)
+// + SEG_PARSER_VERSION (src/lib/nlp/ai-segmenter.ts — bump on any prompt/
+// model/schema change; old-version rows are simply never read again).
+// Rows are written ONLY for successful, complete LLM segmentations — the
+// heuristic fast path and fallback-degraded splits are never cached.
+// Sliding 30d TTL on lastUsedAt (opportunistic throttled sweep in
+// src/lib/nlp/segmentation-cache.ts).
+model SegmentationCache {
+  lineKey       String
+  parserVersion String   // SEG_PARSER_VERSION at write time
+  segmentsJson  Json     // SegmentedItem[]: { rawText, mealType, brand, normalizedForm }
+  hitCount      Int      @default(0) // times served from cache (not counted on write)
+  lastUsedAt    DateTime @default(now()) // sliding-TTL anchor: bumped on every hit
+  createdAt     DateTime @default(now())
+
+  @@id([lineKey, parserVersion])
+  @@index([lastUsedAt])
+  @@index([hitCount])
 }
 
 // ============================================================================

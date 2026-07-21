@@ -154,7 +154,9 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    const { callStructuredLlm } = await import('@/lib/ai/structured-client');
+    const { segmentTextWithAi } = await import('@/lib/nlp/ai-segmenter');
+    const { canonicalizeSegLine } = await import('@/lib/nlp/seg-line-key');
+    const { lookupSegmentationCache, writeSegmentationCache } = await import('@/lib/nlp/segmentation-cache');
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
@@ -173,6 +175,11 @@ export async function POST(req: NextRequest) {
       (req.nextUrl.searchParams.get('nocache') === '1' || body.nocache === true);
 
     let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
+
+    // Segmentation-cache outcome for telemetry: true = split served from
+    // SegmentationCache, false = AI segmentation ran, null = this request
+    // never reached AI segmentation (item-form input / single-item fast path).
+    let segCacheHit: boolean | null = null;
 
     if (inputItems && Array.isArray(inputItems)) {
       items = inputItems.map(item => {
@@ -194,90 +201,43 @@ export async function POST(req: NextRequest) {
       // return it unchanged after ~1-5s. Skip straight to mapping.
       items = [singleItemFromText(text)!];
     } else {
-      // AI-first segmentation: the cheap LLM splitter (CHEAP_AI_MODEL_PRIMARY
-      // via OpenRouter — gpt-4o-mini, ~$0.0003/call, magic-log is
-      // rate-capped) is the
-      // unconditional first step for any multi-token / delimited log. The
-      // deterministic heuristic is deliberately NOT on the primary path — it
-      // survives only as forceSegmentText, the fallback used when the LLM
-      // errors or exceeds its deadline. This removes the class of silent
-      // heuristic mis-splits (flavor "and" like "cookies and cream", ambiguous
-      // "with" attachments) that a static phrase whitelist could never keep up
-      // with. The mapper is then fed clean, AI-segmented food names while
-      // quantity/units stay deterministic — the goal being fewer AI guesses in
-      // the *mapping* stage, not the (cheap) segmentation stage.
-      {
-        console.log('[nlp-parse] AI-first segmentation');
+      // AI-first segmentation (prompt/model/schema live in
+      // src/lib/nlp/ai-segmenter.ts, versioned by SEG_PARSER_VERSION): the
+      // cheap LLM splitter is the unconditional first step for any
+      // multi-token / delimited log; the deterministic heuristic survives
+      // only as forceSegmentText, the fallback when the LLM errors or
+      // exceeds its deadline.
+      //
+      // SegmentationCache sits in front of the LLM: an identical repeat line
+      // (canonicalized: case/whitespace/trailing-punctuation only — digits
+      // preserved) serves the cached split in ~ms instead of re-paying the
+      // ~2-4s LLM call. Fail-open: any cache error behaves as a miss. Only
+      // successful, complete LLM parses are written back — heuristic
+      // fallback splits are never cached. The admin nocache cold-run flag
+      // bypasses the cache in BOTH directions (no read, no write) so parity
+      // runs measure the full pipeline without mutating cache state.
+      console.log('[nlp-parse] AI-first segmentation');
 
-        const NLP_SPLIT_SCHEMA = {
-          name: 'nlp_split',
-          schema: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              items: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  additionalProperties: false,
-                  properties: {
-                    rawText: { type: 'string' },
-                    mealType: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snacks'] },
-                    brand: { type: 'string' },
-                    normalizedForm: { type: 'string' }
-                  },
-                  required: ['rawText', 'mealType', 'brand', 'normalizedForm']
-                }
-              }
-            },
-            required: ['items']
-          },
-          strict: true
-        };
+      const lineKey = canonicalizeSegLine(text);
+      const cachedSegments = noCache ? null : await lookupSegmentationCache(lineKey);
 
-        // Minimal prompt: the JSON schema already constrains the output shape,
-        // so the prompt only needs the field semantics and one example.
-        const SYSTEM_PROMPT = `Split the food-log text into individual food items. Per item:
-- rawText: original chunk incl. quantity/unit (e.g. "2 scrambled eggs")
-- mealType: breakfast|lunch|dinner|snacks (default "snacks")
-- brand: explicit brand name, else ""
-- normalizedForm: base food name without quantity/unit, keep prep modifiers ("2 scrambled eggs" -> "scrambled eggs", "1 tbsp Heinz ketchup" -> "ketchup")
-Attached condiments stay with their item ("toast with butter" = 1 item); distinct foods are separate items.
-Two distinct whole foods joined by "and" are SEPARATE items ("chicken and rice" -> 2, "eggs and bacon" -> 2, "rice and beans" -> 2). Keep "and" together ONLY when the whole phrase names ONE product or a single flavor ("cookies and cream", "peaches and cream", "mac and cheese", "peanut butter and jelly" = 1 item).
-Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs","mealType":"breakfast","brand":"","normalizedForm":"eggs"},{"rawText":"wheat toast","mealType":"breakfast","brand":"","normalizedForm":"wheat toast"}]}`;
-
-        // Per-attempt timeout 6s, overall deadline 8s: a hung provider chain
-        // (previously up to 15s+) now degrades to the lenient heuristic split
-        // instead of stalling the request or returning a 500.
-        const LLM_ATTEMPT_TIMEOUT_MS = 6000;
-        const LLM_OVERALL_DEADLINE_MS = 8000;
-
-        let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
-        const llmResult = await Promise.race([
-          callStructuredLlm({
-            schema: NLP_SPLIT_SCHEMA,
-            systemPrompt: SYSTEM_PROMPT,
-            userPrompt: `Unstructured text: "${text}"`,
-            purpose: 'parse',
-            timeout: LLM_ATTEMPT_TIMEOUT_MS,
-            maxTokens: 600,
-          }),
-          new Promise<null>((resolve) => {
-            deadlineTimer = setTimeout(() => resolve(null), LLM_OVERALL_DEADLINE_MS);
-          }),
-        ]);
-        if (deadlineTimer) clearTimeout(deadlineTimer);
-
-        if (!llmResult || llmResult.status === 'error') {
-          console.warn(
-            `[nlp-parse] LLM segmentation ${llmResult ? `failed: ${llmResult.error}` : `deadline exceeded (${LLM_OVERALL_DEADLINE_MS}ms)`} — using lenient heuristic split`
-          );
-          items = forceSegmentText(text);
-        } else {
-          items = (llmResult.content?.items as Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand: string; normalizedForm: string }>) || [];
-          if (items.length === 0) {
-            items = forceSegmentText(text);
+      if (cachedSegments) {
+        segCacheHit = true;
+        items = cachedSegments;
+        console.log(`[nlp-parse] segmentation cache HIT (${cachedSegments.length} items) — LLM skipped`);
+      } else {
+        segCacheHit = false;
+        const aiItems = await segmentTextWithAi(text);
+        if (aiItems) {
+          items = aiItems;
+          if (!noCache) {
+            // Write-through (fail-open inside; a few ms before mapping starts).
+            await writeSegmentationCache(lineKey, aiItems);
           }
+        } else {
+          // LLM failed/timed out/returned nothing usable — degraded split,
+          // deliberately NOT cached.
+          items = forceSegmentText(text);
         }
       }
     }
@@ -288,7 +248,7 @@ Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs"
       cacheEscape: string | null; foodId: string | null; foodName: string | null;
       brandName: string | null; source: string | null; confidence: number | null;
       servingTier: string | null; grams: number | null; totalKcal: number | null;
-      latencyMs: number; noCache: boolean;
+      latencyMs: number; noCache: boolean; segCacheHit: boolean | null;
     };
     const eventRows: EventRow[] = [];
     const telemetryEnabled = process.env.MAPPING_EVENT_LOG_ENABLED !== 'false';
@@ -331,6 +291,7 @@ Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs"
           totalKcal: isMapped ? (mapped as any).kcal : null,
           latencyMs: mapLatencyMs,
           noCache,
+          segCacheHit,
         });
       }
 

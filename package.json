@@ -36,6 +36,7 @@
         "eval": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register eval/run.ts",
         "eval:analyze": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register eval/analyze.ts",
         "flywheel:sweep": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/flywheel-sweep.ts",
+        "seg:replay-diff": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/seg-replay-diff.ts",
         "similar:build": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/build-similar.ts",
         "test:fdc-api": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/test-fdc-api.ts",
         "verify:seeding": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/verify-seeding.ts",
