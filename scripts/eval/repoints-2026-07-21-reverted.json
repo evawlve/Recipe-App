@@ -1,0 +1,8 @@
+[
+ {"seed": "mayonnaise", "target": "off_9348905001434", "class": "nutrition", "severity": "medium", "wasFood": "Mayonnaise off_9327304000880 (restore-14 kept this 597kcal row; fresh pick 705kcal flipped it back)"},
+ {"seed": "goldfish", "target": "off_71124421", "class": "nutrition", "severity": "high", "wasFood": "Goldfish off_0001424435577"},
+ {"seed": "lays", "target": "off_06047719", "class": "nutrition", "severity": "high", "wasFood": "Lays ολικής off_9201070382107"},
+ {"seed": "tomato sauce", "target": "fdc_169074", "class": "identity", "severity": "medium", "wasFood": "Tomato sauce off_9310347507195"},
+ {"seed": "quinoa", "target": "fdc_168917", "class": "identity", "severity": "high", "wasFood": "Quinoa [U bio] off_8219221675528"},
+ {"seed": "pinto beans", "target": "fdc_175200", "class": "nutrition", "severity": "medium", "wasFood": "Pinto beans off_0074734129207"}
+]

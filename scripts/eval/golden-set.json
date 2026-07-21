@@ -2797,8 +2797,7 @@
           "honey"
         ]
       ],
-      "knownIssue": true,
-      "notes": "NONDETERMINISTIC composite collapse: some runs return ONE item mapped to Greek yogurt honey granola at 12g total (strawberries dropped, absurd grams), other runs split into 3+ items correctly. Kept knownIssue so the flip-flop never fails the suite; promote once segmentation is deterministic."
+      "notes": "Composite collapse family. Was knownIssue (nondeterministic: some runs collapsed to ONE Greek-yogurt-honey-granola item at 12g); PROMOTED to hard 2026-07-21 after 3 consecutive stable runs post PR #112/#116. If it flaps again, demote with a dated note rather than deleting."
     },
     {
       "id": "n-seg-19",
@@ -2949,8 +2948,7 @@
           "rice"
         ]
       ],
-      "knownIssue": true,
-      "notes": "Pattern 7 ('with' as a genuine two-food separator = 2 items). Contrast with n-seg-28 where 'with' attaches a condiment. IMPROVED by always-AI-first segmentation (2026-07-18): the LLM now splits 'chicken with brown rice' into chicken + rice (2 items); previously the heuristic-first path kept it as ONE. Passes recent runs but LLM-segmentation-dependent, so kept knownIssue rather than promoted to hard (avoids flaky CI). Same family as n-seg-16/18."
+      "notes": "Pattern 7 ('with' as a genuine two-food separator = 2 items). Contrast with n-seg-28 where 'with' attaches a condiment. Fixed by always-AI-first segmentation (2026-07-18). Was knownIssue (LLM-segmentation-dependent); PROMOTED to hard 2026-07-21 after 3 consecutive stable runs post PR #112/#116. Same family as n-seg-16/18."
     },
     {
       "id": "n-seg-30",

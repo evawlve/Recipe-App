@@ -15,6 +15,7 @@
  *   - built-in PRODUCE/PROTEIN/STAPLES/BRANDS lists (mirrors stress-latency.ts,
  *     which self-executes on import and so can't be imported)
  *   - optional --seed <file>          (one extra name per line, # comments ok)
+ *   - optional extraSeeds param       (flywheel-sweep passes telemetry-driven keys)
  *
  * Requests are ITEM-form and unitless ({rawText: name, quantity: 1, name}) —
  * item form bypasses AI segmentation (no LLM cost there), and FoodMapping is
@@ -27,24 +28,13 @@
  * Writes results/warm-<timestamp>.json: per-seed mapping result (food, source,
  * grams, confidence, per-100g macros) + summary. Feed the result file to the
  * triage workflow / parity sweep for validation.
+ *
+ * Also importable (flywheel-sweep.ts): assembleSeeds() + runWarm() are pure of
+ * CLI state; only main() reads process.argv.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-
-const args = process.argv.slice(2);
-function argValue(flag: string): string | undefined {
-    const i = args.indexOf(flag);
-    return i >= 0 ? args[i + 1] : undefined;
-}
-
-const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.21:3000';
-const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
-const CONCURRENCY = Number(argValue('--concurrency') ?? 4);
-const TIMEOUT_MS = Number(argValue('--timeout') ?? 45000);
-const LIMIT = argValue('--limit') ? Number(argValue('--limit')) : undefined;
-const DRY = args.includes('--dry');
-const SEED_FILE = argValue('--seed');
 
 // Mirrors stress-latency.ts (not importable: it self-executes).
 const PRODUCE = ['apple', 'banana', 'orange', 'strawberries', 'blueberries', 'grapes', 'watermelon',
@@ -93,7 +83,15 @@ function csvFields(line: string): string[] {
     return out;
 }
 
-function assembleSeeds(): string[] {
+export interface SeedOptions {
+    /** Extra seed file: one name per line, # comments ok. */
+    seedFile?: string;
+    /** Extra in-memory seeds (e.g. telemetry-driven keys from flywheel-sweep). */
+    extraSeeds?: string[];
+    limit?: number;
+}
+
+export function assembleSeeds(opts: SeedOptions = {}): string[] {
     const seeds: string[] = [];
 
     // 1. High-usage CSV (raw_line is column 1)
@@ -122,11 +120,14 @@ function assembleSeeds(): string[] {
     seeds.push(...PRODUCE, ...PROTEIN, ...STAPLES, ...BRANDS);
 
     // 4. Optional extra seed file
-    if (SEED_FILE) {
-        const extra = fs.readFileSync(SEED_FILE, 'utf8').split('\n')
+    if (opts.seedFile) {
+        const extra = fs.readFileSync(opts.seedFile, 'utf8').split('\n')
             .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
         seeds.push(...extra);
     }
+
+    // 5. Optional in-memory extras
+    if (opts.extraSeeds) seeds.push(...opts.extraSeeds.map(s => s.trim()).filter(s => s.length > 1));
 
     const seen = new Set<string>();
     const deduped = seeds.filter(s => {
@@ -135,10 +136,10 @@ function assembleSeeds(): string[] {
         seen.add(k);
         return true;
     });
-    return LIMIT ? deduped.slice(0, LIMIT) : deduped;
+    return opts.limit ? deduped.slice(0, opts.limit) : deduped;
 }
 
-interface WarmResult {
+export interface WarmResult {
     seed: string;
     ok: boolean;
     ms: number;
@@ -152,16 +153,30 @@ interface WarmResult {
     error?: string;
 }
 
-async function warmOne(seed: string): Promise<WarmResult> {
+export interface WarmOptions {
+    base: string;
+    apiKey?: string;
+    concurrency?: number;
+    timeoutMs?: number;
+    quiet?: boolean;
+}
+
+export interface WarmRunReport {
+    outPath: string;
+    summary: { ok: number; errors: number; lowConf: number; bySource: Record<string, number> };
+    results: WarmResult[];
+}
+
+async function warmOne(seed: string, base: string, apiKey: string, timeoutMs: number): Promise<WarmResult> {
     const body = { items: [{ rawText: seed, quantity: 1, name: seed }] };
     const t0 = Date.now();
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
             const ctrl = new AbortController();
-            const to = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-            const res = await fetch(`${BASE}/api/nlp/parse`, {
+            const to = setTimeout(() => ctrl.abort(), timeoutMs);
+            const res = await fetch(`${base}/api/nlp/parse`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+                headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
                 body: JSON.stringify(body),
                 signal: ctrl.signal,
             });
@@ -186,13 +201,11 @@ async function warmOne(seed: string): Promise<WarmResult> {
     return { seed, ok: false, ms: Date.now() - t0, error: 'unreachable' };
 }
 
-async function main() {
-    const seeds = assembleSeeds();
-    console.log(`Warm corpus: ${seeds.length} names → ${BASE} (concurrency ${CONCURRENCY})`);
-    if (DRY) {
-        seeds.forEach(s => console.log(`  ${s}`));
-        return;
-    }
+export async function runWarm(seeds: string[], opts: WarmOptions): Promise<WarmRunReport> {
+    const apiKey = opts.apiKey ?? process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
+    const concurrency = opts.concurrency ?? 4;
+    const timeoutMs = opts.timeoutMs ?? 45000;
+    const say = (msg: string) => { if (!opts.quiet) console.log(msg); };
 
     const results: WarmResult[] = [];
     let done = 0;
@@ -200,15 +213,15 @@ async function main() {
     async function worker() {
         while (queue.length) {
             const seed = queue.shift()!;
-            const r = await warmOne(seed);
+            const r = await warmOne(seed, opts.base, apiKey, timeoutMs);
             results.push(r);
             done++;
             if (done % 25 === 0 || done === seeds.length) {
-                console.log(`  ${done}/${seeds.length} (${results.filter(x => !x.ok).length} errors)`);
+                say(`  ${done}/${seeds.length} (${results.filter(x => !x.ok).length} errors)`);
             }
         }
     }
-    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    await Promise.all(Array.from({ length: concurrency }, worker));
 
     const ok = results.filter(r => r.ok);
     const errors = results.filter(r => !r.ok);
@@ -220,21 +233,49 @@ async function main() {
     fs.mkdirSync(outDir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = path.join(outDir, `warm-${ts}.json`);
+    const summary = { ok: ok.length, errors: errors.length, lowConf: lowConf.length, bySource };
     fs.writeFileSync(outPath, JSON.stringify({
-        base: BASE, at: new Date().toISOString(), seedCount: seeds.length,
-        summary: { ok: ok.length, errors: errors.length, lowConf: lowConf.length, bySource },
-        results,
+        base: opts.base, at: new Date().toISOString(), seedCount: seeds.length,
+        summary, results,
     }, null, 1));
 
-    console.log(`\nSources: ${JSON.stringify(bySource)}`);
-    console.log(`Low-confidence (<0.85, NOT cached): ${lowConf.length}`);
-    lowConf.slice(0, 20).forEach(r =>
-        console.log(`   ${r.seed} → "${r.foodName}" conf=${r.matchConfidence?.toFixed(2)}`));
-    if (errors.length) {
-        console.log(`Errors: ${errors.length}`);
-        errors.slice(0, 10).forEach(r => console.log(`   ${r.seed}: ${r.error}`));
+    say(`\nSources: ${JSON.stringify(bySource)}`);
+    say(`Low-confidence (<0.85, NOT cached): ${lowConf.length}`);
+    if (!opts.quiet) {
+        lowConf.slice(0, 20).forEach(r =>
+            console.log(`   ${r.seed} → "${r.foodName}" conf=${r.matchConfidence?.toFixed(2)}`));
+        if (errors.length) {
+            console.log(`Errors: ${errors.length}`);
+            errors.slice(0, 10).forEach(r => console.log(`   ${r.seed}: ${r.error}`));
+        }
     }
-    console.log(`\nResults written to ${path.relative(process.cwd(), outPath)}`);
+    say(`\nResults written to ${path.relative(process.cwd(), outPath)}`);
+    return { outPath, summary, results };
 }
 
-main().catch(err => { console.error(err); process.exit(2); });
+async function main() {
+    const args = process.argv.slice(2);
+    const argValue = (flag: string): string | undefined => {
+        const i = args.indexOf(flag);
+        return i >= 0 ? args[i + 1] : undefined;
+    };
+
+    const base = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.21:3000';
+    const concurrency = Number(argValue('--concurrency') ?? 4);
+    const timeoutMs = Number(argValue('--timeout') ?? 45000);
+    const limit = argValue('--limit') ? Number(argValue('--limit')) : undefined;
+    const dry = args.includes('--dry');
+    const seedFile = argValue('--seed');
+
+    const seeds = assembleSeeds({ seedFile, limit });
+    console.log(`Warm corpus: ${seeds.length} names → ${base} (concurrency ${concurrency})`);
+    if (dry) {
+        seeds.forEach(s => console.log(`  ${s}`));
+        return;
+    }
+    await runWarm(seeds, { base, concurrency, timeoutMs });
+}
+
+if (require.main === module) {
+    main().catch(err => { console.error(err); process.exit(2); });
+}
