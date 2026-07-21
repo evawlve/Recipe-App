@@ -5,7 +5,18 @@
 
 // Unit hints and their patterns
 // Format: { hint: string, patterns: string[], nameExtractor: (tokens: string[]) => string }
-const UNIT_HINT_PATTERNS = [
+// Optional appliesTo(lowerTokensWithContext) gates a pattern to specific
+// contexts. It receives the name tokens PLUS any caller-supplied context
+// tokens (e.g. the already-parsed unit: in "3 egg whites", "egg" is consumed
+// as a count unit before hint extraction, so it is context, not a name token).
+type UnitHintPattern = {
+  hint: string;
+  patterns: string[];
+  appliesTo?: (lowerTokensWithContext: string[]) => boolean;
+  nameExtractor: (tokens: string[]) => string;
+};
+
+const UNIT_HINT_PATTERNS: UnitHintPattern[] = [
   {
     hint: 'yolk',
     patterns: ['yolks', 'yolk'],
@@ -20,6 +31,11 @@ const UNIT_HINT_PATTERNS = [
   {
     hint: 'white',
     patterns: ['whites', 'white'],
+    // Only egg whites are a piece-like part. Without this gate, "white" in
+    // "white rice"/"white bread"/"white wine"/"white onion" was stripped from
+    // the name as a bogus unit hint (variety modifier, not a food part).
+    appliesTo: (lowerTokens: string[]) =>
+      lowerTokens.includes('egg') || lowerTokens.includes('eggs'),
     nameExtractor: (tokens: string[]) => {
       // Remove "white"/"whites" and "egg"/"eggs", return "egg"
       const filtered = tokens.filter(t => 
@@ -116,12 +132,24 @@ const UNIT_HINT_PATTERNS = [
 /**
  * Extract unit hint from tokens and return the core name
  * Returns { unitHint: string | null, coreName: string }
+ *
+ * contextTokens: extra tokens visible to appliesTo gates but never part of the
+ * extracted name — e.g. the parsed unit ("egg" in "3 egg whites", which the
+ * unit parser consumes before the name tokens reach this function).
  */
-export function extractUnitHint(tokens: string[]): { unitHint: string | null; coreName: string } {
+export function extractUnitHint(
+  tokens: string[],
+  contextTokens: string[] = []
+): { unitHint: string | null; coreName: string } {
   const lowerTokens = tokens.map(t => t.toLowerCase());
-  
+  const lowerTokensWithContext = [
+    ...lowerTokens,
+    ...contextTokens.map(t => t.toLowerCase()),
+  ];
+
   // Check each pattern
   for (const pattern of UNIT_HINT_PATTERNS) {
+    if (pattern.appliesTo && !pattern.appliesTo(lowerTokensWithContext)) continue;
     for (const hintPattern of pattern.patterns) {
       const index = lowerTokens.indexOf(hintPattern);
       if (index !== -1) {

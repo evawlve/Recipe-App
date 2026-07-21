@@ -81,6 +81,8 @@ const SYSTEM_PROMPT = [
   '  - "unsweetened almond milk" → canonical_base: "unsweetened almond milk" (NOT just "almond milk")',
   '  - "reduced fat cream cheese" → canonical_base: "reduced fat cream cheese"',
   '  - "sugar free pudding" → canonical_base: "sugar free pudding"',
+  '  - EGG PARTS are distinct foods: "egg whites" → canonical_base: "egg whites" (NOT "eggs"); "egg yolks" → canonical_base: "egg yolks" (NOT "eggs")',
+  '  - COOKED STATE changes nutrition per gram: "cooked quinoa" → canonical_base: "cooked quinoa" (NOT "quinoa"); "cooked rice" → canonical_base: "cooked rice". Preserve "cooked" in normalized_name AND canonical_base — do NOT move it to cooking_modifier.',
   '- BRANDS: When is_branded=true, INCLUDE the brand name (lowercase) in canonical_base:',
   '  - "Philadelphia cream cheese" → canonical_base: "philadelphia cream cheese", is_branded: true',
   '  - "Kerrygold butter" → canonical_base: "kerrygold butter", is_branded: true',
