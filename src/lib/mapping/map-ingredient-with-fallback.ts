@@ -58,6 +58,7 @@ import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveCacheKeyName } from './cache-key';
 import {
     applyOffBareQueryGuard, isBareUnitlessQty1, usableBareLabelServing,
+    isDoseAnchoredBareQuery,
     BARE_LABEL_MIN_GRAMS, BARE_LABEL_MAX_GRAMS, BARE_MIN_PIECE_SERVING_GRAMS,
 } from '../servings/bare-query-guard';
 
@@ -4571,6 +4572,14 @@ export async function buildOffResult(
     const bareLabelGrams = bareRequest
         ? usableBareLabelServing(hydrated.servingGrams, labelUnitWord)
         : null;
+    // Dose-measured categories (n-serv-37 sugar / n-serv-43 ghost pre workout
+    // eval regressions): when the bare query IS a scoop/spoon-dosed category
+    // (tail-anchored — "sugar", "ghost pre workout", "peanut butter"), the
+    // own-label and sibling-median steps are SKIPPED so resolution flows to
+    // the label/package tiers where the category CAP restores the tsp/scoop
+    // dose default. Piece/tub foods (yoplait, snickers, pepper jack) are
+    // unaffected: their categories are absent or oz/cup/can-based.
+    const doseAnchored = bareRequest && isDoseAnchoredBareQuery(parsed?.name || '');
 
     // Units where the product's own label serving IS the thing the user asked
     // for ("1 container of yogurt" → the container size on the label). For these,
@@ -4711,7 +4720,10 @@ export async function buildOffResult(
         // not 28/9 per piece (A); "yoplait original strawberry" the 170g cup,
         // not the 12g strawberry seed (B). usableBareLabelServing already
         // rejected the flat-100g placeholder and garbage sub-3g metadata.
-        if (grams == null && !barePluralRequest && bareRequest && bareLabelGrams != null) {
+        // Dose-anchored categories skip this step: a sugar record's cup-
+        // measure label must not outrank the 1-tsp default (n-serv-37).
+        if (grams == null && !barePluralRequest && bareRequest && !doseAnchored
+            && bareLabelGrams != null) {
             grams = bareLabelGrams;
             servingDescription = `1 serving (${bareLabelGrams}g)`;
             servingTier = 'bare_label_serving';
@@ -4832,8 +4844,11 @@ export async function buildOffResult(
         // Plural bare requests may borrow ONLY on a real brand (snickers,
         // airheads): the name-token pseudo-brand ("Almonds" → brand 'almonds')
         // could match junk OFF brands for generic produce plurals.
+        // Dose-anchored categories skip the borrow too: Ghost's 32.5g
+        // two-scoop sibling median must not outrank the 1-scoop pre-workout
+        // default (n-serv-43) — the package tiers + category CAP handle it.
         if (
-            grams == null && bareRequest
+            grams == null && bareRequest && !doseAnchored
             && (!barePluralRequest || hydrated.brandName != null)
             && bareLabelGrams == null && brandForBorrow
             && !(hydrated.packageQuantityUnit === 'ml' && packageGrams != null)

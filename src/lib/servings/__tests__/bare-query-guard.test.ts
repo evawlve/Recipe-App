@@ -8,7 +8,7 @@
 
 import {
     applyOffBareQueryGuard, BareQueryGuardInput,
-    isBareUnitlessQty1, usableBareLabelServing,
+    isBareUnitlessQty1, usableBareLabelServing, isDoseAnchoredBareQuery,
 } from '../bare-query-guard';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
@@ -446,6 +446,36 @@ describe('applyOffBareQueryGuard — bounded discrete floor on REPLACE tiers (Tr
             foodName: 'Chobani Greek Yogurt',
         }));
         expect(r).toBeNull();
+    });
+});
+
+describe('isDoseAnchoredBareQuery — scoop/spoon-dosed tier-order gate (eval regressions n-serv-37/43)', () => {
+    it.each([
+        ['sugar', 'single-token tsp category'],
+        ['brown sugar', 'tail token anchors the tsp category'],
+        ['ghost pre workout', 'two-token scoop phrase at the tail ("pre workout")'],
+        ['pre workout', 'the scoop phrase itself'],
+        ['peanut butter', 'tbsp phrase whose head is itself lexicon-covered'],
+        ['olive oil', 'tbsp condiment anchored at the head'],
+        ['ketchup', 'single-token tbsp condiment'],
+        ['whey protein powder', 'scoop category with the phrase at the tail'],
+    ])('anchored: "%s" (%s)', (q) => {
+        expect(isDoseAnchoredBareQuery(q)).toBe(true);
+    });
+
+    it.each([
+        ['pepper jack', 'spice token survives without the tail ("pepper" alone matches)'],
+        ['butter chicken', 'condiment token is a leading modifier'],
+        ['pumpkin spice latte', 'spice token is a middle modifier'],
+        ['cinnamon raisin bagel', 'spice token is a leading modifier'],
+        ['creatine gummies', 'scoop token is a leading modifier — gummies keep piece resolution'],
+        ['yoplait original strawberry', 'no lexicon category at all'],
+        ['snickers', 'no lexicon category at all'],
+        ['combos cheddar pretzel', 'salty-snack category is oz-dosed, not tsp/tbsp/scoop'],
+        ['muscle milk', 'can-dosed category'],
+        ['milk', 'cup-dosed liquid category'],
+    ])('NOT anchored: "%s" (%s)', (q) => {
+        expect(isDoseAnchoredBareQuery(q)).toBe(false);
     });
 });
 

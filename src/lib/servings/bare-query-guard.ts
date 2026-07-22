@@ -121,6 +121,54 @@ function queryHeadToken(queryName: string): string {
     return toks[toks.length - 1] ?? '';
 }
 
+/**
+ * Dose-measured lexicon categories: the bare-query default is a tsp/tbsp/scoop
+ * DOSE, not a piece or package ("1 tsp" sugar/spices, "1 tbsp" condiments,
+ * "2 tbsp" nut butters, "1 scoop" pre-workout / protein powders).
+ */
+const DOSE_MEASURE_RE = /\b(tsp|tbsp|scoop)\b/i;
+
+/**
+ * True when a bare query belongs to a scoop/spoon-dosed lexicon category AND
+ * that category is anchored at the query's TAIL — i.e. the category noun IS
+ * what the user asked for, not a contained modifier.
+ *
+ * For these foods the product's own label serving / sibling median is the
+ * WRONG rank-1 answer to a bare request: a sugar record's 104g cup-measure
+ * label or Ghost's 32.5g two-scoop sibling median must not outrank the
+ * teaspoon/scoop dose default (eval regressions n-serv-37 / n-serv-43,
+ * 2026-07-21). buildOffResult skips the own-label and sibling-median steps
+ * when this holds, so resolution flows to the label/package tiers where the
+ * category CAP restores the dose default — exactly the pre-Track-3 path.
+ *
+ * Anchoring (reuses getBareQueryDefault — no parallel lexicon):
+ *   - the LAST token alone triggers the same category ("sugar", "oil",
+ *     "ketchup", peanut BUTTER); or
+ *   - the last TWO tokens trigger it while the second-to-last alone does NOT
+ *     ("pre workout", "greens powder" — the phrase needs its final token).
+ * Contained-token hijacks stay un-anchored: "pepper jack" (the spice match
+ * survives without "jack"), "butter chicken", "pumpkin spice latte" — their
+ * genuine label servings keep winning.
+ */
+export function isDoseAnchoredBareQuery(queryName: string): boolean {
+    const full = getBareQueryDefault(queryName);
+    if (!full || !DOSE_MEASURE_RE.test(full.description)) return false;
+    const toks = (queryName || '').toLowerCase().split(/[^a-z]+/).filter(t => t.length > 0);
+    if (toks.length === 0) return false;
+
+    const last1 = getBareQueryDefault(toks[toks.length - 1]);
+    if (last1 && last1.grams === full.grams) return true;
+
+    if (toks.length >= 2) {
+        const last2 = getBareQueryDefault(toks.slice(-2).join(' '));
+        const penult = getBareQueryDefault(toks[toks.length - 2]);
+        if (last2 && last2.grams === full.grams && !(penult && penult.grams === full.grams)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export interface BareQueryGuardInput {
     /** Grams billed by the tier cascade. */
     grams: number;

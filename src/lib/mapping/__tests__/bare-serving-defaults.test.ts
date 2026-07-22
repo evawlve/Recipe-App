@@ -367,6 +367,81 @@ describe('step (2) — count-noun piece resolution for bare requests', () => {
     });
 });
 
+describe('dose-anchored categories — own-label/sibling steps must NOT outrank the tsp/scoop default', () => {
+    it('n-serv-37: bare "sugar" ignores a cup-measure label and lands on the 4g tsp default', async () => {
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Granulated White Sugar',
+            brandName: 'Domino',
+            servingGrams: 104,
+            servingDescription: '0.5 cup (104 g)',
+        }));
+        // Even a plausible sibling median must not answer either.
+        mockedQueryRaw.mockResolvedValue([{ med: 104, n: 12 }]);
+
+        const result = await buildOffResult(
+            makeCandidate('Granulated White Sugar'), bareParsed('sugar'), 0.9, 'sugar'
+        );
+
+        expect(result?.servingTier).toBe('bare_category_default');
+        expect(result?.grams).toBe(4);
+    });
+
+    it('n-serv-37 variant: label-less sugar record skips the sibling median too', async () => {
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Granulated White Sugar',
+            brandName: 'Domino',
+            servingGrams: null,
+        }));
+        mockedQueryRaw.mockResolvedValue([{ med: 104, n: 12 }]);
+
+        const result = await buildOffResult(
+            makeCandidate('Granulated White Sugar'), bareParsed('sugar'), 0.9, 'sugar'
+        );
+
+        // count_unresolved_floor → REPLACE via the sugars lexicon entry.
+        expect(result?.servingTier).toBe('bare_category_default');
+        expect(result?.grams).toBe(4);
+    });
+
+    it('n-serv-43: bare "ghost pre workout" skips the 32.5g two-scoop sibling median → 12g scoop default', async () => {
+        // Live shape: off_0810028296060 has NULL servingGrams/servingSize;
+        // 147 Ghost siblings (protein tubs) median exactly 32.5g — which the
+        // eval caught billing as bare_sibling_serving.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Ghost Legend Pre Workout Cherry Limeade',
+            brandName: 'Ghost',
+            servingGrams: null,
+        }));
+        mockedQueryRaw.mockResolvedValue([{ med: 32.5, n: 147 }]);
+
+        const result = await buildOffResult(
+            makeCandidate('Ghost Legend Pre Workout Cherry Limeade'),
+            bareParsed('ghost pre workout'), 0.9, 'ghost pre workout'
+        );
+
+        expect(result?.servingTier).toBe('bare_category_default');
+        expect(result?.grams).toBe(12);
+    });
+
+    it('dose category with an in-band package tier still resolves through the CAP (ghost 473g tub → 12g)', async () => {
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Ghost Legend Pre Workout',
+            brandName: 'Ghost',
+            servingGrams: null,
+            packageQuantity: 473,
+            packageQuantityUnit: 'ml',
+        }));
+
+        const result = await buildOffResult(
+            makeCandidate('Ghost Legend Pre Workout'),
+            bareParsed('ghost pre workout'), 0.9, 'ghost pre workout'
+        );
+
+        expect(result?.servingTier).toBe('bare_category_default');
+        expect(result?.grams).toBe(12);
+    });
+});
+
 describe('step (4) — bounded discrete floor, never flat-100g for piece names', () => {
     it('bills one ~50g bar when nothing else resolves (no brand, no label, backfill error)', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({

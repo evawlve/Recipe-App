@@ -120,10 +120,10 @@ describe('buildOffResult — bare-query guard wire-in (A1)', () => {
             makeCandidate('Tomato Ketchup'), bareParsed('ketchup'), 0.9, 'ketchup'
         );
 
-        // Since the bare-serving defaults (Track 3, Jul 2026), an in-band own
-        // label serving on a bare singular bills as 'bare_label_serving' —
-        // same grams, more precise telemetry.
-        expect(result?.servingTier).toBe('bare_label_serving');
+        // Ketchup is a dose-anchored condiment (tbsp default), so the Track 3
+        // own-label step defers to the original label/CAP flow — byte-
+        // identical to master.
+        expect(result?.servingTier).toBe('label_serving_default');
         expect(result?.grams).toBe(15);
     });
 
