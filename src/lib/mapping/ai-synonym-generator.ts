@@ -113,7 +113,7 @@ for (const [british, americans] of Object.entries(BRITISH_TO_AMERICAN)) {
 // Schema & Prompts (Very Conservative)
 // ============================================================
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
     name: 'synonym_generation',
     schema: {
         type: 'object',

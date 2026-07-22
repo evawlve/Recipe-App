@@ -26,7 +26,7 @@ type AiPick =
     reason: string;
   };
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
   name: 'fatsecret_candidate_pick',
   schema: {
     type: 'object',

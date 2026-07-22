@@ -130,7 +130,7 @@ export interface AmbiguousServingResult {
     error?: string;
 }
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
     name: 'ambiguous_serving_estimate',
     schema: {
         type: 'object',
@@ -516,7 +516,7 @@ export interface BatchedProduceSizeResult {
     error?: string;
 }
 
-const PRODUCE_SIZE_RESPONSE_SCHEMA = {
+export const PRODUCE_SIZE_RESPONSE_SCHEMA = {
     name: 'produce_size_estimates',
     schema: {
         type: 'object',

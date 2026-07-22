@@ -74,7 +74,7 @@ export type AiServingResult =
     raw?: unknown;
   };
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
   name: 'fatsecret_serving_suggestion',
   schema: {
     type: 'object',

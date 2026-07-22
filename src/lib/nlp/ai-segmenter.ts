@@ -63,7 +63,7 @@ export function isSegmentedItemArray(value: unknown): value is SegmentedItem[] {
   });
 }
 
-const NLP_SPLIT_SCHEMA = {
+export const NLP_SPLIT_SCHEMA = {
   name: 'nlp_split',
   schema: {
     type: 'object',
