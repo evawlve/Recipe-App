@@ -19,6 +19,14 @@
  *      flips, per-100g kcal drift >5%, grams flap >25%, error deltas.
  *   4. EVAL GATE  — spawn run-eval.ts; real failures must be a subset of
  *      --allow-fail (default n-mq-10). Gate failure → exit 1.
+ *      4b. SEG REPLAY-DIFF (REPORT-ONLY) — top-N SegmentationCache lines by
+ *      hitCount re-run through fresh AI segmentation with the cache bypassed
+ *      (no cache read, NO cache write) and diffed against the cached splits;
+ *      writes results/seg-replay-<ts>.json + a trend line vs the previous
+ *      seg-replay artifact. Fail-soft: any error (LLM down, DB down) becomes
+ *      a warning in the report and NEVER changes the sweep's exit code or
+ *      gating. Logic: src/lib/ops/seg-replay.ts. Cost ~N LLM calls (default
+ *      20, --seg-replay-top).
  *   5. REPORT     — results/flywheel-<ts>.{json,md}; --publish-dir copies the
  *      markdown (dated + flywheel-latest.md) somewhere Syncthing carries it
  *      (e.g. sync-docs/) so every machine sees the nightly report.
@@ -31,12 +39,18 @@
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
  *     scripts/eval/flywheel-sweep.ts --base http://localhost:3000 \
  *     [--days 7] [--top 100] [--concurrency 4] [--allow-fail n-mq-10] \
- *     [--skip-warm] [--skip-eval] [--publish-dir sync-docs]
+ *     [--skip-warm] [--skip-eval] [--seg-replay-top 20] [--publish-dir sync-docs]
  *
  * --stuck-keys-only runs JUST the stuck-key report (read-only against the DB,
  * writes only results/stuck-keys-<ts>.json) — no warm, no eval, no publish.
+ * --seg-replay-only likewise runs JUST the seg replay-diff step (reads the DB,
+ * ~N LLM calls, writes only results/seg-replay-<ts>.json).
  */
 
+// Load .env before any src/lib import: the seg replay-diff step calls the LLM
+// in-process and structured-client captures OPENROUTER_API_KEY & co. from
+// process.env at import time. dotenv never overrides vars already set.
+import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
@@ -46,6 +60,11 @@ import {
     collectStuckKeys, computeStuckTrend, findPreviousStuckReport, formatStuckKeysSection,
     StuckKeysReport, StuckTrend,
 } from '../../src/lib/ops/stuck-keys';
+import {
+    collectSegReplay, computeSegReplayTrend, failedSegReplayReport, findPreviousSegReplayReport,
+    formatSegReplaySection, SegReplayReport, SegReplayTrend, SEG_REPLAY_DEFAULT_TOP_N,
+} from '../../src/lib/ops/seg-replay';
+import { segmentTextWithAi } from '../../src/lib/nlp/ai-segmenter';
 
 const args = process.argv.slice(2);
 function argValue(flag: string): string | undefined {
@@ -61,6 +80,8 @@ const ALLOW_FAIL = (argValue('--allow-fail') ?? 'n-mq-10').split(',').map(s => s
 const SKIP_WARM = args.includes('--skip-warm');
 const SKIP_EVAL = args.includes('--skip-eval');
 const STUCK_ONLY = args.includes('--stuck-keys-only');
+const SEG_REPLAY_TOP = Number(argValue('--seg-replay-top') ?? SEG_REPLAY_DEFAULT_TOP_N);
+const SEG_REPLAY_ONLY = args.includes('--seg-replay-only');
 const PUBLISH_DIR = argValue('--publish-dir');
 
 const RESULTS_DIR = path.join(__dirname, 'results');
@@ -184,6 +205,64 @@ async function runStuckKeysReport(ranAt: string, stamp: string): Promise<StuckKe
         }, null, 1));
     }
     return { report, trend, outPath };
+}
+
+// ---------------------------------------------------------------------------
+// 4b. Seg replay-diff (REPORT-ONLY) — logic in src/lib/ops/seg-replay.ts
+// ---------------------------------------------------------------------------
+
+interface SegReplayRun {
+    report: SegReplayReport;
+    trend: SegReplayTrend;
+    /** results/seg-replay-<ts>.json; null when the step failed (nothing to trend against). */
+    outPath: string | null;
+}
+
+/**
+ * Fail-soft wrapper: this step is strictly report-only. ANY failure (prisma
+ * init, DB, LLM, fs) is folded into an ok:false report section — it must
+ * never throw into main() and never influence the eval gate's exit code.
+ */
+async function runSegReplayStep(ranAt: string, stamp: string): Promise<SegReplayRun> {
+    try {
+        const prisma = new PrismaClient();
+        let report: SegReplayReport;
+        try {
+            report = await collectSegReplay(prisma, segmentTextWithAi, { topN: SEG_REPLAY_TOP });
+        } finally {
+            await prisma.$disconnect().catch(() => {});
+        }
+
+        // Locate the previous artifact BEFORE writing this run's file (trend input).
+        const prev = findPreviousSegReplayReport(RESULTS_DIR);
+        const trend = computeSegReplayTrend(report.drifts, prev);
+
+        let outPath: string | null = null;
+        if (report.ok) {
+            // Zero cached lines is a valid (clean) result and still a trend
+            // datapoint; a failed run writes nothing so it can't fake a clean zero.
+            fs.mkdirSync(RESULTS_DIR, { recursive: true });
+            outPath = path.join(RESULTS_DIR, `seg-replay-${stamp}.json`);
+            fs.writeFileSync(outPath, JSON.stringify({ ranAt, ...report, trend }, null, 1));
+        }
+        return { report, trend, outPath };
+    } catch (err) {
+        return {
+            report: failedSegReplayReport(SEG_REPLAY_TOP, (err as Error).message),
+            trend: { previous: null, previousDrifts: null, delta: null },
+            outPath: null,
+        };
+    }
+}
+
+function segReplaySummaryLine(seg: SegReplayRun): string {
+    const r = seg.report;
+    if (!r.ok) return `  unavailable (report-only, not gating): ${r.error}`;
+    if (r.cachedLines === 0) return '  0 cached lines to replay — clean zero';
+    const trendBit = seg.trend.previous === null
+        ? 'first run'
+        : `prev drifts ${seg.trend.previousDrifts}, Δ ${seg.trend.delta}`;
+    return `  replayed ${r.replayed}: ${r.matches} match / ${r.drifts} drift / ${r.aiErrors} ai_error (${trendBit})`;
 }
 
 // ---------------------------------------------------------------------------
@@ -312,7 +391,7 @@ function fmtTable(rows: string[][], header: string[]): string {
 
 function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport | null,
     seedCount: number, telemetrySeedCount: number, diff: WarmDiff | null, gate: EvalGate | null,
-    stuck: StuckKeysRun | null): string {
+    stuck: StuckKeysRun | null, segReplay: SegReplayRun | null): string {
     const lines: string[] = [];
     lines.push(`# Flywheel sweep — ${ranAt}`);
     lines.push('');
@@ -403,6 +482,12 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
         if (stuck.outPath) lines.push('', `Triage input: \`${path.basename(stuck.outPath)}\``);
         lines.push('');
     }
+
+    if (segReplay) {
+        lines.push(...formatSegReplaySection(segReplay.report, segReplay.trend));
+        if (segReplay.outPath) lines.push('', `Artifact: \`${path.basename(segReplay.outPath)}\``);
+        lines.push('');
+    }
     return lines.join('\n');
 }
 
@@ -418,6 +503,15 @@ async function main() {
         console.log('');
         console.log(formatStuckKeysSection(stuck.report, stuck.trend).join('\n'));
         if (stuck.outPath) console.log(`\nJSON: ${stuck.outPath}`);
+        return;
+    }
+
+    if (SEG_REPLAY_ONLY) {
+        console.log(`Seg-replay-only report @ ${ranAt} (top ${SEG_REPLAY_TOP} cached lines)`);
+        const seg = await runSegReplayStep(ranAt, stamp);
+        console.log('');
+        console.log(formatSegReplaySection(seg.report, seg.trend).join('\n'));
+        if (seg.outPath) console.log(`\nJSON: ${seg.outPath}`);
         return;
     }
 
@@ -465,6 +559,11 @@ async function main() {
             : `  ${gate.pass ? 'PASS' : 'FAIL'} (real fails: ${gate.realFails.map(f => f.id).join(', ') || 'none'})`);
     }
 
+    // Report-only drift check — runs after the gate, never changes its verdict.
+    console.log('\n[4b] Seg replay-diff (report-only)…');
+    const segReplay = await runSegReplayStep(ranAt, stamp);
+    console.log(segReplaySummaryLine(segReplay));
+
     fs.mkdirSync(RESULTS_DIR, { recursive: true });
     const jsonPath = path.join(RESULTS_DIR, `flywheel-${stamp}.json`);
     fs.writeFileSync(jsonPath, JSON.stringify({
@@ -477,9 +576,18 @@ async function main() {
             ok: stuck.report.ok, error: stuck.report.error,
             count: stuck.report.count, trend: stuck.trend, report: stuck.outPath,
         },
+        // Entries live in the dedicated seg-replay-<ts>.json; summary + pointer here.
+        segReplay: {
+            ok: segReplay.report.ok, error: segReplay.report.error,
+            topN: segReplay.report.topN, cachedLines: segReplay.report.cachedLines,
+            replayed: segReplay.report.replayed, matches: segReplay.report.matches,
+            drifts: segReplay.report.drifts, aiErrors: segReplay.report.aiErrors,
+            driftRate: segReplay.report.driftRate,
+            trend: segReplay.trend, report: segReplay.outPath,
+        },
     }, null, 1));
 
-    const md = buildMarkdown(ranAt, telemetry, warm, seedCount, telemetrySeeds.length, diff, gate, stuck);
+    const md = buildMarkdown(ranAt, telemetry, warm, seedCount, telemetrySeeds.length, diff, gate, stuck, segReplay);
     const mdPath = path.join(RESULTS_DIR, `flywheel-${stamp}.md`);
     fs.writeFileSync(mdPath, md);
     console.log(`\nReport: ${mdPath}`);
