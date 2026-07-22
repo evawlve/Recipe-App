@@ -54,7 +54,7 @@ import { detectBrandInQuery } from './brand-detector';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
-import { deriveCacheKeyName } from './cache-key';
+import { deriveMappingCacheKey } from './cache-key';
 import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
 
 // ============================================================
@@ -749,12 +749,13 @@ export async function mapIngredientWithFallback(
         // Check ValidatedMapping for normalized name BEFORE calling AI
         // This is the key optimization: "1 cup chopped onion" → normalized "onion" → cache hit!
         if (telemetry) telemetry.normalizedForm = normalizedName;
-        // PR D pt3 (C1): lookup key carries identity discriminators (egg
-        // white/yolk, cooked, whole) so identity-distinct senses stop fighting
-        // over one row. Computed identically at the step-1c lookup and the
-        // Step-6 save key — lookup and save must stay the same function of
-        // (normalizedName, parsed).
-        const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(deriveCacheKeyName(normalizedName, parsed), 'fatsecret', trimmed);
+        // PR D pt3 (C1) + key symmetry (Track 1c): lookup key carries identity
+        // discriminators (egg white/yolk, cooked, whole) AND the brand-prefix
+        // decision — deriveMappingCacheKey is THE key function, used verbatim
+        // at the step-1c lookup and the Step-6 save key. brandDetection (not
+        // the AI-mutable isBrandedQuery) is the brand input at all three
+        // sites: it's the only brand signal that exists this early.
+        const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(deriveMappingCacheKey(normalizedName, parsed, brandDetection), 'fatsecret', trimmed);
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
 
@@ -1159,9 +1160,12 @@ export async function mapIngredientWithFallback(
             // skipCache must gate this layer too — without it a "cold" (nocache)
             // run would still serve cached rows via step 1c and parity runs
             // against the cache would be meaningless.
-            // PR D pt3 (C1): same derived key as the early lookup — recomputed
-            // here because AI normalize may have replaced normalizedName.
-            const normalizedCache = skipCache ? null : await getValidatedMappingByNormalizedName(deriveCacheKeyName(normalizedName, parsed), 'fatsecret', trimmed);
+            // PR D pt3 (C1) + key symmetry (Track 1c): same derived key
+            // (deriveMappingCacheKey incl. brand-prefix decision) as the early
+            // lookup and the Step-6 save — recomputed here because AI
+            // normalize may have replaced normalizedName. brandDetection is
+            // request-stable, so this key matches the save key exactly.
+            const normalizedCache = skipCache ? null : await getValidatedMappingByNormalizedName(deriveMappingCacheKey(normalizedName, parsed, brandDetection), 'fatsecret', trimmed);
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
                 const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
@@ -2469,20 +2473,17 @@ export async function mapIngredientWithFallback(
             // instead of canonicalBase (which collapses variants to a shared base).
             // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
             // caused 73+ subsequent "peanut butter" queries to return powdered PB.
-            // PR D pt3 (C1): the key adds the parser's identity discriminators —
-            // the SAME function of (normalizedName, parsed) as both cache lookups.
-            let cacheKey = deriveCacheKeyName(normalizedName, parsed);
-
-            // Brand-Prefixed normalizedForm (Option A)
-            // If the query is branded and we have a targetBrand, prefix the cache key
-            // with the brand name so that it doesn't overwrite generic cache entries.
-            // e.g., "heinz tomato ketchup" instead of "tomato ketchup"
-            if (isBrandedQuery && brandDetection.matchedBrand) {
-                const brandPrefix = brandDetection.matchedBrand.toLowerCase();
-                if (!cacheKey.toLowerCase().includes(brandPrefix)) {
-                    cacheKey = `${brandPrefix} ${cacheKey}`;
-                }
-            }
+            // Key symmetry (Track 1c): the SAME function of (normalizedName,
+            // parsed, brandDetection) as both cache lookups — identity
+            // discriminators AND the brand-prefix decision now live inside
+            // deriveMappingCacheKey. The old site-local brand prepend used a
+            // substring includes() that singularization defeated ("oikos" vs
+            // canonical token "oiko" → dead "oiko oiko" rows); the shared
+            // function stem-matches tokens and collapses duplicate tokens.
+            // Note: brandDetection (request-stable), NOT isBrandedQuery — the
+            // AI-upgraded flag doesn't exist at early-lookup time, so a key
+            // built from it could never be symmetric.
+            const cacheKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection);
 
             // Per-100g macros of the pick + the AI estimate feed the save-time
             // plausibility gate inside saveValidatedMapping (PR D): corrupt
