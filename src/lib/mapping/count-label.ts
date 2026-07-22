@@ -105,6 +105,58 @@ export function servingLabelCountsPiece(
     return perPiece >= 0.2 && perPiece <= 500;
 }
 
+// ============================================================
+// Discrete-item unit nouns (moved here from map-ingredient-with-fallback so
+// the bare-serving guard can share the SAME lexicon — no parallel copies).
+// ============================================================
+
+/**
+ * Discrete packaged-item nouns: when an item NAME names one of these and has
+ * no genuine serving, the noun itself is an estimable unit ("quest protein
+ * bar" → 1 bar) — sibling-borrow / AI resolve its weight rather than
+ * defaulting to a flat 100g. Deliberately excludes ambiguous words like
+ * "cup"/"pack"/"stick" that collide with volume/package/butter handling.
+ * links/slices/tortillas added for the bare-serving defaults (Track 3, Jul
+ * 2026) — same routing, they were already estimable units downstream.
+ */
+export const DISCRETE_ITEM_UNIT_RE = /\b(bars?|cookies?|brownies?|patties|patty|nuggets?|puffs?|wafers?|biscuits?|muffins?|links?|slices?|tortillas?)\b/i;
+
+/** First discrete-item unit noun in a food name, singularized ("Quest Protein Bars" → "bar"). */
+export function inferDiscreteUnit(name: string): string | null {
+    const m = name.match(DISCRETE_ITEM_UNIT_RE);
+    return m ? singularizeUnit(m[1]) : null;
+}
+
+/**
+ * Bounded single-piece floors for discrete-item nouns (bare-serving defaults,
+ * Jul 2026). Last-resort grams for a bare query whose NAME implies a discrete
+ * piece but for which no label / seed / sibling / AI weight resolved — such a
+ * food must NEVER bill the flat 100g default ("protein bar" is ~50g, not
+ * 100g). Values are conservative mid-range piece weights, not label data.
+ */
+export const DISCRETE_PIECE_FLOOR_GRAMS: Record<string, number> = {
+    bar: 50,
+    cookie: 30,
+    brownie: 40,
+    patty: 45,
+    nugget: 20,
+    puff: 20,
+    wafer: 15,
+    biscuit: 30,
+    muffin: 55,
+    link: 45,
+    slice: 30,
+    tortilla: 45,
+};
+
+/** The bounded piece floor implied by a food name, else null. */
+export function discretePieceFloor(name: string): { unit: string; grams: number } | null {
+    const unit = inferDiscreteUnit(name || '');
+    if (!unit) return null;
+    const grams = DISCRETE_PIECE_FLOOR_GRAMS[unit];
+    return grams ? { unit, grams } : null;
+}
+
 /**
  * Noun-agnostic form of servingLabelCountsPiece — does this label enumerate
  * ≥2 of ANY recognized piece word with a sane per-piece weight? Used to compute

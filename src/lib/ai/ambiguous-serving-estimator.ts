@@ -69,6 +69,16 @@ export const UNIT_MIN_GRAMS: Record<string, number> = {
     handful: 10, handfuls: 10,
     bowl: 25, bowls: 25,
     plate: 50, plates: 50,
+    // Discrete-piece nouns (count-noun sibling routing, Track 3 Jul 2026):
+    // a cached "bar" of 1.5g is a poisoned per-nut weight in disguise
+    // (barebells 1.5g class) — reject it so sibling-borrow/AI re-resolve.
+    // "slice" is deliberately ABSENT: genuine slices span 2g (pepperoni) to
+    // 30g+ (bread), so no single floor is safe.
+    bar: 15, bars: 15,
+    patty: 15, patties: 15,
+    link: 10, links: 10,
+    tortilla: 15, tortillas: 15,
+    cookie: 4, cookies: 4,
 };
 
 /** Sanity bounds for an ambiguous unit's per-unit grams; either side may be undefined. */
@@ -96,6 +106,13 @@ const UNIT_MAX_GRAMS: Record<string, number> = {
     // Pieces/strips/chunks/breasts: reasonable max for cut produce/meat
     piece: 200, pieces: 200, strip: 50, strips: 50, chunk: 50, chunks: 50,
     breast: 300, breasts: 300, thigh: 200, thighs: 200,
+    // Discrete-piece nouns (count-noun sibling routing, Track 3 Jul 2026):
+    // caps reject package-scale cached rows (a 340g "bar" is a multipack).
+    bar: 150, bars: 150,
+    patty: 250, patties: 250,
+    link: 100, links: 100,
+    tortilla: 120, tortillas: 120,
+    cookie: 100, cookies: 100,
 };
 
 export interface AmbiguousServingRequest {
