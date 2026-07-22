@@ -1,20 +1,25 @@
 /**
- * Bare-query serving guard for the OFF result builder (PR D pt3, Lever A).
+ * Bare-query serving guard for the OFF result builder (PR D pt3, Lever A;
+ * extended for bare-serving defaults, Track 3, Jul 2026).
  *
  * A "bare" query is a unitless qty-1 request with no digits in the raw line
  * ("olive oil", "doritos", "bacon") — the user asked for *a serving*, not a
- * package. Two failure classes in buildOffResult's tier cascade betray that
- * intent:
- *   - package/label tiers billing the whole retail unit (olive oil → 250g
- *     bottle, ghost pre-workout → 473g tub);
- *   - fabricated tiers billing a flat floor (mayonnaise → 100g, bacon → 100g).
- * This module maps such results onto the shared bare-query category lexicon
- * (getBareQueryDefault). Pure function, no I/O; the caller wires it in after
- * the tier cascade and keeps its original result on a null return.
+ * package. Deterministic resolution order for such requests (triage batch
+ * 2026-07-21, 82 confirmed serving rows):
+ *   (1) the record's OWN in-band label serving (usableBareLabelServing,
+ *       billed by buildOffResult as tier 'bare_label_serving');
+ *   (2) a count-noun piece weight when the NAME implies a discrete piece
+ *       (buildOffResult's seed / discrete-unit-backfill branches);
+ *   (3) the same-brand sibling median label serving ('bare_sibling_serving');
+ *   (4) a bounded floor — NEVER flat-100g for a discrete-piece name
+ *       ('bare_discrete_floor', wired below in the REPLACE path).
+ * This module owns the eligibility predicate, the label-usability band, and
+ * the post-cascade override (CAP / REPLACE / floor). Pure functions, no I/O.
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import { getBareQueryDefault } from '../ai/ambiguous-serving-estimator';
+import { discretePieceFloor } from '../mapping/count-label';
 
 /**
  * Tiers whose grams come from real package/label machinery and can only be
@@ -35,6 +40,25 @@ const CAP_TIERS = new Set([
 ]);
 
 /**
+ * Tier billed from the record's own in-band label serving — real
+ * single-serving-scale data (bare-serving defaults, Jul 2026). The category
+ * CAP may only override it when the lexicon category is the query's HEAD
+ * noun ("olive oil" → oil, whole-bottle labels still capped). A merely
+ * CONTAINED token must not cap it: "pepper jack" (spice hijack → 2.5g) and
+ * "pumpkin spice latte" (→ 2.5g) previously lost their genuine label
+ * servings to token-containment caps (triage 2026-07-21).
+ *
+ * 'bare_sibling_serving' is deliberately UNTOUCHED (not merely head-gated):
+ * the median of >=3 sibling label servings, band-limited to 3–400g and
+ * excluding the flat-100 placeholder, is stronger evidence than a category
+ * default — capping it re-breaks trailing-lexicon-noun dishes ("hot pocket
+ * ham and cheese" → 28g cheese cap over the 127g pocket median).
+ */
+const HEAD_GATED_CAP_TIERS = new Set([
+    'bare_label_serving',
+]);
+
+/**
  * Fabricated tiers — the grams are a made-up floor, not label data — so a
  * category default is strictly better in BOTH directions (mayonnaise 100→14,
  * coca cola 100→355).
@@ -43,6 +67,107 @@ const REPLACE_TIERS = new Set([
     'flat_100g_default',
     'count_unresolved_floor',
 ]);
+
+/** Band for trusting a record's own label serving on a bare request. */
+export const BARE_LABEL_MIN_GRAMS = 3;
+export const BARE_LABEL_MAX_GRAMS = 400;
+
+/**
+ * Seed per-piece weights below this never answer a bare qty-1 request on
+ * their own: "barebells caramel cashew" must not bill one 1.5g cashew, and
+ * bare "almond" means a serving of almonds, not a 1.2g nut. Pieces at or
+ * above it (banana 118g, egg 50g, bagel) ARE the serving and pass through.
+ */
+export const BARE_MIN_PIECE_SERVING_GRAMS = 20;
+
+/**
+ * Eligibility for every bare-serving lever: unitless qty-1, multiplier 1, no
+ * digit anywhere in the raw line. The digit gate keeps every explicit count
+ * ("1 gatorade", "3 almonds", "15 pretzels") on the counted-resolution path.
+ */
+export function isBareUnitlessQty1(parsed: ParsedIngredient | null, rawLine: string): boolean {
+    if (!parsed || parsed.unit || parsed.qty !== 1 || parsed.multiplier !== 1) return false;
+    if (/\d/.test(rawLine)) return false;
+    return true;
+}
+
+/**
+ * The record's own label serving, when it is usable as THE answer to a bare
+ * request: single-serving-scale (3–400g) and not a per-100g placeholder.
+ *
+ *   - EU per-100g panels are routinely registered as a "serving" ("100 g",
+ *     "100.0g", "1 portion (100 g)") — exactly 100g with no household unit
+ *     word is treated as a placeholder, NOT a label (snickers/mascarpone/
+ *     gorgonzola class). A genuine "1 cup (100 g)" passes via its unit word.
+ *   - Sub-3g servings with no unit word are garbage metadata ("1.0g" on a
+ *     whole trout / hot pocket) — the band rejects them so the sibling
+ *     median can answer instead.
+ */
+export function usableBareLabelServing(
+    servingGrams: number | null | undefined,
+    labelUnitWord: string | null,
+): number | null {
+    if (!servingGrams || servingGrams <= 0) return null;
+    if (servingGrams < BARE_LABEL_MIN_GRAMS || servingGrams > BARE_LABEL_MAX_GRAMS) return null;
+    if (servingGrams === 100 && (labelUnitWord == null || labelUnitWord === 'g' || labelUnitWord === 'portion')) {
+        return null;
+    }
+    return servingGrams;
+}
+
+/** Last alphabetic token of a query name ("pumpkin spice latte" → "latte"). */
+function queryHeadToken(queryName: string): string {
+    const toks = (queryName || '').toLowerCase().split(/[^a-z]+/).filter(t => t.length > 0);
+    return toks[toks.length - 1] ?? '';
+}
+
+/**
+ * Dose-measured lexicon categories: the bare-query default is a tsp/tbsp/scoop
+ * DOSE, not a piece or package ("1 tsp" sugar/spices, "1 tbsp" condiments,
+ * "2 tbsp" nut butters, "1 scoop" pre-workout / protein powders).
+ */
+const DOSE_MEASURE_RE = /\b(tsp|tbsp|scoop)\b/i;
+
+/**
+ * True when a bare query belongs to a scoop/spoon-dosed lexicon category AND
+ * that category is anchored at the query's TAIL — i.e. the category noun IS
+ * what the user asked for, not a contained modifier.
+ *
+ * For these foods the product's own label serving / sibling median is the
+ * WRONG rank-1 answer to a bare request: a sugar record's 104g cup-measure
+ * label or Ghost's 32.5g two-scoop sibling median must not outrank the
+ * teaspoon/scoop dose default (eval regressions n-serv-37 / n-serv-43,
+ * 2026-07-21). buildOffResult skips the own-label and sibling-median steps
+ * when this holds, so resolution flows to the label/package tiers where the
+ * category CAP restores the dose default — exactly the pre-Track-3 path.
+ *
+ * Anchoring (reuses getBareQueryDefault — no parallel lexicon):
+ *   - the LAST token alone triggers the same category ("sugar", "oil",
+ *     "ketchup", peanut BUTTER); or
+ *   - the last TWO tokens trigger it while the second-to-last alone does NOT
+ *     ("pre workout", "greens powder" — the phrase needs its final token).
+ * Contained-token hijacks stay un-anchored: "pepper jack" (the spice match
+ * survives without "jack"), "butter chicken", "pumpkin spice latte" — their
+ * genuine label servings keep winning.
+ */
+export function isDoseAnchoredBareQuery(queryName: string): boolean {
+    const full = getBareQueryDefault(queryName);
+    if (!full || !DOSE_MEASURE_RE.test(full.description)) return false;
+    const toks = (queryName || '').toLowerCase().split(/[^a-z]+/).filter(t => t.length > 0);
+    if (toks.length === 0) return false;
+
+    const last1 = getBareQueryDefault(toks[toks.length - 1]);
+    if (last1 && last1.grams === full.grams) return true;
+
+    if (toks.length >= 2) {
+        const last2 = getBareQueryDefault(toks.slice(-2).join(' '));
+        const penult = getBareQueryDefault(toks[toks.length - 2]);
+        if (last2 && last2.grams === full.grams && !(penult && penult.grams === full.grams)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 export interface BareQueryGuardInput {
     /** Grams billed by the tier cascade. */
@@ -76,8 +201,7 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
     // Eligibility: bare unitless qty-1 request only. The digit gate keeps every
     // explicit count out ("15 pretzels" must retain its count_unresolved_floor
     // backstop, "3 almonds" its per-piece resolution).
-    if (!parsed || parsed.unit || parsed.qty !== 1 || parsed.multiplier !== 1) return null;
-    if (/\d/.test(rawLine)) return null;
+    if (!isBareUnitlessQty1(parsed, rawLine)) return null;
     if (!servingTier) return null;
 
     const queryDefault = getBareQueryDefault(queryName);
@@ -92,6 +216,20 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         return null;
     }
 
+    if (HEAD_GATED_CAP_TIERS.has(servingTier)) {
+        // Own-label / sibling-median grams are real single-serving-scale data.
+        // The CAP may fire only when the lexicon category is anchored at the
+        // query HEAD ("olive oil" → oil: a 250g whole-bottle "serving" still
+        // caps to 14g). Contained-token hijacks (pepper jack, butter chicken)
+        // keep the label.
+        if (queryDefault
+            && getBareQueryDefault(queryHeadToken(queryName)) != null
+            && grams > queryDefault.grams * 2) {
+            return buildOverride(queryDefault.grams);
+        }
+        return null;
+    }
+
     if (REPLACE_TIERS.has(servingTier)) {
         // Fabricated grams: the foodName fallback is safe here (nothing real is
         // being overridden) and lets branded queries hit via the product name
@@ -99,6 +237,17 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         const def = queryDefault ?? getBareQueryDefault(foodName);
         if (def) {
             return buildOverride(def.grams);
+        }
+        // Bounded discrete floor (Track 3, Jul 2026): a name that implies a
+        // discrete piece must NEVER bill the flat 100g default — one sensible
+        // piece is strictly closer ("kirkland protein bar …" → ~50g bar).
+        const floor = discretePieceFloor(queryName) ?? discretePieceFloor(foodName);
+        if (floor) {
+            return {
+                grams: floor.grams,
+                servingTier: 'bare_discrete_floor',
+                servingDescription: `1 ${floor.unit} (~${floor.grams}g)`,
+            };
         }
     }
 

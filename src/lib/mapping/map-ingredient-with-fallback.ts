@@ -27,6 +27,7 @@ import {
     singularizeUnit, extractLabelServingUnit,
     LABEL_COUNT_PIECE_NOUNS, GENERIC_PIECE_WORDS,
     pieceNounInName, labelPieceMatchesItem, countedPieceNoun, servingLabelCountsPiece,
+    inferDiscreteUnit,
 } from './count-label';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
@@ -55,7 +56,11 @@ import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-pla
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, type BrandKeyInput } from './cache-key';
-import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
+import {
+    applyOffBareQueryGuard, isBareUnitlessQty1, usableBareLabelServing,
+    isDoseAnchoredBareQuery,
+    BARE_LABEL_MIN_GRAMS, BARE_LABEL_MAX_GRAMS, BARE_MIN_PIECE_SERVING_GRAMS,
+} from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
 
 // ============================================================
@@ -1647,6 +1652,15 @@ export async function mapIngredientWithFallback(
                         }
 
                         const billsByServing = requestBillsByServing(parsed);
+                        // Cooked-grain volume requests (n-serv-06): the re-retrieval must
+                        // prefer candidates that OWN a matching volume serving over ones
+                        // that would fall back to generic density. requestBillsByServing
+                        // excludes explicit volume units by design (PR D pt2), so the
+                        // serving-shape flag is wired through this grain-scoped path.
+                        const grainVolumeUnit = !billsByServing && parsed?.unit
+                            && isMatchableVolumeUnit(parsed.unit)
+                            && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
+                            ? parsed.unit : null;
                         const rerankCandidates = candidatesForRerank.map(c => toRerankCandidate({
                             id: c.id,
                             name: c.name,
@@ -1656,7 +1670,8 @@ export async function mapIngredientWithFallback(
                             source: c.source,
                             nutrition: c.nutrition,  // Include for Route C macro sanity check + nutrition tiebreaker
                             countLabelMatch: countedNoun ? candidateHasCountLabel(c, countedNoun) : undefined,
-                            servingLabelMatch: billsByServing ? candidateHasServingData(c) : undefined,
+                            servingLabelMatch: billsByServing ? candidateHasServingData(c)
+                                : grainVolumeUnit ? candidateHasVolumeServing(c, grainVolumeUnit) : undefined,
                         }));
 
                         // Hybrid prep stripping: prefer AI canonicalBase (strips prep but preserves
@@ -2308,6 +2323,12 @@ export async function mapIngredientWithFallback(
                 // Run reranker to ensure anomaly penalties (e.g. canned beans) are applied
                 const countedNounFB = countedPieceNoun(parsed);
                 const billsByServingFB = requestBillsByServing(parsed);
+                // Same grain-scoped volume serving-shape wiring as the primary
+                // rerank site (n-serv-06).
+                const grainVolumeUnitFB = !billsByServingFB && parsed?.unit
+                    && isMatchableVolumeUnit(parsed.unit)
+                    && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
+                    ? parsed.unit : null;
                 const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
                     id: c.id,
                     name: c.name,
@@ -2317,7 +2338,8 @@ export async function mapIngredientWithFallback(
                     source: c.source,
                     nutrition: c.nutrition,
                     countLabelMatch: countedNounFB ? candidateHasCountLabel(c, countedNounFB) : undefined,
-                    servingLabelMatch: billsByServingFB ? candidateHasServingData(c) : undefined,
+                    servingLabelMatch: billsByServingFB ? candidateHasServingData(c)
+                        : grainVolumeUnitFB ? candidateHasVolumeServing(c, grainVolumeUnitFB) : undefined,
                 }));
                 const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
                 const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
@@ -3905,11 +3927,34 @@ async function buildFdcResult(
         servingDescription = `${grams.toFixed(1)}g`;
         servingTier = 'weight_unit';
     } else if (unit && volumeToGrams[unit]) {
-        // Unit is a volume unit - try AI estimation first for food-specific density
+        // Unit is a volume unit. Resolution order (Track 3, Jul 2026):
+        //   (0) the record's OWN matching volume serving (USDA household
+        //       measure, or a previously cached AI row) — deterministic and
+        //       food-specific ("1.5 cups cooked quinoa" on fdc 168917 must
+        //       bill 1.5 × the 185g usda_fdc cup row, never a fresh AI guess
+        //       or the generic 240ml×density fallback; n-serv-06 flap);
+        //   (1) AI estimation for food-specific density;
+        //   (2) hardcoded density fallback.
         const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
-        let aiEstimated = false;
+        let volumeResolved = false;
 
         if (!isNaN(fdcId)) {
+            const ownVolume = await findOwnFdcVolumeServing(fdcId, unit);
+            if (ownVolume) {
+                grams = qty * ownVolume.perUnitGrams;
+                servingDescription = `${qty} ${unit}`;
+                volumeResolved = true;
+                servingTier = ownVolume.genuine ? 'fdc_label_volume' : 'fdc_volume_cached';
+                logger.info('fdc.volume_own_serving', {
+                    foodName: candidate.name, unit,
+                    gramsPerUnit: ownVolume.perUnitGrams,
+                    totalGrams: grams,
+                    genuine: ownVolume.genuine,
+                });
+            }
+        }
+
+        if (!volumeResolved && !isNaN(fdcId)) {
             try {
                 const { insertFdcAiServing } = await import('../usda/fdc-ai-backfill');
                 const aiResult = await insertFdcAiServing(fdcId, 'volume', { targetUnit: unit });
@@ -3920,7 +3965,7 @@ async function buildFdcResult(
                 if (aiResult.success && aiResult.grams && aiResult.grams > 0) {
                     grams = qty * aiResult.grams;
                     servingDescription = `${qty} ${unit}`;
-                    aiEstimated = true;
+                    volumeResolved = true;
                     servingTier = 'fdc_volume_ai';
                     logger.info('fdc.volume_ai_estimated', {
                         foodName: candidate.name, unit, gramsPerUnit: aiResult.grams, totalGrams: grams,
@@ -3931,7 +3976,7 @@ async function buildFdcResult(
             }
         }
 
-        if (!aiEstimated) {
+        if (!volumeResolved) {
             // Fallback to hardcoded density estimate
             grams = qty * volumeToGrams[unit];
             servingDescription = `${qty} ${unit}`;
@@ -4236,15 +4281,8 @@ async function buildFdcResult(
  * Hydrates the candidate into the local DB, resolves grams from the parsed unit,
  * and falls back to AI nutrition backfill when the Atwater gate rejects label data.
  */
-// Discrete packaged-snack nouns: when a unitless branded item names one of these
-// and has no genuine serving, estimate that unit's weight (sibling-borrow / AI)
-// rather than defaulting to a flat 100g. Deliberately excludes ambiguous words
-// like "cup"/"pack"/"slice" that collide with volume/package handling.
-const DISCRETE_ITEM_UNIT_RE = /\b(bars?|cookies?|brownies?|patties|patty|nuggets?|puffs?|wafers?|biscuits?|muffins?)\b/i;
-function inferDiscreteUnit(name: string): string | null {
-    const m = name.match(DISCRETE_ITEM_UNIT_RE);
-    return m ? singularizeUnit(m[1]) : null;
-}
+// (inferDiscreteUnit moved to count-label.ts — shared with the bare-serving
+// guard's discrete floor so there is exactly ONE discrete-noun lexicon.)
 
 /**
  * True when an OFF search candidate's raw label serving enumerates >=2 of the
@@ -4285,6 +4323,117 @@ function candidateHasServingData(candidate: UnifiedCandidate): boolean {
     }
     if (candidate.source === 'fdc') {
         return !!candidate.servings?.some(s => typeof s.grams === 'number' && s.grams > 0);
+    }
+    return false;
+}
+
+// ============================================================
+// Volume-serving matching (cooked-grain volume preference, Track 3 Jul 2026)
+// ============================================================
+
+// Requested-volume-unit → serving-description stems. FDC household measures
+// store "cup" / "1 cup" / "0.25 cup, sliced"; tbsp rows may spell "tablespoon".
+const VOLUME_UNIT_STEMS: Record<string, string[]> = {
+    cup: ['cup'], cups: ['cup'],
+    tbsp: ['tbsp', 'tablespoon'], tablespoon: ['tbsp', 'tablespoon'], tablespoons: ['tbsp', 'tablespoon'],
+    tsp: ['tsp', 'teaspoon'], teaspoon: ['tsp', 'teaspoon'], teaspoons: ['tsp', 'teaspoon'],
+    floz: ['fl oz', 'fluid ounce'], 'fl oz': ['fl oz', 'fluid ounce'],
+};
+const VOLUME_UNIT_ML: Record<string, number> = {
+    cup: 240, cups: 240,
+    tbsp: 15, tablespoon: 15, tablespoons: 15,
+    tsp: 5, teaspoon: 5, teaspoons: 5,
+    floz: 30, 'fl oz': 30,
+};
+
+/** True when the requested unit is one the volume-serving matcher understands. */
+function isMatchableVolumeUnit(unit: string): boolean {
+    return VOLUME_UNIT_STEMS[unit.toLowerCase().trim()] != null;
+}
+
+/** True when a serving description names the requested volume unit ("0.5 cup (126 g)" for "cup"). */
+function servingDescriptionMatchesVolumeUnit(description: string | null | undefined, unit: string): boolean {
+    if (!description) return false;
+    const stems = VOLUME_UNIT_STEMS[unit.toLowerCase().trim()];
+    if (!stems) return false;
+    return stems.some(s => new RegExp(`\\b${s.replace(' ', '\\s+')}s?\\b`, 'i').test(description));
+}
+
+/** Leading count of a serving description ("0.25 cup" → 0.25, "1/2 cup" → 0.5, "cup" → 1). */
+function servingLeadingCount(description: string): number {
+    const frac = description.match(/^\s*(\d+)\s*\/\s*(\d+)/);
+    if (frac) {
+        const denom = parseFloat(frac[2]);
+        return denom > 0 ? parseFloat(frac[1]) / denom : 1;
+    }
+    const m = description.match(/^\s*(\d+(?:\.\d+)?)/);
+    if (!m) return 1;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+// Density plausibility band for trusting a volume serving (g/ml). Foods span
+// ~0.1 (puffed cereal) to ~1.45 (honey); anything outside is a corrupt row
+// (e.g. a whole-package weight stored under a "cup" description).
+const VOLUME_SERVING_MIN_DENSITY = 0.1;
+const VOLUME_SERVING_MAX_DENSITY = 1.6;
+
+/**
+ * The record's OWN volume serving matching the requested unit, per-unit
+ * (n-serv-06): the USDA cooked-quinoa "cup"=185g row must beat both a fresh
+ * AI estimate and the generic 240ml×density fallback. Genuine (non-AI) rows
+ * win over previously cached AI rows; either makes resolution deterministic
+ * across runs. Density-banded so corrupt rows can't smuggle package weights.
+ */
+export async function findOwnFdcVolumeServing(
+    fdcId: number,
+    unit: string,
+): Promise<{ perUnitGrams: number; genuine: boolean } | null> {
+    const mlPerUnit = VOLUME_UNIT_ML[unit.toLowerCase().trim()];
+    if (!mlPerUnit || !isMatchableVolumeUnit(unit)) return null;
+    let rows: Array<{ description: string; grams: number | null; isAiEstimated: boolean | null }>;
+    try {
+        const { prisma } = await import('../db');
+        rows = await prisma.fdcServing.findMany({
+            where: { fdcId },
+            select: { description: true, grams: true, isAiEstimated: true },
+        });
+    } catch {
+        return null;
+    }
+    const matches = rows
+        .filter(r => r.grams != null && r.grams > 0 && servingDescriptionMatchesVolumeUnit(r.description, unit))
+        .map(r => {
+            const count = servingLeadingCount(r.description);
+            return {
+                perUnitGrams: (r.grams as number) / (count > 0 ? count : 1),
+                genuine: !r.isAiEstimated,
+            };
+        })
+        .filter(m => {
+            const density = m.perUnitGrams / mlPerUnit;
+            return density >= VOLUME_SERVING_MIN_DENSITY && density <= VOLUME_SERVING_MAX_DENSITY;
+        });
+    if (matches.length === 0) return null;
+    return matches.find(m => m.genuine) ?? matches[0];
+}
+
+/**
+ * True when a search candidate carries a serving matching the requested
+ * volume unit. Feeds the rerank serving-shape flag for cooked-grain volume
+ * requests (n-serv-06): among cooked candidates, one that OWNS a cup serving
+ * must beat one that would fall back to generic volume density.
+ */
+export function candidateHasVolumeServing(candidate: UnifiedCandidate, unit: string): boolean {
+    if (candidate.source === 'fdc') {
+        return !!candidate.servings?.some(s =>
+            typeof s.grams === 'number' && s.grams > 0
+            && servingDescriptionMatchesVolumeUnit(s.description, unit));
+    }
+    if (candidate.source === 'openfoodfacts') {
+        const raw = candidate.rawData as { servingSize?: string | null; servingGrams?: number | null } | undefined;
+        return typeof raw?.servingGrams === 'number' && raw.servingGrams > 0
+            && servingDescriptionMatchesVolumeUnit(raw?.servingSize, unit);
     }
     return false;
 }
@@ -4333,6 +4482,40 @@ async function borrowSiblingPackageGrams(
         const winner = rows[0];
         if (!winner?.med || winner.n < 2) return null;
         return winner.med;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Median same-brand LABEL serving (bare-serving defaults, Track 3 Jul 2026).
+ * Within a brand's line the single-serving size is near-constant (all 15
+ * IQ Bar SKUs label 45g; 148 Snickers SKUs median 39.8g), so when the matched
+ * SKU's own servingGrams is NULL, garbage, or the flat-100g placeholder, the
+ * sibling median answers a bare qty-1 request deterministically from real
+ * label data. Band-restricted to single-serving scale and excludes exact-100g
+ * rows (the per-100g placeholder would otherwise dominate many brands).
+ * Requires >=3 in-band siblings so a bogus pair can't set the median.
+ */
+async function borrowSiblingLabelServing(
+    brandName: string | null | undefined,
+    selfBarcode: string,
+): Promise<{ grams: number; samples: number } | null> {
+    const brand = brandName?.trim();
+    if (!brand || brand.length < 2) return null;
+    try {
+        const { prisma } = await import('../db');
+        const rows = await prisma.$queryRaw<Array<{ med: number | null; n: number }>>`
+            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
+                   count(*)::int AS n
+            FROM "OffFood"
+            WHERE "brandName" ILIKE ${brand}
+              AND barcode <> ${selfBarcode}
+              AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
+              AND "servingGrams" <> 100`;
+        const row = rows[0];
+        if (!row?.med || row.n < 3) return null;
+        return { grams: row.med, samples: row.n };
     } catch {
         return null;
     }
@@ -4421,6 +4604,29 @@ export async function buildOffResult(
     const perLabelUnitGrams = hydrated.servingGrams && hydrated.servingGrams > 0
         ? hydrated.servingGrams / labelUnitCount : null;
 
+    // Bare-serving defaults (Track 3, Jul 2026): a digitless unitless qty-1
+    // line asks for A SERVING. Deterministic resolution order:
+    //   (1) the record's own in-band label serving ('bare_label_serving');
+    //   (2) a count-noun piece when the NAME implies one (seed / discrete
+    //       backfill branches below);
+    //   (3) the same-brand sibling median label serving ('bare_sibling_serving');
+    //   (4) bounded floor — never flat-100g for a discrete-piece name
+    //       (wired in applyOffBareQueryGuard's REPLACE path).
+    // The digit gate inside isBareUnitlessQty1 keeps "1 gatorade" / "3 almonds"
+    // on the counted-resolution path — nothing below changes for them.
+    const bareRequest = isBareUnitlessQty1(parsed, rawLine);
+    const bareLabelGrams = bareRequest
+        ? usableBareLabelServing(hydrated.servingGrams, labelUnitWord)
+        : null;
+    // Dose-measured categories (n-serv-37 sugar / n-serv-43 ghost pre workout
+    // eval regressions): when the bare query IS a scoop/spoon-dosed category
+    // (tail-anchored — "sugar", "ghost pre workout", "peanut butter"), the
+    // own-label and sibling-median steps are SKIPPED so resolution flows to
+    // the label/package tiers where the category CAP restores the tsp/scoop
+    // dose default. Piece/tub foods (yoplait, snickers, pepper jack) are
+    // unaffected: their categories are absent or oz/cup/can-based.
+    const doseAnchored = bareRequest && isDoseAnchoredBareQuery(parsed?.name || '');
+
     // Units where the product's own label serving IS the thing the user asked
     // for ("1 container of yogurt" → the container size on the label). For these,
     // trust servingGrams over estimation.
@@ -4498,8 +4704,11 @@ export async function buildOffResult(
     } else if (unit && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
         // Count/size/unknown units ("slice", "medium", "can", "knob", "rasher"):
         // deterministic count defaults + cached per-food servings + AI estimation.
+        // brandForBorrow (not the raw, often-null brandName) so a "1 bar" on a
+        // null-brand SKU can still reach the same-brand sibling-serving borrow
+        // (count-noun sibling routing, Track 3 Jul 2026).
         const ambiguous = await getOrCreateAmbiguousServing(
-            candidate.id, hydrated.foodName, unit, hydrated.brandName ?? null
+            candidate.id, hydrated.foodName, unit, brandForBorrow
         );
         if ((ambiguous.status === 'success' || ambiguous.status === 'cached')
             && ambiguous.grams && ambiguous.grams > 0) {
@@ -4533,8 +4742,13 @@ export async function buildOffResult(
         // fall through to the label/floor defaults, where the bare-query
         // guard applies the category default.
         const barePluralRequest = isBarePluralRequest(parsed, rawLine, itemNameForCount);
+        // Placeholder rejection (Track 3, Jul 2026): the flat-100g EU
+        // per-100g pseudo-serving must not satisfy the plural band either —
+        // "snickers" on a '1 portion (100 g)' SKU falls through to the
+        // sibling-median step below instead of billing the placeholder.
         if (barePluralRequest && hydrated.servingGrams
-            && hydrated.servingGrams >= 10 && hydrated.servingGrams <= 150) {
+            && hydrated.servingGrams >= 10 && hydrated.servingGrams <= 150
+            && usableBareLabelServing(hydrated.servingGrams, labelUnitWord) != null) {
             grams = hydrated.servingGrams;
             servingDescription = `1 serving (${hydrated.servingGrams}g)`;
             servingTier = 'bare_plural_serving';
@@ -4542,6 +4756,27 @@ export async function buildOffResult(
                 foodId: candidate.id,
                 name: itemNameForCount,
                 servingGrams: hydrated.servingGrams,
+            });
+        }
+
+        // (1) OWN LABEL SERVING for a bare request (bare-serving defaults,
+        // Track 3 Jul 2026): a digitless qty-1 line bills the record's own
+        // single-serving-scale label directly, pre-empting every per-piece
+        // divide below — "combos cheddar pretzel" must bill the 28g label,
+        // not 28/9 per piece (A); "yoplait original strawberry" the 170g cup,
+        // not the 12g strawberry seed (B). usableBareLabelServing already
+        // rejected the flat-100g placeholder and garbage sub-3g metadata.
+        // Dose-anchored categories skip this step: a sugar record's cup-
+        // measure label must not outrank the 1-tsp default (n-serv-37).
+        if (grams == null && !barePluralRequest && bareRequest && !doseAnchored
+            && bareLabelGrams != null) {
+            grams = bareLabelGrams;
+            servingDescription = `1 serving (${bareLabelGrams}g)`;
+            servingTier = 'bare_label_serving';
+            logger.info('off.build_result.bare_label_serving', {
+                foodId: candidate.id,
+                name: itemNameForCount,
+                servingGrams: bareLabelGrams,
             });
         }
 
@@ -4561,6 +4796,7 @@ export async function buildOffResult(
             genericPieceNoun != null
         );
         if (
+            grams == null &&
             !barePluralRequest &&
             perLabelUnitGrams != null && perLabelUnitGrams >= 0.2 && perLabelUnitGrams <= 500 &&
             labelCountsUserPiece
@@ -4584,7 +4820,14 @@ export async function buildOffResult(
             try {
                 const { getDefaultCountServing } = await import('../servings/default-count-grams');
                 const countDefault = getDefaultCountServing(itemNameForCount, 'each');
-                if (countDefault && countDefault.grams > 0) {
+                // Bare-request piece sanity (Track 3, Jul 2026): a digitless
+                // qty-1 singular asks for A SERVING — a tiny per-piece seed
+                // ("barebells caramel cashew" → the 1.5g cashew, bare
+                // "almond" → 1.2g) must not answer it. Pieces >=20g (banana,
+                // egg, bagel) ARE the serving and pass through.
+                const bareTinyPiece = bareRequest && countDefault != null
+                    && countDefault.grams < BARE_MIN_PIECE_SERVING_GRAMS;
+                if (countDefault && countDefault.grams > 0 && !bareTinyPiece) {
                     grams = qty * countDefault.grams;
                     servingDescription = `${qty} each (${countDefault.grams.toFixed(1)}g each)`;
                     servingTier = 'seed_count_default';
@@ -4592,6 +4835,12 @@ export async function buildOffResult(
                         foodId: candidate.id,
                         name: itemNameForCount,
                         perPieceGrams: countDefault.grams,
+                    });
+                } else if (bareTinyPiece) {
+                    logger.info('off.build_result.bare_tiny_piece_skipped', {
+                        foodId: candidate.id,
+                        name: itemNameForCount,
+                        perPieceGrams: countDefault!.grams,
                     });
                 }
             } catch {
@@ -4602,12 +4851,18 @@ export async function buildOffResult(
         // No deterministic per-piece weight and no genuine label serving: if the
         // product names a discrete packaged item (a protein "bar", "cookie"...),
         // estimate that unit's weight via sibling-borrow / AI instead of the flat
-        // 100g default (a 60g Quest bar must not log as 100g).
-        if (grams == null && !barePluralRequest && (!hydrated.servingGrams || hydrated.servingGrams <= 0)) {
+        // 100g default (a 60g Quest bar must not log as 100g). For a bare
+        // request this also runs when the record's serving is unusable (the
+        // flat-100g placeholder / garbage band) — order step (2). Passes
+        // brandForBorrow (not the raw, often-null brandName) so null-brand
+        // SKUs can still reach the same-brand sibling-serving borrow.
+        if (grams == null && !barePluralRequest
+            && (!hydrated.servingGrams || hydrated.servingGrams <= 0
+                || (bareRequest && bareLabelGrams == null))) {
             const discreteUnit = inferDiscreteUnit(parsed.name || hydrated.foodName);
             if (discreteUnit) {
                 const amb = await getOrCreateAmbiguousServing(
-                    candidate.id, hydrated.foodName, discreteUnit, hydrated.brandName ?? null
+                    candidate.id, hydrated.foodName, discreteUnit, brandForBorrow
                 );
                 if ((amb.status === 'success' || amb.status === 'cached') && amb.grams && amb.grams > 0) {
                     grams = qty * amb.grams;
@@ -4620,6 +4875,43 @@ export async function buildOffResult(
                         status: amb.status,
                     });
                 }
+            }
+        }
+
+        // (C2) SAME-BRAND SIBLING MEDIAN LABEL SERVING — bare request whose
+        // own label is unusable and whose name resolved no piece: borrow the
+        // brand's median single-serving label ("snickers" on a placeholder-100
+        // SKU → ~40g from 148 sibling bars; "barebells caramel cashew" → 55g).
+        // Runs BEFORE the package fallback: a bare query prefers a sibling's
+        // single-serving label over this SKU's multi-serve package weight
+        // (airheads 85.78g pack class). Exception: an own ml-band package is
+        // a discrete retail beverage ("gatorade" bottle) — drink-the-unit
+        // semantics keep the package answer.
+        // Plural bare requests may borrow ONLY on a real brand (snickers,
+        // airheads): the name-token pseudo-brand ("Almonds" → brand 'almonds')
+        // could match junk OFF brands for generic produce plurals.
+        // Dose-anchored categories skip the borrow too: Ghost's 32.5g
+        // two-scoop sibling median must not outrank the 1-scoop pre-workout
+        // default (n-serv-43) — the package tiers + category CAP handle it.
+        if (
+            grams == null && bareRequest && !doseAnchored
+            && (!barePluralRequest || hydrated.brandName != null)
+            && bareLabelGrams == null && brandForBorrow
+            && !(hydrated.packageQuantityUnit === 'ml' && packageGrams != null)
+        ) {
+            const sibling = await borrowSiblingLabelServing(
+                brandForBorrow, candidate.id.replace(/^off_/, '')
+            );
+            if (sibling != null) {
+                grams = sibling.grams;
+                servingDescription = `1 serving (~${sibling.grams.toFixed(0)}g, brand median)`;
+                servingTier = 'bare_sibling_serving';
+                logger.info('off.build_result.bare_sibling_serving', {
+                    foodId: candidate.id,
+                    brand: brandForBorrow,
+                    grams: sibling.grams,
+                    samples: sibling.samples,
+                });
             }
         }
 

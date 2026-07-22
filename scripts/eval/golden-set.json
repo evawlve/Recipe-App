@@ -3841,7 +3841,7 @@
         230,
         320
       ],
-      "notes": "DEMOTED back to knownIssue 2026-07-19 (over-promoted same day after 3 passing runs; flapped on run 4: grams=360 vs [230,320], and record flips between 'cooked quinoa' and 'uncooked quinoa' 150-360g across identical requests). Same root as n-cook-05: NO stable cooked-quinoa record in corpus, serving is AI-estimated and nondeterministic. Do NOT promote until the quinoa ingest gap is fixed. | PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/ PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
+      "notes": "DEMOTED back to knownIssue 2026-07-19 (over-promoted same day after 3 passing runs; flapped on run 4: grams=360 vs [230,320], and record flips between 'cooked quinoa' and 'uncooked quinoa' 150-360g across identical requests). Same root as n-cook-05: NO stable cooked-quinoa record in corpus, serving is AI-estimated and nondeterministic. Do NOT promote until the quinoa ingest gap is fixed. | PROMOTED 2026-07-19 after 3 consecutive passing runs. | Previously: KNOWN ISSUE (flaky serving resolution — demoted from hard 2026-07-18 after it flipped between two consecutive eval runs). '1 1/2 cups cooked quinoa' resolves NONDETERMINISTICALLY: some runs pick an FDC 'cooked quinoa' record (~185g/ PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals. | FIX SHIPPED (Track 3, feat/bare-serving-defaults): buildFdcResult volume branch now resolves the record's OWN FdcServing volume row first (fdc 168917 usda_fdc cup=185g -> 277.5g deterministic, tier fdc_label_volume; cached AI rows reused as fdc_volume_cached) and the cooked-grain rerank path passes servingLabelMatch for candidates OWNING a matching volume serving, so re-retrieval prefers cup-serving records over generic-density fallbacks."
     },
     {
       "id": "n-serv-07",
@@ -4847,6 +4847,127 @@
       ],
       "knownIssue": true,
       "notes": "PR D pt3 class (a) KNOWN ISSUE — bare whole-meat-cut raise DEFERRED (warm-2026-07-20: billed 100g floor; a real ribeye portion is ~225g). Whole-meat cuts are deliberately ABSENT from the bare-query lexicon this PR (raise direction needs its own design). Promote when a steak-portion default ships."
+    },
+    {
+      "id": "n-serv-52",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "combos cheddar pretzel",
+        "quantity": 1,
+        "name": "combos cheddar pretzel"
+      },
+      "expectName": [
+        [
+          "combos"
+        ]
+      ],
+      "grams": [
+        25,
+        34
+      ],
+      "notes": "Track 3 bare-serving defaults (triage-2026-07-21, 82-row serving class). Bare qty-1 on a count-labeled SKU ('9 piece (28 g)') must bill the WHOLE 28g label serving via bare_label_serving, not the 28/9=3.11g per-piece divide. Deterministic: own-label step pre-empts every per-piece branch. Hard."
+    },
+    {
+      "id": "n-serv-53",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "sun chips harvest cheddar",
+        "quantity": 1,
+        "name": "sun chips harvest cheddar"
+      },
+      "expectName": [
+        [
+          "sun",
+          "chip"
+        ]
+      ],
+      "grams": [
+        25,
+        34
+      ],
+      "notes": "Track 3 bare-serving defaults. Same class as n-serv-52 via the '14 chips (28 g)' label: bare qty-1 was billed 2g (one chip). Own-label step bills 28g; the salty-snack lexicon CAP is inert (28 <= 2x28). Hard."
+    },
+    {
+      "id": "n-serv-54",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "yoplait original strawberry",
+        "quantity": 1,
+        "name": "yoplait original strawberry"
+      },
+      "expectName": [
+        [
+          "yoplait"
+        ]
+      ],
+      "grams": [
+        140,
+        190
+      ],
+      "notes": "Track 3 bare-serving defaults. 'strawberry' was resolved as a countable produce piece (12g) despite the record's own 170g cup label. Own-label step (bare_label_serving) bills the 170g label; brand sibling median (~150g, 198 SKUs) backstops label-less Yoplait records. Hard."
+    },
+    {
+      "id": "n-serv-55",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "pepper jack",
+        "quantity": 1,
+        "name": "pepper jack"
+      },
+      "expectName": [
+        [
+          "pepper",
+          "jack"
+        ]
+      ],
+      "grams": [
+        18,
+        40
+      ],
+      "notes": "Track 3 bare-serving defaults — head-gated CAP. The contained 'pepper' token matched the spice lexicon and capped the record's genuine 28g slice label to 2.5g. The CAP now fires only when the lexicon category is the query HEAD token ('jack' is not lexicon-covered), so the label stands. Hard."
+    },
+    {
+      "id": "n-serv-56",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "snickers",
+        "quantity": 1,
+        "name": "snickers"
+      },
+      "expectName": [
+        [
+          "snickers"
+        ]
+      ],
+      "grams": [
+        34,
+        60
+      ],
+      "notes": "Track 3 bare-serving defaults — sibling median. OFF's '1 portion (100 g)' placeholder is no longer accepted as a serving (usableBareLabelServing rejects exact-100g with a g/portion unit word); the same-brand sibling median answers instead (live: 148 Snickers SKUs, median 39.8g; real bars 41.7-48g). Deterministic given DB state. Hard."
+    },
+    {
+      "id": "n-serv-57",
+      "category": "serving_unit",
+      "item": {
+        "rawText": "kirkland protein bar chocolate chip",
+        "quantity": 1,
+        "name": "kirkland protein bar chocolate chip"
+      },
+      "expectName": [
+        [
+          "kirkland"
+        ],
+        [
+          "protein",
+          "bar"
+        ]
+      ],
+      "grams": [
+        40,
+        80
+      ],
+      "knownIssue": true,
+      "notes": "Track 3 bare-serving defaults KNOWN ISSUE (soft until 2 stable runs — n-serv-06 flap precedent). NULL-servingGrams SKU billed 1g (poisoned 'bar' cache row). New per-noun bounds reject cached bars <15g; routing: discrete 'bar' backfill -> brand sibling borrow -> AI (floor-clamped >=15g) -> 50g bare_discrete_floor. First resolution may be AI-estimated (~60g real bar), hence soft."
     },
     {
       "id": "n-mq-01",

@@ -6,7 +6,10 @@
  * n-serv-27/28 (red bull/clif untouchable tiers).
  */
 
-import { applyOffBareQueryGuard, BareQueryGuardInput } from '../bare-query-guard';
+import {
+    applyOffBareQueryGuard, BareQueryGuardInput,
+    isBareUnitlessQty1, usableBareLabelServing, isDoseAnchoredBareQuery,
+} from '../bare-query-guard';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
 function bare(name: string, over: Partial<ParsedIngredient> = {}): ParsedIngredient {
@@ -268,6 +271,230 @@ describe('applyOffBareQueryGuard — eligibility gates', () => {
 
     it('rejects an undefined serving tier', () => {
         expect(applyOffBareQueryGuard(input({ servingTier: undefined }))).toBeNull();
+    });
+});
+
+describe('usableBareLabelServing — own-label usability band (Track 3)', () => {
+    it('accepts a genuine in-band label serving (yoplait 170g)', () => {
+        expect(usableBareLabelServing(170, null)).toBe(170);
+    });
+
+    it('rejects the flat-100g placeholder in all its spellings', () => {
+        expect(usableBareLabelServing(100, null)).toBeNull();       // "100 g" / no description
+        expect(usableBareLabelServing(100, 'g')).toBeNull();        // "100.0g"
+        expect(usableBareLabelServing(100, 'portion')).toBeNull();  // "1 portion (100 g)"
+    });
+
+    it('accepts a genuine 100g serving carried by a household unit word ("1 cup (100 g)")', () => {
+        expect(usableBareLabelServing(100, 'cup')).toBe(100);
+    });
+
+    it('rejects garbage sub-3g metadata (trout/hot-pocket "1.0g" rows)', () => {
+        expect(usableBareLabelServing(1, 'g')).toBeNull();
+        expect(usableBareLabelServing(1, null)).toBeNull();
+    });
+
+    it('rejects package-scale servings above 400g (turkey-leg 976g pack, miso 623g tub)', () => {
+        expect(usableBareLabelServing(976, 'leg')).toBeNull();
+        expect(usableBareLabelServing(623.7, 'container')).toBeNull();
+    });
+
+    it('accepts a single-serve RTD at 355g (pumpkin spice latte)', () => {
+        expect(usableBareLabelServing(355, 'portion')).toBe(355);
+    });
+
+    it('rejects null/zero', () => {
+        expect(usableBareLabelServing(null, null)).toBeNull();
+        expect(usableBareLabelServing(0, null)).toBeNull();
+    });
+});
+
+describe('applyOffBareQueryGuard — head-gated CAP on bare_label/bare_sibling tiers (Track 3)', () => {
+    it("still caps a whole-bottle label when the category IS the query head ('olive oil' 250g → 14g)", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 250,
+            servingTier: 'bare_label_serving',
+        }));
+        expect(r).toEqual({
+            grams: 14,
+            servingTier: 'bare_category_default',
+            servingDescription: '1 serving (~14g)',
+        });
+    });
+
+    it("does NOT cap a genuine label on a contained-token hijack ('pepper jack' 28g vs spice 2.5g)", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 28,
+            servingTier: 'bare_label_serving',
+            parsed: bare('pepper jack'),
+            rawLine: 'pepper jack',
+            queryName: 'pepper jack',
+            foodName: 'Pepper Jack Cheese Slices',
+        }));
+        expect(r).toBeNull();
+    });
+
+    it("does NOT cap 'butter chicken' (condiment token, head 'chicken') — the 100g portion stands", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 100,
+            servingTier: 'bare_label_serving',
+            parsed: bare('butter chicken'),
+            rawLine: 'butter chicken',
+            queryName: 'butter chicken',
+            foodName: 'Butter Chicken',
+        }));
+        expect(r).toBeNull();
+    });
+
+    it("does NOT cap 'pumpkin spice latte' (spice token, head 'latte') — the 355ml RTD stands", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 355,
+            servingTier: 'bare_label_serving',
+            parsed: bare('pumpkin spice latte'),
+            rawLine: 'pumpkin spice latte',
+            queryName: 'pumpkin spice latte',
+            foodName: 'Pumpkin Spice Oat Latte',
+        }));
+        expect(r).toBeNull();
+    });
+
+    it('never touches the sibling-median tier (median of >=3 real labels beats a category default)', () => {
+        // Even a head-anchored lexicon hit ("olive oil") leaves the sibling
+        // median alone; and trailing-lexicon-noun dishes keep their median
+        // ("hot pocket ham and cheese" 127g must not become a 28g cheese cap).
+        expect(applyOffBareQueryGuard(input({
+            grams: 250,
+            servingTier: 'bare_sibling_serving',
+        }))).toBeNull();
+
+        expect(applyOffBareQueryGuard(input({
+            grams: 127,
+            servingTier: 'bare_sibling_serving',
+            parsed: bare('hot pocket ham and cheese'),
+            rawLine: 'hot pocket ham and cheese',
+            queryName: 'hot pocket ham and cheese',
+            foodName: 'Ham & Cheese Hot Pocket',
+        }))).toBeNull();
+    });
+
+    it('peanut butter keeps its multi-word category on the head gate (head "butter" is lexicon-covered)', () => {
+        // 300g package-scale "label" on a bare peanut butter query: head token
+        // "butter" is itself lexicon-covered, so the CAP fires with the
+        // full-query 32g default (300 > 64).
+        const r = applyOffBareQueryGuard(input({
+            grams: 300,
+            servingTier: 'bare_label_serving',
+            parsed: bare('peanut butter'),
+            rawLine: 'peanut butter',
+            queryName: 'peanut butter',
+            foodName: 'Creamy Peanut Butter',
+        }));
+        expect(r!.grams).toBe(32);
+    });
+});
+
+describe('applyOffBareQueryGuard — bounded discrete floor on REPLACE tiers (Track 3)', () => {
+    it("bills one ~50g bar instead of the flat 100g ('quest protein bar birthday cake')", () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 100,
+            servingTier: 'flat_100g_default',
+            parsed: bare('quest protein bar birthday cake'),
+            rawLine: 'quest protein bar birthday cake',
+            queryName: 'quest protein bar birthday cake',
+            foodName: 'Protein Bar Birthday Cake',
+        }));
+        expect(r).toEqual({
+            grams: 50,
+            servingTier: 'bare_discrete_floor',
+            servingDescription: '1 bar (~50g)',
+        });
+    });
+
+    it('lexicon categories still win over the floor (doritos stays 28g via salty snacks)', () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 100,
+            servingTier: 'flat_100g_default',
+            parsed: bare('doritos'),
+            rawLine: 'doritos',
+            queryName: 'doritos',
+            foodName: 'Doritos Nacho Cheese Tortilla Chips',
+        }));
+        expect(r!.grams).toBe(28);
+        expect(r!.servingTier).toBe('bare_category_default');
+    });
+
+    it('falls back to the foodName noun when the query names none', () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 100,
+            servingTier: 'count_unresolved_floor',
+            parsed: bare('barebells caramel'),
+            rawLine: 'barebells caramel',
+            queryName: 'barebells caramel',
+            foodName: 'Barebells Caramel Protein Bar',
+        }));
+        expect(r!.servingTier).toBe('bare_discrete_floor');
+        expect(r!.grams).toBe(50);
+    });
+
+    it('still a no-op when neither lexicon nor a discrete noun applies (greek yogurt)', () => {
+        const r = applyOffBareQueryGuard(input({
+            grams: 100,
+            servingTier: 'flat_100g_default',
+            parsed: bare('greek yogurt'),
+            rawLine: 'greek yogurt',
+            queryName: 'greek yogurt',
+            foodName: 'Chobani Greek Yogurt',
+        }));
+        expect(r).toBeNull();
+    });
+});
+
+describe('isDoseAnchoredBareQuery — scoop/spoon-dosed tier-order gate (eval regressions n-serv-37/43)', () => {
+    it.each([
+        ['sugar', 'single-token tsp category'],
+        ['brown sugar', 'tail token anchors the tsp category'],
+        ['ghost pre workout', 'two-token scoop phrase at the tail ("pre workout")'],
+        ['pre workout', 'the scoop phrase itself'],
+        ['peanut butter', 'tbsp phrase whose head is itself lexicon-covered'],
+        ['olive oil', 'tbsp condiment anchored at the head'],
+        ['ketchup', 'single-token tbsp condiment'],
+        ['whey protein powder', 'scoop category with the phrase at the tail'],
+    ])('anchored: "%s" (%s)', (q) => {
+        expect(isDoseAnchoredBareQuery(q)).toBe(true);
+    });
+
+    it.each([
+        ['pepper jack', 'spice token survives without the tail ("pepper" alone matches)'],
+        ['butter chicken', 'condiment token is a leading modifier'],
+        ['pumpkin spice latte', 'spice token is a middle modifier'],
+        ['cinnamon raisin bagel', 'spice token is a leading modifier'],
+        ['creatine gummies', 'scoop token is a leading modifier — gummies keep piece resolution'],
+        ['yoplait original strawberry', 'no lexicon category at all'],
+        ['snickers', 'no lexicon category at all'],
+        ['combos cheddar pretzel', 'salty-snack category is oz-dosed, not tsp/tbsp/scoop'],
+        ['muscle milk', 'can-dosed category'],
+        ['milk', 'cup-dosed liquid category'],
+    ])('NOT anchored: "%s" (%s)', (q) => {
+        expect(isDoseAnchoredBareQuery(q)).toBe(false);
+    });
+});
+
+describe('isBareUnitlessQty1', () => {
+    it('accepts a digitless unitless qty-1 line', () => {
+        expect(isBareUnitlessQty1(bare('protein bar'), 'protein bar')).toBe(true);
+    });
+
+    it.each([
+        ['digit in raw line', bare('gatorade'), '1 gatorade'],
+        ['explicit unit', bare('olive oil', { unit: 'cup' }), 'cup of olive oil'],
+        ['qty !== 1', bare('almonds', { qty: 2 }), 'two almonds'],
+        ['multiplier !== 1', bare('olive oil', { multiplier: 2 }), 'olive oil'],
+    ])('rejects %s', (_label, parsed, rawLine) => {
+        expect(isBareUnitlessQty1(parsed as ParsedIngredient, rawLine as string)).toBe(false);
+    });
+
+    it('rejects a null parse', () => {
+        expect(isBareUnitlessQty1(null, 'olive oil')).toBe(false);
     });
 });
 

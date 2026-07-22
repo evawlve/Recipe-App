@@ -14,6 +14,7 @@ import {
     isAmbiguousUnit,
     isEstimableUnknownUnit,
     estimateAmbiguousServing,
+    getAmbiguousUnitBounds,
     AMBIGUOUS_UNITS,
 } from '../ai/ambiguous-serving-estimator';
 
@@ -278,17 +279,34 @@ export async function getOrCreateAmbiguousServing(
             normalizedUnit,
             isSize ? sizeFromUnit : undefined
         );
+        // Unit-bounds sanity (count-noun sibling routing, Track 3 Jul 2026):
+        // the seed lookup falls back to FOOD-NAME word matching, so a "bar"
+        // request on "… Caramel Cashew" can surface the 1.5g cashew seed —
+        // a per-piece weight in disguise for the requested unit. Out-of-bounds
+        // seeds fall through to sibling-borrow / AI instead.
         if (countDefault) {
-            logger.debug('ambiguous_backfill.count_deterministic', {
-                foodId,
-                unit: normalizedUnit,
-                grams: countDefault.grams,
-            });
-            return {
-                status: 'success',
-                grams: countDefault.grams,
-                confidence: countDefault.confidence,
-            };
+            const seedBounds = getAmbiguousUnitBounds(normalizedUnit);
+            const seedOutOfBounds = (seedBounds.min != null && countDefault.grams < seedBounds.min)
+                || (seedBounds.max != null && countDefault.grams > seedBounds.max);
+            if (seedOutOfBounds) {
+                logger.warn('ambiguous_backfill.count_default_out_of_bounds', {
+                    foodId,
+                    unit: normalizedUnit,
+                    grams: countDefault.grams,
+                    bounds: seedBounds,
+                });
+            } else {
+                logger.debug('ambiguous_backfill.count_deterministic', {
+                    foodId,
+                    unit: normalizedUnit,
+                    grams: countDefault.grams,
+                });
+                return {
+                    status: 'success',
+                    grams: countDefault.grams,
+                    confidence: countDefault.confidence,
+                };
+            }
         }
     } catch (e) {
         // Ignore
@@ -307,7 +325,6 @@ export async function getOrCreateAmbiguousServing(
     // disguise; fall through so the estimator overwrites it).
     const existing = await findExistingServing(foodId, normalizedUnit);
     if (existing?.grams) {
-        const { getAmbiguousUnitBounds } = await import('../ai/ambiguous-serving-estimator');
         const bounds = getAmbiguousUnitBounds(normalizedUnit);
         const outOfBounds = (bounds.min != null && existing.grams < bounds.min)
             || (bounds.max != null && existing.grams > bounds.max);

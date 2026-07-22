@@ -120,6 +120,9 @@ describe('buildOffResult — bare-query guard wire-in (A1)', () => {
             makeCandidate('Tomato Ketchup'), bareParsed('ketchup'), 0.9, 'ketchup'
         );
 
+        // Ketchup is a dose-anchored condiment (tbsp default), so the Track 3
+        // own-label step defers to the original label/CAP flow — byte-
+        // identical to master.
         expect(result?.servingTier).toBe('label_serving_default');
         expect(result?.grams).toBe(15);
     });
