@@ -42,7 +42,7 @@ const SYSTEM_PROMPT = [
     '6. OUTPUT JSON: { simplified: string, rationale: string }',
 ].join('\n');
 
-const JSON_SCHEMA = {
+export const JSON_SCHEMA = {
     name: 'simplify_ingredient',
     schema: {
         type: 'object',

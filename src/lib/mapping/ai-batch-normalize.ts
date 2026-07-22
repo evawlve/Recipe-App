@@ -38,7 +38,7 @@ export interface BatchNormalizeResult {
 // Response Schema
 // ============================================================
 
-const BATCH_RESPONSE_SCHEMA = {
+export const BATCH_RESPONSE_SCHEMA = {
     name: 'batch_fatsecret_normalize',
     schema: {
         type: 'object',

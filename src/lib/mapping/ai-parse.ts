@@ -40,7 +40,12 @@ export type AiParseResult = AiParseSuccess | AiParseError;
 // Schema
 // ============================================================
 
-const RESPONSE_SCHEMA = {
+// OpenAI/Azure strict mode requires `required` to list EVERY key in
+// `properties`; optionality is expressed via the nullable type union on
+// `notes` (['string', 'null']), not by omitting it from `required`.
+// (Omitting it caused an HTTP 400 on the primary model and a silent
+// fallback to the secondary model on every call.)
+export const RESPONSE_SCHEMA = {
     name: 'ingredient_parse',
     schema: {
         type: 'object',
@@ -53,7 +58,7 @@ const RESPONSE_SCHEMA = {
             confidence: { type: 'number' },
             error: { type: ['string', 'null'] },
         },
-        required: ['qty', 'unit', 'name', 'confidence', 'error'],
+        required: ['qty', 'unit', 'name', 'notes', 'confidence', 'error'],
     },
     strict: true,
 };
