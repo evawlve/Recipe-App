@@ -33,7 +33,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { canonicalizeCacheKey } from '../src/lib/mapping/normalization-rules';
-import { collapseAdjacentDuplicateTokens } from '../src/lib/mapping/cache-key';
+import { collapseAdjacentDuplicateTokens, isMalformedCacheKey } from '../src/lib/mapping/cache-key';
 import { isBrandedIngredient } from '../src/lib/mapping/brand-detector';
 
 const prisma = new PrismaClient();
@@ -73,6 +73,10 @@ function stemLooksLikeBrand(stem: string): boolean {
 
 function classify(row: { normalizedForm: string }): string | null {
     const raw = row.normalizedForm;
+    // Gate on the SHARED predicate — the same isMalformedCacheKey that the
+    // read path's legacy-key fallback uses to keep zombie rows dead. The
+    // reason strings below are reporting detail on top of it.
+    if (!isMalformedCacheKey(raw)) return null;
     const reasons: string[] = [];
 
     const rawDups = adjacentDuplicates(raw);

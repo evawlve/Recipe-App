@@ -54,8 +54,47 @@ import { detectBrandInQuery } from './brand-detector';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
-import { deriveMappingCacheKey } from './cache-key';
+import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, type BrandKeyInput } from './cache-key';
 import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
+import type { CachedMappedIngredient } from './validated-mapping-helpers';
+
+// ============================================================
+// Symmetric cache lookup with legacy-key fallback (Track 1c)
+// ============================================================
+// Primary lookup uses deriveMappingCacheKey — THE shared read/write key.
+// But every FoodMapping row written before Track 1c was keyed by the OLD
+// read scheme (deriveCacheKeyName, no brand prefix), so whenever the new
+// key differs from the legacy key a miss falls back to ONE extra indexed
+// point-read on the legacy key. The write path stays new-scheme-only, so
+// legacy rows migrate forward naturally on their next save.
+//
+// Guard: the fallback must never look up a MALFORMED legacy key (adjacent
+// duplicate tokens — the "oiko oiko"/"canned canned" rows the cleanup
+// script deletes). Resurrecting those zombie rows would undo the fix, so
+// isMalformedCacheKey (the script's own predicate) gates the fallback.
+async function lookupValidatedMappingWithLegacyFallback(
+    normalizedName: string,
+    parsed: import('../parse/ingredient-line').ParsedIngredient | null | undefined,
+    brandDetection: BrandKeyInput,
+    rawLine: string,
+): Promise<CachedMappedIngredient | null> {
+    const symmetricKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, rawLine);
+    const hit = await getValidatedMappingByNormalizedName(symmetricKey, 'fatsecret', rawLine);
+    if (hit) return hit;
+
+    const legacyKey = deriveCacheKeyName(normalizedName, parsed);
+    if (legacyKey === symmetricKey || isMalformedCacheKey(legacyKey)) return null;
+
+    const legacyHit = await getValidatedMappingByNormalizedName(legacyKey, 'fatsecret', rawLine);
+    if (legacyHit) {
+        logger.debug('mapping.legacy_cache_key_fallback_hit', {
+            rawLine,
+            symmetricKey,
+            legacyKey,
+        });
+    }
+    return legacyHit;
+}
 
 // ============================================================
 // In-Flight Lock (Prevents race conditions in parallel processing)
@@ -754,8 +793,10 @@ export async function mapIngredientWithFallback(
         // decision — deriveMappingCacheKey is THE key function, used verbatim
         // at the step-1c lookup and the Step-6 save key. brandDetection (not
         // the AI-mutable isBrandedQuery) is the brand input at all three
-        // sites: it's the only brand signal that exists this early.
-        const earlyCacheHit = skipCache ? null : await getValidatedMappingByNormalizedName(deriveMappingCacheKey(normalizedName, parsed, brandDetection), 'fatsecret', trimmed);
+        // sites: it's the only brand signal that exists this early. A miss
+        // additionally falls back to the legacy (pre-Track-1c) key so rows
+        // written under the old scheme stay reachable.
+        const earlyCacheHit = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed);
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
 
@@ -1164,8 +1205,9 @@ export async function mapIngredientWithFallback(
             // (deriveMappingCacheKey incl. brand-prefix decision) as the early
             // lookup and the Step-6 save — recomputed here because AI
             // normalize may have replaced normalizedName. brandDetection is
-            // request-stable, so this key matches the save key exactly.
-            const normalizedCache = skipCache ? null : await getValidatedMappingByNormalizedName(deriveMappingCacheKey(normalizedName, parsed, brandDetection), 'fatsecret', trimmed);
+            // request-stable, so this key matches the save key exactly. A
+            // miss falls back to the legacy (pre-Track-1c) key.
+            const normalizedCache = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed);
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
                 const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
@@ -2474,16 +2516,19 @@ export async function mapIngredientWithFallback(
             // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
             // caused 73+ subsequent "peanut butter" queries to return powdered PB.
             // Key symmetry (Track 1c): the SAME function of (normalizedName,
-            // parsed, brandDetection) as both cache lookups — identity
-            // discriminators AND the brand-prefix decision now live inside
-            // deriveMappingCacheKey. The old site-local brand prepend used a
-            // substring includes() that singularization defeated ("oikos" vs
-            // canonical token "oiko" → dead "oiko oiko" rows); the shared
-            // function stem-matches tokens and collapses duplicate tokens.
+            // parsed, brandDetection, rawLine) as both cache lookups —
+            // identity discriminators AND the brand-prefix decision now live
+            // inside deriveMappingCacheKey. The old site-local brand prepend
+            // used a substring includes() that singularization defeated
+            // ("oikos" vs canonical token "oiko" → dead "oiko oiko" rows);
+            // the shared function gates the prefix on decisive brand context
+            // (so false-positive lexicon hits like "bell" on "bell pepper"
+            // never mutate the key), stem-matches tokens, and collapses
+            // duplicate tokens.
             // Note: brandDetection (request-stable), NOT isBrandedQuery — the
             // AI-upgraded flag doesn't exist at early-lookup time, so a key
             // built from it could never be symmetric.
-            const cacheKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection);
+            const cacheKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, trimmed);
 
             // Per-100g macros of the pick + the AI estimate feed the save-time
             // plausibility gate inside saveValidatedMapping (PR D): corrupt

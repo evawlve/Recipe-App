@@ -32,6 +32,7 @@
  */
 
 import { canonicalizeCacheKey } from './normalization-rules';
+import { hasDecisiveBrandContext } from './simple-rerank';
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
@@ -135,33 +136,66 @@ export function collapseAdjacentDuplicateTokens(key: string): string {
 }
 
 /**
+ * True when a stored/derived cache key is malformed: it carries the same
+ * token (or token stem) twice. Canonical keys are token-sorted, so after
+ * re-canonicalizing, ALL duplicate stems sit adjacent — one adjacency scan is
+ * a full dup check, and it also catches legacy unsorted keys and
+ * plural/singular doubled brands ("oiko oikos").
+ *
+ * Shared by the legacy-key read fallback in map-ingredient-with-fallback.ts
+ * (a malformed legacy key must never be looked up — zombie rows stay dead)
+ * and scripts/fix-malformed-cache-keys.ts (the deletion predicate).
+ */
+export function isMalformedCacheKey(key: string): boolean {
+  const normalizedWhitespace = key.split(/\s+/).filter(t => t.length > 0).join(' ');
+  if (collapseAdjacentDuplicateTokens(key) !== normalizedWhitespace) return true;
+  const canonical = canonicalizeCacheKey(key);
+  return collapseAdjacentDuplicateTokens(canonical) !== canonical;
+}
+
+/**
  * THE cache key for FoodMapping reads AND writes — the single shared
  * derivation (Track 1c). Pure function of (normalizedName, parsed,
- * brandDetection); no I/O, no side effects.
+ * brandDetection, rawLine); no I/O, no side effects.
  *
  * Steps:
  *   1. deriveCacheKeyName — canonicalize + identity discriminators (above).
- *   2. Brand prefix — when the query is branded, prepend the brand so branded
- *      picks don't overwrite generic cache rows ("heinz ketchup tomato" vs
- *      "ketchup tomato"). The skip-guard compares CANONICALIZED TOKEN STEMS,
- *      not substring includes(): the brand is considered already present when
- *      any token of the key stem-matches any token of the brand, so
- *      "oikos" (stem "oiko") against key "greek oiko yogurt" correctly skips
- *      — the old `key.includes('oikos')` check was defeated by
- *      singularization and doubled the brand instead.
+ *   2. Brand prefix — when the query DECISIVELY names a brand, prepend it so
+ *      branded picks don't collide with generic cache rows ("met rx protein
+ *      bar" vs "protein bar"). Two guards, both required:
+ *
+ *      a. DECISIVENESS (hasDecisiveBrandContext — the same definition the
+ *         brand-mismatch save gate and rerank use): a multi-word brand counts
+ *         only as its full detected phrase; a single-word brand counts only
+ *         when it sits next to a product-form token in the raw line. This is
+ *         what keeps false-positive lexicon hits from mutating keys: the
+ *         lexicon's bare "bell" entry (Bell & Evans) matches the 1-gram scan
+ *         for "bell pepper", and once AI normalize rewrote the name to
+ *         "capsicum" an unconditional prefix produced read/write key
+ *         "bell capsicum" — orphaning the live human-triage "capsicum" row
+ *         (golden n-mq-30). Non-decisive brand hits must never alter the key.
+ *
+ *      b. PRESENCE, by CANONICALIZED TOKEN STEMS, not substring includes():
+ *         the brand is already represented when any token of the key
+ *         stem-matches any token of the brand, so "oikos" (stem "oiko")
+ *         against key "greek oiko yogurt" correctly skips — the old
+ *         `key.includes('oikos')` check was defeated by singularization and
+ *         doubled the brand instead ("oiko oiko").
+ *
  *   3. Final canonicalize (sorts the prefix into place, singularizes it) +
  *      adjacent-dup-token collapse, so no composed key can ever carry the
  *      same token twice — regardless of what AI normalize handed us as
  *      normalizedName ("canned canned kidney beans" class).
  *
  * Idempotent: feeding a derived key back in as normalizedName (with the same
- * brandDetection) returns the identical key — required so a row saved under
- * key K is found by any later query that derives K.
+ * brandDetection/rawLine) returns the identical key — required so a row
+ * saved under key K is found by any later query that derives K.
  */
 export function deriveMappingCacheKey(
   normalizedName: string,
   parsed: ParsedIngredient | null | undefined,
-  brandDetection?: BrandKeyInput | null
+  brandDetection?: BrandKeyInput | null,
+  rawLine?: string
 ): string {
   const base = deriveCacheKeyName(normalizedName, parsed);
 
@@ -169,7 +203,7 @@ export function deriveMappingCacheKey(
   const brand = brandDetection?.isBranded
     ? brandDetection.matchedBrand?.trim().toLowerCase()
     : undefined;
-  if (brand) {
+  if (brand && hasDecisiveBrandContext(rawLine ?? normalizedName, brand)) {
     const keyTokens = new Set(base.split(/\s+/).filter(t => t.length > 0));
     const brandTokens = canonicalizeCacheKey(brand)
       .split(/\s+/)
