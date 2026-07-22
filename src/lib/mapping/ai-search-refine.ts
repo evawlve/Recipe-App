@@ -7,7 +7,7 @@ import type { FatSecretFoodSummary } from './client';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
     name: 'fatsecret_refine_search',
     schema: {
         type: 'object',

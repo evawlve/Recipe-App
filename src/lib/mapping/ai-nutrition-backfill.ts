@@ -88,7 +88,7 @@ export function getNutritionBatchCount(): number {
 // JSON Schema for LLM response
 // ============================================================
 
-const NUTRITION_RESPONSE_SCHEMA = {
+export const NUTRITION_RESPONSE_SCHEMA = {
     name: 'ai_nutrition_estimate',
     strict: true,
     schema: {

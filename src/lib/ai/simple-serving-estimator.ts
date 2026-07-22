@@ -31,7 +31,7 @@ export interface SimpleServingEstimateResult {
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
     name: 'simple_serving_estimate',
     schema: {
         type: 'object',

@@ -25,7 +25,7 @@ export type AIValidationResult = {
     };
 };
 
-const VALIDATION_SCHEMA = {
+export const VALIDATION_SCHEMA = {
     name: 'ingredient_validation',
     strict: true,
     schema: {

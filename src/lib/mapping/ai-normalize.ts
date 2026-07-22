@@ -33,7 +33,7 @@ type AiNormalizeError = {
 
 export type AiNormalizeResult = AiNormalizeSuccess | AiNormalizeError;
 
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
   name: 'fatsecret_normalize',
   schema: {
     type: 'object',
