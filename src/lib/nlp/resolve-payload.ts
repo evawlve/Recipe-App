@@ -104,6 +104,39 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         categoryId: null
       });
     }
+  } else if (foodId.startsWith('fs_')) {
+    const fsId = foodId.replace('fs_', '');
+    const fsFood = await prisma.fatSecretFood.findUnique({
+      where: { fsId },
+      include: { servings: true }
+    });
+    if (fsFood) {
+      name = fsFood.name;
+      brandName = fsFood.brandName ?? null;
+      source = 'fatsecret';
+      const nutrients = (fsFood.nutrientsPer100g as any) || {};
+      nutritionPer100g = {
+        kcal100: nutrients.calories ?? nutrients.kcal ?? 0,
+        protein100: nutrients.protein ?? 0,
+        carbs100: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
+        fat100: nutrients.fat ?? 0,
+        fiber100: nutrients.fiber ?? 0,
+        sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
+        sodium100: nutrients.sodium ?? 0,
+      };
+
+      const units = fsFood.servings
+        .filter(s => s.grams != null && s.grams > 0)
+        .map(s => ({
+          label: s.description,
+          grams: s.grams as number
+        }));
+      rawServingOptions = deriveServingOptions({
+        units,
+        densityGml: null,
+        categoryId: null
+      });
+    }
   } else {
     // AI generated food details lookup
     const aiFood = await prisma.aiGeneratedFood.findUnique({

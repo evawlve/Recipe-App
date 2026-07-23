@@ -22,6 +22,17 @@ async function findCachedServing(foodId: string, unit: string) {
       where: { barcode }
     });
     return servings.find(s => s.description.toLowerCase().includes(normalizedUnit)) || null;
+  } else if (foodId.startsWith('fs_')) {
+    const fsId = foodId.replace('fs_', '');
+    const servings = await prisma.fatSecretServing.findMany({
+      where: { fsId }
+    });
+    return servings.find(s =>
+      s.grams != null && (
+        s.description.toLowerCase().includes(normalizedUnit) ||
+        (s.measurementDescription ?? '').toLowerCase().includes(normalizedUnit)
+      )
+    ) || null;
   } else {
     const servings = await prisma.aiGeneratedServing.findMany({
       where: { foodId }
