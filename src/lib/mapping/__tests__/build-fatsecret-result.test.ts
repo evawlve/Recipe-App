@@ -284,3 +284,33 @@ describe('buildFatSecretResult — gram resolution cascade', () => {
         expect(result!.kcal).toBeCloseTo(2210 * (14 / 250), 3);
     });
 });
+
+describe('repro: "15 pretzels" (fs_4349 live data, eval n-serv-20 675g regression)', () => {
+    it('matches the per-piece serving via the lexicon-free trailing-token fallback', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue({
+            fsId: '4349',
+            name: 'Pretzels',
+            brandName: null,
+            foodType: 'Generic',
+            nutrientsPer100g: { calories: 380, protein: 10.34, carbs: 79.76, fat: 2.63, fiber: 3, sugars: 2.76, sodium: 1.357, saturatedFat: 0.501 },
+            defaultServingId: 'sv-serving',
+            fetchedAt: new Date(),
+            servings: [
+                { servingId: 'sv-serving', description: '1 serving (28 g)', measurementDescription: 'serving', grams: 28, volumeMl: null, numberOfUnits: 1, nutrients: { calories: 106, protein: 2.9, carbohydrate: 22.33, fat: 0.74 } },
+                { servingId: 'sv-cup', description: '1 cup', measurementDescription: 'cup', grams: 45, volumeMl: null, numberOfUnits: 1, nutrients: { calories: 171, protein: 4.65, carbohydrate: 35.89, fat: 1.18 } },
+                { servingId: 'sv-100', description: '100 g', measurementDescription: 'g', grams: 100, volumeMl: null, numberOfUnits: 100, nutrients: { calories: 380, protein: 10.34, carbohydrate: 79.76, fat: 2.63 } },
+                { servingId: 'sv-oz', description: '1 oz', measurementDescription: 'oz', grams: 28.35, volumeMl: null, numberOfUnits: 1, nutrients: { calories: 108, protein: 2.93, carbohydrate: 22.61, fat: 0.75 } },
+                { servingId: 'sv-piece', description: '1 pretzel (Include nuggets)', measurementDescription: 'pretzel', grams: 3, volumeMl: null, numberOfUnits: 1, nutrients: { calories: 11, protein: 0.31, carbohydrate: 2.39, fat: 0.08 } },
+            ],
+        });
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_4349', name: 'Pretzels', brandName: null }),
+            parsedLine({ qty: 15, unit: null, name: 'pretzels' }),
+            0.9,
+            '15 pretzels'
+        );
+        expect(result).not.toBeNull();
+        expect(result!.grams).toBe(45); // 15 x 3g per-piece serving, NOT 15 x 45g cup = 675
+        expect(result!.servingTier).toBe('fs_label_count');
+    });
+});

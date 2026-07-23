@@ -278,11 +278,28 @@ export async function buildFatSecretResult(
         // a discrete piece. Token-match the noun against serving descriptions —
         // the fs "1 bar" serving is exactly the missing-serving-shape class
         // this lane exists to fix.
-        const noun = unit
+        let noun = unit
             ? singularizeUnit(unit)
             : inferDiscreteUnit(parsed?.name || foodName);
+        let match = noun ? usableServings.find(s => servingMatchesNoun(s, noun!)) : undefined;
+        // Lexicon-free fallback for unitless lines ("15 pretzels"): the noun
+        // lexicon is deliberately conservative, but an fs serving whose label
+        // contains the request's trailing token ("1 pretzel (Include nuggets)")
+        // is itself proof the token is a countable piece of THIS food. Only
+        // fires when such a serving exists, so no false discrete billing.
+        if (!match && !unit) {
+            const lastToken = (parsed?.name || foodName)
+                .toLowerCase().trim().split(/\s+/).pop() ?? '';
+            const fallbackNoun = singularizeUnit(lastToken);
+            if (fallbackNoun && fallbackNoun.length >= 3) {
+                const fallbackMatch = usableServings.find(s => servingMatchesNoun(s, fallbackNoun));
+                if (fallbackMatch) {
+                    noun = fallbackNoun;
+                    match = fallbackMatch;
+                }
+            }
+        }
         if (noun) {
-            const match = usableServings.find(s => servingMatchesNoun(s, noun));
             if (match) {
                 const unitsPerServing = match.numberOfUnits && match.numberOfUnits > 0
                     ? match.numberOfUnits : 1;
