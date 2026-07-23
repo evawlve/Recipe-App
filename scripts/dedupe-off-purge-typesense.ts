@@ -19,7 +19,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const HOST = process.env.TYPESENSE_HOST ?? 'http://192.168.1.21:8108';
+const HOST = process.env.TYPESENSE_HOST ?? 'http://192.168.1.133:8108';
 const KEY = process.env.TYPESENSE_API_KEY ?? '';
 const COLLECTION = 'off_foods';
 const DRY_RUN = process.argv.includes('--dry-run');

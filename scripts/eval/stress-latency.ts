@@ -9,7 +9,7 @@
  *
  * Run (from repo root):
  *   npx ts-node --transpile-only --compilerOptions '{"module":"commonjs","moduleResolution":"node"}' \
- *     scripts/eval/stress-latency.ts [--base http://192.168.1.21:3000] [--n 1] [--concurrency 8] [--nlp] [--timeout 15000]
+ *     scripts/eval/stress-latency.ts [--base http://192.168.1.133:3000] [--n 1] [--concurrency 8] [--nlp] [--timeout 15000]
  *
  *   --n <k>            repeat the whole corpus k times (default 1)
  *   --concurrency <c>  parallel in-flight requests (default 1 = sequential latency; >1 = load test)
@@ -26,7 +26,7 @@ const argv = process.argv.slice(2);
 const flag = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined; };
 const has = (f: string) => argv.includes(f);
 
-const BASE = flag('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.21:3000';
+const BASE = flag('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
 const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
 const REPEAT = parseInt(flag('--n') ?? '1', 10);
 const CONCURRENCY = parseInt(flag('--concurrency') ?? '1', 10);

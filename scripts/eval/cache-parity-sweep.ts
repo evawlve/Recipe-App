@@ -11,7 +11,7 @@
  * Run (from repo root):
  *   npx ts-node --transpile-only --compilerOptions '{"module":"commonjs","moduleResolution":"node"}' \
  *     scripts/eval/cache-parity-sweep.ts --before scripts/eval/results/foodmapping-before-2026-07-20.json \
- *     [--base http://192.168.1.21:3000] [--concurrency 4]
+ *     [--base http://192.168.1.133:3000] [--concurrency 4]
  *
  * The --before file is a JSON array of FoodMapping rows:
  *   select json_agg(row_to_json(t)) from (select "normalizedForm","foodName",
@@ -31,7 +31,7 @@ function argValue(flag: string): string | undefined {
     return i >= 0 ? args[i + 1] : undefined;
 }
 
-const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.21:3000';
+const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
 const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
 const CONCURRENCY = Number(argValue('--concurrency') ?? 4);
 const TIMEOUT_MS = Number(argValue('--timeout') ?? 30000);

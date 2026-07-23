@@ -83,6 +83,8 @@ export interface FatSecretClientOptions {
 export interface FatSecretSearchOptions {
   maxResults?: number;
   pageNumber?: number;
+  /** Per-call timeout override (ms); falls back to the instance timeoutMs. */
+  timeoutMs?: number;
 }
 
 export interface FatSecretAutocompleteHit {
@@ -166,12 +168,15 @@ export class FatSecretClient {
   }
 
   async searchFoodsV4(query: string, opts: FatSecretSearchOptions = {}): Promise<FatSecretFoodSummary[]> {
-    const response = await this.request<any>({
-      method: 'foods.search.v4',
-      search_expression: query,
-      max_results: String(opts.maxResults ?? 8),
-      page_number: String(opts.pageNumber ?? 0),
-    });
+    const response = await this.request<any>(
+      {
+        method: 'foods.search.v4',
+        search_expression: query,
+        max_results: String(opts.maxResults ?? 8),
+        page_number: String(opts.pageNumber ?? 0),
+      },
+      { timeoutMs: opts.timeoutMs },
+    );
 
     const foodsNode =
       response?.foods_search?.results?.food ??
@@ -418,7 +423,7 @@ export class FatSecretClient {
     }
   }
 
-  private async request<T>(params: Record<string, string>): Promise<T> {
+  private async request<T>(params: Record<string, string>, opts: { timeoutMs?: number } = {}): Promise<T> {
     if (!this.clientId || !this.clientSecret) {
       throw new FatSecretAuthError('Missing FatSecret client credentials');
     }
@@ -439,7 +444,7 @@ export class FatSecretClient {
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    });
+    }, opts.timeoutMs);
 
     if (response.status === 401) {
       this.token = null;
@@ -449,7 +454,7 @@ export class FatSecretClient {
         headers: {
           Authorization: `Bearer ${retryToken}`,
         },
-      });
+      }, opts.timeoutMs);
     }
 
     if (response.status === 429) {
@@ -509,9 +514,9 @@ export class FatSecretClient {
     return data.access_token;
   }
 
-  private async fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  private async fetchWithTimeout(url: string, init: RequestInit, timeoutMs?: number): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs ?? this.timeoutMs);
     try {
       return await this.fetchImpl(url, { ...init, signal: controller.signal });
     } finally {

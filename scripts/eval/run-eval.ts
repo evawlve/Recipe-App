@@ -8,7 +8,7 @@
  *
  * Run (from repo root):
  *   npx ts-node --transpile-only --compilerOptions '{"module":"commonjs","moduleResolution":"node"}' \
- *     scripts/eval/run-eval.ts [--base http://192.168.1.21:3000] [--only search|nlp] [--grep s-brand]
+ *     scripts/eval/run-eval.ts [--base http://192.168.1.133:3000] [--only search|nlp] [--grep s-brand]
  *
  * Results are written to scripts/eval/results/eval-<timestamp>.json for
  * before/after diffing across ranking or ingest changes.
@@ -26,7 +26,7 @@ function argValue(flag: string): string | undefined {
     return i >= 0 ? args[i + 1] : undefined;
 }
 
-const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.21:3000';
+const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
 const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
 const ONLY = argValue('--only');
 const GREP = argValue('--grep');

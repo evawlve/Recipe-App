@@ -260,7 +260,7 @@ async function main() {
         return i >= 0 ? args[i + 1] : undefined;
     };
 
-    const base = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.21:3000';
+    const base = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
     const concurrency = Number(argValue('--concurrency') ?? 4);
     const timeoutMs = Number(argValue('--timeout') ?? 45000);
     const limit = argValue('--limit') ? Number(argValue('--limit')) : undefined;
