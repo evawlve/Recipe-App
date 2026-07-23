@@ -97,6 +97,17 @@ export async function drainPendingBackgroundTasks(): Promise<void> {
     pendingBackgroundTasks.clear();
 }
 
+/**
+ * Register an external fire-and-forget promise with the drain set, the same
+ * way this module's own tasks are tracked (e.g. the FatSecret lane's
+ * persist writes). The promise MUST already have a .catch() attached —
+ * registration does not add error handling.
+ */
+export function registerBackgroundTask(task: Promise<void>): void {
+    pendingBackgroundTasks.add(task);
+    task.finally(() => pendingBackgroundTasks.delete(task));
+}
+
 // ============================================================
 // Queue Management
 // ============================================================

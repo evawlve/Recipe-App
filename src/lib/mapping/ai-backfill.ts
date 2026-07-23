@@ -146,7 +146,7 @@ export interface InsertAiServingOptions {
         name: string;
         brandName?: string | null;
         foodType?: string;
-        source: 'fdc' | 'openfoodfacts' | 'ai_generated';
+        source: 'fdc' | 'openfoodfacts' | 'ai_generated' | 'fatsecret';
         nutrition?: {
             kcal: number;
             protein: number;

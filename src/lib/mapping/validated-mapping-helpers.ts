@@ -212,12 +212,15 @@ export async function getValidatedMappingByNormalizedName(
 
         logger.debug('validated_mapping.normalized_cache_hit', { normalizedName, source });
 
-        // Build mapping food ID correctly from FDC ID, OFF barcode, or AI generated food
+        // Build mapping food ID correctly from FDC ID, OFF barcode, FatSecret
+        // food id, or AI generated food
         let foodId = '';
         if (cached.fdcId) {
             foodId = `fdc_${cached.fdcId}`;
         } else if (cached.offBarcode) {
             foodId = `off_${cached.offBarcode}`;
+        } else if (cached.fsId) {
+            foodId = `fs_${cached.fsId}`;
         } else {
             const aiFood = await prisma.aiGeneratedFood.findFirst({
                 where: {
@@ -248,7 +251,8 @@ export async function getValidatedMappingByNormalizedName(
             foodName: cached.foodName,
             brandName: cached.brandName,
             confidence: Math.max(0, Math.min(1, cached.aiConfidence)),
-            source: cached.source === 'openfoodfacts' ? 'openfoodfacts'
+            source: cached.fsId ? 'fatsecret'
+                    : cached.source === 'openfoodfacts' ? 'openfoodfacts'
                     : cached.source === 'fdc' ? 'fdc'
                     : 'ai_generated',
             validatedBy: cached.validatedBy,
@@ -282,11 +286,15 @@ async function findByTokenSet(
     const tokenArray = [...inputTokens];
     const firstToken = tokenArray[0];
 
-    const mappingSource = source === 'fatsecret' ? 'ai_generated' : source;
+    // Historical quirk: the mapper calls the read path with source='fatsecret'
+    // as its catch-all default, which this filter has always remapped to
+    // 'ai_generated' rows. Lane-written rows now genuinely carry
+    // source='fatsecret', so that call must match BOTH.
+    const mappingSources = source === 'fatsecret' ? ['ai_generated', 'fatsecret'] : [source];
 
     const candidates = await prisma.foodMapping.findMany({
         where: {
-            source: mappingSource,
+            source: { in: mappingSources },
             normalizedForm: { contains: firstToken }
         },
         take: 50,
@@ -438,22 +446,25 @@ export async function saveValidatedMapping(
     try {
         let fdcId: number | null = null;
         let offBarcode: string | null = null;
+        let fsId: string | null = null;
 
         if (mapping.foodId.startsWith('fdc_')) {
             fdcId = parseInt(mapping.foodId.replace('fdc_', ''), 10);
         } else if (mapping.foodId.startsWith('off_')) {
             offBarcode = mapping.foodId.replace('off_', '');
+        } else if (mapping.foodId.startsWith('fs_')) {
+            fsId = mapping.foodId.replace('fs_', '');
         }
 
-        const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'ai_generated';
+        const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : fsId ? 'fatsecret' : 'ai_generated';
         const clampedConfidence = Math.max(0, Math.min(1, validation.confidence));
 
         // Existing-row lookup, hoisted ahead of EVERY upsert (PR D pt3): the
-        // human-row write-guard below and the OFF serving-downgrade guard both
+        // human-row write-guard below and the serving-downgrade guard both
         // need the current row, so fetch it once.
         const existing = await prisma.foodMapping.findUnique({
             where: { normalizedForm },
-            select: { offBarcode: true, fdcId: true, foodName: true, validatedBy: true },
+            select: { offBarcode: true, fdcId: true, fsId: true, foodName: true, validatedBy: true },
         });
 
         // Human-row write-guard (PR D pt3): rows stamped validatedBy=
@@ -469,7 +480,9 @@ export async function saveValidatedMapping(
                 ? `off_${existing.offBarcode}`
                 : existing.fdcId != null
                     ? `fdc_${existing.fdcId}`
-                    : null;
+                    : existing.fsId
+                        ? `fs_${existing.fsId}`
+                        : null;
             const sameRecord = existingFoodId != null
                 ? existingFoodId === mapping.foodId
                 // ai_generated rows carry no id columns — match on food name.
@@ -498,46 +511,74 @@ export async function saveValidatedMapping(
             return;
         }
 
-        // Serving-shape downgrade guard (PR D pt2, Jul 2026): the parity sweep
-        // showed record swaps silently replacing a cache row whose OFF record
-        // carries real serving data ("red bull" with its 250ml can label) with
-        // a record that has none — every later serving-billed request then
-        // falls to flat_100g_default. When an overwrite would change the OFF
-        // barcode, keep the old row if the new record would lose all serving
-        // shape. The new pick still serves THIS request, it just isn't cached.
-        if (offBarcode) {
-            if (existing?.offBarcode && existing.offBarcode !== offBarcode) {
-                const [oldOff, newOff] = await Promise.all([
-                    prisma.offFood.findUnique({
-                        where: { barcode: existing.offBarcode },
-                        select: { servingGrams: true, packageQuantity: true, corruptReason: true },
-                    }),
-                    prisma.offFood.findUnique({
+        // Serving-shape downgrade guard (PR D pt2, Jul 2026; extended to the
+        // fatsecret lane, Phase 1): the parity sweep showed record swaps
+        // silently replacing a cache row whose OFF record carries real serving
+        // data ("red bull" with its 250ml can label) with a record that has
+        // none — every later serving-billed request then falls to
+        // flat_100g_default. When an overwrite would change the target record
+        // (OFF barcode or fs id, in either direction), keep the old row if the
+        // new record would lose all serving shape. fs picks do NOT bypass the
+        // guard: an fs record only counts as having serving shape when it
+        // carries a gram-quantified FatSecretServing. The new pick still
+        // serves THIS request, it just isn't cached.
+        const newTargetKey = offBarcode ? `off:${offBarcode}` : fsId ? `fs:${fsId}` : null;
+        const existingTargetKey = existing?.offBarcode
+            ? `off:${existing.offBarcode}`
+            : existing?.fsId ? `fs:${existing.fsId}` : null;
+        if (newTargetKey && existingTargetKey && newTargetKey !== existingTargetKey) {
+            const hasServingShape = (f: { servingGrams: number | null; packageQuantity: number | null } | null) =>
+                !!f && ((f.servingGrams ?? 0) > 0 || (f.packageQuantity ?? 0) > 0);
+            const fsHasServingShape = async (id: string) =>
+                !!(await prisma.fatSecretServing.findFirst({
+                    where: { fsId: id, grams: { gt: 0 } },
+                    select: { id: true },
+                }));
+
+            let incumbentShape: boolean;
+            let incumbentCorruptReason: string | null = null;
+            if (existing!.offBarcode) {
+                const oldOff = await prisma.offFood.findUnique({
+                    where: { barcode: existing!.offBarcode },
+                    select: { servingGrams: true, packageQuantity: true, corruptReason: true },
+                });
+                incumbentShape = hasServingShape(oldOff);
+                incumbentCorruptReason = oldOff?.corruptReason ?? null;
+            } else {
+                // fs incumbent — no fs corrupt-marking exists in Phase 1.
+                incumbentShape = await fsHasServingShape(existing!.fsId!);
+            }
+
+            // A corrupt-marked incumbent forfeits the guard: keeping it
+            // would zombie the row — every hit escapes ('corrupt_record'),
+            // re-resolves, and lands right back here. Serving shape on a
+            // corrupt panel is not worth preserving.
+            const incumbentCorrupt = incumbentCorruptReason != null && isCorruptExclusionEnabled();
+            if (incumbentCorrupt) {
+                logger.info('validated_mapping.downgrade_guard_bypassed_corrupt_incumbent', {
+                    normalizedForm,
+                    keptTarget: newTargetKey,
+                    evictedTarget: existingTargetKey,
+                    corruptReason: incumbentCorruptReason,
+                });
+            } else if (incumbentShape) {
+                let newShape: boolean;
+                if (offBarcode) {
+                    const newOff = await prisma.offFood.findUnique({
                         where: { barcode: offBarcode },
                         select: { servingGrams: true, packageQuantity: true },
-                    }),
-                ]);
-                const hasServingShape = (f: { servingGrams: number | null; packageQuantity: number | null } | null) =>
-                    !!f && ((f.servingGrams ?? 0) > 0 || (f.packageQuantity ?? 0) > 0);
-                // A corrupt-marked incumbent forfeits the guard: keeping it
-                // would zombie the row — every hit escapes ('corrupt_record'),
-                // re-resolves, and lands right back here. Serving shape on a
-                // corrupt panel is not worth preserving.
-                const incumbentCorrupt = oldOff?.corruptReason != null && isCorruptExclusionEnabled();
-                if (incumbentCorrupt) {
-                    logger.info('validated_mapping.downgrade_guard_bypassed_corrupt_incumbent', {
-                        normalizedForm,
-                        keptBarcode: offBarcode,
-                        evictedBarcode: existing.offBarcode,
-                        corruptReason: oldOff?.corruptReason,
                     });
-                } else if (hasServingShape(oldOff) && !hasServingShape(newOff)) {
+                    newShape = hasServingShape(newOff);
+                } else {
+                    newShape = await fsHasServingShape(fsId!);
+                }
+                if (!newShape) {
                     logger.warn('validated_mapping.save_rejected_serving_downgrade', {
                         rawIngredient,
                         normalizedForm,
                         foodName: mapping.foodName,
-                        keptBarcode: existing.offBarcode,
-                        rejectedBarcode: offBarcode,
+                        keptTarget: existingTargetKey,
+                        rejectedTarget: newTargetKey,
                     });
                     return;
                 }
@@ -555,6 +596,7 @@ export async function saveValidatedMapping(
                 source: mappingSource,
                 offBarcode,
                 fdcId,
+                fsId,
                 aiConfidence: clampedConfidence,
                 validatedBy: 'ai',
                 usedCount: 1,
@@ -565,11 +607,14 @@ export async function saveValidatedMapping(
                 // supersede a stale cached food with a re-resolution, and an
                 // increment-only update kept the stale row forever — every
                 // subsequent request paid the full re-resolution cost.
+                // offBarcode/fdcId/fsId are ALL written every save (non-matching
+                // ids are null), so the target columns stay mutually exclusive.
                 foodName: mapping.foodName,
                 brandName: mapping.brandName,
                 source: mappingSource,
                 offBarcode,
                 fdcId,
+                fsId,
                 aiConfidence: clampedConfidence,
                 validatedBy: 'ai',
                 usedCount: { increment: 1 },

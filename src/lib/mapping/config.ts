@@ -40,6 +40,13 @@ export const FATSECRET_CACHE_AI_MAX_DENSITY = Number.parseFloat(
   process.env.FATSECRET_CACHE_AI_MAX_DENSITY ?? '5',
 );
 export const FATSECRET_CACHE_AI_ENABLED = getFlag('FATSECRET_CACHE_AI_ENABLED', true);
+
+// FatSecret retrieval lane (Phase 1): fs candidates compete in rerank on cache
+// miss; picked foods persist locally. Kill-switch default OFF.
+export const FATSECRET_RETRIEVAL_ENABLED = getFlag('FATSECRET_RETRIEVAL_ENABLED', false);
+export const FATSECRET_LANE_TIMEOUT_MS = Number.parseInt(process.env.FATSECRET_LANE_TIMEOUT_MS ?? '800', 10);
+export const FATSECRET_LANE_MAX_RESULTS = Number.parseInt(process.env.FATSECRET_LANE_MAX_RESULTS ?? '8', 10);
+export const FATSECRET_REFRESH_DAYS = Number.parseInt(process.env.FATSECRET_REFRESH_DAYS ?? '30', 10);
 export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://api.openai.com/v1';
 
 // OpenRouter configuration for cheap-first LLM fallback (Jan 2026)

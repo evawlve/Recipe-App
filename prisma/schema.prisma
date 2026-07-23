@@ -419,6 +419,45 @@ model OffServing {
 }
 
 // ============================================================================
+// FatSecret Premier — retrieval-lane food store (persisted lane hits;
+// cache hits never touch the external API)
+// ============================================================================
+
+model FatSecretFood {
+  fsId             String        @id           // FatSecret food_id (no "fs_" prefix)
+  name             String
+  brandName        String?
+  foodType         String?                     // e.g., "Brand", "Generic"
+  nutrientsPer100g Json                        // { kcal, protein, carbs, fat, fiber, sugar, sodium }
+  defaultServingId String?                     // FatSecret serving_id of the default serving
+  fetchedAt        DateTime      @default(now())  // staleness marker (FATSECRET_REFRESH_DAYS)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  servings         FatSecretServing[]
+  foodMappings     FoodMapping[]
+
+  @@index([name])
+  @@index([brandName])
+  @@index([fetchedAt])
+}
+
+model FatSecretServing {
+  id                     String        @id @default(cuid())
+  fsId                   String                     // FK → FatSecretFood.fsId
+  servingId              String                     // FatSecret serving_id
+  description            String                     // e.g., "1 bar", "1 cup"
+  measurementDescription String?
+  grams                  Float?                     // metric_serving_amount normalized to g
+  volumeMl               Float?
+  numberOfUnits          Float?
+  nutrients              Json?                      // per-serving macros
+  food                   FatSecretFood @relation(fields: [fsId], references: [fsId], onDelete: Cascade)
+
+  @@unique([fsId, servingId])
+  @@index([fsId])
+}
+
+// ============================================================================
 // Canonical Food Mapping Cache (replaces ValidatedMapping)
 // normalizedForm is the primary lookup key — one mapping per ingredient concept
 // ============================================================================
@@ -427,9 +466,10 @@ model FoodMapping {
   normalizedForm  String   @id              // Canonical lookup key (e.g., "strawberry")
   foodName        String
   brandName       String?
-  source          String   @default("fdc")  // "fdc" | "openfoodfacts" | "ai_generated"
+  source          String   @default("fdc")  // "fdc" | "openfoodfacts" | "ai_generated" | "fatsecret"
   offBarcode      String?                   // FK → OffFood.barcode
   fdcId           Int?                      // FK → FdcFood.fdcId
+  fsId            String?                   // FK → FatSecretFood.fsId
   aiConfidence    Float
   validatedAt     DateTime @default(now())
   validatedBy     String   @default("ai")
@@ -440,9 +480,11 @@ model FoodMapping {
 
   offFood         OffFood?  @relation(fields: [offBarcode], references: [barcode])
   fdcFood         FdcFood?  @relation(fields: [fdcId], references: [fdcId])
+  fatSecretFood   FatSecretFood? @relation(fields: [fsId], references: [fsId])
 
   @@index([fdcId])
   @@index([offBarcode])
+  @@index([fsId])
   @@index([lastUsedAt(sort: Desc)])
 }
 

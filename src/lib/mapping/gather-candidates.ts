@@ -10,6 +10,7 @@ import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-
 import { normalizeIngredientName } from './normalization-rules';
 import { logger } from '../logger';
 import { searchOffSimple, searchOffSemantic } from '../openfoodfacts/search';
+import { searchFatSecretLane } from './fatsecret-lane';
 import { countedPieceNoun } from './count-label';
 import { detectGrainCookingContext } from './filter-candidates';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
@@ -24,7 +25,7 @@ warmupEmbedder();
 
 export interface UnifiedCandidate {
     id: string;
-    source: 'fdc' | 'openfoodfacts' | 'ai_generated';
+    source: 'fdc' | 'openfoodfacts' | 'ai_generated' | 'fatsecret';
     name: string;
     brandName?: string | null;
     score: number;
@@ -335,6 +336,18 @@ export async function gatherCandidates(
         );
     }
 
+    // FatSecret retrieval lane (Phase 1, Jul 2026): fatsecret Premier
+    // candidates compete in rerank alongside OFF/FDC on the same general
+    // queries the OFF simple lane fires for. The lane gates itself on
+    // FATSECRET_RETRIEVAL_ENABLED (default OFF) and is fully fail-open, so
+    // no extra gating here beyond skipOff (quick gather gate checks must
+    // stay local — never hit the external API for them). Deliberately NOT
+    // tied to offEnabled/isBrandedQuery: spec keeps the lane unconditional
+    // post-flag and lets rerank decide.
+    if (!skipOff) {
+        searchPromises.push(searchFatSecretLane(primaryQuery, maxPerSource));
+    }
+
     // Cooked-record retrieval (cooked-vs-dry fix, Jul 2026): a volume-unit
     // grain line ("1 cup white rice") prefers the cooked basis, but keyword
     // search on the bare name returns almost exclusively dry records — the
@@ -409,6 +422,8 @@ export async function gatherCandidates(
                 let id = c.id;
                 if (c.source === 'fdc' && !id.startsWith('fdc_')) {
                     id = `fdc_${id}`;
+                } else if (c.source === 'fatsecret' && !id.startsWith('fs_')) {
+                    id = `fs_${id}`;
                 }
 
                 const existing = byId.get(id);

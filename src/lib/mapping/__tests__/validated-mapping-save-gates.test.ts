@@ -15,6 +15,7 @@ const mockFoodMappingFindUnique = jest.fn();
 const mockFoodMappingUpsert = jest.fn();
 const mockFoodMappingUpdate = jest.fn();
 const mockOffFoodFindUnique = jest.fn();
+const mockFatSecretServingFindFirst = jest.fn();
 
 jest.mock('../../db', () => ({
     prisma: {
@@ -26,10 +27,13 @@ jest.mock('../../db', () => ({
         offFood: {
             findUnique: (...args: unknown[]) => mockOffFoodFindUnique(...args),
         },
+        fatSecretServing: {
+            findFirst: (...args: unknown[]) => mockFatSecretServingFindFirst(...args),
+        },
     },
 }));
 
-import { saveValidatedMapping } from '../validated-mapping-helpers';
+import { saveValidatedMapping, getValidatedMappingByNormalizedName } from '../validated-mapping-helpers';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 import type { AIValidationResult } from '../ai-validation';
 
@@ -55,6 +59,7 @@ beforeEach(() => {
     mockFoodMappingUpsert.mockResolvedValue({});
     mockFoodMappingUpdate.mockResolvedValue({});
     mockOffFoodFindUnique.mockResolvedValue(null);
+    mockFatSecretServingFindFirst.mockResolvedValue(null);
 });
 
 describe('brand-mismatch save gate', () => {
@@ -303,6 +308,100 @@ describe('human-row write-guard (PR D pt3)', () => {
         const upsertArgs = mockFoodMappingUpsert.mock.calls[0][0];
         expect(upsertArgs.update.validatedBy).toBe('ai');
         expect(upsertArgs.update.offBarcode).toBe(OTHER_BARCODE);
+    });
+});
+
+describe('fatsecret lane fs_ branch (Phase 1)', () => {
+    it('derives fsId + mappingSource fatsecret and nulls the other id columns', async () => {
+        await saveValidatedMapping(
+            'protein bar',
+            makeMapping({ foodId: 'fs_12345', foodName: 'Protein Bar' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        const args = mockFoodMappingUpsert.mock.calls[0][0];
+        expect(args.create.fsId).toBe('12345');
+        expect(args.create.offBarcode).toBeNull();
+        expect(args.create.fdcId).toBeNull();
+        expect(args.create.source).toBe('fatsecret');
+        expect(args.update.fsId).toBe('12345');
+        expect(args.update.offBarcode).toBeNull();
+        expect(args.update.fdcId).toBeNull();
+        expect(args.update.source).toBe('fatsecret');
+    });
+
+    it('downgrade guard: an fs pick without gram servings must not evict a serving-labeled OFF row', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: '9002490100070' });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason: null });
+        mockFatSecretServingFindFirst.mockResolvedValue(null); // fs record has no gram serving
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'fs_444', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('downgrade guard: an fs pick WITH a gram serving may replace the OFF row', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: '9002490100070' });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason: null });
+        mockFatSecretServingFindFirst.mockResolvedValue({ id: 'sv1' });
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'fs_444', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(mockFoodMappingUpsert.mock.calls[0][0].create.fsId).toBe('444');
+    });
+
+    it('downgrade guard: an fs incumbent with serving shape is protected from a shapeless OFF pick', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: null, fsId: '999' });
+        mockFatSecretServingFindFirst.mockResolvedValue({ id: 'sv1' }); // incumbent HAS shape
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: null, packageQuantity: null }); // new pick has none
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'off_5099839628986', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('human-row write-guard matches fs identity (same fs record bumps usage only)', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: null,
+            fdcId: null,
+            fsId: '777',
+            foodName: 'Protein Bar',
+            validatedBy: 'human-triage',
+        });
+        await saveValidatedMapping(
+            'protein bar',
+            makeMapping({ foodId: 'fs_777', foodName: 'Protein Bar' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(mockFoodMappingUpdate).toHaveBeenCalledTimes(1);
+        expect(mockFoodMappingUpdate.mock.calls[0][0].data.usedCount).toEqual({ increment: 1 });
+    });
+
+    it('read path reconstructs fs_<fsId> and source fatsecret from a lane row', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({
+            normalizedForm: 'protein bar',
+            foodName: 'Protein Bar',
+            brandName: null,
+            source: 'fatsecret',
+            offBarcode: null,
+            fdcId: null,
+            fsId: '12345',
+            aiConfidence: 0.92,
+            validatedBy: 'ai',
+        });
+        const result = await getValidatedMappingByNormalizedName('protein bar', 'fatsecret');
+        expect(result).not.toBeNull();
+        expect(result!.foodId).toBe('fs_12345');
+        expect(result!.source).toBe('fatsecret');
+        expect(result!.confidence).toBeCloseTo(0.92, 5);
     });
 });
 
