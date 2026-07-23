@@ -62,6 +62,7 @@ import {
     BARE_LABEL_MIN_GRAMS, BARE_LABEL_MAX_GRAMS, BARE_MIN_PIECE_SERVING_GRAMS,
 } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
+import { buildFatSecretResult } from './build-fatsecret-result';
 
 // ============================================================
 // Symmetric cache lookup with legacy-key fallback (Track 1c)
@@ -2768,6 +2769,13 @@ export async function hydrateAndSelectServing(
         return await buildOffResult(candidate, parsed, confidence, rawLine);
     }
 
+    // Handle FatSecret retrieval-lane candidates (fs_ prefix). MUST run before
+    // the legacy branch below: that path is keyed to name-keyed AiGeneratedFood
+    // rows (getCachedFoodWithRelations) and would misroute fs_ ids.
+    if (candidate.source === 'fatsecret' || candidate.id.startsWith('fs_')) {
+        return await buildFatSecretResult(candidate, parsed, confidence, rawLine);
+    }
+
     // For cache/fatsecret candidates, get full details with servings
     let details: FatSecretFoodDetails | null = null;
     let targetFoodId = candidate.id;
@@ -4292,6 +4300,23 @@ async function buildFdcResult(
  * null-serving SKUs that would fall to the generic seed.
  */
 function candidateHasCountLabel(candidate: UnifiedCandidate, pieceNoun: string): boolean {
+    if (candidate.source === 'fatsecret') {
+        // fs servings are household measures — "1 cookie", "6 crackers" — so a
+        // serving whose unit word IS the counted noun (or the generic piece
+        // counter) carries an authoritative per-piece weight. Same noun list,
+        // unit-word extraction and per-piece sanity band as the OFF label
+        // check (servingLabelCountsPiece), except count >= 1 qualifies: an fs
+        // "1 cookie" serving is genuinely per-piece, unlike an OFF "1 portion"
+        // label.
+        return !!candidate.servings?.some(s => {
+            if (!(typeof s.grams === 'number' && s.grams > 0)) return false;
+            const labelWord = extractLabelServingUnit(s.description);
+            if (labelWord !== pieceNoun && !(labelWord && GENERIC_PIECE_WORDS.has(labelWord))) return false;
+            const count = servingLeadingCount(s.description);
+            const perPiece = s.grams / (count > 0 ? count : 1);
+            return perPiece >= 0.2 && perPiece <= 500;
+        });
+    }
     if (candidate.source !== 'openfoodfacts') return false;
     const raw = candidate.rawData as { servingSize?: string | null; servingGrams?: number | null } | undefined;
     return servingLabelCountsPiece(raw?.servingSize, raw?.servingGrams, pieceNoun);
@@ -4322,6 +4347,11 @@ function candidateHasServingData(candidate: UnifiedCandidate): boolean {
         return typeof raw?.servingGrams === 'number' && raw.servingGrams > 0;
     }
     if (candidate.source === 'fdc') {
+        return !!candidate.servings?.some(s => typeof s.grams === 'number' && s.grams > 0);
+    }
+    // fs lane candidates carry inline gram-quantified servings ("1 bar" 60g) —
+    // exactly the serving shape SERVING_LABEL_BOOST exists to reward.
+    if (candidate.source === 'fatsecret') {
         return !!candidate.servings?.some(s => typeof s.grams === 'number' && s.grams > 0);
     }
     return false;
