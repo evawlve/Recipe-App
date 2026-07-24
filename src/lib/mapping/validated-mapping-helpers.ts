@@ -22,6 +22,12 @@ import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-r
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
 
+// Cross-source displacement margin (fs displacement hardening, Jul 2026):
+// how much MORE confident a challenger from a different source family
+// (off: ↔ fs:) must be than the incumbent's stored aiConfidence to take
+// over an existing cache row. Same-family swaps are exempt.
+const CROSS_SOURCE_DISPLACEMENT_MARGIN = 0.05;
+
 /**
  * Cache read result: the mapped ingredient plus row provenance. `validatedBy`
  * (FoodMapping.validatedBy: 'ai' | 'human-triage') is threaded through reads
@@ -464,7 +470,7 @@ export async function saveValidatedMapping(
         // need the current row, so fetch it once.
         const existing = await prisma.foodMapping.findUnique({
             where: { normalizedForm },
-            select: { offBarcode: true, fdcId: true, fsId: true, foodName: true, validatedBy: true },
+            select: { offBarcode: true, fdcId: true, fsId: true, foodName: true, validatedBy: true, aiConfidence: true },
         });
 
         // Human-row write-guard (PR D pt3): rows stamped validatedBy=
@@ -579,6 +585,33 @@ export async function saveValidatedMapping(
                         foodName: mapping.foodName,
                         keptTarget: existingTargetKey,
                         rejectedTarget: newTargetKey,
+                    });
+                    return;
+                }
+            }
+
+            // Cross-source displacement margin (fs displacement hardening,
+            // Jul 2026): when the overwrite would move the key to a different
+            // source family (off: ↔ fs:), the incumbent already passed every
+            // save gate at its own save time — displacing an already-good
+            // pick with a different corpus's record is only justified when
+            // the challenger is meaningfully MORE confident, not merely this
+            // run's rerank winner by a hair. Same-family swaps (off:→off:)
+            // keep the full supersede-stale semantics, and corrupt incumbents
+            // forfeited above.
+            const crossSourceFamily =
+                newTargetKey.split(':')[0] !== existingTargetKey.split(':')[0];
+            if (!incumbentCorrupt && crossSourceFamily) {
+                const incumbentConfidence = existing?.aiConfidence ?? 0;
+                if (clampedConfidence < incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN) {
+                    logger.warn('validated_mapping.save_rejected_cross_source_margin', {
+                        rawIngredient,
+                        normalizedForm,
+                        foodName: mapping.foodName,
+                        keptTarget: existingTargetKey,
+                        rejectedTarget: newTargetKey,
+                        incumbentConfidence,
+                        challengerConfidence: clampedConfidence,
                     });
                     return;
                 }

@@ -405,6 +405,83 @@ describe('fatsecret lane fs_ branch (Phase 1)', () => {
     });
 });
 
+describe('cross-source displacement margin (fs hardening, Jul 2026)', () => {
+    const OFF_BARCODE = '9002490100070';
+
+    function offIncumbent(aiConfidence: number, corruptReason: string | null = null) {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: OFF_BARCODE, aiConfidence });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason });
+        // fs challenger carries a gram serving so the downgrade guard passes.
+        mockFatSecretServingFindFirst.mockResolvedValue({ id: 'sv1' });
+    }
+
+    it('fs challenger without a real confidence margin cannot displace a good OFF incumbent', async () => {
+        offIncumbent(0.93); // challenger 0.95 < 0.93 + 0.05
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'fs_444', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('fs challenger with a real margin may displace', async () => {
+        offIncumbent(0.85); // challenger 0.95 >= 0.85 + 0.05
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'fs_444', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(mockFoodMappingUpsert.mock.calls[0][0].update.fsId).toBe('444');
+    });
+
+    it('same-family off→off swaps are exempt from the margin', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: OFF_BARCODE, aiConfidence: 0.99 });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason: null });
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'off_5099839628986', foodName: 'Red Bull Energy Drink' }),
+            validation, // 0.95 < 0.99 + margin, but same family → supersede-stale semantics stay
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('a corrupt incumbent forfeits the margin like it forfeits the downgrade guard', async () => {
+        offIncumbent(0.99, 'panel-inflated:direct');
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'fs_444', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('protects fs incumbents from OFF churn symmetrically', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: null, fsId: '999', aiConfidence: 0.93 });
+        mockFatSecretServingFindFirst.mockResolvedValue({ id: 'sv1' }); // incumbent has shape
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 355, packageQuantity: null }); // challenger has shape too
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'off_5099839628986', foodName: 'Red Bull Energy Drink' }),
+            validation, // 0.95 < 0.93 + 0.05 → keep the fs row
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('an incumbent with no stored confidence is displaceable (legacy rows)', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ offBarcode: OFF_BARCODE, aiConfidence: null });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason: null });
+        mockFatSecretServingFindFirst.mockResolvedValue({ id: 'sv1' });
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: 'fs_444', foodName: 'Red Bull Energy Drink' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('save-time macro-plausibility gate interplay', () => {
     it('gate is skipped when no per-100g macros are provided (grams<=0 caller path)', async () => {
         // Callers derive nutrientsPer100g by dividing by grams and pass null
