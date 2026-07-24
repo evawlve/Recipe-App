@@ -28,6 +28,63 @@ import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-r
 // over an existing cache row. Same-family swaps are exempt.
 const CROSS_SOURCE_DISPLACEMENT_MARGIN = 0.05;
 
+// Bare-category takeover gate (Jul 2026). See saveValidatedMapping.
+// Trivial words dropped before counting query specificity / testing whether a
+// food name is a bare category.
+const SAVE_GATE_STOPWORDS = new Set([
+    'the', 'a', 'an', 'of', 'with', 'and', 'or', 'in', 'on', 'for', 'to',
+    'plus', 'jr', 'sr', 'style', 'flavor', 'flavored', 'flavour', 'flavoured',
+    'original', 'classic', 'regular',
+]);
+
+// Generic food-category nouns. A food name built ENTIRELY of these adds no
+// identity beyond the category, so a specific branded query that resolves to
+// such a name is a poisoning collapse. Deliberately excludes distinctive
+// product names ("mac", "whopper", "baconator") and core single-ingredient
+// nouns ("chicken", "beef", "rice") so real SKUs and legitimate generic picks
+// from generic queries are never rejected.
+const BARE_CATEGORY_WORDS = new Set([
+    'cereal', 'burger', 'cheeseburger', 'hamburger', 'sandwich', 'sub', 'wrap',
+    'burrito', 'taco', 'pizza', 'nugget', 'nuggets', 'fries', 'soda', 'pop',
+    'drink', 'beverage', 'snack', 'candy', 'cookie', 'cookies', 'cracker',
+    'crackers', 'chips', 'shake', 'smoothie', 'sauce', 'dressing', 'soup',
+    'bacon', 'sausage', 'hotdog', 'breakfast', 'lunch', 'dinner', 'meal',
+    'platter', 'combo', 'pie', 'cake', 'muffin', 'donut', 'doughnut', 'roll',
+    'bun', 'oatmeal', 'pudding', 'popsicle', 'pretzel', 'dessert',
+]);
+
+/**
+ * Count the distinctive (specific) tokens in a raw query for the bare-category
+ * gate: tokens longer than 2 chars that are not digits, not part of the
+ * detected brand, and not trivial stopwords. De-duplicated.
+ */
+function countSpecificSaveTokens(rawLine: string, detectedBrand: string | null): number {
+    const brandTokens = new Set(
+        (detectedBrand ?? '').toLowerCase().split(/\s+/).filter(Boolean),
+    );
+    const tokens = rawLine.toLowerCase().split(/[\s,()[\]{}]+/).filter(Boolean);
+    const specific = tokens.filter(t =>
+        t.length > 2
+        && !/^\d/.test(t)
+        && !brandTokens.has(t)
+        && !SAVE_GATE_STOPWORDS.has(t),
+    );
+    return new Set(specific).size;
+}
+
+/**
+ * True when every significant token of a food name is a generic food-category
+ * word — i.e. the name is a bare category ("Cereal", "Bacon Cheeseburger") with
+ * no distinctive product/ingredient token.
+ */
+function isBareCategoryFoodName(foodName: string): boolean {
+    const tokens = foodName.toLowerCase()
+        .split(/[\s,()[\]{}/-]+/)
+        .filter(t => t.length > 0 && !SAVE_GATE_STOPWORDS.has(t));
+    if (tokens.length === 0) return false;
+    return tokens.every(t => BARE_CATEGORY_WORDS.has(t));
+}
+
 /**
  * Cache read result: the mapped ingredient plus row provenance. `validatedBy`
  * (FoodMapping.validatedBy: 'ai' | 'human-triage') is threaded through reads
@@ -391,6 +448,38 @@ export async function saveValidatedMapping(
             foodName: mapping.foodName,
             brandName: mapping.brandName,
             namedBrand: detectedBrand,
+        });
+        return;
+    }
+
+    // Bare-category takeover save gate (Jul 2026 cache-warming session): a
+    // specific branded/multi-token query must not collapse into a bare generic
+    // category that carries no brand — "special k red berries" -> "Cereal",
+    // "wendys jr bacon cheeseburger" -> "Bacon cheeseburger" poison the generic
+    // key so every later request for the plain category answers from a branded
+    // save (and vice-versa). Fires only when the query is specific (a brand is
+    // named, or it carries >= 3 distinctive tokens) AND the pick carries neither
+    // a brand field nor the detected brand in its name AND every significant
+    // token of the food name is a generic food-category word. Proper product
+    // names survive because they keep a distinctive non-category token
+    // ("mcdonalds big mac" -> "Big Mac"; "mac" is not a category word). The pick
+    // still serves THIS request, it just isn't cached under the collapsed key.
+    const bareBrandCarried = detectedBrand
+        ? candidateMatchesTargetBrand(mapping.brandName ?? undefined, mapping.foodName, detectedBrand)
+        : false;
+    const pickHasBrandField = !!(mapping.brandName && mapping.brandName.trim());
+    const specificTokenCount = countSpecificSaveTokens(rawIngredient, detectedBrand);
+    if ((!!detectedBrand || specificTokenCount >= 3)
+        && !bareBrandCarried
+        && !pickHasBrandField
+        && isBareCategoryFoodName(mapping.foodName)) {
+        logger.warn('validated_mapping.save_rejected_bare_category_takeover', {
+            rawIngredient,
+            normalizedForm,
+            foodName: mapping.foodName,
+            brandName: mapping.brandName,
+            namedBrand: detectedBrand,
+            specificTokenCount,
         });
         return;
     }
