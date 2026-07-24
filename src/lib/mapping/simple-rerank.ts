@@ -95,12 +95,21 @@ const WEIGHTS = {
     DECISIVE_BRAND_BOOST: 0.35,  // Only fires behind hasDecisiveBrandContext + non-brand token coverage; a cross-brand candidate must not win on flavor-token coverage alone when the user named a brand unambiguously.
     // Cooked-grain preference for volume-unit lines (cooked-vs-dry fix, Jul 2026)
     GRAIN_COOKED_VOLUME_BOOST: 0.35,  // Fires only under softCooked grain context; paired with a partition tiebreak because a dry exact-match ("White Rice", ~350 kcal/100g) otherwise outscores any cooked record on name quality.
+    // Brand macro-consensus outlier demotion (fs displacement hardening, Jul 2026)
+    CONSENSUS_OUTLIER_PENALTY: 0.25,  // Fires only with a detected target brand and >=3 nutrition-bearing same-product siblings whose majority agrees; demotes the record whose panel deviates hard from the sibling median ("42% protein Quest bar" — passes every absolute floor, only sibling agreement catches it). Sized to beat the max ORIGINAL_SCORE spread between a saturating outlier and unsaturated siblings (0.18) plus the fs branded prior (0.03), while staying below the 0.35 partitions.
 };
 
 
 // Nutrition scoring thresholds
 const NUTRITION_CALORIE_VARIANCE_THRESHOLD = 0.30;  // 30% difference triggers penalty
 const NUTRITION_CONFIDENCE_GATE = 0.70;             // Only apply if AI confidence >= 0.7
+
+// Brand macro-consensus thresholds (fs displacement hardening, Jul 2026)
+const CONSENSUS_AGREE_TOLERANCE = 0.15;         // Siblings within ±15% of the median count as agreeing
+const CONSENSUS_PROTEIN_OUTLIER_DEV = 0.20;     // >20% protein deviation from an agreed median = outlier
+const CONSENSUS_KCAL_OUTLIER_DEV = 0.30;        // >30% kcal deviation from an agreed median = outlier
+const CONSENSUS_MIN_PROTEIN_MEDIAN = 8;         // Only judge protein consensus on protein-relevant foods (g/100g)
+const CONSENSUS_MIN_KCAL_MEDIAN = 50;           // Skip kcal consensus on near-zero-calorie foods where ratios are noise
 
 // Modifiers/descriptors we should ignore in matching
 // ⚠️ ONLY truly neutral words belong here. Form-changing tokens (powder, paste, seed, etc.)
@@ -1586,6 +1595,7 @@ export function simpleRerank(
                 grainCookedBoost,
                 grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
                 plausibilityFloorHit: isPlausibilityFloorHit(c),
+                consensusOutlierPenalty: 0,
             };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
@@ -1622,9 +1632,80 @@ export function simpleRerank(
                 grainCookedBoost,
                 grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
                 plausibilityFloorHit: isPlausibilityFloorHit(c),
+                consensusOutlierPenalty: 0,
             };
         });
         scored.push(...fallbackScored);
+    }
+
+    // Brand macro-consensus outlier demotion (fs displacement hardening,
+    // Jul 2026): a branded query often surfaces the same SKU from several
+    // sources — OFF near-dupes, fatsecret, FDC branded — and a record whose
+    // label data is plausible-but-wrong (the 42%-protein Quest bar class)
+    // passes every absolute plausibility floor, so only sibling agreement can
+    // catch it. When >=3 same-brand candidates that cover a non-brand query
+    // token carry per-100g panels and a real majority agrees within
+    // CONSENSUS_AGREE_TOLERANCE of the median, demote any sibling that
+    // deviates beyond the outlier thresholds. Source-agnostic: a bad OFF row
+    // is demoted exactly like a bad fatsecret row.
+    // Gated on a detected target brand, NOT the stricter decisive two-word
+    // adjacency: "1 quest chocolate chip protein bar" puts a flavor token
+    // next to the brand word and fails the adjacency test, yet its sibling
+    // pack is exactly where consensus matters. The sibling conditions below
+    // (>=3 same-brand records covering a non-brand query token, majority
+    // agreement) are the real safety rail against coincidental brand words.
+    // Kill-switch: RANK_BRAND_CONSENSUS="0" disables the pass.
+    if (targetBrand && process.env.RANK_BRAND_CONSENSUS !== '0') {
+        const siblings = scored.filter(s =>
+            candidateMatchesTargetBrand(s.candidate.brandName, s.candidate.name, targetBrand!)
+            && coversNonBrandQueryToken(s.candidate.name, query, targetBrand!)
+            && s.candidate.nutrition?.per100g === true
+            && s.candidate.nutrition.kcal > 0);
+        if (siblings.length >= 3) {
+            const median = (vals: number[]): number => {
+                const sorted = [...vals].sort((a, b) => a - b);
+                const mid = Math.floor(sorted.length / 2);
+                return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+            };
+            const outliersOf = (
+                values: number[],
+                minMedian: number,
+                outlierDev: number,
+            ): Set<number> => {
+                const med = median(values);
+                if (med < minMedian) return new Set();
+                const agreeing = values.filter(v => Math.abs(v - med) / med <= CONSENSUS_AGREE_TOLERANCE);
+                // The median only means consensus when a real majority sits
+                // near it (and never fewer than two agreeing records).
+                if (agreeing.length < 2 || agreeing.length * 2 <= values.length) return new Set();
+                const flagged = new Set<number>();
+                values.forEach((v, i) => {
+                    if (Math.abs(v - med) / med > outlierDev) flagged.add(i);
+                });
+                return flagged;
+            };
+            const proteinOutliers = outliersOf(
+                siblings.map(s => s.candidate.nutrition!.protein ?? 0),
+                CONSENSUS_MIN_PROTEIN_MEDIAN, CONSENSUS_PROTEIN_OUTLIER_DEV);
+            const kcalOutliers = outliersOf(
+                siblings.map(s => s.candidate.nutrition!.kcal),
+                CONSENSUS_MIN_KCAL_MEDIAN, CONSENSUS_KCAL_OUTLIER_DEV);
+            siblings.forEach((s, i) => {
+                if (proteinOutliers.has(i) || kcalOutliers.has(i)) {
+                    s.score -= WEIGHTS.CONSENSUS_OUTLIER_PENALTY;
+                    s.consensusOutlierPenalty = WEIGHTS.CONSENSUS_OUTLIER_PENALTY;
+                    logger.info('simple_rerank.consensus_outlier_demoted', {
+                        query,
+                        candidate: s.candidate.name,
+                        id: s.candidate.id,
+                        source: s.candidate.source,
+                        proteinOutlier: proteinOutliers.has(i),
+                        kcalOutlier: kcalOutliers.has(i),
+                        siblingCount: siblings.length,
+                    });
+                }
+            });
+        }
     }
 
     // Sort by score descending, with deterministic tiebreaker (ID) to ensure stable results
@@ -1747,6 +1828,7 @@ export function simpleRerank(
                 `fdc=${fdcBoost.toFixed(2)} fs=${fsBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
                 `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
                 `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} dbrand=${((s as any).decisiveBrandBoost ?? 0).toFixed(2)} ` +
+                `cons=-${((s as any).consensusOutlierPenalty ?? 0).toFixed(2)} ` +
                 `floor=${s.plausibilityFloorHit ? 1 : 0} src=${s.candidate.source}`
             );
         });
