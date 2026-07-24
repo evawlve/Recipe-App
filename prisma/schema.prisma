@@ -463,9 +463,16 @@ model FatSecretServing {
 // ============================================================================
 
 model FoodMapping {
-  normalizedForm  String   @id              // Canonical lookup key (e.g., "strawberry")
+  normalizedForm  String   @id              // Canonical lookup key (e.g., "strawberry"); token-sorted + singularized. UNCHANGED by canonicalBase — collapsing variants into the KEY poisoned the cache historically ("powdered peanut butter"→"peanut butter"), so canonicalBase is an OBSERVABILITY/grouping column only, never the lookup key.
   foodName        String
   brandName       String?
+  // AI-derived base identity (from ai-normalize `canonical_base`): prep/size stripped
+  // but nutrition-affecting AND brand modifiers PRESERVED — e.g. "strawberry halves"→
+  // "strawberries", "skim milk"→"skim milk", "tropicana orange juice"→"tropicana orange
+  // juice" (brand kept so two OJ brands stay distinct). Used for dedup/grouping/analytics;
+  // NOT a lookup key. Nullable: populated going forward + via backfill-canonical-base.ts.
+  canonicalBase   String?
+  cookingModifier String?                   // Cooking method extracted by ai-normalize (grilled/roasted/scrambled…), for diary/grouping use
   source          String   @default("fdc")  // "fdc" | "openfoodfacts" | "ai_generated" | "fatsecret"
   offBarcode      String?                   // FK → OffFood.barcode
   fdcId           Int?                      // FK → FdcFood.fdcId
@@ -486,6 +493,7 @@ model FoodMapping {
   @@index([offBarcode])
   @@index([fsId])
   @@index([lastUsedAt(sort: Desc)])
+  @@index([canonicalBase])
 }
 
 // ============================================================================

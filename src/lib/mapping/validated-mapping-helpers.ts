@@ -351,6 +351,28 @@ function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
 }
 
 /**
+ * Normalize the AI-derived base into a brand-safe value for the canonicalBase COLUMN.
+ * Returns null when there's no base to persist. When the pick carries a brand that the
+ * base doesn't already name, the brand is prepended so distinct branded products never
+ * collapse to the same canonicalBase (e.g. "tropicana orange juice" vs "simply orange
+ * juice"). This is grouping/observability only — it never touches the normalizedForm key.
+ */
+export function brandSafeCanonicalBase(
+    rawBase: string | undefined | null,
+    brandName: string | undefined | null,
+): string | null {
+    const base = rawBase?.toLowerCase().trim().replace(/\s+/g, ' ');
+    if (!base) return null;
+    const brand = brandName?.toLowerCase().trim().replace(/\s+/g, ' ');
+    if (!brand) return base;
+    // Already brand-qualified if every brand token is present in the base (whole-token).
+    const baseTokens = new Set(base.split(' '));
+    const brandTokens = brand.split(' ').filter(Boolean);
+    const hasBrand = brandTokens.length > 0 && brandTokens.every((t) => baseTokens.has(t));
+    return hasBrand ? base : `${brand} ${base}`;
+}
+
+/**
  * Save an AI-approved mapping to the validated cache
  * Saves by normalizedForm as the primary lookup key
  */
@@ -362,7 +384,11 @@ export async function saveValidatedMapping(
         isAlias?: boolean;
         canonicalRawIngredient?: string;
         normalizedForm?: string;  // If provided, uses this; otherwise normalizes rawIngredient
-        canonicalBase?: string;   // AI-derived base form for cache key consolidation (highest priority)
+        canonicalBase?: string;   // MISNOMER (historical): the pre-derived LOOKUP KEY basis, NOT the AI base. Canonicalized into normalizedForm below. Do NOT confuse with persistCanonicalBase.
+        // Observability/grouping columns (NEVER affect the lookup key). The AI base
+        // (ai-normalize `canonical_base`) + cooking method, persisted as-is for dedup/analytics.
+        persistCanonicalBase?: string;   // e.g. "tropicana orange juice" (brand kept), "strawberries"
+        persistCookingModifier?: string; // e.g. "grilled", "scrambled"
         nutrientsPer100g?: MacroPlausibilityInput | null;      // Pick's per-100g macros for the save-time gate
         expectedNutrition?: ExpectedNutritionPer100g | null;   // AI normalize estimate to cross-check against
     }
@@ -371,6 +397,15 @@ export async function saveValidatedMapping(
     const rawForm = options?.canonicalBase || options?.normalizedForm || normalizeQuery(rawIngredient);
     // Canonicalize: lowercase + singularize + sort tokens
     const normalizedForm = canonicalizeCacheKey(rawForm);
+
+    // Brand-safe base identity for the canonicalBase COLUMN (observability only —
+    // does not touch normalizedForm). ai-normalize is supposed to keep the brand in
+    // canonical_base when is_branded, but guard deterministically: if the pick carries
+    // a brand and the base doesn't already name it, prepend it — so two different
+    // branded products (e.g. Tropicana vs Simply orange juice) never share a
+    // canonicalBase and stay distinct for grouping/dedup.
+    const persistedCanonicalBase = brandSafeCanonicalBase(options?.persistCanonicalBase, mapping.brandName);
+    const persistedCookingModifier = options?.persistCookingModifier?.trim() || null;
 
     const detectedBrand = detectBrandInQuery(rawIngredient).matchedBrand;
 
@@ -626,6 +661,8 @@ export async function saveValidatedMapping(
                 normalizedForm,
                 foodName: mapping.foodName,
                 brandName: mapping.brandName,
+                canonicalBase: persistedCanonicalBase,
+                cookingModifier: persistedCookingModifier,
                 source: mappingSource,
                 offBarcode,
                 fdcId,
@@ -652,6 +689,11 @@ export async function saveValidatedMapping(
                 validatedBy: 'ai',
                 usedCount: { increment: 1 },
                 lastUsedAt: new Date(),
+                // Only overwrite the base/modifier when THIS save actually derived one
+                // (e.g. the LLM-skipped cached-normalize path may lack a brand-safe base) —
+                // otherwise leave a previously populated value intact.
+                ...(persistedCanonicalBase ? { canonicalBase: persistedCanonicalBase } : {}),
+                ...(persistedCookingModifier ? { cookingModifier: persistedCookingModifier } : {}),
             },
         });
 

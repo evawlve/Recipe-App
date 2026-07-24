@@ -1077,6 +1077,7 @@ export async function mapIngredientWithFallback(
         let aiSynonyms: string[] = [];
         let aiNutritionEstimate: { caloriesPer100g: number; proteinPer100g: number; carbsPer100g: number; fatPer100g: number; confidence: number } | undefined;
         let aiCanonicalBase: string | undefined;  // For cache key consolidation
+        let aiCookingModifier: string | undefined;  // Persisted to FoodMapping.cookingModifier (grouping only)
         let skippedLlmNormalize = false;
         // ── Brand detection (already computed above, available here too) ────
         // isBrandedQuery and brandDetection are set before the early cache check.
@@ -1117,6 +1118,7 @@ export async function mapIngredientWithFallback(
                         normalizedName = aiHint.normalizedName;
                     }
                     aiCanonicalBase = aiHint.canonicalBase;
+                    aiCookingModifier = aiHint.cookingModifier;
                     aiSynonyms = aiHint.synonyms || [];
                     if (aiSynonyms.length > 0) {
                         logger.info('mapping.ai_synonyms', { rawLine: trimmed, synonyms: aiSynonyms });
@@ -2574,6 +2576,8 @@ export async function mapIngredientWithFallback(
                 reason: selectionReason,
             }, {
                 canonicalBase: cacheKey,  // Use normalizedName as cache key
+                persistCanonicalBase: aiCanonicalBase,   // AI base identity → canonicalBase column (grouping only)
+                persistCookingModifier: aiCookingModifier,
                 nutrientsPer100g: savedNutrientsPer100g,
                 expectedNutrition,
             });
@@ -2610,6 +2614,8 @@ export async function mapIngredientWithFallback(
                     isAlias: true,
                     canonicalRawIngredient: trimmed,
                     canonicalBase: cacheKey,  // Use same cache key for consolidation
+                    persistCanonicalBase: aiCanonicalBase,   // AI base identity → canonicalBase column (grouping only)
+                    persistCookingModifier: aiCookingModifier,
                     nutrientsPer100g: savedNutrientsPer100g,
                     expectedNutrition,
                 }).catch(() => { }); // Best effort, ignore duplicates
