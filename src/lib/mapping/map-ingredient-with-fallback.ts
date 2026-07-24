@@ -93,6 +93,25 @@ async function lookupValidatedMappingWithLegacyFallback(
 
     const legacyHit = await getValidatedMappingByNormalizedName(legacyKey, 'fatsecret', rawLine);
     if (legacyHit) {
+        // Branded-query guard: the legacy key (deriveCacheKeyName) is BRANDLESS,
+        // so when a brand was detected and stripped it can wrongly match a
+        // GENERIC record — e.g. "one bar birthday cake" detects brand "one bar",
+        // normalizes to "birthday cake", and the legacy key hits a generic
+        // "Birthday Cake" instead of "One birthday cake protein bars". Only
+        // accept a legacy hit that actually reflects the detected brand (in its
+        // name or brandName); otherwise fall through to the full pipeline.
+        if (
+            brandDetection.matchedBrand &&
+            !legacyHitReflectsBrand(legacyHit, brandDetection.matchedBrand)
+        ) {
+            logger.debug('mapping.legacy_cache_key_brand_mismatch_skipped', {
+                rawLine,
+                legacyKey,
+                matchedBrand: brandDetection.matchedBrand,
+                cachedFood: legacyHit.foodName,
+            });
+            return null;
+        }
         logger.debug('mapping.legacy_cache_key_fallback_hit', {
             rawLine,
             symmetricKey,
@@ -100,6 +119,28 @@ async function lookupValidatedMappingWithLegacyFallback(
         });
     }
     return legacyHit;
+}
+
+/**
+ * True when a cached record reflects the detected brand — any significant brand
+ * token (≥3 chars) appears as a whole word in the record's name or brandName.
+ * Used to reject brandless-legacy-key hits on GENERIC records for branded
+ * queries (see lookupValidatedMappingWithLegacyFallback). Conservative: it only
+ * blocks a fallback hit that shows no trace of the brand at all.
+ */
+export function legacyHitReflectsBrand(
+    hit: Pick<CachedMappedIngredient, 'foodName' | 'brandName'>,
+    matchedBrand: string,
+): boolean {
+    const tokens = matchedBrand
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter(t => t.length >= 3);
+    if (tokens.length === 0) return true; // nothing specific to match on — don't block
+    const hay = `${hit.foodName ?? ''} ${hit.brandName ?? ''}`.toLowerCase();
+    return tokens.some(t =>
+        new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(hay),
+    );
 }
 
 // ============================================================
