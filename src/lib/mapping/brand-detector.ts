@@ -250,6 +250,36 @@ const KNOWN_BRANDS: string[] = [
     'ritual', 'ritual vitamins', 'scivation', 'six star', 'skratch labs',
     'sunwarrior', 'thorne', 'vega', 'vega sport', 'vital proteins', 'xtend',
 
+    // ── Supplement / Energy / Pre-workout / DTC brands (2026 cache-warming) ──
+    // Modern sports-nutrition, energy-drink and DTC-protein brands surfaced by
+    // the branded-query cache-warming session. Multi-word entries ("alani nu",
+    // "gorilla mode", "total war", "ghost energy", "core power") are matched as
+    // whole phrases by the longest-first n-gram scan below, so hasDecisiveBrand
+    // context fires on them without an adjacent product-form word.
+    // NOTE: bare "on" (Optimum Nutrition) is deliberately OMITTED — as a 2-char
+    // English preposition it would flag countless non-branded lines; the
+    // multi-word "optimum nutrition" above covers the brand safely.
+    'alani nu', 'c4', 'celsius', 'gorilla mode', 'bang', 'reign', 'total war',
+    'redcon1', 'jocko', 'jocko fuel', 'kaged', 'kaged muscle', 'ghost energy',
+    'bloom', 'bloom nutrition', 'ryse', 'bucked up', 'transparent labs',
+    'legion', 'muscletech', 'ghost',
+
+    // ── RTD Protein / Functional Beverages ────────────────────
+    'premier protein', 'core power', 'fairlife', 'owyn', 'koia', 'iconic',
+    'muscle milk', 'isopure',
+
+    // ── Protein Bars / Better-for-you Snacks ──────────────────
+    'no cow', 'gomacro', 'aloha', 'rxbar', 'quest', 'barebells', 'built',
+    'built bar', 'met-rx', 'power crunch', 'one bar',
+
+    // ── Meat Snacks / Jerky ───────────────────────────────────
+    'jack links', 'jack link\'s', 'chomps', 'country archer', 'old trapper',
+    'slim jim', 'wilde',
+
+    // ── Frozen Dessert / QSR (branded-query coverage) ─────────
+    'halo top', 'talenti', 'jeni\'s', 'jenis', 'raising cane\'s', 'raising canes',
+    'canes', 'culver\'s', 'culvers', 'whataburger', 'jack in the box',
+
     // ── Specialty / Natural / Organic ─────────────────────────
     '365 everyday value', '365 whole foods', 'ancient harvest', 'annie\'s',
     'applegate', 'arrowhead mills', 'bob\'s red mill', 'bobs red mill',
@@ -428,8 +458,11 @@ export function detectBrandInQuery(rawLine: string): BrandDetectionResult {
         return { isBranded: false, matchedBrand: null };
     }
 
-    // Check 1-grams, 2-grams, 3-grams
-    for (let size = 1; size <= 3; size++) {
+    // Check 3-grams, 2-grams, 1-grams — LONGEST phrase first so a multi-word
+    // brand wins over a bare sub-token that is itself a lexicon entry
+    // ("alani nu" over "alani", "kettle brand" over "kettle"). A whole-phrase
+    // match is what lets hasDecisiveBrandContext treat the hit as decisive.
+    for (let size = 3; size >= 1; size--) {
         for (let i = 0; i <= tokens.length - size; i++) {
             const ngram = tokens.slice(i, i + size).join(' ');
             if (BRAND_SET.has(ngram)) {
