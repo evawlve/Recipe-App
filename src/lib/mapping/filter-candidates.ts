@@ -1478,9 +1478,17 @@ const INGREDIENT_MACRO_PROFILES: Array<{
  */
 export function hasSuspiciousMacros(
     query: string,
-    candidateNutrients?: { calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null
+    candidateNutrients?: { calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null,
+    options?: { ignoreCeilings?: boolean }
 ): boolean {
     if (!candidateNutrients) return false;  // No data = can't check
+    // ignoreCeilings: when the query explicitly names a brand, the candidate is a
+    // specific branded PRODUCT, so raw-produce upper bounds (a "strawberry" or
+    // "spinach" flavor word capping calories at ~30–60/100g) don't apply — a
+    // Frosted Strawberry Pop-Tart or a Starbucks Spinach Feta Wrap really is that
+    // calorie-dense. The FLOOR checks (e.g. whey "protein" min-protein) are kept:
+    // they catch a low-protein same-brand record winning a supplement query.
+    const ignoreCeilings = options?.ignoreCeilings === true;
 
     const queryLower = query.toLowerCase();
     // Normalize common variations for matching
@@ -1509,18 +1517,18 @@ export function hasSuspiciousMacros(
         // skip produce-based macro profiles. "Strawberry banana greek yogurt" should NOT
         // be checked against the fresh strawberry profile (maxCalPer100g: 60).
         // The berry/produce is a FLAVOR component, not the main food.
-        const COMPOUND_PRODUCT_TERMS = /\b(yogurt|yoghurt|ice cream|gelato|sorbet|smoothie|jam|jelly|preserve|marmalade|pie|cake|muffin|bread|cereal|granola|oatmeal|pancake|waffle|syrup|sauce|salsa|dressing|bar|cookie|pudding|mousse|parfait|protein bar|shake)\b/i;
+        const COMPOUND_PRODUCT_TERMS = /\b(yogurt|yoghurt|ice cream|gelato|sorbet|smoothie|jam|jelly|preserve|marmalade|pie|cake|muffin|bread|cereal|granola|oatmeal|pancake|waffle|syrup|sauce|salsa|dressing|bar|cookie|pudding|mousse|parfait|protein bar|shake|wrap|sandwich|burrito|quesadilla|panini|flatbread|calzone|empanada|melt)\b/i;
         if (COMPOUND_PRODUCT_TERMS.test(queryLower)) continue;
 
         // Check calorie bounds (e.g., ice/water should have ~0 calories)
-        if (profile.maxCalPer100g != null && candidateNutrients.calories != null) {
+        if (!ignoreCeilings && profile.maxCalPer100g != null && candidateNutrients.calories != null) {
             if (candidateNutrients.calories > profile.maxCalPer100g) {
                 return true; // Calories too high for this ingredient type
             }
         }
 
         // Check fat bounds
-        if (profile.maxFatPer100g != null && candidateNutrients.fat != null) {
+        if (!ignoreCeilings && profile.maxFatPer100g != null && candidateNutrients.fat != null) {
             if (candidateNutrients.fat > profile.maxFatPer100g) {
                 return true; // Fat too high for this ingredient type
             }
@@ -1532,7 +1540,7 @@ export function hasSuspiciousMacros(
         }
 
         // Check carb bounds
-        if (profile.maxCarbPer100g != null && candidateNutrients.carbs != null) {
+        if (!ignoreCeilings && profile.maxCarbPer100g != null && candidateNutrients.carbs != null) {
             if (candidateNutrients.carbs > profile.maxCarbPer100g) {
                 return true; // Carbs too high
             }
@@ -2121,6 +2129,86 @@ const RESTAURANT_BRANDS = [
     'el monterey', 'banquet', 'hungry-man',
 ];
 
+// Supplement/sports-nutrition query markers. When present, produce macro
+// CEILINGS are kept even for brand-named lookups (see filterCandidatesByTokens)
+// so the same-brand flavor-variant sibling set stays constrained for rerank.
+const SUPPLEMENT_QUERY_RE = /\b(protein|whey|isolate|casein|pre[\s-]?workout|bcaa|eaa|creatine|mass gainer|gainer|collagen|amino)\b/i;
+
+// Single-word "brands" that are really generic descriptors — matching one of
+// these in a query is NOT evidence the user named a specific brand, so they
+// must not trigger the branded-query relaxation below.
+const GENERIC_BRAND_WORDS = new Set([
+    'original', 'light', 'natural', 'classic', 'organic', 'value', 'great',
+    'simply', 'fresh', 'real', 'pure', 'gold', 'signature', 'select',
+    'premium', 'store', 'brand', 'plain', 'regular', 'family', 'home',
+]);
+
+/**
+ * Possessive/punctuation-insensitive brand normalization:
+ * "Arby's" -> "arbys", "McDonald's" -> "mcdonalds", "Chick-fil-A" -> "chick fil a".
+ */
+function normalizeBrandForMatch(s: string): string {
+    return s
+        .toLowerCase()
+        .replace(/['’`]/g, '')        // drop apostrophes so "arbys" == "arby's"
+        .replace(/[^a-z0-9]+/g, ' ')  // other punctuation -> space
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * True when the QUERY explicitly names the candidate's brand/restaurant.
+ *
+ * When a user types "arbys curly fries" or "mcdonalds chicken nuggets", the
+ * brand is part of the intent — the exact restaurant menu item is the CORRECT
+ * match, not a mistake. The raw-ingredient guards (meal/product mismatch,
+ * produce macro profiles) exist to stop generic queries like "cinnamon sticks"
+ * from grabbing a branded product; they must NOT fire when the query itself
+ * asked for that brand. This is possessive-insensitive so "arbys" matches the
+ * candidate brand "Arby's" (the punctuation mismatch that was silently dropping
+ * every restaurant menu item).
+ *
+ * Scoped to be conservative: a bare generic word ("original", "classic") that
+ * happens to be an OFF brand does NOT count.
+ */
+export function queryTargetsCandidateBrand(
+    query: string,
+    candidateBrand?: string | null
+): boolean {
+    if (!candidateBrand) return false;
+    const q = normalizeBrandForMatch(query);
+    const brand = normalizeBrandForMatch(candidateBrand);
+    if (!q || !brand) return false;
+    const qPadded = ` ${q} `;
+    const qTokens = new Set(q.split(' '));
+
+    // 1) Full brand phrase appears in the query ("olive garden" ⊂ "olive garden breadsticks")
+    if (brand.length >= 3 && qPadded.includes(` ${brand} `)) {
+        if (!(brand.split(' ').length === 1 && GENERIC_BRAND_WORDS.has(brand))) return true;
+    }
+
+    // 2) Every significant brand token is present in the query (handles reorder / extra words).
+    //    Ignore 1–2 char tokens ("a", "of") and require at least one non-generic token.
+    const brandTokens = brand.split(' ').filter(t => t.length >= 3);
+    if (
+        brandTokens.length > 0 &&
+        brandTokens.every(t => qTokens.has(t)) &&
+        brandTokens.some(t => !GENERIC_BRAND_WORDS.has(t))
+    ) {
+        return true;
+    }
+
+    // 3) A known restaurant/prepared-food brand is named in BOTH the query and
+    //    this candidate's brand ("chili's" query ↔ candidate brand "Chili's").
+    for (const b of RESTAURANT_BRANDS) {
+        const nb = normalizeBrandForMatch(b);
+        if (nb.length < 3) continue;
+        if (qPadded.includes(` ${nb} `) && ` ${brand} `.includes(` ${nb} `)) return true;
+    }
+
+    return false;
+}
+
 export function isMealProductMismatch(
     normalizedName: string,
     candidateName: string,
@@ -2478,6 +2566,14 @@ export function filterCandidatesByTokens(
         return { filtered: [], removedCount: 0 };
     }
 
+    // Supplement queries ("... protein/whey/pre-workout ...") must KEEP the
+    // macro ceilings even for branded lookups: the ceilings constrain the
+    // same-brand flavor-variant sibling set that rerank consensus relies on.
+    // Relaxing them there admits extra flavor SKUs ("Blueberry Muffin Ryse
+    // Protein") that shift the winner. Produce-flavor false positives
+    // (strawberry Pop-Tart, spinach wrap) only occur on non-supplement foods.
+    const isSupplementQuery = SUPPLEMENT_QUERY_RE.test(modifierCheckSource);
+
     // Extract must-have tokens
     let mustHaveTokens = deriveMustHaveTokens(normalizedName);
     
@@ -2686,8 +2782,18 @@ export function filterCandidatesByTokens(
             return false;
         }
 
+        // Did the query explicitly name THIS candidate's brand/restaurant?
+        // If so, the meal/product guard must not fire — the user asked for the
+        // branded item, so retrieving that exact product is correct (this also
+        // fixes the possessive mismatch: "arbys" vs brand "Arby's"). Checked
+        // against both the normalized name and the raw line (either may carry
+        // the brand token). See queryTargetsCandidateBrand.
+        const brandTargeted =
+            queryTargetsCandidateBrand(normalizedName, candidate.brandName) ||
+            (!!rawLine && queryTargetsCandidateBrand(rawLine, candidate.brandName));
+
         // Meal/product mismatch (e.g., "orange zest" vs "ORANGE ZEST CHICKEN")
-        if (isMealProductMismatch(normalizedName, candidate.name, candidate.brandName)) {
+        if (!brandTargeted && isMealProductMismatch(normalizedName, candidate.name, candidate.brandName)) {
             if (debug) {
                 logger.info('filter.candidates.meal_product_mismatch', {
                     query: normalizedName,
@@ -2750,7 +2856,13 @@ export function filterCandidatesByTokens(
         // e.g. "strawberry" → FRUTSTIX (85 kcal/100g vs expected 32), "whey protein" with more carbs than protein
         // Use rawLine for this check as AI normalization may strip important modifiers like "unsweetened"
         const queryForMacroCheck = rawLine || normalizedName;
-        if (hasSuspiciousMacros(queryForMacroCheck, nutrientsToCheck)) {
+        // For deliberate branded FOOD lookups, ignore raw-produce macro CEILINGS
+        // (a "Frosted Strawberry Pop-Tart" or "Starbucks Spinach Feta Wrap" is
+        // legitimately calorie-dense). Supplement queries keep the ceilings
+        // (they constrain the flavor-variant sibling set rerank consensus uses).
+        if (hasSuspiciousMacros(queryForMacroCheck, nutrientsToCheck, {
+            ignoreCeilings: brandTargeted && !isSupplementQuery,
+        })) {
             if (debug) logger.info('filter.candidates.suspicious_macros', { query: queryForMacroCheck, candidate: candidate.name, nutrients: nutrientsToCheck });
             return false;
         }
