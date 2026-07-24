@@ -1648,8 +1648,14 @@ export function simpleRerank(
     // CONSENSUS_AGREE_TOLERANCE of the median, demote any sibling that
     // deviates beyond the outlier thresholds. Source-agnostic: a bad OFF row
     // is demoted exactly like a bad fatsecret row.
+    // Gated on a detected target brand, NOT the stricter decisive two-word
+    // adjacency: "1 quest chocolate chip protein bar" puts a flavor token
+    // next to the brand word and fails the adjacency test, yet its sibling
+    // pack is exactly where consensus matters. The sibling conditions below
+    // (>=3 same-brand records covering a non-brand query token, majority
+    // agreement) are the real safety rail against coincidental brand words.
     // Kill-switch: RANK_BRAND_CONSENSUS="0" disables the pass.
-    if (decisiveBrandActive && process.env.RANK_BRAND_CONSENSUS !== '0') {
+    if (targetBrand && process.env.RANK_BRAND_CONSENSUS !== '0') {
         const siblings = scored.filter(s =>
             candidateMatchesTargetBrand(s.candidate.brandName, s.candidate.name, targetBrand!)
             && coversNonBrandQueryToken(s.candidate.name, query, targetBrand!)

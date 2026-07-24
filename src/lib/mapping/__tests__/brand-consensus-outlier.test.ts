@@ -31,6 +31,23 @@ function rerank(candidates: RerankCandidate[]) {
 }
 
 describe('brand macro-consensus outlier demotion', () => {
+    it('fires on the exact n-mq-08 phrasing, where the flavor token breaks decisive adjacency', () => {
+        // "1 quest chocolate chip protein bar": "quest" neighbors "chocolate",
+        // so hasDecisiveBrandContext is false — the pass must not depend on it.
+        const candidates = [
+            questBar({ id: 'off_1', nutrition: { kcal: 333, protein: 33, carbs: 37, fat: 13, per100g: true } }),
+            questBar({ id: 'off_2', nutrition: { kcal: 333, protein: 34, carbs: 37, fat: 13, per100g: true } }),
+            questBar({ id: 'off_3', nutrition: { kcal: 333, protein: 35, carbs: 37, fat: 13, per100g: true } }),
+            questBar({
+                id: 'fs_42', source: 'fatsecret', score: 1.0,
+                nutrition: { kcal: 350, protein: 42, carbs: 35, fat: 14, per100g: true },
+            }),
+        ];
+        const result = simpleRerank(
+            QUERY, candidates, undefined, '1 quest chocolate chip protein bar', true, 'quest');
+        expect(result.sortedCandidates[0]?.id).not.toBe('fs_42');
+    });
+
     it('demotes a plausible-wrong fs record that deviates from the OFF sibling consensus', () => {
         const candidates = [
             questBar({ id: 'off_1', nutrition: { kcal: 333, protein: 33, carbs: 37, fat: 13, per100g: true } }),
