@@ -389,6 +389,77 @@ function fmtTable(rows: string[][], header: string[]): string {
     return all.length > 1 ? md.join('\n') : '_none_';
 }
 
+/**
+ * Roll a namespaced dropReason up to its class level for the report: keep
+ * '<stage>:<class>' and drop the detail suffix. The stored column keeps full
+ * granularity (Diego, 2026-07-24 decision 3) — this is display only.
+ */
+function dropReasonClass(reason: string): string {
+    return reason.split(':').slice(0, 2).join(':');
+}
+
+/**
+ * Funnel breakdown for a warm batch (sprint F1). Turns "our fixes felt
+ * systematic" into a measurable conversion rate: what share of seeds reached a
+ * cache row, and which class the rest died in.
+ */
+function buildFunnelSection(warm: WarmRunReport | null): string[] {
+    const lines: string[] = ['## Funnel'];
+    if (!warm) {
+        lines.push('_skipped (--skip-warm)_');
+        return lines;
+    }
+
+    const results = warm.results ?? [];
+    const staged = results.filter(r => r.funnelStage);
+    if (staged.length === 0) {
+        // The sweep talks to the box over HTTP: an API that predates F1 returns
+        // no funnel fields. Say so rather than reporting a funnel of all zeros.
+        lines.push('_no funnel data — the API being swept predates the funnel instrumentation (sprint F1)_');
+        return lines;
+    }
+
+    const byStage = new Map<string, number>();
+    for (const r of staged) byStage.set(r.funnelStage!, (byStage.get(r.funnelStage!) ?? 0) + 1);
+
+    const total = staged.length;
+    const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
+    const stageRows = [...byStage.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([stage, n]) => [stage, String(n), pct(n)]);
+    lines.push(fmtTable(stageRows, ['stage', 'n', '%']));
+    lines.push('');
+
+    // Conversion = seeds that ended with a cache row. 'saved' is what THIS batch
+    // converted; 'cache_hit' was already converted by an earlier batch.
+    const saved = byStage.get('saved') ?? 0;
+    const cacheHit = byStage.get('cache_hit') ?? 0;
+    lines.push(`**Conversion**: ${pct(saved)} newly saved · ${pct(saved + cacheHit)} cached overall (${saved + cacheHit}/${total})`);
+
+    const underGate = byStage.get('under_gate') ?? 0;
+    if (underGate > 0) {
+        lines.push(`**Under-gate** (served but never cached — the warm target): ${underGate} (${pct(underGate)})`);
+    }
+    lines.push('');
+
+    const byClass = new Map<string, number>();
+    for (const r of staged) {
+        if (!r.dropReason) continue;
+        const cls = dropReasonClass(r.dropReason);
+        byClass.set(cls, (byClass.get(cls) ?? 0) + 1);
+    }
+    const drops = [...byClass.values()].reduce((a, b) => a + b, 0);
+    lines.push(`### Top drop classes (${drops} drops)`);
+    const classRows = [...byClass.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([cls, n]) => [cls, String(n), drops > 0 ? `${((n / drops) * 100).toFixed(1)}%` : '—']);
+    lines.push(fmtTable(classRows, ['class', 'n', '% of drops']));
+    if (byClass.size > 15) lines.push(`\n_(${byClass.size - 15} further classes not shown)_`);
+
+    return lines;
+}
+
 function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport | null,
     seedCount: number, telemetrySeedCount: number, diff: WarmDiff | null, gate: EvalGate | null,
     stuck: StuckKeysRun | null, segReplay: SegReplayRun | null): string {
@@ -428,6 +499,9 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
         const s = warm.summary;
         lines.push(`ok ${s.ok} · errors ${s.errors} · low-conf (not cached) ${s.lowConf} · sources ${JSON.stringify(s.bySource)}`);
     }
+    lines.push('');
+
+    lines.push(...buildFunnelSection(warm));
     lines.push('');
 
     lines.push('## Diff vs previous warm run');

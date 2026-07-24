@@ -731,12 +731,24 @@ model MappingEventLog {
   latencyMs      Int?
   noCache        Boolean  @default(false) // request ran with the admin nocache flag (cold run)
   segCacheHit    Boolean? // true = segmentation served from SegmentationCache; false = AI segmentation ran; null = line never reached AI segmentation (item-form input or single-item fast path)
+  // Funnel taxonomy (sprint F1, Jul 2026 — src/lib/mapping/funnel.ts). funnelStage
+  // is the coarse bucket the line ended in: cache_hit | saved | under_gate |
+  // save_rejected | no_match | no_candidates | all_filtered | fast_path | error.
+  // 'under_gate' (0.3 <= confidence < 0.85 — served but never offered to the cache)
+  // was previously unobservable and is the population cache-warming converts.
+  funnelStage    String?
+  // Namespaced class ID for WHY a line dropped: '<stage>:<class>[:<detail>]', e.g.
+  // 'save_rejected:implausible_macros:floor:produce_kcal_below'. Null for
+  // cache_hit/saved. Normalized (numbers stripped) so it groups.
+  dropReason     String?
   createdAt      DateTime @default(now())
 
   @@index([createdAt])
   @@index([normalizedForm])
   @@index([cacheHit])
   @@index([servingTier])
+  @@index([funnelStage])
+  @@index([dropReason])
 }
 
 // AI segmentation-result cache (magic-log): repeat free-text lines skip the
