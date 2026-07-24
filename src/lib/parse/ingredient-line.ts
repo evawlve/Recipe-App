@@ -3,6 +3,37 @@ import { normalizeUnitToken, convertUnit } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
+import { detectBrandInQuery } from '../mapping/brand-detector';
+
+/**
+ * Flavor/product words that mark "rocket" as part of a branded product name
+ * (e.g. "rocket pop", a red-white-and-blue popsicle flavor) rather than the
+ * British produce term for arugula.
+ */
+const ROCKET_FLAVOR_ADJACENT = new Set([
+  'pop', 'pops', 'popsicle', 'popsicles', 'freeze', 'fuel', 'blast', 'candy',
+]);
+
+/**
+ * Apply the British "rocket" -> "arugula" produce synonym, guarded against
+ * branded/flavor contexts. Returns the line unchanged when the query names a
+ * known brand (the whole line is a product name, not produce), and keeps
+ * "rocket <flavor-word>" intact ("rocket pop"). Genuine produce phrasing
+ * ("rocket salad", "wild rocket", "rocket leaves") is rewritten as before.
+ */
+export function guardedRocketToArugula(text: string): string {
+  if (!/\brocket\b/i.test(text)) return text;
+  // A brand anywhere in the line means "rocket" is almost certainly a product
+  // or flavor name, not the salad green — leave it untouched.
+  if (detectBrandInQuery(text).isBranded) return text;
+  return text.replace(/\brocket\b(\s+([a-z]+))?/gi, (match, _spaceWord, nextWord) => {
+    if (nextWord && ROCKET_FLAVOR_ADJACENT.has(nextWord.toLowerCase())) {
+      return match; // "rocket pop"/"rocket popsicle" flavor — keep as-is
+    }
+    // Preserve whatever trailing word/space the regex captured after "rocket".
+    return 'arugula' + match.slice('rocket'.length);
+  });
+}
 
 export type ParsedIngredient = {
   qty: number;
@@ -148,11 +179,20 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     .replace(/\btinned\b/gi, 'canned')     // British "tinned" -> American "canned"
     .replace(/\bcourgettes?\b/gi, 'zucchini')  // British "courgette(s)" -> American "zucchini"
     .replace(/\baubergines?\b/gi, 'eggplant')  // British "aubergine(s)" -> American "eggplant"
-    .replace(/\brocket\b/gi, 'arugula')
+    // NOTE: rocket -> arugula is handled by guardedRocketToArugula() below so it
+    // never fires inside a branded/flavor name ("bucked up rocket pop ...").
     .replace(/\bcoriander\b/gi, 'cilantro')
     .replace(/\bspring onions?\b/gi, 'green onion')  // British "spring onion(s)" -> American
     // Synonym: "calorie free" → "sugar free" (many products labeled as sugar free, not calorie free)
     .replace(/\bcalorie[- ]free\b/gi, 'sugar free');
+
+  // rocket -> arugula (British produce term), context-guarded. The bare synonym
+  // mis-fired inside branded flavor names: "bucked up rocket pop pre workout"
+  // became "...arugula pop..." and then matched an "Arugula Lettuce" record.
+  // Skip the rewrite when the line names a known brand, or when "rocket" is
+  // immediately followed by a flavor/product word ("rocket pop"/"popsicle").
+  // Genuine produce ("rocket salad", "wild rocket", "rocket leaves") is kept.
+  unitNormalized = guardedRocketToArugula(unitNormalized);
 
   // === NEW: Spelling corrections for common misspellings ===
   // These would otherwise return 0 API results and fail with 0.00 confidence

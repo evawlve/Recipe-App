@@ -100,6 +100,27 @@ describe('brand-mismatch save gate', () => {
         );
         expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
     });
+
+    it('FIX 1: rejects "alani nu pre workout" mapped to a generic "Pre-Workout" (supplement brand now in lexicon)', async () => {
+        // "alani nu" is a multi-word supplement brand; the longest-first n-gram
+        // scan matches the whole phrase so the context is decisive, and the
+        // generic "Pre-Workout" pick carries the brand in neither field.
+        await saveValidatedMapping(
+            'alani nu pre workout arctic white',
+            makeMapping({ foodName: 'Pre-Workout' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('FIX 1: saves when the alani nu pick carries the brand', async () => {
+        await saveValidatedMapping(
+            'alani nu pre workout arctic white',
+            makeMapping({ foodName: 'Pre-Workout Arctic White', brandName: 'Alani Nu' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('serving-downgrade save guard', () => {
@@ -503,5 +524,57 @@ describe('save-time macro-plausibility gate interplay', () => {
         );
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
         expect(mockFoodMappingFindUnique).not.toHaveBeenCalled();
+    });
+});
+
+describe('FIX 3: bare-category takeover save gate', () => {
+    it('rejects "special k red berries" collapsing into a bare "Cereal"', async () => {
+        await saveValidatedMapping(
+            'special k red berries',
+            makeMapping({ foodName: 'Cereal' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('rejects "wendys jr bacon cheeseburger" collapsing into a bare "Bacon Cheeseburger"', async () => {
+        // "wendys" is detected but NOT decisive (no adjacent product-form word),
+        // so the older brand-mismatch gate misses this — the bare-category gate
+        // catches it because a brand is named and the pick is all category words.
+        await saveValidatedMapping(
+            'wendys jr bacon cheeseburger',
+            makeMapping({ foodName: 'Bacon Cheeseburger' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('KEEPS "mcdonalds big mac" -> "Big Mac" (distinctive product token survives)', async () => {
+        await saveValidatedMapping(
+            'mcdonalds big mac',
+            makeMapping({ foodName: 'Big Mac' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('KEEPS a bare-category pick when the pick carries the brand', async () => {
+        await saveValidatedMapping(
+            'special k red berries',
+            makeMapping({ foodName: 'Red Berries Cereal', brandName: 'Special K' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire for a generic query resolving to its own generic category', async () => {
+        // No brand named, and the food name keeps distinctive ingredient tokens
+        // ("chicken", "noodle") that are not bare-category words -> saved.
+        await saveValidatedMapping(
+            'chicken noodle soup',
+            makeMapping({ foodName: 'Chicken Noodle Soup' }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
     });
 });
