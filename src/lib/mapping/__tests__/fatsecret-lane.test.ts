@@ -308,22 +308,39 @@ describe('per-100g derivation', () => {
 // ============================================================
 
 describe('score scale', () => {
-    it('scores by rank position on the 0-1 scale with a 0.5 floor', async () => {
+    it('decays the positional base by rank with a 0.5 floor', async () => {
+        // Names share no token with the query → no name-quality multiplier,
+        // the raw positional base is exposed.
         const hits = Array.from({ length: 10 }, (_, i) =>
-            summary({ id: String(1000 + i), name: `Food ${i}` })
+            summary({ id: String(1000 + i), name: `Unrelated Item${i}x` })
         );
         const client = makeClient(hits);
 
-        const candidates = await lane.searchFatSecretLane('food', 10, client);
+        const candidates = await lane.searchFatSecretLane('quinoa', 10, client);
 
-        const expected = [1, 0.94, 0.88, 0.82, 0.76, 0.7, 0.64, 0.58, 0.52, 0.5];
+        const expected = [0.95, 0.93, 0.91, 0.89, 0.87, 0.85, 0.83, 0.81, 0.79, 0.77];
         expect(candidates).toHaveLength(10);
         candidates.forEach((c, i) => expect(c.score).toBeCloseTo(expected[i], 10));
-        // Every score stays on the 0-1 rerank ORIGINAL_SCORE scale
-        candidates.forEach(c => {
-            expect(c.score).toBeGreaterThanOrEqual(0.5);
-            expect(c.score).toBeLessThanOrEqual(1);
-        });
+    });
+
+    it('multiplies by name quality so full-coverage hits saturate ORIGINAL_SCORE', async () => {
+        const hits = [
+            // Full coverage (both query tokens in name+brand) → ×1.5
+            summary({ id: '1', name: 'Protein Bar', brandName: 'Quest' }),
+            // Partial coverage (1 of 2 tokens) → ×1.2
+            summary({ id: '2', name: 'Granola Bar' }),
+            // No coverage → base only
+            summary({ id: '3', name: 'Orange Juice' }),
+        ];
+        const client = makeClient(hits);
+
+        const candidates = await lane.searchFatSecretLane('protein bar', 8, client);
+
+        expect(candidates[0].score).toBeCloseTo(0.95 * 1.5, 10); // clamps to 1 in rerank
+        expect(candidates[1].score).toBeCloseTo(0.93 * 1.2, 10);
+        expect(candidates[2].score).toBeCloseTo(0.91, 10);
+        // A full-coverage hit deep in the list still beats a no-coverage top hit
+        expect(candidates[0].score).toBeGreaterThan(1);
     });
 });
 
