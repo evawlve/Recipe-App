@@ -293,16 +293,18 @@ export async function GET(req: NextRequest) {
       const category = mapUsdaToCategory(q);
       const isProduceQuery = category === 'fruit' || category === 'veg';
 
-      // FDC and OFF scores live on different scales (computePositionScore
-      // ~0–1.5 vs computeOffScore ~0–10), so they can't be compared or fed
-      // into the confidence formula raw. Normalize each per source, and
-      // weight FDC by how much of the query its name actually covers —
+      // FDC/fatsecret and OFF scores live on different scales
+      // (computePositionScore and the fs lane's positionScore ~0–1.5 vs
+      // computeOffScore ~0–10), so they can't be compared or fed into the
+      // confidence formula raw. Normalize each per source, and weight
+      // FDC/fatsecret by how much of the query its name actually covers —
       // engine typo-expansion can surface FDC rows that share no real
-      // token with the query (e.g. "ryse" pulling in "rye flour").
+      // token with the query (e.g. "ryse" pulling in "rye flour"), and
+      // fatsecret's API returns loosely related items deep in its list.
       const relevanceById = new Map<string, { coverage: number; relevance: number }>();
       for (const c of fallbackCandidates) {
         const coverage = queryTokenCoverage(q, c.name, c.brandName);
-        let relevance = c.source === 'fdc'
+        let relevance = c.source === 'fdc' || c.source === 'fatsecret'
           ? Math.min(1, (c.score || 0) / 1.5) * coverage
           : Math.min(1, Math.max(0, (c.score || 0) / 10));
         if (isJunkNamed(c)) relevance *= 0.5;

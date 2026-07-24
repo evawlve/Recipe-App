@@ -1148,6 +1148,15 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
         score += 0.03;  // Small enough not to override a genuine name-quality difference
     }
 
+    // Source tiebreaker — fatsecret wins for branded/SKU queries. fatsecret
+    // Premier records carry label-derived serving panels and brand data that
+    // crowdsourced OFF rows often lack. Same magnitude as the FDC prior
+    // above: a tiebreaker between equal name matches, not a blanket
+    // preference.
+    if (candidate.source === 'fatsecret' && (isBranded || targetBrand)) {
+        score += 0.03;
+    }
+
 
     // 4. Prefer generic over branded (but smarter about it)
     if (!candidate.brandName) {
@@ -1723,6 +1732,7 @@ export function simpleRerank(
             const coverage = getWordCoverageBonus(query, s.candidate.name);
             const apiScore = Math.min(s.candidate.score, 1) * WEIGHTS.ORIGINAL_SCORE;
             const fdcBoost = (s.candidate.source === 'fdc' && isProduceOrMeat(query)) ? 0.03 : 0;
+            const fsBoost = (s.candidate.source === 'fatsecret' && (isBranded || targetBrand)) ? 0.03 : 0;
             const brand = !s.candidate.brandName ? WEIGHTS.NO_BRAND : 0;
             const nutrDev = (aiNutritionEstimate && s.candidate.nutrition?.per100g && s.candidate.nutrition.kcal != null)
                 ? Math.abs(s.candidate.nutrition.kcal - aiNutritionEstimate.caloriesPer100g).toFixed(0)
@@ -1734,7 +1744,7 @@ export function simpleRerank(
                 `[exact=${exact.toFixed(2)} overlap=${overlap.toFixed(2)} api=${apiScore.toFixed(2)} ` +
                 `catΔ=-${catChange.toFixed(2)} contra=-${contradiction.toFixed(2)} bloat=-${bloat.toFixed(2)} ` +
                 `phrase=${phrase.toFixed(2)} mod=${modifier.toFixed(2)} cover=${coverage.toFixed(2)} ` +
-                `fdc=${fdcBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
+                `fdc=${fdcBoost.toFixed(2)} fs=${fsBoost.toFixed(2)} brand=${brand.toFixed(2)}] ` +
                 `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
                 `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} dbrand=${((s as any).decisiveBrandBoost ?? 0).toFixed(2)} ` +
                 `floor=${s.plausibilityFloorHit ? 1 : 0} src=${s.candidate.source}`

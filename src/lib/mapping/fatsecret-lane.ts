@@ -27,6 +27,7 @@ import {
 } from './client';
 import type { UnifiedCandidate } from './gather-candidates';
 import { registerBackgroundTask } from './deferred-hydration';
+import { queryTokenCoverage } from '../search/query-token-coverage';
 
 // ============================================================
 // Client Singleton (lazy; unit tests inject their own)
@@ -179,12 +180,28 @@ export function derivePer100gFromServings(
 // Candidate Mapping
 // ============================================================
 
-/** Position-rank score on the FDC-style 0-1 scale (rerank clamps at 1). */
-function positionScore(index: number): number {
-    return Math.max(0.5, 1 - index * 0.06);
+/**
+ * Position-rank score on the FDC-style scale (rerank clamps at 1).
+ * The positional base decays with rank; the name-quality multiplier
+ * mirrors FDC's computePositionScore so a fatsecret record whose
+ * name/brand fully covers the query saturates the rerank's
+ * ORIGINAL_SCORE term the way name-boosted OFF/FDC scores do. A purely
+ * positional score can never saturate, which structurally under-ranked
+ * genuinely-good fatsecret records against mediocre OFF matches.
+ */
+function positionScore(index: number, query: string, hit: FatSecretFoodSummary): number {
+    const base = Math.max(0.5, 0.95 - index * 0.02);
+    const coverage = queryTokenCoverage(query, hit.name, hit.brandName);
+    if (coverage >= 1) return base * 1.5;
+    if (coverage >= 0.5) return base * 1.2;
+    return base;
 }
 
-function toUnifiedCandidate(hit: FatSecretFoodSummary, index: number): UnifiedCandidate {
+function toUnifiedCandidate(
+    hit: FatSecretFoodSummary,
+    index: number,
+    query: string
+): UnifiedCandidate {
     const per100 = derivePer100gFromServings(hit.servings);
 
     const servings = (hit.servings ?? [])
@@ -201,7 +218,7 @@ function toUnifiedCandidate(hit: FatSecretFoodSummary, index: number): UnifiedCa
         source: 'fatsecret',
         name: hit.name,
         brandName: hit.brandName ?? null,
-        score: positionScore(index),
+        score: positionScore(index, query, hit),
         foodType: hit.foodType ?? undefined,
         nutrition: per100
             ? {
@@ -359,7 +376,7 @@ export async function searchFatSecretLane(
         });
         registerBackgroundTask(task);
 
-        return hits.map(toUnifiedCandidate);
+        return hits.map((hit, index) => toUnifiedCandidate(hit, index, trimmed));
     } catch (err) {
         // FAIL-OPEN: rate limits, timeouts (AbortError), auth failures — the
         // lane never breaks a mapping request.
