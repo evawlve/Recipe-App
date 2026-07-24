@@ -1418,6 +1418,185 @@ function coversNonBrandQueryToken(candidateName: string, query: string, targetBr
 }
 
 // ============================================================
+// Same-brand variant precision (restaurant/QSR fix, Jul 2026)
+// ============================================================
+// When the user names a brand and the exact record is retrieved at top score,
+// the reranker still mis-selects a SIBLING variant, because the distinguishing
+// signal — an explicit size ("medium"), a count ("10 piece"), or an extra
+// qualifier ("Double", "Ultimate", "Deluxe") — is either stripped from the
+// rerank query by upstream normalization ("arbys curly fries medium" →
+// "arbys curly fries", so Small/Medium/Large tie) or too weakly penalized
+// (one extra "double" token diluted across a 4-token query ≈ 0.07).
+//
+// These adjustments read the RAW LINE (which retains size/count/qualifiers even
+// when the normalized rerank query dropped them) and are gated on a branded
+// context, so they never touch the generic-ingredient golden cases.
+
+const VARIANT_SIZE_TOKENS: Record<string, string> = {
+    small: 'small', sm: 'small', kids: 'small', kid: 'small', child: 'small',
+    childs: 'small', snack: 'small', mini: 'small', junior: 'small', jr: 'small',
+    medium: 'medium', med: 'medium', regular: 'medium', reg: 'medium',
+    large: 'large', lg: 'large', big: 'large',
+};
+const VARIANT_SIZE_ALL = new Set(Object.keys(VARIANT_SIZE_TOKENS));
+
+// Distinguishing qualifier tokens that describe a DIFFERENT SKU than the plain
+// product (a multiplier, a specialty build, or a bundled meal). Penalized only
+// when present in the candidate but ABSENT from the query — a curated list
+// (not "any extra token") so descriptive names like "Wisconsin Cheese Curds"
+// are never falsely demoted.
+const VARIANT_QUALIFIER_TOKENS = new Set([
+    'double', 'triple', 'quad', 'quadruple',
+    'ultimate', 'deluxe', 'supreme', 'premium', 'signature', 'gourmet',
+    'loaded', 'stuffed', 'bunless', 'animal',
+    'spicy', 'buffalo', 'bbq', 'barbecue', 'honey', 'sriracha', 'nashville',
+    'combo', 'bundle', 'platter', 'family', 'party',
+    'mega', 'monster', 'king', 'giant', 'colossal',
+]);
+
+// Neutral connectors / style words that carry no variant identity — excluded
+// from the "extra qualifier" scan so they can't masquerade as distinguishing.
+const VARIANT_STOPWORDS = new Set([
+    'on', 'in', 'of', 'the', 'and', 'with', 'for', 'to', 'or', 'an', 'at',
+    'style', 'hand', 'tossed', 'crust', 'oz', 'fl', 'inch', 'slice',
+    'slices', 'piece', 'pieces', 'pc', 'pcs', 'ct', 'count', 'meal',
+]);
+
+/** Resolve an explicit size class from free text, or null if none present. */
+function resolveVariantSize(text: string): string | null {
+    const lower = text.toLowerCase();
+    if (/\b(?:extra[\s-]?large|x[\s-]?large|xl)\b/.test(lower)) return 'xlarge';
+    for (const tok of tokenize(text)) {
+        const mapped = VARIANT_SIZE_TOKENS[tok];
+        if (mapped) return mapped;
+    }
+    return null;
+}
+
+/** Resolve an explicit piece-count from free text, or null if none present. */
+function resolveVariantCount(text: string): number | null {
+    const m = text.toLowerCase().match(/\b(\d{1,3})\s*(?:piece|pieces|pcs?|count|ct)\b/);
+    if (m) return parseInt(m[1], 10);
+    return null;
+}
+
+/** Brand + brand-field tokens to exclude when inspecting a candidate name. */
+function brandExclusionTokens(targetBrand: string | undefined, brandName: string | undefined): Set<string> {
+    const out = new Set<string>();
+    for (const t of tokenize(targetBrand ?? '')) out.add(t);
+    for (const t of tokenize(brandName ?? '')) out.add(t);
+    return out;
+}
+
+// Adjustment magnitudes. Sizing rationale: size/count classes routinely tie at
+// ~0.60 on name quality (same brand, same core tokens), so the mismatch penalty
+// must exceed that spread to reorder them; the match boost is smaller so it only
+// promotes within an already-strong pool.
+const VARIANT_SIZE_MATCH_BOOST = 0.12;
+const VARIANT_SIZE_MISMATCH_PENALTY = 0.25;
+const VARIANT_SIZE_UNREQUESTED_PENALTY = 0.06;  // query has NO size but candidate does → mild "prefer base"
+const VARIANT_COUNT_MATCH_BOOST = 0.15;
+const VARIANT_COUNT_MISMATCH_PENALTY = 0.30;    // "10 piece" vs "6 piece" is a large nutrition delta
+const VARIANT_QUALIFIER_PENALTY = 0.15;         // per un-requested qualifier
+const VARIANT_QUALIFIER_CAP = 0.30;
+
+interface BrandVariantBreakdown {
+    adjustment: number;
+    sizeMismatch: boolean;
+    countMismatch: boolean;
+    extraQualifiers: string[];
+}
+
+/**
+ * Score adjustment that enforces same-brand variant precision. Only meaningful
+ * under a branded context (caller gates on isBranded || targetBrand).
+ *   - Honors an explicitly requested size/count from the raw line.
+ *   - Penalizes candidates carrying an un-requested distinguishing qualifier.
+ * Returns the delta plus a breakdown used to gate the confidence calibration.
+ */
+function computeBrandVariantAdjustment(
+    rawText: string,
+    candidate: RerankCandidate,
+    targetBrand: string | undefined,
+): BrandVariantBreakdown {
+    let adjustment = 0;
+    let sizeMismatch = false;
+    let countMismatch = false;
+
+    const qSize = resolveVariantSize(rawText);
+    const cSize = resolveVariantSize(candidate.name);
+    if (qSize) {
+        if (cSize === qSize) adjustment += VARIANT_SIZE_MATCH_BOOST;
+        else if (cSize && cSize !== qSize) { adjustment -= VARIANT_SIZE_MISMATCH_PENALTY; sizeMismatch = true; }
+        // candidate with no size when a size was requested → neutral (acceptable base fallback)
+    } else if (cSize) {
+        adjustment -= VARIANT_SIZE_UNREQUESTED_PENALTY;
+    }
+
+    const qCount = resolveVariantCount(rawText);
+    const cCount = resolveVariantCount(candidate.name);
+    if (qCount != null && cCount != null) {
+        if (cCount === qCount) adjustment += VARIANT_COUNT_MATCH_BOOST;
+        else { adjustment -= VARIANT_COUNT_MISMATCH_PENALTY; countMismatch = true; }
+    }
+
+    // Un-requested distinguishing qualifiers.
+    const exclude = brandExclusionTokens(targetBrand, candidate.brandName);
+    const queryTokens = new Set(tokenize(rawText));
+    const extraQualifiers: string[] = [];
+    for (const t of tokenize(candidate.name)) {
+        if (exclude.has(t) || VARIANT_STOPWORDS.has(t) || VARIANT_SIZE_ALL.has(t)) continue;
+        if (!VARIANT_QUALIFIER_TOKENS.has(t)) continue;
+        if (queryTokens.has(t) || [...queryTokens].some(qt => tokensMatch(qt, t))) continue;
+        extraQualifiers.push(t);
+    }
+    if (extraQualifiers.length > 0) {
+        adjustment -= Math.min(VARIANT_QUALIFIER_CAP, extraQualifiers.length * VARIANT_QUALIFIER_PENALTY);
+    }
+
+    return { adjustment, sizeMismatch, countMismatch, extraQualifiers };
+}
+
+/**
+ * True when `winner` is a strong, tight, same-brand match for a branded query:
+ * the brand matches AND every non-brand food token of the query is covered AND
+ * the winner adds no identity descriptor beyond the query (its food tokens are a
+ * subset of the query's) AND it isn't otherwise demoted. Used to calibrate
+ * confidence UP for exact branded matches that the score-based formula
+ * under-credits (api score saturates at 0.45, so a clean branded exact match
+ * still tops out ~0.6 → conf ~0.73). Deliberately strict: it abstains whenever
+ * the winner carries an extra descriptor ("Wisconsin 6 Cheese Pizza" for
+ * "cheese pizza"), so it never lifts an ambiguous or specialty variant.
+ */
+function isStrongBrandedExactMatch(
+    winner: RerankCandidate,
+    rawText: string,
+    targetBrand: string | undefined,
+): boolean {
+    if (!targetBrand) return false;
+    const brandTok = tokenize(targetBrand)[0];
+    if (!brandTok) return false;
+    const winnerBrandTokens = new Set([...tokenize(winner.name), ...tokenize(winner.brandName ?? '')]);
+    if (!winnerBrandTokens.has(brandTok)) return false;
+
+    const exclude = brandExclusionTokens(targetBrand, winner.brandName);
+    const drop = (t: string) => exclude.has(t) || VARIANT_STOPWORDS.has(t)
+        || VARIANT_SIZE_ALL.has(t) || /^\d+$/.test(t);
+    const queryFood = tokenize(rawText).filter(t => !drop(t));
+    const winnerFood = tokenize(winner.name).filter(t => !drop(t));
+    if (queryFood.length === 0) return false;
+
+    const queryFoodSet = new Set(queryFood);
+    // Every query food token must be covered by the winner...
+    const covered = queryFood.every(qt => winnerFood.some(wt => tokensMatch(qt, wt)));
+    if (!covered) return false;
+    // ...and the winner must add no identity descriptor beyond the query.
+    const winnerAddsExtra = winnerFood.some(wt =>
+        !queryFoodSet.has(wt) && ![...queryFoodSet].some(qt => tokensMatch(qt, wt)));
+    return !winnerAddsExtra;
+}
+
+// ============================================================
 // Main Rerank Function
 // ============================================================
 
@@ -1557,6 +1736,22 @@ export function simpleRerank(
         return assessRankTimePlausibility(query, c.name, c.nutrition).floorHit;
     };
 
+    // Same-brand variant precision (restaurant/QSR fix, Jul 2026): honor the
+    // raw line's explicit size/count and penalize un-requested distinguishing
+    // qualifiers when the user named a brand. Reads the RAW line because the
+    // normalized rerank query frequently drops the size/count ("arbys curly
+    // fries medium" → "arbys curly fries"). Gated on a branded context so it
+    // never touches generic-ingredient golden cases.
+    // Kill-switch: RANK_BRAND_VARIANT="0" restores today's ordering.
+    const brandVariantActive = (isBranded || !!targetBrand)
+        && process.env.RANK_BRAND_VARIANT !== '0';
+    const brandVariantRawText = rawLine || query;
+    const emptyBrandVariant: BrandVariantBreakdown = {
+        adjustment: 0, sizeMismatch: false, countMismatch: false, extraQualifiers: [],
+    };
+    const brandVariantOf = (c: RerankCandidate): BrandVariantBreakdown =>
+        brandVariantActive ? computeBrandVariantAdjustment(brandVariantRawText, c, targetBrand) : emptyBrandVariant;
+
     // Score all candidates (base score + nutrition score + modifier constraints)
     const scored = candidates
         .map(c => {
@@ -1581,10 +1776,11 @@ export function simpleRerank(
             const servingLabelBoost = c.servingLabelMatch ? WEIGHTS.SERVING_LABEL_BOOST : 0;
             const decisiveBrandBoost = isDecisiveBrandCandidate(c) ? WEIGHTS.DECISIVE_BRAND_BOOST : 0;
             const grainCookedBoost = isCookedGrainCandidate(c) ? WEIGHTS.GRAIN_COOKED_VOLUME_BOOST : 0;
+            const brandVariant = brandVariantOf(c);
 
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost + servingLabelBoost + decisiveBrandBoost + grainCookedBoost,
+                score: baseScore + nutritionResult.score - constraintPenalty + countLabelBoost + servingLabelBoost + decisiveBrandBoost + grainCookedBoost + brandVariant.adjustment,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
@@ -1596,6 +1792,7 @@ export function simpleRerank(
                 grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
                 plausibilityFloorHit: isPlausibilityFloorHit(c),
                 consensusOutlierPenalty: 0,
+                brandVariant,
             };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);
@@ -1619,9 +1816,10 @@ export function simpleRerank(
             const servingLabelBoost = c.servingLabelMatch ? WEIGHTS.SERVING_LABEL_BOOST : 0;
             const decisiveBrandBoost = isDecisiveBrandCandidate(c) ? WEIGHTS.DECISIVE_BRAND_BOOST : 0;
             const grainCookedBoost = isCookedGrainCandidate(c) ? WEIGHTS.GRAIN_COOKED_VOLUME_BOOST : 0;
+            const brandVariant = brandVariantOf(c);
             return {
                 candidate: c,
-                score: baseScore + nutritionResult.score + countLabelBoost + servingLabelBoost + decisiveBrandBoost + grainCookedBoost,
+                score: baseScore + nutritionResult.score + countLabelBoost + servingLabelBoost + decisiveBrandBoost + grainCookedBoost + brandVariant.adjustment,
                 baseScore,
                 nutritionScore: nutritionResult.score,
                 nutritionReason: nutritionResult.reason,
@@ -1633,6 +1831,7 @@ export function simpleRerank(
                 grainCookedCoverage: grainCookedBoost > 0 ? grainRawCoverage(c) : 0,
                 plausibilityFloorHit: isPlausibilityFloorHit(c),
                 consensusOutlierPenalty: 0,
+                brandVariant,
             };
         });
         scored.push(...fallbackScored);
@@ -1829,6 +2028,7 @@ export function simpleRerank(
                 `nutr=${s.nutritionScore.toFixed(3)} nutrDev=${nutrDev} constr=-${s.constraintPenalty.toFixed(3)} ` +
                 `cnt=${((s as any).countLabelBoost ?? 0).toFixed(2)} dbrand=${((s as any).decisiveBrandBoost ?? 0).toFixed(2)} ` +
                 `cons=-${((s as any).consensusOutlierPenalty ?? 0).toFixed(2)} ` +
+                `bvar=${((s as any).brandVariant?.adjustment ?? 0).toFixed(2)} ` +
                 `floor=${s.plausibilityFloorHit ? 1 : 0} src=${s.candidate.source}`
             );
         });
@@ -1877,6 +2077,40 @@ export function simpleRerank(
     if (grainSoftCooked && top.grainCookedBoost > 0) {
         confidence = Math.max(confidence, 0.75);
         reason = 'cooked_grain_preference';
+    }
+
+    // Branded-match confidence calibration (restaurant/QSR fix, Jul 2026): a
+    // clean same-brand exact match is systematically under-credited by the
+    // score→confidence formula — the API retrieval score saturates at
+    // min(score,1)*0.45, so even an exact branded record (retrieved at s≫1)
+    // tops out ~0.6 → conf ~0.73 and never clears the 0.85 cache gate. When the
+    // winner is a STRONG, tight, same-brand match (brand matches, full non-brand
+    // token coverage, adds no extra descriptor, no size/count/qualifier mismatch,
+    // not floor-hit or consensus-demoted), lift confidence over the gate. Strict
+    // by construction so it never inflates an ambiguous or specialty pick.
+    // Kill-switch: RANK_BRANDED_CALIBRATION="0".
+    if (brandVariantActive
+        && process.env.RANK_BRANDED_CALIBRATION !== '0'
+        && !top.plausibilityFloorHit
+        && top.consensusOutlierPenalty === 0
+        && !top.brandVariant.sizeMismatch
+        && !top.brandVariant.countMismatch
+        && top.brandVariant.extraQualifiers.length === 0
+        && isStrongBrandedExactMatch(top.candidate, brandVariantRawText, targetBrand)) {
+        const lifted = Math.max(confidence, 0.88);
+        if (lifted > confidence) {
+            logger.info('simple_rerank.branded_match_calibrated', {
+                query,
+                rawLine,
+                targetBrand,
+                winner: top.candidate.name,
+                winnerBrand: top.candidate.brandName,
+                from: confidence.toFixed(3),
+                to: lifted.toFixed(3),
+            });
+            confidence = lifted;
+            if (reason === 'simple_rerank' || reason === 'close_match') reason = 'branded_exact_match';
+        }
     }
 
     if (decisiveBrandActive && top.decisiveBrandBoost > 0) {
