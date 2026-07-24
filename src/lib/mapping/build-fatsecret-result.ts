@@ -106,6 +106,23 @@ function servingMacros(nutrients: Record<string, unknown> | null): Macros | null
     };
 }
 
+/**
+ * Estimate a serving's gram weight from its per-serving macros, used ONLY for
+ * FatSecret records that carry per-serving macros but no metric weight and no
+ * per-100g panel (FatSecret's generic "1 serving" restaurant records — e.g.
+ * "Impossible Whopper", "Cheese Fries [Shake Shack]"). Grams is secondary
+ * metadata on this path: the per-serving macros are billed directly and stay
+ * authoritative, so a neutral energy-density estimate is sufficient. Floored at
+ * the physical macro mass (protein + carbs + fat), which a food can never weigh
+ * less than, so the reported density can never exceed a plausible value.
+ */
+const PREPARED_FOOD_KCAL_PER_GRAM = 2.0;
+function estimateServingGrams(m: Macros): number {
+    const macroMass = m.protein + m.carbs + m.fat;
+    const byEnergy = m.kcal > 0 ? m.kcal / PREPARED_FOOD_KCAL_PER_GRAM : 0;
+    return Math.max(macroMass, byEnergy, 1);
+}
+
 /** Per-100g macros from FatSecretFood.nutrientsPer100g (or candidate.nutrition). */
 function per100gMacros(source: Record<string, unknown> | null | undefined): Macros | null {
     if (!source) return null;
@@ -214,7 +231,16 @@ export async function buildFatSecretResult(
     );
 
     const usableServings = servings.filter(s => s.grams != null && s.grams > 0);
-    if (!per100 && usableServings.every(s => servingMacros(s.nutrients) == null)) {
+    // A serving may carry per-serving macros WITHOUT any gram weight —
+    // FatSecret's generic "1 serving" restaurant records are exactly this shape
+    // (e.g. Impossible Whopper: "1 serving" = 630 kcal / 28p / 62c / 32f, grams
+    // null, per100g {}). Those are still billable serving-by-serving via the
+    // macro-only branch in the count/serving cascade below, so keep the
+    // candidate alive whenever ANY serving has macros — not only the
+    // gram-anchored ones. Dropping here was discarding exact-match FS winners
+    // and fabricating an AI estimate in their place.
+    const anyServingHasMacros = servings.some(s => servingMacros(s.nutrients) != null);
+    if (!per100 && !anyServingHasMacros) {
         // No per-100g nutrition and no per-serving macros anywhere — nothing
         // this builder could bill. (Distinct from "no servings": per-100g alone
         // still supports the fallback path below.)
@@ -331,6 +357,39 @@ export async function buildFatSecretResult(
                     : `${qty} x ${defaultServing.description} (${defaultServing.grams}g each)`;
                 servingTier = 'fs_default_serving';
                 pickedServing = defaultServing;
+            }
+        }
+
+        // Macro-only-serving fallback: FatSecret's generic "1 serving"
+        // restaurant records carry per-serving macros but no gram weight and no
+        // per-100g panel, so every gram-anchored path above found nothing. The
+        // serving IS the unit the user is logging, so bill its macros directly.
+        // The reported grams is a secondary energy-density estimate anchored on
+        // the serving so the per-serving macro scaling below bills exactly
+        // `qty x` this serving's authoritative macros.
+        if (grams == null) {
+            const macroServing =
+                (row?.defaultServingId
+                    ? servings.find(s => s.servingId === row!.defaultServingId
+                        && servingMacros(s.nutrients) != null)
+                    : undefined)
+                ?? servings.find(s => servingMacros(s.nutrients) != null);
+            if (macroServing) {
+                const m = servingMacros(macroServing.nutrients)!;
+                const estPerServingGrams = estimateServingGrams(m);
+                macroServing.grams = estPerServingGrams;
+                grams = qty * estPerServingGrams;
+                servingDescription = qty === 1
+                    ? macroServing.description
+                    : `${qty} x ${macroServing.description}`;
+                servingTier = 'fs_serving_macros_only';
+                pickedServing = macroServing;
+                logger.info('fs.build_result.serving_macros_only', {
+                    foodId: candidate.id,
+                    serving: macroServing.description,
+                    kcalPerServing: m.kcal,
+                    estGrams: estPerServingGrams,
+                });
             }
         }
     }

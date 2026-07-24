@@ -256,6 +256,77 @@ describe('buildFatSecretResult — gram resolution cascade', () => {
         expect(result!.kcal).toBe(150);
     });
 
+    it('bills a macro-only "1 serving" record with no grams / no per-100g (Impossible Whopper repro)', async () => {
+        // FatSecret generic restaurant record: the ONLY serving is "1 serving"
+        // with full per-serving macros but grams null and nutrientsPer100g {}.
+        // Pre-fix this returned null (fs.build_result.no_nutrition) and the
+        // exact-match FS winner was discarded for a fabricated AI estimate.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '29778811',
+            name: 'Impossible Whopper',
+            brandName: 'Burger King',
+            nutrientsPer100g: {}, // derivePer100gFromServings returned null → {}
+            defaultServingId: '27148372',
+            servings: [{
+                servingId: '27148372',
+                description: '1 serving',
+                measurementDescription: 'serving',
+                grams: null,
+                volumeMl: null,
+                numberOfUnits: 1,
+                nutrients: { calories: 630, protein: 28, carbohydrate: 62, fat: 32 },
+            }],
+        }));
+
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_29778811', name: 'Impossible Whopper', brandName: 'Burger King' }),
+            parsedLine({ qty: 1, name: 'impossible whopper' }),
+            0.98, 'burger king impossible whopper'
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        // Macros are billed DIRECTLY from the serving panel — authoritative.
+        expect(result!.kcal).toBe(630);
+        expect(result!.protein).toBe(28);
+        expect(result!.carbs).toBe(62);
+        expect(result!.fat).toBe(32);
+        // Grams is a secondary energy-density estimate: 630 / 2.0 = 315
+        // (macro mass 122g floor does not bind), density stays a plausible 2.0.
+        expect(result!.grams).toBeCloseTo(315, 3);
+        expect(result!.servingDescription).toBe('1 serving');
+    });
+
+    it('macro-only path scales macros by qty (2 servings = 2x panel)', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '103243799',
+            name: 'McFlurry with OREO Cookies - Regular',
+            brandName: "McDonald's",
+            nutrientsPer100g: {},
+            defaultServingId: '82091818',
+            servings: [{
+                servingId: '82091818',
+                description: '1 serving',
+                measurementDescription: 'serving',
+                grams: null,
+                volumeMl: null,
+                numberOfUnits: 1,
+                nutrients: { calories: 410, protein: 10, carbohydrate: 64, fat: 13 },
+            }],
+        }));
+
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_103243799', name: 'McFlurry with OREO Cookies - Regular', brandName: "McDonald's" }),
+            parsedLine({ qty: 2, name: 'mcflurry oreo' }),
+            0.9, '2 mcdonalds mcflurry oreo'
+        );
+
+        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        expect(result!.kcal).toBe(820);
+        expect(result!.carbs).toBe(128);
+        expect(result!.servingDescription).toBe('2 x 1 serving');
+    });
+
     it('bare-query guard CAPs a package-scale default serving (olive oil 250g -> 14g)', async () => {
         mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
             name: 'Extra Virgin Olive Oil',
