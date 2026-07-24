@@ -142,7 +142,7 @@ const KNOWN_BRANDS: string[] = [
     // ── Protein Bars & Snack Bars ─────────────────────────────
     'atkins', 'clif', 'cliff bar', 'epic', 'fit crunch', 'fulfil',
     'gatorade', 'greens first', 'kind', 'larabar', 'luna', 'lara bar',
-    'met-rx', 'nature valley', 'no cow', 'nutri-grain', 'one bar',
+    'met-rx', 'nature valley', 'no cow', 'nutri-grain',
     'perfect bar', 'power crunch', 'pure protein', 'quest', 'rx bar',
     'rxbar', 'ratio', 'skip', 'skyr', 'think thin', 'thinktin',
     'two moms in the raw', 'unreal', 'zone', 'zbar',
@@ -270,7 +270,7 @@ const KNOWN_BRANDS: string[] = [
 
     // ── Protein Bars / Better-for-you Snacks ──────────────────
     'no cow', 'gomacro', 'aloha', 'rxbar', 'quest', 'barebells', 'built',
-    'built bar', 'met-rx', 'power crunch', 'one bar',
+    'built bar', 'met-rx', 'power crunch',
 
     // ── Meat Snacks / Jerky ───────────────────────────────────
     'jack links', 'jack link\'s', 'chomps', 'country archer', 'old trapper',
