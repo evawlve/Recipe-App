@@ -11,6 +11,7 @@
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { normalizeIngredientName } from './normalization-rules';
 import { gatherCandidates, confidenceGate, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
+import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
 import {
     filterCandidatesByTokens,
     hasCriticalModifierMismatch,
@@ -273,13 +274,34 @@ export type FatsecretMappedIngredient = {
  * facts survive the mapper's many internal return paths without threading
  * them through every result construction.
  */
-export interface MappingTelemetry {
+export interface MappingTelemetry extends FunnelSink {
     /** The mapper's own cache-key input (post-normalization), not the segmenter hint. */
     normalizedForm?: string;
     /** Set when a FoodMapping row served the line: which cache layer hit. */
     cacheHit?: 'early' | 'normalized';
     /** Set when a cached row existed but was bypassed: 'early:grain_cooked', 'normalized:core_token_mismatch', ... */
     cacheEscape?: string;
+    // funnelStage / dropReason come from FunnelSink — the funnel bucket this
+    // line ended in and, when it dropped, the namespaced class ID for why.
+}
+
+/**
+ * Record the funnel outcome for a line. Later calls win: a fresh pick is marked
+ * 'saved' optimistically and downgraded to 'save_rejected' by whichever save
+ * gate blocks the write.
+ */
+function markFunnel(
+    telemetry: MappingTelemetry | undefined,
+    stage: FunnelStage,
+    classId?: string | null,
+): void {
+    if (!telemetry) return;
+    telemetry.funnelStage = stage;
+    // Successful stages carry no drop reason; clear any earlier one so a
+    // recovered line (e.g. fallback search after a cache miss) isn't tagged.
+    telemetry.dropReason = (stage === 'cache_hit' || stage === 'saved')
+        ? undefined
+        : funnelReason(stage, classId);
 }
 
 /**
@@ -656,6 +678,7 @@ export async function mapIngredientWithFallback(
     const baseNameLowerForWaterCheck = baseName.toLowerCase().trim().replace(/^\d+(?:\.\d+)?\s*%\s*/, '');
     if (ZERO_CALORIE_INGREDIENTS.includes(baseNameLowerForWaterCheck)) {
         logger.info('mapping.zero_calorie_default', { rawLine: trimmed, baseName });
+        markFunnel(telemetry, 'fast_path', 'zero_calorie');
 
         // Calculate grams from parsed quantity using standard conversions
         const WATER_UNIT_GRAMS: Record<string, number> = {
@@ -1056,6 +1079,7 @@ export async function mapIngredientWithFallback(
                     // Track cache hit for metrics
                     incrementCacheHit();
                     if (telemetry) telemetry.cacheHit = 'early';
+                    markFunnel(telemetry, 'cache_hit');
 
                     // Log the early cache hit
                     if (ENABLE_MAPPING_ANALYSIS) {
@@ -1421,6 +1445,7 @@ export async function mapIngredientWithFallback(
                     confidence = normalizedCache.confidence;
                     selectionReason = 'normalized_cache_hit';
                     if (telemetry) telemetry.cacheHit = 'normalized';
+                    markFunnel(telemetry, 'cache_hit');
                 }
             }
 
@@ -2092,6 +2117,16 @@ export async function mapIngredientWithFallback(
                     failureReason: 'no_candidates_found',
                 });
             }
+            // Separate a dataset gap (retrieval found nothing to rank) from a
+            // filter gap (records existed but every one was dropped pre-rank)
+            // from a selection gap — they need completely different fixes.
+            if (allCandidates.length === 0) {
+                markFunnel(telemetry, 'no_candidates', 'dataset_gap');
+            } else if (filtered.length === 0) {
+                markFunnel(telemetry, 'all_filtered', 'no_candidate_survived_filters');
+            } else {
+                markFunnel(telemetry, 'no_match', 'no_winner_selected');
+            }
             return null; // Return null if truly failed
         }
 
@@ -2142,6 +2177,7 @@ export async function mapIngredientWithFallback(
                     failureReason: `confidence_too_low (${confidence.toFixed(3)} < ${MIN_ACCEPTABLE_CONFIDENCE})`,
                 });
             }
+            markFunnel(telemetry, 'no_match', 'confidence_too_low');
             return null;
         }
 
@@ -2611,11 +2647,16 @@ export async function mapIngredientWithFallback(
                 confidence: aiNutritionEstimate.confidence,
             } : undefined;
 
+            // Optimistic: a save gate inside saveValidatedMapping downgrades
+            // this to 'save_rejected' (with its own class ID) if it blocks.
+            markFunnel(telemetry, 'saved');
+
             await saveValidatedMapping(rawLine, result, {
                 approved: true,
                 confidence,
                 reason: selectionReason,
             }, {
+                telemetry,               // save gates tag their own rejection class
                 canonicalBase: cacheKey,  // Use normalizedName as cache key
                 persistCanonicalBase: aiCanonicalBase,   // AI base identity → canonicalBase column (grouping only)
                 persistCookingModifier: aiCookingModifier,
@@ -2661,6 +2702,23 @@ export async function mapIngredientWithFallback(
                     expectedNutrition,
                 }).catch(() => { }); // Best effort, ignore duplicates
             }
+        } else if (selectionReason !== 'normalized_cache_hit') {
+            // THE SILENT CLASS (sprint F1): 0.3 <= confidence < 0.85. This pick
+            // serves the user but is never offered to the cache — historically
+            // with no log line at all, so the population cache-warming exists to
+            // convert was only reconstructable by after-the-fact SQL inference.
+            // Tag it with the reason the selection cascade settled where it did.
+            // Only the FIRST segment of selectionReason is kept as the class:
+            // 'fallback_simplified: <AI rationale>' would otherwise make this an
+            // unbounded-cardinality column.
+            markFunnel(telemetry, 'under_gate', selectionReason.split(':')[0]);
+            logger.debug('mapping.under_save_gate', {
+                rawLine: trimmed,
+                normalizedName,
+                confidence,
+                selectionReason,
+                foodId: result.foodId,
+            });
         }
 
         // Log success

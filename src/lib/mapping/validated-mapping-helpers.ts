@@ -18,6 +18,7 @@ import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { assessSaveTimePlausibility } from './macro-plausibility';
 import type { MacroPlausibilityInput, ExpectedNutritionPer100g } from './macro-plausibility';
 import { detectBrandInQuery } from './brand-detector';
+import { markSaveRejected, normalizeClassId, type FunnelSink } from './funnel';
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
@@ -448,6 +449,11 @@ export async function saveValidatedMapping(
         persistCookingModifier?: string; // e.g. "grilled", "scrambled"
         nutrientsPer100g?: MacroPlausibilityInput | null;      // Pick's per-100g macros for the save-time gate
         expectedNutrition?: ExpectedNutritionPer100g | null;   // AI normalize estimate to cross-check against
+        // Funnel sink (sprint F1): the caller marks the line 'saved' optimistically;
+        // whichever gate below blocks the write downgrades it to 'save_rejected'
+        // with that gate's class ID. Pass ONLY for the primary save — an alias
+        // save being rejected must not relabel the line it was derived from.
+        telemetry?: FunnelSink;
     }
 ): Promise<void> {
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
@@ -484,6 +490,7 @@ export async function saveValidatedMapping(
             brandName: mapping.brandName,
             namedBrand: detectedBrand,
         });
+        markSaveRejected(options?.telemetry, 'brand_mismatch');
         return;
     }
 
@@ -516,6 +523,7 @@ export async function saveValidatedMapping(
             namedBrand: detectedBrand,
             specificTokenCount,
         });
+        markSaveRejected(options?.telemetry, 'bare_category_takeover');
         return;
     }
 
@@ -538,6 +546,7 @@ export async function saveValidatedMapping(
                 foodName: mapping.foodName,
                 brandName: mapping.brandName,
             });
+            markSaveRejected(options?.telemetry, 'core_token_mismatch');
             return; // Don't save this invalid mapping
         }
         logger.info('validated_mapping.save_core_token_brand_rescued', {
@@ -569,6 +578,13 @@ export async function saveValidatedMapping(
                 brandName: mapping.brandName,
                 reasons: gate.reasons,
             });
+            // Fold the first plausibility reason in as the detail suffix —
+            // normalizeClassId strips the interpolated measurements that would
+            // otherwise make this class ID unique per row.
+            markSaveRejected(
+                options?.telemetry,
+                `implausible_macros:${normalizeClassId(gate.reasons[0], { maxSegments: 2 })}`,
+            );
             return;
         }
     }
@@ -638,6 +654,7 @@ export async function saveValidatedMapping(
                     attemptedFoodName: mapping.foodName,
                 });
             }
+            markSaveRejected(options?.telemetry, 'human_row');
             return;
         }
 
@@ -710,6 +727,7 @@ export async function saveValidatedMapping(
                         keptTarget: existingTargetKey,
                         rejectedTarget: newTargetKey,
                     });
+                    markSaveRejected(options?.telemetry, 'serving_downgrade');
                     return;
                 }
             }
@@ -737,6 +755,7 @@ export async function saveValidatedMapping(
                         incumbentConfidence,
                         challengerConfidence: clampedConfidence,
                     });
+                    markSaveRejected(options?.telemetry, 'cross_source_margin');
                     return;
                 }
             }

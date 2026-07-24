@@ -249,6 +249,7 @@ export async function POST(req: NextRequest) {
       brandName: string | null; source: string | null; confidence: number | null;
       servingTier: string | null; grams: number | null; totalKcal: number | null;
       latencyMs: number; noCache: boolean; segCacheHit: boolean | null;
+      funnelStage: string | null; dropReason: string | null;
     };
     const eventRows: EventRow[] = [];
     const telemetryEnabled = process.env.MAPPING_EVENT_LOG_ENABLED !== 'false';
@@ -292,6 +293,10 @@ export async function POST(req: NextRequest) {
           latencyMs: mapLatencyMs,
           noCache,
           segCacheHit,
+          // Funnel taxonomy (sprint F1). A line the mapper never classified
+          // (it threw, or returned a 'pending' lock status) has no stage.
+          funnelStage: telemetry.funnelStage ?? null,
+          dropReason: telemetry.dropReason ?? null,
         });
       }
 
@@ -327,6 +332,8 @@ export async function POST(req: NextRequest) {
             sodium100: 0,
           },
           servingOptions: [],
+          funnelStage: telemetry.funnelStage,
+          dropReason: telemetry.dropReason,
         };
       }
 
@@ -369,6 +376,12 @@ export async function POST(req: NextRequest) {
         nutrition,
         nutritionPer100g: details.nutritionPer100g,
         servingOptions: details.servingOptions,
+        // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
+        // offline warm batches (scripts/eval/warm-cache.ts) read each seed's
+        // funnel outcome straight off the response instead of re-deriving it
+        // from MappingEventLog. Clients ignore unknown fields.
+        funnelStage: telemetry.funnelStage,
+        dropReason: telemetry.dropReason,
       };
     }));
 

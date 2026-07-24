@@ -150,6 +150,10 @@ export interface WarmResult {
     grams?: number;
     matchConfidence?: number;
     per100g?: { kcal?: number; protein?: number; carbs?: number; fat?: number };
+    /** Funnel bucket this seed ended in (sprint F1) — 'saved' is a conversion. */
+    funnelStage?: string;
+    /** Namespaced class ID for why the seed failed to convert. */
+    dropReason?: string;
     error?: string;
 }
 
@@ -191,6 +195,7 @@ async function warmOne(seed: string, base: string, apiKey: string, timeoutMs: nu
                 foodId: it.foodId, foodName: it.foodName, brandName: it.brandName ?? undefined,
                 source: it.source, grams: it.grams, matchConfidence: it.matchConfidence,
                 per100g: { kcal: n.kcal100, protein: n.protein100, carbs: n.carbs100, fat: n.fat100 },
+                funnelStage: it.funnelStage, dropReason: it.dropReason,
             };
         } catch (err) {
             if (attempt === 1) {

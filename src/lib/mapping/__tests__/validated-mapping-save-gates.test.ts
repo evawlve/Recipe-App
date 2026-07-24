@@ -36,6 +36,7 @@ jest.mock('../../db', () => ({
 import { saveValidatedMapping, getValidatedMappingByNormalizedName } from '../validated-mapping-helpers';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 import type { AIValidationResult } from '../ai-validation';
+import type { FunnelSink } from '../funnel';
 
 const validation = { confidence: 0.95 } as AIValidationResult;
 
@@ -576,5 +577,55 @@ describe('FIX 3: bare-category takeover save gate', () => {
             validation,
         );
         expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('funnel tagging on the save gates (sprint F1)', () => {
+    it('tags a brand-mismatch rejection with its class, downgrading "saved"', async () => {
+        // The caller marks the line 'saved' optimistically before the write.
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'ryse protein',
+            makeMapping({ foodName: 'Protein Rice' }),
+            validation,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.funnelStage).toBe('save_rejected');
+        expect(telemetry.dropReason).toBe('save_rejected:brand_mismatch');
+    });
+
+    it('tags a bare-category-takeover rejection with its own distinct class', async () => {
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'special k red berries',
+            makeMapping({ foodName: 'Cereal' }),
+            validation,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:bare_category_takeover');
+    });
+
+    it('leaves the line "saved" when no gate blocks the write', async () => {
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'ryse protein',
+            makeMapping({ foodName: 'Loaded Protein Powder', brandName: 'RYSE' }),
+            validation,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(telemetry.funnelStage).toBe('saved');
+        expect(telemetry.dropReason).toBeUndefined();
+    });
+
+    it('stays silent when no sink is passed — an alias save must not relabel its parent line', async () => {
+        await expect(saveValidatedMapping(
+            'ryse protein',
+            makeMapping({ foodName: 'Protein Rice' }),
+            validation,
+        )).resolves.toBeUndefined();
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
     });
 });
