@@ -96,7 +96,7 @@ const WEIGHTS = {
     // Cooked-grain preference for volume-unit lines (cooked-vs-dry fix, Jul 2026)
     GRAIN_COOKED_VOLUME_BOOST: 0.35,  // Fires only under softCooked grain context; paired with a partition tiebreak because a dry exact-match ("White Rice", ~350 kcal/100g) otherwise outscores any cooked record on name quality.
     // Brand macro-consensus outlier demotion (fs displacement hardening, Jul 2026)
-    CONSENSUS_OUTLIER_PENALTY: 0.20,  // Fires only under the decisive-brand gate with >=3 nutrition-bearing same-product siblings whose majority agrees; demotes the record whose panel deviates hard from the sibling median ("42% protein Quest bar" — passes every absolute floor, only sibling agreement catches it).
+    CONSENSUS_OUTLIER_PENALTY: 0.25,  // Fires only with a detected target brand and >=3 nutrition-bearing same-product siblings whose majority agrees; demotes the record whose panel deviates hard from the sibling median ("42% protein Quest bar" — passes every absolute floor, only sibling agreement catches it). Sized to beat the max ORIGINAL_SCORE spread between a saturating outlier and unsaturated siblings (0.18) plus the fs branded prior (0.03), while staying below the 0.35 partitions.
 };
 
 
