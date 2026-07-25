@@ -1588,6 +1588,19 @@ export const FUNNEL_CAVEATS: { id: string; note: string }[] = [
             + 'LARGE cold count on such a gate as the real signal that something is wrong.',
     },
     {
+        id: 'cachekey-is-the-read-key-not-always-the-write-key',
+        note: 'FunnelRow.cacheKey uses canonicalizeCacheKey, but the SAVE path uses deriveMappingCacheKey, which '
+            + 'brand-PREFIXES when a brand was detected with decisive context. Measured 2026-07-25: for every '
+            + 'branded query tried (oikos greek yogurt, ghost protein cinnamon roll, quest chocolate chip protein '
+            + 'bar, ryse protein cinnamon toast crunch, mcdonalds fries, chipotle/qdoba chicken burrito) the two '
+            + 'agree, because MappingEventLog.normalizedForm is the AI-normalized name and already carries the '
+            + 'brand token. But the event log does NOT record the detected brand or the decisive-context verdict, '
+            + 'so where the save path DID prefix, this lookup cannot reproduce that key and hadIncumbent will read '
+            + 'false. Exposure looks small and is not measurable from the event log alone; if a class shows '
+            + 'implausibly many cold rows on a gate that needs an incumbent, suspect this before believing it. '
+            + 'Related known bug: brand-prefix save-key asymmetry ("oikos" saved "oiko oiko", read "oiko").',
+    },
+    {
         id: 'dropreason-vocabularies-interpolate-measurements',
         note: 'Macro-plausibility reasons embed live numbers (atwater:kcal_412_exceeds_computed_388.5) and '
             + 'selectionReason can carry free-form AI rationale. ALWAYS normalize via normalizeClassId before '
