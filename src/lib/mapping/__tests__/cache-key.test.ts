@@ -131,4 +131,50 @@ describe('deriveCacheKeyName', () => {
             expect(deriveCacheKeyName('milk', wholeMilk)).toBe(canonicalizeCacheKey('milk'));
         });
     });
+
+    // ======================================================================
+    // POSSESSIVE BRAND SPELLINGS
+    // Three spellings of one brand used to address three different cache rows:
+    // "mcdonald's" -> "mcdonald'" (apostrophe kept, then fed to singularize),
+    // "mcdonald’s" -> "mcdonald s" (curly form split into a stray token), and
+    // "mcdonalds"  -> "mcdonald". Since the key basis is whatever spelling the
+    // LLM emitted, which row a user hit was effectively random — live on the box
+    // "mcdonalds fries" returned McDonald's Fries Medium (114g) while
+    // "mcdonald's fries" returned a generic unbranded Fries (250g).
+    // ======================================================================
+    describe('possessive apostrophes collapse to one key', () => {
+        it.each([
+            ["mcdonald's fries", 'mcdonalds fries'],
+            ['mcdonald’s fries', 'mcdonalds fries'],
+            ["trader joe's orange chicken", 'trader joes orange chicken'],
+            ["stouffer's lasagna", 'stouffers lasagna'],
+            ["jimmy john's turkey tom", 'jimmy johns turkey tom'],
+        ])('%s === %s', (withApostrophe, without) => {
+            expect(canonicalizeCacheKey(withApostrophe)).toBe(canonicalizeCacheKey(without));
+        });
+
+        it('leaves no dangling apostrophe in the key', () => {
+            expect(canonicalizeCacheKey("mcdonald's fries")).toBe('fry mcdonald');
+            expect(canonicalizeCacheKey("portillo's hot dog")).toBe('dog hot portillo');
+        });
+
+        it('is a fixed point, so migrating a stored key is one-shot', () => {
+            for (const q of ["moe's chips", 'mcdonald’s fries', "trader joe's mandarin orange chicken"]) {
+                const once = canonicalizeCacheKey(q);
+                expect(canonicalizeCacheKey(once)).toBe(once);
+            }
+        });
+
+        it('does not fuse words across a non-possessive apostrophe', () => {
+            // "it's-it" is a real ice cream brand: dropping the apostrophe must not
+            // merge it into neighbouring tokens or drop the hyphen.
+            expect(canonicalizeCacheKey("it's-it ice cream sandwich")).toBe('cream ice its-it sandwich');
+        });
+
+        it('is inert on names without apostrophes', () => {
+            for (const q of ['impossible burger patty', '2% milk', 'half-and-half', 'greek yogurt']) {
+                expect(canonicalizeCacheKey(q)).toBe(canonicalizeCacheKey(q.replace(/'/g, '')));
+            }
+        });
+    });
 });
