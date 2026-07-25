@@ -27,6 +27,13 @@
  *      a warning in the report and NEVER changes the sweep's exit code or
  *      gating. Logic: src/lib/ops/seg-replay.ts. Cost ~N LLM calls (default
  *      20, --seg-replay-top).
+ *      4c. CORPUS COVERAGE (REPORT-ONLY) — share of a FIXED representative
+ *      seed corpus (scripts/eval/coverage-corpus.tsv, 3,307 seeds) whose
+ *      canonical key already exists in FoodMapping, overall and per domain,
+ *      trended against the previous sweep. Answers "is the cache big enough
+ *      yet?" (baseline 28.8% on 2026-07-24, stop signal >70-80%) as opposed to
+ *      the warm run's cache_hit, which answers "did it hold?". Read-only and
+ *      never gates. Logic: src/lib/ops/cache-coverage.ts.
  *   5. REPORT     — results/flywheel-<ts>.{json,md}; --publish-dir copies the
  *      markdown (dated + flywheel-latest.md) somewhere Syncthing carries it
  *      (e.g. sync-docs/) so every machine sees the nightly report.
@@ -45,6 +52,9 @@
  * writes only results/stuck-keys-<ts>.json) — no warm, no eval, no publish.
  * --seg-replay-only likewise runs JUST the seg replay-diff step (reads the DB,
  * ~N LLM calls, writes only results/seg-replay-<ts>.json).
+ * --coverage-only runs JUST the coverage read — no API calls, no LLM, no
+ * writes at all. Cheap enough to run between warm batches to watch a domain
+ * fill in; use --coverage-corpus <path> to measure a different seed list.
  */
 
 // Load .env before any src/lib import: the seg replay-diff step calls the LLM
@@ -65,6 +75,10 @@ import {
     formatSegReplaySection, SegReplayReport, SegReplayTrend, SEG_REPLAY_DEFAULT_TOP_N,
 } from '../../src/lib/ops/seg-replay';
 import { segmentTextWithAi } from '../../src/lib/nlp/ai-segmenter';
+import {
+    CacheCoverageReport, collectCacheCoverage, computeCoverageTrend, CoverageTrend,
+    findPreviousCoverage, formatCoverageSection,
+} from '../../src/lib/ops/cache-coverage';
 
 const args = process.argv.slice(2);
 function argValue(flag: string): string | undefined {
@@ -83,9 +97,13 @@ const STUCK_ONLY = args.includes('--stuck-keys-only');
 const SEG_REPLAY_TOP = Number(argValue('--seg-replay-top') ?? SEG_REPLAY_DEFAULT_TOP_N);
 const SEG_REPLAY_ONLY = args.includes('--seg-replay-only');
 const PUBLISH_DIR = argValue('--publish-dir');
+const SKIP_COVERAGE = args.includes('--skip-coverage');
+const COVERAGE_ONLY = args.includes('--coverage-only');
 
 const RESULTS_DIR = path.join(__dirname, 'results');
 const REPO_ROOT = path.join(__dirname, '..', '..');
+const COVERAGE_CORPUS = argValue('--coverage-corpus')
+    ?? path.join(__dirname, 'coverage-corpus.tsv');
 
 // ---------------------------------------------------------------------------
 // 1. Telemetry
@@ -462,7 +480,8 @@ function buildFunnelSection(warm: WarmRunReport | null): string[] {
 
 function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport | null,
     seedCount: number, telemetrySeedCount: number, diff: WarmDiff | null, gate: EvalGate | null,
-    stuck: StuckKeysRun | null, segReplay: SegReplayRun | null): string {
+    stuck: StuckKeysRun | null, segReplay: SegReplayRun | null,
+    coverage: { report: CacheCoverageReport; trend: CoverageTrend | null } | null): string {
     const lines: string[] = [];
     lines.push(`# Flywheel sweep — ${ranAt}`);
     lines.push('');
@@ -489,6 +508,16 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
                 lines.push(`- ${kind}: ${s.pass}/${s.total} · p50 ${s.p50ms}ms · p95 ${s.p95ms}ms`);
             }
         }
+    }
+    lines.push('');
+
+    // Second only to the gate: the gate says the cache is CORRECT, this says
+    // whether it is yet BIG enough to be worth being correct about.
+    lines.push('## Corpus coverage');
+    if (!coverage) {
+        lines.push('_skipped (--skip-coverage)_');
+    } else {
+        lines.push(...formatCoverageSection(coverage.report, coverage.trend));
     }
     lines.push('');
 
@@ -567,9 +596,36 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Corpus coverage — read-only, and the only step that answers "is the cache big
+ * enough yet?" rather than "did it hold?". Never gates: a coverage number can't
+ * be wrong in a way that should stop a deploy.
+ */
+async function runCoverageStep(ranAt: string, stamp: string): Promise<{
+    report: CacheCoverageReport; trend: CoverageTrend | null;
+}> {
+    const prisma = new PrismaClient();
+    let report: CacheCoverageReport;
+    try {
+        report = await collectCacheCoverage(prisma, COVERAGE_CORPUS, ranAt);
+    } finally {
+        await prisma.$disconnect().catch(() => {});
+    }
+    const previous = findPreviousCoverage(RESULTS_DIR, `flywheel-${stamp}.json`);
+    return { report, trend: computeCoverageTrend(report, previous) };
+}
+
 async function main() {
     const ranAt = new Date().toISOString();
     const stamp = ranAt.replace(/[:.]/g, '-');
+
+    if (COVERAGE_ONLY) {
+        console.log(`Coverage-only read @ ${ranAt} · corpus ${path.basename(COVERAGE_CORPUS)}`);
+        const cov = await runCoverageStep(ranAt, stamp);
+        console.log('');
+        console.log(formatCoverageSection(cov.report, cov.trend).join('\n'));
+        return;
+    }
 
     if (STUCK_ONLY) {
         console.log(`Stuck-keys-only report @ ${ranAt} (window ${DAYS}d)`);
@@ -638,6 +694,20 @@ async function main() {
     const segReplay = await runSegReplayStep(ranAt, stamp);
     console.log(segReplaySummaryLine(segReplay));
 
+    // Report-only coverage read. Runs LAST so it measures the state this sweep
+    // leaves behind, which is what "coverage now" has to mean.
+    let coverage: { report: CacheCoverageReport; trend: CoverageTrend | null } | null = null;
+    if (SKIP_COVERAGE) {
+        console.log('\n[4c] Corpus coverage skipped (--skip-coverage)');
+    } else {
+        console.log('\n[4c] Corpus coverage (report-only)…');
+        coverage = await runCoverageStep(ranAt, stamp);
+        console.log(coverage.report.ok
+            ? `  ${coverage.report.pct}% of ${coverage.report.total} seeds cached` +
+              `${coverage.trend ? ` (${coverage.trend.deltaPct >= 0 ? '+' : ''}${coverage.trend.deltaPct}pt)` : ''}`
+            : `  unavailable: ${coverage.report.error}`);
+    }
+
     fs.mkdirSync(RESULTS_DIR, { recursive: true });
     const jsonPath = path.join(RESULTS_DIR, `flywheel-${stamp}.json`);
     fs.writeFileSync(jsonPath, JSON.stringify({
@@ -659,9 +729,12 @@ async function main() {
             driftRate: segReplay.report.driftRate,
             trend: segReplay.trend, report: segReplay.outPath,
         },
+        // findPreviousCoverage reads this block back out of the previous
+        // sweep's JSON — it IS the coverage history, so keep the shape stable.
+        coverage: coverage ? { ...coverage.report, trend: coverage.trend } : null,
     }, null, 1));
 
-    const md = buildMarkdown(ranAt, telemetry, warm, seedCount, telemetrySeeds.length, diff, gate, stuck, segReplay);
+    const md = buildMarkdown(ranAt, telemetry, warm, seedCount, telemetrySeeds.length, diff, gate, stuck, segReplay, coverage);
     const mdPath = path.join(RESULTS_DIR, `flywheel-${stamp}.md`);
     fs.writeFileSync(mdPath, md);
     console.log(`\nReport: ${mdPath}`);
