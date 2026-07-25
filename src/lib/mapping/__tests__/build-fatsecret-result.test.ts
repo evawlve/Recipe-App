@@ -478,3 +478,168 @@ describe('repro: "starbucks flat white" (fs_8729727 live data, flat-100g class)'
         expect(result!.servingTier).toBe('fs_label_count');
     });
 });
+
+// Beverage weight recovery. Fix 5 let the real serving through, but grams then
+// came from a 2.0 kcal/g PREPARED-SOLID density — which reads a 5 kcal brewed
+// coffee as 2.5 grams. The record's own per-100g panel is a far better source:
+// FatSecret derives it FROM the serving, so inverting it returns the true
+// weight. All fixtures below are verbatim box rows.
+describe('per-100g panel inversion recovers the true serving weight', () => {
+    // fs 103646771, Starbucks Matcha Latte (Tall) — a tall cup is 12 fl oz/355ml.
+    const matchaLatteTall = makeRow({
+        fsId: '103646771',
+        name: 'Matcha Latte (Tall)',
+        brandName: 'Starbucks',
+        nutrientsPer100g: { calories: 50, protein: 2.35, carbs: 6.47, fat: 1.47 },
+        defaultServingId: 'sv-serving',
+        servings: [
+            {
+                servingId: 'sv-100', description: '100 g', measurementDescription: 'g',
+                grams: 100, volumeMl: null, numberOfUnits: 100,
+                nutrients: { calories: 50, protein: 2.35, carbohydrate: 6.47, fat: 1.47 },
+            },
+            {
+                servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+                grams: null, volumeMl: null, numberOfUnits: 1,
+                nutrients: { calories: 170, protein: 8, carbohydrate: 22, fat: 5 },
+            },
+        ],
+    });
+
+    it('bills a tall matcha latte at drink weight, not solid-food density', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(matchaLatteTall);
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_103646771', name: 'Matcha Latte (Tall)', brandName: 'Starbucks' }),
+            parsedLine({ qty: 1, unit: null, name: 'starbucks matcha latte' }),
+            0.9,
+            'starbucks matcha latte'
+        );
+        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        // Every nutrient independently implies ~340g; the energy-density
+        // estimate this replaces would have said 170/2.0 = 85g.
+        expect(result!.grams).toBeGreaterThan(320);
+        expect(result!.grams).toBeLessThan(360);
+        expect(result!.kcal).toBeCloseTo(170, 0);
+    });
+
+    // fs 103646474, Starbucks Decaf Pike Place Roast. The pathological case: a
+    // 1 kcal/100g panel quantizes calories to +-50%, so calories alone says
+    // 500g. Protein (1 / 0.22) says 455g and the median splits them — brewed
+    // coffee really is ~473ml.
+    it('survives a 1 kcal/100g panel by taking the median across nutrients', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '103646474',
+            name: 'Decaf Roast - Pike Place Roast',
+            brandName: 'Starbucks',
+            nutrientsPer100g: { calories: 1, protein: 0.22, carbs: 0, fat: 0 },
+            defaultServingId: 'sv-serving',
+            servings: [
+                {
+                    servingId: 'sv-100', description: '100 g', measurementDescription: 'g',
+                    grams: 100, volumeMl: null, numberOfUnits: 100,
+                    nutrients: { calories: 1, protein: 0.22, carbohydrate: 0, fat: 0 },
+                },
+                {
+                    servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+                    grams: null, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 5, protein: 1, carbohydrate: 0, fat: 0 },
+                },
+            ],
+        }));
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_103646474', name: 'Pike Place Roast', brandName: 'Starbucks' }),
+            parsedLine({ qty: 1, unit: null, name: 'starbucks pike place roast' }),
+            0.9,
+            'starbucks pike place roast'
+        );
+        // A cup of coffee, not 2.5 grams of one.
+        expect(result!.grams).toBeGreaterThan(400);
+        expect(result!.grams).toBeLessThan(560);
+        expect(result!.kcal).toBeCloseTo(5, 0);
+    });
+
+    // A zero-nutrient serving carries no weight signal at all, so a 0-value
+    // panel nutrient must not vote a 0g estimate into the median.
+    it('ignores nutrients that are zero on either side', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            nutrientsPer100g: { calories: 40, protein: 2, carbs: 5, fat: 1.2 },
+            defaultServingId: 'sv-serving',
+            servings: [
+                {
+                    servingId: 'sv-100', description: '100 g', measurementDescription: 'g',
+                    grams: 100, volumeMl: null, numberOfUnits: 100,
+                    nutrients: { calories: 40, protein: 2, carbohydrate: 5, fat: 1.2 },
+                },
+                {
+                    // fat rounded down to 0 against a positive panel fat.
+                    servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+                    grams: null, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 100, protein: 5, carbohydrate: 12.5, fat: 0 },
+                },
+            ],
+        }));
+        const result = await buildFatSecretResult(
+            makeCandidate({ name: 'Some Drink' }),
+            parsedLine({ qty: 1, unit: null, name: 'some drink' }),
+            0.9,
+            'some drink'
+        );
+        expect(result!.grams).toBeCloseTo(250, 0);
+    });
+
+    // fs-shaped Diet Coke: every panel nutrient is 0, so nothing is derivable.
+    // Demoting the panel here would swap a 100g display for a 1g one showing
+    // the same correct 0 kcal, so the row is deliberately left in place.
+    it('leaves a genuinely zero-calorie drink exactly as it was', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            name: 'Diet Coke (Can)',
+            brandName: 'Coca-Cola',
+            nutrientsPer100g: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+            defaultServingId: 'sv-100',
+            servings: [
+                {
+                    servingId: 'sv-100', description: '100 g', measurementDescription: 'g',
+                    grams: 100, volumeMl: null, numberOfUnits: 100,
+                    nutrients: { calories: 0, protein: 0, carbohydrate: 0, fat: 0 },
+                },
+                {
+                    servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+                    grams: null, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 0, protein: 0, carbohydrate: 0, fat: 0 },
+                },
+            ],
+        }));
+        const result = await buildFatSecretResult(
+            makeCandidate({ name: 'Diet Coke', brandName: 'Coca-Cola' }),
+            parsedLine({ qty: 1, unit: null, name: 'diet coke' }),
+            0.9,
+            'diet coke'
+        );
+        expect(result!.grams).toBe(100);
+        expect(result!.kcal).toBe(0);
+    });
+
+    // Records with NO panel at all — the shape estimateServingGrams was written
+    // for — must keep using it.
+    it('still falls back to the energy-density estimate when there is no panel', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            name: 'Impossible Whopper',
+            nutrientsPer100g: {},
+            defaultServingId: 'sv-serving',
+            servings: [{
+                servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+                grams: null, volumeMl: null, numberOfUnits: 1,
+                nutrients: { calories: 630, protein: 28, carbohydrate: 62, fat: 32 },
+            }],
+        }));
+        const result = await buildFatSecretResult(
+            makeCandidate({ name: 'Impossible Whopper', brandName: 'Burger King' }),
+            parsedLine({ qty: 1, unit: null, name: 'impossible whopper' }),
+            0.9,
+            'impossible whopper'
+        );
+        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        expect(result!.grams).toBeCloseTo(315, 0); // 630 / 2.0
+        expect(result!.kcal).toBeCloseTo(630, 0);
+    });
+});
