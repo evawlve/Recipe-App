@@ -167,9 +167,67 @@ const LEAN_PROTEIN_CUT_PATTERN =
 const LEAN_CUT_PROTEIN_FLOOR = 18;
 
 /** Alcohol carries 7 kcal/g that never shows up in P/C/F — exempt from the high-side Atwater check.
- *  Exported for detect-corrupt-nutrition.ts, whose kJ-as-kcal rule needs the same exemption. */
+ *  Exported for detect-corrupt-nutrition.ts, whose kJ-as-kcal rule needs the same exemption.
+ *
+ *  Named cocktails and spirits were added after the Jul 2026 funnel read: a
+ *  martini at a correct 226 kcal/100g computes ~2 kcal from P/C/F and was
+ *  rejected as corrupt, because the drink's name says nothing this pattern
+ *  recognised. "punch" and "sour" are deliberately NOT here — "fruit punch"
+ *  and "sour cream" are non-alcoholic, and exempting them would blunt a check
+ *  that does real work. */
 export const ALCOHOL_PATTERN =
-    /\b(beer|wine|vodka|whiske?y|rum|gin|tequila|liqueur|brandy|cognac|sake|cider|cocktail|margarita|sangria|champagne|prosecco|bourbon|scotch|mead|soju|alcoholic?|spirits?|ale|lager|stout|ipa)\b/i;
+    /\b(beer|wine|vodka|whiske?y|rum|gin|tequila|liqueur|brandy|cognac|sake|cider|cocktail|margarita|sangria|champagne|prosecco|bourbon|scotch|mead|soju|alcoholic?|spirits?|ale|lager|stout|ipa|martini|mojito|daiquiri|negroni|manhattan|old[\s-]?fashioned|mai[\s-]?tai|pi(?:ñ|n)a[\s-]?colada|bloody mary|mimosa|spritz|vermouth|aperol|campari|kahlua|baileys?|schnapps|absinthe|amaretto|triple sec|hard (?:seltzer|cider|lemonade)|shandy|nightcap)\b/i;
+
+/**
+ * Baked goods and composite dishes — foods whose name CONTAINS an ingredient
+ * word without being that ingredient.
+ *
+ * The Jul 2026 funnel read found 15 of 21 save-time plausibility rejections
+ * were this one mistake: a produce or lean-cut token appears in the name of a
+ * prepared dish, and the dish is then held to the ingredient's nutrition.
+ * "banana bread" was judged against a fresh-banana calorie ceiling, "carrot
+ * cake" likewise, and "shrimp scampi" against a raw-shrimp protein floor that
+ * sauce and pasta legitimately dilute.
+ *
+ * This disqualifies the CATEGORY, not the food — the AI-estimate cross-check
+ * still runs on these lines, which is what actually caught the genuine
+ * corruption in that batch (beef stew at 20 kcal/100g, oxtail soup at 26).
+ */
+// NOTE: "roll" is deliberately absent. It reads as a baked good but also
+// matches "Chicken Breast Deli Roll" and "California Roll", and the deli-roll
+// case is precisely what the lean-cut protein floor exists to catch (golden
+// n-mq-22). A word that disqualifies the very case a rule was built for is
+// worse than a missing word.
+const PREPARED_DISH_PATTERN =
+    /\b(bread|cake|muffin|pie|cobbler|crumble|tart|pastry|pastries|cookie|brownie|bun|scone|biscuit|donut|doughnut|waffle|pancake|casserole|stir[\s-]?fr(?:y|ied)|scampi|soup|stew|chowder|bisque|curry|salad|sandwich|wrap|burrito|taco|pizza|lasagn(?:a|e)|risotto|pasta|noodles?|spaghetti|macaroni|quiche|gratin|florentine|alfredo|parmigiana|teriyaki|tempura|fritters?|croquette|pudding|custard|mousse|cheesecake|smoothie|milkshake|latte|loaf|dumplings?|pierogi|empanada|samosa|stuffing|hash|skillet)\b/i;
+
+/**
+ * A named main protein alongside a produce word means a composite dish, not
+ * produce: "orange chicken" carries no dish noun at all, yet it is obviously
+ * not an orange. Used ONLY to disqualify the fresh-produce category — feeding
+ * it to the lean-cut protein floor would disable that floor entirely.
+ */
+const MAIN_PROTEIN_NOUN_PATTERN =
+    /\b(chicken|beef|pork|turkey|lamb|duck|shrimp|prawns?|fish|salmon|tuna|tofu|sausage|bacon|ham|steak|meatballs?|brisket|schnitzel)\b/i;
+
+/** Fresh produce queried by name, and not actually a dish that merely mentions it. */
+function isFreshProduceContext(query: string, combinedNames: string): boolean {
+    return FRESH_PRODUCE_PATTERN.test(query)
+        && !CONCENTRATED_FORM_PATTERN.test(combinedNames)
+        && !PREPARED_DISH_PATTERN.test(combinedNames)
+        && !MAIN_PROTEIN_NOUN_PATTERN.test(combinedNames);
+}
+
+/**
+ * Genuinely zero-calorie drinks that carry a produce word for flavour.
+ *
+ * Exempt from the produce calorie FLOOR only: a grapefruit sparkling water at
+ * 4.8 kcal/100g is correct, not corrupt. Juice is pointedly excluded — orange
+ * juice really should clear the floor, and dropping it here would let a
+ * genuinely broken juice record through.
+ */
+const ZERO_CAL_FLAVOURED_DRINK_PATTERN =
+    /\b(sparkling|seltzer|club soda|soda water|tonic|mineral water|flavou?red water|tea|black coffee|zero|diet|sugar[\s-]?free|unsweetened)\b/i;
 
 // ============================================================
 // Main assessment
@@ -275,8 +333,7 @@ export function assessMacroPlausibility(
     if (
         kcal != null &&
         kcal > FRESH_PRODUCE_MAX_KCAL &&
-        FRESH_PRODUCE_PATTERN.test(query) &&
-        !CONCENTRATED_FORM_PATTERN.test(combinedNames)
+        isFreshProduceContext(query, combinedNames)
     ) {
         reasons.push(`category:fresh_produce_kcal_${kcal}_over_${FRESH_PRODUCE_MAX_KCAL}`);
     }
@@ -301,7 +358,11 @@ export function assessMacroPlausibility(
         protein > 0 &&
         protein < LEAN_CUT_PROTEIN_FLOOR &&
         LEAN_PROTEIN_CUT_PATTERN.test(query) &&
-        !PROTEIN_EXEMPT_PATTERN.test(combinedNames)
+        !PROTEIN_EXEMPT_PATTERN.test(combinedNames) &&
+        // A composite dish dilutes the cut with sauce, pasta or vegetables, so
+        // the raw-cut floor doesn't apply: shrimp scampi at 11g and tuna
+        // casserole at 6.2g are both correct.
+        !PREPARED_DISH_PATTERN.test(combinedNames)
     ) {
         reasons.push(`category:lean_cut_protein_below_floor(${round1(protein)})`);
     }
@@ -393,10 +454,12 @@ function collectDeterministicFloorReasons(
             reasons.push(`floor:sweetener_kcal_${round1(kcal)}_below_${SWEETENER_MIN_KCAL}`);
         }
     }
-    const isFreshProduceQuery =
-        FRESH_PRODUCE_PATTERN.test(query) && !CONCENTRATED_FORM_PATTERN.test(combinedNames);
+    // "banana bread" / "orange chicken" are not produce in either direction.
+    const isFreshProduceQuery = isFreshProduceContext(query, combinedNames);
     if (isFreshProduceQuery) {
-        if (kcal != null && kcal < FRESH_PRODUCE_MIN_KCAL) {
+        // A flavoured zero-calorie drink legitimately sits under the floor.
+        if (kcal != null && kcal < FRESH_PRODUCE_MIN_KCAL
+            && !ZERO_CAL_FLAVOURED_DRINK_PATTERN.test(combinedNames)) {
             reasons.push(`floor:produce_kcal_${round1(kcal)}_below_${FRESH_PRODUCE_MIN_KCAL}`);
         }
         if (protein != null && protein > FRESH_PRODUCE_MAX_PROTEIN) {
