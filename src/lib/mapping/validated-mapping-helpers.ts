@@ -29,6 +29,48 @@ import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-r
 // over an existing cache row. Same-family swaps are exempt.
 const CROSS_SOURCE_DISPLACEMENT_MARGIN = 0.05;
 
+/**
+ * A preparation the user asked for that adds no fat.
+ *
+ * Kept separate from the cross-source margin on purpose. The first funnel read
+ * found the margin blocking 19 rows of which only 4 deserved it, and those 4
+ * were not a source problem at all — they were preparation mismatches
+ * ("baked chicken tenders" resolving to a *Fried* record, "poached egg" to a
+ * *Fried Egg*). That signal is worth keeping precisely because it is
+ * orthogonal to which corpus the record came from.
+ */
+const LEAN_PREPARATION_PATTERN =
+    /\b(baked|grilled|steamed|poached|boiled|roasted|broiled|raw|air[\s-]?fried|braised|poached)\b/i;
+
+/** A preparation that adds fat, and so cannot satisfy a lean-prep request. */
+const FAT_ADDED_PREPARATION_PATTERN =
+    /\b(deep[\s-]?fried|fried|breaded|battered|crispy|tempura|katsu|schnitzel|nuggets?|tenders?|fritters?)\b/i;
+
+/**
+ * True when the query asks for a fat-free preparation and the candidate's name
+ * advertises a fat-adding one.
+ *
+ * Only fires when the query is EXPLICIT about preparation — a bare "chicken
+ * tenders" is not a mismatch, it is just a request for tenders. And a record
+ * that merely repeats the query's own preparation word is never a conflict,
+ * which is why the fat-added test is applied to the record only after the
+ * record is shown not to satisfy the request.
+ */
+function hasPreparationConflict(rawIngredient: string, candidateName: string): boolean {
+    const query = rawIngredient.toLowerCase();
+    if (!LEAN_PREPARATION_PATTERN.test(query)) return false;
+
+    const candidate = (candidateName || '').toLowerCase();
+    if (!FAT_ADDED_PREPARATION_PATTERN.test(candidate)) return false;
+
+    // The record also advertising the requested preparation clears it:
+    // "Roasted Broiled or Baked Chicken Thigh" answers "grilled chicken thighs".
+    const requested = query.match(LEAN_PREPARATION_PATTERN)?.[0];
+    if (requested && new RegExp(`\\b${requested}\\b`, 'i').test(candidate)) return false;
+
+    return true;
+}
+
 // Bare-category takeover gate (Jul 2026). See saveValidatedMapping.
 // Trivial words dropped before counting query specificity / testing whether a
 // food name is a bare category.
@@ -768,7 +810,28 @@ export async function saveValidatedMapping(
             // forfeited above.
             const crossSourceFamily =
                 newTargetKey.split(':')[0] !== existingTargetKey.split(':')[0];
-            if (!incumbentCorrupt && crossSourceFamily) {
+            // Generic whole foods are waived from the margin (funnel fix 3).
+            // The margin was added as conservatism BEFORE we had data on how
+            // the new source performs. The first funnel read supplied it: all
+            // 19 blocked rows were fatsecret, and 15 should have cached —
+            // grilled tilapia 128 kcal, boiled egg 154, brussels sprouts 43,
+            // baked sweet potato 90, all near-exact USDA. The casualty class is
+            // exactly where fatsecret is strongest and OFF is weakest: an
+            // unbranded whole-food query, where OFF can only offer a packaged
+            // product that fits the query worse.
+            //
+            // The waiver is deliberately narrow — it requires the query to name
+            // no brand, the challenger to carry no brand, and the challenger's
+            // macros to be non-degenerate. A branded query is exactly where the
+            // margin still earns its keep.
+            const waiveMargin =
+                !detectedBrand
+                && !(mapping.brandName && mapping.brandName.trim())
+                && !!options?.nutrientsPer100g
+                && !isAllZeroMacros(options.nutrientsPer100g)
+                && !hasPreparationConflict(rawIngredient, mapping.foodName);
+
+            if (!incumbentCorrupt && crossSourceFamily && !waiveMargin) {
                 const incumbentConfidence = existing?.aiConfidence ?? 0;
                 if (clampedConfidence < incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN) {
                     logger.warn('validated_mapping.save_rejected_cross_source_margin', {

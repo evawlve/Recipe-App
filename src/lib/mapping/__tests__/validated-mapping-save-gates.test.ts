@@ -588,6 +588,81 @@ describe('zero-macro save gate', () => {
     });
 });
 
+// Funnel fix 3. All 19 margin blocks in the Jul 2026 cold warm were fatsecret
+// and 15 should have cached; the casualty class was unbranded whole foods.
+describe('cross-source margin waiver for unbranded whole foods', () => {
+    const incumbent = {
+        normalizedForm: 'grilled tilapia',
+        offBarcode: '1111111111111',
+        fdcId: null,
+        fsId: null,
+        aiConfidence: 0.95,
+        validatedBy: 'ai',
+    };
+    const plausible = { nutrientsPer100g: { kcal: 128, protein: 26, carbs: 0, fat: 2.7 } };
+
+    it('lets an unbranded fatsecret whole food displace an OFF incumbent it would previously lose to', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(incumbent);
+        await saveValidatedMapping(
+            'grilled tilapia',
+            makeMapping({ foodId: 'fs_1', foodName: 'Tilapia (Fish) (Cooked, Dry Heat)', brandName: undefined }),
+            { confidence: 0.93 } as AIValidationResult, // below 0.95 + 0.05 margin
+            plausible,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('still enforces the margin when the challenger carries a brand', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(incumbent);
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'grilled tilapia',
+            makeMapping({ foodId: 'fs_1', foodName: 'Tilapia Fillet', brandName: 'Publix' }),
+            { confidence: 0.93 } as AIValidationResult,
+            { ...plausible, telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('still enforces the margin on a preparation mismatch (poached -> Fried Egg)', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ ...incumbent, normalizedForm: 'egg poached' });
+        await saveValidatedMapping(
+            'poached egg',
+            makeMapping({ foodId: 'fs_2', foodName: 'Fried Egg', brandName: undefined }),
+            { confidence: 0.93 } as AIValidationResult,
+            { nutrientsPer100g: { kcal: 201, protein: 13.6, carbs: 0.8, fat: 15.3 } },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a record that repeats the requested preparation as a conflict', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({ ...incumbent, normalizedForm: 'baked potato sweet' });
+        await saveValidatedMapping(
+            'baked sweet potato',
+            makeMapping({
+                foodId: 'fs_3',
+                foodName: 'Sweet Potato (Without Salt, Baked In Skin, Cooked)',
+                brandName: undefined,
+            }),
+            { confidence: 0.93 } as AIValidationResult,
+            { nutrientsPer100g: { kcal: 90, protein: 2, carbs: 21, fat: 0.1 } },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('still enforces the margin when the challenger has degenerate macros', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(incumbent);
+        await saveValidatedMapping(
+            'grilled tilapia',
+            makeMapping({ foodId: 'fs_4', foodName: 'Tilapia', brandName: undefined }),
+            { confidence: 0.93 } as AIValidationResult,
+            { nutrientsPer100g: { kcal: 0, protein: 0, carbs: 0, fat: 0 } },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+});
+
 describe('FIX 3: bare-category takeover save gate', () => {
     it('rejects "special k red berries" collapsing into a bare "Cereal"', async () => {
         await saveValidatedMapping(
