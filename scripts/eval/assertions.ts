@@ -56,9 +56,15 @@ export interface BaselineEntry {
  * Any move onto or off zero counts, because zero is the degenerate-nutrition shape.
  */
 export function numberDrifted(was: number | null | undefined, now: number | null | undefined): boolean {
-    if (was == null || now == null) return was !== now;
-    if (was === 0 || now === 0) return was !== now;
-    return Math.abs(now - was) / Math.abs(was) > 0.10;
+    // Collapse null and undefined to one absent value FIRST. The baseline writer stores
+    // `?? null`, while a live search result simply has no `grams` key at all — so a
+    // strict !== read "null -> undefined" as drift and reported two search pins as
+    // changed when nothing had. An absent value is absent either way.
+    const a = was ?? null;
+    const b = now ?? null;
+    if (a === null || b === null) return a !== b;
+    if (a === 0 || b === 0) return a !== b;   // any move onto/off zero matters
+    return Math.abs(b - a) / Math.abs(a) > 0.10;
 }
 
 /** Human-readable description of every way `now` differs from the baseline, or []. */
