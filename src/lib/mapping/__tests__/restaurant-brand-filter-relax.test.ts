@@ -95,3 +95,87 @@ describe('filterCandidatesByTokens — branded restaurant items survive', () => 
         expect(isMealProductMismatch('cinnamon sticks', 'Cinnamon Sticks', 'DiGiorno')).toBe(true);
     });
 });
+
+describe('disqualifier scan ignores the brand name', () => {
+    // The UNRELATED_INDICATORS list exists to reject unrelated PRODUCTS ("cadillac"
+    // for flaxseed meal). It was being tested against name + brandName, so every
+    // chain whose brand contains grill/kitchen/cafe/diner/bistro/restaurant had its
+    // whole catalogue rejected: 476 ingested FatSecret records across 66 brands.
+    // Observed live before the fix — "qdoba chicken burrito" gathered 8 Qdoba
+    // FatSecret records and 0 survived, all on disqualifier "grill".
+    const qdoba = [
+        'Chicken Queso Burrito', 'Cholula Hot & Sweet Chicken Burrito', 'Quesabirria Burrito',
+        'Southwest Steak Burrito', 'Grilled Chicken - Kids', 'Keto Bowl - Chicken',
+        'Grilled Adobo Chicken', 'Chicken Queso Bowl',
+    ];
+
+    it('keeps Qdoba Mexican Grill records for "qdoba chicken burrito"', () => {
+        const cands = qdoba.map(name => cand({
+            source: 'fatsecret',
+            name,
+            brandName: 'Qdoba Mexican Grill',
+            nutrition: { per100g: true, kcal: 185, protein: 9.5, fat: 6.2, carbs: 22 } as any,
+        }));
+        const { filtered } = filterCandidatesByTokens(cands, 'qdoba chicken burrito', {
+            rawLine: 'qdoba chicken burrito',
+        });
+        // The assembled burrito is the record the golden case n-mq-39 needs.
+        expect(filtered.map(c => c.name)).toContain('Chicken Queso Burrito');
+    });
+
+    it('keeps a venue-brand record when the brand word is only in the brand', () => {
+        const cands = [cand({
+            source: 'fatsecret',
+            name: 'Chipotle Chicken Burrito',
+            brandName: 'The Gym Kitchen',
+            nutrition: { per100g: true, kcal: 153, protein: 8.4, fat: 3.1, carbs: 22.5 } as any,
+        })];
+        const { filtered } = filterCandidatesByTokens(cands, 'chipotle chicken burrito', {
+            rawLine: 'chipotle chicken burrito',
+        });
+        expect(filtered.length).toBe(1);
+    });
+
+    it('spares an OFF record that bakes a venue brand into the name', () => {
+        // OFF stores the brand inside the name, so scanning the name alone would
+        // still see "grill" — brand-derived words are skipped explicitly.
+        const cands = [cand({
+            source: 'openfoodfacts',
+            name: 'Qdoba Mexican Grill, Chicken Queso Burrito',
+            brandName: 'Qdoba Mexican Grill',
+            nutrition: { per100g: true, kcal: 185, protein: 9.5, fat: 6.2, carbs: 22 } as any,
+        })];
+        const { filtered } = filterCandidatesByTokens(cands, 'qdoba chicken burrito', {
+            rawLine: 'qdoba chicken burrito',
+        });
+        expect(filtered.length).toBe(1);
+    });
+
+    it('STILL rejects an unrelated word that is in the product name', () => {
+        // The check must keep doing its job when the disqualifier is genuinely part
+        // of the product, not the brand — this is the case the list was written for.
+        const cands = [cand({
+            source: 'openfoodfacts',
+            name: 'Cadillac Margarita Mix',
+            brandName: 'Jose Cuervo',
+            nutrition: { per100g: true, kcal: 120, protein: 0, fat: 0, carbs: 30 } as any,
+        })];
+        const { filtered } = filterCandidatesByTokens(cands, 'flaxseed meal', {
+            rawLine: 'flaxseed meal',
+        });
+        expect(filtered.length).toBe(0);
+    });
+
+    it('STILL rejects a grill APPLIANCE for a food query', () => {
+        const cands = [cand({
+            source: 'openfoodfacts',
+            name: 'George Foreman Grill Cleaning Wipes',
+            brandName: 'George Foreman',
+            nutrition: { per100g: true, kcal: 0, protein: 0, fat: 0, carbs: 0 } as any,
+        })];
+        const { filtered } = filterCandidatesByTokens(cands, 'chicken breast', {
+            rawLine: 'chicken breast',
+        });
+        expect(filtered.length).toBe(0);
+    });
+});

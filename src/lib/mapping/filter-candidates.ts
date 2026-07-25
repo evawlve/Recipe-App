@@ -2724,12 +2724,33 @@ export function filterCandidatesByTokens(
             'auto', 'car', 'vehicle', 'truck', 'automotive'
         ]);
 
-        const candidateWords = candidateName.split(/\s+/).filter(w => w.length > 3);
+        // Scan the PRODUCT NAME, never the brand. A brand name is identity, not
+        // evidence of relatedness: "Qdoba Mexican Grill" says nothing about whether
+        // a Chicken Queso Burrito answers "qdoba chicken burrito". Because
+        // normalizeCandidateName() appends brandName, the word "grill" landed in the
+        // scanned text and rejected ALL 8 Qdoba FatSecret records — likewise "The Gym
+        // Kitchen" rejected its Chipotle Chicken Burrito on "kitchen". Measured on the
+        // box: 476 ingested FatSecret records across 66 brands were unreachable this
+        // way (grill 236, kitchen 107, restaurant 60, cafe 52, bistro 11, diner 10),
+        // and the blackout was invisible because the loop skips words present in the
+        // query — so it only spared you if you typed the brand's full legal name.
+        // candidateName (name + brand) is still correct for the must-have check above,
+        // where a query token legitimately matches the brand.
+        const brandWords = new Set(
+            (candidate.brandName ?? '').toLowerCase().split(/[^\w]+/).filter(w => w.length > 3)
+        );
+        const candidateWords = candidate.name.toLowerCase().split(/\s+/).filter(w => w.length > 3);
         const queryWords = new Set(normalizedName.toLowerCase().split(/\s+/).filter(w => w.length > 3));
 
         for (const word of candidateWords) {
             // Skip words that appear in query
             if (queryWords.has(word)) continue;
+
+            // Skip brand-derived words. Sources differ on where the brand lives: OFF
+            // bakes it into the name ("Qdoba, Tequila Lime Chicken") while FatSecret
+            // keeps it separate, so scanning the name alone is not enough to spare a
+            // venue-named brand on the OFF side.
+            if (brandWords.has(word)) continue;
 
             // Skip words that are related to must-have tokens
             if (mustHaveTokens.some(token => word.includes(token) || token.includes(word))) continue;
