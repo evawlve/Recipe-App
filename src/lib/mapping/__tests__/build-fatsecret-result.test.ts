@@ -385,3 +385,96 @@ describe('repro: "15 pretzels" (fs_4349 live data, eval n-serv-20 675g regressio
         expect(result!.servingTier).toBe('fs_label_count');
     });
 });
+
+// Funnel fix 5. A literal "100 g" serving is a per-100g PANEL, not a portion.
+// FatSecret ships chain-restaurant records with exactly two servings: the
+// synthetic `100 g` row and the real `1 serving` row that carries the item's
+// macros but no gram weight. Because only the former had grams it was the only
+// "usable" one, so `grams` was never null, the macro-only branch never ran, and
+// the item billed 100g whatever it was.
+describe('repro: "starbucks flat white" (fs_8729727 live data, flat-100g class)', () => {
+    const flatWhiteRow = {
+        fsId: '8729727',
+        name: 'Flat White (Tall)',
+        brandName: 'Starbucks',
+        foodType: 'Brand',
+        nutrientsPer100g: { kcal: 66, protein: 3.53, carbs: 5.29, fat: 2.65 },
+        defaultServingId: 'sv-serving',
+        fetchedAt: new Date(),
+        servings: [
+            {
+                servingId: 'sv-100', description: '100 g', measurementDescription: 'g',
+                grams: 100, volumeMl: null, numberOfUnits: 100,
+                nutrients: { calories: 66, protein: 3.53, carbohydrate: 5.29, fat: 2.65 },
+            },
+            {
+                servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+                grams: null, volumeMl: null, numberOfUnits: 1,
+                nutrients: { calories: 170, protein: 9, carbohydrate: 13, fat: 9 },
+            },
+        ],
+    };
+
+    it('bills the real serving instead of 100 g of a latte', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(flatWhiteRow);
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_8729727', name: 'Flat White (Tall)', brandName: 'Starbucks' }),
+            parsedLine({ qty: 1, unit: null, name: 'starbucks flat white' }),
+            0.9,
+            'starbucks flat white'
+        );
+        expect(result).not.toBeNull();
+        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        expect(result!.grams).not.toBe(100);
+        // The serving's own macros are authoritative, not a per-100g rescale.
+        expect(result!.kcal).toBeCloseTo(170, 0);
+        expect(result!.protein).toBeCloseTo(9, 0);
+    });
+
+    it('scales by quantity off the real serving', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(flatWhiteRow);
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_8729727', name: 'Flat White (Tall)', brandName: 'Starbucks' }),
+            parsedLine({ qty: 2, unit: null, name: 'starbucks flat white' }),
+            0.9,
+            '2 starbucks flat whites'
+        );
+        expect(result!.kcal).toBeCloseTo(340, 0);
+    });
+
+    it('still serves an explicit 100g request from the panel row', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(flatWhiteRow);
+        const result = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_8729727', name: 'Flat White (Tall)', brandName: 'Starbucks' }),
+            parsedLine({ qty: 100, unit: 'g', name: 'starbucks flat white' }),
+            0.9,
+            '100g starbucks flat white'
+        );
+        expect(result!.grams).toBe(100);
+        expect(result!.kcal).toBeCloseTo(66, 0);
+    });
+
+    it('does not strip a genuine 100g PRODUCT serving (a 100 g bar)', async () => {
+        // numberOfUnits 1 and a descriptive name — this is a real portion that
+        // happens to weigh 100 g, not a per-100g panel row.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            defaultServingId: 'sv-bar',
+            servings: [barServing({
+                servingId: 'sv-bar', description: '1 bar (100 g)',
+                measurementDescription: 'bar', grams: 100, numberOfUnits: 1,
+                nutrients: { calories: 400, protein: 33, carbohydrate: 40, fat: 13 },
+            })],
+        }));
+        const result = await buildFatSecretResult(
+            makeCandidate({ name: 'Protein Bar' }),
+            parsedLine({ qty: 1, unit: null, name: 'protein bar' }),
+            0.9,
+            'protein bar'
+        );
+        expect(result!.grams).toBe(100);
+        // Resolved as a counted "bar", i.e. through the serving list — proving
+        // the row survived the panel filter rather than being dropped to the
+        // per-100g fallback.
+        expect(result!.servingTier).toBe('fs_label_count');
+    });
+});

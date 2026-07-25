@@ -230,7 +230,27 @@ export async function buildFatSecretResult(
             ? candidate.nutrition as unknown as Record<string, unknown> : null)
     );
 
-    const usableServings = servings.filter(s => s.grams != null && s.grams > 0);
+    // A literal "100 g" serving is a PER-100G PANEL, not a portion anyone eats
+    // (funnel fix 5). FatSecret ships many chain-restaurant records with exactly
+    // two servings: a synthetic `100 g` row and the real `1 serving` row that
+    // carries the item's macros but no gram weight. Because only the former has
+    // grams, it was the only "usable" one — so `grams` was never null, the
+    // macro-only branch below never ran, and every such item billed 100g
+    // regardless of what it was. That is the flat-100g class the first funnel
+    // read found: `starbucks flat white`, `dunkin matcha latte`,
+    // `starbucks pike place roast` all landed at exactly 100g.
+    //
+    // Excluding it lets the real serving reach the macro-only branch, which
+    // bills that serving's authoritative macros. The row is still available to
+    // `per100`/gram-anchored requests — a user asking for "100g of X" is served
+    // by the explicit-weight path, which does not read this list.
+    const isPer100gPanelServing = (s: { description: string; grams: number | null; numberOfUnits: number | null }) =>
+        s.grams === 100
+        && (s.numberOfUnits == null || s.numberOfUnits === 100)
+        && /^\s*100\s*g(?:rams?)?\s*$/i.test(s.description);
+
+    const usableServings = servings.filter(s =>
+        s.grams != null && s.grams > 0 && !isPer100gPanelServing(s));
     // A serving may carry per-serving macros WITHOUT any gram weight —
     // FatSecret's generic "1 serving" restaurant records are exactly this shape
     // (e.g. Impossible Whopper: "1 serving" = 630 kcal / 28p / 62c / 32f, grams
