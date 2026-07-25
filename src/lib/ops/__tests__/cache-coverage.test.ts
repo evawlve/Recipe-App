@@ -1,0 +1,163 @@
+/**
+ * cache-coverage — corpus coverage read.
+ *
+ * The load-bearing behaviour is key canonicalization: stored FoodMapping keys
+ * are token-SORTED, so raw-string matching would under-report coverage and the
+ * trend would look flat while the cache was actually filling up.
+ */
+
+// normalization-rules imports the shared db module, which constructs a
+// PrismaClient at import time and needs DATABASE_URL. This step never touches
+// that client — it takes its own — so stub it out and keep the suite runnable
+// without an env.
+jest.mock('../../db', () => ({ prisma: {} }));
+
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import {
+    collectCacheCoverage, computeCoverageTrend, findPreviousCoverage,
+    formatCoverageSection, loadCoverageCorpus, CoverageDbClient,
+} from '../cache-coverage';
+
+function tmpdir(): string {
+    return fs.mkdtempSync(path.join(os.tmpdir(), 'coverage-test-'));
+}
+
+function writeCorpus(dir: string, rows: string[]): string {
+    const p = path.join(dir, 'corpus.tsv');
+    fs.writeFileSync(p, ['domain\tbaseline\tseed', ...rows].join('\n') + '\n');
+    return p;
+}
+
+function db(keys: string[]): CoverageDbClient {
+    return { foodMapping: { findMany: async () => keys.map(normalizedForm => ({ normalizedForm })) } };
+}
+
+const RAN_AT = '2026-07-25T00:00:00.000Z';
+
+describe('loadCoverageCorpus', () => {
+    it('parses rows and canonicalizes the key, skipping the header', () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['produce\tnew\tred bell peppers', 'chains\tcached\tbig mac']);
+        const seeds = loadCoverageCorpus(p);
+        expect(seeds).toHaveLength(2);
+        expect(seeds[0]).toMatchObject({ domain: 'produce', baseline: 'new', seed: 'red bell peppers' });
+        // lowercased, singularized, token-sorted
+        expect(seeds[0].key).toBe('bell pepper red');
+        expect(seeds[1].baseline).toBe('cached');
+    });
+});
+
+describe('collectCacheCoverage', () => {
+    it('matches a stored key whose tokens are in a different order', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['dairy\tnew\tplain greek yogurt']);
+        // How the mapper actually stores it: sorted.
+        const report = await collectCacheCoverage(db(['greek plain yogurt']), p, RAN_AT);
+        expect(report.ok).toBe(true);
+        expect(report.cached).toBe(1);
+        expect(report.pct).toBe(100);
+    });
+
+    it('separates whole-corpus coverage from growth on the then-uncached seeds', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, [
+            'unlabeled\tcached\tbanana',
+            'unlabeled\tcached\tegg',
+            'chains\tnew\tbig mac',
+            'frozen\tnew\tdigiorno pepperoni pizza',
+        ]);
+        // Both baseline rows plus one of the two new ones are now cached.
+        const report = await collectCacheCoverage(db(['banana', 'egg', 'big mac']), p, RAN_AT);
+        expect(report.total).toBe(4);
+        expect(report.cached).toBe(3);
+        expect(report.pct).toBe(75);
+        // Growth ignores the seeds that were already covered at corpus cut.
+        expect(report.growthTotal).toBe(2);
+        expect(report.growthCached).toBe(1);
+        expect(report.growthPct).toBe(50);
+    });
+
+    it('reports per-domain over the new seeds only, least-covered first', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, [
+            'chains\tnew\tbig mac',
+            'chains\tnew\twhopper',
+            'frozen\tnew\thot pocket',
+            'unlabeled\tcached\tbanana',
+        ]);
+        const report = await collectCacheCoverage(db(['big mac', 'whopper', 'banana']), p, RAN_AT);
+        expect(report.perDomain.map(d => d.domain)).toEqual(['frozen', 'chains']);
+        expect(report.perDomain[0]).toMatchObject({ domain: 'frozen', cached: 0, total: 1, pct: 0 });
+        expect(report.perDomain[1]).toMatchObject({ domain: 'chains', cached: 2, total: 2, pct: 100 });
+        // 'unlabeled' is baseline-cached, so it never enters the domain table.
+        expect(report.perDomain.find(d => d.domain === 'unlabeled')).toBeUndefined();
+    });
+
+    it('fails soft when the corpus is missing rather than throwing', async () => {
+        const report = await collectCacheCoverage(db([]), '/nonexistent/corpus.tsv', RAN_AT);
+        expect(report.ok).toBe(false);
+        expect(report.error).toBeTruthy();
+        expect(formatCoverageSection(report, null)[0]).toContain('coverage step failed');
+    });
+});
+
+describe('trend', () => {
+    it('reads the previous reading out of the last sweep JSON that carried one', () => {
+        const dir = tmpdir();
+        // Newest first by sort order, but this one predates the coverage step.
+        fs.writeFileSync(path.join(dir, 'flywheel-2026-07-24.json'), JSON.stringify({ coverage: { ok: true, pct: 28.8 } }));
+        fs.writeFileSync(path.join(dir, 'flywheel-2026-07-25.json'), JSON.stringify({ gate: {} }));
+        const prev = findPreviousCoverage(dir);
+        expect(prev).toEqual({ file: 'flywheel-2026-07-24.json', pct: 28.8 });
+    });
+
+    it('skips a report whose coverage step errored', () => {
+        const dir = tmpdir();
+        fs.writeFileSync(path.join(dir, 'flywheel-2026-07-23.json'), JSON.stringify({ coverage: { ok: true, pct: 20 } }));
+        fs.writeFileSync(path.join(dir, 'flywheel-2026-07-24.json'), JSON.stringify({ coverage: { ok: false, pct: 0 } }));
+        expect(findPreviousCoverage(dir)?.pct).toBe(20);
+    });
+
+    it('excludes this run\'s own file so a sweep cannot trend against itself', () => {
+        const dir = tmpdir();
+        fs.writeFileSync(path.join(dir, 'flywheel-2026-07-25.json'), JSON.stringify({ coverage: { ok: true, pct: 40 } }));
+        expect(findPreviousCoverage(dir, 'flywheel-2026-07-25.json')).toBeNull();
+    });
+
+    it('computes the delta in points', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['a\tnew\tbanana', 'a\tnew\tegg']);
+        const report = await collectCacheCoverage(db(['banana']), p, RAN_AT);
+        const trend = computeCoverageTrend(report, { file: 'prev.json', pct: 28.8 });
+        expect(report.pct).toBe(50);
+        expect(trend?.deltaPct).toBe(21.2);
+    });
+
+    it('has no trend on the first run', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['a\tnew\tbanana']);
+        const report = await collectCacheCoverage(db([]), p, RAN_AT);
+        expect(computeCoverageTrend(report, null)).toBeNull();
+    });
+});
+
+describe('formatCoverageSection', () => {
+    it('marks the stop signal only once coverage clears it', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['a\tnew\tbanana', 'a\tnew\tegg', 'a\tnew\tmilk', 'a\tnew\trice']);
+        const low = await collectCacheCoverage(db(['banana']), p, RAN_AT);
+        expect(formatCoverageSection(low, null)[0]).toContain('📈');
+
+        const high = await collectCacheCoverage(db(['banana', 'egg', 'milk', 'rice']), p, RAN_AT);
+        expect(formatCoverageSection(high, null)[0]).toContain('✅');
+    });
+
+    it('states which quantity it is, so it cannot be read as funnel cache_hit', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['a\tnew\tbanana']);
+        const report = await collectCacheCoverage(db(['banana']), p, RAN_AT);
+        expect(formatCoverageSection(report, null).join('\n')).toContain('NOT the warm run');
+    });
+});
