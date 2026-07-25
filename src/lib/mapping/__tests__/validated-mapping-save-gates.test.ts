@@ -651,6 +651,21 @@ describe('cross-source margin waiver for unbranded whole foods', () => {
         expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
     });
 
+    it('waives for "brussels sprouts", whose bare food word collides with a grocery chain', async () => {
+        // detectBrandInQuery reports matchedBrand "sprouts" (Sprouts Farmers
+        // Market) here, so a bare detectedBrand check would veto the waiver on
+        // an unmistakable whole food. Production incumbent was an OFF
+        // store-brand row ("Freedom's Choice") holding the key.
+        mockFoodMappingFindUnique.mockResolvedValue({ ...incumbent, normalizedForm: 'brussel sprout' });
+        await saveValidatedMapping(
+            'brussels sprouts',
+            makeMapping({ foodId: 'fs_5', foodName: 'Brussels Sprouts', brandName: undefined }),
+            { confidence: 0.93 } as AIValidationResult,
+            { nutrientsPer100g: { kcal: 43, protein: 3.4, carbs: 9, fat: 0.3 } },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
     it('still enforces the margin when the challenger has degenerate macros', async () => {
         mockFoodMappingFindUnique.mockResolvedValue(incumbent);
         await saveValidatedMapping(

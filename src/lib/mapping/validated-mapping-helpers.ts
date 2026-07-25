@@ -824,8 +824,15 @@ export async function saveValidatedMapping(
             // no brand, the challenger to carry no brand, and the challenger's
             // macros to be non-degenerate. A branded query is exactly where the
             // margin still earns its keep.
+            // hasDecisiveBrandContext, not a bare detectedBrand: several grocery
+            // chains share a name with a plain food word, so the detector reports
+            // "sprouts" (Sprouts Farmers Market) for "brussels sprouts" and would
+            // veto the waiver for an unmistakable whole food. The brand_mismatch
+            // gate above already relies on this same distinction.
+            const queryAssertsBrand =
+                !!detectedBrand && hasDecisiveBrandContext(rawIngredient, detectedBrand);
             const waiveMargin =
-                !detectedBrand
+                !queryAssertsBrand
                 && !(mapping.brandName && mapping.brandName.trim())
                 && !!options?.nutrientsPer100g
                 && !isAllZeroMacros(options.nutrientsPer100g)
