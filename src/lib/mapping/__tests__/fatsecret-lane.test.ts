@@ -301,6 +301,105 @@ describe('per-100g derivation', () => {
             { description: 'cup', grams: 240 }, // measurementDescription fallback
         ]);
     });
+
+    // ml servings (funnel first read, Jul 2026). 976 of the 3,504 foods that
+    // ended up with an empty nutrientsPer100g in production had a single
+    // ml-only serving; rejecting the unit discarded complete nutrition.
+    it('derives grams from an ml-only serving, falling back to water density', async () => {
+        const per100 = lane.derivePer100gFromServings(
+            [
+                serving({
+                    id: 'pouch',
+                    description: '1 pouch',
+                    metricServingAmount: 177,
+                    metricServingUnit: 'ml',
+                    calories: 90,
+                    carbohydrate: 25,
+                    protein: 0,
+                    fat: 0,
+                }),
+            ],
+            'Zorbex', // no category keyword → 1.0 g/ml
+        );
+
+        // 177 ml * 1.0 g/ml -> 177 g; 90 kcal / 177 g * 100 = 50.85
+        expect(per100).toMatchObject({ calories: 50.85, carbs: 14.12 });
+    });
+
+    it('routes a juice pouch through the fruit density, not the water default', async () => {
+        const per100 = lane.derivePer100gFromServings(
+            [
+                serving({
+                    id: 'pouch',
+                    description: '1 pouch',
+                    metricServingAmount: 177,
+                    metricServingUnit: 'ml',
+                    calories: 90,
+                }),
+            ],
+            'Capri Sun 100% Juice - Berry',
+        );
+
+        // 177 ml * 0.95 (fruit) -> 168.15 g; 90 / 168.15 * 100 = 53.52
+        expect(per100?.calories).toBeCloseTo(53.52, 1);
+    });
+
+    it('applies category density rather than a flat 1.0 when the name implies one', async () => {
+        const per100 = lane.derivePer100gFromServings(
+            [
+                serving({
+                    id: 'tbsp',
+                    description: '1 tbsp',
+                    metricServingAmount: 15,
+                    metricServingUnit: 'ml',
+                    calories: 120,
+                }),
+            ],
+            'Olive Oil',
+        );
+
+        // oil density 0.91 -> 13.65 g; 120 / 13.65 * 100 = 879.12
+        expect(per100?.calories).toBeCloseTo(879.12, 1);
+    });
+
+    it('still prefers a gram-bearing serving over an ml one', async () => {
+        const per100 = lane.derivePer100gFromServings(
+            [
+                serving({
+                    id: 'ml',
+                    description: '1 cup',
+                    metricServingAmount: 240,
+                    metricServingUnit: 'ml',
+                    calories: 500,
+                }),
+                metric100Serving(),
+            ],
+            'Whole Milk',
+        );
+
+        // The exact 100 g panel short-circuits regardless of ml servings.
+        expect(per100).toMatchObject({ calories: 250, protein: 20 });
+    });
+
+    it('persists the density-derived grams so serving options stop being empty', async () => {
+        const hit = summary({
+            servings: [
+                serving({
+                    id: 'bottle',
+                    description: '1 bottle',
+                    metricServingAmount: 591,
+                    metricServingUnit: 'ml',
+                    calories: 140,
+                }),
+            ],
+        });
+
+        await lane.persistFatSecretHits([hit]);
+
+        const servingWrite = mockPrisma.fatSecretServing.upsert.mock.calls[0][0];
+        expect(servingWrite.create.grams).toBe(591); // 591 ml * 1.0
+        expect(servingWrite.create.volumeMl).toBe(591); // raw ml still retained
+    });
 });
 
 // ============================================================

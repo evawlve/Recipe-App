@@ -19,6 +19,74 @@ export function getServingType(label: string): 'weight' | 'volume' | 'count' {
   return 'count';
 }
 
+/** Per-100g block as resolveFoodDetails returns it. */
+export interface ResolvedNutritionPer100g {
+  kcal100: number;
+  protein100: number;
+  carbs100: number;
+  fat100: number;
+  fiber100: number;
+  sugar100: number;
+  sodium100: number;
+}
+
+/**
+ * True when a resolved per-100g block carries no nutrition at all.
+ *
+ * resolveFoodDetails starts from an all-zero literal and overwrites it only if
+ * the food row is found AND that row has nutrients, so all-zero is how this
+ * module spells "unknown" — it cannot distinguish that from a genuine zero.
+ */
+export function isDegenerateNutrition(n: ResolvedNutritionPer100g): boolean {
+  return n.kcal100 === 0 && n.protein100 === 0 && n.carbs100 === 0 && n.fat100 === 0;
+}
+
+/**
+ * Per-100g values implied by a line's own billed macros.
+ *
+ * Used when the food row can't supply nutrition. The mapper is authoritative
+ * for the line — it billed these macros off the candidate that actually won —
+ * whereas resolveFoodDetails re-reads the food row, and the two disagree
+ * whenever the row isn't there yet.
+ *
+ * That gap is routine, not exotic: fatsecret hits are written by a background
+ * task (persistFatSecretHits), so the FIRST-EVER sighting of a fatsecret food
+ * resolves against a row that does not exist or is still empty. Measured on
+ * the box: a cold "kohlrabi fritters" returned a correct serving value of 53.5
+ * kcal alongside kcal100 = 0; the very next identical request returned 357.
+ * Since the mobile client rescales portions by multiplying kcal100
+ * (api-contract §4), the user could log a food correctly and then zero it out
+ * just by nudging the portion control.
+ *
+ * per100g * grams == the billed macros by construction, so a portion change
+ * stays exactly consistent with what was shown even when `grams` is itself an
+ * estimate (fatsecret restaurant items with no metric serving, where grams
+ * comes from an energy-density guess). The absolute weight may be approximate;
+ * the ratio is not.
+ *
+ * Returns null when there is nothing to derive from.
+ */
+export function per100gFromBilledMacros(billed: {
+  grams: number;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}): Pick<ResolvedNutritionPer100g, 'kcal100' | 'protein100' | 'carbs100' | 'fat100'> | null {
+  if (!(billed.grams > 0)) return null;
+  if (!(billed.kcal > 0) && !(billed.protein > 0) && !(billed.carbs > 0) && !(billed.fat > 0)) {
+    return null;
+  }
+  const factor = 100 / billed.grams;
+  const round2 = (v: number) => Math.round(v * factor * 100) / 100;
+  return {
+    kcal100: round2(billed.kcal),
+    protein100: round2(billed.protein),
+    carbs100: round2(billed.carbs),
+    fat100: round2(billed.fat),
+  };
+}
+
 export async function resolveFoodDetails(foodId: string, matchedServingDescription?: string | null) {
   let name = '';
   let brandName: string | null = null;
