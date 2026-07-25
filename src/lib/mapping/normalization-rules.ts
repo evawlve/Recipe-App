@@ -624,18 +624,14 @@ const IRREGULAR_PLURALS: Record<string, string> = {
   selves: 'self',
   // Produce
   dice: 'die',  // but "diced" is already stripped as prep
-  // Possessive brand stems ending in a sibilant. Once apostrophes are deleted,
-  // "reese's" arrives here as "reeses", which the -ses rule chops to "rees" —
-  // and "rees" is itself -s-eligible, so the result is NOT a fixed point
-  // ("rees" -> "ree"). Every stored key is currently a fixed point and
-  // cache-coverage.ts:130 relies on that when it re-canonicalizes stored keys,
-  // so a non-fixed-point key would make the coverage metric under-report rows
-  // the cache actually serves. Mapping the whole form to its stem keeps the
-  // invariant. The general fix — guarding the -ses branch so it only fires for
-  // -ss stems (glasses->glass) and strips one s otherwise — also corrects
-  // cheeses->chees, houses->hous and roses->ros, but moves those keys too and
-  // needs its own migration.
-  reeses: 'reese',
+  // The -ses branch below reads a doubled s as the signal that the stem really
+  // ends in -ss. These are the words where that signal is absent but the stem
+  // still is not -se, so the general rule would over-restore an e
+  // ("buses" -> "buse"). Small and closed: English has very few single-s stems.
+  buses: 'bus',
+  gases: 'gas',
+  // ...and the mirror case: a doubled s whose stem is -sse, not -ss.
+  mousses: 'mousse',
 };
 
 /**
@@ -647,7 +643,8 @@ const IRREGULAR_PLURALS: Record<string, string> = {
  * 3. -ies → -y (berries → berry)
  * 4. -ves → -f (leaves → leaf) — handled by irregular map
  * 5. -oes → -o (tomatoes → tomato, potatoes → potato)
- * 6. -ses, -xes, -zes, -ches, -shes → strip -es
+ * 6. -xes, -zes, -ches, -shes and -sses → strip -es (boxes → box, glasses → glass);
+ *    bare -ses → strip -s only, because the stem kept its e (cheeses → cheese)
  * 7. -es (general, word > 4 chars) → strip -es
  * 8. -s (word > 3 chars) → strip -s
  */
@@ -683,8 +680,24 @@ export function singularize(word: string): string {
   }
 
   // -ses, -xes, -zes, -ches, -shes → strip -es
+  //
+  // Stripping two characters is right whenever the -es was added to a stem that
+  // already ended in a sibilant: box->boxes, buzz->buzzes, church->churches,
+  // dish->dishes, glass->glasses. It is wrong for -ses when the singular ends
+  // in -e, because then only the s was added: cheese->cheeses, rose->roses,
+  // house->houses, dose->doses. Chopping two there yields chees / ros / hous /
+  // dos — and those are not even fixed points ("chees" -> "chee"), which
+  // matters because cache-coverage.ts re-canonicalizes stored keys and would
+  // under-report any row whose key moves on a second pass.
+  //
+  // The doubled s is the discriminator: "-sses" means the stem really is -ss,
+  // anything else means the stem is -se. IRREGULAR_PLURALS carries the handful
+  // of words where that signal misleads (buses, gases, mousses).
   if (lower.length > 4 && /(?:ses|xes|zes|ches|shes)$/.test(lower)) {
-    return lower.slice(0, -2);
+    if (lower.endsWith('ses') && !lower.endsWith('sses')) {
+      return lower.slice(0, -1);  // cheeses -> cheese, roses -> rose
+    }
+    return lower.slice(0, -2);    // glasses -> glass, boxes -> box, dishes -> dish
   }
 
   // General -es (word > 4 chars) — but only if the stem looks like a real word
