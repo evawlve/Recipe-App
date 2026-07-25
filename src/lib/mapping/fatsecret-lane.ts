@@ -28,7 +28,7 @@ import {
 import type { UnifiedCandidate } from './gather-candidates';
 import { registerBackgroundTask } from './deferred-hydration';
 import { queryTokenCoverage } from '../search/query-token-coverage';
-import { inferCategoryFromName, categoryDensity } from '../units/density';
+import { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } from '../units/density';
 
 // ============================================================
 // Client Singleton (lazy; unit tests inject their own)
@@ -115,8 +115,19 @@ function servingGramsOf(s: FatSecretApiServing, foodName?: string | null): numbe
         // 1.0 g/ml (water-like) is the right default here rather than a
         // refusal: the ml servings fatsecret reports are overwhelmingly
         // beverages, whose density is within a few percent of water.
+        //
+        // Dry-granule categories are refused outright, because a serving
+        // REPORTED IN ML IS A LIQUID and those densities describe the dry
+        // solid. inferCategoryFromName matches on substrings, so "Oat Milk"
+        // reaches `oats` (0.36 g/ml, dry flakes) and "Almond Nog" reaches
+        // `nut` (0.55) — a 240 ml oat milk would weigh 86 g and its per-100g
+        // would come out ~3x too high. The category is not wrong about the
+        // ingredient, only about the form, and ml tells us the form.
         const category = foodName ? inferCategoryFromName(foodName) : null;
-        const density = (category ? categoryDensity(category) : undefined) ?? 1.0;
+        const usableCategory = category && !DRY_GRANULE_DENSITY_CATEGORIES.has(category)
+            ? category
+            : null;
+        const density = (usableCategory ? categoryDensity(usableCategory) : undefined) ?? 1.0;
         return round2(ml * density);
     }
     return null;

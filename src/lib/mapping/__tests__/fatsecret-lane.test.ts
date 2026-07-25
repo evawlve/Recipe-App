@@ -362,6 +362,51 @@ describe('per-100g derivation', () => {
         expect(per100?.calories).toBeCloseTo(879.12, 1);
     });
 
+    // A serving reported in ml is a liquid, so the dry-solid densities must not
+    // apply — inferCategoryFromName matches substrings and would otherwise send
+    // "Oat Milk" to the 0.36 g/ml density of dry flakes.
+    it.each([
+        ['Oat Milk', 'oats'],
+        ['Almond Nog', 'nut'],
+        ['Vanilla Whey Protein Shake', 'whey'],
+        ['Powder Mix', 'powder'],
+    ])('refuses the dry-granule density for %s (would match %s)', async (name) => {
+        const per100 = lane.derivePer100gFromServings(
+            [
+                serving({
+                    id: 'cup',
+                    description: '1 cup',
+                    metricServingAmount: 240,
+                    metricServingUnit: 'ml',
+                    calories: 120,
+                }),
+            ],
+            name,
+        );
+
+        // 240 ml * 1.0 -> 240 g; 120 / 240 * 100 = 50. Any dry density would
+        // shrink the grams and inflate this well above 50.
+        expect(per100?.calories).toBeCloseTo(50, 1);
+    });
+
+    it('still applies a liquid-appropriate category density', async () => {
+        const per100 = lane.derivePer100gFromServings(
+            [
+                serving({
+                    id: 'cup',
+                    description: '1 cup',
+                    metricServingAmount: 240,
+                    metricServingUnit: 'ml',
+                    calories: 120,
+                }),
+            ],
+            'Whole Milk', // dairy 1.03 — not a dry granule, so it survives
+        );
+
+        // 240 * 1.03 = 247.2 g; 120 / 247.2 * 100 = 48.54
+        expect(per100?.calories).toBeCloseTo(48.54, 1);
+    });
+
     it('still prefers a gram-bearing serving over an ml one', async () => {
         const per100 = lane.derivePer100gFromServings(
             [
