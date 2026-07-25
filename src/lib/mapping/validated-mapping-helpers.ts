@@ -454,6 +454,10 @@ export async function saveValidatedMapping(
         // with that gate's class ID. Pass ONLY for the primary save — an alias
         // save being rejected must not relabel the line it was derived from.
         telemetry?: FunnelSink;
+        // Funnel fix 4: this pick was admitted BELOW the 0.85 confidence gate,
+        // so it may create a cache row but must never overwrite one. See the
+        // insert-only guard in the body.
+        insertOnly?: boolean;
     }
 ): Promise<void> {
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
@@ -637,6 +641,25 @@ export async function saveValidatedMapping(
             where: { normalizedForm },
             select: { offBarcode: true, fdcId: true, fsId: true, foodName: true, validatedBy: true, aiConfidence: true },
         });
+
+        // Insert-only guard (funnel fix 4). A pick admitted BELOW the 0.85
+        // confidence gate may create a cache row but must never overwrite one:
+        // something the cascade was 78% sure of has no business evicting a row
+        // a more confident pick already earned. This is the whole blast-radius
+        // bound on conditional admission — it is why relaxing the gate cannot
+        // regress a currently-passing lookup, and it is the guarantee the
+        // abandoned PR #143 lacked when it repointed the eight most-used
+        // generic keys in the cache.
+        if (options?.insertOnly && existing) {
+            logger.info('validated_mapping.sub_threshold_no_displace', {
+                rawIngredient,
+                normalizedForm,
+                keptFoodName: existing.foodName,
+                rejectedFoodName: mapping.foodName,
+            });
+            markSaveRejected(options?.telemetry, 'sub_threshold_no_displace');
+            return;
+        }
 
         // Human-row write-guard (PR D pt3): rows stamped validatedBy=
         // 'human-triage' are triage repoints — a fresh AI resolution must not

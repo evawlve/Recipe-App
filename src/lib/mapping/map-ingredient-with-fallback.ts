@@ -2693,6 +2693,7 @@ export async function mapIngredientWithFallback(
                 persistCookingModifier: aiCookingModifier,
                 nutrientsPer100g: savedNutrientsPer100g,
                 expectedNutrition,
+                insertOnly: subThreshold.admit,
             });
 
             // Also save AI synonyms as aliases to enable future cache hits
@@ -2731,6 +2732,9 @@ export async function mapIngredientWithFallback(
                     persistCookingModifier: aiCookingModifier,
                     nutrientsPer100g: savedNutrientsPer100g,
                     expectedNutrition,
+                    // An alias of a sub-threshold pick inherits the guarantee:
+                    // it may seed a new key, never overwrite an existing one.
+                    insertOnly: subThreshold.admit,
                 }).catch(() => { }); // Best effort, ignore duplicates
             }
         } else if (selectionReason !== 'normalized_cache_hit') {

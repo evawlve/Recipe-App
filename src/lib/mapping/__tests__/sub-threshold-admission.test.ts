@@ -92,91 +92,89 @@ describe('class 1, cross-brand substitution — the reason not to lower the flat
     });
 });
 
-describe('KNOWN COVERAGE LIMIT: single-word chain brands are not reached', () => {
-    // hasDecisiveBrandContext qualifies a single-token brand only when it sits
-    // next to a token in BRAND_PRODUCT_CONTEXT_TOKENS, which is a
-    // SUPPLEMENT vocabulary (protein/whey/casein/bar/creatine/...). So
-    // "chipotle burrito" and "dunkin munchkins" fall out here rather than at
-    // the brand-agreement check, and this fix does not convert them.
-    //
-    // This is deliberate, not an oversight. The same predicate gates the
-    // brand prefix in deriveMappingCacheKey, and that shared use is what
-    // guarantees an admitted pick cannot address a bare generic cache key.
-    // Loosening it for admission alone would forfeit the guarantee and
-    // reintroduce the failure that closed PR #143. Widening restaurant
-    // coverage means widening the KEY predicate, which is its own change with
-    // its own blast radius.
-    it.each(['chipotle burrito bowl', 'chilis chips and salsa', 'wendys frosty'])(
-        'declines "%s" for want of decisive brand context', (rawLine) => {
-            const brand = rawLine.split(' ')[0];
-            const r = assess({
-                rawLine, confidence: 0.82, matchedBrand: brand,
-                foodName: 'Some Food', brandName: 'Some Brand',
-            });
-            expect(r.admit).toBe(false);
-            expect(r.reason).toBe('no_decisive_brand');
-        });
-
-    it('also misses a brand whose lexicon form does not tokenize onto the record', () => {
-        // "a and w root beer" -> Root Beer [A&W] at 0.81 was a confirmed-good
-        // discard in the funnel read, and it still is. The brand is decisive
-        // (multi-word), but candidateMatchesTargetBrand tests the FIRST brand
-        // token — "a" — against ["root","beer","a&w"]. Punctuation-collapsed
-        // brand forms would need a normalization change in a helper the
-        // brand_mismatch gate and the reranker also depend on.
-        const r = assess({
-            rawLine: 'a and w root beer',
-            confidence: 0.81,
-            matchedBrand: 'a and w',
-            foodName: 'Root Beer',
-            brandName: 'A&W',
-            nutrientsPer100g: { kcal: 46, protein: 0, carbs: 12.4, fat: 0 },
-        });
-        expect(r.admit).toBe(false);
-        expect(r.reason).toBe('record_lacks_query_brand');
-    });
-
-    it('DOES reach a single-word brand next to a supplement product word', () => {
-        const r = assess({
-            rawLine: 'ryse protein powder',
-            confidence: 0.8,
-            matchedBrand: 'ryse',
-            foodName: 'Loaded Protein',
-            brandName: 'RYSE',
-        });
+describe('unbranded near-misses — the population this actually converts', () => {
+    // Measured: warming 369 real seeds through a brand-REQUIRING draft of this
+    // fix admitted ZERO rows, because the under-gate population is
+    // overwhelmingly unbranded. These are the real sub-0.85 picks that batch
+    // produced, at the confidence it produced them — including two the funnel
+    // read had already confirmed good and discarded.
+    it.each<[string, string, number]>([
+        ['ground beef 90/10', 'Ground Beef 85% Lean 15% Fat', 0.78],
+        ['ground turkey', '85% lean ground turkey', 0.83],
+        ['canned tuna in water', 'Fish, tuna, white, canned in water, drained solids', 0.84],
+        ['honey bunches of oats', 'Honey Bunches of Oats', 0.82],
+        ['shrimp and grits', 'Shrimp and Grits', 0.75],
+        ['baked salmon', 'Baked or Broiled Salmon', 0.83],
+    ])('admits "%s" -> %s at %s', (rawLine, foodName, confidence) => {
+        const r = assess({ rawLine, confidence, isBranded: false, foodName });
         expect(r.admit).toBe(true);
     });
-});
 
-describe('classes 2 and 3 are excluded wholesale by requiring a brand', () => {
-    // Composite-dish undercount and product-form slip are overwhelmingly
-    // unbranded queries, so the brand requirement removes them as a population
-    // rather than trying to detect each one.
-    it.each<[string, string]>([
-        ['spaghetti and meatballs', 'Meatballs'],
-        ['meyer lemon', 'Lemon Syrup'],
-        ['injera', 'Injera Crisps'],
-        ['mac and cheese', 'Macaroni, Dry'],
-        ['restaurant bbq ribs', 'Brioche Bun'],
-    ])('blocks the unbranded query "%s"', (rawLine, foodName) => {
-        const r = assess({ rawLine, confidence: 0.82, isBranded: false, foodName });
-        expect(r.admit).toBe(false);
-        expect(r.reason).toBe('no_decisive_brand');
-    });
-
-    it('blocks an unbranded whole food even when a lexicon brand shares its name', () => {
+    it('admits an unbranded whole food whose name collides with a grocery chain', () => {
         // detectBrandInQuery reports "sprouts" (Sprouts Farmers Market) here.
-        // A bare matchedBrand check would admit it — and an admitted pick can
-        // address a bare generic cache key, which is exactly the blast radius
-        // that sank PR #143.
+        // hasDecisiveBrandContext declines it, so the query asserts no brand and
+        // the record has nothing to contradict.
         const r = assess({
             rawLine: 'brussels sprouts',
             confidence: 0.82,
             matchedBrand: 'sprouts',
             foodName: 'Brussels Sprouts',
         });
+        expect(r.admit).toBe(true);
+    });
+});
+
+describe('the insert-only guarantee is what makes unbranded admission safe', () => {
+    // The admission decision knows nothing about incumbents; the guarantee is
+    // enforced by `insertOnly` in saveValidatedMapping (covered in
+    // validated-mapping-save-gates.test.ts). What matters here is that an
+    // admission is a plain `{admit: true}` carrying no exemption of its own —
+    // the mapper passes `insertOnly: subThreshold.admit` on both the primary
+    // save and its aliases, so every admitted pick may SEED a key and none may
+    // overwrite one.
+    it('admits with no additional exemption attached', () => {
+        const r = assess({
+            rawLine: 'ground turkey',
+            confidence: 0.83,
+            isBranded: false,
+            foodName: '85% lean ground turkey',
+        });
+        expect(r).toEqual({ admit: true });
+    });
+});
+
+describe('KNOWN COVERAGE LIMIT: single-word chain brands are not adjudicated', () => {
+    // hasDecisiveBrandContext qualifies a single-token brand only next to a
+    // token in BRAND_PRODUCT_CONTEXT_TOKENS, which is a SUPPLEMENT vocabulary
+    // (protein/whey/casein/bar/creatine/...). So "chipotle burrito" reads as
+    // UNBRANDED here and is admitted on the insert-only guarantee rather than
+    // being checked for cross-brand substitution.
+    //
+    // That is a weaker check than these queries deserve, but it is bounded: such
+    // a pick can only seed a key that had no row. Tightening it means widening a
+    // predicate that the brand_mismatch gate and deriveMappingCacheKey both
+    // depend on — its own change, with its own blast radius.
+    it('admits "chipotle burrito bowl" because the brand never registers as asserted', () => {
+        const r = assess({
+            rawLine: 'chipotle burrito bowl',
+            confidence: 0.82,
+            matchedBrand: 'chipotle',
+            foodName: 'Burrito Bowl',
+            brandName: 'Pollen + Grace',
+        });
+        expect(r.admit).toBe(true);
+    });
+
+    it('DOES adjudicate a single-word brand next to a supplement product word', () => {
+        const r = assess({
+            rawLine: 'ryse protein powder',
+            confidence: 0.8,
+            matchedBrand: 'ryse',
+            foodName: 'Optimum Nutrition Whey',
+            brandName: 'Optimum Nutrition',
+        });
         expect(r.admit).toBe(false);
-        expect(r.reason).toBe('no_decisive_brand');
+        expect(r.reason).toBe('record_lacks_query_brand');
     });
 });
 

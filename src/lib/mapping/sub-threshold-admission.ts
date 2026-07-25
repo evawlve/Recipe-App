@@ -20,32 +20,38 @@
  *   3. product-form slip — `meyer lemon` -> lemon syrup, `injera` -> crisps,
  *      `mac and cheese` -> dry raw macaroni.
  *
- * The observation that makes class 1 tractable: **good rows almost always have
- * the record's brand matching a brand token in the query.** So admission is
- * restricted to queries that decisively name a brand AND resolve to a record
- * carrying it. That admits the clean half (`a and w root beer` -> Root Beer
- * [A&W] at 0.81, `dymatize casein` -> Elite Casein [Dymatize] at 0.83) and
- * rejects every named member of class 1. Classes 2 and 3 are overwhelmingly
- * unbranded queries, so requiring a brand excludes them wholesale rather than
- * by trying to detect them.
+ * Class 1 is handled directly: when the query decisively names a brand, the
+ * record must carry it. Classes 2 and 3 are not detectable this way — and,
+ * measured, they do not need to be.
  *
- * ## Why the brand requirement is a blast-radius guarantee, not just a filter
+ * ## The blast-radius guarantee is insert-only, NOT the brand requirement
  *
- * This is the lesson of the abandoned fix 3 (PR #143), which widened a save
- * gate and silently repointed the eight most-used generic keys in the cache
- * (`egg`, `broccoli`, `chicken`, `salmon`, ...), breaking five golden cases.
- * The waiver had no structural bound on WHICH rows it could touch.
+ * A first version of this fix required a brand on every admission, reasoning
+ * that `deriveMappingCacheKey` prefixes the key with the brand under the same
+ * `hasDecisiveBrandContext` predicate, so an admitted pick could never address
+ * a bare generic key. The guarantee was sound. The fix was useless: warming 369
+ * real seeds through it admitted **zero** rows, because the under-gate
+ * population is overwhelmingly UNBRANDED — `ground beef 90/10` (0.78),
+ * `ground turkey` (0.83), `canned tuna in water` (0.84), `shrimp and grits`
+ * (0.75), `blueberry pancakes` (0.64). The funnel's own confirmed-good discards
+ * (`ground turkey` -> 85% lean ground turkey, `baked salmon` -> Baked or
+ * Broiled Salmon) are exactly the rows a brand requirement excludes.
  *
- * Here there is one. `deriveMappingCacheKey` prefixes the cache key with the
- * brand under exactly this predicate — `hasDecisiveBrandContext` — and when it
- * declines to prefix, it is because the brand tokens are already present in the
- * key. Either way an admitted pick's key provably CONTAINS a brand token, so it
- * can never be the bare generic key (`egg`, `chicken`) that the golden set
- * asserts on. Admission cannot displace those rows because it cannot address
- * them.
+ * So the requirement is replaced with the guarantee it was standing in for.
+ * The failure that closed fix 3 (PR #143) was DISPLACEMENT: a widened gate
+ * repointed the eight most-used generic keys in the cache (`egg`, `broccoli`,
+ * `chicken`, `salmon`, ...) and broke five golden cases. But the drops this fix
+ * converts are cache MISSES — by construction there is no incumbent to lose.
  *
- * Everything admitted still faces all seven save gates in
- * `saveValidatedMapping` — this only decides what gets offered to them.
+ * Hence `insertOnly`: an admitted sub-threshold pick may CREATE a cache row and
+ * may never OVERWRITE one. A pick the cascade was only 78% sure of cannot
+ * evict a row that some higher-confidence pick already earned, so no currently-
+ * passing lookup can regress. The worst case is a new row on a key that
+ * previously had none — still subject to all seven save gates, and visible to
+ * the eval gate.
+ *
+ * Everything admitted still faces those gates; this only decides what gets
+ * offered to them.
  */
 
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
@@ -84,7 +90,6 @@ export interface SubThresholdAdmissionResult {
     reason?:
     | 'above_threshold'
     | 'below_floor'
-    | 'no_decisive_brand'
     | 'record_lacks_query_brand'
     | 'degenerate_macros'
     | 'no_macros';
@@ -112,13 +117,13 @@ export function assessSubThresholdAdmission(
     const brand = brandDetection?.isBranded
         ? brandDetection.matchedBrand?.trim().toLowerCase()
         : undefined;
-    if (!brand || !hasDecisiveBrandContext(rawLine, brand)) {
-        return { admit: false, reason: 'no_decisive_brand' };
-    }
+    const queryAssertsBrand = !!brand && hasDecisiveBrandContext(rawLine, brand);
 
-    // Class 1, cross-brand substitution: the query names a brand and the record
-    // is a DIFFERENT company's product.
-    if (!candidateMatchesTargetBrand(brandName ?? undefined, foodName, brand)) {
+    // Class 1, cross-brand substitution: when the query DOES name a brand, the
+    // record must be that company's product — `buffalo wild wings traditional
+    // wings` must not cache Zaxby's. An unbranded query asserts no brand and so
+    // has nothing to contradict; it is admitted on the insert-only guarantee.
+    if (queryAssertsBrand && !candidateMatchesTargetBrand(brandName ?? undefined, foodName, brand!)) {
         return { admit: false, reason: 'record_lacks_query_brand' };
     }
 
