@@ -890,10 +890,29 @@ export async function saveValidatedMapping(
             aiConfidence: clampedConfidence,
         });
     } catch (error) {
+        // The funnel optimistically marks a line 'saved' before this write. If the
+        // write throws and we return quietly, telemetry reports a conversion for a
+        // row that does not exist — which is exactly what happened to warm batch 01:
+        // it reported 92 saves, wrote 81 rows, and the 11-row gap was 11 FK failures
+        // that no metric could see. Every downstream number (conversion, coverage
+        // lift, the campaign's own gate) inherits that lie, so the failure has to be
+        // reported here or the information is destroyed at write time.
+        //
+        // P2003 is Prisma's foreign-key violation. The FatSecret lane persists its
+        // FatSecretFood parents in a background task, so a first-sighting fs winner
+        // can reach this write before its parent row exists — the dominant cause by
+        // a wide margin (31.4% of batch 01's FatSecret saves). It is split out from
+        // other save errors because the two need completely different fixes.
+        const isForeignKeyViolation = (error as { code?: string }).code === 'P2003';
+        markSaveRejected(options?.telemetry, isForeignKeyViolation ? 'persist_failed_fk' : 'persist_failed');
         logger.error('validated_mapping.save_error', {
             error: (error as Error).message,
+            code: (error as { code?: string }).code,
+            foreignKeyViolation: isForeignKeyViolation,
             rawIngredient,
             normalizedForm,
+            source: mapping.source,
+            foodId: mapping.foodId,
         });
     }
 }
