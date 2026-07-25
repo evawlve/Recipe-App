@@ -12,15 +12,22 @@
  *   - 'healthy' classes are reported in a SEPARATE table from real defects;
  *   - every class shows DISTINCT KEYS alongside events, and is ranked by distinct
  *     keys (one noisy key repeated 400 times is one problem, not four hundred);
- *   - every class shows the hadIncumbent split, because a gate that can only fire
- *     with an incumbent proves itself by having zero cold hits;
+ *   - every class shows the hadIncumbent split as CORROBORATION for the claim that a
+ *     gate needs an incumbent — not as proof of it. The split is measured at report
+ *     time and cannot reproduce a brand-prefixed write key, so it is wrong in both
+ *     directions on individual rows; the proof is reading the gate. A large cold
+ *     count on an incumbent-only gate is a prompt to go and re-read it;
  *   - residual buckets and truly unclassified rows are reported as FRONTIER with
- *     their raw dropReasons, so new shapes surface instead of hiding in a catch-all.
+ *     their raw dropReasons, so new shapes surface instead of hiding in a catch-all;
+ *   - `inputFidelity` states what the input SHAPE cannot show — panel-less rows leave
+ *     Atwater-based detector arms dark, so those zeros are not findings.
  *
- * Incumbent lookup goes through canonicalizeCacheKey (see failure-classes.ts,
- * finding 2): MappingEventLog.normalizedForm is PRE-canonicalization, so joining
- * it straight to FoodMapping.normalizedForm reports "chicken breast", "eggs" and
- * "pretzels" as uncached and inverts the conclusion. Lookups are batched.
+ * Incumbent lookup goes through the derived cache key (see failure-classes.ts,
+ * finding 2 and deriveFunnelCacheKey): MappingEventLog.normalizedForm is
+ * PRE-canonicalization, so joining it straight to FoodMapping.normalizedForm reports
+ * "chicken breast", "eggs" and "pretzels" as uncached and inverts the conclusion —
+ * and canonicalizeCacheKey alone still missed the identity discriminators ("3 egg
+ * whites" -> "egg white", not "egg"). Lookups are batched.
  *
  * Run (from repo root):
  *   # from a warm-cache results file (no DB needed if you pass --no-incumbent)
@@ -38,9 +45,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { FunnelStage } from '../../src/lib/mapping/funnel';
-// NOTE: canonicalizeCacheKey is applied inside makeFunnelRow (failure-classes.ts),
-// which is the ONLY place row.cacheKey is produced — so attachIncumbents below is
-// guaranteed to join on the canonical key rather than on the raw logged form.
+// NOTE: the cache key is derived inside makeFunnelRow (failure-classes.ts), which is
+// the ONLY place row.cacheKey is produced — so attachIncumbents below is guaranteed
+// to join on the derived key rather than on the raw logged form. That key is
+// deriveMappingCacheKey minus its brand-prefix step; keyFidelityOf measures how
+// exposed each row is to the difference, and the report prints the total.
 import {
     FAILURE_CLASSES,
     FUNNEL_CAVEATS,
@@ -49,6 +58,8 @@ import {
     UNCLASSIFIED,
     classifyRow,
     classStages,
+    fromDbBlindSpots,
+    keyFidelityOf,
     makeFunnelRow,
     probeLineFor,
     type FailureClass,
@@ -201,8 +212,12 @@ export async function readFromDb(
 }
 
 /**
- * Populate hadIncumbent for every row, batched. THE CANONICALIZATION IS LOAD-BEARING:
- * without it "chicken breast" (event log) never finds "breast chicken" (cache).
+ * Populate hadIncumbent for every row, batched. THE KEY DERIVATION IS LOAD-BEARING:
+ * without it "chicken breast" (event log) never finds "breast chicken" (cache), and
+ * with canonicalizeCacheKey alone "3 egg whites" never finds "egg white". Read the
+ * result as evidence about a CLASS, never as per-row history — see the caveats
+ * incumbent-is-measured-now-not-at-event-time and
+ * cachekey-is-the-read-key-not-always-the-write-key.
  */
 export async function attachIncumbents(prisma: PrismaLike, rows: FunnelRow[], chunkSize = 500): Promise<number> {
     const keys = Array.from(new Set(rows.map(r => r.cacheKey).filter(k => k.length > 0)));
@@ -240,11 +255,33 @@ export interface ClassReport {
     examples: { rawLine: string; cacheKey: string; foodName: string | null; brandName: string | null; grams: number | null; totalKcal: number | null; confidence: number | null; dropReason: string | null }[];
 }
 
+/**
+ * What THIS input shape cannot see. Reported so a zero is never read as a clean
+ * bill of health: a detector arm that cannot fire produces the same 0 as a defect
+ * class that genuinely has no members.
+ */
+export interface InputFidelityReport {
+    /** Rows carrying a per-100g macro panel. 0 means --from-db (or a panel-less warm file). */
+    rowsWithPanel: number;
+    /** Detector arms that cannot fire without a panel, straight from the registry. */
+    inertDetectors: { classId: string; exemplar: string; why: string }[];
+    /** Rows whose derived key needed an identity discriminator or a dup-collapse. */
+    discriminatorAdjustedRows: number;
+    /** Rows naming white/yolk/cooked/whole — where the key hinges on reproducing the parse. */
+    discriminatorTokenRows: number;
+    /** A few of those rows, key included, so the reader can spot-check the join. */
+    discriminatorExamples: { rawLine: string; cacheKey: string; canonicalOnly: string }[];
+    /** Printed verbatim; every entry is a limit of the run, not a finding. */
+    warnings: string[];
+}
+
 export interface ClassifyReport {
     at: string;
     inputLabel: string;
     rowCount: number;
     stageCounts: Record<string, number>;
+    /** Limits of this input shape — panel-less rows, inert detectors, key-fidelity exposure. */
+    inputFidelity: InputFidelityReport;
     /** Rows matching a class whose fixKind is not 'healthy' and which is not residual. */
     defectEvents: number;
     healthyEvents: number;
@@ -274,6 +311,62 @@ function emptyClassReport(cls: FailureClass | null, classId: string): ClassRepor
         incumbentUnknown: 0,
         dropReasons: [],
         examples: [],
+    };
+}
+
+/**
+ * Measure what this batch of rows cannot show, before any class is counted.
+ *
+ * Two independent blind spots, both silent before 2026-07-25:
+ *   1. NO MACRO PANEL. MappingEventLog stores grams + totalKcal and no per-100g
+ *      macros, so Atwater-based arms are dark. corrupt-panel-served's n-mq-27 lemon
+ *      (383 kcal/100g, physically possible, only Atwater catches it) then classifies
+ *      as cache-hit-healthy — a corrupt panel a user was billed from, counted as
+ *      clean. The impossible-kcal arm still works (effectiveKcalPer100g inverts
+ *      grams+totalKcal exactly), so this is a partial loss, and it is enumerated
+ *      from the registry rather than described in prose.
+ *   2. KEY FIDELITY. row.cacheKey is deriveMappingCacheKey minus the brand-prefix
+ *      step. Rows naming white/yolk/cooked/whole are the ones whose key depends on
+ *      reproducing the pipeline's parse, so they are the likeliest false cold reads.
+ */
+export function measureInputFidelity(rows: FunnelRow[]): InputFidelityReport {
+    const rowsWithPanel = rows.filter(r => r.kcalPer100g != null).length;
+    const fid = rows.map(r => ({ row: r, f: keyFidelityOf(r) }));
+    const adjusted = fid.filter(x => x.f.discriminatorApplied);
+    const tokenRows = fid.filter(x => x.f.carriesDiscriminatorToken);
+    const inertDetectors = fromDbBlindSpots().map(s => ({ classId: s.classId, exemplar: s.exemplar, why: s.why }));
+
+    const warnings: string[] = [];
+    if (rows.length > 0 && rowsWithPanel === 0) {
+        warnings.push(`NO PER-100g MACRO PANEL on any of ${rows.length} row(s) — this is the --from-db shape `
+            + '(MappingEventLog stores grams + totalKcal only). kcal/100g is inverted exactly from grams and '
+            + 'totalKcal, so the impossible-kcal arm still fires, but every ATWATER-based arm is DARK here. '
+            + `${inertDetectors.length} declared blind spot(s) below: a 0 in those classes is NOT evidence of `
+            + 'absence. Re-run against a warm JSONL (which carries per100g) to close them.');
+        for (const s of inertDetectors) {
+            warnings.push(`  inert here: ${s.classId} on "${s.exemplar}" — ${s.why}`);
+        }
+    } else if (rows.length > 0 && rowsWithPanel < rows.length) {
+        warnings.push(`${rows.length - rowsWithPanel} of ${rows.length} row(s) carry no per-100g panel; `
+            + 'Atwater-based detector arms cannot fire on those. See inputFidelity.inertDetectors.');
+    }
+    if (tokenRows.length > 0 || adjusted.length > 0) {
+        warnings.push(`KEY FIDELITY: ${adjusted.length} row(s) needed an identity discriminator or a dup-collapse `
+            + `to reach the real FoodMapping key, and ${tokenRows.length} row(s) name white/yolk/cooked/whole. `
+            + 'Those keys are reproduced from parseIngredientLine(rawLine); where the pipeline saw a different '
+            + 'parse (a DB-backed synonym substitution) or prefixed a decisively-named brand, hadIncumbent for '
+            + 'these rows can read false wrongly. Check them before concluding a key was cold.');
+    }
+
+    return {
+        rowsWithPanel,
+        inertDetectors,
+        discriminatorAdjustedRows: adjusted.length,
+        discriminatorTokenRows: tokenRows.length,
+        discriminatorExamples: adjusted.slice(0, 5).map(x => ({
+            rawLine: x.row.rawLine, cacheKey: x.row.cacheKey, canonicalOnly: x.f.canonicalOnly,
+        })),
+        warnings,
     };
 }
 
@@ -356,6 +449,7 @@ export function aggregate(rows: FunnelRow[], opts: { inputLabel: string; example
         inputLabel: opts.inputLabel,
         rowCount: rows.length,
         stageCounts,
+        inputFidelity: measureInputFidelity(rows),
         defectEvents: sum(defects),
         healthyEvents: sum(healthy),
         residualEvents: sum(frontier),
@@ -399,6 +493,14 @@ function printReport(report: ClassifyReport): void {
     console.log(`defect events=${report.defectEvents}  healthy=${report.healthyEvents}  `
         + `frontier(residual)=${report.residualEvents}  unclassified=${report.unclassifiedEvents} `
         + `(${(report.unclassifiedRate * 100).toFixed(2)}%)`);
+
+    if (report.inputFidelity.warnings.length > 0) {
+        console.log('\n!! WHAT THIS INPUT CANNOT SHOW (a 0 below is not proof of absence):');
+        for (const w of report.inputFidelity.warnings) console.log(`  ${w}`);
+        for (const e of report.inputFidelity.discriminatorExamples) {
+            console.log(`     key e.g. "${e.rawLine}" -> "${e.cacheKey}" (canonicalize-only would read "${e.canonicalOnly}")`);
+        }
+    }
 
     printTable('DEFECTS (ranked by DISTINCT KEYS, not events)', report.defects);
     printTable('HEALTHY / BY DESIGN (counted so they stop looking like defects)', report.healthy);
@@ -529,6 +631,9 @@ export function renderDoc(): string {
         L.push(`- status: ${c.status}${c.residual ? ' · **residual bucket** (hits are frontier, not a diagnosis)' : ''}`);
         L.push(`- discovered: ${c.discoveredAt}`);
         if (c.dropClasses?.length) L.push(`- owns dropReason classes: ${c.dropClasses.map(d => `\`${d}\``).join(', ')}`);
+        for (const spot of c.fromDbBlind ?? []) {
+            L.push(`- **\`--from-db\` blind spot** on \`${spot.exemplar}\`: ${spot.why}`);
+        }
         if (c.goldenCaseIds.length) L.push(`- golden pins: ${c.goldenCaseIds.join(', ')}`);
         if (c.fixPRs.length) L.push(`- fix PRs: ${c.fixPRs.map(n => `#${n}`).join(', ')}`);
         L.push('');

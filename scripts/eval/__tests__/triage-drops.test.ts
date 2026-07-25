@@ -21,26 +21,32 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
+    APPLY_REPOINTS_TARGET_RE,
     COARSE_BY_CLASS_ID,
     DROP_STAGES,
+    FlagError,
+    applyInputLimit,
     buildReport,
     coarseClassOf,
     decideVerdict,
     deriveEvidence,
+    isApplyRepointsTarget,
     isDropStage,
     parseInputText,
+    parseIntFlag,
     probeQueryFor,
     readInputRows,
     recordToInput,
     renderMarkdown,
     resolveOutBase,
     runProbes,
+    scopeDisclosure,
     selectDrops,
     type DossierProbes,
     type ProbeSet,
     type TriageDossier,
 } from '../triage-drops';
-import { FAILURE_CLASSES, classById, makeFunnelRow, type FunnelRow, type FunnelRowInput } from '../failure-classes';
+import { FAILURE_CLASSES, classById, classStages, makeFunnelRow, type FunnelRow, type FunnelRowInput } from '../failure-classes';
 import type { RetrievalProbe } from '../../debug-retrieval-probe';
 import type { FilterTrace } from '../../filter-trace-probe';
 
@@ -632,6 +638,316 @@ describe('decideVerdict', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 6b. Repoint targets must be in a vocabulary apply-repoints.ts can consume
+// ---------------------------------------------------------------------------
+
+describe('repoint target vocabulary', () => {
+    /** Build a verdict for TOKEN_DROPPED where the probe found exactly this candidate. */
+    function verdictWithCandidate(id: string, name = "Michelangelo's Chicken Parmesan") {
+        const d = dossierOf(TOKEN_DROPPED);
+        const probes: DossierProbes = {
+            retrieval: retrievalProbe({ total: 2 }),
+            filterTrace: filterTrace({ gathered: 2, survivors: 1, candidates: [{ id, name, kept: true }] }),
+        };
+        const ev = deriveEvidence(d, probes, 'q');
+        expect(ev.betterCandidate?.id).toBe(id);   // the probe really did find it
+        return decideVerdict({ dossier: d, cls: classById(d.classId) ?? null, evidence: ev });
+    }
+
+    it('accepts exactly off_<barcode> and fdc_<digits>', () => {
+        expect(isApplyRepointsTarget('off_0840609112113')).toBe(true);
+        expect(isApplyRepointsTarget('fdc_171705')).toBe(true);
+        // apply-repoints.ts:102 does parseInt(target.slice(4)) for ANY non-off_ target,
+        // so each of these would resolve to an unrelated FdcFood (or NaN) and upsert.
+        for (const bad of ['fs_12345', 'ai_9', 'fdc_abc', 'fdc_', 'off_', 'x', '', 'OFF_123']) {
+            expect(isApplyRepointsTarget(bad)).toBe(false);
+        }
+        expect(isApplyRepointsTarget(null)).toBe(false);
+        expect(isApplyRepointsTarget(undefined)).toBe(false);
+    });
+
+    it('reports an off_ target as the repoint target, as before', () => {
+        const v = verdictWithCandidate('off_right');
+        expect(v).toMatchObject({ action: 'repoint', targetId: 'off_right', withheldTargetId: null });
+    });
+
+    it('WITHHOLDS an fs_ target instead of one apply-repoints.ts would mis-resolve', () => {
+        const v = verdictWithCandidate('fs_12345');
+        expect(v.targetId).toBeNull();
+        expect(v.withheldTargetId).toBe('fs_12345');
+        // the record is not lost — it is named in the note, with the reason
+        expect(v.note).toContain('REPOINT TARGET WITHHELD');
+        expect(v.note).toContain('fs_12345');
+        expect(v.note).toContain("Michelangelo's Chicken Parmesan");
+        expect(v.note).toContain('slice(4)');
+        expect(v.confirmed).toBe(true);
+    });
+
+    it('never emits a targetId outside the accepted vocabulary, for ANY class or candidate shape', () => {
+        const ids = ['off_0840609112113', 'fdc_171705', 'fs_12345', 'ai_estimate_1', 'fdc_x', 'weird'];
+        for (const cls of FAILURE_CLASSES) {
+            for (const id of ids) {
+                const d = { ...dossierOf(TOKEN_DROPPED), classId: cls.id };
+                const probes: DossierProbes = {
+                    retrieval: retrievalProbe({ total: 2 }),
+                    filterTrace: filterTrace({
+                        gathered: 2, survivors: 1,
+                        candidates: [{ id, name: "Michelangelo's Chicken Parmesan", kept: true }],
+                    }),
+                };
+                const v = decideVerdict({ dossier: d, cls, evidence: deriveEvidence(d, probes, 'q') });
+                if (v.targetId !== null) {
+                    expect(v.targetId).toMatch(APPLY_REPOINTS_TARGET_RE);
+                }
+                if (v.action === 'repoint') expect(v.withheldTargetId).toBeNull();
+            }
+        }
+    });
+
+    it('COUNTS withheld targets in the report and the run log', () => {
+        const sel = selectDrops(rows(TOKEN_DROPPED), { perClassCap: 25 });
+        const probes: DossierProbes = {
+            retrieval: retrievalProbe({ total: 2 }),
+            filterTrace: filterTrace({
+                gathered: 2, survivors: 1,
+                candidates: [{ id: 'fs_12345', name: "Michelangelo's Chicken Parmesan", kept: true }],
+            }),
+        };
+        for (const d of sel.selected) d.evidence = deriveEvidence(d, probes, 'q');
+        const r = buildReport(sel, { inputLabel: 'fixture', mode: 'probes', concurrency: 1, perClassCap: 25 });
+        expect(r.withheldTargetCount).toBe(1);
+        const line = r.log.find(l => l.includes('WITHHELD'))!;
+        expect(line).toContain('1 repoint suggestion(s) WITHHELD');
+        expect(line).toContain('fs_');
+        expect(line).toContain('apply-repoints.ts');
+        expect(renderMarkdown(r)).toContain('repoint target(s) withheld');
+    });
+
+    it('reports zero withheld when every target was expressible', () => {
+        const sel = selectDrops(rows(TOKEN_DROPPED), { perClassCap: 25 });
+        for (const d of sel.selected) d.evidence = deriveEvidence(d, null, 'q');
+        const r = buildReport(sel, { inputLabel: 'fixture', mode: 'no-probes', concurrency: 1, perClassCap: 25 });
+        expect(r.withheldTargetCount).toBe(0);
+        expect(r.log.some(l => l.includes('WITHHELD'))).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 6c. Flag validation — a typo must not manufacture a clean-looking empty run
+// ---------------------------------------------------------------------------
+
+describe('parseIntFlag', () => {
+    it('returns the fallback when the flag was not passed', () => {
+        expect(parseIntFlag('--concurrency', undefined, 4, 1)).toBe(4);
+    });
+
+    it('accepts a well-formed integer, with surrounding whitespace', () => {
+        expect(parseIntFlag('--concurrency', '8', 4, 1)).toBe(8);
+        expect(parseIntFlag('--limit', ' 250 ', 0, 1)).toBe(250);
+    });
+
+    it('REFUSES a non-numeric value rather than degrading (--limit abc gave a 0-row report)', () => {
+        expect(() => parseIntFlag('--limit', 'abc', 0, 1)).toThrow(FlagError);
+        expect(() => parseIntFlag('--limit', 'abc', 0, 1)).toThrow(/must be an integer, got "abc"/);
+        expect(() => parseIntFlag('--limit', '', 0, 1)).toThrow(FlagError);
+        expect(() => parseIntFlag('--limit', '1.5', 0, 1)).toThrow(FlagError);
+        expect(() => parseIntFlag('--limit', 'Infinity', 0, 1)).toThrow(FlagError);
+    });
+
+    it('REFUSES concurrency 0 and negatives, and says why zero is dangerous', () => {
+        expect(() => parseIntFlag('--concurrency', '0', 4, 1)).toThrow(/must be >= 1/);
+        expect(() => parseIntFlag('--concurrency', '0', 4, 1)).toThrow(/probes NOTHING/);
+        expect(() => parseIntFlag('--concurrency', '-2', 4, 1)).toThrow(FlagError);
+        expect(() => parseIntFlag('--limit', '0', 0, 1)).toThrow(/must be >= 1/);
+    });
+
+    it('keeps --per-class-cap 0 legal, because 0 is the documented "unlimited"', () => {
+        expect(parseIntFlag('--per-class-cap', '0', 25, 0)).toBe(0);
+        expect(() => parseIntFlag('--per-class-cap', '-1', 25, 0)).toThrow(/must be >= 0/);
+    });
+
+    it('spots the value-is-the-next-flag mistake and says so', () => {
+        expect(() => parseIntFlag('--concurrency', '--no-probes', 4, 1)).toThrow(/looks like the next flag/);
+    });
+});
+
+describe('runProbes concurrency guard', () => {
+    const oneProbe = (calls: string[]): ProbeSet => ({
+        retrieval: async q => { calls.push(q); return retrievalProbe({ total: 1 }); },
+    });
+
+    it('THROWS instead of silently probing nothing (Math.max(1, NaN) built zero workers)', async () => {
+        for (const bad of [Number.NaN, 0, -1, 1.5]) {
+            const sel = selectDrops(rows(TOKEN_DROPPED), { perClassCap: 25 });
+            const calls: string[] = [];
+            await expect(runProbes(sel.selected, oneProbe(calls), { concurrency: bad }))
+                .rejects.toThrow(/concurrency must be an integer >= 1/);
+            expect(calls).toHaveLength(0);
+            // and the dossier is visibly unprobed rather than looking probed
+            expect(sel.selected[0].probes).toBeNull();
+            expect(sel.selected[0].evidence.probed).toBe(false);
+        }
+    });
+
+    it('probes everything at concurrency 1', async () => {
+        const sel = selectDrops(rows(TOKEN_DROPPED, INGEST_GAP), { perClassCap: 25 });
+        const calls: string[] = [];
+        await runProbes(sel.selected, oneProbe(calls), { concurrency: 1 });
+        expect(calls).toHaveLength(2);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 6d. --limit on the --in path is a REPORTED truncation
+// ---------------------------------------------------------------------------
+
+describe('applyInputLimit', () => {
+    const five = () => rows(...Array.from({ length: 5 }, (_, i) => ({
+        ...TOKEN_DROPPED, rawLine: `chicken parmesan lim${i}`, normalizedForm: `chicken parmesan lim${i}`,
+    })));
+
+    it('is a no-op, and says nothing, when no --limit was passed', () => {
+        const out = applyInputLimit(five(), undefined);
+        expect(out.rows).toHaveLength(5);
+        expect(out.log).toEqual([]);
+    });
+
+    it('REPORTS the truncation with BOTH the file size and the kept size', () => {
+        const out = applyInputLimit(five(), 2);
+        expect(out.rows).toHaveLength(2);
+        expect(out.log).toHaveLength(1);
+        expect(out.log[0]).toContain('--limit 2: TRUNCATED');
+        expect(out.log[0]).toContain('the file had 5 row(s)');
+        expect(out.log[0]).toContain('FIRST 2');
+        expect(out.log[0]).toContain('3 row(s) were discarded');
+        // and it says which numbers now describe the slice, not the file
+        expect(out.log[0]).toContain('KEPT SLICE');
+    });
+
+    it('states positively that nothing was truncated when the file fits', () => {
+        const out = applyInputLimit(five(), 5);
+        expect(out.rows).toHaveLength(5);
+        expect(out.log[0]).toContain('all kept — no truncation');
+    });
+
+    it('the truncation line reaches the report log alongside the other truncations', () => {
+        const limited = applyInputLimit(five(), 1);
+        const sel = selectDrops(limited.rows, { perClassCap: 25 });
+        for (const d of sel.selected) d.evidence = deriveEvidence(d, null, 'q');
+        const r = buildReport(sel, {
+            inputLabel: 'warm.json (--limit 1: 1 of 5 rows)', mode: 'no-probes', concurrency: 1,
+            perClassCap: 25, extraLog: limited.log,
+        });
+        expect(r.log.some(l => l.includes('--limit 1: TRUNCATED'))).toBe(true);
+        // `screened` still describes the slice — but the label now admits it
+        expect(r.screened).toContain('1 rows');
+        expect(r.screened).toContain('1 of 5 rows');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 6e. Scope: what this driver structurally cannot report
+// ---------------------------------------------------------------------------
+
+describe('scope disclosure', () => {
+    const scope = scopeDisclosure();
+
+    it('names the stages it filters out before classifying', () => {
+        expect(scope.dropStages).toEqual(DROP_STAGES);
+        expect([...scope.excludedStages].sort()).toEqual(['cache_hit', 'fast_path', 'saved']);
+    });
+
+    it('lists exactly the classes whose every stage is excluded — derived, not hand-written', () => {
+        expect([...scope.outOfScopeClassIds].sort()).toEqual([
+            'cache-hit-healthy', 'fast-path-water-substring-hijack', 'fast-path-zero-calorie', 'saved-healthy',
+        ]);
+        for (const id of scope.outOfScopeClassIds) {
+            const cls = FAILURE_CLASSES.find(c => c.id === id)!;
+            expect(classStages(cls).some(isDropStage)).toBe(false);
+        }
+        for (const id of scope.partialClassIds) {
+            const cls = FAILURE_CLASSES.find(c => c.id === id)!;
+            expect(classStages(cls).some(isDropStage)).toBe(true);
+            expect(classStages(cls).every(isDropStage)).toBe(false);
+        }
+    });
+
+    it('marks the finding-4 quality classes PARTIAL — they fire on under_gate, which IS a drop stage', () => {
+        // The cached slice (cache_hit/saved) is out of scope, the served-but-uncached
+        // slice is not. Their counts are lower bounds, not zeros.
+        expect(scope.partialClassIds).toContain('degenerate-macros-served');
+        expect(scope.partialClassIds).toContain('corrupt-panel-served');
+        expect(scope.partialClassIds).toContain('serving-flat-100g-fallthrough');
+        expect(scope.outOfScopeClassIds).not.toContain('serving-flat-100g-fallthrough');
+    });
+
+    it('says which coarse byClass buckets are unpopulatable and which are lower bounds', () => {
+        expect(scope.outOfScopeCoarseClasses).toEqual([]);   // every bucket has a reachable class
+        expect(scope.partialCoarseClasses).toContain('serving');
+        expect(scope.partialCoarseClasses).toContain('nutrition');
+        expect(scope.notes.join(' ')).toContain('lower bounds');
+    });
+
+    it('names the actions it can never emit', () => {
+        expect(scope.unreachableActions).toEqual(['evict']);
+    });
+
+    it('states the exclusion in the log AND the markdown, not only in a source comment', () => {
+        const sel = selectDrops(rows(TOKEN_DROPPED), { perClassCap: 25 });
+        for (const d of sel.selected) d.evidence = deriveEvidence(d, null, 'q');
+        const r = buildReport(sel, { inputLabel: 'fixture', mode: 'no-probes', concurrency: 1, perClassCap: 25 });
+        expect(r.scope).toEqual(scope);
+        expect(r.log.some(l => l.startsWith('SCOPE:'))).toBe(true);
+        expect(r.log.join(' ')).toContain('we looked and found none');
+        expect(r.log.join(' ')).toContain('classify-drops.ts territory');
+        const md = renderMarkdown(r);
+        expect(md).toContain('OUT OF SCOPE for this tool');
+        expect(md).toContain('absent by construction');
+        expect(md).toContain('`cache_hit`');
+        expect(md).toContain('cannot fire here');
+    });
+
+    it('DOES triage a poisoned conversion that was served under the gate (not everything is excluded)', () => {
+        // Evidence for the claim above: an all-zero-macro under_gate row is in scope,
+        // reaches degenerate-macros-served, and yields the mark-corrupt action — so
+        // byAction['mark-corrupt'] is reachable.
+        const sel = selectDrops(rows({
+            rawLine: 'cheesecake factory pasta', normalizedForm: 'cheesecake factory pasta',
+            funnelStage: 'under_gate', dropReason: 'under_gate:close_match', source: 'fatsecret',
+            foodName: 'Pasta Carbonara with Chicken', brandName: 'Cheesecake Factory', grams: 1110,
+            kcalPer100g: 0, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 0, confidence: 0.74,
+        }), { perClassCap: 25 });
+        expect(sel.selected[0].classId).toBe('degenerate-macros-served');
+        for (const d of sel.selected) d.evidence = deriveEvidence(d, null, 'q');
+        const r = buildReport(sel, { inputLabel: 'fixture', mode: 'no-probes', concurrency: 1, perClassCap: 25 });
+        expect(r.byAction['mark-corrupt']).toBe(1);
+        expect(r.byClass.nutrition).toBe(1);
+    });
+
+    it('DOES populate the coarse `serving` bucket, through the under_gate slice', () => {
+        const sel = selectDrops(rows({
+            rawLine: 'ribeye', normalizedForm: 'ribeye', funnelStage: 'under_gate',
+            dropReason: 'under_gate:clear_winner', source: 'openfoodfacts', foodName: 'Ribeye',
+            grams: 100, kcalPer100g: 250, proteinPer100g: 24, carbsPer100g: 0, fatPer100g: 17, confidence: 0.8,
+        }), { perClassCap: 25 });
+        expect(sel.selected[0].classId).toBe('serving-flat-100g-fallthrough');
+        for (const d of sel.selected) d.evidence = deriveEvidence(d, null, 'q');
+        const r = buildReport(sel, { inputLabel: 'fixture', mode: 'no-probes', concurrency: 1, perClassCap: 25 });
+        expect(r.byClass.serving).toBe(1);
+    });
+
+    it('still routes a CACHED poisoned conversion away, and the log says where to', () => {
+        const sel = selectDrops(rows({
+            rawLine: 'brazil nuts', normalizedForm: 'brazil nuts', funnelStage: 'cache_hit',
+            source: 'fatsecret', foodName: 'Brazil Nuts', grams: 100,
+            kcalPer100g: 0, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 0,
+        }), { perClassCap: 25 });
+        expect(sel.selected).toHaveLength(0);
+        expect(sel.log.some(l => l.includes('classify-drops.ts territory'))).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
 // 7. Report shaping
 // ---------------------------------------------------------------------------
 
@@ -809,6 +1125,65 @@ describe('coarse-class routing', () => {
 
     it('falls back to the frontier for an id it has never seen', () => {
         expect(coarseClassOf('a-class-invented-tomorrow')).toBe('frontier');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 9b. The read-only guarantee depends on an INVISIBLE import property
+// ---------------------------------------------------------------------------
+
+describe('top-level imports must not reach the FatSecret flag snapshot', () => {
+    /**
+     * loadRealProbes sets FATSECRET_RETRIEVAL_ENABLED=false BEFORE requiring the probe
+     * modules, which is the difference between a SELECT-only run and one that spends
+     * Premier quota and upserts FatSecretFood rows. That only works because
+     * src/lib/mapping/config.ts — which snapshots the flag into a const at module load
+     * — is NOT already resident from a top-level import. Nothing enforced that: adding
+     * one ordinary import to failure-classes.ts would break it with every test green.
+     *
+     * It nearly happened: fixing the cache-key gap wanted deriveMappingCacheKey, whose
+     * module pulls simple-rerank -> ... -> config.ts AND warms the ONNX embedder. Hence
+     * cache-key-core. This walks the real import graph from disk (type-only imports are
+     * erased at runtime, so they are followed for nothing).
+     */
+    const FORBIDDEN = ['mapping/config.ts', 'gather-candidates.ts', 'query-embedding.ts', 'fatsecret-lane.ts'];
+
+    function runtimeGraph(entry: string): string[] {
+        const root = path.resolve(__dirname, '..', '..', '..');
+        const seen = new Set<string>();
+        const walk = (file: string) => {
+            if (seen.has(file)) return;
+            seen.add(file);
+            const src = fs.readFileSync(file, 'utf8');
+            const re = /^\s*import\s+(?:type\s+)?[^;]*?from\s+['"]([^'"]+)['"]|^\s*import\s+['"]([^'"]+)['"]/gm;
+            for (const m of src.matchAll(re)) {
+                if (/^\s*import\s+type\b/.test(m[0])) continue;      // erased at runtime
+                const spec = m[1] ?? m[2];
+                if (!spec.startsWith('.')) continue;                  // node_modules: not our concern
+                const base = path.resolve(path.dirname(file), spec);
+                const resolved = [`${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')].find(fs.existsSync);
+                if (resolved) walk(resolved);
+            }
+        };
+        walk(path.resolve(root, entry));
+        return Array.from(seen).map(f => path.relative(root, f));
+    }
+
+    it.each(['scripts/eval/triage-drops.ts', 'scripts/eval/failure-classes.ts', 'scripts/eval/classify-drops.ts'])(
+        '%s loads none of the FatSecret/embedder modules at import time',
+        entry => {
+            const graph = runtimeGraph(entry);
+            expect(graph.length).toBeGreaterThan(1);                  // the walker really ran
+            const offenders = graph.filter(f => FORBIDDEN.some(bad => f.endsWith(bad)));
+            expect(offenders).toEqual([]);
+        },
+    );
+
+    it('reaches the cache-key derivation through the leaf module, not the full one', () => {
+        const graph = runtimeGraph('scripts/eval/failure-classes.ts');
+        expect(graph).toContain('src/lib/mapping/cache-key-core.ts');
+        expect(graph).not.toContain('src/lib/mapping/cache-key.ts');
+        expect(graph).not.toContain('src/lib/mapping/simple-rerank.ts');
     });
 });
 

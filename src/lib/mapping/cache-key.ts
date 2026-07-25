@@ -33,79 +33,18 @@
 
 import { canonicalizeCacheKey } from './normalization-rules';
 import { hasDecisiveBrandContext } from './simple-rerank';
-import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
+import { deriveCacheKeyName, collapseAdjacentDuplicateTokens } from './cache-key-core';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
-// Unit hints that name a distinct food part (egg white vs yolk vs whole egg).
-// Piece-like hints (leaf, clove, slice, ...) are serving concerns, not identity.
-const IDENTITY_UNIT_HINTS = new Set(['white', 'yolk']);
-
 /**
- * Derive the ValidatedMapping cache key for a normalized ingredient name,
- * appending whitelisted identity discriminators from the parsed line.
- *
- * Pure function — no I/O, no side effects.
- *
- * Dedupe note (verified required): canonicalizeCacheKey lowercases,
- * singularizes, and sorts but does NOT dedupe tokens, so "whole milk" with a
- * re-attached "whole" qualifier would become "milk whole whole" without the
- * set-dedupe here. Dedupe compares in canonical (singularized) space so
- * "egg whites" + hint "white" also collapses correctly.
+ * Step 1 (identity discriminators) and step 3's dup-collapse live in
+ * ./cache-key-core, which is import-leaf on purpose: the read-only eval tooling
+ * (scripts/eval/failure-classes.ts) must derive the same key WITHOUT loading
+ * simple-rerank -> ... -> src/lib/mapping/config.ts, which snapshots
+ * FATSECRET_RETRIEVAL_ENABLED at module load. Re-exported here so this module
+ * stays the one public surface for cache keys.
  */
-export function deriveCacheKeyName(
-  normalizedName: string,
-  parsed: ParsedIngredient | null | undefined
-): string {
-  if (process.env.CACHE_KEY_DISCRIMINATORS === '0') {
-    return canonicalizeCacheKey(normalizedName);
-  }
-
-  if (!parsed) {
-    return canonicalizeCacheKey(normalizedName);
-  }
-
-  const discriminators: string[] = [];
-
-  if (parsed.unitHint && IDENTITY_UNIT_HINTS.has(parsed.unitHint.toLowerCase())) {
-    discriminators.push(parsed.unitHint.toLowerCase());
-  }
-
-  for (const qualifier of parsed.qualifiers ?? []) {
-    const lower = qualifier.toLowerCase();
-    if (IDENTITY_QUALIFIERS.has(lower)) {
-      discriminators.push(lower);
-    }
-  }
-
-  if (discriminators.length === 0) {
-    return canonicalizeCacheKey(normalizedName);
-  }
-
-  // Set-dedupe BEFORE the final canonicalize call, comparing tokens in
-  // canonical form so plural/singular variants ("whites" vs "white") and
-  // already-present qualifiers ("whole milk" + "whole") don't duplicate.
-  const seen = new Set(
-    normalizedName
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(t => t.length > 0)
-      .map(t => canonicalizeCacheKey(t))
-  );
-
-  const appended: string[] = [];
-  for (const discriminator of discriminators) {
-    const canonical = canonicalizeCacheKey(discriminator);
-    if (!canonical || seen.has(canonical)) continue;
-    seen.add(canonical);
-    appended.push(discriminator);
-  }
-
-  if (appended.length === 0) {
-    return canonicalizeCacheKey(normalizedName);
-  }
-
-  return canonicalizeCacheKey(`${normalizedName} ${appended.join(' ')}`);
-}
+export { deriveCacheKeyName, collapseAdjacentDuplicateTokens, IDENTITY_UNIT_HINTS } from './cache-key-core';
 
 /**
  * Brand-detection shape consumed by deriveMappingCacheKey. Matches the
@@ -115,24 +54,6 @@ export function deriveCacheKeyName(
 export interface BrandKeyInput {
   isBranded: boolean;
   matchedBrand?: string | null;
-}
-
-/**
- * Collapse adjacent duplicate tokens in a key ("oiko oiko" → "oiko").
- *
- * canonicalizeCacheKey sorts tokens, so in canonical space ALL duplicate
- * tokens are adjacent — collapsing adjacent runs is a full dedupe. Exported
- * for the malformed-key cleanup script (scripts/fix-malformed-cache-keys.ts),
- * which uses collapsed !== original as its malformation predicate.
- */
-export function collapseAdjacentDuplicateTokens(key: string): string {
-  const out: string[] = [];
-  for (const token of key.split(/\s+/)) {
-    if (token.length === 0) continue;
-    if (out.length > 0 && out[out.length - 1] === token) continue;
-    out.push(token);
-  }
-  return out.join(' ');
 }
 
 /**

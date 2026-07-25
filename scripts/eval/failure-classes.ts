@@ -18,7 +18,12 @@
  *     the whole block is skipped: it CANNOT fire without an incumbent, and only
  *     ever on off: <-> fs: swaps. Ranking classes by raw count would send the
  *     first and largest fix-agent at working code. Hence `FixKind.healthy`, and
- *     hence classify-drops.ts reports counts split by `hadIncumbent`.
+ *     hence classify-drops.ts reports counts split by `hadIncumbent`. That split
+ *     is CORROBORATION, NOT VERIFICATION: hadIncumbent is measured at report time
+ *     and cannot reproduce a brand-prefixed write key, so it can be wrong in both
+ *     directions (see the two caveats `incumbent-is-measured-now-not-at-event-time`
+ *     and `cachekey-is-the-read-key-not-always-the-write-key`). The claim above is
+ *     established by READING THE GATE, and the split is only a smoke alarm.
  *
  * (2) YOU CANNOT JOIN EVENT ROWS TO CACHE ROWS ON `normalizedForm`.
  *     MappingEventLog.normalizedForm is the PRE-canonicalization AI-normalized
@@ -26,9 +31,20 @@
  *     token-SORTED cache key. "chicken breast" in the log is "breast chicken" in
  *     the cache; "eggs" is "egg"; "pretzels" is "pretzel". A naive join reports
  *     every one of those as uncached and inverts the conclusion. So FunnelRow
- *     carries BOTH: `normalizedForm` (as logged) and `cacheKey`
- *     (canonicalizeCacheKey applied — the real exported function, never a
- *     re-implementation).
+ *     carries BOTH: `normalizedForm` (as logged) and `cacheKey`.
+ *     AND canonicalizeCacheKey ALONE IS NOT THAT KEY EITHER. The save/read path
+ *     uses deriveMappingCacheKey (src/lib/mapping/cache-key.ts:194), which is
+ *     canonicalizeCacheKey PLUS (a) identity discriminators from the parsed line
+ *     (IDENTITY_UNIT_HINTS white/yolk, IDENTITY_QUALIFIERS cooked/whole), (b) a
+ *     brand prefix when the query names a brand with decisive context, and (c) an
+ *     adjacent-duplicate-token collapse. Measured 2026-07-25: canonicalize-only
+ *     read "egg" for "3 egg whites" (real key "egg white"), "oat" for "1 cup
+ *     cooked oats" (real "cooked oat") and "oat rolled rolled" for "rolled rolled
+ *     oats" (real "oat rolled"). So `cacheKey` now runs steps (a) and (c) through
+ *     the pipeline's OWN exported functions (deriveCacheKeyName +
+ *     collapseAdjacentDuplicateTokens, never a re-implementation) over
+ *     parseIngredientLine(rawLine). Step (b) is NOT reproducible from a funnel row
+ *     — see deriveFunnelCacheKey for exactly why and what it costs.
  *
  * (3) under_gate's dropReason IS NOT DIAGNOSTIC. F1 tags under_gate with the
  *     confidence gate's `selectionReason` — which path SELECTED the pick, not
@@ -58,6 +74,15 @@
 
 import { canonicalizeCacheKey } from '../../src/lib/mapping/normalization-rules';
 import { normalizeClassId, type FunnelStage } from '../../src/lib/mapping/funnel';
+// cache-key-CORE, not cache-key: the full module imports simple-rerank, whose graph
+// reaches src/lib/mapping/config.ts (it snapshots FATSECRET_RETRIEVAL_ENABLED into a
+// const at load) and gather-candidates (module-scope ONNX warmup — measured: importing
+// cache-key.ts logs `embedding.model_loaded`). triage-drops.ts sets that flag to false
+// BEFORE requiring its probe modules, so a config.ts already resident from a top-level
+// import here would turn a SELECT-only run into one that spends FatSecret quota and
+// upserts FatSecretFood rows. The core module is the same code, leaf-imported.
+import { deriveCacheKeyName, collapseAdjacentDuplicateTokens } from '../../src/lib/mapping/cache-key-core';
+import { parseIngredientLine, type ParsedIngredient } from '../../src/lib/parse/ingredient-line';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,7 +128,12 @@ export interface FunnelRow {
     rawLine: string;
     /** PRE-canonicalization AI-normalized name, exactly as MappingEventLog stores it. */
     normalizedForm: string | null;
-    /** canonicalizeCacheKey(normalizedForm ?? rawLine) — the ONLY key that joins to FoodMapping. */
+    /**
+     * The key this row is joined to FoodMapping on: deriveFunnelCacheKey, i.e. the
+     * pipeline's own deriveCacheKeyName + collapseAdjacentDuplicateTokens. It is
+     * deriveMappingCacheKey MINUS the brand-prefix step, which a funnel row cannot
+     * reproduce — so it is the best available key, not a guaranteed one.
+     */
     cacheKey: string;
     funnelStage: FunnelStage | null;
     /** Namespaced '<stage>:<class>[:<detail>]', as F1 wrote it. */
@@ -175,6 +205,14 @@ export interface FailureClass {
     dropClasses?: string[];
     /** Catch-all bucket: hits are reported as frontier, not as a diagnosed class. */
     residual?: boolean;
+    /**
+     * Exemplars this detector CANNOT match when the input is `--from-db`, because
+     * MappingEventLog carries no per-100g macro panel. Declared rather than
+     * discovered: `failure-classes.test.ts` re-runs every exemplarRow in the db row
+     * shape and fails unless the loss is listed here, so a detector cannot silently
+     * go dark in the mode the docs tell readers to prefer.
+     */
+    fromDbBlind?: { exemplar: string; why: string }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -317,6 +355,26 @@ function atwaterKcal(row: FunnelRow): number | null {
     return 4 * p + 4 * c + 9 * f;
 }
 
+/**
+ * kcal/100g, reconstructed from the billed total when the per-100g panel is absent.
+ *
+ * MappingEventLog stores only `grams` and `totalKcal` (prisma/schema.prisma:717-752),
+ * so every `--from-db` row arrives with kcalPer100g === null. Billing is linear —
+ * totalKcal = kcalPer100g * grams / 100 — so the inverse is EXACT, not an estimate:
+ * the 383 kcal/100g lemon logs 58 g / 222.1 kcal and inverts back to 383. Without
+ * this, `corrupt-panel-served` returned false for every db row and a corrupt panel
+ * that a user was billed from landed in the HEALTHY table (the precise failure
+ * finding 4 exists to prevent).
+ *
+ * NOT a substitute for the panel: the macro-derived arms (Atwater) stay dark from
+ * --from-db and are declared per class in `fromDbBlind`.
+ */
+export function effectiveKcalPer100g(row: FunnelRow): number | null {
+    if (row.kcalPer100g != null) return row.kcalPer100g;
+    if (row.totalKcal == null || row.grams == null || row.grams <= 0) return null;
+    return (row.totalKcal * 100) / row.grams;
+}
+
 /** Strip the stage prefix from a namespaced dropReason and re-normalize it. */
 export function dropClassOf(stage: string | null | undefined, dropReason: string | null | undefined): string {
     if (!dropReason) return '';
@@ -366,6 +424,82 @@ function isPureWaterQuery(rawLine: string): boolean {
 }
 
 /**
+ * THE key a funnel row is joined to FoodMapping on (finding 2).
+ *
+ * Reproduces deriveMappingCacheKey (src/lib/mapping/cache-key.ts:194) with the
+ * pipeline's own exported functions, over the parse of the raw line:
+ *   step 1  deriveCacheKeyName      — canonicalize + identity discriminators   ✅
+ *   step 2  brand prefix            — NOT reproducible (see below)             ❌
+ *   step 3  collapseAdjacentDuplicateTokens                                    ✅
+ *
+ * Verified 2026-07-25 against the real deriveMappingCacheKey over 17 lines: this
+ * equals `deriveMappingCacheKey(name, parseIngredientLine(rawLine), null, rawLine)`
+ * on all 17, and equals the FULL brand-aware key on 15 — the two misses are exactly
+ * the brand-decisive prefixes ("quest protein bar" writes "bar protein quest", this
+ * reads "bar protein"; "dymatize casein" writes "casein dymatize powder protein",
+ * this reads "casein powder protein").
+ *
+ * WHY STEP 2 CANNOT BE DONE HERE, and it is two independent reasons, not one:
+ *   - The INPUT is missing. The brand decision uses the request-stable
+ *     brandDetection = static detector merged with `options.brand` from the API
+ *     request. MappingEventLog records neither the detected brand nor options.brand,
+ *     so even with the detector the merge cannot be reconstructed.
+ *   - The CODE cannot be imported. hasDecisiveBrandContext lives in simple-rerank,
+ *     whose graph loads src/lib/mapping/config.ts (FatSecret flag snapshot) and warms
+ *     the ONNX embedder at module scope. Importing it here would silently break
+ *     triage-drops' read-only default. Re-implementing it is worse (PR #119's lesson).
+ *
+ * Second-order gap: the pipeline parses `preProcessLine`, i.e. rawLine AFTER the
+ * DB-backed synonym substitution (findCanonicalName, map-ingredient-with-fallback.ts
+ * :537) and a spray/squirt cleanup. Where a synonym fired, the parse here differs.
+ *
+ * CONSEQUENCE, stated once so no caller re-derives it: a false hadIncumbent=false is
+ * possible on brand-decisive and synonym-substituted lines. It is NOT symmetric with
+ * the old canonicalize-only key, whose error was the FALSE-POSITIVE direction (every
+ * branded query collapsed onto the generic key the cache is full of, so hadIncumbent
+ * read true for lines whose real key was cold — which is why hadIncumbent could never
+ * have detected this itself).
+ */
+export function deriveFunnelCacheKey(rawLine: string, normalizedForm: string | null): string {
+    const name = normalizedForm ?? rawLine;
+    let parsed: ParsedIngredient | null = null;
+    try {
+        parsed = parseIngredientLine(rawLine);
+    } catch {
+        // A parse failure must degrade to the canonical key, never lose the row.
+        parsed = null;
+    }
+    return collapseAdjacentDuplicateTokens(deriveCacheKeyName(name, parsed));
+}
+
+/**
+ * Tokens that make a row's cache key depend on reproducing the parsed line, i.e.
+ * the population where hadIncumbent is least trustworthy. IDENTITY_UNIT_HINTS
+ * (white/yolk) and IDENTITY_QUALIFIERS (cooked/whole), plus their plurals.
+ */
+export const DISCRIMINATOR_TOKENS = ['white', 'whites', 'yolk', 'yolks', 'cooked', 'whole'];
+
+/** How far this row's key can be trusted as THE FoodMapping key. */
+export interface KeyFidelity {
+    /** What the key was before 2026-07-25: canonicalizeCacheKey and nothing else. */
+    canonicalOnly: string;
+    /** A discriminator or a dup-collapse moved the key off the canonical-only form. */
+    discriminatorApplied: boolean;
+    /** The line names white/yolk/cooked/whole, so its key hinges on the parse. */
+    carriesDiscriminatorToken: boolean;
+}
+
+export function keyFidelityOf(row: FunnelRow): KeyFidelity {
+    const canonicalOnly = canonicalizeCacheKey(row.normalizedForm ?? row.rawLine);
+    const toks = new Set(tokenize(`${row.rawLine} ${row.normalizedForm ?? ''}`));
+    return {
+        canonicalOnly,
+        discriminatorApplied: canonicalOnly !== row.cacheKey,
+        carriesDiscriminatorToken: DISCRIMINATOR_TOKENS.some(t => toks.has(t)),
+    };
+}
+
+/**
  * Build a FunnelRow, deriving the cache key (finding 2) and the quality block
  * (finding 4). Both the CLI and the tests go through here, so a detector can
  * never be green in tests against a shape the CLI would never produce.
@@ -373,7 +507,7 @@ function isPureWaterQuery(rawLine: string): boolean {
 export function makeFunnelRow(input: FunnelRowInput): FunnelRow {
     const stage = (input.funnelStage ?? null) as FunnelStage | null;
     const normalizedForm = input.normalizedForm ?? null;
-    const cacheKey = canonicalizeCacheKey(normalizedForm ?? input.rawLine);
+    const cacheKey = deriveFunnelCacheKey(input.rawLine, normalizedForm);
 
     const grams = input.grams ?? null;
     const kcal100 = input.kcalPer100g ?? null;
@@ -485,11 +619,18 @@ export const FAILURE_CLASSES: FailureClass[] = [
             + 'estimate from its own macros — the kJ-value-in-the-kcal-field family (n-mq-27 lemon: 383 "kcal"/100g '
             + 'vs ~40 real). detect-corrupt-nutrition.ts + mark-corrupt-off.ts already marked 30,788 rows across 8 '
             + 'per-field classes (PRs #116, #119) and the Typesense index dropped 974,044 -> 950,128 accordingly, '
-            + 'so a live hit here means either an unmarked row or a corrupt-exclusion escape. Data fix: mark and purge.',
+            + 'so a live hit here means either an unmarked row or a corrupt-exclusion escape. Data fix: mark and purge. '
+            + 'INPUT-MODE NOTE: the impossible-kcal arm works from --from-db because kcal/100g inverts exactly out of '
+            + 'grams + totalKcal (effectiveKcalPer100g). The 3x-Atwater arm does NOT — MappingEventLog stores no '
+            + 'macro panel — so a scale-slipped-but-not-impossible panel (the n-mq-27 lemon at 383 kcal/100g) is '
+            + 'invisible there and lands in cache-hit-healthy. Declared in fromDbBlind; classify-drops prints it.',
         fixKind: 'data',
         detector: row => {
             if (!atStage(row, SERVED_STAGES)) return false;
-            const kcal = row.kcalPer100g;
+            // Per-100g when we have it, inverted from grams+totalKcal when we do not:
+            // MappingEventLog has no panel, and without this the whole class was dead
+            // in --from-db mode and its rows were counted as HEALTHY.
+            const kcal = effectiveKcalPer100g(row);
             if (kcal == null || kcal <= 0) return false;
             if (kcal > IMPOSSIBLE_KCAL_100G) return true;
             const atwater = atwaterKcal(row);
@@ -511,6 +652,13 @@ export const FAILURE_CLASSES: FailureClass[] = [
         status: 'closed',
         discoveredAt: '2026-07-21',
         dropClasses: [],
+        fromDbBlind: [{
+            exemplar: 'lemon',
+            why: '383 kcal/100g is physically possible, so only the 3x-Atwater arm catches it, and Atwater needs '
+                + 'protein/carbs/fat — which MappingEventLog does not store. From --from-db this row classifies as '
+                + 'cache-hit-healthy. The kJ-as-kcal family is therefore under-counted in that mode; use a warm '
+                + 'JSONL run (which carries per100g) to hunt it, or detect-corrupt-nutrition.ts against the corpus.',
+        }],
     },
     {
         id: 'identity-cooked-vs-dry',
@@ -529,7 +677,10 @@ export const FAILURE_CLASSES: FailureClass[] = [
             if (!atStage(row, SERVED_STAGES)) return false;
             if (!COOKED_RE.test(row.rawLine)) return false;
             if (row.foodName && DRY_RECORD_RE.test(row.foodName)) return true;
-            return (row.kcalPer100g ?? 0) > 250;
+            // effectiveKcalPer100g, not kcalPer100g: from --from-db the panel is null
+            // and this arm went dark, sending "cooked white rice" -> White Rice at
+            // 365 kcal/100g to identity-query-token-dropped instead.
+            return (effectiveKcalPer100g(row) ?? 0) > 250;
         },
         exemplars: ['cooked oats', 'cooked white rice'],
         exemplarRows: [
@@ -791,8 +942,11 @@ export const FAILURE_CLASSES: FailureClass[] = [
             + 'must be meaningfully more confident, not this run\'s rerank winner by a hair. The gate is nested '
             + 'inside `if (newTargetKey && existingTargetKey && newTargetKey !== existingTargetKey)` '
             + '(validated-mapping-helpers.ts:724): on a cold key `existing` is null and the block never runs, so '
-            + 'it CANNOT fire without an incumbent. Verify with the hadIncumbent split — a hit with '
-            + 'hadIncumbent=false would mean the gate or the join is broken, not that a defect was found. '
+            + 'it CANNOT fire without an incumbent — established by READING THE GATE, which is the only proof there '
+            + 'is. The hadIncumbent split CORROBORATES, it does not verify: the lookup is done at report time '
+            + '(evictions since the event read as cold) and cannot reproduce a brand-prefixed write key, so a small '
+            + 'cold count here is a measurement artifact and a LARGE one is a prompt to re-read the gate — never '
+            + 'proof either way on a single row. '
             + 'CAVEAT: newTargetKey/existingTargetKey read only offBarcode then fsId, never fdcId '
             + '(validated-mapping-helpers.ts:720-723), so fdc <-> off and fdc <-> fs displacements bypass this '
             + 'margin AND the serving-downgrade guard entirely. That latent gap is a pipeline defect, not part of '
@@ -823,7 +977,10 @@ export const FAILURE_CLASSES: FailureClass[] = [
             + 'something the cascade was 78% sure of has no business evicting a row a more confident pick earned '
             + '(validated-mapping-helpers.ts:650, funnel fix 4). This is the entire blast-radius bound on '
             + 'conditional admission, and the guarantee the abandoned PR #143 lacked when it repointed the eight '
-            + 'most-used generic keys in the cache. Like cross_source_margin it cannot fire on a cold key.',
+            + 'most-used generic keys in the cache. Like cross_source_margin it cannot fire on a cold key — again a '
+            + 'claim about the CODE. Note the exemplar is the worked example of why hadIncumbent cannot check it: '
+            + '"dymatize casein" is brand-decisive, so its real write key is "casein dymatize powder protein" while '
+            + 'this row derives "casein powder protein" — a live event would read cold and mean nothing.',
         fixKind: 'healthy',
         detector: row => row.funnelStage === 'save_rejected' && hasDropClass(row, 'sub_threshold_no_displace'),
         exemplars: ['dymatize casein'],
@@ -1212,7 +1369,6 @@ export const FAILURE_CLASSES: FailureClass[] = [
     {
         id: 'venue-brand-blackout-tripwire',
         stage: 'all_filtered',
-        alsoStages: ['no_candidates'],
         title: 'TRIPWIRE: a venue-branded query lost its whole candidate pool',
         description:
             'Regression tripwire for the shipped venue-brand blackout (PR #150, 2026-07-25). '
@@ -1222,9 +1378,16 @@ export const FAILURE_CLASSES: FailureClass[] = [
             + 'the cause. Two plausible diagnoses were wrong before running gather+filter with debug:true settled '
             + 'it. This is a QUERY-SIDE proxy (venue word in the query, whole pool filtered), so it should never '
             + 'fire post-#150; a hit means a filter regression, and the diagnosis method is the debug:true trace, '
-            + 'not the reason string.',
+            + 'not the reason string. '
+            + 'STAGE IS all_filtered ONLY. It used to claim no_candidates too, which was wrong on the class\'s own '
+            + 'terms — the blackout was a FILTER bug (UNRELATED_INDICATORS rejected candidates that had been '
+            + 'gathered), and "candidates were gathered then rejected" IS all_filtered. no_candidates means '
+            + 'retrieval returned nothing, which cannot be a filter blackout. Because this class precedes '
+            + 'ingest-gap-no-candidates, the bogus stage claim turned every venue-worded CORPUS GAP '
+            + '("restaurant shrimp scampi" with an empty pool) into a closed pipeline tripwire with fixKind '
+            + 'pipeline — the exact mis-route ingest-gap-no-candidates was written to prevent.',
         fixKind: 'pipeline',
-        detector: row => atStage(row, ['all_filtered', 'no_candidates'])
+        detector: row => row.funnelStage === 'all_filtered'
             && /\b(grill|grille|kitchen|cafe|caf|diner|bistro|restaurant|brewhouse|tavern|creamery)\b/i.test(row.rawLine),
         exemplars: ['restaurant orange chicken', 'restaurant shrimp scampi'],
         exemplarRows: [
@@ -1234,6 +1397,9 @@ export const FAILURE_CLASSES: FailureClass[] = [
         counterRows: [
             { rawLine: 'qdoba steak bowl', funnelStage: 'all_filtered', dropReason: 'all_filtered:no_candidate_survived_filters', source: 'ai_estimated', foodName: 'Qdoba Steak Bowl', grams: 100, kcalPer100g: 250 },
             { rawLine: 'restaurant orange chicken', funnelStage: 'save_rejected', dropReason: 'save_rejected:core_token_mismatch', source: 'openfoodfacts', foodName: "BJ's Restaurant & Brewhouse, Orange Juice", brandName: "BJ's Restaurant & Brewhouse", grams: 100, kcalPer100g: 124 },
+            // A venue word plus an EMPTY pool is a corpus gap, not a filter blackout:
+            // this must reach ingest-gap-no-candidates, never this tripwire.
+            { rawLine: 'restaurant shrimp scampi', normalizedForm: 'shrimp scampi', funnelStage: 'no_candidates', dropReason: 'no_candidates:dataset_gap', source: 'ai_estimated', foodName: 'Shrimp Scampi', grams: 100, kcalPer100g: 220, proteinPer100g: 12, carbsPer100g: 10, fatPer100g: 14, confidence: 0.62 },
         ],
         goldenCaseIds: [],
         fixPRs: [150],
@@ -1467,6 +1633,19 @@ export function classStages(cls: FailureClass): FunnelStage[] {
     return [cls.stage, ...(cls.alsoStages ?? [])];
 }
 
+/**
+ * Every declared `--from-db` blind spot, flattened for the report.
+ *
+ * MappingEventLog stores no per-100g macro panel, so any detector arm that needs
+ * one is inert against that input. classify-drops prints this whenever the rows it
+ * was handed carry no panel, because "0 hits" from a dark detector must not read as
+ * "we looked and found none".
+ */
+export function fromDbBlindSpots(): { classId: string; title: string; exemplar: string; why: string }[] {
+    return FAILURE_CLASSES.flatMap(c =>
+        (c.fromDbBlind ?? []).map(s => ({ classId: c.id, title: c.title, exemplar: s.exemplar, why: s.why })));
+}
+
 // ---------------------------------------------------------------------------
 // Measured ground truth + caveats that are facts, not classes
 // ---------------------------------------------------------------------------
@@ -1572,32 +1751,52 @@ export const FUNNEL_CAVEATS: { id: string; note: string }[] = [
         id: 'event-log-key-is-not-the-cache-key',
         note: 'MappingEventLog.normalizedForm is PRE-canonicalization; FoodMapping.normalizedForm is canonicalized, '
             + 'singularized and token-SORTED. "chicken breast" -> "breast chicken", "eggs" -> "egg", "pretzels" -> '
-            + '"pretzel". Always canonicalizeCacheKey() before joining, or the join reports cached keys as cold and '
-            + 'inverts the conclusion.',
+            + '"pretzel". Always derive the key before joining (deriveFunnelCacheKey — canonicalizeCacheKey is '
+            + 'necessary but NOT sufficient, see cachekey-is-the-read-key-not-always-the-write-key), or the join '
+            + 'reports cached keys as cold and inverts the conclusion.',
     },
     {
         id: 'incumbent-is-measured-now-not-at-event-time',
-        note: 'hadIncumbent is resolved by looking FoodMapping up at report time, not at event time, and it is '
-            + 'wrong in BOTH directions. A key cached after the event reads hadIncumbent=true; a key EVICTED after '
-            + 'the event reads hadIncumbent=false. The second direction is the one that bites: the first real run '
-            + '(2026-07-25, since 07-24) reported 8 "cold" gate-cross-source-margin events, which is impossible — '
-            + 'that gate is nested inside a block requiring an incumbent and cannot fire on a cold key. They were '
-            + 'events whose rows had been evicted hours later by the composite cache refresh. So a small cold count '
-            + 'on a gate that provably needs an incumbent is a timing artifact, NOT a refutation. Read hadIncumbent '
-            + 'as evidence about a class (does this gate ever fire cold?), never as per-row history, and treat a '
-            + 'LARGE cold count on such a gate as the real signal that something is wrong.',
+        note: 'hadIncumbent is resolved by looking FoodMapping up at report time, not at event time, so it is wrong '
+            + 'in both directions: a key cached after the event reads true, a key EVICTED after the event reads '
+            + 'false. Read it as evidence about a class (does this gate ever fire cold?), never as per-row history. '
+            + 'WORKED EXAMPLE, and the lesson is about diagnosis rather than about timing. The first real run '
+            + '(2026-07-25, --from-db since 07-24) reported 8 "cold" gate-cross-source-margin events, which is '
+            + 'impossible — that gate is nested inside a block requiring an incumbent. The obvious explanation was '
+            + 'this timing skew, since a composite cache refresh had evicted rows hours after those events, and that '
+            + 'explanation was WRITTEN DOWN HERE AND WAS WRONG. The real cause was the cacheKey bug in the caveat '
+            + 'below: canonicalizeCacheKey alone missed the identity discriminators, so the lookup asked for a key '
+            + 'nothing held. Fixing the key derivation took the count to 8 -> 0 cold, exactly as reading the gate '
+            + 'predicts. So when a structural claim and the data disagree, suspect the MEASUREMENT before inventing '
+            + 'a story that reconciles them — a plausible reconciliation stops the search at the wrong place.',
     },
     {
         id: 'cachekey-is-the-read-key-not-always-the-write-key',
-        note: 'FunnelRow.cacheKey uses canonicalizeCacheKey, but the SAVE path uses deriveMappingCacheKey, which '
-            + 'brand-PREFIXES when a brand was detected with decisive context. Measured 2026-07-25: for every '
-            + 'branded query tried (oikos greek yogurt, ghost protein cinnamon roll, quest chocolate chip protein '
-            + 'bar, ryse protein cinnamon toast crunch, mcdonalds fries, chipotle/qdoba chicken burrito) the two '
-            + 'agree, because MappingEventLog.normalizedForm is the AI-normalized name and already carries the '
-            + 'brand token. But the event log does NOT record the detected brand or the decisive-context verdict, '
-            + 'so where the save path DID prefix, this lookup cannot reproduce that key and hadIncumbent will read '
-            + 'false. Exposure looks small and is not measurable from the event log alone; if a class shows '
-            + 'implausibly many cold rows on a gate that needs an incumbent, suspect this before believing it. '
+        note: 'FunnelRow.cacheKey reproduces deriveMappingCacheKey in TWO of its three steps and the third is '
+            + 'unreproducible, so hadIncumbent is a lead, never a verification. '
+            + 'CLOSED 2026-07-25 (this was a real defect, not a theoretical gap): the key used to be '
+            + 'canonicalizeCacheKey alone, which omitted the IDENTITY DISCRIMINATORS the save path appends from the '
+            + 'parsed line (IDENTITY_UNIT_HINTS white/yolk, IDENTITY_QUALIFIERS cooked/whole) and the '
+            + 'adjacent-dup-token collapse. Measured divergences: "3 egg whites" read "egg" against a real key of '
+            + '"egg white"; "1 cup cooked oats" read "oat" against "cooked oat"; "rolled rolled oats" read '
+            + '"oat rolled rolled" against "oat rolled". Those rows all read hadIncumbent=false wrongly. '
+            + 'cacheKey now runs deriveCacheKeyName + collapseAdjacentDuplicateTokens (the pipeline\'s own exported '
+            + 'functions, via cache-key-core so the eval tooling does not load config.ts) over '
+            + 'parseIngredientLine(rawLine). '
+            + 'STILL OPEN, in the OPPOSITE direction: the BRAND-PREFIX step. deriveMappingCacheKey prepends the '
+            + 'brand when the query names one with decisive context, and neither input is recoverable — the event '
+            + 'log records neither the detected brand nor the request\'s options.brand, and hasDecisiveBrandContext '
+            + 'cannot be imported into the eval tooling without dragging config.ts + the ONNX warmup in. Measured: '
+            + '"quest protein bar" writes "bar protein quest" while this reads "bar protein"; "dymatize casein" '
+            + 'writes "casein dymatize powder protein" while this reads "casein powder protein". For every branded '
+            + 'query where MappingEventLog.normalizedForm already carries the brand token (oikos greek yogurt, '
+            + 'mcdonalds fries, red bull energy drink, chipotle/qdoba burrito) the two agree, because the '
+            + 'brand-already-present guard skips the prefix — which is why exposure looks small. '
+            + 'ALSO: the pipeline parses rawLine AFTER a DB-backed synonym substitution (findCanonicalName), so a '
+            + 'synonym-rewritten line derives a different key here. '
+            + 'Net: a cold read on a brand-decisive or synonym-substituted line may be an artifact. The OLD error '
+            + 'ran the other way (branded queries collapsing onto the generic key the cache is full of, so cold '
+            + 'rows read as warm) — which is precisely why hadIncumbent could not have detected any of this itself. '
             + 'Related known bug: brand-prefix save-key asymmetry ("oikos" saved "oiko oiko", read "oiko").',
     },
     {

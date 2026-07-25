@@ -36,9 +36,17 @@
  * TRUNCATION IS ALWAYS REPORTED
  * ---------------------------------------------------------------------------
  * A per-class cap (`--per-class-cap`, default 25) stops one loud class from eating
- * the whole run. Every dossier the cap drops, every duplicate event collapsed and
- * every non-drop-stage row skipped is counted into `log[]` and printed. Silent
- * truncation reads as "covered everything" when it did not.
+ * the whole run. Every dossier the cap drops, every duplicate event collapsed, every
+ * non-drop-stage row skipped and every row `--limit` cut off is counted into `log[]`
+ * and printed. Silent truncation reads as "covered everything" when it did not.
+ *
+ * The same rule applies to what the tool CANNOT see: `scope` states which F2 classes,
+ * which coarse `byClass` buckets and which actions are unreachable here, because a
+ * bucket that is empty by construction otherwise reads as "we looked and found none".
+ *
+ * And numeric flags are VALIDATED, not coerced (`parseIntFlag`): `--concurrency 0`
+ * used to build zero probe workers and `--limit abc` an empty row set, each producing
+ * a clean-looking report of a run that never happened.
  *
  * Run (from repo root):
  *   # cheap mode: classify only, no retrieval at all
@@ -60,6 +68,7 @@ import {
     FAILURE_CLASSES,
     FUNNEL_CAVEATS,
     UNCLASSIFIED,
+    classStages,
     classifyRow,
     makeFunnelRow,
     uncoveredTokens,
@@ -81,6 +90,12 @@ import type { FilterTrace } from '../filter-trace-probe';
  * The stages this driver triages. `cache_hit` / `saved` / `fast_path` are NOT
  * drops — F2 can still flag them as poisoned conversions (finding 4), which is
  * `classify-drops.ts`'s job; this driver is about lines that did not land.
+ *
+ * The exclusion has a cost, and `scopeDisclosure()` states it in the report rather
+ * than leaving it in this comment: the finding-4 quality classes span served stages,
+ * so this run sees only their `under_gate` slice (served to the user, never cached)
+ * and never their `cache_hit`/`saved` slice (already cached — the poisoned
+ * conversion). Four classes are excluded outright.
  */
 export const DROP_STAGES: FunnelStage[] = ['no_match', 'under_gate', 'save_rejected', 'all_filtered', 'no_candidates'];
 
@@ -158,13 +173,43 @@ export function coarseClassOf(classId: string): CoarseClass {
 // ---------------------------------------------------------------------------
 
 /**
- * `repoint` / `evict` / `mark-corrupt` are row-level data ops (apply-repoints.ts
- * consumes `{seed, target}` in the `off_<barcode>` / `fdc_<id>` vocabulary, which
- * is exactly the candidate `id` this driver reports). `pipeline-fix` routes to a
- * code change. `ingest` routes to the ingest queue and NEVER to a fix-agent.
+ * `repoint` / `evict` / `mark-corrupt` are row-level data ops. `pipeline-fix` routes
+ * to a code change. `ingest` routes to the ingest queue and NEVER to a fix-agent.
  * `triage` means the evidence does not support any action yet.
+ *
+ * A `repoint` hands `{seed, targetId}` to apply-repoints.ts, which WRITES FoodMapping
+ * under validatedBy 'human-triage'. Its target vocabulary is NOT the candidate-id
+ * vocabulary — see APPLY_REPOINTS_TARGET_RE, which is what `targetId` is constrained
+ * to. Getting that wrong pins a wrong record against future warm waves.
  */
 export type TriageAction = 'repoint' | 'evict' | 'mark-corrupt' | 'ingest' | 'pipeline-fix' | 'triage' | 'none';
+
+/**
+ * EXACTLY what apply-repoints.ts can consume as `target`, read off its own code
+ * (scripts/eval/apply-repoints.ts:83-104):
+ *
+ *   if (r.target.startsWith('off_')) { barcode = target.slice(4); ...OffFood... }
+ *   const fdcId = parseInt(r.target.slice(4), 10);   // EVERYTHING ELSE
+ *
+ * There is no third branch and no validation. `fs_12345` therefore does not error —
+ * `'fs_12345'.slice(4)` is `'2345'`, so it looks up FdcFood 2345, an unrelated
+ * record, and if that row has nutrition it UPSERTS the cache key onto it. That is a
+ * silent wrong-record cache poisoning applied under validatedBy 'human-triage', i.e.
+ * pinned against future warm waves — the same shape as the 2026-07-24 clobber
+ * incident that had to be surgically reverted.
+ *
+ * So the vocabulary is off_<barcode> and fdc_<digits>, and NOTHING else. Candidate
+ * ids from the probes span a wider space (`off_` / `fdc_` / `fs_`, and the served
+ * `foodId` can also be `ai_`), so an fs_ candidate — reachable whenever `--fatsecret`
+ * is passed — must be WITHHELD rather than reported as a target. Extend this regex
+ * only together with a branch in apply-repoints.ts, never before it.
+ */
+export const APPLY_REPOINTS_TARGET_RE = /^(off_[A-Za-z0-9._-]+|fdc_\d+)$/;
+
+/** Can apply-repoints.ts resolve this candidate id to the record it names? */
+export function isApplyRepointsTarget(id: string | null | undefined): boolean {
+    return typeof id === 'string' && APPLY_REPOINTS_TARGET_RE.test(id);
+}
 
 /** Per-class default action where fixKind alone is too coarse. */
 const ACTION_BY_CLASS_ID: Record<string, TriageAction> = {
@@ -184,6 +229,98 @@ function defaultActionFor(cls: FailureClass): TriageAction {
         case 'pipeline': return 'pipeline-fix';
         case 'healthy': return 'none';
     }
+}
+
+// ---------------------------------------------------------------------------
+// Scope: what this tool structurally cannot report
+// ---------------------------------------------------------------------------
+
+/**
+ * Which parts of the advertised 2026-07-21 vocabulary this driver cannot fill.
+ *
+ * The report prints the full `byClass` vocabulary, so a bucket that is *unreachable
+ * by construction* would read as "we looked and found none". This is computed from
+ * DROP_STAGES x the registry, never hand-listed, so it cannot drift.
+ */
+export interface ScopeDisclosure {
+    dropStages: FunnelStage[];
+    /** Stages present in the registry that selectDrops filters out before classifying. */
+    excludedStages: FunnelStage[];
+    /** Classes that can NEVER fire here: every stage they declare is excluded. */
+    outOfScopeClassIds: string[];
+    /** Classes only PARTLY visible: some declared stages are excluded, some are not. */
+    partialClassIds: string[];
+    /** Coarse buckets with no reachable class at all — unpopulatable by construction. */
+    outOfScopeCoarseClasses: CoarseClass[];
+    /** Coarse buckets whose count is real but INCOMPLETE (a member class is partly/fully excluded). */
+    partialCoarseClasses: CoarseClass[];
+    /** Actions this driver can never emit, whatever the input. */
+    unreachableActions: TriageAction[];
+    /** Rendered into log[] and into the md, so the exclusion travels with the numbers. */
+    notes: string[];
+}
+
+const ALL_ACTIONS: TriageAction[] = ['repoint', 'evict', 'mark-corrupt', 'ingest', 'pipeline-fix', 'triage', 'none'];
+
+export function scopeDisclosure(): ScopeDisclosure {
+    const inScope = (cls: FailureClass) => classStages(cls).some(s => isDropStage(s));
+    const fullyVisible = (cls: FailureClass) => classStages(cls).every(s => isDropStage(s));
+
+    const excludedStages = Array.from(new Set(
+        FAILURE_CLASSES.flatMap(classStages).filter(s => !isDropStage(s)))).sort();
+    const outOfScope = FAILURE_CLASSES.filter(c => !inScope(c));
+    const partial = FAILURE_CLASSES.filter(c => inScope(c) && !fullyVisible(c));
+
+    const coarseOf = (ids: string[]) => Array.from(new Set(ids.map(coarseClassOf)));
+    const reachableCoarse = new Set(FAILURE_CLASSES.filter(inScope).map(c => coarseClassOf(c.id)));
+    const outOfScopeCoarseClasses = coarseOf(outOfScope.map(c => c.id)).filter(c => !reachableCoarse.has(c)).sort();
+    const partialCoarseClasses = coarseOf([...outOfScope, ...partial].map(c => c.id))
+        .filter(c => !outOfScopeCoarseClasses.includes(c)).sort();
+
+    // Actions the code can still emit for an in-scope class, plus the ones the
+    // probe-override / healthy / residual / unclassified paths hard-code.
+    const reachableActions = new Set<TriageAction>([
+        ...FAILURE_CLASSES.filter(inScope).map(defaultActionFor),
+        'repoint', 'ingest', 'pipeline-fix', 'triage', 'none',
+    ]);
+    const unreachableActions = ALL_ACTIONS.filter(a => !reachableActions.has(a));
+
+    const notes: string[] = [];
+    notes.push(`SCOPE: this driver triages ${DROP_STAGES.join('|')} ONLY. Rows at `
+        + `${excludedStages.join('|')} are filtered out BEFORE classification, so anything below is absent `
+        + 'BY CONSTRUCTION and must not be read as "we looked and found none". Poisoned conversions that were '
+        + 'actually CACHED (finding 4) are classify-drops.ts territory — run that, not this.');
+    if (outOfScope.length > 0) {
+        notes.push(`SCOPE: ${outOfScope.length} F2 class(es) can NEVER fire here — `
+            + outOfScope.map(c => `${c.id} (${classStages(c).join('|')})`).join(', ') + '.');
+    }
+    if (partial.length > 0) {
+        notes.push(`SCOPE: ${partial.length} class(es) are only PARTLY visible — `
+            + partial.map(c => `${c.id} (sees ${classStages(c).filter(isDropStage).join('|')}, `
+                + `blind to ${classStages(c).filter(s => !isDropStage(s)).join('|')})`).join('; ')
+            + '. Their counts are real but LOWER BOUNDS: the quality classes span served stages, so this run '
+            + 'sees the under_gate slice (served, never cached) and never the cache_hit/saved slice (cached, '
+            + 'i.e. the poisoned conversion).');
+    }
+    notes.push(outOfScopeCoarseClasses.length > 0
+        ? `SCOPE: coarse byClass bucket(s) ${outOfScopeCoarseClasses.join(', ')} are UNPOPULATABLE here.`
+        : 'SCOPE: every coarse byClass bucket has at least one reachable class, but '
+            + `${partialCoarseClasses.join(', ')} draw on partly-excluded classes, so their counts are lower bounds.`);
+    if (unreachableActions.length > 0) {
+        notes.push(`SCOPE: action(s) ${unreachableActions.join(', ')} are never emitted by this driver `
+            + '(no in-scope class defaults to them and no code path proposes them), so a 0 there says nothing '
+            + 'about the underlying work.');
+    }
+    return {
+        dropStages: [...DROP_STAGES],
+        excludedStages,
+        outOfScopeClassIds: outOfScope.map(c => c.id),
+        partialClassIds: partial.map(c => c.id),
+        outOfScopeCoarseClasses,
+        partialCoarseClasses,
+        unreachableActions,
+        notes,
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -229,13 +366,24 @@ export interface TriageVerdict {
     confirmed: boolean;
     cls: CoarseClass;
     action: TriageAction;
-    /** `off_<barcode>` | `fdc_<id>` | `fs_<fsId>`, or null when no target was found. */
+    /**
+     * `off_<barcode>` or `fdc_<id>` — ALWAYS a value apply-repoints.ts can resolve
+     * (APPLY_REPOINTS_TARGET_RE) — or null when no target was found OR the record the
+     * probe found cannot be expressed in that vocabulary. Never an `fs_` id.
+     */
     targetId: string | null;
     note: string;
     /** Secondary actions the evidence also supports (e.g. mark-corrupt alongside a repoint). */
     extraActions: TriageAction[];
     /** True when probe evidence overrode the row-only class (e.g. pipeline -> ingest). */
     reclassifiedByProbe: boolean;
+    /**
+     * The candidate id the probe DID find but which apply-repoints.ts cannot consume,
+     * so `targetId` is null and the record is named in `note` instead. Counted in the
+     * run log — a withheld target is a finding a human can still act on, and it must
+     * not read as "the probe found nothing".
+     */
+    withheldTargetId: string | null;
 }
 
 export interface TriageDossier {
@@ -516,7 +664,7 @@ export function selectDrops(rows: FunnelRow[], opts: { perClassCap: number }): S
             probes: null,
             evidence: emptyEvidence(),
             // Placeholder; decideVerdict runs after the probes so evidence can override.
-            verdict: { confirmed: false, cls: 'frontier', action: 'triage', targetId: null, note: 'not yet decided', extraActions: [], reclassifiedByProbe: false },
+            verdict: { confirmed: false, cls: 'frontier', action: 'triage', targetId: null, note: 'not yet decided', extraActions: [], reclassifiedByProbe: false, withheldTargetId: null },
         });
     }
 
@@ -586,15 +734,28 @@ export function loadRealProbes(opts: { fatsecret: boolean }): ProbeSet {
     };
 }
 
-/** Run the probes over the selected dossiers with a fixed-size worker pool. */
+/**
+ * Run the probes over the selected dossiers with a fixed-size worker pool.
+ *
+ * THROWS on an invalid concurrency rather than degrading. `Math.max(1, NaN)` is NaN,
+ * so `Array.from({length: NaN})` built an EMPTY worker array: runProbes resolved
+ * immediately, every dossier kept `probes: null`, and the report still said
+ * mode='probes' with each note claiming '--no-probes'. A run that reads as fully
+ * probed but proposed nothing is indistinguishable from "the corpus had nothing" —
+ * so this is a hard failure, at entry, before any probe is called.
+ */
 export async function runProbes(
     dossiers: TriageDossier[],
     probes: ProbeSet,
     opts: { concurrency: number; onProgress?: (done: number, total: number) => void },
 ): Promise<void> {
+    if (!Number.isInteger(opts.concurrency) || opts.concurrency < 1) {
+        throw new Error(`runProbes: concurrency must be an integer >= 1, got ${JSON.stringify(opts.concurrency)}. `
+            + 'A non-positive or NaN value builds zero workers and silently probes NOTHING.');
+    }
     let idx = 0;
     let done = 0;
-    const workers = Array.from({ length: Math.max(1, opts.concurrency) }, async () => {
+    const workers = Array.from({ length: opts.concurrency }, async () => {
         while (idx < dossiers.length) {
             const d = dossiers[idx++];
             const query = probeQueryFor({
@@ -741,7 +902,7 @@ export function decideVerdict(args: {
     if (!cls) {
         return {
             confirmed: false, cls: 'frontier', action: 'triage', targetId: null, extraActions,
-            reclassifiedByProbe: false,
+            reclassifiedByProbe: false, withheldTargetId: null,
             note: `No registry class matched (dropReason ${dossier.dropReason ?? 'none'}). This is the true `
                 + 'frontier: characterize it and add an F2 class before acting.',
         };
@@ -750,7 +911,7 @@ export function decideVerdict(args: {
     if (cls.fixKind === 'healthy') {
         return {
             confirmed: false, cls: 'healthy', action: 'none', targetId: null, extraActions,
-            reclassifiedByProbe: false,
+            reclassifiedByProbe: false, withheldTargetId: null,
             note: `${cls.title} — by design, not a defect. incumbent=${String(dossier.hadIncumbent)}. `
                 + 'Counted so it stops looking like work.',
         };
@@ -759,7 +920,7 @@ export function decideVerdict(args: {
     if (cls.residual) {
         return {
             confirmed: false, cls: coarseClassOf(cls.id), action: 'triage', targetId: null, extraActions,
-            reclassifiedByProbe: false,
+            reclassifiedByProbe: false, withheldTargetId: null,
             note: `${cls.title} (residual bucket, dropReason ${dossier.dropReason ?? 'none'}). No diagnosis yet `
                 + '— promote a class from the recurring shapes before sending a fix-agent.',
         };
@@ -769,7 +930,7 @@ export function decideVerdict(args: {
     if (evidence.probed && evidence.corpusGap && cls.fixKind !== 'ingest') {
         return {
             confirmed: true, cls: 'ingest-gap', action: 'ingest', targetId: null, extraActions,
-            reclassifiedByProbe: true,
+            reclassifiedByProbe: true, withheldTargetId: null,
             note: `Row facts said ${cls.id}, but retrieval returned ZERO candidates in every lane for `
                 + `"${evidence.probeQuery}" — this is a dataset gap, not a ranking gap. Route to the ingest `
                 + 'queue, NEVER a fix-agent.',
@@ -779,7 +940,7 @@ export function decideVerdict(args: {
     if (evidence.probed && evidence.filterWipeout) {
         return {
             confirmed: true, cls: 'ranking-gap', action: 'pipeline-fix', targetId: null, extraActions,
-            reclassifiedByProbe: cls.id !== 'all-filtered-over-rejection',
+            reclassifiedByProbe: cls.id !== 'all-filtered-over-rejection', withheldTargetId: null,
             note: `${evidence.candidateCount} candidate(s) gathered and NONE survived the filters `
                 + `(${evidence.removedByTokenFilter ?? '?'} removed by the token filter, `
                 + `${evidence.droppedByCoreToken ?? '?'} by core-token mismatch; mustHave=`
@@ -790,14 +951,21 @@ export function decideVerdict(args: {
 
     const baseAction = defaultActionFor(cls);
     const better = evidence.betterCandidate;
-    if (better?.id) {
+    // A candidate id apply-repoints.ts cannot resolve must never be reported as a
+    // target: it would not error there, it would silently resolve to an unrelated
+    // FdcFood and pin the key onto it. Withhold it, name it in the note, count it.
+    const withheldTargetId = better?.id && !isApplyRepointsTarget(better.id) ? better.id : null;
+    const describeCandidate = (c: BetterCandidate) =>
+        `${c.id} ("${c.name}"${c.brand ? ` [${c.brand}]` : ''}, ${c.source}, score ${c.score ?? '?'}`
+        + `${c.survivedFilters ? ', survived the filters' : ', gather-only'})`;
+
+    if (better?.id && withheldTargetId == null) {
         if (baseAction === 'mark-corrupt') extraActions.push('mark-corrupt');
         if (cls.fixKind === 'pipeline') extraActions.push('pipeline-fix');
         return {
             confirmed: true, cls: coarseClassOf(cls.id), action: 'repoint', targetId: better.id, extraActions,
-            reclassifiedByProbe: false,
-            note: `${cls.title}. Probe found ${better.id} ("${better.name}"${better.brand ? ` [${better.brand}]` : ''}, `
-                + `${better.source}, score ${better.score ?? '?'}${better.survivedFilters ? ', survived the filters' : ', gather-only'}) `
+            reclassifiedByProbe: false, withheldTargetId: null,
+            note: `${cls.title}. Probe found ${describeCandidate(better)} `
                 + `covering the dropped token(s) [${better.coversUncovered.join(', ')}] that the served pick `
                 + `("${dossier.served.foodName ?? 'none'}") misses. Repoint fixes today's cache row; the durable `
                 + `fix for ${cls.fixKind === 'pipeline' ? 'this pipeline class is the ranking/filter change' : 'the class is the data op'}.`,
@@ -808,6 +976,14 @@ export function decideVerdict(args: {
         ? `Probe: ${evidence.candidateCount ?? '?'} candidate(s), ${evidence.survivors ?? '?'} survivor(s)`
             + (evidence.notes.length ? `; ${evidence.notes.join(' ')}` : '.')
         : 'No probes were run (--no-probes), so this verdict rests on row facts alone.';
+
+    if (better && withheldTargetId != null) {
+        evidenceNote += ` REPOINT TARGET WITHHELD: the probe DID find ${describeCandidate(better)} covering the `
+            + `dropped token(s) [${better.coversUncovered.join(', ')}], but apply-repoints.ts can only consume `
+            + 'off_<barcode> / fdc_<id> targets — it parses anything else as an fdcId via target.slice(4), so '
+            + `reporting "${withheldTargetId}" would silently repoint this key onto an unrelated FdcFood under `
+            + 'validatedBy=human-triage. Act on this by hand, or add the branch to apply-repoints.ts first.';
+    }
 
     // An ingest class claims "no record exists". When the probe found survivors that
     // claim is only true of the specific FORM asked for (n-cook-06: the corpus has
@@ -826,6 +1002,7 @@ export function decideVerdict(args: {
         targetId: null,
         extraActions,
         reclassifiedByProbe: false,
+        withheldTargetId,
         note: `${cls.title}. ${describeRowEvidence(dossier)} ${evidenceNote}`,
     };
 }
@@ -889,6 +1066,10 @@ export interface TriageReport {
     droppedByCap: number;
     reclassifiedByProbe: number;
     probeErrorCount: number;
+    /** Repoint proposals suppressed because apply-repoints.ts cannot consume the target. */
+    withheldTargetCount: number;
+    /** What this tool structurally cannot report — so an empty bucket is not read as a clean one. */
+    scope: ScopeDisclosure;
     log: string[];
     caveats: string[];
 }
@@ -916,11 +1097,13 @@ export function buildReport(
     let suspectCount = 0;
     let reclassified = 0;
     let probeErrorCount = 0;
+    const withheldTargets: string[] = [];
 
     for (const d of selection.selected) {
         const cls = d.classId === UNCLASSIFIED ? null : CLASS_BY_ID.get(d.classId) ?? null;
         d.verdict = decideVerdict({ dossier: d, cls, evidence: d.evidence });
         if (d.verdict.reclassifiedByProbe) reclassified++;
+        if (d.verdict.withheldTargetId) withheldTargets.push(d.verdict.withheldTargetId);
         probeErrorCount += d.evidence.probeErrors.length;
 
         byFailureClass[d.classId] = (byFailureClass[d.classId] ?? 0) + 1;
@@ -950,12 +1133,22 @@ export function buildReport(
     // Most-frequent first inside `confirmed`, so a reader starts at the loudest key.
     confirmed.sort((a, b) => b.dossier.occurrences - a.dossier.occurrences || a.seed.localeCompare(b.seed));
 
+    const scope = scopeDisclosure();
     const log = [...selection.log, ...(opts.extraLog ?? [])];
     log.push(`verdicts: ${confirmed.length} confirmed / ${dismissed.length} dismissed `
         + `(${suspectCount} suspect = non-healthy class). `
         + `${reclassified} reclassified by probe evidence.`);
     if (probeErrorCount > 0) log.push(`probe errors: ${probeErrorCount} lane failure(s) recorded — `
         + 'those dossiers have partial evidence, do NOT read them as "nothing found".');
+    if (withheldTargets.length > 0) {
+        const prefixes = Array.from(new Set(withheldTargets.map(t => `${t.split('_')[0]}_`))).sort();
+        log.push(`${withheldTargets.length} repoint suggestion(s) WITHHELD: ${prefixes.join('/')} targets are not `
+            + 'expressible to apply-repoints.ts (it resolves anything non-off_ as an fdcId via slice(4), so the id '
+            + 'would silently repoint the key onto an unrelated FdcFood). The record is named in the verdict note '
+            + `for each — ${withheldTargets.join(', ')} — so this is a finding to act on by hand, NOT "no `
+            + 'candidate found".');
+    }
+    for (const note of scope.notes) log.push(note);
 
     return {
         screened: `${selection.rowCount} rows (${selection.dropRowCount} drop-stage, `
@@ -983,6 +1176,8 @@ export function buildReport(
         droppedByCap: selection.droppedByCap,
         reclassifiedByProbe: reclassified,
         probeErrorCount,
+        withheldTargetCount: withheldTargets.length,
+        scope,
         log,
         caveats: FUNNEL_CAVEATS.map(c => `${c.id}: ${c.note}`),
     };
@@ -1030,12 +1225,35 @@ export function renderMarkdown(report: TriageReport): string {
     L.push(`- drop rows only: ${fmtCounts(report.dropStageCounts) || '(none)'}`);
     L.push('');
 
+    L.push('## OUT OF SCOPE for this tool — absent by construction, NOT "looked and found none"');
+    L.push('');
+    for (const note of report.scope.notes) L.push(`- ${note}`);
+    L.push('');
+    L.push(`- drop stages triaged: ${report.scope.dropStages.map(s => `\`${s}\``).join(', ')}`);
+    L.push(`- stages excluded before classification: ${report.scope.excludedStages.map(s => `\`${s}\``).join(', ') || '(none)'}`);
+    L.push(`- classes that cannot fire here: ${report.scope.outOfScopeClassIds.map(c => `\`${c}\``).join(', ') || '(none)'}`);
+    L.push(`- classes only partly visible: ${report.scope.partialClassIds.map(c => `\`${c}\``).join(', ') || '(none)'}`);
+    L.push(`- coarse buckets unpopulatable: ${report.scope.outOfScopeCoarseClasses.join(', ') || '(none)'}`);
+    L.push(`- coarse buckets that are LOWER BOUNDS: ${report.scope.partialCoarseClasses.join(', ') || '(none)'}`);
+    L.push(`- actions never emitted: ${report.scope.unreachableActions.join(', ') || '(none)'}`);
+    L.push('');
+
     L.push('## Confirmed, by coarse class (the 2026-07-21 vocabulary)');
+    L.push('');
+    L.push(`> Read with the scope section above: ${report.scope.outOfScopeCoarseClasses.length > 0
+        ? `${report.scope.outOfScopeCoarseClasses.join(', ')} cannot appear at all, and `
+        : ''}${report.scope.partialCoarseClasses.join(', ') || 'no bucket'} draw on partly-excluded classes.`);
     L.push('');
     L.push('| coarse class | confirmed |');
     L.push('| ------------ | --------: |');
     for (const [k, v] of Object.entries(report.byClass).sort((a, b) => b[1] - a[1])) L.push(`| ${k} | ${v} |`);
     L.push('');
+    if (report.withheldTargetCount > 0) {
+        L.push(`**${report.withheldTargetCount} repoint target(s) withheld** — the probe found a covering record `
+            + 'whose id apply-repoints.ts cannot resolve, so `targetId` is null and the record is named in the '
+            + 'note. Act on those by hand.');
+        L.push('');
+    }
 
     L.push('## All triaged dossiers, by F2 class');
     L.push('');
@@ -1110,6 +1328,12 @@ export function renderConsole(report: TriageReport): void {
         console.log('\n!! TRUNCATED — not covered by this run:');
         for (const t of report.truncation) console.log(`  ${t.classId}: triaged ${t.kept}/${t.seen} (dropped ${t.dropped})`);
     }
+    if (report.withheldTargetCount > 0) {
+        console.log(`\n!! ${report.withheldTargetCount} repoint target(s) WITHHELD (not expressible to `
+            + 'apply-repoints.ts) — see the notes, act by hand.');
+    }
+    console.log('\n!! OUT OF SCOPE — absent by construction, not "looked and found none":');
+    for (const note of report.scope.notes) console.log(`  ${note}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1120,6 +1344,57 @@ export function resolveOutBase(out: string | undefined, at: Date): string {
     if (out) return out.replace(/\.(json|md)$/i, '');
     const ts = at.toISOString().replace(/[:.]/g, '-');
     return path.join(__dirname, 'results', `triage-verdicts-${ts}`);
+}
+
+/** Thrown for a bad flag value; main() prints the message and exits non-zero. */
+export class FlagError extends Error { }
+
+/**
+ * Parse an integer flag, or REFUSE the run.
+ *
+ * Every numeric flag here used to be `Number(val(flag) ?? default)`, unvalidated,
+ * and each failed silently in its own way: `--concurrency 0` / `--concurrency abc`
+ * built zero probe workers (a report that reads as fully probed while nothing was
+ * probed), and `--limit abc` made `slice(0, NaN)` = [] — a fully-formed 0-row report
+ * saying "nothing dropped — every distinct key is in this report". A typo must not
+ * be able to manufacture a clean-looking empty run.
+ */
+export function parseIntFlag(flag: string, raw: string | undefined, fallback: number, min: number): number {
+    if (raw === undefined) return fallback;
+    const trimmed = raw.trim();
+    const n = Number(trimmed);
+    if (trimmed.length === 0 || !Number.isFinite(n) || !Number.isInteger(n)) {
+        throw new FlagError(`${flag} must be an integer, got "${raw}". `
+            + (trimmed.startsWith('--')
+                ? `That looks like the next flag — ${flag} takes a value.`
+                : 'A non-numeric value would silently degrade this run, so it is refused.'));
+    }
+    if (n < min) {
+        throw new FlagError(`${flag} must be >= ${min}, got ${n}.`
+            + (flag === '--concurrency' ? ' A concurrency below 1 builds zero workers and probes NOTHING.' : ''));
+    }
+    return n;
+}
+
+/**
+ * Apply `--limit` to the `--in` rows and SAY SO. The old `rows.slice(0, limit)`
+ * pushed nothing into log[], so every downstream count (rowCount, screened,
+ * stageCounts, dropStageCounts) described the slice while reading as the file —
+ * exactly the "covered everything" failure the header's TRUNCATION IS ALWAYS
+ * REPORTED section exists to prevent. Both sizes are reported, always.
+ */
+export function applyInputLimit(rows: FunnelRow[], limit: number | undefined): { rows: FunnelRow[]; log: string[] } {
+    if (limit === undefined) return { rows, log: [] };
+    if (rows.length <= limit) {
+        return { rows, log: [`--limit ${limit}: the input file had ${rows.length} row(s), all kept — no truncation.`] };
+    }
+    return {
+        rows: rows.slice(0, limit),
+        log: [`--limit ${limit}: TRUNCATED the input — the file had ${rows.length} row(s) and this run covers only `
+            + `the FIRST ${limit}. ${rows.length - limit} row(s) were discarded before any stage filtering, so `
+            + 'rowCount / screened / stageCounts below describe the KEPT SLICE, not the file. Raise or drop '
+            + '--limit to cover the rest.'],
+    };
 }
 
 async function main(): Promise<void> {
@@ -1133,10 +1408,14 @@ async function main(): Promise<void> {
     const inFile = val('--in');
     const fromDb = has('--from-db');
     if (!inFile && !fromDb) {
-        console.error('Usage: triage-drops.ts (--in <warm.json|.jsonl> | --from-db [--since <date>] [--limit N])');
+        console.error('Usage: triage-drops.ts (--in <warm.json|.jsonl> | --from-db) [--since <date>] [--limit N]');
         console.error('  [--concurrency 4] [--per-class-cap 25] [--out <path>] [--no-probes] [--no-incumbent]');
         console.error('  [--fatsecret] [--dry]');
         console.error('');
+        console.error('  --limit N     integer >= 1. Caps the DB read with --from-db; with --in it truncates the');
+        console.error('                file to the first N rows, and the truncation is reported in the run log.');
+        console.error('  --concurrency N        integer >= 1 (probe worker pool).');
+        console.error('  --per-class-cap N      integer >= 0; 0 means UNLIMITED.');
         console.error('  --no-probes   classify only, zero retrieval calls (cheap mode)');
         console.error('  --dry         run everything, write nothing');
         console.error('  --fatsecret   include the FatSecret lane: spends FS API quota AND background-upserts');
@@ -1145,8 +1424,12 @@ async function main(): Promise<void> {
         return;
     }
 
-    const concurrency = Number(val('--concurrency') ?? 4);
-    const perClassCap = Number(val('--per-class-cap') ?? 25);
+    // Validated, not coerced: see parseIntFlag. `--per-class-cap 0` is the documented
+    // "unlimited", so its floor is 0; a probe pool of 0 is meaningless, so that floor is 1.
+    const concurrency = parseIntFlag('--concurrency', val('--concurrency'), 4, 1);
+    const perClassCap = parseIntFlag('--per-class-cap', val('--per-class-cap'), 25, 0);
+    const limitRaw = val('--limit');
+    const limit = limitRaw === undefined ? undefined : parseIntFlag('--limit', limitRaw, 0, 1);
     const noProbes = has('--no-probes');
     const dry = has('--dry');
     const wantIncumbent = !has('--no-incumbent');
@@ -1160,18 +1443,26 @@ async function main(): Promise<void> {
     if (fromDb) {
         const sinceRaw = val('--since');
         const since = sinceRaw ? new Date(sinceRaw) : undefined;
-        if (since && Number.isNaN(since.getTime())) throw new Error(`--since is not a date: ${sinceRaw}`);
-        const limit = Number(val('--limit') ?? 20000);
+        if (since && Number.isNaN(since.getTime())) throw new FlagError(`--since is not a date: ${sinceRaw}`);
+        const dbLimit = limit ?? 20000;
         prisma = openPrisma();
-        const inputs = await readFromDb(prisma, { since, limit });
+        const inputs = await readFromDb(prisma, { since, limit: dbLimit });
         rows = inputs.map(makeFunnelRow);
-        inputLabel = `MappingEventLog (SELECT only)${sinceRaw ? ` since ${sinceRaw}` : ''} limit ${limit}`;
+        inputLabel = `MappingEventLog (SELECT only)${sinceRaw ? ` since ${sinceRaw}` : ''} limit ${dbLimit}`;
+        if (inputs.length === dbLimit) {
+            extraLog.push(`--limit ${dbLimit} was REACHED exactly (${inputs.length} rows read): the event log almost `
+                + 'certainly holds older matching rows this run never saw. Raise --limit or narrow --since.');
+        }
     } else {
-        rows = readInputRows(inFile!);
-        const limit = val('--limit');
-        if (limit) rows = rows.slice(0, Number(limit));
+        const fileRows = readInputRows(inFile!);
+        const limited = applyInputLimit(fileRows, limit);
+        rows = limited.rows;
+        extraLog.push(...limited.log);
         const rel = path.relative(process.cwd(), inFile!);
         inputLabel = rel.startsWith('..') ? inFile! : rel;
+        if (rows.length !== fileRows.length) {
+            inputLabel += ` (--limit ${limit}: ${rows.length} of ${fileRows.length} rows)`;
+        }
         // The approximate read. warm JSONL records no servingTier, so F2's
         // flat100gServing quality flag falls back to grams === 100 and counts
         // records whose label genuinely IS 100 g. --from-db has the real tier.
@@ -1243,6 +1534,11 @@ async function main(): Promise<void> {
 
 if (require.main === module) {
     main().catch(err => {
+        // A bad flag is a user error, not a crash: print the message, not a stack.
+        if (err instanceof FlagError) {
+            console.error(`\n${err.message}\nRun with no arguments for usage. Nothing was written.`);
+            process.exit(2);
+        }
         console.error(err);
         process.exit(1);
     });

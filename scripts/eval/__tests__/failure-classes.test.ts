@@ -23,15 +23,20 @@ import {
     classStages,
     classifyRow,
     contentTokens,
+    deriveFunnelCacheKey,
     dropClassOf,
+    effectiveKcalPer100g,
+    fromDbBlindSpots,
     hasDropClass,
     isCompositeQuery,
+    keyFidelityOf,
     makeFunnelRow,
     probeLineFor,
     uncoveredTokens,
     type FixKind,
+    type FunnelRowInput,
 } from '../failure-classes';
-import { aggregate, attachIncumbents, renderDoc, type PrismaLike } from '../classify-drops';
+import { aggregate, attachIncumbents, measureInputFidelity, renderDoc, type PrismaLike } from '../classify-drops';
 
 const FIX_KINDS: FixKind[] = ['pipeline', 'data', 'ingest', 'healthy'];
 
@@ -275,6 +280,101 @@ describe('finding 2 — cacheKey is canonicalized, normalizedForm is not', () =>
 });
 
 // ---------------------------------------------------------------------------
+// Finding 2, second half: canonicalizeCacheKey is NOT the FoodMapping key
+// ---------------------------------------------------------------------------
+
+describe('finding 2 — the key is the DERIVED key, not canonicalizeCacheKey alone', () => {
+    // Every literal below was verified on 2026-07-25 by calling the pipeline's own
+    // deriveMappingCacheKey(name, parseIngredientLine(rawLine), null, rawLine). It is
+    // asserted here as a literal rather than by importing that function, because
+    // importing src/lib/mapping/cache-key.ts loads simple-rerank -> config.ts and warms
+    // the ONNX embedder (measured: it logs `embedding.model_loaded`), which is exactly
+    // what the eval tooling must never do. Re-verify with:
+    //   deriveMappingCacheKey(nf ?? raw, parseIngredientLine(raw), null, raw)
+
+    it('appends the identity discriminators the save path appends (IDENTITY_UNIT_HINTS)', () => {
+        // canonicalizeCacheKey alone read "egg" here — a different food's key.
+        expect(makeFunnelRow({ rawLine: '3 egg whites', normalizedForm: 'egg' }).cacheKey).toBe('egg white');
+    });
+
+    it('appends IDENTITY_QUALIFIERS, so cooked does not share a key with dry', () => {
+        expect(makeFunnelRow({ rawLine: '1 cup cooked oats', normalizedForm: 'oats' }).cacheKey).toBe('cooked oat');
+    });
+
+    it("collapses duplicate tokens — the brief's own 'rolled rolled oats' example", () => {
+        expect(makeFunnelRow({ rawLine: 'rolled rolled oats' }).cacheKey).toBe('oat rolled');
+    });
+
+    it('still canonicalizes, singularizes and token-sorts (finding 2, first half)', () => {
+        expect(makeFunnelRow({ rawLine: 'x', normalizedForm: 'chicken breast' }).cacheKey).toBe('breast chicken');
+        expect(makeFunnelRow({ rawLine: 'x', normalizedForm: 'eggs' }).cacheKey).toBe('egg');
+    });
+
+    it('is idempotent under an already-discriminated form', () => {
+        expect(makeFunnelRow({ rawLine: 'egg white', normalizedForm: 'egg white' }).cacheKey).toBe('egg white');
+        expect(makeFunnelRow({ rawLine: 'whole milk', normalizedForm: 'milk' }).cacheKey).toBe('milk');
+    });
+
+    it('PINS the one step that is still missing — the brand prefix — instead of implying it is closed', () => {
+        // deriveMappingCacheKey WRITES "bar protein quest" / "casein dymatize powder
+        // protein" for these lines, because the query names the brand decisively. The
+        // event log records neither the detected brand nor options.brand, so this
+        // reads the generic key and hadIncumbent can be false-negative. If this test
+        // ever fails because the keys now agree, the caveat
+        // cachekey-is-the-read-key-not-always-the-write-key must be updated too.
+        expect(makeFunnelRow({ rawLine: 'quest protein bar', normalizedForm: 'protein bar' }).cacheKey)
+            .toBe('bar protein');
+        expect(makeFunnelRow({ rawLine: 'dymatize casein', normalizedForm: 'casein protein powder' }).cacheKey)
+            .toBe('casein powder protein');
+    });
+
+    it('degrades to the canonical key rather than losing a row the parser rejects', () => {
+        expect(deriveFunnelCacheKey('---', 'pretzels')).toBe('pretzel');
+        expect(deriveFunnelCacheKey('', 'eggs')).toBe('egg');
+    });
+
+    it('measures its own fidelity, so hadIncumbent is never read as per-row truth', () => {
+        const adjusted = keyFidelityOf(makeFunnelRow({ rawLine: '3 egg whites', normalizedForm: 'egg' }));
+        expect(adjusted).toMatchObject({
+            canonicalOnly: 'egg', discriminatorApplied: true, carriesDiscriminatorToken: true,
+        });
+        const plain = keyFidelityOf(makeFunnelRow({ rawLine: 'pretzels', normalizedForm: 'pretzels' }));
+        expect(plain).toMatchObject({ discriminatorApplied: false, carriesDiscriminatorToken: false });
+    });
+
+    it('WARNS in the classify-drops report when rows carry discriminator-bearing tokens', () => {
+        const report = aggregate([
+            makeFunnelRow({ rawLine: '3 egg whites', normalizedForm: 'egg', funnelStage: 'cache_hit', foodName: 'Egg White', grams: 33, kcalPer100g: 55 }),
+            makeFunnelRow({ rawLine: 'cooked quinoa', normalizedForm: 'quinoa', funnelStage: 'cache_hit', foodName: 'Quinoa', grams: 185, kcalPer100g: 120 }),
+        ], { inputLabel: 'test' });
+        expect(report.inputFidelity.discriminatorTokenRows).toBe(2);
+        expect(report.inputFidelity.discriminatorAdjustedRows).toBe(2);
+        expect(report.inputFidelity.warnings.some(w => w.startsWith('KEY FIDELITY'))).toBe(true);
+        expect(report.inputFidelity.warnings.join(' ')).toContain('hadIncumbent');
+        expect(report.inputFidelity.discriminatorExamples[0]).toMatchObject({
+            rawLine: '3 egg whites', cacheKey: 'egg white', canonicalOnly: 'egg',
+        });
+    });
+
+    it('does not cry wolf on rows whose key needed no discriminator', () => {
+        const report = aggregate([makeFunnelRow({
+            rawLine: 'pretzels', normalizedForm: 'pretzels', funnelStage: 'save_rejected',
+            dropReason: 'save_rejected:cross_source_margin', kcalPer100g: 380, grams: 3,
+        })], { inputLabel: 'test' });
+        expect(report.inputFidelity.warnings.some(w => w.startsWith('KEY FIDELITY'))).toBe(false);
+    });
+
+    it('states the identity-discriminator direction in the caveat, not just the brand one', () => {
+        const caveat = FUNNEL_CAVEATS.find(c => c.id === 'cachekey-is-the-read-key-not-always-the-write-key')!;
+        expect(caveat.note).toContain('IDENTITY DISCRIMINATORS');
+        expect(caveat.note).toContain('egg white');
+        expect(caveat.note).toContain('brand');
+        // and it must not be duplicated by a second entry
+        expect(FUNNEL_CAVEATS.filter(c => c.id === caveat.id)).toHaveLength(1);
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Finding 3: under_gate's dropReason carries no signal
 // ---------------------------------------------------------------------------
 
@@ -363,6 +463,149 @@ describe('finding 4 — a successful stage can still be a defect', () => {
     it('marks an ai_estimated backfill so an ingest gap is not mistaken for a ranking gap', () => {
         const row = makeFunnelRow({ rawLine: 'qdoba steak bowl', funnelStage: 'all_filtered', source: 'ai_estimated', grams: 100 });
         expect(row.quality.aiEstimated).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The --from-db row shape: no per-100g panel
+// ---------------------------------------------------------------------------
+
+/**
+ * Rebuild an exemplar exactly as classify-drops' readFromDb would deliver it:
+ * MappingEventLog stores grams and totalKcal and NO per-100g macros
+ * (prisma/schema.prisma:717-752). This is the highest-value test in the file — the
+ * whole `corrupt-panel-served` class was dead in this mode and its rows were being
+ * counted as HEALTHY, and nothing failed.
+ */
+function asDbRow(input: FunnelRowInput): FunnelRowInput {
+    const withDerivedTotal = makeFunnelRow(input);
+    return {
+        ...input,
+        totalKcal: withDerivedTotal.totalKcal,
+        kcalPer100g: null,
+        proteinPer100g: null,
+        carbsPer100g: null,
+        fatPer100g: null,
+    };
+}
+
+describe('--from-db row shape (grams + totalKcal, no macro panel)', () => {
+    it('inverts kcal/100g exactly out of grams and totalKcal', () => {
+        const row = makeFunnelRow(asDbRow({
+            rawLine: 'lemon', funnelStage: 'cache_hit', foodName: 'Lemon', grams: 58, kcalPer100g: 383,
+        }));
+        expect(row.kcalPer100g).toBeNull();
+        expect(effectiveKcalPer100g(row)).toBeCloseTo(383, 6);
+        // and nothing is invented when the row billed nothing
+        expect(effectiveKcalPer100g(makeFunnelRow({ rawLine: 'x', grams: 0, totalKcal: 0 }))).toBeNull();
+        expect(effectiveKcalPer100g(makeFunnelRow({ rawLine: 'x' }))).toBeNull();
+    });
+
+    // THE loop the review asked for: every class, every exemplar, panel stripped.
+    for (const cls of FAILURE_CLASSES) {
+        for (const input of cls.exemplarRows) {
+            const blind = (cls.fromDbBlind ?? []).find(b => b.exemplar === input.rawLine);
+            const label = blind
+                ? `"${input.rawLine}" is DECLARED blind from --from-db`
+                : `"${input.rawLine}" still classifies as ${cls.id} from --from-db`;
+            it(`${cls.id}: ${label}`, () => {
+                const row = makeFunnelRow(asDbRow(input));
+                if (blind) {
+                    // Declared losses must be REAL. If this fails the detector improved —
+                    // delete the fromDbBlind entry (and its doc text) rather than this test.
+                    expect(cls.detector(row)).toBe(false);
+                    expect(blind.why.length).toBeGreaterThan(40);
+                } else {
+                    expect(cls.detector(row)).toBe(true);
+                    expect(classifyRow(row).classId).toBe(cls.id);
+                }
+            });
+        }
+    }
+
+    it('catches the physically-impossible panel from --from-db (the arm that must not be lost)', () => {
+        const carrot = makeFunnelRow(asDbRow({
+            rawLine: 'carrot', funnelStage: 'saved', source: 'openfoodfacts', foodName: 'Carrots',
+            grams: 61, kcalPer100g: 1720, proteinPer100g: 0.9, carbsPer100g: 9.6, fatPer100g: 0.2,
+        }));
+        expect(classifyRow(carrot).classId).toBe('corrupt-panel-served');
+    });
+
+    it('declares — rather than hides — where a blind exemplar lands instead', () => {
+        const lemon = makeFunnelRow(asDbRow({
+            rawLine: 'lemon', funnelStage: 'cache_hit', source: 'openfoodfacts', foodName: 'Lemon',
+            grams: 58, kcalPer100g: 383, proteinPer100g: 0.4, carbsPer100g: 9.3, fatPer100g: 0.3,
+        }));
+        // This IS the failure the review found: a corrupt panel counted as clean. It is
+        // unfixable from this input (Atwater needs macros), so it must be DECLARED.
+        expect(classifyRow(lemon).classId).toBe('cache-hit-healthy');
+        const spots = fromDbBlindSpots();
+        expect(spots.map(s => `${s.classId}:${s.exemplar}`)).toContain('corrupt-panel-served:lemon');
+        expect(spots.every(s => s.why.includes('MappingEventLog') || s.why.includes('Atwater'))).toBe(true);
+    });
+
+    it('classify-drops REPORTS the inert detectors when no row carries a panel', () => {
+        const fid = measureInputFidelity([
+            makeFunnelRow(asDbRow({ rawLine: 'lemon', funnelStage: 'cache_hit', foodName: 'Lemon', grams: 58, kcalPer100g: 383 })),
+            makeFunnelRow(asDbRow({ rawLine: 'carrot', funnelStage: 'saved', foodName: 'Carrots', grams: 61, kcalPer100g: 1720 })),
+        ]);
+        expect(fid.rowsWithPanel).toBe(0);
+        expect(fid.inertDetectors.map(d => d.classId)).toContain('corrupt-panel-served');
+        expect(fid.warnings[0]).toContain('NO PER-100g MACRO PANEL');
+        expect(fid.warnings.join(' ')).toContain('NOT evidence of absence');
+    });
+
+    it('says nothing about inert detectors when the input DOES carry panels', () => {
+        const fid = measureInputFidelity([makeFunnelRow({
+            rawLine: 'lemon', funnelStage: 'cache_hit', foodName: 'Lemon', grams: 58,
+            kcalPer100g: 383, proteinPer100g: 0.4, carbsPer100g: 9.3, fatPer100g: 0.3,
+        })]);
+        expect(fid.rowsWithPanel).toBe(1);
+        expect(fid.warnings.some(w => w.includes('NO PER-100g MACRO PANEL'))).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// no_candidates is a corpus gap, never a filter blackout
+// ---------------------------------------------------------------------------
+
+describe('no_candidates routing', () => {
+    it('routes a no_candidates row to ingest-gap-no-candidates', () => {
+        const row = makeFunnelRow({
+            rawLine: 'shrimp scampi', normalizedForm: 'shrimp scampi', funnelStage: 'no_candidates',
+            dropReason: 'no_candidates:dataset_gap', source: 'ai_estimated', foodName: 'Shrimp Scampi',
+            grams: 100, kcalPer100g: 220, proteinPer100g: 12, carbsPer100g: 10, fatPer100g: 14,
+        });
+        expect(classifyRow(row).classId).toBe('ingest-gap-no-candidates');
+        expect(classifyRow(row).cls?.fixKind).toBe('ingest');
+    });
+
+    it('routes a VENUE-WORDED no_candidates row to the ingest gap, not the blackout tripwire', () => {
+        // The blackout was a FILTER bug: candidates were gathered, then rejected — that is
+        // all_filtered by definition. Claiming no_candidates too made this row a "closed"
+        // pipeline tripwire and burned the session ingest-gap exists to save.
+        for (const rawLine of ['restaurant shrimp scampi', 'chipotle grill chicken bowl', 'corner cafe muffin']) {
+            const row = makeFunnelRow({
+                rawLine, funnelStage: 'no_candidates', dropReason: 'no_candidates:dataset_gap',
+                source: 'ai_estimated', grams: 100, kcalPer100g: 200,
+            });
+            expect(classifyRow(row).classId).toBe('ingest-gap-no-candidates');
+        }
+    });
+
+    it('keeps the tripwire on all_filtered, where a filter blackout actually shows up', () => {
+        const tripwire = classById('venue-brand-blackout-tripwire')!;
+        expect(classStages(tripwire)).toEqual(['all_filtered']);
+        const row = makeFunnelRow({
+            rawLine: 'restaurant shrimp scampi', funnelStage: 'all_filtered',
+            dropReason: 'all_filtered:no_candidate_survived_filters', source: 'ai_estimated', grams: 100, kcalPer100g: 220,
+        });
+        expect(classifyRow(row).classId).toBe('venue-brand-blackout-tripwire');
+    });
+
+    it('leaves no_candidates owned by exactly one class', () => {
+        const owners = FAILURE_CLASSES.filter(c => classStages(c).includes('no_candidates'));
+        expect(owners.map(c => c.id)).toEqual(['ingest-gap-no-candidates']);
     });
 });
 
