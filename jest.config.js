@@ -7,7 +7,15 @@ module.exports = {
       displayName: 'api',
       cacheDirectory: '<rootDir>/tmp/jest-cache',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/src/app/**/*.test.ts', '<rootDir>/src/lib/**/*.test.ts', '<rootDir>/src/ops/**/*.test.ts'],
+      testMatch: [
+        '<rootDir>/src/app/**/*.test.ts',
+        '<rootDir>/src/lib/**/*.test.ts',
+        '<rootDir>/src/ops/**/*.test.ts',
+        // Eval/ops tooling under scripts/ was previously untestable, which is how the
+        // abstention hole in run-eval.ts survived. F2's failure-class detectors are
+        // required to be tested against their own exemplars, so they need this too.
+        '<rootDir>/scripts/**/*.test.ts',
+      ],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }],
       },

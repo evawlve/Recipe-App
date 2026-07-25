@@ -19,6 +19,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { textOf, matchesAlt, isAbstention, describeDrift, type BaselineEntry } from './assertions';
 
 const args = process.argv.slice(2);
 function argValue(flag: string): string | undefined {
@@ -30,9 +31,32 @@ const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.
 const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
 const ONLY = argValue('--only');
 const GREP = argValue('--grep');
+/** Re-record the knownIssue baseline from this run instead of comparing against it. */
+const WRITE_BASELINE = args.includes('--write-baseline');
 
 const goldenPath = path.join(__dirname, 'golden-set.json');
 const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
+
+/**
+ * What the mapper actually returned, as structured values rather than prose.
+ *
+ * `detail` already carried these numbers, but only inside a human-readable string,
+ * so nothing could compare them across runs. That is what let n-cook-06 slide from
+ * kcal100=361 (wrong record) to kcal100=0 (no nutrition at all) while the gate kept
+ * reporting "0 real failures" — both are outside the band, both are knownIssue, and
+ * a boolean cannot express "still failing, but worse".
+ */
+interface Observed {
+    foodId?: string | null;
+    foodName?: string | null;
+    source?: string | null;
+    grams?: number | null;
+    kcal?: number | null;
+    kcal100?: number | null;
+    confidence?: number | null;
+    itemCount?: number;
+    abstained?: boolean;
+}
 
 interface CaseResult {
     id: string;
@@ -45,6 +69,7 @@ interface CaseResult {
     confidence?: number;
     /** Documented-but-unfixed defect: failure is expected and does NOT fail the suite. */
     knownIssue?: boolean;
+    observed?: Observed;
 }
 
 const results: CaseResult[] = [];
@@ -58,19 +83,63 @@ function nutritionMissing(h: any): boolean {
     return !MACRO_KEYS.some(k => hasNum(h?.[k]));
 }
 
-function textOf(hit: any): string {
-    return `${hit.name ?? hit.foodName ?? ''} ${hit.brand ?? hit.brandName ?? ''}`.toLowerCase();
-}
 
-/** True if any of the alternatives (each = list of required substrings) matches the text. */
-function matchesAlt(text: string, alternatives: string[][]): boolean {
-    return alternatives.some(alt => alt.every(sub => text.includes(sub.toLowerCase())));
-}
 
 function percentile(sorted: number[], p: number): number {
     if (sorted.length === 0) return 0;
     const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
     return sorted[Math.max(0, idx)];
+}
+
+// ---------------------------------------------------------------------------
+// knownIssue baseline
+// ---------------------------------------------------------------------------
+
+
+const baselinePath = path.join(__dirname, 'known-issue-baseline.json');
+
+function loadKnownIssueBaseline(): Record<string, BaselineEntry> {
+    try {
+        return JSON.parse(fs.readFileSync(baselinePath, 'utf8')).cases ?? {};
+    } catch {
+        return {};
+    }
+}
+
+function writeKnownIssueBaseline(rs: CaseResult[]): void {
+    const cases: Record<string, BaselineEntry> = {};
+    for (const r of rs) {
+        if (!r.knownIssue || !r.observed) continue;
+        cases[r.id] = {
+            foodId: r.observed.foodId ?? null,
+            foodName: r.observed.foodName ?? null,
+            grams: r.observed.grams ?? null,
+            kcal100: r.observed.kcal100 ?? null,
+            abstained: r.observed.abstained ?? false,
+        };
+    }
+    fs.writeFileSync(baselinePath, JSON.stringify({
+        _readme: 'Recorded state of each knownIssue case. run-eval compares against this and '
+            + 'reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the '
+            + 'signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the '
+            + 'new values are understood to be the intended state.',
+        writtenAt: new Date().toISOString(),
+        cases,
+    }, null, 2) + '\n');
+}
+
+/** Every knownIssue case whose recorded values moved since the baseline was written. */
+function compareKnownIssueBaseline(rs: CaseResult[]): Array<{ id: string; what: string }> {
+    const base = loadKnownIssueBaseline();
+    const out: Array<{ id: string; what: string }> = [];
+    for (const r of rs) {
+        if (!r.knownIssue || !r.observed) continue;
+        const b = base[r.id];
+        if (!b) continue;  // new pin: nothing to compare until the baseline is refreshed
+        const changes = describeDrift(b, r.observed);
+        if (changes.length) out.push({ id: r.id, what: changes.join('; ') });
+    }
+    return out;
 }
 
 async function runSearchCase(c: any): Promise<CaseResult> {
@@ -97,7 +166,17 @@ async function runSearchCase(c: any): Promise<CaseResult> {
             const bad = topN.find(nutritionMissing);
             if (bad) { pass = false; detail = `NULL-NUTRITION "${bad.name}" | ${detail}`; }
         }
-        return { id: c.id, kind: 'search', category: c.category, query: c.query, pass, ms, detail, confidence, knownIssue: c.knownIssue };
+        return {
+            id: c.id, kind: 'search', category: c.category, query: c.query, pass, ms, detail, confidence,
+            knownIssue: c.knownIssue,
+            observed: {
+                foodId: hits[0]?.id ?? hits[0]?.foodId ?? null,
+                foodName: hits[0]?.name ?? null,
+                kcal100: hits[0]?.kcal100 ?? null,
+                confidence: confidence ?? null,
+                itemCount: hits.length,
+            },
+        };
     } catch (err) {
         return { id: c.id, kind: 'search', category: c.category, query: c.query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue };
     }
@@ -116,7 +195,16 @@ async function runNlpCase(c: any): Promise<CaseResult> {
         const ms = Date.now() - t0;
         const items: any[] = await res.json();
         if (!Array.isArray(items) || items.length === 0) {
-            return { id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms, detail: `no items returned (HTTP ${res.status})` };
+            // Carries knownIssue for consistency with the catch branch below — otherwise a
+            // transport hiccup on a pinned case reads as a REAL failure while an exception
+            // on the same case is absorbed. The drift check still surfaces it, because
+            // itemCount 1 -> 0 is a recorded change.
+            return {
+                id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms,
+                detail: `TRANSPORT: no items returned (HTTP ${res.status})`,
+                knownIssue: c.knownIssue,
+                observed: { itemCount: 0 },
+            };
         }
 
         const failures: string[] = [];
@@ -127,10 +215,45 @@ async function runNlpCase(c: any): Promise<CaseResult> {
 
         // Name check: for single-item cases the one item must match; for
         // segmentation cases at least one item must match.
+        //
+        // An abstention can NEVER satisfy a positive name assertion — it echoes the
+        // query text back as foodName, so it would otherwise match trivially. See
+        // isAbstention().
         if (c.expectName) {
-            const anyNameMatch = items.some(it => matchesAlt(textOf(it), c.expectName));
+            const anyNameMatch = items.some(it => !isAbstention(it) && matchesAlt(textOf(it), c.expectName));
             if (!anyNameMatch) {
-                failures.push(`name mismatch: [${items.map(it => `"${it.foodName}"`).join(', ')}]`);
+                const shown = items.map(it => isAbstention(it) ? 'NO PICK (abstained)' : `"${it.foodName}"`);
+                failures.push(`name mismatch: [${shown.join(', ')}]`);
+            }
+        }
+
+        // Negative name assertion — no returned item may match. This pins a
+        // wrong-record class without needing to know the right answer, which is what
+        // the composite->component drift cases need: "qdoba chicken burrito must not
+        // resolve to Tequila Lime Chicken" is assertable even while the correct
+        // billing figure is still being argued about.
+        if (c.forbidName) {
+            const offender = items.find(it => !isAbstention(it) && matchesAlt(textOf(it), c.forbidName));
+            if (offender) {
+                failures.push(`forbidden name matched: "${offender.foodName}" [${offender.brandName ?? ''}]`);
+            }
+        }
+
+        // The mapper is REQUIRED to produce no confident pick. For a query whose
+        // honest answer is "not in the corpus", billing a component at 0.95 is worse
+        // than abstaining, and only this can express that.
+        if (c.expectAbstain) {
+            const confident = items.find(it => !isAbstention(it));
+            if (confident) {
+                failures.push(`expected abstention, got "${confident.foodName}" conf=${confident.matchConfidence} grams=${confident.grams}`);
+            }
+        }
+
+        // Weak form: it may guess, but must not look authoritative enough to cache.
+        if (typeof c.maxConfidence === 'number') {
+            const conf = items[0]?.matchConfidence;
+            if (typeof conf !== 'number' || conf > c.maxConfidence) {
+                failures.push(`confidence=${conf} exceeds maxConfidence ${c.maxConfidence} (mapped: "${items[0]?.foodName}")`);
             }
         }
 
@@ -175,6 +298,17 @@ async function runNlpCase(c: any): Promise<CaseResult> {
             pass: failures.length === 0, ms,
             detail: failures.length ? failures.join('; ') : `mapped: "${items[0]?.foodName}" grams=${items[0]?.grams} conf=${confidence?.toFixed(2)}`,
             confidence, knownIssue: c.knownIssue,
+            observed: {
+                foodId: items[0]?.foodId ?? null,
+                foodName: items[0]?.foodName ?? null,
+                source: items[0]?.source ?? null,
+                grams: items[0]?.grams ?? null,
+                kcal: items[0]?.nutrition?.calories ?? null,
+                kcal100: items[0]?.nutritionPer100g?.kcal100 ?? null,
+                confidence: confidence ?? null,
+                itemCount: items.length,
+                abstained: isAbstention(items[0]),
+            },
         };
     } catch (err) {
         return { id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue };
@@ -252,6 +386,25 @@ async function main() {
     if (knownNowPassing.length) {
         console.log(`\n---- 🟢 known issues NOW PASSING (${knownNowPassing.length} — promote to hard assertions) ----`);
         for (const r of knownNowPassing) console.log(`   [${r.id}] "${r.query}"`);
+    }
+
+    // ---- knownIssue DRIFT ----
+    // knownIssue is a whole-case, all-reasons, unbounded exemption: a pinned case can
+    // move from "wrong record, right ballpark" to "0 kcal" or "no record at all" and the
+    // gate still says "0 real failures", because a boolean cannot express "still failing,
+    // but differently". n-cook-06 did exactly that (kcal100 361 -> 0). Comparing the
+    // recorded values catches it.
+    const drifts = compareKnownIssueBaseline(results);
+    if (drifts.length) {
+        console.log(`\n---- 🟠 knownIssue DRIFT (${drifts.length}) — still failing, but the failure CHANGED ----`);
+        for (const d of drifts) console.log(`   [${d.id}] ${d.what}`);
+        console.log(`   (non-gating. If the new values are the intended state, refresh with --write-baseline.)`);
+    }
+    summary.knownIssueDrift = drifts.length;
+
+    if (WRITE_BASELINE) {
+        writeKnownIssueBaseline(results);
+        console.log(`\nBaseline written to ${path.relative(process.cwd(), baselinePath)} (${results.filter(r => r.knownIssue).length} knownIssue cases).`);
     }
 
     const outDir = path.join(__dirname, 'results');
