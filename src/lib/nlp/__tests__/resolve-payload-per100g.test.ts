@@ -17,7 +17,11 @@ jest.mock('../../db', () => ({
     },
 }));
 
-import { isDegenerateNutrition, per100gFromBilledMacros } from '../resolve-payload';
+import {
+    isDegenerateNutrition,
+    per100gFromBilledMacros,
+    isPer100gInconsistentWithBilled,
+} from '../resolve-payload';
 
 const EMPTY = {
     kcal100: 0, protein100: 0, carbs100: 0, fat100: 0,
@@ -79,5 +83,59 @@ describe('per100gFromBilledMacros', () => {
         expect(per100gFromBilledMacros({
             grams: 50, kcal: 0, protein: 10, carbs: 0, fat: 0,
         })).toEqual({ kcal100: 0, protein100: 20, carbs100: 0, fat100: 0 });
+    });
+});
+
+// Funnel fix 5. Billing a FatSecret "1 serving" restaurant row from its own
+// macros makes `grams` an energy-density estimate rather than a weight, so the
+// per-100g block and the billed macros stop agreeing. The client rescales a
+// portion as per100g x grams, so the response would carry two different calorie
+// counts and changing the portion would silently switch between them.
+describe('isPer100gInconsistentWithBilled', () => {
+    const base = { fiber100: 0, sugar100: 0, sodium100: 0, protein100: 0, carbs100: 0, fat100: 0 };
+
+    it('flags the tall flat white: 85g x 50 kcal/100g = 42, billed 170', () => {
+        expect(isPer100gInconsistentWithBilled(
+            { ...base, kcal100: 50 },
+            { grams: 85, kcal: 170 },
+        )).toBe(true);
+    });
+
+    it('accepts an ordinary gram-anchored line where the two agree', () => {
+        expect(isPer100gInconsistentWithBilled(
+            { ...base, kcal100: 400 },
+            { grams: 60, kcal: 240 },
+        )).toBe(false);
+    });
+
+    it('tolerates rounding drift rather than churning on it', () => {
+        // 60g x 400.5 = 240.3 against a billed 240.0
+        expect(isPer100gInconsistentWithBilled(
+            { ...base, kcal100: 400.5 },
+            { grams: 60, kcal: 240 },
+        )).toBe(false);
+    });
+
+    it('does not trip on a small total where a few kcal is a big percentage', () => {
+        // A 5 kcal black coffee: the relative gap is large but the absolute one
+        // is within the noise floor, so re-deriving would be churn.
+        expect(isPer100gInconsistentWithBilled(
+            { ...base, kcal100: 2 },
+            { grams: 100, kcal: 5 },
+        )).toBe(false);
+    });
+
+    it('stays out of the way when there is nothing to compare', () => {
+        expect(isPer100gInconsistentWithBilled({ ...base, kcal100: 50 }, { grams: 0, kcal: 170 })).toBe(false);
+        expect(isPer100gInconsistentWithBilled({ ...base, kcal100: 50 }, { grams: 85, kcal: 0 })).toBe(false);
+    });
+
+    it('composes with per100gFromBilledMacros to restore the invariant', () => {
+        const billed = { grams: 85, kcal: 170, protein: 9, carbs: 14, fat: 9 };
+        expect(isPer100gInconsistentWithBilled({ ...base, kcal100: 50 }, billed)).toBe(true);
+        const derived = per100gFromBilledMacros(billed)!;
+        // per100g x grams == billed, at any portion.
+        expect(derived.kcal100 * (billed.grams / 100)).toBeCloseTo(billed.kcal, 1);
+        expect(derived.protein100 * (billed.grams / 100)).toBeCloseTo(billed.protein, 1);
     });
 });

@@ -42,6 +42,33 @@ export function isDegenerateNutrition(n: ResolvedNutritionPer100g): boolean {
 }
 
 /**
+ * True when the per-100g block cannot be reconciled with what the line bills.
+ *
+ * The client rescales a portion as `per100g x grams`, so the response carries
+ * the calorie count twice and the two must agree. They come apart when grams is
+ * not a real weight: a serving billed from its OWN macros (FatSecret's
+ * "1 serving" restaurant rows) reports grams as an energy-density estimate, so
+ * a tall flat white bills its true 170 kcal beside a kcal100 that implies 42.
+ *
+ * Compared on calories alone — it is the figure the split actually corrupts,
+ * and the one every client path reads. The tolerance is deliberately loose:
+ * ordinary rounding through `toFixed(1)` and per-100g storage drifts by a few
+ * tenths, and re-deriving in that case would be churn. Both an absolute and a
+ * relative floor must be cleared, so small totals (a 5 kcal black coffee)
+ * cannot trip it on rounding alone.
+ */
+export function isPer100gInconsistentWithBilled(
+  n: ResolvedNutritionPer100g,
+  billed: { grams: number; kcal: number },
+): boolean {
+  if (!(billed.grams > 0)) return false;
+  if (!(billed.kcal > 0)) return false;
+  const implied = (n.kcal100 ?? 0) * (billed.grams / 100);
+  const diff = Math.abs(implied - billed.kcal);
+  return diff > 5 && diff > billed.kcal * 0.1;
+}
+
+/**
  * Per-100g values implied by a line's own billed macros.
  *
  * Used when the food row can't supply nutrition. The mapper is authoritative
