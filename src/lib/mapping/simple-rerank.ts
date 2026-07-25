@@ -1387,19 +1387,39 @@ export function hasDecisiveBrandContext(text: string, targetBrand: string): bool
 }
 
 /**
+ * The tokenizer splits on whitespace and brackets, so an apostrophe stays glued
+ * inside its token: "Member's Mark" yields "member's". The brand lexicon's
+ * detected form is routinely apostrophe-free ("members mark"), so the two sides
+ * never met and possessive-first brands failed a match against their own
+ * records. Folding `'` / `’` / `` ` `` out of both sides fixes that; it is an
+ * admit-only relaxation, because dropping characters can only merge token forms
+ * and therefore can only turn a false match into a true one.
+ */
+function foldApostrophes(token: string): string {
+    return token.replace(/['’`]/g, '');
+}
+
+/**
  * Whole-token brand match: the candidate must carry the detected brand's first
  * token as a full word — in its brand field OR its name, because OFF records
  * often embed the brand in the name with an empty brand field ("Ghost Whey
  * Protein (Cinnabon)", brand ""). Substring matching is unsafe ("one" would
  * match "Toblerone"); requiring every detected token is too strict because
  * lexicon entries can be brand+form ("one bar" vs brand "ONE Brands").
+ *
+ * Comparison is apostrophe-insensitive on both sides (see foldApostrophes) so
+ * "Member's Mark" / "members mark" / "Members Mark" are one brand, not three.
  */
 export function candidateMatchesTargetBrand(brandName: string | undefined, candidateName: string, targetBrand: string): boolean {
     const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (brandTokens.length === 0) return false;
+    const target = foldApostrophes(brandTokens[0]);
+    if (target.length === 0) return false;
     const candTokens = `${candidateName} ${brandName ?? ''}`.toLowerCase()
-        .split(/[\s,()[\]{}]+/).filter(Boolean);
-    return candTokens.includes(brandTokens[0]);
+        .split(/[\s,()[\]{}]+/)
+        .map(foldApostrophes)
+        .filter(Boolean);
+    return candTokens.includes(target);
 }
 
 /**
