@@ -63,6 +63,70 @@ beforeEach(() => {
     mockFatSecretServingFindFirst.mockResolvedValue(null);
 });
 
+// Funnel fix 4. A pick admitted BELOW the 0.85 confidence gate may create a
+// cache row but must never overwrite one. This is the entire blast-radius bound
+// on conditional admission — and the guarantee PR #143 lacked when it repointed
+// the eight most-used generic keys in the cache and broke five golden cases.
+describe('insert-only guard for sub-threshold admissions', () => {
+    it('seeds a key that has no row', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(null);
+        await saveValidatedMapping(
+            'ground turkey',
+            makeMapping({ foodName: '85% lean ground turkey' }),
+            { confidence: 0.83 } as AIValidationResult,
+            { insertOnly: true, nutrientsPer100g: { kcal: 213, protein: 17, carbs: 0, fat: 15 } },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses to overwrite an existing row, whatever its confidence', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: '1111111111111', fdcId: null, fsId: null,
+            foodName: 'Ground Turkey', aiConfidence: 0.98, validatedBy: 'ai',
+        });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'ground turkey',
+            makeMapping({ foodName: '85% lean ground turkey' }),
+            { confidence: 0.83 } as AIValidationResult,
+            { insertOnly: true, telemetry, nutrientsPer100g: { kcal: 213, protein: 17, carbs: 0, fat: 15 } },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:sub_threshold_no_displace');
+    });
+
+    it('refuses even when the incumbent is LESS confident — 0.83 does not get to evict', async () => {
+        // The guard is unconditional on purpose. Comparing confidences is what
+        // the cross-source margin does, and it is exactly the kind of judgement
+        // that went wrong in PR #143; a sub-threshold pick simply never displaces.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: '1111111111111', fdcId: null, fsId: null,
+            foodName: 'Ground Turkey', aiConfidence: 0.60, validatedBy: 'ai',
+        });
+        await saveValidatedMapping(
+            'ground turkey',
+            makeMapping({ foodName: '85% lean ground turkey' }),
+            { confidence: 0.83 } as AIValidationResult,
+            { insertOnly: true, nutrientsPer100g: { kcal: 213, protein: 17, carbs: 0, fat: 15 } },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('leaves ordinary above-threshold saves free to supersede', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: '1111111111111', fdcId: null, fsId: null,
+            foodName: 'Ground Turkey', aiConfidence: 0.90, validatedBy: 'ai',
+        });
+        await saveValidatedMapping(
+            'ground turkey',
+            makeMapping({ foodId: 'off_1111111111111', foodName: '85% lean ground turkey' }),
+            validation,
+            { nutrientsPer100g: { kcal: 213, protein: 17, carbs: 0, fat: 15 } },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('brand-mismatch save gate', () => {
     it('rejects "ryse protein" mapped to "Protein Rice" (no brand carried)', async () => {
         await saveValidatedMapping(

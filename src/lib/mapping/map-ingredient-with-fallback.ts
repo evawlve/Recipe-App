@@ -53,6 +53,7 @@ import { requestAiNutrition, extractBaseFoodContext, getAiServingGrams } from '.
 import { AI_NUTRITION_BACKFILL_ENABLED } from './config';
 import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
+import { assessSubThresholdAdmission } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
@@ -2602,8 +2603,35 @@ export async function mapIngredientWithFallback(
             return null;
         }
 
+        // Per-100g macros of the pick. Hoisted above the save decision because
+        // conditional sub-threshold admission needs them too (funnel fix 4) —
+        // they still feed the save-time plausibility gate inside
+        // saveValidatedMapping (PR D), which serves corrupt picks but declines
+        // to cache them.
+        const savedNutrientsPer100g = result.grams > 0 ? {
+            kcal: (result.kcal / result.grams) * 100,
+            protein: (result.protein / result.grams) * 100,
+            carbs: (result.carbs / result.grams) * 100,
+            fat: (result.fat / result.grams) * 100,
+        } : undefined;
+
+        // Funnel fix 4: a pick just under the gate may still be offered to the
+        // cache when the query decisively names a brand the record carries.
+        // See sub-threshold-admission.ts — the brand requirement is also what
+        // bounds the blast radius, since such a pick's cache key provably
+        // contains a brand token and so can never be a bare generic key.
+        const subThreshold = assessSubThresholdAdmission({
+            rawLine: trimmed,
+            confidence,
+            brandDetection,
+            foodName: result.foodName,
+            brandName: result.brandName,
+            nutrientsPer100g: savedNutrientsPer100g,
+        });
+        const admitToCache = confidence >= 0.85 || subThreshold.admit;
+
         // Step 6: Save to validated cache if high confidence
-        if (confidence >= 0.85 && selectionReason === 'normalized_cache_hit') {
+        if (admitToCache && selectionReason === 'normalized_cache_hit') {
             // PR D pt3 (B6): a cache hit must NOT re-save itself — the resave
             // is what let the escape→overwrite loop churn rows. Mirrors the
             // early-cache path, which returns before ever reaching Step 6.
@@ -2612,7 +2640,7 @@ export async function mapIngredientWithFallback(
                 normalizedName,
                 foodId: result.foodId,
             });
-        } else if (confidence >= 0.85) {
+        } else if (admitToCache) {
             // Use normalizedName (preserves nutritional modifiers like "powdered", "reduced fat")
             // instead of canonicalBase (which collapses variants to a shared base).
             // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
@@ -2632,15 +2660,6 @@ export async function mapIngredientWithFallback(
             // built from it could never be symmetric.
             const cacheKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, trimmed);
 
-            // Per-100g macros of the pick + the AI estimate feed the save-time
-            // plausibility gate inside saveValidatedMapping (PR D): corrupt
-            // picks still serve this request but are not cached.
-            const savedNutrientsPer100g = result.grams > 0 ? {
-                kcal: (result.kcal / result.grams) * 100,
-                protein: (result.protein / result.grams) * 100,
-                carbs: (result.carbs / result.grams) * 100,
-                fat: (result.fat / result.grams) * 100,
-            } : undefined;
             const expectedNutrition = aiNutritionEstimate ? {
                 caloriesPer100g: aiNutritionEstimate.caloriesPer100g,
                 proteinPer100g: aiNutritionEstimate.proteinPer100g,
@@ -2650,6 +2669,18 @@ export async function mapIngredientWithFallback(
             // Optimistic: a save gate inside saveValidatedMapping downgrades
             // this to 'save_rejected' (with its own class ID) if it blocks.
             markFunnel(telemetry, 'saved');
+            // Logged, not funnel-tagged: markFunnel deliberately clears the
+            // class on successful stages, so the next funnel read measures this
+            // relaxation from this line rather than from a dropReason.
+            if (subThreshold.admit) {
+                logger.info('mapping.sub_threshold_admitted', {
+                    rawLine: trimmed,
+                    normalizedName,
+                    confidence,
+                    foodId: result.foodId,
+                    foodName: result.foodName,
+                });
+            }
 
             await saveValidatedMapping(rawLine, result, {
                 approved: true,
@@ -2662,6 +2693,7 @@ export async function mapIngredientWithFallback(
                 persistCookingModifier: aiCookingModifier,
                 nutrientsPer100g: savedNutrientsPer100g,
                 expectedNutrition,
+                insertOnly: subThreshold.admit,
             });
 
             // Also save AI synonyms as aliases to enable future cache hits
@@ -2700,6 +2732,9 @@ export async function mapIngredientWithFallback(
                     persistCookingModifier: aiCookingModifier,
                     nutrientsPer100g: savedNutrientsPer100g,
                     expectedNutrition,
+                    // An alias of a sub-threshold pick inherits the guarantee:
+                    // it may seed a new key, never overwrite an existing one.
+                    insertOnly: subThreshold.admit,
                 }).catch(() => { }); // Best effort, ignore duplicates
             }
         } else if (selectionReason !== 'normalized_cache_hit') {
@@ -2718,6 +2753,10 @@ export async function mapIngredientWithFallback(
                 confidence,
                 selectionReason,
                 foodId: result.foodId,
+                // Which conditional-admission condition declined it (fix 4).
+                // Kept on the debug line rather than in the funnel class so the
+                // existing selectionReason taxonomy stays comparable run to run.
+                subThresholdReason: subThreshold.reason,
             });
         }
 
