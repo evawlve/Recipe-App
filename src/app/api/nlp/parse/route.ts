@@ -160,8 +160,10 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
-    const { resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros } =
-      await import('@/lib/nlp/resolve-payload');
+    const {
+      resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros,
+      isPer100gInconsistentWithBilled,
+    } = await import('@/lib/nlp/resolve-payload');
     const { logger } = await import('@/lib/logger');
 
     const body = await req.json();
@@ -347,7 +349,18 @@ export async function POST(req: NextRequest) {
       // persisted by a background task — that split shipped correct serving
       // calories next to kcal100: 0, and the client rescales by kcal100. Fall
       // back to the line's own macros so the two can't contradict each other.
-      const derivedPer100g = isDegenerateNutrition(details.nutritionPer100g)
+      //
+      // The same split reappears whenever the two are merely INCONSISTENT
+      // rather than absent (funnel fix 5). A record billed from its own
+      // per-serving macros — FatSecret's "1 serving" restaurant rows — carries
+      // grams that are only an energy-density estimate, so a tall flat white
+      // bills its true 170 kcal while kcal100 x grams says 42. Whichever number
+      // the client happens to use then decides the calorie count, and changing
+      // the portion silently switches it to the wrong one. The billed macros are
+      // authoritative, so re-derive per-100g from them and the invariant
+      // per100g x grams == billed holds by construction at any portion.
+      const inconsistent = isPer100gInconsistentWithBilled(details.nutritionPer100g, mapped);
+      const derivedPer100g = isDegenerateNutrition(details.nutritionPer100g) || inconsistent
         ? per100gFromBilledMacros(mapped)
         : null;
       const nutritionPer100g = derivedPer100g
