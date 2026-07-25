@@ -1143,8 +1143,7 @@
           "ryse"
         ]
       ],
-      "knownIssue": true,
-      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. VERIFIED 2026-07-19: INGEST-BLOCKED, not ranking-fixable. RYSE brand IS in corpus (Ryse Clear Protein, RYSE Loaded Protein Banana Pudding) but NO Cinnamon-Toast-Crunch flavor SKU exists, so nothing RYSE can be ranked up; the query lands on generic cereal records. Needs the flavor SKU ingested before any ranking fix engages. knownIssue, non-gating."
+      "notes": "PROMOTED HARD 2026-07-25: the ingest gap that made this unfixable is closed. The FatSecret lane (live on master since 2026-07-23, FATSECRET_RETRIEVAL_ENABLED=1) supplies a RYSE candidate for this flavor, so a 'ryse' hit now lands in the top 3 instead of the query falling through to generic cereal records. Green on every run across 2026-07-24/25 including the FS-hardening gates. This case therefore asserts the fs lane's contribution to /api/foods/search — if the flag is turned off or fs candidates stop reaching the search route, this goes red first, which is the intended signal. | Previously: Pattern 1 (flavor-suffix collision), SEARCH. VERIFIED 2026-07-19: INGEST-BLOCKED, not ranking-fixable. RYSE brand IS in corpus (Ryse Clear Protein, RYSE Loaded Protein Banana Pudding) but NO Cinnamon-Toast-Crunch flavor SKU exists, so nothing RYSE can be ranked up; the query lands on generic cereal records. Needs the flavor SKU ingested before any ranking fix engages."
     },
     {
       "id": "s-supp-12",
@@ -4966,8 +4965,7 @@
         40,
         80
       ],
-      "knownIssue": true,
-      "notes": "Track 3 bare-serving defaults KNOWN ISSUE (soft until 2 stable runs — n-serv-06 flap precedent). NULL-servingGrams SKU billed 1g (poisoned 'bar' cache row). New per-noun bounds reject cached bars <15g; routing: discrete 'bar' backfill -> brand sibling borrow -> AI (floor-clamped >=15g) -> 50g bare_discrete_floor. First resolution may be AI-estimated (~60g real bar), hence soft."
+      "notes": "PROMOTED HARD 2026-07-25: the soft-until-2-stable-runs condition below is met and then some — green on every run across 2026-07-24/25. CACHE-BACKED, unlike n-mq-22: FoodMapping key 'bar chip chocolate kirkland protein' -> OFF 'Protein bar' / Kirkland (validatedBy=ai, updated 2026-07-25). The [40,80] band is deliberately wide relative to the >=15g clamp and the 50g bare_discrete_floor, so a re-warm is unlikely to flip it; but if that row is evicted and re-resolved to an AI estimate outside the band this case is the tripwire, so read a failure here as 'the bar-serving routing changed', not as a new defect class. | Previously: Track 3 bare-serving defaults KNOWN ISSUE (soft until 2 stable runs — n-serv-06 flap precedent). NULL-servingGrams SKU billed 1g (poisoned 'bar' cache row). New per-noun bounds reject cached bars <15g; routing: discrete 'bar' backfill -> brand sibling borrow -> AI (floor-clamped >=15g) -> 50g bare_discrete_floor. First resolution may be AI-estimated (~60g real bar), hence soft."
     },
     {
       "id": "n-mq-01",
@@ -5242,8 +5240,7 @@
           38
         ]
       },
-      "knownIssue": true,
-      "notes": "DEFECT (found 2026-07-19) — GENERIC MATCH QUALITY. PARTIALLY IMPROVED 2026-07-19: shipped lean-cut protein FLOOR (18g/100g, macro-plausibility.ts) which demoted the worst deli 'roll' (14.6p) -> now 'sliced chicken breast' 16.8p, but STILL below [25,38] because the real ~30g grilled-breast record is NOT retrieved for this phrasing (word-order-sensitive candidate gathering; 'chicken breast grilled' finds 29.5p but 'grilled chicken breast' does not). 'white rice' still resolves to 45g DRY vs ~150g cooked. REMAINING (deferred, own PR behind full eval): (a) cooked-default for bare staples [HIGH risk — cook-state-detector.ts is dead code, gather-candidates.ts:~516 auto-bypasses bare 'rice' to dry top1], (b) retrieval/rerank so the grilled-breast record enters the pool order-independently."
+      "notes": "PROMOTED HARD 2026-07-25: the word-order-sensitive retrieval gap described below is resolved, and the pass is RETRIEVAL-DRIVEN, not cache-propped — verified on the box that NO FoodMapping row exists for the canonical key 'breast chicken grilled' (ILIKE %grilled% AND %chicken% returns zero rows), and SegmentationCache stores only the item split, never the chosen record. So protein100 lands in [25,38] via live candidate gathering on every run. Green across 2026-07-24/25. NOTE the assertion covers only the chicken item: this case never asserted the 'white rice' half, and the dry-vs-cooked staple default remains open (see the REMAINING (a) note below) — promoting this does NOT claim that half is fixed. | Previously: DEFECT (found 2026-07-19) — GENERIC MATCH QUALITY. PARTIALLY IMPROVED 2026-07-19: shipped lean-cut protein FLOOR (18g/100g, macro-plausibility.ts) which demoted the worst deli 'roll' (14.6p) -> now 'sliced chicken breast' 16.8p, but STILL below [25,38] because the real ~30g grilled-breast record is NOT retrieved for this phrasing (word-order-sensitive candidate gathering; 'chicken breast grilled' finds 29.5p but 'grilled chicken breast' does not). 'white rice' still resolves to 45g DRY vs ~150g cooked. REMAINING (deferred, own PR behind full eval): (a) cooked-default for bare staples [HIGH risk — cook-state-detector.ts is dead code, gather-candidates.ts:~516 auto-bypasses bare 'rice' to dry top1], (b) retrieval/rerank so the grilled-breast record enters the pool order-independently."
     },
     {
       "id": "n-mq-23",
