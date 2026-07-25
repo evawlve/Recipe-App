@@ -528,6 +528,66 @@ describe('save-time macro-plausibility gate interplay', () => {
     });
 });
 
+// Degenerate-nutrition gate (funnel first read, Jul 2026). FoodMapping stores
+// identity only, so caching a pick that hydrates to nothing pins the key to a
+// 0 kcal record for every later request.
+describe('zero-macro save gate', () => {
+    it('rejects a pick whose per-100g macros are all zero', async () => {
+        await saveValidatedMapping(
+            'glazed munchkins',
+            makeMapping({ foodId: 'fs_68758329', foodName: 'Glazed Munchkins' }),
+            validation,
+            { nutrientsPer100g: { kcal: 0, protein: 0, carbs: 0, fat: 0 } },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(mockFoodMappingFindUnique).not.toHaveBeenCalled(); // pre-DB, like the other macro gates
+    });
+
+    it('tags the rejection as save_rejected:zero_macros', async () => {
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'moussaka',
+            makeMapping({ foodId: 'fs_1', foodName: 'Moussaka' }),
+            validation,
+            { nutrientsPer100g: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, telemetry },
+        );
+        expect(telemetry.funnelStage).toBe('save_rejected');
+        expect(telemetry.dropReason).toBe('save_rejected:zero_macros');
+    });
+
+    it('treats absent macros the same as zero ones', async () => {
+        await saveValidatedMapping(
+            'gyro',
+            makeMapping({ foodId: 'fs_2697224', foodName: 'Gyro' }),
+            validation,
+            { nutrientsPer100g: {} },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('lets a single non-zero macro through — only ALL-zero is degenerate', async () => {
+        // Zero-calorie foods that still carry a macro reading are real data.
+        // (Deliberately not a produce name: the plausibility gate's own
+        // produce floor would reject 0 kcal there for a different reason.)
+        await saveValidatedMapping(
+            'test food',
+            makeMapping({ foodId: 'off_1111111111111', foodName: 'Test Food' }),
+            validation,
+            { nutrientsPer100g: { kcal: 0, protein: 0, carbs: 3, fat: 0 } },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire when the caller supplies no macros at all (grams<=0 path stays ungated)', async () => {
+        await saveValidatedMapping(
+            'diet coke',
+            makeMapping({ foodId: 'off_1111111111111', foodName: 'Diet Coke', grams: 0 }),
+            validation,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('FIX 3: bare-category takeover save gate', () => {
     it('rejects "special k red berries" collapsing into a bare "Cereal"', async () => {
         await saveValidatedMapping(

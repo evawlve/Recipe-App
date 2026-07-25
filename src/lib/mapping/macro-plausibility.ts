@@ -25,6 +25,29 @@ export interface MacroPlausibilityInput {
     fat?: number | null;
 }
 
+/**
+ * True when every macro reads as zero (or is absent) — a record carrying no
+ * nutrition at all.
+ *
+ * Deliberately NOT folded into assessMacroPlausibility: that function's bounds
+ * layer is shared with rank time, where an all-zero candidate is already
+ * handled by hasNullOrInvalidMacros, and where a hard drop would change
+ * ranking. This is a save-time-only signal.
+ *
+ * Absent and zero are treated alike on purpose. A record that omits every
+ * macro is no more informative than one that reports them as zero, and the
+ * per-100g blocks reaching this code are built by division (kcal / grams), so
+ * a missing input surfaces as an explicit 0 about as often as as a null.
+ */
+export function isAllZeroMacros(n?: MacroPlausibilityInput | null): boolean {
+    if (!n) return false;
+    const kcal = n.kcal ?? n.calories ?? 0;
+    return (kcal ?? 0) === 0
+        && (n.protein ?? 0) === 0
+        && (n.carbs ?? 0) === 0
+        && (n.fat ?? 0) === 0;
+}
+
 export interface MacroPlausibilityResult {
     /** True when no checks fired. */
     plausible: boolean;

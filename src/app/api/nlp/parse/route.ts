@@ -160,7 +160,9 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
-    const { resolveFoodDetails } = await import('@/lib/nlp/resolve-payload');
+    const { resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros } =
+      await import('@/lib/nlp/resolve-payload');
+    const { logger } = await import('@/lib/logger');
 
     const body = await req.json();
     const { text, items: inputItems } = body;
@@ -339,6 +341,24 @@ export async function POST(req: NextRequest) {
 
       const details = await resolveFoodDetails(mapped.foodId, mapped.servingDescription);
 
+      // `nutrition` below reads mapped.* (authoritative for this line) while
+      // nutritionPer100g came wholly from the food-row re-read. When the row
+      // isn't there yet — every first sighting of a fatsecret food, which is
+      // persisted by a background task — that split shipped correct serving
+      // calories next to kcal100: 0, and the client rescales by kcal100. Fall
+      // back to the line's own macros so the two can't contradict each other.
+      const derivedPer100g = isDegenerateNutrition(details.nutritionPer100g)
+        ? per100gFromBilledMacros(mapped)
+        : null;
+      const nutritionPer100g = derivedPer100g
+        ? { ...details.nutritionPer100g, ...derivedPer100g }
+        : details.nutritionPer100g;
+      if (derivedPer100g) {
+        logger.debug('parse.per100g_derived_from_billed', {
+          foodId: mapped.foodId, foodName: mapped.foodName, grams: mapped.grams,
+        });
+      }
+
       const scale = mapped.grams / 100;
       const nutrition = {
         calories: Number(mapped.kcal.toFixed(1)),
@@ -374,7 +394,7 @@ export async function POST(req: NextRequest) {
         unit,
         grams: mapped.grams,
         nutrition,
-        nutritionPer100g: details.nutritionPer100g,
+        nutritionPer100g,
         servingOptions: details.servingOptions,
         // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
         // offline warm batches (scripts/eval/warm-cache.ts) read each seed's

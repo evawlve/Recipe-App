@@ -15,7 +15,7 @@ import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
-import { assessSaveTimePlausibility } from './macro-plausibility';
+import { assessSaveTimePlausibility, isAllZeroMacros } from './macro-plausibility';
 import type { MacroPlausibilityInput, ExpectedNutritionPer100g } from './macro-plausibility';
 import { detectBrandInQuery } from './brand-detector';
 import { markSaveRejected, normalizeClassId, type FunnelSink } from './funnel';
@@ -555,6 +555,31 @@ export async function saveValidatedMapping(
             foodName: mapping.foodName,
             brandName: mapping.brandName,
         });
+    }
+
+    // Degenerate-nutrition gate (funnel first read, Jul 2026): a pick whose
+    // per-100g macros are ALL zero has no nutrition to give. The plausibility
+    // gate below can't catch it — all-zero passes every bounds check (nothing
+    // is negative, the macro sum is 0) and Atwater compares 0 against 0 — so
+    // such a pick sailed through at confidence 0.95-1.00. FoodMapping stores
+    // identity only, so caching one pins the key to a record that hydrates to
+    // 0 kcal for every later request, long after this one.
+    //
+    // Genuinely zero-calorie foods exist (water, black coffee, diet soda), but
+    // an all-zero row is far more often a data gap than a real measurement, and
+    // declining to CACHE it costs only a repeat lookup — this request is served
+    // either way. Water and ice short-circuit at the fast path and never
+    // reach a save.
+    if (options?.nutrientsPer100g && isAllZeroMacros(options.nutrientsPer100g)) {
+        logger.warn('validated_mapping.save_rejected_zero_macros', {
+            rawIngredient,
+            normalizedForm,
+            foodName: mapping.foodName,
+            brandName: mapping.brandName,
+            foodId: mapping.foodId,
+        });
+        markSaveRejected(options?.telemetry, 'zero_macros');
+        return;
     }
 
     // Save-time macro-plausibility gate (PR D, Jul 2026): picks that survive

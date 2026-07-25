@@ -28,6 +28,7 @@ import {
 import type { UnifiedCandidate } from './gather-candidates';
 import { registerBackgroundTask } from './deferred-hydration';
 import { queryTokenCoverage } from '../search/query-token-coverage';
+import { inferCategoryFromName, categoryDensity } from '../units/density';
 
 // ============================================================
 // Client Singleton (lazy; unit tests inject their own)
@@ -78,8 +79,22 @@ export interface FsNutrientsPer100g {
     saturatedFat?: number;
 }
 
-/** Usable gram weight of a serving, or null. */
-function servingGramsOf(s: FatSecretApiServing): number | null {
+/**
+ * Usable gram weight of a serving, or null.
+ *
+ * `foodName` is optional only so the volume branch can degrade to water
+ * density; pass it wherever it's available.
+ *
+ * The ml branch matters more than it looks. fatsecret reports a large share of
+ * beverages and condiments with `metric_serving_unit = "ml"` and no gram weight
+ * at all — 976 of the 3,504 foods that ended up with an empty
+ * `nutrientsPer100g` in production had exactly that shape (Capri Sun 177 ml,
+ * Gatorade 591 ml, Heinz relish 15 ml). Returning null for them threw away
+ * complete, correct nutrition over a unit we can convert. The legacy lane's
+ * `gramsForServing` has always applied category density here; this restores
+ * parity. `volumeMl` is persisted separately, so nothing is lost by deriving.
+ */
+function servingGramsOf(s: FatSecretApiServing, foodName?: string | null): number | null {
     if (
         s.metricServingUnit?.toLowerCase() === 'g' &&
         typeof s.metricServingAmount === 'number' &&
@@ -94,6 +109,15 @@ function servingGramsOf(s: FatSecretApiServing): number | null {
         s.servingWeightGrams > 0
     ) {
         return s.servingWeightGrams;
+    }
+    const ml = servingVolumeMlOf(s);
+    if (ml != null) {
+        // 1.0 g/ml (water-like) is the right default here rather than a
+        // refusal: the ml servings fatsecret reports are overwhelmingly
+        // beverages, whose density is within a few percent of water.
+        const category = foodName ? inferCategoryFromName(foodName) : null;
+        const density = (category ? categoryDensity(category) : undefined) ?? 1.0;
+        return round2(ml * density);
     }
     return null;
 }
@@ -125,7 +149,8 @@ function round2(v: number): number {
  * as OFF rows without nutrientsPer100g).
  */
 export function derivePer100gFromServings(
-    servings: FatSecretApiServing[] | undefined | null
+    servings: FatSecretApiServing[] | undefined | null,
+    foodName?: string | null
 ): FsNutrientsPer100g | null {
     if (!servings || servings.length === 0) return null;
 
@@ -142,7 +167,7 @@ export function derivePer100gFromServings(
             chosenGrams = 100;
             break; // exact per-100g panel — done
         }
-        const grams = servingGramsOf(s);
+        const grams = servingGramsOf(s, foodName);
         if (grams != null && grams > chosenGrams) {
             chosen = s;
             chosenGrams = grams;
@@ -202,12 +227,12 @@ function toUnifiedCandidate(
     index: number,
     query: string
 ): UnifiedCandidate {
-    const per100 = derivePer100gFromServings(hit.servings);
+    const per100 = derivePer100gFromServings(hit.servings, hit.name);
 
     const servings = (hit.servings ?? [])
         .map(s => ({
             description: (s.description ?? s.measurementDescription ?? '').trim(),
-            grams: servingGramsOf(s),
+            grams: servingGramsOf(s, hit.name),
         }))
         .filter((s): s is { description: string; grams: number } =>
             Boolean(s.description) && s.grams != null
@@ -281,7 +306,7 @@ export async function persistFatSecretHits(hits: FatSecretFoodSummary[]): Promis
 
     for (const hit of hits) {
         try {
-            const per100 = derivePer100gFromServings(hit.servings);
+            const per100 = derivePer100gFromServings(hit.servings, hit.name);
             const defaultServingId = hit.servings?.[0]?.id ?? null;
 
             const foodData = {
@@ -308,7 +333,7 @@ export async function persistFatSecretHits(hits: FatSecretFoodSummary[]): Promis
                 const servingData = {
                     description,
                     measurementDescription: s.measurementDescription ?? null,
-                    grams: servingGramsOf(s),
+                    grams: servingGramsOf(s, hit.name),
                     volumeMl: servingVolumeMlOf(s),
                     numberOfUnits: s.numberOfUnits ?? null,
                     // omit when null: Json? columns reject plain JS null writes
