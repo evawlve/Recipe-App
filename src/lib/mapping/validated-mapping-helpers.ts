@@ -71,6 +71,27 @@ function hasPreparationConflict(rawIngredient: string, candidateName: string): b
     return true;
 }
 
+/**
+ * A query that names how the food was cooked or preserved.
+ *
+ * This is what scopes the cross-source margin waiver, and the scope was set by
+ * a regression rather than by taste. The first draft waived the margin for any
+ * unbranded whole-food query; gating it repointed the eight hottest generic
+ * keys in the cache (egg 926 uses, broccoli 530, salmon 342, chicken 232, plus
+ * kale/pretzel/tilapia/brussel sprout) and broke five golden cases, because
+ * fatsecret's "Boiled Egg" bills a 42g medium egg where a bare "two eggs" must
+ * bill ~50g each.
+ *
+ * A preparation word is the discriminator because prep-qualified queries get
+ * their OWN cache key — "egg fried" and "deviled egg" are rows distinct from
+ * "egg". So waiving only for them reaches the funnel's casualty class
+ * (grilled tilapia, boiled egg, baked sweet potato) without ever touching the
+ * bare key a golden case asserts on. Bare generic queries keep the margin,
+ * which is precisely where it was still earning its keep.
+ */
+const PREPARATION_QUALIFIER_PATTERN =
+    /\b(baked|grilled|steamed|poached|boiled|hard[\s-]?boiled|soft[\s-]?boiled|roasted|broiled|braised|seared|smoked|saut(?:e|é)ed|blanched|charred|air[\s-]?fried|deep[\s-]?fried|pan[\s-]?fried|stir[\s-]?fried|fried|scrambled|cooked|uncooked|raw|fresh|frozen|canned|jarred|dried|dehydrated|pickled|cured|fermented)\b/i;
+
 // Bare-category takeover gate (Jul 2026). See saveValidatedMapping.
 // Trivial words dropped before counting query specificity / testing whether a
 // food name is a bare category.
@@ -820,10 +841,12 @@ export async function saveValidatedMapping(
             // unbranded whole-food query, where OFF can only offer a packaged
             // product that fits the query worse.
             //
-            // The waiver is deliberately narrow — it requires the query to name
-            // no brand, the challenger to carry no brand, and the challenger's
-            // macros to be non-degenerate. A branded query is exactly where the
-            // margin still earns its keep.
+            // The waiver is deliberately narrow — the query must NAME A
+            // PREPARATION, name no brand, the challenger must carry no brand,
+            // and its macros must be non-degenerate. A branded query is exactly
+            // where the margin still earns its keep, and so, it turns out, is a
+            // bare generic one: see PREPARATION_QUALIFIER_PATTERN for the
+            // regression that set this scope.
             // hasDecisiveBrandContext, not a bare detectedBrand: several grocery
             // chains share a name with a plain food word, so the detector reports
             // "sprouts" (Sprouts Farmers Market) for "brussels sprouts" and would
@@ -832,7 +855,8 @@ export async function saveValidatedMapping(
             const queryAssertsBrand =
                 !!detectedBrand && hasDecisiveBrandContext(rawIngredient, detectedBrand);
             const waiveMargin =
-                !queryAssertsBrand
+                PREPARATION_QUALIFIER_PATTERN.test(rawIngredient)
+                && !queryAssertsBrand
                 && !(mapping.brandName && mapping.brandName.trim())
                 && !!options?.nutrientsPer100g
                 && !isAllZeroMacros(options.nutrientsPer100g)

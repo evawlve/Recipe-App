@@ -651,14 +651,13 @@ describe('cross-source margin waiver for unbranded whole foods', () => {
         expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
     });
 
-    it('waives for "brussels sprouts", whose bare food word collides with a grocery chain', async () => {
+    it('waives for a prep-qualified query whose food word collides with a grocery chain', async () => {
         // detectBrandInQuery reports matchedBrand "sprouts" (Sprouts Farmers
         // Market) here, so a bare detectedBrand check would veto the waiver on
-        // an unmistakable whole food. Production incumbent was an OFF
-        // store-brand row ("Freedom's Choice") holding the key.
-        mockFoodMappingFindUnique.mockResolvedValue({ ...incumbent, normalizedForm: 'brussel sprout' });
+        // an unmistakable whole food. hasDecisiveBrandContext is what keeps it.
+        mockFoodMappingFindUnique.mockResolvedValue({ ...incumbent, normalizedForm: 'roasted brussel sprout' });
         await saveValidatedMapping(
-            'brussels sprouts',
+            'roasted brussels sprouts',
             makeMapping({ foodId: 'fs_5', foodName: 'Brussels Sprouts', brandName: undefined }),
             { confidence: 0.93 } as AIValidationResult,
             { nutrientsPer100g: { kcal: 43, protein: 3.4, carbs: 9, fat: 0.3 } },
@@ -675,6 +674,40 @@ describe('cross-source margin waiver for unbranded whole foods', () => {
             { nutrientsPer100g: { kcal: 0, protein: 0, carbs: 0, fat: 0 } },
         );
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+
+    // The regression that scoped this waiver. An earlier draft waived the
+    // margin for ANY unbranded whole food; gating it on the box repointed the
+    // eight most-used generic keys in the cache and broke five golden cases —
+    // "two eggs" billed 84g against an expected [88,140], because fatsecret's
+    // "Boiled Egg" is a 42g medium egg. These keys are the ones the golden set
+    // asserts on, and the prep-qualified keys above are separate cache rows,
+    // so scoping to a named preparation reaches the casualties without them.
+    describe('bare generic keys keep the margin', () => {
+        // Macros are the real per-100g values of the fatsecret record that
+        // actually took each key, so the ONLY gate with grounds to fire is the
+        // margin — a plausibility rejection here would prove nothing.
+        it.each<[string, string, string, { kcal: number; protein: number; carbs: number; fat: number }]>([
+            ['eggs', 'egg', 'Boiled Egg', { kcal: 155, protein: 12.6, carbs: 1.1, fat: 10.6 }],
+            ['broccoli', 'broccoli', 'Cooked Broccoli (Fat Not Added in Cooking)', { kcal: 35, protein: 2.4, carbs: 7.2, fat: 0.4 }],
+            ['chicken', 'chicken', 'Grilled Chicken', { kcal: 165, protein: 31, carbs: 0, fat: 3.6 }],
+            ['salmon', 'salmon', 'Cooked Salmon', { kcal: 206, protein: 22.1, carbs: 0, fat: 12.4 }],
+            ['kale', 'kale', 'Cooked Kale (from Fresh)', { kcal: 28, protein: 1.9, carbs: 5.6, fat: 0.4 }],
+            ['tilapia', 'tilapia', 'Tilapia (Fish) (Cooked, Dry Heat)', { kcal: 128, protein: 26.2, carbs: 0, fat: 2.7 }],
+            ['pretzel', 'pretzel', 'Pretzels', { kcal: 381, protein: 10.0, carbs: 79.2, fat: 3.5 }],
+            ['brussels sprouts', 'brussel sprout', 'Brussels Sprouts', { kcal: 43, protein: 3.4, carbs: 8.9, fat: 0.3 }],
+        ])('does not let an unbranded fatsecret record take the bare "%s" key', async (query, form, foodName, macros) => {
+            mockFoodMappingFindUnique.mockResolvedValue({ ...incumbent, normalizedForm: form });
+            const telemetry: FunnelSink = { funnelStage: 'saved' };
+            await saveValidatedMapping(
+                query,
+                makeMapping({ foodId: 'fs_bare', foodName, brandName: undefined }),
+                { confidence: 0.93 } as AIValidationResult,
+                { nutrientsPer100g: macros, telemetry },
+            );
+            expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+            expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+        });
     });
 });
 
