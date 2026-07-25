@@ -1,5 +1,5 @@
 import { deriveCacheKeyName } from '../cache-key';
-import { canonicalizeCacheKey } from '../normalization-rules';
+import { canonicalizeCacheKey, singularize } from '../normalization-rules';
 import { parseIngredientLine } from '../../parse/ingredient-line';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
@@ -176,5 +176,85 @@ describe('deriveCacheKeyName', () => {
                 expect(canonicalizeCacheKey(q)).toBe(canonicalizeCacheKey(q.replace(/'/g, '')));
             }
         });
+    });
+});
+
+// ==========================================================================
+// The -es family. One rule covered two different plurals: an -es genuinely
+// added after a sibilant stem (box -> boxes, glass -> glasses) and a bare -s
+// added to a stem that already ended in -se (cheese -> cheeses). Chopping two
+// characters is right for the first and wrong for the second, which produced
+// chees / hous / ros / dos. The doubled s tells them apart.
+// ==========================================================================
+describe('singularize: the -es family', () => {
+    describe('a sibilant stem keeps losing both characters', () => {
+        it.each([
+            ['glasses', 'glass'], ['dresses', 'dress'], ['classes', 'class'], ['masses', 'mass'],
+            ['boxes', 'box'], ['foxes', 'fox'], ['taxes', 'tax'], ['mixes', 'mix'],
+            ['buzzes', 'buzz'],
+            ['sandwiches', 'sandwich'], ['churches', 'church'], ['peaches', 'peach'], ['lunches', 'lunch'],
+            ['dishes', 'dish'], ['radishes', 'radish'], ['squashes', 'squash'], ['knishes', 'knish'],
+        ])('%s -> %s', (plural, singular) => {
+            expect(singularize(plural)).toBe(singular);
+        });
+    });
+
+    describe('a stem that already ended in -e loses only the s', () => {
+        it.each([
+            ['cheeses', 'cheese'], ['houses', 'house'], ['roses', 'rose'], ['doses', 'dose'],
+            ['bases', 'base'], ['noses', 'nose'], ['courses', 'course'], ['phases', 'phase'],
+        ])('%s -> %s', (plural, singular) => {
+            expect(singularize(plural)).toBe(singular);
+        });
+    });
+
+    describe('the words where the doubled-s signal misleads', () => {
+        it.each([
+            ['buses', 'bus'],       // single-s stem, no doubling to signal it
+            ['gases', 'gas'],
+            ['mousses', 'mousse'],  // doubled s, but the stem is -sse
+        ])('%s -> %s', (plural, singular) => {
+            expect(singularize(plural)).toBe(singular);
+        });
+    });
+
+    it('derives the possessive brand stem that used to need an explicit entry', () => {
+        // PR #149 had to hard-code `reeses: 'reese'` because the old rule chopped
+        // it to "rees", which was itself -s-eligible and so not a fixed point.
+        // The general rule now produces it, and the hard-coded entry is gone.
+        expect(singularize('reeses')).toBe('reese');
+        expect(canonicalizeCacheKey("reese's puffs")).toBe('puff reese');
+    });
+
+    it('leaves every output a fixed point', () => {
+        // cache-coverage.ts re-canonicalizes stored keys to count them, so a key
+        // that moves on a second pass makes the coverage metric under-report.
+        const words = [
+            'cheeses', 'houses', 'roses', 'doses', 'bases', 'noses', 'courses', 'phases',
+            'glasses', 'dresses', 'boxes', 'dishes', 'sandwiches', 'buses', 'gases', 'mousses',
+            'reeses', 'molasses', 'olives', 'noodles', 'tomatoes', 'berries',
+        ];
+        for (const w of words) {
+            const once = singularize(w);
+            expect(singularize(once)).toBe(once);
+        }
+    });
+
+    it('still defers to the blacklist for singulars that look plural', () => {
+        for (const w of ['molasses', 'hummus', 'couscous', 'asparagus', 'swiss', 'chips', 'strips']) {
+            expect(singularize(w)).toBe(w);
+        }
+    });
+
+    it('does not disturb the general -es and -s rules', () => {
+        const unaffected: Array<[string, string]> = [
+            ['olives', 'olive'], ['noodles', 'noodle'], ['sauces', 'sauce'], ['juices', 'juice'],
+            ['crepes', 'crepe'], ['pastes', 'paste'], ['tomatoes', 'tomato'], ['potatoes', 'potato'],
+            ['berries', 'berry'], ['cherries', 'cherry'], ['chilies', 'chili'],
+            ['leaves', 'leaf'], ['halves', 'half'], ['carrots', 'carrot'], ['eggs', 'egg'],
+        ];
+        for (const [plural, singular] of unaffected) {
+            expect(singularize(plural)).toBe(singular);
+        }
     });
 });
