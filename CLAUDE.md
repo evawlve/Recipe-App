@@ -8,6 +8,7 @@ Code, DB, and pipeline conventions are already documented — follow them, don't
 - **[AGENTS.md](AGENTS.md)** — Prisma/DB conventions, table naming, TypeScript style, agent workflows. **The critical one:** FDC foods key on integer `fdcId`, OFF keys on string `barcode` — never mix them.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — system overview.
 - **`.agent/docs/`** — known-issues, debugging quickstart, ingredient-mapping-pipeline deep dive.
+- **Mobile repo `sync-docs/mapping_investigation_playbook.md`** — how to diagnose a mapping defect without being wrong three times first, and what the eval gate *cannot* see. Read it before touching `src/lib/mapping/` or the cache.
 
 ## 🛠️ Commands
 
@@ -18,11 +19,37 @@ Code, DB, and pipeline conventions are already documented — follow them, don't
 
 ## 💻 Machine & Sync Topology
 
-Three machines linked by **Syncthing**: Mac laptop (mobile dev), Windows PC (secondary dev), and a headless Linux server (the **Mini-PC**, migrating to a Dell OptiPlex 5060) that actually runs this backend in Docker.
+Three machines linked by **Syncthing**: Mac laptop (mobile dev), Windows PC (secondary dev), and a headless Linux server — a Dell OptiPlex 5060, **`ssh owner@192.168.1.133`** (hostname `DHL32-Opt-5060`) — that actually runs this backend in Docker. The OptiPlex **replaced the old Mini-PC (user `diego`, `192.168.1.21`) on 2026-07-20**; the `.21` takeover plan was retired and `.133` is permanent. Any doc mentioning the Mini-PC means this box's predecessor.
 
 - **Runtime services** (on the server): Next.js API on `:3000`, **Typesense** on `:8108` (current search provider — replaced Meilisearch), **PostgreSQL + pgvector** on `:5432` (source of truth + semantic-search embeddings). Supabase (cloud) handles auth. The API runs as a `recipe-api` systemd **user** service (`npm run start`, Node **v24.18.0 via nvm** — no system node), linger enabled.
-- **Production**: Vercel can't reach the server's raw LAN IP (`192.168.1.21`) — public access must go through a Cloudflare Tunnel / reverse proxy, never the bare IP.
+- **The Postgres database is named `mealspire`** (not `recipe_app`), in container `mealspire-db`. Reach it with `docker exec mealspire-db psql -U postgres -d mealspire`. On `FoodMapping` the confidence column is **`aiConfidence`**, not `confidence`.
+- **Production**: Vercel can't reach the server's raw LAN IP — public access must go through a Cloudflare Tunnel / reverse proxy, never the bare IP.
 - Because Syncthing mirrors working trees but **git histories diverge per machine**, the same files often get committed independently on the Mac and Windows PC. See the workflow rules below.
+- **`.env*` files are Syncthing-ignored** and machine-specific (server uses `localhost`, dev machines use the server's LAN IP). Never expect Syncthing to carry env values.
+
+## ⚠️ Server Ops — rules that have actually bitten
+
+Every rule here cost real downtime or real data at least once. See the mobile repo's `sync-docs/mapping_investigation_playbook.md` for the diagnostic method these sit alongside.
+
+- **A source pull + service restart DEPLOYS NOTHING.** `recipe-api` runs `next start` against the prebuilt `.next`. You must `npm run build` on the box before `systemctl --user restart recipe-api`, or you will "verify a fix" against the old bundle.
+- **NEVER `pkill -f "next start"`.** It matches the live `recipe-api`, any isolated gate server, **and its own command line** — it has taken production down. Kill by port:
+  ```bash
+  PID=$(ss -lptn "sport = :3100" | grep -o "pid=[0-9]*" | head -1 | cut -d= -f2); kill $PID
+  ```
+- **The box is DEPLOY-ONLY. Never run git mutations there** beyond `git fetch` and `git merge --ff-only`. **Never `git reset --hard`** — it destroys untracked keepers (the `.stignore` `/data` anchor, the box's local topology notes).
+- **`git merge --ff-only` will ABORT** when a PR commits files that previously existed only as *untracked* Syncthing'd copies ("untracked working tree files would be overwritten"). Back them up, delete them, then merge — the committed versions supersede them. This happened on PR #154's five probe scripts and will recur on the Windows PC.
+- **Eval and warm scripts write to the SHARED PRODUCTION DB.** There is no staging copy. Always `pg_dump -t '"FoodMapping"'` first, and **diff with a Python dict compare, never `join`** — `join(1)` silently drops rows to collation differences, which reads as "nothing changed".
+- **Isolated gate recipe** (test a branch without touching the live service): rsync the tree to a scratch dir → hardlink `node_modules` → `prisma generate` → `npm run build` → `setsid nohup env PORT=3100 npm run start` → run the eval with `--base http://localhost:3100` → kill **by port**.
+
+## 🧭 Mapping-pipeline change rules
+
+Condensed from the 2026-07 campaign; full reasoning in the playbook doc named above.
+
+- **Never fix a mapping defect with an absolute gate.** A hard reject sets `winner = null` and falls through to AI backfill at `grams = servingResult?.grams ?? 100` — a different wrong number, not a right one. Preference order: **admit-only relaxation → relative demotion / sort reorder → confidence suppression → absolute gate.** Never subtract from `score` to demote (it drops confidence below `MIN_RERANK_CONFIDENCE` 0.70 and re-enters the null path).
+- **`deriveMappingCacheKey` ≠ `canonicalizeCacheKey`** — the save path also appends identity discriminators (`white`/`yolk`, `cooked`/`whole`) and a brand prefix. You **cannot** join `MappingEventLog.normalizedForm` to `FoodMapping.normalizedForm`; the event log stores the pre-canonicalization name.
+- **Anything the read-only eval tooling imports must come from `cache-key-core.ts`**, not `cache-key.ts` — the latter transitively loads `config.ts`, which warms ONNX. An import-graph test pins this.
+- **Rank defects by distinct keys, not event count.** `save_rejected:cross_source_margin` is 71% of `save_rejected` events and is *incumbent protection* — it cannot fire on a cold key. Only `fixKind: 'pipeline'` classes in `scripts/eval/failure-classes.ts` may be handed to a fix-agent.
+- **To diagnose:** retrieval questions → run `gatherCandidates` + `filterCandidatesByTokens` and print the pool. Ranking questions → delete the `FoodMapping` row and re-run the eval cold. A probe that reimplements the caller's argument list is a different function and its predicted *winner* is not evidence.
 
 ## 🔁 Git & CI Workflow
 
