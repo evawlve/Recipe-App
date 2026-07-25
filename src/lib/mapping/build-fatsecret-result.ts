@@ -123,6 +123,56 @@ function estimateServingGrams(m: Macros): number {
     return Math.max(macroMass, byEnergy, 1);
 }
 
+/**
+ * Recover a serving's TRUE gram weight by inverting the record's own per-100g
+ * panel — preferred over the energy-density estimate above whenever a panel
+ * exists.
+ *
+ * FatSecret derives that panel FROM the serving (`serving / grams x 100`), so
+ * the division is reversible: `100 x serving_nutrient / panel_nutrient` returns
+ * the very grams that produced it. This is arithmetic, not estimation.
+ * Validated on the box against the 24,579 servings whose true weight IS
+ * recorded — median ratio 1.000 (p10 0.995 / p90 1.005), 98.1% within 5%.
+ *
+ * Why the MEDIAN across nutrients rather than calories alone: the panel is
+ * rounded, and relative quantization error grows as the value shrinks, so a
+ * brewed coffee's `1 kcal/100g` panel is already +-50% before anything else
+ * goes wrong. Share landing within 10% of the true weight, by panel density:
+ *
+ *   panel kcal/100g    calories only    median-of-nutrients
+ *   <=5  (drinks)          68.8%              91.1%
+ *   6-20                   92.9%              99.0%
+ *   >20  (solids)          99.7%              99.9%
+ *
+ * Only nutrients positive on BOTH sides vote. A serving fat rounded down to 0
+ * against a positive panel fat would otherwise contribute a 0g estimate and
+ * drag the median toward zero — the same rounding that motivates the median.
+ */
+function gramsFromPer100gPanel(serving: Macros, per100: Macros): number | null {
+    const votes: number[] = [];
+    for (const [sv, p100] of [
+        [serving.kcal, per100.kcal],
+        [serving.protein, per100.protein],
+        [serving.carbs, per100.carbs],
+        [serving.fat, per100.fat],
+    ] as const) {
+        if (sv > 0 && p100 > 0) votes.push((100 * sv) / p100);
+    }
+    if (votes.length === 0) return null;
+    votes.sort((a, b) => a - b);
+    const mid = votes.length >> 1;
+    const median = votes.length % 2 === 1
+        ? votes[mid]
+        : (votes[mid - 1] + votes[mid]) / 2;
+    return Number.isFinite(median) && median > 0 ? median : null;
+}
+
+/** True when a per-100g panel carries any nutrient the weight can be recovered from. */
+function per100gCarriesWeightSignal(per100: Macros | null): boolean {
+    return per100 != null
+        && (per100.kcal > 0 || per100.protein > 0 || per100.carbs > 0 || per100.fat > 0);
+}
+
 /** Per-100g macros from FatSecretFood.nutrientsPer100g (or candidate.nutrition). */
 function per100gMacros(source: Record<string, unknown> | null | undefined): Macros | null {
     if (!source) return null;
@@ -230,7 +280,35 @@ export async function buildFatSecretResult(
             ? candidate.nutrition as unknown as Record<string, unknown> : null)
     );
 
-    const usableServings = servings.filter(s => s.grams != null && s.grams > 0);
+    // A literal "100 g" serving is a PER-100G PANEL, not a portion anyone eats
+    // (funnel fix 5). FatSecret ships many chain-restaurant records with exactly
+    // two servings: a synthetic `100 g` row and the real `1 serving` row that
+    // carries the item's macros but no gram weight. Because only the former has
+    // grams, it was the only "usable" one — so `grams` was never null, the
+    // macro-only branch below never ran, and every such item billed 100g
+    // regardless of what it was. That is the flat-100g class the first funnel
+    // read found: `starbucks flat white`, `dunkin matcha latte`,
+    // `starbucks pike place roast` all landed at exactly 100g.
+    //
+    // Excluding it lets the real serving reach the macro-only branch, which
+    // bills that serving's authoritative macros. The row is still available to
+    // `per100`/gram-anchored requests — a user asking for "100g of X" is served
+    // by the explicit-weight path, which does not read this list.
+    const isPer100gPanelServing = (s: { description: string; grams: number | null; numberOfUnits: number | null }) =>
+        s.grams === 100
+        && (s.numberOfUnits == null || s.numberOfUnits === 100)
+        && /^\s*100\s*g(?:rams?)?\s*$/i.test(s.description);
+
+    // ...but only demote it when its per-100g can actually recover the serving
+    // weight. For a genuinely zero-calorie drink — Diet Coke, sparkling water,
+    // unsweetened tea, 50 such records on the box — every panel nutrient is 0,
+    // so there is nothing to invert and dropping the row would trade a 100g
+    // display for a 1g one showing the same, correct, 0 kcal. Leave those
+    // exactly as they are rather than regress the portion to buy nothing.
+    const panelIsInvertible = per100gCarriesWeightSignal(per100);
+
+    const usableServings = servings.filter(s =>
+        s.grams != null && s.grams > 0 && !(panelIsInvertible && isPer100gPanelServing(s)));
     // A serving may carry per-serving macros WITHOUT any gram weight —
     // FatSecret's generic "1 serving" restaurant records are exactly this shape
     // (e.g. Impossible Whopper: "1 serving" = 630 kcal / 28p / 62c / 32f, grams
@@ -376,7 +454,15 @@ export async function buildFatSecretResult(
                 ?? servings.find(s => servingMacros(s.nutrients) != null);
             if (macroServing) {
                 const m = servingMacros(macroServing.nutrients)!;
-                const estPerServingGrams = estimateServingGrams(m);
+                // Invert the record's own per-100g panel when it has one: that
+                // recovers the real weight instead of estimating it, so a tall
+                // flat white bills 340g rather than the 85g a 2.0 kcal/g solid
+                // -food density implies, and a brewed coffee ~477g rather than
+                // 2.5g. Falls back to the estimate for records with no panel at
+                // all (Impossible Whopper and friends), which is what it was
+                // written for.
+                const fromPanel = per100 ? gramsFromPer100gPanel(m, per100) : null;
+                const estPerServingGrams = fromPanel ?? estimateServingGrams(m);
                 macroServing.grams = estPerServingGrams;
                 grams = qty * estPerServingGrams;
                 servingDescription = qty === 1
@@ -389,6 +475,7 @@ export async function buildFatSecretResult(
                     serving: macroServing.description,
                     kcalPerServing: m.kcal,
                     estGrams: estPerServingGrams,
+                    gramsSource: fromPanel != null ? 'per100g_panel_inversion' : 'energy_density',
                 });
             }
         }
