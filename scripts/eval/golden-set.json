@@ -6059,6 +6059,122 @@
         ]
       },
       "notes": "WATER FAST-PATH companion to n-mq-37 (2026-07-21): a line that IS entirely a water query (after qty/unit stripping) must still take the zero-calorie fast-path and bill ~0 kcal — guards against over-tightening the whole-line anchor. 16 fl-oz → ~473g water_default, 0 kcal. Hard."
+    },
+    {
+      "id": "n-mq-38",
+      "category": "match_quality",
+      "text": "chipotle chicken burrito",
+      "expectName": [
+        [
+          "burrito"
+        ]
+      ],
+      "grams": [
+        280,
+        700
+      ],
+      "total": {
+        "calories": [
+          600,
+          1400
+        ]
+      },
+      "knownIssue": true,
+      "notes": "COMPOSITE→COMPONENT drift (2026-07-25 characterization, warm of the fast-casual seed domain). The mapper answers a composite-dish query with one of its COMPONENTS at cache-worthy confidence, so the line bills a small fraction of the real meal and looks authoritative doing it: measured live at 118g/166 kcal for a burrito that is ~1,100 kcal. Under-counting by 5-10x is far more severe than any serving-size bug in this suite. ROOT CAUSE IS TWO THINGS. (1) Corpus gap: Chipotle/Qdoba publish per-INGREDIENT nutrition, so no assembled restaurant-burrito record exists to find — FatSecret has 'Burrito Bowl' and 'Flour Tortilla (Burrito)' but no chicken burrito, and every OFF 'chipotle burrito' hit uses chipotle as a FLAVOUR (Chipotle BBQ Pork Burrito) or is a different brand's frozen product (Evol). (2) No gate rejects a component answer, so the miss is silent rather than honest. NAIVE FIX DOES NOT WORK: 'reject when the query's head noun is absent from the winner' kills these four correctly but also kills 'impossible burger patty' → 'Impossible Burger', because burger/patty are synonyms while chicken/burrito is ingredient-of. Separating those is semantic. Pinned as knownIssue so any future fix is gated by measurement rather than eyeballed. THIS CASE: live 2026-07-25 → 'Chipotle, Chicken' 118g/166 kcal."
+    },
+    {
+      "id": "n-mq-39",
+      "category": "match_quality",
+      "text": "qdoba chicken burrito",
+      "expectName": [
+        [
+          "burrito"
+        ]
+      ],
+      "grams": [
+        280,
+        700
+      ],
+      "total": {
+        "calories": [
+          550,
+          1300
+        ]
+      },
+      "knownIssue": true,
+      "notes": "COMPOSITE→COMPONENT drift (2026-07-25 characterization, warm of the fast-casual seed domain). The mapper answers a composite-dish query with one of its COMPONENTS at cache-worthy confidence, so the line bills a small fraction of the real meal and looks authoritative doing it: measured live at 118g/166 kcal for a burrito that is ~1,100 kcal. Under-counting by 5-10x is far more severe than any serving-size bug in this suite. ROOT CAUSE IS TWO THINGS. (1) Corpus gap: Chipotle/Qdoba publish per-INGREDIENT nutrition, so no assembled restaurant-burrito record exists to find — FatSecret has 'Burrito Bowl' and 'Flour Tortilla (Burrito)' but no chicken burrito, and every OFF 'chipotle burrito' hit uses chipotle as a FLAVOUR (Chipotle BBQ Pork Burrito) or is a different brand's frozen product (Evol). (2) No gate rejects a component answer, so the miss is silent rather than honest. NAIVE FIX DOES NOT WORK: 'reject when the query's head noun is absent from the winner' kills these four correctly but also kills 'impossible burger patty' → 'Impossible Burger', because burger/patty are synonyms while chicken/burrito is ingredient-of. Separating those is semantic. Pinned as knownIssue so any future fix is gated by measurement rather than eyeballed. THIS CASE: live 2026-07-25 → 'Qdoba, Tequila Lime Chicken' 50g/224 kcal."
+    },
+    {
+      "id": "n-mq-40",
+      "category": "match_quality",
+      "text": "cava harissa avocado bowl",
+      "expectName": [
+        [
+          "bowl"
+        ]
+      ],
+      "grams": [
+        250,
+        700
+      ],
+      "total": {
+        "calories": [
+          400,
+          1000
+        ]
+      },
+      "knownIssue": true,
+      "notes": "COMPOSITE→COMPONENT drift (2026-07-25 characterization, warm of the fast-casual seed domain). The mapper answers a composite-dish query with one of its COMPONENTS at cache-worthy confidence, so the line bills a small fraction of the real meal and looks authoritative doing it: measured live at 118g/166 kcal for a burrito that is ~1,100 kcal. Under-counting by 5-10x is far more severe than any serving-size bug in this suite. ROOT CAUSE IS TWO THINGS. (1) Corpus gap: Chipotle/Qdoba publish per-INGREDIENT nutrition, so no assembled restaurant-burrito record exists to find — FatSecret has 'Burrito Bowl' and 'Flour Tortilla (Burrito)' but no chicken burrito, and every OFF 'chipotle burrito' hit uses chipotle as a FLAVOUR (Chipotle BBQ Pork Burrito) or is a different brand's frozen product (Evol). (2) No gate rejects a component answer, so the miss is silent rather than honest. NAIVE FIX DOES NOT WORK: 'reject when the query's head noun is absent from the winner' kills these four correctly but also kills 'impossible burger patty' → 'Impossible Burger', because burger/patty are synonyms while chicken/burrito is ingredient-of. Separating those is semantic. Pinned as knownIssue so any future fix is gated by measurement rather than eyeballed. THIS CASE: live 2026-07-25 → 'Harissa' 28g/70 kcal — a whole bowl billed as one of its condiments, the most extreme ratio in the class."
+    },
+    {
+      "id": "n-mq-41",
+      "category": "match_quality",
+      "text": "noodles and company pad thai",
+      "expectName": [
+        [
+          "pad"
+        ],
+        [
+          "thai"
+        ]
+      ],
+      "grams": [
+        250,
+        700
+      ],
+      "total": {
+        "calories": [
+          500,
+          1300
+        ]
+      },
+      "knownIssue": true,
+      "notes": "COMPOSITE→COMPONENT drift (2026-07-25 characterization, warm of the fast-casual seed domain). The mapper answers a composite-dish query with one of its COMPONENTS at cache-worthy confidence, so the line bills a small fraction of the real meal and looks authoritative doing it: measured live at 118g/166 kcal for a burrito that is ~1,100 kcal. Under-counting by 5-10x is far more severe than any serving-size bug in this suite. ROOT CAUSE IS TWO THINGS. (1) Corpus gap: Chipotle/Qdoba publish per-INGREDIENT nutrition, so no assembled restaurant-burrito record exists to find — FatSecret has 'Burrito Bowl' and 'Flour Tortilla (Burrito)' but no chicken burrito, and every OFF 'chipotle burrito' hit uses chipotle as a FLAVOUR (Chipotle BBQ Pork Burrito) or is a different brand's frozen product (Evol). (2) No gate rejects a component answer, so the miss is silent rather than honest. NAIVE FIX DOES NOT WORK: 'reject when the query's head noun is absent from the winner' kills these four correctly but also kills 'impossible burger patty' → 'Impossible Burger', because burger/patty are synonyms while chicken/burrito is ingredient-of. Separating those is semantic. Pinned as knownIssue so any future fix is gated by measurement rather than eyeballed. THIS CASE: live 2026-07-25 → 'chinese cellophane or long rice (mung beans) dehydrated noodles'. Distinct sub-shape: the component picked is a RAW INGREDIENT from FDC, not a menu item."
+    },
+    {
+      "id": "n-mq-42",
+      "category": "match_quality",
+      "text": "chipotle chicken burrito bowl",
+      "expectName": [
+        [
+          "burrito",
+          "bowl"
+        ],
+        [
+          "bowl"
+        ]
+      ],
+      "grams": [
+        250,
+        600
+      ],
+      "total": {
+        "calories": [
+          400,
+          1000
+        ]
+      },
+      "notes": "HARD control for the composite→component class pinned in n-mq-38..41. This query resolves CORRECTLY today (live 2026-07-25: 'Chipotle Chicken Burrito Bowl' 350g/606 kcal) because an assembled record exists for the bowl. Adding the single token 'bowl' is the entire difference between 606 kcal and the 166 kcal n-mq-38 gets — which is why the class is a retrieval/gating problem and not a parsing one. Any fix for 38-41 MUST keep this passing; a head-noun rule that over-rejects would break it."
     }
   ]
 }
