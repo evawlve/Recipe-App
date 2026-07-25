@@ -624,6 +624,18 @@ const IRREGULAR_PLURALS: Record<string, string> = {
   selves: 'self',
   // Produce
   dice: 'die',  // but "diced" is already stripped as prep
+  // Possessive brand stems ending in a sibilant. Once apostrophes are deleted,
+  // "reese's" arrives here as "reeses", which the -ses rule chops to "rees" —
+  // and "rees" is itself -s-eligible, so the result is NOT a fixed point
+  // ("rees" -> "ree"). Every stored key is currently a fixed point and
+  // cache-coverage.ts:130 relies on that when it re-canonicalizes stored keys,
+  // so a non-fixed-point key would make the coverage metric under-report rows
+  // the cache actually serves. Mapping the whole form to its stem keeps the
+  // invariant. The general fix — guarding the -ses branch so it only fires for
+  // -ss stems (glasses->glass) and strips one s otherwise — also corrects
+  // cheeses->chees, houses->hous and roses->ros, but moves those keys too and
+  // needs its own migration.
+  reeses: 'reese',
 };
 
 /**
@@ -708,13 +720,26 @@ export function singularize(word: string): string {
  * - "Greek Yogurt" == "greek yogurt" (case)
  * - "creamy peanut butter" != "peanut butter" (meaningful modifier preserved)
  * - "red bell pepper" != "bell pepper" (color variant preserved)
+ * - "mcdonald's fries" == "mcdonalds fries" == "mcdonald’s fries" (possessive spelling)
+ *
+ * Apostrophes are DELETED before tokenizing, not kept and not turned into
+ * separators. Keeping them fed the possessive `s` to singularize() and left a
+ * dangling quote ("mcdonald's" -> "mcdonald'"), while the curly form was not in
+ * the keep-list at all and split into a stray token ("mcdonald’s" -> "mcdonald s").
+ * Three spellings of one brand therefore addressed three different cache rows, and
+ * because the key basis is whatever spelling the LLM emitted, which row a user hit
+ * was effectively random: "mcdonalds fries" resolved to McDonald's Fries Medium
+ * (114g) while "mcdonald's fries" resolved to a generic unbranded Fries (250g).
+ * Deleting the apostrophe collapses all three onto the apostrophe-free key, which
+ * is the spelling the existing rows already agree on.
  */
 export function canonicalizeCacheKey(normalizedName: string): string {
   if (!normalizedName) return '';
 
   return normalizedName
     .toLowerCase()
-    .replace(/[^a-z0-9%\s\-']/g, ' ')  // Keep %, hyphens, apostrophes
+    .replace(/['‘’ʼ`´]/g, '')  // Possessives collapse: see above
+    .replace(/[^a-z0-9%\s\-]/g, ' ')  // Keep %, hyphens
     .split(/\s+/)
     .filter(w => w.length > 0)
     .map(singularize)
