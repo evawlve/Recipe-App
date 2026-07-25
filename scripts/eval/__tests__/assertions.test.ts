@@ -137,6 +137,15 @@ describe('numberDrifted', () => {
         expect(numberDrifted(100, null)).toBe(true);
         expect(numberDrifted(null, null)).toBe(false);
     });
+
+    it('treats null and undefined as the SAME absent value', () => {
+        // The baseline writer stores `?? null`; a live search result simply has no
+        // `grams` key. A strict !== read that as "null -> undefined" drift and falsely
+        // reported s-typo-08 and s-typo-14 as changed on the first real run.
+        expect(numberDrifted(null, undefined)).toBe(false);
+        expect(numberDrifted(undefined, null)).toBe(false);
+        expect(numberDrifted(undefined, undefined)).toBe(false);
+    });
 });
 
 describe('describeDrift', () => {
