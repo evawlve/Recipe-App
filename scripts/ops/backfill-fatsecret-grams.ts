@@ -59,7 +59,11 @@
  */
 import 'dotenv/config';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { inferCategoryFromName, categoryDensity } from '../../src/lib/units/density';
+import {
+    inferCategoryFromName,
+    categoryDensity,
+    DRY_GRANULE_DENSITY_CATEGORIES,
+} from '../../src/lib/units/density';
 
 const prisma = new PrismaClient();
 
@@ -149,12 +153,23 @@ function round2(v: number): number {
     return Math.round(v * 100) / 100;
 }
 
-/** Density for a food name: category default, else water. */
+/**
+ * Density for a food name: category default, else water.
+ *
+ * Dry-granule categories are refused, because everything this script touches
+ * was REPORTED IN ML and is therefore a liquid, while those densities describe
+ * the dry solid. inferCategoryFromName matches on substrings, so "Oat Milk"
+ * reaches `oats` (0.36 g/ml, dry flakes) and "Almond Nog" reaches `nut`
+ * (0.55); a 240 ml oat milk would be recorded as 86 g and its per-100g panel
+ * would land ~3x too high. Must stay in step with servingGramsOf in
+ * src/lib/mapping/fatsecret-lane.ts, which applies the same rule at ingest.
+ */
 function densityFor(name: string): { category: string; densityGml: number } {
-    const category = inferCategoryFromName(name);
+    const inferred = inferCategoryFromName(name);
+    const category = inferred && !DRY_GRANULE_DENSITY_CATEGORIES.has(inferred) ? inferred : null;
     const density = categoryDensity(category);
     return {
-        category: category ?? 'none',
+        category: category ?? (inferred ? `${inferred} (refused: dry-granule)` : 'none'),
         densityGml: density ?? FALLBACK_DENSITY_GML,
     };
 }
