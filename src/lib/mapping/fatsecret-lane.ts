@@ -305,6 +305,85 @@ function rawServingNutrients(s: FatSecretApiServing): Record<string, number> | n
     return Object.keys(out).length > 0 ? out : null;
 }
 
+// ============================================================
+// In-flight persist registry (FK persist race)
+// ============================================================
+
+/**
+ * fsId → the in-flight `persistFatSecretHits` promise that will write that
+ * food's FatSecretFood parent row.
+ *
+ * FoodMapping.fsId is a FOREIGN KEY to FatSecretFood.fsId, but the lane
+ * persists its hits fire-and-forget, so on a food's first-ever sighting the
+ * child write can reach the database before its parent. The FK then rejects
+ * the save, `saveValidatedMapping` swallows the error, and the mapping is
+ * silently never cached (11 of warm batch 01's 92 reported saves; 67 such
+ * events since 2026-07-23).
+ *
+ * Entries live only while a persist is actually in flight — the `.finally`
+ * below removes them — so the registry is bounded by concurrent lane
+ * searches, and a lookup after the persist drained is a Map miss (free).
+ */
+const pendingPersistByFsId = new Map<string, Promise<void>>();
+
+/**
+ * Cap on how long a save may wait for an in-flight persist. The measured
+ * window is under 2s for every observed failure; the cap exists so a stalled
+ * background write can never hold a request open — on timeout the caller
+ * proceeds and the write behaves exactly as it does today.
+ */
+const PERSIST_WAIT_TIMEOUT_MS = 3000;
+
+function trackPendingPersist(hits: FatSecretFoodSummary[], task: Promise<void>): void {
+    const ids = hits.map(h => h.id).filter((id): id is string => !!id);
+    if (ids.length === 0) return;
+    for (const id of ids) pendingPersistByFsId.set(id, task);
+    void task.finally(() => {
+        for (const id of ids) {
+            // Only clear entries this task owns — a later search for the same
+            // food may already have replaced them.
+            if (pendingPersistByFsId.get(id) === task) pendingPersistByFsId.delete(id);
+        }
+    });
+}
+
+/**
+ * Wait for the background persist that owns `fsId`, if one is still running.
+ *
+ * Returns immediately (a Map lookup) when nothing is in flight — the common
+ * case, since a persist started at retrieval time has normally drained long
+ * before rerank + AI validation finish. Callers writing a row that references
+ * FatSecretFood.fsId should await this first; see the insert-bound call in
+ * `saveValidatedMapping`.
+ *
+ * Never throws: the registered task already carries its own `.catch`, and a
+ * failed persist simply leaves the parent absent, which is today's behavior.
+ */
+export async function awaitPendingFatSecretPersist(fsId: string): Promise<void> {
+    const task = pendingPersistByFsId.get(fsId);
+    if (!task) return;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+        await Promise.race([
+            task,
+            new Promise<void>(resolve => {
+                timer = setTimeout(() => {
+                    logger.warn('fatsecret_lane.persist_wait_timeout', { fsId });
+                    resolve();
+                }, PERSIST_WAIT_TIMEOUT_MS);
+            }),
+        ]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
+
+/** Test seam: drop every registry entry (tests only). */
+export function __resetPendingFatSecretPersistForTests(): void {
+    pendingPersistByFsId.clear();
+}
+
 /**
  * Upsert search hits into FatSecretFood/FatSecretServing. Called
  * fire-and-forget from the lane (registered with the deferred-hydration
@@ -411,6 +490,9 @@ export async function searchFatSecretLane(
             });
         });
         registerBackgroundTask(task);
+        // ...and indexed by fsId, so a save that needs one of these FK parents
+        // can wait for exactly that write instead of the whole drain.
+        trackPendingPersist(hits, task);
 
         return hits.map((hit, index) => toUnifiedCandidate(hit, index, trimmed));
     } catch (err) {

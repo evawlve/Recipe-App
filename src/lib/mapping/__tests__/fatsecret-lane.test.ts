@@ -594,6 +594,48 @@ describe('persistFatSecretHits', () => {
         expect(mockPrisma.fatSecretServing.upsert).not.toHaveBeenCalled();
     });
 
+    // FoodMapping.fsId is an FK to FatSecretFood.fsId, so a save that lands
+    // before this background write does gets rejected by the database. The
+    // per-fsId registry lets exactly that save wait for exactly that write.
+    describe('in-flight persist registry (FK persist race)', () => {
+        it('returns immediately for an fsId with no persist in flight', async () => {
+            lane.__resetPendingFatSecretPersistForTests();
+            // Would hang (or hit the 3s cap) if it awaited anything.
+            await expect(lane.awaitPendingFatSecretPersist('12345')).resolves.toBeUndefined();
+        });
+
+        it('resolves only once the in-flight parent write has landed', async () => {
+            let resolveUpsert!: (v: unknown) => void;
+            let parentWritten = false;
+            mockPrisma.fatSecretFood.upsert.mockImplementation(
+                () => new Promise(resolve => {
+                    resolveUpsert = (v: unknown) => { parentWritten = true; resolve(v); };
+                })
+            );
+
+            await lane.searchFatSecretLane('protein bar', 8, makeClient([summary({ servings: [] })]));
+            expect(parentWritten).toBe(false);
+
+            let waited = false;
+            const wait = lane.awaitPendingFatSecretPersist('12345').then(() => { waited = true; });
+            await Promise.resolve();
+            expect(waited).toBe(false); // still blocked on the persist
+
+            resolveUpsert({});
+            await wait;
+            expect(parentWritten).toBe(true);
+        });
+
+        it('drops the entry once the persist settles, so later saves never wait', async () => {
+            await lane.searchFatSecretLane('protein bar', 8, makeClient([summary({ servings: [] })]));
+            await deferred.drainPendingBackgroundTasks();
+
+            // Nothing left to await: a hung mock here would prove otherwise.
+            mockPrisma.fatSecretFood.upsert.mockImplementation(() => new Promise(() => { }));
+            await expect(lane.awaitPendingFatSecretPersist('12345')).resolves.toBeUndefined();
+        });
+    });
+
     it('lane registers the persist with the background drain (drainPendingBackgroundTasks awaits it)', async () => {
         // Make the upsert async-slow enough that it cannot have completed inline
         let resolveUpsert!: (v: unknown) => void;

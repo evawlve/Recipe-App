@@ -22,6 +22,7 @@ import { markSaveRejected, normalizeClassId, type FunnelSink } from './funnel';
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
+import { awaitPendingFatSecretPersist } from './fatsecret-lane';
 
 // Cross-source displacement margin (fs displacement hardening, Jul 2026):
 // how much MORE confident a challenger from a different source family
@@ -807,6 +808,34 @@ export async function saveValidatedMapping(
                     return;
                 }
             }
+        }
+
+        // FatSecret FK persist race (Jul 2026). FoodMapping.fsId is a foreign
+        // key to FatSecretFood.fsId, and the lane writes those parent rows
+        // fire-and-forget (fatsecret-lane.ts persistFatSecretHits, registered
+        // as a background task). On a food's FIRST-EVER sighting this child
+        // write can beat its parent: the upsert then fails the FK, the catch
+        // below logs save_error, and the mapping is silently never cached even
+        // though the funnel already marked the line 'saved'. Warm batch 01
+        // reported 92 saves and wrote 81 rows — 31.4% of its fatsecret saves
+        // wrote nothing.
+        //
+        // Waiting on the ONE in-flight persist that owns this fsId is free
+        // when it already drained (a Map lookup, the normal case — the persist
+        // starts at retrieval time and rerank + AI validation run after it)
+        // and capped when it hasn't.
+        //
+        // INSERT-BOUND on `existing`: only a save that would CREATE a row
+        // waits. When a row is already there the parent is left to the
+        // background task exactly as today, so this can never turn a
+        // currently-failing overwrite into a successful one. That bound is not
+        // cosmetic — 8 of the 67 measured FK failures were update branches
+        // against hot validatedBy='ai' incumbents, including the `cooked rice`
+        // and `cooked pasta` rows golden cases n-cook-01/n-cook-02 exist to
+        // lock and the bare generic key `chicken`. An unbounded version of
+        // this fix displaces them.
+        if (fsId && !existing) {
+            await awaitPendingFatSecretPersist(fsId);
         }
 
         await prisma.foodMapping.upsert({
