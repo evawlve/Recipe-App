@@ -25,6 +25,19 @@
  *                          kJ-value-in-the-kcal-field family (n-mq-27 lemon:
  *                          383 "kcal"/100g vs ~40 real). Alcohol names are
  *                          exempt (7 kcal/g invisible to Atwater).
+ *   panel-inflated-serving a per-SERVING panel stored in the per-100g fields —
+ *                          the same corruption detect-corrupt-panel.ts catches
+ *                          via same-name sibling medians, but caught SIBLING-FREE
+ *                          from the row alone. Needed because the class lives in
+ *                          meal-kit / restaurant / deli items, which are name-space
+ *                          singletons: 45 of a 65-row sample had no siblings, so the
+ *                          median approach is structurally blind there. Two absolute
+ *                          measurements replace the median: an internally coherent
+ *                          panel (calories within 10% of Atwater) whose macros sum
+ *                          into the near-anhydrous [95, 105] g/100g band, and an
+ *                          implied per-serving energy above 1,500 kcal from a serving
+ *                          mass inside the single-eating-occasion window. See the
+ *                          threshold block in corrupt-mark.ts for the calibration.
  *   sodium-sibling-outlier sodium >= max(2 g, 6x the same-name sibling
  *                          median) with >= --min-group siblings whose median
  *                          is itself sane — the mayo class, where the value
@@ -63,6 +76,10 @@ import {
     MIN_SODIUM_OUTLIER_GROUP,
     MIN_SODIUM_OUTLIER_RATIO,
     MIN_SODIUM_OUTLIER_G,
+    MIN_IMPLIED_SERVING_KCAL,
+    impliedServingKcal,
+    rejectPanelInflatedServing,
+    ServingScalePanel,
 } from '../../src/lib/mapping/corrupt-mark';
 
 const prisma = new PrismaClient();
@@ -221,6 +238,26 @@ async function main() {
                 }
             }
             if (na != null && na > 4) sauceBand++;
+            // Sibling-free per-serving-panel rule. Sits AFTER every absolute
+            // per-field rule (a row that is individually impossible is better
+            // described by that class) and after the sauceBand tally so the
+            // existing diagnostic counters are unaffected. The macro-sum upper
+            // bound is enforced inside the rule too, so it stays correct if the
+            // precedence chain is ever reordered.
+            if (protein != null && fat != null && carbs != null && kcal != null && r.servingGrams != null) {
+                const panel: ServingScalePanel = {
+                    kcal100: kcal, servingGrams: r.servingGrams, protein, fat, carbs,
+                };
+                if (rejectPanelInflatedServing(panel) == null) {
+                    const implied = impliedServingKcal(panel);
+                    flagged.push({
+                        ...base, direction: 'panel-inflated-serving', value: implied,
+                        rescaled: Math.round((kcal * 100) / r.servingGrams),
+                        panel, check: { field: 'calories', value: kcal },
+                    });
+                    continue;
+                }
+            }
             if (na != null && na >= MIN_SODIUM_OUTLIER_G) {
                 const m = sodiumMedians.get(normalizeNameKey(r.name));
                 if (m && m.med > 0 && m.med <= MAX_OUTLIER_SANE_MEDIAN && na >= MIN_SODIUM_OUTLIER_RATIO * m.med) {
@@ -272,6 +309,22 @@ async function main() {
         console.log(`  ${f.barcode} "${f.name}"${f.brandName ? ` [${f.brandName}]` : ''} (${f.direction}): ${f.value}${extra}`);
     }
     if (flagged.length > PRINT) console.log(`  ... ${flagged.length - PRINT} more in the report file`);
+
+    // panel-inflated-serving reads differently from the per-field classes (the
+    // value is an implied SERVING energy, not a per-100g field), so it gets its
+    // own block instead of competing in the shared severity list.
+    const servingScale = flagged.filter(f => f.direction === 'panel-inflated-serving');
+    if (servingScale.length) {
+        console.log(`\npanel-inflated-serving (${servingScale.length} rows, implied serving kcal > ${MIN_IMPLIED_SERVING_KCAL}):`);
+        for (const f of servingScale.sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).slice(0, PRINT)) {
+            const p = f.panel!;
+            console.log(`  ${f.barcode} "${f.name}"${f.brandName ? ` [${f.brandName}]` : ''}: ` +
+                `${p.kcal100} kcal/100g x ${p.servingGrams}g = ${Math.round(f.value ?? 0)} kcal/serving ` +
+                `(macro sum ${(p.protein + p.fat + p.carbs).toFixed(1)} g/100g, ` +
+                `panel-as-serving reads ${f.rescaled} kcal/100g)`);
+        }
+        if (servingScale.length > PRINT) console.log(`  ... ${servingScale.length - PRINT} more in the report file`);
+    }
     console.log(`\nReport written to ${path.relative(process.cwd(), outPath)}`);
     console.log('Next: scripts/mark-corrupt-off.ts --file <report> (dry-run first, then --apply after approval).');
 }
