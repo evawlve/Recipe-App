@@ -145,6 +145,40 @@ export function isHumanTrustSkippableEscape(reason: string): boolean {
 }
 
 /**
+ * Out-parameter for getValidatedMappingByNormalizedName.
+ *
+ * The read path has two very different ways to return null: no row existed under
+ * this key, or a row existed and the identity checks below REJECTED it. Callers
+ * could not tell them apart, so every helper-level rejection was written to
+ * MappingEventLog as `cacheHit=NULL, cacheEscape=NULL` — byte-identical to a cold
+ * key. That made a real, recurring failure class (a row the pipeline writes and
+ * then can never serve, so it re-resolves forever) statistically invisible.
+ *
+ * Pass an object here to find out which happened: a non-null `reason` after the
+ * call means a row was found and rejected. Purely diagnostic — populating it
+ * changes no control flow.
+ */
+export interface CacheLookupRejection {
+    /** Rejection class, or null when no row was found at all. */
+    reason: string | null;
+    /** Key the rejected row was stored under — for key-fork diagnosis. */
+    normalizedForm?: string;
+    /** Name of the rejected row, so the reason can be read without a second query. */
+    foodName?: string;
+}
+
+function noteRejection(
+    rejection: CacheLookupRejection | undefined,
+    reason: string,
+    cached: { normalizedForm: string; foodName: string },
+): void {
+    if (!rejection) return;
+    rejection.reason = reason;
+    rejection.normalizedForm = cached.normalizedForm;
+    rejection.foodName = cached.foodName;
+}
+
+/**
  * Retrieve a validated mapping from cache by RAW ingredient line
  * @deprecated Use getValidatedMappingByNormalizedName for new code
  */
@@ -168,11 +202,14 @@ export async function getValidatedMapping(
  * @param normalizedName - The normalized ingredient name to look up
  * @param source - Data source ('fatsecret' or 'fdc' or 'openfoodfacts')
  * @param rawLine - Optional raw ingredient line for cooking state/modifier validation
+ * @param rejection - Optional out-param; receives the reason when a row was found
+ *                    and rejected. See CacheLookupRejection.
  */
 export async function getValidatedMappingByNormalizedName(
     normalizedName: string,
     source: 'fatsecret' | 'fdc' | 'openfoodfacts' = 'fatsecret',
-    rawLine?: string
+    rawLine?: string,
+    rejection?: CacheLookupRejection
 ): Promise<CachedMappedIngredient | null> {
     try {
         // Canonicalize the lookup key (lowercase + singularize + sort tokens)
@@ -222,6 +259,7 @@ export async function getValidatedMappingByNormalizedName(
                     query: normalizedName,
                     cachedFood: cached.foodName,
                 });
+                noteRejection(rejection, 'core_token_mismatch', cached);
                 return null;  // Reject cache hit, force fresh search
             }
             trustSkippedRejection = 'core_token_mismatch';
@@ -244,6 +282,7 @@ export async function getValidatedMappingByNormalizedName(
                         cachedFood: cached.foodName,
                         modifier: mod,
                     });
+                    noteRejection(rejection, `nutritional_modifier:${mod}`, cached);
                     return null;  // Reject cache hit, force fresh search
                 }
                 trustSkippedRejection = trustSkippedRejection ?? `nutritional_modifier:${mod}`;
@@ -260,6 +299,7 @@ export async function getValidatedMappingByNormalizedName(
                         rawLine,
                         cachedFood: cached.foodName,
                     });
+                    noteRejection(rejection, 'context_mismatch', cached);
                     return null;  // Reject cache hit, force fresh search
                 }
                 trustSkippedRejection = trustSkippedRejection ?? 'context_mismatch';
