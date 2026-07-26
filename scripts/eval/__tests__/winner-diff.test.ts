@@ -475,9 +475,9 @@ describe('parseGoldenSet', () => {
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
         expect(n(c => c.expectName.length > 0)).toBe(243);
         expect(n(c => !!c.grams)).toBe(148);              // the majority assertion
-        expect(n(c => !!c.macros)).toBe(59);
+        expect(n(c => !!c.macros)).toBe(65);
         expect(n(c => typeof c.expectItems === 'number')).toBe(47);
-        expect(n(c => !!c.total)).toBe(18);
+        expect(n(c => !!c.total)).toBe(35);
         // documented in _readme, no live case uses them — parsed anyway so the screen
         // does not go blind the moment one is added back
         expect(n(c => !!c.forbidName)).toBe(0);
@@ -485,16 +485,18 @@ describe('parseGoldenSet', () => {
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
         expect(n(c => assertedBands(c).length === 0)).toBe(0);
-        // 47 assert a name and no numeric band — the population the _readme names
-        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(47);
+        // 37 assert a name and no numeric band — the population the _readme names.
+        // Was 47 before PR #167 added calorie bands; those 10 are the whole point of
+        // that PR, and this line is the receipt that they landed.
+        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(37);
 
         // split by shape: `--golden` replays item-shaped cases unless --include-multi-item
         const item = all.filter(c => c.shape === 'item');
         const text = all.filter(c => c.shape === 'text');
         expect([item.length, text.length]).toEqual([160, 83]);
         expect(item.filter(c => c.grams).length).toBe(117);
-        expect(item.filter(c => c.macros).length).toBe(43);
-        expect(item.filter(c => c.total).length).toBe(7);
+        expect(item.filter(c => c.macros).length).toBe(47);
+        expect(item.filter(c => c.total).length).toBe(16);
         expect(text.filter(c => c.grams).length).toBe(31);
         expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(47);
 
@@ -714,7 +716,7 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         const kind = (k: string) => cov.byKind.find(b => b.kind === k)!;
         expect(cov.cases).toBe(243);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 148, blind: 148 });
-        expect(kind('total')).toEqual({ kind: 'total', asserted: 18, blind: 18 });
+        expect(kind('total')).toEqual({ kind: 'total', asserted: 35, blind: 35 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 47, blind: 47 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
@@ -732,7 +734,10 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         const cov = goldenCoverage(all.filter(c => c.shape === 'item'));
         expect(cov.cases).toBe(160);
         expect(cov.byKind.find(b => b.kind === 'grams')).toEqual({ kind: 'grams', asserted: 117, blind: 117 });
-        expect(cov.casesWithBlindBand).toBe(117 + 7 - all.filter(c => c.shape === 'item' && c.grams && c.total).length);
+        // 117 item cases assert grams + 16 assert a total, less the 9 that assert both.
+        // The `total` term was 7 before PR #167 added calorie bands.
+        expect(all.filter(c => c.shape === 'item' && c.grams && c.total).length).toBe(9);
+        expect(cov.casesWithBlindBand).toBe(117 + 16 - 9);
     });
 
     it('an item case with only a name and a measurable macro band is fully judgeable', () => {

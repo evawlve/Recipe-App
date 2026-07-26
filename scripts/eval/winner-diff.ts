@@ -1313,8 +1313,17 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
                 // RECORD wins, but `confidence` is also the cache-admission signal
                 // (`admitToCache = confidence >= 0.85 || subThreshold`), and the two
                 // stages report on different scales: the gate exits at >= 0.85 by
-                // construction, simpleRerank returns min(0.5 + score*0.5, 0.95) with a
-                // 0.70 floor. Taking the rerank number unconditionally therefore
+                // construction, simpleRerank starts at min(0.5 + score*0.5, 0.95) and
+                // then adds up to +0.1 for `exact_match`, capped at 0.98
+                // (simple-rerank.ts:2077, :2086), with a 0.70 floor
+                // (MIN_RERANK_CONFIDENCE, :2169). CORRECTED 2026-07-26: this comment
+                // used to say the rerank scale TOPS OUT at 0.95, which is wrong. 0.98
+                // is reachable and is the single most common stored value — 1,370 of
+                // 3,246 FoodMapping rows sit at exactly 0.98 (measured 2026-07-26).
+                // That false ceiling was the stated premise for this mitigation. The
+                // mitigation is still right (0.85 vs the rerank scale is the real gap),
+                // but do not re-derive anything from the old number.
+                // Taking the rerank number unconditionally therefore
                 // DEMOTED lines whose answer did not change at all — 37 of the 441
                 // gate lines fall under the save gate, 9 with an UNCHANGED winner, 2
                 // of those under SUB_THRESHOLD_SAVE_FLOOR (0.75) so they stop being
@@ -1906,8 +1915,13 @@ function runCounterfactual(replayPath: string, top: number) {
     if (s.medianCounterMicros != null) {
         say('');
         say(`median wall time of the Step 4 the gate skipped: ${s.medianCounterMicros.toFixed(0)} us`);
-        say('   (simpleRerank is a pure function — there is no LLM in src/lib/mapping — so');
-        say('    this is the entire cost the gate avoids. Measure it; do not assert it.)');
+        say('   (simpleRerank is pure and synchronous — `grep -c "await " simple-rerank.ts`');
+        say('    is 0 — so this is the entire cost the gate avoids. Measure it; do not');
+        say('    assert it. CORRECTED 2026-07-26: this line used to claim "there is no LLM');
+        say('    in src/lib/mapping", which is false. ai-rerank.ts IS a full');
+        say('    OpenAI-compatible client, and map-ingredient-with-fallback.ts awaits');
+        say('    aiSimplifyIngredient in the same file that carried the denial. The true');
+        say('    claim is narrower: nothing on the gate/rerank path awaits an LLM.)');
     }
     sayAll(formatScreens(runScreens(s.pairs, 'GATE', 'RERANK'), top));
     say('');

@@ -30,6 +30,30 @@ jest.mock('../../db', () => ({
     ingredient: {
       findMany: jest.fn().mockResolvedValue([]),
     },
+    // Serving stores reached via hydrateAndSelectServing -> ambiguous-unit-backfill.
+    // Omitting these did not make a test fail loudly — it made
+    // `does NOT fast-path "canned tuna in water"` die inside the mapper with
+    // "Cannot read properties of undefined (reading 'findUnique')", which reads
+    // like a production bug and is not one. Keep every model that
+    // ambiguous-unit-backfill.ts touches present here.
+    aiGeneratedServing: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      upsert: jest.fn().mockResolvedValue(null),
+    },
+    fdcServing: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      upsert: jest.fn().mockResolvedValue(null),
+    },
+    offServing: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      upsert: jest.fn().mockResolvedValue(null),
+    },
+    userPortionOverride: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
   },
 }));
 
