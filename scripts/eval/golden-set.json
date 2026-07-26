@@ -6262,12 +6262,8 @@
       "text": "trader joes chicken breast",
       "expectName": [
         [
-          "chicken breast"
-        ]
-      ],
-      "forbidName": [
-        [
-          "mary's"
+          "chicken breast",
+          "trader joe"
         ]
       ],
       "grams": [
@@ -6281,7 +6277,7 @@
         ]
       },
       "knownIssue": true,
-      "notes": "OVER-ADMISSION TRIPWIRE for n-mq-43..46, and a separately-found defect. Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. This seed is UNCHANGED by #160 — off_0208065711897 'Skinless Chicken Breast' [Mary's Chicken] 112 g / 130 kcal, pool 10 both before and after — which is the point: opening the Trader Joe's pool must not reorder a query that already had one. It is marked knownIssue because the answer is WRONG IN A DIFFERENT WAY: the brand is Mary's Chicken, not Trader Joe's, even though off_0274038708522 (\"Trader Joe's Boneless Skinless Chicken Breast\") exists and was the record hijacking 'trader joes gone bananas' before #160. Same food, wrong brand, right macros — so the numeric bands pass and only the brand is wrong, which is why this class survived every gate. Do not 'fix' this by tightening the brand requirement without measuring n-mq-43..46 again; the two pull in opposite directions. ASSERTION CORRECTED after the first eval run reported this case as 'known issue NOW PASSING'. It passed because expectName ['chicken breast'] and both numeric bands are satisfied by the WRONG-BRAND record — which is precisely the defect. A wrong answer that passes is worse than no case at all, so forbidName [\"mary's\"] now makes the defect expressible. The forbid is safe in the sense n-mq-40 warns about: \"mary's\" is not a substring of the correct answer (\"Trader Joe's Boneless Skinless Chicken Breast\"), so the case becomes passable the moment the brand is right, rather than unpassable forever."
+      "notes": "OVER-ADMISSION TRIPWIRE for n-mq-43..46, and a separately-found defect. Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. This seed is UNCHANGED by #160 — off_0208065711897 'Skinless Chicken Breast' [Mary's Chicken] 112 g / 130 kcal, pool 10 both before and after — which is the point: opening the Trader Joe's pool must not reorder a query that already had one. It is marked knownIssue because the answer is WRONG IN A DIFFERENT WAY: the brand is Mary's Chicken, not Trader Joe's, even though off_0274038708522 (\"Trader Joe's Boneless Skinless Chicken Breast\") exists and was the record hijacking 'trader joes gone bananas' before #160. Same food, wrong brand, right macros — so the numeric bands pass and only the brand is wrong, which is why this class survived every gate. Do not 'fix' this by tightening the brand requirement without measuring n-mq-43..46 again; the two pull in opposite directions. ASSERTION CORRECTED TWICE, and the second correction is the instructive one. Round 1 added forbidName [\"mary's\"] after the case reported 'NOW PASSING' on the wrong-brand record. Round 2 (2026-07-26, post-#160 deploy) it reported 'NOW PASSING' AGAIN — because the winner had moved to a THIRD brand, off 'Skinless Chicken Breast' [Great Value] 112 g / 140 kcal. Neither Mary's nor Trader Joe's. Enumerating forbidden brands is the wrong SHAPE of assertion: it can only ever exclude the wrong answers you have already seen, and a retrieval change just walks to the next one. Replaced with a POSITIVE brand requirement — expectName [[\"chicken breast\",\"trader joe\"]], inner-AND against name+brand — which is satisfied by exactly one thing, the correct record, and is robust to every wrong brand including ones not yet observed. Still knownIssue: off_0274038708522 (\"Trader Joe's Boneless Skinless Chicken Breast\") exists and is not being retrieved. This tightening changes NO pipeline behaviour and therefore cannot affect n-mq-43..46 — the warning above about the two pulling in opposite directions applies to changing the brand requirement in the MAPPER, not in this assertion."
     }
   ]
 }
