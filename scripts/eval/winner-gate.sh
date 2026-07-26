@@ -158,18 +158,28 @@ if [[ "$REGRESSION_N" -gt 0 ]]; then
 fi
 
 # ------------------------------------------------------------ noise floor
-# The receipt is keyed by TREE HASH, so `diff` requires one from EACH side. A
-# base-only receipt is not sufficient and diff will (correctly) refuse to report.
-echo "[3/5] noise floor on BOTH trees (must be 0 — writes the receipts diff requires)"
-if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$OUT/snap.json" ) 2>&1 | tail -8; then
-    echo "ABORT: noise floor is non-zero on BASE. The replay is not deterministic," >&2
-    echo "so any before/after claim below it is not a result." >&2
-    exit 4
-fi
-if ! eval "$RUN" noise-floor --snapshot "$OUT/snap.json" 2>&1 | tail -8; then
-    echo "ABORT: noise floor is non-zero on BRANCH. Your change introduced" >&2
-    echo "nondeterminism into replay — that is itself the finding." >&2
-    exit 4
+# The receipt is keyed by (SNAPSHOT, TREE HASH), so `diff` requires one per
+# snapshot per side — four runs when a regression population is in play. Missing
+# any one makes diff refuse to report, which is how both of this driver's own
+# bugs were caught.
+noise_floor_both_trees() {
+    local snap="$1" name="$2"
+    if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$snap" ) 2>&1 | tail -6; then
+        echo "ABORT: noise floor non-zero on BASE for $name. The replay is not" >&2
+        echo "deterministic, so any before/after claim below it is not a result." >&2
+        exit 4
+    fi
+    if ! eval "$RUN" noise-floor --snapshot "$snap" 2>&1 | tail -6; then
+        echo "ABORT: noise floor non-zero on BRANCH for $name. Your change" >&2
+        echo "introduced nondeterminism into replay — that is itself the finding." >&2
+        exit 4
+    fi
+}
+
+echo "[3/5] noise floor: every snapshot x both trees (must be 0)"
+noise_floor_both_trees "$OUT/snap.json" "cold"
+if [[ "$REGRESSION_N" -gt 0 ]]; then
+    noise_floor_both_trees "$OUT/snap-regression.json" "regression"
 fi
 
 # ------------------------------------------------------------ replays
