@@ -38,19 +38,34 @@ describe('isMultiIngredientMismatch — compound-query self-match', () => {
         expect(isMultiIngredientMismatch(query, candidate)).toBe(false);
     });
 
-    // ---- what the fix must NOT break: the reverse check still adjudicates ----
+    // ---- what the fix must NOT break ----
+    //
+    // MEASURED, not assumed. Both groups below return false on origin/master AND
+    // on this branch — they exit before reaching the branch this change touches,
+    // so the change provably cannot have moved them. Written down because the
+    // 2026-07-26 investigation reported that the canonical regression "lives in
+    // the SECOND branch and must be shown untouched"; it does not live in either
+    // branch, and a test asserting it did would have failed on master too.
 
-    it('still rejects a candidate matching only ONE side of a compound query', () => {
-        // The canonical regression this rule was written for.
-        expect(isMultiIngredientMismatch('tomato and green chili mix', 'green raw tomatoes')).toBe(true);
+    it('the canonical regression exits early on WORD COUNT, not on either branch', () => {
+        // 'tomato and green chili mix' has 5 significant words, so
+        // `if (queryWords.length > 3) return false` at filter-candidates.ts:2020
+        // fires first. This function never adjudicates it — whatever keeps
+        // 'green raw tomatoes' out is upstream (must-have tokens / core-token
+        // coverage), so the guard added here cannot reopen it.
+        expect(isMultiIngredientMismatch('tomato and green chili mix', 'green raw tomatoes')).toBe(false);
     });
 
     it.each([
         ['mac and cheese', 'Cheddar Cheese'],
         ['biscuits and gravy', 'Buttermilk Biscuits'],
         ['bacon and eggs', 'Scrambled Eggs'],
-    ])('%p still rejects the single-component candidate %p', (query, candidate) => {
-        expect(isMultiIngredientMismatch(query, candidate)).toBe(true);
+    ])('%p vs single-component %p exits at the no-connector guard', (query, candidate) => {
+        // The candidate carries no and/&/with, so `if (!multiMatch) return false`
+        // at :2024 fires. The REVERSE CHECK only ever runs when the CANDIDATE is
+        // compound — it is not a general single-component rejector, which is the
+        // opposite of what the investigation assumed.
+        expect(isMultiIngredientMismatch(query, candidate)).toBe(false);
     });
 
     // ---- the first branch must be UNCHANGED for single-ingredient queries ----
