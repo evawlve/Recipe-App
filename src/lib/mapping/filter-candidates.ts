@@ -2590,7 +2590,27 @@ export function filterCandidatesByTokens(
     // Filter candidates
     const filtered = candidates.filter(candidate => {
         const candidateName = normalizeCandidateName(candidate);
-        const candidateTokens = tokenize(candidateName);
+        // Possessive brands are invisible to the required-token check: "Trader
+        // Joe's" tokenizes to {trader, joe}, so the query token `joes` matches
+        // nothing and the entire Trader Joe's catalogue is filtered out before
+        // rerank ever sees it (warm batch 01: `trader joes scandinavian
+        // swimmers` went 12 candidates → 1, and the 1 survivor was the only
+        // record whose brand string happened to omit the apostrophe).
+        //
+        // The folded spelling is *added* to the token set and tested *alongside*
+        // the raw name, never substituted for it. That makes this change
+        // admit-only by construction rather than by measurement: the token set
+        // is a superset of today's and the regex tests are a disjunction over
+        // today's, so no candidate that survives the check today can fail it
+        // now. Substituting instead (fold in place) would drop `wendy's`-style
+        // pairs, because the query side would then have to fold too.
+        const candidateNameFolded = foldApostrophes(candidateName);
+        const hasApostrophe = candidateNameFolded !== candidateName;
+        const candidateTokens = hasApostrophe
+            ? new Set([...tokenize(candidateName), ...tokenize(candidateNameFolded)])
+            : tokenize(candidateName);
+        const matchesName = (pattern: RegExp): boolean =>
+            pattern.test(candidateName) || (hasApostrophe && pattern.test(candidateNameFolded));
 
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
@@ -2680,7 +2700,7 @@ export function filterCandidatesByTokens(
             // Word boundary match in full name (prevents "ice" matching "rice")
             // Use regex with word boundaries instead of includes()
             const wordBoundaryRegex = new RegExp(`\\b${token}\\b`, 'i');
-            if (wordBoundaryRegex.test(candidateName)) {
+            if (matchesName(wordBoundaryRegex)) {
                 return true;
             }
 
@@ -2693,7 +2713,7 @@ export function filterCandidatesByTokens(
                         return true;
                     }
                     const variantRegex = new RegExp(`\\b${variant}\\b`, 'i');
-                    if (variantRegex.test(candidateName)) {
+                    if (matchesName(variantRegex)) {
                         return true;
                     }
                 }
@@ -2703,7 +2723,7 @@ export function filterCandidatesByTokens(
             const synonyms = TOKEN_SYNONYMS[token];
             if (synonyms) {
                 return synonyms.some(syn =>
-                    candidateTokens.has(syn) || new RegExp(`\\b${syn}\\b`, 'i').test(candidateName)
+                    candidateTokens.has(syn) || matchesName(new RegExp(`\\b${syn}\\b`, 'i'))
                 );
             }
             return false;
@@ -3063,4 +3083,20 @@ function tokenize(text: string): Set<string> {
             .split(/[^\w]+/)
             .filter(t => t.length > 2)
     );
+}
+
+/**
+ * Remove apostrophes so a possessive brand tokenizes as one word.
+ *
+ * `tokenize()` splits on `[^\w]+`, and the apostrophe is not a word character,
+ * so "Trader Joe's" yields `{trader, joe}` — the orphan `s` is then dropped by
+ * the `length > 2` filter. An apostrophe-free query token (`joes`) therefore has
+ * nothing to match, and the plural rescue cannot bridge the gap either because
+ * `singularize('joes')` hits the `-oes` branch and returns `jo`, not `joe`.
+ *
+ * Only `'` and its typographic variants are folded. Every other separator keeps
+ * its current behaviour.
+ */
+function foldApostrophes(text: string): string {
+    return text.replace(/['’`]/g, '');
 }
