@@ -79,9 +79,13 @@ describe('possessive-brand candidates survive the required-token filter', () => 
 });
 
 describe('folding must not become substring matching', () => {
+    // NOTE ON VACUITY. The first two cases below carry NO apostrophe in the
+    // candidate, so `hasApostrophe` is false and the folded path is never
+    // entered — they pin the surrounding filter, not this change. They are kept
+    // because that behaviour still has to hold, but they are not controls for
+    // the fold. The cases after them are: each has an apostrophe-bearing
+    // candidate, so the new path IS exercised, and each must still be rejected.
     it('still removes a record of the right food under the wrong brand', () => {
-        // The filter's whole job. Folding adds tokens; it must not add matches
-        // between unrelated words.
         const result = filterCandidatesByTokens(
             [cand('Scandinavian Swimmers Gummi Candy', "Haribo")],
             'trader joes scandinavian swimmers',
@@ -94,6 +98,29 @@ describe('folding must not become substring matching', () => {
         // exists to prevent, unchanged by folding.
         const result = filterCandidatesByTokens([cand('Toblerone Milk Chocolate')], "one's chocolate");
         expect(result.filtered).toHaveLength(0);
+    });
+
+    it('an apostrophe in the candidate does not waive a genuinely missing token', () => {
+        // Non-vacuous: "Nature's Promise" folds, so the new branch runs. The
+        // query leads with the food noun so `deriveMustHaveTokens` requires
+        // `granola` — which this candidate does not have, folded or not.
+        const result = filterCandidatesByTokens(
+            [cand('Organic Baby Spinach', "Nature's Promise")],
+            'granola natures promise',
+        );
+        expect(result.filtered).toHaveLength(0);
+    });
+
+    it('the token the fold creates does not match an unrelated word', () => {
+        // "Mary's" folds to `marys`. That must admit a query for `marys`, and
+        // nothing else: `rosemary` contains `mary` as a substring and must not
+        // match, folded or otherwise.
+        expect(
+            filterCandidatesByTokens([cand('Chicken Breast', "Mary's Chicken")], 'marys chicken').filtered,
+        ).toHaveLength(1);
+        expect(
+            filterCandidatesByTokens([cand('Chicken Breast', "Mary's Chicken")], 'rosemary chicken').filtered,
+        ).toHaveLength(0);
     });
 });
 
@@ -108,11 +135,20 @@ describe('the fold is additive — nothing that passes today may fail now', () =
         ["arby's roast beef", cand('Roast Beef Classic', "Arby's")],
         ["denny's pancakes", cand('Buttermilk Pancakes', "Denny's")],
         ["zaxby's chicken fingers", cand('Chicken Fingerz', "Zaxby's")],
-        ['trader joes chicken breast', cand('Chicken Breast', "Trader Joe's")],
     ];
 
     it.each(survivors)('keeps %s', (query, candidate) => {
         expect(filterCandidatesByTokens([candidate], query).filtered).toHaveLength(1);
+    });
+
+    it('admits the apostrophe-free query for a possessive candidate', () => {
+        // Moved out of the survivor list above: this one FAILS before the fix,
+        // so it is a fix assertion, not a control, and leaving it in a block
+        // whose stated contract is "passes before and after" made that block's
+        // comment untrue.
+        expect(
+            filterCandidatesByTokens([cand('Chicken Breast', "Trader Joe's")], 'trader joes chicken breast').filtered,
+        ).toHaveLength(1);
     });
 
     it('keeps an apostrophe-free candidate whose brand has no apostrophe at all', () => {
