@@ -24,6 +24,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { canonicalizeCacheKey } from '../../src/lib/mapping/normalization-rules';
 
 const args = process.argv.slice(2);
 function argValue(flag: string): string | undefined {
@@ -56,8 +57,61 @@ const before: BeforeRow[] = JSON.parse(fs.readFileSync(beforePath, 'utf8'));
 const results: any[] = [];
 let done = 0;
 
+/**
+ * Replay the OBSERVED query form, not the stored key.
+ *
+ * `FoodMapping.normalizedForm` is `canonicalizeCacheKey` output: token-sorted
+ * alphabetically. Feeding it back in as the query text is not a replay — it is
+ * a different query that merely happens to share a cache row, because
+ * `deriveMustHaveTokens` reads the first two core tokens in SOURCE ORDER and
+ * the sort has destroyed that order.
+ *
+ * Measured 2026-07-26 over 39,414 MappingEventLog rows: for **1,103 of 2,443
+ * keys (45.15%)** the sorted key computes a DIFFERENT required-token set than
+ * the user word order that owns the row — and since saveValidatedMapping is not
+ * gated by skipCache, the sweep then overwrites the row with whatever that
+ * different admission produced. Examples:
+ *
+ *   skinless chicken breast  users [skinless,chicken]  sweep [breast,chicken]
+ *   mission tortilla chips   users [mission,tortilla]  sweep [chips,mission]
+ *   premier protein caramel  users [premier,protein]   sweep [caramel,premier]
+ *
+ * This is a concrete mechanism for the "cache-parity-sweep clobbers a few good
+ * OFF picks" behaviour on record from the 2026-07-24 fs-refresh wave (saltine
+ * sleeve, m&ms). Pass --observed to replay the real query form instead.
+ *
+ * Build the file with:
+ *   select json_agg(row_to_json(t)) from (
+ *     select "normalizedForm", count(*) as events
+ *     from "MappingEventLog" where "normalizedForm" is not null
+ *     group by 1 order by 2 desc) t;
+ */
+interface ObservedRow { normalizedForm: string; events: number }
+const observedPath = argValue('--observed');
+const observedByKey = new Map<string, { form: string; events: number }>();
+if (observedPath) {
+    const rows: ObservedRow[] = JSON.parse(fs.readFileSync(observedPath, 'utf8'));
+    for (const r of rows) {
+        if (!r.normalizedForm) continue;
+        // Skip forms that are ALREADY in canonical order — they are almost all
+        // prior sweep replays feeding on themselves, and they carry no order
+        // information to recover.
+        if (r.normalizedForm.trim() === canonicalizeCacheKey(r.normalizedForm)) continue;
+        const key = canonicalizeCacheKey(r.normalizedForm);
+        const cur = observedByKey.get(key);
+        if (!cur || r.events > cur.events) observedByKey.set(key, { form: r.normalizedForm, events: r.events });
+    }
+    console.log(`[observed] ${rows.length} logged forms → ${observedByKey.size} keys with a recoverable query order`);
+} else {
+    console.log('[observed] --observed not supplied: replaying STORED KEYS, which is order-destroyed for ~45% of rows');
+}
+let usedObserved = 0;
+let usedStoredKey = 0;
+
 async function sweepOne(row: BeforeRow) {
-    const name = row.normalizedForm;
+    const obs = observedByKey.get(row.normalizedForm);
+    const name = obs?.form ?? row.normalizedForm;
+    if (obs) usedObserved++; else usedStoredKey++;
     // 100 g weight unit → grams resolution is trivial and identical for every
     // record, so per-100g nutrition compares apples-to-apples.
     const body = { items: [{ rawText: `100g ${name}`, quantity: 100, unit: 'g', name }] };
@@ -76,7 +130,10 @@ async function sweepOne(row: BeforeRow) {
             const items: any = await res.json();
             const it = Array.isArray(items) ? items[0] : null;
             return {
-                key: name,
+                // `key` must stay the CACHE key so the diff lines up with the
+                // --before rows; `queriedAs` records what was actually sent.
+                key: row.normalizedForm,
+                queriedAs: name,
                 before: row,
                 cold: it ? {
                     foodId: it.foodId ?? null,
@@ -90,7 +147,7 @@ async function sweepOne(row: BeforeRow) {
                 ms: Date.now() - t0,
             };
         } catch (e) {
-            if (attempt === 1) return { key: name, before: row, cold: { error: String(e).slice(0, 120) }, ms: Date.now() - t0 };
+            if (attempt === 1) return { key: row.normalizedForm, queriedAs: name, before: row, cold: { error: String(e).slice(0, 120) }, ms: Date.now() - t0 };
         }
     }
 }
@@ -126,9 +183,18 @@ async function main() {
 
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = path.join(__dirname, 'results', `cache-parity-${stamp}.json`);
-    fs.writeFileSync(outPath, JSON.stringify({ base: BASE, ranAt: stamp, summary: { total: results.length, sameRecord: same, changedRecord: changedId, changedSource, errors }, changes, results }, null, 1));
+    // Report the replay-fidelity split explicitly. A run that silently fell back
+    // to stored keys for most rows looks identical in the diff to a clean run,
+    // but it is measuring a different query than the one that owns each row.
+    const replay = { usedObservedForm: usedObserved, usedStoredKey, storedKeyPct: +(100 * usedStoredKey / Math.max(1, results.length)).toFixed(1) };
+    const summary = { total: results.length, sameRecord: same, changedRecord: changedId, changedSource, errors, replay };
+    fs.writeFileSync(outPath, JSON.stringify({ base: BASE, ranAt: stamp, summary, changes, results }, null, 1));
 
-    console.log(JSON.stringify({ total: results.length, sameRecord: same, changedRecord: changedId, changedSource, errors }, null, 1));
+    console.log(JSON.stringify(summary, null, 1));
+    if (usedStoredKey > 0) {
+        console.log(`⚠️  ${usedStoredKey} of ${results.length} rows (${replay.storedKeyPct}%) were replayed as the STORED, token-sorted key.`);
+        console.log('    Those rows do not reproduce the query that owns them; treat their diffs as suggestive, not authoritative.');
+    }
     for (const c of changes) {
         if (c.error) console.log(`  ⚠️ [${c.key}] ERROR: ${c.error}`);
         else console.log(`  ↻ [${c.key}]\n      was ${c.was}\n      now ${c.now}`);
