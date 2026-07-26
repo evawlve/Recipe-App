@@ -6171,6 +6171,112 @@
         ]
       },
       "notes": "HARD control for the composite→component class pinned in n-mq-38..41. This query resolves CORRECTLY today (live 2026-07-25: 'Chipotle Chicken Burrito Bowl' 350g/606 kcal) because an assembled record exists for the bowl. Adding the single token 'bowl' is the entire difference between 606 kcal and the 166 kcal n-mq-38 gets — which is why the class is a retrieval/gating problem and not a parsing one. Any fix for 38-41 MUST keep this passing; a head-noun rule that over-rejects would break it."
+    },
+    {
+      "id": "n-mq-43",
+      "category": "match_quality",
+      "text": "trader joes cold brew",
+      "expectName": [
+        [
+          "cold brew"
+        ]
+      ],
+      "grams": [
+        150,
+        500
+      ],
+      "total": {
+        "calories": [
+          0,
+          90
+        ]
+      },
+      "notes": "Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. BEFORE: 'Cold Pressed Juice, Red' (off_00812412) from a rerank pool of ONE. AFTER: 'Black Cold Brew Coffee' [Trader Joe's] off_00569521, 240 g / 10 kcal, pool 10. The apostrophe in the brand string, not the ranking, decided this: `tokenize()` splits on [^\\w]+ so \"Trader Joe's\" yields {trader, joe} and the query token `joes` matched nothing, so the required-token filter removed the entire correct-brand catalogue before rerank. The kcal band is wide but low on purpose — black cold brew is a near-zero-calorie drink, and the pre-fix answer (a fruit juice) sat well outside it, so the band alone discriminates."
+    },
+    {
+      "id": "n-mq-44",
+      "category": "match_quality",
+      "text": "trader joes turkey burgers",
+      "expectName": [
+        [
+          "turkey burger"
+        ]
+      ],
+      "grams": [
+        80,
+        220
+      ],
+      "total": {
+        "calories": [
+          100,
+          340
+        ]
+      },
+      "notes": "Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. BEFORE: \"Trader Joe's Turkey Meatballs\" (off_0004044492005) from a pool of ONE. AFTER: 'Turkey Burgers' [Trader Joe's] fs_3639236, 113 g / 180 kcal, pool 8. expectName requires the substring 'turkey burger', which the meatball record does not carry — note assertions match against name + brand, so asserting on the brand token would be satisfied by the wrong food under the right brand, which is exactly this defect's signature."
+    },
+    {
+      "id": "n-mq-45",
+      "category": "match_quality",
+      "text": "trader joes unexpected cheddar",
+      "expectName": [
+        [
+          "cheddar cheese"
+        ]
+      ],
+      "grams": [
+        20,
+        130
+      ],
+      "total": {
+        "calories": [
+          70,
+          460
+        ]
+      },
+      "notes": "Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. BEFORE: 'Unexpected cheddar chicken sausage' (off_0007064048887) from a pool of TWO. AFTER: 'Unexpected Cheddar Cheese' [Trader Joe's] fs_4998702, 28 g / 110 kcal, pool 10. The discriminator is 'cheese': the sausage record contains 'cheddar' and would satisfy a looser assertion. This is the sharpest case in the group — both records are real Trader Joe's SKUs whose names share two of three tokens."
+    },
+    {
+      "id": "n-mq-46",
+      "category": "match_quality",
+      "text": "trader joes scandinavian swimmers",
+      "expectName": [
+        [
+          "swimmer"
+        ]
+      ],
+      "grams": [
+        20,
+        130
+      ],
+      "total": {
+        "calories": [
+          60,
+          420
+        ]
+      },
+      "notes": "Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. BEFORE: 'Pane Guttiau Paper Thin Scandinavian Crackers' (off_00785716) from a pool of ONE. AFTER: 'Scandinavian Swimmers' [Trader Joe's] fs_11655355, 28 g / 100 kcal, pool 10. The filter log for this seed is the whole finding in one line: mustHaveTokens=[\"trader\",\"joes\"] before=12 after=1, removing three records literally named 'Scandinavian Swimmers'. Gummy candy answered by a cracker."
+    },
+    {
+      "id": "n-mq-47",
+      "category": "match_quality",
+      "text": "trader joes chicken breast",
+      "expectName": [
+        [
+          "chicken breast"
+        ]
+      ],
+      "grams": [
+        80,
+        200
+      ],
+      "total": {
+        "calories": [
+          80,
+          260
+        ]
+      },
+      "knownIssue": true,
+      "notes": "OVER-ADMISSION TRIPWIRE for n-mq-43..46, and a separately-found defect. Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. This seed is UNCHANGED by #160 — off_0208065711897 'Skinless Chicken Breast' [Mary's Chicken] 112 g / 130 kcal, pool 10 both before and after — which is the point: opening the Trader Joe's pool must not reorder a query that already had one. It is marked knownIssue because the answer is WRONG IN A DIFFERENT WAY: the brand is Mary's Chicken, not Trader Joe's, even though off_0274038708522 (\"Trader Joe's Boneless Skinless Chicken Breast\") exists and was the record hijacking 'trader joes gone bananas' before #160. Same food, wrong brand, right macros — so the numeric bands pass and only the brand is wrong, which is why this class survived every gate. Do not 'fix' this by tightening the brand requirement without measuring n-mq-43..46 again; the two pull in opposite directions."
     }
   ]
 }
