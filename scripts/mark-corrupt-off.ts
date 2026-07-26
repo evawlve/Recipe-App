@@ -8,7 +8,9 @@
  *   - panel-low flags whose sibling median exceeds the physical ceiling are
  *     skipped (the SIBLING group is the corrupt one — kJ-as-kcal family);
  *   - panel-inflated flags from groups smaller than 8 are skipped;
- *   - nutrition-scale flags are re-verified against their own thresholds.
+ *   - nutrition-scale flags are re-verified against their own thresholds;
+ *   - panel-inflated-serving flags have the ENTIRE rule re-run from the raw
+ *     panel they carry, and re-check servingGrams against the live row.
  * Surviving flags are re-checked against the live row (barcode still exists,
  * stored value of the flag's check field still matches the scan within 0.5 —
  * the corpus may have changed since the scan) and then written as
@@ -129,7 +131,7 @@ async function main(): Promise<void> {
         const chunk = barcodes.slice(i, i + FETCH_CHUNK);
         const rows = await prisma.offFood.findMany({
             where: { barcode: { in: chunk } },
-            select: { barcode: true, nutrientsPer100g: true, corruptReason: true },
+            select: { barcode: true, nutrientsPer100g: true, corruptReason: true, servingGrams: true },
         });
         const byBarcode = new Map(rows.map(r => [r.barcode, r]));
         for (const barcode of chunk) {
@@ -141,6 +143,16 @@ async function main(): Promise<void> {
                 entry.flag.check ?? { field: 'calories', value: entry.flag.kcal100 };
             const live = checkValueOf(row.nutrientsPer100g, check.field);
             if (live == null || Math.abs(live - check.value) > 0.5) {
+                stale++;
+                continue;
+            }
+            // panel-inflated-serving is the one rule whose verdict depends on
+            // servingGrams as well as the panel, so its flags re-check it too —
+            // otherwise a serving-mass edit between scan and mark would slip
+            // past a check that only ever looked at the nutrient field.
+            if (entry.flag.panel &&
+                (row.servingGrams == null ||
+                 Math.abs(row.servingGrams - entry.flag.panel.servingGrams) > 0.5)) {
                 stale++;
                 continue;
             }
