@@ -15,6 +15,7 @@
         "prisma:migrate": "prisma migrate dev",
         "seed:foods": "node scripts/seed-foods.js",
         "test": "jest",
+        "test:ci": "jest --ci --testPathIgnorePatterns /node_modules/ src/ops/curated/__tests__/seed-curated.test.ts",
         "test:watch": "jest --watch",
         "prisma:seed": "prisma db seed",
         "usda:import": "ts-node --transpile-only scripts/usda-import.ts",
