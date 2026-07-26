@@ -569,11 +569,32 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   };
 }
 
+/**
+ * Every apostrophe glyph a keyboard can produce.
+ *
+ * Deliberately the SAME set `canonicalizeCacheKey` folds. iOS Smart Punctuation
+ * is on by default and rewrites `'` to `’` as the user types, so the curly form
+ * is not an edge case — it is what the mobile client actually sends.
+ */
+const APOSTROPHES = /['‘’ʼ`´]/g;
+
 function collapseSpaces(value: string): string {
   // Preserve hyphens (important for compound words like "all-purpose flour")
   // apostrophes (important for contractions and possessives)
   // and percent signs (important for "2% milk", nutritionally significant)
-  return value.replace(/\s+/g, ' ').replace(/[^\w\s'%\-]/g, ' ').replace(/\s+/g, ' ').trim();
+  //
+  // The apostrophe normalisation on the first line is load-bearing and was
+  // missing: the strip below preserves only the STRAIGHT apostrophe, so every
+  // other glyph became a space here — upstream of `canonicalizeCacheKey`, whose
+  // whole job is to fold them. By the time it ran, `mcdonald’s` had already
+  // become `mcdonald s` and the apostrophe it was written to collapse was gone,
+  // leaving an orphan `s` token in the key and a brand the detector cannot see.
+  return value
+    .replace(APOSTROPHES, "'")
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s'%\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function escapeRegex(value: string): string {
