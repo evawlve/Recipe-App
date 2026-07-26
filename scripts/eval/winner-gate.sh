@@ -1,0 +1,215 @@
+#!/usr/bin/env bash
+#
+# winner-gate.sh — one command for the winner-diff gate.
+#
+# WHY THIS EXISTS
+# ---------------
+# scripts/eval/winner-diff.ts is the gate the playbook demands before any
+# admission or ranking change may be called safe. It is a good harness. It was
+# also run for ZERO of the six mapping investigations on 2026-07-26, and the
+# reason is visible in its own header: doing it right is six commands, one of
+# which is the prose instruction "copy the tree, edit the copy". Under any time
+# pressure that loses to writing a plausible argument instead — which is how
+# "admit-only by inspection is not a safety argument" became a four-time repeat
+# finding in this repo.
+#
+# So this driver makes the correct sequence the cheap one. It:
+#   1. REFUSES to run without a cold-seed file (winner-diff blind spot (D): a
+#      population of already-asked queries cannot contain the cases a fix is
+#      supposed to CREATE — that blind spot has invalidated a gate before);
+#   2. ABORTS when the branch touches retrieval, because a frozen-pool diff is
+#      meaningless then (blind spot (A));
+#   3. builds the BASE tree as a git worktree instead of `git checkout -- <file>`,
+#      which is how uncommitted work gets destroyed;
+#   4. takes ONE snapshot shared by both sides, so retrieval nondeterminism
+#      cannot enter the diff;
+#   5. enforces the noise-floor receipt (must be 0) before it will diff.
+#
+# The underlying harness is strictly read-only and enforces that with a Prisma
+# write-guard middleware. This driver adds no writes of its own.
+#
+# USAGE
+#   scripts/eval/winner-gate.sh --cold-seeds <file> [options]
+#
+#   --cold-seeds <file>   REQUIRED. One raw ingredient line per line: the queries
+#                         your change is supposed to FIX. These must include keys
+#                         that have never been asked. Blank lines and #-comments
+#                         are ignored.
+#   --base <ref>          Base to compare against (default: origin/master).
+#   --regression <n>      Also sample n already-asked lines from the event log as
+#                         a regression population (default 250, 0 to disable).
+#   --label <name>        Names the artifact directory (default: the branch name).
+#   --keep                Keep the base worktree for inspection.
+#
+# EXAMPLE
+#   scripts/eval/winner-gate.sh --cold-seeds /tmp/mac-and-cheese-seeds.txt
+#
+set -euo pipefail
+
+BASE_REF="origin/master"
+COLD_SEEDS=""
+REGRESSION_N=250
+LABEL=""
+KEEP=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --cold-seeds) COLD_SEEDS="$2"; shift 2 ;;
+        --base)       BASE_REF="$2";   shift 2 ;;
+        --regression) REGRESSION_N="$2"; shift 2 ;;
+        --label)      LABEL="$2";      shift 2 ;;
+        --keep)       KEEP=1;          shift ;;
+        -h|--help)    sed -n '2,45p' "$0"; exit 0 ;;
+        *) echo "unknown arg: $1" >&2; exit 2 ;;
+    esac
+done
+
+cd "$(git rev-parse --show-toplevel)"
+[[ -f scripts/eval/winner-diff.ts ]] || { echo "must run from the backend repo root" >&2; exit 2; }
+
+# ---------------------------------------------------------------- blind spot D
+if [[ -z "$COLD_SEEDS" ]]; then
+    cat >&2 <<'EOF'
+REFUSING TO RUN: --cold-seeds is required.
+
+winner-diff's populations (--from-events, --from-cache) contain ONLY queries that
+have already been asked. If your change's value proposition is "queries that
+returned nothing now work", those queries are by construction absent, the diff
+reports SAME on 100% of rows, and the gate passes vacuously. That has already
+invalidated one gate in this repo.
+
+Write the queries your change is supposed to fix into a file, one per line,
+including ones nobody has ever typed, and pass it here. If your change genuinely
+creates no new answers, say so in the PR and pass a file containing the cases you
+expect to stay UNCHANGED — but pass a file.
+EOF
+    exit 2
+fi
+[[ -f "$COLD_SEEDS" ]] || { echo "cold-seeds file not found: $COLD_SEEDS" >&2; exit 2; }
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+LABEL="${LABEL:-${BRANCH//\//-}}"
+STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+OUT="/tmp/winner-gate-${LABEL}-${STAMP}"
+mkdir -p "$OUT"
+
+echo "=== winner-gate ==="
+echo "branch:    $BRANCH"
+echo "base:      $BASE_REF"
+echo "cold:      $COLD_SEEDS ($(grep -cvE '^\s*(#|$)' "$COLD_SEEDS") seeds)"
+echo "artifacts: $OUT"
+echo
+
+# ---------------------------------------------------------------- blind spot A
+# A frozen-pool diff replays a pool BOTH variants inherit. If the branch changes
+# retrieval, each side would have produced a different pool and the comparison is
+# void — not conservative, void.
+RETRIEVAL_PATHS='src/lib/mapping/gather-candidates.ts|src/lib/search/|query-builder|typesense|fatsecret-lane|embedding'
+if git diff --name-only "$BASE_REF"...HEAD | grep -qE "$RETRIEVAL_PATHS"; then
+    echo "ABORT: this branch touches RETRIEVAL:" >&2
+    git diff --name-only "$BASE_REF"...HEAD | grep -E "$RETRIEVAL_PATHS" | sed 's/^/  /' >&2
+    cat >&2 <<'EOF'
+
+winner-diff freezes the candidate pool at gatherCandidates' output and replays it
+through both variants. When retrieval itself changes, both sides replay a pool
+NEITHER would have produced, so the diff measures nothing. Re-snapshot per
+variant (--cross-snapshot) and accept that retrieval nondeterminism is then
+inside your signal — or gate this change a different way.
+EOF
+    exit 3
+fi
+
+RUN='npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/winner-diff.ts'
+
+# ------------------------------------------------------------ base worktree
+# A worktree, NOT `git checkout <ref> -- <file>`: that form silently discards
+# uncommitted edits when HEAD is the base commit (playbook section 9).
+BASE_TREE="/tmp/winner-gate-base-${STAMP}"
+cleanup() {
+    if [[ $KEEP -eq 0 ]]; then
+        git worktree remove "$BASE_TREE" --force >/dev/null 2>&1 || true
+    else
+        echo "base worktree kept at $BASE_TREE"
+    fi
+}
+trap cleanup EXIT
+
+echo "[1/5] materializing BASE tree from $BASE_REF"
+git worktree add -q --detach "$BASE_TREE" "$BASE_REF"
+ln -s "$(pwd)/node_modules" "$BASE_TREE/node_modules"
+[[ -f .env ]] && cp .env "$BASE_TREE/.env"
+
+# ------------------------------------------------------------ population
+POP="$OUT/population.txt"
+grep -vE '^\s*(#|$)' "$COLD_SEEDS" > "$POP"
+COLD_N=$(wc -l < "$POP" | tr -d ' ')
+if [[ "$REGRESSION_N" -gt 0 ]]; then
+    echo "[2/5] snapshot: $COLD_N cold seeds + up to $REGRESSION_N already-asked lines"
+else
+    echo "[2/5] snapshot: $COLD_N cold seeds (regression population disabled)"
+fi
+
+# One snapshot, taken from BASE, shared by both replays. Retrieval runs once.
+( cd "$BASE_TREE" && eval "$RUN" snapshot --from-file "$POP" --out "$OUT/snap.json" ) 2>&1 | tail -20
+
+if [[ "$REGRESSION_N" -gt 0 ]]; then
+    ( cd "$BASE_TREE" && eval "$RUN" snapshot --from-events --limit "$REGRESSION_N" \
+        --out "$OUT/snap-regression.json" ) 2>&1 | tail -8
+fi
+
+# ------------------------------------------------------------ noise floor
+# The receipt is keyed by TREE HASH, so `diff` requires one from EACH side. A
+# base-only receipt is not sufficient and diff will (correctly) refuse to report.
+echo "[3/5] noise floor on BOTH trees (must be 0 — writes the receipts diff requires)"
+if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$OUT/snap.json" ) 2>&1 | tail -8; then
+    echo "ABORT: noise floor is non-zero on BASE. The replay is not deterministic," >&2
+    echo "so any before/after claim below it is not a result." >&2
+    exit 4
+fi
+if ! eval "$RUN" noise-floor --snapshot "$OUT/snap.json" 2>&1 | tail -8; then
+    echo "ABORT: noise floor is non-zero on BRANCH. Your change introduced" >&2
+    echo "nondeterminism into replay — that is itself the finding." >&2
+    exit 4
+fi
+
+# ------------------------------------------------------------ replays
+echo "[4/5] replay BASE, then BRANCH, against the identical frozen pool"
+( cd "$BASE_TREE" && eval "$RUN" replay --snapshot "$OUT/snap.json" \
+    --out "$OUT/A-base.json" --label BASE ) 2>&1 | tail -6
+eval "$RUN" replay --snapshot "$OUT/snap.json" \
+    --out "$OUT/B-branch.json" --label BRANCH 2>&1 | tail -6
+
+if [[ "$REGRESSION_N" -gt 0 ]]; then
+    ( cd "$BASE_TREE" && eval "$RUN" replay --snapshot "$OUT/snap-regression.json" \
+        --out "$OUT/A-base-regression.json" --label BASE ) 2>&1 | tail -4
+    eval "$RUN" replay --snapshot "$OUT/snap-regression.json" \
+        --out "$OUT/B-branch-regression.json" --label BRANCH 2>&1 | tail -4
+fi
+
+# ------------------------------------------------------------ diff
+echo
+echo "[5/5] DIFF — cold population (the cases the change is supposed to create)"
+eval "$RUN" diff --a "$OUT/A-base.json" --b "$OUT/B-branch.json" --screens 2>&1 | tee "$OUT/diff-cold.txt"
+
+if [[ "$REGRESSION_N" -gt 0 ]]; then
+    echo
+    echo "=== DIFF — regression population (already-asked lines that must not move) ==="
+    eval "$RUN" diff --a "$OUT/A-base-regression.json" --b "$OUT/B-branch-regression.json" --screens \
+        2>&1 | tee "$OUT/diff-regression.txt"
+fi
+
+cat <<EOF
+
+=== winner-gate done ===
+artifacts: $OUT
+
+Read it in this order, and do not skip the second question:
+  1. Did the COLD population move in the intended direction? If it shows SAME on
+     everything, the change does not do what the PR says it does.
+  2. Did the REGRESSION population move at all? Every mover there is a cost you
+     are paying, and it must be enumerated in the PR body — not summarized.
+
+This harness cannot see: serving/gram resolution, the save gates, or warm
+behaviour (it forces skipCache). A SAME here does NOT prove the cached row is
+unchanged. The eval's grams bands are what see serving regressions.
+EOF
