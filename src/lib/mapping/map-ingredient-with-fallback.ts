@@ -1641,125 +1641,376 @@ export async function mapIngredientWithFallback(
 
                     const gateResult = confidenceGate(searchQuery, sortedFiltered, trimmed);
 
-                    if (gateResult.skipAiRerank && gateResult.selected) {
-                        winner = gateResult.selected;
-                        confidence = gateResult.confidence;
-                        selectionReason = gateResult.reason || 'confidence_gate';
-                    } else {
-                        // Step 4: Simple rerank (Token-based)
-                        // Use filtered (not sortedFiltered) to ensure high-overlap candidates aren't pushed out
-                        // simpleRerank will do its own scoring based on token overlap + other factors
+                    // Step 3b (Jul 2026): the confidence gate is a BACKSTOP, not a
+                    // pre-emption. It used to short-circuit Step 4 outright —
+                    // `skipAiRerank` handed back its own pick and simpleRerank never
+                    // ran at all — and that shortcut is what three separate
+                    // investigations in one week kept tripping over.
+                    //
+                    // Why the short-circuit had to go:
+                    //
+                    //  * The gate's judge is PURE RECALL. assessConfidence
+                    //    (gather-candidates.ts) is `overlap / queryTokens`, plus a
+                    //    position bonus, plus +0.15 for substring containment. It never
+                    //    penalises tokens the CANDIDATE carries that the query never
+                    //    used, and it reads `candidate.name` only — `brandName` is
+                    //    invisible to it. "subway cold cut combo" against
+                    //    "Subway, Cold Cut Combo Salad" (15.7 kcal/100g against the
+                    //    sandwich's 69.5) scores 0.85 — still enough to exit, because
+                    //    the extra noun that changes what the food IS costs nothing.
+                    //    It reaches a clean 1.000 when the brand-stripped `parsed.name`
+                    //    ("cold cut combo") is what arrives at the gate, which is the
+                    //    common case and the sharper statement of the defect.
+                    //    simpleRerank is the only stage on this path that carries
+                    //    precision terms — and it was the stage being skipped.
+                    //
+                    //  * The name is a fossil. `skipAiRerank` reads as if the gate is
+                    //    saving an expensive LLM call. It is not. Nothing on the
+                    //    confidenceGate/simpleRerank path awaits an LLM — simpleRerank
+                    //    is pure and synchronous (`grep -c "await " simple-rerank.ts`
+                    //    is 0), measured at p50 116µs / p95 253µs over 441 gate lines.
+                    //    Be precise about this, because the looser version of the claim
+                    //    is false and has already been written down once: there ARE
+                    //    LLM clients in this directory (ai-rerank.ts is a full
+                    //    OpenAI-compatible client, and `aiSimplifyIngredient` is
+                    //    awaited by THIS file further down) — they simply are not on
+                    //    the path the gate short-circuits. The gate was buying a
+                    //    fraction of a millisecond and paying for it in wrong records.
+                    //
+                    //  * Measured, not reasoned about. Replayed over the FROZEN
+                    //    candidate pool so both paths saw an identical pool, with the
+                    //    write guard on (noise floor re-measured at 0.0%): the gate
+                    //    fires on 10.6% of logged lines and disagrees with simpleRerank
+                    //    on 60.8% of them. All 296 unique disagreements were then
+                    //    adjudicated row by row (not sampled and scaled): 115 IMPROVE,
+                    //    50 REGRESS, 110 lateral, 12 both-wrong, 9 undetermined —
+                    //    net +65, a 2.3:1 ratio. The sharpest screen is class drift: 53
+                    //    rows where ONLY the gate's winner carries a food-class noun the
+                    //    query never used (salad / soup / sauce / mix), against 2 rows
+                    //    for the reranker.
+                    //
+                    //    The 50 REGRESS rows are pre-existing simpleRerank defects that
+                    //    the gate was MASKING, not damage this change causes. They are
+                    //    enumerated so they can be fixed where they live. Two caveats
+                    //    that survived review and should temper the number: at least
+                    //    one row (`popeyes red beans and rice`) is both-wrong rather
+                    //    than a regression, and at least one (`dr pepper`) is a
+                    //    RETRIEVAL defect — its pool contains no plain Dr Pepper record
+                    //    at all because the normalized query is "dr black pepper" — so
+                    //    no ranking change can fix it.
+                    //
+                    // What survives: the gate still RUNS, its verdict is still computed
+                    // and logged, and it is still honoured — but only when simpleRerank
+                    // declines to name anyone. As a last resort it strictly beats the
+                    // raw `sortedFiltered[0].score >= 0.80` grab underneath it, because
+                    // it has at least asked a question about the query rather than
+                    // trusting the search engine's own ordering.
+                    //
+                    // Known, accepted cost of the demotion: on lines where the two
+                    // stages pick DIFFERENT records, `confidence` now comes from
+                    // simpleRerank's scale instead of the gate's, so some formerly
+                    // gate-selected lines land under the `confidence >= 0.85` save gate
+                    // at Step 6 and reach the cache only through sub-threshold
+                    // admission, which is insert-only. That is coverage traded for
+                    // record identity, on purpose. Lines where the two stages AGREE on
+                    // the record AND the gate exited via `high_confidence_clear_winner`
+                    // are held at the higher of the two — see the rerank winner
+                    // assignment below; without that, identical answers lost their cache
+                    // save (`restaurant hibachi chicken` kept its record and went
+                    // 0.917 -> 0.707, under both the 0.85 gate and the 0.75 floor).
+                    // `mapping.confidence_gate_overridden` below is how the trade is
+                    // watched in production.
+                    const gateSelection = gateResult.skipAiRerank ? gateResult.selected : undefined;
 
-                        // Count-labeled SKU preference (Cluster A pt2, Jul 2026): when the
-                        // user is counting pieces, nudge rerank toward SKUs whose label
-                        // declares that piece's count — their per-piece weight is
-                        // authoritative via the label-count-derived path in buildOffResult.
-                        const countedNoun = countedPieceNoun(parsed);
+                    // Step 4: Simple rerank (Token-based)
+                    // Use filtered (not sortedFiltered) to ensure high-overlap candidates aren't pushed out
+                    // simpleRerank will do its own scoring based on token overlap + other factors
 
-                        // Enrich Generic candidates with cached nutrition data.
-                        const candidatesForRerank = filtered.slice(0, 10);
-                        // Counted queries: let count-labeled SKUs below the top-10 cutoff
-                        // compete too (they still have to win the rerank on merit).
-                        if (countedNoun) {
-                            for (const c of filtered.slice(10)) {
-                                if (candidatesForRerank.length >= 13) break;
-                                if (candidateHasCountLabel(c, countedNoun)) candidatesForRerank.push(c);
-                            }
+                    // Count-labeled SKU preference (Cluster A pt2, Jul 2026): when the
+                    // user is counting pieces, nudge rerank toward SKUs whose label
+                    // declares that piece's count — their per-piece weight is
+                    // authoritative via the label-count-derived path in buildOffResult.
+                    const countedNoun = countedPieceNoun(parsed);
+
+                    // Enrich Generic candidates with cached nutrition data.
+                    const candidatesForRerank = filtered.slice(0, 10);
+                    // Counted queries: let count-labeled SKUs below the top-10 cutoff
+                    // compete too (they still have to win the rerank on merit).
+                    if (countedNoun) {
+                        for (const c of filtered.slice(10)) {
+                            if (candidatesForRerank.length >= 13) break;
+                            if (candidateHasCountLabel(c, countedNoun)) candidatesForRerank.push(c);
                         }
-                        const fsCandidatesMissingNutr = candidatesForRerank
-                            .filter(c => c.source === 'ai_generated' && !c.nutrition);
-                        if (fsCandidatesMissingNutr.length > 0) {
-                            const { prisma } = await import('../db');
-                            const fsIds = fsCandidatesMissingNutr.map(c => c.id);
-                            const cachedFoods = await prisma.aiGeneratedFood.findMany({
-                                where: { id: { in: fsIds } },
-                                select: {
-                                    id: true,
-                                    caloriesPer100g: true,
-                                    proteinPer100g: true,
-                                    carbsPer100g: true,
-                                    fatPer100g: true,
-                                },
-                            });
-                            for (const cf of cachedFoods) {
-                                const cand = candidatesForRerank.find(c => c.id === cf.id);
-                                if (cand && !cand.nutrition) {
-                                    cand.nutrition = {
-                                        kcal: cf.caloriesPer100g,
-                                        protein: cf.proteinPer100g,
-                                        carbs: cf.carbsPer100g,
-                                        fat: cf.fatPer100g,
-                                        per100g: true,
-                                    };
-                                }
-                            }
-                        }
-
-                        // FDC-based fallback for AI nutrition estimate.
-                        // FDC candidates always have per-100g nutrition inline from
-                        // the search API. When no AI estimate is available (LLM gate
-                        // skipped and no cached estimate), use the best-matching FDC
-                        // candidate's nutrition as a synthetic reference for the tiebreaker.
-                        if (!aiNutritionEstimate) {
-                            const fdcRef = candidatesForRerank.find(
-                                c => c.source === 'fdc' && c.nutrition?.per100g && (c.nutrition.kcal > 0 || c.nutrition.protein > 0)
-                            );
-                            if (fdcRef && fdcRef.nutrition) {
-                                aiNutritionEstimate = {
-                                    caloriesPer100g: fdcRef.nutrition.kcal,
-                                    proteinPer100g: fdcRef.nutrition.protein,
-                                    carbsPer100g: fdcRef.nutrition.carbs,
-                                    fatPer100g: fdcRef.nutrition.fat,
-                                    confidence: 0.6,  // Lower confidence than LLM estimate
+                    }
+                    // NOT DONE HERE, DELIBERATELY, AND THE REASON IS WORTH KEEPING.
+                    //
+                    // `filtered.slice(0, 10)` above truncates over GATHER order, not
+                    // score order. On 17 of the 441 measured gate-firing lines the
+                    // gate's pick sits past index 10, so simpleRerank cannot re-select
+                    // it — those lines are a DELETION, not an adjudication, and the
+                    // backstop below cannot rescue them because the reranker did return
+                    // a winner, just a different one. `kirkland almonds` is the sharpest:
+                    // the Kirkland record is at gather index 22, so the reranker only
+                    // ever sees a Members Mark record.
+                    //
+                    // The obvious repair — append `gateSelection` to candidatesForRerank
+                    // — was written, measured, and REVERTED. Scored against the project's
+                    // own adjudication of all 296 disagreements it bought nothing: it
+                    // restored 5 of the 17, of which 2 were adjudicated rerank-better, so
+                    // the regression count did not move. It only changed WHICH rows were
+                    // wrong. And it was not free: combined with the confidence
+                    // restoration below it took `buffalo wild wings boneless wings` from
+                    // 0.710 (below the sub-threshold floor, so not cached at all) to
+                    // 1.000 — a full displacing upsert of an adjudicated-WRONG record
+                    // ("Buffalo style alaska wild wings", a frozen seafood product, over
+                    // the real BWW 6-count). Turning a transient wrong answer into a
+                    // cached one is the worse failure.
+                    //
+                    // It also flattered its own measurement: restored rows become SAME in
+                    // a baseline-vs-change diff, so they drop out of the screen population
+                    // and the class-drift number is computed on a set with the change's
+                    // own regressions removed by construction.
+                    //
+                    // The real defect is the truncation itself — `slice(0, 10)` over
+                    // gather order is the same mechanism as the composite-to-component
+                    // drift class. Fix that where it lives, with its own gate. Do not
+                    // special-case the gate pick past it.
+                    const fsCandidatesMissingNutr = candidatesForRerank
+                        .filter(c => c.source === 'ai_generated' && !c.nutrition);
+                    if (fsCandidatesMissingNutr.length > 0) {
+                        const { prisma } = await import('../db');
+                        const fsIds = fsCandidatesMissingNutr.map(c => c.id);
+                        const cachedFoods = await prisma.aiGeneratedFood.findMany({
+                            where: { id: { in: fsIds } },
+                            select: {
+                                id: true,
+                                caloriesPer100g: true,
+                                proteinPer100g: true,
+                                carbsPer100g: true,
+                                fatPer100g: true,
+                            },
+                        });
+                        for (const cf of cachedFoods) {
+                            const cand = candidatesForRerank.find(c => c.id === cf.id);
+                            if (cand && !cand.nutrition) {
+                                cand.nutrition = {
+                                    kcal: cf.caloriesPer100g,
+                                    protein: cf.proteinPer100g,
+                                    carbs: cf.carbsPer100g,
+                                    fat: cf.fatPer100g,
+                                    per100g: true,
                                 };
-                                logger.debug('mapping.fdc_nutrition_fallback', {
-                                    rawLine: trimmed,
-                                    fdcName: fdcRef.name,
-                                    fdcId: fdcRef.id,
-                                    estimate: aiNutritionEstimate.caloriesPer100g,
-                                });
                             }
                         }
+                    }
 
-                        const billsByServing = requestBillsByServing(parsed);
-                        // Cooked-grain volume requests (n-serv-06): the re-retrieval must
-                        // prefer candidates that OWN a matching volume serving over ones
-                        // that would fall back to generic density. requestBillsByServing
-                        // excludes explicit volume units by design (PR D pt2), so the
-                        // serving-shape flag is wired through this grain-scoped path.
-                        const grainVolumeUnit = !billsByServing && parsed?.unit
-                            && isMatchableVolumeUnit(parsed.unit)
-                            && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
-                            ? parsed.unit : null;
-                        const rerankCandidates = candidatesForRerank.map(c => toRerankCandidate({
-                            id: c.id,
-                            name: c.name,
-                            brandName: c.brandName,
-                            foodType: c.foodType,
-                            score: c.score,
-                            source: c.source,
-                            nutrition: c.nutrition,  // Include for Route C macro sanity check + nutrition tiebreaker
-                            countLabelMatch: countedNoun ? candidateHasCountLabel(c, countedNoun) : undefined,
-                            servingLabelMatch: billsByServing ? candidateHasServingData(c)
-                                : grainVolumeUnit ? candidateHasVolumeServing(c, grainVolumeUnit) : undefined,
-                        }));
+                    // FDC-based fallback for AI nutrition estimate.
+                    // FDC candidates always have per-100g nutrition inline from
+                    // the search API. When no AI estimate is available (LLM gate
+                    // skipped and no cached estimate), use the best-matching FDC
+                    // candidate's nutrition as a synthetic reference for the tiebreaker.
+                    if (!aiNutritionEstimate) {
+                        const fdcRef = candidatesForRerank.find(
+                            c => c.source === 'fdc' && c.nutrition?.per100g && (c.nutrition.kcal > 0 || c.nutrition.protein > 0)
+                        );
+                        if (fdcRef && fdcRef.nutrition) {
+                            aiNutritionEstimate = {
+                                caloriesPer100g: fdcRef.nutrition.kcal,
+                                proteinPer100g: fdcRef.nutrition.protein,
+                                carbsPer100g: fdcRef.nutrition.carbs,
+                                fatPer100g: fdcRef.nutrition.fat,
+                                confidence: 0.6,  // Lower confidence than LLM estimate
+                            };
+                            logger.debug('mapping.fdc_nutrition_fallback', {
+                                rawLine: trimmed,
+                                fdcName: fdcRef.name,
+                                fdcId: fdcRef.id,
+                                estimate: aiNutritionEstimate.caloriesPer100g,
+                            });
+                        }
+                    }
 
-                        // Hybrid prep stripping: prefer AI canonicalBase (strips prep but preserves
-                        // nutritional modifiers), fall back to local prep-word stripping.
-                        // The raw line (trimmed) is still passed for modifier constraint extraction.
-                        const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
-                        const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNoun != null);
+                    const billsByServing = requestBillsByServing(parsed);
+                    // Cooked-grain volume requests (n-serv-06): the re-retrieval must
+                    // prefer candidates that OWN a matching volume serving over ones
+                    // that would fall back to generic density. requestBillsByServing
+                    // excludes explicit volume units by design (PR D pt2), so the
+                    // serving-shape flag is wired through this grain-scoped path.
+                    const grainVolumeUnit = !billsByServing && parsed?.unit
+                        && isMatchableVolumeUnit(parsed.unit)
+                        && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
+                        ? parsed.unit : null;
+                    const rerankCandidates = candidatesForRerank.map(c => toRerankCandidate({
+                        id: c.id,
+                        name: c.name,
+                        brandName: c.brandName,
+                        foodType: c.foodType,
+                        score: c.score,
+                        source: c.source,
+                        nutrition: c.nutrition,  // Include for Route C macro sanity check + nutrition tiebreaker
+                        countLabelMatch: countedNoun ? candidateHasCountLabel(c, countedNoun) : undefined,
+                        servingLabelMatch: billsByServing ? candidateHasServingData(c)
+                            : grainVolumeUnit ? candidateHasVolumeServing(c, grainVolumeUnit) : undefined,
+                    }));
 
-                        if (rerankResult && rerankResult.winner) {
-                            const selected = filtered.find(c => c.id === rerankResult.winner!.id);
-                            if (selected) {
-                                winner = selected;
-                                confidence = rerankResult.confidence;
-                                selectionReason = rerankResult.reason;
+                    // Hybrid prep stripping: prefer AI canonicalBase (strips prep but preserves
+                    // nutritional modifiers), fall back to local prep-word stripping.
+                    // The raw line (trimmed) is still passed for modifier constraint extraction.
+                    const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
+                    const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNoun != null);
+
+                    if (rerankResult && rerankResult.winner) {
+                        const selected = filtered.find(c => c.id === rerankResult.winner!.id);
+                        if (selected) {
+                            winner = selected;
+                            confidence = rerankResult.confidence;
+                            selectionReason = rerankResult.reason;
+                            // AGREEMENT KEEPS THE HIGHER CONFIDENCE.
+                            //
+                            // This change is about WHICH RECORD wins, not about how sure
+                            // we are. But `confidence` is also the cache-admission
+                            // signal (`admitToCache = confidence >= 0.85 || ...` below),
+                            // and the two stages report on different scales.
+                            //
+                            // Be careful about HOW they differ — an earlier draft of
+                            // this comment said simpleRerank returns
+                            // `min(0.5 + score*0.5, 0.95)` with a 0.70 floor, and that
+                            // is wrong for most of the corpus: `exact_match` adds +0.1
+                            // capped at 0.98, `branded_exact_match` lifts to 0.88, and
+                            // `cooked_grain_preference` floors at 0.75. Measured over
+                            // the 3,475 pure-rerank rows, 2,454 sit at exactly 0.98.
+                            // simpleRerank is NOT systematically lower than the gate.
+                            //
+                            // The real asymmetry is narrower and is what this guards:
+                            // on the rows where the gate fired and BOTH stages then
+                            // picked the same record, the reranker's number can still
+                            // land under 0.85 while the gate's did not. Taking the
+                            // rerank number unconditionally there silently DEMOTES a
+                            // line whose answer did not change — the record is
+                            // identical and the cache save disappears.
+                            //
+                            // Measured on the 441 gate-firing lines: 37 fall under the
+                            // 0.85 save gate, 9 of them with an UNCHANGED winner, and 2
+                            // of those also fall under SUB_THRESHOLD_SAVE_FLOOR (0.75)
+                            // so they are not cached at all. `restaurant hibachi
+                            // chicken` keeps the same record while going 0.917 -> 0.707.
+                            // Worse, the 7 that survive via `insertOnly` can never be
+                            // REFRESHED afterwards, which is exactly what the parity
+                            // sweep and the nightly flywheel rely on.
+                            //
+                            // TWO scopes, both load-bearing.
+                            //
+                            // (1) Agreement only. When the reranker names a DIFFERENT
+                            // record, the gate's confidence describes a candidate we
+                            // just rejected, and carrying it over would be laundering.
+                            //
+                            // (2) `high_confidence_clear_winner` only. The gate has
+                            // three exits and they are NOT on the same scale, despite
+                            // what "the gate exits at >= 0.85" suggests. Only this one
+                            // returns assessConfidence's actual match score.
+                            // `basic_produce_bypass` returns
+                            // `Math.max(0, Math.min(1, top1.score))` — a CLAMPED RAW
+                            // ENGINE SCORE (its own comment notes OFF runs ~0-10 and FDC
+                            // ~0-1.5), so for any OFF candidate it saturates at exactly
+                            // 1.000 and says nothing about match quality;
+                            // `yeast_variant_preference` returns a hardcoded 0.95.
+                            // Restoring those would launder a retrieval score into the
+                            // cache-admission signal. Measured: of the 132 rows this
+                            // lift touched unscoped, 27 were basic_produce_bypass, every
+                            // one at exactly 1.000, and 5 of them crossed the 0.85 save
+                            // gate on it (steamed broccoli, boiled potatoes, roasted
+                            // carrots, roasted sweet potato, 100g cooked rice white).
+                            if (
+                                gateSelection
+                                && winner.id === gateSelection.id
+                                && gateResult.reason === 'high_confidence_clear_winner'
+                            ) {
+                                confidence = Math.max(confidence, gateResult.confidence);
                             }
                         }
+                    }
 
-                        if (!winner && sortedFiltered.length > 0) {
+                    // Monitoring hook for the demotion above. Fires on exactly the
+                    // population the change exists to move — the gate would have
+                    // pre-empted, and the reranker named someone else — and carries
+                    // BOTH records (id + name + source) plus the gate's own reason, so
+                    // a production read can be adjudicated the same way the offline
+                    // replay was without reconstructing the pool. `poolSize` is here
+                    // because pool=1/pool=2 is a diagnosis in its own right: a
+                    // disagreement over a pool of one is an admission defect upstream,
+                    // not a ranking one. Silence on a gate line means the two agree and
+                    // the demotion was inert there.
+                    if (gateSelection && winner && winner.id !== gateSelection.id) {
+                        logger.info('mapping.confidence_gate_overridden', {
+                            rawLine: trimmed,
+                            query: searchQuery,
+                            gateReason: gateResult.reason,
+                            gateId: gateSelection.id,
+                            gateName: gateSelection.name,
+                            gateBrand: gateSelection.brandName ?? null,
+                            gateSource: gateSelection.source,
+                            gateConfidence: gateResult.confidence,
+                            rerankId: winner.id,
+                            rerankName: winner.name,
+                            rerankBrand: winner.brandName ?? null,
+                            rerankSource: winner.source,
+                            rerankConfidence: confidence,
+                            rerankReason: selectionReason,
+                            poolSize: filtered.length,
+                        });
+                    }
+
+                    if (!winner) {
+                        if (gateSelection) {
+                            // BACKSTOP. simpleRerank declined to name anyone, so the
+                            // gate's pick is the best-informed candidate left standing.
+                            // Deliberately ahead of the raw-score grab below: the gate
+                            // at least scored the candidate against the query.
+                            //
+                            // Distinct selectionReason so telemetry can separate a
+                            // backstop from the old pre-emptive firing (the previous
+                            // strings 'high_confidence_clear_winner' /
+                            // 'basic_produce_bypass' / 'yeast_variant_preference' now
+                            // vanish from the under_gate column entirely — expect that
+                            // in any run-over-run histogram). It is a bare constant with
+                            // no digits and no parentheses on purpose: the under_gate
+                            // class is `selectionReason.split(':')[0]` through
+                            // normalizeClassId, which strips both.
+                            // Takes the gate's confidence with NO reason scope, unlike
+                            // the agreement lift above. That asymmetry is deliberate,
+                            // not an oversight, and it is worth stating because the two
+                            // sit 100 lines apart and look inconsistent.
+                            //
+                            // On this branch simpleRerank named nobody, so there is no
+                            // second number to choose between — the alternative is not a
+                            // better-scaled confidence, it is no winner at all and a
+                            // fall-through to the AI-simplify path. Baseline behaved
+                            // exactly this way on exactly these rows, so scoping here
+                            // would be a NEW regression rather than a restoration.
+                            //
+                            // The cost is real and small: of the 9 backstop rows in the
+                            // 4,165-query population, 6 are `basic_produce_bypass` and
+                            // are therefore cached at a saturated raw engine score of
+                            // 1.000 (`chicken and rice bowl`, `rice and peas`,
+                            // `steamed carrots`, `steamed rice`, `sauteed spinach`).
+                            // That laundering predates this change. The honest fix is to
+                            // put `basic_produce_bypass` on a real confidence scale in
+                            // gather-candidates.ts, which would correct both sites at
+                            // once — not to special-case it here.
+                            winner = gateSelection;
+                            confidence = gateResult.confidence;
+                            selectionReason = 'confidence_gate_backstop';
+                            logger.info('mapping.confidence_gate_backstop', {
+                                rawLine: trimmed,
+                                query: searchQuery,
+                                gateReason: gateResult.reason,
+                                selectedId: gateSelection.id,
+                                selectedName: gateSelection.name,
+                                selectedSource: gateSelection.source,
+                                confidence,
+                                poolSize: filtered.length,
+                            });
+                        } else if (sortedFiltered.length > 0) {
                             // Fallback to top scorer ONLY if above minimum threshold
                             const MIN_FALLBACK_CONFIDENCE = 0.80;
                             if (sortedFiltered[0].score >= MIN_FALLBACK_CONFIDENCE) {
