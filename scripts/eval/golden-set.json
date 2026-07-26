@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Re-deriving these counts against the current file gives the AFTER figures; the BEFORE figures are recorded so the delta stays legible. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test.",
   "search": [
     {
       "id": "s-gen-01",
@@ -1584,7 +1584,20 @@
         [
           "courgette"
         ]
-      ]
+      ],
+      "macros": {
+        "kcal100": [
+          8,
+          35
+        ]
+      },
+      "total": {
+        "calories": [
+          10,
+          80
+        ]
+      },
+      "notes": "CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): raw zucchini is ~17 kcal/100g; observed 196 g / 16.9 kcal100 / 33.2 kcal x3. The kcal100 band is the real assertion: it fails on a courgette-shaped record carrying a fried/breaded or whole-package panel."
     },
     {
       "id": "n-brit-02",
@@ -2051,10 +2064,23 @@
           "avocado"
         ]
       ],
+      "macros": {
+        "kcal100": [
+          120,
+          210
+        ]
+      },
       "grams": [
         110,
         230
-      ]
+      ],
+      "total": {
+        "calories": [
+          160,
+          330
+        ]
+      },
+      "notes": "CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): a medium avocado is ~150 g at ~160 kcal/100g = ~240 kcal; observed 150 g / 160.0 kcal100 / 240.0 kcal x3. Same avocado-oil exclusion as n-qty-02."
     },
     {
       "id": "n-svs-04",
@@ -2480,10 +2506,23 @@
           "egg"
         ]
       ],
+      "macros": {
+        "kcal100": [
+          120,
+          180
+        ]
+      },
       "grams": [
         44,
         63
-      ]
+      ],
+      "total": {
+        "calories": [
+          55,
+          95
+        ]
+      },
+      "notes": "CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): a large egg is 50 g / ~72 kcal (~143 kcal/100g); observed 50 g / 140.0 kcal100 / 70.0 kcal x3. The grams band alone could not distinguish a real egg from a 50 g slice of an egg-named composite."
     },
     {
       "id": "n-svg-05",
@@ -2830,61 +2869,91 @@
       "id": "n-seg-21",
       "category": "segmentation",
       "text": "2 scoops ghost protein cinnamon roll",
-      "expectItems": 1,
       "expectName": [
         [
           "ghost"
         ]
       ],
-      "notes": "FIXED 2026-07-19 (decisive brand gate + brand-targeted retrieval + core-token brand rescue): maps to Ghost Whey Protein (Cinnabon) off_0810128902335, the exact record the characterization named. Promoted hard. | Previously: KNOWN ISSUE (branded-competitor hijack, RANKING-FIXABLE). '2 scoops ghost protein cinnamon roll' maps to Optimum Nutrition 'Cinnamon Roll Protein' (off_0748927070545). VERIFIED 2026-07-19: a Ghost-branded cinnamon protein IS in corpus but under the flavor name 'Cinnabon' (off_0810169602454 / off_0810128902335), so 'cinnamon roll' vs 'cinnabon' share no flavor tokens -> only a decisive brand gate c"
+      "expectItems": 1,
+      "total": {
+        "calories": [
+          170,
+          350
+        ]
+      },
+      "notes": "FIXED 2026-07-19 (decisive brand gate + brand-targeted retrieval + core-token brand rescue): maps to Ghost Whey Protein (Cinnabon) off_0810128902335, the exact record the characterization named. Promoted hard. | Previously: KNOWN ISSUE (branded-competitor hijack, RANKING-FIXABLE). '2 scoops ghost protein cinnamon roll' maps to Optimum Nutrition 'Cinnamon Roll Protein' (off_0748927070545). VERIFIED 2026-07-19: a Ghost-branded cinnamon protein IS in corpus but under the flavor name 'Cinnabon' (off_0810169602454 / off_0810128902335), so 'cinnamon roll' vs 'cinnabon' share no flavor tokens -> only a decisive brand gate c | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): 2 scoops Ghost whey = ~69 g / ~260 kcal; observed 69 g / 260.0 kcal x3. Band is deliberately wide because the winning record has already moved once (notes above name an OFF barcode; it now resolves to fs_14132527)."
     },
     {
       "id": "n-seg-22",
       "category": "segmentation",
       "text": "2 scoops ghost vegan protein cinnamon roll",
-      "expectItems": 1,
       "expectName": [
         [
           "ghost"
         ]
       ],
-      "notes": "Pattern 1 (brand hijack via flavor suffix), SEGMENTATION-stage boundary pin: HIGH side (7 words, over the 6-word single-item cap -> LLM segmenter). FIXED 2026-07-18 by the mapper brand-preservation guard: when the segmenter's normalizedForm drops a brand-lexicon token present in rawLine, baseName is re-derived from rawLine so candidate retrieval stays brand-aware. Now maps to Ghost 'Vegan Protein' 0.888/70g. Promoted to hard assertion."
+      "expectItems": 1,
+      "total": {
+        "calories": [
+          160,
+          320
+        ]
+      },
+      "notes": "Pattern 1 (brand hijack via flavor suffix), SEGMENTATION-stage boundary pin: HIGH side (7 words, over the 6-word single-item cap -> LLM segmenter). FIXED 2026-07-18 by the mapper brand-preservation guard: when the segmenter's normalizedForm drops a brand-lexicon token present in rawLine, baseName is re-derived from rawLine so candidate retrieval stays brand-aware. Now maps to Ghost 'Vegan Protein' 0.888/70g. Promoted to hard assertion. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): 2 scoops Ghost Vegan Protein = 70 g / ~240 kcal; observed 70 g / 240.1 kcal x3. Same record and billing as n-supp-07, which already carries a grams band."
     },
     {
       "id": "n-seg-23",
       "category": "segmentation",
       "text": "1 quest bar birthday cake",
-      "expectItems": 1,
       "expectName": [
         [
           "quest"
         ]
       ],
-      "notes": "Pattern 1, SEGMENTATION boundary LOW side (5 words). Sub-cap phrasing keeps 'quest' brand token despite the shared 'birthday cake' flavor. CURRENT: works. Hard assertion."
+      "expectItems": 1,
+      "total": {
+        "calories": [
+          130,
+          260
+        ]
+      },
+      "notes": "Pattern 1, SEGMENTATION boundary LOW side (5 words). Sub-cap phrasing keeps 'quest' brand token despite the shared 'birthday cake' flavor. CURRENT: works. Hard assertion. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): a Quest bar is 60 g / ~190 kcal; observed 60 g / 181.0 kcal x3. Single-item case (expectItems 1, itemCount 1 in all 3 runs) so items[0] is unambiguous."
     },
     {
       "id": "n-seg-24",
       "category": "segmentation",
       "text": "1 quest protein bar birthday cake flavor",
-      "expectItems": 1,
       "expectName": [
         [
           "quest"
         ]
       ],
-      "notes": "Pattern 1, SEGMENTATION boundary HIGH side (7 words, over the 6-word cap). FIXED 2026-07-18 by the mapper brand-preservation guard — the 'birthday cake' flavor no longer hijacks off the Quest brand token. Promoted to hard assertion."
+      "expectItems": 1,
+      "total": {
+        "calories": [
+          130,
+          260
+        ]
+      },
+      "notes": "Pattern 1, SEGMENTATION boundary HIGH side (7 words, over the 6-word cap). FIXED 2026-07-18 by the mapper brand-preservation guard — the 'birthday cake' flavor no longer hijacks off the Quest brand token. Promoted to hard assertion. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): same product as n-seg-23 via the over-6-word segmentation path; observed 60 g / 180.0 kcal x3."
     },
     {
       "id": "n-seg-25",
       "category": "segmentation",
       "text": "1 scoop ryse protein cinnamon toast crunch",
-      "expectItems": 1,
       "expectName": [
         [
           "ryse"
         ]
       ],
-      "notes": "Pattern 1, SEGMENTATION (7 words, over the 6-word cap). FIXED 2026-07-18 by the mapper brand-preservation guard — the 'cinnamon toast crunch' cereal-brand collision no longer drops the RYSE brand token. Promoted to hard assertion."
+      "expectItems": 1,
+      "total": {
+        "calories": [
+          70,
+          210
+        ]
+      },
+      "notes": "Pattern 1, SEGMENTATION (7 words, over the 6-word cap). FIXED 2026-07-18 by the mapper brand-preservation guard — the 'cinnamon toast crunch' cereal-brand collision no longer drops the RYSE brand token. Promoted to hard assertion. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): 1 scoop Ryse Clear Protein = ~35 g / ~123 kcal; observed 34.95 g / 122.7 kcal x3."
     },
     {
       "id": "n-seg-26",
@@ -3253,13 +3322,25 @@
       "id": "n-qty-02",
       "category": "quantity_parsing",
       "text": "½ avocado",
-      "expectItems": 1,
       "expectName": [
         [
           "avocado"
         ]
       ],
-      "notes": "Pattern 10 (unicode fraction '½'). Asserts the unicode fraction parses to one avocado item without crashing segmentation. ASPIRATIONAL: grams ~half an avocado (~75-100g). Hard assertion on name/segmentation only."
+      "expectItems": 1,
+      "macros": {
+        "kcal100": [
+          120,
+          210
+        ]
+      },
+      "total": {
+        "calories": [
+          70,
+          230
+        ]
+      },
+      "notes": "Pattern 10 (unicode fraction '½'). Asserts the unicode fraction parses to one avocado item without crashing segmentation. ASPIRATIONAL: grams ~half an avocado (~75-100g). Hard assertion on name/segmentation only. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): raw avocado is ~160 kcal/100g (fdc_171705); observed 75 g / 160.0 kcal100 / 120.0 kcal x3. kcal100 band fails on the avocado-OIL records in the corpus (~800-1000 kcal/100g), which the name assertion alone cannot exclude."
     },
     {
       "id": "n-qty-03",
@@ -3571,11 +3652,23 @@
           "core power"
         ]
       ],
+      "macros": {
+        "kcal100": [
+          30,
+          85
+        ]
+      },
       "grams": [
         300,
         460
       ],
-      "notes": "Unitless branded drink -> full-bottle backfill. VERIFIED live: 'Fairlife core power elite', 1=414g (14 fl oz bottle, correct). Discrete serving correctly backfilled. Hard assertion."
+      "total": {
+        "calories": [
+          140,
+          280
+        ]
+      },
+      "notes": "Unitless branded drink -> full-bottle backfill. VERIFIED live: 'Fairlife core power elite', 1=414g (14 fl oz bottle, correct). Discrete serving correctly backfilled. Hard assertion. | LIVE DEFECT, EXPECTED TO FAIL: this case asserted a name and a grams band but NO nutrition band, so it scored a PASS while billing 952.2 kcal for a 414 g bottle. off_9568310020398 stores the whole-bottle Core Power Elite panel (230 kcal / 42 g protein per 414 mL) in nutrientsPer100g -> 4.14x over-bill, and the case could not see it. Clean siblings measured in OffFood: original Core Power kcal100 41.06-41.10 (170 kcal/bottle), Elite kcal100 55.56-56.0 (230-232 kcal/bottle), Fair Oaks 340 mL kcal100 44 (150 kcal), Strawberry kcal100 58 (240 kcal). Band [140,280] admits every one of those and excludes both the 952.2 kcal seen today and the 704 kcal of the other panel-inflated fleet (kcal100 170). kcal100 [30,85] names the root cause directly. NOTE: the [180,320] band originally proposed would have excluded the plain 170 kcal Core Power, forcing a repoint specifically to an Elite SKU; rejected for that reason. Un-fail by fixing the DATA (mark/repair the panel or repoint), not by widening this band."
     },
     {
       "id": "n-supp-24",
@@ -3621,7 +3714,13 @@
         55,
         75
       ],
-      "notes": "Unitless branded bar -> discrete backfill. VERIFIED live: 'CLIF BAR', 1=68g (correct Clif Bar weight). Contrast with n-supp-28 (chomps) which does NOT backfill. Hard assertion."
+      "total": {
+        "calories": [
+          180,
+          320
+        ]
+      },
+      "notes": "Unitless branded bar -> discrete backfill. VERIFIED live: 'CLIF BAR', 1=68g (correct Clif Bar weight). Contrast with n-supp-28 (chomps) which does NOT backfill. Hard assertion. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): a Clif Bar is 68 g / 250 kcal; observed 68 g / 250.0 kcal x3. grams-only case = panel-blind in exactly the n-supp-23 way."
     },
     {
       "id": "n-supp-26",
@@ -4128,7 +4227,13 @@
         30,
         60
       ],
-      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 120g (matched the generic 'cookie' seed = 30g). Added a specific 'oreo' seed (~11.3g) -> 4 x 11.3 = 45.2g. Hard assertion."
+      "total": {
+        "calories": [
+          150,
+          280
+        ]
+      },
+      "notes": "FIXED 2026-07-18 (Cluster A, Defect 2 = generic seed too heavy). Was 120g (matched the generic 'cookie' seed = 30g). Added a specific 'oreo' seed (~11.3g) -> 4 x 11.3 = 45.2g. Hard assertion. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): an Oreo is ~11.3 g / ~53 kcal, so 4 = ~212 kcal; observed 45.2 g / 210.9 kcal x3."
     },
     {
       "id": "n-serv-19",
@@ -4243,7 +4348,13 @@
         300,
         650
       ],
-      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 3). '1 gatorade' (unitless branded count) now bills the same-brand median package via the OFF product_quantity backfill (207k rows) + sibling-borrow: ~500-600ml bottle. Was flat capped-100g."
+      "total": {
+        "calories": [
+          40,
+          160
+        ]
+      },
+      "notes": "PROMOTED to hard 2026-07-19 (Cluster A pt2 Defect 3). '1 gatorade' (unitless branded count) now bills the same-brand median package via the OFF product_quantity backfill (207k rows) + sibling-borrow: ~500-600ml bottle. Was flat capped-100g. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): Gatorade Thirst Quencher is ~22 kcal/100 mL, so a 12 oz bottle bills ~80 kcal; observed 360 g / 80.0 kcal x3. This band is the guard against the POWDER records (~360 kcal/100g), which the grams band cannot catch because a powder mispick billed at 360 g stays inside [300,650] while billing ~1300 kcal."
     },
     {
       "id": "n-serv-24",
@@ -4359,7 +4470,13 @@
         55,
         82
       ],
-      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 68g). Branded bar with a genuine serving (~68g). Hard assertion; the fix must preserve this. Contrast the over-billed generic-seed bars (n-serv-18 oreo, n-serv-19 eggo)."
+      "total": {
+        "calories": [
+          180,
+          320
+        ]
+      },
+      "notes": "CENSUS REGRESSION GUARD (currently CORRECT: 68g). Branded bar with a genuine serving (~68g). Hard assertion; the fix must preserve this. Contrast the over-billed generic-seed bars (n-serv-18 oreo, n-serv-19 eggo). | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): duplicate query of n-supp-25 on the serving_unit path; observed 68 g / 250.0 kcal x3."
     },
     {
       "id": "n-serv-29",
@@ -5259,7 +5376,13 @@
           "ryse"
         ]
       ],
-      "notes": "IDENTITY-HIJACK GUARD (PR D pt2, 2026-07-20). The parity sweep's cold re-resolution mapped 'protein ryse' to 'Protein Rice' (ryse fuzzy->rice). The save-time brand-mismatch gate now refuses to CACHE a cross-brand pick for a decisive brand query, but retrieval can still SERVE one when no Ryse SKU surfaces. Promote to hard once retrieval reliably surfaces Ryse protein SKUs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
+      "total": {
+        "calories": [
+          70,
+          210
+        ]
+      },
+      "notes": "IDENTITY-HIJACK GUARD (PR D pt2, 2026-07-20). The parity sweep's cold re-resolution mapped 'protein ryse' to 'Protein Rice' (ryse fuzzy->rice). The save-time brand-mismatch gate now refuses to CACHE a cross-brand pick for a decisive brand query, but retrieval can still SERVE one when no Ryse SKU surfaces. Promote to hard once retrieval reliably surfaces Ryse protein SKUs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): same record and billing as n-seg-25. The existing assertion pinned only the Ryse brand, so a Ryse-branded record with a per-tub panel would still have passed."
     },
     {
       "id": "n-mq-24",
@@ -5864,7 +5987,13 @@
         ]
       ],
       "expectItems": 1,
-      "notes": "FIXED 2026-07-19 (decisive brand gate): 'One birthday cake protein bars' (ONE Brands) beats the Cake Cup hijacker. Promoted hard. | Previously: DEFECT (branded-competitor hijack, RANKING-FIXABLE). Maps to 'Birthday Cake' brand 'Cake Cup' (off_0810257005259); correct 'One Birthday Cake Protein bar' brand 'ONE Brands' (off_0788434107730) IS in corpus and tops the search. Same class as n-seg-21. Root: simple-rerank.ts brand match is only a tiebreaker behind a score short-circuit (:1452) + a weak +0.25 bonus. Fix risks 'one'/'ghost'/'built' g"
+      "total": {
+        "calories": [
+          150,
+          290
+        ]
+      },
+      "notes": "FIXED 2026-07-19 (decisive brand gate): 'One birthday cake protein bars' (ONE Brands) beats the Cake Cup hijacker. Promoted hard. | Previously: DEFECT (branded-competitor hijack, RANKING-FIXABLE). Maps to 'Birthday Cake' brand 'Cake Cup' (off_0810257005259); correct 'One Birthday Cake Protein bar' brand 'ONE Brands' (off_0788434107730) IS in corpus and tops the search. Same class as n-seg-21. Root: simple-rerank.ts brand match is only a tiebreaker behind a score short-circuit (:1452) + a weak +0.25 bonus. Fix risks 'one'/'ghost'/'built' g | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): ONE Bar is a 60 g / ~220 kcal bar; observed 60 g / 220.0 kcal x3. Without this the case passes on the right brand at any billed total."
     },
     {
       "id": "n-brand-03",
@@ -5875,7 +6004,19 @@
           "premier"
         ]
       ],
-      "notes": "POSITIVE CONTROL (hard). Correctly maps to Premier Protein Cafe Latte (off_0643843759386, conf 0.98). Guards the blast radius of any future brand-gating fix — must stay green."
+      "macros": {
+        "kcal100": [
+          30,
+          85
+        ]
+      },
+      "total": {
+        "calories": [
+          110,
+          230
+        ]
+      },
+      "notes": "POSITIVE CONTROL (hard). Correctly maps to Premier Protein Cafe Latte (off_0643843759386, conf 0.98). Guards the blast radius of any future brand-gating fix — must stay green. | CALORIE BAND ADDED 2026-07-26 (calorie-blindness sweep, same class as PR #152): same RTD-protein-shake panel class as n-supp-23, and this is the positive control for it. Premier Protein 11 fl oz bills 160 kcal; observed 311.8 g x 51.3 kcal/100g = 160.0 kcal in all 3 runs of 2026-07-26. kcal100 [30,85] fails immediately if this record is ever swapped for one holding the whole-bottle panel."
     },
     {
       "id": "n-brand-04",
