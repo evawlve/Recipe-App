@@ -50,7 +50,27 @@ export type ParsedIngredient = {
 function resolvePackageMultipliers(line: string): string {
   // Pattern to match: qty1 [delimiter] ( qty2 unit ) [package_type]
   // e.g. 1/2 (12 oz) package, 2 x 15-ounce cans, 3 (4 oz) containers, 2 15 oz cans
-  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)\s*[-x×*(\s]?\s*(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)/gi;
+  //
+  // TWO GUARDS, both load-bearing — removing either one reopens a live defect:
+  //
+  //   (a) `(?:\s*[-x×*(]\s*|\s+)` — the qty1/qty2 separator is REQUIRED. It used to
+  //       be `\s*[-x×*(\s]?\s*`, fully optional, so a single contiguous number was
+  //       split against itself: "100" became qty1="10" x qty2="0" = 0.
+  //
+  //   (b) the trailing `\b` after the container alternation. Without it, `can`
+  //       matched the first three letters of `canned`/`cantaloupe`/`candy`/`canola`,
+  //       `bag` matched `baguette`, `box` matched `boxed`, `bottle` matched
+  //       `bottled`, `tub` matched `tube`.
+  //
+  // Together they billed silently wrong. "100g canned tuna in water" parsed as
+  // { qty: 0, unit: null, name: "gned tuna in water" } — a garbage name that
+  // poisons deriveMustHaveTokens, plus qty 0 that starves serving selection.
+  // Live examples: "150g cantaloupe" -> "gtaloupe", "100g candy" -> "gdy",
+  // "340g bottled water" -> "gd water", "30g packet oatmeal" -> 0 g.
+  //
+  // Each guard alone is insufficient: (a) alone still corrupts "100g cans of tuna";
+  // (b) alone still corrupts "2 15 oz canned tomatoes". Keep both.
+  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)(?:\s*[-x×*(]\s*|\s+)(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)\b/gi;
 
   return line.replace(packageRegex, (match, qty1Str, qty2Str, unit) => {
     const qty1 = parseFraction(qty1Str);

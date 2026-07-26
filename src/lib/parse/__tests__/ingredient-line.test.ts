@@ -346,4 +346,77 @@ describe('resolvePackageMultipliers package resolution rules', () => {
     expect(p.unit).toBe('oz');
     expect(p.name).toBe('tomatoes');
   });
+
+  /**
+   * NON-VACUITY: every case below returned a MANGLED name and qty 0 on master
+   * before this guard landed — verified by running this exact list against
+   * 1850a1c. They are not hypothetical.
+   *
+   *   '100g canned tuna in water' -> { qty: 0, unit: null, name: 'gned tuna in water' }
+   *   '150g cantaloupe'           -> { qty: 0, unit: null, name: 'gtaloupe' }
+   *   '340g bottled water'        -> { qty: 0, unit: null, name: 'gd water' }
+   *
+   * Two independent defects co-fired: the container alternation had no trailing
+   * \b (so `can` matched `canned`), and the qty1/qty2 separator was optional
+   * (so `100` split into 10 x 0 = 0).
+   */
+  describe.each([
+    ['100g canned tuna in water', 100, 'g', 'tuna in water'],
+    ['150g cantaloupe', 150, 'g', 'cantaloupe'],
+    ['100g candy', 100, 'g', 'candy'],
+    ['120g baguette', 120, 'g', 'baguette'],
+    ['100g canola oil', 100, 'g', 'canola oil'],
+    ['200g cane sugar', 200, 'g', 'cane sugar'],
+    ['340g bottled water', 340, 'g', 'bottled water'],
+    ['500g boxed pasta', 500, 'g', 'boxed pasta'],
+    ['200g jarred pesto', 200, 'g', 'jarred pesto'],
+    ['150g tube tomato paste', 150, 'g', 'tube tomato paste'],
+    ['250g packaged salad', 250, 'g', 'packaged salad'],
+    ['100g cannellini beans', 100, 'g', 'cannellini beans'],
+  ])('a container word must not match a longer word that starts with it', (line, qty, unit, name) => {
+    test(`${line} keeps its quantity and its name`, () => {
+      const p = parseIngredientLine(line as string)!;
+      expect(p.qty).toBeCloseTo(qty as number);
+      expect(p.unit).toBe(unit);
+      expect(p.name).toBe(name);
+    });
+  });
+
+  test('a single contiguous number is never split against itself', () => {
+    // "30g packet oatmeal" kept its unit on master but billed qty 0, because
+    // "30" was read as qty1=3 x qty2=0. The name survived, so this one was
+    // silent in a way the mangled-name cases were not.
+    const p = parseIngredientLine('30g packet oatmeal')!;
+    expect(p.qty).toBeCloseTo(30);
+    expect(p.unit).toBe('g');
+  });
+
+  test('a real container word still resolves after the \\b guard', () => {
+    // The \b must not break the genuine package form: `cans` is a whole token.
+    const p = parseIngredientLine('2 100g cans of tuna')!;
+    expect(p.qty).toBeCloseTo(200);
+    expect(p.unit).toBe('g');
+  });
+
+  test('qty1 === 1 still preserves the package structure', () => {
+    const p = parseIngredientLine('1 (14 oz) can beans')!;
+    expect(p.qty).toBeCloseTo(1);
+    expect(p.name).toContain('14 oz can beans');
+  });
+
+  /**
+   * KNOWN LIMIT, asserted so it cannot drift silently. "canned" is an adjective,
+   * not a package count, so the multiplier correctly no longer fires here.
+   * Master produced qty 30 with the mangled name "ozned tomatoes" — it got the
+   * quantity right by accident while destroying the name. Neither answer is
+   * right; this one is at least not corrupt. A real fix would need to treat
+   * "<n> <n> <unit> canned <food>" as "<n> cans of <n> <unit>", which is a
+   * parser feature, not a regex guard.
+   */
+  test('"2 15 oz canned tomatoes" no longer multiplies, and no longer mangles', () => {
+    const p = parseIngredientLine('2 15 oz canned tomatoes')!;
+    expect(p.name).not.toMatch(/ozned|gned/);
+    expect(p.name).toBe('15 oz tomatoes');
+    expect(p.qty).toBeCloseTo(2);
+  });
 });

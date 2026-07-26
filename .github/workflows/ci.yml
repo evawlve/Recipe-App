@@ -19,6 +19,15 @@ jobs:
       - run: npm run prisma:generate
       - run: npm run lint:ci
       - run: npm run typecheck
+      # Until 2026-07-26 this job was lint + typecheck + build only, so NONE of the
+      # 2,121 tests in this repo had ever gated a merge. That is how PR #167 and
+      # PR #168 both went green and still left master red on three assertions:
+      # #167 changed the golden-set band counts, #168's tests pinned the old ones,
+      # and nothing in CI executed either. Do not remove this step.
+      #
+      # test:ci excludes src/ops/curated/__tests__/seed-curated.test.ts, which needs
+      # a reachable Postgres. Everything else runs in ~6s.
+      - run: npm run test:ci
       - run: npm run build
     env:
       # Supabase Configuration (Required for build)
