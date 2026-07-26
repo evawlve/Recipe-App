@@ -141,6 +141,15 @@ function getSingularPluralVariants(word: string): string[] {
     // Also try pluralizing the singular (handles irregular forms)
     const pluralOfSingular = pluralize(singular);
     if (!variants.includes(pluralOfSingular)) variants.push(pluralOfSingular);
+    // pluralize() sends every -o noun to -oes. Right for potato/tomato, wrong for
+    // every other -o word: OFF has 0 records spelled doritoes/cheetoes/tostitoes
+    // and 783/512/242 spelled with a plain -s. Add -os ALONGSIDE -oes, never instead.
+    for (const base of [word, singular]) {
+        if (base.endsWith('o')) {
+            const osForm = base + 's';
+            if (!variants.includes(osForm)) variants.push(osForm);
+        }
+    }
     return variants;
 }
 
