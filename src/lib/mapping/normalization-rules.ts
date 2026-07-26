@@ -575,8 +575,25 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
  * Deliberately the SAME set `canonicalizeCacheKey` folds. iOS Smart Punctuation
  * is on by default and rewrites `'` to `’` as the user types, so the curly form
  * is not an edge case — it is what the mobile client actually sends.
+ *
+ * `ʻ` (U+02BB MODIFIER LETTER TURNED COMMA) joined the set for the same reason
+ * the others did: it was the last spelling that still forked the key. It is the
+ * ʻokina, so it arrives with Hawaiian-spelled brand names. Being outside `\w`, it
+ * fell through this fold and was then matched by the strip below (and by the
+ * equivalent strip in `canonicalizeCacheKey`), so it became a SPACE and the
+ * possessive `s` tokenized on its own: `Trader Joeʻs cookie butter` keyed as
+ * "butter cookie joe s trader" while every other spelling keyed as
+ * "butter cookie joe trader" — verified against a verbatim pre-change copy of
+ * this module. Measured before adding it: 3 OffFood rows corpus-wide, 0
+ * FatSecret rows, 0 of 3,246 FoodMapping keys, 0 of 4,165 logged query forms —
+ * key-space hygiene with a zero-row migration, not a live incident. It closes
+ * the fork before a Hawaiian brand walks into it.
+ *
+ * The two copies of this class (here and in `canonicalizeCacheKey`) MUST stay
+ * byte-identical; every apostrophe defect fixed in this file so far has been
+ * two folds disagreeing about which glyphs are apostrophes.
  */
-const APOSTROPHES = /['‘’ʼ`´]/g;
+const APOSTROPHES = /['‘’ʼʻ`´]/g;
 
 function collapseSpaces(value: string): string {
   // Preserve hyphens (important for compound words like "all-purpose flour")
@@ -772,7 +789,8 @@ export function canonicalizeCacheKey(normalizedName: string): string {
 
   return normalizedName
     .toLowerCase()
-    .replace(/['‘’ʼ`´]/g, '')  // Possessives collapse: see above
+    // Possessives collapse: see above. Must stay byte-identical to APOSTROPHES.
+    .replace(/['‘’ʼʻ`´]/g, '')
     .replace(/[^a-z0-9%\s\-]/g, ' ')  // Keep %, hyphens
     .split(/\s+/)
     .filter(w => w.length > 0)
