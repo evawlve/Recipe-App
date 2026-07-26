@@ -41,6 +41,7 @@ interface Row {
     nutrientsPer100g: { calories?: number; protein?: number; carbs?: number; fat?: number } | null;
     servingGrams: number | null;
     servingSize: string | null;
+    corruptReason: string | null;
 }
 
 /** Same completeness idea as dedupe-candidates.ts isBetterRepresentative,
@@ -58,8 +59,26 @@ function completenessScore(r: Row): number {
 }
 
 /** True when a should survive over b. Ties broken deterministically so
- *  re-runs pick the same representative. */
+ *  re-runs pick the same representative.
+ *
+ *  A clean row ALWAYS beats a corrupt-marked one, ahead of completeness. That
+ *  ordering is load-bearing, not a preference: the corrupt row is usually the
+ *  MORE "complete" of the pair, because the defect in this corpus is a
+ *  whole-container panel stored as per-100g — every macro populated (at the
+ *  wrong scale) and servingGrams set, a perfect 5/5 below. Ranking by
+ *  completeness first therefore actively prefers the corrupt row.
+ *
+ *  Why it matters even though marks look sticky: --clear resets every
+ *  duplicateOfBarcode and re-elects from scratch, and before this change the
+ *  election could not see corruptReason at all — it was not even selected. If a
+ *  corrupt representative is ever hard-deleted rather than marked, the next run
+ *  elects its clean-LOOKING clone and re-introduces the identical bad panel into
+ *  search, since sync-typesense.ts only excludes duplicateOfBarcode IS NOT NULL
+ *  and corruptReason IS NOT NULL — and the clone is neither. */
 function isBetterRepresentative(a: Row, b: Row): boolean {
+    const aCorrupt = a.corruptReason != null;
+    const bCorrupt = b.corruptReason != null;
+    if (aCorrupt !== bCorrupt) return bCorrupt;
     const ac = completenessScore(a);
     const bc = completenessScore(b);
     if (ac !== bc) return ac > bc;
@@ -110,6 +129,9 @@ async function main() {
                 nutrientsPer100g: true,
                 servingGrams: true,
                 servingSize: true,
+                // Required by isBetterRepresentative. Omitting it silently made
+                // election blind to corrupt marks rather than failing loudly.
+                corruptReason: true,
             },
             orderBy: { barcode: 'asc' },
             take: READ_BATCH,
@@ -199,11 +221,19 @@ async function main() {
     console.log('so the rebuilt off_foods index drops them.');
 }
 
-main()
-    .catch(err => {
-        console.error('❌ Crashed:', err);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+// Guarded so the election logic above can be unit-tested without this script
+// connecting to the production database on import. Same pattern as
+// scripts/eval/correctness-screen.ts:982.
+if (require.main === module) {
+    main()
+        .catch(err => {
+            console.error('❌ Crashed:', err);
+            process.exit(1);
+        })
+        .finally(async () => {
+            await prisma.$disconnect();
+        });
+}
+
+export { isBetterRepresentative, completenessScore, groupKey };
+export type { Row };
