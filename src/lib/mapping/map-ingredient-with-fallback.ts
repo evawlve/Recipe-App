@@ -30,7 +30,7 @@ import {
     pieceNounInName, labelPieceMatchesItem, countedPieceNoun, servingLabelCountsPiece,
     inferDiscreteUnit,
 } from './count-label';
-import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape } from './validated-mapping-helpers';
+import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, type CacheLookupRejection } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from './client';
@@ -85,15 +85,16 @@ async function lookupValidatedMappingWithLegacyFallback(
     parsed: import('../parse/ingredient-line').ParsedIngredient | null | undefined,
     brandDetection: BrandKeyInput,
     rawLine: string,
+    rejection?: CacheLookupRejection,
 ): Promise<CachedMappedIngredient | null> {
     const symmetricKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, rawLine);
-    const hit = await getValidatedMappingByNormalizedName(symmetricKey, 'fatsecret', rawLine);
+    const hit = await getValidatedMappingByNormalizedName(symmetricKey, 'fatsecret', rawLine, rejection);
     if (hit) return hit;
 
     const legacyKey = deriveCacheKeyName(normalizedName, parsed);
     if (legacyKey === symmetricKey || isMalformedCacheKey(legacyKey)) return null;
 
-    const legacyHit = await getValidatedMappingByNormalizedName(legacyKey, 'fatsecret', rawLine);
+    const legacyHit = await getValidatedMappingByNormalizedName(legacyKey, 'fatsecret', rawLine, rejection);
     if (legacyHit) {
         // Branded-query guard: the legacy key (deriveCacheKeyName) is BRANDLESS,
         // so when a brand was detected and stripped it can wrongly match a
@@ -112,8 +113,16 @@ async function lookupValidatedMappingWithLegacyFallback(
                 matchedBrand: brandDetection.matchedBrand,
                 cachedFood: legacyHit.foodName,
             });
+            if (rejection) {
+                rejection.reason = 'legacy_brand_mismatch';
+                rejection.normalizedForm = legacyKey;
+                rejection.foodName = legacyHit.foodName;
+            }
             return null;
         }
+        // A legacy hit that IS accepted clears any rejection the symmetric-key
+        // lookup recorded above — the caller got a row, so nothing was bypassed.
+        if (rejection) rejection.reason = null;
         logger.debug('mapping.legacy_cache_key_fallback_hit', {
             rawLine,
             symmetricKey,
@@ -867,7 +876,14 @@ export async function mapIngredientWithFallback(
         // sites: it's the only brand signal that exists this early. A miss
         // additionally falls back to the legacy (pre-Track-1c) key so rows
         // written under the old scheme stay reachable.
-        const earlyCacheHit = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed);
+        const earlyLookupRejection: CacheLookupRejection = { reason: null };
+        const earlyCacheHit = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed, earlyLookupRejection);
+        if (!earlyCacheHit && earlyLookupRejection.reason && telemetry) {
+            // A row existed under this key and the read path rejected it. Without
+            // this the event is indistinguishable from a cold key, which is how
+            // rows that are written and then never servable stayed invisible.
+            telemetry.cacheEscape = 'lookup_early:' + earlyLookupRejection.reason;
+        }
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
 
@@ -1281,7 +1297,11 @@ export async function mapIngredientWithFallback(
             // normalize may have replaced normalizedName. brandDetection is
             // request-stable, so this key matches the save key exactly. A
             // miss falls back to the legacy (pre-Track-1c) key.
-            const normalizedCache = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed);
+            const normalizedLookupRejection: CacheLookupRejection = { reason: null };
+            const normalizedCache = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed, normalizedLookupRejection);
+            if (!normalizedCache && normalizedLookupRejection.reason && telemetry) {
+                telemetry.cacheEscape = 'lookup_normalized:' + normalizedLookupRejection.reason;
+            }
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
                 const normalizedCoreTokenMismatch = hasCoreTokenMismatch(normalizedName, normalizedCache.foodName, normalizedCache.brandName);
