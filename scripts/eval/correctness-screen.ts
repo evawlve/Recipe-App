@@ -1,0 +1,997 @@
+/**
+ * correctness-screen.ts — post-warm CORRECTNESS screen for one cache-warming batch.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY THIS EXISTS
+ * ---------------------------------------------------------------------------
+ * gate.py certifies STRUCTURE: added/changed/removed counts, ai_estimated share,
+ * conversion rate. Batch 01 of the seed-corpus warm campaign passed every one of
+ * those thresholds — 0 eval failures, 0% ai_estimated, added 81 / changed 0 /
+ * removed 0 — and a hand audit then graded 23 of its 81 new rows BAD and 10
+ * SUSPECT. 27.2% wrong, certified clean.
+ *
+ * The existing gates say "this batch did not damage the rows it should not have
+ * touched". They say nothing about whether the rows it ADDED are correct. This
+ * file is that missing instrument: it reads each row the batch added and asks
+ * whether the record behind it is the product the seed asked for, at a plausible
+ * weight, with a plausible panel.
+ *
+ * ---------------------------------------------------------------------------
+ * WHERE IT RUNS — read before moving it
+ * ---------------------------------------------------------------------------
+ * This is a CAMPAIGN step, not a mapper step. It runs after the warm, over the
+ * keys in <bdir>/added.txt, and its output is a withhold/evict list. It must NOT
+ * be moved into saveValidatedMapping: playbook §3 — a hard reject there sets
+ * winner = null and falls through to AI backfill at grams = 100, i.e. a DIFFERENT
+ * wrong number, not a right one. (Adversarial-review correction B5: the current
+ * saveValidatedMapping returns early rather than nulling the winner, so the live
+ * cost is "permanently uncacheable" rather than "AI backfill" — either way it is a
+ * cost paid on the request path for a problem that only exists in the cache.)
+ *
+ * The distinction that makes withholding safe: the pick still answers the user's
+ * request either way. The only thing this file decides is whether the pick becomes
+ * STICKY AND FREE. A withheld row is deferred coverage, not a broken answer.
+ *
+ * ---------------------------------------------------------------------------
+ * TIERS
+ * ---------------------------------------------------------------------------
+ *   Tier D (deterministic) — 10 flagging rules + 1 informational, no network, no
+ *     API key, no DB beyond the row pull. Every rule is a mechanical property of
+ *     the row (key shape, token coverage, serving grams, Atwater, panel integrity).
+ *   Tier L (LLM adjudication) — one call per row Tier D did not already evict.
+ *     ~62 calls, ~$0.011 and ~11 s per batch at gpt-4o-mini / temperature 0.
+ *     Semantic identity is the thing Tier D provably cannot do: `turkey bacon` ->
+ *     `Turkey Breast` and `sparkling water` -> `Water Crackers` share their head
+ *     noun, so no token rule can separate them.
+ *
+ * ---------------------------------------------------------------------------
+ * MEASURED OPERATING POINT — and which of its numbers are FITTED
+ * ---------------------------------------------------------------------------
+ * `--policy balanced --llm`, i.e. EVICT when (D1 or D3 or D4 or D6 or D8 or D9) or
+ * a Tier-L REJECT. Measured on the 81 hand-labelled rows of batch 01
+ * (23 BAD / 10 SUSPECT / 48 GOOD):
+ *
+ *   BAD caught          23 / 23  = 100%     <- NOT FITTED. See below.
+ *   GOOD wrongly evicted 0 / 48  = 0%       <- FITTED. Do not plan against this.
+ *   SUSPECT evicted      8 / 10
+ *
+ * **The 0% false-positive rate on GOOD rows is FITTED.** The shipped Tier-L rubric's
+ * variant-class taxonomy was written after reading the errors the clean held-out
+ * rubric made on these same rows. The clean HELD-OUT rubric (rubric v3, whose
+ * examples contain no batch-01 content of any kind) measures **6 / 48 = 12.5%**.
+ * 12.5% is the number to plan a batch against, and it is the number this script
+ * prints to the operator. Anyone quoting 0% is quoting a fitted figure.
+ *
+ * **Recall is NOT fitted.** The combined screen caught 23 / 23 BAD under all four
+ * rubric variants tried, including v3 (no batch-01 content on either the ACCEPT or
+ * the REJECT side). Recall is the number this screen exists for and it is the one
+ * that survives the held-out test.
+ *
+ * Tier D alone, same rows, same labels (`--policy balanced`, no `--llm`):
+ *   BAD 18 / 23 evicted (a 19th goes to REVIEW), GOOD 0 / 48 evicted.
+ * So dropping `--llm` is a recall drop from 100% to 78%, and this script says so.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THIS SCREEN CANNOT SEE — also carried as comments at each rule
+ * ---------------------------------------------------------------------------
+ * 1. **Tier L agreed with the pipeline (ACCEPT) on 3 BAD rows**; all 3 were caught
+ *    by Tier D. Both tiers are language models reading a product name, so they
+ *    share a failure mode. That is the structural argument for requiring BOTH — a
+ *    future "the LLM catches everything, drop Tier D" simplification would silently
+ *    drop those 3. (Symmetrically, the 4 BAD rows Tier D misses are exactly the 4
+ *    Tier L catches. Neither tier alone reaches 100%.)
+ * 2. **The serving check is a RECONSTRUCTION.** `resolveServingGrams` reimplements
+ *    the billing anchor and never calls `hydrateAndSelectServing`, so count-label
+ *    serving, dose-anchored serving and the FatSecret weight oracle are invisible
+ *    to it. A row D5 calls "no serving weight" MAY IN FACT BILL CORRECTLY.
+ *    **This was not measured.**
+ * 3. **D9 fired zero times on the 81 rows.** It is unexercised, not validated.
+ * 4. **Determinism is partial.** Four Tier-L runs at temperature 0 gave identical
+ *    BAD and GOOD columns; the SUSPECT column moved by one row. Quote review-queue
+ *    sizes as a range, not a number.
+ * 5. **One batch, one domain.** Batch 01 is store brands. Hand-label the first 20
+ *    added rows of the next domain and re-run with `--labels` before trusting any
+ *    of these numbers there.
+ *
+ * ---------------------------------------------------------------------------
+ * USAGE (from repo root)
+ * ---------------------------------------------------------------------------
+ *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
+ *     scripts/eval/correctness-screen.ts \
+ *       --bdir <batch dir containing added.txt> --seeds <batch seed file> \
+ *       [--llm] [--policy strict|balanced|lenient] [--out screen.json] \
+ *       [--rows rows.json] [--dump-rows rows.json] [--labels labels.json]
+ *
+ *   --rows        skip the DB and read a previously dumped row pull (offline replay)
+ *   --dump-rows   write the DB pull to this path so a later run can use --rows
+ *   --labels      score the screen against a hand-labelled ground truth and print
+ *                 per-rule and per-tier confusion matrices
+ *   --llm-all     run Tier L on EVERY row including ones Tier D evicted (measurement
+ *                 only — production runs Tier L on the survivors, which is cheaper)
+ *
+ * EXIT CODE: 0 if no row is marked EVICT, 1 if any row is. Anything > 1 is a crash
+ * or a refused flag and the runner must treat it as RED — a screen that could not
+ * run must never be read as a clean batch. Exit 1 means "withhold the flagged
+ * rows", NOT "roll the whole batch back".
+ *
+ * READ-ONLY: SELECT only. This file never writes to Postgres, Typesense or
+ * FoodMapping. The eviction itself is a separate, transactional campaign step.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { detectBrandInQuery } from '../../src/lib/mapping/brand-detector';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type Policy = 'strict' | 'balanced' | 'lenient';
+export type Severity = 'EVICT' | 'REVIEW' | 'INFO';
+export type Decision = 'EVICT' | 'REVIEW' | 'KEEP';
+/** Tier-D rule ids are stable and greppable; 'L' is Tier L's slot in a policy. */
+export type RuleId = 'D1' | 'D2' | 'D3' | 'D4' | 'D5' | 'D6' | 'D7' | 'D8' | 'D9' | 'D10' | 'D11' | 'L';
+
+export interface Hit { rule: RuleId; severity: Severity; detail: string }
+
+/** One FoodMapping row joined to the record behind it — the shape ROW_SQL returns. */
+export interface ScreenRow {
+    key: string;
+    src: string;
+    conf: number | null;
+    validatedby: string;
+    mapfoodname: string;
+    mapbrand: string;
+    recname: string;
+    recbrand: string;
+    per100g: Record<string, number> | null;
+    off_serving_grams: number | null;
+    off_serving_size: string;
+    pkg_qty: number | null;
+    pkg_unit: string;
+    corruptreason: string;
+    dupof: string;
+    fs_serving_desc: string;
+    fs_serving_grams: number | null;
+    fs_serving_nutrients: Record<string, number> | null;
+    recid: string;
+    n_off_servings: number;
+    off_serv_min_g: number | null;
+    off_serv_max_g: number | null;
+    /** Filled in by attribute(); '' means "could not be attributed to a seed". */
+    seed?: string;
+}
+
+export interface LlmVerdict {
+    verdict: 'ACCEPT' | 'UNSURE' | 'REJECT';
+    axis: string;
+    confidence: number;
+    reason: string;
+    error?: string;
+}
+
+export interface Verdict {
+    key: string;
+    seed: string;
+    record: string;
+    brand: string;
+    source: string;
+    recid: string;
+    decision: Decision;
+    tierD: Hit[];
+    tierL: LlmVerdict | null;
+}
+
+// ---------------------------------------------------------------------------
+// The honesty constants. Printed to the operator; asserted in the unit tests.
+// ---------------------------------------------------------------------------
+
+/**
+ * Expected share of GOOD rows this screen will wrongly evict, measured with the
+ * CLEAN HELD-OUT rubric (v3 — every worked example drawn from a different food
+ * domain, no batch-01 row on either the ACCEPT or the REJECT side): 6 / 48.
+ *
+ * The shipped rubric measures 0 / 48 on the same rows, but its variant-class
+ * taxonomy is a generalisation of the six errors v3 made on this very batch, so
+ * that 0% is FITTED and must never be quoted as an expectation.
+ */
+export const HELD_OUT_GOOD_FP_RATE = 6 / 48;
+/** The fitted figure, named so nobody re-derives it and believes it. */
+export const FITTED_GOOD_FP_RATE = 0;
+/** Combined-screen recall on BAD — stable across all four rubric variants tried. */
+export const MEASURED_BAD_RECALL_WITH_LLM = 23 / 23;
+/** Tier-D-only recall at `--policy balanced` (evict set) on the same 81 rows. */
+export const MEASURED_BAD_RECALL_TIER_D_ONLY = 18 / 23;
+
+// ---------------------------------------------------------------------------
+// Flag parsing — validated, not coerced. A coerced flag produces a clean-looking
+// report of a run that never happened.
+// ---------------------------------------------------------------------------
+
+export class FlagError extends Error {}
+
+export function parseIntFlag(flag: string, raw: string | undefined, fallback: number, min: number): number {
+    if (raw === undefined) return fallback;
+    const trimmed = raw.trim();
+    const n = Number(trimmed);
+    if (trimmed.length === 0 || !Number.isFinite(n) || !Number.isInteger(n)) {
+        throw new FlagError(`${flag} must be an integer, got "${raw}".`
+            + (trimmed.startsWith('--') ? ` That looks like the next flag — ${flag} takes a value.` : ''));
+    }
+    if (n < min) throw new FlagError(`${flag} must be >= ${min}, got ${n}.`);
+    return n;
+}
+
+export function parsePolicy(raw: string | undefined): Policy {
+    if (raw === undefined) return 'balanced';
+    if (raw === 'strict' || raw === 'balanced' || raw === 'lenient') return raw;
+    throw new FlagError(`--policy must be one of strict|balanced|lenient, got "${raw}". `
+        + 'An unknown policy would evict nothing, which reads as a clean batch.');
+}
+
+// ---------------------------------------------------------------------------
+// Tokenising
+// ---------------------------------------------------------------------------
+
+export const STOP = new Set([
+    'and', 'the', 'a', 'an', 'of', 'with', 'in', 'or', 'for', 'to', 'but', 'no', 'not',
+    'fresh', 'brand', 'original', 'classic', 'style', 'flavor', 'flavour', 'natural',
+    'all', 'new', 'plain',
+]);
+// NOTE — no brand names live in STOP, deliberately. detectBrandInQuery is the ONLY
+// brand source. [measured] it matched a brand on 108 of batch 01's 110 seeds (misses:
+// `clancys tortilla chips`, `fit and active protein shake`), and an ablation that added
+// every batch-01 store brand to STOP produced a byte-identical confusion matrix — the
+// hand list was inert. Do not add brands here; if the lexicon misses one, fix the lexicon.
+
+export function toks(s: string): string[] {
+    return (s || '').toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 0);
+}
+
+/**
+ * Deliberately crude, SYMMETRIC stemmer. It is applied to BOTH sides of every
+ * comparison, so over-truncation cancels. The `-ses` over-truncation lesson
+ * (playbook §4, `cheeses` -> `chees`) was about a stemmer applied to ONE side;
+ * keep this one symmetric and it stays harmless.
+ */
+export function stem(t: string): string {
+    if (t.length <= 3) return t;
+    if (t.endsWith('ies')) return t.slice(0, -3) + 'y';
+    if (t.endsWith('ses') || t.endsWith('xes') || t.endsWith('zes') || t.endsWith('ches') || t.endsWith('shes')) return t.slice(0, -2);
+    if (t.endsWith('s') && !t.endsWith('ss') && !t.endsWith('us')) return t.slice(0, -1);
+    return t;
+}
+
+export const stems = (s: string): Set<string> => new Set(toks(s).map(stem));
+
+export function brandTokens(seed: string): Set<string> {
+    const out = new Set<string>();
+    const det = detectBrandInQuery(seed);
+    if (det.matchedBrand) for (const t of toks(det.matchedBrand)) out.add(stem(t));
+    return out;
+}
+
+/** Non-brand, non-stopword content stems of the seed, in order. */
+export function contentStems(seed: string, brand: Set<string>): string[] {
+    return toks(seed)
+        .map(stem)
+        .filter(t => !brand.has(t) && !STOP.has(t) && t.length > 1 && !/^\d+$/.test(t));
+}
+
+// ---------------------------------------------------------------------------
+// Derived facts
+// ---------------------------------------------------------------------------
+
+/**
+ * The gram weight a unitless `qty 1` log is billed against, and where it came from.
+ * `grams: null` means nothing anchored it and the mapper falls back to a flat 100 g.
+ *
+ * !! THIS IS A RECONSTRUCTION, NOT THE PIPELINE. !!
+ * It walks OffFood.servingGrams -> FatSecretServing.grams -> OffServing.grams ->
+ * flat 100 g. It does NOT call hydrateAndSelectServing, so count-label serving,
+ * dose-anchored serving and funnel fix 5's FatSecret weight oracle are invisible
+ * here. A row D5 flags as "no serving weight" MAY IN FACT BILL CORRECTLY via one of
+ * those. The divergence between this reconstruction and the real anchor was NEVER
+ * MEASURED — read D5/D6 as "this row's anchor looks wrong from the columns", not as
+ * "this row bills wrong".
+ */
+export function resolveServingGrams(r: ScreenRow): { grams: number | null; from: string } {
+    if (r.off_serving_grams != null && r.off_serving_grams > 0) return { grams: r.off_serving_grams, from: 'OffFood.servingGrams' };
+    if (r.fs_serving_grams != null && r.fs_serving_grams > 0) return { grams: r.fs_serving_grams, from: 'FatSecretServing.grams' };
+    if (r.off_serv_min_g != null && r.off_serv_min_g > 0) return { grams: r.off_serv_min_g, from: 'OffServing.grams' };
+    return { grams: null, from: 'none (flat-100g default)' };
+}
+
+export function atwater(p: Record<string, number> | null): { declared: number; computed: number; ratio: number } | null {
+    if (!p) return null;
+    const kcal = Number(p.calories ?? p.kcal ?? NaN);
+    const P = Number(p.protein ?? 0), C = Number(p.carbs ?? p.carbohydrate ?? 0), F = Number(p.fat ?? 0);
+    if (!isFinite(kcal)) return null;
+    const computed = 4 * P + 4 * C + 9 * F;
+    if (computed <= 0) return null;
+    return { declared: kcal, computed, ratio: kcal / computed };
+}
+
+// ---------------------------------------------------------------------------
+// Tier D
+// ---------------------------------------------------------------------------
+
+/**
+ * Which rules EVICT outright and which only downgrade a row to REVIEW.
+ * Measured on batch 01 (23 BAD / 10 SUSPECT / 48 GOOD), Tier D alone:
+ *   lenient   BAD  4/23 evicted,  5 rows evicted   — not a screen
+ *   balanced  BAD 18/23 evicted, 19 rows evicted   <- recommended; with --llm, 23/23
+ *   strict    BAD 19/23 evicted, 27 rows evicted   — buys ZERO extra recall over
+ *                                                    balanced+L and withholds 2 more
+ */
+export const POLICIES: Record<Policy, { evict: RuleId[] }> = {
+    strict: { evict: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'L'] },
+    balanced: { evict: ['D1', 'D3', 'D4', 'D6', 'D8', 'D9', 'L'] },
+    lenient: { evict: ['D1', 'D6', 'D8', 'D9'] },
+};
+
+/** Every Tier-D rule id, flagging and informational, in report order. */
+export const TIER_D_RULE_IDS: RuleId[] = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11'];
+
+/**
+ * The deterministic tier. No network, no API key, no DB — given a row and a policy
+ * this is a pure function, which is what lets the pinned confusion matrix in
+ * __tests__/correctness-screen.test.ts defend the screen's recall against refactors.
+ *
+ * A row with no seed (attribution failed) has an empty seedContent, which makes
+ * D1/D2/D3/D4/D10/D11 ABSTAIN rather than fire. The screen goes quiet, not loud,
+ * when it does not know what was asked for.
+ */
+export function tierD(r: ScreenRow, policy: Policy): Hit[] {
+    const hits: Hit[] = [];
+    const seed = r.seed ?? '';
+    const brand = brandTokens(seed);
+    const keyStems = new Set(toks(r.key).map(stem));
+    const seedContent = contentStems(seed, brand);
+    const recStems = new Set([...stems(r.recname), ...stems(r.recbrand), ...stems(r.mapfoodname)]);
+    const sev = (rule: RuleId): Severity => POLICIES[policy].evict.includes(rule) ? 'EVICT' : 'REVIEW';
+
+    // D1 — bare-brand / bare-category key. The key carries no content token at all,
+    // so ANY future query that reduces to the brand answers with this one SKU.
+    // (`trader joes joe joes` -> key `joe trader`; the bare query `trader joes`
+    // derives the identical key.) 1/23 BAD, 0/48 GOOD on batch 01.
+    if (brand.size > 0) {
+        const keyContent = [...keyStems].filter(t => !brand.has(t) && !STOP.has(t));
+        if (keyContent.length === 0) {
+            hits.push({ rule: 'D1', severity: sev('D1'), detail: `bare-brand key: '${r.key}' has no content token outside the brand` });
+        }
+    }
+
+    // D2 — the seed named a brand and the KEY kept none of it. That is the
+    // generic-key-takeover shape (`met rx big 100` -> key `protein bar`,
+    // `millville honey nut toasted oats` -> key `honey nut oat rolled toasted`):
+    // a branded SKU seizes a key every other query for that category will also hit.
+    // 0/23 BAD, 0/48 GOOD, 1/10 SUSPECT — REVIEW-only under `balanced`.
+    if (brand.size > 0 && [...keyStems].every(t => !brand.has(t))) {
+        hits.push({ rule: 'D2', severity: sev('D2'), detail: `key '${r.key}' dropped the seed's brand entirely (generic-key takeover)` });
+    }
+
+    // D11 — a non-brand seed token vanished from the key. INFORMATIONAL ONLY, under
+    // every policy. [measured] on batch 01 it fired on 2 GOOD and 0 BAD rows
+    // (`great value FROZEN chicken breast`, `kirkland signature DRIED mango` — both
+    // AI-normalisation drift on a CORRECT pick), so it must never gate. It is the
+    // coverage-shortfall signal (`identity-query-token-dropped`) and belongs in the
+    // batch report. Promoting it to a flag was the prior proposal's rule (d), and it
+    // bought nothing but false positives.
+    const dropped = seedContent.filter(t => !keyStems.has(t));
+    if (dropped.length > 0) {
+        hits.push({ rule: 'D11', severity: 'INFO', detail: `key '${r.key}' dropped seed token(s): ${dropped.join(',')} [informational]` });
+    }
+
+    // D3 — head noun absent. The seed's LAST content token is the thing being
+    // logged; if its stem appears nowhere in the record's name or brand, the record
+    // is a different food. THE WORKHORSE: 15/23 BAD, 0/48 GOOD standalone — almost
+    // the entire deterministic gain. `kirkland signature turkey bacon` -> "Kirkland
+    // Signature Turkey Breast" flags on 'bacon'; `great value almonds` -> "Great
+    // value, almonds, smoke" does not. The stricter variant (seed head must EQUAL the
+    // record's head) was tried and rejected: it fires on that almonds row and on
+    // `publix deli fried chicken` -> "Deli Fried Chicken Tenders". Head-PRESENT is
+    // the precision/recall knee — do not tighten it without re-running --labels.
+    const head = seedContent[seedContent.length - 1];
+    if (head && !recStems.has(head)) {
+        hits.push({ rule: 'D3', severity: sev('D3'), detail: `seed head noun '${head}' absent from record '${r.recname}'` });
+    }
+
+    // D4 — zero content-token overlap between seed and record. A subset of D3 in
+    // practice (3/23 BAD, 0/48 GOOD) but kept: it is what survives when the head noun
+    // happens to match by accident.
+    if (seedContent.length > 0 && !seedContent.some(t => recStems.has(t))) {
+        hits.push({ rule: 'D4', severity: sev('D4'), detail: `no seed content token in record '${r.recname}'` });
+    }
+
+    // D5 — no gram anchor anywhere, so a unitless `1 x` bills the flat-100g default.
+    // 1/23 BAD but 7/10 SUSPECT: a SUSPECT detector, not a BAD detector, which is why
+    // `balanced` routes it to REVIEW rather than EVICT.
+    // CAVEAT: resolveServingGrams is a RECONSTRUCTION (see its docstring). A row
+    // flagged here may still bill correctly via hydrateAndSelectServing. NOT MEASURED.
+    const sg = resolveServingGrams(r);
+    if (sg.grams == null) {
+        hits.push({ rule: 'D5', severity: sev('D5'), detail: 'no serving weight in any column -> flat-100g default' });
+    } else if (sg.grams < 5 || sg.grams > 500) {
+        // D6 — an absurd gram weight: 1.0 g of chili oil, 1.9 g of muffin, 1106 g of
+        // banana. 3/23 BAD, 0/48 GOOD. Same reconstruction caveat as D5.
+        hits.push({ rule: 'D6', severity: sev('D6'), detail: `serving weight ${sg.grams} g implausible (from ${sg.from})` });
+    }
+
+    // D7 — Atwater inconsistency on the per-100g panel. Detects arithmetic
+    // INCONSISTENCY, not wrongness: the three demonstrably corrupt records in batch 01
+    // are all Atwater-consistent. Nutrition wrongness is carried entirely by Tier L's
+    // "is this plausible FOR THIS FOOD" axis, i.e. by a language model's world
+    // knowledge — which is a dependency, not a guarantee.
+    const aw = atwater(r.per100g);
+    if (aw && aw.computed >= 20 && (aw.ratio < 0.85 || aw.ratio > 1.15)) {
+        hits.push({ rule: 'D7', severity: sev('D7'), detail: `Atwater ${aw.ratio.toFixed(2)} (declared ${aw.declared.toFixed(0)} vs computed ${aw.computed.toFixed(0)} kcal/100g)` });
+    }
+
+    // D8 — no usable per-100g basis at all. `{}` panels bill only through the
+    // macro-only branch; anything gram-scaled has nothing to scale from. 0/23 BAD on
+    // batch 01 (retail SKUs have panels) — this is the rule expected to carry the
+    // restaurant-chain batches, where 33 of the 34 known panel-less FatSecret rows
+    // live. That expectation is ESTIMATED, not measured.
+    const kcal = r.per100g ? Number(r.per100g.calories ?? r.per100g.kcal ?? NaN) : NaN;
+    if (!r.per100g || Object.keys(r.per100g).length === 0) {
+        hits.push({ rule: 'D8', severity: sev('D8'), detail: 'per-100g panel is empty {}' });
+    } else if (!isFinite(kcal) || kcal <= 0) {
+        hits.push({ rule: 'D8', severity: sev('D8'), detail: `per-100g calories missing or <= 0 (${String(kcal)})` });
+    }
+
+    // D9 — the corpus already knows this record is bad.
+    // !! UNEXERCISED IN THE WILD: D9 fired ZERO times on all 81 rows of batch 01. !!
+    // That is a finding, not a pass. The three records the audit PROVED are corrupt
+    // (0274038708522 TJ chicken breast @ 11.7 kcal/100g, 0826088442101 Kirkland
+    // muffins @ 0 P / 0 F, 0000650010800 TJ Chili Onion Crunch @ 110 kcal/100g) are
+    // all missed by the corpus's own corruption detector (PR #119, 8 classes, 23,916
+    // rows marked). Keep D9 — it is free — but budget NO recall to it. Its only
+    // coverage anywhere is the synthetic cases in the unit tests.
+    if (r.corruptreason) hits.push({ rule: 'D9', severity: sev('D9'), detail: `corruptReason=${r.corruptreason}` });
+    if (r.dupof) hits.push({ rule: 'D9', severity: sev('D9'), detail: `duplicateOfBarcode=${r.dupof}` });
+
+    // D10 — the seed named a brand and the record carries it in neither its brand
+    // field nor its name. 0/23 BAD, 1/10 SUSPECT — REVIEW-only under `balanced`,
+    // because a blank or differently-spelled brand field on an otherwise correct
+    // record is common and benign.
+    if (brand.size > 0) {
+        const recBrandStems = new Set([...stems(r.recbrand), ...stems(r.recname)]);
+        const matched = [...brand].filter(t => recBrandStems.has(t));
+        if (matched.length === 0) {
+            hits.push({ rule: 'D10', severity: sev('D10'), detail: `seed brand absent from record brand '${r.recbrand}' / name` });
+        }
+    }
+    return hits;
+}
+
+// ---------------------------------------------------------------------------
+// Tier L
+// ---------------------------------------------------------------------------
+
+/**
+ * The shipped rubric (v4). Every worked example is drawn from a DIFFERENT food
+ * domain than batch 01 (chipotle / qdoba / cava / subway composites), so the REJECT
+ * and ACCEPT blocks leak no test-set content. The variant-class taxonomy, however,
+ * IS a generalisation of the six false positives the examples-only rubric (v3) made
+ * on batch 01 — class-level fitting, weaker than row-level, but not zero. That is
+ * precisely why HELD_OUT_GOOD_FP_RATE, and not 0%, is what gets printed.
+ *
+ * The counter-example blocks are not decoration: playbook §5 — a detector without
+ * counterRows passes tautologically. Without them the rubric evicted 6 GOOD rows.
+ */
+export const LLM_SYSTEM = `You are a food-database auditor. You see a shopper's search phrase and the ONE database record a mapping pipeline cached for it, forever. Decide whether that record is the right product with usable numbers.
+
+Judge four axes:
+1. IDENTITY - is this the same FOOD the phrase names? A different product from the same brand is WRONG even when it shares words.
+2. NUTRITION - are the per-100g calories and macros plausible FOR THE FOOD THE PHRASE NAMES (not merely internally consistent)?
+3. SERVING - is the default serving weight a real portion of this product?
+4. KEY - does the stored cache key still identify the product, or has it collapsed to a bare brand / bare category that unrelated queries would also hit?
+
+The hard part is telling a WRONG PRODUCT from a HARMLESS VARIANT. Use these (all from a different food domain than the rows you are judging).
+
+REJECT - different food, however similar the words:
+  "chipotle chicken burrito" -> "Chipotle, Chicken"        (one component billed for a whole assembled dish; ~7x under)
+  "qdoba chicken burrito" -> "Qdoba, Tequila Lime Chicken" (same shape)
+  "jimmy johns sub" -> "Jimmy Chips"                       (side item instead of the sandwich)
+  "buffalo wild wings ultimate nachos" -> "Medium Buffalo Sauce"  (condiment instead of the dish)
+  "cava harissa avocado bowl" -> "Harissa"                 (a 28 g dip instead of a bowl)
+  "subway tuna sandwich" -> "Tuna"                         (filling instead of the sandwich)
+  "tuna in water" -> a 0 kcal water record
+  "raising canes combo box" -> "Milk 1% Box"               (drink instead of the meal)
+
+ACCEPT - same food, extra or different descriptive words. Shoppers omit qualifiers routinely and the nutrition is close. These are NOT mismatches:
+  "chipotle chicken burrito bowl" -> "Chipotle Chicken Burrito Bowl" | Easy Eats  (different brand, same dish)
+  "impossible burger patty" -> "Impossible Burger"          (burger/patty are synonyms)
+  "noodles and company pad thai" -> "Pad Thai (Small)"      (a named portion size of the same dish)
+  "chick fil a cobb salad" -> "Chick-Fil-A, Cobb Salad"     (punctuation only)
+  "white rice" -> "Rice, white, long-grain, cooked"         (preparation qualifiers the phrase omitted)
+These VARIANT CLASSES are always ACCEPT when the food category is unchanged - do not reject on any of them:
+  - flavour / seasoning variant        (smoked, BBQ, Thai, s'mores, vanilla, salted)
+  - texture variant                    (creamy, crunchy, smooth, chunky)
+  - cut / form of the same prepared food (tenders, shredded, boneless, skinless, sliced, halves)
+  - named portion or pack size         (small, large, family size, single serve)
+  - sub-brand or product-line name     (Mountain Trail Mix, Fiber Trail Mix)
+  - the record's brand field is blank or spelled differently while the name matches the food
+  - the record name is the bare generic of the food the phrase named ("Granola" for "<brand> granola")
+Sanity check before you REJECT on identity: would this record's kcal/100g be within roughly +/-25% of the food the phrase named? If yes, it is almost certainly a variant, not a different food - ACCEPT.
+A flavour, variety, cut, texture, portion-size or preparation word the phrase did not mention is NOT a mismatch. Reject only when the record is a DIFFERENT FOOD - different category, or a form factor whose kcal/100g differs materially.
+
+Answer with JSON only, no prose, no markdown fence:
+{"verdict":"ACCEPT"|"UNSURE"|"REJECT","axis":"identity"|"nutrition"|"serving"|"key"|"none","confidence":0.0-1.0,"reason":"<= 25 words"}
+
+Use UNSURE when you cannot tell whether it is the same product from the information given - that routes the row to a human instead of discarding it. Reserve REJECT for cases you would defend.`;
+
+/** The compact record card Tier L judges. Deterministic given the row. */
+export function llmUserPrompt(r: ScreenRow): string {
+    const sg = resolveServingGrams(r);
+    const aw = atwater(r.per100g);
+    const p = r.per100g ?? {};
+    const lines = [
+        `shopper phrase: ${r.seed}`,
+        `cache key stored: ${r.key}`,
+        `record name: ${r.recname || r.mapfoodname}`,
+        `record brand: ${r.recbrand || r.mapbrand || '(none)'}`,
+        `source: ${r.src}  id: ${r.recid}`,
+        `per 100 g: ${isFinite(Number(p.calories)) ? `${Number(p.calories).toFixed(1)} kcal` : 'NO CALORIES'}, protein ${Number(p.protein ?? 0).toFixed(1)} g, carbs ${Number(p.carbs ?? 0).toFixed(1)} g, fat ${Number(p.fat ?? 0).toFixed(1)} g` + (Object.keys(p).length === 0 ? '  [PANEL IS EMPTY {}]' : ''),
+        aw ? `Atwater check: declared/computed = ${aw.ratio.toFixed(2)}` : 'Atwater check: not computable',
+        sg.grams != null
+            ? `default serving: ${sg.grams} g  (label: ${r.off_serving_size || r.fs_serving_desc || 'n/a'})  -> a "1 x" log bills ${((Number(p.calories ?? 0) * sg.grams) / 100).toFixed(0)} kcal`
+            : `default serving: NONE in any column -> a "1 x" log bills a flat 100 g = ${Number(p.calories ?? 0).toFixed(0)} kcal`,
+        r.pkg_qty ? `package quantity: ${r.pkg_qty} ${r.pkg_unit}` : '',
+    ].filter(Boolean);
+    return lines.join('\n');
+}
+
+export interface LlmConfig { model: string; baseUrl: string; apiKey: string; concurrency: number }
+
+export async function callLlm(r: ScreenRow, cfg: LlmConfig): Promise<LlmVerdict> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiKey}` },
+                body: JSON.stringify({
+                    model: cfg.model,
+                    temperature: 0,
+                    max_tokens: 200,
+                    response_format: { type: 'json_object' },
+                    messages: [
+                        { role: 'system', content: LLM_SYSTEM },
+                        { role: 'user', content: llmUserPrompt(r) },
+                    ],
+                }),
+            });
+            if (!res.ok) { await new Promise(s => setTimeout(s, 800 * (attempt + 1))); continue; }
+            const j = await res.json() as { choices?: { message?: { content?: string } }[] };
+            const txt = j?.choices?.[0]?.message?.content ?? '';
+            const parsed = JSON.parse(txt.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim());
+            return {
+                verdict: parsed.verdict === 'REJECT' ? 'REJECT' : parsed.verdict === 'UNSURE' ? 'UNSURE' : 'ACCEPT',
+                axis: String(parsed.axis ?? 'none'),
+                confidence: Number(parsed.confidence ?? 0),
+                reason: String(parsed.reason ?? ''),
+            };
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            // A failed call defaults to ACCEPT so a network blip cannot mass-evict a
+            // batch — but every failure is counted and reported, because an
+            // unadjudicated row silently reading as clean is the whole defect class
+            // this file exists to close.
+            if (attempt === 2) return { verdict: 'ACCEPT', axis: 'none', confidence: 0, reason: msg, error: 'call-failed' };
+            await new Promise(s => setTimeout(s, 800 * (attempt + 1)));
+        }
+    }
+    return { verdict: 'ACCEPT', axis: 'none', confidence: 0, reason: 'exhausted', error: 'call-failed' };
+}
+
+export async function runLlm(rows: ScreenRow[], cfg: LlmConfig): Promise<Map<string, LlmVerdict>> {
+    const out = new Map<string, LlmVerdict>();
+    let i = 0;
+    async function worker() {
+        while (i < rows.length) {
+            const r = rows[i++];
+            out.set(r.key, await callLlm(r, cfg));
+            if (out.size % 10 === 0) process.stderr.write(`  llm ${out.size}/${rows.length}\n`);
+        }
+    }
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(cfg.concurrency, rows.length)) }, worker));
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// Combining the tiers
+// ---------------------------------------------------------------------------
+
+/**
+ * A Tier-L REJECT evicts only when the policy lists 'L'; a Tier-L UNSURE never
+ * evicts, it routes the row to a human. Requiring BOTH tiers is deliberate: Tier L
+ * ACCEPTed 3 of the 23 BAD rows — it shares the pipeline's failure mode, both being
+ * language models reading a product name — and Tier D caught all 3. Deleting either
+ * tier silently drops rows the other cannot see.
+ */
+export function decide(hits: Hit[], l: LlmVerdict | null | undefined, policy: Policy): Decision {
+    const lReject = !!l && l.verdict === 'REJECT';
+    const lUnsure = !!l && l.verdict === 'UNSURE';
+    if (hits.some(h => h.severity === 'EVICT')) return 'EVICT';
+    if (lReject && POLICIES[policy].evict.includes('L')) return 'EVICT';
+    if (hits.some(h => h.severity === 'REVIEW') || lReject || lUnsure) return 'REVIEW';
+    return 'KEEP';
+}
+
+/** Tier D over every row, plus (optionally) the Tier-L verdicts already gathered. */
+export function screenBatch(rows: ScreenRow[], policy: Policy, llm?: Map<string, LlmVerdict>): Verdict[] {
+    return rows.map(r => {
+        const hits = tierD(r, policy);
+        const l = llm?.get(r.key) ?? null;
+        return {
+            key: r.key, seed: r.seed ?? '', record: r.recname, brand: r.recbrand,
+            source: r.src, recid: r.recid,
+            decision: decide(hits, l, policy),
+            tierD: hits, tierL: l,
+        };
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Data loading
+// ---------------------------------------------------------------------------
+
+/** The read-only row pull. SELECT only — no writes, no side-effecting functions. */
+export const ROW_SQL = `
+SELECT json_agg(t) FROM (
+SELECT m."normalizedForm" AS key, m.source AS src, m."aiConfidence" AS conf,
+       coalesce(m."validatedBy",'') AS validatedby,
+       m."foodName" AS mapfoodname, coalesce(m."brandName",'') AS mapbrand,
+       coalesce(o.name, f.name, '') AS recname,
+       coalesce(o."brandName", f."brandName", '') AS recbrand,
+       coalesce(o."nutrientsPer100g", f."nutrientsPer100g") AS per100g,
+       o."servingGrams" AS off_serving_grams,
+       coalesce(o."servingSize",'') AS off_serving_size,
+       o."packageQuantity" AS pkg_qty,
+       coalesce(o."packageQuantityUnit",'') AS pkg_unit,
+       coalesce(o."corruptReason",'') AS corruptreason,
+       coalesce(o."duplicateOfBarcode",'') AS dupof,
+       coalesce(fs.description,'') AS fs_serving_desc,
+       fs.grams AS fs_serving_grams,
+       fs.nutrients AS fs_serving_nutrients,
+       coalesce(m."offBarcode", m."fsId", m."fdcId"::text,'') AS recid,
+       (SELECT count(*) FROM "OffServing" os WHERE os.barcode = o.barcode) AS n_off_servings,
+       (SELECT min(os.grams) FROM "OffServing" os WHERE os.barcode = o.barcode AND os.grams IS NOT NULL) AS off_serv_min_g,
+       (SELECT max(os.grams) FROM "OffServing" os WHERE os.barcode = o.barcode AND os.grams IS NOT NULL) AS off_serv_max_g
+FROM "FoodMapping" m
+LEFT JOIN "OffFood" o        ON o.barcode  = m."offBarcode"
+LEFT JOIN "FatSecretFood" f  ON f."fsId"   = m."fsId"
+LEFT JOIN "FatSecretServing" fs ON fs."fsId" = f."fsId" AND fs."servingId" = f."defaultServingId"
+WHERE m."normalizedForm" = ANY($1::text[])
+ORDER BY 1) t;`;
+
+/** Minimal read-only surface we need from prisma; structural so tests never touch a DB. */
+export interface PrismaLike {
+    $queryRawUnsafe: (sql: string, ...args: unknown[]) => Promise<unknown>;
+    $disconnect: () => Promise<void>;
+}
+
+function openPrisma(): PrismaLike {
+    // Required lazily so the unit tests never construct a client, and so a --rows
+    // replay needs no DATABASE_URL at all.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('dotenv/config');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaClient } = require('@prisma/client');
+    return new PrismaClient() as PrismaLike;
+}
+
+async function loadRows(keys: string[], rowsIn?: string, rowsOut?: string): Promise<ScreenRow[]> {
+    if (rowsIn) return JSON.parse(fs.readFileSync(rowsIn, 'utf8')) as ScreenRow[];
+    const prisma = openPrisma();
+    try {
+        const res = await prisma.$queryRawUnsafe(ROW_SQL, keys) as { json_agg: ScreenRow[] | null }[];
+        const rows: ScreenRow[] = res?.[0]?.json_agg ?? [];
+        if (rowsOut) fs.writeFileSync(rowsOut, JSON.stringify(rows, null, 1));
+        return rows;
+    } finally { await prisma.$disconnect(); }
+}
+
+/**
+ * Attribute each added key back to the batch seed that produced it. The stored key
+ * is NOT a pure function of the seed (`trader joes joe joes` -> `joe trader`,
+ * playbook §4), so this tries the real canonicalizeCacheKey first and falls back to
+ * a stem-Jaccard best match for the AI-normalisation drift cases
+ * (`amazon fresh chicken breast` -> `amazon breast chicken skinless`).
+ *
+ * `canon` is INJECTABLE so this stays testable without importing
+ * normalization-rules, which constructs a PrismaClient at module load. On batch 01
+ * both paths agree: with canon, 69 exact + 12 Jaccard; without canon, 81 Jaccard —
+ * and both assign all 81 rows the same seed the human audit recorded, 0 unattributed.
+ *
+ * A row with NO seed is reported and screened with an empty seed, which makes the
+ * token rules ABSTAIN rather than fire — conservative in the right direction, but it
+ * does mean an attribution failure makes the screen quiet, not loud.
+ */
+export function attribute(
+    rows: ScreenRow[],
+    seeds: string[],
+    canon?: ((s: string) => string) | null,
+): { unattributed: string[] } {
+    const byKey = new Map<string, string>();
+    const seedSets = seeds.map(s => ({ s, set: new Set(toks(s).map(stem)) }));
+    if (canon) for (const s of seeds) { const k = canon(s); if (!byKey.has(k)) byKey.set(k, s); }
+    const unattributed: string[] = [];
+    for (const r of rows) {
+        const exact = byKey.get(r.key);
+        if (exact) { r.seed = exact; continue; }
+        const kt = new Set(toks(r.key).map(stem));
+        let best = { s: '', j: 0 };
+        for (const { s, set } of seedSets) {
+            const inter = [...kt].filter(t => set.has(t)).length;
+            const j = inter / new Set([...kt, ...set]).size;
+            if (j > best.j) best = { s, j };
+        }
+        if (best.j >= 0.5) r.seed = best.s;
+        else { r.seed = ''; unattributed.push(r.key); }
+    }
+    return { unattributed };
+}
+
+/** Load canonicalizeCacheKey without letting its prisma import take the run down. */
+function loadCanonicalizer(): ((s: string) => string) | null {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        return require('../../src/lib/mapping/normalization-rules').canonicalizeCacheKey as (s: string) => string;
+    } catch {
+        return null;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Scoring against a hand-labelled ground truth
+// ---------------------------------------------------------------------------
+
+export type Label = 'GOOD' | 'SUSPECT' | 'BAD';
+
+export interface ConfusionStats {
+    badCaught: number; badMissed: number;
+    goodFlagged: number; goodClean: number;
+    susFlagged: number; susClean: number;
+    recall: number; precBad: number; precBadSus: number;
+}
+
+/** Pure: how a flagged set scores against the labels. Printing is separate. */
+export function confusionOf(flagged: Set<string>, labels: Map<string, Label>): ConfusionStats {
+    let badCaught = 0, badMissed = 0, goodFlagged = 0, goodClean = 0, susFlagged = 0, susClean = 0;
+    for (const [k, v] of labels) {
+        const f = flagged.has(k);
+        if (v === 'BAD') f ? badCaught++ : badMissed++;
+        else if (v === 'GOOD') f ? goodFlagged++ : goodClean++;
+        else f ? susFlagged++ : susClean++;
+    }
+    const bad = badCaught + badMissed;
+    const flaggedTotal = badCaught + goodFlagged + susFlagged;
+    return {
+        badCaught, badMissed, goodFlagged, goodClean, susFlagged, susClean,
+        recall: bad ? badCaught / bad : 0,
+        // Precision counted two ways: BAD-only (harsh) and BAD+SUSPECT — a SUSPECT
+        // flag is not a false alarm, those rows genuinely need a human.
+        precBad: flaggedTotal ? badCaught / flaggedTotal : 0,
+        precBadSus: flaggedTotal ? (badCaught + susFlagged) / flaggedTotal : 0,
+    };
+}
+
+export function formatConfusion(name: string, s: ConfusionStats): string {
+    const bad = s.badCaught + s.badMissed, good = s.goodFlagged + s.goodClean, sus = s.susFlagged + s.susClean;
+    return `${name.padEnd(34)} BAD ${s.badCaught}/${bad} caught  GOOD flagged ${s.goodFlagged}/${good}  SUSPECT flagged ${s.susFlagged}/${sus}`
+        + `  | recall ${(100 * s.recall).toFixed(1)}%  precision(BAD) ${(100 * s.precBad).toFixed(1)}%  precision(BAD+SUS) ${(100 * s.precBadSus).toFixed(1)}%`;
+}
+
+function confusion(name: string, flagged: Set<string>, labels: Map<string, Label>): ConfusionStats {
+    const s = confusionOf(flagged, labels);
+    console.log(formatConfusion(name, s));
+    return s;
+}
+
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+
+const USAGE = [
+    'Usage: correctness-screen.ts (--bdir <batch dir> | --rows <rows.json>) [--seeds <seed file>]',
+    '  [--policy strict|balanced|lenient] [--llm] [--llm-all] [--model <id>] [--concurrency N]',
+    '  [--out <screen.json>] [--dump-rows <rows.json>] [--labels <labels.json>]',
+    '',
+    '  --bdir        batch directory produced by gate.py; reads <bdir>/added.txt',
+    '  --rows        replay a previously dumped row pull instead of reading the DB',
+    '  --llm         add Tier L. WITHOUT it, measured BAD recall falls 100% -> 78%.',
+    '  --labels      score against a hand-labelled ground truth (how the shipped numbers were made)',
+    '',
+    'Exit 0 = nothing to evict, 1 = rows flagged for withholding, >1 = crash (treat as RED).',
+].join('\n');
+
+async function main(): Promise<number> {
+    const args = process.argv.slice(2);
+    const has = (flag: string) => args.includes(flag);
+    const val = (flag: string): string | undefined => {
+        const i = args.indexOf(flag);
+        return i >= 0 ? args[i + 1] : undefined;
+    };
+
+    const bdir = val('--bdir');
+    const rowsIn = val('--rows');
+    if (!bdir && !rowsIn) { console.error(USAGE); return 2; }
+
+    const seedsPath = val('--seeds');
+    const rowsOut = val('--dump-rows');
+    const labelsPath = val('--labels');
+    const outPath = val('--out');
+    const llmAll = has('--llm-all');
+    const useLlm = has('--llm') || llmAll;
+    const policy = parsePolicy(val('--policy'));
+    const concurrency = parseIntFlag('--concurrency', val('--concurrency'), 6, 1);
+
+    let llmCfg: LlmConfig | null = null;
+    if (useLlm) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('dotenv/config');
+        const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY;
+        // FAIL CLOSED. The prototype degraded silently to Tier D here, and a silent
+        // degrade is a recall drop from 100% to 78% that the batch log still reads as
+        // a clean full-strength run. If you genuinely want Tier D only, omit --llm.
+        if (!apiKey) {
+            throw new FlagError('--llm was requested but neither OPENROUTER_API_KEY nor OPENAI_API_KEY is set. '
+                + 'Running without Tier L drops measured BAD recall from 100% to 78%, so this is refused rather '
+                + 'than silently degraded. Set the key, or drop --llm and accept the Tier-D-only operating point.');
+        }
+        llmCfg = {
+            model: val('--model') ?? process.env.SCREEN_AI_MODEL ?? 'openai/gpt-4o-mini',
+            baseUrl: process.env.OPENROUTER_BASE_URL ?? process.env.OPENAI_API_BASE_URL ?? 'https://openrouter.ai/api/v1',
+            apiKey,
+            concurrency,
+        };
+    }
+
+    let keys: string[] = [];
+    if (bdir) {
+        const addedPath = path.join(bdir, 'added.txt');
+        keys = fs.readFileSync(addedPath, 'utf8').split('\n')
+            .map(l => l.split('\t')[0].trim()).filter(Boolean);
+    }
+    let rows = await loadRows(keys, rowsIn, rowsOut);
+    if (keys.length) {
+        const wanted = new Set(keys);
+        const pulled = rows.length;
+        rows = rows.filter(r => wanted.has(r.key));
+        // Silent truncation reads as "covered everything" when it did not.
+        if (rows.length !== keys.length) {
+            console.log(`WARN added.txt listed ${keys.length} key(s); the row pull returned ${pulled} and `
+                + `${rows.length} matched. ${keys.length - rows.length} added key(s) are NOT screened.`);
+        }
+    }
+
+    const seeds = seedsPath
+        ? fs.readFileSync(seedsPath, 'utf8').split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'))
+        : [];
+    if (!seeds.length) {
+        console.log('WARN no --seeds file: every row is screened with an EMPTY seed, so D1/D2/D3/D4/D10/D11 '
+            + 'ABSTAIN. D3 alone carries 15 of 23 measured BAD catches — this run is not the measured screen.');
+    }
+    const { unattributed } = attribute(rows, seeds, loadCanonicalizer());
+    if (unattributed.length) {
+        console.log(`WARN ${unattributed.length} row(s) could not be attributed to a seed and are screened with an `
+            + `empty seed (token rules abstain): ${unattributed.slice(0, 5).join(', ')}`);
+    }
+
+    // --- Tier D (pure, offline)
+    const dHits = new Map<string, Hit[]>();
+    for (const r of rows) dHits.set(r.key, tierD(r, policy));
+
+    // --- Tier L, on the rows Tier D did not already EVICT
+    const dEvicted = new Set([...dHits].filter(([, h]) => h.some(x => x.severity === 'EVICT')).map(([k]) => k));
+    const llmTargets = llmAll ? rows : rows.filter(r => !dEvicted.has(r.key));
+    let llm = new Map<string, LlmVerdict>();
+    if (llmCfg) {
+        console.log(`tier L: ${llmTargets.length} rows (of ${rows.length}) -> ${llmCfg.model}`);
+        llm = await runLlm(llmTargets, llmCfg);
+        const failed = [...llm.values()].filter(v => v.error).length;
+        if (failed) console.log(`WARN ${failed} Tier-L call(s) failed and defaulted to ACCEPT — those rows were NOT adjudicated.`);
+    }
+
+    const verdicts = screenBatch(rows, policy, llm);
+    const nEvict = verdicts.filter(v => v.decision === 'EVICT').length;
+    const nReview = verdicts.filter(v => v.decision === 'REVIEW').length;
+
+    console.log(`\nscreened ${rows.length} rows | policy=${policy} | tiers=${llmCfg ? 'D+L' : 'D only'}`
+        + ` | EVICT ${nEvict} · REVIEW ${nReview} · KEEP ${rows.length - nEvict - nReview}`);
+    // The expectation the operator gets is the HELD-OUT one. The 0/48 the shipped
+    // rubric measured on batch 01 is FITTED (its variant taxonomy was written after
+    // reading the held-out rubric's errors on those same rows), and quoting it would
+    // understate the coverage this screen throws away.
+    console.log(`expected false positives ~${(100 * HELD_OUT_GOOD_FP_RATE).toFixed(1)}% of the CORRECT rows in this `
+        + 'batch (held-out rubric: 6 of 48 GOOD rows on batch 01), so some of the '
+        + `${nEvict + nReview} row(s) withheld above are correct picks. How many depends on this batch's GOOD `
+        + 'share, which is unknown without --labels, so no absolute count is implied. The 0/48 the shipped '
+        + 'rubric scored on batch 01 is FITTED and is not an expectation.');
+    if (!llmCfg) {
+        console.log('NOTE Tier D only. Measured BAD recall at this point is 78% (18/23) vs 100% (23/23) with --llm; '
+            + 'the 4 rows Tier D misses are exactly the 4 Tier L catches.');
+    }
+    console.log('NOTE this screen grades the rows the batch ADDED. It says "this is wrong"; it never says "here is '
+        + 'the right one", and it does not call hydrateAndSelectServing, so D5/D6 are a reconstruction of the billing '
+        + 'anchor whose agreement with the real one was never measured.');
+
+    if (outPath) {
+        fs.writeFileSync(outPath, JSON.stringify({
+            policy,
+            model: llmCfg ? llmCfg.model : null,
+            heldOutGoodFalsePositiveRate: HELD_OUT_GOOD_FP_RATE,
+            verdicts,
+        }, null, 1));
+        const evictList = verdicts.filter(v => v.decision === 'EVICT').map(v => v.key).join('\n');
+        const evictPath = outPath.replace(/\.json$/, '') + '-evict.txt';
+        fs.writeFileSync(evictPath, evictList + (evictList ? '\n' : ''));
+        console.log(`wrote ${outPath} and ${evictPath}`);
+    }
+
+    // --- scoring against ground truth
+    if (labelsPath) {
+        const labelArr = JSON.parse(fs.readFileSync(labelsPath, 'utf8')) as { key: string; verdict: Label }[];
+        const known = new Set(rows.map(r => r.key));
+        const labels = new Map<string, Label>(labelArr.filter(x => known.has(x.key)).map(x => [x.key, x.verdict]));
+        console.log(`\n=== confusion, measured on ${labels.size} labelled rows `
+            + `(${[...labels.values()].filter(v => v === 'BAD').length} BAD / `
+            + `${[...labels.values()].filter(v => v === 'SUSPECT').length} SUSPECT / `
+            + `${[...labels.values()].filter(v => v === 'GOOD').length} GOOD) ===`);
+
+        for (const id of TIER_D_RULE_IDS) {
+            const flagged = new Set([...dHits].filter(([, h]) => h.some(x => x.rule === id)).map(([k]) => k));
+            if (flagged.size) confusion(`  ${id} alone`, flagged, labels);
+            else console.log(`  ${id} alone`.padEnd(36) + 'NO FIRES on this batch — unexercised here, not validated.');
+        }
+        const dAny = new Set([...dHits].filter(([, h]) => h.some(x => x.severity !== 'INFO')).map(([k]) => k));
+        console.log('');
+        confusion('TIER D (any rule)', dAny, labels);
+        const dEv = new Set([...dHits].filter(([, h]) => h.some(x => x.severity === 'EVICT')).map(([k]) => k));
+        confusion(`TIER D (EVICT only, ${policy})`, dEv, labels);
+        if (llmCfg) {
+            const lFlag = new Set([...llm].filter(([, v]) => v.verdict === 'REJECT').map(([k]) => k));
+            const lFlagU = new Set([...llm].filter(([, v]) => v.verdict !== 'ACCEPT').map(([k]) => k));
+            confusion(llmAll ? 'TIER L alone (all rows)' : 'TIER L (on rows D passed)', lFlag, labels);
+            confusion(llmAll ? 'TIER L REJECT+UNSURE (all)' : 'TIER L REJECT+UNSURE', lFlagU, labels);
+            confusion('COMBINED D-any + L', new Set([...dAny, ...lFlag]), labels);
+            confusion(`COMBINED D-EVICT + L-REJECT (${policy}) = the EVICT set`, new Set([...dEv, ...lFlag]), labels);
+            confusion('COMBINED D-any + L-REJECT+UNSURE = EVICT u REVIEW', new Set([...dAny, ...lFlagU]), labels);
+        }
+
+        // Per-row misses, so a miss is never a bare number.
+        const finalFlag = new Set(verdicts.filter(v => v.decision !== 'KEEP').map(v => v.key));
+        console.log('\n--- BAD rows the screen MISSED ---');
+        for (const [k, v] of labels) if (v === 'BAD' && !finalFlag.has(k)) {
+            const r = rows.find(x => x.key === k);
+            console.log(`  MISS ${k}  | seed: ${r?.seed} | got: ${r?.recname} | ${r?.recbrand}`);
+        }
+        console.log('--- GOOD rows the screen FLAGGED (coverage thrown away) ---');
+        for (const [k, v] of labels) if (v === 'GOOD' && finalFlag.has(k)) {
+            const vd = verdicts.find(x => x.key === k);
+            console.log(`  FP   ${k}  | ${vd?.decision} | ${vd?.tierD.map(h => h.rule).join(',') ?? ''}`
+                + `${vd?.tierL?.verdict === 'REJECT' ? ' L:' + vd.tierL.reason : ''}`);
+        }
+    }
+
+    return nEvict > 0 ? 1 : 0;
+}
+
+if (require.main === module) {
+    main()
+        .then(code => process.exit(code))
+        .catch(err => {
+            // A refused flag is a user error, not a crash — but both exit non-zero and
+            // above 1, because a screen that could not run must never be read as a
+            // clean batch.
+            if (err instanceof FlagError) {
+                console.error(`\n${err.message}\n`);
+                console.error(USAGE);
+                process.exit(2);
+            }
+            console.error(err);
+            process.exit(2);
+        });
+}
