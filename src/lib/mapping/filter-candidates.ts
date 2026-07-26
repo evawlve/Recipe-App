@@ -2026,16 +2026,37 @@ export function isMultiIngredientMismatch(normalizedName: string, candidateName:
     const beforeConnector = multiMatch[1];
     const afterConnector = multiMatch[3];
 
-    // Check if query matches the part AFTER the connector (secondary ingredient)
-    const queryMainToken = queryWords[queryWords.length - 1]; // Last word is usually the main ingredient
+    // This branch's premise is that the QUERY is a single ingredient appearing
+    // in the candidate only as the SECONDARY component — "cheese" must not be
+    // answered by "Mac and Cheese". That premise is false when the query is
+    // itself an "X and Y" compound: the user asked for the dish, and the dish's
+    // own last token naturally sits in the after-connector half.
+    //
+    // Without this guard the function returned true for a candidate whose name
+    // is byte-identical to the query. "mac and cheese" split the candidate into
+    // before="mac" / after="cheese", found queryMainToken "cheese" in the after
+    // half and not the before half, and rejected EVERY candidate — including
+    // the record literally named "Mac and Cheese" — leaving strict and relaxed
+    // pools both empty and dropping the line to AI backfill at 28g/90kcal
+    // against a real ~200g/~400kcal serving.
+    //
+    // The REVERSE CHECK below is what adjudicates compound queries, and it
+    // still rejects a candidate matching only ONE side ("tomato and green chili
+    // mix" vs "green raw tomatoes"), so narrowing here does not reopen that case.
+    const queryIsCompound = /^(.+?)\s+(&|and|with)\s+(.+)$/i.test(queryLower);
 
-    // If query's main token is in the "after" part but NOT in the "before" part,
-    // the query is a secondary ingredient in this mixed product
-    const inAfter = afterConnector.includes(queryMainToken);
-    const inBefore = beforeConnector.includes(queryMainToken);
+    if (!queryIsCompound) {
+        // Check if query matches the part AFTER the connector (secondary ingredient)
+        const queryMainToken = queryWords[queryWords.length - 1]; // Last word is usually the main ingredient
 
-    if (inAfter && !inBefore) {
-        return true; // Mismatch - query is secondary ingredient
+        // If query's main token is in the "after" part but NOT in the "before" part,
+        // the query is a secondary ingredient in this mixed product
+        const inAfter = afterConnector.includes(queryMainToken);
+        const inBefore = beforeConnector.includes(queryMainToken);
+
+        if (inAfter && !inBefore) {
+            return true; // Mismatch - query is secondary ingredient
+        }
     }
 
     // REVERSE CHECK: If the QUERY contains "and"/"&"/"with" (is itself multi-ingredient),
