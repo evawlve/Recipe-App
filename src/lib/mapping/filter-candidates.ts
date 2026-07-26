@@ -141,6 +141,29 @@ function getSingularPluralVariants(word: string): string[] {
     // Also try pluralizing the singular (handles irregular forms)
     const pluralOfSingular = pluralize(singular);
     if (!variants.includes(pluralOfSingular)) variants.push(pluralOfSingular);
+    // pluralize() routes EVERY -o noun to -oes. That is right for potato/tomato
+    // and wrong for every other English -o noun: the OFF corpus carries 0 records
+    // spelled doritoes / cheetoes / tostitoes, against 783 / 512 / 242 spelled with
+    // a plain -s. So a required token `dorito` could only ever re-generate
+    // `doritoes` and never reached a single Doritos record.
+    //
+    // The -os form is APPENDED alongside -oes, never substituted for it: potatoes
+    // (4,445 records) and tomatoes (3,529) are why the -oes arm exists, and
+    // substituting is the mistake the possessive token-filter work recorded (#160).
+    //
+    // Derived from the ORIGINAL `word` only — never from `singular`. singularize()
+    // has an -oes arm that mangles tokens it was never meant to touch:
+    // singularize('joes') is 'jo', and 'jo' + 's' = 'jos', which word-matches real
+    // OFF rows ("Jos Louis", "Jos Gambinos", "jos andrs foods") and would admit
+    // them for any query spelling the brand `joes`. A round-trip check does not
+    // catch that either — pluralize('jo') is exactly 'joes', so 'jo' round-trips
+    // just as cleanly as 'potato' does. Only the untouched query token is a safe
+    // base. Cost of the guard, pinned in the tests: an -oes-SPELLED query
+    // ("mangoes") still does not reach -os-spelled records.
+    if (word.endsWith('o')) {
+        const osForm = word + 's';
+        if (!variants.includes(osForm)) variants.push(osForm);
+    }
     return variants;
 }
 
