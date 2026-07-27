@@ -1,0 +1,10 @@
+{
+ "table": "FoodMapping",
+ "count": 6,
+ "takenAt": "2026-07-27T03:58:11.201Z",
+ "rows": [
+  {
+   "normalizedForm": "almond great value",
+   "foodName": "Great Value, Almonds",
+   "brandName": "Great Value",
+  

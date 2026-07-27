@@ -114,6 +114,13 @@ async function planOne(r: Repoint): Promise<Plan> {
 
 async function main() {
     const repoints: Repoint[] = JSON.parse(fs.readFileSync(FILE!, 'utf8'));
+    if (!Array.isArray(repoints) || repoints.length === 0) {
+        // Fail closed: "Plan: 0 updates, 0 creates, 0 skips" over exit 0 reads
+        // as a successful apply of nothing — an empty or mis-shaped file must
+        // be loud instead.
+        console.error(`FAIL: ${FILE} contains ZERO repoints — nothing to plan; exit 2.`);
+        process.exit(2);
+    }
     console.log(`${repoints.length} repoints from ${FILE} — ${APPLY ? 'APPLYING' : 'DRY RUN'}\n`);
 
     const plans: Plan[] = [];

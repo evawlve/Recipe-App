@@ -137,6 +137,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { detectBrandInQuery } from '../../src/lib/mapping/brand-detector';
+import { servingMacros } from '../../src/lib/mapping/fs-serving-macros';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -255,6 +256,30 @@ export const MEASURED_BAD_RECALL_TIER_D_ONLY = 15 / 23;
  * has to argue with a number instead of with the fixture.
  */
 export const D1_FALSE_EVICT_RATE_REAL_CACHE = 0.738;
+/**
+ * The measured false-fire rate of D8 on the FATSECRET rows of the REAL 3,248-row
+ * cache (2026-07-27). D8's premise — "an empty/zero per-100g panel means nothing to
+ * scale from" — is FALSE for the FatSecret lane, where serving-level macros live in
+ * FatSecretServing.nutrients and the row bills correctly through the macro-only
+ * branch (`fs_serving_macros_only`). Decomposed from the whole-cache screen:
+ *
+ *   48 D8 fires total = 35 fatsecret + 13 openfoodfacts + 0 fdc.
+ *   - All 35 FatSecret rows carry FatSecretServing.nutrients with finite calories,
+ *     and every one bills through the serving-macros branch. 34 bill a plausible
+ *     number (520 kcal pad thai, 1,040 kcal Italian beef, a genuine 0 kcal Propel);
+ *     the 35th (`blaze pepperoni pizza`) bills an implausible 20 kcal — a
+ *     record-nutrition defect on Tier L's axis, not "nothing to scale from".
+ *   - The 13 "openfoodfacts" fires are id-less mappings (offBarcode, fsId and fdcId
+ *     all NULL): no record, no panel, no serving nutrition anywhere. TRUE positives,
+ *     and D8 still fires on all 13 after the fix.
+ *
+ * D8 survived PR #178 as an evictor under EVERY policy on a "0.0% false-evict"
+ * measured over the rules-flagged subset — which never contained these rows
+ * (playbook §11 class C, the same shape that retired D1). Named and asserted so a
+ * future "promote D8 back to firing on panel-less FatSecret rows" has to argue with
+ * this number instead of with a fixture.
+ */
+export const D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE = 34 / 35;
 
 // ---------------------------------------------------------------------------
 // Flag parsing — validated, not coerced. A coerced flag produces a clean-looking
@@ -409,6 +434,53 @@ export const AI_SERVING_TIER_RE = /(^|_)ai(_|$)|estimat/i;
  */
 export const NO_ANCHOR_TIERS = new Set<string>(['flat_100g_default']);
 
+/**
+ * The serving-level kcal the FatSecret macro-only branch bills from, or null when
+ * the row carries no USABLE serving-level nutrition.
+ *
+ * READS THROUGH `servingMacros` — the exact function the production macro-only
+ * branch bills through (build-fatsecret-result.ts) — instead of re-implementing
+ * it. The first draft of this function forked the reader (playbook §11 class A)
+ * with `Number(n.calories ?? n.kcal ?? NaN)` and diverged on string-typed Json
+ * values: `Number('') === 0` reads an empty string as a genuine 0-kcal billing
+ * basis, and `Number('520 kcal') === NaN` refuses a value the real reader's
+ * parseFloat bills as 520. The parity suite in correctness-screen.test.ts pins
+ * both call sites to identical fixtures so a re-fork goes red.
+ *
+ * ZERO IS A VALUE, NOT AN ABSENCE. `propel water` stores per-100g 0 kcal AND
+ * serving nutrients with a genuine 0 kcal — the product has no calories, and D8's
+ * `kcal <= 0` arm must not read that as "nothing to scale from". Fail-closed on the
+ * other side: nutrients missing entirely, an empty `{}`, or a nutrients object
+ * without a finite calories/kcal field all return null, and D8 fires as before.
+ *
+ * NEGATIVE IS UNUSABLE, screen policy layered ON TOP of the shared reader:
+ * `servingMacros` itself returns a negative kcal (production carries no guard
+ * there — changing that is not this instrument's call), but a negative calorie
+ * count is not a number anyone can be billed, so the screen refuses to count it
+ * as a billing basis and D8 keeps firing. Fail closed, deliberately divergent,
+ * and documented here because it is the ONLY divergence.
+ */
+export function servingLevelKcal(r: ScreenRow): number | null {
+    const n = r.fs_serving_nutrients;
+    if (!n || typeof n !== 'object') return null;
+    const m = servingMacros(n);
+    if (m == null || m.kcal < 0) return null;
+    return m.kcal;
+}
+
+/**
+ * The ONE predicate for "this per-100g panel is not a billing basis" — empty
+ * `{}` / missing, or calories missing / non-finite / <= 0. Both D8 (tierD) and
+ * the Tier-L record card (llmUserPrompt) MUST read it from here: they carried
+ * two inline copies until 2026-07-27, and two copies of a predicate drift —
+ * the exact class-A shape servingLevelKcal above just paid for.
+ */
+export function per100gPanelBasis(per100g: Record<string, number> | null): { empty: boolean; kcal: number; unusable: boolean } {
+    const empty = !per100g || Object.keys(per100g).length === 0;
+    const kcal = per100g ? Number(per100g.calories ?? per100g.kcal ?? NaN) : NaN;
+    return { empty, kcal, unusable: empty || !isFinite(kcal) || kcal <= 0 };
+}
+
 export function atwater(p: Record<string, number> | null): { declared: number; computed: number; ratio: number } | null {
     if (!p) return null;
     const kcal = Number(p.calories ?? p.kcal ?? NaN);
@@ -461,6 +533,18 @@ export function atwater(p: Record<string, number> | null): { declared: number; c
  * DOWNSTREAM OF IT. D7 stays an evictor under `strict` because an internally
  * inconsistent panel IS a property of the chosen record: picking a different record
  * fixes it.
+ *
+ * D8 STAYS AN EVICTOR UNDER EVERY POLICY, BUT SINCE 2026-07-27 IT ABSTAINS (INFO)
+ * WHEN THE RECORD CARRIES SERVING-LEVEL NUTRITION. Its old premise — empty/zero
+ * per-100g panel = nothing to bill from — is false for the FatSecret lane, where
+ * 34 of the 35 rows it fired on across the real cache billed correctly through
+ * FatSecretServing.nutrients (D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE = 34/35; D8's
+ * "0.0% false-evict" from PR #178 was measured over a rules-flagged subset that
+ * never contained these rows). What D8 still fires on — no per-100g basis AND no
+ * serving-level nutrition anywhere — passes the rule above: it is a property of the
+ * chosen record (all 13 surviving real-cache fires are id-less mappings with no
+ * record behind them at all), and deleting the row so the key re-resolves to a
+ * record that HAS data is precisely the actionable fix.
  */
 export const POLICIES: Record<Policy, { evict: RuleId[] }> = {
     strict: { evict: ['D2', 'D3', 'D4', 'D7', 'D8', 'D9', 'D10', 'L'] },
@@ -571,16 +655,36 @@ export function tierD(r: ScreenRow, policy: Policy): Hit[] {
         hits.push({ rule: 'D7', severity: sev('D7'), detail: `Atwater ${aw.ratio.toFixed(2)} (declared ${aw.declared.toFixed(0)} vs computed ${aw.computed.toFixed(0)} kcal/100g)` });
     }
 
-    // D8 — no usable per-100g basis at all. `{}` panels bill only through the
-    // macro-only branch; anything gram-scaled has nothing to scale from. 0/23 BAD on
-    // batch 01 (retail SKUs have panels) — this is the rule expected to carry the
-    // restaurant-chain batches, where 33 of the 34 known panel-less FatSecret rows
-    // live. That expectation is ESTIMATED, not measured.
-    const kcal = r.per100g ? Number(r.per100g.calories ?? r.per100g.kcal ?? NaN) : NaN;
-    if (!r.per100g || Object.keys(r.per100g).length === 0) {
-        hits.push({ rule: 'D8', severity: sev('D8'), detail: 'per-100g panel is empty {}' });
-    } else if (!isFinite(kcal) || kcal <= 0) {
-        hits.push({ rule: 'D8', severity: sev('D8'), detail: `per-100g calories missing or <= 0 (${String(kcal)})` });
+    // D8 — no usable BILLING basis at all. The old premise — "an empty/zero per-100g
+    // panel has nothing to scale from" — was REFUTED on the real cache 2026-07-27:
+    // the FatSecret lane bills panel-less rows through FatSecretServing.nutrients
+    // (the macro-only branch), and 34 of the 35 FatSecret rows D8 fired on billed
+    // fine (D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE). The rule this used to carry
+    // for restaurant chains — "expected to carry the restaurant-chain batches, where
+    // the panel-less FatSecret rows live" — was exactly backwards: those rows are
+    // the lane working as designed, and the four chain rows D8 would have deleted
+    // are in the domain the warm campaign is trying to build coverage in.
+    //
+    // So D8 now consults the serving-level nutrition before firing, same shape as
+    // the D5/D6 abstention (PR #178): when the record has a readable serving kcal —
+    // including a GENUINE ZERO like Propel Fitness Water — the premise does not
+    // hold, and D8 reports INFO instead of firing. What survives as an evictable
+    // fire is "no per-100g basis AND no serving-level nutrition anywhere", which IS
+    // a property of the chosen record (all 13 surviving fires on the real cache are
+    // id-less mappings with no record behind them), so eviction remains actionable.
+    const panel = per100gPanelBasis(r.per100g);
+    if (panel.unusable) {
+        const panelWhy = panel.empty ? 'per-100g panel is empty {}' : `per-100g calories missing or <= 0 (${String(panel.kcal)})`;
+        const servKcal = servingLevelKcal(r);
+        if (servKcal != null) {
+            hits.push({
+                rule: 'D8', severity: 'INFO',
+                detail: `${panelWhy}, but FatSecretServing carries ${servKcal} kcal/serving — bills via the `
+                    + 'macro-only branch; 34 of 35 such rows on the real cache billed fine [SERVING-NUTRITION ABSTAIN]',
+            });
+        } else {
+            hits.push({ rule: 'D8', severity: sev('D8'), detail: `${panelWhy} and no serving-level nutrition anywhere` });
+        }
     }
 
     // D9 — the corpus already knows this record is bad.
@@ -665,11 +769,25 @@ Answer with JSON only, no prose, no markdown fence:
 
 Use UNSURE when you cannot tell whether it is the same product from the information given - that routes the row to a human instead of discarding it. Reserve REJECT for cases you would defend.`;
 
-/** The compact record card Tier L judges. Deterministic given the row. */
+/**
+ * The compact record card Tier L judges. Deterministic given the row.
+ *
+ * The card must EXPLAIN the FatSecret macro-only lane, not just expose it: the
+ * 2026-07-27 whole-cache audit REJECTed 30 of the 35 panel-less FatSecret rows on
+ * the nutrition axis, citing the empty panel ("bills 490 kcal from nowhere",
+ * "contradictory"), while every one of those rows billed correctly through
+ * FatSecretServing.nutrients. A judge shown "NO CALORIES [PANEL IS EMPTY {}]" next
+ * to a real billed total reads the contradiction as corruption — so when the panel
+ * is unusable but serving-level nutrition exists, the card now prints that panel
+ * and says where the billed number comes from.
+ */
 export function llmUserPrompt(r: ScreenRow): string {
     const sg = realServing(r);
     const aw = atwater(r.per100g);
     const p = r.per100g ?? {};
+    const servKcal = servingLevelKcal(r);
+    const panelUnusable = per100gPanelBasis(r.per100g).unusable;
+    const n = r.fs_serving_nutrients ?? {};
     // When the real anchor ran, quote ITS kcal — hydrateAndSelectServing can bill a
     // food whose per-100g panel is empty (the FatSecret serving-nutrient path), and
     // per100g * grams / 100 would print 0 kcal for a real 1,980 kcal entree.
@@ -683,6 +801,12 @@ export function llmUserPrompt(r: ScreenRow): string {
         `record brand: ${r.recbrand || r.mapbrand || '(none)'}`,
         `source: ${r.src}  id: ${r.recid}`,
         `per 100 g: ${isFinite(Number(p.calories)) ? `${Number(p.calories).toFixed(1)} kcal` : 'NO CALORIES'}, protein ${Number(p.protein ?? 0).toFixed(1)} g, carbs ${Number(p.carbs ?? 0).toFixed(1)} g, fat ${Number(p.fat ?? 0).toFixed(1)} g` + (Object.keys(p).length === 0 ? '  [PANEL IS EMPTY {}]' : ''),
+        panelUnusable && servKcal != null
+            ? `serving-level nutrition (FatSecret "${r.fs_serving_desc || '1 serving'}"): ${servKcal.toFixed(0)} kcal, `
+                + `protein ${Number(n.protein ?? 0).toFixed(1)} g, carbs ${Number(n.carbohydrate ?? n.carbs ?? 0).toFixed(1)} g, `
+                + `fat ${Number(n.fat ?? 0).toFixed(1)} g — FatSecret stores chain-restaurant nutrition PER SERVING and `
+                + 'this row bills from these numbers; the empty per-100g panel is that lane\'s normal shape, not corruption'
+            : '',
         aw ? `Atwater check: declared/computed = ${aw.ratio.toFixed(2)}` : 'Atwater check: not computable',
         sg.grams != null
             ? `default serving: ${sg.grams} g  (label: ${r.off_serving_size || r.fs_serving_desc || 'n/a'}, via ${sg.from})  -> a "1 x" log bills ${billed}`
