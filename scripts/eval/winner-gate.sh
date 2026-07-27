@@ -40,6 +40,18 @@
 #                         a regression population (default 250, 0 to disable).
 #   --label <name>        Names the artifact directory (default: the branch name).
 #   --keep                Keep the base worktree for inspection.
+#   --no-serving          Skip the serving stage. Do NOT pass this for any change
+#                         that could touch grams — see below.
+#
+# THE SERVING STAGE IS ON BY DEFAULT
+#   winner-diff stops at winner selection (its own limit (B)). That blind spot
+#   passed a green gate on PR #173, which moved `mac and cheese` onto the correct
+#   record while the billed number went 90.4 -> 39.5 kcal against a true ~400 --
+#   the 28g serving anchor never moved and the new record has a lower kcal/100g.
+#   So this driver runs `--with-serving` on both replays and both noise floors,
+#   and the diff prints a SERVING section reporting what the USER IS BILLED.
+#   Rows it cannot adjudicate (AI-estimated tiers) are listed as UNJUDGED, never
+#   folded into the SAME count.
 #
 # EXAMPLE
 #   scripts/eval/winner-gate.sh --cold-seeds /tmp/mac-and-cheese-seeds.txt
@@ -51,6 +63,7 @@ COLD_SEEDS=""
 REGRESSION_N=250
 LABEL=""
 KEEP=0
+SERVING="--with-serving"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -59,7 +72,8 @@ while [[ $# -gt 0 ]]; do
         --regression) REGRESSION_N="$2"; shift 2 ;;
         --label)      LABEL="$2";      shift 2 ;;
         --keep)       KEEP=1;          shift ;;
-        -h|--help)    sed -n '2,45p' "$0"; exit 0 ;;
+        --no-serving) SERVING="";      shift ;;
+        -h|--help)    sed -n '2,58p' "$0"; exit 0 ;;
         *) echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -164,12 +178,12 @@ fi
 # bugs were caught.
 noise_floor_both_trees() {
     local snap="$1" name="$2"
-    if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$snap" ) 2>&1 | tail -6; then
+    if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$snap" $SERVING ) 2>&1 | tail -6; then
         echo "ABORT: noise floor non-zero on BASE for $name. The replay is not" >&2
         echo "deterministic, so any before/after claim below it is not a result." >&2
         exit 4
     fi
-    if ! eval "$RUN" noise-floor --snapshot "$snap" 2>&1 | tail -6; then
+    if ! eval "$RUN" noise-floor --snapshot "$snap" $SERVING 2>&1 | tail -6; then
         echo "ABORT: noise floor non-zero on BRANCH for $name. Your change" >&2
         echo "introduced nondeterminism into replay — that is itself the finding." >&2
         exit 4
@@ -193,15 +207,15 @@ fi
 # ------------------------------------------------------------ replays
 echo "[4/5] replay BASE, then BRANCH, against the identical frozen pool"
 ( cd "$BASE_TREE" && eval "$RUN" replay --snapshot "$OUT/snap.json" \
-    --out "$OUT/A-base.json" --label BASE ) 2>&1 | tail -6
+    --out "$OUT/A-base.json" --label BASE $SERVING ) 2>&1 | tail -6
 eval "$RUN" replay --snapshot "$OUT/snap.json" \
-    --out "$OUT/B-branch.json" --label BRANCH 2>&1 | tail -6
+    --out "$OUT/B-branch.json" --label BRANCH $SERVING 2>&1 | tail -6
 
 if [[ "$REGRESSION_N" -gt 0 ]]; then
     ( cd "$BASE_TREE" && eval "$RUN" replay --snapshot "$OUT/snap-regression.json" \
-        --out "$OUT/A-base-regression.json" --label BASE ) 2>&1 | tail -4
+        --out "$OUT/A-base-regression.json" --label BASE $SERVING ) 2>&1 | tail -4
     eval "$RUN" replay --snapshot "$OUT/snap-regression.json" \
-        --out "$OUT/B-branch-regression.json" --label BRANCH 2>&1 | tail -4
+        --out "$OUT/B-branch-regression.json" --label BRANCH $SERVING 2>&1 | tail -4
 fi
 
 # ------------------------------------------------------------ diff
@@ -221,13 +235,17 @@ cat <<EOF
 === winner-gate done ===
 artifacts: $OUT
 
-Read it in this order, and do not skip the second question:
+Read it in this order, and do not skip questions 2 or 3:
   1. Did the COLD population move in the intended direction? If it shows SAME on
      everything, the change does not do what the PR says it does.
   2. Did the REGRESSION population move at all? Every mover there is a cost you
      are paying, and it must be enumerated in the PR body — not summarized.
+  3. In the SERVING DIFF: which way did the BILLED number go? A winner can move
+     onto the right record and bill worse. If the PR claims an under-bill is
+     fixed, a GRAMS-CHANGED row going the wrong way refutes that claim outright,
+     and UNJUDGED rows are not evidence of safety.
 
-This harness cannot see: serving/gram resolution, the save gates, or warm
-behaviour (it forces skipCache). A SAME here does NOT prove the cached row is
-unchanged. The eval's grams bands are what see serving regressions.
+Still invisible to this harness: the save gates, and warm behaviour (replay forces
+skipCache). A SAME here does NOT prove the CACHED row is unchanged — for that,
+run the eval and check the stored FoodMapping row directly.
 EOF
