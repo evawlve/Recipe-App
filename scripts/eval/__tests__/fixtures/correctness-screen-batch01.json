@@ -53,7 +53,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "fit and active protein shake"
+    "seed": "fit and active protein shake",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 39.43661880493164
+    }
    }
   },
   {
@@ -93,7 +98,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "amazon fresh almond butter"
+    "seed": "amazon fresh almond butter",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 190.08
+    }
    }
   },
   {
@@ -133,7 +143,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "good and gather almond butter"
+    "seed": "good and gather almond butter",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 190.08
+    }
    }
   },
   {
@@ -173,7 +188,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "simply nature almond butter"
+    "seed": "simply nature almond butter",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 190
+    }
    }
   },
   {
@@ -215,7 +235,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "simple truth almond butter"
+    "seed": "simple truth almond butter",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 593.75
+    }
    }
   },
   {
@@ -257,7 +282,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "sprouts almond butter"
+    "seed": "sprouts almond butter",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 593.75
+    }
    }
   },
   {
@@ -297,7 +327,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 31,
     "off_serv_max_g": 31,
-    "seed": "great value almonds"
+    "seed": "great value almonds",
+    "real": {
+     "grams": 31,
+     "tier": "label_serving_default",
+     "kcal": 190.03
+    }
    }
   },
   {
@@ -350,7 +385,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature almonds"
+    "seed": "kirkland signature almonds",
+    "real": {
+     "grams": 30,
+     "tier": "fs_default_serving",
+     "kcal": 170
+    }
    }
   },
   {
@@ -390,7 +430,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 28,
     "off_serv_max_g": 28,
-    "seed": "members mark almonds"
+    "seed": "members mark almonds",
+    "real": {
+     "grams": 28,
+     "tier": "label_serving_default",
+     "kcal": 170.00000732421876
+    }
    }
   },
   {
@@ -432,7 +477,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 140,
     "off_serv_max_g": 140,
-    "seed": "trader joes vanilla almondmilk yogurt"
+    "seed": "trader joes vanilla almondmilk yogurt",
+    "real": {
+     "grams": 140,
+     "tier": "label_serving_default",
+     "kcal": 330.4
+    }
    }
   },
   {
@@ -472,7 +522,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 113.398,
     "off_serv_max_g": 113.398,
-    "seed": "amazon fresh chicken breast"
+    "seed": "amazon fresh chicken breast",
+    "real": {
+     "grams": 113.398,
+     "tier": "label_serving_default",
+     "kcal": 109.99606
+    }
    }
   },
   {
@@ -512,7 +567,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 170,
     "off_serv_max_g": 170,
-    "seed": "amazon fresh greek yogurt"
+    "seed": "amazon fresh greek yogurt",
+    "real": {
+     "grams": 170,
+     "tier": "label_serving_default",
+     "kcal": 180.2
+    }
    }
   },
   {
@@ -552,7 +612,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 28,
     "off_serv_max_g": 28,
-    "seed": "amazon fresh trail mix"
+    "seed": "amazon fresh trail mix",
+    "real": {
+     "grams": 28,
+     "tier": "label_serving_default",
+     "kcal": 160.0000048828125
+    }
    }
   },
   {
@@ -592,7 +657,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 112,
     "off_serv_max_g": 112,
-    "seed": "good and gather chicken breast"
+    "seed": "good and gather chicken breast",
+    "real": {
+     "grams": 112,
+     "tier": "label_serving_default",
+     "kcal": 140
+    }
    }
   },
   {
@@ -632,7 +702,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 70,
     "off_serv_max_g": 70,
-    "seed": "great value macaroni and cheese"
+    "seed": "great value macaroni and cheese",
+    "real": {
+     "grams": 70,
+     "tier": "label_serving_default",
+     "kcal": 249.89999999999998
+    }
    }
   },
   {
@@ -679,7 +754,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "good and gather rotisserie chicken"
+    "seed": "good and gather rotisserie chicken",
+    "real": {
+     "grams": 84,
+     "tier": "fs_default_serving",
+     "kcal": 130
+    }
    }
   },
   {
@@ -721,7 +801,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 41,
     "off_serv_max_g": 41,
-    "seed": "good and gather granola"
+    "seed": "good and gather granola",
+    "real": {
+     "grams": 41,
+     "tier": "label_serving_default",
+     "kcal": 170.00000366210938
+    }
    }
   },
   {
@@ -777,7 +862,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "good and gather sparkling water"
+    "seed": "good and gather sparkling water",
+    "real": {
+     "grams": 15,
+     "tier": "fs_label_count",
+     "kcal": 70
+    }
    }
   },
   {
@@ -829,7 +919,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature bacon"
+    "seed": "kirkland signature bacon",
+    "real": {
+     "grams": 18,
+     "tier": "fs_default_serving",
+     "kcal": 90
+    }
    }
   },
   {
@@ -871,7 +966,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 56,
     "off_serv_max_g": 56,
-    "seed": "kirkland signature turkey bacon"
+    "seed": "kirkland signature turkey bacon",
+    "real": {
+     "grams": 56,
+     "tier": "label_serving_default",
+     "kcal": 59.92000000000001
+    }
    }
   },
   {
@@ -914,7 +1014,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 143,
     "off_serv_max_g": 143,
-    "seed": "trader joes everything but the bagel seasoning"
+    "seed": "trader joes everything but the bagel seasoning",
+    "real": {
+     "grams": 143,
+     "tier": "label_serving_default",
+     "kcal": 379.99998168945314
+    }
    }
   },
   {
@@ -958,7 +1063,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 1106.7653828,
     "off_serv_max_g": 1106.7653828,
-    "seed": "trader joes gone bananas"
+    "seed": "trader joes gone bananas",
+    "real": {
+     "grams": 1106.7653828,
+     "tier": "label_serving_default",
+     "kcal": 129.49154767661258
+    }
    }
   },
   {
@@ -1001,7 +1111,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 55,
     "off_serv_max_g": 55,
-    "seed": "simple truth emerge protein bar"
+    "seed": "simple truth emerge protein bar",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 194.6903076171875
+    }
    }
   },
   {
@@ -1041,7 +1156,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 24,
     "off_serv_max_g": 24,
-    "seed": "millville granola bars"
+    "seed": "millville granola bars",
+    "real": {
+     "grams": 24,
+     "tier": "label_serving_default",
+     "kcal": 100.08
+    }
    }
   },
   {
@@ -1084,7 +1204,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature protein bars"
+    "seed": "kirkland signature protein bars",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 283.3333435058594
+    }
    }
   },
   {
@@ -1126,7 +1251,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "sprouts brand granola"
+    "seed": "sprouts brand granola",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 190.08
+    }
    }
   },
   {
@@ -1166,7 +1296,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 112,
     "off_serv_max_g": 112,
-    "seed": "great value frozen chicken breast"
+    "seed": "great value frozen chicken breast",
+    "real": {
+     "grams": 112,
+     "tier": "label_serving_default",
+     "kcal": 140
+    }
    }
   },
   {
@@ -1206,7 +1341,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 112,
     "off_serv_max_g": 112,
-    "seed": "kirkland signature organic chicken breast"
+    "seed": "kirkland signature organic chicken breast",
+    "real": {
+     "grams": 112,
+     "tier": "label_serving_default",
+     "kcal": 109.98399658203127
+    }
    }
   },
   {
@@ -1246,7 +1386,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 112,
     "off_serv_max_g": 112,
-    "seed": "members mark chicken breast"
+    "seed": "members mark chicken breast",
+    "real": {
+     "grams": 112,
+     "tier": "label_serving_default",
+     "kcal": 129.92000000000002
+    }
    }
   },
   {
@@ -1286,7 +1431,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 112,
     "off_serv_max_g": 112,
-    "seed": "simple truth organic chicken breast"
+    "seed": "simple truth organic chicken breast",
+    "real": {
+     "grams": 112,
+     "tier": "label_serving_default",
+     "kcal": 109.98399658203127
+    }
    }
   },
   {
@@ -1328,7 +1478,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 450,
     "off_serv_max_g": 450,
-    "seed": "trader joes cold brew"
+    "seed": "trader joes cold brew",
+    "real": {
+     "grams": 450,
+     "tier": "label_serving_default",
+     "kcal": 149.84999656677246
+    }
    }
   },
   {
@@ -1370,7 +1525,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 71,
     "off_serv_max_g": 71,
-    "seed": "trader joes turkey burgers"
+    "seed": "trader joes turkey burgers",
+    "real": {
+     "grams": 71,
+     "tier": "label_serving_default",
+     "kcal": 100.00000503540036
+    }
    }
   },
   {
@@ -1413,7 +1573,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 100,
     "off_serv_max_g": 100,
-    "seed": "trader joes kung pao chicken burrito"
+    "seed": "trader joes kung pao chicken burrito",
+    "real": {
+     "grams": 100,
+     "tier": "label_serving_default",
+     "kcal": 40
+    }
    }
   },
   {
@@ -1465,7 +1630,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "trader joes speculoos cookie butter"
+    "seed": "trader joes speculoos cookie butter",
+    "real": {
+     "grams": 15,
+     "tier": "fs_default_serving",
+     "kcal": 85
+    }
    }
   },
   {
@@ -1520,7 +1690,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "heb creamy peanut butter"
+    "seed": "heb creamy peanut butter",
+    "real": {
+     "grams": 32,
+     "tier": "fs_default_serving",
+     "kcal": 190
+    }
    }
   },
   {
@@ -1560,7 +1735,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "kroger peanut butter"
+    "seed": "kroger peanut butter",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 179.84
+    }
    }
   },
   {
@@ -1600,7 +1780,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "simply nature organic peanut butter"
+    "seed": "simply nature organic peanut butter",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 190
+    }
    }
   },
   {
@@ -1640,7 +1825,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 36,
     "off_serv_max_g": 36,
-    "seed": "sprouts organic peanut butter"
+    "seed": "sprouts organic peanut butter",
+    "real": {
+     "grams": 36,
+     "tier": "label_serving_default",
+     "kcal": 209.88
+    }
    }
   },
   {
@@ -1682,7 +1872,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "wegmans salted caramel gelato"
+    "seed": "wegmans salted caramel gelato",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 189.6551666259766
+    }
    }
   },
   {
@@ -1734,7 +1929,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature cashews"
+    "seed": "kirkland signature cashews",
+    "real": {
+     "grams": 56.6999484752573,
+     "tier": "fs_serving_macros_only",
+     "kcal": 330
+    }
    }
   },
   {
@@ -1776,7 +1976,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 85,
     "off_serv_max_g": 85,
-    "seed": "trader joes unexpected cheddar"
+    "seed": "trader joes unexpected cheddar",
+    "real": {
+     "grams": 85,
+     "tier": "label_serving_default",
+     "kcal": 159.79999999999998
+    }
    }
   },
   {
@@ -1831,7 +2036,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "great value string cheese"
+    "seed": "great value string cheese",
+    "real": {
+     "grams": 28,
+     "tier": "fs_default_serving",
+     "kcal": 80
+    }
    }
   },
   {
@@ -1884,7 +2094,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "publix deli fried chicken"
+    "seed": "publix deli fried chicken",
+    "real": {
+     "grams": 94,
+     "tier": "fs_label_count",
+     "kcal": 220
+    }
    }
   },
   {
@@ -1924,7 +2139,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 76,
     "off_serv_max_g": 76,
-    "seed": "kirkland signature chicken sausage"
+    "seed": "kirkland signature chicken sausage",
+    "real": {
+     "grams": 76,
+     "tier": "label_serving_default",
+     "kcal": 150.0000018310547
+    }
    }
   },
   {
@@ -1967,7 +2187,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "members mark rotisserie chicken"
+    "seed": "members mark rotisserie chicken",
+    "real": {
+     "grams": 100,
+     "tier": "flat_100g_default",
+     "kcal": 270
+    }
    }
   },
   {
@@ -2010,7 +2235,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 1,
     "off_serv_max_g": 1,
-    "seed": "trader joes chili onion crunch"
+    "seed": "trader joes chili onion crunch",
+    "real": {
+     "grams": 1,
+     "tier": "label_serving_default",
+     "kcal": 1.1
+    }
    }
   },
   {
@@ -2063,7 +2293,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "favorite day chocolate chip cookies"
+    "seed": "favorite day chocolate chip cookies",
+    "real": {
+     "grams": 40,
+     "tier": "fs_default_serving",
+     "kcal": 190
+    }
    }
   },
   {
@@ -2103,7 +2338,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 28.349,
     "off_serv_max_g": 28.349,
-    "seed": "clancys tortilla chips"
+    "seed": "clancys tortilla chips",
+    "real": {
+     "grams": 28.349,
+     "tier": "label_serving_default",
+     "kcal": 141.745
+    }
    }
   },
   {
@@ -2158,7 +2398,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "trader joes soy chorizo"
+    "seed": "trader joes soy chorizo",
+    "real": {
+     "grams": 56,
+     "tier": "fs_default_serving",
+     "kcal": 130
+    }
    }
   },
   {
@@ -2198,7 +2443,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 84,
     "off_serv_max_g": 84,
-    "seed": "trader joes hold the cone"
+    "seed": "trader joes hold the cone",
+    "real": {
+     "grams": 84,
+     "tier": "label_serving_default",
+     "kcal": 260.4
+    }
    }
   },
   {
@@ -2251,7 +2501,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "trader joes cornbread crunch"
+    "seed": "trader joes cornbread crunch",
+    "real": {
+     "grams": 47,
+     "tier": "fs_default_serving",
+     "kcal": 170
+    }
    }
   },
   {
@@ -2293,7 +2548,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 85,
     "off_serv_max_g": 85,
-    "seed": "favorite day ice cream sandwiches"
+    "seed": "favorite day ice cream sandwiches",
+    "real": {
+     "grams": 85,
+     "tier": "label_serving_default",
+     "kcal": 130.04999999999998
+    }
    }
   },
   {
@@ -2333,7 +2593,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 71,
     "off_serv_max_g": 71,
-    "seed": "kirkland signature croissants"
+    "seed": "kirkland signature croissants",
+    "real": {
+     "grams": 71,
+     "tier": "label_serving_default",
+     "kcal": 300.33
+    }
    }
   },
   {
@@ -2388,7 +2653,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "specially selected croissants"
+    "seed": "specially selected croissants",
+    "real": {
+     "grams": 57,
+     "tier": "fs_default_serving",
+     "kcal": 210
+    }
    }
   },
   {
@@ -2430,7 +2700,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 28,
     "off_serv_max_g": 28,
-    "seed": "trader joes elote dip"
+    "seed": "trader joes elote dip",
+    "real": {
+     "grams": 28,
+     "tier": "label_serving_default",
+     "kcal": 49.99999938964845
+    }
    }
   },
   {
@@ -2485,7 +2760,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature granola"
+    "seed": "kirkland signature granola",
+    "real": {
+     "grams": 55,
+     "tier": "fs_default_serving",
+     "kcal": 250
+    }
    }
   },
   {
@@ -2525,7 +2805,12 @@
     "n_off_servings": 4,
     "off_serv_min_g": 240,
     "off_serv_max_g": 300,
-    "seed": "great value orange juice"
+    "seed": "great value orange juice",
+    "real": {
+     "grams": 300,
+     "tier": "label_serving_default",
+     "kcal": 141
+    }
    }
   },
   {
@@ -2580,7 +2865,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature greek yogurt"
+    "seed": "kirkland signature greek yogurt",
+    "real": {
+     "grams": 227,
+     "tier": "fs_default_serving",
+     "kcal": 130
+    }
    }
   },
   {
@@ -2620,7 +2910,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 170,
     "off_serv_max_g": 170,
-    "seed": "members mark greek yogurt"
+    "seed": "members mark greek yogurt",
+    "real": {
+     "grams": 170,
+     "tier": "label_serving_default",
+     "kcal": 99.99999809265137
+    }
    }
   },
   {
@@ -2660,7 +2955,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 150,
     "off_serv_max_g": 150,
-    "seed": "wegmans organic greek yogurt"
+    "seed": "wegmans organic greek yogurt",
+    "real": {
+     "grams": 150,
+     "tier": "label_serving_default",
+     "kcal": 120
+    }
    }
   },
   {
@@ -2700,7 +3000,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 170,
     "off_serv_max_g": 170,
-    "seed": "signature select greek yogurt"
+    "seed": "signature select greek yogurt",
+    "real": {
+     "grams": 170,
+     "tier": "label_serving_default",
+     "kcal": 89.93000259399415
+    }
    }
   },
   {
@@ -2740,7 +3045,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 170,
     "off_serv_max_g": 170,
-    "seed": "simple truth greek yogurt"
+    "seed": "simple truth greek yogurt",
+    "real": {
+     "grams": 170,
+     "tier": "label_serving_default",
+     "kcal": 119.99999771118163
+    }
    }
   },
   {
@@ -2793,7 +3103,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "trader joes vegetable gyoza"
+    "seed": "trader joes vegetable gyoza",
+    "real": {
+     "grams": 85,
+     "tier": "fs_default_serving",
+     "kcal": 160
+    }
    }
   },
   {
@@ -2833,7 +3148,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 49,
     "off_serv_max_g": 49,
-    "seed": "heb tortillas"
+    "seed": "heb tortillas",
+    "real": {
+     "grams": 49,
+     "tier": "label_serving_default",
+     "kcal": 149.94
+    }
    }
   },
   {
@@ -2876,7 +3196,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 52,
     "off_serv_max_g": 52,
-    "seed": "millville honey nut toasted oats"
+    "seed": "millville honey nut toasted oats",
+    "real": {
+     "grams": 52,
+     "tier": "label_serving_default",
+     "kcal": 189.8
+    }
    }
   },
   {
@@ -2918,7 +3243,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 40,
     "off_serv_max_g": 40,
-    "seed": "trader joes protein pasta"
+    "seed": "trader joes protein pasta",
+    "real": {
+     "grams": 40,
+     "tier": "label_serving_default",
+     "kcal": 140
+    }
    }
   },
   {
@@ -2960,7 +3290,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 36,
     "off_serv_max_g": 36,
-    "seed": "trader joes scandinavian swimmers"
+    "seed": "trader joes scandinavian swimmers",
+    "real": {
+     "grams": 36,
+     "tier": "label_serving_default",
+     "kcal": 159.84
+    }
    }
   },
   {
@@ -3015,7 +3350,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "trader joes joe joes"
+    "seed": "trader joes joe joes",
+    "real": {
+     "grams": 29,
+     "tier": "fs_default_serving",
+     "kcal": 140
+    }
    }
   },
   {
@@ -3064,7 +3404,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "trader joes tzatziki"
+    "seed": "trader joes tzatziki",
+    "real": {
+     "grams": 30,
+     "tier": "fs_default_serving",
+     "kcal": 35
+    }
    }
   },
   {
@@ -3115,7 +3460,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "publix key lime pie"
+    "seed": "publix key lime pie",
+    "real": {
+     "grams": 132,
+     "tier": "fs_label_count",
+     "kcal": 420
+    }
    }
   },
   {
@@ -3168,7 +3518,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature dried mango"
+    "seed": "kirkland signature dried mango",
+    "real": {
+     "grams": 41,
+     "tier": "fs_default_serving",
+     "kcal": 130
+    }
    }
   },
   {
@@ -3220,7 +3575,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature trail mix"
+    "seed": "kirkland signature trail mix",
+    "real": {
+     "grams": 57,
+     "tier": "fs_default_serving",
+     "kcal": 320
+    }
    }
   },
   {
@@ -3263,7 +3623,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 1.9,
     "off_serv_max_g": 1.9,
-    "seed": "kirkland signature muffins"
+    "seed": "kirkland signature muffins",
+    "real": {
+     "grams": 1.9,
+     "tier": "label_serving_default",
+     "kcal": 4.999999999999999
+    }
    }
   },
   {
@@ -3320,7 +3685,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "kirkland signature protein shake"
+    "seed": "kirkland signature protein shake",
+    "real": {
+     "grams": 34,
+     "tier": "fs_default_serving",
+     "kcal": 170
+    }
    }
   },
   {
@@ -3363,7 +3733,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 100,
     "off_serv_max_g": 100,
-    "seed": "kirkland signature quinoa"
+    "seed": "kirkland signature quinoa",
+    "real": {
+     "grams": 100,
+     "tier": "label_serving_default",
+     "kcal": 112
+    }
    }
   },
   {
@@ -3403,7 +3778,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 32,
     "off_serv_max_g": 32,
-    "seed": "signature select trail mix"
+    "seed": "signature select trail mix",
+    "real": {
+     "grams": 32,
+     "tier": "label_serving_default",
+     "kcal": 169.92000000000002
+    }
    }
   },
   {
@@ -3443,7 +3823,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 30,
     "off_serv_max_g": 30,
-    "seed": "sprouts trail mix"
+    "seed": "sprouts trail mix",
+    "real": {
+     "grams": 30,
+     "tier": "label_serving_default",
+     "kcal": 170.00000610351563
+    }
    }
   },
   {
@@ -3483,7 +3868,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 30,
     "off_serv_max_g": 30,
-    "seed": "wegmans trail mix"
+    "seed": "wegmans trail mix",
+    "real": {
+     "grams": 30,
+     "tier": "label_serving_default",
+     "kcal": 150
+    }
    }
   },
   {
@@ -3526,7 +3916,12 @@
     "n_off_servings": 1,
     "off_serv_min_g": 28,
     "off_serv_max_g": 28,
-    "seed": "publix pecan pie"
+    "seed": "publix pecan pie",
+    "real": {
+     "grams": 28,
+     "tier": "label_serving_default",
+     "kcal": 190.12
+    }
    }
   },
   {
@@ -3569,7 +3964,12 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "publix sub sandwich"
+    "seed": "publix sub sandwich",
+    "real": {
+     "grams": 175,
+     "tier": "fs_serving_macros_only",
+     "kcal": 350
+    }
    }
   },
   {
@@ -3625,8 +4025,14 @@
     "n_off_servings": 0,
     "off_serv_min_g": null,
     "off_serv_max_g": null,
-    "seed": "signature select sparkling water"
+    "seed": "signature select sparkling water",
+    "real": {
+     "grams": 30,
+     "tier": "fs_label_count",
+     "kcal": 120
+    }
    }
   }
- ]
+ ],
+ "_realAnchor": "Each row.real is what hydrateAndSelectServing returns for that record — captured 2026-07-27 against the live corpus. It exists so the pinned matrix measures the anchor the USER IS BILLED, offline and deterministically. Reconstruction vs real agreed on 78/81 (96.3%); the 3 that differ are recorded in the PR that added this field."
 }

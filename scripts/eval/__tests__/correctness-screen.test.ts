@@ -24,10 +24,16 @@
  *     temperature 0 agreed exactly on BAD and GOOD and disagreed by one SUSPECT
  *     row). The shipped operating point is Tier D + Tier L; this file defends only
  *     the deterministic half, which is 78% of the measured recall.
- *   - Whether a flagged row actually bills wrong. D5/D6 read a RECONSTRUCTION of the
- *     billing anchor, not hydrateAndSelectServing. Never measured.
  *   - D9 in the wild: it fired ZERO times across all 81 rows, so its only coverage
  *     anywhere is the synthetic case below.
+ *
+ * CLOSED 2026-07-27 — "whether a flagged row actually bills wrong" used to sit in
+ * the list above, because D5/D6 read a reconstruction rather than
+ * hydrateAndSelectServing. They now read the real anchor, and the fixture carries
+ * it (`row.real`), so this file is still offline and deterministic while pinning
+ * the number the USER IS BILLED. Measured agreement between the two on these 81
+ * rows: 78/81 = 96.3%. The remaining gap is why D5/D6 abstain to INFO rather than
+ * evict whenever the real anchor did not run.
  */
 
 import * as fs from 'fs';
@@ -39,6 +45,7 @@ import {
     MEASURED_BAD_RECALL_TIER_D_ONLY,
     MEASURED_BAD_RECALL_WITH_LLM,
     POLICIES,
+    ROW_SQL,
     TIER_D_RULE_IDS,
     attribute,
     atwater,
@@ -47,6 +54,8 @@ import {
     decide,
     parseIntFlag,
     parsePolicy,
+    parseSeedFile,
+    realServing,
     resolveServingGrams,
     screenBatch,
     stem,
@@ -164,13 +173,22 @@ describe('Tier D over batch 01 — pinned confusion matrix', () => {
      * BAD catches at ZERO cost in GOOD rows, D5 is a SUSPECT detector rather than a
      * BAD detector (which is why `balanced` sends it to REVIEW), and D9 fires on
      * nothing at all.
+     *
+     * UPDATED 2026-07-27 — D5/D6 now read the REAL billing anchor
+     * (hydrateAndSelectServing) instead of the column reconstruction, and the fixture
+     * carries it. Measured effect on these same 81 rows: reconstruction and real
+     * anchor agree on 78/81 (96.3%), and the 3 that differ move D5 STRICTLY in the
+     * right direction — it gains the BAD row `bar emerge protein simple truth`
+     * (billing flat-100g, which the 55 g column hid) and drops two SUSPECT rows that
+     * do resolve a real serving via `fs_serving_macros_only`. BAD recall is unchanged
+     * at every policy; the screen simply withholds one fewer row.
      */
     const PER_RULE: { rule: RuleId; fires: number; bad: number; good: number; suspect: number; note: string }[] = [
         { rule: 'D1', fires: 1, bad: 1, good: 0, suspect: 0, note: 'bare-brand key: `joe trader`' },
         { rule: 'D2', fires: 1, bad: 0, good: 0, suspect: 1, note: 'generic-key takeover (millville lost)' },
         { rule: 'D3', fires: 16, bad: 15, good: 0, suspect: 1, note: 'THE WORKHORSE — head noun absent' },
         { rule: 'D4', fires: 3, bad: 3, good: 0, suspect: 0, note: 'a subset of D3 in practice' },
-        { rule: 'D5', fires: 8, bad: 1, good: 0, suspect: 7, note: 'a SUSPECT detector, not a BAD detector' },
+        { rule: 'D5', fires: 7, bad: 2, good: 0, suspect: 5, note: 'a SUSPECT detector, not a BAD detector' },
         { rule: 'D6', fires: 3, bad: 3, good: 0, suspect: 0, note: '1.0 g chili oil, 1.9 g muffin, 1106 g banana' },
         { rule: 'D7', fires: 2, bad: 1, good: 0, suspect: 1, note: 'Atwater: inconsistency, not wrongness' },
         { rule: 'D8', fires: 1, bad: 0, good: 0, suspect: 1, note: 'empty panels are a restaurant-batch rule' },
@@ -205,7 +223,7 @@ describe('Tier D over batch 01 — pinned confusion matrix', () => {
         );
         const c = confusionOf(flagged, LABELS);
         expect({ flagged: flagged.size, bad: c.badCaught, good: c.goodFlagged, suspect: c.susFlagged })
-            .toEqual({ flagged: 27, bad: 19, good: 0, suspect: 8 });
+            .toEqual({ flagged: 26, bad: 19, good: 0, suspect: 7 });
         expect(c.recall).toBeCloseTo(19 / 23, 10);
     });
 
@@ -215,9 +233,9 @@ describe('Tier D over batch 01 — pinned confusion matrix', () => {
      * more; `lenient` is not a screen.
      */
     const PER_POLICY: { policy: Policy; evict: number; evictBad: number; review: number; reviewBad: number; keep: number }[] = [
-        { policy: 'lenient', evict: 5, evictBad: 4, review: 22, reviewBad: 15, keep: 54 },
-        { policy: 'balanced', evict: 19, evictBad: 18, review: 8, reviewBad: 1, keep: 54 },
-        { policy: 'strict', evict: 27, evictBad: 19, review: 0, reviewBad: 0, keep: 54 },
+        { policy: 'lenient', evict: 5, evictBad: 4, review: 21, reviewBad: 15, keep: 55 },
+        { policy: 'balanced', evict: 19, evictBad: 18, review: 7, reviewBad: 1, keep: 55 },
+        { policy: 'strict', evict: 26, evictBad: 19, review: 0, reviewBad: 0, keep: 55 },
     ];
 
     it.each(PER_POLICY)('policy $policy: EVICT $evict ($evictBad BAD) · REVIEW $review · KEEP $keep, and 0 GOOD ever evicted',
@@ -334,13 +352,48 @@ describe('D4 — zero seed/record content-token overlap', () => {
 });
 
 describe('D5 — no serving weight anywhere', () => {
-    it('fires when every gram column is empty (a unitless `1 x` bills a flat 100 g)', () => {
-        const r = baseRow({ off_serving_grams: null, fs_serving_grams: null, off_serv_min_g: null });
+    const noCols = { off_serving_grams: null, fs_serving_grams: null, off_serv_min_g: null };
+
+    it('fires when the REAL anchor resolves no serving', () => {
+        const r = baseRow({ ...noCols, real: { grams: null, tier: null, kcal: null } });
         expect(rules(tierD(r, 'balanced'))).toContain('D5');
-        // ...and under `balanced` it is a REVIEW, not an EVICT: 7 of its 8 fires on
-        // batch 01 were SUSPECT rows, and the anchor it reads is a reconstruction.
+        // ...and under `balanced` it is a REVIEW, not an EVICT: 5 of its 7 fires on
+        // batch 01 were SUSPECT rows.
         expect(tierD(r, 'balanced').find(h => h.rule === 'D5')?.severity).toBe('REVIEW');
     });
+
+    it('fires on flat_100g_default — 100 g there is the ABSENCE of an anchor', () => {
+        // The real function reports the flat-100g fallback as `100 g`, which sits
+        // squarely inside D6's plausible band. Reading it literally silenced D5 on 6
+        // batch-01 rows (one of them BAD) the first time this was wired up.
+        const r = baseRow({ ...noCols, real: { grams: 100, tier: 'flat_100g_default', kcal: 250 } });
+        expect(rules(tierD(r, 'balanced'))).toContain('D5');
+        expect(rules(tierD(r, 'balanced'))).not.toContain('D6');
+    });
+
+    it('does NOT fire when the real anchor found a serving the columns could not', () => {
+        // `cashew kirkland signature`: no gram column anywhere, but the FatSecret
+        // macros-only path resolves 56.7 g. The reconstruction called this D5; the
+        // real anchor clears it.
+        const r = baseRow({ ...noCols, real: { grams: 56.7, tier: 'fs_serving_macros_only', kcal: 320 } });
+        expect(rules(tierD(r, 'balanced'))).not.toContain('D5');
+    });
+
+    it('ABSTAINS to INFO when the real anchor never ran — an unmeasured reconstruction may not evict', () => {
+        // `real: undefined` is an offline --rows replay or --no-serving. D5/D6 must
+        // report, never gate: the reconstruction's agreement with the real anchor is
+        // 96.3%, not 100%, so on its own authority it may not throw a row away.
+        const r = baseRow(noCols);
+        const h = tierD(r, 'balanced').find(x => x.rule === 'D5');
+        expect(h?.severity).toBe('INFO');
+        expect(h?.detail).toContain('UNJUDGED');
+    });
+
+    it('D6 also abstains without the real anchor, at a weight that would otherwise EVICT', () => {
+        const h = tierD(baseRow({ off_serving_grams: 1.0 }), 'balanced').find(x => x.rule === 'D6');
+        expect(h?.severity).toBe('INFO');
+    });
+
     it('does not fire when any column anchors a weight', () => {
         const r = baseRow({ off_serving_grams: null, fs_serving_grams: 44, off_serv_min_g: null });
         expect(rules(tierD(r, 'balanced'))).not.toContain('D5');
@@ -582,5 +635,112 @@ describe('confusionOf()', () => {
         expect(c.precBad).toBeCloseTo(0.5, 10);
         expect(c.precBadSus).toBeCloseTo(1.0, 10);
         expect(c.recall).toBe(1);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// The three blind spots closed 2026-07-27. Each of these tests exists because the
+// screen produced a confident, wrong number over the full 3,248-row cache.
+// ---------------------------------------------------------------------------
+
+describe('ROW_SQL joins every source a FoodMapping row can point at', () => {
+    it('joins FdcFood — its absence false-evicted 78 of 78 fdc rows', () => {
+        // FoodMapping.fdcId is a first-class source, but ROW_SQL joined only OffFood
+        // and FatSecretFood. Every fdc row therefore arrived with recname='' and
+        // per100g=null, so D8 ("no usable per-100g basis") fired on all of them and
+        // D3/D4 compared the seed against an empty string. Batch 01 had no fdc rows,
+        // which is exactly why the measured operating point never saw it.
+        expect(ROW_SQL).toContain('"FdcFood"');
+        expect(ROW_SQL).toMatch(/LEFT JOIN "FdcFood" \w+\s+ON \w+\."fdcId" = m\."fdcId"/);
+    });
+
+    it('coalesces the fdc record into name, brand and panel — not just the join', () => {
+        // A join nobody selects from is the same bug with extra steps.
+        expect(ROW_SQL).toMatch(/coalesce\(o\.name, f\.name, fd\.description/);
+        expect(ROW_SQL).toMatch(/coalesce\(o\."nutrientsPer100g", f\."nutrientsPer100g", fd\."nutrientsPer100g"\)/);
+    });
+
+    it('reads FdcFood.servingSize as grams ONLY when the unit says grams', () => {
+        const asGrams = baseRow({
+            off_serving_grams: null, fs_serving_grams: null, off_serv_min_g: null,
+            fdc_serving_size: 85, fdc_serving_unit: 'g',
+        });
+        expect(resolveServingGrams(asGrams)).toEqual({ grams: 85, from: 'FdcFood.servingSize' });
+
+        // `1 cup` in the servingSize column is a VOLUME. Reading 240 there as 240 g
+        // would invent a weight for every liquid in the FDC corpus.
+        const asVolume = baseRow({
+            off_serving_grams: null, fs_serving_grams: null, off_serv_min_g: null,
+            fdc_serving_size: 240, fdc_serving_unit: 'ml',
+        });
+        expect(resolveServingGrams(asVolume).grams).toBeNull();
+    });
+});
+
+describe('realServing() — the anchor D5/D6 judge', () => {
+    it('reports judged=false when the pass never ran, so the rules abstain', () => {
+        expect(realServing(baseRow()).judged).toBe(false);
+        expect(realServing(baseRow({ real: null })).judged).toBe(false);
+        expect(realServing(baseRow({ real: { grams: null, tier: null, kcal: null, error: 'boom' } })).judged).toBe(false);
+    });
+
+    it('normalises flat_100g_default to "no anchor" rather than a plausible 100 g', () => {
+        const r = realServing(baseRow({ real: { grams: 100, tier: 'flat_100g_default', kcal: 250 } }));
+        expect(r.judged).toBe(true);
+        expect(r.grams).toBeNull();
+        expect(r.from).toContain('flat_100g_default');
+    });
+
+    it('treats an AI-ESTIMATED tier as UNJUDGED — a fresh model guess cannot evict a row', () => {
+        // hydrateAndSelectServing invokes the ambiguous-serving estimator for rows the
+        // corpus cannot anchor. That number is not a property of the cached row; it can
+        // differ on the next request. Same rule as the serving gate's
+        // AI-NONDETERMINISTIC verdict (PR #174): report it, never gate on it.
+        for (const tier of ['ai_estimated_serving', 'fdc_size_estimated', 'count_ai_default']) {
+            const r = realServing(baseRow({ real: { grams: 28, tier, kcal: 90 } }));
+            expect(r.judged).toBe(false);
+            expect(r.from).toContain('ai-estimated');
+        }
+        const h = tierD(baseRow({ real: { grams: 1.0, tier: 'ai_estimated_serving', kcal: 5 } }), 'balanced')
+            .find(x => x.rule === 'D6');
+        expect(h?.severity).toBe('INFO');
+    });
+
+    it('passes a genuine anchor through untouched', () => {
+        const r = realServing(baseRow({ real: { grams: 56.7, tier: 'fs_serving_macros_only', kcal: 320 } }));
+        expect(r).toEqual({ grams: 56.7, from: 'hydrateAndSelectServing:fs_serving_macros_only', judged: true });
+    });
+});
+
+describe('parseSeedFile() + pinned attribution', () => {
+    it('parses bare phrases, key<TAB>phrase pins, comments and blanks', () => {
+        const s = parseSeedFile('# a comment\n\nplain seed phrase\nsome key\tthe observed phrase\n');
+        expect(s.phrases).toEqual(['plain seed phrase', 'the observed phrase']);
+        expect(s.byKey.get('some key')).toBe('the observed phrase');
+    });
+
+    it('a pin beats the Jaccard guess — the failure that made 332 evictions unquotable', () => {
+        // Measured 2026-07-27 over the whole cache: a TURKEY key drew the seed
+        // `85% lean 15% fat beef` because it was the nearest phrase in a 4,168-entry
+        // list, and D3 then reported "head noun 'beef' absent" on a correct row.
+        const rows = [baseRow({ key: '15% 85% fat lean turkey', recname: '85% lean ground turkey' })];
+        const seeds = parseSeedFile('85% lean 15% fat beef\n15% 85% fat lean turkey\t85% lean 15% fat turkey\n');
+
+        attribute(rows, seeds, null);
+        expect(rows[0].seed).toBe('85% lean 15% fat turkey');
+        expect(rules(tierD(rows[0], 'balanced'))).not.toContain('D3');
+    });
+
+    it('without the pin the same row draws the wrong seed and D3 misfires', () => {
+        const rows = [baseRow({ key: '15% 85% fat lean turkey', recname: '85% lean ground turkey' })];
+        attribute(rows, parseSeedFile('85% lean 15% fat beef\n'), null);
+        expect(rows[0].seed).toBe('85% lean 15% fat beef');
+        expect(rules(tierD(rows[0], 'balanced'))).toContain('D3');
+    });
+
+    it('still accepts a plain string[] so batch callers are unaffected', () => {
+        const rows = [baseRow({ key: 'almond great value' })];
+        attribute(rows, ['great value almonds'], null);
+        expect(rows[0].seed).toBe('great value almonds');
     });
 });
