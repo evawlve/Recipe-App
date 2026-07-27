@@ -80,18 +80,24 @@
  *    future "the LLM catches everything, drop Tier D" simplification would silently
  *    drop those 3. (Symmetrically, the 4 BAD rows Tier D misses are exactly the 4
  *    Tier L catches. Neither tier alone reaches 100%.)
- * 2. **The serving check is a RECONSTRUCTION.** `resolveServingGrams` reimplements
- *    the billing anchor and never calls `hydrateAndSelectServing`, so count-label
- *    serving, dose-anchored serving and the FatSecret weight oracle are invisible
- *    to it. A row D5 calls "no serving weight" MAY IN FACT BILL CORRECTLY.
- *    **This was not measured.**
+ * 2. ~~**The serving check is a RECONSTRUCTION.**~~ CLOSED 2026-07-27. D5/D6 read the
+ *    real anchor through `hydrateAndSelectServing` (on by default; `--no-serving`
+ *    opts out). `resolveServingGrams` survives only as the fallback for offline
+ *    `--rows` replays, and when the real anchor did not run D5/D6 report INFO and
+ *    never EVICT — an unmeasured reconstruction may not throw a cache row away.
  * 3. **D9 fired zero times on the 81 rows.** It is unexercised, not validated.
+ *    (Update 2026-07-27: it fires 13 times across the full 3,248-row cache, and all
+ *    13 reproduce as a plain SQL join against corruptReason/duplicateOfBarcode.)
  * 4. **Determinism is partial.** Four Tier-L runs at temperature 0 gave identical
  *    BAD and GOOD columns; the SUSPECT column moved by one row. Quote review-queue
  *    sizes as a range, not a number.
  * 5. **One batch, one domain.** Batch 01 is store brands. Hand-label the first 20
  *    added rows of the next domain and re-run with `--labels` before trusting any
  *    of these numbers there.
+ * 6. **The measured numbers are a BATCH instrument's.** Screening the whole cache at
+ *    once changes seed attribution from a lookup into a nearest-match guess unless
+ *    `--seeds` carries explicit `key<TAB>phrase` pins — see `attribute()`. Without
+ *    pins, the seed-dependent rules produce false positives at cache width.
  *
  * ---------------------------------------------------------------------------
  * USAGE (from repo root)
@@ -158,8 +164,32 @@ export interface ScreenRow {
     n_off_servings: number;
     off_serv_min_g: number | null;
     off_serv_max_g: number | null;
+    /**
+     * FDC columns. ROW_SQL joined OffFood and FatSecretFood ONLY until 2026-07-27,
+     * so every fdc-sourced row arrived with recname='' and per100g=null and D8
+     * fired on all of them — 78 of 78 fdc rows in the live cache, a 100% false
+     * positive rate on that source. Batch 01 contained no fdc rows, which is why
+     * the measured operating point never saw it.
+     */
+    fdc_serving_size: number | null;
+    fdc_serving_unit: string;
+    fdc_serv_min_g: number | null;
     /** Filled in by attribute(); '' means "could not be attributed to a seed". */
     seed?: string;
+    /**
+     * Filled in by the --with-serving pass from the REAL billing anchor
+     * (hydrateAndSelectServing), not from resolveServingGrams. `undefined` means
+     * the pass never ran for this row, which is UNJUDGED — never agreement.
+     */
+    real?: RealServing | null;
+}
+
+/** What the request path would actually bill for a unitless `1 x` of this row. */
+export interface RealServing {
+    grams: number | null;
+    tier: string | null;
+    kcal: number | null;
+    error?: string;
 }
 
 export interface LlmVerdict {
@@ -288,19 +318,73 @@ export function contentStems(seed: string, brand: Set<string>): string[] {
  *
  * !! THIS IS A RECONSTRUCTION, NOT THE PIPELINE. !!
  * It walks OffFood.servingGrams -> FatSecretServing.grams -> OffServing.grams ->
- * flat 100 g. It does NOT call hydrateAndSelectServing, so count-label serving,
- * dose-anchored serving and funnel fix 5's FatSecret weight oracle are invisible
- * here. A row D5 flags as "no serving weight" MAY IN FACT BILL CORRECTLY via one of
- * those. The divergence between this reconstruction and the real anchor was NEVER
- * MEASURED — read D5/D6 as "this row's anchor looks wrong from the columns", not as
- * "this row bills wrong".
+ * FdcFood.servingSize -> FdcServing.grams -> flat 100 g. It does NOT call
+ * hydrateAndSelectServing, so count-label serving, dose-anchored serving and funnel
+ * fix 5's FatSecret weight oracle are invisible here.
+ *
+ * PREFER `realServing()`. Since 2026-07-27 the screen runs the real anchor by
+ * default (`--with-serving`) and D5/D6 judge THAT; this function is the fallback
+ * used only for the LLM card and for rows the real pass could not resolve. Where
+ * the two disagree, the real one is right by construction — it is the function the
+ * request path calls.
  */
 export function resolveServingGrams(r: ScreenRow): { grams: number | null; from: string } {
     if (r.off_serving_grams != null && r.off_serving_grams > 0) return { grams: r.off_serving_grams, from: 'OffFood.servingGrams' };
     if (r.fs_serving_grams != null && r.fs_serving_grams > 0) return { grams: r.fs_serving_grams, from: 'FatSecretServing.grams' };
     if (r.off_serv_min_g != null && r.off_serv_min_g > 0) return { grams: r.off_serv_min_g, from: 'OffServing.grams' };
+    // FDC: servingSize is only a weight when its unit says so — `1 cup` in the
+    // servingSize column is a volume and must not be read as grams.
+    if (r.fdc_serving_size != null && r.fdc_serving_size > 0 && /^g(ram)?s?$/i.test(r.fdc_serving_unit || '')) {
+        return { grams: r.fdc_serving_size, from: 'FdcFood.servingSize' };
+    }
+    if (r.fdc_serv_min_g != null && r.fdc_serv_min_g > 0) return { grams: r.fdc_serv_min_g, from: 'FdcServing.grams' };
     return { grams: null, from: 'none (flat-100g default)' };
 }
+
+/**
+ * The anchor D5/D6 actually judge, and whether it can be judged at all.
+ *
+ * `judged: false` means the real pass did not produce a number for this row — the
+ * flag was off, the row is an offline `--rows` replay, or hydration threw. In that
+ * state D5/D6 MUST NOT evict: the reconstruction alone was never measured against
+ * the real anchor, and evicting a cache row on an unvalidated number is the same
+ * mistake the serving gate closed in PR #174. Absence of a verdict is UNJUDGED,
+ * never agreement — the screen goes quiet, not loud.
+ */
+export function realServing(r: ScreenRow): { grams: number | null; from: string; judged: boolean } {
+    if (r.real === undefined) return { ...resolveServingGrams(r), judged: false };
+    if (r.real === null || r.real.error) return { grams: null, from: 'real anchor unresolved', judged: false };
+    // `flat_100g_default` is the ABSENCE of an anchor wearing a number. The real
+    // function reports it as 100 g; the reconstruction reports it as null. They mean
+    // the same thing, and D5 exists to say it — so normalise to null or D5 falls
+    // silent on exactly the rows it was written for. Measured on batch 01: 6 of the
+    // 9 reconstruction/real "disagreements" were only this, and reading the 100 g
+    // literally would have silenced 6 correct D5 warnings (one of them a BAD row).
+    if (NO_ANCHOR_TIERS.has(r.real.tier ?? '')) {
+        return { grams: null, from: `hydrateAndSelectServing:${r.real.tier}`, judged: true };
+    }
+    // An AI-ESTIMATED anchor is not a property of this cache row — it is a fresh model
+    // guess that can differ on the next request, so it cannot ground a decision to
+    // throw the row away. Same rule the serving gate uses (PR #174's
+    // AI-NONDETERMINISTIC verdict): name it, never silently read it as agreement.
+    if (AI_SERVING_TIER_RE.test(r.real.tier ?? '')) {
+        return { grams: r.real.grams, from: `ai-estimated:${r.real.tier}`, judged: false };
+    }
+    return { grams: r.real.grams, from: `hydrateAndSelectServing:${r.real.tier ?? 'no-tier'}`, judged: true };
+}
+
+/**
+ * Tiers produced by a model call rather than by corpus data. Matching one means the
+ * screen spent an LLM call resolving that row — see the cost note on
+ * `resolveRealServings`.
+ */
+export const AI_SERVING_TIER_RE = /(^|_)ai(_|$)|estimat/i;
+
+/**
+ * Serving tiers that are a FALLBACK, not a measured portion. A row on one of these
+ * has no real anchor no matter what number it carries, which is what D5 reports.
+ */
+export const NO_ANCHOR_TIERS = new Set<string>(['flat_100g_default']);
 
 export function atwater(p: Record<string, number> | null): { declared: number; computed: number; ratio: number } | null {
     if (!p) return null;
@@ -407,15 +491,20 @@ export function tierD(r: ScreenRow, policy: Policy): Hit[] {
     // D5 — no gram anchor anywhere, so a unitless `1 x` bills the flat-100g default.
     // 1/23 BAD but 7/10 SUSPECT: a SUSPECT detector, not a BAD detector, which is why
     // `balanced` routes it to REVIEW rather than EVICT.
-    // CAVEAT: resolveServingGrams is a RECONSTRUCTION (see its docstring). A row
-    // flagged here may still bill correctly via hydrateAndSelectServing. NOT MEASURED.
-    const sg = resolveServingGrams(r);
+    //
+    // Since 2026-07-27 this reads the REAL anchor (hydrateAndSelectServing) when the
+    // --with-serving pass ran. When it did not, both rules DOWNGRADE to INFO instead
+    // of firing: the reconstruction's agreement with the real anchor has never been
+    // measured, so it may not evict a row on its own authority.
+    const sg = realServing(r);
+    const dsev = (rule: RuleId): Severity => (sg.judged ? sev(rule) : 'INFO');
+    const unjudged = sg.judged ? '' : ' [UNJUDGED: real anchor not computed, reconstruction only]';
     if (sg.grams == null) {
-        hits.push({ rule: 'D5', severity: sev('D5'), detail: 'no serving weight in any column -> flat-100g default' });
+        hits.push({ rule: 'D5', severity: dsev('D5'), detail: `no serving weight -> flat-100g default (${sg.from})${unjudged}` });
     } else if (sg.grams < 5 || sg.grams > 500) {
         // D6 — an absurd gram weight: 1.0 g of chili oil, 1.9 g of muffin, 1106 g of
-        // banana. 3/23 BAD, 0/48 GOOD. Same reconstruction caveat as D5.
-        hits.push({ rule: 'D6', severity: sev('D6'), detail: `serving weight ${sg.grams} g implausible (from ${sg.from})` });
+        // banana. 3/23 BAD, 0/48 GOOD.
+        hits.push({ rule: 'D6', severity: dsev('D6'), detail: `serving weight ${sg.grams} g implausible (from ${sg.from})${unjudged}` });
     }
 
     // D7 — Atwater inconsistency on the per-100g panel. Detects arithmetic
@@ -524,9 +613,15 @@ Use UNSURE when you cannot tell whether it is the same product from the informat
 
 /** The compact record card Tier L judges. Deterministic given the row. */
 export function llmUserPrompt(r: ScreenRow): string {
-    const sg = resolveServingGrams(r);
+    const sg = realServing(r);
     const aw = atwater(r.per100g);
     const p = r.per100g ?? {};
+    // When the real anchor ran, quote ITS kcal — hydrateAndSelectServing can bill a
+    // food whose per-100g panel is empty (the FatSecret serving-nutrient path), and
+    // per100g * grams / 100 would print 0 kcal for a real 1,980 kcal entree.
+    const billed = r.real && !r.real.error && r.real.kcal != null
+        ? `${r.real.kcal.toFixed(0)} kcal`
+        : `${((Number(p.calories ?? 0) * (sg.grams ?? 100)) / 100).toFixed(0)} kcal`;
     const lines = [
         `shopper phrase: ${r.seed}`,
         `cache key stored: ${r.key}`,
@@ -536,8 +631,8 @@ export function llmUserPrompt(r: ScreenRow): string {
         `per 100 g: ${isFinite(Number(p.calories)) ? `${Number(p.calories).toFixed(1)} kcal` : 'NO CALORIES'}, protein ${Number(p.protein ?? 0).toFixed(1)} g, carbs ${Number(p.carbs ?? 0).toFixed(1)} g, fat ${Number(p.fat ?? 0).toFixed(1)} g` + (Object.keys(p).length === 0 ? '  [PANEL IS EMPTY {}]' : ''),
         aw ? `Atwater check: declared/computed = ${aw.ratio.toFixed(2)}` : 'Atwater check: not computable',
         sg.grams != null
-            ? `default serving: ${sg.grams} g  (label: ${r.off_serving_size || r.fs_serving_desc || 'n/a'})  -> a "1 x" log bills ${((Number(p.calories ?? 0) * sg.grams) / 100).toFixed(0)} kcal`
-            : `default serving: NONE in any column -> a "1 x" log bills a flat 100 g = ${Number(p.calories ?? 0).toFixed(0)} kcal`,
+            ? `default serving: ${sg.grams} g  (label: ${r.off_serving_size || r.fs_serving_desc || 'n/a'}, via ${sg.from})  -> a "1 x" log bills ${billed}`
+            : `default serving: NONE resolved (${sg.from}) -> a "1 x" log bills a flat 100 g = ${billed}`,
         r.pkg_qty ? `package quantity: ${r.pkg_qty} ${r.pkg_unit}` : '',
     ].filter(Boolean);
     return lines.join('\n');
@@ -643,9 +738,9 @@ SELECT json_agg(t) FROM (
 SELECT m."normalizedForm" AS key, m.source AS src, m."aiConfidence" AS conf,
        coalesce(m."validatedBy",'') AS validatedby,
        m."foodName" AS mapfoodname, coalesce(m."brandName",'') AS mapbrand,
-       coalesce(o.name, f.name, '') AS recname,
-       coalesce(o."brandName", f."brandName", '') AS recbrand,
-       coalesce(o."nutrientsPer100g", f."nutrientsPer100g") AS per100g,
+       coalesce(o.name, f.name, fd.description, '') AS recname,
+       coalesce(o."brandName", f."brandName", fd."brandName", '') AS recbrand,
+       coalesce(o."nutrientsPer100g", f."nutrientsPer100g", fd."nutrientsPer100g") AS per100g,
        o."servingGrams" AS off_serving_grams,
        coalesce(o."servingSize",'') AS off_serving_size,
        o."packageQuantity" AS pkg_qty,
@@ -658,11 +753,15 @@ SELECT m."normalizedForm" AS key, m.source AS src, m."aiConfidence" AS conf,
        coalesce(m."offBarcode", m."fsId", m."fdcId"::text,'') AS recid,
        (SELECT count(*) FROM "OffServing" os WHERE os.barcode = o.barcode) AS n_off_servings,
        (SELECT min(os.grams) FROM "OffServing" os WHERE os.barcode = o.barcode AND os.grams IS NOT NULL) AS off_serv_min_g,
-       (SELECT max(os.grams) FROM "OffServing" os WHERE os.barcode = o.barcode AND os.grams IS NOT NULL) AS off_serv_max_g
+       (SELECT max(os.grams) FROM "OffServing" os WHERE os.barcode = o.barcode AND os.grams IS NOT NULL) AS off_serv_max_g,
+       fd."servingSize" AS fdc_serving_size,
+       coalesce(fd."servingSizeUnit",'') AS fdc_serving_unit,
+       (SELECT min(fs2.grams) FROM "FdcServing" fs2 WHERE fs2."fdcId" = fd."fdcId" AND fs2.grams > 0) AS fdc_serv_min_g
 FROM "FoodMapping" m
 LEFT JOIN "OffFood" o        ON o.barcode  = m."offBarcode"
 LEFT JOIN "FatSecretFood" f  ON f."fsId"   = m."fsId"
 LEFT JOIN "FatSecretServing" fs ON fs."fsId" = f."fsId" AND fs."servingId" = f."defaultServingId"
+LEFT JOIN "FdcFood" fd       ON fd."fdcId" = m."fdcId"
 WHERE m."normalizedForm" = ANY($1::text[])
 ORDER BY 1) t;`;
 
@@ -682,15 +781,92 @@ function openPrisma(): PrismaLike {
     return new PrismaClient() as PrismaLike;
 }
 
-async function loadRows(keys: string[], rowsIn?: string, rowsOut?: string): Promise<ScreenRow[]> {
+async function loadRows(keys: string[], rowsIn?: string): Promise<ScreenRow[]> {
     if (rowsIn) return JSON.parse(fs.readFileSync(rowsIn, 'utf8')) as ScreenRow[];
     const prisma = openPrisma();
     try {
         const res = await prisma.$queryRawUnsafe(ROW_SQL, keys) as { json_agg: ScreenRow[] | null }[];
-        const rows: ScreenRow[] = res?.[0]?.json_agg ?? [];
-        if (rowsOut) fs.writeFileSync(rowsOut, JSON.stringify(rows, null, 1));
-        return rows;
+        return res?.[0]?.json_agg ?? [];
     } finally { await prisma.$disconnect(); }
+}
+
+/** `off_` / `fs_` / `fdc_` — the id prefixes hydrateAndSelectServing branches on. */
+function candidateId(r: ScreenRow): string | null {
+    if (!r.recid) return null;
+    if (r.src === 'openfoodfacts') return `off_${r.recid}`;
+    if (r.src === 'fatsecret') return `fs_${r.recid}`;
+    if (r.src === 'fdc') return `fdc_${r.recid}`;
+    return null;
+}
+
+/**
+ * Fill `row.real` with what the REQUEST PATH would bill for a unitless `1 x`.
+ *
+ * This calls `hydrateAndSelectServing` — the same function route.ts calls — rather
+ * than reimplementing it, which is the whole point: the previous reconstruction
+ * could not see count-label serving, dose-anchored serving or the FatSecret weight
+ * oracle, and PR #174 moved the real anchor further from it still. A screen that
+ * evicts cache rows on a number the user is not billed is grading the wrong thing.
+ *
+ * Rows it cannot resolve get `error` set, which makes D5/D6 abstain. Failure is
+ * never silently converted into agreement.
+ *
+ * !! THIS IS NOT FREE AND NOT PURE. !!
+ * `hydrateAndSelectServing` is the production path, so it does what production does:
+ * it can call the USDA FDC API and it can invoke the ambiguous-serving AI estimator
+ * (one gpt-4o-mini call per ambiguous row). Over the full 3,248-row cache that is
+ * minutes of wall clock and a few hundred model calls, NOT the offline pure-function
+ * cost of Tier D. Rows it resolves through the estimator come back on an
+ * `AI_SERVING_TIER_RE` tier and D5/D6 abstain on them, so the model spend buys
+ * information about the row but never a verdict. Budget for it, or pass
+ * `--no-serving` and accept that D5/D6 report instead of gate.
+ */
+export async function resolveRealServings(rows: ScreenRow[], concurrency = 8): Promise<void> {
+    // Required lazily: this module builds a Prisma client and pulls in the whole
+    // mapper at import time, which unit tests must never do.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { hydrateAndSelectServing } = require('../../src/lib/mapping/map-ingredient-with-fallback');
+    let next = 0;
+    const worker = async (): Promise<void> => {
+        for (;;) {
+            const i = next++;
+            if (i >= rows.length) return;
+            const r = rows[i];
+            const id = candidateId(r);
+            if (!id) { r.real = { grams: null, tier: null, kcal: null, error: `no record id for source '${r.src}'` }; continue; }
+            const p = r.per100g ?? {};
+            const candidate = {
+                id,
+                source: r.src as 'fdc' | 'openfoodfacts' | 'ai_generated' | 'fatsecret',
+                name: r.recname || r.mapfoodname,
+                brandName: r.recbrand || r.mapbrand || null,
+                score: 1,
+                nutrition: {
+                    kcal: Number(p.calories ?? p.kcal ?? 0),
+                    protein: Number(p.protein ?? 0),
+                    carbs: Number(p.carbs ?? p.carbohydrate ?? 0),
+                    fat: Number(p.fat ?? 0),
+                    per100g: true,
+                },
+                rawData: {},
+            };
+            try {
+                const res = await hydrateAndSelectServing(candidate, null, r.conf ?? 0.9, r.seed || r.key);
+                if (!res) { r.real = null; continue; }
+                r.real = {
+                    grams: typeof res.grams === 'number' ? res.grams : null,
+                    tier: res.servingTier ?? null,
+                    // `kcal` is the TOTAL for the resolved grams — the same field
+                    // route.ts records as MappingEventLog.totalKcal.
+                    kcal: typeof res.kcal === 'number' ? res.kcal : null,
+                };
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : String(err);
+                r.real = { grams: null, tier: null, kcal: null, error: msg };
+            }
+        }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
 }
 
 /**
@@ -708,17 +884,63 @@ async function loadRows(keys: string[], rowsIn?: string, rowsOut?: string): Prom
  * A row with NO seed is reported and screened with an empty seed, which makes the
  * token rules ABSTAIN rather than fire — conservative in the right direction, but it
  * does mean an attribution failure makes the screen quiet, not loud.
+ *
+ * !! THE JACCARD FALLBACK DOES NOT SCALE PAST ONE BATCH. !!
+ * It picks the nearest seed in the list, and "nearest" stops meaning "correct" once
+ * the list spans many domains. Measured 2026-07-27 screening all 3,248 cache rows
+ * against 4,168 observed phrases: a TURKEY key was attributed to an `85% lean 15%
+ * fat beef` seed, and three distinct Chick-fil-A keys all matched one
+ * `chick fil a milkshake` seed — each producing a false D3 "head noun absent". 332
+ * of 516 evictions rested solely on seed-dependent rules. For any run wider than a
+ * single batch, pass EXPLICIT `key<TAB>phrase` pairs (see `parseSeedFile`) so
+ * attribution is a lookup instead of a guess.
  */
+/**
+ * A seed file's contents. `byKey` holds explicit `key<TAB>phrase` pins; `phrases`
+ * holds bare seed lines. A file may mix both — batch runs use bare lines, and a
+ * whole-cache run pins every key.
+ */
+export interface SeedInput { phrases: string[]; byKey: Map<string, string> }
+
+/**
+ * Parse a --seeds file. A line with a TAB is `key<TAB>observed phrase` and pins
+ * that key exactly; a line without one is a bare seed phrase matched by
+ * canonicalization then Jaccard. `#` comments and blanks are ignored.
+ */
+export function parseSeedFile(text: string): SeedInput {
+    const phrases: string[] = [];
+    const byKey = new Map<string, string>();
+    for (const raw of text.split('\n')) {
+        const line = raw.replace(/\r$/, '');
+        if (!line.trim() || line.trimStart().startsWith('#')) continue;
+        const tab = line.indexOf('\t');
+        if (tab >= 0) {
+            const key = line.slice(0, tab).trim();
+            const phrase = line.slice(tab + 1).trim();
+            if (key && phrase) { byKey.set(key, phrase); phrases.push(phrase); }
+            continue;
+        }
+        phrases.push(line.trim());
+    }
+    return { phrases, byKey };
+}
+
 export function attribute(
     rows: ScreenRow[],
-    seeds: string[],
+    seeds: string[] | SeedInput,
     canon?: ((s: string) => string) | null,
 ): { unattributed: string[] } {
+    const list = Array.isArray(seeds) ? seeds : seeds.phrases;
+    const pinned = Array.isArray(seeds) ? new Map<string, string>() : seeds.byKey;
     const byKey = new Map<string, string>();
-    const seedSets = seeds.map(s => ({ s, set: new Set(toks(s).map(stem)) }));
-    if (canon) for (const s of seeds) { const k = canon(s); if (!byKey.has(k)) byKey.set(k, s); }
+    const seedSets = list.map(s => ({ s, set: new Set(toks(s).map(stem)) }));
+    if (canon) for (const s of list) { const k = canon(s); if (!byKey.has(k)) byKey.set(k, s); }
     const unattributed: string[] = [];
     for (const r of rows) {
+        // An explicit key->phrase pin always wins: it is the phrase actually observed
+        // for this key, not the nearest one in a global list.
+        const exactPin = pinned.get(r.key);
+        if (exactPin) { r.seed = exactPin; continue; }
         const exact = byKey.get(r.key);
         if (exact) { r.seed = exact; continue; }
         const kt = new Set(toks(r.key).map(stem));
@@ -797,12 +1019,17 @@ function confusion(name: string, flagged: Set<string>, labels: Map<string, Label
 const USAGE = [
     'Usage: correctness-screen.ts (--bdir <batch dir> | --rows <rows.json>) [--seeds <seed file>]',
     '  [--policy strict|balanced|lenient] [--llm] [--llm-all] [--model <id>] [--concurrency N]',
-    '  [--out <screen.json>] [--dump-rows <rows.json>] [--labels <labels.json>]',
+    '  [--out <screen.json>] [--dump-rows <rows.json>] [--labels <labels.json>] [--no-serving]',
     '',
     '  --bdir        batch directory produced by gate.py; reads <bdir>/added.txt',
     '  --rows        replay a previously dumped row pull instead of reading the DB',
     '  --llm         add Tier L. WITHOUT it, measured BAD recall falls 100% -> 78%.',
     '  --labels      score against a hand-labelled ground truth (how the shipped numbers were made)',
+    '  --no-serving  skip the real billing anchor. D5/D6 then report INFO, never EVICT,',
+    '                because the reconstruction alone was never measured against it.',
+    '',
+    '  --seeds accepts bare phrases OR explicit "key<TAB>phrase" pins. Use pins for any',
+    '  run wider than one batch: nearest-match attribution guesses wrong at cache scale.',
     '',
     'Exit 0 = nothing to evict, 1 = rows flagged for withholding, >1 = crash (treat as RED).',
 ].join('\n');
@@ -827,6 +1054,10 @@ async function main(): Promise<number> {
     const useLlm = has('--llm') || llmAll;
     const policy = parsePolicy(val('--policy'));
     const concurrency = parseIntFlag('--concurrency', val('--concurrency'), 6, 1);
+    // Default ON, mirroring winner-gate.sh: the instrument should see the number the
+    // user is billed unless someone explicitly opts out. An offline --rows replay has
+    // no DB, so it cannot run the real anchor.
+    const withServing = !has('--no-serving') && !rowsIn;
 
     let llmCfg: LlmConfig | null = null;
     if (useLlm) {
@@ -855,7 +1086,7 @@ async function main(): Promise<number> {
         keys = fs.readFileSync(addedPath, 'utf8').split('\n')
             .map(l => l.split('\t')[0].trim()).filter(Boolean);
     }
-    let rows = await loadRows(keys, rowsIn, rowsOut);
+    let rows = await loadRows(keys, rowsIn);
     if (keys.length) {
         const wanted = new Set(keys);
         const pulled = rows.length;
@@ -867,18 +1098,51 @@ async function main(): Promise<number> {
         }
     }
 
-    const seeds = seedsPath
-        ? fs.readFileSync(seedsPath, 'utf8').split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'))
-        : [];
-    if (!seeds.length) {
+    const seeds: SeedInput = seedsPath
+        ? parseSeedFile(fs.readFileSync(seedsPath, 'utf8'))
+        : { phrases: [], byKey: new Map() };
+    if (!seeds.phrases.length) {
         console.log('WARN no --seeds file: every row is screened with an EMPTY seed, so D1/D2/D3/D4/D10/D11 '
             + 'ABSTAIN. D3 alone carries 15 of 23 measured BAD catches — this run is not the measured screen.');
     }
     const { unattributed } = attribute(rows, seeds, loadCanonicalizer());
+    const guessed = rows.length - unattributed.length - seeds.byKey.size;
+    if (seeds.byKey.size) {
+        console.log(`seeds: ${seeds.byKey.size} key(s) pinned explicitly, ${Math.max(0, guessed)} matched by canonicalization/Jaccard.`);
+    }
     if (unattributed.length) {
         console.log(`WARN ${unattributed.length} row(s) could not be attributed to a seed and are screened with an `
             + `empty seed (token rules abstain): ${unattributed.slice(0, 5).join(', ')}`);
     }
+    // Jaccard picks the NEAREST seed, and nearest stops meaning correct once the seed
+    // list spans domains (turkey key <- beef seed, 2026-07-27). Say so rather than
+    // letting a wide run quietly inherit a per-batch instrument's reputation.
+    if (!seeds.byKey.size && seeds.phrases.length > 300) {
+        console.log(`WARN ${seeds.phrases.length} bare seed phrases and no key->phrase pins. Attribution is a `
+            + 'nearest-match GUESS at this width and the seed-dependent rules (D1/D2/D3/D4/D10/D11) '
+            + 'will produce false positives. Pass explicit "key<TAB>phrase" lines for a whole-cache run.');
+    }
+
+    // --- The real billing anchor, for D5/D6. Needs the DB; an offline --rows replay
+    // cannot run it, and in that case D5/D6 report INFO/UNJUDGED rather than evicting
+    // on a reconstruction whose agreement with the real anchor was never measured.
+    if (withServing) {
+        await resolveRealServings(rows);
+        const ok = rows.filter(r => r.real && !r.real.error).length;
+        const failed = rows.filter(r => r.real?.error).length;
+        const ai = rows.filter(r => r.real && !r.real.error && AI_SERVING_TIER_RE.test(r.real.tier ?? '')).length;
+        console.log(`serving: real anchor resolved for ${ok}/${rows.length} row(s)`
+            + (failed ? `, ${failed} errored (D5/D6 abstain on those)` : '')
+            + (ai ? `, ${ai} via an AI estimator (D5/D6 abstain on those too)` : ''));
+    } else {
+        console.log('NOTE --no-serving: D5/D6 are a RECONSTRUCTION this run and are reported as INFO, not EVICT. '
+            + 'Tier-D BAD recall is below the measured 18/23 without them.');
+    }
+
+    // Dump AFTER the serving pass, not during the row pull: the real anchor costs
+    // minutes and a few hundred model calls, and a dump taken before it produces a
+    // --rows file that can never judge D5/D6. Pay once, replay offline forever.
+    if (rowsOut) fs.writeFileSync(rowsOut, JSON.stringify(rows, null, 1));
 
     // --- Tier D (pure, offline)
     const dHits = new Map<string, Hit[]>();
