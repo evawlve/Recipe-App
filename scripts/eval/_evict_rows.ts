@@ -3,6 +3,33 @@
  *
  * DRY RUN BY DEFAULT. Pass --execute to actually delete.
  *
+ * TWO SNAPSHOT ROLES — the same _snap_foodmapping.ts output plays two different
+ * jobs, and feeding the wrong file to the wrong script silently voids a guard:
+ *
+ *   Role A — SCREEN snapshot (verdict anchor). Taken when the audit/screen ran;
+ *     it holds the rows the verdicts were issued AGAINST. The identity guard in
+ *     THIS script is only meaningful against Role A: it asks "is the live row
+ *     still the row the screen judged?". Feed it a snapshot taken seconds ago
+ *     and the check is vacuously green — live trivially matches itself — and
+ *     the guard proves NOTHING about screen-time state.
+ *   Role B — FRESH pre-execute snapshot (restore anchor). Re-taken immediately
+ *     before any --execute (handoff §2b). _restore_rows.ts restores from THIS
+ *     file, because it holds the rows exactly as they were the moment before
+ *     deletion. It must NEVER be passed to --screen-snapshot.
+ *
+ * The five-step procedure (also in _snap_foodmapping.ts / _restore_rows.ts):
+ *   1. screen/audit runs; _snap_foodmapping.ts -> S_screen   (Role A)
+ *   2. THIS script, dry run:   _evict_rows.ts <keys> --screen-snapshot S_screen
+ *   3. immediately before execute: _snap_foodmapping.ts -> S_fresh  (Role B)
+ *   4. THIS script, execute:   _evict_rows.ts <keys> --screen-snapshot S_screen --execute
+ *   5. rollback if needed:     _restore_rows.ts S_fresh <keys> --execute
+ *
+ * The snapshot argument is therefore a NAMED flag (--screen-snapshot), and a
+ * bare positional snapshot path REFUSES: a positional cannot say which role the
+ * file is playing, and the failure mode (operator hands over the fresh Role-B
+ * file, guard goes vacuously green) is invisible at run time. This deliberately
+ * breaks the CLI documented in handoff_cache_audit_2026-07-27.md §1(a).
+ *
  * Safety properties, in order of importance:
  *  1. Refuses to run without a snapshot file that CONTAINS every key being deleted.
  *     A delete you cannot undo is not a delete, it is data loss.
@@ -31,7 +58,7 @@
  * Exit codes: 0 = ok (dry run or executed), 2 = refused / error.
  *
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
- *     scripts/eval/_evict_rows.ts <keys.json> <snapshot.json> [--execute]
+ *     scripts/eval/_evict_rows.ts <keys.json> --screen-snapshot <screen-time-snapshot.json> [--execute]
  */
 import 'dotenv/config';
 import * as fs from 'fs';
@@ -212,13 +239,128 @@ export function evictGuard(
 }
 
 // ---------------------------------------------------------------------------
+// CLI argument parsing — pure and testable, because the refusal it implements
+// (a role-ambiguous positional snapshot) is itself a guard.
+// ---------------------------------------------------------------------------
+
+export const EVICT_USAGE =
+    'usage: _evict_rows.ts <keys.json> --screen-snapshot <screen-time-snapshot.json> [--execute]';
+
+export type EvictCliParse =
+    | { ok: true; keysPath: string; screenSnapshotPath: string; execute: boolean }
+    | { ok: false; reason: string };
+
+/**
+ * The snapshot is a NAMED argument because the file plays one of two roles
+ * (see header) and a positional cannot state which. A second positional is
+ * refused, never guessed at: the old CLI shape is exactly how an operator
+ * hands the FRESH restore-anchor snapshot to the verdict guard.
+ */
+export function parseEvictArgs(argv: string[]): EvictCliParse {
+    let execute = false;
+    let screenSnapshotPath: string | undefined;
+    const positionals: string[] = [];
+    for (let i = 0; i < argv.length; i++) {
+        const a = argv[i];
+        if (a === '--execute') { execute = true; continue; }
+        if (a === '--screen-snapshot') {
+            if (screenSnapshotPath !== undefined) {
+                return { ok: false, reason: `--screen-snapshot given twice. ${EVICT_USAGE}` };
+            }
+            const v = argv[i + 1];
+            if (!v || v.startsWith('--')) {
+                return { ok: false, reason: `--screen-snapshot requires a file path. ${EVICT_USAGE}` };
+            }
+            screenSnapshotPath = v;
+            i++;
+            continue;
+        }
+        if (a.startsWith('--')) {
+            // An unrecognised flag must refuse, not fall through as a positional:
+            // "--screen-snapshit typo silently ignored" is a class-B hole.
+            return { ok: false, reason: `unknown flag ${JSON.stringify(a)}. ${EVICT_USAGE}` };
+        }
+        positionals.push(a);
+    }
+    if (positionals.length > 1) {
+        return {
+            ok: false,
+            reason: [
+                `REFUSING a bare positional snapshot path (${JSON.stringify(positionals[1])}): this argument cannot`,
+                'say which ROLE the file plays. The identity guard is only meaningful against the AT-SCREEN-TIME',
+                'snapshot the audit verdicts were derived from (Role A). If this file is the FRESH pre-execute',
+                'snapshot (Role B, the restore anchor for _restore_rows.ts), the guard would be vacuously green —',
+                'live trivially matches a snapshot taken seconds ago — and would prove nothing about screen-time',
+                'state. Re-run naming the role explicitly:',
+                `  ${EVICT_USAGE}`,
+            ].join('\n'),
+        };
+    }
+    if (positionals.length === 0) return { ok: false, reason: EVICT_USAGE };
+    if (!screenSnapshotPath) {
+        return {
+            ok: false,
+            reason: `missing --screen-snapshot <file>: the guard needs the AT-SCREEN-TIME snapshot (Role A). ${EVICT_USAGE}`,
+        };
+    }
+    return { ok: true, keysPath: positionals[0], screenSnapshotPath, execute };
+}
+
+/** Age warning threshold: a screen snapshot younger than this is almost certainly the wrong file. */
+export const SUSPICIOUSLY_FRESH_MS = 15 * 60 * 1000;
+
+/**
+ * The run-start banner: names the file anchoring the verdicts, its role, its
+ * age, and which step of the five-step procedure this run is. Pure so the
+ * fresh-file warning is testable.
+ */
+export function snapshotRoleBanner(opts: {
+    screenSnapshotPath: string;
+    takenAt: string;
+    execute: boolean;
+    now: Date;
+}): string[] {
+    const lines: string[] = [];
+    const taken = new Date(opts.takenAt);
+    const ageMs = Number.isNaN(taken.getTime()) ? null : opts.now.getTime() - taken.getTime();
+    const ageText = ageMs === null
+        ? `taken ${JSON.stringify(opts.takenAt)} (unparseable date — check this file by hand)`
+        : `taken ${opts.takenAt} (${(ageMs / 3_600_000).toFixed(1)} h before this run)`;
+
+    lines.push('======================================================================');
+    lines.push('SNAPSHOT ROLES — this run anchors its verdicts to:');
+    lines.push(`  verdict anchor (Role A, --screen-snapshot): ${opts.screenSnapshotPath}`);
+    lines.push(`    ${ageText}`);
+    lines.push('    This must be the AT-SCREEN-TIME snapshot the audit verdicts were');
+    lines.push('    derived from — NOT the fresh pre-execute snapshot (Role B).');
+    if (ageMs !== null && ageMs < SUSPICIOUSLY_FRESH_MS) {
+        lines.push(`    WARNING: this snapshot is only ${(ageMs / 60_000).toFixed(1)} min old. A screen takes time;`);
+        lines.push('    a minutes-old file is almost certainly the FRESH restore-anchor snapshot');
+        lines.push('    fed to the wrong flag — the identity guard would be vacuously green.');
+        lines.push('    STOP unless you know why this file is this fresh.');
+    }
+    lines.push(opts.execute
+        ? '  procedure step: 4 of 5 (EXECUTE). Step 3 — a FRESH pre-execute snapshot'
+        : '  procedure step: 2 of 5 (DRY RUN). Before any --execute, take a FRESH');
+    lines.push(opts.execute
+        ? '    (_snap_foodmapping.ts) — must ALREADY exist; it is the restore anchor'
+        : '    snapshot (_snap_foodmapping.ts); that file is the restore anchor');
+    lines.push('    for _restore_rows.ts and must NOT be passed to --screen-snapshot.');
+    lines.push('======================================================================');
+    return lines;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<number> {
-    const [keysPath, snapPath] = process.argv.slice(2).filter(a => a !== '--execute');
-    const execute = process.argv.includes('--execute');
-    if (!keysPath || !snapPath) throw new Error('usage: _evict_rows.ts <keys.json> <snapshot.json> [--execute]');
+    const cli = parseEvictArgs(process.argv.slice(2));
+    if (!cli.ok) {
+        console.error(`REFUSING: ${cli.reason}`);
+        return 2;
+    }
+    const { keysPath, screenSnapshotPath: snapPath, execute } = cli;
 
     let keysText: string;
     try { keysText = fs.readFileSync(keysPath, 'utf8'); } catch (e) {
@@ -238,6 +380,15 @@ async function main(): Promise<number> {
         return 2;
     }
     const snap = parsedSnap.snap;
+
+    // Prominent, first thing on the console: which file anchors the verdicts,
+    // what role it must be playing, and where the operator is in the procedure.
+    for (const line of snapshotRoleBanner({
+        screenSnapshotPath: snapPath,
+        takenAt: snap.takenAt,
+        execute,
+        now: new Date(),
+    })) console.log(line);
 
     const prisma = new PrismaClient();
     try {
@@ -276,7 +427,11 @@ async function main(): Promise<number> {
         const res = await prisma.foodMapping.deleteMany({ where: { normalizedForm: { in: keys } } });
         const after = await prisma.foodMapping.count();
         console.log(`\nDELETED ${res.count} row(s). FoodMapping now ${after} rows.`);
-        console.log(`Restore with: _restore_rows.ts ${snapPath} ${keysPath}`);
+        console.log(
+            `Restore with: _restore_rows.ts <FRESH-pre-execute-snapshot.json> ${keysPath} — `
+            + 'the restore anchor is the Role-B snapshot taken at step 3, '
+            + `NOT the screen snapshot (${snapPath}) this guard ran against.`,
+        );
         return 0;
     } finally {
         await prisma.$disconnect();

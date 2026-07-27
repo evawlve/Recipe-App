@@ -4,8 +4,20 @@
  * The counterpart to _evict_rows.ts. Written BEFORE the eviction ran, because a
  * restore path you have not written is a restore path you do not have.
  *
+ * WHICH SNAPSHOT: the FRESH pre-execute snapshot (Role B, the restore anchor) —
+ * the one taken at step 3, immediately before `_evict_rows --execute` (handoff
+ * §2b). NOT the screen-time snapshot (Role A) that anchored the audit verdicts:
+ * that file can be hours older and holds pre-flywheel row content, so restoring
+ * from it can resurrect stale rows. The full five-step procedure is in the
+ * _evict_rows.ts header:
+ *   1. screen runs; _snap_foodmapping.ts -> S_screen        (Role A, verdict anchor)
+ *   2. _evict_rows.ts <keys> --screen-snapshot S_screen              (dry run)
+ *   3. _snap_foodmapping.ts -> S_fresh                      (Role B, restore anchor)
+ *   4. _evict_rows.ts <keys> --screen-snapshot S_screen --execute
+ *   5. THIS script:  _restore_rows.ts S_fresh <keys> --execute
+ *
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
- *     scripts/eval/_restore_rows.ts <snapshot.json> [keys.json] [--execute]
+ *     scripts/eval/_restore_rows.ts <fresh-pre-execute-snapshot.json> [keys.json] [--execute]
  *
  * With keys.json: restores only those keys. Without: restores every snapshot row
  * that is currently missing. Uses createMany({skipDuplicates}) so it never
@@ -123,7 +135,13 @@ async function main(): Promise<number> {
     const args = process.argv.slice(2).filter(a => a !== '--execute');
     const execute = process.argv.includes('--execute');
     const [snapPath, keysPath] = args;
-    if (!snapPath) throw new Error('usage: _restore_rows.ts <snapshot.json> [keys.json] [--execute]');
+    if (!snapPath) {
+        throw new Error(
+            'usage: _restore_rows.ts <fresh-pre-execute-snapshot.json> [keys.json] [--execute] — '
+            + 'the snapshot here is the Role-B RESTORE ANCHOR (taken immediately before the evict --execute), '
+            + 'not the screen-time snapshot the verdicts came from (see header).',
+        );
+    }
 
     const parsed = loadSnapshot(snapPath);
     if (!parsed.ok) {
@@ -153,6 +171,7 @@ async function main(): Promise<number> {
             (await prisma.foodMapping.findMany({ select: { normalizedForm: true } })).map(r => r.normalizedForm),
         );
         const { missing, skipped } = partitionRestore(rows, liveKeys);
+        console.log(`restore anchor (Role B — must be the FRESH pre-execute snapshot, step 3 of 5): ${snapPath}`);
         console.log(`snapshot ${snap.count} rows (taken ${snap.takenAt})`);
         console.log(`candidates ${rows.length}, currently MISSING from the cache: ${missing.length}`);
         for (const line of skipReportLines(skipped.map(r => r.normalizedForm))) console.log(line);

@@ -28,11 +28,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+    EVICT_USAGE,
     evictGuard,
     identityOf,
     loadSnapshot,
+    parseEvictArgs,
     parseKeysText,
     parseSnapshotText,
+    snapshotRoleBanner,
+    SUSPICIOUSLY_FRESH_MS,
     type Snapshot,
     type SnapshotRow,
 } from '../_evict_rows';
@@ -385,5 +389,121 @@ describe('_restore_rows keys file: degenerate-but-valid JSON refuses, never narr
         const v = selectRestoreRows('["and ben jerry", "propel water"]', snap.rows);
         expect(v.ok).toBe(true);
         if (v.ok) expect(v.rows).toHaveLength(2);
+    });
+});
+
+// ===========================================================================
+// 5. Snapshot ROLES — the evict guard is only meaningful against the
+//    AT-SCREEN-TIME snapshot (Role A, verdict anchor). The handoff tells the
+//    operator to re-take a FRESH snapshot before any --execute (Role B, the
+//    restore anchor for _restore_rows.ts); feeding THAT file to the evict
+//    guard makes the identity check vacuously green — live trivially matches
+//    a snapshot taken seconds ago. The CLI therefore refuses to accept a
+//    snapshot path whose role it cannot know.
+// ===========================================================================
+
+describe('_evict_rows CLI: the snapshot argument must state its ROLE', () => {
+    function cliRefusal(argv: string[]): string {
+        const v = parseEvictArgs(argv);
+        expect(v.ok).toBe(false);
+        if (v.ok) throw new Error('unreachable');
+        return v.reason;
+    }
+
+    it('FAIL INJECTION — the OLD positional CLI (handoff §1a shape) refuses, naming the ambiguity', () => {
+        // Exactly the documented pre-fix command line: keys, snapshot, --execute.
+        const reason = cliRefusal([
+            '/tmp/screen-llm/audit-evict-keys.json',
+            '/tmp/screen-llm/snapshots/FoodMapping-pre-evict.json',
+            '--execute',
+        ]);
+        expect(reason).toContain('ROLE');
+        expect(reason).toContain('vacuously green');
+        expect(reason).toContain('--screen-snapshot');
+    });
+
+    it('a bare positional snapshot refuses even without --execute (dry runs anchor verdicts too)', () => {
+        expect(parseEvictArgs(['keys.json', 'snap.json']).ok).toBe(false);
+    });
+
+    it('missing --screen-snapshot refuses — the guard has no verdict anchor without it', () => {
+        expect(cliRefusal(['keys.json'])).toContain('--screen-snapshot');
+        expect(cliRefusal(['keys.json', '--execute'])).toContain('--screen-snapshot');
+    });
+
+    it('--screen-snapshot without a value refuses (a following flag is not a path)', () => {
+        expect(cliRefusal(['keys.json', '--screen-snapshot'])).toContain('requires a file path');
+        expect(cliRefusal(['keys.json', '--screen-snapshot', '--execute'])).toContain('requires a file path');
+    });
+
+    it('an unknown flag refuses — a typo of the role flag must not silently un-anchor the run', () => {
+        expect(cliRefusal(['keys.json', '--screen-snap', 'snap.json'])).toContain('unknown flag');
+    });
+
+    it('--screen-snapshot given twice refuses (which one anchored the verdicts?)', () => {
+        expect(cliRefusal(['k.json', '--screen-snapshot', 'a.json', '--screen-snapshot', 'b.json']))
+            .toContain('twice');
+    });
+
+    it('zero args refuses with usage', () => {
+        expect(cliRefusal([])).toContain(EVICT_USAGE);
+    });
+
+    it('POSITIVE CONTROL — the corrected command line parses, in either order', () => {
+        const v = parseEvictArgs(['keys.json', '--screen-snapshot', 'snap.json', '--execute']);
+        expect(v).toEqual({ ok: true, keysPath: 'keys.json', screenSnapshotPath: 'snap.json', execute: true });
+
+        const dry = parseEvictArgs(['--screen-snapshot', 'snap.json', 'keys.json']);
+        expect(dry).toEqual({ ok: true, keysPath: 'keys.json', screenSnapshotPath: 'snap.json', execute: false });
+    });
+});
+
+describe('_evict_rows run-start banner: names the verdict anchor and the procedure step', () => {
+    const NOW = new Date('2026-07-27T18:00:00.000Z');
+    const base = {
+        screenSnapshotPath: '/snaps/FoodMapping-screen-2026-07-27.json',
+        takenAt: '2026-07-27T09:00:00.000Z', // 9 h before NOW — a plausible screen-time file
+        now: NOW,
+    };
+
+    it('names the file, its role, and its age', () => {
+        const text = snapshotRoleBanner({ ...base, execute: false }).join('\n');
+        expect(text).toContain(base.screenSnapshotPath);
+        expect(text).toContain('verdict anchor');
+        expect(text).toContain('9.0 h before this run');
+        expect(text).toContain('AT-SCREEN-TIME');
+    });
+
+    it('dry run states step 2 of 5; execute states step 4 of 5 and demands the Role-B file already exist', () => {
+        expect(snapshotRoleBanner({ ...base, execute: false }).join('\n')).toContain('step: 2 of 5');
+        const exec = snapshotRoleBanner({ ...base, execute: true }).join('\n');
+        expect(exec).toContain('step: 4 of 5');
+        expect(exec).toContain('ALREADY exist');
+    });
+
+    it('a minutes-old "screen" snapshot warns LOUDLY — that file is almost certainly Role B', () => {
+        const text = snapshotRoleBanner({
+            ...base,
+            takenAt: new Date(NOW.getTime() - 30_000).toISOString(), // 30 s old
+            execute: true,
+        }).join('\n');
+        expect(text).toContain('WARNING');
+        expect(text).toContain('STOP');
+    });
+
+    it('POSITIVE CONTROL — an hours-old snapshot does not warn, and the threshold is honest', () => {
+        expect(snapshotRoleBanner({ ...base, execute: false }).join('\n')).not.toContain('WARNING');
+        // The banner must warn strictly below the exported threshold, not at some other number.
+        const justUnder = snapshotRoleBanner({
+            ...base,
+            takenAt: new Date(NOW.getTime() - (SUSPICIOUSLY_FRESH_MS - 1)).toISOString(),
+            execute: false,
+        }).join('\n');
+        expect(justUnder).toContain('WARNING');
+    });
+
+    it('an unparseable takenAt is surfaced, not silently skipped', () => {
+        const text = snapshotRoleBanner({ ...base, takenAt: 'not-a-date', execute: false }).join('\n');
+        expect(text).toContain('unparseable');
     });
 });
