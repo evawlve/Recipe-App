@@ -70,7 +70,7 @@ describe('capMayOverrideLabelServing', () => {
         ['pumpkin spice granola'],
         ['talenti sea salt caramel'],
     ])('blocks the cap for the product query %p', (q) => {
-        expect(capMayOverrideLabelServing(q)).toBe(false);
+        expect(capMayOverrideLabelServing(q, 'label_serving_default')).toBe(false);
     });
 
     it('does not let the dose-anchor carve-out readmit a long product query', () => {
@@ -78,16 +78,43 @@ describe('capMayOverrideLabelServing', () => {
         // its head token is "salt" — which is exactly why the carve-out carries a
         // token limit of its own instead of being an unconditional escape hatch.
         expect(isDoseAnchoredBareQuery('rxbar chocolate sea salt')).toBe(true);
-        expect(capMayOverrideLabelServing('rxbar chocolate sea salt')).toBe(false);
+        expect(capMayOverrideLabelServing('rxbar chocolate sea salt', 'label_serving_default')).toBe(false);
+    });
+
+    it('protects DECLARED label tiers only — package-scale grams stay cappable', () => {
+        // The winner-gate caught this as a live regression on the first draft,
+        // which protected every CAP tier by token count: `orgain organic protein
+        // powder` went 35g -> 325.3g via package_count_sibling, billing 1,168 kcal
+        // for one scoop. A package COUNT is not a declared serving.
+        const q = 'orgain organic protein powder';
+        expect(capMayOverrideLabelServing(q, 'package_count_sibling')).toBe(true);
+        expect(capMayOverrideLabelServing(q, 'package_quantity_own')).toBe(true);
+        expect(capMayOverrideLabelServing(q, 'seed_count_default')).toBe(true);
+        expect(capMayOverrideLabelServing(q, 'label_serving_default')).toBe(false);
     });
 
     it('is not fooled by punctuation or extra whitespace', () => {
-        expect(capMayOverrideLabelServing('  olive   oil  ')).toBe(true);
-        expect(capMayOverrideLabelServing("trader joe's everything bagel seasoning")).toBe(false);
+        expect(capMayOverrideLabelServing('  olive   oil  ', 'label_serving_default')).toBe(true);
+        expect(capMayOverrideLabelServing("trader joe's everything bagel seasoning", 'label_serving_default')).toBe(false);
     });
 
     it('treats an empty query as capable (it cannot be a product name)', () => {
-        expect(capMayOverrideLabelServing('')).toBe(true);
+        expect(capMayOverrideLabelServing('', 'label_serving_default')).toBe(true);
+    });
+});
+
+describe('the package-scale regression the gate caught', () => {
+    it('still caps a 325g whole-tub package count to the one-scoop default', () => {
+        const r = applyOffBareQueryGuard({
+            grams: 325.3,
+            servingTier: 'package_count_sibling',
+            parsed: bare('orgain organic protein powder'),
+            rawLine: 'orgain organic protein powder',
+            queryName: 'orgain organic protein powder',
+            foodName: 'Organic Protein Protein Powder',
+        });
+        expect(r).not.toBeNull();
+        expect(r!.grams).toBeLessThan(100);
     });
 });
 

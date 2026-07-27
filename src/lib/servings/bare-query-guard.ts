@@ -160,14 +160,32 @@ const CAP_MAX_QUERY_TOKENS = 2;
 const CAP_MAX_DOSE_ANCHORED_TOKENS = 3;
 
 /**
- * May a lexicon category default overwrite grams that came from the record's own
- * declared label?
+ * Tiers whose grams are the manufacturer's DECLARED SERVING for this record.
+ * Only these are protected by the query-token rule.
  *
- * This governs the CAP paths only. The REPLACE paths are untouched: there the
- * grams are fabricated (a flat 100g placeholder or a count floor), so a category
+ * The distinction is the whole point. A declared serving is data about one
+ * serving; a PACKAGE-scale tier (package_count_*, package_quantity_*) is a count
+ * of the whole container, and capping those is exactly what the guard is for. The
+ * first draft of this fix protected every CAP tier by token count, and the
+ * winner-gate caught the cost immediately: `orgain organic protein powder`
+ * (4 tokens) went 35g -> 325.3g via package_count_sibling, billing 1,168 kcal for
+ * one scoop of protein powder. The 35g cap there was correct and stays.
+ */
+const DECLARED_LABEL_TIERS = new Set([
+    'label_serving_default',   // also the alias for fs_default_serving
+    'bare_label_serving',
+]);
+
+/**
+ * May a lexicon category default overwrite these grams?
+ *
+ * Governs the CAP paths only. The REPLACE paths are untouched: there the grams
+ * are fabricated (a flat 100g placeholder or a count floor), so a category
  * default is strictly better and no label data is at risk.
  */
-export function capMayOverrideLabelServing(queryName: string): boolean {
+export function capMayOverrideLabelServing(queryName: string, servingTier?: string): boolean {
+    // Package-scale grams are not a declared serving; cap them as before.
+    if (servingTier !== undefined && !DECLARED_LABEL_TIERS.has(servingTier)) return true;
     const n = queryTokens(queryName).length;
     if (n <= CAP_MAX_QUERY_TOKENS) return true;
     return isDoseAnchoredBareQuery(queryName) && n <= CAP_MAX_DOSE_ANCHORED_TOKENS;
@@ -258,12 +276,12 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
 
     const queryDefault = getBareQueryDefault(queryName);
 
-    // A multi-word PRODUCT query keeps its record's declared label serving: the
+    // A multi-word PRODUCT query keeps its record's DECLARED label serving: the
     // manufacturer's number outranks a category guess made from one token inside
-    // the product's name. Applies to both CAP paths; the REPLACE path below is
-    // deliberately untouched, since there the grams are fabricated and nothing
-    // real is being overwritten.
-    const capAllowed = capMayOverrideLabelServing(queryName);
+    // the product's name. Package-scale tiers are unaffected — capping those is
+    // what the guard is for. The REPLACE path below is untouched entirely, since
+    // there the grams are fabricated and nothing real is being overwritten.
+    const capAllowed = capMayOverrideLabelServing(queryName, servingTier);
 
     if (CAP_TIERS.has(servingTier)) {
         // CAP consults ONLY the query-side lexicon. A foodName fallback here
