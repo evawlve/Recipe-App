@@ -705,6 +705,16 @@ async function main(): Promise<void> {
 
     const rows = inputs.map(makeFunnelRow);
 
+    if (rows.length === 0) {
+        // Fail closed (playbook §11 class B): a funnel report over zero rows
+        // reads as "no drops", which is the opposite of what an empty input
+        // means (a failed warm, a bad --since, the wrong file).
+        console.error(`FAIL: ${label} yielded ZERO rows — a report over nothing must not read as "no drops"; exit 2.`);
+        process.exitCode = 2;
+        if (prisma) await prisma.$disconnect();
+        return;
+    }
+
     if (wantIncumbent) {
         try {
             prisma = prisma ?? openPrisma();
