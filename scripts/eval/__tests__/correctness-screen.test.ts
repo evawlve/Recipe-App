@@ -40,6 +40,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     D1_FALSE_EVICT_RATE_REAL_CACHE,
+    D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE,
     FITTED_GOOD_FP_RATE,
     FlagError,
     HELD_OUT_GOOD_FP_RATE,
@@ -54,12 +55,14 @@ import {
     confusionOf,
     contentStems,
     decide,
+    llmUserPrompt,
     parseIntFlag,
     parsePolicy,
     parseSeedFile,
     realServing,
     resolveServingGrams,
     screenBatch,
+    servingLevelKcal,
     stem,
     tierD,
     toks,
@@ -193,7 +196,7 @@ describe('Tier D over batch 01 — pinned confusion matrix', () => {
         { rule: 'D5', fires: 7, bad: 2, good: 0, suspect: 5, note: 'a SUSPECT detector, not a BAD detector' },
         { rule: 'D6', fires: 3, bad: 3, good: 0, suspect: 0, note: '1.0 g chili oil, 1.9 g muffin, 1106 g banana' },
         { rule: 'D7', fires: 2, bad: 1, good: 0, suspect: 1, note: 'Atwater: inconsistency, not wrongness' },
-        { rule: 'D8', fires: 1, bad: 0, good: 0, suspect: 1, note: 'empty panels are a restaurant-batch rule' },
+        { rule: 'D8', fires: 1, bad: 0, good: 0, suspect: 1, note: 'the one fire (`publix sandwich sub`) is a FatSecret serving-nutrition row — INFO since 2026-07-27' },
         { rule: 'D9', fires: 0, bad: 0, good: 0, suspect: 0, note: 'UNEXERCISED — corruptReason never set here' },
         { rule: 'D10', fires: 1, bad: 0, good: 0, suspect: 1, note: 'blank brand fields are common and benign' },
         { rule: 'D11', fires: 2, bad: 0, good: 2, suspect: 0, note: 'INFO only — it flags GOOD rows and must never gate' },
@@ -232,12 +235,21 @@ describe('Tier D over batch 01 — pinned confusion matrix', () => {
     /**
      * Whole-tier decisions per policy. `balanced` is the shipped operating point's
      * deterministic half; `strict` buys TWO extra BAD rows over it and withholds
-     * eight more; `lenient` is not a screen — since D1/D6 were retired it evicts one
-     * row on the whole fixture and zero BAD, which is the honest picture of what the
-     * two purely-structural rules (D8/D9) can do alone.
+     * eight more; `lenient` is not a screen — it now evicts ZERO rows on the whole
+     * fixture, which is the honest picture of what the two purely-structural rules
+     * (D8/D9) can do alone.
+     *
+     * MOVED 2026-07-27 (D8 serving-nutrition abstention): lenient was evict 1 /
+     * review 25. Batch 01's only D8 fire — `publix sandwich sub`, a SUSPECT row —
+     * is itself a FatSecret serving-nutrition row (bills a real 350 kcal through
+     * `fs_serving_macros_only`), i.e. exactly the shape whose false-fire rate on
+     * the real cache measured 34/35. D8 now reports INFO on it, and the row lands
+     * in REVIEW via D3 instead of being evicted, so it never leaves the screen's
+     * sight. `balanced` and `strict` are byte-identical to the pre-fix pins: the
+     * row was already an EVICT there on D3's authority, not D8's.
      */
     const PER_POLICY: { policy: Policy; evict: number; evictBad: number; review: number; reviewBad: number; keep: number }[] = [
-        { policy: 'lenient', evict: 1, evictBad: 0, review: 25, reviewBad: 19, keep: 55 },
+        { policy: 'lenient', evict: 0, evictBad: 0, review: 26, reviewBad: 19, keep: 55 },
         { policy: 'balanced', evict: 16, evictBad: 15, review: 10, reviewBad: 4, keep: 55 },
         { policy: 'strict', evict: 19, evictBad: 16, review: 7, reviewBad: 3, keep: 55 },
     ];
@@ -302,6 +314,18 @@ describe('reported accuracy', () => {
         // The screen's own recall must never be quoted above what the weaker of its
         // two measured Tier-L models delivers without saying which model.
         expect(MEASURED_BAD_RECALL_WITH_LLM).toBeGreaterThan(MEASURED_BAD_RECALL_WITH_LLM_MINI);
+    });
+
+    it('pins D8\'s real-cache FatSecret false-fire rate — the number that forced the abstention', () => {
+        // 48 D8 fires on the real 3,248-row cache = 35 fatsecret + 13 id-less
+        // mappings + 0 fdc; 34 of the 35 FatSecret rows billed fine through
+        // FatSecretServing.nutrients. D8 was an evictor under EVERY policy at the
+        // time, certified by a "0.0% false-evict" measured over a subset that never
+        // contained these rows. A future "promote D8 back to firing on panel-less
+        // FatSecret rows" has to argue with this number, not with a fixture —
+        // batch 01's one D8 fire cannot see the class (playbook §11 class C).
+        expect(D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE).toBeCloseTo(34 / 35, 10);
+        expect(D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE).toBeGreaterThan(0.9);
     });
 });
 
@@ -436,15 +460,110 @@ describe('D7 — Atwater inconsistency', () => {
     });
 });
 
-describe('D8 — unusable per-100g basis', () => {
+describe('D8 — no usable billing basis anywhere', () => {
+    /**
+     * The 2026-07-27 fix, pinned against rows copied VERBATIM from the whole-cache
+     * capture. D8's old premise — "an empty/zero per-100g panel has nothing to
+     * scale from" — is false for the FatSecret lane: serving macros live in
+     * FatSecretServing.nutrients and the row bills through the macro-only branch.
+     * 34 of the 35 FatSecret rows D8 fired on across the real 3,248-row cache
+     * billed fine, and D8 was an EVICTOR UNDER EVERY POLICY at the time, on the
+     * strength of a "0.0% false-evict" measured over a rules-flagged subset that
+     * never contained these rows.
+     */
+    const D8FIX = JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'fixtures', 'd8-fatsecret-serving-rows.json'), 'utf8'),
+    ) as { pinnedFalsePositives: ScreenRow[]; the35thRow: ScreenRow; truePositive: ScreenRow };
+
     it.each([
         ['an empty {} panel', {} as Record<string, number>],
         ['a 0 kcal panel', { calories: 0, protein: 0, carbs: 0, fat: 0 }],
-    ])('fires on %s', (_label, per100g) => {
-        expect(rules(tierD(baseRow({ per100g }), 'balanced'))).toContain('D8');
+    ])('still fires on %s when NO serving-level nutrition exists', (_label, per100g) => {
+        // baseRow has fs_serving_nutrients: null — the true-positive shape.
+        const hits = tierD(baseRow({ per100g }), 'balanced');
+        expect(rules(hits)).toContain('D8');
+        expect(hits.find(h => h.rule === 'D8')?.severity).toBe('EVICT');
     });
+
     it('does not fire on a real panel', () => {
         expect(rules(tierD(baseRow(), 'balanced'))).not.toContain('D8');
+    });
+
+    it.each(
+        ['and company noodle pad thai', 'beef italian portillo sandwich', 'bowl cava falafel', 'bowl cava lamb meatball spicy', 'propel water']
+            .map(k => [k] as [string]),
+    )('regression: must not evict `%s` under ANY policy — it bills fine via serving macros', (key) => {
+        const row = D8FIX.pinnedFalsePositives.find(r => r.key === key)!;
+        expect(row).toBeDefined();
+        for (const policy of ['lenient', 'balanced', 'strict'] as Policy[]) {
+            const hit = tierD(row, policy).find(h => h.rule === 'D8');
+            // D8 still SEES the row (the panel really is empty/zero — that is the
+            // lane's shape and worth reporting) but may only say INFO, never gate.
+            expect([key, policy, hit?.severity]).toEqual([key, policy, 'INFO']);
+            expect(hit?.detail).toContain('ABSTAIN');
+            // Under lenient only D8/D9 evict, so the decision doubles as a direct
+            // assertion that no OTHER rule evicts these five either: the 320-key
+            // evict list must be re-cut to 315 (handoff §2a).
+            if (policy === 'lenient') {
+                expect([key, screenBatch([row], policy)[0].decision]).not.toEqual([key, 'EVICT']);
+            }
+        }
+    });
+
+    it('propel water: per-100g 0 kcal AND serving 0 kcal is a GENUINE zero, not an absence', () => {
+        const propel = D8FIX.pinnedFalsePositives.find(r => r.key === 'propel water')!;
+        // The kcal<=0 arm is what fired here. Zero calories with serving nutrients
+        // present and readable is a VALUE — a fitness water has no calories.
+        expect(Number(propel.per100g?.calories)).toBe(0);
+        expect(servingLevelKcal(propel)).toBe(0);
+        expect(tierD(propel, 'lenient').find(h => h.rule === 'D8')?.severity).toBe('INFO');
+    });
+
+    it('fails CLOSED when serving nutrients exist but carry no readable kcal', () => {
+        // An empty {} nutrients object, or one without a finite calories/kcal field,
+        // is NOT a billing basis. Absence of the evidence keeps D8 firing — the
+        // abstention needs the number, not the column.
+        for (const nutrients of [{}, { sodium: 230 }, { calories: NaN } as unknown as Record<string, number>]) {
+            const r = baseRow({ per100g: {}, fs_serving_nutrients: nutrients });
+            expect(servingLevelKcal(r)).toBeNull();
+            expect(tierD(r, 'balanced').find(h => h.rule === 'D8')?.severity).toBe('EVICT');
+        }
+    });
+
+    it('true positive, real capture shape: an id-less mapping still fires D8 under every policy', () => {
+        // `bay` -> "Bay Scallops": offBarcode/fsId/fdcId ALL NULL, so nothing joined
+        // — no record, no panel, no serving nutrition. All 13 surviving D8 fires on
+        // the real cache are this shape. Deleting the row IS actionable: the key
+        // re-resolves to a record that exists. This is what keeps D8 an evictor.
+        for (const policy of ['lenient', 'balanced', 'strict'] as Policy[]) {
+            const hit = tierD(D8FIX.truePositive, policy).find(h => h.rule === 'D8');
+            expect([policy, hit?.severity]).toEqual([policy, 'EVICT']);
+        }
+    });
+
+    it('the 35th FatSecret row (`blaze pepperoni pizza`, bills 20 kcal) abstains here — its defect is Tier L\'s axis', () => {
+        // The one FatSecret D8 fire that does NOT bill fine: 20 kcal for a pepperoni
+        // pizza. That is an implausible-nutrition defect on the RECORD — world
+        // knowledge, Tier L's nutrition axis (the whole-cache audit REJECTed it) —
+        // not "nothing to scale from". A presence check cannot and should not catch
+        // it; pinned so nobody re-tightens D8 to chase this row.
+        expect(servingLevelKcal(D8FIX.the35thRow)).toBe(20);
+        expect(tierD(D8FIX.the35thRow, 'balanced').find(h => h.rule === 'D8')?.severity).toBe('INFO');
+    });
+
+    it('the record card explains the serving-nutrition lane instead of reading as corruption', () => {
+        // The whole-cache audit REJECTed 30 of the 35 panel-less FatSecret rows on
+        // the nutrition axis, citing the empty panel ("bills 490 kcal from
+        // nowhere") — the card showed "NO CALORIES [PANEL IS EMPTY {}]" next to a
+        // real billed total and let the judge read the contradiction as corruption.
+        const card = llmUserPrompt(D8FIX.pinnedFalsePositives.find(r => r.key === 'and company noodle pad thai')!);
+        expect(card).toContain('[PANEL IS EMPTY {}]');
+        expect(card).toContain('serving-level nutrition (FatSecret "1 serving"): 520 kcal');
+        expect(card).toContain('not corruption');
+        // ...and a row with a real panel gets no such line.
+        expect(llmUserPrompt(baseRow())).not.toContain('serving-level nutrition');
+        // ...nor does a row with nothing anywhere — no basis must never read as one.
+        expect(llmUserPrompt(D8FIX.truePositive)).not.toContain('serving-level nutrition');
     });
 });
 
@@ -559,6 +678,18 @@ describe('policies', () => {
         // column on FoodMapping. Deleting the row throws away a correct identity and
         // re-resolves the same weight on the next request. 21 rows on the real cache
         // rested on D6 alone with provably correct identities.
+    });
+
+    it('D8 stays an evictor under every policy — legal ONLY because of the serving-nutrition abstention', () => {
+        for (const [name, p] of Object.entries(POLICIES)) {
+            expect([name, p.evict.includes('D8')]).toEqual([name, true]);
+        }
+        // What post-fix D8 fires on — no per-100g basis AND no serving-level
+        // nutrition anywhere — is a property of the chosen record, so deleting the
+        // row is actionable: the key re-resolves to a record that has data. Without
+        // the abstention, this same table is the configuration that would have
+        // deleted four correctly-billing chain-restaurant rows and a genuinely
+        // zero-calorie Propel (handoff 2026-07-27 §2a).
     });
 
     it('every evictor is a rule whose fires are actionable by DELETING the row', () => {
