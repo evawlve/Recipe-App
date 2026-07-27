@@ -59,6 +59,7 @@ import {
     parseIntFlag,
     parsePolicy,
     parseSeedFile,
+    per100gPanelBasis,
     realServing,
     resolveServingGrams,
     screenBatch,
@@ -73,6 +74,10 @@ import {
     type RuleId,
     type ScreenRow,
 } from '../correctness-screen';
+// The REAL reader the FatSecret macro-only branch bills through — imported into
+// the tests so the parity suite feeds the production call site and the screen
+// call site identical fixtures (review item 1, playbook §11 class A).
+import { servingMacros } from '../../../src/lib/mapping/fs-serving-macros';
 
 // ---------------------------------------------------------------------------
 // Fixture
@@ -564,6 +569,107 @@ describe('D8 — no usable billing basis anywhere', () => {
         expect(llmUserPrompt(baseRow())).not.toContain('serving-level nutrition');
         // ...nor does a row with nothing anywhere — no basis must never read as one.
         expect(llmUserPrompt(D8FIX.truePositive)).not.toContain('serving-level nutrition');
+    });
+
+    it('a NEGATIVE serving kcal is UNUSABLE — D8 keeps firing (fail closed)', () => {
+        // Review item 2 (2026-07-27): a negative finite kcal used to count as a
+        // billing basis and abstain D8. Nobody can be billed -520 kcal; a record
+        // whose only nutrition is negative has no usable basis anywhere.
+        for (const calories of [-520, -0.5, '-1' as unknown as number]) {
+            const r = baseRow({ per100g: {}, fs_serving_nutrients: { calories } });
+            expect(servingLevelKcal(r)).toBeNull();
+            expect(tierD(r, 'balanced').find(h => h.rule === 'D8')?.severity).toBe('EVICT');
+            // ...and the record card must not present a negative as the billing basis.
+            expect(llmUserPrompt(r)).not.toContain('serving-level nutrition');
+        }
+        // The real reader DOES return the negative (production carries no guard
+        // there — changing production is not this instrument's call). That makes
+        // the clamp the ONE sanctioned divergence between the two call sites;
+        // asserted so it stays deliberate instead of drifting silent.
+        expect(servingMacros({ calories: -520 })?.kcal).toBe(-520);
+    });
+});
+
+describe('servingLevelKcal ↔ servingMacros — one reader, pinned parity', () => {
+    /**
+     * Review item 1 (2026-07-27, playbook §11 class A): the screen's first draft
+     * RE-IMPLEMENTED the macro-only branch's kcal reader with `Number(...)` and
+     * diverged from the real reader's parseFloat on string-typed Json values —
+     * `Number('') === 0` manufactures a 0-kcal billing basis out of an empty
+     * string, `Number('520 kcal') === NaN` refuses a value the lane bills as 520.
+     * The fix is SHARED CODE: servingLevelKcal now calls the very servingMacros
+     * that build-fatsecret-result.ts bills through. This suite feeds BOTH call
+     * sites identical fixtures so any re-fork goes red the day it is written.
+     */
+    type Nutr = Record<string, number> | null;
+    const CASES: [string, Nutr][] = [
+        ['numeric 520', { calories: 520 }],
+        ['numeric 0 (Propel — zero is a VALUE)', { calories: 0 }],
+        ['string "520" — Json columns carry no schema', { calories: '520' } as unknown as Nutr],
+        ['string "0"', { calories: '0' } as unknown as Nutr],
+        ['string "520 kcal" — parseFloat reads it, the old fork refused it', { calories: '520 kcal' } as unknown as Nutr],
+        ['empty string — the old fork read a 0-kcal basis out of NOTHING', { calories: '' } as unknown as Nutr],
+        ['null calories, kcal synonym', { calories: null, kcal: 340 } as unknown as Nutr],
+        ['undefined calories, no fallback', { calories: undefined } as unknown as Nutr],
+        ['empty object {}', {}],
+        ['null nutrients', null],
+        ['no kcal field at all', { sodium: 230 }],
+        ['NaN calories', { calories: NaN }],
+        ['negative -520', { calories: -520 }],
+        ['negative string "-1"', { calories: '-1' } as unknown as Nutr],
+        ['boolean true — neither reader may coerce it', { calories: true } as unknown as Nutr],
+    ];
+
+    it.each(CASES)('parity on %s', (_label, nutrients) => {
+        const screenReads = servingLevelKcal(baseRow({ fs_serving_nutrients: nutrients }));
+        const laneBills = servingMacros(nutrients);
+        if (laneBills == null || laneBills.kcal < 0) {
+            // No basis (or the sanctioned negative clamp): the screen must read null.
+            expect(screenReads).toBeNull();
+        } else {
+            // A basis: the screen must read the EXACT kcal the lane bills.
+            expect(screenReads).toBe(laneBills.kcal);
+        }
+    });
+
+    it('pins the two shapes the old fork got wrong, in both directions', () => {
+        // Direction 1 — fork abstained D8 on a row with no usable nutrition:
+        // Number('') === 0 read "genuine zero" where the real reader reads nothing.
+        expect(servingMacros({ calories: '' })).toBeNull();
+        expect(servingLevelKcal(baseRow({ fs_serving_nutrients: { calories: '' } as unknown as Nutr }))).toBeNull();
+        // Direction 2 — fork re-fired D8 on a row that bills fine: the lane's
+        // parseFloat bills '520 kcal' as 520; the fork's Number(...) read NaN.
+        expect(servingMacros({ calories: '520 kcal' })?.kcal).toBe(520);
+        expect(servingLevelKcal(baseRow({ fs_serving_nutrients: { calories: '520 kcal' } as unknown as Nutr }))).toBe(520);
+    });
+});
+
+describe('per100gPanelBasis — the one panel-unusable predicate', () => {
+    /**
+     * Review item 3 (2026-07-27): tierD's D8 gate and llmUserPrompt's record
+     * card carried two inline copies of "this panel is not a billing basis".
+     * Two copies of a predicate drift. Both call sites now read THIS function,
+     * and each case asserts all three surfaces move together.
+     */
+    const PANELS: [string, Record<string, number> | null, boolean][] = [
+        ['null panel', null, true],
+        ['empty {}', {}, true],
+        ['zero kcal', { calories: 0, protein: 0, carbs: 0, fat: 0 }, true],
+        ['negative kcal', { calories: -5 }, true],
+        ['NaN kcal', { calories: NaN }, true],
+        ['no calories field', { protein: 10 }, true],
+        ['real panel', { calories: 600, protein: 21, carbs: 20, fat: 53 }, false],
+        ['kcal-synonym panel', { kcal: 480 }, false],
+    ];
+
+    it.each(PANELS)('%s — predicate, D8 and the record card move together', (_label, per100g, unusable) => {
+        expect(per100gPanelBasis(per100g).unusable).toBe(unusable);
+        // tierD: a D8 hit (any severity) appears exactly when the panel is unusable.
+        expect(tierD(baseRow({ per100g, fs_serving_nutrients: null }), 'balanced').some(h => h.rule === 'D8')).toBe(unusable);
+        // The record card: the serving-level explanation line appears exactly when
+        // the panel is unusable AND serving nutrition exists to explain with.
+        const withServing = baseRow({ per100g, fs_serving_nutrients: { calories: 520, protein: 10 } });
+        expect(llmUserPrompt(withServing).includes('serving-level nutrition')).toBe(unusable);
     });
 });
 

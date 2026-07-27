@@ -137,6 +137,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { detectBrandInQuery } from '../../src/lib/mapping/brand-detector';
+import { servingMacros } from '../../src/lib/mapping/fs-serving-macros';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -435,19 +436,49 @@ export const NO_ANCHOR_TIERS = new Set<string>(['flat_100g_default']);
 
 /**
  * The serving-level kcal the FatSecret macro-only branch bills from, or null when
- * the row carries no readable serving-level nutrition.
+ * the row carries no USABLE serving-level nutrition.
+ *
+ * READS THROUGH `servingMacros` — the exact function the production macro-only
+ * branch bills through (build-fatsecret-result.ts) — instead of re-implementing
+ * it. The first draft of this function forked the reader (playbook §11 class A)
+ * with `Number(n.calories ?? n.kcal ?? NaN)` and diverged on string-typed Json
+ * values: `Number('') === 0` reads an empty string as a genuine 0-kcal billing
+ * basis, and `Number('520 kcal') === NaN` refuses a value the real reader's
+ * parseFloat bills as 520. The parity suite in correctness-screen.test.ts pins
+ * both call sites to identical fixtures so a re-fork goes red.
  *
  * ZERO IS A VALUE, NOT AN ABSENCE. `propel water` stores per-100g 0 kcal AND
  * serving nutrients with a genuine 0 kcal — the product has no calories, and D8's
  * `kcal <= 0` arm must not read that as "nothing to scale from". Fail-closed on the
  * other side: nutrients missing entirely, an empty `{}`, or a nutrients object
  * without a finite calories/kcal field all return null, and D8 fires as before.
+ *
+ * NEGATIVE IS UNUSABLE, screen policy layered ON TOP of the shared reader:
+ * `servingMacros` itself returns a negative kcal (production carries no guard
+ * there — changing that is not this instrument's call), but a negative calorie
+ * count is not a number anyone can be billed, so the screen refuses to count it
+ * as a billing basis and D8 keeps firing. Fail closed, deliberately divergent,
+ * and documented here because it is the ONLY divergence.
  */
 export function servingLevelKcal(r: ScreenRow): number | null {
     const n = r.fs_serving_nutrients;
     if (!n || typeof n !== 'object') return null;
-    const kcal = Number(n.calories ?? n.kcal ?? NaN);
-    return Number.isFinite(kcal) ? kcal : null;
+    const m = servingMacros(n);
+    if (m == null || m.kcal < 0) return null;
+    return m.kcal;
+}
+
+/**
+ * The ONE predicate for "this per-100g panel is not a billing basis" — empty
+ * `{}` / missing, or calories missing / non-finite / <= 0. Both D8 (tierD) and
+ * the Tier-L record card (llmUserPrompt) MUST read it from here: they carried
+ * two inline copies until 2026-07-27, and two copies of a predicate drift —
+ * the exact class-A shape servingLevelKcal above just paid for.
+ */
+export function per100gPanelBasis(per100g: Record<string, number> | null): { empty: boolean; kcal: number; unusable: boolean } {
+    const empty = !per100g || Object.keys(per100g).length === 0;
+    const kcal = per100g ? Number(per100g.calories ?? per100g.kcal ?? NaN) : NaN;
+    return { empty, kcal, unusable: empty || !isFinite(kcal) || kcal <= 0 };
 }
 
 export function atwater(p: Record<string, number> | null): { declared: number; computed: number; ratio: number } | null {
@@ -641,11 +672,9 @@ export function tierD(r: ScreenRow, policy: Policy): Hit[] {
     // fire is "no per-100g basis AND no serving-level nutrition anywhere", which IS
     // a property of the chosen record (all 13 surviving fires on the real cache are
     // id-less mappings with no record behind them), so eviction remains actionable.
-    const kcal = r.per100g ? Number(r.per100g.calories ?? r.per100g.kcal ?? NaN) : NaN;
-    const panelEmpty = !r.per100g || Object.keys(r.per100g).length === 0;
-    const panelKcalUnusable = !panelEmpty && (!isFinite(kcal) || kcal <= 0);
-    if (panelEmpty || panelKcalUnusable) {
-        const panelWhy = panelEmpty ? 'per-100g panel is empty {}' : `per-100g calories missing or <= 0 (${String(kcal)})`;
+    const panel = per100gPanelBasis(r.per100g);
+    if (panel.unusable) {
+        const panelWhy = panel.empty ? 'per-100g panel is empty {}' : `per-100g calories missing or <= 0 (${String(panel.kcal)})`;
         const servKcal = servingLevelKcal(r);
         if (servKcal != null) {
             hits.push({
@@ -757,8 +786,7 @@ export function llmUserPrompt(r: ScreenRow): string {
     const aw = atwater(r.per100g);
     const p = r.per100g ?? {};
     const servKcal = servingLevelKcal(r);
-    const pKcal = Number(p.calories ?? p.kcal ?? NaN);
-    const panelUnusable = Object.keys(p).length === 0 || !isFinite(pKcal) || pKcal <= 0;
+    const panelUnusable = per100gPanelBasis(r.per100g).unusable;
     const n = r.fs_serving_nutrients ?? {};
     // When the real anchor ran, quote ITS kcal — hydrateAndSelectServing can bill a
     // food whose per-100g panel is empty (the FatSecret serving-nutrient path), and
