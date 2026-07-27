@@ -368,16 +368,43 @@ function diffWarmRuns(prevPath: string | null, current: WarmResult[]): WarmDiff 
  * run-eval writes its results file even on the zero-case path, exits 2, and
  * an empty `results` array re-derived here as "no unexpected failures" — a
  * PASS. That is playbook §11 class B, absence encoded as a pass.
+ *
+ * Exported with an injectable child + results dir so the jest suite can run
+ * the EVIDENCE ASSEMBLY itself against a stub child process — the 35
+ * fail-injection tests on judgeEvalGate prove the judge, but only a real
+ * spawn proves that the exit code, the before/after file diff and the JSON
+ * parse actually reach it. Defaults reproduce production behaviour exactly;
+ * main() calls this with no arguments.
  */
-function runEvalGate(): EvalGate {
-    const before = new Set(
-        fs.existsSync(RESULTS_DIR) ? fs.readdirSync(RESULTS_DIR).filter(f => f.startsWith('eval-')) : []);
+export interface RunEvalGateOptions {
+    /** Child to spawn; defaults to the real run-eval.ts under ts-node. */
+    spawn?: { cmd: string; args: string[] };
+    /** Where eval-*.json receipts appear; defaults to scripts/eval/results. */
+    resultsDir?: string;
+    /** Failure ids the gate may absorb; defaults to --allow-fail. */
+    allowFail?: string[];
+    cwd?: string;
+    timeoutMs?: number;
+}
 
-    const proc = spawnSync('npx', [
-        'ts-node', '--transpile-only',
-        '--compilerOptions', '{"module":"commonjs","moduleResolution":"node"}',
-        path.join(__dirname, 'run-eval.ts'), '--base', BASE,
-    ], { cwd: REPO_ROOT, stdio: 'inherit', timeout: 30 * 60 * 1000 });
+export function runEvalGate(opts: RunEvalGateOptions = {}): EvalGate {
+    const resultsDir = opts.resultsDir ?? RESULTS_DIR;
+    const allowFail = opts.allowFail ?? ALLOW_FAIL;
+    const child = opts.spawn ?? {
+        cmd: 'npx',
+        args: [
+            'ts-node', '--transpile-only',
+            '--compilerOptions', '{"module":"commonjs","moduleResolution":"node"}',
+            path.join(__dirname, 'run-eval.ts'), '--base', BASE,
+        ],
+    };
+
+    const before = new Set(
+        fs.existsSync(resultsDir) ? fs.readdirSync(resultsDir).filter(f => f.startsWith('eval-')) : []);
+
+    const proc = spawnSync(child.cmd, child.args, {
+        cwd: opts.cwd ?? REPO_ROOT, stdio: 'inherit', timeout: opts.timeoutMs ?? 30 * 60 * 1000,
+    });
 
     const evidence: EvalRunEvidence = {
         spawnError: proc.error ? proc.error.message : undefined,
@@ -386,10 +413,10 @@ function runEvalGate(): EvalGate {
         resultsFile: null,
     };
 
-    if (!evidence.spawnError && fs.existsSync(RESULTS_DIR)) {
-        const evalFile = fs.readdirSync(RESULTS_DIR)
+    if (!evidence.spawnError && fs.existsSync(resultsDir)) {
+        const evalFile = fs.readdirSync(resultsDir)
             .filter(f => f.startsWith('eval-') && !before.has(f))
-            .map(f => path.join(RESULTS_DIR, f))
+            .map(f => path.join(resultsDir, f))
             .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
         if (evalFile) {
             evidence.resultsFile = evalFile;
@@ -401,7 +428,7 @@ function runEvalGate(): EvalGate {
         }
     }
 
-    return judgeEvalGate(evidence, ALLOW_FAIL);
+    return judgeEvalGate(evidence, allowFail);
 }
 
 // ---------------------------------------------------------------------------

@@ -29,7 +29,8 @@ import * as path from 'path';
 import {
     EvalRunEvidence, judgeEvalGate, sweepVerdict,
 } from '../flywheel-verdict';
-import { runWarm, warmExitCode, WarmResult } from '../warm-cache';
+import { runEvalGate } from '../flywheel-sweep';
+import { main as warmMain, runWarm, warmExitCode, WarmResult } from '../warm-cache';
 import { parityExitCode, summarizeParity } from '../cache-parity-sweep';
 import { Sample, stressExitCode } from '../stress-latency';
 import {
@@ -147,6 +148,54 @@ describe('judgeEvalGate: run-eval exit 2 can never be re-derived into a PASS', (
     });
 });
 
+describe('runEvalGate: the evidence ASSEMBLY judged against a real child, not a hand-built receipt', () => {
+    // The 35 judgeEvalGate tests above prove the judge; none of them prove
+    // that the spawn's exit code, the before/after eval-* file diff and the
+    // JSON parse actually REACH it. This block spawns a real child — a local
+    // node stub, no network, no DB — that reproduces run-eval's fail-closed
+    // shape: write a plausible results file FIRST, then exit 2.
+    const writeStub = (dir: string, exitCode: number): string => {
+        const stub = path.join(dir, `stub-run-eval-exit${exitCode}.js`);
+        fs.writeFileSync(stub, [
+            "const fs = require('fs');",
+            "const path = require('path');",
+            'const resultsDir = process.argv[2];',
+            "fs.writeFileSync(path.join(resultsDir, 'eval-stub-' + process.pid + '.json'),",
+            "    JSON.stringify({ results: [{ id: 'n-a-01', query: 'apple', detail: '', pass: true }] }));",
+            `process.exit(${exitCode});`,
+        ].join('\n'));
+        return stub;
+    };
+
+    it('a child that writes a plausible results file and THEN exits 2 comes out RED through the real assembly', () => {
+        const resultsDir = tmpDir();
+        const stub = writeStub(resultsDir, 2);
+        const gate = runEvalGate({
+            spawn: { cmd: process.execPath, args: [stub, resultsDir] },
+            resultsDir, allowFail: [], timeoutMs: 30000,
+        });
+        expect(gate.ran).toBe(false);
+        expect(gate.pass).toBe(false);
+        expect(gate.error).toContain('exited 2');
+        expect(gate.error).toContain('does not override');
+        // ...and the sweep-level consequence systemd sees: instrument failure.
+        expect(sweepVerdict(gate, { seedCount: 10, resultCount: 10, okCount: 10 }).code).toBe(2);
+    });
+
+    it('POSITIVE CONTROL — the same stub exiting 0 passes, so the assembly (not the stub) is what decides', () => {
+        const resultsDir = tmpDir();
+        const stub = writeStub(resultsDir, 0);
+        const gate = runEvalGate({
+            spawn: { cmd: process.execPath, args: [stub, resultsDir] },
+            resultsDir, allowFail: [], timeoutMs: 30000,
+        });
+        expect(gate.error).toBeUndefined();
+        expect(gate.ran).toBe(true);
+        expect(gate.pass).toBe(true);
+        expect(gate.casesRun).toBe(1);
+    });
+});
+
 describe('sweepVerdict: the sweep exit code systemd sees', () => {
     const goodGate = () => judgeEvalGate({
         status: 0, signal: null, resultsFile: '/x/eval.json',
@@ -251,6 +300,52 @@ describe('warm-cache: a warm run that warmed nothing is RED', () => {
     }, 20000);
 });
 
+describe('warm-cache main: the zero-seed guard binds the --dry path too', () => {
+    // Reviewer finding on PR #181: main()'s --dry branch returned BEFORE the
+    // zero-seed guard, so `--dry` over a zero-seed corpus printed
+    // "Warm corpus: 0 names" and exited 0 — the exact absence-as-pass shape
+    // warmExitCode was added to refuse. These tests run the real main() with
+    // an injected seed assembler; fetch is spied to prove dry stays dry.
+    let logSpy: jest.SpyInstance;
+    let errSpy: jest.SpyInstance;
+    beforeEach(() => {
+        logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+    afterEach(() => { logSpy.mockRestore(); errSpy.mockRestore(); });
+
+    it('--dry over a ZERO-seed corpus returns exit 2 — a dry run that lists nothing is not a green preview', async () => {
+        const fetchSpy = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('must not be reached'));
+        try {
+            const code = await warmMain(['--dry'], () => []);
+            expect(code).toBe(2);
+            expect(errSpy.mock.calls.flat().join(' ')).toContain('ZERO seeds');
+            expect(fetchSpy).not.toHaveBeenCalled();
+        } finally { fetchSpy.mockRestore(); }
+    });
+
+    it('the WET path shares the same guard: zero seeds never reach runWarm or the network', async () => {
+        const fetchSpy = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('must not be reached'));
+        try {
+            const code = await warmMain([], () => []);
+            expect(code).toBe(2);
+            expect(fetchSpy).not.toHaveBeenCalled();
+        } finally { fetchSpy.mockRestore(); }
+    });
+
+    it('POSITIVE CONTROL — --dry over the real corpus lists the seeds and returns 0, with zero network calls', async () => {
+        const fetchSpy = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('must not be reached'));
+        try {
+            const code = await warmMain(['--dry', '--limit', '5']);
+            expect(code).toBe(0);
+            const lines = logSpy.mock.calls.flat().filter((l): l is string => typeof l === 'string');
+            expect(lines[0]).toContain('Warm corpus: 5 names');
+            expect(lines.filter(l => l.startsWith('  '))).toHaveLength(5);
+            expect(fetchSpy).not.toHaveBeenCalled();
+        } finally { fetchSpy.mockRestore(); }
+    });
+});
+
 // ===========================================================================
 // 3. cache-parity-sweep — total HTTP failure vs verified-clean cache
 // ===========================================================================
@@ -319,6 +414,46 @@ describe('cache-parity-sweep: "0 changed records" needs rows that actually came 
         const { counts } = summarizeParity([bare]);
         expect(counts.changedRecord).toBe(0);
         expect(counts.unresolvableBefore).toBe(1);
+    });
+
+    // Reviewer probe on PR #181: parityExitCode was blind to unresolvableBefore
+    // — the same absence-encoded-as-clean class this PR closes, inside the
+    // function it added. Every replay can come back fine and still ZERO
+    // identity comparisons happen, because no incumbent id was reconstructable.
+    it('REVIEWER PROBE: all replays fine but NO incumbent ids → zero comparisons ran → exit 2 VOID, never "0 changed"', () => {
+        const rows = ['a', 'b', 'c'].map(k =>
+            row(k, { foodId: 'off_999' }, before(k, { offBarcode: null, fdcId: null, fsId: null })));
+        const { counts } = summarizeParity(rows);
+        expect(counts).toMatchObject({ total: 3, sameRecord: 0, changedRecord: 0, errors: 0, unresolvableBefore: 3 });
+        expect(counts.verifiedReachable).toBe(0);   // pre-fix this read 3 — rows nothing was diffed against
+        const verdict = parityExitCode(counts);
+        expect(verdict.code).toBe(2);
+        expect(verdict.reason).toContain('NOTHING DIFFED');
+        expect(verdict.reason).toContain('ZERO identity comparisons');
+    });
+
+    it('PARTIALLY unresolvable: the verified denominator no longer counts rows that were never diffed', () => {
+        const rows = [
+            row('a', { foodId: 'off_123' }),   // diffed: same record
+            row('b', { foodId: 'off_123' }),   // diffed: same record
+            row('c', { foodId: 'off_999' }, before('c', { offBarcode: null, fdcId: null, fsId: null })),
+        ];
+        const { counts } = summarizeParity(rows);
+        expect(counts.unresolvableBefore).toBe(1);
+        expect(counts.verifiedReachable).toBe(2);   // pre-fix this read 3
+        // Real comparisons ran, so the run is not void; the excluded row is
+        // reported via unresolvableBefore + the console warning.
+        expect(parityExitCode(counts).code).toBe(0);
+    });
+
+    it('errors and unresolvable rows covering the WHOLE run is exit 2 even when neither alone reaches total', () => {
+        const rows = [
+            row('a', { error: 'http 502' }),
+            row('b', { foodId: 'off_999' }, before('b', { offBarcode: null, fdcId: null, fsId: null })),
+        ];
+        const { counts } = summarizeParity(rows);
+        expect(counts.verifiedReachable).toBe(0);
+        expect(parityExitCode(counts).code).toBe(2);
     });
 });
 

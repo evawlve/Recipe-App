@@ -34,8 +34,10 @@
  *
  * EXIT CODES (fail-closed, see parityExitCode): 0 = every row's replay came
  * back and was diffed · 1 = partial transport failure (errored rows were
- * verified by nothing) · 2 = the run was VOID — zero rows evaluated or zero
- * rows reachable; "0 changed records" from an exit-2 run means nothing.
+ * verified by nothing) · 2 = the run was VOID — zero rows evaluated, zero
+ * rows reachable, or zero identity comparisons ran (every row errored or had
+ * no reconstructable incumbent id); "0 changed records" from an exit-2 run
+ * means nothing.
  */
 
 import * as fs from 'fs';
@@ -524,7 +526,14 @@ export interface ParityCounts {
     changedSource: number;
     errors: number;
     unresolvableBefore: number;
-    /** rows whose replay actually came back — the only rows this sweep VERIFIED */
+    /**
+     * Rows whose replay came back AND whose incumbent id could be
+     * reconstructed — the only rows an identity comparison actually ran on.
+     * Unresolvable rows are excluded: their replay reached the API, but the
+     * diff had nothing to compare it against, so they were verified by
+     * NOTHING (the same absence-as-clean shape parityExitCode exists to
+     * refuse).
+     */
     verifiedReachable: number;
 }
 
@@ -552,7 +561,8 @@ export function summarizeParity(rows: any[]): { counts: ParityCounts; changes: a
     return {
         counts: {
             total: rows.length, sameRecord: same, changedRecord: changedId, changedSource,
-            errors, unresolvableBefore, verifiedReachable: rows.length - errors,
+            errors, unresolvableBefore,
+            verifiedReachable: rows.length - errors - unresolvableBefore,
         },
         changes,
     };
@@ -570,8 +580,15 @@ export function summarizeParity(rows: any[]): { counts: ParityCounts; changes: a
  *
  * Partial transport failure is exit 1: the sweep ran, but the errored rows
  * were verified by NOTHING and the run cannot be quoted as whole-cache parity.
+ *
+ * `unresolvableBefore` rows are a second kind of nothing (found in review of
+ * THIS fix, the same class it closes): their replay comes back fine, but the
+ * --before export carries no reconstructable incumbent id, so no identity
+ * comparison ever runs. A run where every row is errored-or-unresolvable
+ * performed ZERO comparisons — "0 changed records" over such a run is a
+ * statement about the export file, not the cache — so it is exit 2 VOID.
  */
-export function parityExitCode(counts: Pick<ParityCounts, 'total' | 'errors'>): { code: 0 | 1 | 2; reason: string | null } {
+export function parityExitCode(counts: Pick<ParityCounts, 'total' | 'errors' | 'unresolvableBefore'>): { code: 0 | 1 | 2; reason: string | null } {
     if (counts.total === 0) {
         return { code: 2, reason: 'evaluated ZERO rows — the --before file is empty; "0 changed records" would be vacuous, not clean' };
     }
@@ -580,6 +597,14 @@ export function parityExitCode(counts: Pick<ParityCounts, 'total' | 'errors'>): 
             code: 2,
             reason: `NOTHING REACHABLE: all ${counts.total} replay attempts failed. This sweep verified 0 rows — `
                 + '"0 changed records" is VOID, not a clean cache',
+        };
+    }
+    if (counts.errors + counts.unresolvableBefore >= counts.total) {
+        return {
+            code: 2,
+            reason: `NOTHING DIFFED: of ${counts.total} rows, ${counts.errors} errored and ${counts.unresolvableBefore} `
+                + 'carry no reconstructable incumbent id (--before export missing offBarcode/fdcId/fsId). '
+                + 'ZERO identity comparisons ran — "0 changed records" is VOID, not a clean cache',
         };
     }
     if (counts.errors > 0) {
@@ -704,7 +729,7 @@ async function main() {
     // Fail-closed verdict — "0 changed records" is only a finding when rows
     // actually came back to be diffed (see parityExitCode).
     if (verdict.code === 0) {
-        console.log(`✅ ${changedId} changed record(s) over ${counts.verifiedReachable} rows verified reachable.`);
+        console.log(`✅ ${changedId} changed record(s) over ${counts.verifiedReachable} rows diffed (replay returned AND incumbent id resolvable).`);
     } else {
         console.error(`\n${verdict.code === 2 ? '💥' : '⚠️'} ${verdict.reason} (exit ${verdict.code})`);
         process.exitCode = verdict.code;

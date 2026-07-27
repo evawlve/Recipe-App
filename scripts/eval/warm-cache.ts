@@ -293,34 +293,55 @@ export async function runWarm(seeds: string[], opts: WarmOptions): Promise<WarmR
     return { outPath, summary, results };
 }
 
-async function main() {
-    const args = process.argv.slice(2);
+/**
+ * CLI entry. Exported with injectable argv + seed assembly so the jest suite
+ * can prove the WIRING, not just the pure verdict: review of PR #181 found
+ * the --dry path returned before warmExitCode ever ran, so --dry over a
+ * zero-seed corpus printed "Warm corpus: 0 names" and exited 0 — the same
+ * class-B absence-as-pass this file's own warmExitCode exists to refuse.
+ * The guard now sits ABOVE the --dry fork so both paths share it, and main
+ * RETURNS the exit code instead of setting process state (testable without
+ * touching process.exitCode).
+ */
+export async function main(
+    argv: string[] = process.argv.slice(2),
+    assemble: typeof assembleSeeds = assembleSeeds,
+): Promise<number> {
     const argValue = (flag: string): string | undefined => {
-        const i = args.indexOf(flag);
-        return i >= 0 ? args[i + 1] : undefined;
+        const i = argv.indexOf(flag);
+        return i >= 0 ? argv[i + 1] : undefined;
     };
 
     const base = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
     const concurrency = Number(argValue('--concurrency') ?? 4);
     const timeoutMs = Number(argValue('--timeout') ?? 45000);
     const limit = argValue('--limit') ? Number(argValue('--limit')) : undefined;
-    const dry = args.includes('--dry');
+    const dry = argv.includes('--dry');
     const seedFile = argValue('--seed');
 
-    const seeds = assembleSeeds({ seedFile, limit });
+    const seeds = assemble({ seedFile, limit });
     console.log(`Warm corpus: ${seeds.length} names → ${base} (concurrency ${concurrency})`);
+    if (seeds.length === 0) {
+        // Shared zero-seed guard — the --dry path must hit it too: a dry run
+        // that lists nothing is a broken corpus, not a clean preview.
+        const verdict = warmExitCode(0, []);
+        console.error(`\n💥 WARM RUN FAILED (exit ${verdict.code}): ${verdict.reason}`);
+        return verdict.code;
+    }
     if (dry) {
         seeds.forEach(s => console.log(`  ${s}`));
-        return;
+        return 0;
     }
     const report = await runWarm(seeds, { base, concurrency, timeoutMs });
     const verdict = warmExitCode(seeds.length, report.results);
     if (verdict.code !== 0) {
         console.error(`\n💥 WARM RUN FAILED (exit ${verdict.code}): ${verdict.reason}`);
-        process.exitCode = verdict.code;
     }
+    return verdict.code;
 }
 
 if (require.main === module) {
-    main().catch(err => { console.error(err); process.exit(2); });
+    main()
+        .then(code => { if (code !== 0) process.exitCode = code; })
+        .catch(err => { console.error(err); process.exit(2); });
 }
