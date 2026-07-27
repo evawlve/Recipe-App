@@ -8,13 +8,15 @@
  * DB host) is the single mocked boundary; NO NETWORK, NO DATABASE, NO ssh —
  * nothing in this file talks to a real host.
  *
- * The five injections the snapshot must survive (each maps to a §11 class B
+ * The injections the snapshot must survive (each maps to a §11 class B
  * incident shape that shipped a confidently wrong number elsewhere):
  *   transport failure            -> refuse, not "0 rows dumped, exit 0"
  *   pg COPY / docker failure     -> refuse, partial never becomes final
  *   count mismatch               -> refuse (truncated dump reads as SHORT, not done)
  *   empty dump / empty count     -> refuse (absence is not zero)
  *   pre-existing output file     -> refuse BEFORE dumping anything
+ *   post-dump failure            -> best-effort rm of THIS run's .partial only
+ *   cleanup itself failing       -> still nonzero, manual-removal instructions
  */
 
 import {
@@ -33,6 +35,7 @@ import {
     shellQuote,
     snapshot,
     snapshotPaths,
+    sshArgs,
     timestampToken,
     type ExecResult,
     type SnapshotConfig,
@@ -86,6 +89,9 @@ function happyHandlers(over: Record<string, Handler> = {}, opts: { rows?: number
         'count-after': () => ok(`${rows}\n`),
         finalize: () => ok(''),
         manifest: () => ok(''),
+        // Post-dump failure paths issue a best-effort rm of the current run's
+        // .partial; a clean run must never reach this step (FULL_ORDER pins it).
+        'cleanup-partial': () => ok(''),
         ...over,
     };
 }
@@ -162,6 +168,13 @@ describe('positive control: a clean run succeeds and is complete', () => {
         expect(out).toContain('sha256:   deadbeef00');
     });
 
+    it('the printed recipe ends with the MANDATORY Typesense re-sync (a Postgres-only rollback leaves search serving stale numbers)', async () => {
+        const { out } = await run(happyHandlers());
+        expect(out).toContain('MANDATORY — re-sync Typesense');
+        expect(out).toContain('scripts/sync-typesense.ts');
+        expect(out).toContain('gather-candidates.ts');
+    });
+
     it('the manifest records rowCount, sha256 and the dumped column list', async () => {
         const { t } = await run(happyHandlers());
         const script = t.script('manifest');
@@ -169,6 +182,9 @@ describe('positive control: a clean run succeeds and is complete', () => {
         expect(script).toContain('"sha256": "deadbeef00"');
         expect(script).toContain('"nutrientsPer100g"');
         expect(script).toContain('.meta.json');
+        // The manifest IS the stored rollback procedure — it must carry the
+        // Typesense re-sync step, not just the psql steps.
+        expect(script).toContain('sync-typesense.ts');
     });
 
     it('--exclude-embedding drops ONLY embedding and marks the filename', async () => {
@@ -495,6 +511,113 @@ describe('restoreInstructions', () => {
     });
     it('bakes the verified row count into the sanity step', () => {
         expect(text).toContain('MUST print 1234');
+    });
+    it('carries the mandatory Typesense full-rebuild re-sync BEFORE the side-table drop', () => {
+        // Search serves nutrients off the Typesense hit (gather-candidates.ts),
+        // so a recipe that stops at Postgres is an incomplete rollback.
+        const syncIdx = lines.findIndex(l => l.includes('scripts/sync-typesense.ts') && !l.startsWith('#'));
+        const dropIdx = lines.findIndex(l => l.includes('DROP TABLE'));
+        expect(syncIdx).toBeGreaterThan(-1);
+        expect(dropIdx).toBeGreaterThan(-1);
+        expect(syncIdx).toBeLessThan(dropIdx);
+        // The runnable command line, with the repo's ts-node invocation (never tsx).
+        const cmd = lines[syncIdx];
+        expect(cmd).toContain('npx ts-node --project tsconfig.scripts.json');
+        expect(cmd).not.toContain('tsx ');
+        // And the recipe says WHY full-rebuild is the correct mode for a
+        // bounded row-set (per-row values; doc existence under mark changes).
+        expect(text).toContain('updateTypesenseDocumentsByFilter');
+        expect(text).toContain('DUPLICATE docs');
+    });
+});
+
+describe('sshTransport guarantees bash on the remote end', () => {
+    // sshd hands the remote command string to the LOGIN shell; set -euo
+    // pipefail is bash/zsh-only. The transport must therefore wrap every
+    // script as one `bash -c '<script>'` string — not pass the raw script
+    // (login shell runs it), and not pass bash/-c/script as separate argv
+    // entries (ssh space-joins them unquoted and the login shell word-splits
+    // the script before bash sees it).
+    const script = `set -euo pipefail; echo 'a b' | wc -l`;
+
+    it('the remote command is a single bash -c string with the script single-quoted', () => {
+        const args = sshArgs('owner@192.168.1.133', script);
+        expect(args[args.length - 1]).toBe(`bash -c ${shellQuote(script)}`);
+    });
+
+    it('the raw script never appears as its own argv element', () => {
+        const args = sshArgs('owner@192.168.1.133', script);
+        expect(args).not.toContain(script);
+        expect(args).not.toContain('-c'); // '-c' alone would mean separate-argv form
+    });
+
+    it('keeps BatchMode and ConnectTimeout ahead of the host', () => {
+        const args = sshArgs('owner@192.168.1.133', script);
+        expect(args.slice(0, 4)).toEqual(['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15']);
+        expect(args[4]).toBe('owner@192.168.1.133');
+        expect(args).toHaveLength(6);
+    });
+});
+
+describe('fail injection: .partial cleanup on failure', () => {
+    const paths = snapshotPaths(cfg());
+
+    it('a post-dump failure best-effort removes EXACTLY this run\'s .partial (no glob), still exits nonzero', async () => {
+        const { code, t, out } = await run(happyHandlers({
+            'verify-integrity': () => fail(1, 'gzip: unexpected end of file'),
+        }));
+        expect(code).not.toBe(0);
+        expect(t.steps()).toContain('cleanup-partial');
+        expect(t.script('cleanup-partial')).toBe(`rm -f ${shellQuote(paths.partialFile)}`);
+        expect(t.script('cleanup-partial')).not.toContain('*');
+        expect(out).toContain('SNAPSHOT REFUSED');
+    });
+
+    it('a dump failure also cleans up (gzip may have created the file before COPY died)', async () => {
+        const { code, t } = await run(happyHandlers({
+            dump: () => fail(1, 'error: server closed the connection unexpectedly'),
+        }));
+        expect(code).not.toBe(0);
+        expect(t.steps()).toContain('cleanup-partial');
+    });
+
+    it('PRE-dump failures do NOT issue a cleanup (no partial can exist; no pointless ssh)', async () => {
+        for (const handlers of [
+            happyHandlers({ 'transport-preflight': () => fail(255, 'no route to host') }),
+            happyHandlers({ 'refuse-overwrite': () => ok('EXISTS\n') }),
+            happyHandlers({ 'count-before': () => ok('0\n') }),
+        ]) {
+            const { code, t } = await run(handlers);
+            expect(code).not.toBe(0);
+            expect(t.steps()).not.toContain('cleanup-partial');
+        }
+    });
+
+    it('cleanup failing (rm nonzero) never masks the refusal, and points at HOUSEKEEPING', async () => {
+        const { code, out } = await run(happyHandlers({
+            dump: () => fail(1, 'COPY failed'),
+            'cleanup-partial': () => fail(1, 'rm: cannot remove: Read-only file system'),
+        }));
+        expect(code).not.toBe(0);
+        expect(out).toContain('remove it manually');
+        expect(out).toContain('HOUSEKEEPING');
+        expect(out).toContain('SNAPSHOT REFUSED');
+    });
+
+    it('cleanup transport throwing entirely still refuses with manual instructions', async () => {
+        const { code, out } = await run(happyHandlers({
+            dump: () => fail(1, 'COPY failed'),
+            'cleanup-partial': () => { throw new Error('ssh: connection reset'); },
+        }));
+        expect(code).not.toBe(0);
+        expect(out).toContain('remove it manually');
+        expect(out).toContain('SNAPSHOT REFUSED');
+    });
+
+    it('a clean run never issues a cleanup (FULL_ORDER already pins this; assert it directly)', async () => {
+        const { code, t } = await run(happyHandlers());
+        expect(code).toBe(0);
+        expect(t.steps()).not.toContain('cleanup-partial');
     });
 });
 

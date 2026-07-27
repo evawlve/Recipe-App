@@ -82,7 +82,28 @@
  * file (refuse-overwrite), mv/manifest failure. The dump is written to a
  * .partial name and only renamed to its final name AFTER every verification
  * passes — a file with the final name IS a verified snapshot, always.
+ * On failure the run best-effort deletes ITS OWN .partial (the exact filename,
+ * never a glob) so a refused run does not strand a multi-GB file on the host;
+ * if the transport itself is dead that cleanup can fail too — see HOUSEKEEPING.
  * Fail-injection tests: scripts/eval/__tests__/snapshot-off-food.test.ts.
+ *
+ * All remote commands are explicitly wrapped in `bash -c '<script>'` by the
+ * transport: sshd hands a remote command string to the LOGIN shell, and
+ * `set -euo pipefail` (the fail-closed flags above) is bash/zsh-only — under
+ * a dash/fish login shell the flags would error or silently not apply. The
+ * wrapper guarantees bash semantics regardless of the remote login shell.
+ *
+ * ===========================================================================
+ * HOUSEKEEPING — orphaned .partial files
+ * ===========================================================================
+ * A failed run best-effort removes its own .partial, but a dead transport or
+ * a killed process can still strand one (potentially multi-GB). A .partial is
+ * NEVER trustworthy (only the FINAL .tsv.gz name means "verified"), so any
+ * orphan is safe to delete once no snapshot run is in flight:
+ *   ssh owner@192.168.1.133 'ls -lh /home/owner/snapshots/OffFood-*.tsv.gz.partial'
+ *   ssh owner@192.168.1.133 'rm -v /home/owner/snapshots/OffFood-<timestamp>*.tsv.gz.partial'
+ * Delete ONLY files ending in .tsv.gz.partial — never *.tsv.gz or *.meta.json;
+ * those are verified snapshots and their manifests.
  *
  * ===========================================================================
  * RESTORE SEMANTICS (also printed after every successful run + manifest)
@@ -92,6 +113,14 @@
  * resurrect a DELETED row — the §4 repair only UPDATEs, so that is out of
  * scope, but a full-column snapshot also supports INSERT ... WHERE NOT EXISTS
  * for resurrection if some other operation deletes rows.
+ *
+ * Restoring Postgres is NOT the end of the rollback. The search path serves
+ * nutrients straight off the Typesense hit (src/lib/mapping/gather-candidates.ts
+ * maps hit.nutrientsPer100g into the candidate), so a Postgres-only rollback
+ * leaves search billing the un-rolled-back numbers indefinitely. The printed
+ * recipe therefore ends with a MANDATORY full `scripts/sync-typesense.ts`
+ * rebuild on the DB host — full, not incremental, even for a bounded row-set;
+ * the recipe itself states why (per-row values + doc existence).
  *
  * READ-ONLY toward the database in every mode (COPY TO STDOUT + SELECTs); the
  * only things written are the snapshot + manifest files on the host.
@@ -161,9 +190,29 @@ export interface ExecResult {
 }
 
 export interface Transport {
-    /** Run `script` under `bash -c` on the remote host. `step` names the
-     *  pipeline stage for error messages and for the tests. */
+    /** Run `script` under `bash -c` on the remote host — GUARANTEED, not
+     *  assumed: see sshArgs(). `step` names the pipeline stage for error
+     *  messages and for the tests. */
     exec(step: string, script: string): Promise<ExecResult>;
+}
+
+/**
+ * Build the ssh argv for one remote step. The script is wrapped as ONE
+ * remote-command string, `bash -c '<script>'` (single-quoted via shellQuote):
+ * sshd concatenates remote-command args and hands the string to the remote
+ * user's LOGIN shell, so an unwrapped script would run under whatever that
+ * shell is — and `set -euo pipefail` (the fail-closed flags every mutating
+ * step relies on) needs bash/zsh. Passing 'bash','-c',script as separate argv
+ * entries would be just as wrong: ssh space-joins them WITHOUT quoting, so the
+ * login shell would word-split the script before bash ever saw it.
+ */
+export function sshArgs(sshHost: string, script: string): string[] {
+    return [
+        '-o', 'BatchMode=yes',
+        '-o', 'ConnectTimeout=15',
+        sshHost,
+        `bash -c ${shellQuote(script)}`,
+    ];
 }
 
 /** Real transport: one ssh invocation per step. BatchMode so a missing key
@@ -173,7 +222,7 @@ export function sshTransport(sshHost: string): Transport {
         exec(step: string, script: string): Promise<ExecResult> {
             const proc = spawnSync(
                 'ssh',
-                ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', sshHost, script],
+                sshArgs(sshHost, script),
                 { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
             );
             if (proc.error) {
@@ -304,7 +353,24 @@ export function restoreInstructions(cfg: SnapshotConfig, paths: SnapshotPaths, c
         `#    operation deleted rows, resurrect from a FULL-column snapshot with:`,
         `#    INSERT INTO "${TABLE}"(${colList}) SELECT ${colList} FROM "${TABLE}_restore" s`,
         `#      WHERE NOT EXISTS (SELECT 1 FROM "${TABLE}" f WHERE f."barcode"=s."barcode")`,
-        `# 6. when verified: ${psql} -c 'DROP TABLE "${TABLE}_restore"'`,
+        `# 6. MANDATORY — re-sync Typesense after ANY restore that changed rows. The`,
+        `#    search path serves nutrients straight off the Typesense hit`,
+        `#    (src/lib/mapping/gather-candidates.ts), so a Postgres-only rollback leaves`,
+        `#    search billing the un-rolled-back numbers indefinitely. Run the FULL`,
+        `#    rebuild from the backend repo checkout on the DB host (documented`,
+        `#    topology: /home/owner/Recipe-App):`,
+        `cd /home/owner/Recipe-App && npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/sync-typesense.ts`,
+        `#    Use the FULL rebuild even for a bounded row-set restore, because the`,
+        `#    repo's only bounded Typesense updater (updateTypesenseDocumentsByFilter)`,
+        `#    PATCHes ONE identical partial doc into every filter match — right for a`,
+        `#    uniform flag backfill, wrong for per-row panel values — and live off_foods`,
+        `#    doc ids can predate id=barcode keying (see typesense-client.ts), so a`,
+        `#    hand-rolled per-row upsert can DUPLICATE docs instead of replacing them.`,
+        `#    Also: a restore can change "corruptReason"/"duplicateOfBarcode", which`,
+        `#    changes which docs should EXIST in the index at all — only the full`,
+        `#    rebuild re-applies those exclusions (search falls back to Postgres while`,
+        `#    it runs).`,
+        `# 7. only after the re-sync completes: ${psql} -c 'DROP TABLE "${TABLE}_restore"'`,
     ];
 }
 
@@ -370,6 +436,11 @@ async function selectCount(cfg: SnapshotConfig, t: Transport, step: string): Pro
 
 export async function snapshot(cfg: SnapshotConfig, t: Transport, log: (s: string) => void = console.log): Promise<number> {
     const paths = snapshotPaths(cfg);
+    // Set immediately before the dump step: from that point on, a failed run
+    // may have stranded a (potentially multi-GB) .partial on the host, and the
+    // failure path below best-effort removes THIS run's partial — the exact
+    // filename, never a glob, so no other run's files can be touched.
+    let dumpAttempted = false;
     try {
         // 0. transport sanity — the cheapest possible remote no-op, so a dead
         //    host/key fails here with an unambiguous message, not mid-dump.
@@ -413,6 +484,7 @@ export async function snapshot(cfg: SnapshotConfig, t: Transport, log: (s: strin
             'set -euo pipefail',
             `${psqlCommand(cfg, buildCopySql(columns))} | gzip -9 > ${shellQuote(paths.partialFile)}`,
         ].join('; ');
+        dumpAttempted = true;
         await runStep(t, 'dump', dumpScript);
         log(`[dump] COPY stream written to ${paths.partialFile}`);
 
@@ -503,6 +575,23 @@ export async function snapshot(cfg: SnapshotConfig, t: Transport, log: (s: strin
     } catch (err) {
         if (err instanceof StepFailure) {
             log(err.message);
+            if (dumpAttempted) {
+                // Best-effort, never a step failure of its own: remove THIS
+                // run's .partial so a refused run does not strand a multi-GB
+                // file on the host. rm -f of the exact filename only — a no-op
+                // if the partial was never created or was already renamed by
+                // finalize. The overall exit stays nonzero regardless.
+                try {
+                    const res = await t.exec('cleanup-partial', `rm -f ${shellQuote(paths.partialFile)}`);
+                    if (res.code === 0) {
+                        log(`[cleanup-partial] removed ${paths.partialFile} (no-op if it was never created or already renamed)`);
+                    } else {
+                        log(`[cleanup-partial] rm exited ${res.code} — if ${paths.partialFile} exists on the host, remove it manually (see HOUSEKEEPING in the header)`);
+                    }
+                } catch {
+                    log(`[cleanup-partial] transport unavailable — if ${paths.partialFile} exists on the host, remove it manually (see HOUSEKEEPING in the header)`);
+                }
+            }
             log(`SNAPSHOT REFUSED — nothing at ${paths.dataFile} is trustworthy unless the file exists under its FINAL name (partials are unverified).`);
             return 1;
         }
