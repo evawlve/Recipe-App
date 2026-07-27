@@ -18,7 +18,15 @@
  *   3. DIFF       — compare against the previous warm-*.json report: identity
  *      flips, per-100g kcal drift >5%, grams flap >25%, error deltas.
  *   4. EVAL GATE  — spawn run-eval.ts; real failures must be a subset of
- *      --allow-fail (default n-mq-10). Gate failure → exit 1.
+ *      --allow-fail (default n-mq-10). Gate failure → exit 1. An INSTRUMENT
+ *      failure — run-eval crashed/killed, exited 2 (its own fail-closed
+ *      zero-case signal), receipt missing/unreadable/contradicting the exit
+ *      code, or a warm step that reached nothing — → exit 2: the sweep
+ *      measured NOTHING and must not read as either green or "gate red".
+ *      The gate is POST-HOC: step [2/4] has already written to FoodMapping
+ *      before it runs, and nothing rolls back — a red gate means "writes
+ *      happened AND the gate is red", and the exit reasons say so.
+ *      Verdict logic is pure + fail-injection tested: flywheel-verdict.ts.
  *      4b. SEG REPLAY-DIFF (REPORT-ONLY) — top-N SegmentationCache lines by
  *      hitCount re-run through fresh AI segmentation with the cache bypassed
  *      (no cache read, NO cache write) and diffed against the cached splits;
@@ -66,6 +74,9 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
 import { assembleSeeds, runWarm, WarmResult, WarmRunReport } from './warm-cache';
+import {
+    EvalGate, EvalRunEvidence, judgeEvalGate, sweepVerdict, WarmFacts,
+} from './flywheel-verdict';
 import {
     collectStuckKeys, computeStuckTrend, findPreviousStuckReport, formatStuckKeysSection,
     StuckKeysReport, StuckTrend,
@@ -347,19 +358,18 @@ function diffWarmRuns(prevPath: string | null, current: WarmResult[]): WarmDiff 
 // 4. Eval gate
 // ---------------------------------------------------------------------------
 
-interface EvalGate {
-    ran: boolean;
-    pass: boolean;
-    realFails: { id: string; query: string; detail: string }[];
-    unexpectedFails: string[];
-    knownIssues: number;
-    knownNowPassing: string[];
-    kinds?: Record<string, { pass: number; total: number; p50ms: number; p95ms: number }>;
-    error?: string;
-}
-
+/**
+ * Spawn run-eval.ts and JUDGE it — exit code first, results file second.
+ *
+ * The verdict logic itself is pure and lives in flywheel-verdict.ts
+ * (judgeEvalGate), where it is fail-injection tested. The old version of this
+ * function ignored `proc.status` whenever a results file existed, which
+ * defeated run-eval's own `evalExitCode` fail-closed signal (PR #177):
+ * run-eval writes its results file even on the zero-case path, exits 2, and
+ * an empty `results` array re-derived here as "no unexpected failures" — a
+ * PASS. That is playbook §11 class B, absence encoded as a pass.
+ */
 function runEvalGate(): EvalGate {
-    const gate: EvalGate = { ran: false, pass: true, realFails: [], unexpectedFails: [], knownIssues: 0, knownNowPassing: [] };
     const before = new Set(
         fs.existsSync(RESULTS_DIR) ? fs.readdirSync(RESULTS_DIR).filter(f => f.startsWith('eval-')) : []);
 
@@ -369,28 +379,29 @@ function runEvalGate(): EvalGate {
         path.join(__dirname, 'run-eval.ts'), '--base', BASE,
     ], { cwd: REPO_ROOT, stdio: 'inherit', timeout: 30 * 60 * 1000 });
 
-    if (proc.error) {
-        return { ...gate, pass: false, error: `run-eval spawn failed: ${proc.error.message}` };
-    }
-    const evalFile = fs.readdirSync(RESULTS_DIR)
-        .filter(f => f.startsWith('eval-') && !before.has(f))
-        .map(f => path.join(RESULTS_DIR, f))
-        .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
-    if (!evalFile) {
-        return { ...gate, pass: false, error: `run-eval produced no results file (exit ${proc.status})` };
+    const evidence: EvalRunEvidence = {
+        spawnError: proc.error ? proc.error.message : undefined,
+        status: proc.status ?? null,
+        signal: (proc.signal as string | null) ?? null,
+        resultsFile: null,
+    };
+
+    if (!evidence.spawnError && fs.existsSync(RESULTS_DIR)) {
+        const evalFile = fs.readdirSync(RESULTS_DIR)
+            .filter(f => f.startsWith('eval-') && !before.has(f))
+            .map(f => path.join(RESULTS_DIR, f))
+            .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+        if (evalFile) {
+            evidence.resultsFile = evalFile;
+            try {
+                evidence.data = JSON.parse(fs.readFileSync(evalFile, 'utf8'));
+            } catch (err) {
+                evidence.parseError = (err as Error).message;
+            }
+        }
     }
 
-    const data = JSON.parse(fs.readFileSync(evalFile, 'utf8'));
-    const results: any[] = data.results ?? [];
-    gate.ran = true;
-    gate.realFails = results.filter(r => !r.pass && !r.knownIssue)
-        .map(r => ({ id: r.id, query: r.query, detail: r.detail }));
-    gate.unexpectedFails = gate.realFails.map(r => r.id).filter(id => !ALLOW_FAIL.includes(id));
-    gate.knownIssues = results.filter(r => !r.pass && r.knownIssue).length;
-    gate.knownNowPassing = results.filter(r => r.pass && r.knownIssue).map(r => r.id);
-    gate.kinds = data.summary?.kinds;
-    gate.pass = gate.unexpectedFails.length === 0;
-    return gate;
+    return judgeEvalGate(evidence, ALLOW_FAIL);
 }
 
 // ---------------------------------------------------------------------------
@@ -493,12 +504,18 @@ function buildMarkdown(ranAt: string, telemetry: Telemetry, warm: WarmRunReport 
     if (!gate) {
         lines.push('_skipped (--skip-eval)_');
     } else if (gate.error) {
-        lines.push(`❌ **ERROR**: ${gate.error}`);
+        lines.push(`💥 **INSTRUMENT ERROR** (exit 2 — this sweep has NO gate verdict): ${gate.error}`);
     } else {
         lines.push(gate.pass
-            ? `✅ **PASS** — real failures ⊆ allowlist [${ALLOW_FAIL.join(', ')}]`
+            ? `✅ **PASS** — ${gate.casesRun} cases; real failures ⊆ allowlist [${ALLOW_FAIL.join(', ')}]`
             : `❌ **FAIL** — unexpected real failures: ${gate.unexpectedFails.join(', ')}`);
         for (const f of gate.realFails) lines.push(`- [${f.id}] "${f.query}" — ${f.detail}`);
+        if (gate.suppressedFails.length) {
+            lines.push(`- ⚠️ real failures ABSORBED by --allow-fail (a standing red, kept visible): ${gate.suppressedFails.join(', ')}`);
+        }
+        if (gate.staleAllowFail.length) {
+            lines.push(`- 🧹 --allow-fail entries that did NOT fail this run (stale — prune before they absorb a genuine red): ${gate.staleAllowFail.join(', ')}`);
+        }
         lines.push(`- known issues still failing: ${gate.knownIssues}`);
         if (gate.knownNowPassing.length) {
             lines.push(`- 🟢 known issues NOW PASSING (promote after stability): ${gate.knownNowPassing.join(', ')}`);
@@ -619,11 +636,19 @@ async function main() {
     const ranAt = new Date().toISOString();
     const stamp = ranAt.replace(/[:.]/g, '-');
 
+    // The *-only modes exist to produce exactly ONE report. Inside a full sweep
+    // these steps are fail-soft by design (report-only, never gating), but when
+    // the step IS the whole invocation, "unavailable: <error>" over an exit 0
+    // is absence-encoded-as-success — fail closed instead.
     if (COVERAGE_ONLY) {
         console.log(`Coverage-only read @ ${ranAt} · corpus ${path.basename(COVERAGE_CORPUS)}`);
         const cov = await runCoverageStep(ranAt, stamp);
         console.log('');
         console.log(formatCoverageSection(cov.report, cov.trend).join('\n'));
+        if (!cov.report.ok) {
+            console.error(`\nFAIL: coverage-only run produced NO coverage read (${cov.report.error ?? 'unknown'}) — exit 2.`);
+            process.exitCode = 2;
+        }
         return;
     }
 
@@ -633,6 +658,10 @@ async function main() {
         console.log('');
         console.log(formatStuckKeysSection(stuck.report, stuck.trend).join('\n'));
         if (stuck.outPath) console.log(`\nJSON: ${stuck.outPath}`);
+        if (!stuck.report.ok) {
+            console.error(`\nFAIL: stuck-keys-only run produced NO report (${stuck.report.error ?? 'unknown'}) — exit 2.`);
+            process.exitCode = 2;
+        }
         return;
     }
 
@@ -642,6 +671,10 @@ async function main() {
         console.log('');
         console.log(formatSegReplaySection(seg.report, seg.trend).join('\n'));
         if (seg.outPath) console.log(`\nJSON: ${seg.outPath}`);
+        if (!seg.report.ok) {
+            console.error(`\nFAIL: seg-replay-only run produced NO report (${seg.report.error ?? 'unknown'}) — exit 2.`);
+            process.exitCode = 2;
+        }
         return;
     }
 
@@ -685,8 +718,12 @@ async function main() {
         console.log('\n[4/4] Golden-set eval gate…');
         gate = runEvalGate();
         console.log(gate.error
-            ? `  ERROR: ${gate.error}`
-            : `  ${gate.pass ? 'PASS' : 'FAIL'} (real fails: ${gate.realFails.map(f => f.id).join(', ') || 'none'})`);
+            ? `  INSTRUMENT ERROR (no verdict): ${gate.error}`
+            : `  ${gate.pass ? 'PASS' : 'FAIL'} (${gate.casesRun} cases; real fails: ${gate.realFails.map(f => f.id).join(', ') || 'none'}`
+              + `${gate.suppressedFails.length ? `; suppressed by allow-fail: ${gate.suppressedFails.join(', ')}` : ''})`);
+        if (!gate.error && gate.staleAllowFail.length) {
+            console.log(`  note: --allow-fail entries not failing any more: ${gate.staleAllowFail.join(', ')} (prune, or they absorb a future genuine red)`);
+        }
     }
 
     // Report-only drift check — runs after the gate, never changes its verdict.
@@ -708,10 +745,18 @@ async function main() {
             : `  unavailable: ${coverage.report.error}`);
     }
 
+    // The sweep's own exit verdict — computed BEFORE the report is written so
+    // the JSON carries the same code systemd will see (flywheel-verdict.ts).
+    const warmFacts: WarmFacts | null = warm
+        ? { seedCount, resultCount: warm.results.length, okCount: warm.summary.ok }
+        : null;
+    const verdict = sweepVerdict(gate, warmFacts);
+
     fs.mkdirSync(RESULTS_DIR, { recursive: true });
     const jsonPath = path.join(RESULTS_DIR, `flywheel-${stamp}.json`);
     fs.writeFileSync(jsonPath, JSON.stringify({
         ranAt, base: BASE, days: DAYS, allowFail: ALLOW_FAIL,
+        exit: verdict,
         telemetry, warmSummary: warm?.summary ?? null, warmReport: warm?.outPath ?? null,
         diff, gate,
         // Rows live in the dedicated stuck-keys-<ts>.json (triage-batch input);
@@ -750,10 +795,19 @@ async function main() {
         }
     }
 
-    if (gate && !gate.pass) {
-        console.error('\nEval gate FAILED');
-        process.exit(1);
+    // LOUD, machine-readable failure: one summary line + one reason per line on
+    // stderr, and an exit code that reaches systemd (Type=oneshot marks the unit
+    // failed on any nonzero). process.exitCode — not process.exit() — so every
+    // report above is already flushed and nothing here can truncate it.
+    if (verdict.code !== 0) {
+        console.error(`\n${verdict.code === 2
+            ? '💥 FLYWHEEL INSTRUMENT FAILURE — this sweep has no trustworthy numbers'
+            : '❌ FLYWHEEL EVAL GATE FAILED'} (exit ${verdict.code})`);
+        for (const r of verdict.reasons) console.error(`  - ${r}`);
+        process.exitCode = verdict.code;
     }
 }
 
-main().catch(err => { console.error(err); process.exit(2); });
+if (require.main === module) {
+    main().catch(err => { console.error(err); process.exit(2); });
+}

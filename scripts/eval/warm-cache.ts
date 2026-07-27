@@ -163,6 +163,37 @@ export interface WarmOptions {
     concurrency?: number;
     timeoutMs?: number;
     quiet?: boolean;
+    /** Where warm-<ts>.json goes; defaults to scripts/eval/results (tests inject a tmp dir). */
+    outDir?: string;
+}
+
+/**
+ * The warm run's process exit code (playbook §11 class B — a warm that warmed
+ * NOTHING must not read as a clean run).
+ *
+ *   2 = the instrument failed: zero seeds assembled, zero requests recorded
+ *       (a worker pool that never ran, e.g. NaN --concurrency), or a TOTAL
+ *       request failure — nothing was reachable, so "ok 0 · errors N" is an
+ *       outage report, not a warm report.
+ *   0 = the run measured something (partial errors stay visible in the
+ *       summary and in the flywheel diff, which is where they are judged).
+ */
+export function warmExitCode(seedCount: number, results: WarmResult[]): { code: 0 | 2; reason: string | null } {
+    if (seedCount === 0) {
+        return { code: 2, reason: 'assembled ZERO seeds — corpus files missing or empty; nothing was warmed' };
+    }
+    if (results.length === 0) {
+        return { code: 2, reason: `attempted ${seedCount} seeds but recorded ZERO results — the worker pool never ran` };
+    }
+    const ok = results.filter(r => r.ok).length;
+    if (ok === 0) {
+        return {
+            code: 2,
+            reason: `TOTAL failure: 0 of ${results.length} seeds resolved — nothing was reachable, `
+                + 'and "0 warmed" must never read as a clean run',
+        };
+    }
+    return { code: 0, reason: null };
 }
 
 export interface WarmRunReport {
@@ -208,7 +239,11 @@ async function warmOne(seed: string, base: string, apiKey: string, timeoutMs: nu
 
 export async function runWarm(seeds: string[], opts: WarmOptions): Promise<WarmRunReport> {
     const apiKey = opts.apiKey ?? process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
-    const concurrency = opts.concurrency ?? 4;
+    // Sanitised, not trusted: Number('abc') is NaN and Array.from({length: NaN})
+    // builds ZERO workers — the whole corpus is silently skipped and the run
+    // reports "0 ok, 0 errors" as if it were clean. Class-B shape; floor at 1.
+    const rawConcurrency = Math.floor(Number(opts.concurrency ?? 4));
+    const concurrency = Math.max(1, Number.isFinite(rawConcurrency) && rawConcurrency > 0 ? rawConcurrency : 4);
     const timeoutMs = opts.timeoutMs ?? 45000;
     const say = (msg: string) => { if (!opts.quiet) console.log(msg); };
 
@@ -234,7 +269,7 @@ export async function runWarm(seeds: string[], opts: WarmOptions): Promise<WarmR
     const bySource: Record<string, number> = {};
     for (const r of ok) bySource[r.source ?? 'unknown'] = (bySource[r.source ?? 'unknown'] ?? 0) + 1;
 
-    const outDir = path.join(__dirname, 'results');
+    const outDir = opts.outDir ?? path.join(__dirname, 'results');
     fs.mkdirSync(outDir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = path.join(outDir, `warm-${ts}.json`);
@@ -278,7 +313,12 @@ async function main() {
         seeds.forEach(s => console.log(`  ${s}`));
         return;
     }
-    await runWarm(seeds, { base, concurrency, timeoutMs });
+    const report = await runWarm(seeds, { base, concurrency, timeoutMs });
+    const verdict = warmExitCode(seeds.length, report.results);
+    if (verdict.code !== 0) {
+        console.error(`\n💥 WARM RUN FAILED (exit ${verdict.code}): ${verdict.reason}`);
+        process.exitCode = verdict.code;
+    }
 }
 
 if (require.main === module) {

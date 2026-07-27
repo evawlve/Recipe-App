@@ -65,6 +65,13 @@ const { getBareQueryDefault } = require('../../src/lib/ai/ambiguous-serving-esti
 
 async function main() {
     const lines = fs.readFileSync(0, 'utf8').split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
+    if (lines.length === 0) {
+        // Fail closed: "probing 0 queries" over exit 0 reads as a clean probe.
+        console.error('FAIL: ZERO queries on stdin — nothing was probed; exit 2.');
+        process.exitCode = 2;
+        await prisma.$disconnect();
+        return;
+    }
     console.log(`probing ${lines.length} queries — READ-ONLY, skipCache forced\n`);
 
     for (const line of lines) {

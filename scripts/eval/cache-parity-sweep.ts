@@ -31,6 +31,11 @@
  *
  * Writes results/cache-parity-<timestamp>.json (full) and prints a summary +
  * the changed-record list to stdout.
+ *
+ * EXIT CODES (fail-closed, see parityExitCode): 0 = every row's replay came
+ * back and was diffed · 1 = partial transport failure (errored rows were
+ * verified by nothing) · 2 = the run was VOID — zero rows evaluated or zero
+ * rows reachable; "0 changed records" from an exit-2 run means nothing.
  */
 
 import * as fs from 'fs';
@@ -492,11 +497,106 @@ async function sweepOne(row: BeforeRow) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Diff + verdict (pure, exported for fail-injection tests)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every source the cache can hold must be expressible here. FatSecret was
+ * missing, and because `beforeId` returned null for those rows the diff
+ * compared `fs_1646 !== null` and called every one of them a changed record —
+ * a false-positive floor equal to the whole fatsecret share of the cache
+ * (441 of 3,246 rows, 13.6%, as of 2026-07-26; it was ~19 rows when the lane
+ * shipped, which is why nobody noticed). Making the replay text faithful is
+ * pointless if a seventh of the resulting diff is noise.
+ */
+function beforeId(b: BeforeRow): string | null {
+    return b.offBarcode ? `off_${b.offBarcode}`
+        : b.fdcId != null ? `fdc_${b.fdcId}`
+            : b.fsId ? `fs_${b.fsId}`
+                : null;
+}
+
+export interface ParityCounts {
+    total: number;
+    sameRecord: number;
+    changedRecord: number;
+    changedSource: number;
+    errors: number;
+    unresolvableBefore: number;
+    /** rows whose replay actually came back — the only rows this sweep VERIFIED */
+    verifiedReachable: number;
+}
+
+/** Fold the per-row sweep results into the diff counts + printable changes. */
+export function summarizeParity(rows: any[]): { counts: ParityCounts; changes: any[] } {
+    let same = 0, changedId = 0, changedSource = 0, errors = 0, unresolvableBefore = 0;
+    const changes: any[] = [];
+    for (const r of rows) {
+        if (r.cold.error) { errors++; changes.push({ key: r.key, error: r.cold.error }); continue; }
+        const oldId = beforeId(r.before);
+        if (r.cold.foodId === oldId) { same++; continue; }
+        // No id at all for the incumbent: an old --before export missing a column,
+        // not evidence the record moved. Counted separately so it can never be
+        // read as a regression.
+        if (oldId === null) { unresolvableBefore++; continue; }
+        changedId++;
+        if (r.cold.source !== r.before.source) changedSource++;
+        changes.push({
+            key: r.key,
+            was: `${oldId} "${r.before.foodName}" (${r.before.source}, used=${r.before.usedCount})`,
+            now: `${r.cold.foodId} "${r.cold.foodName}" (${r.cold.source}, conf=${r.cold.confidence?.toFixed?.(2)})`,
+            kcal100: r.cold.kcal100,
+        });
+    }
+    return {
+        counts: {
+            total: rows.length, sameRecord: same, changedRecord: changedId, changedSource,
+            errors, unresolvableBefore, verifiedReachable: rows.length - errors,
+        },
+        changes,
+    };
+}
+
+/**
+ * Fail-closed exit verdict (playbook §11 class B). This script OVERWRITES
+ * cache rows as an intended side effect, and its old ending printed
+ * `"changedRecord": 0` and exited 0 even when EVERY replay attempt failed —
+ * total HTTP failure was byte-for-byte indistinguishable from a verified-clean
+ * cache. The two states this must never conflate:
+ *
+ *   "0 changed, N rows verified reachable"      → exit 0 (a real measurement)
+ *   "0 evaluated because nothing was reachable" → exit 2 (a void run)
+ *
+ * Partial transport failure is exit 1: the sweep ran, but the errored rows
+ * were verified by NOTHING and the run cannot be quoted as whole-cache parity.
+ */
+export function parityExitCode(counts: Pick<ParityCounts, 'total' | 'errors'>): { code: 0 | 1 | 2; reason: string | null } {
+    if (counts.total === 0) {
+        return { code: 2, reason: 'evaluated ZERO rows — the --before file is empty; "0 changed records" would be vacuous, not clean' };
+    }
+    if (counts.errors >= counts.total) {
+        return {
+            code: 2,
+            reason: `NOTHING REACHABLE: all ${counts.total} replay attempts failed. This sweep verified 0 rows — `
+                + '"0 changed records" is VOID, not a clean cache',
+        };
+    }
+    if (counts.errors > 0) {
+        return {
+            code: 1,
+            reason: `${counts.errors} of ${counts.total} rows could not be replayed (transport errors); `
+                + 'those cache rows were verified by NOTHING this run',
+        };
+    }
+    return { code: 0, reason: null };
+}
+
 async function main() {
     const beforePath = argValue('--before');
     if (!beforePath) {
         console.error('missing --before <foodmapping-rows.json>');
-        process.exit(1);
+        process.exit(2);
     }
     const before: BeforeRow[] = JSON.parse(fs.readFileSync(beforePath, 'utf8'));
 
@@ -527,37 +627,8 @@ async function main() {
     });
     await Promise.all(workers);
 
-    // Every source the cache can hold must be expressible here. FatSecret was
-    // missing, and because `beforeId` returned null for those rows the diff
-    // compared `fs_1646 !== null` and called every one of them a changed record —
-    // a false-positive floor equal to the whole fatsecret share of the cache
-    // (441 of 3,246 rows, 13.6%, as of 2026-07-26; it was ~19 rows when the lane
-    // shipped, which is why nobody noticed). Making the replay text faithful is
-    // pointless if a seventh of the resulting diff is noise.
-    const beforeId = (b: BeforeRow) =>
-        b.offBarcode ? `off_${b.offBarcode}`
-            : b.fdcId != null ? `fdc_${b.fdcId}`
-                : b.fsId ? `fs_${b.fsId}`
-                    : null;
-    let same = 0, changedId = 0, changedSource = 0, errors = 0, unresolvableBefore = 0;
-    const changes: any[] = [];
-    for (const r of results) {
-        if (r.cold.error) { errors++; changes.push({ key: r.key, error: r.cold.error }); continue; }
-        const oldId = beforeId(r.before);
-        if (r.cold.foodId === oldId) { same++; continue; }
-        // No id at all for the incumbent: an old --before export missing a column,
-        // not evidence the record moved. Counted separately so it can never be
-        // read as a regression.
-        if (oldId === null) { unresolvableBefore++; continue; }
-        changedId++;
-        if (r.cold.source !== r.before.source) changedSource++;
-        changes.push({
-            key: r.key,
-            was: `${oldId} "${r.before.foodName}" (${r.before.source}, used=${r.before.usedCount})`,
-            now: `${r.cold.foodId} "${r.cold.foodName}" (${r.cold.source}, conf=${r.cold.confidence?.toFixed?.(2)})`,
-            kcal100: r.cold.kcal100,
-        });
-    }
+    const { counts, changes } = summarizeParity(results);
+    const { sameRecord: same, changedRecord: changedId, changedSource, errors, unresolvableBefore } = counts;
 
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = path.join(__dirname, 'results', `cache-parity-${stamp}.json`);
@@ -597,7 +668,13 @@ async function main() {
         observedHasColdBreakdown: replayIndex.hasColdBreakdown,
         coldEventsExcluded: replayIndex.coldEventsSeen,
     };
-    const summary = { total: results.length, sameRecord: same, changedRecord: changedId, changedSource, errors, unresolvableBefore, replay };
+    const verdict = parityExitCode(counts);
+    const summary = {
+        total: results.length, sameRecord: same, changedRecord: changedId, changedSource, errors,
+        unresolvableBefore, verifiedReachable: counts.verifiedReachable,
+        exit: { code: verdict.code, reason: verdict.reason },
+        replay,
+    };
     fs.writeFileSync(outPath, JSON.stringify({ base: BASE, ranAt: stamp, summary, changes, rejectedDominant, results }, null, 1));
 
     console.log(JSON.stringify(summary, null, 1));
@@ -623,6 +700,15 @@ async function main() {
         else console.log(`  ↻ [${c.key}]\n      was ${c.was}\n      now ${c.now}`);
     }
     console.log(`\nResults written to ${outPath}`);
+
+    // Fail-closed verdict — "0 changed records" is only a finding when rows
+    // actually came back to be diffed (see parityExitCode).
+    if (verdict.code === 0) {
+        console.log(`✅ ${changedId} changed record(s) over ${counts.verifiedReachable} rows verified reachable.`);
+    } else {
+        console.error(`\n${verdict.code === 2 ? '💥' : '⚠️'} ${verdict.reason} (exit ${verdict.code})`);
+        process.exitCode = verdict.code;
+    }
 }
 
 // Guarded so the replay-form selection above can be unit-tested without this
@@ -630,5 +716,7 @@ async function main() {
 // saveValidatedMapping is not gated by skipCache). Same pattern as
 // scripts/dedupe-off-mark.ts:227.
 if (require.main === module) {
-    main();
+    // A crash must be exit 2, never an unhandled rejection whose code depends
+    // on the Node version's default.
+    main().catch(err => { console.error(err); process.exit(2); });
 }
