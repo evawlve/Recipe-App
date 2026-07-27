@@ -101,7 +101,36 @@ const NLP_PHRASES = [
 
 // ---- Runner ------------------------------------------------------------
 
-interface Sample { kind: 'search' | 'nlp'; q: string; ms: number; ok: boolean; empty: boolean; nullNut: boolean; status: number; expectHits?: boolean }
+export interface Sample { kind: 'search' | 'nlp'; q: string; ms: number; ok: boolean; empty: boolean; nullNut: boolean; status: number; expectHits?: boolean }
+
+/**
+ * Fail-closed exit verdict (playbook §11 class B).
+ *
+ *   2 = the run measured NOTHING (zero requests — e.g. `--n 0` or a NaN
+ *       repeat count built an empty task list; the old code exited 0 there).
+ *   1 = hard problems: request errors, null-nutrition leaks, or EVERY
+ *       should-hit search coming back empty — an index that answers HTTP 200
+ *       with an empty catalogue for the whole corpus is dead, and "0 errors"
+ *       must not read as green (the header names empty-result rate as a thing
+ *       this script exists to catch; total emptiness is the unambiguous case).
+ *   0 = measured, with no hard problems.
+ */
+export function stressExitCode(samples: Sample[]): { code: 0 | 1 | 2; reasons: string[] } {
+    if (samples.length === 0) {
+        return { code: 2, reasons: ['ZERO requests executed — check --n/--concurrency; a run that measured nothing is not a green run'] };
+    }
+    const reasons: string[] = [];
+    const errors = samples.filter(s => !s.ok).length;
+    if (errors > 0) reasons.push(`${errors} request error(s)`);
+    const nullNut = samples.filter(s => s.nullNut).length;
+    if (nullNut > 0) reasons.push(`${nullNut} null-nutrition leak(s)`);
+    const shouldHit = samples.filter(s => s.kind === 'search' && s.expectHits === true && s.ok);
+    if (shouldHit.length > 0 && shouldHit.every(s => s.empty)) {
+        reasons.push(`EVERY should-hit search returned EMPTY (${shouldHit.length}/${shouldHit.length}) — `
+            + 'the index is answering with nothing; HTTP 200 over an empty catalogue is not a pass');
+    }
+    return { code: reasons.length > 0 ? 1 : 0, reasons };
+}
 
 async function timedFetch(url: string, init?: any): Promise<{ ms: number; status: number; body: any; ok: boolean }> {
     const ctl = new AbortController();
@@ -219,10 +248,19 @@ async function main() {
     }, null, 2));
     console.log(`\nResults written to ${path.relative(process.cwd(), outPath)}`);
 
-    // Fail only on hard problems: any request error, or a null-nutrition leak.
-    const hardFail = searchSamples.some(s => !s.ok) || nlpSamples.some(s => !s.ok)
-        || searchSamples.some(s => s.nullNut) || nlpSamples.some(s => s.nullNut);
-    process.exit(hardFail ? 1 : 0);
+    // Fail-closed verdict: hard problems are exit 1; a run that measured
+    // NOTHING is exit 2, never green (see stressExitCode).
+    const verdict = stressExitCode([...searchSamples, ...nlpSamples]);
+    if (verdict.code !== 0) {
+        console.error(`\n${verdict.code === 2 ? '💥' : '❌'} STRESS RUN ${verdict.code === 2 ? 'VOID' : 'FAILED'} (exit ${verdict.code}):`);
+        for (const r of verdict.reasons) console.error(`  - ${r}`);
+    }
+    process.exit(verdict.code);
 }
 
-main().catch(err => { console.error(err); process.exit(2); });
+// Guarded so stressExitCode is importable by the offline test suite without
+// firing a single request (this file used to self-execute on import, which is
+// why warm-cache.ts had to mirror its corpus lists instead of importing them).
+if (require.main === module) {
+    main().catch(err => { console.error(err); process.exit(2); });
+}

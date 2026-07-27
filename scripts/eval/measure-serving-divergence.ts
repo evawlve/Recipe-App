@@ -27,6 +27,11 @@ async function main(): Promise<number> {
         rows: Array<{ verdict: string; row: ScreenRow }>;
     };
     const rows = fx.rows.map(e => e.row);
+    if (rows.length === 0) {
+        // Fail closed: an agreement rate over zero rows is not a measurement.
+        console.error('FAIL: the fixture contains ZERO rows — nothing was measured; exit 2.');
+        return 2;
+    }
     const verdicts = new Map(fx.rows.map(e => [e.row.key, e.verdict]));
 
     const before = rows.map(r => resolveServingGrams(r));
@@ -72,6 +77,12 @@ async function main(): Promise<number> {
         const i = rows.indexOf(r);
         console.log(`  ${verdictOf(verdicts, r.key).padEnd(8)} ${r.key.slice(0, 46).padEnd(46)} `
             + `${d56(before[i].grams)} -> ${d56(realServing(r).grams)}`);
+    }
+    if (errored === rows.length) {
+        // Fail closed: every anchor errored, so the "divergence" above compared
+        // the reconstruction against NOTHING (DB/FDC unreachable, most likely).
+        console.error('\nFAIL: every serving anchor errored — the divergence was measured against nothing; exit 2.');
+        return 2;
     }
     return 0;
 }

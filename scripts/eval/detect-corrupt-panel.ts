@@ -40,16 +40,26 @@ import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { normalizeNameKey } from '../../src/lib/search/dedupe-candidates';
 
-const prisma = new PrismaClient();
-
-const args = process.argv.slice(2);
-function argValue(flag: string): string | undefined {
-    const i = args.indexOf(flag);
-    return i >= 0 ? args[i + 1] : undefined;
-}
-const MIN_GROUP = Number(argValue('--min-group') ?? 4);
-const PRINT = Number(argValue('--print') ?? 40);
 const BATCH = 20000;
+
+/**
+ * The slice of PrismaClient this scan consumes — injectable so the
+ * fail-injection tests can prove the zero-scan refusal offline
+ * (__tests__/fail-open-sweep.test.ts).
+ */
+export interface ScanDb {
+    offFood: {
+        findMany(args: unknown): Promise<Row[]>;
+        findUnique(args: unknown): Promise<Pick<Row, 'name' | 'servingGrams' | 'nutrientsPer100g'> | null>;
+    };
+}
+
+export interface PanelScanOptions {
+    minGroup?: number;
+    print?: number;
+    /** report directory; defaults to scripts/eval/results (tests inject a tmp dir) */
+    outDir?: string;
+}
 
 /** Confirmed corrupt in the 2026-07-20 warm-cache triage (adversarial verify vs live corpus). */
 const TRIAGE_CONFIRMED = [
@@ -71,12 +81,12 @@ function median(sorted: number[]): number {
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-interface Row { barcode: string; name: string; brandName: string | null; servingGrams: number | null; nutrientsPer100g: unknown }
+export interface Row { barcode: string; name: string; brandName: string | null; servingGrams: number | null; nutrientsPer100g: unknown }
 
-async function* streamRows(): AsyncGenerator<Row[]> {
+async function* streamRows(db: ScanDb): AsyncGenerator<Row[]> {
     let cursor: string | undefined;
     for (;;) {
-        const batch: Row[] = await prisma.offFood.findMany({
+        const batch: Row[] = await db.offFood.findMany({
             select: { barcode: true, name: true, brandName: true, servingGrams: true, nutrientsPer100g: true },
             where: { nutrientsPer100g: { not: undefined } },
             orderBy: { barcode: 'asc' },
@@ -89,12 +99,16 @@ async function* streamRows(): AsyncGenerator<Row[]> {
     }
 }
 
-async function main() {
+/** The scan, injectable + exit-code returning. 0 = report written; 2 = the scan saw nothing. */
+export async function runScan(db: ScanDb, opts: PanelScanOptions = {}): Promise<number> {
+    const MIN_GROUP = opts.minGroup ?? 4;
+    const PRINT = opts.print ?? 40;
+
     // Pass 1: sibling kcal + serving distributions per name key
     console.log('Pass 1: building sibling kcal/serving medians...');
     const groups = new Map<string, { kcals: number[]; servings: number[] }>();
     let scanned = 0;
-    for await (const batch of streamRows()) {
+    for await (const batch of streamRows(db)) {
         for (const r of batch) {
             const kcal = readKcal(r.nutrientsPer100g);
             if (kcal == null) continue;
@@ -130,6 +144,14 @@ async function main() {
     groups.clear();
     console.log(`  ${scanned} rows, ${medians.size} sane name groups with >=${MIN_GROUP} members, ${inflatedGroups.length} mass-inflated groups (median > ${MAX_SANE_MEDIAN}) excluded`);
 
+    // Fail closed (playbook §11 class B): a scan that saw ZERO rows is a broken
+    // instrument, not a clean corpus. No report is written, so a failed run can
+    // never fake an empty population downstream.
+    if (scanned === 0) {
+        console.error('FAIL: the scan saw ZERO rows. "Flagged 0 (of 0 scanned)" is a void run, not a clean corpus — no report written, exit 2.');
+        return 2;
+    }
+
     // Pass 2: test the panel-as-100g signature
     console.log('Pass 2: testing serving-rescale signature...');
     const flagged: Array<{
@@ -138,7 +160,7 @@ async function main() {
         direction: 'panel-low' | 'panel-inflated';
         rescaled: number; siblingMedian: number; groupSize: number; triageConfirmed: boolean;
     }> = [];
-    for await (const batch of streamRows()) {
+    for await (const batch of streamRows(db)) {
         for (const r of batch) {
             const kcal = readKcal(r.nutrientsPer100g);
             if (kcal == null) continue;
@@ -166,7 +188,7 @@ async function main() {
     }
 
     flagged.sort((a, b) => b.siblingMedian - a.siblingMedian);
-    const outDir = path.join(__dirname, 'results');
+    const outDir = opts.outDir ?? path.join(__dirname, 'results');
     fs.mkdirSync(outDir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = path.join(outDir, `corrupt-panel-scan-${ts}.json`);
@@ -191,7 +213,7 @@ async function main() {
     const flaggedSet = new Set(flagged.map(f => f.barcode));
     for (const b of TRIAGE_CONFIRMED) {
         if (flaggedSet.has(b)) { console.log(`  CAUGHT  off_${b}`); continue; }
-        const row = await prisma.offFood.findUnique({
+        const row = await db.offFood.findUnique({
             where: { barcode: b },
             select: { name: true, servingGrams: true, nutrientsPer100g: true },
         });
@@ -202,8 +224,23 @@ async function main() {
     }
 
     console.log(`\nReport written to ${path.relative(process.cwd(), outPath)}`);
+    return 0;
 }
 
-main()
-    .catch(err => { console.error(err); process.exit(2); })
-    .finally(() => prisma.$disconnect());
+// Guarded so runScan is importable by the offline test suite (this file used
+// to construct a PrismaClient and start the scan at import time).
+if (require.main === module) {
+    const args = process.argv.slice(2);
+    const argValue = (flag: string): string | undefined => {
+        const i = args.indexOf(flag);
+        return i >= 0 ? args[i + 1] : undefined;
+    };
+    const prisma = new PrismaClient();
+    runScan(prisma as unknown as ScanDb, {
+        minGroup: Number(argValue('--min-group') ?? 4),
+        print: Number(argValue('--print') ?? 40),
+    })
+        .then(code => { if (code !== 0) process.exitCode = code; })
+        .catch(err => { console.error(err); process.exitCode = 2; })
+        .finally(() => prisma.$disconnect().catch(() => {}));
+}

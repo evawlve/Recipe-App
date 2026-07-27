@@ -82,16 +82,24 @@ import {
     ServingScalePanel,
 } from '../../src/lib/mapping/corrupt-mark';
 
-const prisma = new PrismaClient();
-
-const args = process.argv.slice(2);
-function argValue(flag: string): string | undefined {
-    const i = args.indexOf(flag);
-    return i >= 0 ? args[i + 1] : undefined;
-}
-const MIN_GROUP = Number(argValue('--min-group') ?? MIN_SODIUM_OUTLIER_GROUP);
-const PRINT = Number(argValue('--print') ?? 40);
 const BATCH = 20000;
+
+/**
+ * The one slice of PrismaClient this scan consumes — injectable so the
+ * fail-injection tests can prove the zero-scan refusal offline
+ * (__tests__/fail-open-sweep.test.ts), same pattern as
+ * detect-panel-scale-divided.ts's RowStream.
+ */
+export interface ScanDb {
+    offFood: { findMany(args: unknown): Promise<Row[]> };
+}
+
+export interface NutritionScanOptions {
+    minGroup?: number;
+    print?: number;
+    /** report directory; defaults to scripts/eval/results (tests inject a tmp dir) */
+    outDir?: string;
+}
 
 /** Foods that legitimately live above SODIUM_IMPLAUSIBLE_100G: pure salts,
  *  bouillon/stock concentrates, seasoning/gravy powders, electrolyte mixes.
@@ -118,12 +126,12 @@ function median(sorted: number[]): number {
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-interface Row { barcode: string; name: string; brandName: string | null; servingGrams: number | null; nutrientsPer100g: unknown }
+export interface Row { barcode: string; name: string; brandName: string | null; servingGrams: number | null; nutrientsPer100g: unknown }
 
-async function* streamRows(): AsyncGenerator<Row[]> {
+async function* streamRows(db: ScanDb): AsyncGenerator<Row[]> {
     let cursor: string | undefined;
     for (;;) {
-        const batch: Row[] = await prisma.offFood.findMany({
+        const batch: Row[] = await db.offFood.findMany({
             select: { barcode: true, name: true, brandName: true, servingGrams: true, nutrientsPer100g: true },
             // Marked and deduped rows are already out of retrieval; skipping
             // them also keeps the sibling sodium medians clean.
@@ -138,12 +146,16 @@ async function* streamRows(): AsyncGenerator<Row[]> {
     }
 }
 
-async function main() {
+/** The scan, injectable + exit-code returning. 0 = report written; 2 = the scan saw nothing. */
+export async function runScan(db: ScanDb, opts: NutritionScanOptions = {}): Promise<number> {
+    const MIN_GROUP = opts.minGroup ?? MIN_SODIUM_OUTLIER_GROUP;
+    const PRINT = opts.print ?? 40;
+
     // Pass 1: sibling sodium distributions per name key (for the outlier rule).
     console.log('Pass 1: building sibling sodium medians...');
     const groups = new Map<string, number[]>();
     let scanned = 0;
-    for await (const batch of streamRows()) {
+    for await (const batch of streamRows(db)) {
         for (const r of batch) {
             const nutrients = r.nutrientsPer100g as Record<string, unknown> | null;
             const na = readNum(nutrients, 'sodium');
@@ -166,12 +178,21 @@ async function main() {
     groups.clear();
     console.log(`  ${scanned} rows, ${sodiumMedians.size} name groups with >=${MIN_GROUP} sodium values`);
 
+    // Fail closed (playbook §11 class B): a scan that saw ZERO rows is a broken
+    // instrument — wrong database, a filter typo, an exhausted table — not a
+    // clean corpus. No report is written, so a failed run can never fake an
+    // empty population downstream (mark-corrupt-off.ts consumes these files).
+    if (scanned === 0) {
+        console.error('FAIL: the scan saw ZERO rows. "Flagged 0 (of 0 scanned)" is a void run, not a clean corpus — no report written, exit 2.');
+        return 2;
+    }
+
     // Pass 2: per-row rules, first match wins.
     console.log('Pass 2: testing per-field rules...');
     const flagged: CorruptScanFlag[] = [];
     const guarded: Array<{ barcode: string; name: string; brandName: string | null; sodium: number }> = [];
     let sauceBand = 0;
-    for await (const batch of streamRows()) {
+    for await (const batch of streamRows(db)) {
         for (const r of batch) {
             const nutrients = r.nutrientsPer100g as Record<string, unknown> | null;
             const kcal = readKcal(nutrients);
@@ -280,7 +301,7 @@ async function main() {
     const byDirection: Record<string, number> = {};
     for (const f of flagged) byDirection[f.direction] = (byDirection[f.direction] ?? 0) + 1;
 
-    const outDir = path.join(__dirname, 'results');
+    const outDir = opts.outDir ?? path.join(__dirname, 'results');
     fs.mkdirSync(outDir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = path.join(outDir, `corrupt-nutrition-scan-${ts}.json`);
@@ -327,8 +348,23 @@ async function main() {
     }
     console.log(`\nReport written to ${path.relative(process.cwd(), outPath)}`);
     console.log('Next: scripts/mark-corrupt-off.ts --file <report> (dry-run first, then --apply after approval).');
+    return 0;
 }
 
-main()
-    .catch(err => { console.error(err); process.exit(2); })
-    .finally(() => prisma.$disconnect());
+// Guarded so runScan is importable by the offline test suite (this file used
+// to construct a PrismaClient and start the scan at import time).
+if (require.main === module) {
+    const args = process.argv.slice(2);
+    const argValue = (flag: string): string | undefined => {
+        const i = args.indexOf(flag);
+        return i >= 0 ? args[i + 1] : undefined;
+    };
+    const prisma = new PrismaClient();
+    runScan(prisma as unknown as ScanDb, {
+        minGroup: Number(argValue('--min-group') ?? MIN_SODIUM_OUTLIER_GROUP),
+        print: Number(argValue('--print') ?? 40),
+    })
+        .then(code => { if (code !== 0) process.exitCode = code; })
+        .catch(err => { console.error(err); process.exitCode = 2; })
+        .finally(() => prisma.$disconnect().catch(() => {}));
+}
