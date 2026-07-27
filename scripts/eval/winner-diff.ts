@@ -108,6 +108,17 @@
  *   $RUN replay --snapshot /tmp/wd-snap.json --out /tmp/wd-B.json --label BRANCH
  *   $RUN diff --a /tmp/wd-A.json --b /tmp/wd-B.json --screens
  *
+ *   Prefer scripts/eval/winner-gate.sh, which runs all of the above in one command.
+ *
+ * --with-serving  (add to BOTH replays AND the noise-floor run)
+ *   Runs the real serving layer for every row that has a winner and records the
+ *   grams / tier / kcal the user would be billed. Without it this harness stops at
+ *   winner selection — limit (B) below — and a change can move the winner onto the
+ *   CORRECT record while making the billed number worse. That is not hypothetical:
+ *   PR #173 did exactly that (mac and cheese, 90.4 -> 39.5 kcal against a true
+ *   ~400) and passed a green winner gate. Any change that could touch grams must
+ *   be gated with this flag.
+ *
  * NEVER switch variants with `git checkout <sha> -- <file>`. That is how
  * uncommitted work gets destroyed. Copy the tree and edit the copy.
  */
@@ -127,16 +138,20 @@ import {
     PopulationLine,
     QueryOrigin,
     ScreenPair,
+    ServingInfo,
     Verdict,
     VERDICTS,
     classifyOrigin,
+    classifyServing,
     classifyVerdict,
     counterfactualSummary,
     emptyLedger,
     formatScreens,
+    formatServingSummary,
     gateReasonHistogram,
     kcalDeltaPct,
     noiseGate,
+    summariseServing,
     originSplit,
     parseGoldenSet,
     parseQueryFile,
@@ -511,6 +526,11 @@ const { simpleRerank, toRerankCandidate, stripPrepModifiers } = rerankMod;
 const {
     computeFloorHitIds, dropDenylistedCandidates, makeSortedFilteredComparator, candidateHasVolumeServing,
 } = mapperMod;
+/**
+ * The whole serving layer behind one exported entry point. Used by the optional
+ * --with-serving stage; it is the SAME function the route calls, not a transcription.
+ */
+const { hydrateAndSelectServing } = mapperMod;
 const { countedPieceNoun, extractLabelServingUnit, GENERIC_PIECE_WORDS, servingLabelCountsPiece } = countLabelMod;
 const { assessMacroPlausibility } = plausibilityMod;
 
@@ -1536,11 +1556,81 @@ async function preEnrichAiGenerated(entries: SnapshotEntry[]): Promise<number> {
 }
 
 // ============================================================
+// 9b. THE SERVING STAGE  (optional; closes blind spot (B))
+// ============================================================
+
+/**
+ * Tiers whose grams came from a model rather than from data. They do not replay
+ * deterministically, so they are flagged and reported in their own bucket rather
+ * than counted as movement the change under test caused.
+ */
+const AI_SERVING_TIER_RE = /(^|_)ai(_|$)|estimate/i;
+
+/**
+ * Run the REAL serving layer for every row that has a winner, and record what the
+ * user would be billed.
+ *
+ * WHY THIS IS A SEPARATE PASS. `replaySelection` is synchronous and pure over the
+ * frozen pool; serving resolution is async and reads the DB (sibling medians,
+ * package quantities, OffServing rows). Keeping it after the fact preserves that
+ * property — the selection half of a replay is still reproducible with no I/O.
+ *
+ * WHY THE WRITE GUARD IS ENOUGH. `hydrateOffCandidate` is cache-first: for records
+ * already in OffFood — which is every record Typesense can return, since it indexes
+ * our own Postgres — it is a pure read. Its upserts only fire for a record we do
+ * not have, and the guard no-ops those without throwing.
+ *
+ * The honest limit: this measures the serving stage under REPLAY, where the cache
+ * is bypassed. It still cannot see the save gates or what a warm read would serve.
+ */
+async function resolveServings(snap: SnapshotFile, rows: ReplayRow[]): Promise<void> {
+    const byQuery = new Map(snap.entries.map(e => [e.query, e]));
+
+    for (const row of rows) {
+        const e = byQuery.get(row.query);
+        if (!e || !row.winner) { row.serving = null; continue; }
+
+        // The winner is recorded as an id; the builder needs the candidate OBJECT.
+        // Deep-copy it: buildOffResult mutates candidate.nutrition in place, and a
+        // mutated pool would make the second replay of a noise-floor pair differ
+        // from the first for reasons that have nothing to do with the code.
+        const src = e.candidates.find(c => c.id === row.winner!.foodId);
+        if (!src) {
+            row.serving = { grams: null, servingTier: null, servingDescription: null, totalKcal: null, aiTouched: false, error: 'winner not found in frozen pool' };
+            continue;
+        }
+        const cand: UnifiedCandidate = JSON.parse(JSON.stringify(src));
+
+        try {
+            const r = await hydrateAndSelectServing(cand, e.parsed, row.winner.confidence, e.gatherRawLine);
+            if (!r) { row.serving = null; continue; }
+            const tier: string | null = r.servingTier ?? null;
+            row.serving = {
+                grams: typeof r.grams === 'number' ? r.grams : null,
+                servingTier: tier,
+                servingDescription: r.servingDescription ?? null,
+                // `kcal` on FatsecretMappedIngredient is the TOTAL for the resolved
+                // grams, not a per-100g figure — it is verbatim what route.ts:296
+                // records as MappingEventLog.totalKcal, i.e. the number on screen.
+                totalKcal: typeof r.kcal === 'number' ? r.kcal : null,
+                aiTouched: tier != null && AI_SERVING_TIER_RE.test(tier),
+            };
+        } catch (err: any) {
+            row.serving = {
+                grams: null, servingTier: null, servingDescription: null, totalKcal: null,
+                aiTouched: false, error: err?.message ?? String(err),
+            };
+        }
+    }
+}
+
+// ============================================================
 // 10. REPLAY mode
 // ============================================================
 
 async function buildReplay(
     snap: SnapshotFile, label: string, variant: SelectionVariant, debug: boolean, allowDrift: boolean,
+    withServing = false, snapshotPath?: string,
 ): Promise<{ file: ReplayFile; enriched: number }> {
     const drift = checkDrift(allowDrift);
     announceVariantFit(drift, variant);
@@ -1572,6 +1662,10 @@ async function buildReplay(
             });
         }
     }
+
+    if (withServing) {
+        await resolveServings(snap, rows);
+    }
     muzzle(false);
 
     const file: ReplayFile = {
@@ -1579,11 +1673,13 @@ async function buildReplay(
         version: 1,
         label,
         variant,
+        withServing,
         ranAt: new Date().toISOString(),
         gitHead: gitHead(),
         gitDirty: gitDirtyHash(),
         snapshotTakenAt: snap.takenAt,
         snapshotPopulation: snap.population,
+        ...(snapshotPath ? { snapshotPath } : {}),
         callerHash: drift.caller,
         helpersHash: drift.helpers,
         rows,
@@ -1646,6 +1742,15 @@ function fmtWinner(w: WinnerInfo | null): string {
     return `${w.source}:${w.foodId} "${w.foodName}"${brand}  ${pan}  conf=${w.confidence.toFixed(3)} reason=${w.selectionReason} idx=${w.indexInFiltered}`;
 }
 
+function fmtServing(s: ServingInfo | null | undefined): string {
+    if (s === undefined) return '(stage not run)';
+    if (s === null) return '(no serving)';
+    if (s.error) return `(ERROR: ${s.error})`;
+    const g = s.grams == null ? '?g' : `${s.grams.toFixed(1)}g`;
+    const k = s.totalKcal == null ? '?kcal' : `${s.totalKcal.toFixed(0)}kcal`;
+    return `${g} ${k} ${s.servingTier ?? '-'}${s.aiTouched ? ' (AI)' : ''}`;
+}
+
 // ============================================================
 // 11. NOISE FLOOR
 // ============================================================
@@ -1670,14 +1775,17 @@ function readLedger(p: string): NoiseFloorLedger | null {
  * 0 changed rows" and reported 2 changes; both statements cannot be true, and the
  * label was the wrong one.
  */
-async function runNoiseFloor(snapPath: string, variant: SelectionVariant, debug: boolean, allowDrift: boolean) {
+async function runNoiseFloor(
+    snapPath: string, variant: SelectionVariant, debug: boolean, allowDrift: boolean, withServing = false,
+) {
     const snap: SnapshotFile = readSnapshot(snapPath);
-    const a = await buildReplay(snap, 'noise-1', variant, debug, allowDrift);
-    const b = await buildReplay(snap, 'noise-2', variant, debug, allowDrift);
+    const a = await buildReplay(snap, 'noise-1', variant, debug, allowDrift, withServing);
+    const b = await buildReplay(snap, 'noise-2', variant, debug, allowDrift, withServing);
 
     const byQ = new Map(b.file.rows.map(r => [r.query, r]));
     let winnerDiffs = 0;
     let pathDiffs = 0;
+    let servingDiffs = 0;
     const offenders: string[] = [];
     for (const ra of a.file.rows) {
         const rb = byQ.get(ra.query);
@@ -1686,6 +1794,17 @@ async function runNoiseFloor(snapPath: string, variant: SelectionVariant, debug:
         const wb = rb.winner?.foodId ?? null;
         if (wa !== wb) { winnerDiffs++; offenders.push(`${ra.query}: winner ${wa} -> ${wb}`); }
         if (ra.path !== rb.path) { pathDiffs++; offenders.push(`${ra.query}: path ${ra.path} -> ${rb.path}`); }
+        if (withServing) {
+            // AI-estimated tiers are nondeterministic BY DESIGN; counting them here
+            // would make the floor permanently non-zero and the gate unusable. They
+            // are excluded from the floor and reported as UNJUDGED in every diff, so
+            // the exclusion can never be mistaken for clearance.
+            const v = classifyServing(ra, rb);
+            if (v !== 'SERVING-SAME' && v !== 'AI-NONDETERMINISTIC' && v !== 'UNJUDGED') {
+                servingDiffs++;
+                offenders.push(`${ra.query}: serving ${ra.serving?.grams ?? '-'}g/${ra.serving?.servingTier ?? '-'} -> ${rb.serving?.grams ?? '-'}g/${rb.serving?.servingTier ?? '-'}`);
+            }
+        }
     }
 
     const receipt: NoiseFloorReceipt = {
@@ -1699,6 +1818,7 @@ async function runNoiseFloor(snapPath: string, variant: SelectionVariant, debug:
         rows: a.file.rows.length,
         winnerDiffs,
         pathDiffs,
+        ...(withServing ? { withServing: true, servingDiffs } : {}),
     };
 
     const rp = receiptPath(snapPath);
@@ -1712,8 +1832,9 @@ async function runNoiseFloor(snapPath: string, variant: SelectionVariant, debug:
     say('================================================================================');
     say('NOISE FLOOR  (replayNoise: same snapshot, same tree, same variant — MUST be 0)');
     say(`  snapshot ${snap.takenAt}   tree ${receipt.gitDirty}   variant ${variant}`);
-    say(`  rows ${receipt.rows}   winner-diffs ${receipt.winnerDiffs}   path-diffs ${receipt.pathDiffs}`);
-    if (winnerDiffs === 0 && pathDiffs === 0) {
+    say(`  rows ${receipt.rows}   winner-diffs ${receipt.winnerDiffs}   path-diffs ${receipt.pathDiffs}`
+        + (withServing ? `   serving-diffs ${servingDiffs}` : '   (serving stage NOT run)'));
+    if (winnerDiffs === 0 && pathDiffs === 0 && servingDiffs === 0) {
         say('  RESULT: 0 — the replay is deterministic on this tree. A diff run may proceed.');
     } else {
         say('  RESULT: NON-ZERO. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
@@ -1730,7 +1851,7 @@ async function runNoiseFloor(snapPath: string, variant: SelectionVariant, debug:
     say('        is a different, genuinely non-zero number.');
     say('================================================================================');
 
-    if (winnerDiffs !== 0 || pathDiffs !== 0) process.exitCode = 1;
+    if (winnerDiffs !== 0 || pathDiffs !== 0 || servingDiffs !== 0) process.exitCode = 1;
 }
 
 // ============================================================
@@ -1817,6 +1938,12 @@ function runDiff(aPath: string, bPath: string, opts: {
         if (d != null && a.winner && b.winner && a.winner.foodId !== b.winner.foodId) {
             say(`     kcal/100g ${a.winner.panel!.kcal} -> ${b.winner.panel!.kcal}  (${d >= 0 ? '+' : ''}${d.toFixed(1)}%)`);
         }
+        // The BILLED number, printed next to the winner change that caused it. A
+        // winner can move to the correct record and still bill worse — that is not
+        // a hypothetical, it is what PR #173 shipped.
+        if (A.withServing && B.withServing) {
+            say(`     BILLED ${fmtServing(a.serving)}  ->  ${fmtServing(b.serving)}   [${classifyServing(a, b)}]`);
+        }
     }
     if (changedRows.length > opts.top) {
         say('');
@@ -1829,6 +1956,22 @@ function runDiff(aPath: string, bPath: string, opts: {
     for (const k of VERDICTS) say(`  ${k.padEnd(18)} ${counts[k]}`);
     say(`  rows with ANY movement (winner, pool or rerank window): ${movement} / ${A.rows.length}`);
     say('--------------------------------------------------------------------------------');
+
+    // The serving section is printed for EVERY run, including the ones where the
+    // stage did not run. When it did not, it says so in one line instead of being
+    // absent — an absent section reads as "nothing to report", which is the exact
+    // misreading that let a winner-only gate clear a worse billed number.
+    if (A.withServing && B.withServing) {
+        sayAll(formatServingSummary(summariseServing(A.rows, B.rows), opts.top));
+    } else {
+        say('');
+        say('=== SERVING DIFF — NOT RUN ===');
+        say('  Neither replay carried the serving stage, so this run says NOTHING about');
+        say('  what the user is billed. A winner can move onto the CORRECT record and the');
+        say('  billed number can still get worse (PR #173: mac and cheese, 90.4 -> 39.5 kcal');
+        say('  against a true ~400, because the 28g anchor never moved).');
+        say('  Re-run both replays with --with-serving to gate the billed number.');
+    }
 
     if (opts.screens) sayAll(formatScreens(runScreens(pairs, A.label, B.label), opts.top));
 
@@ -1850,12 +1993,19 @@ function runDiff(aPath: string, bPath: string, opts: {
     say('');
     say('REMINDER — a SAME verdict does NOT clear the change. This gate is blind to:');
     say('  (a) retrieval effects (the gather output is frozen);');
-    say('  (b) everything after winner selection — hydration, serving resolution, AI');
-    say('      backfill, the save-time plausibility and brand-mismatch gates, the write;');
+    if (A.withServing && B.withServing) {
+        say('  (b) PARTLY CLOSED this run — hydration and serving resolution DID run and are');
+        say('      reported in the SERVING DIFF above. Still unseen: AI backfill determinism,');
+        say('      the save-time plausibility and brand-mismatch gates, and the write itself.');
+    } else {
+        say('  (b) everything after winner selection — hydration, serving resolution, AI');
+        say('      backfill, the save-time plausibility and brand-mismatch gates, the write.');
+        say('      Re-run with --with-serving to close the serving half of this.');
+    }
     say('  (c) warm-key behaviour (skipCache is forced, so this is COLD resolution);');
-    say('  (d) any case the change is supposed to CREATE — this population contains only');
-    say('      queries that were already asked. Pair this with a hand-written positive');
-    say('      case list that asserts the RIGHT answer.');
+    say('  (d) any case the change is supposed to CREATE — a --from-events or --from-cache');
+    say('      population contains only queries that were already asked. Pair this with a');
+    say('      hand-written positive case list that asserts the RIGHT answer.');
     say('');
 
     if (opts.jsonOut) {
@@ -1874,11 +2024,22 @@ function runDiff(aPath: string, bPath: string, opts: {
 }
 
 /** Where the snapshot that produced this replay lives, for the receipt lookup. */
+/**
+ * Where the receipt ledger for this replay lives.
+ *
+ * A replay now RECORDS the snapshot it was replayed from, so in the normal case
+ * there is nothing to guess. The guessing below is the pre-2026-07-27 fallback and
+ * it had a bug worth remembering: it only resolved when the directory held EXACTLY
+ * ONE .noise-floor.json. A gate run with both a cold and a regression population
+ * writes two, so it silently fell through to "snapshot.json" — a file that never
+ * exists — and `diff` refused to report with a message pointing at a path nothing
+ * had ever written. That failure looks exactly like a missing noise floor, which
+ * is the one message in this harness you least want to be spurious.
+ */
 function guessSnapshotPath(f: ReplayFile, replayPath: string): string {
     const explicit = argStr('snapshot');
     if (explicit) return explicit;
-    // Replays are conventionally written next to their snapshot; fall back to the
-    // population string only for the message.
+    if (f.snapshotPath && fs.existsSync(receiptPath(f.snapshotPath))) return f.snapshotPath;
     const dir = path.dirname(replayPath);
     const guesses = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => n.endsWith('.noise-floor.json')) : [];
     if (guesses.length === 1) return path.join(dir, guesses[0].replace(/\.noise-floor\.json$/, '.json'));
@@ -2294,13 +2455,39 @@ function gitHead(): string {
  * nothing. Hashing src/lib/mapping/*.ts means two replays with the same value provably
  * ran the same mapping code, which is exactly the property the noise floor needs.
  */
+/**
+ * Directories whose contents decide what a replay produces. `gitDirtyHash` is the
+ * harness's answer to "did the two sides run the same code", and a directory left
+ * out of it is a change the gate cannot tell apart from no change at all.
+ *
+ * src/lib/servings and the serving estimator joined the list on 2026-07-27, with
+ * the serving stage. Before that, a fix living entirely in bare-query-guard.ts
+ * produced an IDENTICAL tree hash on both sides: the BASE noise-floor receipt
+ * satisfied the BRANCH, and the diff header announced "identical tree AND
+ * identical variant — this run is itself a noise-floor check" about a run that
+ * was nothing of the sort.
+ */
+const HASHED_SOURCE_PATHS = [
+    'src/lib/mapping',
+    'src/lib/servings',
+    // The bare-query lexicon getBareQueryDefault() lives here; it decides grams.
+    'src/lib/ai/ambiguous-serving-estimator.ts',
+];
+
 function gitDirtyHash(): string {
     try {
-        const dir = path.join(REPO_ROOT, 'src/lib/mapping');
         const parts: string[] = [];
-        for (const f of fs.readdirSync(dir).sort()) {
-            if (!f.endsWith('.ts')) continue;
-            parts.push(f + ':' + sha(fs.readFileSync(path.join(dir, f), 'utf8')));
+        for (const rel of HASHED_SOURCE_PATHS) {
+            const p = path.join(REPO_ROOT, rel);
+            if (!fs.existsSync(p)) continue;
+            if (fs.statSync(p).isDirectory()) {
+                for (const f of fs.readdirSync(p).sort()) {
+                    if (!f.endsWith('.ts')) continue;
+                    parts.push(rel + '/' + f + ':' + sha(fs.readFileSync(path.join(p, f), 'utf8')));
+                }
+            } else {
+                parts.push(rel + ':' + sha(fs.readFileSync(p, 'utf8')));
+            }
         }
         return sha(parts.join('\n')).slice(0, 8);
     } catch { return 'unknown'; }
@@ -2409,6 +2596,10 @@ async function main() {
     const allowDrift = has('--allow-drift');
     const verbose = has('--verbose');
     const top = argInt('top') ?? 30;
+    // Opt-in because it costs a DB round trip per row and, on rows that reach an
+    // AI estimator, a model call. Opt-in is NOT "optional": a replay without it
+    // cannot adjudicate the number the user sees, and the diff now says so.
+    const withServing = has('--with-serving');
 
     if (!mode || mode === 'help' || mode === '--help' || mode === '-h') { say(HELP); return; }
 
@@ -2431,7 +2622,7 @@ async function main() {
         const out = argStr('out');
         if (!snapPath || !out) throw new Error('replay needs --snapshot <file> --out <file> [--label X]');
         const snap = readSnapshot(snapPath);
-        const { file, enriched } = await buildReplay(snap, argStr('label') ?? 'unlabelled', resolveVariant(), debug, allowDrift);
+        const { file, enriched } = await buildReplay(snap, argStr('label') ?? 'unlabelled', resolveVariant(), debug, allowDrift, withServing, path.resolve(snapPath));
         writeJsonAtomic(out, file);
         printReplaySummary(file, enriched, verbose);
         say('');
@@ -2440,7 +2631,7 @@ async function main() {
     } else if (mode === 'noise-floor' || mode === 'noise') {
         const snapPath = argStr('snapshot');
         if (!snapPath) throw new Error('noise-floor needs --snapshot <file>');
-        await runNoiseFloor(snapPath, resolveVariant(), debug, allowDrift);
+        await runNoiseFloor(snapPath, resolveVariant(), debug, allowDrift, withServing);
 
     } else if (mode === 'diff') {
         const a = argStr('a');

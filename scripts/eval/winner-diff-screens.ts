@@ -97,6 +97,34 @@ export interface CounterfactualInfo {
     notes: string[];
 }
 
+/**
+ * What the SERVING stage billed, once a winner exists.
+ *
+ * Populated only under `replay --with-serving`. It exists because the harness
+ * used to stop at winner selection, and that blind spot passed a green gate on a
+ * change that made the user's number WORSE: PR #173 moved `mac and cheese` onto
+ * the correct record and the billed total went 90.4 -> 39.5 kcal against a true
+ * ~400, because the 28g serving anchor never moved. A winner diff cannot see
+ * that. This can.
+ */
+export interface ServingInfo {
+    /** grams billed for the parsed quantity, or null when the stage produced nothing */
+    grams: number | null;
+    /** cascade branch that billed the grams — 'bare_category_default', 'fs_label_count', … */
+    servingTier: string | null;
+    servingDescription: string | null;
+    /** kcal the user is actually shown — the number every under-bill report quotes */
+    totalKcal: number | null;
+    /**
+     * True when the grams came from an AI estimator. Those tiers are not
+     * deterministic across replays, so the diff reports them in their own bucket
+     * rather than counting them as movement your change caused.
+     */
+    aiTouched: boolean;
+    /** the serving stage threw — the row is UNJUDGEABLE, which is not the same as unchanged */
+    error?: string;
+}
+
 export interface ReplayRow {
     query: string;
     /** population tag, so a report can separate real user lines from warmer keys */
@@ -114,6 +142,14 @@ export interface ReplayRow {
     gate: { skipAiRerank: boolean; reason: string; confidence: number };
     rerankReason?: string;
     winner: WinnerInfo | null;
+    /**
+     * The grams/kcal the winner was actually billed at.
+     *   undefined ⇒ the serving stage was never run (no --with-serving)
+     *   null      ⇒ it ran and produced no result (no winner, or the builder returned null)
+     * The distinction matters: a diff must refuse to compare a stage that never
+     * ran, and must NOT read that as "serving unchanged".
+     */
+    serving?: ServingInfo | null;
     /** present only when the gate pre-empted: what simpleRerank would have picked */
     counter?: CounterfactualInfo;
     counterMicros?: number;
@@ -138,8 +174,17 @@ export interface ReplayFile {
     gitDirty: string;
     snapshotTakenAt: string;
     snapshotPopulation: string;
+    /**
+     * The snapshot file this replay was produced from. Recorded so `diff` can find
+     * the noise-floor ledger by construction instead of guessing at it — the guess
+     * only worked when a directory held exactly one snapshot, so every gate run
+     * with both a cold and a regression population misresolved it.
+     */
+    snapshotPath?: string;
     callerHash: string;
     helpersHash: string;
+    /** true when `--with-serving` ran the serving stage and populated row.serving */
+    withServing?: boolean;
     rows: ReplayRow[];
 }
 
@@ -177,6 +222,144 @@ export function classifyVerdict(a: ReplayRow, b: ReplayRow): Verdict {
     if (a.path !== b.path || a.relaxedRecovery !== b.relaxedRecovery) return 'PATH-CHANGED';
     return 'SAME';
 }
+
+// ============================================================
+// 3b. THE SERVING VERDICT  (blind spot (B), closed 2026-07-27)
+// ============================================================
+
+export type ServingVerdict =
+    /** both sides billed the same grams (within FP tolerance) */
+    | 'SERVING-SAME'
+    /** grams moved — the only verdict that changes what the user is billed */
+    | 'GRAMS-CHANGED'
+    /** same grams, different cascade branch: no user-visible change TODAY, but the
+     *  provenance moved, and a tier is what the next fix will target */
+    | 'TIER-CHANGED'
+    | 'NOSERVING->SERVING'
+    | 'SERVING->NOSERVING'
+    /** at least one side came from an AI estimator — not deterministic, not judgeable */
+    | 'AI-NONDETERMINISTIC'
+    /** the stage did not run on one or both sides, or it threw */
+    | 'UNJUDGED';
+
+export const SERVING_VERDICTS: readonly ServingVerdict[] = [
+    'SERVING-SAME', 'GRAMS-CHANGED', 'TIER-CHANGED',
+    'NOSERVING->SERVING', 'SERVING->NOSERVING', 'AI-NONDETERMINISTIC', 'UNJUDGED',
+];
+
+/** Grams are floats off a cascade of multiplications; 0.01g is not a change. */
+const GRAMS_EPSILON = 0.01;
+
+/**
+ * Did the number the USER IS BILLED move?
+ *
+ * `UNJUDGED` is returned whenever the stage did not run on both sides, and that
+ * is load-bearing: the failure this verdict exists to prevent is reading silence
+ * as safety. A replay taken without --with-serving has `serving === undefined`,
+ * and calling that SERVING-SAME would reproduce the exact blind spot that let a
+ * green gate ship a worse billed number.
+ */
+export function classifyServing(a: ReplayRow, b: ReplayRow): ServingVerdict {
+    const sa = a.serving;
+    const sb = b.serving;
+    if (sa === undefined || sb === undefined) return 'UNJUDGED';
+    if (sa?.error || sb?.error) return 'UNJUDGED';
+    if (sa?.aiTouched || sb?.aiTouched) return 'AI-NONDETERMINISTIC';
+
+    const ga = sa?.grams ?? null;
+    const gb = sb?.grams ?? null;
+    if (ga == null && gb == null) return 'SERVING-SAME';
+    if (ga == null) return 'NOSERVING->SERVING';
+    if (gb == null) return 'SERVING->NOSERVING';
+    if (Math.abs(ga - gb) > GRAMS_EPSILON) return 'GRAMS-CHANGED';
+    if ((sa?.servingTier ?? null) !== (sb?.servingTier ?? null)) return 'TIER-CHANGED';
+    return 'SERVING-SAME';
+}
+
+/**
+ * Percent change in the billed total. Signed: negative means the change made the
+ * user's number SMALLER, which for an under-bill fix is the wrong direction and
+ * is the single fact PR #173's report should have led with.
+ */
+export function billedKcalDeltaPct(a: ReplayRow, b: ReplayRow): number | null {
+    const ka = a.serving?.totalKcal ?? null;
+    const kb = b.serving?.totalKcal ?? null;
+    if (ka == null || kb == null || ka === 0) return null;
+    return (100 * (kb - ka)) / ka;
+}
+
+export interface ServingSummary {
+    counts: Record<ServingVerdict, number>;
+    /** rows whose billed grams moved, worst-magnitude first */
+    moved: Array<{
+        query: string;
+        aGrams: number | null; bGrams: number | null;
+        aTier: string | null; bTier: string | null;
+        aKcal: number | null; bKcal: number | null;
+        kcalDeltaPct: number | null;
+    }>;
+    /** rows the gate could not adjudicate — must be printed, never summarised away */
+    unjudged: string[];
+}
+
+export function summariseServing(aRows: ReplayRow[], bRows: ReplayRow[]): ServingSummary {
+    const byQ = new Map(bRows.map(r => [r.query, r]));
+    const counts = Object.fromEntries(SERVING_VERDICTS.map(v => [v, 0])) as Record<ServingVerdict, number>;
+    const moved: ServingSummary['moved'] = [];
+    const unjudged: string[] = [];
+
+    for (const a of aRows) {
+        const b = byQ.get(a.query);
+        if (!b) continue;
+        const v = classifyServing(a, b);
+        counts[v]++;
+        if (v === 'UNJUDGED' || v === 'AI-NONDETERMINISTIC') unjudged.push(a.query);
+        if (v === 'GRAMS-CHANGED' || v === 'NOSERVING->SERVING' || v === 'SERVING->NOSERVING') {
+            moved.push({
+                query: a.query,
+                aGrams: a.serving?.grams ?? null, bGrams: b.serving?.grams ?? null,
+                aTier: a.serving?.servingTier ?? null, bTier: b.serving?.servingTier ?? null,
+                aKcal: a.serving?.totalKcal ?? null, bKcal: b.serving?.totalKcal ?? null,
+                kcalDeltaPct: billedKcalDeltaPct(a, b),
+            });
+        }
+    }
+    moved.sort((x, y) => Math.abs(y.kcalDeltaPct ?? 0) - Math.abs(x.kcalDeltaPct ?? 0));
+    return { counts, moved, unjudged };
+}
+
+export function formatServingSummary(s: ServingSummary, top = 30): string[] {
+    const out: string[] = [];
+    const total = Object.values(s.counts).reduce((a, b) => a + b, 0);
+    out.push('');
+    out.push('=== SERVING DIFF — what the user is BILLED (winner-diff blind spot (B)) ===');
+    if (total === 0) { out.push('  no comparable rows'); return out; }
+    for (const v of SERVING_VERDICTS) {
+        if (!s.counts[v]) continue;
+        out.push(`  ${v.padEnd(22)} ${String(s.counts[v]).padStart(5)}  (${((100 * s.counts[v]) / total).toFixed(1)}%)`);
+    }
+    if (s.moved.length) {
+        out.push('');
+        out.push('  BILLED-NUMBER MOVERS  (worst kcal delta first)');
+        for (const m of s.moved.slice(0, top)) {
+            const d = m.kcalDeltaPct == null ? '   n/a' : `${m.kcalDeltaPct >= 0 ? '+' : ''}${m.kcalDeltaPct.toFixed(1)}%`;
+            out.push(`    ${m.query}`);
+            out.push(`      ${fmtG(m.aGrams)} ${m.aTier ?? '-'} ${fmtK(m.aKcal)}  ->  ${fmtG(m.bGrams)} ${m.bTier ?? '-'} ${fmtK(m.bKcal)}   kcal ${d}`);
+        }
+        if (s.moved.length > top) out.push(`    … and ${s.moved.length - top} more`);
+    }
+    if (s.unjudged.length) {
+        out.push('');
+        out.push(`  ${s.unjudged.length} row(s) UNJUDGED (stage not run, threw, or AI-estimated).`);
+        out.push('  These are NOT evidence of no change. Listed so the count cannot be read as clearance:');
+        for (const q of s.unjudged.slice(0, top)) out.push(`    ${q}`);
+        if (s.unjudged.length > top) out.push(`    … and ${s.unjudged.length - top} more`);
+    }
+    return out;
+}
+
+function fmtG(g: number | null): string { return g == null ? '(none)' : `${g.toFixed(1)}g`; }
+function fmtK(k: number | null): string { return k == null ? '(none)' : `${k.toFixed(0)}kcal`; }
 
 /** Window ids present in A but not B, and vice versa. */
 export function windowChurn(a: ReplayRow, b: ReplayRow): { evicted: string[]; added: string[] } {
@@ -524,6 +707,14 @@ export interface NoiseFloorReceipt {
     rows: number;
     winnerDiffs: number;
     pathDiffs: number;
+    /**
+     * Set only when the noise-floor run itself used --with-serving. A receipt
+     * without it proves nothing about serving determinism, which is why
+     * `noiseGate` refuses a serving-bearing diff that can only find one of these.
+     */
+    withServing?: boolean;
+    /** grams/tier differences between two replays of the SAME tree — must also be 0 */
+    servingDiffs?: number;
 }
 
 export interface NoiseFloorLedger {
@@ -597,6 +788,20 @@ export function noiseGate(
                 `side ${side} noise floor is NON-ZERO (${r.winnerDiffs} winner / ${r.pathDiffs} path ` +
                 `differences over ${r.rows} rows). The replay is not deterministic on this tree; ` +
                 'any diff number below would be noise plus signal with no way to separate them.');
+        } else if (f.withServing && !r.withServing) {
+            // A winner-only receipt says nothing about whether the SERVING stage
+            // replays deterministically. Accepting it would let a serving diff be
+            // reported with no floor under it — the same "silence read as safety"
+            // failure the serving stage was added to prevent.
+            problems.push(
+                `side ${side} replayed WITH the serving stage but its noise-floor receipt was ` +
+                'taken WITHOUT it. Re-run: winner-diff noise-floor --snapshot <snap.json> ' +
+                '--with-serving   FROM THAT TREE.');
+        } else if (f.withServing && r.servingDiffs !== 0) {
+            problems.push(
+                `side ${side} SERVING noise floor is NON-ZERO (${r.servingDiffs} grams/tier ` +
+                `differences over ${r.rows} rows). Serving resolution is not deterministic on ` +
+                'this tree, so no billed-number claim below it is a result.');
         }
     }
 
