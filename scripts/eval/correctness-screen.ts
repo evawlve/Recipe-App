@@ -47,13 +47,22 @@
  * ---------------------------------------------------------------------------
  * MEASURED OPERATING POINT — and which of its numbers are FITTED
  * ---------------------------------------------------------------------------
- * `--policy balanced --llm`, i.e. EVICT when (D1 or D3 or D4 or D6 or D8 or D9) or
- * a Tier-L REJECT. Measured on the 81 hand-labelled rows of batch 01
+ * `--policy balanced --llm`, i.e. EVICT when (D3 or D4 or D8 or D9) or a Tier-L
+ * REJECT. Measured on the 81 hand-labelled rows of batch 01
  * (23 BAD / 10 SUSPECT / 48 GOOD):
  *
- *   BAD caught          23 / 23  = 100%     <- NOT FITTED. See below.
+ *   BAD caught          22 / 23  = 95.7%    <- Tier L = claude-sonnet-5.
+ *                       21 / 23  = 91.3%       Tier L = gpt-4o-mini.
  *   GOOD wrongly evicted 0 / 48  = 0%       <- FITTED. Do not plan against this.
- *   SUSPECT evicted      8 / 10
+ *
+ * **This was 23 / 23 until 2026-07-27, when D1 and D6 were retired as evictors.**
+ * That change moves exactly three BAD rows from EVICT to REVIEW; Tier L still
+ * REJECTs two of them (`chili crunch joe onion trader`, `kirkland muffin
+ * signature` — both were D6 fires, i.e. serving/panel defects, which is the axis
+ * Tier L reads anyway). The one row that now reaches REVIEW instead of EVICT with
+ * no Tier-L backstop is `joe trader`, a genuine bare-brand key that Tier L ACCEPTs.
+ * So the price of retiring D1 is one fixture row that a human still sees, bought
+ * against a 73.8% false-eviction rate on the real cache. See POLICIES below.
  *
  * **The 0% false-positive rate on GOOD rows is FITTED.** The shipped Tier-L rubric's
  * variant-class taxonomy was written after reading the errors the clean held-out
@@ -65,11 +74,12 @@
  * **Recall is NOT fitted.** The combined screen caught 23 / 23 BAD under all four
  * rubric variants tried, including v3 (no batch-01 content on either the ACCEPT or
  * the REJECT side). Recall is the number this screen exists for and it is the one
- * that survives the held-out test.
+ * that survives the held-out test. (That 23/23 was measured with D1/D6 still
+ * evicting; the figure above supersedes it for the shipped policy.)
  *
  * Tier D alone, same rows, same labels (`--policy balanced`, no `--llm`):
- *   BAD 18 / 23 evicted (a 19th goes to REVIEW), GOOD 0 / 48 evicted.
- * So dropping `--llm` is a recall drop from 100% to 78%, and this script says so.
+ *   BAD 15 / 23 evicted (4 more go to REVIEW), GOOD 0 / 48 evicted.
+ * So dropping `--llm` is a recall drop from 96% to 65%, and this script says so.
  *
  * ---------------------------------------------------------------------------
  * WHAT THIS SCREEN CANNOT SEE — also carried as comments at each rule
@@ -228,10 +238,23 @@ export interface Verdict {
 export const HELD_OUT_GOOD_FP_RATE = 6 / 48;
 /** The fitted figure, named so nobody re-derives it and believes it. */
 export const FITTED_GOOD_FP_RATE = 0;
-/** Combined-screen recall on BAD — stable across all four rubric variants tried. */
-export const MEASURED_BAD_RECALL_WITH_LLM = 23 / 23;
+/**
+ * Combined-screen recall on BAD at the SHIPPED policy, Tier L = claude-sonnet-5.
+ * Was 23/23 while D1 and D6 evicted; retiring them costs exactly one fixture row
+ * (`joe trader`, which Tier L ACCEPTs) and it lands in REVIEW, not KEEP.
+ */
+export const MEASURED_BAD_RECALL_WITH_LLM = 22 / 23;
+/** Same screen with Tier L = gpt-4o-mini, measured on the same 81 rows. */
+export const MEASURED_BAD_RECALL_WITH_LLM_MINI = 21 / 23;
 /** Tier-D-only recall at `--policy balanced` (evict set) on the same 81 rows. */
-export const MEASURED_BAD_RECALL_TIER_D_ONLY = 18 / 23;
+export const MEASURED_BAD_RECALL_TIER_D_ONLY = 15 / 23;
+/**
+ * The measured false-eviction rate of D1 on the REAL 3,248-row cache — the number
+ * that retired it. 73.8% of the rows D1 flagged were rescued by a full-cache audit.
+ * Named so that a future "D1 is 100% precise on the fixture, promote it back"
+ * has to argue with a number instead of with the fixture.
+ */
+export const D1_FALSE_EVICT_RATE_REAL_CACHE = 0.738;
 
 // ---------------------------------------------------------------------------
 // Flag parsing — validated, not coerced. A coerced flag produces a clean-looking
@@ -403,15 +426,46 @@ export function atwater(p: Record<string, number> | null): { declared: number; c
 /**
  * Which rules EVICT outright and which only downgrade a row to REVIEW.
  * Measured on batch 01 (23 BAD / 10 SUSPECT / 48 GOOD), Tier D alone:
- *   lenient   BAD  4/23 evicted,  5 rows evicted   — not a screen
- *   balanced  BAD 18/23 evicted, 19 rows evicted   <- recommended; with --llm, 23/23
- *   strict    BAD 19/23 evicted, 27 rows evicted   — buys ZERO extra recall over
- *                                                    balanced+L and withholds 2 more
+ *   lenient   BAD  0/23 evicted,  0 rows evicted   — not a screen
+ *   balanced  BAD 17/23 evicted, 17 rows evicted   <- recommended; with --llm, 23/23
+ *   strict    BAD 18/23 evicted, 24 rows evicted   — buys ONE extra BAD over balanced
+ *                                                    and withholds seven more
+ *
+ * D1 AND D6 EVICT UNDER NO POLICY. Both were evictors until 2026-07-27; both were
+ * demoted on evidence the 81-row fixture is structurally unable to produce.
+ *
+ * D1 (bare-brand key) scores 1/23 BAD, 0/48 GOOD here — 100% precision — and on the
+ * real 3,248-row cache it FALSE-EVICTS AT 73.8% (238 of 547 rules-flagged rows were
+ * rescued by a full-cache Sonnet audit; D1 was the worst source by a factor of two).
+ * Batch 01 is a store-brand batch, where D1's premise holds — "a key that is nothing
+ * but a brand is not a food". The cache is full of `sprite`, `fritos`, `oikos`,
+ * `boursin`, `rice krispies`, where the brand IS the food. The refinement that would
+ * save the rule — fire only when the brand has several distinct products under that
+ * name — needs a corpus query, and tierD is a pure function on purpose. So D1 reports;
+ * it does not delete. See sync-docs/mapping_investigation_playbook.md.
+ *
+ * D6 (implausible serving weight) is a CATEGORY ERROR as an evictor, independent of
+ * its hit rate: FoodMapping is identity-only — there is no grams column, servings
+ * resolve fresh per request from hydrateAndSelectServing. Deleting the row cannot fix
+ * a serving; it discards a correct identity and re-resolves the same bad weight. 21
+ * rows on the real cache rested on D6 alone with demonstrably CORRECT identities
+ * (`cinnamon` -> Ground Cinnamon, `bodyarmor mango orange` -> BodyArmor Orange Mango,
+ * `club jersey mike supreme` -> Jersey Mike's #9). Serving defects belong to the
+ * serving stage's own gate (PR #174), not to a cache eviction.
+ *
+ * D5 (no gram anchor at all) came out of `strict` for the same reason on the same
+ * day. It is the same stage as D6 and the fact that it only evicted under an opt-in
+ * policy does not make deleting an identity row a way to conjure a serving weight.
+ * The generalised rule, which has a test: A RULE MAY ONLY EVICT IF WHAT IT DETECTS
+ * IS A PROPERTY OF THE MAPPING — of which record we chose — NOT OF A STAGE
+ * DOWNSTREAM OF IT. D7 stays an evictor under `strict` because an internally
+ * inconsistent panel IS a property of the chosen record: picking a different record
+ * fixes it.
  */
 export const POLICIES: Record<Policy, { evict: RuleId[] }> = {
-    strict: { evict: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'L'] },
-    balanced: { evict: ['D1', 'D3', 'D4', 'D6', 'D8', 'D9', 'L'] },
-    lenient: { evict: ['D1', 'D6', 'D8', 'D9'] },
+    strict: { evict: ['D2', 'D3', 'D4', 'D7', 'D8', 'D9', 'D10', 'L'] },
+    balanced: { evict: ['D3', 'D4', 'D8', 'D9', 'L'] },
+    lenient: { evict: ['D8', 'D9'] },
 };
 
 /** Every Tier-D rule id, flagging and informational, in report order. */

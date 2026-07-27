@@ -39,11 +39,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+    D1_FALSE_EVICT_RATE_REAL_CACHE,
     FITTED_GOOD_FP_RATE,
     FlagError,
     HELD_OUT_GOOD_FP_RATE,
     MEASURED_BAD_RECALL_TIER_D_ONLY,
     MEASURED_BAD_RECALL_WITH_LLM,
+    MEASURED_BAD_RECALL_WITH_LLM_MINI,
     POLICIES,
     ROW_SQL,
     TIER_D_RULE_IDS,
@@ -229,13 +231,15 @@ describe('Tier D over batch 01 — pinned confusion matrix', () => {
 
     /**
      * Whole-tier decisions per policy. `balanced` is the shipped operating point's
-     * deterministic half; `strict` buys ONE extra BAD row over it and withholds eight
-     * more; `lenient` is not a screen.
+     * deterministic half; `strict` buys TWO extra BAD rows over it and withholds
+     * eight more; `lenient` is not a screen — since D1/D6 were retired it evicts one
+     * row on the whole fixture and zero BAD, which is the honest picture of what the
+     * two purely-structural rules (D8/D9) can do alone.
      */
     const PER_POLICY: { policy: Policy; evict: number; evictBad: number; review: number; reviewBad: number; keep: number }[] = [
-        { policy: 'lenient', evict: 5, evictBad: 4, review: 21, reviewBad: 15, keep: 55 },
-        { policy: 'balanced', evict: 19, evictBad: 18, review: 7, reviewBad: 1, keep: 55 },
-        { policy: 'strict', evict: 26, evictBad: 19, review: 0, reviewBad: 0, keep: 55 },
+        { policy: 'lenient', evict: 1, evictBad: 0, review: 25, reviewBad: 19, keep: 55 },
+        { policy: 'balanced', evict: 16, evictBad: 15, review: 10, reviewBad: 4, keep: 55 },
+        { policy: 'strict', evict: 19, evictBad: 16, review: 7, reviewBad: 3, keep: 55 },
     ];
 
     it.each(PER_POLICY)('policy $policy: EVICT $evict ($evictBad BAD) · REVIEW $review · KEEP $keep, and 0 GOOD ever evicted',
@@ -288,10 +292,16 @@ describe('reported accuracy', () => {
     });
 
     it('records that recall — unlike precision — is NOT fitted', () => {
-        // 23/23 held under all four rubric variants tried, including the one with no
-        // batch-01 content of any kind. Tier D alone accounts for 18 of those 23.
-        expect(MEASURED_BAD_RECALL_WITH_LLM).toBe(1);
-        expect(MEASURED_BAD_RECALL_TIER_D_ONLY).toBeCloseTo(18 / 23, 10);
+        // Recall held at 23/23 under all four rubric variants tried, including the one
+        // with no batch-01 content of any kind — the rubric is not the fragile part.
+        // The shipped figure is 22/23 because D1/D6 were retired as evictors, not
+        // because the rubric moved: the lost row is `joe trader`, which Tier L ACCEPTs.
+        expect(MEASURED_BAD_RECALL_WITH_LLM).toBeCloseTo(22 / 23, 10);
+        expect(MEASURED_BAD_RECALL_WITH_LLM_MINI).toBeCloseTo(21 / 23, 10);
+        expect(MEASURED_BAD_RECALL_TIER_D_ONLY).toBeCloseTo(15 / 23, 10);
+        // The screen's own recall must never be quoted above what the weaker of its
+        // two measured Tier-L models delivers without saying which model.
+        expect(MEASURED_BAD_RECALL_WITH_LLM).toBeGreaterThan(MEASURED_BAD_RECALL_WITH_LLM_MINI);
     });
 });
 
@@ -511,7 +521,7 @@ describe('Tier D abstains rather than fires when it does not know the seed', () 
 
 describe('policies', () => {
     it('balanced evicts exactly the rules measured at precision 1.00 on batch 01', () => {
-        expect(POLICIES.balanced.evict).toEqual(['D1', 'D3', 'D4', 'D6', 'D8', 'D9', 'L']);
+        expect(POLICIES.balanced.evict).toEqual(['D3', 'D4', 'D8', 'D9', 'L']);
     });
     it('lenient never evicts on a token rule, so it cannot see the D3 class at all', () => {
         expect(POLICIES.lenient.evict).not.toContain('D3');
@@ -519,6 +529,49 @@ describe('policies', () => {
     });
     it('D11 is in no policy', () => {
         for (const p of Object.values(POLICIES)) expect(p.evict).not.toContain('D11');
+    });
+
+    /**
+     * D1 and D6 were evictors under all three policies until 2026-07-27. Both were
+     * retired on evidence this fixture is structurally incapable of producing, so
+     * both need a test that argues with the fixture rather than from it.
+     */
+    it('D1 evicts under NO policy — 100% precise here, 73.8% FALSE-evict on the real cache', () => {
+        for (const [name, p] of Object.entries(POLICIES)) {
+            expect([name, p.evict.includes('D1')]).toEqual([name, false]);
+        }
+        // The fixture's own verdict on D1, kept visible so the contradiction is legible:
+        // 1 BAD flagged, 0 GOOD flagged — perfect precision on 81 store-brand rows.
+        const flagged = firedBy('D1');
+        expect([...flagged].filter(k => LABELS.get(k) === 'GOOD')).toEqual([]);
+        expect([...flagged].filter(k => LABELS.get(k) === 'BAD')).toEqual(['joe trader']);
+        // ...and the number that overrides it. Batch 01 is a store-brand batch, where
+        // "a key that is only a brand is not a food" holds. The real cache contains
+        // `sprite`, `fritos`, `oikos`, `rice krispies`, where the brand IS the food.
+        expect(D1_FALSE_EVICT_RATE_REAL_CACHE).toBeGreaterThan(0.5);
+    });
+
+    it('D6 evicts under NO policy — FoodMapping is identity-only, so eviction cannot fix a serving', () => {
+        for (const [name, p] of Object.entries(POLICIES)) {
+            expect([name, p.evict.includes('D6')]).toEqual([name, false]);
+        }
+        // This one is a category error, not a precision problem: there is no grams
+        // column on FoodMapping. Deleting the row throws away a correct identity and
+        // re-resolves the same weight on the next request. 21 rows on the real cache
+        // rested on D6 alone with provably correct identities.
+    });
+
+    it('every evictor is a rule whose fires are actionable by DELETING the row', () => {
+        // The D6 mistake generalised: a rule may only evict if the thing it detects is
+        // a property of the MAPPING (which row we chose), not of a stage downstream of
+        // it. D5/D6 are serving-stage rules; D7 is a panel-arithmetic rule on the
+        // corpus record and evicts only under `strict`, where the operator has opted in.
+        const SERVING_STAGE_RULES: RuleId[] = ['D5', 'D6'];
+        for (const [name, p] of Object.entries(POLICIES)) {
+            for (const r of SERVING_STAGE_RULES) {
+                expect([name, r, p.evict.includes(r)]).toEqual([name, r, false]);
+            }
+        }
     });
 });
 

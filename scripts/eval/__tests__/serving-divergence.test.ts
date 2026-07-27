@@ -193,14 +193,25 @@ describe('a row whose real anchor did not run can NEVER produce an EVICT-severit
         expect(evicting).toEqual([]);
     });
 
-    it('POSITIVE CONTROL — with the real anchor present, D5/D6 DO evict under strict', () => {
+    it('POSITIVE CONTROL — with the real anchor present, D5/D6 escalate to REVIEW', () => {
         // Without this, "no EVICT" is satisfiable by rules that never fire, which is
-        // a tautology rather than an invariant.
+        // a tautology rather than an invariant. The control asserts the SEVERITY
+        // ESCALATION (INFO -> REVIEW), which is what the unjudged path suppresses.
+        //
+        // It used to assert EVICT. Since 2026-07-27 D5/D6 evict under no policy —
+        // FoodMapping is identity-only, so deleting a row cannot produce a serving
+        // weight — which means the invariant above ("unjudged never EVICTs") is now
+        // trivially true and this control is the ONLY thing keeping the block honest.
+        // Do not weaken it to `.length >= 0`.
         const judgedRows = BATCH01.filter(r => realServing(r).judged);
         expect(judgedRows.length).toBeGreaterThan(70);
-        const evicting = judgedRows.flatMap(r =>
-            tierD(r, 'strict').filter(h => (h.rule === 'D5' || h.rule === 'D6') && h.severity === 'EVICT'));
-        expect(evicting.length).toBeGreaterThan(0);
+        const escalated = judgedRows.flatMap(r =>
+            tierD(r, 'strict').filter(h => (h.rule === 'D5' || h.rule === 'D6') && h.severity === 'REVIEW'));
+        expect(escalated.length).toBeGreaterThan(0);
+        // ...and they escalate no further, under any policy.
+        const evicting = judgedRows.flatMap(r => ALL_POLICIES.flatMap(p =>
+            tierD(r, p).filter(h => (h.rule === 'D5' || h.rule === 'D6') && h.severity === 'EVICT')));
+        expect(evicting).toEqual([]);
     });
 
     it('an unjudged serving row is never EVICTed by the combined decision either', () => {

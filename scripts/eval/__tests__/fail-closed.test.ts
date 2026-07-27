@@ -367,18 +367,24 @@ describe('resolveRealServings: a serving-resolution failure downgrades D5/D6 to 
         expect(hydrateAndSelectServing).not.toHaveBeenCalled();
     });
 
-    it('POSITIVE CONTROL — a resolved anchor IS judged and CAN evict', async () => {
+    it('POSITIVE CONTROL — a resolved anchor IS judged and DOES escalate past INFO', async () => {
         // Without this the block above is satisfiable by a screen that never judges
         // anything, which would be a tautology rather than a test.
+        //
+        // The escalation ceiling is REVIEW, not EVICT: since 2026-07-27 D5/D6 evict
+        // under no policy, because FoodMapping is identity-only and deleting the row
+        // cannot produce a serving weight. What this control still proves is what it
+        // was written for — a JUDGED anchor is treated differently from an unjudged
+        // one, so the UNJUDGED->INFO downgrade tested above is not vacuous.
         (hydrateAndSelectServing as jest.Mock).mockResolvedValue({ grams: 1.0, servingTier: 'label_serving_default', kcal: 6 });
         const rows = [cleanBut()];
         await resolveRealServings(rows, 1);
 
         expect(realServing(rows[0]).judged).toBe(true);
         const d6 = tierD(rows[0], 'balanced').find(h => h.rule === 'D6');
-        expect(d6?.severity).toBe('EVICT');
+        expect(d6?.severity).toBe('REVIEW');
         expect(d6?.detail).not.toContain('UNJUDGED');
-        expect(screenBatch(rows, 'balanced')[0].decision).toBe('EVICT');
+        expect(screenBatch(rows, 'balanced')[0].decision).toBe('REVIEW');
     });
 });
 
