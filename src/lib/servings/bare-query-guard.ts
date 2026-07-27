@@ -115,10 +115,62 @@ export function usableBareLabelServing(
     return servingGrams;
 }
 
+function queryTokens(queryName: string): string[] {
+    return (queryName || '').toLowerCase().split(/[^a-z]+/).filter(t => t.length > 0);
+}
+
 /** Last alphabetic token of a query name ("pumpkin spice latte" → "latte"). */
 function queryHeadToken(queryName: string): string {
-    const toks = (queryName || '').toLowerCase().split(/[^a-z]+/).filter(t => t.length > 0);
+    const toks = queryTokens(queryName);
     return toks[toks.length - 1] ?? '';
+}
+
+/**
+ * How many words a query may have before its own matched record's DECLARED label
+ * serving outranks a lexicon category default.
+ *
+ * A lexicon category describes a bare ingredient, and a bare ingredient is named
+ * in one or two words: "salt", "black pepper", "olive oil", "brown sugar". Three
+ * or more words means the user named a PRODUCT, and a product's manufacturer
+ * serving beats a category guess about one token inside its name.
+ *
+ * Measured on the box 2026-07-27 — every one of these had real label data that
+ * the CAP destroyed, because the cap threshold is `categoryDefault x 2` and for
+ * the 2.5g spice category that is FIVE GRAMS, i.e. below every real packaged food:
+ *
+ *   mac and cheese              bare_label_serving   113.4g -> 28g   (cheese, 28g)
+ *   rxbar chocolate sea salt    label_serving_default   52g -> 2.5g  (salt, 2.5g)
+ *   quaker instant rolled oats apple cinnamon         43g -> 2.5g   (cinnamon)
+ *   ryse loaded protein cinnamon                    34.2g -> 2.5g   (cinnamon)
+ *   pumpkin spice granola       fs_default_serving      29g -> 2.5g  (spice)
+ *   talenti sea salt caramel    fs_default_serving     128g -> 2.5g  (salt)
+ *
+ * In every case the lexicon token names the FLAVOUR, not the food. A 2x band on
+ * a 2.5g anchor is not a band; it clamps everything.
+ */
+const CAP_MAX_QUERY_TOKENS = 2;
+
+/**
+ * Dose-anchored queries get one extra token ("ghost pre workout"), because the
+ * dose default is the whole point for them and the phrase needs its final token
+ * to trigger. Beyond that the same product logic applies: "rxbar chocolate sea
+ * salt" is dose-anchored by the letter of `isDoseAnchoredBareQuery` — its head
+ * token IS "salt" — and is obviously not a teaspoon of salt.
+ */
+const CAP_MAX_DOSE_ANCHORED_TOKENS = 3;
+
+/**
+ * May a lexicon category default overwrite grams that came from the record's own
+ * declared label?
+ *
+ * This governs the CAP paths only. The REPLACE paths are untouched: there the
+ * grams are fabricated (a flat 100g placeholder or a count floor), so a category
+ * default is strictly better and no label data is at risk.
+ */
+export function capMayOverrideLabelServing(queryName: string): boolean {
+    const n = queryTokens(queryName).length;
+    if (n <= CAP_MAX_QUERY_TOKENS) return true;
+    return isDoseAnchoredBareQuery(queryName) && n <= CAP_MAX_DOSE_ANCHORED_TOKENS;
 }
 
 /**
@@ -206,11 +258,18 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
 
     const queryDefault = getBareQueryDefault(queryName);
 
+    // A multi-word PRODUCT query keeps its record's declared label serving: the
+    // manufacturer's number outranks a category guess made from one token inside
+    // the product's name. Applies to both CAP paths; the REPLACE path below is
+    // deliberately untouched, since there the grams are fabricated and nothing
+    // real is being overwritten.
+    const capAllowed = capMayOverrideLabelServing(queryName);
+
     if (CAP_TIERS.has(servingTier)) {
         // CAP consults ONLY the query-side lexicon. A foodName fallback here
         // would make any OFF name containing a lexicon token ("Chocolate Chip
         // …", "… Crisps") cap a genuine label serving the user never named.
-        if (queryDefault && grams > queryDefault.grams * 2) {
+        if (capAllowed && queryDefault && grams > queryDefault.grams * 2) {
             return buildOverride(queryDefault.grams);
         }
         return null;
@@ -222,7 +281,13 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         // query HEAD ("olive oil" → oil: a 250g whole-bottle "serving" still
         // caps to 14g). Contained-token hijacks (pepper jack, butter chicken)
         // keep the label.
-        if (queryDefault
+        //
+        // Head-anchoring alone is NOT sufficient, which is why the token rule is
+        // and'ed in: "mac and cheese" has "cheese" as its literal head token, so
+        // this branch capped a genuine 113.4g label serving to the 28g one-ounce
+        // cheese default and billed 40 kcal for a ~400 kcal dish.
+        if (capAllowed
+            && queryDefault
             && getBareQueryDefault(queryHeadToken(queryName)) != null
             && grams > queryDefault.grams * 2) {
             return buildOverride(queryDefault.grams);
