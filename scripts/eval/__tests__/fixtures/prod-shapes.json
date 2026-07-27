@@ -1,0 +1,26 @@
+{
+  "_readme": "Shapes the LIVE cache actually contains. __tests__/prod-shape-coverage.test.ts fails when the committed test fixtures stop covering one of them. This file is the only thing that knows about a shape the fixture is MISSING — batch 01 contained zero fdc rows, which is why a missing FdcFood join in ROW_SQL survived 73 green tests and false-evicted 78 of 78 fdc rows in the live cache. A fixture cannot be trusted to notice what it does not contain. Regenerate with scripts/eval/refresh-prod-shapes.ts (needs a live DB; never run in CI).",
+  "measuredAt": "2026-07-27",
+  "refreshWith": "npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/refresh-prod-shapes.ts",
+  "population": { "table": "FoodMapping", "rows": 3248 },
+  "shapes": {
+    "source": [
+      { "value": "openfoodfacts", "count": 2728 },
+      { "value": "fatsecret", "count": 442 },
+      { "value": "fdc", "count": 78 }
+    ],
+    "servingTier": [
+      { "value": "label_serving_default", "count": 2036 },
+      { "value": "flat_100g_default", "count": 679 },
+      { "value": "fs_default_serving", "count": 309 },
+      { "value": "fdc_size_estimate", "count": 78 },
+      { "value": "fs_serving_macros_only", "count": 76 },
+      { "value": "fs_label_count", "count": 57 }
+    ]
+  },
+  "notes": [
+    "source counts were re-read live from FoodMapping on 2026-07-27 and sum to the full 3,248-row population.",
+    "servingTier counts come from a whole-cache --with-serving screen run on 2026-07-27 and sum to 3,235. The ~13-row remainder is rows whose real anchor could not be resolved at all; that state is an ERROR, not a shape, and the fixture is not required to carry an exemplar of it. It is covered instead by __tests__/fail-closed.test.ts, which forces hydrateAndSelectServing to throw and asserts the row is UNJUDGED.",
+    "Every fdc row in the cache resolves on fdc_size_estimate, which AI_SERVING_TIER_RE matches ('estimat'). The entire fdc population is therefore UNJUDGED by D5/D6 — the one production source with no fixture coverage was also the one whose serving anchor the screen may never gate on."
+  ]
+}

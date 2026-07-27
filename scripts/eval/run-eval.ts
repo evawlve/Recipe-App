@@ -19,7 +19,14 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { textOf, matchesAlt, isAbstention, describeDrift, type BaselineEntry } from './assertions';
+import {
+    isAbstention,
+    driftedKnownIssues,
+    evalExitCode,
+    scoreNlpCase,
+    scoreSearchCase,
+    type BaselineEntry,
+} from './assertions';
 
 const args = process.argv.slice(2);
 function argValue(flag: string): string | undefined {
@@ -56,6 +63,8 @@ interface Observed {
     confidence?: number | null;
     itemCount?: number;
     abstained?: boolean;
+    /** No reading at all — transport error, non-array body, zero items. */
+    errored?: boolean;
 }
 
 interface CaseResult {
@@ -73,17 +82,6 @@ interface CaseResult {
 }
 
 const results: CaseResult[] = [];
-
-const MACRO_KEYS = ['kcal100', 'protein100', 'carbs100', 'fat100'];
-function hasNum(v: unknown): boolean {
-    return typeof v === 'number' && Number.isFinite(v);
-}
-/** A search hit with NO finite macro at all — the null-nutrition rows the OFF filter should drop. */
-function nutritionMissing(h: any): boolean {
-    return !MACRO_KEYS.some(k => hasNum(h?.[k]));
-}
-
-
 
 function percentile(sorted: number[], p: number): number {
     if (sorted.length === 0) return 0;
@@ -116,6 +114,7 @@ function writeKnownIssueBaseline(rs: CaseResult[]): void {
             grams: r.observed.grams ?? null,
             kcal100: r.observed.kcal100 ?? null,
             abstained: r.observed.abstained ?? false,
+            errored: r.observed.errored ?? false,
         };
     }
     fs.writeFileSync(baselinePath, JSON.stringify({
@@ -130,23 +129,11 @@ function writeKnownIssueBaseline(rs: CaseResult[]): void {
 
 /** Every knownIssue case whose recorded values moved since the baseline was written. */
 function compareKnownIssueBaseline(rs: CaseResult[]): Array<{ id: string; what: string }> {
-    const base = loadKnownIssueBaseline();
-    const out: Array<{ id: string; what: string }> = [];
-    for (const r of rs) {
-        if (!r.knownIssue || !r.observed) continue;
-        const b = base[r.id];
-        if (!b) continue;  // new pin: nothing to compare until the baseline is refreshed
-        const changes = describeDrift(b, r.observed);
-        if (changes.length) out.push({ id: r.id, what: changes.join('; ') });
-    }
-    return out;
+    return driftedKnownIssues(rs, loadKnownIssueBaseline());
 }
 
 async function runSearchCase(c: any): Promise<CaseResult> {
     const t0 = Date.now();
-    let detail = '';
-    let pass = false;
-    let confidence: number | undefined;
     try {
         const res = await fetch(`${BASE}/api/foods/search?s=${encodeURIComponent(c.query)}&local=true`, {
             headers: { 'x-api-key': API_KEY },
@@ -154,18 +141,8 @@ async function runSearchCase(c: any): Promise<CaseResult> {
         const ms = Date.now() - t0;
         const body: any = await res.json();
         const hits: any[] = Array.isArray(body) ? body : (body.data ?? body.results ?? []);
-        const topN = hits.slice(0, c.rank ?? 3);
-        pass = topN.some(h => matchesAlt(textOf(h), c.match));
-        confidence = hits[0]?.confidence;
-        detail = pass
-            ? `hit: "${hits.find((h: any) => matchesAlt(textOf(h), c.match))?.name}"`
-            : `top${c.rank ?? 3}: [${topN.map(h => `"${h.name}"`).join(', ') || 'EMPTY'}]`;
-        // Invariant (unless opted out): no returned hit may lack all nutrition — verifies
-        // the OFF null-nutrition filter keeps junk rows out of manual search results.
-        if (c.requireNutrition !== false && topN.length) {
-            const bad = topN.find(nutritionMissing);
-            if (bad) { pass = false; detail = `NULL-NUTRITION "${bad.name}" | ${detail}`; }
-        }
+        const { pass, detail } = scoreSearchCase(c, hits);
+        const confidence = hits[0]?.confidence;
         return {
             id: c.id, kind: 'search', category: c.category, query: c.query, pass, ms, detail, confidence,
             knownIssue: c.knownIssue,
@@ -178,7 +155,15 @@ async function runSearchCase(c: any): Promise<CaseResult> {
             },
         };
     } catch (err) {
-        return { id: c.id, kind: 'search', category: c.category, query: c.query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue };
+        // `observed` is recorded even here. Without it a knownIssue case that starts
+        // throwing is invisible twice over: the failure is exempted by the pin AND the
+        // drift check has nothing to diff, so a pinned case that stopped answering
+        // altogether left no trace in any output.
+        return {
+            id: c.id, kind: 'search', category: c.category, query: c.query, pass: false,
+            ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue,
+            observed: { itemCount: 0, errored: true },
+        };
     }
 }
 
@@ -203,94 +188,11 @@ async function runNlpCase(c: any): Promise<CaseResult> {
                 id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms,
                 detail: `TRANSPORT: no items returned (HTTP ${res.status})`,
                 knownIssue: c.knownIssue,
-                observed: { itemCount: 0 },
+                observed: { itemCount: 0, errored: true },
             };
         }
 
-        const failures: string[] = [];
-
-        if (c.expectItems && items.length < c.expectItems) {
-            failures.push(`expected >=${c.expectItems} items, got ${items.length}`);
-        }
-
-        // Name check: for single-item cases the one item must match; for
-        // segmentation cases at least one item must match.
-        //
-        // An abstention can NEVER satisfy a positive name assertion — it echoes the
-        // query text back as foodName, so it would otherwise match trivially. See
-        // isAbstention().
-        if (c.expectName) {
-            const anyNameMatch = items.some(it => !isAbstention(it) && matchesAlt(textOf(it), c.expectName));
-            if (!anyNameMatch) {
-                const shown = items.map(it => isAbstention(it) ? 'NO PICK (abstained)' : `"${it.foodName}"`);
-                failures.push(`name mismatch: [${shown.join(', ')}]`);
-            }
-        }
-
-        // Negative name assertion — no returned item may match. This pins a
-        // wrong-record class without needing to know the right answer, which is what
-        // the composite->component drift cases need: "qdoba chicken burrito must not
-        // resolve to Tequila Lime Chicken" is assertable even while the correct
-        // billing figure is still being argued about.
-        if (c.forbidName) {
-            const offender = items.find(it => !isAbstention(it) && matchesAlt(textOf(it), c.forbidName));
-            if (offender) {
-                failures.push(`forbidden name matched: "${offender.foodName}" [${offender.brandName ?? ''}]`);
-            }
-        }
-
-        // The mapper is REQUIRED to produce no confident pick. For a query whose
-        // honest answer is "not in the corpus", billing a component at 0.95 is worse
-        // than abstaining, and only this can express that.
-        if (c.expectAbstain) {
-            const confident = items.find(it => !isAbstention(it));
-            if (confident) {
-                failures.push(`expected abstention, got "${confident.foodName}" conf=${confident.matchConfidence} grams=${confident.grams}`);
-            }
-        }
-
-        // Weak form: it may guess, but must not look authoritative enough to cache.
-        if (typeof c.maxConfidence === 'number') {
-            const conf = items[0]?.matchConfidence;
-            if (typeof conf !== 'number' || conf > c.maxConfidence) {
-                failures.push(`confidence=${conf} exceeds maxConfidence ${c.maxConfidence} (mapped: "${items[0]?.foodName}")`);
-            }
-        }
-
-        if (c.macros) {
-            const per100 = items[0]?.nutritionPer100g ?? {};
-            for (const [key, range] of Object.entries(c.macros) as [string, [number, number]][]) {
-                const v = per100[key];
-                if (typeof v !== 'number' || v < range[0] || v > range[1]) {
-                    failures.push(`${key}=${typeof v === 'number' ? v.toFixed(1) : v} outside [${range[0]}, ${range[1]}] (mapped: "${items[0]?.foodName}")`);
-                }
-            }
-        }
-
-        // Resolved serving weight: asserts the total grams for the requested unit/quantity.
-        // This is what catches serving-estimation defects (e.g. "1 slice bread" → 100g).
-        if (c.grams) {
-            const g = items[0]?.grams;
-            if (typeof g !== 'number' || g < c.grams[0] || g > c.grams[1]) {
-                failures.push(`grams=${typeof g === 'number' ? g : String(g)} outside [${c.grams[0]}, ${c.grams[1]}] (unit "${c.item?.unit ?? ''}", mapped "${items[0]?.foodName}")`);
-            }
-        }
-
-        // Billed totals for the requested quantity — the grams-scaled `nutrition`
-        // block the app actually logs. This is the end-to-end assertion a per-100g
-        // band can't provide: a wrong record, wrong serving, or wrong scaling all
-        // surface as a wrong billed total ("1 tbsp olive oil" must bill ~119 kcal,
-        // whether the failure was density, record choice, or grams math).
-        // Keys: calories | protein | carbs | fat (also fiber/sugar/sodium).
-        if (c.total) {
-            const tot = items[0]?.nutrition ?? {};
-            for (const [key, range] of Object.entries(c.total) as [string, [number, number]][]) {
-                const v = tot[key];
-                if (typeof v !== 'number' || v < range[0] || v > range[1]) {
-                    failures.push(`total.${key}=${typeof v === 'number' ? v.toFixed(1) : v} outside [${range[0]}, ${range[1]}] (grams=${items[0]?.grams}, mapped: "${items[0]?.foodName}")`);
-                }
-            }
-        }
+        const failures = scoreNlpCase(c, items);
 
         const confidence = items[0]?.matchConfidence;
         return {
@@ -311,7 +213,13 @@ async function runNlpCase(c: any): Promise<CaseResult> {
             },
         };
     } catch (err) {
-        return { id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue };
+        // See runSearchCase: `observed` is recorded on the error path too, so a pinned
+        // case that stops answering drifts instead of disappearing entirely.
+        return {
+            id: c.id, kind: 'nlp', category: c.category, query, pass: false,
+            ms: Date.now() - t0, detail: `ERROR: ${(err as Error).message}`, knownIssue: c.knownIssue,
+            observed: { itemCount: 0, errored: true },
+        };
     }
 }
 
@@ -412,10 +320,15 @@ async function main() {
     const outPath = path.join(outDir, `eval-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
     fs.writeFileSync(outPath, JSON.stringify({ summary, results }, null, 2));
     console.log(`\nResults written to ${path.relative(process.cwd(), outPath)}`);
-    console.log(`\n${realFails.length ? '❌' : '✅'} ${realFails.length} real failures, 🟡 ${knownFails.length} known issues (expected).`);
+    if (results.length === 0) {
+        console.error('\n❗ ZERO cases ran. Check --only / --grep and the golden-set file. '
+            + 'A run that executed nothing is not a green run — exiting 2.');
+    } else {
+        console.log(`\n${realFails.length ? '❌' : '✅'} ${realFails.length} real failures, 🟡 ${knownFails.length} known issues (expected).`);
+    }
 
-    // Only genuine (non-known-issue) failures fail the suite.
-    process.exit(realFails.length > 0 ? 1 : 0);
+    // Only genuine (non-known-issue) failures fail the suite — but zero cases is a 2.
+    process.exit(evalExitCode(results));
 }
 
 main().catch(err => { console.error(err); process.exit(2); });
