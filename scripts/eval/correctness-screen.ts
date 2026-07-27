@@ -649,7 +649,14 @@ export async function callLlm(r: ScreenRow, cfg: LlmConfig): Promise<LlmVerdict>
                 body: JSON.stringify({
                     model: cfg.model,
                     temperature: 0,
-                    max_tokens: 200,
+                    // 200 was enough for gpt-4o-mini and ONLY for gpt-4o-mini. A
+                    // reasoning model spends its thinking inside the same completion
+                    // budget: claude-sonnet-5 burns ~57 reasoning tokens before the
+                    // JSON and truncated 16 of 81 rows mid-object ("Unexpected end of
+                    // JSON input"). `--model` invites exactly that swap, so the budget
+                    // has to fit a reasoning model rather than the cheapest one. Costs
+                    // nothing when unused — billing is on tokens emitted, not reserved.
+                    max_tokens: 700,
                     response_format: { type: 'json_object' },
                     messages: [
                         { role: 'system', content: LLM_SYSTEM },
@@ -669,15 +676,17 @@ export async function callLlm(r: ScreenRow, cfg: LlmConfig): Promise<LlmVerdict>
             };
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            // A failed call defaults to ACCEPT so a network blip cannot mass-evict a
-            // batch — but every failure is counted and reported, because an
-            // unadjudicated row silently reading as clean is the whole defect class
-            // this file exists to close.
-            if (attempt === 2) return { verdict: 'ACCEPT', axis: 'none', confidence: 0, reason: msg, error: 'call-failed' };
+            // A failed call is UNSURE, not ACCEPT. Both avoid the mass-eviction a
+            // network blip could otherwise cause — UNSURE routes to REVIEW, EVICT is
+            // never reached — but ACCEPT let an unadjudicated row read as CLEAN, which
+            // is the exact defect class this file exists to close. Measured: swapping
+            // --model to claude-sonnet-5 truncated 16 of 81 rows, and under the old
+            // default all 16 landed in KEEP with nothing but a WARN line to say so.
+            if (attempt === 2) return { verdict: 'UNSURE', axis: 'none', confidence: 0, reason: msg, error: 'call-failed' };
             await new Promise(s => setTimeout(s, 800 * (attempt + 1)));
         }
     }
-    return { verdict: 'ACCEPT', axis: 'none', confidence: 0, reason: 'exhausted', error: 'call-failed' };
+    return { verdict: 'UNSURE', axis: 'none', confidence: 0, reason: 'exhausted', error: 'call-failed' };
 }
 
 export async function runLlm(rows: ScreenRow[], cfg: LlmConfig): Promise<Map<string, LlmVerdict>> {
@@ -1156,7 +1165,10 @@ async function main(): Promise<number> {
         console.log(`tier L: ${llmTargets.length} rows (of ${rows.length}) -> ${llmCfg.model}`);
         llm = await runLlm(llmTargets, llmCfg);
         const failed = [...llm.values()].filter(v => v.error).length;
-        if (failed) console.log(`WARN ${failed} Tier-L call(s) failed and defaulted to ACCEPT — those rows were NOT adjudicated.`);
+        if (failed) {
+            console.log(`WARN ${failed} Tier-L call(s) failed and were recorded UNSURE (-> REVIEW), NOT adjudicated. `
+                + 'A truncated response is the usual cause: raise max_tokens if you changed --model.');
+        }
     }
 
     const verdicts = screenBatch(rows, policy, llm);
