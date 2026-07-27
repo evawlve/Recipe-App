@@ -744,3 +744,28 @@ describe('parseSeedFile() + pinned attribution', () => {
         expect(rows[0].seed).toBe('great value almonds');
     });
 });
+
+describe('Tier-L failure is fail-SAFE, not fail-open', () => {
+    const failed = (): LlmVerdict =>
+        ({ verdict: 'UNSURE', axis: 'none', confidence: 0, reason: 'Unexpected end of JSON input', error: 'call-failed' });
+
+    it('an unadjudicated row goes to REVIEW, never KEEP', () => {
+        // It used to default to ACCEPT. Measured 2026-07-27: swapping --model to
+        // claude-sonnet-5 truncated 16 of 81 responses mid-JSON, and under ACCEPT all
+        // 16 landed in KEEP with only a WARN line to say so — a silently
+        // unscreened row reading as clean is the defect class this file exists for.
+        expect(decide([], failed(), 'balanced')).toBe('REVIEW');
+    });
+
+    it('still cannot mass-EVICT on an outage — that was the reason ACCEPT was chosen', () => {
+        // The fail-safe has to preserve the original property: a network blip must not
+        // throw the cache away. UNSURE reaches REVIEW and stops there under every policy.
+        for (const p of ['lenient', 'balanced', 'strict'] as Policy[]) {
+            expect(decide([], failed(), p)).not.toBe('EVICT');
+        }
+    });
+
+    it('a real ACCEPT still keeps the row, so the change costs no precision', () => {
+        expect(decide([], { verdict: 'ACCEPT', axis: 'none', confidence: 0.9, reason: '' }, 'balanced')).toBe('KEEP');
+    });
+});
