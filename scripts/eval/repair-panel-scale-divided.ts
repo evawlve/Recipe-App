@@ -84,6 +84,20 @@
  *     S/100 — so a hand-added small-S entry would SHRINK a panel and sail
  *     under every ceiling. Below-guard rows cannot have come from the
  *     detector, so they refuse the whole plan.
+ *  8. --tier is REQUIRED in execute mode: the tier is the WRITE SCOPE, and a
+ *     default would silently select the widest one. Each entry's tier label
+ *     is also RECOMPUTED from its own familyDistinctServings at validation
+ *     time — a hand-relabelled tier-2 entry must not ride into a --tier 1
+ *     apply. --sample is refused in execute mode (there is no sampled apply;
+ *     scope by --tier or approve a smaller plan).
+ *  9. The dry run prints the plan file's sha256; --execute recomputes it and
+ *     refuses a mismatch against --plan-sha256 (optional — when omitted, the
+ *     computed hash is printed prominently for eyeball comparison against the
+ *     approved artifact). And before any write, the snapshot dump the manifest
+ *     names is re-verified ON THE DB HOST (still exists, sha256 still matches)
+ *     over the SAME bash -c wrapped ssh transport snapshot-off-food.ts uses
+ *     (imported, not re-implemented — §11 class A). A rollback path is only
+ *     real if it still exists when the writes start.
  *
  * A wrong flag inflates a 1,060 g row by 10.6x. That is why every one of these
  * gates exists and why none of them is optional.
@@ -113,7 +127,8 @@
  *
  *   # Phase 3, AFTER approval + a fresh verified OffFood snapshot:
  *   ... repair-panel-scale-divided.ts --execute --plan <approved-plan.json> \
- *     --snapshot-manifest <OffFood-<ts>.meta.json> [--tier 1|2|all]
+ *     --snapshot-manifest <OffFood-<ts>.meta.json> --tier 1|2|all \
+ *     [--plan-sha256 <the hash the dry run printed>]
  *
  * The manifest lands on the DB host (snapshot-off-food.ts writes it next to
  * the dump); scp it to wherever this script runs, or run this script on the
@@ -124,6 +139,7 @@
  * Offline fail-injection tests: scripts/eval/__tests__/repair-panel-scale-divided.test.ts.
  */
 import 'dotenv/config';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PrismaClient, Prisma } from '@prisma/client';
@@ -139,7 +155,13 @@ import {
     type RepairEntry,
     type ScanReport,
 } from './detect-panel-scale-divided';
-import { REQUIRED_COLUMNS, TABLE } from './snapshot-off-food';
+import {
+    REQUIRED_COLUMNS,
+    TABLE,
+    shellQuote,
+    sshTransport,
+    type Transport,
+} from './snapshot-off-food';
 
 // ===========================================================================
 // Constants
@@ -553,7 +575,13 @@ export function buildPlan(
 // Plan + manifest validation (fail-closed; every reason is explicit)
 // ===========================================================================
 
-export type PlanParse = { ok: true; plan: RepairPlan } | { ok: false; reason: string };
+export type PlanParse = { ok: true; plan: RepairPlan; sha256: string } | { ok: false; reason: string };
+
+/** sha256 hex digest — the plan-artifact pin (item: the hash the dry run
+ *  prints is the hash --execute re-derives from the exact bytes it read). */
+export function sha256Hex(data: string | Buffer): string {
+    return crypto.createHash('sha256').update(data).digest('hex');
+}
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
     return v != null && typeof v === 'object' && !Array.isArray(v);
@@ -605,6 +633,26 @@ export function validatePlanText(text: string): PlanParse {
         if (typeof e.name !== 'string' || typeof e.brandName !== 'string') return { ok: false, reason: `${at} (${e.barcode}): missing name/brandName` };
         if (typeof e.familyKey !== 'string' || e.familyKey.trim() === '') return { ok: false, reason: `${at} (${e.barcode}): missing familyKey` };
         if (e.tier !== 1 && e.tier !== 2) return { ok: false, reason: `${at} (${e.barcode}): tier must be 1 or 2 (got ${JSON.stringify(e.tier)})` };
+        if (typeof e.familyDistinctServings !== 'number' || !Number.isInteger(e.familyDistinctServings) || e.familyDistinctServings < 2) {
+            return {
+                ok: false,
+                reason: `${at} (${e.barcode}): familyDistinctServings ${JSON.stringify(e.familyDistinctServings)} is missing or invalid `
+                    + '(a qualifying family has >= 2 distinct sizes) — without it the tier label cannot be recomputed, so it cannot be trusted',
+            };
+        }
+        // The tier label is RECOMPUTED from the entry's own family data, never
+        // trusted: --tier selects the write scope by this label, so a
+        // hand-relabelled tier-2 entry would otherwise ride into a --tier 1
+        // apply that Diego approved on tier-1 evidence alone.
+        const recomputedTier = tierOf({ familyDistinctServings: e.familyDistinctServings });
+        if (e.tier !== recomputedTier) {
+            return {
+                ok: false,
+                reason: `${at} (${e.barcode}): tier is labelled ${e.tier} but the entry's own familyDistinctServings=${e.familyDistinctServings} `
+                    + `recomputes to tier ${recomputedTier} — a relabelled tier changes the WRITE SCOPE --tier selects (hand-edited plan, or `
+                    + 'a stale plan from a different tier rule). Regenerate the plan.',
+            };
+        }
         if (typeof e.servingGrams !== 'number' || !isFinite(e.servingGrams) || e.servingGrams < MIN_FLAGGED_SERVING_G) {
             return {
                 ok: false,
@@ -620,7 +668,7 @@ export function validatePlanText(text: string): PlanParse {
             return { ok: false, reason: `${at} (${e.barcode}): rawAfter is missing or not a readable panel` };
         }
     }
-    return { ok: true, plan: raw as RepairPlan };
+    return { ok: true, plan: raw as RepairPlan, sha256: sha256Hex(text) };
 }
 
 export function loadPlan(planPath: string): PlanParse {
@@ -631,10 +679,44 @@ export function loadPlan(planPath: string): PlanParse {
     return validatePlanText(text);
 }
 
+/**
+ * The plan-artifact hash gate. `computed` is the sha256 of the exact bytes
+ * --plan pointed at; `provided` is --plan-sha256 (null when omitted). The flag
+ * is OPTIONAL by design: when omitted the computed hash is printed prominently
+ * so the operator can eyeball it against the one the dry run printed on the
+ * approved artifact — omission weakens the gate to a human check, it does not
+ * skip it silently.
+ */
+export function checkPlanSha256(
+    computed: string,
+    provided: string | null,
+): { ok: true; lines: string[] } | { ok: false; reason: string } {
+    if (provided === null) {
+        return {
+            ok: true,
+            lines: [
+                `plan sha256 (computed): ${computed}`,
+                'no --plan-sha256 was provided — EYEBALL the hash above against the one the dry run printed on the',
+                'approved artifact before trusting this run; pass --plan-sha256 to make the check refuse mechanically.',
+            ],
+        };
+    }
+    if (provided.toLowerCase() !== computed.toLowerCase()) {
+        return {
+            ok: false,
+            reason: `--plan-sha256 mismatch: provided ${provided}, but the --plan file's bytes hash to ${computed} — `
+                + 'this is NOT the approved plan artifact (edited, regenerated, or the wrong file). Point --plan at the '
+                + 'exact file the dry run wrote, or re-approve the new one.',
+        };
+    }
+    return { ok: true, lines: [`plan sha256 verified: ${computed} (matches --plan-sha256)`] };
+}
+
 /** The subset of snapshot-off-food.ts's manifest this gate depends on. */
 export interface SnapshotManifest {
     table: string;
     createdAt: string;
+    sshHost: string;
     file: string;
     rowCount: number;
     columnCount: number;
@@ -668,6 +750,13 @@ export function validateManifestText(text: string): ManifestParse {
     }
     if (typeof m.createdAt !== 'string' || Number.isNaN(new Date(m.createdAt).getTime())) {
         return { ok: false, reason: `manifest createdAt is missing or unparseable (${JSON.stringify(m.createdAt)})` };
+    }
+    if (typeof m.sshHost !== 'string' || m.sshHost.trim() === '') {
+        return {
+            ok: false,
+            reason: 'manifest carries no sshHost — --execute must verify the dump file still exists on the DB host '
+                + 'before writing, and it cannot without the host the snapshot was taken on',
+        };
     }
     if (typeof m.rowCount !== 'number' || !Number.isInteger(m.rowCount) || m.rowCount <= 0) {
         return { ok: false, reason: `manifest rowCount ${JSON.stringify(m.rowCount)} is not a positive integer — an empty snapshot is not a rollback path` };
@@ -740,6 +829,74 @@ export function checkSnapshotCoversPlan(manifestCreatedAt: string, planAt: strin
         };
     }
     return { ok: true };
+}
+
+/**
+ * Execute-time check that the rollback path is still REAL: the dump file the
+ * manifest names must still exist on the DB host and hash to the manifest's
+ * sha256. A manifest is a claim about the host at snapshot time; the writes
+ * happen NOW, and a deleted or replaced dump means the "verified snapshot"
+ * gate is holding a receipt for a rollback that no longer exists.
+ *
+ * The transport is snapshot-off-food.ts's own (bash -c wrapped ssh) — imported,
+ * not re-implemented, because a re-implementation that drifts from the real
+ * remote path is playbook §11 class A. Runs ONLY in execute mode (already an
+ * authorized-prod-access context); offline tests mock the Transport boundary.
+ *
+ * The remote script exits 0 on both verdicts (like snapshot-off-food.ts's
+ * refuse-overwrite probe) so a transport failure is never mistaken for a
+ * verdict; the verdict itself is parsed, and anything unrecognized refuses
+ * (§11 class B — a sha256sum failure inside the substitution yields
+ * "PRESENT " with no hash, which must refuse, not pass).
+ */
+export async function verifySnapshotOnHost(
+    manifest: Pick<SnapshotManifest, 'file' | 'sha256' | 'sshHost'>,
+    t: Transport,
+): Promise<{ ok: true; sha256: string } | { ok: false; reason: string }> {
+    const script = `if [ -f ${shellQuote(manifest.file)} ]; then printf 'PRESENT %s\\n' "$(sha256sum ${shellQuote(manifest.file)} | awk '{print $1}')"; else echo MISSING; fi`;
+    let res;
+    try {
+        res = await t.exec('verify-snapshot-on-host', script);
+    } catch (e) {
+        return {
+            ok: false,
+            reason: `cannot verify the snapshot dump on ${manifest.sshHost}: transport threw (${(e as Error).message}) — `
+                + 'an unverifiable rollback path is not a rollback path; refusing to write',
+        };
+    }
+    if (res.code !== 0) {
+        return {
+            ok: false,
+            reason: `cannot verify the snapshot dump on ${manifest.sshHost}: remote check exited ${res.code} `
+                + `(stderr: ${res.stderr.trim().slice(0, 300) || '(empty)'}) — an unverifiable rollback path is not a rollback path; refusing to write`,
+        };
+    }
+    const verdict = res.stdout.trim();
+    if (verdict === 'MISSING') {
+        return {
+            ok: false,
+            reason: `the snapshot dump ${manifest.file} NO LONGER EXISTS on ${manifest.sshHost} — the manifest is a receipt for a `
+                + 'rollback path that is gone (deleted, moved, or the host was re-provisioned). Take a fresh snapshot '
+                + '(snapshot-off-food.ts), re-check it covers the plan, and re-run.',
+        };
+    }
+    const m = /^PRESENT ([0-9a-f]{64})$/i.exec(verdict);
+    if (!m) {
+        return {
+            ok: false,
+            reason: `unrecognized verdict from the dump-file check on ${manifest.sshHost}: ${JSON.stringify(verdict.slice(0, 200))} — `
+                + 'refusing rather than guessing (an empty hash means sha256sum itself failed on the host)',
+        };
+    }
+    if (m[1].toLowerCase() !== manifest.sha256.toLowerCase()) {
+        return {
+            ok: false,
+            reason: `snapshot dump sha256 MISMATCH on ${manifest.sshHost}: the manifest says ${manifest.sha256} but ${manifest.file} `
+                + `now hashes to ${m[1]} — the dump was modified or replaced AFTER verification, so it can no longer restore what `
+                + 'the manifest promises. Take a fresh snapshot and re-run.',
+        };
+    }
+    return { ok: true, sha256: m[1].toLowerCase() };
 }
 
 // ===========================================================================
@@ -883,7 +1040,7 @@ export function formatPlanSummary(plan: RepairPlan, sampleSize: number): string[
         + `${plan.tierTotals.tier1.rows} rows / ${plan.tierTotals.tier1.families} families`);
     out.push(`  tier 2 (2-size families — a 2-point log-log fit is perfect BY CONSTRUCTION; weak evidence): `
         + `${plan.tierTotals.tier2.rows} rows / ${plan.tierTotals.tier2.families} families`);
-    out.push('  --execute takes --tier 1|2|all so tier 1 can be approved and applied alone.');
+    out.push('  --execute REQUIRES an explicit --tier 1|2|all (the write scope is never defaulted), so tier 1 can be approved and applied alone.');
     out.push('');
     out.push(`EXCLUDED by name (${plan.exclusions.length}):`);
     for (const x of plan.exclusions) {
@@ -925,7 +1082,8 @@ export function formatPlanSummary(plan: RepairPlan, sampleSize: number): string[
     out.push('');
     out.push('NEXT (Phase 3, needs Diego): approve this plan (tier 1 alone is approvable), take a fresh verified');
     out.push('OffFood snapshot (scripts/eval/snapshot-off-food.ts — the manifest must be NEWER than this plan),');
-    out.push('then: repair-panel-scale-divided.ts --execute --plan <this file> --snapshot-manifest <.meta.json> --tier 1');
+    out.push('then: repair-panel-scale-divided.ts --execute --plan <this file> --snapshot-manifest <.meta.json> \\');
+    out.push('        --tier 1 --plan-sha256 <the hash printed under "Plan sha256:" below>');
     out.push('READ-ONLY: nothing was written to the database by this dry run.');
     return out;
 }
@@ -972,12 +1130,13 @@ export const USAGE = [
     '  repair-panel-scale-divided.ts                       # DRY RUN (default): scan + emit the plan',
     '      [--out <plan.json>] [--sample <N>]',
     '  repair-panel-scale-divided.ts --execute             # Phase 3 only, after approval',
-    '      --plan <approved-plan.json> --snapshot-manifest <OffFood-*.meta.json> [--tier 1|2|all]',
+    '      --plan <approved-plan.json> --snapshot-manifest <OffFood-*.meta.json> --tier 1|2|all',
+    '      [--plan-sha256 <the 64-hex hash the dry run printed>]',
 ].join('\n');
 
 export type CliParse =
     | { ok: true; mode: 'dry-run'; out: string | null; sample: number }
-    | { ok: true; mode: 'execute'; planPath: string; manifestPath: string; tier: TierFilter }
+    | { ok: true; mode: 'execute'; planPath: string; manifestPath: string; tier: TierFilter; planSha256: string | null }
     | { ok: false; reason: string };
 
 export function parseRepairArgs(argv: string[]): CliParse {
@@ -985,8 +1144,10 @@ export function parseRepairArgs(argv: string[]): CliParse {
     let planPath: string | undefined;
     let manifestPath: string | undefined;
     let tier: TierFilter | undefined;
+    let planSha256: string | null = null;
     let out: string | null = null;
     let sample = DEFAULT_SAMPLE_SIZE;
+    let sampleSet = false;
 
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
@@ -1016,6 +1177,15 @@ export function parseRepairArgs(argv: string[]): CliParse {
             tier = v;
             continue;
         }
+        if (a === '--plan-sha256') {
+            const v = value();
+            if (typeof v !== 'string') return { ok: false, reason: `${v.err}. ${USAGE}` };
+            if (!/^[0-9a-f]{64}$/i.test(v)) {
+                return { ok: false, reason: `--plan-sha256 must be a 64-hex sha256 (got ${JSON.stringify(v)}) — copy the hash the dry run printed, whole. ${USAGE}` };
+            }
+            planSha256 = v;
+            continue;
+        }
         if (a === '--out') {
             const v = value();
             if (typeof v !== 'string') return { ok: false, reason: `${v.err}. ${USAGE}` };
@@ -1028,6 +1198,7 @@ export function parseRepairArgs(argv: string[]): CliParse {
             const n = Number(v);
             if (!Number.isInteger(n) || n <= 0) return { ok: false, reason: `--sample must be a positive integer (got ${JSON.stringify(v)}). ${USAGE}` };
             sample = n;
+            sampleSet = true;
             continue;
         }
         // Unknown flags and stray positionals REFUSE (a typo silently ignored
@@ -1047,14 +1218,36 @@ export function parseRepairArgs(argv: string[]): CliParse {
                     + `(scripts/eval/snapshot-off-food.ts .meta.json) is the ONLY rollback path for a repair that multiplies panels by up to 50x. ${USAGE}`,
             };
         }
+        if (tier === undefined) {
+            // No default: the tier is the WRITE SCOPE, and the old implicit
+            // 'all' silently selected the widest one — the exact shape of an
+            // operator typing --execute and getting more writes than approved.
+            return {
+                ok: false,
+                reason: '--execute refuses without an explicit --tier: the tier is the WRITE SCOPE and it is never defaulted. '
+                    + `--tier 1 = families with >= ${TIER1_MIN_DISTINCT_SERVINGS} distinct sizes (strong evidence; ~2,093 rows in the live corpus), `
+                    + '--tier 2 = 2-size families (weak evidence; ~1,080 rows), --tier all = both (~3,173 rows). '
+                    + `The exact counts for YOUR plan are in its tierTotals block (also printed by the dry-run summary). ${USAGE}`,
+            };
+        }
         if (out !== null) return { ok: false, reason: `--out is a dry-run flag (the plan is INPUT to --execute, via --plan). ${USAGE}` };
-        return { ok: true, mode: 'execute', planPath, manifestPath, tier: tier ?? 'all' };
+        if (sampleSet) {
+            return {
+                ok: false,
+                reason: '--sample is a dry-run flag: --execute applies EVERY selected row or refuses — a "sampled apply" does not exist, '
+                    + `so an operator expecting a scoped write would silently get the whole tier. Scope by --tier, or approve a smaller plan. ${USAGE}`,
+            };
+        }
+        return { ok: true, mode: 'execute', planPath, manifestPath, tier, planSha256 };
     }
 
     if (planPath) return { ok: false, reason: `--plan is only meaningful with --execute (the dry run PRODUCES the plan). ${USAGE}` };
     if (manifestPath) return { ok: false, reason: `--snapshot-manifest is only meaningful with --execute. ${USAGE}` };
     if (tier !== undefined) {
         return { ok: false, reason: `--tier is only meaningful with --execute — the dry-run plan always carries BOTH tiers, separated, so Diego can approve tier 1 alone. ${USAGE}` };
+    }
+    if (planSha256 !== null) {
+        return { ok: false, reason: `--plan-sha256 is only meaningful with --execute — the dry run PRINTS the hash; it does not check one. ${USAGE}` };
     }
     return { ok: true, mode: 'dry-run', out, sample };
 }
@@ -1116,23 +1309,37 @@ async function runDryRun(out: string | null, sample: number): Promise<number> {
         fs.mkdirSync(outDir, { recursive: true });
         const ts = plan.at.replace(/[:.]/g, '-');
         const outPath = out ?? path.join(outDir, `panel-scale-repair-plan-${ts}.json`);
-        fs.writeFileSync(outPath, JSON.stringify(plan, null, 1));
+        const planJson = JSON.stringify(plan, null, 1);
+        fs.writeFileSync(outPath, planJson);
 
         for (const line of formatPlanSummary(plan, sample)) console.log(line);
         console.log(`\nPlan written to ${path.relative(process.cwd(), outPath)}`);
+        // The artifact pin: --execute recomputes this from the exact bytes of
+        // the --plan file and refuses a mismatch against --plan-sha256.
+        console.log(`Plan sha256: ${sha256Hex(planJson)}`);
+        console.log('Record this hash with the approval and pass it to --execute as --plan-sha256 <hash>;');
+        console.log('a plan file whose bytes no longer match it is not the approved artifact.');
         return 0;
     } finally {
         await prisma.$disconnect();
     }
 }
 
-async function runExecute(planPath: string, manifestPath: string, tier: TierFilter): Promise<number> {
+async function runExecute(planPath: string, manifestPath: string, tier: TierFilter, planSha256: string | null): Promise<number> {
     const parsedPlan = loadPlan(planPath);
     if (!parsedPlan.ok) {
         console.error(`REFUSING: ${parsedPlan.reason}`);
         return 2;
     }
     const plan = parsedPlan.plan;
+
+    // The artifact pin: the hash of the exact bytes --plan pointed at, checked
+    // against --plan-sha256 (or printed prominently when the flag was omitted).
+    const shaCheck = checkPlanSha256(parsedPlan.sha256, planSha256);
+    if (!shaCheck.ok) {
+        console.error(`REFUSING: ${shaCheck.reason}`);
+        return 2;
+    }
 
     const parsedManifest = loadManifest(manifestPath);
     if (!parsedManifest.ok) {
@@ -1153,10 +1360,23 @@ async function runExecute(planPath: string, manifestPath: string, tier: TierFilt
         return 2;
     }
 
+    // Last gate before any write, and the only remote one: the rollback dump
+    // must still exist on the DB host and hash-match the manifest. Execute
+    // mode is already an authorized-prod-access context; the transport is
+    // snapshot-off-food.ts's own bash -c wrapped ssh.
+    console.log(`[verify-snapshot-on-host] checking ${manifest.file} on ${manifest.sshHost} ...`);
+    const hostCheck = await verifySnapshotOnHost(manifest, sshTransport(manifest.sshHost));
+    if (!hostCheck.ok) {
+        console.error(`REFUSING: ${hostCheck.reason}`);
+        return 2;
+    }
+
     console.log('==========================================================================');
     console.log('EXECUTE — divided-panel corpus repair');
     console.log(`  plan     : ${planPath} (cut ${plan.at})`);
+    for (const line of shaCheck.lines) console.log(`  ${line}`);
     console.log(`  snapshot : ${manifest.file} (${manifest.rowCount} rows, sha256 ${manifest.sha256.slice(0, 12)}..., taken ${manifest.createdAt})`);
+    console.log(`  dump     : verified live on ${manifest.sshHost} — exists, sha256 matches the manifest`);
     console.log(`  tier     : ${tier} -> ${entries.length} of ${plan.entries.length} plan entries`);
     console.log(`  ${plan.unsettled}`);
     console.log('==========================================================================');
@@ -1213,7 +1433,7 @@ async function main(): Promise<number> {
         return 2;
     }
     if (cli.mode === 'dry-run') return runDryRun(cli.out, cli.sample);
-    return runExecute(cli.planPath, cli.manifestPath, cli.tier);
+    return runExecute(cli.planPath, cli.manifestPath, cli.tier, cli.planSha256);
 }
 
 if (require.main === module) {

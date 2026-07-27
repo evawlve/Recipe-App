@@ -23,6 +23,7 @@ import {
 import {
     applyPlan,
     buildPlan,
+    checkPlanSha256,
     checkSnapshotCoversPlan,
     executeExitCode,
     EXCLUDED_BARCODES,
@@ -33,9 +34,11 @@ import {
     mandatoryNextSteps,
     parseRepairArgs,
     scaleStoredPanel,
+    sha256Hex,
     tierOf,
     validateManifestText,
     validatePlanText,
+    verifySnapshotOnHost,
     DEFAULT_SAMPLE_SIZE,
     PLAN_KIND,
     UNSETTLED_FLOOR,
@@ -43,8 +46,9 @@ import {
     type PlanEntry,
     type RepairDb,
     type RepairPlan,
+    type SnapshotManifest,
 } from '../repair-panel-scale-divided';
-import { REQUIRED_COLUMNS } from '../snapshot-off-food';
+import { REQUIRED_COLUMNS, type ExecResult, type Transport } from '../snapshot-off-food';
 
 // ===========================================================================
 // Fixtures — same generators as panel-scale-divided.test.ts, so the fixture
@@ -408,9 +412,43 @@ describe('parseRepairArgs: the gates are in the parser', () => {
         const dry = parseRepairArgs(['--out', 'plan.json', '--sample', '10']);
         expect(dry).toEqual({ ok: true, mode: 'dry-run', out: 'plan.json', sample: 10 });
         const exec = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json', '--tier', '1']);
-        expect(exec).toEqual({ ok: true, mode: 'execute', planPath: 'p.json', manifestPath: 'm.meta.json', tier: '1' });
-        const execAll = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json']);
-        expect(execAll).toEqual({ ok: true, mode: 'execute', planPath: 'p.json', manifestPath: 'm.meta.json', tier: 'all' });
+        expect(exec).toEqual({ ok: true, mode: 'execute', planPath: 'p.json', manifestPath: 'm.meta.json', tier: '1', planSha256: null });
+    });
+
+    it('--execute WITHOUT --tier refuses — the write scope is never defaulted, and the error names the tiers and their row counts', () => {
+        const r = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json']);
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.reason).toContain('--tier');
+            expect(r.reason).toContain('WRITE SCOPE');
+            expect(r.reason).toContain('2,093');   // tier 1 rows in the live corpus
+            expect(r.reason).toContain('1,080');   // tier 2 rows
+            expect(r.reason).toContain('tierTotals'); // where THIS plan's exact counts live
+        }
+    });
+
+    it('POSITIVE CONTROL — an explicit --tier all still parses (the default was removed, not the option)', () => {
+        const r = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json', '--tier', 'all']);
+        expect(r).toEqual({ ok: true, mode: 'execute', planPath: 'p.json', manifestPath: 'm.meta.json', tier: 'all', planSha256: null });
+    });
+
+    it('--sample in execute mode refuses — an operator typing --execute --sample 10 must not silently get the full tier', () => {
+        const r = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json', '--tier', '1', '--sample', '10']);
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.reason).toContain('--sample');
+            expect(r.reason).toContain('dry-run flag');
+        }
+    });
+
+    it('--plan-sha256 parses in execute mode, refuses malformed values, and is execute-only', () => {
+        const hash = 'ab'.repeat(32);
+        const r = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json', '--tier', '1', '--plan-sha256', hash]);
+        expect(r).toEqual({ ok: true, mode: 'execute', planPath: 'p.json', manifestPath: 'm.meta.json', tier: '1', planSha256: hash });
+        const short = parseRepairArgs(['--execute', '--plan', 'p.json', '--snapshot-manifest', 'm.meta.json', '--tier', '1', '--plan-sha256', 'abc123']);
+        expect(short.ok).toBe(false);
+        if (!short.ok) expect(short.reason).toContain('64-hex');
+        expect(parseRepairArgs(['--plan-sha256', hash]).ok).toBe(false);
     });
 });
 
@@ -441,6 +479,8 @@ describe('snapshot manifest gate: only a verified snapshot-off-food.ts .meta.jso
         ['no restore recipe', manifestText({ restore: [] }), 'restore'],
         ['unparseable createdAt', manifestText({ createdAt: 'yesterday-ish' }), 'createdAt'],
         ['wrong format', manifestText({ format: 'pg_dump custom' }), 'COPY'],
+        ['missing sshHost (the dump-still-exists check needs the host)', manifestText({}, ['sshHost']), 'sshHost'],
+        ['empty sshHost', manifestText({ sshHost: '  ' }), 'sshHost'],
     ];
     it.each(refusals)('refuses: %s', (_label, text, expectInReason) => {
         const r = validateManifestText(text);
@@ -492,6 +532,39 @@ describe('plan validation: shape, provenance, and the one-sided-guard trap', () 
         if (!r.ok) expect(r.reason).toContain('member guard');
     });
 
+    it('a hand-relabelled tier refuses — the tier is RECOMPUTED from the entry\'s own familyDistinctServings, never trusted', async () => {
+        // jmFamily is a 2-size family: every honest entry is tier 2. Relabel
+        // one to tier 1 — without the recompute, --tier 1 would select and
+        // WRITE this weak-evidence row under a strong-evidence approval.
+        const plan = JSON.parse(JSON.stringify(await makePlan(jmFamily()))) as RepairPlan;
+        expect(plan.entries[0].tier).toBe(2); // fixture sanity: the relabel below is a lie
+        plan.entries[0] = { ...plan.entries[0], tier: 1 };
+        const r = validatePlanText(JSON.stringify(plan));
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.reason).toContain('recomputes to tier 2');
+            expect(r.reason).toContain('WRITE SCOPE');
+        }
+        // And the sneak-a-row-OUT direction: tier 1 relabelled as tier 2.
+        const plan2 = JSON.parse(JSON.stringify(await makePlan(wawaFamily()))) as RepairPlan;
+        expect(plan2.entries[0].tier).toBe(1);
+        plan2.entries[0] = { ...plan2.entries[0], tier: 2 };
+        const r2 = validatePlanText(JSON.stringify(plan2));
+        expect(r2.ok).toBe(false);
+        if (!r2.ok) expect(r2.reason).toContain('recomputes to tier 1');
+    });
+
+    it('an entry with missing or invalid familyDistinctServings refuses — the tier recompute needs it', async () => {
+        const plan = JSON.parse(JSON.stringify(await makePlan(jmFamily()))) as RepairPlan;
+        delete (plan.entries[0] as Partial<PlanEntry>).familyDistinctServings;
+        const r = validatePlanText(JSON.stringify(plan));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.reason).toContain('familyDistinctServings');
+        const plan2 = JSON.parse(JSON.stringify(await makePlan(jmFamily()))) as RepairPlan;
+        plan2.entries[0] = { ...plan2.entries[0], familyDistinctServings: 1 };
+        expect(validatePlanText(JSON.stringify(plan2)).ok).toBe(false);
+    });
+
     it('duplicate barcodes refuse — a row repaired twice is multiplied twice', async () => {
         const plan = JSON.parse(JSON.stringify(await makePlan(jmFamily()))) as RepairPlan;
         plan.entries.push({ ...plan.entries[0] });
@@ -513,6 +586,137 @@ describe('plan validation: shape, provenance, and the one-sided-guard trap', () 
         }
         expect(validatePlanText('').ok).toBe(false);
         expect(validatePlanText('{"planKind":').ok).toBe(false);
+    });
+});
+
+// ===========================================================================
+// 7a. The plan-artifact sha256 pin (execute must hold the approved bytes)
+// ===========================================================================
+
+describe('plan sha256 pin: the dry run prints it, execute recomputes it and refuses a mismatch', () => {
+    it('sha256Hex is real sha256 (known vector for "abc")', () => {
+        expect(sha256Hex('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    });
+
+    it('validatePlanText returns the sha256 of the EXACT text it validated — the same bytes loadPlan reads from --plan', async () => {
+        const text = JSON.stringify(await makePlan(jmFamily()), null, 1); // dry-run serialization
+        const r = validatePlanText(text);
+        expect(r.ok).toBe(true);
+        if (r.ok) expect(r.sha256).toBe(sha256Hex(text));
+        // A one-byte edit to the artifact changes the pin.
+        const edited = text.replace('"tier": 2', '"tier":  2');
+        const r2 = validatePlanText(edited);
+        expect(r2.ok).toBe(true);
+        if (r.ok && r2.ok) expect(r2.sha256).not.toBe(r.sha256);
+    });
+
+    it('FAIL INJECTION — a provided --plan-sha256 that does not match the file refuses, naming both hashes', () => {
+        const r = checkPlanSha256('aa'.repeat(32), 'bb'.repeat(32));
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.reason).toContain('mismatch');
+            expect(r.reason).toContain('aa'.repeat(32));
+            expect(r.reason).toContain('bb'.repeat(32));
+        }
+    });
+
+    it('POSITIVE CONTROL — a matching hash passes, case-insensitively', () => {
+        const good = checkPlanSha256('ab'.repeat(32), 'AB'.repeat(32));
+        expect(good.ok).toBe(true);
+        if (good.ok) expect(good.lines.join(' ')).toContain('verified');
+    });
+
+    it('an omitted --plan-sha256 passes but PRINTS the computed hash prominently for eyeball comparison — omission weakens the gate, never skips it silently', () => {
+        const r = checkPlanSha256('cd'.repeat(32), null);
+        expect(r.ok).toBe(true);
+        if (r.ok) {
+            const text = r.lines.join(' ');
+            expect(text).toContain('cd'.repeat(32));
+            expect(text).toContain('EYEBALL');
+        }
+    });
+});
+
+// ===========================================================================
+// 7b. The dump-still-exists check on the DB host (execute-only; the transport
+//     boundary is snapshot-off-food.ts's own and is mocked here — §11 class A:
+//     reuse the real remote machinery, mock only at its boundary)
+// ===========================================================================
+
+describe('verifySnapshotOnHost: the rollback dump must still exist and hash-match at execute time', () => {
+    const execOk = (stdout: string): ExecResult => ({ code: 0, stdout, stderr: '' });
+    const execFail = (code: number, stderr: string): ExecResult => ({ code, stdout: '', stderr });
+
+    function manifestFixture(): SnapshotManifest {
+        const r = validateManifestText(manifestText());
+        if (!r.ok) throw new Error(`fixture manifest must validate: ${r.reason}`);
+        return r.manifest;
+    }
+
+    function fakeTransport(result: ExecResult): { t: Transport; calls: Array<{ step: string; script: string }> } {
+        const calls: Array<{ step: string; script: string }> = [];
+        return {
+            calls,
+            t: {
+                exec(step: string, script: string): Promise<ExecResult> {
+                    calls.push({ step, script });
+                    return Promise.resolve(result);
+                },
+            },
+        };
+    }
+
+    it('POSITIVE CONTROL — present + matching hash passes, in ONE remote call whose script names the manifest file and sha256sum', async () => {
+        const manifest = manifestFixture();
+        const { t, calls } = fakeTransport(execOk(`PRESENT ${manifest.sha256}\n`));
+        const r = await verifySnapshotOnHost(manifest, t);
+        expect(r.ok).toBe(true);
+        if (r.ok) expect(r.sha256).toBe(manifest.sha256.toLowerCase());
+        expect(calls).toHaveLength(1);
+        expect(calls[0].script).toContain(manifest.file);
+        expect(calls[0].script).toContain('sha256sum');
+    });
+
+    it('FAIL INJECTION — the dump file is GONE from the host: refuse (the manifest is a receipt for a rollback that no longer exists)', async () => {
+        const { t } = fakeTransport(execOk('MISSING\n'));
+        const r = await verifySnapshotOnHost(manifestFixture(), t);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.reason).toContain('NO LONGER EXISTS');
+    });
+
+    it('FAIL INJECTION — the file exists but its sha256 no longer matches the manifest: refuse, naming both hashes', async () => {
+        const manifest = manifestFixture();
+        const { t } = fakeTransport(execOk(`PRESENT ${'ff'.repeat(32)}\n`));
+        const r = await verifySnapshotOnHost(manifest, t);
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.reason).toContain('MISMATCH');
+            expect(r.reason).toContain(manifest.sha256);
+            expect(r.reason).toContain('ff'.repeat(32));
+        }
+    });
+
+    it('a dead transport refuses — the absence of a verdict is never a PASS (§11 class B)', async () => {
+        const { t } = fakeTransport(execFail(255, 'ssh: connect to host 192.168.1.133: No route to host'));
+        const r = await verifySnapshotOnHost(manifestFixture(), t);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.reason).toContain('unverifiable rollback path is not a rollback path');
+    });
+
+    it('an unrecognized verdict refuses — "PRESENT " with an empty hash means sha256sum itself failed on the host', async () => {
+        for (const stdout of ['PRESENT \n', '', 'PRESENT not-a-hash\n', 'bash: sha256sum: command not found\n']) {
+            const { t } = fakeTransport(execOk(stdout));
+            const r = await verifySnapshotOnHost(manifestFixture(), t);
+            expect(r.ok).toBe(false);
+            if (!r.ok) expect(r.reason.length).toBeGreaterThan(0);
+        }
+    });
+
+    it('a transport that THROWS refuses instead of crashing the run', async () => {
+        const t: Transport = { exec: () => Promise.reject(new Error('spawn ssh ENOENT')) };
+        const r = await verifySnapshotOnHost(manifestFixture(), t);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.reason).toContain('spawn ssh ENOENT');
     });
 });
 
