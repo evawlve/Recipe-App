@@ -1,0 +1,134 @@
+{
+ "_readme": "Exemplar rows for production shapes that the hand-audited batch-01 ground truth does NOT contain. Batch 01 is a frozen 81-row audit with a pinned confusion matrix, so rows cannot be added to it without lying about what was audited; this file carries the missing shapes instead. prod-shape-coverage.test.ts screens the UNION of both files against fixtures/prod-shapes.json. Rows are REAL, pulled from the live cache on 2026-07-27 via ROW_SQL with row.real filled by the actual hydrateAndSelectServing pass. They carry no BAD/GOOD label: they exist to prove the screen can SEE the shape, not to move the measured recall.",
+ "rows": [
+  {
+   "shape": "src=fdc, servingTier=fdc_size_estimate",
+   "row": {
+    "key": "avocado",
+    "src": "fdc",
+    "conf": 0.99,
+    "validatedby": "human-triage",
+    "mapfoodname": "Avocados, raw, all commercial varieties",
+    "mapbrand": "",
+    "recname": "Avocados, raw, all commercial varieties",
+    "recbrand": "",
+    "per100g": {
+     "fat": 14.7,
+     "carbs": 8.53,
+     "fiber": 6.7,
+     "sugar": 0.66,
+     "protein": 2,
+     "calories": 160
+    },
+    "off_serving_grams": null,
+    "off_serving_size": "",
+    "pkg_qty": null,
+    "pkg_unit": "",
+    "corruptreason": "",
+    "dupof": "",
+    "fs_serving_desc": "",
+    "fs_serving_grams": null,
+    "fs_serving_nutrients": null,
+    "recid": "171705",
+    "n_off_servings": 0,
+    "off_serv_min_g": null,
+    "off_serv_max_g": null,
+    "fdc_serving_size": null,
+    "fdc_serving_unit": "",
+    "fdc_serv_min_g": 50,
+    "real": {
+     "grams": 150,
+     "tier": "fdc_size_estimate",
+     "kcal": 240
+    },
+    "seed": "avocado"
+   }
+  },
+  {
+   "shape": "src=fdc, servingTier=fdc_size_estimate",
+   "row": {
+    "key": "bagel plain",
+    "src": "fdc",
+    "conf": 0.99,
+    "validatedby": "human-triage",
+    "mapfoodname": "Bagels, plain, unenriched, without calcium propionate(includes onion, poppy, sesame)",
+    "mapbrand": "",
+    "recname": "Bagels, plain, unenriched, without calcium propionate(includes onion, poppy, sesame)",
+    "recbrand": "",
+    "per100g": {
+     "fat": 1.6,
+     "carbs": 53.4,
+     "fiber": 2.3,
+     "sugar": 0,
+     "protein": 10.5,
+     "calories": 275
+    },
+    "off_serving_grams": null,
+    "off_serving_size": "",
+    "pkg_qty": null,
+    "pkg_unit": "",
+    "corruptreason": "",
+    "dupof": "",
+    "fs_serving_desc": "",
+    "fs_serving_grams": null,
+    "fs_serving_nutrients": null,
+    "recid": "175051",
+    "n_off_servings": 0,
+    "off_serv_min_g": null,
+    "off_serv_max_g": null,
+    "fdc_serving_size": null,
+    "fdc_serving_unit": "",
+    "fdc_serv_min_g": 26,
+    "real": {
+     "grams": 105,
+     "tier": "fdc_size_estimate",
+     "kcal": 288.75
+    },
+    "seed": "plain bagel"
+   }
+  },
+  {
+   "shape": "src=fdc, servingTier=fdc_size_estimate",
+   "row": {
+    "key": "banana",
+    "src": "fdc",
+    "conf": 0.98,
+    "validatedby": "ai",
+    "mapfoodname": "raw bananas",
+    "mapbrand": "",
+    "recname": "Bananas, raw",
+    "recbrand": "",
+    "per100g": {
+     "fat": 0.33,
+     "carbs": 22.8,
+     "fiber": 2.6,
+     "sugar": 12.2,
+     "protein": 1.09,
+     "calories": 89
+    },
+    "off_serving_grams": null,
+    "off_serving_size": "",
+    "pkg_qty": null,
+    "pkg_unit": "",
+    "corruptreason": "",
+    "dupof": "",
+    "fs_serving_desc": "",
+    "fs_serving_grams": null,
+    "fs_serving_nutrients": null,
+    "recid": "173944",
+    "n_off_servings": 0,
+    "off_serv_min_g": null,
+    "off_serv_max_g": null,
+    "fdc_serving_size": null,
+    "fdc_serving_unit": "",
+    "fdc_serv_min_g": 81,
+    "real": {
+     "grams": 118,
+     "tier": "fdc_size_estimate",
+     "kcal": 105.02
+    },
+    "seed": "banana"
+   }
+  }
+ ]
+}

@@ -783,6 +783,16 @@ export function noiseGate(
                 `no noise-floor receipt for side ${side} (snapshot ${f.snapshotTakenAt}, ` +
                 `tree ${f.gitDirty}, variant ${f.variant}). Run: winner-diff noise-floor ` +
                 `--snapshot <snap.json> --variant ${f.variant}   FROM THAT TREE.`);
+        } else if (r.rows === 0) {
+            // A receipt over ZERO rows says nothing replayed, not that everything
+            // replayed identically — `winnerDiffs !== 0 || pathDiffs !== 0` is
+            // trivially false when no row was ever compared. An empty snapshot
+            // (`--from-events` matching no MappingEventLog rows) therefore wrote a
+            // PASSING receipt and licensed a diff run with no floor under it.
+            problems.push(
+                `side ${side} noise-floor receipt covers ZERO rows (snapshot ${f.snapshotTakenAt}, ` +
+                `variant ${f.variant}). Nothing was replayed, so "0 differences" is an absence of ` +
+                'measurement, not determinism. Re-take the floor against a non-empty snapshot.');
         } else if (r.winnerDiffs !== 0 || r.pathDiffs !== 0) {
             problems.push(
                 `side ${side} noise floor is NON-ZERO (${r.winnerDiffs} winner / ${r.pathDiffs} path ` +

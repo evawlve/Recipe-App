@@ -668,8 +668,22 @@ export async function callLlm(r: ScreenRow, cfg: LlmConfig): Promise<LlmVerdict>
             const j = await res.json() as { choices?: { message?: { content?: string } }[] };
             const txt = j?.choices?.[0]?.message?.content ?? '';
             const parsed = JSON.parse(txt.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim());
+            // An UNRECOGNISED verdict string is a reply we could not read, not an
+            // approval. The old form was `=== 'REJECT' ? ... : === 'UNSURE' ? ... :
+            // 'ACCEPT'`, so `"reject"`, `"Reject"`, `"probably fine"`, a missing key and
+            // `{}` ALL landed on ACCEPT and the row was kept — the same fail-open shape
+            // PR #176 closed for a truncated reply, still open one branch over. Only the
+            // three known tokens are honoured; anything else is UNSURE (-> REVIEW).
+            const raw = String(parsed?.verdict ?? '').trim().toUpperCase();
+            if (raw !== 'ACCEPT' && raw !== 'UNSURE' && raw !== 'REJECT') {
+                return {
+                    verdict: 'UNSURE', axis: 'none', confidence: 0,
+                    reason: `unreadable verdict ${JSON.stringify(parsed?.verdict ?? null)}`,
+                    error: 'unparseable-verdict',
+                };
+            }
             return {
-                verdict: parsed.verdict === 'REJECT' ? 'REJECT' : parsed.verdict === 'UNSURE' ? 'UNSURE' : 'ACCEPT',
+                verdict: raw,
                 axis: String(parsed.axis ?? 'none'),
                 confidence: Number(parsed.confidence ?? 0),
                 reason: String(parsed.reason ?? ''),
@@ -721,6 +735,22 @@ export function decide(hits: Hit[], l: LlmVerdict | null | undefined, policy: Po
     if (lReject && POLICIES[policy].evict.includes('L')) return 'EVICT';
     if (hits.some(h => h.severity === 'REVIEW') || lReject || lUnsure) return 'REVIEW';
     return 'KEEP';
+}
+
+/**
+ * The process exit code for a completed run — 0 = nothing to evict, 1 = rows
+ * flagged, 2 = the run is not a result.
+ *
+ * SCREENING ZERO ROWS IS NOT A CLEAN BATCH. `loadRows` returns `[]` for an empty
+ * `added.txt`, for a `--rows` file containing `[]`, and for a key list that matches
+ * nothing in FoodMapping (`json_agg` over no rows is SQL NULL, coalesced to `[]`).
+ * All three then produced `nEvict = 0` and exit 0 — the same output as a batch that
+ * was screened and found clean. The truncation WARN could not catch it either: it
+ * only fires when `keys.length !== rows.length`, and 0 === 0.
+ */
+export function screenExitCode(rowsScreened: number, nEvict: number): 0 | 1 | 2 {
+    if (rowsScreened === 0) return 2;
+    return nEvict > 0 ? 1 : 0;
 }
 
 /** Tier D over every row, plus (optionally) the Tier-L verdicts already gathered. */
@@ -1040,7 +1070,8 @@ const USAGE = [
     '  --seeds accepts bare phrases OR explicit "key<TAB>phrase" pins. Use pins for any',
     '  run wider than one batch: nearest-match attribution guesses wrong at cache scale.',
     '',
-    'Exit 0 = nothing to evict, 1 = rows flagged for withholding, >1 = crash (treat as RED).',
+    'Exit 0 = nothing to evict, 1 = rows flagged for withholding, >1 = crash OR zero rows',
+'screened (treat as RED — a run that judged nothing is not a clean batch).',
 ].join('\n');
 
 async function main(): Promise<number> {
@@ -1252,7 +1283,12 @@ async function main(): Promise<number> {
         }
     }
 
-    return nEvict > 0 ? 1 : 0;
+    if (rows.length === 0) {
+        console.error('\nFATAL screened 0 rows. Nothing was judged, so this run is NOT a clean batch — '
+            + 'check that --bdir/added.txt is non-empty, that --rows is not [], and that the keys exist '
+            + 'in FoodMapping. Exiting 2.');
+    }
+    return screenExitCode(rows.length, nEvict);
 }
 
 if (require.main === module) {
