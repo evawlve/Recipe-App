@@ -40,6 +40,7 @@ import {
     partitionRestore,
     raceSkips,
     restoreExitCode,
+    selectRestoreRows,
     skipReportLines,
 } from '../_restore_rows';
 
@@ -310,5 +311,79 @@ describe('_restore_rows: a silent skip is the limit on reversibility, so it is n
         expect(skipReportLines([])).toEqual([]);
         expect(skipReportLines([], 0)).toEqual([]);
         expect(restoreExitCode(0)).toBe(0);
+    });
+});
+
+// ===========================================================================
+// 4. Restore keys file — the SAME rigor as the evict side. Restore is the
+//    post-disaster path: a degenerate keys file that quietly becomes "restore
+//    nothing / restore partial" with exit 0 is the class-B false green on the
+//    one path whose failure is unrecoverable.
+// ===========================================================================
+
+describe('_restore_rows keys file: degenerate-but-valid JSON refuses, never narrows silently', () => {
+    const snapRows = [
+        { normalizedForm: 'and ben jerry' },
+        { normalizedForm: 'food test' },
+        { normalizedForm: 'red wine' },
+    ];
+
+    function refusalReason(v: ReturnType<typeof selectRestoreRows>): string {
+        expect(v.ok).toBe(false);
+        if (v.ok) throw new Error('unreachable');
+        return v.reason;
+    }
+
+    it("'[]' refuses — an empty list must not become \"nothing to restore\" with exit 0", () => {
+        expect(refusalReason(selectRestoreRows('[]', snapRows))).toContain('non-empty');
+    });
+
+    it('a bare JSON string refuses — new Set("oops") iterates as CHARACTERS, matching 0 rows', () => {
+        // The pre-fix code would silently produce 0 candidates and exit 0.
+        expect(selectRestoreRows('"oops"', snapRows).ok).toBe(false);
+    });
+
+    it("mixed-type entries ('[\"and ben jerry\", 3]') refuse — no silent partial filter", () => {
+        // Pre-fix: the 3 was dropped by Set membership and 1 of 2 requested rows
+        // restored, with exit 0 and no report of the difference.
+        expect(refusalReason(selectRestoreRows('["and ben jerry", 3]', snapRows))).toContain('non-string');
+    });
+
+    it('empty / whitespace / truncated keys files refuse instead of crashing or passing', () => {
+        for (const bad of ['', '   ', '["and ben jerry"', '{"keys": []}', '["a", ""]']) {
+            expect(selectRestoreRows(bad, snapRows).ok).toBe(false);
+        }
+    });
+
+    it('a requested key ABSENT from the snapshot refuses — the mirror of evictGuard unbacked-keys', () => {
+        // Pre-fix: silently intersected away — partitionRestore never saw it,
+        // skipReportLines never printed it, exit 0 while the row stayed gone.
+        const reason = refusalReason(
+            selectRestoreRows('["and ben jerry", "never snapshotted key"]', snapRows),
+        );
+        expect(reason).toContain('NOT in the snapshot');
+        expect(reason).toContain(JSON.stringify('never snapshotted key'));
+    });
+
+    it('ONE unbacked key refuses the ENTIRE run — no restore-what-we-can', () => {
+        const v = selectRestoreRows('["red wine", "ghost a", "ghost b"]', snapRows);
+        expect(v.ok).toBe(false);
+        if (!v.ok) expect(v.reason).toContain('2 requested key(s)');
+    });
+
+    it('POSITIVE CONTROL — a valid keys file selects exactly the requested snapshot rows', () => {
+        const v = selectRestoreRows('["food test", "red wine"]', snapRows);
+        expect(v.ok).toBe(true);
+        if (v.ok) {
+            expect(v.keys).toEqual(['food test', 'red wine']);
+            expect(v.rows.map(r => r.normalizedForm)).toEqual(['food test', 'red wine']);
+        }
+    });
+
+    it('POSITIVE CONTROL — the real evict-list fixture keys select against the mini snapshot', () => {
+        const snap = mini();
+        const v = selectRestoreRows('["and ben jerry", "propel water"]', snap.rows);
+        expect(v.ok).toBe(true);
+        if (v.ok) expect(v.rows).toHaveLength(2);
     });
 });

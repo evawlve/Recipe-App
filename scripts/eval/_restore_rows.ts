@@ -20,11 +20,19 @@
  *   exit 3 = completed, but >=1 key was NOT restored (already live) — the
  *            printed list is the residue an operator must reconcile by hand
  *   exit 2 = refused / error
+ *
+ * The keys file gets the SAME validation as _evict_rows.ts (parseKeysText), and
+ * additionally every requested key must exist in the snapshot — the mirror of
+ * evictGuard's unbacked-keys refusal. A degenerate-but-valid-JSON keys file
+ * ('[]', a bare string, mixed types) or a keys/snapshot pairing that doesn't
+ * line up must REFUSE (exit 2), never quietly become "restore nothing" or
+ * "restore partial" with exit 0: restore is the post-disaster path, and a false
+ * green here is unrecoverable (playbook §11 class B).
  */
 import 'dotenv/config';
 import * as fs from 'fs';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { loadSnapshot } from './_evict_rows';
+import { loadSnapshot, parseKeysText } from './_evict_rows';
 
 // ---------------------------------------------------------------------------
 // Pure, unit-testable pieces (scripts/eval/__tests__/cache-ops-guards.test.ts)
@@ -75,6 +83,38 @@ export function restoreExitCode(totalSkipped: number): number {
     return totalSkipped > 0 ? 3 : 0;
 }
 
+/**
+ * Validate the optional keys file and select the snapshot rows it names.
+ * Refuses (never silently narrows) when:
+ *   - the file fails parseKeysText (empty / truncated / not a non-empty array
+ *     of non-empty strings) — same gate the evict side runs;
+ *   - ANY requested key is absent from the snapshot. There is nothing to
+ *     restore such a key FROM, so proceeding would strand it with no report:
+ *     partitionRestore never sees it and skipReportLines never prints it,
+ *     breaking the header contract that every unrestored key is counted and
+ *     printed. A missing key means the wrong snapshot or the wrong keys file —
+ *     an operator problem to fix, not a filter to apply.
+ */
+export function selectRestoreRows<R extends { normalizedForm: string }>(
+    keysText: string,
+    snapRows: R[],
+): { ok: true; keys: string[]; rows: R[] } | { ok: false; reason: string } {
+    const parsed = parseKeysText(keysText);
+    if (!parsed.ok) return { ok: false, reason: `keys file: ${parsed.reason}` };
+    const inSnap = new Set(snapRows.map(r => r.normalizedForm));
+    const unbacked = parsed.keys.filter(k => !inSnap.has(k));
+    if (unbacked.length) {
+        return {
+            ok: false,
+            reason:
+                `${unbacked.length} requested key(s) are NOT in the snapshot — there is nothing to restore them from `
+                + `(wrong snapshot? wrong keys file?): e.g. ${unbacked.slice(0, 5).map(k => JSON.stringify(k)).join(' | ')}`,
+        };
+    }
+    const want = new Set(parsed.keys);
+    return { ok: true, keys: parsed.keys, rows: snapRows.filter(r => want.has(r.normalizedForm)) };
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -94,8 +134,17 @@ async function main(): Promise<number> {
 
     let rows = snap.rows as unknown as Prisma.FoodMappingCreateManyInput[];
     if (keysPath) {
-        const want = new Set<string>(JSON.parse(fs.readFileSync(keysPath, 'utf8')));
-        rows = rows.filter(r => want.has(r.normalizedForm));
+        let keysText: string;
+        try { keysText = fs.readFileSync(keysPath, 'utf8'); } catch (e) {
+            console.error(`REFUSING: cannot read keys file ${keysPath}: ${(e as Error).message}`);
+            return 2;
+        }
+        const sel = selectRestoreRows(keysText, snap.rows);
+        if (!sel.ok) {
+            console.error(`REFUSING: ${sel.reason}`);
+            return 2;
+        }
+        rows = sel.rows as unknown as Prisma.FoodMappingCreateManyInput[];
     }
 
     const prisma = new PrismaClient();
