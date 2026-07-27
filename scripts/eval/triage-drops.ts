@@ -1471,6 +1471,16 @@ async function main(): Promise<void> {
             + 'precise read.');
     }
 
+    if (rows.length === 0) {
+        // Fail closed (playbook §11 class B): an empty triage batch must not
+        // read as "nothing to triage" — it means the input was empty or the
+        // DB window matched nothing.
+        console.error(`FAIL: ${inputLabel} yielded ZERO rows — an empty triage batch is a broken input, not a clean one; exit 2.`);
+        process.exitCode = 2;
+        if (prisma) await prisma.$disconnect();
+        return;
+    }
+
     if (wantIncumbent) {
         try {
             prisma = prisma ?? openPrisma();
