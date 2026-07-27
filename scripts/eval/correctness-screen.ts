@@ -1179,8 +1179,8 @@ async function main(): Promise<number> {
             + 'the 4 rows Tier D misses are exactly the 4 Tier L catches.');
     }
     console.log('NOTE this screen grades the rows the batch ADDED. It says "this is wrong"; it never says "here is '
-        + 'the right one", and it does not call hydrateAndSelectServing, so D5/D6 are a reconstruction of the billing '
-        + 'anchor whose agreement with the real one was never measured.');
+        + 'the right one". D5/D6 read the real billing anchor when --with-serving ran (reconstruction/real agreement '
+        + 'measured at 96.3% on batch 01) and abstain to INFO when it did not.');
 
     if (outPath) {
         fs.writeFileSync(outPath, JSON.stringify({
