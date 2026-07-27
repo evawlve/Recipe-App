@@ -25,6 +25,7 @@ import { prisma } from '../db';
 import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
 import { singularizeUnit, inferDiscreteUnit } from './count-label';
+import { num, servingMacros, type Macros } from './fs-serving-macros';
 import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
@@ -82,29 +83,9 @@ interface FsServingView {
     nutrients: Record<string, unknown> | null;
 }
 
-interface Macros { kcal: number; protein: number; carbs: number; fat: number }
-
-function num(v: unknown): number | null {
-    const n = typeof v === 'string' ? parseFloat(v) : typeof v === 'number' ? v : NaN;
-    return Number.isFinite(n) ? n : null;
-}
-
-/**
- * Per-serving macros from a FatSecretServing.nutrients Json. The lane persists
- * the client's normalized field names (calories/protein/carbohydrate/fat);
- * accept kcal/carbs synonyms defensively — Json columns carry no schema.
- */
-function servingMacros(nutrients: Record<string, unknown> | null): Macros | null {
-    if (!nutrients) return null;
-    const kcal = num(nutrients['calories'] ?? nutrients['kcal']);
-    if (kcal == null) return null;
-    return {
-        kcal,
-        protein: num(nutrients['protein']) ?? 0,
-        carbs: num(nutrients['carbohydrate'] ?? nutrients['carbs']) ?? 0,
-        fat: num(nutrients['fat']) ?? 0,
-    };
-}
+// `Macros`, `num` and `servingMacros` moved VERBATIM to ./fs-serving-macros.ts
+// (2026-07-27) so the correctness screen reads serving-level nutrition through
+// the exact function this lane bills from, instead of re-implementing it.
 
 /**
  * Estimate a serving's gram weight from its per-serving macros, used ONLY for
