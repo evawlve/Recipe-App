@@ -1993,12 +1993,19 @@ function runDiff(aPath: string, bPath: string, opts: {
     say('');
     say('REMINDER — a SAME verdict does NOT clear the change. This gate is blind to:');
     say('  (a) retrieval effects (the gather output is frozen);');
-    say('  (b) everything after winner selection — hydration, serving resolution, AI');
-    say('      backfill, the save-time plausibility and brand-mismatch gates, the write;');
+    if (A.withServing && B.withServing) {
+        say('  (b) PARTLY CLOSED this run — hydration and serving resolution DID run and are');
+        say('      reported in the SERVING DIFF above. Still unseen: AI backfill determinism,');
+        say('      the save-time plausibility and brand-mismatch gates, and the write itself.');
+    } else {
+        say('  (b) everything after winner selection — hydration, serving resolution, AI');
+        say('      backfill, the save-time plausibility and brand-mismatch gates, the write.');
+        say('      Re-run with --with-serving to close the serving half of this.');
+    }
     say('  (c) warm-key behaviour (skipCache is forced, so this is COLD resolution);');
-    say('  (d) any case the change is supposed to CREATE — this population contains only');
-    say('      queries that were already asked. Pair this with a hand-written positive');
-    say('      case list that asserts the RIGHT answer.');
+    say('  (d) any case the change is supposed to CREATE — a --from-events or --from-cache');
+    say('      population contains only queries that were already asked. Pair this with a');
+    say('      hand-written positive case list that asserts the RIGHT answer.');
     say('');
 
     if (opts.jsonOut) {
