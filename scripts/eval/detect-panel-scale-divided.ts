@@ -631,7 +631,10 @@ function parseArgs(argv: string[]) {
     };
 }
 
-function prismaStream(prisma: PrismaClient): RowStream {
+/** Exported so repair-panel-scale-divided.ts scans through the EXACT same
+ *  query (playbook §11 class A: a re-implemented stream is a fork that can
+ *  drift from the detector's population). */
+export function prismaStream(prisma: PrismaClient): RowStream {
     return async function* () {
         let cursor: string | undefined;
         for (;;) {
