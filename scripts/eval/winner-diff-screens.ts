@@ -174,6 +174,13 @@ export interface ReplayFile {
     gitDirty: string;
     snapshotTakenAt: string;
     snapshotPopulation: string;
+    /**
+     * The snapshot file this replay was produced from. Recorded so `diff` can find
+     * the noise-floor ledger by construction instead of guessing at it — the guess
+     * only worked when a directory held exactly one snapshot, so every gate run
+     * with both a cold and a regression population misresolved it.
+     */
+    snapshotPath?: string;
     callerHash: string;
     helpersHash: string;
     /** true when `--with-serving` ran the serving stage and populated row.serving */

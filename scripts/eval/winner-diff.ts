@@ -1630,7 +1630,7 @@ async function resolveServings(snap: SnapshotFile, rows: ReplayRow[]): Promise<v
 
 async function buildReplay(
     snap: SnapshotFile, label: string, variant: SelectionVariant, debug: boolean, allowDrift: boolean,
-    withServing = false,
+    withServing = false, snapshotPath?: string,
 ): Promise<{ file: ReplayFile; enriched: number }> {
     const drift = checkDrift(allowDrift);
     announceVariantFit(drift, variant);
@@ -1679,6 +1679,7 @@ async function buildReplay(
         gitDirty: gitDirtyHash(),
         snapshotTakenAt: snap.takenAt,
         snapshotPopulation: snap.population,
+        ...(snapshotPath ? { snapshotPath } : {}),
         callerHash: drift.caller,
         helpersHash: drift.helpers,
         rows,
@@ -2016,11 +2017,22 @@ function runDiff(aPath: string, bPath: string, opts: {
 }
 
 /** Where the snapshot that produced this replay lives, for the receipt lookup. */
+/**
+ * Where the receipt ledger for this replay lives.
+ *
+ * A replay now RECORDS the snapshot it was replayed from, so in the normal case
+ * there is nothing to guess. The guessing below is the pre-2026-07-27 fallback and
+ * it had a bug worth remembering: it only resolved when the directory held EXACTLY
+ * ONE .noise-floor.json. A gate run with both a cold and a regression population
+ * writes two, so it silently fell through to "snapshot.json" — a file that never
+ * exists — and `diff` refused to report with a message pointing at a path nothing
+ * had ever written. That failure looks exactly like a missing noise floor, which
+ * is the one message in this harness you least want to be spurious.
+ */
 function guessSnapshotPath(f: ReplayFile, replayPath: string): string {
     const explicit = argStr('snapshot');
     if (explicit) return explicit;
-    // Replays are conventionally written next to their snapshot; fall back to the
-    // population string only for the message.
+    if (f.snapshotPath && fs.existsSync(receiptPath(f.snapshotPath))) return f.snapshotPath;
     const dir = path.dirname(replayPath);
     const guesses = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => n.endsWith('.noise-floor.json')) : [];
     if (guesses.length === 1) return path.join(dir, guesses[0].replace(/\.noise-floor\.json$/, '.json'));
@@ -2436,13 +2448,39 @@ function gitHead(): string {
  * nothing. Hashing src/lib/mapping/*.ts means two replays with the same value provably
  * ran the same mapping code, which is exactly the property the noise floor needs.
  */
+/**
+ * Directories whose contents decide what a replay produces. `gitDirtyHash` is the
+ * harness's answer to "did the two sides run the same code", and a directory left
+ * out of it is a change the gate cannot tell apart from no change at all.
+ *
+ * src/lib/servings and the serving estimator joined the list on 2026-07-27, with
+ * the serving stage. Before that, a fix living entirely in bare-query-guard.ts
+ * produced an IDENTICAL tree hash on both sides: the BASE noise-floor receipt
+ * satisfied the BRANCH, and the diff header announced "identical tree AND
+ * identical variant — this run is itself a noise-floor check" about a run that
+ * was nothing of the sort.
+ */
+const HASHED_SOURCE_PATHS = [
+    'src/lib/mapping',
+    'src/lib/servings',
+    // The bare-query lexicon getBareQueryDefault() lives here; it decides grams.
+    'src/lib/ai/ambiguous-serving-estimator.ts',
+];
+
 function gitDirtyHash(): string {
     try {
-        const dir = path.join(REPO_ROOT, 'src/lib/mapping');
         const parts: string[] = [];
-        for (const f of fs.readdirSync(dir).sort()) {
-            if (!f.endsWith('.ts')) continue;
-            parts.push(f + ':' + sha(fs.readFileSync(path.join(dir, f), 'utf8')));
+        for (const rel of HASHED_SOURCE_PATHS) {
+            const p = path.join(REPO_ROOT, rel);
+            if (!fs.existsSync(p)) continue;
+            if (fs.statSync(p).isDirectory()) {
+                for (const f of fs.readdirSync(p).sort()) {
+                    if (!f.endsWith('.ts')) continue;
+                    parts.push(rel + '/' + f + ':' + sha(fs.readFileSync(path.join(p, f), 'utf8')));
+                }
+            } else {
+                parts.push(rel + ':' + sha(fs.readFileSync(p, 'utf8')));
+            }
         }
         return sha(parts.join('\n')).slice(0, 8);
     } catch { return 'unknown'; }
@@ -2577,7 +2615,7 @@ async function main() {
         const out = argStr('out');
         if (!snapPath || !out) throw new Error('replay needs --snapshot <file> --out <file> [--label X]');
         const snap = readSnapshot(snapPath);
-        const { file, enriched } = await buildReplay(snap, argStr('label') ?? 'unlabelled', resolveVariant(), debug, allowDrift, withServing);
+        const { file, enriched } = await buildReplay(snap, argStr('label') ?? 'unlabelled', resolveVariant(), debug, allowDrift, withServing, path.resolve(snapPath));
         writeJsonAtomic(out, file);
         printReplaySummary(file, enriched, verbose);
         say('');

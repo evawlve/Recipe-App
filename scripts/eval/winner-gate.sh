@@ -188,14 +188,12 @@ noise_floor_both_trees() {
         echo "introduced nondeterminism into replay — that is itself the finding." >&2
         exit 4
     fi
-    # UPSTREAM BUG WORKAROUND (winner-diff.ts, found 2026-07-26): `diff` derives
-    # the receipt-ledger path from the replay files and resolves it to
-    # "snapshot.noise-floor.json" rather than "<snapshot-basename>.noise-floor.json".
-    # The ledger written above holds exactly the receipts diff asks for, under the
-    # right name, and diff still REFUSES TO REPORT because it reads the wrong path.
-    # Mirror it so a correct run is not blocked by a filename. Remove once fixed.
-    local ledger="${snap%.json}.noise-floor.json"
-    [[ -f "$ledger" ]] && cp "$ledger" "$(dirname "$snap")/snapshot.noise-floor.json"
+    # The ledger-path bug this used to work around is FIXED upstream: a replay now
+    # records its own snapshot path, so `diff` finds the ledger by construction.
+    # The old workaround mirrored the ledger to a shared "snapshot.noise-floor.json",
+    # which was actively harmful once this driver grew a second population — the
+    # regression mirror overwrote the cold one and `diff` refused to report a run
+    # whose receipts were all present and all zero.
 }
 
 echo "[3/5] noise floor: every snapshot x both trees (must be 0)"
