@@ -30,6 +30,7 @@ export function PhoneMock() {
             <p className="text-sm font-bold text-muted">619 kcal</p>
           </div>
 
+          {/* No `badge`: these numbers are invented for the mock. See FoodCard's prop docs. */}
           <FoodCard
             name="Grilled Chicken Breast"
             serving="1 × 100g"
@@ -38,7 +39,6 @@ export function PhoneMock() {
             carbs={0}
             fat={4}
             confidence="exact"
-            badge
           />
 
           <div className="chunky-btn chunky-btn-gray w-full py-2.5 text-sm normal-case tracking-normal">

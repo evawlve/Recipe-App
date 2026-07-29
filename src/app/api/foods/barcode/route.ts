@@ -33,15 +33,45 @@ export async function GET(req: NextRequest) {
     }
 
     const trimmedCode = code.trim();
+
+    type ResolvedDetails = Awaited<ReturnType<typeof resolveFoodDetails>>;
     let foodId: string | null = null;
+    let details: ResolvedDetails | null = null;
 
     // 1. Try FatSecret first
     const fsResult = await lookupFatSecretBarcode(trimmedCode);
     if (fsResult && fsResult.foodId) {
-      foodId = fsResult.foodId;
-      await ensureFoodCached(foodId);
-    } else {
-      // 2. Try OpenFoodFacts
+      // The `fs_` prefix is load-bearing. resolveFoodDetails dispatches PURELY on the id
+      // prefix (`fdc_` / `off_` / `fs_`) and falls through to an AiGeneratedFood lookup
+      // otherwise, while lookupFatSecretBarcode returns a BARE numeric id
+      // (`client.ts`, `id: String(raw.food_id)`). AiGeneratedFood.id is a cuid, so a
+      // numeric id can never match it: the unprefixed call resolved nothing and shipped a
+      // 200 carrying `name: ''`, all-zero nutrition and `servingOptions: []`. Verified on
+      // the live DB — `95103` resolves to name '' / 0 kcal, `fs_95103` to
+      // 'Original Potato Crisps' / 536 kcal / 12 serving options.
+      //
+      // ensureFoodCached still takes the BARE id (it keys AiGeneratedFood) and is
+      // deliberately called with NO `client` option: passing one makes it fetch live and
+      // write FatSecret data into AiGeneratedFood under `aiModel: 'fatsecret-live-import'`,
+      // which cache-search now surfaces as `ai_generated` / `ai_estimated` — real
+      // FatSecret data relabelled as an AI estimate. Fix the prefix, not the transport.
+      const fsFoodId = `fs_${fsResult.foodId}`;
+      await ensureFoodCached(fsResult.foodId);
+      const resolved = await resolveFoodDetails(fsFoodId);
+      // Resolved-ness is judged on the NAME, never on the nutrition. All-zero macros are a
+      // legitimate value, not a miss — FatSecretFood 4041569 'Coke Zero (Can)' really is
+      // 0 kcal / 0 protein / 0 carbs / 0 fat — so gating on isDegenerateNutrition here
+      // would throw away a correct hit. An empty name is the unambiguous "matched no row".
+      if (resolved.name) {
+        foodId = fsFoodId;
+        details = resolved;
+      }
+    }
+
+    // 2. Fall back to OpenFoodFacts — reached both when FatSecret has no hit at all AND
+    //    when a FatSecret hit resolved to nothing, so an unresolvable FatSecret id can no
+    //    longer shadow a healthy OFF answer with an empty 200.
+    if (!details) {
       const offProduct = await getOffProductByBarcode(trimmedCode);
       if (offProduct) {
         const offId = `off_${offProduct.code}`;
@@ -50,16 +80,19 @@ export async function GET(req: NextRequest) {
           name: offProduct.product_name || 'OpenFoodFacts Product',
           rawData: offProduct,
         });
-        foodId = offId;
+        const resolved = await resolveFoodDetails(offId);
+        if (resolved.name) {
+          foodId = offId;
+          details = resolved;
+        }
       }
     }
 
-    if (!foodId) {
+    // 3. Nothing resolved. A 404 is the contract; an empty 200 is the defect.
+    if (!foodId || !details) {
       return NextResponse.json({ error: 'Food not found for barcode' }, { status: 404 });
     }
 
-    const details = await resolveFoodDetails(foodId);
-    
     const responsePayload = {
       id: foodId,
       name: details.name,

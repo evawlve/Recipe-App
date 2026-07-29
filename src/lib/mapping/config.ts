@@ -46,6 +46,45 @@ export const FATSECRET_CACHE_AI_ENABLED = getFlag('FATSECRET_CACHE_AI_ENABLED', 
 export const FATSECRET_RETRIEVAL_ENABLED = getFlag('FATSECRET_RETRIEVAL_ENABLED', false);
 export const FATSECRET_LANE_TIMEOUT_MS = Number.parseInt(process.env.FATSECRET_LANE_TIMEOUT_MS ?? '800', 10);
 export const FATSECRET_LANE_MAX_RESULTS = Number.parseInt(process.env.FATSECRET_LANE_MAX_RESULTS ?? '8', 10);
+
+/**
+ * How many NON-WINNING FatSecret hits a single query may write to our own cache.
+ *
+ * The lane asks FatSecret for FATSECRET_LANE_MAX_RESULTS (8) candidates and used to
+ * persist every one of them. Measured 2026-07-28: 23,814 `FatSecretFood` rows exist and
+ * only 564 back a `FoodMapping` — 97.6% of what we store is speculative sediment for a
+ * food no user ever chose. Retaining the food a user actually asked for is defensible;
+ * retaining seven extra copies of a third party's database per query is a different
+ * thing, and we are mid-attribution-audit with them.
+ *
+ * The WINNER is always persisted regardless of this cap — `FoodMapping.fsId` is a foreign
+ * key to `FatSecretFood.fsId`, so dropping the winner's parent row silently loses the
+ * mapping (that exact failure cost warm batch 01 31.4% of its saves). See
+ * `ensureFatSecretParentPersisted`. This value caps only the speculative extras, so the
+ * true per-query ceiling is this + 1.
+ *
+ * **Default 0 — we persist only foods that actually won a mapping.** This knob is new and
+ * UNCOMMITTED; it has never shipped at any value. It was written at 2 while one objection
+ * stood — that the runners-up might be needed later to back a user override — and Diego
+ * closed that on 2026-07-28: the runners-up are for override, and the FatSecret API is being
+ * wired in for search itself, so the override picker queries FatSecret rather than reading
+ * our cache.
+ *
+ * Do NOT restate that as "the candidates already travel in the parse response". They do not.
+ * `/api/nlp/parse` returns exactly ONE winner per line with no alternates field
+ * (`app/api/nlp/parse/route.ts` item literal; documented in api-contract.md under "One winner
+ * per line — there are no alternates"). `searchFatSecretLane` returning 8 candidates is an
+ * INTERNAL rerank pool, not a wire payload — an easy conflation, and it was made here. The
+ * override feature therefore needs a candidate source built either way, which is precisely
+ * why speculatively storing rows against it buys nothing.
+ *
+ * `ensureFatSecretParentPersisted` refetches a single record on demand if an override picks
+ * one we never stored. Raise this only if you have a measured reason.
+ */
+export const FATSECRET_PERSIST_RUNNERS_UP = Math.max(
+  0,
+  Number.parseInt(process.env.FATSECRET_PERSIST_RUNNERS_UP ?? '0', 10) || 0,
+);
 export const FATSECRET_REFRESH_DAYS = Number.parseInt(process.env.FATSECRET_REFRESH_DAYS ?? '30', 10);
 export const OPENAI_API_BASE_URL = process.env.OPENAI_API_BASE_URL ?? 'https://api.openai.com/v1';
 

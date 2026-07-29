@@ -161,6 +161,18 @@ export async function getCachedFoodWithRelations(id: string) {
   });
 }
 
+// PROVENANCE (corrected 2026-07-28). This module reads `AiGeneratedFood`, whose
+// rows are LLM nutrition estimates — measured on the box that day at 127
+// `openai/gpt-4o-mini` + 2 `mistralai/mistral-nemo` and ZERO fatsecret-derived
+// (the `fatsecret-live-import` path in cache.ts has been dead code since the
+// FatSecret lane replaced it). It nevertheless labelled every row
+// `source: 'fatsecret-cache'` / `verification: 'fatsecret'`, and the mobile
+// client rendered fatsecret's licensed Web Badge on that value — attributing AI
+// guesses to a data provider we are mid-attribution-audit with. Say what these
+// rows are. No consumer branches on the old strings (checked both repos).
+const AI_ESTIMATE_SOURCE = 'ai_generated';
+const AI_ESTIMATE_VERIFICATION = 'ai_estimated';
+
 export function buildCacheCandidate(food: CacheFoodRecord) {
   const nutrients = extractCacheNutrients(food);
   return {
@@ -168,8 +180,8 @@ export function buildCacheCandidate(food: CacheFoodRecord) {
       id: food.id,
       name: food.displayName,
       brand: undefined,
-      source: 'fatsecret-cache',
-      verification: 'fatsecret',
+      source: AI_ESTIMATE_SOURCE,
+      verification: AI_ESTIMATE_VERIFICATION,
       kcal100: nutrients.calories ?? 0,
       protein100: nutrients.protein ?? 0,
       carbs100: nutrients.carbs ?? 0,
@@ -192,13 +204,14 @@ export function buildCacheFoodResponse(
   const { servingOptions, densityGml } = buildServingOptionsForCacheFood(food);
   return {
     id: food.id,
-    fatsecretId: food.id,
+    // `fatsecretId: food.id` was here — an AiGeneratedFood cuid asserted as a
+    // FatSecret food_id. Dropped; `id`/`legacyFoodId` already carry it.
     legacyFoodId: food.id,
     name: food.displayName,
     brand: null,
     categoryId: null,
-    source: 'fatsecret-cache',
-    verification: 'fatsecret',
+    source: AI_ESTIMATE_SOURCE,
+    verification: AI_ESTIMATE_VERIFICATION,
     densityGml,
     kcal100: nutrients.calories ?? 0,
     protein100: nutrients.protein ?? 0,

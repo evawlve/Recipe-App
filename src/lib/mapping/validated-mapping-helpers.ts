@@ -22,7 +22,7 @@ import { markSaveRejected, normalizeClassId, type FunnelSink } from './funnel';
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { normalizeIngredientName, canonicalizeCacheKey } from './normalization-rules';
-import { awaitPendingFatSecretPersist } from './fatsecret-lane';
+import { ensureFatSecretParentPersisted } from './fatsecret-lane';
 
 // Cross-source displacement margin (fs displacement hardening, Jul 2026):
 // how much MORE confident a challenger from a different source family
@@ -875,7 +875,10 @@ export async function saveValidatedMapping(
         // lock and the bare generic key `chicken`. An unbounded version of
         // this fix displaces them.
         if (fsId && !existing) {
-            await awaitPendingFatSecretPersist(fsId);
+            // Also persists the winner outright when the runners-up cap deferred it —
+            // waiting alone is no longer sufficient now that the lane does not write
+            // every hit.
+            await ensureFatSecretParentPersisted(fsId);
         }
 
         await prisma.foodMapping.upsert({

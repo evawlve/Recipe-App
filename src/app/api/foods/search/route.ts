@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // import * as Sentry from '@sentry/nextjs';
 import { withSpan } from '@/lib/obs/withSpan';
 import { capture } from '@/lib/obs/capture';
+import { toClientSource, toWireSource } from '@/lib/attribution';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -198,7 +199,10 @@ export async function GET(req: NextRequest) {
           name: f.name,
           brand: f.brand,
           categoryId: f.categoryId,
-          source: f.source,
+          // Whitelisted, never raw: the legacy Food table stores unconstrained values
+          // (`template`, `verified` on the live box) and the client renders a licensed
+          // trademark off this field. See src/lib/attribution.ts.
+          source: toClientSource(f.source),
           verification: f.verification,
           densityGml: f.densityGml,
           kcal100: f.kcal100,
@@ -421,7 +425,10 @@ export async function GET(req: NextRequest) {
           id: c.id,
           name: c.name,
           brand: c.brandName ?? null,
-          source: c.source === 'openfoodfacts' ? 'off' : (c.source === 'fdc' ? 'usda' : c.source),
+          // Whitelisted, never raw — see src/lib/attribution.ts. Keeps the historical
+          // `off`/`usda` spellings this lane has always sent; an unrecognised corpus value
+          // now becomes null ("no provider claim") instead of passing straight through.
+          source: toWireSource(c.source),
           verification: c.source === 'fdc' ? 'verified' : 'unverified',
           kcal100: c.nutrition?.kcal ?? 0,
           protein100: c.nutrition?.protein ?? 0,
@@ -469,29 +476,48 @@ export async function GET(req: NextRequest) {
         },
       );
     } else if (shouldServeCache) {
-      const cacheResult = await runCacheSearch();
-      if (cacheResult.data.length > 0) {
-        responseData = cacheResult.data;
-        logger.info(
-          'fatsecret_cache_search',
-          {
-            feature: 'mapping_v2',
-            step: 'cache_served',
-            q,
-            cacheCount: cacheResult.count,
-            cacheMode: FATSECRET_CACHE_MODE,
-          },
-        );
-      } else {
-        const localResult = await runLocalSearch();
+      // LADDER ORDER (inverted 2026-07-28): real corpus FIRST, AI estimates last.
+      //
+      // This branch used to serve `runCacheSearch()` — the `AiGeneratedFood`
+      // table — whenever it returned a single row, and only fell through to the
+      // real corpus when it was empty. Measured on the box that day: 129 rows,
+      // 127 `openai/gpt-4o-mini` + 2 `mistralai/mistral-nemo`, ZERO
+      // fatsecret-derived (the `fatsecret-live-import` path in cache.ts is dead
+      // code). So `?s=olive garden chicken alfredo` returned one AI estimate and
+      // never consulted the 1.07M-row OFF corpus, which had three real Olive
+      // Garden records at confidence 0.88. The rows also leave here labelled
+      // `source: 'fatsecret-cache'`, which the mobile client badged as genuine
+      // fatsecret data.
+      //
+      // `runLocalSearch` is not "local-only" despite the flag name: it is
+      // `gatherCandidates`, i.e. OFF + FDC + the live FatSecret lane with
+      // per-source score normalization. It is the search that should answer.
+      // The AI cache stays reachable strictly as a last resort, matching the
+      // mapper, where AI nutrition only fires when nothing won
+      // (`map-ingredient-with-fallback.ts:2277`, `if (!winner)`).
+      const localResult = await runLocalSearch();
+      if (localResult.data.length > 0) {
         responseData = localResult.data;
         logger.info(
           'fatsecret_cache_search',
           {
             feature: 'mapping_v2',
-            step: 'cache_empty_fallback_executed',
+            step: 'corpus_served',
             q,
-            fallbackCount: responseData.length,
+            resultCount: responseData.length,
+            cacheMode: FATSECRET_CACHE_MODE,
+          },
+        );
+      } else {
+        const cacheResult = await runCacheSearch();
+        responseData = cacheResult.data;
+        logger.info(
+          'fatsecret_cache_search',
+          {
+            feature: 'mapping_v2',
+            step: 'corpus_empty_ai_cache_last_resort',
+            q,
+            cacheCount: cacheResult.count,
             cacheMode: FATSECRET_CACHE_MODE,
           },
         );

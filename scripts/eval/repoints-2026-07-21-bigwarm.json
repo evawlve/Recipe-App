@@ -1,0 +1,1271 @@
+[
+ {
+  "seed": "5 hour energy",
+  "target": "off_0719410200152",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Postbiotic Energy Drink - Orange Hour",
+  "key": "hour energy",
+  "note": "Real brand record exists (5-hour Energy Regular Strength Grape, 7.0 kcal/100g, matches ~4 kcal/57ml shot) while the cached ARIH postbiotic can is a token-share "
+ },
+ {
+  "seed": "7up",
+  "target": "off_0065400000968",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Up Creatine Gummies",
+  "key": "up",
+  "note": "Cached record is 'Up Creatine Gummies' (327 kcal/100g, brand 'Up') \u2014 pure token hijack; corpus has the exact US soda off_0065400000968 (7up, 39.4 kcal/100g, 355"
+ },
+ {
+  "seed": "americano",
+  "target": "off_8809603450326",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Americano",
+  "key": "americano",
+  "note": "Cached record is MyProtein americano-flavor whey (83g protein/100g, 26.5g scoop) \u2014 wrong food class; best in-corpus match is off_8809603450326 (Ice Cafe 'Americ"
+ },
+ {
+  "seed": "alfredo sauce",
+  "target": "off_0855019004293",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Alfredo sauce",
+  "key": "alfredo sauce",
+  "note": "Refuted the 'dry mix' theory (record has only 2.7g carbs/100g vs 40-55g for a mix; it is a niche keto/cheese-heavy product with its own 75g serving) but the row"
+ },
+ {
+  "seed": "banquet brown n serve sausage",
+  "target": "off_0031000441104",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "BANQUET Brown N Serve Pancake Sausage Hashbrowns, 5.02 OZ",
+  "key": "banquet brown n serve sausage",
+  "note": "Cached record is a pancake/sausage/hashbrown frozen meal; corpus has exact match off_0031000441104 'Brown 'N Serve Original Fully Cooked Sausage Links' (Banquet"
+ },
+ {
+  "seed": "beef liver",
+  "target": "off_0875045185247",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Beef Liver",
+  "key": "beef liver",
+  "note": "Bulk Nutrients row shows 5.26 kcal and 0.4g protein per 100g \u2014 impossible for beef liver (supplement product with broken panel); off_0875045185247 (Thousand Hil"
+ },
+ {
+  "seed": "beef taco",
+  "target": "fdc_167657",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Beef Taco",
+  "key": "beef taco",
+  "note": "Record is Byron Beef Jerky's taco-flavored jerky (56g protein, 334.6 kcal/100g \u2014 pure jerky profile), not the dish; fdc_167657 (soft taco with ground beef, chee"
+ },
+ {
+  "seed": "bibimbap",
+  "target": "off_8801114182642",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Bibimbap",
+  "key": "bibimbap",
+  "note": "Panel is Atwater-consistent (69.5C/9.5P/8.4F ~= 392 kcal vs 389.5 declared) so it is a valid dry rice-kit panel, not corrupt \u2014 do NOT mark-corrupt; the defect i"
+ },
+ {
+  "seed": "birch benders waffle",
+  "target": "off_0856017003813",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Complete Waffle And Pancake Mix",
+  "key": "birch benders waffle",
+  "note": "Row is dry mix (350 kcal/100g, 0 fat) billed 75g as a prepared waffle; same-brand prepared record exists \u2014 Paleo Toaster Waffles off_0856017003813 with count se"
+ },
+ {
+  "seed": "black tea",
+  "target": "off_0615357124318",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Black tea",
+  "key": "black tea",
+  "note": "Row is a legit sweetened bottled tea (7.68g sugar/100g, '1 BOTTLE (547 ml)') so not corrupt, but wrong record for plain 'black tea' (547g billed = ~170 kcal); b"
+ },
+ {
+  "seed": "blood orange",
+  "target": "off_9324316001072",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Blood orange",
+  "key": "blood orange",
+  "note": "Not panel corruption \u2014 row is an internally consistent bottled beverage ('1 BOTTLE (355 ml)', 3.94g sugar, 14 kcal/100g); the defect is wrong identity for the f"
+ },
+ {
+  "seed": "bloom greens powder",
+  "target": "off_0850042641583",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Greens Powder",
+  "key": "bloom greens powder",
+  "note": "Served record is Revolution Nutrition (verified in DB) while the corpus contains genuine Bloom records: off_0850042641583 'Bloom Greens & Superfoods' (Bloom GS1"
+ },
+ {
+  "seed": "blue bell homemade vanilla",
+  "target": "off_0071899051220",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Red, White, & Blue Bell",
+  "key": "blue bell homemade vanilla extract",
+  "note": "Mapped record is the 'Red, White, & Blue Bell' novelty flavor, not Homemade Vanilla; corpus has exact-name Blue Bell 'Homemade vanilla' off_0071899051220 with a"
+ },
+ {
+  "seed": "broccoli salad deli",
+  "target": "off_0782796014934",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Jason's Deli, Broccoli Florets, For Salad Bar",
+  "key": "broccoli salad deli",
+  "note": "Cached record is plain raw broccoli florets (16 kcal/100g, 0g fat) but the seed means dressed deli broccoli salad; corpus top hit off_0782796014934 'Broccoli sa"
+ },
+ {
+  "seed": "califia farms almond milk",
+  "target": "off_0852909003305",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Califia farms, matcha almond milk with ceremonial green tea",
+  "key": "califia farms almond milk",
+  "note": "Matcha green-tea variant (29 kcal/100g) is the wrong SKU; plain Califia Farms 'Almondmilk' off_0852909003305 exists (14.6 kcal/100g ~ 33 kcal/cup, matches the r"
+ },
+ {
+  "seed": "bulgogi",
+  "target": "off_9310432007098",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Bulgogi",
+  "key": "bulgogi",
+  "note": "DB confirms Sweet Earth (plant-based) with 5.8 prot / 16.2 carb / 2.1 fat per 100g, inconsistent with beef bulgogi; better target off_9310432007098 Hanabi Beef "
+ },
+ {
+  "seed": "capri sun pacific cooler",
+  "target": "off_0087684000953",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Pacific Cooler 12 Oz Bottle",
+  "key": "capri sun pacific cooler",
+  "note": "The matched record really is a 355ml 12oz-bottle SKU, but the canonical Capri Sun Pacific Cooler pouch exists in-corpus as off_0087684000953 (CAPRiSUN, '1 pouch"
+ },
+ {
+  "seed": "buttermilk biscuit",
+  "target": "off_0038259117262",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Buttermilk biscuits",
+  "key": "buttermilk biscuit",
+  "note": "Incumbent off_0015400831628 is unbaked canned-dough (21.5g/biscuit correctly derived from its '2 BISCUITS (43 g)' label; 233 kcal / 2.3g fat per 100g is interna"
+ },
+ {
+  "seed": "chick fil a waffle fries",
+  "target": "off_728242385356408294",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Chick-fil-A sauce, flavored waffle fried chips",
+  "key": "chick fil a waffle fries",
+  "note": "Mapped record is the retail sauce-flavored potato chip bag (500 kcal/100g, 28g serving), while the corpus contains the actual restaurant item 'Chick-Fil-A, Waff"
+ },
+ {
+  "seed": "chester fries",
+  "target": "off_0028400705691",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Chester Fries Carolina Style BBQ",
+  "key": "chester fries",
+  "note": "Plain branded record exists in top results: off_0028400705691 'CHESTER'S FRIES' (Chester's, 535.7 kcal/100g, 28g label serving) is the correct generic match ove"
+ },
+ {
+  "seed": "chipotle chicken bowl",
+  "target": "off_0233153816826",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Chipotle, Chicken",
+  "key": "chipotle chicken bowl",
+  "note": "Record is Chipotle's chicken protein component only (140 kcal/100g, 0g carbs, 118g -> 166 kcal), not a complete bowl; corpus has several full 'Chipotle Chicken "
+ },
+ {
+  "seed": "chow mein",
+  "target": "off_2000000150601",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Chow mein",
+  "key": "chow mein",
+  "note": "74.7g carbs / 0g fat / 352 kcal per 100g is plain dry noodles (0 fat rules out even fried), inflating the prepared-dish seed ~2.3x; Panda Express off_2000000150"
+ },
+ {
+  "seed": "chocolate cupcake",
+  "target": "off_9310645308180",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Chocolate cupcake",
+  "key": "chocolate cupcake",
+  "note": "Nutrition flag refuted: panel is a coherent protein-bar label (servingSize '1 BAR (48 g)', 18.75g protein + 8.3g fiber/100g, barcode prefix 722252 = Clif) \u2014 the"
+ },
+ {
+  "seed": "cinnamon toast crunch",
+  "target": "off_0016000224681",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Cinnamon toast crunch",
+  "key": "cinnamon toast crunch",
+  "note": "Record is a Yoplait CTC-flavored yogurt (107 kcal/100g, yogurt macro profile), not the cereal; repoint to General Mills cereal off_0016000224681 (415 kcal/100g,"
+ },
+ {
+  "seed": "cinnamon roll",
+  "target": "fdc_175034",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Cinnamon roll",
+  "key": "cinnamon roll",
+  "note": "Panel is NOT corrupt \u2014 internally consistent (P2.86/C0.86/F1 -> ~23 kcal) with a 351g (~12 fl oz) serving, i.e. a cinnamon-roll-flavored beverage; defect is wro"
+ },
+ {
+  "seed": "churro",
+  "target": "off_0850000251076",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Churro",
+  "key": "churro",
+  "note": "Panel is NOT corrupt \u2014 sibling barcode off_0858872007883 is Unite Foods 'churro' 1 bar (45g), so this is a churro-flavored protein bar with accurate 22g protein"
+ },
+ {
+  "seed": "cocoa pebbles",
+  "target": "off_0884912356185",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Cocoa Pebbles",
+  "key": "cocoa pebbles",
+  "note": "Panel is internally consistent (33.3C all-sugar + 10F + 0P ~ 223 kcal calc vs 233 listed) \u2014 a licensed candy/novelty product, not a corrupt cereal panel; repoin"
+ },
+ {
+  "seed": "cool whip",
+  "target": "off_0043000009536",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Cool whip",
+  "key": "cool whip",
+  "note": "Corrupt-panel claim refuted \u2014 the row exactly matches Cool Whip FAT FREE (15kcal/0f/3c/1sug/5mg Na per 9g -> 166.67/0/33.33/11.11/0.0556 per 100g, all exact), b"
+ },
+ {
+  "seed": "corned beef",
+  "target": "off_9421902306730",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Corned Beef",
+  "key": "corned beef",
+  "note": "Thrive record bills the whole 340g can ('1 portion (340 g)') AND its panel (118 kcal, 9.4g protein/100g) is an outlier vs every sibling corned beef (213-286 kca"
+ },
+ {
+  "seed": "crunch bar",
+  "target": "off_0050354631498",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Crunch bar",
+  "key": "crunch bar",
+  "note": "Nutrition-corruption hypothesis refuted \u2014 OFF categorizes 0052548558161 as Frozen desserts (a Crunch ice-cream bar; 266 kcal/100g x 79g = 210 kcal/bar is a vali"
+ },
+ {
+  "seed": "dal",
+  "target": "fdc_172421",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Dal",
+  "key": "dal",
+  "note": "Shan 'Dal' is a dry-lentil product (360 kcal/100g, 62g carbs, 24g protein \u2014 dry-legume density) while the seed means the cooked dish; USDA fdc_172421 'Lentils, "
+ },
+ {
+  "seed": "dr pepper",
+  "target": "off_0054900000783",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Dr. Pepper Blackberry Zero Sugar",
+  "key": "dr black pepper",
+  "note": "Plain seed resolved to Blackberry Zero Sugar (0.845 kcal/100g, grams 2.5 absurd); dedup-canonical regular record off_0054900000783 'Dr Pepper' (40.2 kcal/100g, "
+ },
+ {
+  "seed": "egg mcmuffin",
+  "target": "off_83008235847629267178375",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "GF Spiced McMuffin",
+  "key": "mcmuffin",
+  "note": "Venerdi 'GF Spiced McMuffin' is a gluten-free bread muffin (3.3g protein/100g), not the sandwich; corpus has off_83008235847629267178375 'McDonald's, Egg McMuff"
+ },
+ {
+  "seed": "egg noodles",
+  "target": "fdc_169732",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Noodles",
+  "key": "noodles",
+  "note": "Mr Noodles at 442 kcal/100g with 16.3g fat is fried instant ramen (dry egg noodles are ~384 kcal with 4.4g fat, so the dry-vs-cooked defense fails); canonical S"
+ },
+ {
+  "seed": "egg roll",
+  "target": "off_0072180702562",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Rolls",
+  "key": "roll",
+  "note": "Generic 'Rolls' at 440 kcal/63g carbs per 100g is a bread-roll panel, not a Chinese egg roll; off_0072180702562 'Egg Roll' (MINH, 200 kcal/100g, 7.1g protein, 8"
+ },
+ {
+  "seed": "egg salad",
+  "target": "off_0826520904938",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Salad",
+  "key": "salad",
+  "note": "Mapped record is a generic 'Salad' (12.35g carbs, only 7g fat/100g) inconsistent with mayo-based egg salad; corpus has off_0826520904938 'Egg salad' at 200 kcal"
+ },
+ {
+  "seed": "eggo buttermilk waffles",
+  "target": "off_0038000403101",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Eggo Protein Buttermilk Vanilla Waffles",
+  "key": "eggo buttermilk waffles",
+  "note": "Resolved to the Protein Buttermilk Vanilla variant (14.3g prot, 15.7g sugars/100g); the plain SKU exists as off_0038000403101 (brand Eggo, 'Buttermilk Waffles',"
+ },
+ {
+  "seed": "elote",
+  "target": "off_4099100059397",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Elote",
+  "key": "elote",
+  "note": "Record is Blue Diamond elote-flavored almonds (607 kcal, 53.6g fat, 21.4g prot/100g \u2014 an almond panel, not street corn); off_4099100059397 'Elote Style Corn' (A"
+ },
+ {
+  "seed": "e l fudge cookies",
+  "target": "off_0027800067897",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Fudge cookies",
+  "key": "e l fudge cookies",
+  "note": "Incumbent is Foodhold store-brand 'Fudge cookies' but the corpus has the exact branded record off_0027800067897 'E.L. Fudge' (Keebler, 514 kcal/100g; alt off_00"
+ },
+ {
+  "seed": "enchiladas",
+  "target": "fdc_169854",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Enchiladas",
+  "key": "enchiladas",
+  "note": "Nutrition flag refuted \u2014 barcode 0858324006433 is The Real Good Food Co. grain-free low-carb enchiladas and the panel is internally consistent (3c/18.8p/18.8f \u2248"
+ },
+ {
+  "seed": "fage 5% greek yogurt",
+  "target": "off_5201054017432",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Fage total 0% Greek yogurt",
+  "key": "fage 5% greek yogurt",
+  "note": "Incumbent is the Total 0% record (fat100=0, 55 kcal) despite explicit '5%' in seed; corpus top hit off_5201054017432 'Total 5% Fat Greek Yogurt' (FAGE, 93 kcal/"
+ },
+ {
+  "seed": "fairlife 2% ultra filtered milk",
+  "target": "off_0811620020879",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Fat Free Ultra-Filtered Milk",
+  "key": "fairlife 2% ultra filtered milk",
+  "note": "Incumbent is the Fat Free variant (fat100=0, 33.3 kcal/100); off_0811620020879 '2% Reduced Fat ultra-filtered milk' (fairlife, 51 kcal/100, fat 1.93) exists and"
+ },
+ {
+  "seed": "fennel bulb",
+  "target": "off_5000169378182",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Fennel seed",
+  "key": "fennel seed bulb",
+  "note": "Incumbent panel is unmistakably the spice (fat 14.3, fiber 39.3, 321 kcal/100g) for an explicit 'bulb' seed; no FDC fennel exists, but OFF Waitrose 'Fennel' (of"
+ },
+ {
+  "seed": "figs",
+  "target": "off_00532105",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Figs",
+  "key": "figs",
+  "note": "Incumbent panel (275 kcal, 65g carbs, 45g sugars, 40g quarter-cup serving) is dried figs; pipeline convention reads bare produce queries as fresh, and Trader Jo"
+ },
+ {
+  "seed": "filet mignon",
+  "target": "fdc_173117",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Filet mignon",
+  "key": "filet mignon",
+  "note": "off_2890095003530 is a French variable-weight-barcode record (98 kcal / 0.8g fat / 22.6g protein per 100g = French filet mignon i.e. pork tenderloin, panel inte"
+ },
+ {
+  "seed": "flounder",
+  "target": "fdc_174197",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Flounder",
+  "key": "flounder",
+  "note": "off_0035493015279 has 13.95g carbs/7.75g fat per 100g \u2014 a breaded flounder product \u2014 while USDA fdc_174197 'flatfish (flounder and sole species) cooked dry heat"
+ },
+ {
+  "seed": "franks red hot",
+  "target": "off_0041500013558",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Frank's Red Hot",
+  "key": "franks red hot",
+  "note": "DB row confirms brandName 'Goldfish Crackers' with 433 kcal/100g, 70g carbs, 0.5-cup (30g) serving \u2014 the Frank's-flavored cracker, not the sauce \u2014 and off_00415"
+ },
+ {
+  "seed": "fresh oregano",
+  "target": "off_00366175",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Oregano",
+  "key": "oregano",
+  "note": "Record is dried oregano (277.8 kcal, 63.9g carbs/100g = USDA dried profile) billed at flat 100g (servingGrams NULL); corpus has exact-match off_00366175 'Fresh "
+ },
+ {
+  "seed": "fried rice",
+  "target": "off_0782796019809",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "FRIED RICE",
+  "key": "fried rice",
+  "note": "76.6g carbs/100g and servingSize '201 g as prepared (58.5 g)' prove a Continental dry packet mix; quantity scaling off 363 kcal/100g inflates cooked-portion log"
+ },
+ {
+  "seed": "frisee",
+  "target": "off_0084021007378",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Grand parisian velvety green leaf, frisee, sweet carrots, radicchio frosted almonds, dried cranberries, crumbled feta cheese, white balsamic vinaigrette salad kit",
+  "key": "frisee",
+  "note": "Flagged record verified as a full salad kit (130 kcal/100g, 10g fat from almonds/feta/vinaigrette) while plain frisee exists: off_0084021007378 Bonduelle 'Coeur"
+ },
+ {
+  "seed": "frozen yogurt",
+  "target": "off_9349107000997",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Yogurt",
+  "key": "yogurt",
+  "note": "off_5390053000207 is unbranded plain yogurt (56 kcal/100g, 0.2g fat/100g); genuine 'Frozen yogurt' records top the search \u2014 off_9349107000997 (113 kcal/100g), a"
+ },
+ {
+  "seed": "fruity pebbles",
+  "target": "off_0884912129710",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Fruity Pebbles Cereal \u2018N Candy Bites",
+  "key": "fruity pebbles",
+  "note": "Record is the 'Cereal N Candy Bites' candy variant (26.7g fat/100g vs ~4g for real cereal); plain Post 'Fruity Pebbles' off_0884912129710 exists (388.9 kcal/100"
+ },
+ {
+  "seed": "general tso chicken",
+  "target": "off_2375275009996",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "General Tso Chicken",
+  "key": "general tso chicken",
+  "note": "DB confirms brand Lily's Vegan Pantry (vegan substitute, 170 kcal, 8.5g protein/100g) for a plain chicken-dish seed; genuine versions exist \u2014 off_2375275009996 "
+ },
+ {
+  "seed": "girl scout thin mints",
+  "target": "off_0020200070061",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "girl scouts Thin Mints",
+  "key": "girl scout thin mints",
+  "note": "DB confirms Honey Mama's brand with '1 square (14 g)' and a truffle-bar panel (35.7g fat, 7.1g fiber per 100g, vs ~22g fat for real cookies); the genuine Girl S"
+ },
+ {
+  "seed": "fudge brownie",
+  "target": "off_5060426141010",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Fudge brownie",
+  "key": "fudge brownie",
+  "note": "Panel is NOT corrupt \u2014 values are exact n/31-gram-serving scalings (16g fat/10g protein/4g carbs/190kcal per 31g) and kcal math is consistent, i.e. a real keto/"
+ },
+ {
+  "seed": "goose",
+  "target": "fdc_172412",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "goose fat",
+  "key": "goose",
+  "note": "Seed 'goose' means the meat; corpus has USDA goose meat records (fdc_172412 roasted meat+skin 305 kcal/100g, fdc_172414 meat-only 238) while fdc_173572 goose fa"
+ },
+ {
+  "seed": "green tea",
+  "target": "off_5057172181964",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Green tea",
+  "key": "green tea",
+  "note": "off_4971617017353 (Japanese barcode, 250 kcal/50g carbs/0 fat/0 protein per 100g) is a dry-leaf/powder panel \u2014 plausible for leaves so not corrupt, but wrong fo"
+ },
+ {
+  "seed": "hillshire farm ultra thin turkey",
+  "target": "off_0044500201987",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "ROAST BEEF ULTRA THIN",
+  "key": "hillshire farm ultra thin turkey",
+  "note": "Record is ROAST BEEF ULTRA THIN (wrong meat); same-brand 'Ultra Thin Turkey Breast' off_0044500201987 (Hillshire Farm, 125 kcal/100g, 56g portion) ranks #1 \u2014 av"
+ },
+ {
+  "seed": "honeydew melon",
+  "target": "fdc_169911",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Honeydew Melon drink",
+  "key": "honeydew melon",
+  "note": "Flagged record is a beverage; fdc_169911 'Melons, honeydew, raw' (SR Legacy, 36 kcal/100g = canonical USDA value) exists and is the correct target \u2014 top OFF hit"
+ },
+ {
+  "seed": "habanero",
+  "target": "fdc_170106",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Habanero",
+  "key": "habanero",
+  "note": "Incumbent panel (20 kcal + 163mg sodium per 100g, GS1-Canada branded barcode) is a prepared habanero sauce/salsa, not a raw pepper; corpus has fdc_170106 'Peppe"
+ },
+ {
+  "seed": "horchata",
+  "target": "off_0896211003561",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Horchata",
+  "key": "horchata",
+  "note": "Record is a dry horchata mix (internally consistent 425 kcal/100g, 0.25-cup/40g serving), wrong identity for the drink seed; corpus has RTD horchata off_0896211"
+ },
+ {
+  "seed": "jalapeno",
+  "target": "fdc_168576",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Jalapeno",
+  "key": "jalapeno",
+  "note": "Panel is a self-consistent chip/snack profile (481 kcal, 26g fat, 57g carbs \u2014 Atwater ~492), i.e. a jalapeno-flavored snack, while fdc_168576 'jalapeno raw pepp"
+ },
+ {
+  "seed": "jimmy dean breakfast sandwich",
+  "target": "off_0077900490002",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Jimmy Dean Breakfast Burritos",
+  "key": "jimmy dean breakfast sandwich",
+  "note": "Burritos are a distinct JD product line; corpus has true JD sandwiches, best being off_0077900490002 'Croissant Sausage, Egg & Cheese Sandwiches' (1 sandwich=12"
+ },
+ {
+  "seed": "jimmy dean sausage patty",
+  "target": "off_0077900192098",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Jimmy Dean loaded sausage bites",
+  "key": "jimmy dean sausage patty",
+  "note": "'Loaded sausage bites' is a cheese-stuffed snack, not a patty; off_0077900192098 'Fully cooked original pork sausage patties' (2 patties=68g, 412 kcal/100g \u2192 28"
+ },
+ {
+  "seed": "key lime pie",
+  "target": "off_0022518896302",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "SILK Key Lime soy yogurt",
+  "key": "key lime pie",
+  "note": "Seed is the dessert but fdc_175229 is SILK key-lime soy yogurt (88 kcal/100g, flavor-token-only match); corpus has multiple exact Key Lime Pie records \u2014 Willame"
+ },
+ {
+  "seed": "kashi frozen entree",
+  "target": "off_0018627329114",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "no beans canned entree chili",
+  "key": "kashi entree",
+  "note": "fdc_172098 is generic canned no-bean chili (wrong brand and category), while the corpus holds real Kashi frozen entrees search failed to surface \u2014 off_001862732"
+ },
+ {
+  "seed": "korean fried chicken",
+  "target": "off_9360319070042",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Korean Fried chicken",
+  "key": "korean fried chicken",
+  "note": "Unlimeat is a plant-based meat-substitute brand and the panel corroborates imitation (11.8g protein / 35.3g carbs per 100g vs ~17-20g protein for real fried chi"
+ },
+ {
+  "seed": "kodiak protein bar",
+  "target": "off_0705599016707",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Kodiak Protein Oats",
+  "key": "kodiak protein bar",
+  "note": "Corpus holds nine real Kodiak bar records ('kodiak bar' search: Chewy Granola Bar Chocolate Chip off_0705599016707 at 400 kcal/100g, Crunchy Oats & Honey off_00"
+ },
+ {
+  "seed": "kind granola clusters",
+  "target": "off_0602652171789",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Kind, granola bars, dark chocolate mocha",
+  "key": "kind granola clusters",
+  "note": "Record is a 35g granola BAR in a flavored variant (dark chocolate mocha) while the corpus has KIND's actual bagged clusters \u2014 off_0602652171789 'Fruit & nut clu"
+ },
+ {
+  "seed": "ken's steakhouse ranch",
+  "target": "off_5037333332183",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Steakhouse dressing",
+  "key": "ken's steakhouse ranch",
+  "note": "Incumbent off_0041335352129 is Ken's but not ranch \u2014 193 kcal/16g fat/9.7g sugar/0 protein per 100g is a sweet-dressing profile (even Ken's light ranch is 267 k"
+ },
+ {
+  "seed": "kfc mashed potatoes and gravy",
+  "target": "off_86487651478865597580862",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Mashed potatoes",
+  "key": "mashed potatoes and gravy",
+  "note": "Corpus contains the real branded item 'KFC, Mashed Potatoes, Individual' (95 kcal/3g fat/320mg sodium per 100g, matching KFC's published w/-gravy values ~86 kca"
+ },
+ {
+  "seed": "latte",
+  "target": "off_0762111106773",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Latte",
+  "key": "latte",
+  "note": "off_7613039859773 (Nestl\u00e9 barcode prefix) has dry-mix macros (385 kcal/100g, 50.8g carbs, 18.3g protein) \u2014 an instant latte powder, ~7x a prepared latte's ~40-5"
+ },
+ {
+  "seed": "lemon meringue pie",
+  "target": "off_0818546022215",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Lemon meringue pie",
+  "key": "lemon meringue pie",
+  "note": "Jell-O row at 84 kcal/100g is a pudding/pie-filling product (real pie ~268 kcal/100g USDA); corpus has real pies \u2014 off_0818546022215 Granny's Pie Factory 233.6 "
+ },
+ {
+  "seed": "lemon poppy seed muffin",
+  "target": "off_0039779003561",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Lemon Poppy Seed Muffin Bar",
+  "key": "lemon poppy seed muffin",
+  "note": "Record is Nature Valley's ~35g snack BAR (no servingGrams, so bar kcal100 gets billed at 113g muffin weight = ~516 kcal); generic muffin off_0039779003561 (406 "
+ },
+ {
+  "seed": "lean cuisine chicken alfredo",
+  "target": "off_0013800551795",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Lean Cuisine Panko Chicken Romano Bowls",
+  "key": "lean cuisine chicken alfredo",
+  "note": "Exact SKU exists in corpus: off_0013800551795 'Chicken Alfredo - Lean Cuisine' 104.4 kcal/100g x 297g package = ~310 kcal / 19g protein, matching the real label"
+ },
+ {
+  "seed": "lightlife tempeh bacon",
+  "target": "off_0043454020507",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Organic Tempeh",
+  "key": "lightlife tempeh bacon",
+  "note": "The named product exists: off_0043454020507 'Smoky Bacon TEMPEH' by Lightlife (157.9 kcal/100g, 4 slices/76g serving, not corrupt/dup); billed row is plain Ligh"
+ },
+ {
+  "seed": "liquid iv lemon lime",
+  "target": "off_0810125974083",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Sugar Free Lemon Lime",
+  "key": "liquid iv lemon lime",
+  "note": "Seed lacks 'sugar free' but resolved to the Sugar Free variant (whose panel is also internally corrupt: 20 kcal/100g + 100g serving vs sibling off_0850039286728"
+ },
+ {
+  "seed": "little debbie swiss rolls",
+  "target": "off_0024300041303",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Little Debbie Swiss Rolls Cereal",
+  "key": "little debbie swiss rolls",
+  "note": "Cached record is Kellogg's cereal tie-in (brand Kellogg's, '1.25 cup (40g)', 5g fiber), not the snack cake; off_0024300041303 'Swiss Rolls' by Little Debbie at "
+ },
+ {
+  "seed": "lmnt raspberry",
+  "target": "off_0810183490280",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Raspberry",
+  "key": "lmnt raspberry",
+  "note": "Cached record is unbranded raspberry fruit (110g, 60 kcal/100g, 12g sugars \u2014 LMNT is sugar-free), while off_0810183490280 'Raspberry Salt' by LMNT exists as the"
+ },
+ {
+  "seed": "light beer",
+  "target": "off_226374510851519500808",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Light ginger beer",
+  "key": "light beer",
+  "note": "Ginger beer is a non-alcoholic soda, not beer; corpus has zero FDC beer records and all Bud Light restaurant rows are corrupt (1-3 kcal/100g), but Yard House 'B"
+ },
+ {
+  "seed": "marie callenders pot pie",
+  "target": "off_0021131905828",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "MARIE CALLENDERS Cherry Pie, 43 OZ",
+  "key": "marie callenders pot pie",
+  "note": "Cherry dessert pie is the wrong food despite brand match; DB-verified clean target off_0021131905828 (Marie Callender's Chicken Pot Pie, 1 pie/283g, 216 kcal/10"
+ },
+ {
+  "seed": "macaroni",
+  "target": "fdc_168904",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Macaroni",
+  "key": "macaroni",
+  "note": "Dry macaroni (clean 361-kcal dry panel) billed at 100g overbills cooked intent ~2.3x, and live retrieval for plain 'macaroni' already ranks fdc_168904 'Macaroni"
+ },
+ {
+  "seed": "margarita",
+  "target": "off_0869043000350",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Margarita",
+  "key": "margarita",
+  "note": "Panel is NOT corrupt \u2014 370 kcal / 93.5g carbs / 91.3g sugars / 0 fat+protein is internally consistent (kcal\u22484x carbs, scales from a ~23g powder serving), so thi"
+ },
+ {
+  "seed": "matcha latte",
+  "target": "off_9350728002741",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Matcha Latte",
+  "key": "matcha latte",
+  "note": "355 kcal / 75g carbs per 100g is a powder mix (impossible for a liquid) billed at flat 100g; corpus has Tropeaka Matcha Latte off_9350728002741 with prepared-dr"
+ },
+ {
+  "seed": "mint leaves",
+  "target": "fdc_173475",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Mint",
+  "key": "mint",
+  "note": "off_0844911002995 is a breath-mint candy (servingSize '2 PIECES (1.6 g)', 62.5g carbs / 0 protein / 0 sugars = sugar-alcohol mints), so the panel is plausible f"
+ },
+ {
+  "seed": "nutmeg",
+  "target": "fdc_171326",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Nutmeg baby",
+  "key": "nutmeg",
+  "note": "'Nutmeg baby' (67 kcal, 3.5g protein/100g) is a baby-food profile, not the 525 kcal/100g spice; verified USDA 'nutmeg ground spices' fdc_171326 (525 kcal/100g, "
+ },
+ {
+  "seed": "oat milk yogurt",
+  "target": "off_0036632072597",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "OAT milk",
+  "key": "oat milk yogurt",
+  "note": "Resolved record is plain oat milk beverage (59 kcal/100g, 0.6g protein), not a yogurt; Silk 'Oat yeah vanilla oatmilk yogurt' off_0036632072597 is the corpus to"
+ },
+ {
+  "seed": "papa johns cheese pizza",
+  "target": "off_71323627437882266",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Papa John's, Cheese, For Original Crust Medium",
+  "key": "papa johns cheese pizza",
+  "note": "DB confirms incumbent is the cheese topping component at 52 kcal/100g (also a likely per-serving-as-per-100g panel; cheese should be ~300) serving ~15 kcal for "
+ },
+ {
+  "seed": "oscar mayer bologna",
+  "target": "off_0044700008706",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Oscar Mayer, Bologna",
+  "key": "oscar mayer bologna",
+  "note": "Corrupt-panel theory refuted: 1.79g fat/10.7g protein per 100g can't be a per-slice regular-bologna panel (regular slice = ~8g fat/3g protein) \u2014 scaled to 28g i"
+ },
+ {
+  "seed": "passion fruit",
+  "target": "fdc_169108",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Passion Fruit",
+  "key": "passion fruit",
+  "note": "Incumbent off_0850379003177 (no brand, no serving) shows 222 kcal/66.7g carbs/0 protein/0 fat/7.33g sodium per 100g \u2014 impossible for fresh fruit and reads like "
+ },
+ {
+  "seed": "orzo",
+  "target": "off_5059697257629",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "ORZO",
+  "key": "orzo",
+  "note": "Dry-pasta record (349 kcal/100g, servingGrams NULL) billed flat 100g for a bare grain seed users mean cooked; corpus has 'Free From Orzo (Cooked Weight)' off_50"
+ },
+ {
+  "seed": "pad thai noodles",
+  "target": "fdc_168914",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Pad Thai Noodles",
+  "key": "pad thai noodles",
+  "note": "Dry rice-noodle record (345 kcal/100g, servingGrams NULL, flat 100g) for a seed logged as consumed noodles; USDA-verified 'cooked rice noodles' fdc_168914 (108 "
+ },
+ {
+  "seed": "olive garden italian dressing",
+  "target": "off_0070200838079",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Olive Garden Light Italian Dressing",
+  "key": "olive garden italian dressing",
+  "note": "Cached Light variant is 93.75 kcal/100g while the corpus has a clean Olive Garden-branded regular 'Italian dressing' record (off_0070200838079, 267 kcal/100g, 2"
+ },
+ {
+  "seed": "panera broccoli cheddar soup",
+  "target": "off_0077958693912",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Broccoli Cheddar Soup",
+  "key": "panera broccoli cheddar soup",
+  "note": "Corpus has Panera Bread-branded off_0077958693912 (99 kcal/100g, 1 cup/242g serving, clean flags) matching the real ~240 kcal/cup product, while the cached row "
+ },
+ {
+  "seed": "pho",
+  "target": "off_0688267151040",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Pho",
+  "key": "pho",
+  "note": "Incumbent is a dry-kit/corrupt record (333 kcal, 80g carbs, 40g sugars, 0 protein per 100g), while off_0688267151040 (Ahold 'Pho soup rice noodle soup with herb"
+ },
+ {
+  "seed": "peaches and cream oatmeal packet",
+  "target": "off_0030000018002",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Overnight Oats Peaches And Cream",
+  "key": "peaches and cream rolled oats",
+  "note": "Seed is a dry instant-oatmeal packet but incumbent is Mush refrigerated wet overnight oats (120.6 kcal/100g, ~48 kcal at 40g); off_0030000018002 Quaker Peaches "
+ },
+ {
+  "seed": "penne pasta",
+  "target": "off_5099839718397",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Penne Pasta",
+  "key": "penne pasta",
+  "note": "Incumbent is Ohio City Pasta fresh-refrigerated uncooked penne (271 kcal/100g) while the project's cooked-grain convention reads plain 'penne pasta' as cooked; "
+ },
+ {
+  "seed": "plum",
+  "target": "off_0799424001105",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Plum organics",
+  "key": "plum",
+  "note": "Incumbent is Plum Organics baby food (2.2g fat/2.65g protein per 100g, impossible for raw plum); BRANDT 'Plums' off_0799424001105 exists with near-exact USDA ra"
+ },
+ {
+  "seed": "one bar maple glazed donut",
+  "target": "off_00115650",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Maple Glazed Donut",
+  "key": "maple glazed donut",
+  "note": "DB confirms incumbent off_0810137322131 is Ryse Protein powder (74.6g protein/100g, 1 scoop 33.5g \u2014 the known ryse poisoning path); exact match off_00115650 'On"
+ },
+ {
+  "seed": "pomelo",
+  "target": "off_8935268200645",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Pomelo Flavored Drink",
+  "key": "pomelo",
+  "note": "Incumbent is a Hema pomelo-flavored bottled drink at conf 1.0; off_8935268200645 Wildboi 'Juicy Honey Pomelo' matches USDA raw pomelo almost exactly (43 kcal, 0"
+ },
+ {
+  "seed": "pound cake",
+  "target": "off_30063143",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Cake",
+  "key": "cake",
+  "note": "Compound defect: parser ate 'pound' as a weight unit (453.6g = exactly 1 lb) and retrieved bare 'Cake', but literal Pound Cake records exist (off_30063143 unbra"
+ },
+ {
+  "seed": "protein pancakes",
+  "target": "off_0679844103415",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Protein pancakes",
+  "key": "protein pancakes",
+  "note": "65g protein/100g (Atwater-consistent with 385 kcal) is dry protein-powder mix, impossible for prepared pancakes; prepared record exists: off_0679844103415 Premi"
+ },
+ {
+  "seed": "protein smoothie",
+  "target": "off_9310232962610",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Protein smoothie",
+  "key": "protein smoothie",
+  "note": "Incumbent panel is internally consistent (not corrupt) but is a low-protein fruit-smoothie SKU at 2.2g protein/100g (~7g per 325ml bottle), contradicting the se"
+ },
+ {
+  "seed": "plantain",
+  "target": "off_0853687004638",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Plantain",
+  "key": "plantain",
+  "note": "Latin Deli panel (190 kcal, 8.57g fat, 13.3g sugars /100g) is a fried maduros product vs raw plantain ~122 kcal/0.4g fat; corpus has a clearly better whole-plan"
+ },
+ {
+  "seed": "ragu spaghetti sauce",
+  "target": "off_0036200430347",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Spaghetti",
+  "key": "ragu spaghetti sauce",
+  "note": "off_5050665049024 is Ragu-brand dry spaghetti pasta (357 kcal, 72g carbs/100g), not sauce; corpus search returns Ragu 'Pasta sauce' off_0036200430347 (70 kcal/1"
+ },
+ {
+  "seed": "raising canes chicken fingers",
+  "target": "off_0296124805571",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Candy Canes",
+  "key": "raising canes chicken fingers",
+  "note": "Incumbent is literal candy (97.3g carbs/67.7g sugars/1g protein per 100g) \u2014 pure token hijack; no Cane's-branded record exists in corpus, but off_0296124805571 "
+ },
+ {
+  "seed": "purple sweet potato",
+  "target": "fdc_168482",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Purple Sweet Potato",
+  "key": "purple sweet potato",
+  "note": "Nutrition-corruption theory refuted \u2014 panel is Atwater-consistent (51.8c/3p/0.9f \u2248 227 kcal \u2248 230), so it's a genuine dried sweet-potato snack (FYN, CN barcode)"
+ },
+ {
+  "seed": "ratio keto yogurt",
+  "target": "off_0070470165943",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Ratio keto friendly",
+  "key": "ratio keto yogurt",
+  "note": "Incumbent panel (240 kcal/18f/10c/11p at 41g) is exactly the Ratio keto BAR per-bar label stored as per-100g (also a per-serving-as-per-100g mark-corrupt candid"
+ },
+ {
+  "seed": "rold gold pretzels",
+  "target": "off_0028400413640",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Rold Gold Pretzels, Glazed Pretzel Bites, Salted Caramel, Salted Caramel",
+  "key": "rold gold pretzels",
+  "note": "Incumbent is the salted-caramel glazed dessert variant (16.1g fat, 28.6g sugar/100g) while a clean plain record exists \u2014 off_0028400413640 'Rold Gold, Thins Pre"
+ },
+ {
+  "seed": "rice pilaf",
+  "target": "off_4061462289286",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Rice Pilaf",
+  "key": "rice pilaf",
+  "note": "Rice A Roni record carries dry-mix-scale energy (250 kcal/100g) with a bogus '1 portion (100 g)' serving, ~2x cooked pilaf, while off_4061462289286 (Park Street"
+ },
+ {
+  "seed": "serious mass gainer",
+  "target": "off_0748927063776",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "CLEAN MASS XL THE CLEAN GAINER",
+  "key": "serious mass gainer",
+  "note": "Row resolves to PVL Gold Series Clean Mass XL while the corpus holds 7 genuine Optimum Nutrition Serious Mass records; off_0748927063776 has the correct brand, "
+ },
+ {
+  "seed": "scallops",
+  "target": "fdc_167742",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Scallops",
+  "key": "scallops",
+  "note": "Panel is Atwater-consistent (16.8p/8.4f/1.9c=150.4 kcal), so not corrupt \u2014 it's a genuine prepared product (likely garlic-butter scallops, AU barcode), but plai"
+ },
+ {
+  "seed": "shawarma",
+  "target": "off_5060749792944",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Shawarma",
+  "key": "shawarma",
+  "note": "2.4g protein with 11.7f/11c/5.5 sugar is a sauce/paste profile (near-identical to off_96204788 Shawarma Paste), impossible for a meat dish; corpus has plausible"
+ },
+ {
+  "seed": "skirt steak",
+  "target": "fdc_171787",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Skirt Steak",
+  "key": "skirt steak",
+  "note": "Carnivore Snax record is a dehydrated meat chip (571 kcal, 53.6g protein/100g \u2014 impossible for fresh skirt steak at ~220-255 kcal cooked); USDA inside-skirt coo"
+ },
+ {
+  "seed": "silk almond yogurt",
+  "target": "off_0036632078759",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Silk Almond",
+  "key": "silk almond yogurt",
+  "note": "Record is Silk unsweetened almond MILK (30 kcal/100g, 1g protein, 240ml portion serving), while the actual product 'Silk Almondmilk Yogurt' off_0036632078759 (1"
+ },
+ {
+  "seed": "slate chocolate milk",
+  "target": "off_0850029742685",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Milk Chocolate",
+  "key": "slate chocolate milk",
+  "note": "Nutrition-corruption theory refuted \u2014 panel is Atwater-consistent and '1 stick (27 g)' yields exactly 20g protein/100 kcal per stick (Slate's genuine powder-sti"
+ },
+ {
+  "seed": "snickerdoodle cookie",
+  "target": "off_0850042133545",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "snickerdoodle cookie",
+  "key": "snickerdoodle cookie",
+  "note": "Record is Hershey's Kisses snickerdoodle-flavored candy (brand 'Hershey's Kisses', 9 pieces/41g = 4.6g each) billed as one 4.6g piece for a cookie seed; corpus "
+ },
+ {
+  "seed": "squirt soda",
+  "target": "off_0078000016161",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Soda",
+  "key": "soda",
+  "note": "Mapped record is Stubborn Soda LLC generic 'Soda' with a diet-style 7.6 kcal/100g panel and absurd 0.25g serving, while genuine Squirt records exist \u2014 off_00780"
+ },
+ {
+  "seed": "stouffers lasagna",
+  "target": "off_0013800103215",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Lasagna Noodles",
+  "key": "stouffers lasagna noodles",
+  "note": "Record is Schnucks DRY lasagna noodles (375 kcal/100g pasta), wrong brand and form; corpus has multiple Stouffer's frozen entrees \u2014 off_0013800103215 Classic La"
+ },
+ {
+  "seed": "subway meatball sub",
+  "target": "off_0681131284851",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Subway, Meatball Marinara Salad",
+  "key": "subway meatball sub",
+  "note": "Record is the Meatball Marinara SALAD with a corrupt panel (17.8 kcal/100g x 426g = 76 kcal); the exact-brand 'Meatball Marinara, 6 In' (off_2060865842847320586"
+ },
+ {
+  "seed": "subway turkey sub",
+  "target": "off_0034747001419",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Subway, Turkey Breast",
+  "key": "subway turkey sub",
+  "note": "Record is deli turkey breast MEAT (28.1g protein/100g, internally consistent panel, 57g/2oz serving -> 98 kcal), not a sandwich; corpus has real subs \u2014 off_0034"
+ },
+ {
+  "seed": "starfruit",
+  "target": "fdc_171715",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Pineapple starfruit",
+  "key": "starfruit",
+  "note": "off_0070885100591 panel (200 kcal, 48g carbs, 46.7g sugars, 0 fat/protein per 100g) is a dried/sweetened fruit product, while fdc_171715 '(starfruit) raw caramb"
+ },
+ {
+  "seed": "spanish rice",
+  "target": "off_0054800424078",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Spanish Rice",
+  "key": "spanish rice",
+  "note": "Panel is a legit dry seasoned rice mix (321 kcal/100g, 73g carbs, internally consistent) so not corrupt, but flat-100g dry density is ~2.2x over for the cooked "
+ },
+ {
+  "seed": "sweet tea",
+  "target": "off_0651538067005",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "sweet tea",
+  "key": "sweet tea",
+  "note": "Panel is internally consistent (1.25g sugar ~ 4.17 kcal) so it's a genuine zero/low-sugar tea record, i.e. wrong product for the seed; Sweet Leaf Sweet Tea off_"
+ },
+ {
+  "seed": "tabasco",
+  "target": "fdc_174528",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Tabasco Sriracha",
+  "key": "tabasco",
+  "note": "Record is the Sriracha variant (121 kcal/100g, 19g sugar) with servingGrams NULL so 41.5g (~8 tsp) is a fallback estimate; USDA classic Tabasco pepper sauce fdc"
+ },
+ {
+  "seed": "taco bell fire sauce",
+  "target": "off_0041512087127",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Taco Bell Fire Habanero cheese",
+  "key": "taco bell fire sauce",
+  "note": "Record is a Heinz 'Taco Bell Fire Habanero cheese' (393 kcal, 28.6g fat/100g) \u2014 wrong food for a ~0-kcal sauce packet; no Taco Bell fire/hot sauce exists in cor"
+ },
+ {
+  "seed": "tapatio",
+  "target": "fdc_174527",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Tapatio Mac N' Cheese",
+  "key": "tapatio",
+  "note": "No genuine Tapatio salsa picante exists in the corpus (checked name/brand ILIKE and 0077606* barcodes \u2014 only mac n' cheese, ramen, chips, nuts), but generic fdc"
+ },
+ {
+  "seed": "tom yum soup",
+  "target": "off_0842703000587",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Tom yum soup",
+  "key": "tom yum soup",
+  "note": "Panel (64g carbs/36g sugars/6.88g sodium per 100g) is self-consistent with a dry instant-mix product, so mark-corrupt is refuted; the defect is wrong record for"
+ },
+ {
+  "seed": "tomatillo",
+  "target": "off_0076397008288",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Tomatillo Salsa",
+  "key": "tomatillo",
+  "note": "Record is Aldi salsa (28g condiment serving) but corpus top result off_0076397008288 'Tomatillos' (La Costena) is actual tomatillos at 31 kcal/100g, matching US"
+ },
+ {
+  "seed": "trader joes orange chicken",
+  "target": "off_00665636",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Trader Joes Organic Free Range Chicken",
+  "key": "trader joes orange chicken",
+  "note": "Flagged record has raw-chicken macros (116 kcal, 21.4g protein, 0 carbs \u2014 no breading/sauce possible); corpus contains the exact intended SKU off_00665636 'Mand"
+ },
+ {
+  "seed": "vanilla greek yogurt",
+  "target": "fdc_170907",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Vanilla Extract",
+  "key": "vanilla extract greek yogurt",
+  "note": "DB confirms record is Dr Oetker Vanilla Extract (287 kcal/100g, 72g carbs, 55g sugars) at 2.5g \u2014 wrong food entirely; corpus has USDA-verified generic greek van"
+ },
+ {
+  "seed": "vanilla latte",
+  "target": "off_9421907709147",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Vanilla latte",
+  "key": "vanilla latte",
+  "note": "DB confirms 403 kcal/100g with 69.8g carbs / 50.3g sugars \u2014 an instant latte powder mix panel, ~7-10x a prepared latte; ready-to-drink beverage records exist, t"
+ },
+ {
+  "seed": "vanilla milkshake",
+  "target": "off_5022296009913",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Vanilla Milkshake",
+  "key": "vanilla milkshake",
+  "note": "Panel is NOT corrupt \u2014 macros reconcile exactly (69.4P*4 + 2.8C*4 + 1.4F*9 \u2248 305.6 kcal), a self-consistent whey-isolate protein powder flavored 'Vanilla Milksh"
+ },
+ {
+  "seed": "venison",
+  "target": "off_9908297729400",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Venison",
+  "key": "venison",
+  "note": "Epic record is a 37g meat-snack bar (351 kcal, 24.3g fat/100g) not plain venison (~120-170 kcal/100g); no FDC deer/game record exists in corpus, but Hampshire G"
+ },
+ {
+  "seed": "wendys spicy chicken sandwich",
+  "target": "off_209752824208588986029219",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Spicy Chicken Wendys pringles",
+  "key": "wendys spicy chicken sandwich",
+  "note": "Flagged row is Pringles chips (536 kcal, 32g fat, 57g carbs, 3.6g protein/100g); Wendy's-branded sandwich record exists with servingGrams=100 giving correct 513"
+ },
+ {
+  "seed": "wendys baconator",
+  "target": "off_00084040",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Wendy's Baconator",
+  "key": "wendys baconator",
+  "note": "Flagged row is a Cheez-It Baconator-flavored cracker (26 crackers/30g, 63.3g carbs/100g); Wendy's 'Baconator' off_00084040 has a sound per-100g panel (282 kcal)"
+ },
+ {
+  "seed": "wendys frosty",
+  "target": "off_2331885282747866779045",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Wendys Chocolate Frosty Cereal",
+  "key": "wendys frosty",
+  "note": "Flagged row is Kellogg's Frosty-flavored dry cereal (85.7g carbs/100g); Wendy's Classic Chocolate Frosty Small exists (345 kcal at servingGrams=100 \u2248 real 340 k"
+ },
+ {
+  "seed": "whopper",
+  "target": "off_0098000005538",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Whoppers",
+  "key": "whopper",
+  "note": "Record is Hershey's Whoppers candy (463 kcal/76g carbs per 100g) but seed means the BK burger; only sane burger record is off_0098000005538 Whopper Barbecue Bac"
+ },
+ {
+  "seed": "whoppers candy",
+  "target": "off_0066259939713",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Cadbury kit kat reeses whoppers chocolate candy",
+  "key": "whoppers candy",
+  "note": "Current pick is a jumbled Cadbury/KitKat/Reese's assortment record at flat 100g; corpus has the exact product off_0066259939713 'Whoppers' (brand Hershey, 463.4"
+ },
+ {
+  "seed": "white castle frozen sliders",
+  "target": "off_0082988010189",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "White Castle, Fish Slider",
+  "key": "white castle sliders",
+  "note": "Fish Slider is a niche variant; corpus has the flagship frozen SKU off_0082988010189 'Classic Cheese Sliders' (White Castle, 298 kcal/100g, real '2 SANDWICHES ("
+ },
+ {
+  "seed": "xtend bcaa",
+  "target": "off_0842595116168",
+  "class": "identity",
+  "severity": "agent-confirmed",
+  "wasFood": "Xtend BCAAS",
+  "key": "xtend bcaa",
+  "note": "The 384 kcal/100g alone is defensible (sibling Xtend 'The Original BCAA' legitimately shows 388 kcal/100g from aminos), but the suspect's carb-dominant panel (7"
+ }
+]

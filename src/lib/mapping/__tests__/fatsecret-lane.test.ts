@@ -26,6 +26,12 @@ jest.mock('../config', () => {
         },
         FATSECRET_LANE_TIMEOUT_MS: 800,
         FATSECRET_LANE_MAX_RESULTS: 8,
+        // Pinned, NOT inherited from `actual`. This suite is about HOW a speculative persist
+        // is registered, drained and awaited — machinery that only exists when there is
+        // something to persist. The shipped default is 0 (winner-only), which would make
+        // every persist-race test here vacuously green by never writing at all. The cap
+        // itself is covered in fatsecret-persist-cap.test.ts.
+        FATSECRET_PERSIST_RUNNERS_UP: 8,
         // Force "no credentials" for the singleton path — tests inject clients.
         FATSECRET_CLIENT_ID: '',
         FATSECRET_CLIENT_SECRET: '',

@@ -10,6 +10,14 @@ out/
 build/
 
 # Environment variables
+# Catch-all: every .env* variant is ignored, .env.example is the one exception.
+# The enumerated list below used to be the whole rule, and it missed real files —
+# `.env.bak.pre-gemini-20260719` sat untracked-but-stageable for 9 days because
+# `.env*.backup` does not match `.env.bak.*`. Keep the catch-all first; add
+# nothing to the list below expecting it to be the protection.
+.env*
+!.env.example
+
 .env
 .env.local
 .env.development.local

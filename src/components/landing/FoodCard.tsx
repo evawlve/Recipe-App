@@ -20,7 +20,19 @@ export type FoodCardProps = {
   carbs: number;
   fat: number;
   confidence?: keyof typeof CONFIDENCE;
-  /** Show the official fatsecret badge under the serving line. */
+  /**
+   * Show the official fatsecret badge under the serving line.
+   *
+   * ONLY set this when the card's numbers were genuinely supplied by FatSecret. It was set
+   * unconditionally on three fabricated marketing cards ("Grilled Chicken Breast", "Banana")
+   * whose macros are invented, which put FatSecret's licensed mark on data they never
+   * supplied — on the PUBLIC site, while an attribution audit with them is open. Removed
+   * 2026-07-28.
+   *
+   * The site-wide "Powered by fatsecret" placements (`page.tsx`, the footer) are a general
+   * platform credit and are unaffected: this prop is a per-datum provenance CLAIM, which is
+   * a different thing, and is only truthful for a real FatSecret record.
+   */
   badge?: boolean;
 };
 

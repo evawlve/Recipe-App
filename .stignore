@@ -2,7 +2,7 @@ node_modules
 .next
 .git
 .git.corrupted
-data
+/data
 tmp
 logs
 out
@@ -11,3 +11,4 @@ build
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+.env*

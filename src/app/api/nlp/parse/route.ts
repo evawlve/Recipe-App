@@ -383,15 +383,21 @@ export async function POST(req: NextRequest) {
         sodium: Number(((details.nutritionPer100g.sodium100 ?? 0) * scale).toFixed(1)),
       };
 
-      const mappedSource = (mapped as any).source;
-      let standardSource: 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated' = 'fatsecret';
-      if (mappedSource === 'fdc') {
-        standardSource = 'fdc';
-      } else if (mappedSource === 'openfoodfacts') {
-        standardSource = 'openfoodfacts';
-      } else if (mappedSource === 'ai_generated' || mappedSource === 'ai_estimated') {
-        standardSource = 'ai_estimated';
-      }
+      // Provenance is the RESOLVED RECORD's (`details.source`, derived from the foodId prefix
+      // in resolve-payload.ts), never `mapped.source` — that field is the PIPELINE STAGE, not
+      // a provider. It takes eight values (`ai`, `ai_generated`, `cache`, `early_cache`,
+      // `fatsecret`, `fdc`, `full_pipeline`, `openfoodfacts`) and the chain here handled four,
+      // so `ai`, `cache`, `early_cache` and `full_pipeline` every one fell through to a
+      // `'fatsecret'` default. That badged an outright AI estimate (`source: 'ai'`,
+      // map-ingredient-with-fallback.ts:2112) as FatSecret-supplied data. Unknown values floor
+      // to 'ai_estimated' — the only non-badging member of the contract union — so a new
+      // pipeline stage can never again promote itself to a provider claim by default.
+      const STANDARD_SOURCES = ['fatsecret', 'fdc', 'openfoodfacts', 'ai_estimated'] as const;
+      type StandardSource = typeof STANDARD_SOURCES[number];
+      const standardSource: StandardSource =
+        (STANDARD_SOURCES as readonly string[]).includes(details.source)
+          ? (details.source as StandardSource)
+          : 'ai_estimated';
 
       return {
         rawText,
