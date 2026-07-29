@@ -89,7 +89,6 @@ export default function HomePage() {
               carbs={0}
               fat={4}
               confidence="exact"
-              badge
             />
             <FoodCard
               name="Banana"
@@ -99,7 +98,6 @@ export default function HomePage() {
               carbs={27}
               fat={0}
               confidence="exact"
-              badge
             />
           </div>
         </div>

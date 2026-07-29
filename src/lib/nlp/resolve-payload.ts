@@ -117,7 +117,16 @@ export function per100gFromBilledMacros(billed: {
 export async function resolveFoodDetails(foodId: string, matchedServingDescription?: string | null) {
   let name = '';
   let brandName: string | null = null;
-  let source = 'fatsecret';
+  // NOT 'fatsecret'. Each of the four branches below assigns `source` only INSIDE its
+  // `if (record found)` guard, so every unresolvable foodId — `water_default` (the
+  // zero-calorie fast path, which matches no prefix and is not an AiGeneratedFood row), a
+  // stale `fdc_` id, a purged `off_` barcode — kept this initializer and shipped
+  // `source: 'fatsecret'`, putting FatSecret's licensed Web Badge on data they never
+  // supplied while an attribution audit with them is open. An unidentified record must make
+  // no provider claim; 'ai_estimated' is the only non-badging value in the contract union
+  // (api-contract.md:506) and the only one the food_log_items CHECK accepts
+  // (001_mobile_schema.sql:164), so it is the safe floor rather than a claim of AI origin.
+  let source = 'ai_estimated';
   let nutritionPer100g = {
     kcal100: 0,
     protein100: 0,

@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 import { deriveServingOptions } from '@/lib/units/servings';
+import { toClientSource } from '@/lib/attribution';
 
 
 export async function GET(
@@ -60,7 +61,9 @@ export async function GET(
           name: f.name,
           brand: f.brand,
           categoryId: f.categoryId,
-          source: f.source,
+          // Whitelisted, never raw — see src/lib/attribution.ts and the sibling call in
+          // /api/foods/search. The legacy Food table's `source` is unconstrained.
+          source: toClientSource(f.source),
           verification: f.verification,
           densityGml: f.densityGml,
           kcal100: f.kcal100,

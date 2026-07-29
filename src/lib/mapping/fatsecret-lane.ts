@@ -17,6 +17,7 @@ import {
     FATSECRET_RETRIEVAL_ENABLED,
     FATSECRET_LANE_TIMEOUT_MS,
     FATSECRET_LANE_MAX_RESULTS,
+    FATSECRET_PERSIST_RUNNERS_UP,
     FATSECRET_CLIENT_ID,
     FATSECRET_CLIENT_SECRET,
 } from './config';
@@ -34,8 +35,16 @@ import { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES 
 // Client Singleton (lazy; unit tests inject their own)
 // ============================================================
 
-/** Minimal surface the lane needs — lets tests inject a plain mock. */
-export type FatSecretLaneClient = Pick<FatSecretClient, 'searchFoodsV4'>;
+/**
+ * Minimal surface the lane needs — lets tests inject a plain mock.
+ *
+ * `getFood` is OPTIONAL on purpose. It is used by exactly one path
+ * (`ensureFatSecretParentPersisted`'s last-resort refetch) and every existing test mock
+ * predates it; making it required would break them all for a path most of them never take.
+ * A mock without it degrades to "cannot refetch", which is the same as having no credentials.
+ */
+export type FatSecretLaneClient = Pick<FatSecretClient, 'searchFoodsV4'> &
+    Partial<Pick<FatSecretClient, 'getFood'>>;
 
 // undefined = not yet initialized; null = credentials missing (lane disabled)
 let clientSingleton: FatSecretLaneClient | null | undefined;
@@ -348,6 +357,121 @@ function trackPendingPersist(hits: FatSecretFoodSummary[], task: Promise<void>):
 }
 
 /**
+ * fsId → the summary of a hit the lane deliberately did NOT persist, because it fell
+ * outside FATSECRET_PERSIST_RUNNERS_UP.
+ *
+ * This exists so a deferred hit can still be written the moment it turns out to have WON.
+ * Rerank order is not lane order — that is the entire point of the reranker — so the
+ * winner is routinely a hit we chose not to persist speculatively. `FoodMapping.fsId` is a
+ * foreign key to `FatSecretFood.fsId`, so saving a mapping for an unpersisted winner fails
+ * the FK and loses the mapping silently.
+ *
+ * Bounded and FIFO-evicted: entries are only useful between a lane search and the save
+ * that follows it, and eviction is harmless — a miss just means we persist nothing extra,
+ * which is the pre-existing behaviour for a food whose parent row is already there.
+ */
+const deferredHitsByFsId = new Map<string, FatSecretFoodSummary>();
+const DEFERRED_HITS_MAX = 500;
+
+function rememberDeferredHits(hits: FatSecretFoodSummary[]): void {
+    for (const hit of hits) {
+        if (!hit.id) continue;
+        // Re-insert to refresh FIFO position.
+        deferredHitsByFsId.delete(hit.id);
+        deferredHitsByFsId.set(hit.id, hit);
+    }
+    while (deferredHitsByFsId.size > DEFERRED_HITS_MAX) {
+        const oldest = deferredHitsByFsId.keys().next();
+        if (oldest.done) break;
+        deferredHitsByFsId.delete(oldest.value);
+    }
+}
+
+/** Test seam: drop every deferred entry (tests only). */
+export function __resetDeferredFatSecretHitsForTests(): void {
+    deferredHitsByFsId.clear();
+}
+
+/**
+ * Guarantee that `fsId`'s FatSecretFood parent row exists before a child row references it.
+ *
+ * Four cases, in order, cheapest first:
+ *  1. A speculative persist is still in flight — wait for it (the pre-existing behaviour).
+ *  2. The hit was deferred by the runners-up cap and never persisted at all — persist it
+ *     NOW, synchronously, because it just won.
+ *  3. The parent row is already in Postgres (the common case: a previous request persisted
+ *     it, or this fsId was inside the cap). One indexed PK read, then done.
+ *  4. Nothing has it and it is not in memory — refetch the single record from FatSecret and
+ *     persist that.
+ *
+ * Cases 2–4 are what make reducing the cache safe. Without them, capping speculative writes
+ * silently reintroduces the FK failure that cost warm batch 01 31.4% of its saves.
+ *
+ * **Case 4 is what the user-override feature depends on** (design_food_customization_2026-07-28).
+ * The runners-up exist so a user can correct an automatic pick, and that correction arrives in a
+ * LATER request — by then `deferredHitsByFsId` has almost certainly evicted the entry (it is
+ * in-process, FIFO-capped at DEFERRED_HITS_MAX, and empty after any restart). Cases 1–3 all miss,
+ * and without the refetch the override would fail the FK and lose the mapping with no error.
+ *
+ * Never throws. A refetch that fails (no credentials, no `getFood` on an injected mock, rate
+ * limit, 404) leaves the parent absent, which is exactly the pre-existing behaviour — the
+ * caller's insert then fails the FK as it always would have.
+ */
+export async function ensureFatSecretParentPersisted(fsId: string): Promise<void> {
+    if (!fsId) return;
+    await awaitPendingFatSecretPersist(fsId);
+
+    const deferred = deferredHitsByFsId.get(fsId);
+    if (deferred) {
+        deferredHitsByFsId.delete(fsId);
+        logger.info('fatsecret_lane.deferred_winner_persisted', { fsId });
+        await persistFatSecretHits([deferred]).catch(err => {
+            logger.warn('fatsecret_lane.deferred_persist_failed', {
+                fsId,
+                error: (err as Error).message,
+            });
+        });
+        return;
+    }
+
+    // Already ours? Nothing to do — and this is the hot path, so it stays a single PK read.
+    try {
+        const existing = await prisma.fatSecretFood.findUnique({
+            where: { fsId },
+            select: { fsId: true },
+        });
+        if (existing) return;
+    } catch (err) {
+        logger.warn('fatsecret_lane.parent_lookup_failed', {
+            fsId,
+            error: (err as Error).message,
+        });
+        return;
+    }
+
+    const client = getClient();
+    if (!client?.getFood) {
+        logger.warn('fatsecret_lane.parent_refetch_unavailable', { fsId });
+        return;
+    }
+
+    try {
+        const details = await client.getFood(fsId);
+        if (!details) {
+            logger.warn('fatsecret_lane.parent_refetch_empty', { fsId });
+            return;
+        }
+        logger.info('fatsecret_lane.parent_refetched', { fsId });
+        await persistFatSecretHits([details]);
+    } catch (err) {
+        logger.warn('fatsecret_lane.parent_refetch_failed', {
+            fsId,
+            error: (err as Error).message,
+        });
+    }
+}
+
+/**
  * Wait for the background persist that owns `fsId`, if one is still running.
  *
  * Returns immediately (a Map lookup) when nothing is in flight — the common
@@ -481,10 +605,27 @@ export async function searchFatSecretLane(
         });
         if (hits.length === 0) return [];
 
+        // Persist only the first FATSECRET_PERSIST_RUNNERS_UP hits speculatively; the rest
+        // are remembered in-process and written ONLY if one of them turns out to have won
+        // (see ensureFatSecretParentPersisted). We asked FatSecret for these candidates on
+        // one user's behalf — keeping the food they chose is defensible, keeping all 8
+        // copies of someone else's database on every query is not, and 97.6% of the rows
+        // we had accumulated this way never backed a single mapping.
+        const toPersist = hits.slice(0, FATSECRET_PERSIST_RUNNERS_UP);
+        const deferred = hits.slice(FATSECRET_PERSIST_RUNNERS_UP);
+        rememberDeferredHits(deferred);
+        if (deferred.length > 0) {
+            logger.debug('fatsecret_lane.persist_capped', {
+                query: trimmed,
+                persisted: toPersist.length,
+                deferred: deferred.length,
+            });
+        }
+
         // Fire-and-forget persist — registered so scripts can drain before
         // prisma.$disconnect(). persistFatSecretHits never throws, but keep
         // the catch so the registered task can never reject.
-        const task = persistFatSecretHits(hits).catch(err => {
+        const task = persistFatSecretHits(toPersist).catch(err => {
             logger.debug('fatsecret_lane.persist_task_failed', {
                 error: (err as Error).message,
             });
@@ -492,7 +633,10 @@ export async function searchFatSecretLane(
         registerBackgroundTask(task);
         // ...and indexed by fsId, so a save that needs one of these FK parents
         // can wait for exactly that write instead of the whole drain.
-        trackPendingPersist(hits, task);
+        // Track only what this task actually writes — a fsId registered against a task
+        // that never persists it would make `ensureFatSecretParentPersisted` wait on a
+        // promise that cannot help it.
+        trackPendingPersist(toPersist, task);
 
         return hits.map((hit, index) => toUnifiedCandidate(hit, index, trimmed));
     } catch (err) {

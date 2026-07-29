@@ -46,6 +46,12 @@ jest.mock('../config', () => {
         },
         FATSECRET_LANE_TIMEOUT_MS: 800,
         FATSECRET_LANE_MAX_RESULTS: 8,
+        // Pinned, NOT inherited from `actual`. This suite reproduces the FK race between a
+        // FoodMapping insert and the fire-and-forget parent persist — a race that only
+        // exists while the lane persists speculatively. The shipped default is 0
+        // (winner-only), under which there is no in-flight write to race and every test
+        // here would pass without exercising anything.
+        FATSECRET_PERSIST_RUNNERS_UP: 8,
         // Force "no credentials" so the singleton path never builds a real
         // client; every test injects its own.
         FATSECRET_CLIENT_ID: '',
