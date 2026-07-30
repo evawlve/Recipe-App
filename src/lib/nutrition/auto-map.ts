@@ -2,7 +2,6 @@ import { prisma } from '../db';
 import { logger } from '../logger';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { mapIngredientWithFallback, type FatsecretMappedIngredient } from '../mapping/map-ingredient-with-fallback';
-import { mapIngredientWithFdc } from '../usda/map-ingredient-fdc';
 import { createFoodAlias } from '../mapping/alias-manager';
 import { normalizeIngredientName, refreshNormalizationRules } from '../mapping/normalization-rules';
 import { applyCleanupPatterns, recordCleanupOutcome } from '../ingredients/cleanup';
@@ -11,6 +10,49 @@ import { aiNormalizeIngredient } from '../mapping/ai-normalize';
 
 // Align with pilot importer: allow candidates down to 0.5 but gate on AI validation
 const MIN_AUTOMAP_CONFIDENCE = 0.5;
+
+/** The subset of IngredientFoodMap columns that identify WHICH record was mapped. */
+type IngredientFoodMapColumns = {
+  foodId?: string;
+  offBarcode?: string;
+  fdcId?: number;
+  aiGeneratedFoodId?: string;
+};
+
+/**
+ * Decompose the mapper's prefixed `foodId` into the IngredientFoodMap columns that exist.
+ *
+ * The mapper emits `fdc_<int>` | `off_<barcode>` | `fs_<id>` | a bare AiGeneratedFood id —
+ * the same prefix scheme `resolveFoodDetails` reads. IngredientFoodMap has a typed column
+ * for three of those four and NONE for FatSecret, so `fs_` returns null and the caller must
+ * decide what to do about it. Do not "solve" that by stuffing a prefixed string into a text
+ * column: this function replaced exactly that hack (`fatsecretFoodId: \`fdc:${id}\``), which
+ * targeted a column that does not exist and silently failed every write.
+ *
+ * Returns null for anything unstorable — FatSecret, `water_default`, and any id whose
+ * numeric part does not parse — never a partially-populated row.
+ */
+export function ingredientFoodMapLink(
+  foodId: string | null | undefined,
+): { columns: IngredientFoodMapColumns; source: string } | null {
+  if (!foodId) return null;
+
+  if (foodId.startsWith('fdc_')) {
+    const fdcId = Number.parseInt(foodId.slice(4), 10);
+    return Number.isSafeInteger(fdcId) ? { columns: { fdcId }, source: 'fdc' } : null;
+  }
+  if (foodId.startsWith('off_')) {
+    const offBarcode = foodId.slice(4);
+    return offBarcode ? { columns: { offBarcode }, source: 'off' } : null;
+  }
+  // fs_ has no column, and `water_default` (the zero-calorie fast path) resolves to no
+  // record at all. Both are unstorable; say so rather than inventing a home for them.
+  if (foodId.startsWith('fs_') || foodId === 'water_default') return null;
+
+  // No recognised prefix ⇒ an AiGeneratedFood id. This leg has a real FK, so a wrong guess
+  // is rejected by the database rather than written as a dangling reference.
+  return { columns: { aiGeneratedFoodId: foodId }, source: 'ai' };
+}
 
 /**
  * Process items in batches with concurrency control
@@ -76,127 +118,23 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
           : `${ingredient.qty} ${cleanedName}`;
 
         const parsed = parseIngredientLine(cleanedLine);
-        const normalizedName = normalizeIngredientName(parsed?.name || cleanedName).cleaned;
 
-        // 1. Check Global Mappings (Cache/Overrides)
-        // Use any cast to avoid TS errors if client isn't updated in editor yet
-        const globalMapping = await (prisma as any).globalIngredientMapping.findUnique({
-          where: { normalizedName }
-        });
-
-        if (globalMapping && (globalMapping.confidence >= 0.7 || globalMapping.isUserOverride)) {
-          // Update usage stats
-          await (prisma as any).globalIngredientMapping.update({
-            where: { id: globalMapping.id },
-            data: {
-              usageCount: { increment: 1 },
-              lastUsed: new Date()
-            }
-          });
-
-          const payload: any = {
-            ingredientId: ingredient.id,
-            mappedBy: globalMapping.isUserOverride ? 'user-override' : 'global-auto',
-            confidence: globalMapping.confidence,
-            isActive: true,
-            fatsecretGrams: 100, // Default fallback, ideally we'd recalculate
-            // We need to set at least one ID
-          };
-
-          if (globalMapping.source === 'fatsecret') {
-            payload.fatsecretFoodId = globalMapping.fatsecretFoodId;
-            payload.fatsecretServingId = globalMapping.fatsecretServingId;
-            payload.fatsecretSource = 'global-cache';
-          } else if (globalMapping.source === 'fdc') {
-            payload.fatsecretFoodId = `fdc:${globalMapping.fdcId}`;
-            payload.fatsecretSource = 'fdc-global';
-          }
-
-          await prisma.ingredientFoodMap.create({ data: payload });
-
-          logger.info('autoMap:global-hit', {
-            ingredientId: ingredient.id,
-            normalizedName,
-            source: globalMapping.source
-          });
-          return { success: true, ingredientId: ingredient.id };
-        }
-
-        // Always enable debug logging for failure analysis
-        // Use cleaned ingredient line for mapping
-        // NOTE: mapIngredientWithFallback already includes FDC search in parallel,
-        // so the FDC fallback below is a secondary safety net for edge cases.
+        // The GlobalIngredientMapping tier that used to sit here was REMOVED 2026-07-29.
+        // It dereferenced a model that has never existed in the schema, through
+        // `(prisma as any)`, as the first await in this try — so it threw for every
+        // ingredient of every recipe, was swallowed by the catch below as a warn, and
+        // autoMapIngredients returned 0 every time it was called. Nothing beneath it had
+        // ever executed. Its feature (a cross-recipe mapping cache with usage counts and
+        // user overrides) is already served, better, by `FoodMapping` — which
+        // mapIngredientWithFallback reads and writes on its own.
+        //
+        // The live-USDA-API FDC fallback that followed was removed in the same pass: its
+        // cache table (FdcFoodCache) was equally a ghost, and mapIngredientWithFallback
+        // already searches FDC through `searchFdcLocal` against the ingested corpus.
         let mapped: FatsecretMappedIngredient | null = await mapIngredientWithFallback(cleanedLine, {
           minConfidence: MIN_AUTOMAP_CONFIDENCE,
           debug: true,
         }) as FatsecretMappedIngredient | null;
-
-        // FDC Fallback
-        // If FatSecret failed or confidence is low (< 0.4), try FDC
-        if (!mapped || mapped.confidence < 0.4) {
-          const fdcResult = await mapIngredientWithFdc(cleanedLine);
-
-          if (fdcResult) {
-            // If we have no FatSecret result, or FDC is significantly better
-            if (!mapped || fdcResult.confidence > mapped.confidence + 0.1) {
-              logger.info('autoMap:fdc-fallback-used', {
-                ingredientLine: cleanedLine,
-                fdcFood: fdcResult.description,
-                confidence: fdcResult.confidence,
-                fatsecretConfidence: mapped?.confidence
-              });
-
-              // Adapt FDC result to mapped format for DB insertion
-              // Since fatsecretFoodId is just a string without FK constraint, we can store FDC ID with prefix
-              const payload: any = {
-                ingredientId: ingredient.id,
-                fatsecretFoodId: `fdc:${fdcResult.fdcId}`,
-                fatsecretServingId: 'default', // FDC doesn't have serving IDs like FatSecret
-                fatsecretGrams: fdcResult.grams,
-                fatsecretConfidence: fdcResult.confidence,
-                fatsecretSource: 'fdc',
-                pendingVolume: false,
-                mappedBy: 'auto-fdc',
-                confidence: fdcResult.confidence,
-                useOnce: false,
-                isActive: true,
-              };
-
-              await prisma.ingredientFoodMap.create({ data: payload });
-
-              // Save to Global Mappings if high confidence FDC result
-              if (fdcResult.confidence >= 0.7 && fdcResult.fdcId) {
-                await (prisma as any).globalIngredientMapping.upsert({
-                  where: { normalizedName: normalizedName },
-                  update: {
-                    fdcId: fdcResult.fdcId,
-                    confidence: fdcResult.confidence,
-                    source: 'fdc',
-                    lastUsed: new Date(),
-                    usageCount: { increment: 1 }
-                  },
-                  create: {
-                    normalizedName: normalizedName,
-                    fdcId: fdcResult.fdcId,
-                    confidence: fdcResult.confidence,
-                    source: 'fdc',
-                    createdBy: 'auto-map'
-                  }
-                });
-              }
-
-              logger.info('autoMap:mapped', {
-                ingredientId: ingredient.id,
-                fatsecretFoodId: `fdc:${fdcResult.fdcId}`,
-                source: 'fdc',
-                confidence: fdcResult.confidence,
-                rawLine: ingredientLine,
-                foodName: fdcResult.description,
-              });
-              return { success: true, ingredientId: ingredient.id };
-            }
-          }
-        }
 
         // PHASE 2: If mapping still failed, try AI normalization and learn patterns
         if (!mapped) {
@@ -289,45 +227,37 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
           return { success: false, ingredientId: ingredient.id, error: 'ai_rejected' };
         }
 
-        const payload: any = {
-          ingredientId: ingredient.id,
-          fatsecretFoodId: mapped.foodId,
-          fatsecretServingId: mapped.servingId ?? null,
-          fatsecretGrams: mapped.grams,
-          fatsecretConfidence: mapped.confidence,
-          fatsecretSource: mapped.servingDescription ?? null,
-          pendingVolume: false,
-          mappedBy: 'auto-fatsecret',
-          confidence: mapped.confidence,
-          useOnce: false,
-          isActive: true,
-        };
+        // Decompose the mapper's prefixed foodId onto the columns IngredientFoodMap
+        // actually has. The five `fatsecret*` fields this used to send exist nowhere in
+        // the model — Prisma rejects unknown args at runtime, so every create here failed
+        // (silently, behind the same catch) even before the ghost above was reached.
+        const link = ingredientFoodMapLink(mapped.foodId);
 
-        await prisma.ingredientFoodMap.create({ data: payload });
-
-        // Save to Global Mappings if high confidence FatSecret result
-        // QUICK FIX: Lowered threshold from 0.8 to 0.7 to capture more matches
-        if (mapped.confidence >= 0.7 && mapped.foodId) {
-          await (prisma as any).globalIngredientMapping.upsert({
-            where: { normalizedName: normalizedName },
-            update: {
-              fatsecretFoodId: mapped.foodId,
-              fatsecretServingId: mapped.servingId,
-              confidence: mapped.confidence,
-              source: 'fatsecret',
-              lastUsed: new Date(),
-              usageCount: { increment: 1 }
-            },
-            create: {
-              normalizedName: normalizedName,
-              fatsecretFoodId: mapped.foodId,
-              fatsecretServingId: mapped.servingId,
-              confidence: mapped.confidence,
-              source: 'fatsecret',
-              createdBy: 'auto-map'
-            }
+        if (!link) {
+          // A FatSecret winner has no home: IngredientFoodMap has no fsId column and no
+          // FatSecretFood relation. Report it rather than dropping it — a silent skip here
+          // is what let this whole path read as "working" while writing nothing.
+          logger.warn('autoMap:unstorable-source', {
+            ingredientId: ingredient.id,
+            foodId: mapped.foodId,
+            reason: 'IngredientFoodMap has no fsId column — see queue item #29',
+            rawLine: ingredientLine,
+            foodName: mapped.foodName,
           });
+          return { success: false, ingredientId: ingredient.id, error: 'unstorable_source' };
         }
+
+        await prisma.ingredientFoodMap.create({
+          data: {
+            ingredientId: ingredient.id,
+            ...link.columns,
+            pendingVolume: false,
+            mappedBy: `auto-${link.source}`,
+            confidence: mapped.confidence,
+            useOnce: false,
+            isActive: true,
+          },
+        });
 
         // If we have a high-confidence match, create an alias for future lookups
         // QUICK FIX: Lowered threshold from 0.8 to 0.7
@@ -355,7 +285,8 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
 
         logger.info('autoMap:mapped', {
           ingredientId: ingredient.id,
-          fatsecretFoodId: mapped.foodId,
+          foodId: mapped.foodId,      // prefixed mapper id; `fatsecretFoodId` was a misnomer
+          mappedSource: link.source,
           servingId: mapped.servingId,
           confidence: mapped.confidence,
           rawLine: ingredientLine,
