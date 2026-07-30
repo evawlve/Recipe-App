@@ -219,6 +219,18 @@
             "verified": "2026-07-30"
         },
         {
+            "id": "docs-reader-builds",
+            "claim": "npm run docs (scripts/docs-reader/build.mjs) still parses sync-docs/log + sync-docs/reports and writes .docs-reader/index.html",
+            "ownerDoc": "mobile:sync-docs/log/README.md#reading-them",
+            "where": "mobile",
+            "command": "node ./scripts/docs-reader/build.mjs >/dev/null 2>&1 && test -s .docs-reader/index.html && echo ok || echo broken",
+            "expect": {
+                "kind": "equals",
+                "value": "ok"
+            },
+            "verified": "2026-07-30"
+        },
+        {
             "id": "resolve-default-serving-five-sites",
             "claim": "resolveDefaultServing() is called at exactly 5 sites in logging.tsx — the ONE way to pick a card's starting weight",
             "ownerDoc": "mobile:CLAUDE.md#logging-traps",
