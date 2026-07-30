@@ -550,6 +550,10 @@ model AiNormalizeCache {
   estimatedFatPer100g      Float?         // AI estimate (g)
   nutritionConfidence      Float?         // 0-1 confidence for nutrition estimate
   isBranded                Boolean  @default(false)
+  // Multi-component detection. The LLM already returns these; before 2026-07-29 they
+  // were dropped on the floor, so the signal survived only for the life of one request.
+  isMultiIngredient        Boolean  @default(false)
+  splitIngredients         Json?          // string[] when isMultiIngredient; null otherwise
   createdAt                DateTime @default(now())
   lastUsedAt               DateTime @default(now())
   useCount                 Int      @default(0)

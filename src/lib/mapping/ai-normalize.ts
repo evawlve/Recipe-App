@@ -169,13 +169,13 @@ export async function aiNormalizeIngredient(
   // Check persistent database cache first
   const cached = await getAiNormalizeCache(rawLine);
   if (cached) {
+    // getAiNormalizeCache's projection supplies isBranded, isMultiIngredient and
+    // splitIngredients directly; the column defaults cover rows written before those
+    // columns existed. The `(cached as any)` casts that used to sit here read fields
+    // the projection never returned, so they resolved to undefined every single time.
     return {
       status: 'success',
       ...cached,
-      // Provide defaults for new fields (backward compatibility with older cache entries)
-      isBranded: (cached as any).isBranded ?? false,
-      isMultiIngredient: (cached as any).isMultiIngredient ?? false,
-      splitIngredients: (cached as any).splitIngredients ?? undefined,
     };
   }
 
@@ -253,6 +253,8 @@ export async function aiNormalizeIngredient(
       sizePhrases: normalizeResult.sizePhrases,
       cookingModifier: normalizeResult.cookingModifier,
       isBranded: normalizeResult.isBranded,
+      isMultiIngredient: normalizeResult.isMultiIngredient,
+      splitIngredients: normalizeResult.splitIngredients,
       nutritionEstimate: normalizeResult.nutritionEstimate,
     });
 
