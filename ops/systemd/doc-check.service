@@ -1,0 +1,17 @@
+[Unit]
+Description=Doc-claims checker (scripts/doc-check) — backend+box claims only on this host
+After=network-online.target recipe-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Recipe-App
+Environment=NODE_ENV=production
+Environment=PATH=%h/.nvm/versions/node/v24.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# --where backend,box: the box has no copy of the mobile repo (no Syncthing share carries
+# it), so mobile-context claims are out of scope HERE and are covered by full runs from the
+# Mac. The runner prints the excluded claim ids loudly — never let this read as full coverage.
+ExecStart=%h/.nvm/versions/node/v24.18.0/bin/npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts --where backend,box
+TimeoutStartSec=1800
+StandardOutput=append:%h/Recipe-App/logs/doc-check.log
+StandardError=append:%h/Recipe-App/logs/doc-check.log

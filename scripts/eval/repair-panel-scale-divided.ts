@@ -1,6 +1,6 @@
 /**
  * repair-panel-scale-divided.ts — the gated corpus repair for the divided-panel
- * class (handoff_cache_audit_2026-07-27.md §4 / §5a-2a; playbook §3's
+ * class (the mobile repo's sync-docs/archive/handoff_cache_audit_2026-07-27.md §4 / §5a-2a; playbook §3's
  * "detectors" subsection). DRY RUN BY DEFAULT; --execute is Phase 3 and refuses
  * to run without a verified OffFood snapshot manifest and an approved plan file.
  *
@@ -193,7 +193,7 @@ export const REPAIR_ARM = 'synthetic' as const;
  * excluded row into --execute even in principle.
  */
 export const EXCLUDED_BARCODES: ReadonlyMap<string, string> = new Map([
-    ['50571723466684', 'Asda | Thai sticky rice — the one non-chain row the synthetic arm emits; hand-excluded per handoff_cache_audit_2026-07-27.md corrections table'],
+    ['50571723466684', 'Asda | Thai sticky rice — the one non-chain row the synthetic arm emits; hand-excluded per the mobile repo sync-docs/archive/handoff_cache_audit_2026-07-27.md corrections table'],
 ]);
 
 /** Tier 1 = families with >= 3 distinct serving sizes. A 2-point log-log fit

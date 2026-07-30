@@ -583,8 +583,10 @@ export const FAILURE_CLASSES: FailureClass[] = [
             + 'and 3,504 FatSecret records (18.8% of the lane) served 0 kcal. The zero-macros save gate exists '
             + '(validated-mapping-helpers.ts:585) but is SKIPPED entirely when grams is 0, because '
             + 'nutrientsPer100g is only passed when result.grams > 0 (map-ingredient-with-fallback.ts:2611). '
-            + 'Root cause of the FatSecret 0-kcal family was a PERSIST RACE, not corruption — fixed on the box '
-            + '(master 662d609) — so the pipeline half is done and this stays as (a) a regression tripwire and '
+            + 'Root cause of the FatSecret 0-kcal family was a PERSIST RACE, not corruption — fixed in 4fab5f1 '
+            + '"fix(mapping): close the FatSecret FK persist race, insert-bound" (merge e5a4944, PR #159, '
+            + '2026-07-25; the 662d609 this used to cite is PR #146 coverage-trend and is not even an ancestor '
+            + 'of the fix) — so the pipeline half is done and this stays as (a) a regression tripwire and '
             + '(b) a data queue: rows already cached at 0 kcal must still be evicted or repointed.',
         fixKind: 'data',
         detector: row => atStage(row, SERVED_STAGES) && row.quality.degenerateMacros,
@@ -1310,8 +1312,10 @@ export const FAILURE_CLASSES: FailureClass[] = [
         title: 'RESIDUAL: an unrecognised save gate fired',
         description:
             'Any save_rejected event whose gate has no class above. Ten markSaveRejected call sites exist today '
-            + '(validated-mapping-helpers.ts:497-806) and all ten are covered, so a hit here means a NEW gate '
-            + 'shipped without a registry entry. Treat it as frontier and add the class in the same PR as the gate.',
+            + 'inside saveValidatedMapping() in validated-mapping-helpers.ts (re-derive: grep -c "markSaveRejected(" '
+            + 'on that file). NINE are covered here; the tenth is the persist_failed / persist_failed_fk site, '
+            + 'which reports a write that threw rather than a gate that rejected and owns no class. So a hit here '
+            + 'means a NEW gate shipped without a registry entry. Add the class in the same PR as the gate.',
         fixKind: 'pipeline',
         detector: row => row.funnelStage === 'save_rejected',
         exemplars: ['<any query whose save gate has no class yet>'],

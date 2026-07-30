@@ -28,7 +28,7 @@
  * bare positional snapshot path REFUSES: a positional cannot say which role the
  * file is playing, and the failure mode (operator hands over the fresh Role-B
  * file, guard goes vacuously green) is invisible at run time. This deliberately
- * breaks the CLI documented in handoff_cache_audit_2026-07-27.md §1(a).
+ * breaks the CLI documented in the mobile repo's sync-docs/archive/handoff_cache_audit_2026-07-27.md §1(a).
  *
  * Safety properties, in order of importance:
  *  1. Refuses to run without a snapshot file that CONTAINS every key being deleted.

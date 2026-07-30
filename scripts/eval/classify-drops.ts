@@ -571,8 +571,9 @@ export function renderDoc(): string {
     L.push('');
     L.push('- **You cannot join event rows to cache rows on `normalizedForm`.** `MappingEventLog.normalizedForm` is');
     L.push('  pre-canonicalization; `FoodMapping.normalizedForm` is canonicalized, singularized and token-sorted.');
-    L.push('  `"chicken breast"` -> `"breast chicken"`, `"eggs"` -> `"egg"`, `"pretzels"` -> `"pretzel"`. Always run');
-    L.push('  `canonicalizeCacheKey` first.');
+    L.push('  `"chicken breast"` -> `"breast chicken"`, `"eggs"` -> `"egg"`, `"pretzels"` -> `"pretzel"`. Always derive');
+    L.push('  the key with `deriveFunnelCacheKey` — `canonicalizeCacheKey` is necessary but NOT sufficient, because');
+    L.push('  it alone still misses the identity discriminators ("3 egg whites" never finds "egg white").');
     L.push("- **`under_gate`'s dropReason is not diagnostic.** It carries the confidence gate's `selectionReason` —");
     L.push('  which path *selected* the pick, not why confidence was low — and `simple_rerank` / `close_match` /');
     L.push('  `clear_winner` each split ~50/50 good-vs-bad. Classes under `under_gate` are separated by row');

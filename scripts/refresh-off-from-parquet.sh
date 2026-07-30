@@ -12,7 +12,7 @@
 #   download Parquet (~7GB) -> off-parquet-to-jsonl.sh (slim ~330MB JSONL)
 #   -> ingest-off.ts --fresh -> meilisearch-sync.ts
 #
-# See the mobile repo's sync-docs/handoff_food_data_quality_audit.md
+# See the mobile repo's sync-docs/archive/handoff_food_data_quality_audit.md
 # ("TRUE root cause" section) for the full investigation.
 #
 # Safe to run manually at any time:

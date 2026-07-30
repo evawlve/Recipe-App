@@ -10,7 +10,7 @@
  * dump. The official JSONL dump omits the entire `nutriments` object for
  * ~100-140K US products that the Parquet export has (verified 2026-07-12 via
  * the Mission Carb Balance line; see the mobile repo's
- * sync-docs/handoff_food_data_quality_audit.md "TRUE root cause" section).
+ * the mobile repo's sync-docs/archive/handoff_food_data_quality_audit.md "TRUE root cause" section).
  *
  * For picking up nutrition edits OFF's community makes to already-ingested
  * products (without re-running this full multi-hour ingest), see
