@@ -1,4 +1,12 @@
--- Enable Row Level Security on all 34 tables that had it disabled
+-- Enable Row Level Security on the tables that had it disabled.
+--
+-- ⚠️ THIS FILE IS NOT SAFE TO RUN AS-IS. The statements are unguarded (no IF EXISTS),
+-- and as of 2026-07-29 **14 of the remaining targets are tables that have never existed
+-- in this schema** — a legacy Supabase-era artifact. The first ghost it hits aborts the
+-- run. `GlobalIngredientMapping` and `FdcFoodCache` were removed from this list on
+-- 2026-07-29 when their (equally non-existent) models were deleted from the code; the
+-- other 14 are untouched pending a delete-vs-relocate decision on this whole file.
+-- Verify every target against `schema.prisma` before running any of it.
 
 ALTER TABLE "AiGeneratedFood" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "AiGeneratedServing" ENABLE ROW LEVEL SECURITY;
@@ -10,12 +18,10 @@ ALTER TABLE "FatSecretDensityEstimate" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "FatSecretFoodAlias" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "FatSecretFoodCache" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "FatSecretServingCache" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "FdcFoodCache" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "FdcServingCache" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Food" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "FoodAlias" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "FoodUnit" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "GlobalIngredientMapping" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Ingredient" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "IngredientCleanupApplication" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "IngredientCleanupPattern" ENABLE ROW LEVEL SECURITY;
