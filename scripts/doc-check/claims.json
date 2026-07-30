@@ -482,6 +482,18 @@
                 "value": "51"
             },
             "verified": "2026-07-30"
+        },
+        {
+            "id": "log-writeoffs-under-50-lines",
+            "claim": "Every session write-off in sync-docs/log/ is within the 50-line hard cap its README sets — the rule most likely to erode, since the pressure to exceed it is highest on the sessions worth recording",
+            "ownerDoc": "mobile:sync-docs/log/README.md",
+            "where": "mobile",
+            "command": "for f in sync-docs/log/2026-*.md; do n=$(wc -l < \"$f\"); [ \"$n\" -gt 50 ] && echo \"$f:$n\"; done | wc -l",
+            "expect": {
+                "kind": "count",
+                "value": "0"
+            },
+            "verified": "2026-07-30"
         }
     ]
 }
