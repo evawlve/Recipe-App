@@ -30,6 +30,21 @@ describe('ingredientFoodMapLink — storable sources', () => {
         });
     });
 
+    it('routes fs_<id> to fsId and STRIPS the prefix', () => {
+        // FatSecretFood.fsId stores the bare food_id. Keeping the `fs_` prefix here would
+        // violate the foreign key — the same prefix-mismatch class as the old `fdc:` hack.
+        expect(ingredientFoodMapLink('fs_12345')).toEqual({
+            columns: { fsId: '12345' },
+            source: 'fs',
+        });
+    });
+
+    it('does not strip an fs_ prefix from an id that merely contains it', () => {
+        // slice(3) is positional, so guard that only a genuine leading prefix is removed.
+        const link = ingredientFoodMapLink('fs_fs_9');
+        expect(link).toEqual({ columns: { fsId: 'fs_9' }, source: 'fs' });
+    });
+
     it('routes an unprefixed id to aiGeneratedFoodId', () => {
         expect(ingredientFoodMapLink('clx0abc123def456')).toEqual({
             columns: { aiGeneratedFoodId: 'clx0abc123def456' },
@@ -38,18 +53,15 @@ describe('ingredientFoodMapLink — storable sources', () => {
     });
 
     it('never emits more than one identity column', () => {
-        for (const id of ['fdc_1', 'off_9', 'clx0abc']) {
+        for (const id of ['fdc_1', 'off_9', 'fs_7', 'clx0abc']) {
             expect(Object.keys(ingredientFoodMapLink(id)!.columns)).toHaveLength(1);
         }
     });
 });
 
 describe('ingredientFoodMapLink — unstorable sources return null', () => {
-    it('refuses a FatSecret winner: there is no fsId column', () => {
-        // The single most likely input in production, and the one with no home.
-        // Returning null is what makes autoMapIngredients report it instead of
-        // silently writing a row that means something else.
-        expect(ingredientFoodMapLink('fs_12345')).toBeNull();
+    it('refuses an empty fs id', () => {
+        expect(ingredientFoodMapLink('fs_')).toBeNull();
     });
 
     it('refuses water_default, which resolves to no record at all', () => {
@@ -75,8 +87,8 @@ describe('ingredientFoodMapLink — unstorable sources return null', () => {
 describe('ingredientFoodMapLink — the columns it emits are real', () => {
     it('only ever names columns that exist on IngredientFoodMap', () => {
         // Guards the original defect directly: `fatsecret*` must never reappear here.
-        const REAL_COLUMNS = new Set(['foodId', 'offBarcode', 'fdcId', 'aiGeneratedFoodId']);
-        for (const id of ['fdc_167762', 'off_0123456789012', 'clx0abc123def456']) {
+        const REAL_COLUMNS = new Set(['foodId', 'offBarcode', 'fdcId', 'fsId', 'aiGeneratedFoodId']);
+        for (const id of ['fdc_167762', 'off_0123456789012', 'fs_12345', 'clx0abc123def456']) {
             for (const key of Object.keys(ingredientFoodMapLink(id)!.columns)) {
                 expect(REAL_COLUMNS.has(key)).toBe(true);
             }

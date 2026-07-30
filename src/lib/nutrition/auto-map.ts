@@ -16,6 +16,7 @@ type IngredientFoodMapColumns = {
   foodId?: string;
   offBarcode?: string;
   fdcId?: number;
+  fsId?: string;
   aiGeneratedFoodId?: string;
 };
 
@@ -23,14 +24,16 @@ type IngredientFoodMapColumns = {
  * Decompose the mapper's prefixed `foodId` into the IngredientFoodMap columns that exist.
  *
  * The mapper emits `fdc_<int>` | `off_<barcode>` | `fs_<id>` | a bare AiGeneratedFood id —
- * the same prefix scheme `resolveFoodDetails` reads. IngredientFoodMap has a typed column
- * for three of those four and NONE for FatSecret, so `fs_` returns null and the caller must
- * decide what to do about it. Do not "solve" that by stuffing a prefixed string into a text
- * column: this function replaced exactly that hack (`fatsecretFoodId: \`fdc:${id}\``), which
- * targeted a column that does not exist and silently failed every write.
+ * the same prefix scheme `resolveFoodDetails` reads. Every one of those now has a typed
+ * column. Do not "solve" a future gap by stuffing a prefixed string into a text column:
+ * this function replaced exactly that hack (`fatsecretFoodId: \`fdc:${id}\``), which targeted
+ * a column that does not exist and silently failed every write.
  *
- * Returns null for anything unstorable — FatSecret, `water_default`, and any id whose
- * numeric part does not parse — never a partially-populated row.
+ * ⚠️ `fs_` is STRIPPED. `FatSecretFood.fsId` stores the bare FatSecret food_id, so the
+ * prefixed form would violate the foreign key — the same prefix-mismatch bug in a new place.
+ *
+ * Returns null for anything unstorable — `water_default`, and any id whose numeric or id part
+ * does not parse — never a partially-populated row.
  */
 export function ingredientFoodMapLink(
   foodId: string | null | undefined,
@@ -45,9 +48,13 @@ export function ingredientFoodMapLink(
     const offBarcode = foodId.slice(4);
     return offBarcode ? { columns: { offBarcode }, source: 'off' } : null;
   }
-  // fs_ has no column, and `water_default` (the zero-calorie fast path) resolves to no
-  // record at all. Both are unstorable; say so rather than inventing a home for them.
-  if (foodId.startsWith('fs_') || foodId === 'water_default') return null;
+  if (foodId.startsWith('fs_')) {
+    const fsId = foodId.slice(3);   // BARE id — FatSecretFood.fsId carries no prefix
+    return fsId ? { columns: { fsId }, source: 'fs' } : null;
+  }
+  // `water_default` is the zero-calorie fast path and resolves to no record at all. It is
+  // genuinely unstorable; say so rather than inventing a home for it.
+  if (foodId === 'water_default') return null;
 
   // No recognised prefix ⇒ an AiGeneratedFood id. This leg has a real FK, so a wrong guess
   // is rejected by the database rather than written as a dangling reference.
@@ -234,17 +241,26 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
         const link = ingredientFoodMapLink(mapped.foodId);
 
         if (!link) {
-          // A FatSecret winner has no home: IngredientFoodMap has no fsId column and no
-          // FatSecretFood relation. Report it rather than dropping it — a silent skip here
-          // is what let this whole path read as "working" while writing nothing.
+          // Only `water_default` and malformed ids land here now. Report rather than skip —
+          // a silent skip is what let this whole path read as "working" while writing nothing.
           logger.warn('autoMap:unstorable-source', {
             ingredientId: ingredient.id,
             foodId: mapped.foodId,
-            reason: 'IngredientFoodMap has no fsId column — see queue item #29',
             rawLine: ingredientLine,
             foodName: mapped.foodName,
           });
           return { success: false, ingredientId: ingredient.id, error: 'unstorable_source' };
+        }
+
+        // INVARIANT: fsId is a real foreign key, and a FatSecret parent row is fetched on
+        // demand rather than guaranteed to exist. Writing the link without first ensuring the
+        // parent is persisted throws a FK violation into the catch below and loses the mapping
+        // while the request still succeeds — the failure mode that cost warm batch 01 31.4%
+        // of its FatSecret saves. `saveValidatedMapping` calls this insert-bound for the same
+        // reason; the call is idempotent and a hit is a single PK read.
+        if (link.source === 'fs' && link.columns.fsId) {
+          const { ensureFatSecretParentPersisted } = await import('../mapping/fatsecret-lane');
+          await ensureFatSecretParentPersisted(link.columns.fsId);
         }
 
         await prisma.ingredientFoodMap.create({
