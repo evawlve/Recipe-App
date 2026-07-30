@@ -10,7 +10,8 @@
         [
           "chicken breast"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-gen-02",
@@ -21,7 +22,8 @@
         [
           "brown rice"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-gen-03",
@@ -32,7 +34,8 @@
         [
           "broccoli"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-gen-04",
@@ -46,7 +49,8 @@
         [
           "oats"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-gen-05",
@@ -57,7 +61,8 @@
         [
           "banana"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-gen-06",
@@ -71,7 +76,8 @@
         [
           "greek yoghurt"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-gen-07",
@@ -82,7 +88,8 @@
         [
           "ground beef"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-gen-08",
@@ -93,7 +100,8 @@
         [
           "salmon"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-gen-09",
@@ -104,7 +112,8 @@
         [
           "egg"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-gen-10",
@@ -118,7 +127,8 @@
         [
           "milk, whole"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-gen-11",
@@ -129,7 +139,8 @@
         [
           "peanut butter"
         ]
-      ]
+      ],
+      "minItems": 19
     },
     {
       "id": "s-gen-12",
@@ -140,7 +151,8 @@
         [
           "olive oil"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-brand-01",
@@ -152,7 +164,8 @@
           "ghost",
           "oreo"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-brand-02",
@@ -163,7 +176,8 @@
         [
           "oikos"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-brand-03",
@@ -174,7 +188,8 @@
         [
           "quest"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-brand-04",
@@ -185,7 +200,8 @@
         [
           "cheerios"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-brand-05",
@@ -199,7 +215,8 @@
         [
           "coke"
         ]
-      ]
+      ],
+      "minItems": 10
     },
     {
       "id": "s-brand-06",
@@ -210,7 +227,8 @@
         [
           "fairlife"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-brand-07",
@@ -221,7 +239,8 @@
         [
           "chobani"
         ]
-      ]
+      ],
+      "minItems": 11
     },
     {
       "id": "s-brand-08",
@@ -232,7 +251,8 @@
         [
           "oreo"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-sem-01",
@@ -248,7 +268,8 @@
           "protein",
           "yoghurt"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-sem-02",
@@ -260,7 +281,8 @@
           "carb",
           "tortilla"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-sem-03",
@@ -271,7 +293,8 @@
         [
           "meal replacement"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-sem-04",
@@ -290,7 +313,8 @@
           "zero",
           "cola"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-sem-05",
@@ -302,7 +326,8 @@
           "protein",
           "ice cream"
         ]
-      ]
+      ],
+      "minItems": 19
     },
     {
       "id": "s-typo-01",
@@ -313,7 +338,8 @@
         [
           "broccoli"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-typo-02",
@@ -324,7 +350,8 @@
         [
           "avocado"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-typo-03",
@@ -336,7 +363,8 @@
           "chicken",
           "breast"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-typo-04",
@@ -350,7 +378,8 @@
         [
           "yoghurt"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-reg-01",
@@ -362,7 +391,8 @@
           "sweet potato"
         ]
       ],
-      "notes": "produce-hijack fix pin (c199643)"
+      "notes": "produce-hijack fix pin (c199643)",
+      "minItems": 16
     },
     {
       "id": "s-reg-02",
@@ -373,7 +403,8 @@
         [
           "potato"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-reg-03",
@@ -384,7 +415,8 @@
         [
           "spinach"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-mod-01",
@@ -408,7 +440,8 @@
           "fat-free",
           "milk"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-mod-02",
@@ -420,7 +453,8 @@
           "unsweetened",
           "almond"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-mod-03",
@@ -431,7 +465,8 @@
         [
           "cottage cheese"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-prod-01",
@@ -442,7 +477,8 @@
         [
           "apple"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-prod-02",
@@ -453,7 +489,8 @@
         [
           "kale"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-prod-03",
@@ -464,7 +501,8 @@
         [
           "strawberr"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-prod-04",
@@ -475,7 +513,8 @@
         [
           "blueberr"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-prod-05",
@@ -486,7 +525,8 @@
         [
           "cucumber"
         ]
-      ]
+      ],
+      "minItems": 10
     },
     {
       "id": "s-prod-06",
@@ -497,7 +537,8 @@
         [
           "avocado"
         ]
-      ]
+      ],
+      "minItems": 11
     },
     {
       "id": "s-prod-07",
@@ -508,7 +549,8 @@
         [
           "carrot"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-prod-08",
@@ -519,7 +561,8 @@
         [
           "tomato"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-prod-09",
@@ -530,7 +573,8 @@
         [
           "pepper"
         ]
-      ]
+      ],
+      "minItems": 11
     },
     {
       "id": "s-prod-10",
@@ -544,7 +588,8 @@
         [
           "courgette"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-prod-11",
@@ -555,7 +600,8 @@
         [
           "asparagus"
         ]
-      ]
+      ],
+      "minItems": 10
     },
     {
       "id": "s-prod-12",
@@ -566,7 +612,8 @@
         [
           "cauliflower"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-prot-01",
@@ -581,7 +628,8 @@
           "chicken",
           "thigh"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-prot-02",
@@ -596,7 +644,8 @@
           "pork",
           "chop"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-prot-03",
@@ -607,7 +656,8 @@
         [
           "tofu"
         ]
-      ]
+      ],
+      "minItems": 10
     },
     {
       "id": "s-prot-04",
@@ -621,7 +671,8 @@
         [
           "prawn"
         ]
-      ]
+      ],
+      "minItems": 19
     },
     {
       "id": "s-prot-05",
@@ -632,7 +683,8 @@
         [
           "tuna"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-prot-06",
@@ -643,7 +695,8 @@
         [
           "turkey"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-prot-07",
@@ -654,7 +707,8 @@
         [
           "black bean"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-prot-08",
@@ -665,7 +719,8 @@
         [
           "lentil"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-prot-09",
@@ -676,7 +731,8 @@
         [
           "tilapia"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-prot-10",
@@ -687,7 +743,8 @@
         [
           "cottage cheese"
         ]
-      ]
+      ],
+      "minItems": 19
     },
     {
       "id": "s-brand-09",
@@ -698,7 +755,8 @@
         [
           "doritos"
         ]
-      ]
+      ],
+      "minItems": 10
     },
     {
       "id": "s-brand-10",
@@ -709,7 +767,8 @@
         [
           "gatorade"
         ]
-      ]
+      ],
+      "minItems": 10
     },
     {
       "id": "s-brand-11",
@@ -720,7 +779,8 @@
         [
           "clif"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-brand-12",
@@ -731,7 +791,8 @@
         [
           "red bull"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-brand-13",
@@ -746,7 +807,8 @@
         [
           "pop-tart"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-brand-14",
@@ -757,7 +819,8 @@
         [
           "nature valley"
         ]
-      ]
+      ],
+      "minItems": 19
     },
     {
       "id": "s-brand-15",
@@ -769,7 +832,8 @@
           "ben",
           "jerry"
         ]
-      ]
+      ],
+      "minItems": 9
     },
     {
       "id": "s-brand-16",
@@ -784,7 +848,8 @@
           "premier",
           "protein"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-typo-05",
@@ -798,7 +863,8 @@
         [
           "yoghurt"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-typo-06",
@@ -809,7 +875,8 @@
         [
           "turmeric"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-typo-07",
@@ -820,7 +887,8 @@
         [
           "quinoa"
         ]
-      ]
+      ],
+      "minItems": 11
     },
     {
       "id": "s-typo-08",
@@ -833,7 +901,8 @@
         ]
       ],
       "knownIssue": true,
-      "notes": "typo hijacked by literal 'banna'-named junk products in OFF corpus (banna yoghurt/bread); should correct to banana"
+      "notes": "typo hijacked by literal 'banna'-named junk products in OFF corpus (banna yoghurt/bread); should correct to banana",
+      "minItems": 12
     },
     {
       "id": "s-typo-09",
@@ -844,7 +913,8 @@
         [
           "cauliflower"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-typo-10",
@@ -855,7 +925,8 @@
         [
           "spinach"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-uni-01",
@@ -866,7 +937,8 @@
         [
           "jalape"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-uni-02",
@@ -880,7 +952,8 @@
         [
           "açaí"
         ]
-      ]
+      ],
+      "minItems": 11
     },
     {
       "id": "s-uni-03",
@@ -897,7 +970,8 @@
         [
           "cream"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-edge-01",
@@ -908,7 +982,8 @@
         [
           "egg"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-edge-02",
@@ -919,7 +994,8 @@
         [
           "chocolate"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-edge-03",
@@ -930,7 +1006,8 @@
         [
           "water"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-edge-04",
@@ -941,7 +1018,8 @@
         [
           "coffee"
         ]
-      ]
+      ],
+      "minItems": 14
     },
     {
       "id": "s-supp-01",
@@ -954,7 +1032,8 @@
           "vegan"
         ]
       ],
-      "notes": "Regression pin: was falsely flagged as a brand hijack by an eval-harness bug (search API returns brand under 'brand', textOf read 'brandName'). Manual search ranks Ghost records correctly."
+      "notes": "Regression pin: was falsely flagged as a brand hijack by an eval-harness bug (search API returns brand under 'brand', textOf read 'brandName'). Manual search ranks Ghost records correctly.",
+      "minItems": 16
     },
     {
       "id": "s-supp-02",
@@ -966,7 +1045,8 @@
           "ghost",
           "whey"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-supp-03",
@@ -980,7 +1060,8 @@
         [
           "optimum"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-supp-04",
@@ -991,7 +1072,8 @@
         [
           "quest"
         ]
-      ]
+      ],
+      "minItems": 19
     },
     {
       "id": "s-supp-05",
@@ -1002,7 +1084,8 @@
         [
           "premier protein"
         ]
-      ]
+      ],
+      "minItems": 13
     },
     {
       "id": "s-supp-06",
@@ -1013,7 +1096,8 @@
         [
           "muscle milk"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-supp-07",
@@ -1024,7 +1108,8 @@
         [
           "legion"
         ]
-      ]
+      ],
+      "minItems": 15
     },
     {
       "id": "s-supp-08",
@@ -1035,7 +1120,8 @@
         [
           "orgain"
         ]
-      ]
+      ],
+      "minItems": 17
     },
     {
       "id": "s-trap-01",
@@ -1049,7 +1135,8 @@
         [
           "fairlife"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-trap-02",
@@ -1060,7 +1147,8 @@
         [
           "quest"
         ]
-      ]
+      ],
+      "minItems": 18
     },
     {
       "id": "s-trap-03",
@@ -1071,7 +1159,8 @@
         [
           "pure protein"
         ]
-      ]
+      ],
+      "minItems": 16
     },
     {
       "id": "s-trap-04",
@@ -1083,7 +1172,8 @@
           "kirkland"
         ]
       ],
-      "notes": "brand-vs-generic trap. NOTE: 'kirkland protein bar' was the original trap but Kirkland protein bars appear genuinely absent from the corpus (only granola bars/other Kirkland Signature items exist), so the query was retargeted to an existing product."
+      "notes": "brand-vs-generic trap. NOTE: 'kirkland protein bar' was the original trap but Kirkland protein bars appear genuinely absent from the corpus (only granola bars/other Kirkland Signature items exist), so the query was retargeted to an existing product.",
+      "minItems": 13
     },
     {
       "id": "s-trap-05",
@@ -1094,7 +1184,8 @@
         [
           "ghost"
         ]
-      ]
+      ],
+      "minItems": 12
     },
     {
       "id": "s-trap-06",
@@ -1107,7 +1198,8 @@
           "birthday cake"
         ]
       ],
-      "notes": "Regression pin: was falsely flagged as a brand-token hijack by the same eval-harness 'brand' vs 'brandName' field bug. ONE-branded records actually rank 1-3 with conf 1.0."
+      "notes": "Regression pin: was falsely flagged as a brand-token hijack by the same eval-harness 'brand' vs 'brandName' field bug. ONE-branded records actually rank 1-3 with conf 1.0.",
+      "minItems": 13
     },
     {
       "id": "s-supp-09",
@@ -1119,7 +1211,8 @@
           "ghost"
         ]
       ],
-      "notes": "Pattern 1/4 (brand hijack via flavor suffix + core-token rescue), SEARCH stage. 'cinnamon roll' flavor collides with generic/competitor cinnamon-roll protein records; manual search has no 6-word segmenter cap, so this exercises ranking (query-token-coverage gating + brand-rescue), not segmentation. CURRENT: expected to rank Ghost top-3 post-fix. Hard assertion."
+      "notes": "Pattern 1/4 (brand hijack via flavor suffix + core-token rescue), SEARCH stage. 'cinnamon roll' flavor collides with generic/competitor cinnamon-roll protein records; manual search has no 6-word segmenter cap, so this exercises ranking (query-token-coverage gating + brand-rescue), not segmentation. CURRENT: expected to rank Ghost top-3 post-fix. Hard assertion.",
+      "minItems": 15
     },
     {
       "id": "s-supp-10",
@@ -1131,7 +1224,8 @@
           "quest"
         ]
       ],
-      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'birthday cake' is a widely-shared flavor across brands; assert Quest-branded record still wins top-3. Hard assertion."
+      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'birthday cake' is a widely-shared flavor across brands; assert Quest-branded record still wins top-3. Hard assertion.",
+      "minItems": 15
     },
     {
       "id": "s-supp-11",
@@ -1143,7 +1237,8 @@
           "ryse"
         ]
       ],
-      "notes": "PROMOTED HARD 2026-07-25: the ingest gap that made this unfixable is closed. The FatSecret lane (live on master since 2026-07-23, FATSECRET_RETRIEVAL_ENABLED=1) supplies a RYSE candidate for this flavor, so a 'ryse' hit now lands in the top 3 instead of the query falling through to generic cereal records. Green on every run across 2026-07-24/25 including the FS-hardening gates. This case therefore asserts the fs lane's contribution to /api/foods/search — if the flag is turned off or fs candidates stop reaching the search route, this goes red first, which is the intended signal. | Previously: Pattern 1 (flavor-suffix collision), SEARCH. VERIFIED 2026-07-19: INGEST-BLOCKED, not ranking-fixable. RYSE brand IS in corpus (Ryse Clear Protein, RYSE Loaded Protein Banana Pudding) but NO Cinnamon-Toast-Crunch flavor SKU exists, so nothing RYSE can be ranked up; the query lands on generic cereal records. Needs the flavor SKU ingested before any ranking fix engages."
+      "notes": "PROMOTED HARD 2026-07-25: the ingest gap that made this unfixable is closed. The FatSecret lane (live on master since 2026-07-23, FATSECRET_RETRIEVAL_ENABLED=1) supplies a RYSE candidate for this flavor, so a 'ryse' hit now lands in the top 3 instead of the query falling through to generic cereal records. Green on every run across 2026-07-24/25 including the FS-hardening gates. This case therefore asserts the fs lane's contribution to /api/foods/search — if the flag is turned off or fs candidates stop reaching the search route, this goes red first, which is the intended signal. | Previously: Pattern 1 (flavor-suffix collision), SEARCH. VERIFIED 2026-07-19: INGEST-BLOCKED, not ranking-fixable. RYSE brand IS in corpus (Ryse Clear Protein, RYSE Loaded Protein Banana Pudding) but NO Cinnamon-Toast-Crunch flavor SKU exists, so nothing RYSE can be ranked up; the query lands on generic cereal records. Needs the flavor SKU ingested before any ranking fix engages.",
+      "minItems": 12
     },
     {
       "id": "s-supp-12",
@@ -1155,7 +1250,8 @@
           "gatorade"
         ]
       ],
-      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'cool blue' flavor vs generic blue drinks; assert Gatorade wins top-5 (brand confirmed in corpus via s-brand-10). Hard assertion."
+      "notes": "Pattern 1 (flavor-suffix collision), SEARCH. 'cool blue' flavor vs generic blue drinks; assert Gatorade wins top-5 (brand confirmed in corpus via s-brand-10). Hard assertion.",
+      "minItems": 11
     },
     {
       "id": "s-supp-13",
@@ -1170,7 +1266,8 @@
           "gold standard"
         ]
       ],
-      "notes": "Pattern 1 (flavor-suffix collision with in-flavor 'and'), SEARCH. 'cookies and cream' is a generic flavor; assert an Optimum Nutrition record wins top-3 rather than a no-brand cookies-and-cream record. Hard assertion."
+      "notes": "Pattern 1 (flavor-suffix collision with in-flavor 'and'), SEARCH. 'cookies and cream' is a generic flavor; assert an Optimum Nutrition record wins top-3 rather than a no-brand cookies-and-cream record. Hard assertion.",
+      "minItems": 13
     },
     {
       "id": "s-supp-14",
@@ -1185,7 +1282,8 @@
           "fairlife"
         ]
       ],
-      "notes": "Pattern 4 (core-token/brand-rescue), SEARCH. 'vanilla' core token would otherwise pull in generic vanilla shakes; assert the fairlife Core Power record survives (brand confirmed via s-trap-01). Hard assertion."
+      "notes": "Pattern 4 (core-token/brand-rescue), SEARCH. 'vanilla' core token would otherwise pull in generic vanilla shakes; assert the fairlife Core Power record survives (brand confirmed via s-trap-01). Hard assertion.",
+      "minItems": 12
     },
     {
       "id": "s-supp-15",
@@ -1201,7 +1299,8 @@
           "protein"
         ]
       ],
-      "notes": "Pattern 5 (NO_BRAND bonus suppression), SEARCH. A generic 'protein vanilla' record would otherwise win on the +0.05 no-brand bonus; assert the branded Premier Protein record wins top-3 (bonus suppressed in simpleRerank). Hard assertion."
+      "notes": "Pattern 5 (NO_BRAND bonus suppression), SEARCH. A generic 'protein vanilla' record would otherwise win on the +0.05 no-brand bonus; assert the branded Premier Protein record wins top-3 (bonus suppressed in simpleRerank). Hard assertion.",
+      "minItems": 17
     },
     {
       "id": "s-supp-16",
@@ -1213,7 +1312,8 @@
           "muscle milk"
         ]
       ],
-      "notes": "Pattern 5 (NO_BRAND bonus suppression), SEARCH. Assert the Muscle Milk brand beats a generic 'chocolate protein shake' no-brand record. Hard assertion."
+      "notes": "Pattern 5 (NO_BRAND bonus suppression), SEARCH. Assert the Muscle Milk brand beats a generic 'chocolate protein shake' no-brand record. Hard assertion.",
+      "minItems": 12
     },
     {
       "id": "s-typo-11",
@@ -1225,7 +1325,8 @@
           "cheese"
         ]
       ],
-      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'chesse' -> cheese. Hard assertion."
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'chesse' -> cheese. Hard assertion.",
+      "minItems": 14
     },
     {
       "id": "s-typo-12",
@@ -1240,7 +1341,8 @@
           "yoghurt"
         ]
       ],
-      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'yogrt' -> yogurt. Hard assertion."
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'yogrt' -> yogurt. Hard assertion.",
+      "minItems": 14
     },
     {
       "id": "s-typo-13",
@@ -1252,7 +1354,8 @@
           "broccoli"
         ]
       ],
-      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'brocoli' -> broccoli (single-c variant; complements s-typo-01 'brocolli'). Hard assertion."
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'brocoli' -> broccoli (single-c variant; complements s-typo-01 'brocolli'). Hard assertion.",
+      "minItems": 16
     },
     {
       "id": "s-typo-14",
@@ -1265,7 +1368,8 @@
         ]
       ],
       "knownIssue": true,
-      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'banan' -> banana. KNOWN GAP, same family as s-typo-08 'banna': truncated/misspelled banana queries get hijacked by literal 'banan'/'banna'-named junk products in the OFF corpus. Non-gating until the banana typo cluster is fixed."
+      "notes": "Pattern 8 (typo/fuzzy tolerance), SEARCH. 'banan' -> banana. KNOWN GAP, same family as s-typo-08 'banna': truncated/misspelled banana queries get hijacked by literal 'banan'/'banna'-named junk products in the OFF corpus. Non-gating until the banana typo cluster is fixed.",
+      "minItems": 13
     },
     {
       "id": "s-supp-17",
@@ -1277,7 +1381,8 @@
           "ghost"
         ]
       ],
-      "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs (Ghost Gamer in corpus, ranking stable). | Previously: DEFECT (flavor-ingest-blocked), SEARCH. Ghost Gamer line IS in corpus (off_0810028292666 'Gamer' brand 'Ghost') but the 'sour patch' flavor is not; nearest is 'Sour Watermelon' with an empty brand field. Not ranking-fixable without the flavor SKU. knownIssue, non-gating."
+      "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs (Ghost Gamer in corpus, ranking stable). | Previously: DEFECT (flavor-ingest-blocked), SEARCH. Ghost Gamer line IS in corpus (off_0810028292666 'Gamer' brand 'Ghost') but the 'sour patch' flavor is not; nearest is 'Sour Watermelon' with an empty brand field. Not ranking-fixable without the flavor SKU. knownIssue, non-gating.",
+      "minItems": 9
     }
   ],
   "nlp": [

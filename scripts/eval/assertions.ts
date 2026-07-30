@@ -176,7 +176,28 @@ export interface SearchCaseSpec {
     match: string[][];
     rank?: number;
     requireNutrition?: boolean;
+    /**
+     * Floor on how many rows the query must return. See DEFAULT_MIN_ITEMS for why
+     * this exists at all; see the golden set for how each value was derived.
+     */
+    minItems?: number;
 }
+
+/**
+ * Floor applied to a search case that declares no `minItems` of its own.
+ *
+ * WHY THIS EXISTS. Until 2026-07-29 nothing in this file read `list.length`. The
+ * pass criterion is "an expected name appears in `list.slice(0, rank ?? 3)`", and the
+ * largest `rank` in the golden set is 5 — so **any change truncating every result list
+ * to 5 rows passed all 105 search cases, by construction, not by luck.** Manual search
+ * is a browse list; destroying it while keeping the top hit is exactly the failure mode
+ * the pick-layer/rerank work risks, and it was the one thing the gate could not see.
+ *
+ * Deliberately low. Per-case floors in the golden set carry the real signal; this is
+ * the backstop for a newly added case whose author has not measured one yet, so it must
+ * never be the reason a legitimate narrow query goes red.
+ */
+export const DEFAULT_MIN_ITEMS = 5;
 
 const MACRO_KEYS = ['kcal100', 'protein100', 'carbs100', 'fat100'];
 function hasNum(v: unknown): boolean {
@@ -209,6 +230,15 @@ export function scoreSearchCase(c: SearchCaseSpec, hits: unknown): { pass: boole
         const bad = topN.find(nutritionMissing);
         if (bad) { pass = false; detail = `NULL-NUTRITION "${bad.name}" | ${detail}`; }
     }
+    // Browse-list invariant. Checked AFTER the match so the detail still names the
+    // winner: "the right hit is still first" and "the list was gutted" are different
+    // facts and a reader needs both. This is the only check here that reads
+    // list.length, and without it list destruction is invisible — see DEFAULT_MIN_ITEMS.
+    const floor = c.minItems ?? DEFAULT_MIN_ITEMS;
+    if (list.length < floor) {
+        pass = false;
+        detail = `LIST TOO SHORT ${list.length} < ${floor} | ${detail}`;
+    }
     return { pass, detail };
 }
 
@@ -223,6 +253,14 @@ export interface BaselineEntry {
     grams?: number | null;
     kcal100?: number | null;
     abstained?: boolean;
+    /**
+     * How many rows came back. Compared as of 2026-07-29 — it was recorded by
+     * run-eval from the start and never diffed, so a pinned case could lose most of
+     * its list silently. NOTE this only reaches `knownIssue` cases (2 of the 105
+     * search cases), which is why it is the SECOND half of the fix: the pass/fail
+     * floor in scoreSearchCase is what covers the other 103.
+     */
+    itemCount?: number;
     /**
      * The case did not produce a reading at all — transport error, non-array body,
      * zero items. Recorded because `knownIssue` otherwise swallows it completely:
@@ -262,6 +300,7 @@ export function describeDrift(was: BaselineEntry, now: BaselineEntry): string[] 
     }
     if (numberDrifted(was.grams, now.grams)) changes.push(`grams ${was.grams} -> ${now.grams}`);
     if (numberDrifted(was.kcal100, now.kcal100)) changes.push(`kcal100 ${was.kcal100} -> ${now.kcal100}`);
+    if (numberDrifted(was.itemCount, now.itemCount)) changes.push(`itemCount ${was.itemCount} -> ${now.itemCount}`);
     return changes;
 }
 
@@ -285,6 +324,28 @@ export interface DriftableResult {
     id: string;
     knownIssue?: boolean;
     observed?: BaselineEntry;
+}
+
+/**
+ * Fold this run's pin readings over the stored baseline, PRESERVING every entry the
+ * run did not observe.
+ *
+ * Pure and exported for the same reason driftedKnownIssues is: the replace-don't-merge
+ * version lived inside run-eval.ts, which calls main() at import and therefore cannot be
+ * imported by a test, so nothing could have caught it. What it did: the baseline held 15
+ * pins, 13 of them nlp, and `--write-baseline --only search` rebuilt the file from the 2
+ * pins that ran. The other 13 vanished — and since driftedKnownIssues() skips any case
+ * with no baseline entry, they would have become permanently exempt from drift detection
+ * with no error and a 0 exit. An empty `fresh` (a --grep that matched nothing) must
+ * likewise leave the file untouched rather than empty it.
+ */
+export function mergeBaseline(
+    existing: Record<string, BaselineEntry>,
+    fresh: Record<string, BaselineEntry>,
+): { cases: Record<string, BaselineEntry>; refreshed: number; preserved: number } {
+    const cases = { ...existing, ...fresh };
+    const refreshed = Object.keys(fresh).length;
+    return { cases, refreshed, preserved: Object.keys(cases).length - refreshed };
 }
 
 /**

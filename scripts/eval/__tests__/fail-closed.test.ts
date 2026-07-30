@@ -24,8 +24,11 @@
  */
 
 import {
+    DEFAULT_MIN_ITEMS,
+    describeDrift,
     driftedKnownIssues,
     evalExitCode,
+    mergeBaseline,
     scoreNlpCase,
     scoreSearchCase,
     type BaselineEntry,
@@ -148,12 +151,98 @@ describe('golden-set harness: abstention is not a pass', () => {
     });
 
     it('search: an empty hit list FAILS instead of having nothing to disagree with', () => {
-        const c = { match: [['almond']] };
+        // minItems:1 keeps this case about the EMPTY-list contract alone. Without it the
+        // one-hit positive control below trips the browse-list floor and this test would
+        // pass for the wrong reason — green because the list is short, not because the
+        // empty list was rejected.
+        const c = { match: [['almond']], minItems: 1 };
         expect(scoreSearchCase(c, []).pass).toBe(false);
         expect(scoreSearchCase(c, { error: 'typesense unreachable' }).pass).toBe(false);
         expect(scoreSearchCase(c, []).detail).toContain('EMPTY');
         // POSITIVE CONTROL
         expect(scoreSearchCase(c, [{ name: 'Almonds', kcal100: 600 }]).pass).toBe(true);
+    });
+
+    // -----------------------------------------------------------------------
+    // Browse-list destruction (the Stage 0 blind spot, closed 2026-07-29)
+    //
+    // Measured before writing these: `scoreSearchCase` scored `list.slice(0, rank ?? 3)`
+    // and never read `list.length`, and the largest `rank` in the golden set is 5 — so
+    // truncating every list to 5 rows passed all 105 search cases BY CONSTRUCTION. The
+    // top hit does not move, and the top hit was the only thing anyone looked at.
+    // -----------------------------------------------------------------------
+
+    /** 24 plausible rows, the shape a healthy browse list has. */
+    const fullList = (n = 24) =>
+        Array.from({ length: n }, (_, i) => ({ name: i === 0 ? 'Almond butter' : `Filler ${i}`, kcal100: 600 }));
+
+    it('search: a gutted list FAILS even though the expected hit is still #1', () => {
+        const c = { match: [['almond']], minItems: 14 };
+        // THE REGRESSION. Identical winner, identical top-3, 24 rows -> 3.
+        const gutted = scoreSearchCase(c, fullList(3));
+        expect(gutted.pass).toBe(false);
+        expect(gutted.detail).toContain('LIST TOO SHORT');
+        // ...and the winner is still named, because "right hit" and "gutted list" are
+        // two facts and a reader needs both to tell a filter bug from a ranking bug.
+        expect(gutted.detail).toContain('Almond butter');
+        // POSITIVE CONTROL — the same case, same winner, intact list.
+        expect(scoreSearchCase(c, fullList(24)).pass).toBe(true);
+    });
+
+    it('search: the floor is per-case, and DEFAULT_MIN_ITEMS applies when it is unset', () => {
+        expect(DEFAULT_MIN_ITEMS).toBeGreaterThan(1);
+        const noFloor = { match: [['almond']] };
+        expect(scoreSearchCase(noFloor, fullList(DEFAULT_MIN_ITEMS - 1)).pass).toBe(false);
+        expect(scoreSearchCase(noFloor, fullList(DEFAULT_MIN_ITEMS)).pass).toBe(true);
+        // A per-case floor OVERRIDES the default in both directions — a narrow query may
+        // legitimately return fewer rows, and a broad one must be held to more.
+        expect(scoreSearchCase({ match: [['almond']], minItems: 1 }, fullList(1)).pass).toBe(true);
+        expect(scoreSearchCase({ match: [['almond']], minItems: 20 }, fullList(19)).pass).toBe(false);
+    });
+
+    it('search: a short list cannot LAUNDER a wrong winner into a pass', () => {
+        // Both defects at once. The floor must not overwrite the match verdict with a
+        // friendlier one, and neither check may mask the other.
+        const c = { match: [['almond']], minItems: 14 };
+        const r = scoreSearchCase(c, [{ name: 'Peanut butter', kcal100: 600 }]);
+        expect(r.pass).toBe(false);
+        expect(r.detail).toContain('LIST TOO SHORT');
+    });
+
+    it('drift: itemCount collapse on a pinned case is reported', () => {
+        const was: BaselineEntry = { foodId: 'off:1', itemCount: 24 };
+        expect(describeDrift(was, { foodId: 'off:1', itemCount: 3 })
+            .some(s => s.includes('itemCount'))).toBe(true);
+        // Zero is the degenerate shape and must always register.
+        expect(describeDrift(was, { foodId: 'off:1', itemCount: 0 })
+            .some(s => s.includes('itemCount'))).toBe(true);
+        // POSITIVE CONTROL — ordinary corpus churn is not drift.
+        expect(describeDrift(was, { foodId: 'off:1', itemCount: 23 })).toEqual([]);
+    });
+
+    it('baseline refresh PRESERVES pins the run did not observe', () => {
+        // The real shape: 15 pins stored, 13 of them nlp, and `--only search` observes 2.
+        const stored: Record<string, BaselineEntry> = {
+            's-typo-08': { foodId: 'off:old', itemCount: 20 },
+            'n-cook-06': { foodId: 'oats', kcal100: 361 },
+            'n-mq-38': { foodId: 'burrito', kcal100: 166 },
+        };
+        const m = mergeBaseline(stored, { 's-typo-08': { foodId: 'off:new', itemCount: 22 } });
+        expect(m.cases['s-typo-08'].foodId).toBe('off:new');   // refreshed
+        expect(m.cases['n-cook-06']).toEqual(stored['n-cook-06']); // untouched, not deleted
+        expect(m.cases['n-mq-38']).toEqual(stored['n-mq-38']);
+        expect(Object.keys(m.cases)).toHaveLength(3);
+        expect(m.refreshed).toBe(1);
+        expect(m.preserved).toBe(2);
+    });
+
+    it('a refresh that observed NOTHING does not empty the baseline', () => {
+        // `--grep` matching nothing is the same input shape as a total outage. Emptying
+        // the file here would exempt every pin from drift forever, silently.
+        const stored: Record<string, BaselineEntry> = { 'n-cook-06': { foodId: 'oats' } };
+        const m = mergeBaseline(stored, {});
+        expect(m.cases).toEqual(stored);
+        expect(m.refreshed).toBe(0);
     });
 
     it('a run that executed ZERO cases exits 2, not 0', () => {
