@@ -305,8 +305,9 @@ model IngredientFoodMap {
   id                String     @id @default(cuid())
   ingredientId      String
   foodId            String?              // FK → legacy Food table
-  offBarcode        String?              // FK → OffFood.barcode
-  fdcId             Int?                 // FK → FdcFood.fdcId
+  offBarcode        String?              // no FK constraint — the comment is aspirational
+  fdcId             Int?                 // no FK constraint — the comment is aspirational
+  fsId              String?              // REAL FK → FatSecretFood.fsId (no "fs_" prefix)
   aiGeneratedFoodId String?
   pendingVolume     Boolean    @default(false)
   mappedBy          String
@@ -317,11 +318,13 @@ model IngredientFoodMap {
   food              Food?      @relation(fields: [foodId], references: [id], onDelete: Cascade)
   ingredient        Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   aiGeneratedFood   AiGeneratedFood? @relation(fields: [aiGeneratedFoodId], references: [id], onDelete: SetNull)
+  fatSecretFood     FatSecretFood?   @relation(fields: [fsId], references: [fsId], onDelete: SetNull)
 
   @@index([ingredientId])
   @@index([foodId])
   @@index([offBarcode])
   @@index([fdcId])
+  @@index([fsId])
   @@index([aiGeneratedFoodId])
 }
 
@@ -435,6 +438,7 @@ model FatSecretFood {
   updatedAt        DateTime      @updatedAt
   servings         FatSecretServing[]
   foodMappings     FoodMapping[]
+  ingredientMaps   IngredientFoodMap[]
 
   @@index([name])
   @@index([brandName])
