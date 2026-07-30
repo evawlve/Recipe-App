@@ -1038,6 +1038,10 @@ export async function getAiNormalizeCache(rawLine: string) {
             },
         });
 
+        // NOTE: this is a hand-built projection, not a spread of the row. A new column on
+        // AiNormalizeCache is invisible to every caller until it is added HERE as well —
+        // splitIngredients had a live read in ai-normalize.ts for months that could only
+        // ever yield undefined, because the column and this projection were both missing.
         return {
             normalizedName: cached.normalizedName,
             canonicalBase: cached.canonicalBase ?? cached.normalizedName,  // Fallback for backward compatibility
@@ -1046,6 +1050,8 @@ export async function getAiNormalizeCache(rawLine: string) {
             sizePhrases: cached.sizePhrases as string[],
             cookingModifier: cached.cookingModifier ?? undefined,
             isBranded: cached.isBranded ?? false,
+            isMultiIngredient: cached.isMultiIngredient ?? false,
+            splitIngredients: (cached.splitIngredients as string[] | null) ?? undefined,
             nutritionEstimate: cached.estimatedCaloriesPer100g != null ? {
                 caloriesPer100g: cached.estimatedCaloriesPer100g,
                 proteinPer100g: cached.estimatedProteinPer100g ?? 0,
@@ -1077,6 +1083,8 @@ export async function saveAiNormalizeCache(
         sizePhrases: string[];
         cookingModifier?: string;
         isBranded?: boolean;  // Whether AI identified this as a branded product query
+        isMultiIngredient?: boolean;  // Input names two distinct ingredients ("salt and pepper")
+        splitIngredients?: string[];  // The separated components, when isMultiIngredient
         nutritionEstimate?: {
             caloriesPer100g: number;
             proteinPer100g: number;
@@ -1100,6 +1108,8 @@ export async function saveAiNormalizeCache(
                 sizePhrases: result.sizePhrases,
                 cookingModifier: result.cookingModifier,
                 isBranded: result.isBranded ?? false,
+                isMultiIngredient: result.isMultiIngredient ?? false,
+                splitIngredients: result.splitIngredients,  // undefined → column omitted → NULL
                 estimatedCaloriesPer100g: result.nutritionEstimate?.caloriesPer100g,
                 estimatedProteinPer100g: result.nutritionEstimate?.proteinPer100g,
                 estimatedCarbsPer100g: result.nutritionEstimate?.carbsPer100g,
@@ -1110,6 +1120,12 @@ export async function saveAiNormalizeCache(
             update: {
                 useCount: { increment: 1 },
                 lastUsedAt: new Date(),
+                // Undefined-safe on purpose: aiSimplifyIngredient and batchNormalizeIngredients
+                // share this table and never compute these two, so they pass `undefined`, which
+                // Prisma treats as "leave the column alone" rather than "write null/false".
+                // A caller that DOES know must be able to fill a row written by one that didn't.
+                isMultiIngredient: result.isMultiIngredient,
+                splitIngredients: result.splitIngredients,
             },
         });
 
