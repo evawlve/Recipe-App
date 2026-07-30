@@ -1,20 +1,24 @@
 {
-  "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state.",
-  "writtenAt": "2026-07-25T16:05:32.011Z",
+  "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
+  "writtenAt": "2026-07-30T16:44:36.506Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
       "foodName": "banna yoghurt",
       "grams": null,
       "kcal100": 73.69999694824219,
-      "abstained": false
+      "abstained": false,
+      "errored": false,
+      "itemCount": 20
     },
     "s-typo-14": {
       "foodId": "off_5060929632145",
       "foodName": "Banan",
       "grams": null,
       "kcal100": 80,
-      "abstained": false
+      "abstained": false,
+      "errored": false,
+      "itemCount": 22
     },
     "n-supp-06": {
       "foodId": "off_0851770007795",

@@ -23,6 +23,7 @@ import {
     isAbstention,
     driftedKnownIssues,
     evalExitCode,
+    mergeBaseline,
     scoreNlpCase,
     scoreSearchCase,
     type BaselineEntry,
@@ -104,27 +105,49 @@ function loadKnownIssueBaseline(): Record<string, BaselineEntry> {
     }
 }
 
+/**
+ * Re-record the baseline for the pins THIS RUN observed, preserving every other entry.
+ *
+ * MERGES rather than replaces, and that is not a nicety. The baseline held 15 pins, 13
+ * of them nlp; a `--write-baseline --only search` run knows about 2. Rebuilding the file
+ * from `rs` alone deleted the other 13 — and because driftedKnownIssues() skips any case
+ * with no baseline entry ("nothing to compare"), those 13 would have gone PERMANENTLY
+ * exempt from drift detection, silently, with the run still exiting 0. The same applies
+ * to any --grep. A filtered run must be able to refresh its own pins without quietly
+ * dropping coverage for the ones it did not execute.
+ */
 function writeKnownIssueBaseline(rs: CaseResult[]): void {
-    const cases: Record<string, BaselineEntry> = {};
+    const fresh: Record<string, BaselineEntry> = {};
     for (const r of rs) {
         if (!r.knownIssue || !r.observed) continue;
-        cases[r.id] = {
+        fresh[r.id] = {
             foodId: r.observed.foodId ?? null,
             foodName: r.observed.foodName ?? null,
             grams: r.observed.grams ?? null,
             kcal100: r.observed.kcal100 ?? null,
             abstained: r.observed.abstained ?? false,
             errored: r.observed.errored ?? false,
+            itemCount: r.observed.itemCount,
         };
     }
+    const { cases, refreshed, preserved } = mergeBaseline(loadKnownIssueBaseline(), fresh);
     fs.writeFileSync(baselinePath, JSON.stringify({
         _readme: 'Recorded state of each knownIssue case. run-eval compares against this and '
             + 'reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the '
             + 'signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the '
-            + 'new values are understood to be the intended state.',
+            + 'new values are understood to be the intended state. Writes MERGE: a filtered '
+            + '(--only/--grep) run refreshes only the pins it ran and leaves the rest intact.',
         writtenAt: new Date().toISOString(),
         cases,
     }, null, 2) + '\n');
+    // Say what was and was not touched. A refresh that silently covers fewer cases than
+    // the reader assumes is the failure this whole file exists to prevent.
+    console.log(`baseline written: ${refreshed} pin(s) refreshed from this run, ${preserved} preserved untouched `
+        + `(${Object.keys(cases).length} total).`);
+    if (ONLY || GREP) {
+        console.log(`  NOTE: run was filtered (${ONLY ? `--only ${ONLY}` : ''}${GREP ? ` --grep ${GREP}` : ''}) — `
+            + `the preserved entries were NOT re-measured.`);
+    }
 }
 
 /** Every knownIssue case whose recorded values moved since the baseline was written. */
@@ -311,8 +334,11 @@ async function main() {
     summary.knownIssueDrift = drifts.length;
 
     if (WRITE_BASELINE) {
+        // The per-pin accounting (refreshed vs preserved) is printed inside the writer —
+        // this count is only the pins THIS run saw, which on a filtered run is not the
+        // size of the file and must not be reported as though it were.
+        console.log(`\nBaseline written to ${path.relative(process.cwd(), baselinePath)}:`);
         writeKnownIssueBaseline(results);
-        console.log(`\nBaseline written to ${path.relative(process.cwd(), baselinePath)} (${results.filter(r => r.knownIssue).length} knownIssue cases).`);
     }
 
     const outDir = path.join(__dirname, 'results');
