@@ -759,6 +759,18 @@
         "value": "1"
       },
       "verified": "2026-07-31"
+    },
+    {
+      "id": "warm-runner-still-hardcodes-llm",
+      "claim": "TRIPWIRE. The per-batch screen in warm-plan-2026-07-25/run-batches.sh still routes to the OpenRouter --llm tier; the agent migration (handoff §3, two-phase runner split) is specified but NOT built. When this claim FAILS, the split has shipped — update the handoff, CLAUDE.md and this entry together. The file lives in a gitignored sync-docs data dir the box does not receive, so this is a devmachine claim.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-07-31_warm-push-handoff.md#3-the-warm-push",
+      "where": "devmachine",
+      "command": "grep -c -- 'correctness-screen.ts .*--llm ' sync-docs/warm-plan-2026-07-25/run-batches.sh",
+      "expect": {
+        "kind": "equals",
+        "value": "1"
+      },
+      "verified": "2026-07-31"
     }
   ]
 }
