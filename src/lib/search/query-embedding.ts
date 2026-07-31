@@ -49,8 +49,10 @@ export const CORPUS_POOLING: QueryPooling = 'cls';
 /**
  * Diagnostic override, read per call so a probe can A/B both poolings in one
  * process against one loaded model. NOT a tuning knob: any value other than the
- * corpus pooling puts queries in the wrong space, so it warns every time it is
- * honoured. Unset (the production case) means `CORPUS_POOLING`.
+ * corpus pooling puts queries in the wrong space, and warns when honoured.
+ * Setting it to the corpus pooling is a no-op and stays silent; an unparseable
+ * value warns and falls back. Unset or empty (the production case) means
+ * `CORPUS_POOLING`.
  */
 function resolveQueryPooling(): QueryPooling {
     const raw = process.env.EMBED_QUERY_POOLING;
