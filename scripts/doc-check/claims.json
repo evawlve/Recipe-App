@@ -506,6 +506,42 @@
                 "value": "0"
             },
             "verified": "2026-07-30"
+        },
+        {
+            "id": "off-ingest-timers-enabled",
+            "claim": "Both OFF ingest timers are enabled on the box — off-delta.timer (weekly) and off-parquet-refresh.timer (quarterly), installed 2026-07-30 after the Mini-PC retirement left the corpus with no refresh path at all",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "box",
+            "command": "systemctl --user is-enabled off-delta.timer off-parquet-refresh.timer 2>/dev/null | sort -u | tr -d '\\n'",
+            "expect": {
+                "kind": "equals",
+                "value": "enabled"
+            },
+            "verified": "2026-07-30"
+        },
+        {
+            "id": "off-delta-cursor-fresh",
+            "claim": "The OFF delta cursor is inside its ~14-day retention window — outside it, un-ingested changes are only recoverable by a full Parquet re-ingest",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "box",
+            "command": "node -e \"const s=require(process.env.HOME+'/Recipe-App/data/off-delta-state.json');process.stdout.write(String(Math.floor((Date.now()/1000-s.lastProcessedEnd)/86400)))\"",
+            "expect": {
+                "kind": "max",
+                "value": "13"
+            },
+            "verified": "2026-07-30"
+        },
+        {
+            "id": "parquet-refresh-preflight-passes",
+            "claim": "The quarterly Parquet refresh's preflight passes on the box (duckdb, both TS entrypoints, ts-node, DATABASE_URL, >=15GB free, correct host) — the destructive run cannot be rehearsed, so this is the only advance warning that it would abort",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "box",
+            "command": "$HOME/Recipe-App/scripts/refresh-off-from-parquet.sh --preflight-only >/dev/null 2>&1 && echo ok || echo broken",
+            "expect": {
+                "kind": "equals",
+                "value": "ok"
+            },
+            "verified": "2026-07-30"
         }
     ]
 }

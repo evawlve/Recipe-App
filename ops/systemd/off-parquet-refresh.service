@@ -1,0 +1,20 @@
+[Unit]
+Description=Quarterly OFF full refresh from the Parquet export (the lane that actually refreshes the corpus)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Recipe-App
+Environment=NODE_ENV=production
+Environment=PATH=%h/.local/bin:%h/.nvm/versions/node/v24.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# DESTRUCTIVE: ingest-off.ts --fresh truncates and rebuilds OffFood, then
+# sync-typesense.ts rebuilds the collections. The script's own preflight
+# refuses (exit 2, nothing changed) unless duckdb, both TS entrypoints, ts-node,
+# DATABASE_URL and >=15GB free are all present AND it is running on this host —
+# every dev machine's .env points at this box's Postgres, so an unguarded run
+# from a laptop would truncate production.
+ExecStart=%h/Recipe-App/scripts/refresh-off-from-parquet.sh
+TimeoutStartSec=28800
+StandardOutput=append:%h/Recipe-App/logs/off-parquet-refresh.log
+StandardError=append:%h/Recipe-App/logs/off-parquet-refresh.log
