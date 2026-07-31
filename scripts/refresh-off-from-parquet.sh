@@ -197,6 +197,10 @@ rm -f "$PARQUET"
 # The snapshot is deliberately NOT deleted: it is the only record of what the
 # pointers were, and the restore's residue worklist is only actionable against it.
 echo "[$(date -Is)] ✅ Refresh complete."
-echo "[$(date -Is)] NEXT: every OffFood row now has a NULL embedding — semantic recall is"
-echo "     degraded until you run scripts/embed_foods.py (keyword search is unaffected;"
-echo "     the Typesense vector field is optional). Snapshot retained at: $SNAP"
+echo "[$(date -Is)] NEXT, two steps — semantic recall is degraded until BOTH are done"
+echo "     (keyword search is unaffected; the Typesense vector field is optional):"
+echo "       1. scripts/embed-off-cpu.ts   — every OffFood row now has a NULL embedding."
+echo "          Use this, NOT embed_foods.py: the box has no torch/sentence_transformers."
+echo "       2. scripts/sync-typesense.ts  — AGAIN. searchOffSemantic() reads vectors from"
+echo "          Typesense, not pgvector, and the sync above ran before the embeddings existed."
+echo "     Snapshot retained at: $SNAP"

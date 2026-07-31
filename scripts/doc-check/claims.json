@@ -603,6 +603,30 @@
                 "value": "0"
             },
             "verified": "2026-07-30"
+        },
+        {
+            "id": "embed-off-cpu-uses-cls-pooling",
+            "claim": "embed-off-cpu.ts writes CLS-pooled vectors, matching the stored corpus (cosine 1.00000 vs ~0.93 for mean)",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "backend",
+            "command": "grep -c \"pooling: 'cls'\" scripts/embed-off-cpu.ts",
+            "expect": {
+                "kind": "count",
+                "value": "1"
+            },
+            "verified": "2026-07-30"
+        },
+        {
+            "id": "query-embedding-still-mean-pooled",
+            "claim": "KNOWN DEFECT tripwire: query-embedding.ts still embeds queries with pooling:'mean' while the corpus is CLS. When this claim FAILS the mismatch has been fixed — update the owner doc's pooling section and delete this entry.",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "backend",
+            "command": "grep -c \"pooling: 'mean'\" src/lib/search/query-embedding.ts",
+            "expect": {
+                "kind": "count",
+                "value": "1"
+            },
+            "verified": "2026-07-30"
         }
     ]
 }
