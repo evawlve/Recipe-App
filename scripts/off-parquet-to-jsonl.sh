@@ -44,6 +44,13 @@ COPY (
     categories,
     serving_size,
     serving_quantity,
+    -- Net package contents. These two feed OffFood.packageQuantity(+Unit) and
+    -- with it the whole-package-count serving tier. They were MISSING from this
+    -- SELECT until 2026-07-31, so the column was only ever written by the
+    -- out-of-band CSV backfill and every --fresh rebuild destroyed it (it read
+    -- 0 of 1,085,525 rows after the 2026-07-30 refresh). Do not drop them again.
+    product_quantity,
+    quantity,
     countries_tags,
     {
       'energy-kcal_100g':     list_filter(nutriments, lambda n: n.name = 'energy-kcal')[1]."100g",
