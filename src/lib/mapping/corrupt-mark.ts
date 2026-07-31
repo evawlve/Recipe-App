@@ -38,6 +38,7 @@ export type CorruptDirection =
     // detect-corrupt-panel.ts
     | 'panel-low'
     | 'panel-inflated'
+    | 'panel-inflated-family'
     // detect-corrupt-nutrition.ts
     | 'panel-inflated-serving'
     | 'kcal-impossible'
@@ -81,6 +82,23 @@ export interface CorruptScanFlag {
     /** panel-inflated-serving only: the raw inputs the rule is computed from, so
      *  decideMark() can re-run the entire rule instead of trusting `value`. */
     panel?: ServingScalePanel;
+    /** panel-inflated-family only: the group-quality measurements the family
+     *  tier rests on, so decideMark() can re-derive the whole verdict from
+     *  measurements rather than trusting the scan's conclusion. */
+    family?: FamilyGroupEvidence;
+}
+
+/** The family-tier reference distribution, as measured at scan time.
+ *  `relMad` is median(|x - med|) / med over the family's kcal100 values — a
+ *  dispersion measure that is robust to the corrupt members themselves. */
+export interface FamilyGroupEvidence {
+    /** family grouping key the row was scored against (audit trail only) */
+    key: string;
+    relMad: number;
+    /** UNROUNDED family median. CorruptScanFlag.siblingMedian is rounded for
+     *  display, and rounding a small median (a 0.3 kcal/100g diet-soda family)
+     *  changes the verdict, so re-verification reads this field. */
+    median: number;
 }
 
 /** Raw per-100g panel plus the row's own serving mass — the complete input set
@@ -102,6 +120,167 @@ export const MAX_TRUSTABLE_SIBLING_MEDIAN = 920;
 /** panel-inflated flags lean entirely on the sibling distribution; small groups
  *  are dominated by a few bad rows. Triage review set this floor. */
 export const MIN_INFLATED_GROUP_SIZE = 8;
+
+// ---- panel-inflated-family thresholds (COARSER-GROUPING per-serving-panel rule) ----
+//
+// Same defect as `panel-inflated`: a per-SERVING / whole-container panel stored
+// in the per-100g fields, so kcal100 sits ~servingGrams/100 ABOVE the family's
+// true density. What differs is only HOW SIBLINGS ARE FOUND.
+//
+// `panel-inflated` groups by exact normalizeNameKey() equality, which is a
+// token-SET identity: one extra brand or flavour token puts a row in its own
+// group. Measured on the live corpus 2026-07-31 (scripts/eval/_probe_group_sizes
+// methodology, reproduced by detect-corrupt-panel.ts's own pass-1 counters):
+// 661,150 of 1,083,139 kcal-bearing rows (61.0%) sit in groups below MIN_GROUP=4
+// and are therefore never signature-tested at all, rising monotonically with
+// name length — 25.5% at one token to 98.3% at eight or more. The family tier
+// groups on the row's DISCRIMINATIVE tokens instead, which reaches those rows.
+//
+// A coarser group is a WEAKER reference, so every threshold below is stricter
+// than the exact-key tier's, and each one is set from a measured false-positive
+// audit rather than by inspection (see detect-corrupt-panel.ts's header).
+
+/** The family reference must be a real product family, not one fused ingredient
+ *  word. Measured: allowing single-token families takes the flag set from 201 to
+ *  731 rows, and the 530 additions are dominated by correct densities scored
+ *  against a fused median (beef tenderloin 229 kcal/100g vs a `filet` median of
+ *  132; root beer 45 kcal/100ml vs an `ale` median of 37). */
+export const FAMILY_MIN_TOKENS = 2;
+/** Larger than MIN_INFLATED_GROUP_SIZE's motivation but the same value: a coarse
+ *  group needs at least as many members as an exact one before its median is
+ *  load-bearing. */
+export const FAMILY_MIN_GROUP = 8;
+/** median(|x - med|)/med of the family's kcal100 values. A real product family is
+ *  tight; a fused one is not, and fusion is this tier's whole failure mode.
+ *  Measured: relaxing 0.10 -> 0.15 adds 36 rows of which the hand audit read the
+ *  large majority as correct densities (normal-density burritos at 205 kcal/100g
+ *  against a `carne con` median of 113, pork loin chops at 270 against 152). */
+export const FAMILY_MAX_REL_MAD = 0.10;
+/** |kcal100 * 100/S - med| <= tol * med. The exact-key tier uses 0.30; the family
+ *  tier's reference is weaker so it buys precision here. Measured on the audited
+ *  62-row set: tightening 0.30 -> 0.15 removes 7 of 15 false positives for 5 true
+ *  positives, moving the audited FP rate from 24% to ~17%. */
+export const FAMILY_RESCALE_TOL = 0.15;
+/** Stored kcal100 must exceed the family median by at least this factor. Shared
+ *  with the exact-key tier so the two tiers detect the same shape. */
+export const FAMILY_INFLATED_RATIO = 1.6;
+/** Real EAN/UPC/GTIN barcodes are at most 14 digits and this corpus's real ones
+ *  are <= 13. Longer barcodes are the OFF chain-restaurant import, which carries
+ *  a DIFFERENT corruption (the panel DIVIDED by serving scale — see
+ *  detect-panel-scale-divided.ts) whose repair runs the OPPOSITE direction. The
+ *  audit found ~15 such rows (White Castle / Jersey Mike's / Dunkin') inside the
+ *  loose family flag set; excluding them structurally is why no threshold has to
+ *  try to tell the two families apart by value. */
+export const MAX_REAL_GTIN_LENGTH = 13;
+/** Serving-mass window, matching the exact-key tier: below 2 g or above 600 g the
+ *  field is not a single eating occasion, and 90-110 g cannot distinguish a
+ *  per-serving panel from a correct per-100g one at all. */
+export const FAMILY_SERVING_MIN_G = 2;
+export const FAMILY_SERVING_MAX_G = 600;
+export const FAMILY_DEAD_ZONE_MIN_G = 90;
+export const FAMILY_DEAD_ZONE_MAX_G = 110;
+
+/**
+ * MEASURED false-positive rate of the panel-inflated-family flag set on the
+ * LIVE corpus — 9 of 31 rows, hand-audited 2026-07-31 against each row's own
+ * macro panel and servingSize string (1 further row undecidable and excluded
+ * from the ratio; counting it as a miss gives 32.3%).
+ *
+ * A constant with a test, deliberately, because this project has shipped a rule
+ * that scored 100% on its fixture and false-evicted 73.8% of the real cache
+ * (D1_FALSE_EVICT_RATE_REAL_CACHE in scripts/eval/correctness-screen.ts). A
+ * future "the fixture is green, let's auto-mark these" now has to argue with a
+ * number instead of with the fixture.
+ *
+ * WHY IT IS HIGHER THAN THE PRE-DEDUPE AUDIT (24% over 62 rows). Tier 2 only
+ * ever sees rows tier 1 did not already decide, and the rows tier 1 catches are
+ * the easy ones — juices, milks, single-container drinks. What is left is
+ * enriched in the hard mode.
+ *
+ * THE FALSE-POSITIVE MODE, characterised so a reviewer can recognise it: a
+ * PREPARED COMPOSITE DISH whose correct per-100g density genuinely runs 1.6-2.2x
+ * a family median that plainer members dilute — Tesco nduja ravioli 223 vs a
+ * `mascarpone nduja` median of 126, M&S roast potatoes 159 vs a `mari piper`
+ * median of 83, Wallaby 2% Greek yogurt 76 vs a `lowfat milkfat` median of 46.
+ * Every one of them has a NORMAL macro sum (20-45 g/100g); the true positives
+ * almost all carry a macro sum impossible for their food type (Factor ready
+ * meals at 94-103 g/100g, microwave rice at 91) or an impossible single macro
+ * for a liquid (Core Power at 42 g protein/100 mL).
+ *
+ * CONSEQUENCE, and it is the operative one: this flag set is a REVIEW QUEUE,
+ * not a mark list. decideMark() returning true means "the rule still holds on
+ * today's measurements", never "this row is corrupt".
+ */
+export const FAMILY_TIER_AUDITED_FP_RATE = 9 / 31;
+
+/** Why a row is NOT a panel-inflated-family candidate. Doubles as the
+ *  MarkDecision skip code, so a refusal always names the failing condition. */
+export type FamilyRejection =
+    | 'family_evidence_missing'
+    | 'family_barcode_not_real_gtin'
+    | 'family_group_too_small'
+    | 'family_median_implausible'
+    | 'family_dispersion_too_high'
+    | 'family_serving_out_of_window'
+    | 'family_serving_in_dead_zone'
+    | 'family_not_inflated_vs_median'
+    | 'family_rescale_misses_median';
+
+/** The measurements the panel-inflated-family verdict is computed from. Every
+ *  field is a raw observation; nothing here is a conclusion of the scan. */
+export interface FamilyScaleInputs {
+    barcode: string;
+    kcal100: number;
+    servingGrams: number;
+    familyMedian: number;
+    groupSize: number;
+    relMad: number;
+}
+
+/**
+ * The panel-inflated-family rule. Returns null when the row IS a candidate,
+ * otherwise the first failing condition.
+ *
+ * Exported as a named refusal rather than a boolean for the same reason
+ * rejectPanelInflatedServing() is: both the scan and decideMark() re-run it, and
+ * a named refusal is what makes the marker's re-verification auditable.
+ */
+export function rejectPanelInflatedFamily(
+    input: FamilyScaleInputs | null | undefined
+): FamilyRejection | null {
+    if (
+        !input ||
+        typeof input.barcode !== 'string' || !input.barcode.length ||
+        !isFinite(input.kcal100) || input.kcal100 <= 0 ||
+        !isFinite(input.servingGrams) ||
+        !isFinite(input.familyMedian) || input.familyMedian <= 0 ||
+        !isFinite(input.groupSize) ||
+        !isFinite(input.relMad) || input.relMad < 0
+    ) {
+        return 'family_evidence_missing';
+    }
+    if (input.barcode.length > MAX_REAL_GTIN_LENGTH) return 'family_barcode_not_real_gtin';
+    if (input.groupSize < FAMILY_MIN_GROUP) return 'family_group_too_small';
+    // The mass-INFLATED family (maraschino-cherry name groups with medians of
+    // ~3200) is a different corruption in which the plausible-looking row is the
+    // corrupt one. Testing it here inverts the verdict, so it stays excluded.
+    if (input.familyMedian > MAX_TRUSTABLE_SIBLING_MEDIAN) return 'family_median_implausible';
+    if (input.relMad > FAMILY_MAX_REL_MAD) return 'family_dispersion_too_high';
+    if (input.servingGrams < FAMILY_SERVING_MIN_G || input.servingGrams > FAMILY_SERVING_MAX_G) {
+        return 'family_serving_out_of_window';
+    }
+    if (input.servingGrams > FAMILY_DEAD_ZONE_MIN_G && input.servingGrams < FAMILY_DEAD_ZONE_MAX_G) {
+        return 'family_serving_in_dead_zone';
+    }
+    if (input.kcal100 < FAMILY_INFLATED_RATIO * input.familyMedian) {
+        return 'family_not_inflated_vs_median';
+    }
+    const rescaled = input.kcal100 * (100 / input.servingGrams);
+    if (Math.abs(rescaled - input.familyMedian) > FAMILY_RESCALE_TOL * input.familyMedian) {
+        return 'family_rescale_misses_median';
+    }
+    return null;
+}
 
 // ---- detect-corrupt-nutrition.ts thresholds (corpus-mark tier) ----
 // These sit deliberately ABOVE the rank/save-time gate bounds in
@@ -252,7 +431,8 @@ export type MarkDecision =
               | 'value_below_threshold'
               | 'outlier_group_too_small'
               | 'outlier_below_thresholds'
-              | ServingScaleRejection;
+              | ServingScaleRejection
+              | FamilyRejection;
       };
 
 /**
@@ -276,6 +456,25 @@ export function decideMark(flag: CorruptScanFlag): MarkDecision {
                 return { mark: false, skip: 'inflated_group_too_small' };
             }
             return { mark: true, reason: `${flag.direction}:${flag.tier}` };
+        case 'panel-inflated-family': {
+            // Same re-verification discipline as panel-inflated-serving: the rule
+            // is re-run from the raw measurements the scan recorded, so a stale or
+            // hand-edited scan file can only ever mark rows the rule still flags.
+            const rejection = rejectPanelInflatedFamily(
+                flag.family
+                    ? {
+                          barcode: flag.barcode,
+                          kcal100: flag.kcal100,
+                          servingGrams: flag.servingGrams ?? NaN,
+                          familyMedian: flag.family.median,
+                          groupSize: flag.groupSize,
+                          relMad: flag.family.relMad,
+                      }
+                    : null
+            );
+            if (rejection) return { mark: false, skip: rejection };
+            return { mark: true, reason: `${flag.direction}:${flag.tier}` };
+        }
         case 'panel-inflated-serving': {
             // Strictest re-verification of the set: the whole rule is re-run from
             // the raw panel the scan recorded, so `value` (and any hand edit to
