@@ -81,10 +81,47 @@ if [ "$PREFLIGHT_FAIL" -ne 0 ]; then
   exit 2
 fi
 echo "[$(date -Is)] Preflight OK."
+
+# BLAST RADIUS — print what `ingest-off.ts --fresh` will destroy, from the live
+# DB, every time. Measured 2026-07-30 the first time anyone looked: this is not
+# "refresh the corpus", it is a rebuild that also drops ~1.07M pgvector
+# embeddings and NULLs the offBarcode on ~81% of the FoodMapping cache.
+echo "[$(date -Is)] Blast radius (live):"
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only -e '
+const { PrismaClient } = require("@prisma/client");
+(async () => {
+  const p = new PrismaClient();
+  const [r] = await p.$queryRawUnsafe(`SELECT
+    (SELECT count(*) FROM "OffFood")                                     AS offfood,
+    (SELECT count(*) FROM "OffFood" WHERE embedding IS NOT NULL)         AS embedded,
+    (SELECT count(*) FROM "OffServing")                                  AS servings,
+    (SELECT count(*) FROM "FoodMapping" WHERE "offBarcode" IS NOT NULL)  AS mapped`);
+  console.log(`  OffFood rows deleted        : ${r.offfood}`);
+  console.log(`  ...pgvector embeddings lost : ${r.embedded}  (re-embedding needs the Windows RTX 5080 listener)`);
+  console.log(`  OffServing rows deleted     : ${r.servings}`);
+  console.log(`  FoodMapping.offBarcode NULLed: ${r.mapped}  (cache rows that lose their OFF pointer)`);
+  await p.$disconnect();
+})();' || { echo "  ❌ could not read the blast radius — refusing to guess"; exit 2; }
+
 if [ "$PREFLIGHT_ONLY" -eq 1 ]; then
   echo "[$(date -Is)] --preflight-only: all guards pass. Nothing downloaded, nothing written."
   exit 0
 fi
+
+# ACKNOWLEDGEMENT GATE — the numbers above are why this cannot be an unattended
+# job. A timer fires with a bare environment, so a scheduled run lands here and
+# stops; a human who has read the blast radius and has a re-embedding plan sets
+# the variable. This is deliberate: losing 1M embeddings quietly at 02:00 on a
+# Tuesday is exactly the kind of failure this codebase keeps writing gates for.
+if [ "${OFF_REFRESH_I_ACCEPT_DATA_LOSS:-0}" != "1" ]; then
+  echo "[$(date -Is)] ⛔ Refusing: this destroys the embeddings and the cache's OFF pointers above."
+  echo "     Nothing was downloaded or written. To proceed you need BOTH:"
+  echo "       1. a plan to re-embed (the Windows listener, or scripts to backfill), and"
+  echo "       2. a FoodMapping snapshot — see the food-cache flywheel procedure."
+  echo "     Then re-run with OFF_REFRESH_I_ACCEPT_DATA_LOSS=1."
+  exit 3
+fi
+echo "[$(date -Is)] OFF_REFRESH_I_ACCEPT_DATA_LOSS=1 — proceeding with the destructive refresh."
 
 echo "[$(date -Is)] Downloading Parquet export..."
 curl -fsSL --retry 3 -o "$PARQUET.tmp" "$PARQUET_URL"

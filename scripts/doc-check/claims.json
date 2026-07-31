@@ -566,6 +566,19 @@
                 "value": "200"
             },
             "verified": "2026-07-30"
+        },
+        {
+            "id": "parquet-refresh-refuses-without-ack",
+            "claim": "The quarterly OFF refresh refuses (exit 3, nothing downloaded or written) unless a human sets OFF_REFRESH_I_ACCEPT_DATA_LOSS=1 — it destroys ~1.07M pgvector embeddings and NULLs the OFF pointer on ~81% of FoodMapping cache rows, so the timer must never run it unattended",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "box",
+            "command": "$HOME/Recipe-App/scripts/refresh-off-from-parquet.sh >/dev/null 2>&1; echo $?",
+            "expect": {
+                "kind": "equals",
+                "value": "3"
+            },
+            "verified": "2026-07-30",
+            "timeoutMs": 180000
         }
     ]
 }

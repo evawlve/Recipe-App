@@ -8,12 +8,19 @@ Type=oneshot
 WorkingDirectory=%h/Recipe-App
 Environment=NODE_ENV=production
 Environment=PATH=%h/.local/bin:%h/.nvm/versions/node/v24.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-# DESTRUCTIVE: ingest-off.ts --fresh truncates and rebuilds OffFood, then
-# sync-typesense.ts rebuilds the collections. The script's own preflight
-# refuses (exit 2, nothing changed) unless duckdb, both TS entrypoints, ts-node,
-# DATABASE_URL and >=15GB free are all present AND it is running on this host —
-# every dev machine's .env points at this box's Postgres, so an unguarded run
-# from a laptop would truncate production.
+# DESTRUCTIVE, AND DELIBERATELY REFUSES ON A TIMER. Measured 2026-07-30, a
+# --fresh run deletes 1,073,542 OffFood rows carrying 1,073,537 pgvector
+# embeddings, deletes 762,156 OffServing rows, and NULLs FoodMapping.offBarcode
+# on 2,854 of 3,508 cache rows (81%). Re-embedding needs the Windows RTX 5080
+# listener. That is not something to do unattended at 02:00, so the script
+# prints the live blast radius and then exits 3 unless a human sets
+# OFF_REFRESH_I_ACCEPT_DATA_LOSS=1 — which this unit does NOT set. A quarterly
+# firing therefore shows up as a FAILED unit, on purpose: it is a loud reminder
+# that the corpus is due a refresh, not an automatic rebuild.
+# The preflight also exits 2 (nothing changed) unless duckdb, both TS
+# entrypoints, ts-node, DATABASE_URL and >=15GB free are present AND it is
+# running on this host — every dev machine's .env points at this box's Postgres,
+# so an unguarded run from a laptop would truncate production.
 ExecStart=%h/Recipe-App/scripts/refresh-off-from-parquet.sh
 TimeoutStartSec=28800
 StandardOutput=append:%h/Recipe-App/logs/off-parquet-refresh.log
