@@ -141,8 +141,14 @@ if [ "${OFF_REFRESH_I_ACCEPT_DATA_LOSS:-0}" != "1" ]; then
 fi
 echo "[$(date -Is)] OFF_REFRESH_I_ACCEPT_DATA_LOSS=1 — proceeding with the destructive refresh."
 
-echo "[$(date -Is)] Downloading Parquet export..."
-curl -fsSL --retry 3 -o "$PARQUET.tmp" "$PARQUET_URL"
+# A 7GB pull over a home line WILL be interrupted. The first real run
+# (2026-07-30) died at 4.7GB on `curl: (92) HTTP/2 stream not closed cleanly`,
+# and plain --retry restarts from byte zero, which never converges. Force
+# HTTP/1.1 (the stream resets are an HTTP/2-multiplexing artifact), resume the
+# partial with -C -, and retry on transport errors too, not just HTTP codes.
+echo "[$(date -Is)] Downloading Parquet export (resumable)..."
+curl -fL --http1.1 -C - --retry 8 --retry-all-errors --retry-delay 10 \
+  --connect-timeout 30 -sS -o "$PARQUET.tmp" "$PARQUET_URL"
 mv "$PARQUET.tmp" "$PARQUET"
 echo "[$(date -Is)] Downloaded: $(du -h "$PARQUET" | cut -f1)"
 
