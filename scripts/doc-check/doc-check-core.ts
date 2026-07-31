@@ -24,7 +24,18 @@
  */
 
 /** Where a claim's command runs. The runner maps each to a cwd or an ssh wrapper. */
-export type ClaimContext = 'backend' | 'mobile' | 'box';
+/**
+ * Where a claim's command must run.
+ *
+ * `devmachine` is deliberately distinct from `mobile`: both live in the mobile
+ * repo, but a devmachine claim also needs an installed toolchain (node_modules,
+ * a working `npx tsc`). Syncthing does not carry node_modules, so the box has
+ * the mobile FILES but not the mobile TOOLCHAIN. Splitting the context is not a
+ * way to skip a check — it names WHY a host cannot run it, so the runner can
+ * report it as out of scope rather than either failing nightly forever or,
+ * worse, being silently dropped.
+ */
+export type ClaimContext = 'backend' | 'mobile' | 'box' | 'devmachine';
 
 export interface ExpectSpec {
     /**
@@ -92,7 +103,7 @@ export function parseRegistry(raw: string): DocClaim[] {
     if (!Array.isArray(claims)) throw new Error('registry has no claims[] array');
     const seen = new Set<string>();
     const KINDS = new Set(['equals', 'matches', 'count', 'min', 'max']);
-    const CONTEXTS = new Set(['backend', 'mobile', 'box']);
+    const CONTEXTS = new Set(['backend', 'mobile', 'box', 'devmachine']);
     for (const c of claims as DocClaim[]) {
         for (const field of ['id', 'claim', 'ownerDoc', 'where', 'command', 'verified'] as const) {
             if (typeof c?.[field] !== 'string' || c[field].trim() === '') {

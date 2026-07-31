@@ -23,8 +23,14 @@
  *
  * CONTEXTS
  *   backend — this repo's root.
- *   mobile  — the KindaHealthyMobile repo. Syncthing delivers it to every machine;
- *             resolved via DOC_CHECK_MOBILE_ROOT or the known per-machine paths.
+ *   mobile  — the KindaHealthyMobile repo's FILES. Since 2026-07-30 Syncthing
+ *             delivers them to the box too (folder msmwx-9fkha, receive-only,
+ *             ignoring ios/android/node_modules); resolved via
+ *             DOC_CHECK_MOBILE_ROOT or the known per-machine paths.
+ *   devmachine — the mobile repo PLUS an installed toolchain. node_modules is
+ *             Syncthing-ignored, so `npx tsc` does not exist on the box. These
+ *             claims are out of scope there and are reported as such, never
+ *             silently dropped.
  *   box     — the OptiPlex. Local when this host IS the box, ssh otherwise.
  *             A dead ssh FAILS those claims (never skips): the box being
  *             unreachable is exactly when its state is least verified.
@@ -63,7 +69,7 @@ function runCommand(c: DocClaim): CommandOutcome {
     let argv: string[];
     let cwd = BACKEND_ROOT;
 
-    if (c.where === 'mobile') {
+    if (c.where === 'mobile' || c.where === 'devmachine') {
         const root = mobileRoot();
         if (!root) {
             return { ran: false, stdout: '', exitCode: null, error: 'mobile repo not found (set DOC_CHECK_MOBILE_ROOT)' };
