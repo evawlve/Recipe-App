@@ -2530,8 +2530,7 @@
         20,
         30
       ],
-      "knownIssue": true,
-      "notes": "Multi-unit double-count is FIXED (2026-07-18): buildOffResult now divides a label serving by its unit-count (serving-resolver returns unitCount), so a '2 scoops (Xg)' label no longer bills Xg to one scoop. Residual 🟡 is a PRODUCT-SELECTION nuance, not a serving bug: the query now maps to the 'Orgain Organic Protein + Oatmilk' SKU (~45g/scoop per its own label) rather than the base 'Orgain Organic Protein Powder' (~23g/scoop) this range was written for. Both are real Orgain SKUs; 45g is per-label-correct for the one chosen. Revisit if we add product-line disambiguation."
+      "notes": "PROMOTED to a hard assertion 2026-07-31: now maps to the base 'Orgain Organic Protein Powder' SKU at 23g/scoop, inside the [20,30] band. | Previously: multi-unit double-count was FIXED (2026-07-18) — buildOffResult divides a label serving by its unit-count (serving-resolver returns unitCount), so a '2 scoops (Xg)' label no longer bills Xg to one scoop. The residual was a PRODUCT-SELECTION nuance, not a serving bug: the query mapped to the 'Orgain Organic Protein + Oatmilk' SKU (~45g/scoop per its own label) rather than the base SKU this range was written for. The product-line pick tightened after the 2026-07-31 query-pooling fix and packageQuantity restore."
     },
     {
       "id": "n-svg-01",
@@ -6144,7 +6143,7 @@
         ]
       ],
       "knownIssue": true,
-      "notes": "DEFECT (DETECTION + INGEST-BLOCKED). Bare 'c4' is NOT in brand-lexicon.json (only 'c4 energy'/'cellucor c4'), so isBranded/targetBrand never fire; degrades to generic 'fruit punch' (off_03855334, brand ''). No C4 SKU surfaced either. Needs a lexicon entry AND ingest before ranking could engage. knownIssue, non-gating."
+      "notes": "DEFECT (DETECTION + INGEST-BLOCKED). Bare 'c4' is NOT in brand-lexicon.json (only 'c4 energy'/'cellucor c4'), so isBranded/targetBrand never fire and no C4 SKU surfaces. Needs a lexicon entry AND ingest before ranking could engage. The MISS improved on 2026-07-31 (pooling fix + packageQuantity restore): it now lands on off_0810076291826 'Fruit Punch Pre Workout' (Jocko, labeled 19.8g scoop, 50.5 kcal/100g) instead of the brandless generic off_0041387322170 'Fruit Punch' billed at a flat 100g / 409 kcal. Right category, wrong brand — the assertion still fails on 'c4'. knownIssue, non-gating."
     },
     {
       "id": "n-brand-06",

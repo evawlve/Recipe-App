@@ -128,6 +128,8 @@ async function main() {
           },
           servingSize: d.servingSize,
           servingGrams: d.servingGrams,
+          packageQuantity: d.packageQuantity,
+          packageQuantityUnit: d.packageQuantityUnit,
         });
 
         // If a standard serving size was extracted, prepare an OffServing record

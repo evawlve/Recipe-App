@@ -72,6 +72,44 @@ export function parseServingGrams(servingQuantity: any, servingSize: string): nu
   return null;
 }
 
+// --- Package net quantity ------------------------------------------------
+// OFF's `product_quantity` is the normalized net contents (g or ml) and
+// `quantity` is the raw label string ("591 ml", "1.75 L", "6 x 355 ml").
+// Together they populate OffFood.packageQuantity(+Unit), which feeds the
+// whole-package-count serving tier (borrowSiblingPackageGrams() in
+// src/lib/mapping/map-ingredient-with-fallback.ts).
+//
+// These live here, shared by the ingest and by
+// scripts/backfill-off-package-quantity.ts, because the two paths must agree
+// on what qualifies — the 2026-07-30 refresh proved that a column only one
+// path knows how to write is a column the other path silently destroys.
+
+/** "6 x 355 ml", "2×125 g" — product_quantity is the pack TOTAL for these. */
+const MULTIPACK_LABEL = /\d\s*[x×*]\s*\d/i;
+
+/** 'ml' for volume-labeled packages, 'g' for weight-labeled, null if unclear. */
+export function inferPackageUnit(quantityLabel: string): 'g' | 'ml' | null {
+  const s = quantityLabel.toLowerCase();
+  if (/\d\s*(ml|cl|dl|l|litre|liter|fl\s*\.?\s*oz)\b/.test(s)) return 'ml';
+  if (/\d\s*(g|gr|grams?|kg|mg|oz|lbs?|pounds?)\b/.test(s)) return 'g';
+  return null;
+}
+
+/**
+ * Net package contents, or null when unusable. Multipacks are REJECTED
+ * rather than divided: product_quantity is the total across the pack, so
+ * serving it as one package would overbill "1 bottle" by the pack count.
+ */
+export function parsePackageQuantity(
+  productQuantity: unknown,
+  quantityLabel: string,
+): { quantity: number; unit: 'g' | 'ml' | null } | null {
+  const pq = typeof productQuantity === 'number' ? productQuantity : parseFloat(String(productQuantity ?? ''));
+  if (!Number.isFinite(pq) || pq <= 0 || pq > 100000) return null;
+  if (MULTIPACK_LABEL.test(quantityLabel)) return null;
+  return { quantity: pq, unit: inferPackageUnit(quantityLabel) };
+}
+
 /** Atwater check: labeled kcal should be within [0.65x, 1.40x] of the
  * macro-derived estimate. (Was 0.7–1.3; widened 2026-07-13 to admit label
  * rounding / alcohol / sugar-alcohol discrepancies while still rejecting
@@ -122,6 +160,9 @@ export interface ParsedOffProduct {
   fiber: number;
   sugar: number;
   sodium: number;
+  /** Net package contents (g or ml per packageQuantityUnit); null if absent/multipack. */
+  packageQuantity: number | null;
+  packageQuantityUnit: 'g' | 'ml' | null;
   /** true if per-100g macros were back-calculated from `_serving` fields */
   derivedFromServing: boolean;
 }
@@ -173,6 +214,7 @@ export function parseOffProduct(product: any): ParseResult {
   }
 
   const servingGrams = parseServingGrams(servingQuantity, servingSize);
+  const pkg = parsePackageQuantity(product.product_quantity, stripNul(String(product.quantity || '')));
   const nutriments = product.nutriments || {};
 
   let kcal = parseMacro(nutriments['energy-kcal_100g'] ?? nutriments['energy_100g']);
@@ -223,6 +265,8 @@ export function parseOffProduct(product: any): ParseResult {
       servingSize: servingSize || null,
       servingGrams,
       kcal, fat, carbs, protein, fiber, sugar, sodium,
+      packageQuantity: pkg?.quantity ?? null,
+      packageQuantityUnit: pkg?.unit ?? null,
       derivedFromServing,
     },
   };
