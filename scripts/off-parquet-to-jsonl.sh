@@ -6,7 +6,7 @@
 # WHY: OFF's official JSONL dump (openfoodfacts-products.jsonl.gz) omits the
 # entire `nutriments` object for a large slice of products (~100-140K US rows,
 # incl. the Mission Carb Balance line) that the Parquet export has. See
-# sync-docs/handoff_food_data_quality_audit.md ("TRUE root cause") in the
+# the mobile repo's sync-docs/archive/handoff_food_data_quality_audit.md ("TRUE root cause") in the
 # mobile repo. So the bulk ingest now sources from Parquet:
 #
 #   1. Download the Parquet (~7.1GB):

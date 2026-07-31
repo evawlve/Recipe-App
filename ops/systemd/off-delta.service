@@ -1,0 +1,21 @@
+[Unit]
+Description=Weekly Open Food Facts delta ingest (incremental upsert by barcode)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Recipe-App
+Environment=NODE_ENV=production
+Environment=PATH=%h/.nvm/versions/node/v24.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# NOTE ON YIELD: this lane upserts almost nothing. OFF's delta files are JSONL
+# and inherit the JSONL export's missing-`nutriments` hole — measured
+# 2026-07-30, 2,937 of 2,939 US/EN products in a real delta carried NO
+# nutriments object, and a 12-day catch-up scanned 61,796 lines and upserted 0.
+# It is kept because it is cheap and does catch the occasional complete record,
+# but a green run here does NOT mean the corpus is fresh. The lane that
+# actually refreshes it is off-parquet-refresh.timer.
+ExecStart=%h/.nvm/versions/node/v24.18.0/bin/npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/ingest-off-delta.ts
+TimeoutStartSec=3600
+StandardOutput=append:%h/Recipe-App/logs/off-delta.log
+StandardError=append:%h/Recipe-App/logs/off-delta.log

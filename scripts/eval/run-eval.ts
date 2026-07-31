@@ -7,8 +7,10 @@
  * machine without touching repo code paths.
  *
  * Run (from repo root):
- *   npx ts-node --transpile-only --compilerOptions '{"module":"commonjs","moduleResolution":"node"}' \
- *     scripts/eval/run-eval.ts [--base http://192.168.1.133:3000] [--only search|nlp] [--grep s-brand]
+ *   npm run eval:golden -- [--base http://192.168.1.133:3000] [--only search|nlp] [--grep s-brand]
+ *
+ * --base defaults to the box (192.168.1.133:3000); pass http://localhost:3000 when the API is
+ * local. Not to be confused with `npm run eval` (eval/run.ts), a separate parser harness.
  *
  * Results are written to scripts/eval/results/eval-<timestamp>.json for
  * before/after diffing across ranking or ingest changes.
