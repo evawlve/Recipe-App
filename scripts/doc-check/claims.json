@@ -617,14 +617,50 @@
       "verified": "2026-07-30"
     },
     {
-      "id": "off-refresh-does-not-preserve-marks",
-      "claim": "KNOWN DEFECT tripwire: refresh-off-from-parquet.sh does not snapshot/restore OffFood.corruptReason, so a --fresh rebuild silently destroys every curation mark (6,822 lost on 2026-07-30). When this claim FAILS the restore has been added — update the owner doc's 'The marks are data' section and delete this entry.",
+      "id": "off-refresh-handles-curation-marks",
+      "claim": "refresh-off-from-parquet.sh names corruptReason in its blast radius and re-derives it after the ingest, so a --fresh rebuild no longer silently destroys the curation marks (6,822 were lost that way on 2026-07-30). Companion claims pin the mechanism: off-refresh-regenerates-curation-marks (the detect->mark + dedupe chain runs before the Typesense sync) and off-refresh-snapshots-derived-servings.",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "backend",
       "command": "grep -c 'corruptReason' scripts/refresh-off-from-parquet.sh || true",
       "expect": {
+        "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-07-31"
+    },
+    {
+      "id": "off-refresh-snapshots-derived-servings",
+      "claim": "refresh-off-from-parquet.sh snapshots the DERIVED OffServing rows (source <> openfoodfacts) before the truncate and replays them after the ingest. These are the one population neither the ingest nor a re-scan reproduces — re-running the estimator RE-ROLLS them, which is the n-svk-05 mechanism (a cached 150g sleeve was deleted, redrawn at 200g, and persisted).",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+      "where": "backend",
+      "command": "grep -c 'restore-off-servings.ts' scripts/refresh-off-from-parquet.sh",
+      "expect": {
+        "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-07-31"
+    },
+    {
+      "id": "off-refresh-regenerates-curation-marks",
+      "claim": "refresh-off-from-parquet.sh re-runs the detect->mark and dedupe chains after the ingest and BEFORE sync-typesense.ts, so corruptReason/duplicateOfBarcode are re-derived from the NEW panel (not replayed stale) and the search index never contains the bad rows. The 2026-07-30 refresh skipped this entirely and shipped ~100k unmarked rows into Typesense.",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+      "where": "backend",
+      "command": "grep -cE 'mark-corrupt-off.ts|dedupe-off-mark.ts' scripts/refresh-off-from-parquet.sh",
+      "expect": {
+        "kind": "min",
+        "value": "2"
+      },
+      "verified": "2026-07-31"
+    },
+    {
+      "id": "flywheel-allow-fail-defaults-empty",
+      "claim": "flywheel-sweep.ts defaults --allow-fail to EMPTY, so any real eval failure reds the nightly gate. The standing 'n-mq-10' default was pruned 2026-07-31 once that case was passing as a hard assertion: an allowance not currently absorbing a real failure is a slot where a future genuine red disappears silently.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-07-31_warm-push-handoff.md",
+      "where": "backend",
+      "command": "grep -c \"argValue('--allow-fail') ?? ''\" scripts/eval/flywheel-sweep.ts",
+      "expect": {
         "kind": "count",
-        "value": "0"
+        "value": "1"
       },
       "verified": "2026-07-31"
     },

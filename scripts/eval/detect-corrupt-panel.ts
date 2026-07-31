@@ -482,6 +482,10 @@ if (require.main === module) {
     runScan(prisma as unknown as ScanDb, {
         minGroup: Number(argValue('--min-group') ?? 4),
         print: Number(argValue('--print') ?? 40),
+        // The report filename is auto-timestamped, so a caller that needs to
+        // find it deterministically (refresh-off-from-parquet.sh) points this
+        // at an empty per-run directory and takes the only file in it.
+        outDir: argValue('--out-dir'),
     })
         .then(code => { if (code !== 0) process.exitCode = code; })
         .catch(err => { console.error(err); process.exitCode = 2; })
