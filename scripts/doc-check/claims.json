@@ -749,6 +749,30 @@
       "verified": "2026-07-31"
     },
     {
+      "id": "off-triage-marks-have-no-producer",
+      "claim": "No code in the backend repo produces the triage-bigwarm-2026-07-21 corruptReason mark (the registry itself is excluded, or the check matches its own text), so a refresh that re-derives marks cannot bring the 2026-07-21 hand-authored batch back",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md#the-hand-authored-marks",
+      "where": "backend",
+      "command": "grep -rIl 'triage-bigwarm' src scripts --exclude-dir=results --exclude-dir=doc-check | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "verified": "2026-07-31"
+    },
+    {
+      "id": "off-triage-verdicts-mostly-untargeted",
+      "claim": "triage-verdicts-2026-07-21.json holds 50 nutrition mark-corrupt verdicts of which only 7 carry a targetId; the other 43 name a row by seed and prose only, which no restore tool can consume",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md#the-hand-authored-marks",
+      "where": "backend",
+      "command": "python3 -c \"import json;d=json.load(open('scripts/eval/results/triage-verdicts-2026-07-21.json'));n=[r for r in d['confirmed'] if r['cls']=='nutrition'];print(len(n), sum(1 for r in n if r.get('targetId')))\"",
+      "expect": {
+        "kind": "equals",
+        "value": "50 7"
+      },
+      "verified": "2026-07-31"
+    },
+    {
       "id": "corrupt-detector-reachability-gap",
       "claim": "Sibling grouping in detect-corrupt-panel.ts is a coverage decision: rows in exact-name groups below MIN_GROUP=4 are never signature-tested. Measured 2026-07-31: 661,150 of 1,083,139 kcal-bearing rows (61.0%). The axis is NAME LENGTH, not brandedness — 25.5% unreachable at 1 token rising monotonically to 98.3% at 8+ tokens (branded 61.8% vs unbranded 58.9%). The scan prints these counters on every run so the number re-derives itself.",
       "ownerDoc": "mobile:sync-docs/mapping_investigation_playbook.md",
