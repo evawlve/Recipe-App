@@ -579,6 +579,30 @@
             },
             "verified": "2026-07-30",
             "timeoutMs": 180000
+        },
+        {
+            "id": "off-refresh-snapshots-before-truncate",
+            "claim": "refresh-off-from-parquet.sh snapshots FoodMapping BEFORE the --fresh ingest and restores offBarcode AFTER it, in that order",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "backend",
+            "command": "awk 'index($0,\"scripts/eval/_snap_foodmapping.ts \\\"$SNAP\\\"\"){s=NR} index($0,\"scripts/ingest-off.ts \\\"$SLIM_JSONL\\\" --fresh\"){i=NR} index($0,\"scripts/eval/restore-off-pointers.ts \\\"$SNAP\\\" --execute\"){r=NR} END{print (s&&i&&r&&s<i&&i<r)?\"ok\":\"BROKEN\"}' scripts/refresh-off-from-parquet.sh",
+            "expect": {
+                "kind": "equals",
+                "value": "ok"
+            },
+            "verified": "2026-07-30"
+        },
+        {
+            "id": "off-refresh-timer-does-not-set-ack",
+            "claim": "off-parquet-refresh.service does NOT set OFF_REFRESH_I_ACCEPT_DATA_LOSS, so an unattended quarterly firing fails as a unit instead of rebuilding the corpus",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "backend",
+            "command": "grep -c '^Environment=.*OFF_REFRESH_I_ACCEPT_DATA_LOSS' ops/systemd/off-parquet-refresh.service",
+            "expect": {
+                "kind": "count",
+                "value": "0"
+            },
+            "verified": "2026-07-30"
         }
     ]
 }

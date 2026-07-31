@@ -13,7 +13,16 @@
 # "the corpus is fresh".
 #
 #   download Parquet (~7GB) -> off-parquet-to-jsonl.sh (slim ~330MB JSONL)
-#   -> ingest-off.ts --fresh -> sync-typesense.ts
+#   -> snapshot FoodMapping -> ingest-off.ts --fresh -> restore-off-pointers.ts
+#   -> sync-typesense.ts
+#
+# The snapshot/restore pair either side of the ingest is not optional bookkeeping:
+# `--fresh` NULLs FoodMapping.offBarcode on ~81% of the cache to satisfy the FK
+# before deleting OffFood. Barcodes are OFF's stable primary key, so those
+# pointers are recoverable — but only from a snapshot taken BEFORE the truncate.
+# Embeddings are the other loss and are NOT restored here: re-run embed_foods.py
+# afterwards (measured 2026-07-30: ~327 rows/sec on the box's CPU, so ~55min for
+# the full corpus — a GPU is not required).
 #
 # See the mobile repo's sync-docs/archive/handoff_food_data_quality_audit.md
 # ("TRUE root cause" section) for the full investigation.
@@ -71,6 +80,10 @@ command -v duckdb >/dev/null 2>&1 || { echo "  ❌ duckdb CLI not on PATH (neede
 [ -x "$REPO/scripts/off-parquet-to-jsonl.sh" ] || { echo "  ❌ scripts/off-parquet-to-jsonl.sh missing or not executable"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/scripts/ingest-off.ts" ]           || { echo "  ❌ scripts/ingest-off.ts missing"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/scripts/sync-typesense.ts" ]       || { echo "  ❌ scripts/sync-typesense.ts missing"; PREFLIGHT_FAIL=1; }
+# The snapshot/restore pair is checked HERE because a missing restore path
+# discovered after the truncate is a missing restore path, not an error message.
+[ -f "$REPO/scripts/eval/_snap_foodmapping.ts" ]     || { echo "  ❌ scripts/eval/_snap_foodmapping.ts missing — no pre-truncate snapshot is possible"; PREFLIGHT_FAIL=1; }
+[ -f "$REPO/scripts/eval/restore-off-pointers.ts" ]  || { echo "  ❌ scripts/eval/restore-off-pointers.ts missing — the cache pointers would be unrecoverable"; PREFLIGHT_FAIL=1; }
 [ -x "$REPO/node_modules/.bin/ts-node" ]       || { echo "  ❌ node_modules/.bin/ts-node missing — run npm ci"; PREFLIGHT_FAIL=1; }
 [ -n "${DATABASE_URL:-}" ]                     || { echo "  ❌ DATABASE_URL empty"; PREFLIGHT_FAIL=1; }
 # ~7GB parquet + ~330MB slim JSONL + headroom.
@@ -97,9 +110,9 @@ const { PrismaClient } = require("@prisma/client");
     (SELECT count(*) FROM "OffServing")                                  AS servings,
     (SELECT count(*) FROM "FoodMapping" WHERE "offBarcode" IS NOT NULL)  AS mapped`);
   console.log(`  OffFood rows deleted        : ${r.offfood}`);
-  console.log(`  ...pgvector embeddings lost : ${r.embedded}  (re-embedding needs the Windows RTX 5080 listener)`);
+  console.log(`  ...pgvector embeddings lost : ${r.embedded}  (NOT restored here — re-run scripts/embed_foods.py; ~55min on this box CPU, measured 2026-07-30)`);
   console.log(`  OffServing rows deleted     : ${r.servings}`);
-  console.log(`  FoodMapping.offBarcode NULLed: ${r.mapped}  (cache rows that lose their OFF pointer)`);
+  console.log(`  FoodMapping.offBarcode NULLed: ${r.mapped}  (RESTORED automatically after the ingest, minus products OFF delisted)`);
   await p.$disconnect();
 })();' || { echo "  ❌ could not read the blast radius — refusing to guess"; exit 2; }
 
@@ -114,10 +127,15 @@ fi
 # the variable. This is deliberate: losing 1M embeddings quietly at 02:00 on a
 # Tuesday is exactly the kind of failure this codebase keeps writing gates for.
 if [ "${OFF_REFRESH_I_ACCEPT_DATA_LOSS:-0}" != "1" ]; then
-  echo "[$(date -Is)] ⛔ Refusing: this destroys the embeddings and the cache's OFF pointers above."
-  echo "     Nothing was downloaded or written. To proceed you need BOTH:"
-  echo "       1. a plan to re-embed (the Windows listener, or scripts to backfill), and"
-  echo "       2. a FoodMapping snapshot — see the food-cache flywheel procedure."
+  echo "[$(date -Is)] ⛔ Refusing: this rebuilds the corpus and drops the embeddings above."
+  echo "     Nothing was downloaded or written."
+  echo "     Recoverable automatically by this script:"
+  echo "       - FoodMapping.offBarcode — snapshotted before the truncate and restored after."
+  echo "     NOT recovered here, plan for it first:"
+  echo "       - the pgvector embeddings. Re-run scripts/embed_foods.py afterwards"
+  echo "         (~327 rows/sec on this box's CPU, measured 2026-07-30 — no GPU needed)."
+  echo "         Until it finishes, keyword search is unaffected but semantic recall is degraded."
+  echo "       - cache rows whose product OFF has delisted; the restore prints them as a worklist."
   echo "     Then re-run with OFF_REFRESH_I_ACCEPT_DATA_LOSS=1."
   exit 3
 fi
@@ -131,9 +149,36 @@ echo "[$(date -Is)] Downloaded: $(du -h "$PARQUET" | cut -f1)"
 echo "[$(date -Is)] Converting Parquet -> slim JSONL..."
 "$REPO/scripts/off-parquet-to-jsonl.sh" "$PARQUET" "$SLIM_JSONL"
 
+# SNAPSHOT — Role B (restore anchor): taken as late as possible, immediately
+# before the truncate, so live traffic between here and the ingest is minimal.
+# Deliberately AFTER the slow download/convert, which can take hours.
+SNAP="$WORKDIR/FoodMapping-pre-refresh-$(date -u +%Y-%m-%dT%H-%M-%SZ).json"
+echo "[$(date -Is)] Snapshotting FoodMapping -> $SNAP"
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
+  -r tsconfig-paths/register scripts/eval/_snap_foodmapping.ts "$SNAP"
+
 echo "[$(date -Is)] Running --fresh ingest..."
 node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
   scripts/ingest-off.ts "$SLIM_JSONL" --fresh
+
+# RESTORE — exit 3 means "completed, with residue an operator must reconcile"
+# (products OFF delisted). That is an expected outcome of a real refresh, not a
+# failure, so it must not abort the run under `set -e`; exit 2 is a refusal and
+# MUST stop everything. Anything else is unknown and also stops.
+echo "[$(date -Is)] Restoring FoodMapping.offBarcode pointers..."
+set +e
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
+  -r tsconfig-paths/register scripts/eval/restore-off-pointers.ts "$SNAP" --execute
+RESTORE_RC=$?
+set -e
+case "$RESTORE_RC" in
+  0) echo "[$(date -Is)] Pointers fully restored." ;;
+  3) echo "[$(date -Is)] ⚠️  Pointers restored with residue (see the worklist above). Snapshot kept: $SNAP" ;;
+  *) echo "[$(date -Is)] ❌ Pointer restore FAILED (rc=$RESTORE_RC). The cache is missing its OFF pointers."
+     echo "     The snapshot is intact — replay by hand:"
+     echo "     scripts/eval/restore-off-pointers.ts $SNAP --execute"
+     exit "$RESTORE_RC" ;;
+esac
 
 echo "[$(date -Is)] Re-syncing Typesense..."
 node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
@@ -143,4 +188,9 @@ node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
 # record of what was ingested (and for cheap re-runs without a re-download).
 rm -f "$PARQUET"
 
+# The snapshot is deliberately NOT deleted: it is the only record of what the
+# pointers were, and the restore's residue worklist is only actionable against it.
 echo "[$(date -Is)] ✅ Refresh complete."
+echo "[$(date -Is)] NEXT: every OffFood row now has a NULL embedding — semantic recall is"
+echo "     degraded until you run scripts/embed_foods.py (keyword search is unaffected;"
+echo "     the Typesense vector field is optional). Snapshot retained at: $SNAP"
