@@ -195,9 +195,9 @@
         },
         {
             "id": "tsc-baseline-30-total-0-src",
-            "claim": "npx tsc --noEmit fails with exactly 30 pre-existing errors, none under src/ (all sync-docs probe scripts) — that red is not your change",
+            "claim": "Mobile `npx tsc --noEmit` exits non-zero on exactly 30 pre-existing errors, 0 of them under src/ — all backend probe scripts Syncthing'd into sync-docs/. Needs an installed toolchain, so it runs on a dev machine, not the box.",
             "ownerDoc": "mobile:CLAUDE.md#ci",
-            "where": "mobile",
+            "where": "devmachine",
             "command": "npx tsc --noEmit 2>&1 | awk '/error TS/{t++} /^src\\// {s++} END{print t\":\"s+0}'",
             "expect": {
                 "kind": "equals",
@@ -540,6 +540,30 @@
             "expect": {
                 "kind": "equals",
                 "value": "ok"
+            },
+            "verified": "2026-07-30"
+        },
+        {
+            "id": "box-has-mobile-repo",
+            "claim": "The box holds a receive-only copy of the mobile repo at ~/KindaHealthyMobile (Syncthing folder msmwx-9fkha, added 2026-07-30) — this is what lets its nightly check mobile-context claims instead of skipping 15 of them",
+            "ownerDoc": "mobile:CLAUDE.md#machines--repos",
+            "where": "box",
+            "command": "test -f $HOME/KindaHealthyMobile/CLAUDE.md && test -d $HOME/KindaHealthyMobile/sync-docs/log && echo ok || echo missing",
+            "expect": {
+                "kind": "equals",
+                "value": "ok"
+            },
+            "verified": "2026-07-30"
+        },
+        {
+            "id": "box-mobile-copy-stays-small",
+            "claim": "The box's mobile copy stays under 200MB — its ignores drop ios/, android/, assets/, node_modules and the sync-docs data dirs; without them it would pull the 2.4GB working tree",
+            "ownerDoc": "mobile:CLAUDE.md#machines--repos",
+            "where": "box",
+            "command": "du -sm $HOME/KindaHealthyMobile 2>/dev/null | cut -f1",
+            "expect": {
+                "kind": "max",
+                "value": "200"
             },
             "verified": "2026-07-30"
         }

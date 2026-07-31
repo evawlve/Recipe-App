@@ -60,6 +60,19 @@ describe('parseRegistry fails closed', () => {
     test('duplicate ids are rejected — two claims sharing an id would let one shadow the other', () => {
         expect(() => parseRegistry(JSON.stringify({ claims: [claim(), claim()] }))).toThrow(/duplicate/);
     });
+
+    // Pinned because a context is what decides which host is ALLOWED to skip a
+    // claim. A typo'd context that still parsed would silently drop the claim
+    // from every --where run; the 'laptop' case above is the negative control
+    // for exactly that, and this is its positive counterpart.
+    test.each([['backend'], ['mobile'], ['box'], ['devmachine']])(
+        'context %s is accepted — the full set, so adding one is a deliberate edit here too',
+        (where) => {
+            const parsed = parseRegistry(JSON.stringify({ claims: [claim({ id: `c-${where}`, where: where as never })] }));
+            expect(parsed).toHaveLength(1);
+            expect(parsed[0].where).toBe(where);
+        },
+    );
 });
 
 describe('evaluateClaim fails closed', () => {
