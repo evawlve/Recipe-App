@@ -18,7 +18,8 @@
  *   3. DIFF       — compare against the previous warm-*.json report: identity
  *      flips, per-100g kcal drift >5%, grams flap >25%, error deltas.
  *   4. EVAL GATE  — spawn run-eval.ts; real failures must be a subset of
- *      --allow-fail (default n-mq-10). Gate failure → exit 1. An INSTRUMENT
+ *      --allow-fail (default EMPTY — any real failure reds the gate). An
+ *      allowance is opt-in per run, never standing. Gate failure → exit 1. An INSTRUMENT
  *      failure — run-eval crashed/killed, exited 2 (its own fail-closed
  *      zero-case signal), receipt missing/unreadable/contradicting the exit
  *      code, or a warm step that reached nothing — → exit 2: the sweep
@@ -53,7 +54,7 @@
  * Run (from repo root):
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
  *     scripts/eval/flywheel-sweep.ts --base http://localhost:3000 \
- *     [--days 7] [--top 100] [--concurrency 4] [--allow-fail n-mq-10] \
+ *     [--days 7] [--top 100] [--concurrency 4] [--allow-fail <triaged-id,...>] \
  *     [--skip-warm] [--skip-eval] [--seg-replay-top 20] [--publish-dir sync-docs]
  *
  * --stuck-keys-only runs JUST the stuck-key report (read-only against the DB,
@@ -101,7 +102,12 @@ const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://localhos
 const DAYS = Number(argValue('--days') ?? 7);
 const TOP = Number(argValue('--top') ?? 100);
 const CONCURRENCY = Number(argValue('--concurrency') ?? 4);
-const ALLOW_FAIL = (argValue('--allow-fail') ?? 'n-mq-10').split(',').map(s => s.trim()).filter(Boolean);
+// Default is EMPTY: an allowance that is not currently absorbing a real
+// failure is a slot where a future genuine red disappears. 'n-mq-10' was the
+// standing default until 2026-07-31, by which point it had been passing as a
+// hard assertion — pruned per the warm-push preflight. Pass --allow-fail
+// explicitly, and only for a red you have triaged and chosen to stand.
+const ALLOW_FAIL = (argValue('--allow-fail') ?? '').split(',').map(s => s.trim()).filter(Boolean);
 const SKIP_WARM = args.includes('--skip-warm');
 const SKIP_EVAL = args.includes('--skip-eval');
 const STUCK_ONLY = args.includes('--stuck-keys-only');
