@@ -167,6 +167,22 @@ const COUNT_DEFAULTS: Record<string, SeedEntry> = {
     // ===== OTHER COMMON ITEMS =====
     'cookie': { grams: 30, confidence: 0.7, sizes: { small: 15, medium: 30, large: 45 }, aliases: ['cookies'] },
     'cracker': { grams: 4, confidence: 0.75, aliases: ['crackers'] },
+    // A cracker SLEEVE is a container unit, so the 4g per-piece seed above is
+    // structurally barred from answering it (see CONTAINER_UNITS below) and the
+    // request falls through to the AI estimator. That estimator PERSISTS what it
+    // draws: after the 2026-07-30 refresh deleted every derived OffServing row,
+    // the redraw came back 200g (was 150g) and upsertServing made it permanent,
+    // turning golden case n-svk-05 into a standing red. A deterministic rung
+    // stops the dice being rolled at all.
+    // DERIVED, not measured: no saltine product in the OFF corpus carries a
+    // sleeve serving (checked 2026-07-31 — servings are per-cracker, 25-48g).
+    // 113g = the corpus's own 453g box (barcode 0011224490904 "Saltines", i.e.
+    // 1 lb) over the standard 4 sleeves. Sits mid-band against the golden
+    // assertion [70,170], and near the 150g the system used pre-refresh.
+    'saltine crackers sleeve': {
+        grams: 113, confidence: 0.8,
+        aliases: ['sleeve saltine crackers', 'sleeve of saltine crackers', 'saltines sleeve', 'sleeve saltines'],
+    },
     'olive': { grams: 4, confidence: 0.8, sizes: { small: 3, medium: 4, large: 5 }, aliases: ['olives'] },
     'kalamata olive': { grams: 4, confidence: 0.8, sizes: { small: 3, medium: 4, large: 5 }, aliases: ['kalamata olives', 'kalamata'] },
     'pickle': { grams: 35, confidence: 0.75, aliases: ['pickles'] },
