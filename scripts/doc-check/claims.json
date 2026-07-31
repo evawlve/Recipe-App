@@ -627,6 +627,30 @@
                 "value": "1"
             },
             "verified": "2026-07-30"
+        },
+        {
+            "id": "off-refresh-does-not-preserve-marks",
+            "claim": "KNOWN DEFECT tripwire: refresh-off-from-parquet.sh does not snapshot/restore OffFood.corruptReason, so a --fresh rebuild silently destroys every curation mark (6,822 lost on 2026-07-30). When this claim FAILS the restore has been added — update the owner doc's 'The marks are data' section and delete this entry.",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "backend",
+            "command": "grep -c 'corruptReason' scripts/refresh-off-from-parquet.sh || true",
+            "expect": {
+                "kind": "count",
+                "value": "0"
+            },
+            "verified": "2026-07-31"
+        },
+        {
+            "id": "off-corrupt-marks-wiped",
+            "claim": "KNOWN DEFECT tripwire: OffFood.corruptReason is 0 rows after the 2026-07-30 refresh (was 6,822), so corrupt records are unexcluded from Typesense and the corrupt_record escape cannot fire. When this claim FAILS the marks have been restored — re-date the owner doc and the warm-push plan's B1, and delete this entry.",
+            "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+            "where": "box",
+            "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc 'SELECT count(*) FROM \"OffFood\" WHERE \"corruptReason\" IS NOT NULL;'",
+            "expect": {
+                "kind": "count",
+                "value": "0"
+            },
+            "verified": "2026-07-31"
         }
     ]
 }
