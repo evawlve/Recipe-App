@@ -192,3 +192,59 @@ describe('exhaustion degrades the line, it does not throw', () => {
         }
     });
 });
+
+describe('a non-numeric budget fails CLOSED, never open', () => {
+    // Both live producers of `max` are Number.parseInt over operator-supplied text:
+    // AI_NUTRITION_MAX_PER_REQUEST / AI_NUTRITION_MAX_PER_BATCH in ./config, and
+    // --nutrition-budget in scripts/warm-names.ts. MEASURED (node -e):
+    //   Math.max(0, NaN) === NaN ; (NaN <= 0) === false ; parseInt('', 10) === NaN
+    // so the pre-fix `Math.max(0, max)` + `remaining <= 0` pair turned
+    // AI_NUTRITION_MAX_PER_REQUEST=unlimited into an UNBOUNDED LLM allowance —
+    // the exact opposite of the .env.example line "Set to 0 to fail the live path
+    // closed", and with no log line to show it happening.
+
+    it.each([
+        ['NaN (parseInt of a non-numeric env var)', Number.NaN],
+        ['Infinity', Number.POSITIVE_INFINITY],
+        ['-Infinity', Number.NEGATIVE_INFINITY],
+    ])('createAiNutritionBudget(%s) yields remaining 0', (_label, max) => {
+        expect(createAiNutritionBudget(max as number).remaining).toBe(0);
+    });
+
+    it('a NaN budget cannot buy a single LLM call', async () => {
+        mockAiGeneratedFoodFindUnique.mockResolvedValue(null);
+        mockCallStructuredLlm.mockClear();
+
+        const budget = createAiNutritionBudget(Number.parseInt('unlimited', 10));
+        const out = await requestAiNutrition('food', { budget });
+
+        expect(out).toEqual({ status: 'error', reason: 'nutrition_budget_exhausted' });
+        expect(mockCallStructuredLlm).not.toHaveBeenCalled();
+    });
+
+    it('the exhaustion guard itself fails closed on a hand-built NaN budget', async () => {
+        // Defence in depth: AiNutritionBudget is a plain caller-owned struct, so a
+        // caller can hand one over without going through the constructor. Dies if
+        // the guard is written `remaining <= 0` instead of `!(remaining > 0)`.
+        mockAiGeneratedFoodFindUnique.mockResolvedValue(null);
+        mockCallStructuredLlm.mockClear();
+
+        const out = await requestAiNutrition('food', {
+            budget: { remaining: Number.NaN, spent: 0 },
+        });
+
+        expect(out).toEqual({ status: 'error', reason: 'nutrition_budget_exhausted' });
+        expect(mockCallStructuredLlm).not.toHaveBeenCalled();
+    });
+
+    it('a fractional budget is floored, so it cannot decrement past the guard', () => {
+        expect(createAiNutritionBudget(2.9).remaining).toBe(2);
+        expect(createAiNutritionBudget(0.9).remaining).toBe(0);
+    });
+
+    it('still honours a legitimate allowance', () => {
+        expect(createAiNutritionBudget(3).remaining).toBe(3);
+        expect(createAiNutritionBudget(0).remaining).toBe(0);
+        expect(createAiNutritionBudget(-5).remaining).toBe(0);
+    });
+});

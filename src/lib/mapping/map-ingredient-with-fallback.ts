@@ -67,6 +67,10 @@ import {
 } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
 import { buildFatSecretResult } from './build-fatsecret-result';
+// THE reader for FatSecretServing.nutrients — the cache-escape decision must ask
+// "is this billable?" through the exact function the fs lane bills with, never a
+// re-derived one (see the module header in ./fs-serving-macros).
+import { servingMacros } from './fs-serving-macros';
 
 // ============================================================
 // Symmetric cache lookup with legacy-key fallback (Track 1c)
@@ -908,6 +912,10 @@ export async function mapIngredientWithFallback(
 
             let earlyNutritionInvalid = false;
             let earlyCorruptMarked = false;
+            // fs_ only: the record has no per-100g panel but DOES carry per-serving
+            // macros, which buildFatSecretResult() bills directly. Suppresses the
+            // missing-nutrition safety net below — see the fs_ arm for the measurement.
+            let fsBillableViaServings = false;
             let loadedFdcNutrition: any = null;
             let cachedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
             let cachedKcal100: number | null = null;
@@ -962,21 +970,38 @@ export async function mapIngredientWithFallback(
                         // are cuids). So `nutrients` stayed null, and because the
                         // missing-nutrition safety net below was gated on off_ alone, fs_
                         // hits skipped hasNullOrInvalidMacros() entirely.
-                        // Measured blast radius of turning the check on (2026-08-01): of the
-                        // 570 FoodMapping rows carrying an fsId, 35 point at a FatSecretFood
-                        // whose nutrientsPer100g is `{}` — real foods ("Ten Vegetable Soup -
-                        // Bowl", "White Top Pizza - Large") that were being served with null
-                        // nutrition. The other 535 pass unchanged.
+                        // An empty per-100g panel is NOT the same as "no nutrition" for the
+                        // fs lane. FatSecret's generic restaurant records are exactly the
+                        // shape `nutrientsPer100g = {}` + a "1 serving" FatSecretServing
+                        // carrying full macros and no grams, and buildFatSecretResult()
+                        // bills those serving macros directly (its `anyServingHasMacros`
+                        // branch, added deliberately for "Impossible Whopper" and friends).
+                        // MEASURED 2026-08-01 on the live DB: of the 570 FoodMapping rows
+                        // carrying an fsId, 35 have an empty panel — and ALL 35 have a
+                        // macro-bearing serving, i.e. every one is correctly billable today
+                        //   SELECT count(*) FROM "FoodMapping" m
+                        //     JOIN "FatSecretFood" f ON f."fsId"=m."fsId"
+                        //    WHERE f."nutrientsPer100g"::text='{}'
+                        //      AND EXISTS (SELECT 1 FROM "FatSecretServing" s
+                        //                   WHERE s."fsId"=f."fsId"
+                        //                     AND s.nutrients->>'calories' IS NOT NULL);
+                        //   -> 35 ; the NOT EXISTS form -> 0
+                        // Escaping on the panel alone would therefore have been a 100%
+                        // false-positive rule: it would re-resolve "Quarter Pounder with
+                        // Cheese" / "Pad Thai (Small)" on EVERY request forever (the
+                        // re-resolution's winner is the same fs row, so the upsert rewrites
+                        // an identical row and the next request escapes again).
+                        // So ask the question the billing path asks, through the SAME reader
+                        // it bills with — servingMacros() from ./fs-serving-macros.
                         const fsId = earlyCacheHit.foodId.replace('fs_', '');
                         const fsFood = await prisma.fatSecretFood.findUnique({
                             where: { fsId },
-                            select: { nutrientsPer100g: true }
+                            select: { nutrientsPer100g: true, servings: { select: { nutrients: true } } }
                         });
-                        // An empty panel is MISSING nutrition, not zero nutrition — route it
-                        // to the safety net below rather than letting `?? 0` manufacture a
-                        // plausible-looking all-zero panel.
                         const fsPanel = fsFood?.nutrientsPer100g as Record<string, any> | null | undefined;
                         nutrients = fsPanel && Object.keys(fsPanel).length > 0 ? fsPanel : null;
+                        fsBillableViaServings = (fsFood?.servings ?? []).some(
+                            s => servingMacros(s.nutrients as Record<string, unknown> | null) != null);
                     } else {
                         // No recognised prefix. Every candidate id is prefixed by
                         // construction (gatherCandidates forces fdc_/fs_, OFF candidates are
@@ -1019,14 +1044,18 @@ export async function mapIngredientWithFallback(
                                 nutrients,
                             });
                         }
-                    } else if (earlyCacheHit.foodId.startsWith('off_') || earlyCacheHit.foodId.startsWith('fs_')) {
+                    } else if (earlyCacheHit.foodId.startsWith('off_')
+                        || (earlyCacheHit.foodId.startsWith('fs_') && !fsBillableViaServings)) {
                         // The cached mapping points at a record that is missing or has no
                         // nutrition at all (corrupt legacy rows, e.g. a normalized name
-                        // ingested as a barcode; empty FatSecret panels — 35 of the 570
-                        // measured fs_ rows). Treat as invalid so the full pipeline re-maps
-                        // instead of serving null-backed nutrition. Extended from off_ to
-                        // fs_ on 2026-08-01; deliberately NOT extended to fdc_ or to
-                        // unrecognised prefixes, which are separate unmeasured changes.
+                        // ingested as a barcode; an fs record with neither a per-100g panel
+                        // NOR any macro-bearing serving). Treat as invalid so the full
+                        // pipeline re-maps instead of serving null-backed nutrition.
+                        // Extended from off_ to fs_ on 2026-08-01; deliberately NOT extended
+                        // to fdc_ or to unrecognised prefixes, which are separate unmeasured
+                        // changes. MEASURED 2026-08-01: 0 of the 570 live fs_ mappings are
+                        // in the no-panel-and-no-serving-macros state, so this arm is a
+                        // guard against future ingests, not a live eviction.
                         earlyNutritionInvalid = true;
                         logger.warn('mapping.early_cache_missing_nutrition', {
                             rawLine: trimmed,
@@ -1352,6 +1381,8 @@ export async function mapIngredientWithFallback(
                 // Validate nutrition data - reject cached mappings to foods with zero/null nutrition
                 let normalizedNutritionInvalid = false;
                 let normalizedCorruptMarked = false;
+                // fs_ only — see the matching flag in Step 1a.
+                let normalizedFsBillableViaServings = false;
                 let normalizedOffServing: { servingSize: string | null; servingGrams: number | null } | null = null;
                 let normalizedCachedKcal100: number | null = null;
                 let normalizedCachedCarbs100: number | null = null;
@@ -1383,10 +1414,12 @@ export async function mapIngredientWithFallback(
                         const fsId = normalizedCache.foodId.replace('fs_', '');
                         const fsFood = await prisma.fatSecretFood.findUnique({
                             where: { fsId },
-                            select: { nutrientsPer100g: true }
+                            select: { nutrientsPer100g: true, servings: { select: { nutrients: true } } }
                         });
                         const fsPanel = fsFood?.nutrientsPer100g as Record<string, any> | null | undefined;
                         nutrients = fsPanel && Object.keys(fsPanel).length > 0 ? fsPanel : null;
+                        normalizedFsBillableViaServings = (fsFood?.servings ?? []).some(
+                            s => servingMacros(s.nutrients as Record<string, unknown> | null) != null);
                     } else {
                         // Instrument only — see the matching note in Step 1a.
                         logger.audit('cache.unrecognised_food_id_prefix', {
@@ -1413,12 +1446,14 @@ export async function mapIngredientWithFallback(
                                 nutrients,
                             });
                         }
-                    } else if (normalizedCache.foodId.startsWith('off_') || normalizedCache.foodId.startsWith('fs_')) {
+                    } else if (normalizedCache.foodId.startsWith('off_')
+                        || (normalizedCache.foodId.startsWith('fs_') && !normalizedFsBillableViaServings)) {
                         // Symmetric with Step 1a's safety net: a cache row pointing at a
-                        // record with no nutrition panel at all must re-resolve, not be
-                        // served with nulls. Deliberately NOT extended to fdc_ here — the
-                        // fdc_ arm above has never had this net and widening it is a
-                        // separate, unmeasured behaviour change.
+                        // record with no nutrition panel AND no macro-bearing serving must
+                        // re-resolve, not be served with nulls. An empty panel alone is not
+                        // enough — see the measurement in Step 1a's fs_ arm. Deliberately
+                        // NOT extended to fdc_ here — the fdc_ arm above has never had this
+                        // net and widening it is a separate, unmeasured behaviour change.
                         normalizedNutritionInvalid = true;
                         logger.warn('mapping.normalized_cache_missing_nutrition', {
                             rawLine: trimmed,

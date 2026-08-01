@@ -99,8 +99,23 @@ export interface AiNutritionBudget {
     spent: number;
 }
 
+/**
+ * Fails CLOSED on a non-finite input. Both live producers of `max` are
+ * `Number.parseInt(...)` on operator-supplied text — `AI_NUTRITION_MAX_PER_REQUEST`
+ * / `AI_NUTRITION_MAX_PER_BATCH` in ./config and `--nutrition-budget` in
+ * scripts/warm-names.ts — and `parseInt` yields NaN for '' or 'unlimited'.
+ * `Math.max(0, NaN)` is NaN and `NaN <= 0` is false, so an unsanitised NaN would
+ * make the exhaustion guard in `requestAiNutrition()` unreachable and turn a
+ * typo'd env var into an UNBOUNDED LLM allowance — the opposite of the
+ * documented "set to 0 to fail the live path closed". Floor to an integer too,
+ * so a fractional budget cannot decrement past the guard.
+ */
 export function createAiNutritionBudget(max: number): AiNutritionBudget {
-    return { remaining: Math.max(0, max), spent: 0 };
+    const remaining = Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
+    if (!Number.isFinite(max)) {
+        logger.warn('ai_nutrition.budget_non_finite', { max: String(max), appliedRemaining: 0 });
+    }
+    return { remaining, spent: 0 };
 }
 
 // ============================================================
@@ -482,7 +497,11 @@ export async function requestAiNutrition(
 
     // Budget check — an ordinary AiNutritionError, not a throw: every caller
     // already handles `status === 'error'` by degrading the line.
-    if (options.budget.remaining <= 0) {
+    // Written as `!(remaining > 0)`, NOT `remaining <= 0`: the two differ on NaN,
+    // where `<=` is false and would wave the call through unbounded. Budgets are
+    // sanitised in createAiNutritionBudget(), but a budget object is a plain
+    // caller-owned struct — this is the fail-closed form at the point of spend.
+    if (!(options.budget.remaining > 0)) {
         logger.audit('ai_nutrition.budget_exhausted', {
             normalizedName,
             spent: options.budget.spent,

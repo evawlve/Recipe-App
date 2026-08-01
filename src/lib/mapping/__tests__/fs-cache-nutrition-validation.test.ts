@@ -117,10 +117,13 @@ beforeEach(() => {
 });
 
 describe('Step 1a: fs_ early cache hits are nutrition-validated', () => {
-    it('escapes an fs_ hit whose FatSecretFood panel is empty', async () => {
+    it('escapes an fs_ hit whose FatSecretFood panel is empty and carries no servings', async () => {
         (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValueOnce(fsCacheRow).mockResolvedValue(null);
-        // The real shape of the 35 measured rows: the row exists, the panel is {}.
-        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({ nutrientsPer100g: {} });
+        // Panel {} AND no servings at all — nothing to bill from either basis.
+        // NOTE: this is NOT the shape of the 35 measured empty-panel rows; every
+        // one of those has a macro-bearing serving and is covered by the
+        // does-NOT-escape case below.
+        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({ nutrientsPer100g: {}, servings: [] });
 
         const telemetry: MappingTelemetry = {};
         await mapIngredientWithFallback('1 bowl ten vegetable soup', {
@@ -141,6 +144,79 @@ describe('Step 1a: fs_ early cache hits are nutrition-validated', () => {
             expect.objectContaining({ where: { id: 'fs_69219858' } }),
         );
         // The whole point: the hit is refused, not served with null nutrition.
+        expect(telemetry.cacheEscape).toBe('early:nutrition_invalid');
+    });
+
+    // THE false-positive guard. An empty per-100g panel is NOT "no nutrition" for
+    // the fs lane: FatSecret's generic restaurant records are `nutrientsPer100g={}`
+    // plus a gram-less "1 serving" carrying the real macros, and
+    // buildFatSecretResult() bills those directly (its `anyServingHasMacros`
+    // branch). MEASURED 2026-08-01 on the live DB: ALL 35 empty-panel fs_ mappings
+    // have a macro-bearing serving, and 0 do not —
+    //   SELECT count(*) FROM "FoodMapping" m JOIN "FatSecretFood" f ON f."fsId"=m."fsId"
+    //    WHERE f."nutrientsPer100g"::text='{}'
+    //      AND EXISTS (SELECT 1 FROM "FatSecretServing" s
+    //                   WHERE s."fsId"=f."fsId" AND s.nutrients->>'calories' IS NOT NULL);
+    //   -> 35 ; NOT EXISTS -> 0
+    // so escaping on the panel alone was a 100%-false-positive rule that would
+    // re-resolve "Quarter Pounder with Cheese" on every request forever.
+    it('does NOT escape an empty-panel fs_ hit that has macro-bearing servings', async () => {
+        (getValidatedMappingByNormalizedName as jest.Mock)
+            .mockResolvedValueOnce({ ...fsCacheRow, foodName: 'Quarter Pounder with Cheese' })
+            .mockResolvedValue(null);
+        // The real measured shape (fsId 42331): panel {}, one gram-less serving
+        // carrying full macros.
+        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({
+            fsId: '69219858',
+            name: 'Quarter Pounder with Cheese',
+            nutrientsPer100g: {},
+            fetchedAt: new Date(),
+            servings: [{
+                servingId: 's1',
+                description: '1 serving',
+                measurementDescription: null,
+                grams: null,
+                volumeMl: null,
+                numberOfUnits: 1,
+                nutrients: { calories: 520, protein: 30, carbohydrate: 42, fat: 26 },
+            }],
+        });
+
+        const telemetry: MappingTelemetry = {};
+        await mapIngredientWithFallback('1 quarter pounder with cheese', {
+            minConfidence: 0,
+            skipFdc: true,
+            telemetry,
+        });
+
+        // The mutation this kills: reverting to `nutrients == null => invalid`
+        // for fs_ makes this 'early:nutrition_invalid'.
+        expect(telemetry.cacheEscape).not.toBe('early:nutrition_invalid');
+        // And it must have ASKED the servings question — a panel-only select
+        // cannot answer it.
+        expect(prisma.fatSecretFood.findUnique).toHaveBeenCalledWith(
+            expect.objectContaining({
+                select: expect.objectContaining({ servings: expect.anything() }),
+            }),
+        );
+    });
+
+    it('escapes an fs_ hit with an empty panel AND no macro-bearing serving', async () => {
+        (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValueOnce(fsCacheRow).mockResolvedValue(null);
+        // Neither billing basis exists. MEASURED 0 live rows in this state today,
+        // so this arm is a guard against future ingests.
+        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({
+            nutrientsPer100g: {},
+            servings: [{ servingId: 's1', description: '1 serving', grams: null, nutrients: {} }],
+        });
+
+        const telemetry: MappingTelemetry = {};
+        await mapIngredientWithFallback('1 bowl ten vegetable soup', {
+            minConfidence: 0,
+            skipFdc: true,
+            telemetry,
+        });
+
         expect(telemetry.cacheEscape).toBe('early:nutrition_invalid');
     });
 
@@ -228,12 +304,48 @@ describe('Step 1a: fs_ early cache hits are nutrition-validated', () => {
 });
 
 describe('Step 1c: fs_ normalized cache hits are nutrition-validated', () => {
-    it('escapes an fs_ normalized hit whose FatSecretFood panel is empty', async () => {
+    // Step 1c's copy of the false-positive guard. Both blocks must agree — the
+    // whole defect class here is one of the two drifting from the other.
+    it('does NOT escape an empty-panel fs_ normalized hit that has macro-bearing servings', async () => {
+        // Same query/foodName pair as the escaping Step 1c cases below, so the
+        // ONLY thing that differs is the servings — otherwise the test can pass
+        // on an unrelated escape (an earlier draft passed on
+        // 'normalized:core_token_mismatch' and would not have caught the bug).
+        (getValidatedMappingByNormalizedName as jest.Mock)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValue(fsCacheRow);
+        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({
+            fsId: '69219858',
+            name: 'Ten Vegetable Soup - Bowl',
+            nutrientsPer100g: {},
+            fetchedAt: new Date(),
+            servings: [{
+                servingId: 's1',
+                description: '1 serving',
+                measurementDescription: null,
+                grams: null,
+                volumeMl: null,
+                numberOfUnits: 1,
+                nutrients: { calories: 610, protein: 21, carbohydrate: 84, fat: 22 },
+            }],
+        });
+
+        const telemetry: MappingTelemetry = {};
+        await mapIngredientWithFallback('ten vegetable soup', {
+            minConfidence: 0,
+            skipFdc: true,
+            telemetry,
+        });
+
+        expect(telemetry.cacheEscape).not.toBe('normalized:nutrition_invalid');
+    });
+
+    it('escapes an fs_ normalized hit whose panel is empty and carries no servings', async () => {
         // Early lookup misses; the Step 1c lookup hits.
         (getValidatedMappingByNormalizedName as jest.Mock)
             .mockResolvedValueOnce(null)
             .mockResolvedValue(fsCacheRow);
-        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({ nutrientsPer100g: {} });
+        (prisma.fatSecretFood.findUnique as jest.Mock).mockResolvedValue({ nutrientsPer100g: {}, servings: [] });
 
         const telemetry: MappingTelemetry = {};
         await mapIngredientWithFallback('ten vegetable soup', {

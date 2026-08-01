@@ -237,6 +237,15 @@ async function main(): Promise<void> {
         console.error('ERROR: --file <path> is required');
         process.exit(1);
     }
+    // Fail the RUN, don't silently fall back. `get()` returns the next token
+    // whatever it is, so `--nutrition-budget --limit 500` parses the budget as
+    // NaN; `nutritionBudget ?? AI_NUTRITION_MAX_PER_BATCH` would keep the NaN
+    // (?? only falls back on null/undefined) and the batch would spend against a
+    // budget nothing can exhaust. This is a warm-campaign spend control.
+    if (nutritionBudget !== undefined && !Number.isFinite(nutritionBudget)) {
+        console.error('ERROR: --nutrition-budget must be a number (got a non-numeric value)');
+        process.exit(1);
+    }
     const seeds = readSeedFile(file, limit);
     console.log(`🌱 warm-names: ${seeds.length} unique queries, concurrency=${concurrency}`);
     const { stats, nutritionSpent } = await warmNames({
