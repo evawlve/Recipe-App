@@ -34,6 +34,16 @@
  *                   whose reason matches --clear-prefix (default: all rows);
  *                   requires --apply to take effect
  *   --clear-prefix <p>  with --clear: only clear reasons starting with <p>
+ *   --only-reasons <a,b>  mark ONLY flags whose direction is in the list;
+ *                   everything else is held and counted. Exists because the
+ *                   nutrition scan mixes physics bounds (nil false-positive
+ *                   surface) with judgement rules that must not be applied
+ *                   unattended — panel-inflated-serving reads servingGrams as
+ *                   one eating occasion, false for a large package, and would
+ *                   mark 8000500273296, which stores Ferrero Rocher's correct
+ *                   panel. Held flags stay in the scan report: that report is
+ *                   the only list of the rows an audit needs to see.
+ *                   Fails closed — an allowlist matching nothing exits 2.
  *
  * After applying: run scripts/purge-corrupt-typesense.ts to drop the marked
  * docs from the live off_foods index (full rebuilds via sync-typesense.ts
@@ -56,6 +66,9 @@ const APPLY = args.includes('--apply');
 const CLEAR = args.includes('--clear');
 const CLEAR_PREFIX = argValue('--clear-prefix');
 const FILE = argValue('--file');
+/** Direction allowlist (empty = mark every direction the scan flagged). */
+const ONLY_REASONS = (argValue('--only-reasons') ?? '')
+    .split(',').map(s => s.trim()).filter(Boolean);
 
 const FETCH_CHUNK = 1000;
 const WRITE_BATCH = 5000;
@@ -111,7 +124,11 @@ async function main(): Promise<void> {
     console.log(`Scan ${scan.at}: ${scan.flagged.length} flagged of ${scan.summary.scanned} scanned`);
 
     // 1. Trust rules (pure, shared with jest).
+    //    Held-by-allowlist is counted SEPARATELY from a trust-rule skip: a skip
+    //    means the rules judged the flag unsafe, a hold means the caller did not
+    //    ask for that direction. Conflating them hides which one happened.
     const skips: Record<string, number> = {};
+    const held: Record<string, number> = {};
     const markable = new Map<string, { flag: CorruptScanFlag; reason: string }>();
     for (const flag of scan.flagged) {
         const decision = decideMark(flag);
@@ -119,9 +136,25 @@ async function main(): Promise<void> {
             skips[decision.skip] = (skips[decision.skip] ?? 0) + 1;
             continue;
         }
+        const direction = decision.reason.split(':')[0];
+        if (ONLY_REASONS.length > 0 && !ONLY_REASONS.includes(direction)) {
+            held[direction] = (held[direction] ?? 0) + 1;
+            continue;
+        }
         markable.set(flag.barcode, { flag, reason: decision.reason });
     }
     console.log(`Trust rules: ${markable.size} markable, skipped ${JSON.stringify(skips)}`);
+    if (ONLY_REASONS.length > 0) {
+        console.log(`--only-reasons ${ONLY_REASONS.join(',')}: held ${JSON.stringify(held)}`);
+        // An allowlist that matches NOTHING while the scan found flags is a typo
+        // in the caller far more often than a corpus with no impossible rows
+        // (the 2026-08-01 corpus held 22,087). Unattended callers must not read
+        // "marked 0" as success, so fail closed rather than write nothing.
+        if (markable.size === 0 && scan.flagged.length > 0) {
+            console.error('❌ --only-reasons matched no flagged direction — refusing to report a no-op as a result.');
+            process.exit(2);
+        }
+    }
 
     // 2. Staleness re-check against the live rows.
     const barcodes = [...markable.keys()];

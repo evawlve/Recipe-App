@@ -27,10 +27,18 @@
 #                             adding product_quantity/quantity to
 #                             off-parquet-to-jsonl.sh's SELECT. Needs nothing here.
 #   corruptReason,         -> REGENERATED AFTER the ingest by re-running the
-#   duplicateOfBarcode        detector/dedupe. Deliberately NOT replayed from a
+#   duplicateOfBarcode        detectors/dedupe. Deliberately NOT replayed from a
 #                             snapshot: they are derivations of the panel, and a
 #                             refresh can bring a CORRECTED panel — replaying a
 #                             stale mark would suppress a row OFF has since fixed.
+#                             corruptReason has TWO producers, both required:
+#                             detect-corrupt-panel.ts (sibling-median, 6,905
+#                             marks) and detect-corrupt-nutrition.ts (per-field
+#                             physics, 22,087). Naming one restores a quarter of
+#                             the column while looking like it worked.
+#                             NOT covered: the hand-authored marks, which no
+#                             re-derivation can reproduce. Open — see
+#                             backend_integration_guide.md.
 #   derived OffServing     -> SNAPSHOT + REPLAY. These ('ai', 'sibling_borrow')
 #                             are the only population that is neither ingested
 #                             nor derivable: re-running the estimator RE-ROLLS
@@ -111,6 +119,32 @@ command -v duckdb >/dev/null 2>&1 || { echo "  ❌ duckdb CLI not on PATH (neede
 [ -f "$REPO/scripts/eval/_snap_off_servings.ts" ]    || { echo "  ❌ scripts/eval/_snap_off_servings.ts missing — derived ai/sibling_borrow servings would be unrecoverable"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/scripts/eval/restore-off-servings.ts" ]  || { echo "  ❌ scripts/eval/restore-off-servings.ts missing — the derived-serving snapshot could not be replayed"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/scripts/eval/detect-corrupt-panel.ts" ]  || { echo "  ❌ scripts/eval/detect-corrupt-panel.ts missing — corruptReason could not be regenerated"; PREFLIGHT_FAIL=1; }
+# There are TWO corrupt detectors, and corruptReason is regenerated only if BOTH
+# run. The 2026-08-01 marks were 22,087 rows from this one and 6,905 from the
+# panel scan; a preflight naming one detector passes a run that restores a
+# quarter of the column.
+[ -f "$REPO/scripts/eval/detect-corrupt-nutrition.ts" ] || { echo "  ❌ scripts/eval/detect-corrupt-nutrition.ts missing — the per-field physics marks could not be regenerated"; PREFLIGHT_FAIL=1; }
+# Only the PHYSICS directions of the nutrition scan are applied unattended. The
+# same scan also emits judgement rules — panel-inflated-serving,
+# sodium-implausible, sodium-sibling-outlier — which must never be auto-applied:
+# panel-inflated-serving assumes servingGrams is one eating occasion, false for
+# a large package, so it fires on 8000500273296, whose stored panel is Ferrero
+# Rocher's CORRECT one. Held rows stay in the scan report for a human to audit.
+NUTRITION_PHYSICS='kcal-impossible,macro-sum-impossible,fiber-impossible,sugars-impossible,sodium-impossible'
+# Validated HERE, against the detector's own source, because the alternative is
+# discovering a typo'd direction after the truncate — and mark-corrupt-off.ts's
+# fail-closed exit would then abort a run that has already rebuilt the corpus.
+# The doc-check claim off-refresh-nutrition-allowlist-not-stale runs the same
+# script, so the two cannot disagree.
+if [ -x "$REPO/scripts/check-nutrition-allowlist.sh" ]; then
+  # Merged so a refusal (exit 2, printed to stderr) is reported rather than read
+  # as an empty result; the count is the last line the script writes.
+  ALLOWLIST_OUT="$("$REPO/scripts/check-nutrition-allowlist.sh" 2>&1 || echo REFUSED)"
+  [ "$(printf '%s\n' "$ALLOWLIST_OUT" | tail -1)" = "0" ] \
+    || { echo "  ❌ NUTRITION_PHYSICS did not validate: $ALLOWLIST_OUT"; PREFLIGHT_FAIL=1; }
+else
+  echo "  ❌ scripts/check-nutrition-allowlist.sh missing or not executable — NUTRITION_PHYSICS could not be validated"; PREFLIGHT_FAIL=1
+fi
 [ -f "$REPO/scripts/mark-corrupt-off.ts" ]           || { echo "  ❌ scripts/mark-corrupt-off.ts missing — corruptReason could not be regenerated"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/scripts/dedupe-off-mark.ts" ]            || { echo "  ❌ scripts/dedupe-off-mark.ts missing — duplicateOfBarcode could not be regenerated"; PREFLIGHT_FAIL=1; }
 [ -x "$REPO/node_modules/.bin/ts-node" ]       || { echo "  ❌ node_modules/.bin/ts-node missing — run npm ci"; PREFLIGHT_FAIL=1; }
@@ -280,6 +314,21 @@ CORRUPT_SCAN="$(ls -1 "$CORRUPT_DIR"/corrupt-panel-scan-*.json 2>/dev/null | hea
 [ -n "$CORRUPT_SCAN" ] || { echo "  ❌ the corrupt scan produced no report — refusing to continue with an unmarked corpus"; exit 2; }
 node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
   -r tsconfig-paths/register scripts/mark-corrupt-off.ts --file "$CORRUPT_SCAN" --apply
+
+# SECOND detector: per-FIELD physical impossibilities (kcal > 905/100g, macro
+# sum > 105 g/100g, ...). Separate from the panel scan above, which only catches
+# whole panels stored at per-serving scale via same-name sibling medians.
+# $NUTRITION_PHYSICS and why it is an allowlist: see the preflight.
+echo "[$(date -Is)] Regenerating per-field nutrition marks (physics directions only)..."
+NUTRITION_DIR="$WORKDIR/nutrition-scan-$STAMP"
+mkdir -p "$NUTRITION_DIR"
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
+  -r tsconfig-paths/register scripts/eval/detect-corrupt-nutrition.ts --out-dir "$NUTRITION_DIR"
+NUTRITION_SCAN="$(ls -1 "$NUTRITION_DIR"/corrupt-nutrition-scan-*.json 2>/dev/null | head -1)"
+[ -n "$NUTRITION_SCAN" ] || { echo "  ❌ the nutrition scan produced no report — refusing to continue with an unmarked corpus"; exit 2; }
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
+  -r tsconfig-paths/register scripts/mark-corrupt-off.ts --file "$NUTRITION_SCAN" \
+  --only-reasons "$NUTRITION_PHYSICS" --apply
 
 echo "[$(date -Is)] Regenerating duplicateOfBarcode marks..."
 node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
