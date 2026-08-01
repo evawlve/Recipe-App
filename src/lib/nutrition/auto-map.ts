@@ -3,7 +3,7 @@ import { logger } from '../logger';
 import { parseIngredientLine } from '../parse/ingredient-line';
 import { mapIngredientWithFallback, type FatsecretMappedIngredient } from '../mapping/map-ingredient-with-fallback';
 import { createAiNutritionBudget } from '../mapping/ai-nutrition-backfill';
-import { AI_NUTRITION_MAX_PER_REQUEST } from '../mapping/config';
+import { AI_NUTRITION_MAX_PER_REQUEST, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST } from '../mapping/config';
 import { createFoodAlias } from '../mapping/alias-manager';
 import { normalizeIngredientName, refreshNormalizationRules } from '../mapping/normalization-rules';
 import { applyCleanupPatterns, recordCleanupOutcome } from '../ingredients/cleanup';
@@ -98,6 +98,12 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
   // This loop is a writer with up to `concurrency` mapper calls in flight; a
   // per-call default would scale spend with recipe size.
   const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST);
+  // The SECOND, separate allowance: hydration/enrichment inside buildOffResult.
+  // Kept off the pool above because exhausting it DELETES an OFF candidate that
+  // already won retrieval, and this loop runs up to `concurrency` mappers at
+  // once — one shared pool would make which record a recipe caches depend on
+  // the interleaving of its other ingredients.
+  const hydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_REQUEST);
 
   logger.info('autoMap:start', { recipeId, mode: 'fatsecret-only', concurrency });
 
@@ -149,6 +155,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
           minConfidence: MIN_AUTOMAP_CONFIDENCE,
           debug: true,
           aiNutritionBudget: nutritionBudget,
+          aiHydrationBudget: hydrationBudget,
         }) as FatsecretMappedIngredient | null;
 
         // PHASE 2: If mapping still failed, try AI normalization and learn patterns
@@ -175,6 +182,7 @@ export async function autoMapIngredients(recipeId: string, options?: { concurren
               minConfidence: MIN_AUTOMAP_CONFIDENCE,
               debug: true,
               aiNutritionBudget: nutritionBudget,
+              aiHydrationBudget: hydrationBudget,
             }) as FatsecretMappedIngredient | null;
 
             if (!mapped) {

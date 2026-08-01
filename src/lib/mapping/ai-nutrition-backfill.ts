@@ -91,6 +91,17 @@ export interface AiNutritionOptions {
  * Lifetime is whatever the caller gives it — one HTTP request, one batch run.
  * The object identity is the contract: passing the SAME object to every query
  * in a run is what bounds that run.
+ *
+ * TWO POOLS, not one. Callers construct two of these and must not cross them:
+ *   - LAST RESORT (`MapIngredientOptions.aiNutritionBudget`) — spent when
+ *     nothing matched. Exhaustion degrades a line that had no answer.
+ *   - HYDRATION (`MapIngredientOptions.aiHydrationBudget`) — spent by
+ *     `buildOffResult()` on a candidate that already won retrieval. Exhaustion
+ *     DELETES that candidate, so the pipeline caches a different record; on a
+ *     shared pool that made cache identity a function of concurrent traffic.
+ * The type is shared because the SPEND mechanism is identical; the separation
+ * is in who owns which object, which is why this stays a plain caller-owned
+ * struct with no module-scope backing.
  */
 export interface AiNutritionBudget {
     /** Calls still available. Decremented immediately before each LLM call. */

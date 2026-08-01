@@ -265,8 +265,16 @@ export async function POST(req: NextRequest) {
     // what makes the golden eval immune to whatever ran in this process before
     // it (the old module-scope counter is why a warm run could red the gate).
     const { createAiNutritionBudget } = await import('@/lib/mapping/ai-nutrition-backfill');
-    const { AI_NUTRITION_MAX_PER_REQUEST } = await import('@/lib/mapping/config');
+    const { AI_NUTRITION_MAX_PER_REQUEST, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST } =
+      await import('@/lib/mapping/config');
     const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST);
+    // The SECOND, separate allowance: hydration/enrichment inside buildOffResult.
+    // It must not draw on the pool above. Exhausting the last-resort pool
+    // degrades a line that had no match anyway; exhausting hydration DELETES an
+    // OFF candidate that already won retrieval, so the record this request
+    // writes as a sticky FoodMapping row would depend on the Promise.all
+    // interleaving of the other items — a non-deterministic cache identity.
+    const hydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_REQUEST);
 
     // Map all items concurrently — each mapping is independent, and identical
     // items are deduplicated by the pipeline's in-flight lock.
@@ -288,6 +296,7 @@ export async function POST(req: NextRequest) {
         skipCache: noCache,
         telemetry,
         aiNutritionBudget: nutritionBudget,
+        aiHydrationBudget: hydrationBudget,
       });
       const mapLatencyMs = Date.now() - mapStart;
       const isMapped = !!mapped && !('status' in mapped);

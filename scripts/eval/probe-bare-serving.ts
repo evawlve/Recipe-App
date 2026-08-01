@@ -65,7 +65,7 @@ const { getBareQueryDefault } = require('../../src/lib/ai/ambiguous-serving-esti
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { createAiNutritionBudget } = require('../../src/lib/mapping/ai-nutrition-backfill');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { AI_NUTRITION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
+const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
 
 async function main() {
     const lines = fs.readFileSync(0, 'utf8').split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
@@ -80,12 +80,20 @@ async function main() {
 
     // ONE budget for the whole probe run, shared by every line (see warm-names.ts).
     const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
+    // The SECOND, separate allowance: hydration/enrichment inside
+    // buildOffResult. Exhausting it DELETES an already-won OFF candidate,
+    // so it must not share the last-resort pool (see warm-names.ts).
+    const hydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_BATCH);
     for (const line of lines) {
         captured = null;
         let r: any = null;
         let err: string | null = null;
         try {
-            r = await mapIngredientWithFallback(line, { skipCache: true, aiNutritionBudget: nutritionBudget });
+            r = await mapIngredientWithFallback(line, {
+                skipCache: true,
+                aiNutritionBudget: nutritionBudget,
+                aiHydrationBudget: hydrationBudget,
+            });
         } catch (e: any) {
             err = e?.message ?? String(e);
         }

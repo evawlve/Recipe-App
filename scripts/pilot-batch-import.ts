@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
 import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../src/lib/mapping/map-ingredient-with-fallback';
 import { createAiNutritionBudget } from '../src/lib/mapping/ai-nutrition-backfill';
-import { AI_NUTRITION_MAX_PER_BATCH } from '../src/lib/mapping/config';
+import { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } from '../src/lib/mapping/config';
 import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
 import { refreshNormalizationRules } from '../src/lib/mapping/normalization-rules';
 import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/mapping/mapping-logger';
@@ -50,6 +50,10 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
     // ingredient would make a long import unbounded — this is the migration off
     // the deleted module-scope counter, which used to bound it globally.
     const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
+    // The SECOND, separate allowance: hydration/enrichment inside
+    // buildOffResult. Exhausting it DELETES an already-won OFF candidate,
+    // so it must not share the last-resort pool (see warm-names.ts).
+    const hydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_BATCH);
 
     // Initialize mapping analysis session for AI call tracking
     if (process.env.ENABLE_MAPPING_ANALYSIS === 'true') {
@@ -175,6 +179,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                             skipOnLock: true,  // Don't block on locked ingredients - retry later
                             debug: false,
                             aiNutritionBudget: nutritionBudget,
+                            aiHydrationBudget: hydrationBudget,
                         });
                         dbg(`  Mapped: ${isPendingResult(result) ? 'PENDING' : (result?.foodName || 'null')}`);
 
@@ -365,6 +370,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                             skipAiValidation: true,
                             skipOnLock: false,  // Block on retry - should hit cache instantly
                             aiNutritionBudget: nutritionBudget,
+                            aiHydrationBudget: hydrationBudget,
                         });
 
                         if (!result || isPendingResult(result)) {

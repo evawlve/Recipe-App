@@ -52,7 +52,10 @@ import {
     requestAiNutrition, extractBaseFoodContext, getAiServingGrams,
     createAiNutritionBudget, type AiNutritionBudget,
 } from './ai-nutrition-backfill';
-import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_REQUEST } from './config';
+import {
+    AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_REQUEST,
+    AI_NUTRITION_HYDRATION_MAX_PER_REQUEST,
+} from './config';
 import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
 import { assessSubThresholdAdmission } from './sub-threshold-admission';
@@ -348,12 +351,30 @@ export interface MapIngredientOptions {
     /** Optional telemetry sink — mutated with cache-path facts (see MappingTelemetry). */
     telemetry?: MappingTelemetry;
     /**
-     * LLM nutrition-backfill allowance, owned by the CALLER.
+     * LAST-RESORT LLM nutrition allowance, owned by the CALLER — spent only when
+     * NOTHING matched and the line would otherwise be dropped.
      * A looping caller (a warm run, a batch import) must create ONE budget and
      * pass the SAME OBJECT to every query — that is what bounds the run. Omit it
      * and this call gets its own AI_NUTRITION_MAX_PER_REQUEST allowance.
+     *
+     * It is deliberately NOT the budget the hydration path spends: see
+     * `aiHydrationBudget` below for why they must not share a pool.
      */
     aiNutritionBudget?: AiNutritionBudget;
+    /**
+     * HYDRATION LLM nutrition allowance, owned by the CALLER. Separate pool,
+     * spent only by `buildOffResult()` on a candidate that ALREADY WON
+     * retrieval but whose OFF panel failed the Atwater gate.
+     *
+     * Kept apart from `aiNutritionBudget` because exhaustion here is not a
+     * degradation, it is a DELETION: `buildOffResult()` returns null and the
+     * pipeline bills a different record, which is then written as a sticky
+     * FoodMapping row. Sharing one pool made that identity depend on how many
+     * last-resort calls the OTHER concurrent items of the same request had
+     * already fired. Same object-identity contract as above; omit it and this
+     * call gets its own AI_NUTRITION_HYDRATION_MAX_PER_REQUEST allowance.
+     */
+    aiHydrationBudget?: AiNutritionBudget;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -556,6 +577,10 @@ export async function mapIngredientWithFallback(
         // otherwise every query in the loop mints a new allowance and the run
         // is unbounded.
         aiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST),
+        // The SECOND allowance. Defaulted independently — a caller that owns one
+        // budget and not the other must not silently get its last-resort pool
+        // spent on hydration (or the reverse).
+        aiHydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_REQUEST),
     } = options;
 
     const trimmed = rawLine.trim();
@@ -779,7 +804,7 @@ export async function mapIngredientWithFallback(
                 rawData: {},
             };
             const hydratedResult = await hydrateAndSelectServing(
-                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine, aiNutritionBudget
+                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine, aiHydrationBudget
             );
             if (hydratedResult) {
                 // Track and log cache hit
@@ -1182,7 +1207,7 @@ export async function mapIngredientWithFallback(
                     parsed,
                     earlyCacheHit.confidence,
                     trimmed,
-                    aiNutritionBudget
+                    aiHydrationBudget
                 );
 
                 if (hydratedResult) {
@@ -2300,6 +2325,9 @@ export async function mapIngredientWithFallback(
                     // single ingredient line spends a fresh allowance per
                     // recursion level.
                     aiNutritionBudget,
+                    // Both allowances forward, for the same reason and with the
+                    // same explicit-over-spread caveat.
+                    aiHydrationBudget,
                     minConfidence: 0.1,
                     _skipInFlightLock: true,
                     _skipFallback: true, // Prevent infinite recursion
@@ -2333,6 +2361,7 @@ export async function mapIngredientWithFallback(
                     const fallbackResult = await mapIngredientWithFallback(result.simplified, {
                         ...options,
                         aiNutritionBudget,   // see the dietary-fallback call above
+                        aiHydrationBudget,   // ditto — both allowances, explicitly
                         minConfidence: 0.1, // Accept imperfect matches for fallback
                         _skipInFlightLock: true, // Prevent recursive deadlock
                         _skipFallback: true, // Prevent infinite fallback recursion
@@ -2372,7 +2401,7 @@ export async function mapIngredientWithFallback(
                             parsed,  // Use original parsed input with qty/unit!
                             fallbackCandidate.score,
                             rawLine,
-                            aiNutritionBudget
+                            aiHydrationBudget
                         );
 
                         if (rehydratedResult) {
@@ -2589,7 +2618,7 @@ export async function mapIngredientWithFallback(
         }
 
         // Step 5: Hydrate and select serving with fallback to next candidates
-        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiNutritionBudget);
+        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
 
         // Step 5a: If hydration failed and user requested a weight unit (oz, g, lb),
         // try AI backfill for weight serving on the winner BEFORE falling back to other candidates.
@@ -2617,7 +2646,7 @@ export async function mapIngredientWithFallback(
 
             if (backfillResult.success) {
                 // Retry hydration now that we have a weight serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiNutritionBudget);
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
 
                 if (result) {
                     logger.info('mapping.weight_backfill_success', {
@@ -2669,7 +2698,7 @@ export async function mapIngredientWithFallback(
 
             if (volumeBackfillResult.success) {
                 // Retry hydration now that we have a volume serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiNutritionBudget);
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
 
                 if (result) {
                     logger.info('mapping.volume_backfill_success', {
@@ -2705,7 +2734,7 @@ export async function mapIngredientWithFallback(
             const failedWinnerId = winner.id;
             const tryFallbackCandidate = async (fallback: UnifiedCandidate): Promise<boolean> => {
                 let fallbackResult = await hydrateAndSelectServing(
-                    fallback, parsed, confidence * 0.95, rawLine, aiNutritionBudget
+                    fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
                 );
 
                 // If hydration failed for a FatSecret candidate, try backfill before giving up
@@ -2729,7 +2758,7 @@ export async function mapIngredientWithFallback(
                         });
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine, aiNutritionBudget
+                                fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
                             );
                         }
                     } else if (isWeightUnit) {
@@ -2741,7 +2770,7 @@ export async function mapIngredientWithFallback(
                         const backfillResult = await backfillWeightServing(fallback.id);
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine, aiNutritionBudget
+                                fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
                             );
                         }
                     }
@@ -2862,7 +2891,7 @@ export async function mapIngredientWithFallback(
                 // never accepted; floor-hit ones only as a last resort (PR D pt3 B4).
                 const failedCacheWinnerId = winner.id;
                 const tryCacheFallbackCandidate = async (candidate: UnifiedCandidate): Promise<boolean> => {
-                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine, aiNutritionBudget);
+                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine, aiHydrationBudget);
                     if (!retryResult) return false;
                     logger.info('mapping.cache_fallback_search_success', {
                         originalId: failedCacheWinnerId,
@@ -3313,12 +3342,16 @@ export async function hydrateAndSelectServing(
     confidence: number,
     rawLine: string,
     /**
-     * LLM nutrition allowance, forwarded to buildOffResult (the OFF lane can
-     * reach requestAiNutrition when the Atwater gate rejects label data).
+     * HYDRATION allowance, forwarded to buildOffResult (the OFF lane can reach
+     * requestAiNutrition when the Atwater gate rejects label data). This is the
+     * hydration pool, NOT the caller's last-resort pool: spending here is what
+     * decides whether an already-won candidate survives at all, so it must not
+     * be drainable by the unmappable-line path. See
+     * `MapIngredientOptions.aiHydrationBudget`.
      * Optional so the offline eval/probe callers that pass four positional
      * args keep compiling; they then get one per-call allowance each.
      */
-    aiNutritionBudget?: AiNutritionBudget,
+    aiHydrationBudget?: AiNutritionBudget,
 ): Promise<FatsecretMappedIngredient | null> {
     // Handle FDC candidates (already have nutrition data)
     // Also check for fdc_ prefix in ID - cached ValidatedMappings may have source='cache' but FDC IDs
@@ -3329,7 +3362,7 @@ export async function hydrateAndSelectServing(
 
     // Handle OpenFoodFacts candidates (off_ prefix)
     if (candidate.source === 'openfoodfacts' || candidate.id.startsWith('off_')) {
-        return await buildOffResult(candidate, parsed, confidence, rawLine, aiNutritionBudget);
+        return await buildOffResult(candidate, parsed, confidence, rawLine, aiHydrationBudget);
     }
 
     // Handle FatSecret retrieval-lane candidates (fs_ prefix). MUST run before
@@ -5121,13 +5154,20 @@ export async function buildOffResult(
     confidence: number,
     rawLine: string,
     /**
-     * LLM nutrition allowance. This path was UNCAPPED before 2026-08-01 — the
-     * requestAiNutrition call below passed no batch flag at all, so it was the
-     * one nutrition call site the old module counter never saw. Optional so the
-     * existing four-arg test/probe callers keep compiling; they get one
-     * per-call allowance each.
+     * The HYDRATION allowance — its own pool, never the caller's last-resort
+     * pool. This path was UNCAPPED before 2026-08-01 (the requestAiNutrition
+     * call below passed no batch flag at all, so it was the one nutrition call
+     * site the old module counter never saw); it was then briefly put on the
+     * shared last-resort budget, which is worse than either extreme, because a
+     * non-success outcome here makes this function `return null` and DELETE an
+     * OFF candidate that already won retrieval. Under one shared pool, whether
+     * that deletion happened depended on how many last-resort calls the other
+     * items of the same `Promise.all` request had fired first — a
+     * non-deterministic input to a STICKY FoodMapping row.
+     * Optional so the existing four-arg test/probe callers keep compiling; they
+     * get one per-call allowance each.
      */
-    aiNutritionBudget: AiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST),
+    aiHydrationBudget: AiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_REQUEST),
 ): Promise<FatsecretMappedIngredient | null> {
     // 1. Hydrate into local DB
     let hydrated;
@@ -5633,8 +5673,23 @@ export async function buildOffResult(
         return null;
     }
 
-    const aiNutrition = await requestAiNutrition(hydrated.foodName, { rawLine, budget: aiNutritionBudget });
+    const aiNutrition = await requestAiNutrition(hydrated.foodName, { rawLine, budget: aiHydrationBudget });
     if (aiNutrition.status !== 'success') {
+        // Budget exhaustion is called out separately from every other AI
+        // failure BECAUSE it is the only one whose cause is outside this
+        // candidate: the record is fine, we simply ran out of allowance, and
+        // the `return null` below silently hands the line to a different
+        // record. That is the residual coupling the split allowance is meant to
+        // make unreachable — so it is logged at audit level, and a non-zero
+        // count of this event is the signal to raise
+        // AI_NUTRITION_HYDRATION_MAX_PER_REQUEST / _PER_BATCH.
+        if (aiNutrition.reason === 'nutrition_budget_exhausted') {
+            logger.audit('off.build_result.hydration_budget_exhausted', {
+                foodId: candidate.id,
+                foodName: hydrated.foodName,
+                spent: aiHydrationBudget.spent,
+            });
+        }
         logger.warn('off.build_result.ai_nutrition_failed', {
             foodId: candidate.id,
             reason: aiNutrition.reason,

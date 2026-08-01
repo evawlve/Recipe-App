@@ -25,7 +25,8 @@ jest.mock('../../src/lib/db', () => ({ prisma: {} }));
 
 import { warmNames } from '../warm-names';
 
-type MapperOptions = { aiNutritionBudget?: { remaining: number; spent: number } };
+type Budget = { remaining: number; spent: number };
+type MapperOptions = { aiNutritionBudget?: Budget; aiHydrationBudget?: Budget };
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -64,5 +65,53 @@ describe('warmNames hands every query the SAME budget object', () => {
         });
         const { nutritionSpent } = await warmNames({ queries: QUERIES, concurrency: 1 });
         expect(nutritionSpent).toBe(QUERIES.length);
+    });
+});
+
+/**
+ * The SECOND allowance. warm-names is the writer that turns a query into a
+ * sticky FoodMapping row, so it is the entry point where a shared pool does the
+ * most damage: exhausting hydration deletes an already-won OFF candidate and
+ * the run caches a different record instead.
+ */
+describe('warmNames constructs a SEPARATE hydration budget', () => {
+    const QUERIES = ['ghost whey cinnamon roll', 'quest bar cookie dough', 'core power vanilla'];
+
+    it('passes one shared hydration budget, and it is NOT the last-resort object', async () => {
+        // MUTATION THAT KILLS THIS: pass `nutritionBudget` for both options in
+        // warmNames (the pre-split behaviour) — `not.toBe` fails.
+        await warmNames({ queries: QUERIES, concurrency: 1 });
+
+        const opts = mockMapIngredientWithFallback.mock.calls.map((c) => c[1] as MapperOptions);
+        for (const o of opts) {
+            expect(o.aiHydrationBudget).toBeDefined();
+            expect(o.aiHydrationBudget).toBe(opts[0].aiHydrationBudget);   // IDENTITY across queries
+            expect(o.aiHydrationBudget).not.toBe(o.aiNutritionBudget);     // ...and a DIFFERENT pool
+        }
+    });
+
+    it('honours an explicit per-run hydration maximum, independent of the other one', async () => {
+        // MUTATION THAT KILLS THIS: wire aiHydrationBudgetMax to the
+        // last-resort size (or drop the option) — remaining is then 5, not 40.
+        await warmNames({
+            queries: QUERIES, concurrency: 1,
+            aiNutritionBudgetMax: 5, aiHydrationBudgetMax: 40,
+        });
+        const o = mockMapIngredientWithFallback.mock.calls[0][1] as MapperOptions;
+        expect(o.aiNutritionBudget).toEqual({ remaining: 5, spent: 0 });
+        expect(o.aiHydrationBudget).toEqual({ remaining: 40, spent: 0 });
+    });
+
+    it('reports hydration spend separately from last-resort spend', async () => {
+        // MUTATION THAT KILLS THIS: report `nutritionBudget.spent` for both —
+        // hydrationSpent would come back 0.
+        mockMapIngredientWithFallback.mockImplementation(async (_q: string, opts: MapperOptions) => {
+            opts.aiHydrationBudget!.remaining--;
+            opts.aiHydrationBudget!.spent++;
+            return null;
+        });
+        const { nutritionSpent, hydrationSpent } = await warmNames({ queries: QUERIES, concurrency: 1 });
+        expect(hydrationSpent).toBe(QUERIES.length);
+        expect(nutritionSpent).toBe(0);
     });
 });

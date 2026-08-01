@@ -23,7 +23,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { mapIngredientWithFallback } from '../src/lib/mapping/map-ingredient-with-fallback';
 import { createAiNutritionBudget } from '../src/lib/mapping/ai-nutrition-backfill';
-import { AI_NUTRITION_MAX_PER_BATCH } from '../src/lib/mapping/config';
+import { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } from '../src/lib/mapping/config';
 
 export interface GoldenDiffRecord {
     id: string;
@@ -75,6 +75,10 @@ export async function runGoldenDiffEval(opts: GoldenDiffOptions): Promise<Golden
     const out: GoldenDiffRecord[] = [];
     // ONE budget for the whole run, shared by every case (see warm-names.ts).
     const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
+    // The SECOND, separate allowance: hydration/enrichment inside
+    // buildOffResult. Exhausting it DELETES an already-won OFF candidate,
+    // so it must not share the last-resort pool (see warm-names.ts).
+    const hydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_BATCH);
     for (const c of cases) {
         const query = goldenCaseQuery(c);
         const rec: GoldenDiffRecord = { id: c.id, cat: c.category, query, status: 'null' };
@@ -85,6 +89,7 @@ export async function runGoldenDiffEval(opts: GoldenDiffOptions): Promise<Golden
                 skipOnLock: true,
                 telemetry: telemetry as never,
                 aiNutritionBudget: nutritionBudget,
+                aiHydrationBudget: hydrationBudget,
             });
             if (r === null) {
                 rec.status = 'null';

@@ -520,7 +520,7 @@ const vmHelpersMod = require('../../src/lib/mapping/validated-mapping-helpers');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { createAiNutritionBudget } = require('../../src/lib/mapping/ai-nutrition-backfill');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { AI_NUTRITION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
+const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
 
 // Everything below is IMPORTED FROM THE REAL MODULES, never reimplemented. A probe
 // that reimplements the caller's argument list is a different function.
@@ -820,6 +820,10 @@ async function runSnapshot(pop: PopulationLine[], outPath: string, population: s
     const todo = pop.filter(p => !done.has(p.query));
     // ONE budget for the whole sweep, shared by every query (see warm-names.ts).
     const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
+    // The SECOND, separate allowance: hydration/enrichment inside
+    // buildOffResult. Exhausting it DELETES an already-won OFF candidate,
+    // so it must not share the last-resort pool (see warm-names.ts).
+    const hydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_BATCH);
     for (let i = 0; i < todo.length; i++) {
         const p = todo[i];
         sink.capture = null; aiSink.llm = null; aiSink.cache = null;
@@ -834,6 +838,7 @@ async function runSnapshot(pop: PopulationLine[], outPath: string, population: s
                 allowLiveFallback: true,
                 skipOnLock: true,
                 aiNutritionBudget: nutritionBudget,
+                aiHydrationBudget: hydrationBudget,
             });
             err = 'mapper returned without reaching the full gatherCandidates call';
         } catch (e: any) {
@@ -2172,6 +2177,10 @@ async function runVerify(pop: PopulationLine[], variant: SelectionVariant, debug
     const confDiverged: any[] = [];
     // ONE budget for the whole sweep, shared by every query (see warm-names.ts).
     const servingNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
+    // The SECOND, separate allowance: hydration/enrichment inside
+    // buildOffResult. Exhausting it DELETES an already-won OFF candidate,
+    // so it must not share the last-resort pool (see warm-names.ts).
+    const servingHydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_BATCH);
 
     for (let i = 0; i < pop.length; i++) {
         const p = pop[i];
@@ -2185,6 +2194,7 @@ async function runVerify(pop: PopulationLine[], variant: SelectionVariant, debug
             real = await mapperMod.mapIngredientWithFallback(p.query, {
                 skipCache: true, debug, allowLiveFallback: true, skipOnLock: true, telemetry,
                 aiNutritionBudget: servingNutritionBudget,
+                aiHydrationBudget: servingHydrationBudget,
             });
         } catch (e: any) {
             err = e?.message ?? String(e);
