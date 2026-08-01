@@ -843,6 +843,104 @@
         "value": "1"
       },
       "verified": "2026-07-31"
+    },
+    {
+      "id": "cross-source-bar-has-no-ceiling",
+      "claim": "crossSourceDisplacementBar() in src/lib/mapping/validated-mapping-helpers.ts is a plain incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN with NO ceiling, and no ceiling constant survives in the file. The 0.999 cap was reverted before shipping: any bar <= 1.0 admits a 1.0 challenger and any bar > 1.0 is the freeze, and the freeze is the only thing pinning the plain-food record on a key normalization shares with its cooked variant. Reintroducing a Math.min/ceiling here re-opens `chicken` -> \"Grilled Chicken\" (97 -> 237 kcal/100g). Whitespace is stripped so the check is CRLF-safe.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
+      "where": "backend",
+      "command": "printf '%s@%s\\n' \"$(awk '/^export function crossSourceDisplacementBar/,/^}/' src/lib/mapping/validated-mapping-helpers.ts | tr -d '[:space:]')\" \"$(grep -c CEILING src/lib/mapping/validated-mapping-helpers.ts)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "exportfunctioncrossSourceDisplacementBar(incumbentConfidence:number):number{returnincumbentConfidence+CROSS_SOURCE_DISPLACEMENT_MARGIN;}@0"
+      },
+      "verified": "2026-08-01"
+    },
+    {
+      "id": "row-quality-escapes-exactly-two",
+      "claim": "ROW_QUALITY_ESCAPES in src/lib/mapping/validated-mapping-helpers.ts holds exactly corrupt_record and nutrition_invalid, and the save-time margin forfeit is gated on isRowQualityEscape(e.reason). A read-path escape has two meanings — the row is bad, or this query wants a different food sharing the key — and only the first justifies waiving the margin. MEASURED 2026-08-01: all 440 save_rejected:cross_source_margin events carrying a cacheEscape are query-fit classes, so the forfeit fires ZERO times today; widening this set turns a key collision into a silent displacement.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
+      "where": "backend",
+      "command": "printf '%s@%s\\n' \"$(awk '/^const ROW_QUALITY_ESCAPES = new Set/,/^\\]\\);/' src/lib/mapping/validated-mapping-helpers.ts | grep -oE \"'[a-z_]+'\" | tr -d \"'\" | sort | paste -sd, -)\" \"$(grep -c 'isRowQualityEscape(e.reason)' src/lib/mapping/validated-mapping-helpers.ts)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "corrupt_record,nutrition_invalid@1"
+      },
+      "verified": "2026-08-01"
+    },
+    {
+      "id": "next-config-still-strips-console-info",
+      "claim": "next.config.ts still applies compiler.removeConsole in production with exclude exactly ['error','warn'] — PR #209 KEPT the strip rather than adding 'info' to the exclude list, because that would switch on every logger.info call site at once against an unrotated log. SWC deletes matching console.<method>() calls at BUILD time, which is why 976,124 lines of the box's next-start.log carried zero \"level\":\"info\". Anything built on console.info/console.debug compiles away in production silently; route new logging through logger instead.",
+      "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
+      "where": "backend",
+      "command": "awk '/^  compiler: \\{/,/^  \\},/' next.config.ts | tr -d '[:space:]'",
+      "expect": {
+        "kind": "equals",
+        "value": "compiler:{removeConsole:process.env.NODE_ENV==='production'?{exclude:['error','warn'],}:false,},"
+      },
+      "verified": "2026-08-01"
+    },
+    {
+      "id": "logger-bypasses-console",
+      "claim": "src/lib/logger.ts makes ZERO console.<method>() calls and writes via process.stdout/process.stderr instead — the only shape SWC removeConsole cannot match. Reverting it to console.* reintroduces the silent production strip that made logger.info unloggable.",
+      "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
+      "where": "backend",
+      "command": "printf '%s@%s\\n' \"$(grep -cE 'console\\.[a-z]+ *\\(' src/lib/logger.ts)\" \"$(grep -cE 'process\\.(stdout|stderr)\\.write' src/lib/logger.ts)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^0@[1-9][0-9]*$"
+      },
+      "verified": "2026-08-01"
+    },
+    {
+      "id": "ai-nutrition-hydration-budget-documented",
+      "claim": "Hydration-time AI nutrition has its OWN allowance, separate from the parse-time one: AI_NUTRITION_HYDRATION_MAX_PER_REQUEST and AI_NUTRITION_HYDRATION_MAX_PER_BATCH are both exported from src/lib/mapping/config.ts AND documented in .env.example. Sharing the parse-time budget made the exhaustion guard in requestAiNutrition() unreachable.",
+      "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
+      "where": "backend",
+      "command": "printf '%s@%s\\n' \"$(grep -cE '^AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH)=' .env.example)\" \"$(grep -cE '^export const AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH) =' src/lib/mapping/config.ts)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "2@2"
+      },
+      "verified": "2026-08-01"
+    },
+    {
+      "id": "ai-nutrition-three-call-sites",
+      "claim": "requestAiNutrition() has exactly three production call sites in src/ (tests and comments excluded): two last-resort arms in mapIngredientWithFallback() and one in buildOffResult(). A fourth call site is a new AI-spend path and must be given a budget explicitly — the hydration arm was uncapped precisely because it was added without one.",
+      "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
+      "where": "backend",
+      "command": "grep -rn 'requestAiNutrition(' src --include='*.ts' | grep -v '/__tests__/' | grep -vE ':[0-9]+: *\\*' | grep -v 'export async function' | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "3"
+      },
+      "verified": "2026-08-01"
+    },
+    {
+      "id": "normalize-collapses-cooking-state",
+      "claim": "THE KEY COLLISION. normalizeIngredientName() in src/lib/mapping/normalization-rules.ts strips the cooking modifier, so 'grilled chicken' and 'chicken' both clean to 'chicken' and share ONE FoodMapping key. Output is cleaned(grilled chicken)|cleaned(chicken)|equal?|stripped. When this claim FAILS the cooking-state key fork has shipped — update the report, the displacement-bar entry and this one together, because the bar's freeze is only load-bearing while the keys collide.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
+      "where": "backend",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');const a=n('grilled chicken'),b=n('chicken');process.stdout.write(a.cleaned+'|'+b.cleaned+'|'+String(a.cleaned===b.cleaned)+'|'+a.stripped.join(','))\"",
+      "expect": {
+        "kind": "equals",
+        "value": "chicken|chicken|true|grilled"
+      },
+      "verified": "2026-08-01",
+      "timeoutMs": 180000
+    },
+    {
+      "id": "qualifier-strip-precedes-normalization",
+      "claim": "The strip that actually reaches production keys is extractQualifiers() inside parseIngredientLine() (src/lib/parse/ingredient-line.ts), which runs BEFORE normalizeIngredientName() ever sees the string — not the prep_phrases list. Proof by the one input where they disagree: parseIngredientLine('dried apricots').name is 'apricots' while normalizeIngredientName('dried apricots').cleaned is 'dried apricots' (its PRODUCT_TYPE_MODIFIERS guard fires). Every production call site takes parsed.name first, so editing prep_phrases to fix cooking state is a measured no-op.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
+      "where": "backend",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');process.stdout.write(p('dried apricots').name+'|'+n('dried apricots').cleaned)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "apricots|dried apricots"
+      },
+      "verified": "2026-08-01",
+      "timeoutMs": 180000
     }
   ]
 }

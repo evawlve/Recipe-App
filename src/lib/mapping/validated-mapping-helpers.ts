@@ -1151,11 +1151,13 @@ export async function saveValidatedMapping(
             //
             // Interaction with the alias-loop removal (F1): incumbent
             // confidences are no longer deflated by 0.9 at save time, so a row
-            // earned at 0.98 asked for 1.03 here — UNREACHABLE, not merely
-            // strict. That is why the bar is now capped at
-            // CROSS_SOURCE_MARGIN_CEILING (see the constant for the 65.1%
-            // measurement) and why an incumbent the read path already refused
-            // forfeits the margin entirely.
+            // earned at 0.98 asks for 1.03 here — UNREACHABLE, not merely
+            // strict. The 0.999 ceiling that would have made it clearable was
+            // REVERTED before it shipped: see CROSS_SOURCE_DISPLACEMENT_MARGIN
+            // above for why no ceiling VALUE fixes this, and for the 65.1%
+            // measurement. What survives is the narrower relief — an incumbent
+            // the read path already refused for a ROW-QUALITY reason forfeits
+            // the margin entirely (isRowQualityEscape).
             const crossSourceFamily =
                 newTargetKey.split(':')[0] !== existingTargetKey.split(':')[0];
             if (!incumbentCorrupt && crossSourceFamily) {
