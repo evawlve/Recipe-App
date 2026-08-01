@@ -33,7 +33,13 @@ jest.mock('../../db', () => ({
     },
 }));
 
-import { saveValidatedMapping, getValidatedMappingByNormalizedName, targetKeyOf } from '../validated-mapping-helpers';
+import {
+    saveValidatedMapping,
+    getValidatedMappingByNormalizedName,
+    targetKeyOf,
+    targetKeyOfFoodId,
+    crossSourceDisplacementBar,
+} from '../validated-mapping-helpers';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 import type { AIValidationResult } from '../validated-mapping-helpers';
 import type { FunnelSink } from '../funnel';
@@ -891,5 +897,219 @@ describe('stored confidence is the validated confidence, unscaled', () => {
             { confidence: 0.98 } as AIValidationResult,
         );
         expect(mockFoodMappingUpsert.mock.calls[0][0].update.aiConfidence).toBe(0.98);
+    });
+});
+
+// ============================================================
+// Cross-source displacement: capped bar + escaped-incumbent forfeit
+// (2026-08-01).
+//
+// The margin was `existing.aiConfidence + 0.05` against a challenger clamped to
+// <= 1.0, so above 0.95 the bar was NOT strict — it was UNREACHABLE. MEASURED
+// on the live DB 2026-08-01: 2,286 of 3,509 FoodMapping rows (65.1%) sat above
+// 0.95, and `save_rejected:cross_source_margin` is already the largest
+// save_rejected class in MappingEventLog at 797 events — 440 of them (55.2%)
+// following a recorded cacheEscape, i.e. rows that escape on every read and can
+// never be replaced. Re-derive:
+//   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
+//     -c "SELECT count(*) FILTER (WHERE \"aiConfidence\" > 0.95), count(*) FROM \"FoodMapping\";" \
+//     -c "SELECT count(*), count(\"cacheEscape\") FROM \"MappingEventLog\" \
+//         WHERE \"dropReason\"='"'"'save_rejected:cross_source_margin'"'"';"'
+// ============================================================
+describe('cross-source displacement bar has a ceiling', () => {
+    const OFF_BARCODE = '1111111111111';
+    const FDC_ID = 171705;
+
+    it('caps the bar at 0.999 but leaves sub-ceiling bars alone', () => {
+        expect(crossSourceDisplacementBar(0.98)).toBe(0.999);
+        expect(crossSourceDisplacementBar(1.0)).toBe(0.999);
+        // Below the ceiling the margin is untouched — this is a cap, not a
+        // relaxation. Dies if anyone "simplifies" it to a flat 0.999 bar.
+        expect(crossSourceDisplacementBar(0.5)).toBeCloseTo(0.55, 10);
+        expect(crossSourceDisplacementBar(0.9)).toBeCloseTo(0.95, 10);
+    });
+
+    it('a perfect challenger CAN displace a 0.98 incumbent — the freeze case', async () => {
+        // Uncapped this asked for 1.03 against a value clamped to <= 1.0:
+        // arithmetically impossible. Dies the moment the ceiling is removed.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.98, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 1.0 } as AIValidationResult,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('still refuses a merely-good challenger against the same incumbent', async () => {
+        // The ceiling must not become "the margin is off". 0.99 < 0.999.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.98, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.99 } as AIValidationResult,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        // The freeze counter. Greppable, indexed, and already carrying 797 live
+        // events — it is the only way to watch this during a warm run.
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('leaves a low-confidence incumbent on the plain +0.05 margin', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.50, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.54 } as AIValidationResult,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+});
+
+describe('escaped incumbents forfeit the cross-source margin', () => {
+    const OFF_BARCODE = '1111111111111';
+    const OTHER_OFF = '2222222222222';
+    const FDC_ID = 171705;
+    const FS_ID = '55501';
+
+    const incumbentOff = {
+        offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+        foodName: 'Avocado', aiConfidence: 0.98, validatedBy: 'ai',
+    };
+
+    it('waives the margin when the read path refused THIS incumbent', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const { logger } = await import('../../logger');
+        const auditSpy = jest.spyOn(logger, 'audit').mockImplementation(() => {});
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.86 } as AIValidationResult,
+            {
+                telemetry,
+                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:count_label' }],
+            },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(telemetry.dropReason).toBeUndefined();
+        // Distinct + greppable: a waived margin is a SUCCESSFUL save, so it can
+        // carry no dropReason. Without this line it is indistinguishable from a
+        // save that simply cleared the bar.
+        expect(auditSpy).toHaveBeenCalledWith(
+            'validated_mapping.cross_source_margin_waived_read_escape',
+            expect.objectContaining({
+                evictedTarget: `off:${OFF_BARCODE}`,
+                keptTarget: `fdc:${FDC_ID}`,
+                escapeReason: 'normalized:count_label',
+            }),
+        );
+        auditSpy.mockRestore();
+    });
+
+    it('frees an fs: incumbent, which corruptReason structurally cannot', async () => {
+        // Only OffFood carries corruptReason, so the pre-existing bypass could
+        // never rescue an fs or fdc zombie. This is the half of the fix that
+        // generalises it.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: null, fdcId: null, fsId: FS_ID,
+            foodName: 'Avocado, Raw', aiConfidence: 1.0, validatedBy: 'ai',
+        });
+        mockFatSecretServingFindFirst.mockResolvedValue({ id: 'srv1' });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `off_${OTHER_OFF}`, foodName: 'Avocado' }),
+            { confidence: 0.86 } as AIValidationResult,
+            { readEscapes: [{ targetKey: `fs:${FS_ID}`, reason: 'normalized:nutrition_invalid' }] },
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT waive the margin for an incumbent that never escaped', async () => {
+        // Record-scoped, not request-scoped. The early cache layer runs before
+        // AI normalize can rewrite the key, and the read path has legacy-key and
+        // token-set fallbacks, so an escape and the save do not always address
+        // the same row. A bare boolean would hand this unrelated incumbent's
+        // protection away.
+        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.86 } as AIValidationResult,
+            {
+                telemetry,
+                readEscapes: [{ targetKey: `off:${OTHER_OFF}`, reason: 'early:corrupt_record' }],
+            },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('a forfeit is NOT a licence to lose a serving', async () => {
+        // The forfeit waives the MARGIN only. An unusable incumbent says nothing
+        // about whether the replacement may drop the serving shape, and the
+        // downgrade guard is the one thing standing between a 250ml can label
+        // and flat_100g_default forever after.
+        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason: null });
+        mockFatSecretServingFindFirst.mockResolvedValue(null); // challenger has no gram serving
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'red bull',
+            makeMapping({ foodId: `fs_${FS_ID}`, foodName: 'Red Bull Energy Drink' }),
+            { confidence: 0.86 } as AIValidationResult,
+            {
+                telemetry,
+                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:grain_cooked' }],
+            },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:serving_downgrade');
+    });
+
+    it('an empty/absent escape list behaves exactly as before', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.86 } as AIValidationResult,
+            { telemetry, readEscapes: [] },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('targetKeyOfFoodId agrees with targetKeyOf on the same record', async () => {
+        // The two spellings of one identity. They drifting apart is exactly how
+        // both target-key expressions ended up stopping at `fs:`.
+        expect(targetKeyOfFoodId(`off_${OFF_BARCODE}`)).toBe(targetKeyOf({ offBarcode: OFF_BARCODE }));
+        expect(targetKeyOfFoodId(`fs_${FS_ID}`)).toBe(targetKeyOf({ fsId: FS_ID }));
+        expect(targetKeyOfFoodId(`fdc_${FDC_ID}`)).toBe(targetKeyOf({ fdcId: FDC_ID }));
+        expect(targetKeyOfFoodId('fdc_notanumber')).toBeNull();
+        expect(targetKeyOfFoodId('some-cuid')).toBeNull();
+        expect(targetKeyOfFoodId(null)).toBeNull();
     });
 });

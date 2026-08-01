@@ -26,9 +26,60 @@ import { ensureFatSecretParentPersisted } from './fatsecret-lane';
 
 // Cross-source displacement margin (fs displacement hardening, Jul 2026):
 // how much MORE confident a challenger from a different source family
-// (off: ↔ fs:) must be than the incumbent's stored aiConfidence to take
+// (off: ↔ fs: ↔ fdc:) must be than the incumbent's stored aiConfidence to take
 // over an existing cache row. Same-family swaps are exempt.
 const CROSS_SOURCE_DISPLACEMENT_MARGIN = 0.05;
+
+// Ceiling on that bar (2026-08-01). `clampedConfidence` below is clamped to
+// <= 1.0, so an uncapped `aiConfidence + 0.05` is a bar NO challenger can ever
+// clear once the incumbent is above 0.95: the guard stops being a margin and
+// becomes a FREEZE — the row can never be displaced, however wrong it is.
+//
+// MEASURED 2026-08-01 (live DB): 2,286 of 3,509 FoodMapping rows — 65.1% —
+// carry aiConfidence > 0.95 (openfoodfacts 1998/2855, fatsecret 216/570,
+// fdc 72/84), and a further 552 sit at exactly 0.95 (bar exactly 1.0, clearable
+// only by a perfect 1.0). Re-derive:
+//   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
+//     -c "SELECT count(*) FILTER (WHERE \"aiConfidence\" > 0.95) AS over_95, count(*) FROM \"FoodMapping\";"'
+//
+// 0.999 is chosen so every bar stays REACHABLE — 433 live rows were saved at
+// exactly 1.0, so a 1.0 challenger is a real, produced value — while still
+// demanding near-certainty of anything displacing a 0.98+ incumbent. It is a
+// ceiling, not a relaxation of the margin: below 0.949 the bar is unchanged.
+const CROSS_SOURCE_MARGIN_CEILING = 0.999;
+
+/**
+ * The confidence a cross-family challenger must reach to displace an incumbent.
+ * Exported so the ceiling is testable without reaching into the save path.
+ */
+export function crossSourceDisplacementBar(incumbentConfidence: number): number {
+    return Math.min(
+        incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN,
+        CROSS_SOURCE_MARGIN_CEILING,
+    );
+}
+
+/**
+ * One read-time cache escape observed during THIS resolution: the read path
+ * found a cached row and refused to serve it, which is WHY a re-resolution ran
+ * at all. Threaded into `saveValidatedMapping` (option `readEscapes`) so an
+ * incumbent that has proven itself unusable forfeits its margin protection.
+ *
+ * `targetKey` is the escaped ROW's record identity (`targetKeyOf()` /
+ * `targetKeyOfFoodId()`), not its cache key. Deliberate: the escape and the
+ * save do not always address the same key — the early cache layer runs BEFORE
+ * AI normalize can rewrite `normalizedName`, and the read path also has legacy-
+ * key and token-set fallbacks that hit rows stored under other keys. Matching
+ * on the record means a forfeit can only ever waive the margin for the exact
+ * row that was refused, never for an unrelated incumbent that happened to be
+ * sitting at the save key.
+ */
+export interface ReadEscapeRecord {
+    /** `off:<barcode>` | `fs:<id>` | `fdc:<id>` of the row the read path refused. */
+    targetKey: string;
+    /** Escape class, e.g. 'early:corrupt_record', 'lookup_normalized:context_mismatch'. */
+    reason: string;
+}
 
 // Bare-category takeover gate (Jul 2026). See saveValidatedMapping.
 // Trivial words dropped before counting query specificity / testing whether a
@@ -165,17 +216,30 @@ export interface CacheLookupRejection {
     normalizedForm?: string;
     /** Name of the rejected row, so the reason can be read without a second query. */
     foodName?: string;
+    /**
+     * `targetKeyOf()` of the rejected row — the RECORD it pointed at, which is
+     * what the save-time forfeit matches on (see ReadEscapeRecord). Null for a
+     * row naming no record at all ('no_target_column').
+     */
+    targetKey?: string | null;
 }
 
 function noteRejection(
     rejection: CacheLookupRejection | undefined,
     reason: string,
-    cached: { normalizedForm: string; foodName: string },
+    cached: {
+        normalizedForm: string;
+        foodName: string;
+        offBarcode?: string | null;
+        fsId?: string | null;
+        fdcId?: number | null;
+    },
 ): void {
     if (!rejection) return;
     rejection.reason = reason;
     rejection.normalizedForm = cached.normalizedForm;
     rejection.foodName = cached.foodName;
+    rejection.targetKey = targetKeyOf(cached);
 }
 
 /**
@@ -499,6 +563,26 @@ export function targetKeyOf(
 }
 
 /**
+ * The same identity, computed from a candidate/cache-hit `foodId` string
+ * (`off_<barcode>` / `fs_<id>` / `fdc_<id>`) instead of from row columns.
+ *
+ * The read path hands escapes around as foodIds; the save path compares
+ * targetKeys. One converter so the two spellings can never drift — the exact
+ * drift that let both target-key expressions stop at `fs:`.
+ */
+export function targetKeyOfFoodId(foodId: string | null | undefined): string | null {
+    if (!foodId) return null;
+    if (foodId.startsWith('off_')) return `off:${foodId.slice(4)}`;
+    if (foodId.startsWith('fs_')) return `fs:${foodId.slice(3)}`;
+    if (foodId.startsWith('fdc_')) {
+        const id = foodId.slice(4);
+        // Mirror targetKeyOf's numeric fdcId: an unparseable suffix names no record.
+        return /^\d+$/.test(id) ? `fdc:${id}` : null;
+    }
+    return null;
+}
+
+/**
  * The verdict shape the save gate consumes. Only `confidence` is read here — the
  * rest is carried for callers that record a richer verdict.
  *
@@ -556,6 +640,17 @@ export async function saveValidatedMapping(
         // so it may create a cache row but must never overwrite one. See the
         // insert-only guard in the body.
         insertOnly?: boolean;
+        // ESCAPED INCUMBENTS FORFEIT (2026-08-01). Every read-time cache escape
+        // recorded during THIS resolution — i.e. the rows the read path refused
+        // to serve, which is WHY a re-resolution ran. When the save-time
+        // incumbent is one of them it has proven itself unusable and loses its
+        // cross-source margin protection (the serving-downgrade guard still
+        // applies — an unusable incumbent is not a licence to lose a serving).
+        //
+        // EXPLICIT, never inferred: the mapper appends to this list at each
+        // escape site. Nothing here reads `telemetry.cacheEscape` or guesses
+        // from the funnel — a save with no list is treated exactly as today.
+        readEscapes?: ReadonlyArray<ReadEscapeRecord>;
     }
 ): Promise<void> {
     // Priority: canonicalBase > normalizedForm > computed from rawIngredient
@@ -902,6 +997,28 @@ export async function saveValidatedMapping(
                 });
             }
 
+            // ESCAPED INCUMBENT FORFEIT (2026-08-01). Did the read path refuse
+            // THIS incumbent earlier in this same resolution? Matched on record
+            // identity, not on the cache key: see ReadEscapeRecord for why.
+            //
+            // RELATIONSHIP TO `incumbentCorrupt` — kept ALONGSIDE, not folded
+            // in, because the two differ on both axes:
+            //   * WHAT THEY WAIVE. incumbentCorrupt waives the serving-downgrade
+            //     guard AND the margin (a corrupt panel's serving shape is not
+            //     worth preserving). A forfeit waives the MARGIN ONLY — the row
+            //     is unusable for this query, which says nothing about whether
+            //     the replacement may drop a serving.
+            //   * WHEN THEY APPLY. incumbentCorrupt is a save-time property of
+            //     the OFF record, true even when this save never read the row
+            //     (a `skipCache` warm run records no escape at all). A forfeit
+            //     is request-time evidence and is source-agnostic — it is the
+            //     only mechanism that can free an fs: or fdc: incumbent, which
+            //     carry no corruptReason column to be marked in.
+            // A corrupt-marked OFF incumbent normally trips both; incumbentCorrupt
+            // is evaluated first below so the existing log line is unchanged.
+            const escapeForfeit = (options?.readEscapes ?? [])
+                .find(e => e.targetKey === existingTargetKey) ?? null;
+
             // ASYMMETRY, deliberate: `fdc:` enters the MARGIN half below but
             // NOT this serving-downgrade half. hasServingShape() reads only
             // OffFood.servingGrams/packageQuantity and fsHasServingShape()
@@ -966,13 +1083,33 @@ export async function saveValidatedMapping(
             //
             // Interaction with the alias-loop removal (F1): incumbent
             // confidences are no longer deflated by 0.9 at save time, so a row
-            // earned at 0.98 needs 1.03 here — unreachable, i.e. safe — rather
-            // than the 0.932 that any exact_match rerank winner cleared.
+            // earned at 0.98 asked for 1.03 here — UNREACHABLE, not merely
+            // strict. That is why the bar is now capped at
+            // CROSS_SOURCE_MARGIN_CEILING (see the constant for the 65.1%
+            // measurement) and why an incumbent the read path already refused
+            // forfeits the margin entirely.
             const crossSourceFamily =
                 newTargetKey.split(':')[0] !== existingTargetKey.split(':')[0];
             if (!incumbentCorrupt && crossSourceFamily) {
                 const incumbentConfidence = existing?.aiConfidence ?? 0;
-                if (clampedConfidence < incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN) {
+                const bar = crossSourceDisplacementBar(incumbentConfidence);
+                if (escapeForfeit) {
+                    // Distinct + greppable: a waived margin is a successful save,
+                    // so it can carry no dropReason — without this line the
+                    // waiver is indistinguishable from a save that simply
+                    // cleared the bar. audit() is non-suppressible.
+                    logger.audit('validated_mapping.cross_source_margin_waived_read_escape', {
+                        rawIngredient,
+                        normalizedForm,
+                        foodName: mapping.foodName,
+                        evictedTarget: existingTargetKey,
+                        keptTarget: newTargetKey,
+                        escapeReason: escapeForfeit.reason,
+                        incumbentConfidence,
+                        challengerConfidence: clampedConfidence,
+                        barWaived: bar,
+                    });
+                } else if (clampedConfidence < bar) {
                     logger.warn('validated_mapping.save_rejected_cross_source_margin', {
                         rawIngredient,
                         normalizedForm,
@@ -981,6 +1118,7 @@ export async function saveValidatedMapping(
                         rejectedTarget: newTargetKey,
                         incumbentConfidence,
                         challengerConfidence: clampedConfidence,
+                        bar,
                     });
                     markSaveRejected(options?.telemetry, 'cross_source_margin');
                     return;

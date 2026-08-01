@@ -29,7 +29,7 @@ import {
     pieceNounInName, labelPieceMatchesItem, countedPieceNoun, servingLabelCountsPiece,
     inferDiscreteUnit,
 } from './count-label';
-import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, type CacheLookupRejection } from './validated-mapping-helpers';
+import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, targetKeyOfFoodId, type CacheLookupRejection, type ReadEscapeRecord } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
 import { logger } from '../logger';
 import type { FatSecretFoodDetails, FatSecretServing } from './client';
@@ -887,6 +887,25 @@ export async function mapIngredientWithFallback(
         // Check ValidatedMapping for normalized name BEFORE calling AI
         // This is the key optimization: "1 cup chopped onion" → normalized "onion" → cache hit!
         if (telemetry) telemetry.normalizedForm = normalizedName;
+        // ESCAPED INCUMBENTS FORFEIT (2026-08-01). Every cached row the read
+        // path refuses below is appended here, by RECORD identity, and handed to
+        // saveValidatedMapping as `readEscapes`. A row that could not serve this
+        // request has proven itself unusable, so it forfeits its cross-source
+        // displacement margin — otherwise the escape→re-resolve→blocked-save
+        // loop freezes it in place forever. Explicit and typed on purpose:
+        // nothing downstream infers it from telemetry.
+        //
+        // Deliberately NOT recorded: the post-hit `early_cache_hydration_failed`
+        // fall-through below. Every escape here is a property of the ROW (or of
+        // row-vs-query identity) and so recurs on every request; hydration
+        // depends on THIS request's qty/unit, and one odd unit must not strip a
+        // healthy incumbent's protection. It is labelled for telemetry so the
+        // population can be measured before anyone widens this.
+        const readEscapes: ReadEscapeRecord[] = [];
+        const noteReadEscape = (targetKey: string | null | undefined, reason: string) => {
+            if (targetKey) readEscapes.push({ targetKey, reason });
+        };
+
         // PR D pt3 (C1) + key symmetry (Track 1c): lookup key carries identity
         // discriminators (egg white/yolk, cooked, whole) AND the brand-prefix
         // decision — deriveMappingCacheKey is THE key function, used verbatim
@@ -897,11 +916,12 @@ export async function mapIngredientWithFallback(
         // written under the old scheme stay reachable.
         const earlyLookupRejection: CacheLookupRejection = { reason: null };
         const earlyCacheHit = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed, earlyLookupRejection);
-        if (!earlyCacheHit && earlyLookupRejection.reason && telemetry) {
+        if (!earlyCacheHit && earlyLookupRejection.reason) {
             // A row existed under this key and the read path rejected it. Without
             // this the event is indistinguishable from a cold key, which is how
             // rows that are written and then never servable stayed invisible.
-            telemetry.cacheEscape = 'lookup_early:' + earlyLookupRejection.reason;
+            if (telemetry) telemetry.cacheEscape = 'lookup_early:' + earlyLookupRejection.reason;
+            noteReadEscape(earlyLookupRejection.targetKey, 'lookup_early:' + earlyLookupRejection.reason);
         }
         if (earlyCacheHit) {
             logger.info('mapping.early_cache_hit', { rawLine: trimmed, normalizedName, foodName: earlyCacheHit.foodName });
@@ -1141,6 +1161,7 @@ export async function mapIngredientWithFallback(
                 if (telemetry) {
                     telemetry.cacheEscape = 'early:' + earlyEscapeReason;
                 }
+                noteReadEscape(targetKeyOfFoodId(earlyCacheHit.foodId), 'early:' + earlyEscapeReason);
                 // Fall through to normal search - don't use stale cached mapping
             } else {
                 // Create synthetic candidate from cached result
@@ -1206,7 +1227,9 @@ export async function mapIngredientWithFallback(
                     }
                     return hydratedResult;
                 }
-                // If hydration fails, continue with normal flow
+                // If hydration fails, continue with normal flow. Labelled (it was
+                // a silent fall-through) but NOT a forfeit — see readEscapes.
+                if (telemetry) telemetry.cacheEscape = 'early:hydration_failed';
                 logger.warn('mapping.early_cache_hydration_failed', { rawLine: trimmed, foodId: earlyCacheHit.foodId });
             }
         }
@@ -1371,8 +1394,9 @@ export async function mapIngredientWithFallback(
             // miss falls back to the legacy (pre-Track-1c) key.
             const normalizedLookupRejection: CacheLookupRejection = { reason: null };
             const normalizedCache = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed, normalizedLookupRejection);
-            if (!normalizedCache && normalizedLookupRejection.reason && telemetry) {
-                telemetry.cacheEscape = 'lookup_normalized:' + normalizedLookupRejection.reason;
+            if (!normalizedCache && normalizedLookupRejection.reason) {
+                if (telemetry) telemetry.cacheEscape = 'lookup_normalized:' + normalizedLookupRejection.reason;
+                noteReadEscape(normalizedLookupRejection.targetKey, 'lookup_normalized:' + normalizedLookupRejection.reason);
             }
             if (normalizedCache) {
                 logger.info('mapping.normalized_cache_hit', { rawLine: trimmed, normalizedName });
@@ -1538,6 +1562,7 @@ export async function mapIngredientWithFallback(
                     if (telemetry) {
                         telemetry.cacheEscape = 'normalized:' + normalizedEscapeReason;
                     }
+                    noteReadEscape(targetKeyOfFoodId(normalizedCache.foodId), 'normalized:' + normalizedEscapeReason);
                 } else {
                     winner = {
                         id: normalizedCache.foodId,
@@ -3097,6 +3122,11 @@ export async function mapIngredientWithFallback(
                 nutrientsPer100g: savedNutrientsPer100g,
                 expectedNutrition,
                 insertOnly: subThreshold.admit,
+                // The rows the read path refused this request (see readEscapes
+                // above). If the incumbent at the save key is one of them it
+                // forfeits its cross-source margin — it demonstrably cannot
+                // serve, so re-blocking the replacement just re-arms the loop.
+                readEscapes,
             });
 
             // NO ALIAS SAVES HERE. Removed 2026-08-01 (campaign gate G1/F1).

@@ -442,3 +442,103 @@ describe('cache-escape telemetry label split', () => {
         expect(result && 'foodName' in result ? result.foodName : '').toContain('Light');
     });
 });
+
+// ============================================================
+// ESCAPED INCUMBENTS FORFEIT (2026-08-01) — mapper side.
+//
+// The save gate can only waive an incumbent's cross-source margin if the mapper
+// actually tells it which rows the read path refused. The signal is EXPLICIT
+// (options.readEscapes), so a missing thread here is silent: the save behaves
+// exactly as before and the zombie row stays frozen. These tests are the only
+// thing standing between "implemented" and "wired".
+// ============================================================
+describe('read escapes are threaded to the save gate', () => {
+    it('hands saveValidatedMapping the RECORD identity of the row it escaped', async () => {
+        // A cache row pointing at an OFF record that no longer resolves — the
+        // read path escapes ('nutrition_invalid') and the pipeline re-resolves.
+        (getValidatedMappingByNormalizedName as jest.Mock)
+            .mockResolvedValueOnce(null) // early lookup misses; step-1c hits
+            .mockResolvedValue({
+                foodId: 'off_9999999999999',
+                foodName: 'Cream Cheese',
+                brandName: null,
+                source: 'openfoodfacts',
+                confidence: 0.98,
+                validatedBy: 'ai',
+            });
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'cc-1', source: 'ai_generated', name: 'Light Cream Cheese', brandName: null, score: 0.9, rawData: {} },
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue(lightCreamCheeseFood);
+
+        const telemetry: MappingTelemetry = {};
+        await mapIngredientWithFallback('1 tbsp light cream cheese', {
+            minConfidence: 0,
+            skipFdc: true,
+            telemetry,
+        });
+
+        expect(telemetry.cacheEscape).toBe('normalized:nutrition_invalid');
+        expect(saveValidatedMapping).toHaveBeenCalledTimes(1);
+        const opts = (saveValidatedMapping as jest.Mock).mock.calls[0][3];
+        // targetKey, not foodId and not the cache key: the save gate matches on
+        // the record, because the escaped key and the save key are not always
+        // the same row (AI normalize rewrites the key after the early layer).
+        expect(opts.readEscapes).toEqual([
+            { targetKey: 'off:9999999999999', reason: 'normalized:nutrition_invalid' },
+        ]);
+    });
+
+    it('sends an EMPTY list when nothing was escaped — a cold key forfeits nothing', async () => {
+        // The negative assertion. An implementation that passed a non-empty list
+        // unconditionally would waive the margin for every save in the corpus.
+        (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValue(null);
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'spin-1', source: 'ai_generated', name: 'Spinach', brandName: null, score: 0.9, foodType: 'Generic', rawData: {} },
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
+            id: 'spin-1',
+            displayName: 'Spinach',
+            ingredientName: 'spinach',
+            caloriesPer100g: 23,
+            proteinPer100g: 2.9,
+            carbsPer100g: 3.6,
+            fatPer100g: 0.4,
+            servings: [{ id: 'srv-spin', label: '1 cup', grams: 30, volumeMl: 240 }],
+        });
+
+        await mapIngredientWithFallback('1 cup spinach', { minConfidence: 0, skipFdc: true });
+
+        expect(saveValidatedMapping).toHaveBeenCalledTimes(1);
+        expect((saveValidatedMapping as jest.Mock).mock.calls[0][3].readEscapes).toEqual([]);
+    });
+
+    it('records nothing for a row that names no record (unprefixed legacy id)', async () => {
+        // targetKeyOfFoodId returns null, so there is no identity to forfeit —
+        // and such a row can never be a cross-source incumbent anyway.
+        (getValidatedMappingByNormalizedName as jest.Mock)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValue({
+                foodId: 'cc-full',
+                foodName: 'Cream Cheese',
+                brandName: null,
+                source: 'ai_generated',
+                confidence: 0.9,
+                validatedBy: 'ai',
+            });
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'cc-1', source: 'ai_generated', name: 'Light Cream Cheese', brandName: null, score: 0.9, rawData: {} },
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue(lightCreamCheeseFood);
+
+        const telemetry: MappingTelemetry = {};
+        await mapIngredientWithFallback('1 tbsp light cream cheese', {
+            minConfidence: 0,
+            skipFdc: true,
+            telemetry,
+        });
+
+        expect(telemetry.cacheEscape).toBe('normalized:modifier_mismatch');
+        expect((saveValidatedMapping as jest.Mock).mock.calls[0][3].readEscapes).toEqual([]);
+    });
+});

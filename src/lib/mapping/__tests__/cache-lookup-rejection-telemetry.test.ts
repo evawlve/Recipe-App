@@ -105,6 +105,36 @@ describe('CacheLookupRejection out-param', () => {
         expect(rejection.reason).toBe('core_token_mismatch');
     });
 
+    it('records the rejected ROW IDENTITY, not just its key', async () => {
+        // The save-time forfeit (escaped incumbents lose their cross-source
+        // margin) matches on the record, because the lookup key and the save key
+        // are not always the same row — legacy-key and token-set fallbacks hit
+        // rows stored under other keys. Without targetKey the forfeit would have
+        // to trust that they coincide.
+        mockFoodMappingFindUnique.mockResolvedValue(row({ foodName: 'Chocolate Fudge Brownie' }));
+        const rejection: CacheLookupRejection = { reason: null };
+
+        await getValidatedMappingByNormalizedName('mayonnaise', 'openfoodfacts', undefined, rejection);
+
+        expect(rejection.targetKey).toBe(`off:${BARCODE}`);
+    });
+
+    it('leaves targetKey null for a row that names no record', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(row({
+            foodName: 'Mayonnaise', offBarcode: null, fdcId: null, fsId: null,
+        }));
+        const rejection: CacheLookupRejection = { reason: null };
+
+        const result = await getValidatedMappingByNormalizedName(
+            'mayonnaise', 'openfoodfacts', undefined, rejection,
+        );
+
+        expect(result).toBeNull();
+        expect(rejection.reason).toBe('no_target_column');
+        // Nothing to forfeit: such a row can never be a cross-source incumbent.
+        expect(rejection.targetKey).toBeNull();
+    });
+
     // ---- The negative assertions. These are what make the telemetry meaningful. ----
 
     it('leaves reason NULL when no row exists (the cold-key case)', async () => {
