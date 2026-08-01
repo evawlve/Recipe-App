@@ -62,6 +62,10 @@ logger.info = (msg: string, meta?: any) => {
 const { mapIngredientWithFallback } = require('../../src/lib/mapping/map-ingredient-with-fallback');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getBareQueryDefault } = require('../../src/lib/ai/ambiguous-serving-estimator');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { createAiNutritionBudget } = require('../../src/lib/mapping/ai-nutrition-backfill');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { AI_NUTRITION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
 
 async function main() {
     const lines = fs.readFileSync(0, 'utf8').split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
@@ -74,12 +78,14 @@ async function main() {
     }
     console.log(`probing ${lines.length} queries — READ-ONLY, skipCache forced\n`);
 
+    // ONE budget for the whole probe run, shared by every line (see warm-names.ts).
+    const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
     for (const line of lines) {
         captured = null;
         let r: any = null;
         let err: string | null = null;
         try {
-            r = await mapIngredientWithFallback(line, { skipCache: true });
+            r = await mapIngredientWithFallback(line, { skipCache: true, aiNutritionBudget: nutritionBudget });
         } catch (e: any) {
             err = e?.message ?? String(e);
         }

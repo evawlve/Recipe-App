@@ -4,6 +4,8 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import { prisma } from '../src/lib/db';
 import { mapIngredientWithFallback, type MapIngredientPendingResult } from '../src/lib/mapping/map-ingredient-with-fallback';
+import { createAiNutritionBudget } from '../src/lib/mapping/ai-nutrition-backfill';
+import { AI_NUTRITION_MAX_PER_BATCH } from '../src/lib/mapping/config';
 import { applyCleanupPatterns } from '../src/lib/ingredients/cleanup';
 import { refreshNormalizationRules } from '../src/lib/mapping/normalization-rules';
 import { initMappingAnalysisSession, finalizeMappingAnalysisSession } from '../src/lib/mapping/mapping-logger';
@@ -42,6 +44,12 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
     dbg('=== pilotBatchImport STARTED ===');
     // Sync AI-learned prep phrases before processing
     await refreshNormalizationRules();
+
+    // ONE LLM-nutrition allowance for this RUN, shared by every mapper call
+    // below (both the batch loop and the pending-retry loop). Minting one per
+    // ingredient would make a long import unbounded — this is the migration off
+    // the deleted module-scope counter, which used to bound it globally.
+    const nutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_BATCH);
 
     // Initialize mapping analysis session for AI call tracking
     if (process.env.ENABLE_MAPPING_ANALYSIS === 'true') {
@@ -166,6 +174,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                             skipAiValidation: true,  // Skip AI validation for pilot imports (too strict)
                             skipOnLock: true,  // Don't block on locked ingredients - retry later
                             debug: false,
+                            aiNutritionBudget: nutritionBudget,
                         });
                         dbg(`  Mapped: ${isPendingResult(result) ? 'PENDING' : (result?.foodName || 'null')}`);
 
@@ -355,6 +364,7 @@ async function pilotBatchImport(recipeLimit: number = 30, aiLogPath?: string) {
                             minConfidence: 0.5,
                             skipAiValidation: true,
                             skipOnLock: false,  // Block on retry - should hit cache instantly
+                            aiNutritionBudget: nutritionBudget,
                         });
 
                         if (!result || isPendingResult(result)) {

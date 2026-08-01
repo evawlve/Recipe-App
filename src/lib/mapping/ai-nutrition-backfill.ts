@@ -18,7 +18,7 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { callStructuredLlm } from '../ai/structured-client';
-import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_BATCH } from './config';
+import { AI_NUTRITION_BACKFILL_ENABLED } from './config';
 import type { UnifiedCandidate } from './gather-candidates';
 import { extractModifierConstraints } from './modifier-constraints';
 
@@ -64,24 +64,43 @@ export interface BaseFoodContext {
 export interface AiNutritionOptions {
     rawLine?: string;
     baseFoodContext?: BaseFoodContext;
-    /** If true, this is a batch import (fail gracefully, count toward batch cap) */
-    isBatchMode?: boolean;
+    /**
+     * REQUIRED. The caller's LLM allowance for this unit of work. Required on
+     * purpose: it is the migration guard. `npx tsc --noEmit` fails on any call
+     * site that has not made an explicit decision about who owns the spend,
+     * which is what a silently-defaulted flag could never give us.
+     */
+    budget: AiNutritionBudget;
 }
 
 // ============================================================
-// Batch tracking
+// Spend budget (replaces the old module-scope batchCallCount)
 // ============================================================
 
-let batchCallCount = 0;
-
-/** Reset the batch call counter (call at start of each batch run) */
-export function resetNutritionBatchCounter(): void {
-    batchCallCount = 0;
+/**
+ * A caller-owned allowance of real LLM nutrition calls.
+ *
+ * This deliberately has NO module-scope backing. The previous design was a
+ * `let batchCallCount = 0` at module scope with no reachable reset: in a
+ * long-lived Next.js server it latched for the life of the process, so once a
+ * warm run had spent the allowance the live API refused nutrition backfill
+ * forever — including free exact-match cache hits (see `requestAiNutrition`,
+ * which now checks the cache BEFORE the budget). Do not reintroduce a
+ * process-level ceiling "as a backstop": that is the incident.
+ *
+ * Lifetime is whatever the caller gives it — one HTTP request, one batch run.
+ * The object identity is the contract: passing the SAME object to every query
+ * in a run is what bounds that run.
+ */
+export interface AiNutritionBudget {
+    /** Calls still available. Decremented immediately before each LLM call. */
+    remaining: number;
+    /** Calls consumed, for reporting. */
+    spent: number;
 }
 
-/** Get current batch call count */
-export function getNutritionBatchCount(): number {
-    return batchCallCount;
+export function createAiNutritionBudget(max: number): AiNutritionBudget {
+    return { remaining: Math.max(0, max), spent: 0 };
 }
 
 // ============================================================
@@ -438,33 +457,37 @@ export function extractBaseFoodContext(
  * and sanity bounds. Saves to AiGeneratedFood + AiGeneratedServing tables.
  * 
  * @param normalizedName - The normalized ingredient name (used as cache key)
- * @param options - Additional context (raw line, base food, batch mode)
+ * @param options - Additional context (raw line, base food) plus the REQUIRED spend budget
  * @returns Nutrition result or error
  */
 export async function requestAiNutrition(
     normalizedName: string,
-    options: AiNutritionOptions = {},
+    options: AiNutritionOptions,
 ): Promise<AiNutritionOutcome> {
     // Check feature flag
     if (!AI_NUTRITION_BACKFILL_ENABLED) {
         return { status: 'error', reason: 'ai_nutrition_backfill_disabled' };
     }
 
-    // Check batch cap
-    if (options.isBatchMode && batchCallCount >= AI_NUTRITION_MAX_PER_BATCH) {
-        logger.info('ai_nutrition.batch_cap_reached', {
-            normalizedName,
-            count: batchCallCount,
-            max: AI_NUTRITION_MAX_PER_BATCH,
-        });
-        return { status: 'error', reason: 'batch_cap_reached' };
-    }
-
-    // Check cache first
+    // Cache FIRST, budget second. An exact-match hit costs one indexed unique
+    // lookup and no LLM call, so refusing it can only destroy nutrition for
+    // free: that ordering is what slid golden case n-cook-06 ("1 cup cooked
+    // oats") from kcal100=361 to 0 after a warm run had exhausted the old
+    // process-lifetime cap. A budget bounds SPEND; it must never bound reads.
     const cached = await getCachedAiNutrition(normalizedName);
     if (cached) {
         logger.info('ai_nutrition.cache_hit', { normalizedName, foodId: cached.foodId });
         return cached;
+    }
+
+    // Budget check — an ordinary AiNutritionError, not a throw: every caller
+    // already handles `status === 'error'` by degrading the line.
+    if (options.budget.remaining <= 0) {
+        logger.info('ai_nutrition.budget_exhausted', {
+            normalizedName,
+            spent: options.budget.spent,
+        });
+        return { status: 'error', reason: 'nutrition_budget_exhausted' };
     }
 
     // Call LLM
@@ -472,17 +495,18 @@ export async function requestAiNutrition(
 
     const userPrompt = buildUserPrompt(normalizedName, options.baseFoodContext);
 
+    // Decrement BEFORE the call, never after. `callStructuredLlm` retries
+    // internally and can throw; charging only successful returns would let a
+    // provider outage become an unbounded retry storm the budget cannot see.
+    options.budget.remaining--;
+    options.budget.spent++;
+
     const result = await callStructuredLlm({
         schema: NUTRITION_RESPONSE_SCHEMA,
         systemPrompt: SYSTEM_PROMPT,
         userPrompt,
         purpose: 'nutrition',
     });
-
-    // Track batch calls
-    if (options.isBatchMode) {
-        batchCallCount++;
-    }
 
     if (result.status === 'error') {
         logger.warn('ai_nutrition.llm_failed', { normalizedName, error: result.error });

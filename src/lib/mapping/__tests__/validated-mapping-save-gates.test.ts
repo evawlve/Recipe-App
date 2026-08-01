@@ -33,7 +33,7 @@ jest.mock('../../db', () => ({
     },
 }));
 
-import { saveValidatedMapping, getValidatedMappingByNormalizedName } from '../validated-mapping-helpers';
+import { saveValidatedMapping, getValidatedMappingByNormalizedName, targetKeyOf } from '../validated-mapping-helpers';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 import type { AIValidationResult } from '../ai-validation';
 import type { FunnelSink } from '../funnel';
@@ -368,13 +368,17 @@ describe('human-row write-guard (PR D pt3)', () => {
         expect(mockFoodMappingUpdate).toHaveBeenCalledTimes(1);
     });
 
-    it('guards the alias-save path too (flows through saveValidatedMapping)', async () => {
+    // Was 'guards the alias-save path too'. There is no alias-save path any
+    // more (the Step 6 loop was deleted, campaign gate G1/F1); what this
+    // actually locks is that the guard keys off the RESOLVED normalizedForm,
+    // not the rawIngredient — a caller supplying its own key still hits it.
+    it('guards a save that supplies its own normalizedForm', async () => {
         mockFoodMappingFindUnique.mockResolvedValue(humanRow());
         await saveValidatedMapping(
             'avocados',
             makeMapping({ foodId: `off_${OTHER_BARCODE}`, foodName: 'Avocado Oil Spread' }),
             validation,
-            { isAlias: true, canonicalRawIngredient: 'avocado', normalizedForm: 'avocado' },
+            { normalizedForm: 'avocado' },
         );
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
         expect(mockFoodMappingUpdate).not.toHaveBeenCalled();
@@ -751,5 +755,141 @@ describe('funnel tagging on the save gates (sprint F1)', () => {
             validation,
         )).resolves.toBeUndefined();
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+    });
+});
+
+// ============================================================
+// Campaign gate G1 / F2 — FDC in the displacement guards.
+//
+// Both target-key expressions used to stop at `fs:`, so ANY overwrite with FDC
+// on either side returned null for one key and skipped the whole guarded block
+// (downgrade guard, corrupt bypass and cross-source margin together). MEASURED
+// on the live DB 2026-08-01: 2,855 OFF + 570 fs FoodMapping rows were
+// displaceable this way, and 84 live FDC rows prove the path is reachable.
+// ============================================================
+describe('FDC displacement guards (targetKeyOf)', () => {
+    const FDC_ID = 171705;
+    const OFF_BARCODE = '1111111111111';
+    const OTHER_OFF = '2222222222222';
+
+    it('an FDC challenger cannot displace a more-confident OFF incumbent', async () => {
+        // Dies if fdcId is dropped from targetKeyOf (i.e. today's code):
+        // newTargetKey is null, the block is skipped, and the upsert fires.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado Raw', aiConfidence: 0.98, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.86 } as AIValidationResult,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('an OFF challenger cannot displace a more-confident FDC incumbent', async () => {
+        // Dies on a half-fix that adds fdc: to the NEW key only — the two
+        // expressions were written separately before targetKeyOf collapsed them.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: null, fdcId: FDC_ID, fsId: null,
+            foodName: 'Avocados, raw', aiConfidence: 0.98, validatedBy: 'ai',
+        });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `off_${OTHER_OFF}`, foodName: 'Avocado' }),
+            { confidence: 0.90 } as AIValidationResult,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('an FDC overwrite is never serving-downgrade-checked', async () => {
+        // hasServingShape() cannot read FDC, so folding fdc: into the downgrade
+        // half would make every FDC challenger look shapeless and kill every
+        // legitimate FDC upgrade of a shaped incumbent. Pinned, not commented.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.80, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 250, packageQuantity: null, corruptReason: null });
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.98 } as AIValidationResult, // clears 0.80 + 0.05
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(mockFoodMappingUpsert.mock.calls[0][0].update.fdcId).toBe(FDC_ID);
+    });
+
+    it('a corrupt-marked OFF incumbent does not block an FDC challenger on margin', async () => {
+        // Dies if the incumbentCorrupt hoist is reverted: it would then be
+        // computed inside the now-FDC-skipping downgrade half, read false, and
+        // the margin guard would reject at 0.86 < 1.03 — leaving a corrupt row
+        // that every read escapes and every re-resolution fails to replace.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.98, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({
+            servingGrams: 30, packageQuantity: null, corruptReason: 'per_serving_panel',
+        });
+        const { logger } = await import('../../logger');
+        const infoSpy = jest.spyOn(logger, 'info');
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.86 } as AIValidationResult,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(infoSpy).toHaveBeenCalledWith(
+            'validated_mapping.downgrade_guard_bypassed_corrupt_incumbent',
+            expect.objectContaining({ evictedTarget: `off:${OFF_BARCODE}`, keptTarget: `fdc:${FDC_ID}` }),
+        );
+        infoSpy.mockRestore();
+    });
+
+    it('targetKeyOf orders off > fs > fdc and tolerates omitted columns', async () => {
+        expect(targetKeyOf({ offBarcode: 'b', fsId: 'f', fdcId: 1 })).toBe('off:b');
+        expect(targetKeyOf({ fsId: 'f', fdcId: 1 })).toBe('fs:f');
+        expect(targetKeyOf({ fdcId: 1 })).toBe('fdc:1');
+        expect(targetKeyOf({ offBarcode: null, fsId: null, fdcId: null })).toBeNull();
+        expect(targetKeyOf(null)).toBeNull();
+    });
+});
+
+// ============================================================
+// Campaign gate G1 / F1 (helper-level twin of the mapper test).
+// The observed corruption reached the DB through the UPDATE branch only, so a
+// test that checked `create` alone would have passed on the broken build.
+// ============================================================
+describe('stored confidence is the validated confidence, unscaled', () => {
+    it('writes clampedConfidence to BOTH the create and update branches', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue(null);
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodName: 'Avocado' }),
+            { confidence: 0.98 } as AIValidationResult,
+        );
+        expect(mockFoodMappingUpsert.mock.calls[0][0].create.aiConfidence).toBe(0.98);
+        expect(mockFoodMappingUpsert.mock.calls[0][0].update.aiConfidence).toBe(0.98);
+    });
+
+    it('does not scale it down against an existing ai row either', async () => {
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: '1111111111111', fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.70, validatedBy: 'ai',
+        });
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: 'off_1111111111111', foodName: 'Avocado Raw' }),
+            { confidence: 0.98 } as AIValidationResult,
+        );
+        expect(mockFoodMappingUpsert.mock.calls[0][0].update.aiConfidence).toBe(0.98);
     });
 });

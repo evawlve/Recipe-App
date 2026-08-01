@@ -18,7 +18,6 @@ import {
     isCategoryMismatch,
     isMultiIngredientMismatch,
     isReplacementMismatch,
-    validateAliasMapping,
     hasCoreTokenMismatch,
     hasNullOrInvalidMacros,
     detectGrainCookingContext,
@@ -49,8 +48,11 @@ import { shouldNormalizeLlm } from './normalize-gate';
 import { extractModifierConstraints } from './modifier-constraints';
 import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
 import { extractPrepModifier, generatePreemptiveServings } from './preemptive-backfill';
-import { requestAiNutrition, extractBaseFoodContext, getAiServingGrams } from './ai-nutrition-backfill';
-import { AI_NUTRITION_BACKFILL_ENABLED } from './config';
+import {
+    requestAiNutrition, extractBaseFoodContext, getAiServingGrams,
+    createAiNutritionBudget, type AiNutritionBudget,
+} from './ai-nutrition-backfill';
+import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_REQUEST } from './config';
 import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
 import { assessSubThresholdAdmission } from './sub-threshold-admission';
@@ -341,6 +343,13 @@ export interface MapIngredientOptions {
     normalizedForm?: string;
     /** Optional telemetry sink — mutated with cache-path facts (see MappingTelemetry). */
     telemetry?: MappingTelemetry;
+    /**
+     * LLM nutrition-backfill allowance, owned by the CALLER.
+     * A looping caller (a warm run, a batch import) must create ONE budget and
+     * pass the SAME OBJECT to every query — that is what bounds the run. Omit it
+     * and this call gets its own AI_NUTRITION_MAX_PER_REQUEST allowance.
+     */
+    aiNutritionBudget?: AiNutritionBudget;
 }
 
 const ENABLE_MAPPING_ANALYSIS = process.env.ENABLE_MAPPING_ANALYSIS === 'true';
@@ -537,6 +546,12 @@ export async function mapIngredientWithFallback(
         _skipFallback = false,
         skipOnLock = false,
         telemetry,
+        // THE single decision point for callers that decline to own a budget:
+        // one fresh per-call allowance. A looping caller MUST pass its own
+        // shared object instead (see MapIngredientOptions.aiNutritionBudget) —
+        // otherwise every query in the loop mints a new allowance and the run
+        // is unbounded.
+        aiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST),
     } = options;
 
     const trimmed = rawLine.trim();
@@ -760,7 +775,7 @@ export async function mapIngredientWithFallback(
                 rawData: {},
             };
             const hydratedResult = await hydrateAndSelectServing(
-                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine
+                cachedCandidate, parsed, cachedAfterLock.confidence, rawLine, aiNutritionBudget
             );
             if (hydratedResult) {
                 // Track and log cache hit
@@ -1089,7 +1104,8 @@ export async function mapIngredientWithFallback(
                     cachedCandidate,
                     parsed,
                     earlyCacheHit.confidence,
-                    trimmed
+                    trimmed,
+                    aiNutritionBudget
                 );
 
                 if (hydratedResult) {
@@ -2167,6 +2183,12 @@ export async function mapIngredientWithFallback(
 
                 const dietaryFallbackResult = await mapIngredientWithFallback(strippedLine, {
                     ...options,
+                    // Explicit, NOT covered by the spread: `options` carries the
+                    // caller's value, which may be undefined while the
+                    // destructure above already minted one. Without this a
+                    // single ingredient line spends a fresh allowance per
+                    // recursion level.
+                    aiNutritionBudget,
                     minConfidence: 0.1,
                     _skipInFlightLock: true,
                     _skipFallback: true, // Prevent infinite recursion
@@ -2199,6 +2221,7 @@ export async function mapIngredientWithFallback(
                     // normalizes to the same lock key as the original
                     const fallbackResult = await mapIngredientWithFallback(result.simplified, {
                         ...options,
+                        aiNutritionBudget,   // see the dietary-fallback call above
                         minConfidence: 0.1, // Accept imperfect matches for fallback
                         _skipInFlightLock: true, // Prevent recursive deadlock
                         _skipFallback: true, // Prevent infinite fallback recursion
@@ -2237,7 +2260,8 @@ export async function mapIngredientWithFallback(
                             fallbackCandidate,
                             parsed,  // Use original parsed input with qty/unit!
                             fallbackCandidate.score,
-                            rawLine
+                            rawLine,
+                            aiNutritionBudget
                         );
 
                         if (rehydratedResult) {
@@ -2277,7 +2301,7 @@ export async function mapIngredientWithFallback(
                 const aiResult = await requestAiNutrition(normalizedName, {
                     rawLine: trimmed,
                     baseFoodContext,
-                    isBatchMode: true,
+                    budget: aiNutritionBudget,
                 });
 
                 if (aiResult.status === 'success') {
@@ -2454,7 +2478,7 @@ export async function mapIngredientWithFallback(
         }
 
         // Step 5: Hydrate and select serving with fallback to next candidates
-        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine);
+        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiNutritionBudget);
 
         // Step 5a: If hydration failed and user requested a weight unit (oz, g, lb),
         // try AI backfill for weight serving on the winner BEFORE falling back to other candidates.
@@ -2472,7 +2496,7 @@ export async function mapIngredientWithFallback(
 
             if (backfillResult.success) {
                 // Retry hydration now that we have a weight serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine);
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiNutritionBudget);
 
                 if (result) {
                     logger.info('mapping.weight_backfill_success', {
@@ -2517,7 +2541,7 @@ export async function mapIngredientWithFallback(
 
             if (volumeBackfillResult.success) {
                 // Retry hydration now that we have a volume serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine);
+                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiNutritionBudget);
 
                 if (result) {
                     logger.info('mapping.volume_backfill_success', {
@@ -2553,7 +2577,7 @@ export async function mapIngredientWithFallback(
             const failedWinnerId = winner.id;
             const tryFallbackCandidate = async (fallback: UnifiedCandidate): Promise<boolean> => {
                 let fallbackResult = await hydrateAndSelectServing(
-                    fallback, parsed, confidence * 0.95, rawLine
+                    fallback, parsed, confidence * 0.95, rawLine, aiNutritionBudget
                 );
 
                 // If hydration failed for a FatSecret candidate, try backfill before giving up
@@ -2572,7 +2596,7 @@ export async function mapIngredientWithFallback(
                         });
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine
+                                fallback, parsed, confidence * 0.95, rawLine, aiNutritionBudget
                             );
                         }
                     } else if (isWeightUnit) {
@@ -2584,7 +2608,7 @@ export async function mapIngredientWithFallback(
                         const backfillResult = await backfillWeightServing(fallback.id);
                         if (backfillResult.success) {
                             fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine
+                                fallback, parsed, confidence * 0.95, rawLine, aiNutritionBudget
                             );
                         }
                     }
@@ -2705,7 +2729,7 @@ export async function mapIngredientWithFallback(
                 // never accepted; floor-hit ones only as a last resort (PR D pt3 B4).
                 const failedCacheWinnerId = winner.id;
                 const tryCacheFallbackCandidate = async (candidate: UnifiedCandidate): Promise<boolean> => {
-                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine);
+                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine, aiNutritionBudget);
                     if (!retryResult) return false;
                     logger.info('mapping.cache_fallback_search_success', {
                         originalId: failedCacheWinnerId,
@@ -2781,7 +2805,7 @@ export async function mapIngredientWithFallback(
                 const aiResult = await requestAiNutrition(normalizedName, {
                     rawLine: trimmed,
                     baseFoodContext,
-                    isBatchMode: true,
+                    budget: aiNutritionBudget,
                 });
 
                 if (aiResult.status === 'success') {
@@ -2967,47 +2991,26 @@ export async function mapIngredientWithFallback(
                 insertOnly: subThreshold.admit,
             });
 
-            // Also save AI synonyms as aliases to enable future cache hits
-            // e.g., if "fresh raspberries" maps to Raspberries, also save "raspberries" as alias
-            // NEW: Validate each alias before saving to prevent cascade poisoning
-            for (const synonym of allSynonyms) {
-                const synLower = synonym.toLowerCase().trim();
-                const rawLower = trimmed.toLowerCase().trim();
-
-                // Skip if same as original or too short
-                if (synLower === rawLower || synLower.length < 3) continue;
-
-                // Validate alias before saving - prevent cascade poisoning
-                const aliasNutrients = savedNutrientsPer100g;
-
-                const validation = validateAliasMapping(synonym, result.foodName, aliasNutrients);
-                if (!validation.valid) {
-                    logger.warn('mapping.alias_validation_failed', {
-                        synonym,
-                        foodName: result.foodName,
-                        reason: validation.reason,
-                    });
-                    continue; // Skip this invalid alias
-                }
-
-                // Save validated synonym as alias pointing to the same food
-                await saveValidatedMapping(synonym, result, {
-                    approved: true,
-                    confidence: confidence * 0.9,  // Slightly lower confidence for aliases
-                    reason: 'alias_from_ai_normalize',
-                }, {
-                    isAlias: true,
-                    canonicalRawIngredient: trimmed,
-                    canonicalBase: cacheKey,  // Use same cache key for consolidation
-                    persistCanonicalBase: aiCanonicalBase,   // AI base identity → canonicalBase column (grouping only)
-                    persistCookingModifier: aiCookingModifier,
-                    nutrientsPer100g: savedNutrientsPer100g,
-                    expectedNutrition,
-                    // An alias of a sub-threshold pick inherits the guarantee:
-                    // it may seed a new key, never overwrite an existing one.
-                    insertOnly: subThreshold.admit,
-                }).catch(() => { }); // Best effort, ignore duplicates
-            }
+            // NO ALIAS SAVES HERE. Removed 2026-08-01 (campaign gate G1/F1).
+            //
+            // A loop used to re-run saveValidatedMapping once per AI synonym,
+            // passing the SAME `canonicalBase: cacheKey` as the primary save.
+            // canonicalBase is the highest-priority input to normalizedForm, so
+            // every "alias" resolved to the byte-identical key and simply
+            // UPDATEd the row the primary had just written — at
+            // `confidence * 0.9`, and bumping usedCount once per synonym. It
+            // never created a synonym key in any version of this file, and the
+            // schema-level alias concept is retired (`createFoodAlias()` in
+            // alias-manager.ts is an explicit no-op).
+            //
+            // Synonyms still work, at QUERY time, where a wrong one costs one
+            // bad candidate that ranking can reject rather than a sticky
+            // >=0.85 cache identity that bypasses ranking forever:
+            //   - Step 0a `findCanonicalName()` rewrites the query;
+            //   - Step 1b `getLearnedSynonyms()` feeds `allSynonyms` into
+            //     `gatherCandidates()` as `aiSynonyms` (two call sites above).
+            // Exactly ONE saveValidatedMapping per resolution, stamping the
+            // confidence the >=0.85 gate actually tested. Do not re-add.
         } else if (selectionReason !== 'normalized_cache_hit') {
             // THE SILENT CLASS (sprint F1): 0.3 <= confidence < 0.85. This pick
             // serves the user but is never offered to the cache — historically
@@ -3170,7 +3173,14 @@ export async function hydrateAndSelectServing(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
     confidence: number,
-    rawLine: string
+    rawLine: string,
+    /**
+     * LLM nutrition allowance, forwarded to buildOffResult (the OFF lane can
+     * reach requestAiNutrition when the Atwater gate rejects label data).
+     * Optional so the offline eval/probe callers that pass four positional
+     * args keep compiling; they then get one per-call allowance each.
+     */
+    aiNutritionBudget?: AiNutritionBudget,
 ): Promise<FatsecretMappedIngredient | null> {
     // Handle FDC candidates (already have nutrition data)
     // Also check for fdc_ prefix in ID - cached ValidatedMappings may have source='cache' but FDC IDs
@@ -3181,7 +3191,7 @@ export async function hydrateAndSelectServing(
 
     // Handle OpenFoodFacts candidates (off_ prefix)
     if (candidate.source === 'openfoodfacts' || candidate.id.startsWith('off_')) {
-        return await buildOffResult(candidate, parsed, confidence, rawLine);
+        return await buildOffResult(candidate, parsed, confidence, rawLine, aiNutritionBudget);
     }
 
     // Handle FatSecret retrieval-lane candidates (fs_ prefix). MUST run before
@@ -4971,7 +4981,15 @@ export async function buildOffResult(
     candidate: UnifiedCandidate,
     parsed: ParsedIngredient | null,
     confidence: number,
-    rawLine: string
+    rawLine: string,
+    /**
+     * LLM nutrition allowance. This path was UNCAPPED before 2026-08-01 — the
+     * requestAiNutrition call below passed no batch flag at all, so it was the
+     * one nutrition call site the old module counter never saw. Optional so the
+     * existing four-arg test/probe callers keep compiling; they get one
+     * per-call allowance each.
+     */
+    aiNutritionBudget: AiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST),
 ): Promise<FatsecretMappedIngredient | null> {
     // 1. Hydrate into local DB
     let hydrated;
@@ -5477,7 +5495,7 @@ export async function buildOffResult(
         return null;
     }
 
-    const aiNutrition = await requestAiNutrition(hydrated.foodName, { rawLine });
+    const aiNutrition = await requestAiNutrition(hydrated.foodName, { rawLine, budget: aiNutritionBudget });
     if (aiNutrition.status !== 'success') {
         logger.warn('off.build_result.ai_nutrition_failed', {
             foodId: candidate.id,

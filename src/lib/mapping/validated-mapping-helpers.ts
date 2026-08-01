@@ -472,6 +472,30 @@ export function brandSafeCanonicalBase(
 }
 
 /**
+ * THE single answer to "what record does this row point at".
+ *
+ * One helper, applied to BOTH sides of an overwrite, so the two expressions
+ * cannot drift apart — which is precisely what happened: they were written
+ * separately and both stopped at `fs:`, so any overwrite with FDC on either
+ * side returned null for one key and skipped the whole guarded block (the
+ * serving-downgrade guard, the corrupt bypass and the cross-source margin
+ * together). Precedence off > fs > fdc matches
+ * `getValidatedMappingByNormalizedName()` and the human-row identity branch.
+ *
+ * Exported for tests. Accepts a partial row: callers pass Prisma selections
+ * that may omit columns entirely (undefined), not just null them.
+ */
+export function targetKeyOf(
+    t: { offBarcode?: string | null; fsId?: string | null; fdcId?: number | null } | null | undefined,
+): string | null {
+    if (!t) return null;
+    if (t.offBarcode) return `off:${t.offBarcode}`;
+    if (t.fsId) return `fs:${t.fsId}`;
+    if (t.fdcId != null) return `fdc:${t.fdcId}`;
+    return null;
+}
+
+/**
  * Save an AI-approved mapping to the validated cache
  * Saves by normalizedForm as the primary lookup key
  */
@@ -480,10 +504,15 @@ export async function saveValidatedMapping(
     mapping: FatsecretMappedIngredient,
     validation: AIValidationResult,
     options?: {
-        isAlias?: boolean;
-        canonicalRawIngredient?: string;
         normalizedForm?: string;  // If provided, uses this; otherwise normalizes rawIngredient
-        canonicalBase?: string;   // MISNOMER (historical): the pre-derived LOOKUP KEY basis, NOT the AI base. Canonicalized into normalizedForm below. Do NOT confuse with persistCanonicalBase.
+        // The pre-derived LOOKUP KEY basis (historical misnomer — NOT the AI
+        // canonical base; that is persistCanonicalBase below). It is the
+        // HIGHEST-PRIORITY input to normalizedForm, ahead of both
+        // options.normalizedForm and the rawIngredient. Consequence to hold
+        // onto: two call sites passing the same canonicalBase target the SAME
+        // ROW, whatever rawIngredient they were given. That is exactly how the
+        // deleted alias loop overwrote the primary save it had just made.
+        canonicalBase?: string;
         // Observability/grouping columns (NEVER affect the lookup key). The AI base
         // (ai-normalize `canonical_base`) + cooking method, persisted as-is for dedup/analytics.
         persistCanonicalBase?: string;   // e.g. "tropicana orange juice" (brand kept), "strawberries"
@@ -758,10 +787,8 @@ export async function saveValidatedMapping(
         // guard: an fs record only counts as having serving shape when it
         // carries a gram-quantified FatSecretServing. The new pick still
         // serves THIS request, it just isn't cached.
-        const newTargetKey = offBarcode ? `off:${offBarcode}` : fsId ? `fs:${fsId}` : null;
-        const existingTargetKey = existing?.offBarcode
-            ? `off:${existing.offBarcode}`
-            : existing?.fsId ? `fs:${existing.fsId}` : null;
+        const newTargetKey = targetKeyOf({ offBarcode, fsId, fdcId });
+        const existingTargetKey = targetKeyOf(existing);
         if (newTargetKey && existingTargetKey && newTargetKey !== existingTargetKey) {
             const hasServingShape = (f: { servingGrams: number | null; packageQuantity: number | null } | null) =>
                 !!f && ((f.servingGrams ?? 0) > 0 || (f.packageQuantity ?? 0) > 0);
@@ -771,18 +798,23 @@ export async function saveValidatedMapping(
                     select: { id: true },
                 }));
 
-            let incumbentShape: boolean;
+            // Corrupt-incumbent check, HOISTED above the downgrade half so it
+            // still gates the margin half below. Load-bearing: the downgrade
+            // half now skips whenever either side is `fdc:`, and if this stayed
+            // inside it a corrupt-marked OFF incumbent would newly regain full
+            // margin protection against an FDC challenger — every hit would
+            // escape as 'corrupt_record', re-resolve, and land back at a
+            // blocked save. Only OFF rows carry corruptReason (fs/fdc
+            // incumbents are never corrupt-marked), so the offFood.findUnique
+            // still runs on exactly the same inputs as before the hoist.
+            let incumbentOff: { servingGrams: number | null; packageQuantity: number | null; corruptReason: string | null } | null = null;
             let incumbentCorruptReason: string | null = null;
             if (existing!.offBarcode) {
-                const oldOff = await prisma.offFood.findUnique({
+                incumbentOff = await prisma.offFood.findUnique({
                     where: { barcode: existing!.offBarcode },
                     select: { servingGrams: true, packageQuantity: true, corruptReason: true },
                 });
-                incumbentShape = hasServingShape(oldOff);
-                incumbentCorruptReason = oldOff?.corruptReason ?? null;
-            } else {
-                // fs incumbent — no fs corrupt-marking exists in Phase 1.
-                incumbentShape = await fsHasServingShape(existing!.fsId!);
+                incumbentCorruptReason = incumbentOff?.corruptReason ?? null;
             }
 
             // A corrupt-marked incumbent forfeits the guard: keeping it
@@ -797,39 +829,74 @@ export async function saveValidatedMapping(
                     evictedTarget: existingTargetKey,
                     corruptReason: incumbentCorruptReason,
                 });
-            } else if (incumbentShape) {
-                let newShape: boolean;
-                if (offBarcode) {
-                    const newOff = await prisma.offFood.findUnique({
-                        where: { barcode: offBarcode },
-                        select: { servingGrams: true, packageQuantity: true },
-                    });
-                    newShape = hasServingShape(newOff);
-                } else {
-                    newShape = await fsHasServingShape(fsId!);
-                }
-                if (!newShape) {
-                    logger.warn('validated_mapping.save_rejected_serving_downgrade', {
-                        rawIngredient,
-                        normalizedForm,
-                        foodName: mapping.foodName,
-                        keptTarget: existingTargetKey,
-                        rejectedTarget: newTargetKey,
-                    });
-                    markSaveRejected(options?.telemetry, 'serving_downgrade');
-                    return;
+            }
+
+            // ASYMMETRY, deliberate: `fdc:` enters the MARGIN half below but
+            // NOT this serving-downgrade half. hasServingShape() reads only
+            // OffFood.servingGrams/packageQuantity and fsHasServingShape()
+            // reads FatSecretServing, so every FDC record evaluates SHAPELESS
+            // under both — folding fdc: in unchanged would block every FDC
+            // upgrade of a shaped incumbent. (It is also a correctness bug:
+            // the incumbent branch's else takes `existing!.fsId!`, which is
+            // null for an FDC incumbent.)
+            //
+            // This is a scope choice, not a data gap. MEASURED 2026-08-01
+            // (live DB): FdcServing has a grams>0 row for 3,998 of 4,133
+            // FdcFood rows, and for 80 of the 84 live FDC FoodMapping rows —
+            // so the follow-up is an fdcHasServingShape() reading FdcServing,
+            // not a schema change. FdcFood.servingSize is NOT usable
+            // (MEASURED: 0 rows with servingSize > 0).
+            const servingShapeComparable =
+                !newTargetKey.startsWith('fdc:') && !existingTargetKey.startsWith('fdc:');
+            if (servingShapeComparable && !incumbentCorrupt) {
+                const incumbentShape = existing!.offBarcode
+                    ? hasServingShape(incumbentOff)
+                    // fs incumbent — no fs corrupt-marking exists in Phase 1.
+                    : await fsHasServingShape(existing!.fsId!);
+                if (incumbentShape) {
+                    let newShape: boolean;
+                    if (offBarcode) {
+                        const newOff = await prisma.offFood.findUnique({
+                            where: { barcode: offBarcode },
+                            select: { servingGrams: true, packageQuantity: true },
+                        });
+                        newShape = hasServingShape(newOff);
+                    } else {
+                        newShape = await fsHasServingShape(fsId!);
+                    }
+                    if (!newShape) {
+                        logger.warn('validated_mapping.save_rejected_serving_downgrade', {
+                            rawIngredient,
+                            normalizedForm,
+                            foodName: mapping.foodName,
+                            keptTarget: existingTargetKey,
+                            rejectedTarget: newTargetKey,
+                        });
+                        markSaveRejected(options?.telemetry, 'serving_downgrade');
+                        return;
+                    }
                 }
             }
 
             // Cross-source displacement margin (fs displacement hardening,
             // Jul 2026): when the overwrite would move the key to a different
-            // source family (off: ↔ fs:), the incumbent already passed every
-            // save gate at its own save time — displacing an already-good
+            // source family (off: ↔ fs: ↔ fdc:), the incumbent already passed
+            // every save gate at its own save time — displacing an already-good
             // pick with a different corpus's record is only justified when
             // the challenger is meaningfully MORE confident, not merely this
             // run's rerank winner by a hair. Same-family swaps (off:→off:)
             // keep the full supersede-stale semantics, and corrupt incumbents
             // forfeited above.
+            //
+            // fdc: DOES belong here, unlike the downgrade half: this needs only
+            // the two stored aiConfidence values, and FDC rows carry those like
+            // any other. Its omission was the measured exposure (2,855 OFF +
+            // 570 fs mappings displaceable with no margin at all).
+            //
+            // Interaction with the alias-loop removal (F1): incumbent
+            // confidences are no longer deflated by 0.9 at save time, so a row
+            // earned at 0.98 needs 1.03 here — unreachable, i.e. safe — rather
+            // than the 0.932 that any exact_match rerank winner cleared.
             const crossSourceFamily =
                 newTargetKey.split(':')[0] !== existingTargetKey.split(':')[0];
             if (!incumbentCorrupt && crossSourceFamily) {
@@ -929,7 +996,6 @@ export async function saveValidatedMapping(
             rawIngredient,
             normalizedForm,
             foodName: mapping.foodName,
-            isAlias: options?.isAlias ?? false,
             aiConfidence: clampedConfidence,
         });
     } catch (error) {

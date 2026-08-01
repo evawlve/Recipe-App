@@ -105,7 +105,19 @@ export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?
 // AI Nutrition Backfill configuration
 export const AI_NUTRITION_BACKFILL_ENABLED = getFlag('AI_NUTRITION_BACKFILL_ENABLED', true);
 export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/mistral-nemo';
+/**
+ * Budget SIZE a batch/warm run asks for (see `createAiNutritionBudget`). This is
+ * no longer a process ceiling — the run owns one budget object and passes it to
+ * every query, so the bound is per RUN and dies with the run.
+ */
 export const AI_NUTRITION_MAX_PER_BATCH = Number.parseInt(process.env.AI_NUTRITION_MAX_PER_BATCH ?? '20', 10);
+/**
+ * Budget size for ONE live /api/nlp/parse request. Much smaller than a batch
+ * allowance: a 20-item meal must not be able to fire dozens of LLM calls. Set
+ * to 0 to fail the live path closed. There is deliberately NO process-level
+ * backstop constant — that is the latching mechanism this replaced.
+ */
+export const AI_NUTRITION_MAX_PER_REQUEST = Number.parseInt(process.env.AI_NUTRITION_MAX_PER_REQUEST ?? '3', 10);
 
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();
