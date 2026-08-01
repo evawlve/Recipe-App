@@ -30,33 +30,45 @@ import { ensureFatSecretParentPersisted } from './fatsecret-lane';
 // over an existing cache row. Same-family swaps are exempt.
 const CROSS_SOURCE_DISPLACEMENT_MARGIN = 0.05;
 
-// Ceiling on that bar (2026-08-01). `clampedConfidence` below is clamped to
-// <= 1.0, so an uncapped `aiConfidence + 0.05` is a bar NO challenger can ever
-// clear once the incumbent is above 0.95: the guard stops being a margin and
-// becomes a FREEZE — the row can never be displaced, however wrong it is.
+// THE BAR IS DELIBERATELY LEFT UNREACHABLE ABOVE 0.95 (2026-08-01). An earlier
+// revision of this branch capped it at 0.999 so it would stay clearable, on the
+// reasoning that `clampedConfidence` is clamped to <= 1.0 and therefore an
+// uncapped `aiConfidence + 0.05` FREEZES the 2,286 of 3,509 rows (65.1%) that
+// sit above 0.95. That reasoning is correct about the arithmetic and wrong
+// about what the freeze is doing, so the cap was reverted before it shipped.
 //
-// MEASURED 2026-08-01 (live DB): 2,286 of 3,509 FoodMapping rows — 65.1% —
-// carry aiConfidence > 0.95 (openfoodfacts 1998/2855, fatsecret 216/570,
-// fdc 72/84), and a further 552 sit at exactly 0.95 (bar exactly 1.0, clearable
-// only by a perfect 1.0). Re-derive:
+// The freeze is LOAD-BEARING. Normalization strips the cooking modifier, so a
+// modifier-bearing query and the bare query share ONE key — MEASURED by running
+// normalizeIngredientName(): 'grilled chicken' -> cleaned 'chicken',
+// stripped ['grilled']; 'chicken' -> cleaned 'chicken'. The margin is the only
+// thing pinning the plain-food record on that shared key. Capping it hands the
+// key to the prepared record for BOTH queries. MEASURED 2026-08-01 (live DB),
+// the rejections a 0.999 cap releases, all at challenger confidence 1.0:
+//   salmon -> "Cooked Salmon" (79) · chicken -> "Grilled Chicken" (78)
+//   broccoli -> "Cooked Broccoli" (51) · + potato/spinach/egg/tilapia/rice
+// Panel effect on `chicken`: 97 -> 237 kcal/100g, a 2.4x overbill, on a key
+// whose traffic is majority unmodified (144 plain + 13 'chicken with brown
+// rice' vs 148 'grilled chicken'). Re-derive:
+//   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
+//     -c "SELECT \"normalizedForm\", \"foodName\", confidence, count(*) FROM \"MappingEventLog\" \
+//         WHERE \"dropReason\"='"'"'save_rejected:cross_source_margin'"'"' GROUP BY 1,2,3 ORDER BY 4 DESC LIMIT 10;"'
+//
+// No ceiling VALUE fixes this: any bar <= 1.0 admits a 1.0 challenger and any
+// bar > 1.0 is the freeze. The fix is to stop the two queries sharing a key —
+// see the cooking-state key fork. Until that lands, the freeze stays and is
+// merely made OBSERVABLE (`save_rejected:cross_source_margin`, below), which is
+// the part of this work that was worth keeping.
+//
+// 65.1% freeze measurement, re-derive:
 //   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
 //     -c "SELECT count(*) FILTER (WHERE \"aiConfidence\" > 0.95) AS over_95, count(*) FROM \"FoodMapping\";"'
-//
-// 0.999 is chosen so every bar stays REACHABLE — 433 live rows were saved at
-// exactly 1.0, so a 1.0 challenger is a real, produced value — while still
-// demanding near-certainty of anything displacing a 0.98+ incumbent. It is a
-// ceiling, not a relaxation of the margin: below 0.949 the bar is unchanged.
-const CROSS_SOURCE_MARGIN_CEILING = 0.999;
 
 /**
  * The confidence a cross-family challenger must reach to displace an incumbent.
- * Exported so the ceiling is testable without reaching into the save path.
+ * Exported so the bar is testable without reaching into the save path.
  */
 export function crossSourceDisplacementBar(incumbentConfidence: number): number {
-    return Math.min(
-        incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN,
-        CROSS_SOURCE_MARGIN_CEILING,
-    );
+    return incumbentConfidence + CROSS_SOURCE_DISPLACEMENT_MARGIN;
 }
 
 /**
@@ -193,6 +205,58 @@ const HUMAN_TRUST_SKIPPABLE_ESCAPES = new Set([
 
 export function isHumanTrustSkippableEscape(reason: string): boolean {
     return HUMAN_TRUST_SKIPPABLE_ESCAPES.has(reason);
+}
+
+/**
+ * Escape classes that say THE ROW IS BAD, as opposed to the row is fine but
+ * does not fit THIS query. Only the former may waive the cross-source
+ * displacement margin (see the forfeit in saveValidatedMapping).
+ *
+ * The distinction is the whole point. "The read path refused this incumbent"
+ * has two meanings and they call for opposite actions:
+ *   - ROW QUALITY (here): the record's own data is unusable, so replacing it is
+ *     strictly an improvement and the margin is protecting nothing.
+ *   - QUERY FIT (everything else): the record is fine and this query wants a
+ *     DIFFERENT food that happens to share the key. Displacing does not fix
+ *     that — it just flips which of the two colliding foods wins, and the loser
+ *     is then served to everyone. The correct response is to fork the key.
+ *
+ * MEASURED 2026-08-01 (live DB) — the reason this list is not merely defensive.
+ * Of the 440 `save_rejected:cross_source_margin` events carrying a cacheEscape,
+ * ALL 440 are query-fit classes and NONE are row-quality:
+ *   normalized:count_label 195 · lookup_normalized:context_mismatch 87
+ *   normalized:grain_cooked 83 · normalized:brand_guard 47
+ *   lookup_normalized:core_token_mismatch 28
+ * and every forfeit-reachable event on the hottest keys is the modifier-bearing
+ * query escaping the bare incumbent — `grilled chicken` (28) on key `chicken`,
+ * `grilled salmon` (28) on `salmon`, `baked potato` (2), `sauteed spinach` (1).
+ * An unrestricted forfeit reads "this query wants cooked, the row is raw" as a
+ * licence to overwrite the raw row. Re-derive:
+ *   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
+ *     -c "SELECT \"cacheEscape\", count(*) FROM \"MappingEventLog\" \
+ *         WHERE \"dropReason\"='"'"'save_rejected:cross_source_margin'"'"' \
+ *           AND \"cacheEscape\" IS NOT NULL GROUP BY 1 ORDER BY 2 DESC;"'
+ *
+ * CONSEQUENCE, stated so nobody reads a zero as health: on today's data this
+ * forfeit fires ZERO times. It is correct-but-inert by construction, and the
+ * `cross_source_margin_waived_read_escape` audit line is how you would learn it
+ * had started firing. Do not cite an empty count as evidence the mechanism works.
+ */
+const ROW_QUALITY_ESCAPES = new Set([
+    'corrupt_record',
+    'nutrition_invalid',
+]);
+
+/**
+ * True when an escape reason means the record itself is unusable. Reasons carry
+ * a site prefix (`early:`, `normalized:`, `lookup_early:`, `lookup_normalized:`)
+ * and `nutritional_modifier:<mod>` carries a trailing argument, so match on the
+ * class between the first and any second colon rather than the whole string.
+ */
+export function isRowQualityEscape(reason: string): boolean {
+    const parts = reason.split(':');
+    const cls = parts.length > 1 ? parts[1] : parts[0];
+    return ROW_QUALITY_ESCAPES.has(cls);
 }
 
 /**
@@ -1016,8 +1080,12 @@ export async function saveValidatedMapping(
             //     carry no corruptReason column to be marked in.
             // A corrupt-marked OFF incumbent normally trips both; incumbentCorrupt
             // is evaluated first below so the existing log line is unchanged.
+            // RESTRICTED TO ROW-QUALITY ESCAPES (see isRowQualityEscape). An
+            // escape that means "this query wants a different food" is evidence
+            // of a KEY COLLISION, not of a bad incumbent, and forfeiting on it
+            // hands the shared key to whichever colliding food resolved last.
             const escapeForfeit = (options?.readEscapes ?? [])
-                .find(e => e.targetKey === existingTargetKey) ?? null;
+                .find(e => e.targetKey === existingTargetKey && isRowQualityEscape(e.reason)) ?? null;
 
             // ASYMMETRY, deliberate: `fdc:` enters the MARGIN half below but
             // NOT this serving-downgrade half. hasServingShape() reads only

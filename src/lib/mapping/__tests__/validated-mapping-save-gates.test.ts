@@ -39,6 +39,7 @@ import {
     targetKeyOf,
     targetKeyOfFoodId,
     crossSourceDisplacementBar,
+    isRowQualityEscape,
 } from '../validated-mapping-helpers';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 import type { AIValidationResult } from '../validated-mapping-helpers';
@@ -901,68 +902,79 @@ describe('stored confidence is the validated confidence, unscaled', () => {
 });
 
 // ============================================================
-// Cross-source displacement: capped bar + escaped-incumbent forfeit
-// (2026-08-01).
+// Cross-source displacement: the bar stays unreachable above 0.95, and the
+// escaped-incumbent forfeit is restricted to ROW-QUALITY escapes (2026-08-01).
 //
-// The margin was `existing.aiConfidence + 0.05` against a challenger clamped to
-// <= 1.0, so above 0.95 the bar was NOT strict — it was UNREACHABLE. MEASURED
-// on the live DB 2026-08-01: 2,286 of 3,509 FoodMapping rows (65.1%) sat above
-// 0.95, and `save_rejected:cross_source_margin` is already the largest
-// save_rejected class in MappingEventLog at 797 events — 440 of them (55.2%)
-// following a recorded cacheEscape, i.e. rows that escape on every read and can
-// never be replaced. Re-derive:
+// An earlier revision of this branch capped the bar at 0.999, on the reasoning
+// that `existing.aiConfidence + 0.05` against a challenger clamped to <= 1.0 is
+// not a margin but a FREEZE for the 2,286 of 3,509 rows (65.1%) above 0.95.
+// The arithmetic was right and the conclusion was wrong: adversarial review
+// MEASURED that the freeze is the only thing pinning the plain-food record on
+// keys that a modifier-bearing query shares, because normalization strips the
+// modifier ('grilled chicken' and 'chicken' both clean to 'chicken'). Capping
+// released 1.0-confidence prepared records onto eight bare generic keys —
+// `chicken` -> "Grilled Chicken" would bill 237 kcal/100g instead of 97.
+//
+// So the freeze STAYS until the cooking-state key fork lands, and this block
+// pins that it stays. What survives from the work is observability: the freeze
+// now has a counter, and the forfeit exists for the escapes that genuinely mean
+// the record is unusable. Re-derive the freeze scope and the released set:
 //   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
 //     -c "SELECT count(*) FILTER (WHERE \"aiConfidence\" > 0.95), count(*) FROM \"FoodMapping\";" \
-//     -c "SELECT count(*), count(\"cacheEscape\") FROM \"MappingEventLog\" \
-//         WHERE \"dropReason\"='"'"'save_rejected:cross_source_margin'"'"';"'
+//     -c "SELECT \"normalizedForm\", \"foodName\", count(*) FROM \"MappingEventLog\" \
+//         WHERE \"dropReason\"='"'"'save_rejected:cross_source_margin'"'"' \
+//         GROUP BY 1,2 ORDER BY 3 DESC LIMIT 10;"'
 // ============================================================
-describe('cross-source displacement bar has a ceiling', () => {
+describe('cross-source displacement bar is deliberately unreachable above 0.95', () => {
     const OFF_BARCODE = '1111111111111';
     const FDC_ID = 171705;
 
-    it('caps the bar at 0.999 but leaves sub-ceiling bars alone', () => {
-        expect(crossSourceDisplacementBar(0.98)).toBe(0.999);
-        expect(crossSourceDisplacementBar(1.0)).toBe(0.999);
-        // Below the ceiling the margin is untouched — this is a cap, not a
-        // relaxation. Dies if anyone "simplifies" it to a flat 0.999 bar.
+    it('is a plain +0.05 margin with NO ceiling', () => {
+        // Dies if anyone reintroduces the cap. The 1.03 is the point: it is
+        // unreachable, and that is load-bearing until keys fork on cooking
+        // state. See the header above for what the cap released.
+        expect(crossSourceDisplacementBar(0.98)).toBeCloseTo(1.03, 10);
+        expect(crossSourceDisplacementBar(1.0)).toBeCloseTo(1.05, 10);
         expect(crossSourceDisplacementBar(0.5)).toBeCloseTo(0.55, 10);
         expect(crossSourceDisplacementBar(0.9)).toBeCloseTo(0.95, 10);
     });
 
-    it('a perfect challenger CAN displace a 0.98 incumbent — the freeze case', async () => {
-        // Uncapped this asked for 1.03 against a value clamped to <= 1.0:
-        // arithmetically impossible. Dies the moment the ceiling is removed.
+    it('refuses even a perfect challenger against a 0.98 incumbent', async () => {
+        // The regression the cap introduced, pinned from the outside: a 1.0
+        // "Grilled Chicken" must not take the `chicken` key from the plain
+        // record. Dies the moment a ceiling <= 1.0 comes back.
         mockFoodMappingFindUnique.mockResolvedValue({
             offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
-            foodName: 'Avocado', aiConfidence: 0.98, validatedBy: 'ai',
-        });
-        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
-        await saveValidatedMapping(
-            'avocado',
-            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
-            { confidence: 1.0 } as AIValidationResult,
-        );
-        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
-    });
-
-    it('still refuses a merely-good challenger against the same incumbent', async () => {
-        // The ceiling must not become "the margin is off". 0.99 < 0.999.
-        mockFoodMappingFindUnique.mockResolvedValue({
-            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
-            foodName: 'Avocado', aiConfidence: 0.98, validatedBy: 'ai',
+            foodName: 'Chicken', aiConfidence: 0.98, validatedBy: 'ai',
         });
         mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
         const telemetry: FunnelSink = { funnelStage: 'saved' };
         await saveValidatedMapping(
-            'avocado',
-            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
-            { confidence: 0.99 } as AIValidationResult,
+            'chicken',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Chicken, grilled' }),
+            { confidence: 1.0 } as AIValidationResult,
             { telemetry },
         );
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
         // The freeze counter. Greppable, indexed, and already carrying 797 live
         // events — it is the only way to watch this during a warm run.
         expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('still lets a clearly better challenger displace a weak incumbent', async () => {
+        // The margin must not become "nothing can ever move". Below 0.95 the
+        // bar is reachable and always was.
+        mockFoodMappingFindUnique.mockResolvedValue({
+            offBarcode: OFF_BARCODE, fdcId: null, fsId: null,
+            foodName: 'Avocado', aiConfidence: 0.50, validatedBy: 'ai',
+        });
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 0.90 } as AIValidationResult,
+        );
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
     });
 
     it('leaves a low-confidence incumbent on the plain +0.05 margin', async () => {
@@ -1006,7 +1018,7 @@ describe('escaped incumbents forfeit the cross-source margin', () => {
             { confidence: 0.86 } as AIValidationResult,
             {
                 telemetry,
-                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:count_label' }],
+                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:nutrition_invalid' }],
             },
         );
         expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
@@ -1019,10 +1031,48 @@ describe('escaped incumbents forfeit the cross-source margin', () => {
             expect.objectContaining({
                 evictedTarget: `off:${OFF_BARCODE}`,
                 keptTarget: `fdc:${FDC_ID}`,
-                escapeReason: 'normalized:count_label',
+                escapeReason: 'normalized:nutrition_invalid',
             }),
         );
         auditSpy.mockRestore();
+    });
+
+    it.each([
+        ['normalized:count_label', 195],
+        ['lookup_normalized:context_mismatch', 87],
+        ['normalized:grain_cooked', 83],
+        ['normalized:brand_guard', 47],
+        ['lookup_normalized:core_token_mismatch', 28],
+    ])('does NOT waive for the query-fit escape %s', async (reason) => {
+        // THE REGRESSION PIN. These five classes are 100% of the 440 live
+        // escaped-then-frozen events (counts above, MEASURED 2026-08-01), and
+        // every one of them means "this query wants a different food that shares
+        // the key" — NOT "this row is bad". On the hottest keys the escaping
+        // query is literally the cooked variant: `grilled chicken` (28) escapes
+        // the plain `chicken` incumbent via context_mismatch. Waiving here hands
+        // the shared key to the cooked record for every plain query too.
+        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 1.0 } as AIValidationResult,
+            { telemetry, readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason }] },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:cross_source_margin');
+    });
+
+    it('classifies escape reasons by class, ignoring site prefix and argument', () => {
+        expect(isRowQualityEscape('early:corrupt_record')).toBe(true);
+        expect(isRowQualityEscape('lookup_normalized:nutrition_invalid')).toBe(true);
+        // Prefixes differ per site; the class is what decides.
+        expect(isRowQualityEscape('normalized:corrupt_record')).toBe(true);
+        expect(isRowQualityEscape('normalized:count_label')).toBe(false);
+        expect(isRowQualityEscape('lookup_early:context_mismatch')).toBe(false);
+        // Carries a trailing argument — must not defeat the match.
+        expect(isRowQualityEscape('lookup_normalized:nutritional_modifier:high protein')).toBe(false);
     });
 
     it('frees an fs: incumbent, which corruptReason structurally cannot', async () => {
@@ -1081,23 +1131,23 @@ describe('escaped incumbents forfeit the cross-source margin', () => {
             { confidence: 0.86 } as AIValidationResult,
             {
                 telemetry,
-                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:grain_cooked' }],
+                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:nutrition_invalid' }],
             },
         );
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
         expect(telemetry.dropReason).toBe('save_rejected:serving_downgrade');
     });
 
-    it('does NOT log a waiver for a challenger that clears the capped bar unaided', async () => {
+    it('does NOT log a waiver for a challenger that clears the bar unaided', async () => {
         // The audit line is the ONLY way to tell a waived margin from a save
         // that was never blocked, so it must not fire when the forfeit did no
-        // work. Incumbent 0.98 -> bar min(1.03, 0.999) = 0.999; a 1.0 challenger
-        // clears it with or without the escape. The two populations overlap
-        // heavily on live data (MEASURED 2026-08-01: of the 261 live-key
-        // cross_source_margin rejections, 237 clear the capped bar unaided while
-        // 59 carry a cacheEscape), so an ungated audit over-attributes to the
-        // forfeit exactly where the forfeit is least likely to be the cause.
-        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        // work. Incumbent 0.80 -> bar 0.85; a 1.0 challenger clears it with or
+        // without the escape. The two populations overlap heavily on live data
+        // (MEASURED 2026-08-01: of the 261 live-key cross_source_margin
+        // rejections, 237 clear a 0.999 bar unaided while 59 carry a
+        // cacheEscape), so an ungated audit over-attributes to the forfeit
+        // exactly where the forfeit is least likely to be the cause.
+        mockFoodMappingFindUnique.mockResolvedValue({ ...incumbentOff, aiConfidence: 0.80 });
         mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
         const { logger } = await import('../../logger');
         const auditSpy = jest.spyOn(logger, 'audit').mockImplementation(() => {});
@@ -1108,7 +1158,7 @@ describe('escaped incumbents forfeit the cross-source margin', () => {
             { confidence: 1.0 } as AIValidationResult,
             {
                 telemetry,
-                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:count_label' }],
+                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:nutrition_invalid' }],
             },
         );
         // The save still lands — this changes only what is CLAIMED about why.
