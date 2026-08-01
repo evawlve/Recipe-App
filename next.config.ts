@@ -19,6 +19,24 @@ const nextConfig = {
     ],
   },
   // Enable production optimizations
+  //
+  // WHAT THIS SILENTLY DID (found 2026-08-01): SWC applies removeConsole at BUILD
+  // time by deleting matching `console.<method>(...)` calls from the bundle. Since
+  // `src/lib/logger.ts` routed through `console.info`, EVERY logger.info call site
+  // was stripped from production — measured 0 lines carrying `"level":"info"` in
+  // all 976,124 lines of the box's next-start.log, against 9,128 warn / 67 error.
+  // That is why `logger.info('ai_nutrition.batch_cap_reached')` was unloggable.
+  //
+  // The strip is KEPT: it is still doing useful work against stray `console.log`
+  // in route code, and adding 'info' to the exclude list would switch on all of
+  // logger.info's call sites at once against an unrotated append-only log.
+  // The sanctioned path around it is `logger` in `src/lib/logger.ts`, which writes
+  // via process.stdout/stderr — not a `console` member call, so SWC cannot match
+  // it — and gates volume with a runtime LOG_LEVEL threshold instead.
+  //
+  // If you add a new logging helper, route it through `logger`. Anything built on
+  // `console.info`/`console.debug` will compile away in production without a
+  // single error at build or run time.
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'],

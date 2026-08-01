@@ -1,0 +1,21 @@
+-- Give AiNormalizeCache's derived columns a version, so a wrong normalization stops
+-- being permanent.
+--
+-- Before this column the table had no invalidation path of any kind: no TTL, no version,
+-- no deleteMany anywhere in the repo, and saveAiNormalizeCache's `update:` clause wrote
+-- only useCount/lastUsedAt/isMultiIngredient/splitIngredients — every other derived
+-- column was create-only. A row written once kept its normalizedName, its isBranded flag
+-- and its nutrition estimate forever, and the last two feed simpleRerank.
+--
+-- DEFAULT 1, not 0, and that is deliberate. Existing rows are stamped CURRENT rather than
+-- stale because one live consumer reads this cache and can never heal it:
+-- map-ingredient-with-fallback.ts calls getAiNormalizeCache() on the gate-skipped path
+-- purely to restore aiNutritionEstimate/isBrandedQuery, and never re-saves. Shipping every
+-- row below RULES_VERSION would silently drop the rerank tiebreaker for the whole existing
+-- cache with nothing to refill it. The gate ships armed and tested; invalidation is a
+-- separate, deliberate bump of RULES_VERSION.
+--
+-- Single additive, NOT NULL, defaulted ADD COLUMN with no data step — the shape
+-- migrate-smoke already runs.
+
+ALTER TABLE "AiNormalizeCache" ADD COLUMN "rulesVersion" INTEGER NOT NULL DEFAULT 1;

@@ -105,7 +105,55 @@ export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?
 // AI Nutrition Backfill configuration
 export const AI_NUTRITION_BACKFILL_ENABLED = getFlag('AI_NUTRITION_BACKFILL_ENABLED', true);
 export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/mistral-nemo';
+/**
+ * Budget SIZE a batch/warm run asks for (see `createAiNutritionBudget`). This is
+ * no longer a process ceiling — the run owns one budget object and passes it to
+ * every query, so the bound is per RUN and dies with the run.
+ */
 export const AI_NUTRITION_MAX_PER_BATCH = Number.parseInt(process.env.AI_NUTRITION_MAX_PER_BATCH ?? '20', 10);
+/**
+ * Budget size for ONE live /api/nlp/parse request. Much smaller than a batch
+ * allowance: a 20-item meal must not be able to fire dozens of LLM calls. Set
+ * to 0 to fail the live path closed. There is deliberately NO process-level
+ * backstop constant — that is the latching mechanism this replaced.
+ */
+export const AI_NUTRITION_MAX_PER_REQUEST = Number.parseInt(process.env.AI_NUTRITION_MAX_PER_REQUEST ?? '3', 10);
+
+/**
+ * HYDRATION allowance — a SECOND, separate budget, spent only by
+ * `buildOffResult()` when an OFF record's own per-100g panel fails the Atwater
+ * gate and the only way to bill the line is an AI estimate.
+ *
+ * Why it is not the last-resort budget above. The two spends have opposite
+ * failure modes:
+ *
+ *   - LAST RESORT (`AI_NUTRITION_MAX_*`) is spent when NOTHING matched. Refusing
+ *     it degrades a line that had no answer anyway, so a tight bound is right.
+ *   - HYDRATION is spent on a candidate that ALREADY WON retrieval. Refusing it
+ *     makes `buildOffResult()` return null, which DELETES that candidate — the
+ *     pipeline then bills a different record, and that different record is what
+ *     gets written as a sticky FoodMapping row. Sharing one pool therefore made
+ *     cache IDENTITY depend on how many last-resort calls the other items of the
+ *     same /api/nlp/parse request happened to fire first (the route maps items
+ *     with `Promise.all`, so the interleaving is not even stable run to run).
+ *
+ * Sized generously on purpose: hydration is bounded by candidate count, and
+ * `requestAiNutrition()` checks its cache BEFORE the budget, so repeat names in
+ * a run cost nothing. MEASURED 2026-08-01 (live DB): `AiGeneratedFood` holds
+ * 149 rows TOTAL across both spends since 2026-07-16 — roughly 9 new distinct
+ * names/day, so these ceilings are unreachable in normal operation and exist
+ * only to bound a pathological run.
+ *   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
+ *     -c "SELECT count(*), min(\"createdAt\")::date FROM \"AiGeneratedFood\";"'
+ *
+ * Set to 0 to fail the hydration path closed (OFF records with an unusable
+ * panel then drop, as they did before AI backfill existed).
+ */
+export const AI_NUTRITION_HYDRATION_MAX_PER_REQUEST =
+    Number.parseInt(process.env.AI_NUTRITION_HYDRATION_MAX_PER_REQUEST ?? '20', 10);
+/** Hydration allowance a batch/warm RUN asks for. See the per-request constant above. */
+export const AI_NUTRITION_HYDRATION_MAX_PER_BATCH =
+    Number.parseInt(process.env.AI_NUTRITION_HYDRATION_MAX_PER_BATCH ?? '200', 10);
 
 export type FatSecretRegion = 'US' | 'GLOBAL';
 const rawRegion = process.env.FATSECRET_REGION?.toUpperCase();

@@ -18,6 +18,7 @@
  * Usage (unchanged):
  *   ts-node scripts/warm-names.ts --file data/seeds/fs-strong.json \
  *       [--out logs/warm-fs-strong.jsonl] [--concurrency 4] [--limit N]
+ *       [--nutrition-budget N] [--hydration-budget N]
  *
  * Input file: JSON array of strings, or { "queries": [...] }.
  */
@@ -25,6 +26,8 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { mapIngredientWithFallback } from '../src/lib/mapping/map-ingredient-with-fallback';
+import { createAiNutritionBudget } from '../src/lib/mapping/ai-nutrition-backfill';
+import { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } from '../src/lib/mapping/config';
 import { refreshNormalizationRules } from '../src/lib/mapping/normalization-rules';
 
 export type WarmResult = {
@@ -90,13 +93,33 @@ export interface WarmNamesOptions {
     limit?: number;
     /** Progress callback; the CLI prints a line every 25 completions. */
     onProgress?: (done: number, total: number, stats: WarmStats) => void;
+    /**
+     * LLM nutrition calls this RUN may spend in total (default
+     * AI_NUTRITION_MAX_PER_BATCH). One budget object is created below and
+     * handed to every query — the bound is per run, not per query. CLI:
+     * `--nutrition-budget N`.
+     */
+    aiNutritionBudgetMax?: number;
+    /**
+     * HYDRATION LLM calls this RUN may spend in total (default
+     * AI_NUTRITION_HYDRATION_MAX_PER_BATCH). A SECOND budget object, separate
+     * from the one above: exhausting the last-resort allowance degrades a query
+     * that had no match, but exhausting hydration DELETES an OFF candidate that
+     * already won retrieval — and warm-names WRITES the winner as a sticky
+     * FoodMapping row. One shared pool would make which record a query caches
+     * depend on what the other in-flight queries of the run had already spent.
+     * CLI: `--hydration-budget N`.
+     */
+    aiHydrationBudgetMax?: number;
 }
 
 /**
  * Warm every query through the gated save path. WRITES. Returns the per-query
  * results alongside the stats histogram.
  */
-export async function warmNames(opts: WarmNamesOptions): Promise<{ results: WarmResult[]; stats: WarmStats }> {
+export async function warmNames(
+    opts: WarmNamesOptions,
+): Promise<{ results: WarmResult[]; stats: WarmStats; nutritionSpent: number; hydrationSpent: number }> {
     let queries = opts.queries ? [...opts.queries] : opts.file ? readSeedFile(opts.file) : [];
     if (!opts.file && opts.queries) {
         const seen = new Set<string>();
@@ -121,6 +144,19 @@ export async function warmNames(opts: WarmNamesOptions): Promise<{ results: Warm
     const stats: WarmStats = { mapped: 0, pending: 0, no_match: 0, rejected: 0, error: 0, skipped: 0 };
     let done = 0;
 
+    // ONE budget for the whole run, shared by every warmOne call below. The
+    // SAME OBJECT is the mechanism — minting one per query would make a
+    // 1,000-query batch able to spend 1,000 allowances. warm-names is the
+    // writer whose spend the deleted module-scope counter used to bound, so
+    // this is the migration; scripts/__tests__/warm-names-budget.test.ts
+    // asserts object IDENTITY across calls precisely so a refactor cannot
+    // silently undo it (tsconfig.json excludes scripts/, so no typecheck will).
+    const nutritionBudget = createAiNutritionBudget(opts.aiNutritionBudgetMax ?? AI_NUTRITION_MAX_PER_BATCH);
+    // The SECOND budget — same one-object-per-run mechanism, separate pool.
+    // See WarmNamesOptions.aiHydrationBudgetMax for why they must not share.
+    const hydrationBudget = createAiNutritionBudget(
+        opts.aiHydrationBudgetMax ?? AI_NUTRITION_HYDRATION_MAX_PER_BATCH);
+
     async function warmOne(query: string): Promise<void> {
         if (isTooGeneric(query)) {
             stats.skipped++;
@@ -133,6 +169,8 @@ export async function warmNames(opts: WarmNamesOptions): Promise<{ results: Warm
                 allowLiveFallback: true,
                 skipOnLock: true,
                 telemetry: telemetry as never,
+                aiNutritionBudget: nutritionBudget,
+                aiHydrationBudget: hydrationBudget,
             });
             const funnel = {
                 funnelStage: telemetry.funnelStage as string | undefined,
@@ -190,7 +228,7 @@ export async function warmNames(opts: WarmNamesOptions): Promise<{ results: Warm
         if (!outStream) return res();
         outStream.end(() => res());
     });
-    return { results, stats };
+    return { results, stats, nutritionSpent: nutritionBudget.spent, hydrationSpent: hydrationBudget.spent };
 }
 
 function parseArgs() {
@@ -204,21 +242,43 @@ function parseArgs() {
         out: get('--out'),
         concurrency: parseInt(get('--concurrency', '4')!, 10),
         limit: get('--limit') ? parseInt(get('--limit')!, 10) : undefined,
+        nutritionBudget: get('--nutrition-budget')
+            ? parseInt(get('--nutrition-budget')!, 10)
+            : undefined,
+        hydrationBudget: get('--hydration-budget')
+            ? parseInt(get('--hydration-budget')!, 10)
+            : undefined,
     };
 }
 
 async function main(): Promise<void> {
-    const { file, out, concurrency, limit } = parseArgs();
+    const { file, out, concurrency, limit, nutritionBudget, hydrationBudget } = parseArgs();
     if (!file) {
         console.error('ERROR: --file <path> is required');
         process.exit(1);
     }
+    // Fail the RUN, don't silently fall back. `get()` returns the next token
+    // whatever it is, so `--nutrition-budget --limit 500` parses the budget as
+    // NaN; `nutritionBudget ?? AI_NUTRITION_MAX_PER_BATCH` would keep the NaN
+    // (?? only falls back on null/undefined) and the batch would spend against a
+    // budget nothing can exhaust. This is a warm-campaign spend control.
+    if (nutritionBudget !== undefined && !Number.isFinite(nutritionBudget)) {
+        console.error('ERROR: --nutrition-budget must be a number (got a non-numeric value)');
+        process.exit(1);
+    }
+    // Same fail-the-run rule for the second flag, for the same reason.
+    if (hydrationBudget !== undefined && !Number.isFinite(hydrationBudget)) {
+        console.error('ERROR: --hydration-budget must be a number (got a non-numeric value)');
+        process.exit(1);
+    }
     const seeds = readSeedFile(file, limit);
     console.log(`🌱 warm-names: ${seeds.length} unique queries, concurrency=${concurrency}`);
-    const { stats } = await warmNames({
+    const { stats, nutritionSpent, hydrationSpent } = await warmNames({
         queries: seeds,
         out,
         concurrency,
+        aiNutritionBudgetMax: nutritionBudget,
+        aiHydrationBudgetMax: hydrationBudget,
         onProgress: (done, total, s) => {
             if (done % 25 === 0 || done === total) {
                 console.log(`  [${done}/${total}] mapped=${s.mapped} skip=${s.skipped} `
@@ -226,7 +286,9 @@ async function main(): Promise<void> {
             }
         },
     });
-    console.log('\n📈 warm-names done:', JSON.stringify(stats));
+    console.log('\n📈 warm-names done:', JSON.stringify(stats),
+        `| ai-nutrition LLM calls spent: ${nutritionSpent}`,
+        `| hydration LLM calls spent: ${hydrationSpent}`);
     process.exit(0);
 }
 

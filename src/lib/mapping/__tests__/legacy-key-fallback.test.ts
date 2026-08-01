@@ -94,6 +94,8 @@ jest.mock('../ai-nutrition-backfill', () => ({
     requestAiNutrition: jest.fn().mockResolvedValue({ status: 'error', reason: 'skip' }),
     extractBaseFoodContext: jest.fn().mockReturnValue(null),
     getAiServingGrams: jest.fn().mockResolvedValue(null),
+    // The mapper defaults its per-call spend budget from this factory.
+    createAiNutritionBudget: (max: number) => ({ remaining: max, spent: 0 }),
 }));
 
 function lookupKeys(): string[] {

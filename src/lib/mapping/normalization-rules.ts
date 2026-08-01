@@ -1,6 +1,8 @@
+// No database import here, deliberately. This module computes the cache keys that
+// AiNormalizeCache and FoodMapping are stored under; if it can read a table, the table
+// can move its own keys. See the note on mergedPrepPhrases.
 import fs from 'fs';
 import path from 'path';
-import { prisma } from '../db';
 import { logger } from '../logger';
 
 type NormalizationRules = {
@@ -197,61 +199,46 @@ let cachedRules: NormalizationRules | null = null;
 // ============================================================================
 
 /**
- * In-memory cache for merged prep phrases (static + AI-learned).
- * Refreshed once at pipeline start via refreshNormalizationRules().
+ * In-memory cache for the active prep phrases.
+ * Refreshed at pipeline start via refreshNormalizationRules().
+ *
+ * Until 2026-08-01 this was "static + AI-learned", where AI-learned meant a findMany over
+ * the WHOLE of AiNormalizeCache. That closed a loop: normalizeIngredientName consumes this
+ * list, normalizeIngredientName computes AiNormalizeCache's own keys, so the table mutated
+ * the function that keys it. Rows written while the loop was armed became unreachable the
+ * moment it was disarmed and vice versa — MEASURED 2026-08-01, arming it today would
+ * strand 89 of 2864 rows. The blast radius was never limited to this table either:
+ * normalizeIngredientName also produces the normalizedName fed to deriveMappingCacheKey(),
+ * i.e. the key space of FoodMapping (3509 rows).
+ *
+ * The 22 phrases the table held were not harmless. MEASURED by running the real refresh
+ * against the real 22: 'chicken sandwich' -> 'chicken', 'fried rice' -> 'rice',
+ * 'breaded chicken' -> 'chicken' — bare generic keys, the same class of repointing that
+ * broke five golden cases in PR #143.
+ *
+ * Wanted phrases are hand-added to data/fatsecret/normalization-rules.json one at a time,
+ * with `npm run eval:golden` as the gate. The prepPhrases COLUMN stays populated; it is an
+ * inert LLM observation now, not an input to key computation.
  */
 let mergedPrepPhrases: string[] | null = null;
 
 /**
- * Query AiNormalizeCache for unique prep phrases discovered by AI.
- * These phrases were learned during previous AI normalization runs.
- */
-export async function getAiLearnedPrepPhrases(): Promise<string[]> {
-  try {
-    const cached = await prisma.aiNormalizeCache.findMany({
-      select: { prepPhrases: true },
-    });
-
-    const allPhrases = new Set<string>();
-    for (const row of cached) {
-      const phrases = row.prepPhrases as string[];
-      if (Array.isArray(phrases)) {
-        phrases.forEach(p => {
-          const normalized = p.toLowerCase().trim();
-          if (normalized) {
-            allPhrases.add(normalized);
-          }
-        });
-      }
-    }
-
-    return [...allPhrases];
-  } catch (error) {
-    logger.warn('normalization_rules.ai_phrases_error', { error });
-    return [];
-  }
-}
-
-/**
- * Refresh the merged prep phrases cache.
+ * Refresh the prep phrases cache from the static rules file.
  * Call this at the start of each pipeline run (auto-map, pilot import).
- * Merges static rules from JSON file with AI-learned phrases from DB.
+ *
+ * Kept async and kept as a call site: the in-process pipelines (src/lib/nutrition/auto-map.ts,
+ * scripts/warm-names.ts, scripts/pilot-batch-import.ts) call it to pick up an edited rules
+ * file, and it is the hook a future curated merge would go back into.
  */
 export async function refreshNormalizationRules(): Promise<void> {
   const staticRules = readRulesFile();
-  const aiPhrases = await getAiLearnedPrepPhrases();
 
-  // Merge and deduplicate (static phrases may be regex patterns, AI phrases are literal)
-  const combined = new Set<string>([
-    ...staticRules.prep_phrases,
-    ...aiPhrases,
-  ]);
-
-  mergedPrepPhrases = [...combined];
+  // Static file only. Nothing read from the database may enter this list — see the note
+  // on mergedPrepPhrases.
+  mergedPrepPhrases = [...new Set<string>(staticRules.prep_phrases)];
 
   logger.info('normalization_rules.refreshed', {
     static: staticRules.prep_phrases.length,
-    aiLearned: aiPhrases.length,
     merged: mergedPrepPhrases.length,
   });
 }

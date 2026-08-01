@@ -1932,51 +1932,14 @@ export function isSimpleIngredientToProcessedMismatch(
     return false;
 }
 
-/**
- * Comprehensive alias validation for mapping synonyms.
- * Before saving a synonym as an alias, validate the mapping makes sense for that synonym.
- * 
- * Returns { valid: false, reason: string } if alias should NOT be saved.
- */
-export function validateAliasMapping(
-    synonymToSave: string,
-    foodName: string,
-    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null
-): { valid: boolean; reason?: string } {
-    // Check 1: Simple ingredient → processed product mismatch
-    if (isSimpleIngredientToProcessedMismatch(synonymToSave, foodName, nutrients)) {
-        return {
-            valid: false,
-            reason: `simple_ingredient_to_processed: "${synonymToSave}" should not map to "${foodName}"`
-        };
-    }
-
-    // Check 2: Category mismatch (using existing function)
-    if (isCategoryMismatch(synonymToSave, foodName)) {
-        return {
-            valid: false,
-            reason: `category_mismatch: "${synonymToSave}" should not map to "${foodName}"`
-        };
-    }
-
-    // Check 3: Food type mismatch - synonym ending with food type must match
-    if (isFoodTypeMismatch(synonymToSave, foodName)) {
-        return {
-            valid: false,
-            reason: `food_type_mismatch: "${synonymToSave}" requires different food type than "${foodName}"`
-        };
-    }
-
-    // Check 4: Null macros - don't save aliases to foods with bad data
-    if (hasNullOrInvalidMacros(nutrients)) {
-        return {
-            valid: false,
-            reason: `null_macros: "${foodName}" has null/invalid nutrition data`
-        };
-    }
-
-    return { valid: true };
-}
+// `validateAliasMapping()` lived here until 2026-08-01. Its only consumer was
+// the Step 6 alias loop in map-ingredient-with-fallback.ts, deleted with it
+// (see the comment there): the loop wrote no synonym keys, only re-UPDATEd the
+// primary row. All four checks it composed remain exported.
+// isCategoryMismatch, isFoodTypeMismatch and hasNullOrInvalidMacros still have
+// live consumers; isSimpleIngredientToProcessedMismatch is left with none by
+// this removal — kept deliberately rather than widening the deletion, but it is
+// dead weight and a fair thing to retire in a later pass.
 
 // ============================================================
 // Replacement/Replacer Mismatch (e.g., "egg replacer" vs "egg")

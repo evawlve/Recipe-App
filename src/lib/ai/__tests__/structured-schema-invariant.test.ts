@@ -42,12 +42,10 @@ import * as path from 'path';
 import { RESPONSE_SCHEMA as INGREDIENT_PARSE_SCHEMA } from '@/lib/mapping/ai-parse';
 import { JSON_SCHEMA as SIMPLIFY_SCHEMA } from '@/lib/mapping/ai-simplify';
 import { RESPONSE_SCHEMA as NORMALIZE_SCHEMA } from '@/lib/mapping/ai-normalize';
-import { BATCH_RESPONSE_SCHEMA } from '@/lib/mapping/ai-batch-normalize';
 import { RESPONSE_SCHEMA as RERANK_SCHEMA } from '@/lib/mapping/ai-rerank';
 import { RESPONSE_SCHEMA as SYNONYM_SCHEMA } from '@/lib/mapping/ai-synonym-generator';
 import { RESPONSE_SCHEMA as SEARCH_REFINE_SCHEMA } from '@/lib/mapping/ai-search-refine';
 import { NUTRITION_RESPONSE_SCHEMA } from '@/lib/mapping/ai-nutrition-backfill';
-import { VALIDATION_SCHEMA } from '@/lib/mapping/ai-validation';
 import { RESPONSE_SCHEMA as SERVING_SCHEMA } from '@/lib/ai/serving-estimator';
 import {
     RESPONSE_SCHEMA as AMBIGUOUS_SERVING_SCHEMA,
@@ -72,12 +70,10 @@ const ALL_SCHEMAS: StructuredSchema[] = [
     INGREDIENT_PARSE_SCHEMA,
     SIMPLIFY_SCHEMA,
     NORMALIZE_SCHEMA,
-    BATCH_RESPONSE_SCHEMA,
     RERANK_SCHEMA,
     SYNONYM_SCHEMA,
     SEARCH_REFINE_SCHEMA,
     NUTRITION_RESPONSE_SCHEMA,
-    VALIDATION_SCHEMA,
     SERVING_SCHEMA,
     AMBIGUOUS_SERVING_SCHEMA,
     PRODUCE_SIZE_RESPONSE_SCHEMA,
