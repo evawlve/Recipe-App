@@ -11,11 +11,26 @@
  * missing-nutrition safety net was gated on `startsWith('off_')`, the hit
  * bypassed hasNullOrInvalidMacros() entirely and was served unchecked.
  *
- * MEASURED blast radius of turning the check on: of the 570 fs_ cache rows, 35
- * point at a FatSecretFood whose nutrientsPer100g is `{}` — real menu items
- * ("Ten Vegetable Soup - Bowl", "White Top Pizza - Large") served with null
- * nutrition. The remaining 535 pass unchanged, including "Stevia" (0 kcal / 50g
- * carbs), which only survives because the food NAME is now passed to
+ * WHAT THE CHECK MUST NOT DO. The first draft escaped whenever
+ * `nutrientsPer100g` was `{}`. MEASURED 2026-08-01 on the live box, that is a
+ * 100%-false-positive rule: of the 570 fs_ cache rows, 35 have an empty panel
+ * and ALL 35 also carry a macro-bearing serving, i.e. every one is correctly
+ * billable today —
+ *   SELECT count(*) FROM "FoodMapping" m
+ *     JOIN "FatSecretFood" f ON f."fsId"=m."fsId"
+ *    WHERE f."nutrientsPer100g"::text='{}'
+ *      AND EXISTS (SELECT 1 FROM "FatSecretServing" s
+ *                   WHERE s."fsId"=f."fsId" AND s.nutrients->>'calories' IS NOT NULL);
+ *   -> 35 ; the NOT EXISTS form -> 0
+ * They are chain menu items — "Pad Thai (Small)" (usedCount 127), "Quarter
+ * Pounder with Cheese", "Filet-O-Fish" — and buildFatSecretResult() bills them
+ * through its `anyServingHasMacros` branch, which exists for exactly this shape.
+ * So the escape decision asks the billing question through the billing path's
+ * own reader, servingMacros(): escape only when the panel is empty AND no
+ * serving yields macros (MEASURED: 0 live rows).
+ *
+ * The remaining 535 pass unchanged, including "Stevia" (0 kcal / 50g carbs),
+ * which only survives because the food NAME is now passed to
  * hasNullOrInvalidMacros so its sweetener exception can apply.
  */
 
