@@ -6,7 +6,15 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: ['query', 'error', 'warn'],
+    // Prisma's `query` stream is OFF by default. Measured 2026-08-01 on the box:
+    // 909,552 of the 976,124 lines in ~/Recipe-App/logs/next-start.log (93.2%)
+    // begin with `prisma:query`, against 9,195 structured lines of our own. A
+    // 596MB unrotated log that is 93% raw SQL is not greppable, which is what
+    // made every other observability question unanswerable. Set
+    // PRISMA_LOG_QUERIES=1 and restart to get it back for a debugging window.
+    log: process.env.PRISMA_LOG_QUERIES === '1'
+      ? ['query', 'error', 'warn']
+      : ['error', 'warn'],
     datasources: {
       db: {
         // Prefer direct URL (unpooled) when available to avoid pgBouncer constraints in dev

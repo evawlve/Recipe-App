@@ -954,28 +954,47 @@ export async function mapIngredientWithFallback(
                             cachedOffServing = { servingSize: off.servingSize, servingGrams: off.servingGrams };
                             earlyCorruptMarked = off.corruptReason != null && isCorruptExclusionEnabled();
                         }
-                    } else {
-                        const ai = await prisma.aiGeneratedFood.findUnique({
-                            where: { id: earlyCacheHit.foodId },
-                            select: {
-                                caloriesPer100g: true,
-                                proteinPer100g: true,
-                                carbsPer100g: true,
-                                fatPer100g: true,
-                                fiberPer100g: true,
-                                sugarPer100g: true,
-                            }
+                    } else if (earlyCacheHit.foodId.startsWith('fs_')) {
+                        // FatSecret cache hits were NOT validated here until 2026-08-01.
+                        // This arm used to be an `aiGeneratedFood.findUnique({ id: foodId })`,
+                        // which executed on every fs_ hit and could never match: measured, 0
+                        // of the 149 AiGeneratedFood ids carry an fs_/off_/fdc_ prefix (they
+                        // are cuids). So `nutrients` stayed null, and because the
+                        // missing-nutrition safety net below was gated on off_ alone, fs_
+                        // hits skipped hasNullOrInvalidMacros() entirely.
+                        // Measured blast radius of turning the check on (2026-08-01): of the
+                        // 570 FoodMapping rows carrying an fsId, 35 point at a FatSecretFood
+                        // whose nutrientsPer100g is `{}` — real foods ("Ten Vegetable Soup -
+                        // Bowl", "White Top Pizza - Large") that were being served with null
+                        // nutrition. The other 535 pass unchanged.
+                        const fsId = earlyCacheHit.foodId.replace('fs_', '');
+                        const fsFood = await prisma.fatSecretFood.findUnique({
+                            where: { fsId },
+                            select: { nutrientsPer100g: true }
                         });
-                        if (ai) {
-                            nutrients = {
-                                calories: ai.caloriesPer100g,
-                                protein: ai.proteinPer100g,
-                                carbs: ai.carbsPer100g,
-                                fat: ai.fatPer100g,
-                                fiber: ai.fiberPer100g,
-                                sugar: ai.sugarPer100g,
-                            };
-                        }
+                        // An empty panel is MISSING nutrition, not zero nutrition — route it
+                        // to the safety net below rather than letting `?? 0` manufacture a
+                        // plausible-looking all-zero panel.
+                        const fsPanel = fsFood?.nutrientsPer100g as Record<string, any> | null | undefined;
+                        nutrients = fsPanel && Object.keys(fsPanel).length > 0 ? fsPanel : null;
+                    } else {
+                        // No recognised prefix. Every candidate id is prefixed by
+                        // construction (gatherCandidates forces fdc_/fs_, OFF candidates are
+                        // built as off_${barcode}), and getValidatedMappingByNormalizedName
+                        // no longer fabricates an unprefixed id from normalizedForm — it
+                        // refuses the row instead. So reaching here should be impossible.
+                        //
+                        // INSTRUMENT ONLY, deliberately: this does NOT force
+                        // earlyNutritionInvalid. Refusing here would change behaviour only
+                        // for a shape that measurably cannot occur (0 of 3,509 FoodMapping
+                        // rows have all three target columns null), while the fail-closed
+                        // guarantee already lives at the source in the read path, where it
+                        // is measured and tested. Audit is non-suppressible, so if this ever
+                        // does fire we will see it and can then decide with evidence.
+                        logger.audit('cache.unrecognised_food_id_prefix', {
+                            foodId: earlyCacheHit.foodId,
+                            cachedFood: earlyCacheHit.foodName,
+                        });
                     }
                     if (nutrients) {
                         const loadedNutrition = {
@@ -987,7 +1006,12 @@ export async function mapIngredientWithFallback(
                         };
                         cachedKcal100 = loadedNutrition.kcal || null;
                         cachedCarbs100 = loadedNutrition.carbs || null;
-                        earlyNutritionInvalid = hasNullOrInvalidMacros(loadedNutrition);
+                        // The food name matters: it is what lets hasNullOrInvalidMacros apply
+                        // its sweetener / zero-calorie exceptions. Measured — without it the
+                        // fs_ check newly rejects "Stevia" (0 kcal, 50g carbs) as a
+                        // macro/calorie inconsistency; with it, 0 of the 535 non-empty fs
+                        // panels are false-positived.
+                        earlyNutritionInvalid = hasNullOrInvalidMacros(loadedNutrition, earlyCacheHit.foodName);
                         if (earlyNutritionInvalid) {
                             logger.warn('mapping.early_cache_bad_nutrition', {
                                 rawLine: trimmed,
@@ -995,11 +1019,14 @@ export async function mapIngredientWithFallback(
                                 nutrients,
                             });
                         }
-                    } else if (earlyCacheHit.foodId.startsWith('off_')) {
-                        // The cached mapping points at an OFF row that is missing or has
-                        // no nutrition at all (corrupt legacy rows, e.g. a normalized name
-                        // ingested as a barcode). Treat as invalid so the full pipeline
-                        // re-maps instead of serving null-backed nutrition.
+                    } else if (earlyCacheHit.foodId.startsWith('off_') || earlyCacheHit.foodId.startsWith('fs_')) {
+                        // The cached mapping points at a record that is missing or has no
+                        // nutrition at all (corrupt legacy rows, e.g. a normalized name
+                        // ingested as a barcode; empty FatSecret panels — 35 of the 570
+                        // measured fs_ rows). Treat as invalid so the full pipeline re-maps
+                        // instead of serving null-backed nutrition. Extended from off_ to
+                        // fs_ on 2026-08-01; deliberately NOT extended to fdc_ or to
+                        // unrecognised prefixes, which are separate unmeasured changes.
                         earlyNutritionInvalid = true;
                         logger.warn('mapping.early_cache_missing_nutrition', {
                             rawLine: trimmed,
@@ -1349,28 +1376,23 @@ export async function mapIngredientWithFallback(
                             normalizedOffServing = { servingSize: off.servingSize, servingGrams: off.servingGrams };
                             normalizedCorruptMarked = off.corruptReason != null && isCorruptExclusionEnabled();
                         }
-                    } else {
-                        const ai = await prisma.aiGeneratedFood.findUnique({
-                            where: { id: normalizedCache.foodId },
-                            select: {
-                                caloriesPer100g: true,
-                                proteinPer100g: true,
-                                carbsPer100g: true,
-                                fatPer100g: true,
-                                fiberPer100g: true,
-                                sugarPer100g: true,
-                            }
+                    } else if (normalizedCache.foodId.startsWith('fs_')) {
+                        // Same gap as Step 1a, same fix — see the comment there for the
+                        // measurement. This arm was an aiGeneratedFood lookup that executed
+                        // on every fs_ hit and could never match.
+                        const fsId = normalizedCache.foodId.replace('fs_', '');
+                        const fsFood = await prisma.fatSecretFood.findUnique({
+                            where: { fsId },
+                            select: { nutrientsPer100g: true }
                         });
-                        if (ai) {
-                            nutrients = {
-                                calories: ai.caloriesPer100g,
-                                protein: ai.proteinPer100g,
-                                carbs: ai.carbsPer100g,
-                                fat: ai.fatPer100g,
-                                fiber: ai.fiberPer100g,
-                                sugar: ai.sugarPer100g,
-                            };
-                        }
+                        const fsPanel = fsFood?.nutrientsPer100g as Record<string, any> | null | undefined;
+                        nutrients = fsPanel && Object.keys(fsPanel).length > 0 ? fsPanel : null;
+                    } else {
+                        // Instrument only — see the matching note in Step 1a.
+                        logger.audit('cache.unrecognised_food_id_prefix', {
+                            foodId: normalizedCache.foodId,
+                            cachedFood: normalizedCache.foodName,
+                        });
                     }
 
                     if (nutrients) {
@@ -1383,7 +1405,7 @@ export async function mapIngredientWithFallback(
                         };
                         normalizedCachedKcal100 = mappedNutrients.kcal || null;
                         normalizedCachedCarbs100 = mappedNutrients.carbs || null;
-                        normalizedNutritionInvalid = hasNullOrInvalidMacros(mappedNutrients);
+                        normalizedNutritionInvalid = hasNullOrInvalidMacros(mappedNutrients, normalizedCache.foodName);
                         if (normalizedNutritionInvalid) {
                             logger.warn('mapping.normalized_cache_bad_nutrition', {
                                 rawLine: trimmed,
@@ -1391,6 +1413,18 @@ export async function mapIngredientWithFallback(
                                 nutrients,
                             });
                         }
+                    } else if (normalizedCache.foodId.startsWith('off_') || normalizedCache.foodId.startsWith('fs_')) {
+                        // Symmetric with Step 1a's safety net: a cache row pointing at a
+                        // record with no nutrition panel at all must re-resolve, not be
+                        // served with nulls. Deliberately NOT extended to fdc_ here — the
+                        // fdc_ arm above has never had this net and widening it is a
+                        // separate, unmeasured behaviour change.
+                        normalizedNutritionInvalid = true;
+                        logger.warn('mapping.normalized_cache_missing_nutrition', {
+                            rawLine: trimmed,
+                            cachedFood: normalizedCache.foodName,
+                            foodId: normalizedCache.foodId,
+                        });
                     }
                 }
 
@@ -1814,6 +1848,23 @@ export async function mapIngredientWithFallback(
                     const fsCandidatesMissingNutr = candidatesForRerank
                         .filter(c => c.source === 'ai_generated' && !c.nutrition);
                     if (fsCandidatesMissingNutr.length > 0) {
+                        // INSTRUMENTED, NOT DELETED (2026-08-01). Enumerating every
+                        // producer of this pool says 'ai_generated' is unreachable:
+                        // `filtered` derives solely from gatherCandidates(), whose only
+                        // sources are searchFdcLocal ('fdc'), searchOffSimple/
+                        // searchOffSemantic ('openfoodfacts'), searchFatSecretLane
+                        // ('fatsecret') and options.seedCandidates (itself a prior
+                        // gatherCandidates result). But that is REASONED, not measured —
+                        // and it could not be measured, because the surrounding evidence
+                        // (gather.candidates.complete, mapping.weight_backfill_attempt) is
+                        // logger.info and was being stripped from the production bundle.
+                        // Audit is non-suppressible, so this line survives any LOG_LEVEL.
+                        // Delete these arms only after a measured window with zero hits.
+                        logger.audit('rerank.ai_generated_candidate_seen', {
+                            count: fsCandidatesMissingNutr.length,
+                            ids: fsCandidatesMissingNutr.slice(0, 5).map(c => c.id),
+                            names: fsCandidatesMissingNutr.slice(0, 5).map(c => c.name),
+                        });
                         const { prisma } = await import('../db');
                         const fsIds = fsCandidatesMissingNutr.map(c => c.id);
                         const cachedFoods = await prisma.aiGeneratedFood.findMany({
@@ -1977,7 +2028,7 @@ export async function mapIngredientWithFallback(
                     // not a ranking one. Silence on a gate line means the two agree and
                     // the demotion was inert there.
                     if (gateSelection && winner && winner.id !== gateSelection.id) {
-                        logger.info('mapping.confidence_gate_overridden', {
+                        logger.audit('mapping.confidence_gate_overridden', {
                             rawLine: trimmed,
                             query: searchQuery,
                             gateReason: gateResult.reason,
@@ -2486,6 +2537,16 @@ export async function mapIngredientWithFallback(
         const isWeightUnit = parsed?.unit && /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms)$/i.test(parsed.unit);
 
         if (!result && isWeightUnit && winner.source === 'ai_generated') {
+            // See the rerank instrumentation note above. If this never fires, weight
+            // serving backfill has been silently off since the lane was relabelled
+            // 'fatsecret' — corroborated by MEASURED 0 occurrences of the warn-level
+            // mapping.weight_backfill_failed in 12 days of production log. The repair
+            // would then be to WIDEN this guard to 'fatsecret', not to delete it.
+            logger.audit('backfill.ai_generated_winner_seen', {
+                foodId: winner.id,
+                foodName: winner.name,
+                path: 'weight',
+            });
             logger.info('mapping.weight_backfill_attempt', {
                 foodId: winner.id,
                 foodName: winner.name,
@@ -2525,6 +2586,13 @@ export async function mapIngredientWithFallback(
 
         // Enable AI backfill for BOTH FatSecret and FDC sources (FDC often lacks volume servings)
         if (!result && isVolumeUnit && (winner.source === 'ai_generated' || winner.source === 'fdc')) {
+            if (winner.source === 'ai_generated') {
+                logger.audit('backfill.ai_generated_winner_seen', {
+                    foodId: winner.id,
+                    foodName: winner.name,
+                    path: 'volume',
+                });
+            }
             logger.info('mapping.volume_backfill_attempt', {
                 foodId: winner.id,
                 foodName: winner.name,
@@ -2582,6 +2650,11 @@ export async function mapIngredientWithFallback(
 
                 // If hydration failed for a FatSecret candidate, try backfill before giving up
                 if (!fallbackResult && fallback.source === 'ai_generated') {
+                    logger.audit('backfill.ai_generated_winner_seen', {
+                        foodId: fallback.id,
+                        foodName: fallback.name,
+                        path: 'fallback',
+                    });
                     if (isVolumeUnit) {
                         logger.info('mapping.fallback_volume_backfill_attempt', {
                             foodId: fallback.id,
@@ -2968,7 +3041,7 @@ export async function mapIngredientWithFallback(
             // class on successful stages, so the next funnel read measures this
             // relaxation from this line rather than from a dropReason.
             if (subThreshold.admit) {
-                logger.info('mapping.sub_threshold_admitted', {
+                logger.audit('mapping.sub_threshold_admitted', {
                     rawLine: trimmed,
                     normalizedName,
                     confidence,

@@ -483,7 +483,7 @@ export async function requestAiNutrition(
     // Budget check — an ordinary AiNutritionError, not a throw: every caller
     // already handles `status === 'error'` by degrading the line.
     if (options.budget.remaining <= 0) {
-        logger.info('ai_nutrition.budget_exhausted', {
+        logger.audit('ai_nutrition.budget_exhausted', {
             normalizedName,
             spent: options.budget.spent,
         });

@@ -10,7 +10,6 @@
 
 import { prisma } from '@/lib/db';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
-import type { AIValidationResult } from './ai-validation';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
 import { hasCoreTokenMismatch } from './filter-candidates';
@@ -327,20 +326,23 @@ export async function getValidatedMappingByNormalizedName(
         } else if (cached.fsId) {
             foodId = `fs_${cached.fsId}`;
         } else {
-            const aiFood = await prisma.aiGeneratedFood.findFirst({
-                where: {
-                    OR: [
-                        { ingredientName: cached.normalizedForm },
-                        { displayName: cached.foodName }
-                    ]
-                },
-                select: { id: true }
+            // A row with none of the three target columns names no record. It used to
+            // fall back to an AiGeneratedFood name lookup and, failing that, to
+            // `foodId = cached.normalizedForm` — FABRICATING an unprefixed id, which is
+            // precisely what saveValidatedMapping()'s old 'ai_generated' arm consumed to
+            // write a mapping pointing at nothing.
+            //
+            // MEASURED 2026-08-01: 0 of 3,509 FoodMapping rows have offBarcode, fdcId and
+            // fsId all null, and 0 carry source 'ai_generated'. So this is unreachable on
+            // current data — but that is a DATA-dependent guarantee, not a structural one,
+            // and it is the one live mechanism that could ever mint an unprefixed id.
+            // Returning null forces a fresh resolution instead of inventing an identity.
+            logger.audit('cache.row_has_no_target_column', {
+                normalizedForm: cached.normalizedForm,
+                foodName: cached.foodName,
             });
-            if (aiFood) {
-                foodId = aiFood.id;
-            } else {
-                foodId = cached.normalizedForm;
-            }
+            noteRejection(rejection, 'no_target_column', cached);
+            return null;
         }
 
         if (trustSkippedRejection) {
@@ -494,6 +496,31 @@ export function targetKeyOf(
     if (t.fdcId != null) return `fdc:${t.fdcId}`;
     return null;
 }
+
+/**
+ * The verdict shape the save gate consumes. Only `confidence` is read here — the
+ * rest is carried for callers that record a richer verdict.
+ *
+ * Relocated from the deleted `./ai-validation` module (2026-08-01). That module's
+ * `validateMappingWithAI()` lost its last caller in `fc39221 refactor(mapping):
+ * retire legacy remote-FatSecret mapping engine` and was a fail-open besides
+ * (both the no-API-key path and the catch returned `{ approved: true,
+ * confidence: 0.5 }`), so it was removed; the type it exported was still live and
+ * now lives next to the function that consumes it.
+ */
+export type AIValidationResult = {
+    approved: boolean;
+    confidence: number; // 0.0-1.0
+    reason: string;
+    category?: 'fat_mismatch' | 'type_mismatch' | 'preparation_mismatch' | 'generic_vs_specific' | 'search_query_issue' | 'search_scoring_issue' | 'correct';
+    suggestedAlternative?: string | null;
+    detectedIssues?: Array<'included_measurement' | 'included_prep_phrase' | 'included_brand' | 'too_vague' | 'too_specific' | 'wrong_ingredient_type' | 'nutrition_mismatch' | 'none'>;
+    detectedQualifiers?: {
+        fatContent?: string; // '90% lean', 'fat-free', 'whole', etc.
+        preparationState?: string; // 'raw', 'cooked', 'canned'
+        specificType?: string; // 'rice vinegar', 'soy sauce'
+    };
+};
 
 /**
  * Save an AI-approved mapping to the validated cache
@@ -694,14 +721,43 @@ export async function saveValidatedMapping(
         let fsId: string | null = null;
 
         if (mapping.foodId.startsWith('fdc_')) {
-            fdcId = parseInt(mapping.foodId.replace('fdc_', ''), 10);
+            // Normalise an unparseable suffix to null rather than letting NaN through:
+            // the refusal guard below tests `fdcId == null`, and NaN would otherwise
+            // pass it and reach Prisma as a NaN Int.
+            const parsedFdcId = parseInt(mapping.foodId.replace('fdc_', ''), 10);
+            fdcId = Number.isFinite(parsedFdcId) ? parsedFdcId : null;
         } else if (mapping.foodId.startsWith('off_')) {
             offBarcode = mapping.foodId.replace('off_', '');
         } else if (mapping.foodId.startsWith('fs_')) {
             fsId = mapping.foodId.replace('fs_', '');
         }
 
-        const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : fsId ? 'fatsecret' : 'ai_generated';
+        // REFUSE rather than invent a source (2026-08-01). This used to fall through to
+        // `: 'ai_generated'` when mapping.foodId carried none of the three prefixes, and
+        // the row it would then write is a mapping pointing at NOTHING: source
+        // 'ai_generated' with offBarcode, fdcId and fsId all null, unresolvable by every
+        // reader. FoodMapping has no aiGeneratedFoodId column and no AiGeneratedFood
+        // relation to hold the target (IngredientFoodMap does; this table does not).
+        //
+        // MEASURED 2026-08-01 on the box: FoodMapping is openfoodfacts 2855 / fatsecret
+        // 570 / fdc 84 — zero 'ai_generated' rows — and 0 of those 3,509 rows have all
+        // three target columns null. Every candidate id is prefixed by construction
+        // (gatherCandidates forces fdc_/fs_; OFF candidates are built as off_${barcode}
+        // in offRowToCandidate/mapOffHitToCandidate). So this guard should never fire.
+        // Deleting the arm instead would leave `mappingSource` undefined and write the
+        // same broken row silently; refusing is strictly safer than either alternative.
+        if (!offBarcode && fdcId == null && !fsId) {
+            logger.audit('save.unprefixed_food_id', {
+                rawIngredient,
+                normalizedForm,
+                foodId: mapping.foodId,
+                foodName: mapping.foodName,
+            });
+            markSaveRejected(options?.telemetry, 'unprefixed_food_id');
+            return;
+        }
+
+        const mappingSource = offBarcode ? 'openfoodfacts' : fdcId ? 'fdc' : 'fatsecret';
         const clampedConfidence = Math.max(0, Math.min(1, validation.confidence));
 
         // Existing-row lookup, hoisted ahead of EVERY upsert (PR D pt3): the
@@ -721,7 +777,7 @@ export async function saveValidatedMapping(
         // abandoned PR #143 lacked when it repointed the eight most-used
         // generic keys in the cache.
         if (options?.insertOnly && existing) {
-            logger.info('validated_mapping.sub_threshold_no_displace', {
+            logger.audit('validated_mapping.sub_threshold_no_displace', {
                 rawIngredient,
                 normalizedForm,
                 keptFoodName: existing.foodName,
@@ -747,10 +803,24 @@ export async function saveValidatedMapping(
                     : existing.fsId
                         ? `fs_${existing.fsId}`
                         : null;
-            const sameRecord = existingFoodId != null
-                ? existingFoodId === mapping.foodId
-                // ai_generated rows carry no id columns — match on food name.
-                : existing.foodName === mapping.foodName;
+            if (existingFoodId == null) {
+                // The existing human row names no record (all three target columns
+                // null). The old code name-matched here, on the now-false premise that
+                // "ai_generated rows carry no id columns" — FoodMapping has never held
+                // an ai_generated row (MEASURED 2026-08-01: openfoodfacts 2855 /
+                // fatsecret 570 / fdc 84, and 0 rows with all three columns null), so a
+                // name match would bump usage on, or overwrite, a row pointing at
+                // nothing. Refuse the write and say so.
+                logger.audit('save.human_row_has_no_target_column', {
+                    rawIngredient,
+                    normalizedForm,
+                    existingFoodName: existing.foodName,
+                    attemptedFoodId: mapping.foodId,
+                });
+                markSaveRejected(options?.telemetry, 'human_row');
+                return;
+            }
+            const sameRecord = existingFoodId === mapping.foodId;
             if (sameRecord) {
                 await prisma.foodMapping.update({
                     where: { normalizedForm },
@@ -1186,10 +1256,13 @@ export async function saveAiNormalizeCache(
             update: {
                 useCount: { increment: 1 },
                 lastUsedAt: new Date(),
-                // Undefined-safe on purpose: aiSimplifyIngredient and batchNormalizeIngredients
-                // share this table and never compute these two, so they pass `undefined`, which
-                // Prisma treats as "leave the column alone" rather than "write null/false".
-                // A caller that DOES know must be able to fill a row written by one that didn't.
+                // Undefined-safe on purpose: aiSimplifyIngredient shares this table and never
+                // computes these two, so it passes `undefined`, which Prisma treats as "leave
+                // the column alone" rather than "write null/false". A caller that DOES know
+                // must be able to fill a row written by one that didn't.
+                // (Corrected 2026-08-01: this used to name batchNormalizeIngredients as a
+                // second writer. That function had zero callers anywhere in src/, scripts/ or
+                // eval/ and its module was deleted — do not reason about it as a live writer.)
                 isMultiIngredient: result.isMultiIngredient,
                 splitIngredients: result.splitIngredients,
             },

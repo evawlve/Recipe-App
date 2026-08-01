@@ -140,21 +140,55 @@ describe('the slot is charged around the real call, not around success', () => {
 });
 
 describe('exhaustion degrades the line, it does not throw', () => {
-    it('returns an ordinary AiNutritionError and logs ai_nutrition.budget_exhausted', async () => {
+    it('returns an ordinary AiNutritionError and AUDITS ai_nutrition.budget_exhausted', async () => {
         // The caller ignores the reason string, so only the log distinguishes
         // "we declined to spend" from "the LLM failed" for whoever debugs the
         // next eval slide. That is why the log line is asserted.
+        //
+        // It is logger.AUDIT, not logger.info, and that is load-bearing. This event
+        // was `logger.info` and therefore invisible in production: SWC's
+        // removeConsole stripped every console.info call from the bundle, so
+        // MEASURED 0 occurrences of the cap event in 976,124 lines of box log —
+        // while 19 of the 24 downstream mapping.ai_nutrition_backfill_failed warns
+        // carried reason:"batch_cap_reached". The cap was only ever visible through
+        // a neighbour's payload. Audit bypasses the LOG_LEVEL threshold entirely.
         const { logger } = await import('../../logger');
-        const infoSpy = jest.spyOn(logger, 'info');
+        const auditSpy = jest.spyOn(logger, 'audit');
         const budget: AiNutritionBudget = { remaining: 0, spent: 7 };
 
         const out = await requestAiNutrition('cooked oats', { budget });
 
         expect(out).toEqual({ status: 'error', reason: 'nutrition_budget_exhausted' });
-        expect(infoSpy).toHaveBeenCalledWith(
+        expect(auditSpy).toHaveBeenCalledWith(
             'ai_nutrition.budget_exhausted',
             expect.objectContaining({ normalizedName: 'cooked oats', spent: 7 }),
         );
-        infoSpy.mockRestore();
+        auditSpy.mockRestore();
+    });
+
+    it('is still written at LOG_LEVEL=error, where an info line would be dropped', async () => {
+        // Dies if the event is demoted back to logger.info: the write spy sees no
+        // line carrying the msg, which is the production state this group fixes.
+        const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+        const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+        const prevLevel = process.env.LOG_LEVEL;
+        process.env.LOG_LEVEL = 'error';
+
+        try {
+            jest.resetModules();
+            const { requestAiNutrition: freshRequest } = await import('../ai-nutrition-backfill');
+            await freshRequest('cooked oats', { budget: { remaining: 0, spent: 7 } });
+
+            const lines = [...stderrSpy.mock.calls, ...stdoutSpy.mock.calls].map(c => String(c[0]));
+            const capLine = lines.find(l => l.includes('ai_nutrition.budget_exhausted'));
+            expect(capLine).toBeDefined();
+            expect(JSON.parse(capLine!).level).toBe('audit');
+        } finally {
+            if (prevLevel === undefined) delete process.env.LOG_LEVEL;
+            else process.env.LOG_LEVEL = prevLevel;
+            stderrSpy.mockRestore();
+            stdoutSpy.mockRestore();
+            jest.resetModules();
+        }
     });
 });

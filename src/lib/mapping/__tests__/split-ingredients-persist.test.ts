@@ -90,8 +90,9 @@ describe('saveAiNormalizeCache writes the multi-component signal', () => {
     });
 
     it('defaults isMultiIngredient to false and omits splitIngredients when a caller does not compute them', async () => {
-        // aiSimplifyIngredient and batchNormalizeIngredients share this table and pass
-        // neither field. `undefined` must reach Prisma as "column omitted", not as false/null.
+        // aiSimplifyIngredient shares this table and passes neither field. `undefined` must
+        // reach Prisma as "column omitted", not as false/null. (Corrected 2026-08-01: this
+        // used to also name batchNormalizeIngredients, which had zero callers and was deleted.)
         await saveAiNormalizeCache('jif peanut butter', {
             normalizedName: 'peanut butter',
             synonyms: [],

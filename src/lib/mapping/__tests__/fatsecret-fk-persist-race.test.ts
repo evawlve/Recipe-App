@@ -111,7 +111,7 @@ import {
 import { drainPendingBackgroundTasks } from '../deferred-hydration';
 import { canonicalizeCacheKey } from '../normalization-rules';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
-import type { AIValidationResult } from '../ai-validation';
+import type { AIValidationResult } from '../validated-mapping-helpers';
 
 const FS_ID = '4482913';
 

@@ -35,7 +35,7 @@ jest.mock('../../db', () => ({
 
 import { saveValidatedMapping, getValidatedMappingByNormalizedName, targetKeyOf } from '../validated-mapping-helpers';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
-import type { AIValidationResult } from '../ai-validation';
+import type { AIValidationResult } from '../validated-mapping-helpers';
 import type { FunnelSink } from '../funnel';
 
 const validation = { confidence: 0.95 } as AIValidationResult;
