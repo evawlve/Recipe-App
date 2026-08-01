@@ -1,157 +1,67 @@
 # AI-Learned Prep Phrase Sync
 
-> **Status**: ✅ Implemented (Jan 6, 2026)
-> **Priority**: Medium - Improves normalization accuracy over time
+> **Status**: ❌ REMOVED 2026-08-01. Shipped Jan 6 2026, deleted because the mechanism was
+> a feedback loop. The requirement it addressed is still real; the design it used is not
+> the way back in. Read this before proposing "sync learned phrases" again.
 
 ---
 
-## Problem
+## What it did
 
-The `normalizeIngredientName()` function uses a **static list** of prep phrases from `data/fatsecret/normalization-rules.json`. When AI discovers new prep phrases (e.g., "freshly ground", "roughly torn") during ingredient normalization, they're stored in `AiNormalizeCache` but **never synced back** to the static rules.
+`getAiLearnedPrepPhrases()` in `src/lib/mapping/normalization-rules.ts` ran a `findMany`
+over the whole of `AiNormalizeCache`, and `refreshNormalizationRules()` unioned the
+resulting `prepPhrases` into the module-scope list that `normalizeIngredientName()`
+consumes. The intent: when the LLM discovers "freshly grated" on one line, the static
+parser should strip it on the next line without paying for another LLM call.
 
-This means:
-1. First encounter of "1 cup freshly ground pepper" → AI strips "freshly ground"
-2. Future encounters → Static parser does NOT strip it (unless AI is called again)
+Armed by the in-process pipelines only — `autoMapIngredients()` in
+`src/lib/nutrition/auto-map.ts`, `scripts/warm-names.ts`, `scripts/pilot-batch-import.ts`.
+`scripts/eval/warm-cache.ts` warms over HTTP, so it never armed it.
 
----
+## Why it was removed
 
-## Recommended Solution: Hybrid In-Memory Cache
+`normalizeIngredientName()` computes the keys `AiNormalizeCache` is stored under. Feeding
+the table's own contents back into it made key computation a function of the table, so the
+same input hashed to different keys depending on whether the loop had been armed in that
+process. Rows written armed became unreachable disarmed, and vice versa.
 
-**Why Hybrid?**
-- **File-based sync** requires manual script execution
-- **Per-request DB query** adds overhead
-- **Hybrid** = cached in memory, refreshed once at pipeline start
+MEASURED 2026-08-01 (re-derive: `scripts/backfill-ai-normalize-keys.ts`, dry-run is the
+default): arming the loop today would strand 89 of 2864 rows. The blast radius was never
+confined to this table either — `normalizeIngredientName` also produces the
+`normalizedName` fed to `deriveMappingCacheKey()`, i.e. the key space of `FoodMapping`.
 
-### Architecture
+The phrases were not harmless in themselves. MEASURED by running the real refresh against
+the 22 phrases the live table held: `chicken sandwich` → `chicken`, `fried rice` → `rice`,
+`breaded chicken` → `chicken`. A specific query loses its distinguishing word and lands on
+a bare generic key another food already owns — the same class of repointing that broke five
+golden cases in PR #143.
+
+Re-derive the live phrase list:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    At Pipeline Start                         │
-│  1. Load static rules from normalization-rules.json          │
-│  2. Query AiNormalizeCache for unique prepPhrases            │
-│  3. Merge into in-memory Set (deduplicated)                  │
-│  4. Cache for duration of pipeline run                       │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│              During Ingredient Normalization                 │
-│  normalizeIngredientName() uses merged in-memory cache       │
-│  No DB queries per ingredient                                │
-└─────────────────────────────────────────────────────────────┘
+ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire -t -A -c \
+  "SELECT DISTINCT lower(trim(p)) FROM \"AiNormalizeCache\", \
+   jsonb_array_elements_text(\"prepPhrases\") AS p ORDER BY 1"'
 ```
 
----
+## What replaces it
 
-## Implementation Plan
+Nothing automatic, deliberately. A wanted phrase is hand-added to
+`data/fatsecret/normalization-rules.json` one at a time, with
+`npm run eval:golden -- --base http://192.168.1.133:3000` as the gate on both axes (real
+failures AND drift). A phrase in that file is a key change for every store that keys off
+`normalizeIngredientName`, so it must be a reviewed edit, not a side effect of traffic.
 
-### 1. Add Phrase Aggregation Query
+`refreshNormalizationRules()` and `getMergedPrepPhrases()` still exist and still have their
+three call sites; the refresh now reads the static file and nothing else. The `prepPhrases`
+column stays populated — it is an inert record of what the LLM observed, not an input to
+key computation. `src/lib/mapping/__tests__/normalization-rules-static-only.test.ts` is the
+guard: it fails if the database is ever read back into that list.
 
-Create function to aggregate unique prep phrases from `AiNormalizeCache`:
+## If you want the feature back
 
-```typescript
-// src/lib/mapping/normalization-rules.ts
-
-export async function getAiLearnedPrepPhrases(): Promise<string[]> {
-    const cached = await prisma.aiNormalizeCache.findMany({
-        select: { prepPhrases: true },
-    });
-    
-    const allPhrases = new Set<string>();
-    for (const row of cached) {
-        const phrases = row.prepPhrases as string[];
-        phrases.forEach(p => allPhrases.add(p.toLowerCase().trim()));
-    }
-    
-    return [...allPhrases];
-}
-```
-
-### 2. Add Refresh Mechanism
-
-```typescript
-// src/lib/mapping/normalization-rules.ts
-
-let mergedPrepPhrases: string[] | null = null;
-
-export async function refreshNormalizationRules(): Promise<void> {
-    const staticRules = readRulesFile();
-    const aiPhrases = await getAiLearnedPrepPhrases();
-    
-    // Merge and deduplicate
-    const combined = new Set([
-        ...staticRules.prep_phrases,
-        ...aiPhrases,
-    ]);
-    
-    mergedPrepPhrases = [...combined];
-    logger.info('normalization_rules.refreshed', { 
-        static: staticRules.prep_phrases.length,
-        aiLearned: aiPhrases.length,
-        merged: mergedPrepPhrases.length,
-    });
-}
-
-export function getMergedPrepPhrases(): string[] {
-    return mergedPrepPhrases || readRulesFile().prep_phrases;
-}
-```
-
-### 3. Update `normalizeIngredientName()`
-
-Change from using static rules to merged rules:
-
-```typescript
-// In normalizeIngredientName():
-- for (const phrase of [...rules.prep_phrases, ...rules.size_phrases]) {
-+ for (const phrase of [...getMergedPrepPhrases(), ...rules.size_phrases]) {
-```
-
-### 4. Call at Pipeline Start
-
-**Pilot Batch Import** (`scripts/pilot-batch-import.ts`):
-```typescript
-import { refreshNormalizationRules } from '../src/lib/mapping/normalization-rules';
-
-async function main() {
-    await refreshNormalizationRules(); // Refresh before processing
-    // ... rest of import
-}
-```
-
-**Production** (`src/lib/nutrition/auto-map.ts`):
-```typescript
-export async function autoMapIngredients(recipeId: string) {
-    await refreshNormalizationRules(); // Refresh before mapping
-    // ... rest of function
-}
-```
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/lib/mapping/normalization-rules.ts` | Add `getAiLearnedPrepPhrases()`, `refreshNormalizationRules()`, `getMergedPrepPhrases()` |
-| `scripts/pilot-batch-import.ts` | Call `refreshNormalizationRules()` at start |
-| `src/lib/nutrition/auto-map.ts` | Call `refreshNormalizationRules()` at start |
-
----
-
-## Verification
-
-After implementation:
-
-1. Run pilot import with new ingredient: "1 cup freshly grated parmesan"
-2. AI returns `prepPhrases: ["freshly grated"]`
-3. Clear FoodMapping for that ingredient
-4. Run again - verify static parser now strips "freshly grated" (from merged cache)
-
----
-
-## Edge Cases
-
-1. **Empty AiNormalizeCache**: Use static rules only (graceful fallback)
-2. **Duplicate phrases**: Set automatically deduplicates
-3. **Regex vs literal**: AI phrases are literal strings; static file has regex patterns - handle both
-4. **Case sensitivity**: Normalize to lowercase before merging
+The requirement is real: the parser re-pays for a phrase the LLM already identified. Any
+replacement has to satisfy the constraint this one violated — **key computation must not
+depend on the contents of a keyed store**. A curated allowlist file, regenerated offline
+and committed, satisfies that. A runtime read of `AiNormalizeCache` does not, however it is
+filtered.

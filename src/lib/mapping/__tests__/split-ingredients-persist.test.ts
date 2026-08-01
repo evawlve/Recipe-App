@@ -17,12 +17,17 @@
  * still pass against a permanently-undefined read, which is exactly how this shipped.
  */
 
+// The read path is a single `UPDATE ... RETURNING *` through $queryRaw (2026-08-01); it
+// replaced a findUnique-then-update pair. findUnique/update remain mocked because they are
+// still the degraded fallback if a driver refuses that statement.
+const mockQueryRaw = jest.fn();
 const mockFindUnique = jest.fn();
 const mockUpdate = jest.fn();
 const mockUpsert = jest.fn();
 
 jest.mock('../../db', () => ({
     prisma: {
+        $queryRaw: (...args: unknown[]) => mockQueryRaw(...args),
         aiNormalizeCache: {
             findUnique: (...args: unknown[]) => mockFindUnique(...args),
             update: (...args: unknown[]) => mockUpdate(...args),
@@ -38,7 +43,7 @@ jest.mock('../../ai/structured-client', () => ({
     callStructuredLlm: (...args: unknown[]) => mockCallStructuredLlm(...args),
 }));
 
-import { getAiNormalizeCache, saveAiNormalizeCache } from '../validated-mapping-helpers';
+import { getAiNormalizeCache, saveAiNormalizeCache, RULES_VERSION } from '../validated-mapping-helpers';
 import { aiNormalizeIngredient } from '../ai-normalize';
 
 /** A stored row as Prisma returns it. `salt and pepper` is the prompt's own example. */
@@ -60,12 +65,14 @@ function storedRow(overrides: Record<string, unknown> = {}) {
         isBranded: false,
         isMultiIngredient: true,
         splitIngredients: ['salt', 'pepper'],
+        rulesVersion: RULES_VERSION,
         useCount: 3,
         ...overrides,
     };
 }
 
 beforeEach(() => {
+    mockQueryRaw.mockReset().mockResolvedValue([]);
     mockFindUnique.mockReset();
     mockUpdate.mockReset().mockResolvedValue(undefined);
     mockUpsert.mockReset().mockResolvedValue(undefined);
@@ -95,9 +102,6 @@ describe('saveAiNormalizeCache writes the multi-component signal', () => {
         // used to also name batchNormalizeIngredients, which had zero callers and was deleted.)
         await saveAiNormalizeCache('jif peanut butter', {
             normalizedName: 'peanut butter',
-            synonyms: [],
-            prepPhrases: [],
-            sizePhrases: [],
         });
 
         const call = mockUpsert.mock.calls[0][0];
@@ -111,9 +115,6 @@ describe('saveAiNormalizeCache writes the multi-component signal', () => {
         // them would erase a detection made by one that could.
         await saveAiNormalizeCache('jif peanut butter', {
             normalizedName: 'peanut butter',
-            synonyms: [],
-            prepPhrases: [],
-            sizePhrases: [],
         });
 
         const call = mockUpsert.mock.calls[0][0];
@@ -124,7 +125,7 @@ describe('saveAiNormalizeCache writes the multi-component signal', () => {
 
 describe('getAiNormalizeCache projects the multi-component signal', () => {
     it('returns splitIngredients from a stored row', async () => {
-        mockFindUnique.mockResolvedValue(storedRow());
+        mockQueryRaw.mockResolvedValue([storedRow()]);
 
         const cached = await getAiNormalizeCache('salt and pepper');
 
@@ -135,7 +136,7 @@ describe('getAiNormalizeCache projects the multi-component signal', () => {
     it('reads a pre-migration row as not-multi rather than throwing', async () => {
         // Rows written before the columns existed cannot be backfilled without re-running
         // the LLM. `false` / `undefined` is the same answer the old dead read gave.
-        mockFindUnique.mockResolvedValue(storedRow({ isMultiIngredient: false, splitIngredients: null }));
+        mockQueryRaw.mockResolvedValue([storedRow({ isMultiIngredient: false, splitIngredients: null })]);
 
         const cached = await getAiNormalizeCache('salt and pepper');
 
@@ -146,7 +147,7 @@ describe('getAiNormalizeCache projects the multi-component signal', () => {
 
 describe('aiNormalizeIngredient surfaces the signal on a CACHE HIT', () => {
     it('returns the persisted splitIngredients without calling the LLM', async () => {
-        mockFindUnique.mockResolvedValue(storedRow());
+        mockQueryRaw.mockResolvedValue([storedRow()]);
 
         const result = await aiNormalizeIngredient('salt and pepper');
 
@@ -160,7 +161,7 @@ describe('aiNormalizeIngredient surfaces the signal on a CACHE HIT', () => {
 
 describe('aiNormalizeIngredient hands the signal to the cache on a MISS', () => {
     it('forwards the LLM split_ingredients into the save', async () => {
-        mockFindUnique.mockResolvedValue(null);  // cold key
+        mockQueryRaw.mockResolvedValue([]);  // cold key
         mockCallStructuredLlm.mockResolvedValue({
             status: 'success',
             content: {

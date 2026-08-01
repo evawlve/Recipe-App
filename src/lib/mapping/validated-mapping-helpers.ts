@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '@/lib/db';
+import type { AiNormalizeCache } from '@prisma/client';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
 import { normalizeQuery } from '../search/normalize';
 import { logger } from '../logger';
@@ -1139,46 +1140,112 @@ function classifyFailureType(
 }
 
 /**
- * Compute a normalized cache key from a raw ingredient line.
- * This ensures consistent lookups regardless of quantities/units.
+ * Derivation version for AiNormalizeCache's LLM-derived columns.
+ *
+ * saveAiNormalizeCache stamps it; getAiNormalizeCache treats a row below it as a MISS so
+ * the caller re-derives. Bump it deliberately when the normalize prompt, the static rules
+ * file (data/fatsecret/normalization-rules.json) or computeNormalizedKey changes.
+ * Invalidation is lazy and read-triggered, so a bump costs one LLM call per row that is
+ * actually read again — never a bulk delete, and never a bulk re-derive.
  */
-function computeNormalizedKey(rawLine: string): string {
+export const RULES_VERSION = 1;
+
+/**
+ * Compute a normalized cache key from a raw ingredient line, optionally inside a namespace.
+ *
+ * The namespace is concatenated AFTER normalization and is never parsed, lowercased or
+ * tokenised — so `SIMPLIFY:` and `B:<brand>:` keep their case and colons and cannot be
+ * reordered or rewritten by the token pipeline.
+ *
+ * Before 2026-08-01 callers built `'SIMPLIFY:' + rawLine` and handed the whole string in.
+ * parseIngredientLine cannot parse "SIMPLIFY:1 cup rice", so the quantity and unit survived
+ * into the key and one food fragmented across three rows (MEASURED against the real
+ * modules: 'SIMPLIFY:1 cup rice' -> 'simplify 1 cup rice', 'SIMPLIFY:2 cups rice' ->
+ * 'simplify 2 cups rice', 'SIMPLIFY:rice' -> 'simplify rice'). Rewrites fired inside the
+ * prefix too, so 'SIMPLIFY:B:arbys:...' was stored as 'simplify b arbys ...' — a key no
+ * lookup could ever reach again.
+ */
+export function computeNormalizedKey(rawLine: string, namespace = ''): string {
     const parsed = parseIngredientLine(rawLine.trim());
     const baseName = parsed?.name?.trim() || rawLine.trim();
     const normalized = normalizeIngredientName(baseName).cleaned || baseName;
-    // Lowercase for consistent matching
-    return normalized.toLowerCase().trim();
+    // Lowercase for consistent matching — the FOOD BODY only. The namespace is verbatim.
+    return namespace + normalized.toLowerCase().trim();
 }
 
 /**
- * Get AI normalize result from cache or return null
- * Uses normalized key (not raw line) for lookup
+ * Whether `UPDATE ... RETURNING *` through $queryRaw is usable on this connection.
+ * See touchAndFetchCacheRow.
  */
-export async function getAiNormalizeCache(rawLine: string) {
+let rawTouchSupported = true;
+
+/**
+ * One round-trip "read and record the read": increment usage stats and return the row.
+ *
+ * A miss updates 0 rows and returns nothing, which is exactly what findUnique returning
+ * null meant before. The previous shape was findUnique-then-update, i.e. two round-trips
+ * on every hit.
+ *
+ * The fallback is not decoration. `UPDATE ... RETURNING` through $queryRaw is a
+ * Postgres-shaped query; if the driver ever refuses it, failing closed here would turn
+ * every lookup into a miss and send the entire cache back to the LLM. So the first refusal
+ * demotes the process to the old two-round-trip path permanently and logs once.
+ */
+async function touchAndFetchCacheRow(normalizedKey: string): Promise<AiNormalizeCache | null> {
+    if (rawTouchSupported) {
+        try {
+            const rows = await prisma.$queryRaw<AiNormalizeCache[]>`
+                UPDATE "AiNormalizeCache"
+                SET "useCount" = "useCount" + 1, "lastUsedAt" = now()
+                WHERE "normalizedKey" = ${normalizedKey}
+                RETURNING *`;
+            return rows[0] ?? null;
+        } catch (error) {
+            rawTouchSupported = false;
+            logger.warn('ai_normalize_cache.raw_touch_unsupported', {
+                error: (error as Error).message,
+            });
+        }
+    }
+
+    const cached = await prisma.aiNormalizeCache.findUnique({ where: { normalizedKey } });
+    if (!cached) return null;
+    await prisma.aiNormalizeCache.update({
+        where: { normalizedKey },
+        data: { useCount: { increment: 1 }, lastUsedAt: new Date() },
+    });
+    return cached;
+}
+
+/**
+ * Get AI normalize result from cache or return null.
+ * Uses the normalized key (not the raw line) for lookup; `opts.namespace` selects a
+ * key sub-space (see computeNormalizedKey) and must be passed identically to
+ * saveAiNormalizeCache.
+ */
+export async function getAiNormalizeCache(rawLine: string, opts?: { namespace?: string }) {
     try {
-        const normalizedKey = computeNormalizedKey(rawLine);
-        const cached = await prisma.aiNormalizeCache.findUnique({
-            where: { normalizedKey },
-        });
+        const normalizedKey = computeNormalizedKey(rawLine, opts?.namespace ?? '');
+        const cached = await touchAndFetchCacheRow(normalizedKey);
 
         if (!cached) {
             return null;
         }
 
-        // Update usage stats
-        await prisma.aiNormalizeCache.update({
-            where: { normalizedKey },
-            data: {
-                useCount: { increment: 1 },
-                lastUsedAt: new Date(),
-            },
-        });
+        // A row derived under older rules reads as a MISS so the caller re-derives and
+        // saveAiNormalizeCache's update: clause rewrites the derived columns. The usage
+        // increment above already happened and is deliberate: it records that the row is
+        // live, which is what makes the re-derivation traffic-proportional.
+        if ((cached.rulesVersion ?? 0) < RULES_VERSION) {
+            return null;
+        }
 
         // NOTE: this is a hand-built projection, not a spread of the row. A new column on
         // AiNormalizeCache is invisible to every caller until it is added HERE as well —
         // splitIngredients had a live read in ai-normalize.ts for months that could only
         // ever yield undefined, because the column and this projection were both missing.
         return {
+            rulesVersion: cached.rulesVersion ?? 0,
             normalizedName: cached.normalizedName,
             canonicalBase: cached.canonicalBase ?? cached.normalizedName,  // Fallback for backward compatibility
             synonyms: cached.synonyms as string[],
@@ -1206,17 +1273,21 @@ export async function getAiNormalizeCache(rawLine: string) {
 }
 
 /**
- * Save AI normalize result to cache
- * Uses normalized key (not raw line) as the primary key
+ * Save AI normalize result to cache.
+ * Uses the normalized key (not the raw line) as the primary key; `opts.namespace` must
+ * match the one used for the corresponding getAiNormalizeCache lookup.
  */
 export async function saveAiNormalizeCache(
     rawLine: string,
     result: {
         normalizedName: string;
         canonicalBase?: string;  // Base ingredient for cache key
-        synonyms: string[];
-        prepPhrases: string[];
-        sizePhrases: string[];
+        // Optional on purpose: a caller that does not compute these must be able to leave
+        // a richer row's values alone. Passing [] would BLANK them now that the update:
+        // clause writes them — see the note on that clause.
+        synonyms?: string[];
+        prepPhrases?: string[];
+        sizePhrases?: string[];
         cookingModifier?: string;
         isBranded?: boolean;  // Whether AI identified this as a branded product query
         isMultiIngredient?: boolean;  // Input names two distinct ingredients ("salt and pepper")
@@ -1228,10 +1299,11 @@ export async function saveAiNormalizeCache(
             fatPer100g: number;
             confidence: number;
         };
-    }
+    },
+    opts?: { namespace?: string }
 ): Promise<void> {
     try {
-        const normalizedKey = computeNormalizedKey(rawLine);
+        const normalizedKey = computeNormalizedKey(rawLine, opts?.namespace ?? '');
         await prisma.aiNormalizeCache.upsert({
             where: { normalizedKey },
             create: {
@@ -1239,9 +1311,9 @@ export async function saveAiNormalizeCache(
                 rawLine,  // Keep for reference/debugging
                 normalizedName: result.normalizedName,
                 canonicalBase: result.canonicalBase,
-                synonyms: result.synonyms,
-                prepPhrases: result.prepPhrases,
-                sizePhrases: result.sizePhrases,
+                synonyms: result.synonyms ?? [],
+                prepPhrases: result.prepPhrases ?? [],
+                sizePhrases: result.sizePhrases ?? [],
                 cookingModifier: result.cookingModifier,
                 isBranded: result.isBranded ?? false,
                 isMultiIngredient: result.isMultiIngredient ?? false,
@@ -1251,20 +1323,43 @@ export async function saveAiNormalizeCache(
                 estimatedCarbsPer100g: result.nutritionEstimate?.carbsPer100g,
                 estimatedFatPer100g: result.nutritionEstimate?.fatPer100g,
                 nutritionConfidence: result.nutritionEstimate?.confidence,
+                rulesVersion: RULES_VERSION,
                 useCount: 1,
             },
             update: {
                 useCount: { increment: 1 },
                 lastUsedAt: new Date(),
-                // Undefined-safe on purpose: aiSimplifyIngredient shares this table and never
-                // computes these two, so it passes `undefined`, which Prisma treats as "leave
-                // the column alone" rather than "write null/false". A caller that DOES know
-                // must be able to fill a row written by one that didn't.
+                // Every derived column is written HERE as well as in create:. Until
+                // 2026-08-01 this clause carried only useCount/lastUsedAt and the two
+                // multi-ingredient fields, so normalizedName, isBranded and the nutrition
+                // estimate were create-only — a wrong normalization was permanent, and the
+                // rulesVersion gate in getAiNormalizeCache would have stranded rows forever
+                // rather than healing them.
+                //
+                // Undefined-safe on purpose: Prisma reads `undefined` in an update as "leave
+                // the column alone", not "write null/false". aiSimplifyIngredient shares this
+                // table and computes only normalizedName, so it must not blank a richer row's
+                // arrays, brand flag or nutrition estimate. That is also why synonyms /
+                // prepPhrases / sizePhrases are optional in the signature and are NOT
+                // defaulted here (they are defaulted in create: only).
                 // (Corrected 2026-08-01: this used to name batchNormalizeIngredients as a
                 // second writer. That function had zero callers anywhere in src/, scripts/ or
                 // eval/ and its module was deleted — do not reason about it as a live writer.)
+                normalizedName: result.normalizedName,
+                canonicalBase: result.canonicalBase,
+                synonyms: result.synonyms,
+                prepPhrases: result.prepPhrases,
+                sizePhrases: result.sizePhrases,
+                cookingModifier: result.cookingModifier,
+                isBranded: result.isBranded,
                 isMultiIngredient: result.isMultiIngredient,
                 splitIngredients: result.splitIngredients,
+                estimatedCaloriesPer100g: result.nutritionEstimate?.caloriesPer100g,
+                estimatedProteinPer100g: result.nutritionEstimate?.proteinPer100g,
+                estimatedCarbsPer100g: result.nutritionEstimate?.carbsPer100g,
+                estimatedFatPer100g: result.nutritionEstimate?.fatPer100g,
+                nutritionConfidence: result.nutritionEstimate?.confidence,
+                rulesVersion: RULES_VERSION,
             },
         });
 

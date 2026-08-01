@@ -558,6 +558,12 @@ model AiNormalizeCache {
   // were dropped on the floor, so the signal survived only for the life of one request.
   isMultiIngredient        Boolean  @default(false)
   splitIngredients         Json?          // string[] when isMultiIngredient; null otherwise
+  // Derivation version for every LLM-derived column above. saveAiNormalizeCache stamps
+  // RULES_VERSION (src/lib/mapping/validated-mapping-helpers.ts); getAiNormalizeCache
+  // treats a row below it as a MISS, so a bump re-derives lazily, one LLM call per row
+  // that is actually read again. Before this column there was no invalidation path of
+  // any kind — no TTL, no version, no deleteMany — so a wrong normalization was permanent.
+  rulesVersion             Int      @default(1)
   createdAt                DateTime @default(now())
   lastUsedAt               DateTime @default(now())
   useCount                 Int      @default(0)

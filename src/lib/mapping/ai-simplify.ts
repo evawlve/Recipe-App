@@ -68,10 +68,19 @@ export async function aiSimplifyIngredient(
     const brand = preserveBrand?.trim() || null;
     // Namespace the cache key when preserving a brand so brand-preserving results
     // never collide with (or return) older brand-stripped rows for the same line.
-    const cacheKey = CACHE_PREFIX + (brand ? `B:${brand.toLowerCase()}:` : '') + rawLine;
+    //
+    // The namespace is passed SEPARATELY, not concatenated onto rawLine. Concatenating it
+    // (the shape before 2026-08-01) fed the prefix through parseIngredientLine +
+    // normalizeIngredientName as if it were food: quantities survived into the key
+    // ('SIMPLIFY:1 cup rice' / 'SIMPLIFY:2 cups rice' / 'SIMPLIFY:rice' became three rows
+    // for one food) and the prefix itself was rewritten ('SIMPLIFY:B:arbys:...' stored as
+    // 'simplify b arbys ...', which no lookup could reach again).
+    // Colons are stripped from the brand so the namespace grammar
+    // `SIMPLIFY:` + optional `B:<brand>:` stays unambiguous for scripts that split on it.
+    const namespace = CACHE_PREFIX + (brand ? `B:${brand.toLowerCase().replace(/:/g, '')}:` : '');
 
     // 1. Check Cache
-    const cached = await getAiNormalizeCache(cacheKey);
+    const cached = await getAiNormalizeCache(rawLine, { namespace });
     if (cached && cached.normalizedName) {
         return {
             simplified: cached.normalizedName,
@@ -105,13 +114,12 @@ export async function aiSimplifyIngredient(
 
         if (!simplified) return null;
 
-        // Save to cache
-        await saveAiNormalizeCache(cacheKey, {
+        // Save to cache. synonyms/prepPhrases/sizePhrases are left UNDEFINED, not []:
+        // saveAiNormalizeCache's update: clause now writes them, and [] would blank a row
+        // written earlier by aiNormalizeIngredient, which does compute them.
+        await saveAiNormalizeCache(rawLine, {
             normalizedName: simplified,
-            synonyms: [],
-            prepPhrases: [],
-            sizePhrases: [],
-        });
+        }, { namespace });
 
         return {
             simplified,
