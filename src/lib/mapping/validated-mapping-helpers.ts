@@ -1093,7 +1093,22 @@ export async function saveValidatedMapping(
             if (!incumbentCorrupt && crossSourceFamily) {
                 const incumbentConfidence = existing?.aiConfidence ?? 0;
                 const bar = crossSourceDisplacementBar(incumbentConfidence);
-                if (escapeForfeit) {
+                // GATED ON THE BAR, not on the forfeit alone. The audit line
+                // below is the ONLY way to tell a waived margin from a save
+                // that cleared the bar unaided, so firing it for a challenger
+                // that was never blocked destroys the one thing it measures.
+                // The two populations overlap heavily: MEASURED 2026-08-01, of
+                // the 261 live-key `save_rejected:cross_source_margin` events
+                // 237 clear the capped bar unaided while 59 carry a
+                // cacheEscape, so an ungated audit over-attributes to the
+                // forfeit. Re-derive:
+                //   ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire \
+                //     -c "SELECT count(*) FILTER (WHERE e.confidence >= 0.999), count(e.\"cacheEscape\"), count(*) \
+                //         FROM \"MappingEventLog\" e JOIN \"FoodMapping\" m ON m.\"normalizedForm\"=e.\"normalizedForm\" \
+                //         WHERE e.\"dropReason\"='save_rejected:cross_source_margin';"'
+                if (clampedConfidence >= bar) {
+                    // Cleared unaided. No waiver happened, so no waiver is logged.
+                } else if (escapeForfeit) {
                     // Distinct + greppable: a waived margin is a successful save,
                     // so it can carry no dropReason — without this line the
                     // waiver is indistinguishable from a save that simply
@@ -1109,7 +1124,7 @@ export async function saveValidatedMapping(
                         challengerConfidence: clampedConfidence,
                         barWaived: bar,
                     });
-                } else if (clampedConfidence < bar) {
+                } else {
                     logger.warn('validated_mapping.save_rejected_cross_source_margin', {
                         rawIngredient,
                         normalizedForm,

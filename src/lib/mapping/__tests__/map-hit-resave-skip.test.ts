@@ -489,6 +489,73 @@ describe('read escapes are threaded to the save gate', () => {
         ]);
     });
 
+    it('a legacy_brand_mismatch forfeit names the LEGACY row, not the symmetric-key row', async () => {
+        // `CacheLookupRejection` is ONE slot shared by both lookups inside
+        // lookupValidatedMappingWithLegacyFallback(). The symmetric-key lookup
+        // here refuses row A and writes its identity into that slot; the legacy
+        // lookup then finds brandless row B and refuses it too, on
+        // legacy_brand_mismatch. That branch sets reason/normalizedForm/foodName
+        // inline, so without also rewriting targetKey the escape reported row
+        // B's NAME against row A's RECORD — and that object is what feeds both
+        // the save-time forfeit and the cross_source_margin_waived_read_escape
+        // audit line, i.e. the one counter for waivers pointed at the wrong row.
+        // Both rows really were refused, so either is a legitimate forfeit; only
+        // a self-consistent one is diagnosable.
+        const ROW_A = 'off:1111111111111';   // refused by the symmetric-key lookup
+        const ROW_B = '2222222222222';       // refused by the legacy lookup (brand mismatch)
+        (getValidatedMappingByNormalizedName as jest.Mock).mockImplementation(
+            async (key: string, _src: string, _raw: string, rejection?: { reason: string | null; targetKey?: string | null }) => {
+                if (key === 'nutrition optimum protein shake') {
+                    // Row A found and rejected: writes reason AND targetKey.
+                    if (rejection) { rejection.reason = 'core_token_mismatch'; rejection.targetKey = ROW_A; }
+                    return null;
+                }
+                if (key === 'protein shake') {
+                    // Row B: generic, carries none of the detected brand, so
+                    // legacyHitReflectsBrand() is false and the branch fires.
+                    return {
+                        foodId: `off_${ROW_B}`,
+                        foodName: 'Protein Shake',
+                        brandName: null,
+                        source: 'openfoodfacts',
+                        confidence: 0.98,
+                        validatedBy: 'ai',
+                    };
+                }
+                return null;
+            },
+        );
+        (gatherCandidates as jest.Mock).mockResolvedValue([
+            { id: 'ps-2', source: 'ai_generated', name: 'Optimum Nutrition Protein Shake', brandName: 'Optimum Nutrition', score: 0.9, rawData: {} },
+        ]);
+        (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
+            id: 'ps-2',
+            displayName: 'Optimum Nutrition Protein Shake',
+            ingredientName: 'protein shake',
+            caloriesPer100g: 44,
+            proteinPer100g: 10,
+            carbsPer100g: 1.5,
+            fatPer100g: 0.4,
+            servings: [{ id: 'srv-ps2', label: '1 cup', grams: 240, volumeMl: 240 }],
+        });
+
+        await mapIngredientWithFallback('1 cup protein shake', {
+            minConfidence: 0,
+            skipFdc: true,
+            brand: 'optimum nutrition',
+        });
+
+        expect(saveValidatedMapping).toHaveBeenCalled();
+        const escapes = (saveValidatedMapping as jest.Mock).mock.calls[0][3].readEscapes as
+            Array<{ targetKey: string; reason: string }>;
+        const brandMismatch = escapes.filter(e => e.reason.endsWith('legacy_brand_mismatch'));
+        expect(brandMismatch.length).toBeGreaterThan(0);
+        for (const e of brandMismatch) {
+            expect(e.targetKey).toBe(`off:${ROW_B}`);
+            expect(e.targetKey).not.toBe(ROW_A);
+        }
+    });
+
     it('sends an EMPTY list when nothing was escaped — a cold key forfeits nothing', async () => {
         // The negative assertion. An implementation that passed a non-empty list
         // unconditionally would waive the margin for every save in the corpus.

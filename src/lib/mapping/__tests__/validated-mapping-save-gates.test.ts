@@ -1088,6 +1088,39 @@ describe('escaped incumbents forfeit the cross-source margin', () => {
         expect(telemetry.dropReason).toBe('save_rejected:serving_downgrade');
     });
 
+    it('does NOT log a waiver for a challenger that clears the capped bar unaided', async () => {
+        // The audit line is the ONLY way to tell a waived margin from a save
+        // that was never blocked, so it must not fire when the forfeit did no
+        // work. Incumbent 0.98 -> bar min(1.03, 0.999) = 0.999; a 1.0 challenger
+        // clears it with or without the escape. The two populations overlap
+        // heavily on live data (MEASURED 2026-08-01: of the 261 live-key
+        // cross_source_margin rejections, 237 clear the capped bar unaided while
+        // 59 carry a cacheEscape), so an ungated audit over-attributes to the
+        // forfeit exactly where the forfeit is least likely to be the cause.
+        mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
+        mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });
+        const { logger } = await import('../../logger');
+        const auditSpy = jest.spyOn(logger, 'audit').mockImplementation(() => {});
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'avocado',
+            makeMapping({ foodId: `fdc_${FDC_ID}`, foodName: 'Avocados, raw' }),
+            { confidence: 1.0 } as AIValidationResult,
+            {
+                telemetry,
+                readEscapes: [{ targetKey: `off:${OFF_BARCODE}`, reason: 'normalized:count_label' }],
+            },
+        );
+        // The save still lands — this changes only what is CLAIMED about why.
+        expect(mockFoodMappingUpsert).toHaveBeenCalledTimes(1);
+        expect(telemetry.dropReason).toBeUndefined();
+        expect(auditSpy).not.toHaveBeenCalledWith(
+            'validated_mapping.cross_source_margin_waived_read_escape',
+            expect.anything(),
+        );
+        auditSpy.mockRestore();
+    });
+
     it('an empty/absent escape list behaves exactly as before', async () => {
         mockFoodMappingFindUnique.mockResolvedValue(incumbentOff);
         mockOffFoodFindUnique.mockResolvedValue({ servingGrams: 30, packageQuantity: null, corruptReason: null });

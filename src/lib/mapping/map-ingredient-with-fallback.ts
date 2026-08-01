@@ -126,6 +126,18 @@ async function lookupValidatedMappingWithLegacyFallback(
                 rejection.reason = 'legacy_brand_mismatch';
                 rejection.normalizedForm = legacyKey;
                 rejection.foodName = legacyHit.foodName;
+                // targetKey MUST be rewritten here, not left alone. `rejection`
+                // is ONE slot shared by both lookups above, and the symmetric-key
+                // lookup may already have written the identity of a DIFFERENT
+                // refused row into it. Leaving it would make the record named by
+                // `targetKey` disagree with the row named by `reason`/`foodName`
+                // in the same object — and that object is what feeds both
+                // `readEscapes` (the save-time forfeit) and the
+                // `cross_source_margin_waived_read_escape` audit line, so the one
+                // counter for waivers would point at the wrong row. Both rows
+                // were genuinely refused, so either is a legitimate forfeit; only
+                // a self-consistent one is diagnosable.
+                rejection.targetKey = targetKeyOfFoodId(legacyHit.foodId);
             }
             return null;
         }
