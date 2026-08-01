@@ -773,16 +773,16 @@
       "verified": "2026-07-31"
     },
     {
-      "id": "off-nutrition-tier-never-marked",
-      "claim": "No nutrition-tier corruptReason mark exists in the corpus: every live mark carries a panel-tier prefix, so detect-corrupt-nutrition.ts output has never been applied",
-      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md#the-nutrition-detectors-marks-have-never-been-applied",
+      "id": "off-no-impossible-rows-unmarked",
+      "claim": "No live unmarked OffFood row exceeds MAX_KCAL_100G (905 kcal/100g). The nutrition-tier physics marks were applied 2026-08-01 (22,087 rows); this goes RED if a refresh wipes them, which it will until the refresh re-runs detect-corrupt-nutrition.ts",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md#the-nutrition-detector-tier",
       "where": "box",
-      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT count(*) FROM \\\"OffFood\\\" WHERE \\\"corruptReason\\\" IS NOT NULL AND split_part(\\\"corruptReason\\\", ':', 1) NOT LIKE 'panel-%'\"",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT count(*) FROM \\\"OffFood\\\" WHERE \\\"corruptReason\\\" IS NULL AND \\\"duplicateOfBarcode\\\" IS NULL AND (\\\"nutrientsPer100g\\\"->>'calories')::float > 905\"",
       "expect": {
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-07-31"
+      "verified": "2026-08-01"
     },
     {
       "id": "off-refresh-omits-nutrition-detector",
