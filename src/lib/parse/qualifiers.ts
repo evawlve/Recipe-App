@@ -20,13 +20,28 @@ const QUALIFIERS = new Set([
 ]);
 
 // Qualifiers that change the IDENTITY of the food (not just its prep/size).
-// Used by deriveCacheKeyName (src/lib/mapping/cache-key.ts) to append
-// discriminators to cache keys: "whole milk" must not share a key with "milk",
-// "cooked quinoa" must not share a key with "quinoa" (dry).
+// Used by deriveCacheKeyName (src/lib/mapping/cache-key-core.ts) to append
+// discriminators to cache keys: "cooked quinoa" must not share a key with
+// "quinoa" (dry), "canned tuna" not with "tuna".
 // Keep this list tiny — every entry splits the cache keyspace.
+//
+// Membership here is necessary but NOT sufficient: a token must also survive
+// extractQualifiers() into parsed.qualifiers, or deriveCacheKeyName never sees
+// it. 'raw'/'dried'/'canned' were added 2026-08-01 — they were already being
+// captured as qualifiers and then dropped at the key.
+//
+// 'whole' is the standing counter-example and is NOT fixed by this list:
+// src/lib/parse/unit.ts consumes it as a UNIT, so "whole milk" reaches here
+// with qualifiers=[] and derives key "milk", identical to bare "milk"
+// (measured 2026-08-01; suspected cause of golden n-mq-34, "whole milk" ->
+// "Milk" at fat100 1.3, which is skim). Fixing it means touching unit parsing
+// and therefore serving sizes, so it is deliberately a separate change.
 export const IDENTITY_QUALIFIERS = new Set([
   'cooked',
   'whole',
+  'raw',
+  'dried',
+  'canned',
 ]);
 
 // Multi-word qualifiers (must be checked in order)

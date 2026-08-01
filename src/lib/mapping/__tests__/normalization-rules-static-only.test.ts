@@ -85,13 +85,24 @@ describe('a learned phrase cannot repoint a key onto a bare generic', () => {
     });
 
     it('guard: membership of this list IS what collapses a key', async () => {
-        // Non-vacuity, in two halves.
+        // Non-vacuity, in three halves.
         //
-        // (a) The mechanism is real: 'grilled' is a static prep phrase, and a query
-        //     carrying it loses it and lands on the bare generic.
+        // (a) The mechanism is real: 'microwaved' is a static prep phrase, and a
+        //     query carrying it loses it and lands on the bare generic.
+        //     This used to be demonstrated with 'grilled' — see (c) for why it
+        //     could not stay, and note the mechanism itself is unchanged.
         await refreshNormalizationRules();
-        expect(staticPrepPhrases()).toContain('grilled');
-        expect(key('grilled chicken')).toBe('chicken');
+        expect(staticPrepPhrases()).toContain('microwaved');
+        expect(key('microwaved rice')).toBe('rice');
+
+        // (c) The cooking-state fix, guarded from the same side. 'grilled' was
+        //     removed from the static list on 2026-08-01 precisely BECAUSE
+        //     membership collapses a key, and collapsing 'grilled chicken' onto
+        //     'chicken' is what made proteins bill raw. If either assertion here
+        //     fails the collision is back.
+        //     Owner: sync-docs/reports/2026-08-01_cooking-state-key-collision.md
+        expect(staticPrepPhrases()).not.toContain('grilled');
+        expect(key('grilled chicken')).toBe('grilled chicken');
 
         // (b) 'sandwich', 'fried' and 'breaded' are live learned phrases that are NOT in the
         //     static file. The old refresh put them in exactly the position 'grilled'

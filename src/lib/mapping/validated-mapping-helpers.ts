@@ -1371,7 +1371,13 @@ function classifyFailureType(
  * Invalidation is lazy and read-triggered, so a bump costs one LLM call per row that is
  * actually read again — never a bulk delete, and never a bulk re-derive.
  */
-export const RULES_VERSION = 1;
+// 2 (2026-08-01): the cooking-state verbs were removed from prep_phrases, so a
+// v1 row replays the OLD collapse and outvotes the rules change. Measured before
+// the bump: 31 rows whose rawLine carries a state their normalizedName dropped,
+// led by "scrambled eggs" -> "eggs" (235 uses) and "grilled chicken salad" ->
+// "chicken salad" (203). Without this the fix is invisible on the hottest lines
+// while every unit test stays green, because the tests call the normalizer direct.
+export const RULES_VERSION = 2;
 
 /**
  * Compute a normalized cache key from a raw ingredient line, optionally inside a namespace.
