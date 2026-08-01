@@ -361,6 +361,10 @@ if (require.main === module) {
     };
     const prisma = new PrismaClient();
     runScan(prisma as unknown as ScanDb, {
+        // The default results/ dir is shared across runs, so a caller that
+        // globs for the report it just produced can pick up an older one.
+        // refresh-off-from-parquet.sh passes a fresh per-run directory.
+        outDir: argValue('--out-dir'),
         minGroup: Number(argValue('--min-group') ?? MIN_SODIUM_OUTLIER_GROUP),
         print: Number(argValue('--print') ?? 40),
     })
