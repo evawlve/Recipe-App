@@ -353,6 +353,24 @@ export interface MapIngredientOptions {
     debug?: boolean;
     skipAiValidation?: boolean;
     skipCache?: boolean;
+    /**
+     * Do not WRITE the FoodMapping cache. Sibling of `skipCache`, which only
+     * gates the two read layers.
+     *
+     * Why it exists: a cold audit run (`skipCache`) still called
+     * `saveValidatedMapping()` for every line, so measuring the pipeline
+     * rewrote the thing being measured. On 2026-08-02 a single cold golden run
+     * changed 20 rows and added 3 in a cache that had just been agent-screened,
+     * replacing screened rows with unscreened ones.
+     *
+     * Scope, precisely: this gates the FoodMapping write — the curated identity
+     * map. It does NOT make the request read-only. Hydration still persists
+     * upstream records (FatSecretFood, OffFood, AiGenerated*, FdcServing,
+     * OffServing) and telemetry still writes MappingEventLog. Those are caches
+     * of other people's data, not curated rows; the identity map is the asset a
+     * measurement must not disturb.
+     */
+    skipSave?: boolean;
     skipFdc?: boolean;
     /** Internal flag - skip in-flight lock for recursive fallback calls */
     _skipInFlightLock?: boolean;
@@ -551,6 +569,7 @@ export async function mapIngredientWithFallback(
         minConfidence = 0,
         debug = false,
         skipCache = false,
+        skipSave = false,
         skipFdc = false,
         allowLiveFallback = true,
         _skipInFlightLock = false,
@@ -3149,7 +3168,13 @@ export async function mapIngredientWithFallback(
                 });
             }
 
-            await saveValidatedMapping(rawLine, result, {
+            // skipSave: a measurement must not rewrite what it measures. Placed
+            // around the call rather than inside saveValidatedMapping() so the
+            // save-gate telemetry classes keep meaning "a gate rejected this
+            // write" — a suppressed write is not a rejected one, and folding the
+            // two together would corrupt the save_rejected counters the funnel
+            // reads.
+            if (!skipSave) await saveValidatedMapping(rawLine, result, {
                 approved: true,
                 confidence,
                 reason: selectionReason,

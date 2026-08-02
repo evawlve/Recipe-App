@@ -178,6 +178,14 @@ export async function POST(req: NextRequest) {
     const noCache = isDevBypass &&
       (req.nextUrl.searchParams.get('nocache') === '1' || body.nocache === true);
 
+    // Companion to nocache: do not WRITE the FoodMapping cache either. Admin-only.
+    // nocache alone still saved every line, so a cold audit rewrote the cache it
+    // was auditing — one cold golden run on 2026-08-02 changed 20 rows and added
+    // 3 over freshly agent-screened rows. Deliberately a SEPARATE flag rather
+    // than implied by nocache: some cold runs (a warm-from-cold) do want the write.
+    const noSave = isDevBypass &&
+      (req.nextUrl.searchParams.get('nosave') === '1' || body.nosave === true);
+
     let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
     // Segmentation-cache outcome for telemetry: true = split served from
@@ -294,6 +302,7 @@ export async function POST(req: NextRequest) {
         brand: brand || undefined,
         normalizedForm: normalizedForm || undefined,
         skipCache: noCache,
+        skipSave: noSave,
         telemetry,
         aiNutritionBudget: nutritionBudget,
         aiHydrationBudget: hydrationBudget,
