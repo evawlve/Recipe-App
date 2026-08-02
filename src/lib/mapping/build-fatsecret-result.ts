@@ -469,13 +469,53 @@ export async function buildFatSecretResult(
         // contains the request's trailing token ("1 pretzel (Include nuggets)")
         // is itself proof the token is a countable piece of THIS food. Only
         // fires when such a serving exists, so no false discrete billing.
+        //
+        // BUT IT YIELDS TO A DECLARED SERVING ON A BARE REQUEST. This fallback is
+        // lexicon-free by design — it accepts whatever trailing token happens to
+        // appear in some serving label — so it is the weakest evidence in this
+        // branch, and on a bare query it was outranking the record's own answer.
+        //
+        // `trader joes chicken breast` (golden eval n-mq-47, drift measured
+        // 2026-08-02) resolved trailing token `breast` against
+        // `1/2 breast, bone and skin removed` on `fs_4881229`. That row carries
+        // grams 118 and **numberOfUnits 0.5**, so the per-unit arithmetic below
+        // derives 118 / 0.5 = 236 g — one whole breast. The arithmetic is
+        // correct; the ANSWER is wrong, because a bare request asks what one
+        // serving is and that record says so itself, on a row reading
+        // `1 serving (90 g)`. 236 g is outside the case's [80, 200] band; 90 g
+        // is inside it.
+        //
+        // Note what this is NOT: a size ceiling. A ceiling was the obvious read
+        // (the floor `BARE_MIN_PIECE_SERVING_GRAMS` has no upper twin) and it
+        // would be a magic number chosen to exclude one food, and would still
+        // pick the wrong row for every record whose pieces are legitimately
+        // large. Preferring an explicit declaration over an inference is a rule
+        // with a reason, and it needs no threshold.
+        //
+        // Scoped to the lexicon-free path deliberately. The curated
+        // `DISCRETE_ITEM_UNIT_RE` path is strong evidence — "1 bar" on a protein
+        // bar SHOULD outrank a generic serving row — and is left alone.
         if (!match && !unit && !barePlural) {
             const lastToken = (parsed?.name || foodName)
                 .toLowerCase().trim().split(/\s+/).pop() ?? '';
             const fallbackNoun = singularizeUnit(lastToken);
             if (fallbackNoun && fallbackNoun.length >= 3) {
                 const fallbackMatch = usableServings.find(s => servingMatchesNoun(s, fallbackNoun));
-                if (fallbackMatch) {
+                const declaredOneServing = bareSingular
+                    ? usableServings.find(s =>
+                        EXPLICIT_ONE_SERVING_RE.test(s.description)
+                        && usableBareLabelServing(
+                            s.grams, extractLabelServingUnit(s.description)) != null)
+                    : undefined;
+                if (fallbackMatch && declaredOneServing) {
+                    logger.info('fs.build_result.bare_fallback_yielded_to_declared_serving', {
+                        foodId: candidate.id,
+                        fallbackNoun,
+                        fallbackServing: fallbackMatch.description,
+                        declaredServing: declaredOneServing.description,
+                    });
+                }
+                if (fallbackMatch && !declaredOneServing) {
                     noun = fallbackNoun;
                     match = fallbackMatch;
                 }
