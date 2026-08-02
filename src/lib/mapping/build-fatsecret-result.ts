@@ -51,6 +51,16 @@ function requestBillsByServing(parsed: ParsedIngredient | null): boolean {
     return !(parsed?.unit && EXPLICIT_MEASURE_UNIT_RE.test(parsed.unit.trim()));
 }
 
+/**
+ * A serving row that literally calls itself one serving ("1 serving (85 g)",
+ * "1 serving, cooked"). Deliberately anchored and count-1: "2 servings" is a
+ * multiple and "1 serving size" style prose is not what FatSecret emits. 3,565
+ * such rows exist on the box, 3,422 of them inside the 3-400g bare band
+ * (measured 2026-08-02). Read by the default-serving fallback below, where it
+ * replaces a positional pick — see the reasoning there.
+ */
+const EXPLICIT_ONE_SERVING_RE = /^\s*1\s+serving\b/i;
+
 const WEIGHT_TO_GRAMS: Record<string, number> = {
     'g': 1, 'gram': 1, 'grams': 1,
     'oz': 28.35, 'ounce': 28.35, 'ounces': 28.35,
@@ -507,6 +517,32 @@ export async function buildFatSecretResult(
         // cascade had no band and no successor, so an out-of-band serving was
         // simply billed.
         //
+        // AND THE FALLBACK BELOW THE DECLARED DEFAULT WAS A COIN FLIP, with a
+        // measurable population. `defaultServingId` resolves for 23,837 of
+        // 23,837 FatSecret foods, so `?? usableServings[0]` fires in exactly
+        // one situation: the declared default IS the per-100g panel row that
+        // `isPer100gPanelServing` demotes out of `usableServings` above. That is
+        // 569 foods, 568 of which have another serving to land on positionally
+        // (measured 2026-08-02, box). `Chicken` (fs_1623) is one: its declared
+        // default is the shared "100 g" row, and the positional pick billed
+        // whichever serving the include happened to return first — 85g before
+        // this branch was ordered, 7g ("1 thin slice") after. Ordering made it
+        // reproducible without making it right; reproducible-and-wrong is worse,
+        // because it stops being noticed.
+        //
+        // 278 of those 569 records answer the question themselves with an
+        // explicit "1 serving (Xg)" row, and 3,422 of the 3,565 such rows
+        // corpus-wide are inside the 3-400g band. Preferring it is the record's
+        // own statement of what a serving is, which is the whole hierarchy this
+        // branch implements; position is not evidence of anything.
+        //
+        // No lexicon rescue exists for this class, which is why it matters:
+        // `getBareQueryDefault` returns NOTHING for chicken, beef, steak,
+        // salmon, pork, turkey, rice, pasta, bread, egg, ham or sausage
+        // (measured 2026-08-02). The staple proteins and grains have no category
+        // default, so falling through to the bare-query guard would not have
+        // corrected `chicken` either — it would have billed the flat 100g.
+        //
         // Reject, do NOT substitute. Picking "the next in-band serving" looks
         // better and is not safe: `usableServings` comes from an unordered
         // include, and fs_37040's other in-band servings are 28.35g AND 143g.
@@ -524,6 +560,7 @@ export async function buildFatSecretResult(
                 (row?.defaultServingId
                     ? usableServings.find(s => s.servingId === row!.defaultServingId)
                     : undefined)
+                ?? usableServings.find(s => EXPLICIT_ONE_SERVING_RE.test(s.description))
                 ?? usableServings[0];
             const defaultServing = declaredDefault && bareServingUsable(declaredDefault)
                 ? declaredDefault
