@@ -60,17 +60,17 @@ const WRITE_BASELINE = args.includes('--write-baseline');
  *
  * `/api/nlp/parse` honours this only for dev-bypass callers, which is what
  * API_KEY above makes this harness.
+ *
+ * A cold run also sends `nosave=1`, so it cannot rewrite the cache it measures,
+ * and it scores against its own `known-issue-baseline-cold.json`.
  */
 const NO_CACHE = args.includes('--nocache');
 
-// Recording a cold baseline would silently replace the warm values every batch gate
-// compares against, and the next batch would be blamed for the difference. Exit 2 —
-// the campaign's contract for "this run is not a result", never a pass.
-if (NO_CACHE && WRITE_BASELINE) {
-    console.error('!! --nocache with --write-baseline would overwrite the WARM knownIssue baseline');
-    console.error('!! with COLD values. The batch gate compares against it; refusing.');
-    process.exit(2);
-}
+// NOTE: `--nocache --write-baseline` used to exit 2, because both modes shared one
+// baseline file and a cold run would have overwritten the WARM values every batch
+// gate compares against. The files are separate now (see `baselinePath` below), so
+// the combination is not only safe but the intended way to record cold pins. The
+// invariant that actually matters is the SEPARATION, not the refusal.
 
 const goldenPath = path.join(__dirname, 'golden-set.json');
 const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
@@ -125,7 +125,23 @@ function percentile(sorted: number[], p: number): number {
 // ---------------------------------------------------------------------------
 
 
-const baselinePath = path.join(__dirname, 'known-issue-baseline.json');
+/**
+ * Cold and warm runs get SEPARATE baselines, because a pin records what a case
+ * currently does and those are different questions: warm is "what does the cache
+ * hold for this key", cold is "what does the pipeline produce for it". Measured
+ * 2026-08-02 on the same build, minutes apart: 0 real failures warm, 19 cold.
+ * Scoring cold results against warm pins reclassifies cases wholesale, which is
+ * why the first cold run's 19 is an upper bound on new information rather than a
+ * count of new defects.
+ *
+ * The cold file is absent until someone records it. That is deliberate and it is
+ * SAFE: an empty baseline means no case is pinned, so nothing is silently
+ * absolved — a cold failure reads as a real failure until a human pins it.
+ */
+const baselinePath = path.join(
+    __dirname,
+    NO_CACHE ? 'known-issue-baseline-cold.json' : 'known-issue-baseline.json',
+);
 
 function loadKnownIssueBaseline(): Record<string, BaselineEntry> {
     try {
@@ -225,7 +241,11 @@ async function runNlpCase(c: any): Promise<CaseResult> {
     const query = c.item?.name ?? c.text;
     try {
         const body = c.item ? { items: [c.item] } : { text: c.text };
-        const res = await fetch(`${BASE}/api/nlp/parse${NO_CACHE ? '?nocache=1' : ''}`, {
+        // nosave rides along with nocache, always. A cold run exists to measure
+        // the pipeline; without this it rewrites the cache as it goes and the
+        // "measurement" is also a mutation. Measured 2026-08-02: 20 rows changed,
+        // 3 added, over rows that had just been agent-screened.
+        const res = await fetch(`${BASE}/api/nlp/parse${NO_CACHE ? '?nocache=1&nosave=1' : ''}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
             body: JSON.stringify(body),

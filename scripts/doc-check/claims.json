@@ -993,11 +993,23 @@
       "verified": "2026-08-02"
     },
     {
-      "id": "eval-nocache-refuses-write-baseline",
-      "claim": "--nocache with --write-baseline exits 2 rather than overwrite the WARM knownIssue baseline the batch gate compares against with cold values",
-      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "id": "eval-cold-baseline-is-separate",
+      "claim": "A --nocache run scores against its OWN known-issue-baseline-cold.json, never the warm baseline the batch gate uses. Supersedes the earlier exit-2 refusal of --nocache --write-baseline: with separate files the combination is the intended way to record cold pins, and the invariant that matters is the separation.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
       "where": "backend",
-      "command": "grep -c 'NO_CACHE && WRITE_BASELINE' scripts/eval/run-eval.ts",
+      "command": "grep -c \"NO_CACHE ? 'known-issue-baseline-cold.json'\" scripts/eval/run-eval.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-02"
+    },
+    {
+      "id": "eval-cold-run-cannot-write-cache",
+      "claim": "A --nocache run sends nosave=1, so measuring the pipeline cold cannot rewrite the FoodMapping cache it is measuring. Before this, one cold golden run changed 20 rows and added 3 over freshly agent-screened rows.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
+      "where": "backend",
+      "command": "grep -c 'nocache=1&nosave=1' scripts/eval/run-eval.ts",
       "expect": {
         "kind": "matches",
         "value": "^1$"
