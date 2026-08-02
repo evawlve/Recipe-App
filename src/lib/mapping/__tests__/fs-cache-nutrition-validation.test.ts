@@ -51,6 +51,7 @@ import { queueForDeferredHydration } from '../deferred-hydration';
 import { backfillOnDemand } from '../serving-backfill';
 import { insertAiServing } from '../ai-backfill';
 import { gatherCandidates } from '../gather-candidates';
+import { callStructuredLlm } from '../../ai/structured-client';
 import { prisma } from '../../db';
 
 jest.mock('../../db', () => ({
@@ -101,6 +102,46 @@ jest.mock('../gather-candidates', () => {
     return { ...actual, gatherCandidates: jest.fn() };
 });
 
+// ── Why these last two mocks exist: this file used to reach the network ──────
+//
+// Every assertion below is about `telemetry.cacheEscape`, which is set in the
+// Step 1a / Step 1c cache-validation blocks. But an ESCAPED hit does not end
+// the call — the mapper falls through to full resolution, finds no candidates
+// (gatherCandidates is stubbed to []), and runs its AI fallback chain
+// (ai-simplify, then ai-nutrition-backfill). Both of those go through
+// callStructuredLlm(), the single chokepoint for LLM traffic in the mapper,
+// and ai-simplify.ts does `import 'dotenv/config'` at module scope — so the
+// suite loaded the developer's real .env and billed live OpenRouter calls.
+//
+// MEASURED 2026-08-02 on clean master (`for i in $(seq 10); do npx jest
+// src/lib/mapping/__tests__/fs-cache-nutrition-validation.test.ts; done`):
+// 129 successful `openrouter / openai/gpt-4o-mini` round trips over 10 runs
+// (~13 per run), each 810–3163 ms. Two or three of those land inside one
+// `it()` against jest's 5000 ms default, so 10 of 10 runs failed, with a
+// DIFFERENT set of 2–5 tests timing out each time. It was network latency,
+// not slow code — the assertions themselves resolve in single-digit ms.
+//
+// So the fix is to remove the network, not to raise the timeout. Stubbing
+// callStructuredLlm to return an error is exactly the shape CI already sees,
+// where no API key is configured and getProviderChain() returns []: the
+// fallback chain still runs, it just degrades instead of dialling out.
+jest.mock('../../ai/structured-client', () => {
+    const actual = jest.requireActual('../../ai/structured-client');
+    return { ...actual, callStructuredLlm: jest.fn() };
+});
+
+// gather-candidates calls warmupEmbedder() at MODULE scope, and the
+// requireActual above executes that module for real — starting an ONNX
+// feature-extraction model load that outlives the run and produced the
+// "Cannot log after tests are done" warnings. Same stub as
+// src/lib/ai/__tests__/structured-schema-invariant.test.ts.
+jest.mock('../../search/query-embedding', () => ({
+    SEMANTIC_SEARCH_ENABLED: false,
+    CORPUS_POOLING: 'cls',
+    warmupEmbedder: jest.fn(),
+    embedQuery: jest.fn().mockResolvedValue(null),
+}));
+
 const fsCacheRow = {
     foodId: 'fs_69219858',
     foodName: 'Ten Vegetable Soup - Bowl',
@@ -111,6 +152,27 @@ const fsCacheRow = {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    // clearAllMocks() is mockClear(), which resets recorded CALLS but leaves
+    // mocked implementations in place — including an unconsumed
+    // mockResolvedValueOnce() queue. Every test below arms
+    // getValidatedMappingByNormalizedName with a `Once`, and a test that
+    // returns down a shorter path than expected leaves its `Once` sitting in
+    // the queue for the NEXT test to consume. (Verified on jest 29.7.0: a
+    // queued-but-uncalled Once survives jest.clearAllMocks() and is returned by
+    // the following test's first call.) That is a second, order-dependent
+    // source of nondeterminism on top of the network one, and it is why the
+    // failures used to cascade — a timed-out test poisoned its successor.
+    // mockReset() is the one that drains the queue; only this mock needs it,
+    // because the prisma stubs get their implementations from the module
+    // factory and a blanket resetAllMocks() would wipe those.
+    (getValidatedMappingByNormalizedName as jest.Mock).mockReset();
+    (callStructuredLlm as jest.Mock).mockResolvedValue({
+        status: 'error',
+        error: 'llm disabled in unit tests',
+        provider: 'openrouter',
+        model: 'none',
+        durationMs: 0,
+    });
     (aiNormalizeIngredient as jest.Mock).mockResolvedValue({ status: 'error', reason: 'skip' });
     (getValidatedMapping as jest.Mock).mockResolvedValue(null);
     (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValue(null);

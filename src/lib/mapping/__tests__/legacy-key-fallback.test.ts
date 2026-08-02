@@ -88,6 +88,30 @@ jest.mock('../gather-candidates', () => {
         gatherCandidates: jest.fn(),
     };
 });
+// ...and ai-nutrition-backfill is not the only LLM caller on that tail: the
+// fallback chain runs ai-simplify FIRST. Stubbing only the nutrition half left
+// one live `openrouter / openai/gpt-4o-mini` simplify round trip per run of
+// this file (MEASURED 2026-08-02: 1 call, 1635 ms —
+// `npx jest src/lib/mapping/__tests__/legacy-key-fallback.test.ts 2>&1 | grep -c
+// 'structured-llm].*call successful'` -> 1 before this mock, 0 after).
+// callStructuredLlm() is the chokepoint every LLM caller in the mapper goes
+// through, so stub it there rather than per-caller; that also matches CI, where
+// no API key is configured and getProviderChain() returns []. Same reason this
+// mock exists in fs-cache-nutrition-validation.test.ts, where the latency of
+// those calls against jest's 5000 ms default was making the suite flaky.
+jest.mock('../../ai/structured-client', () => {
+    const actual = jest.requireActual('../../ai/structured-client');
+    return {
+        ...actual,
+        callStructuredLlm: jest.fn().mockResolvedValue({
+            status: 'error',
+            error: 'llm disabled in unit tests',
+            provider: 'openrouter',
+            model: 'none',
+            durationMs: 0,
+        }),
+    };
+});
 // The zombie-guard test runs the pipeline to a full miss; the AI nutrition
 // backfill tail must not fire a real LLM call from inside jest.
 jest.mock('../ai-nutrition-backfill', () => ({
