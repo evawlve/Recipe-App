@@ -183,3 +183,93 @@ describe('a non-bare request is unaffected', () => {
         expect(r!.grams).toBe(200);
     });
 });
+
+/**
+ * The lexicon-free trailing-token fallback yields to a declared serving.
+ *
+ * Golden eval `n-mq-47` drift, 2026-08-02: `trader joes chicken breast` moved
+ * 112g -> 236g. `fs_4881229` has NO 236g serving — its largest is 135g. The
+ * number comes from `1/2 breast, bone and skin removed`, grams 118 with
+ * numberOfUnits **0.5**, so per-unit is 118 / 0.5 = 236: one whole breast,
+ * derived correctly and answering the wrong question. The record states its own
+ * serving on a row reading `1 serving (90 g)`.
+ *
+ * The fix is a priority rule, not a size ceiling. A ceiling would be a threshold
+ * picked to exclude one food, and would still choose the wrong row for records
+ * whose pieces are legitimately large.
+ */
+function makeBreastRow(over: Record<string, unknown> = {}) {
+    return {
+        fsId: '4881229', name: 'Skinless Chicken Breast', brandName: null, foodType: 'Generic',
+        nutrientsPer100g: { kcal: 110, protein: 23, carbs: 0, fat: 2 },
+        defaultServingId: '4751539',
+        fetchedAt: new Date(), createdAt: new Date(), updatedAt: new Date(),
+        servings: [
+            serving('4751536', '1 oz boneless, cooked, skinless', 28),
+            serving('4751538', '1 serving (90 g)', 90),
+            { ...serving('4751539', '100 g', 100), numberOfUnits: 100 },
+            { ...serving('4751525', '1/2 breast, bone and skin removed', 118), numberOfUnits: 0.5 },
+            serving('4751533', '1 cup cooked, diced', 135),
+        ],
+        ...over,
+    };
+}
+
+describe('n-mq-47 — a declared serving outranks a derived whole piece', () => {
+    it('bare "chicken breast" bills the record\'s 90g serving, not the derived 236g breast', async () => {
+        // MUTATION: drop the `declaredOneServing` guard -> 236g, outside [80,200].
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeBreastRow());
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_4881229', name: 'Skinless Chicken Breast' }),
+            parsedLine({ name: 'chicken breast' }), 0.9, 'chicken breast'
+        );
+        expect(r!.grams).toBe(90);
+        expect(r!.grams).toBeGreaterThanOrEqual(80);
+        expect(r!.grams).toBeLessThanOrEqual(200);
+    });
+
+    it('the 0.5-unit arithmetic itself is untouched — it is the PRIORITY that changed', async () => {
+        // Same record, same row, no "1 serving" to yield to: the fallback still
+        // derives one whole breast. This pins that the fix did not delete the
+        // fallback or break numberOfUnits handling.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeBreastRow({
+            servings: makeBreastRow().servings.filter(s => s.servingId !== '4751538'),
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_4881229', name: 'Skinless Chicken Breast' }),
+            parsedLine({ name: 'chicken breast' }), 0.9, 'chicken breast'
+        );
+        expect(r!.grams).toBe(236);
+    });
+
+    it('a NON-bare count still uses the fallback — the rule is bare-only', async () => {
+        // "2 chicken breasts" is an explicit count of pieces; the declared
+        // single serving must not answer it.
+        // MUTATION: drop `bareSingular ?` from declaredOneServing -> 180g.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeBreastRow());
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_4881229', name: 'Skinless Chicken Breast' }),
+            parsedLine({ qty: 2, name: 'chicken breasts' }), 0.9, '2 chicken breasts'
+        );
+        expect(r!.grams).toBe(472);
+    });
+
+    it('the curated lexicon path is NOT affected — "1 bar" still beats a serving row', async () => {
+        // MUTATION: apply the yield to the lexicon path too -> 30g, and a
+        // protein bar stops billing as a bar.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeBreastRow({
+            name: 'Protein Bar', defaultServingId: 'svPanel',
+            servings: [
+                serving('svBar', '1 bar', 60),
+                serving('svServing', '1 serving (30 g)', 30),
+                { ...serving('svPanel', '100 g', 100), numberOfUnits: 100 },
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_9', name: 'Protein Bar' }),
+            parsedLine({ name: 'protein bar' }), 0.9, 'protein bar'
+        );
+        expect(r!.grams).toBe(60);
+        expect(r!.servingTier).toBe('fs_label_count');
+    });
+});
