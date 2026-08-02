@@ -81,7 +81,7 @@ export function countedPieceNoun(parsed: ParsedIngredient | null): string | null
 }
 
 /** Leading integer count of a label serving string, or null ("15 pieces (28 g)" → 15). */
-function labelLeadingCount(servingSize: string): number | null {
+export function labelLeadingCount(servingSize: string): number | null {
     const count = Number((servingSize.match(/^\s*(\d+(?:\.\d+)?)/) || [])[1]);
     return Number.isInteger(count) && count >= 2 ? count : null;
 }

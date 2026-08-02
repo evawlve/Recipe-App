@@ -28,7 +28,10 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
-import { singularizeUnit, inferDiscreteUnit, extractLabelServingUnit } from './count-label';
+import {
+    singularizeUnit, inferDiscreteUnit, extractLabelServingUnit,
+    servingLabelCountsPiece, labelLeadingCount,
+} from './count-label';
 import { num, servingMacros, type Macros } from './fs-serving-macros';
 import {
     applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
@@ -523,8 +526,28 @@ export async function buildFatSecretResult(
         }
         if (noun) {
             if (match) {
-                const unitsPerServing = match.numberOfUnits && match.numberOfUnits > 0
-                    ? match.numberOfUnits : 1;
+                // `numberOfUnits` counts SERVINGS, not pieces, so it is 1 on a
+                // serving whose label already enumerates the pieces. fs_63588
+                // reads `13 chips` at 28.35 g with numberOfUnits 1: dividing by
+                // numberOfUnits calls the whole 13-chip serving one chip, and
+                // `13 tortilla chips` bills 13 x 28.35 = 368.55 g / 1950 kcal
+                // (golden n-serv-35, n-tot-05; band [28, 70]).
+                //
+                // When the label enumerates the matched noun, ITS count is the
+                // authority. count-label.ts has owned that predicate since the
+                // OFF lane adopted it — its header names this exact query — and
+                // this branch simply never called it, which is why the same line
+                // is right through buildOffResult and wrong here.
+                //
+                // Guarded, not substituted: `servingLabelCountsPiece` requires a
+                // count >= 2 naming this noun (or a generic piece word) and a
+                // sane per-piece weight, so `1 thin slice` and `1 serving (123 g)`
+                // still fall through to numberOfUnits untouched.
+                const labelPieceCount = servingLabelCountsPiece(match.description, match.grams, noun)
+                    ? labelLeadingCount(match.description)
+                    : null;
+                const unitsPerServing = labelPieceCount
+                    ?? (match.numberOfUnits && match.numberOfUnits > 0 ? match.numberOfUnits : 1);
                 const perUnitGrams = match.grams! / unitsPerServing;
                 if (bareSingular && perUnitGrams < BARE_MIN_PIECE_SERVING_GRAMS) {
                     // Rule (2): leave `grams` null so resolution falls through
@@ -546,6 +569,10 @@ export async function buildFatSecretResult(
                         noun,
                         serving: match.description,
                         perUnitGrams,
+                        // Which divisor won. Without it the tier alone cannot
+                        // distinguish a label-enumerated serving from a
+                        // numberOfUnits one, and that is the whole defect.
+                        labelPieceCount,
                     });
                 }
             }
