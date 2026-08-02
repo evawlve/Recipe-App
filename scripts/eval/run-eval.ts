@@ -43,6 +43,34 @@ const ONLY = argValue('--only');
 const GREP = argValue('--grep');
 /** Re-record the knownIssue baseline from this run instead of comparing against it. */
 const WRITE_BASELINE = args.includes('--write-baseline');
+/**
+ * Force every nlp case through the mapper instead of the FoodMapping cache.
+ *
+ * MEASURED 2026-08-02: 84.9% of a golden run resolves as `cacheHit='early'`, so by
+ * default this harness mostly measures what the cache already holds, not what the
+ * pipeline now does. That is not a detail — deploying #214 did not move `n-mq-22`
+ * by byte-identical values because the line was served from cache and retrieval
+ * never ran, and batch 19's two failures were serving defects on rows the gate had
+ * already cached.
+ *
+ * OPT-IN, deliberately. The warm campaign's per-batch gate compares against a
+ * baseline recorded warm; flipping the default would reclassify pinned cases
+ * wholesale and the change would look like a regression in the batch under test.
+ * Use it to ask "what does the pipeline do cold", not as the campaign gate.
+ *
+ * `/api/nlp/parse` honours this only for dev-bypass callers, which is what
+ * API_KEY above makes this harness.
+ */
+const NO_CACHE = args.includes('--nocache');
+
+// Recording a cold baseline would silently replace the warm values every batch gate
+// compares against, and the next batch would be blamed for the difference. Exit 2 —
+// the campaign's contract for "this run is not a result", never a pass.
+if (NO_CACHE && WRITE_BASELINE) {
+    console.error('!! --nocache with --write-baseline would overwrite the WARM knownIssue baseline');
+    console.error('!! with COLD values. The batch gate compares against it; refusing.');
+    process.exit(2);
+}
 
 const goldenPath = path.join(__dirname, 'golden-set.json');
 const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
@@ -197,7 +225,7 @@ async function runNlpCase(c: any): Promise<CaseResult> {
     const query = c.item?.name ?? c.text;
     try {
         const body = c.item ? { items: [c.item] } : { text: c.text };
-        const res = await fetch(`${BASE}/api/nlp/parse`, {
+        const res = await fetch(`${BASE}/api/nlp/parse${NO_CACHE ? '?nocache=1' : ''}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
             body: JSON.stringify(body),
@@ -277,7 +305,10 @@ async function main() {
 
     // ---- Summary ----
     const byKind = (kind: string) => results.filter(r => r.kind === kind);
-    const summary: any = { base: BASE, ranAt: new Date().toISOString(), kinds: {}, categories: {} };
+    // noCache is recorded because a cold run and a warm run are not comparable and
+    // the file is the only thing a later reader has. The batch gate's baseline was
+    // recorded warm; a cold report scored against it would read as mass regression.
+    const summary: any = { base: BASE, noCache: NO_CACHE, ranAt: new Date().toISOString(), kinds: {}, categories: {} };
 
     for (const kind of ['search', 'nlp']) {
         const rs = byKind(kind);
