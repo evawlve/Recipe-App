@@ -27,6 +27,7 @@ import { FATSECRET_REFRESH_DAYS } from './config';
 import { singularizeUnit, inferDiscreteUnit } from './count-label';
 import { num, servingMacros, type Macros } from './fs-serving-macros';
 import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
+import { volumeToGrams } from '../units/volume-density';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
@@ -337,23 +338,31 @@ export async function buildFatSecretResult(
             servingTier = 'fs_label_volume';
             pickedServing = volMatch;
         } else {
-            // Category-density fallback, mirroring buildFdcResult: dry-granular
-            // categories get their tuned density, everything else the flat
-            // liquid=1.0 / solid=0.5 defaults.
-            const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i
-                .test(`${foodName} ${parsed?.name ?? ''}`);
-            let densityGml = isLiquid ? 1.0 : 0.5;
-            try {
-                const { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } = require('../units/density');
-                const category = inferCategoryFromName(foodName) || inferCategoryFromName(parsed?.name || '');
-                if (category && DRY_GRANULE_DENSITY_CATEGORIES.has(category)) {
-                    const catDensity = categoryDensity(category);
-                    if (catDensity && catDensity > 0) densityGml = catDensity;
-                }
-            } catch {
-                // density.ts unavailable — keep the flat default
+            // Density fallback, from the ONE owner of this rule
+            // (`resolveVolumeGrams()` in `src/lib/units/volume-density.ts`).
+            //
+            // This block used to be a hand-copy that "mirrored buildFdcResult".
+            // It mirrored the wrong copy: the OFF path carries an `isPaste` tier
+            // (~1 g/ml for spreads) that neither this nor the FDC copy ever got,
+            // so a tablespoon of peanut butter billed 15ml × 0.5 = 7.5 g here
+            // against ~16 g there. Measured 2026-08-01 — when the rerank window
+            // stopped starving the FatSecret lane, 73 of 250 already-asked
+            // queries changed what the user is billed, and this was the cause.
+            //
+            // Nothing about the NUMBERS changed in the move; they are the OFF
+            // path's tuned constants verbatim. Re-tuning is a separate PR with
+            // its own winner-gate run, because grams feed the save gates and the
+            // cached row.
+            const resolved = volumeToGrams(qty, unit, foodName, parsed?.name);
+            // `unit` already passed `VOLUME_UNIT_ML[unit]` above, so a null here
+            // would mean the two unit tables disagree — fall back rather than
+            // bill NaN, and say so.
+            if (!resolved) {
+                logger.warn('fs.build_result.volume_unit_table_mismatch', { unit, foodName });
+                grams = totalMl * 0.5;
+            } else {
+                grams = resolved.grams;
             }
-            grams = totalMl * densityGml;
             servingDescription = `${qty} ${unit}`;
             servingTier = 'fs_volume_density';
         }
