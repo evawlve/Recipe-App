@@ -18,7 +18,11 @@
  *       else default serving                            ('fs_default_serving')
  *   (d) nothing usable        → per-100g × qty          ('fs_per100g_fallback')
  * Bare unitless qty-1 requests get the same bare-query-guard CAP/REPLACE
- * parity as buildOffResult (see the guard wire-in below).
+ * parity as buildOffResult (see the guard wire-in below), and the same
+ * per-piece suppression: a bare PLURAL ("almonds") never resolves to one
+ * piece, and a bare SINGULAR never bills a sub-20g piece. Both rules come from
+ * `src/lib/servings/bare-query-guard.ts` — the ONE owner — because the two
+ * previous copies of this cascade's rules diverged silently.
  */
 
 import { prisma } from '../db';
@@ -26,7 +30,10 @@ import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
 import { singularizeUnit, inferDiscreteUnit } from './count-label';
 import { num, servingMacros, type Macros } from './fs-serving-macros';
-import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
+import {
+    applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
+    BARE_MIN_PIECE_SERVING_GRAMS,
+} from '../servings/bare-query-guard';
 import { volumeToGrams } from '../units/volume-density';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
@@ -372,16 +379,39 @@ export async function buildFatSecretResult(
         // a discrete piece. Token-match the noun against serving descriptions —
         // the fs "1 bar" serving is exactly the missing-serving-shape class
         // this lane exists to fix.
-        let noun = unit
-            ? singularizeUnit(unit)
-            : inferDiscreteUnit(parsed?.name || foodName);
+        //
+        // BARE-REQUEST PER-PIECE SUPPRESSION — the same two rules the OFF
+        // cascade applies, now taken from their one owner in bare-query-guard
+        // rather than re-derived here:
+        //   (1) a digitless qty-1 PLURAL asks for A SERVING, not one piece, so
+        //       every per-piece branch is suppressed ("almonds" → a serving,
+        //       never one 1.2 g nut);
+        //   (2) a digitless qty-1 SINGULAR must not be answered by a tiny
+        //       per-piece weight either — bare "almond" still means a serving.
+        //       OFF spells this `BARE_MIN_PIECE_SERVING_GRAMS` (20 g); pieces
+        //       at or above it (banana, egg, bagel) ARE the serving.
+        //
+        // This branch had NEITHER rule. OFF suppresses (1) across its three
+        // per-piece branches and enforces (2) in its seed branch, but the
+        // plural predicate lived inside map-ingredient-with-fallback and could
+        // not be imported here without an import cycle — so the rule was
+        // structurally unavailable to this copy, not merely forgotten.
+        // Measured by the winner-gate 2026-08-01: bare `almonds` billed 1.2 g /
+        // 7 kcal here against OFF's 28 g / 160 kcal.
+        const barePlural = isBarePluralRequest(parsed, rawLine, parsed?.name || foodName);
+        const bareSingular = !barePlural && isBareUnitlessQty1(parsed, rawLine);
+        let noun = barePlural
+            ? null
+            : unit
+                ? singularizeUnit(unit)
+                : inferDiscreteUnit(parsed?.name || foodName);
         let match = noun ? usableServings.find(s => servingMatchesNoun(s, noun!)) : undefined;
         // Lexicon-free fallback for unitless lines ("15 pretzels"): the noun
         // lexicon is deliberately conservative, but an fs serving whose label
         // contains the request's trailing token ("1 pretzel (Include nuggets)")
         // is itself proof the token is a countable piece of THIS food. Only
         // fires when such a serving exists, so no false discrete billing.
-        if (!match && !unit) {
+        if (!match && !unit && !barePlural) {
             const lastToken = (parsed?.name || foodName)
                 .toLowerCase().trim().split(/\s+/).pop() ?? '';
             const fallbackNoun = singularizeUnit(lastToken);
@@ -398,16 +428,28 @@ export async function buildFatSecretResult(
                 const unitsPerServing = match.numberOfUnits && match.numberOfUnits > 0
                     ? match.numberOfUnits : 1;
                 const perUnitGrams = match.grams! / unitsPerServing;
-                grams = qty * perUnitGrams;
-                servingDescription = `${qty} ${noun} (${perUnitGrams.toFixed(1)}g each)`;
-                servingTier = 'fs_label_count';
-                pickedServing = match;
-                logger.info('fs.build_result.label_count_matched', {
-                    foodId: candidate.id,
-                    noun,
-                    serving: match.description,
-                    perUnitGrams,
-                });
+                if (bareSingular && perUnitGrams < BARE_MIN_PIECE_SERVING_GRAMS) {
+                    // Rule (2): leave `grams` null so resolution falls through
+                    // to the default serving, where the bare-query guard can
+                    // apply the category default.
+                    logger.info('fs.build_result.bare_tiny_piece_skipped', {
+                        foodId: candidate.id,
+                        noun,
+                        serving: match.description,
+                        perUnitGrams,
+                    });
+                } else {
+                    grams = qty * perUnitGrams;
+                    servingDescription = `${qty} ${noun} (${perUnitGrams.toFixed(1)}g each)`;
+                    servingTier = 'fs_label_count';
+                    pickedServing = match;
+                    logger.info('fs.build_result.label_count_matched', {
+                        foodId: candidate.id,
+                        noun,
+                        serving: match.description,
+                        perUnitGrams,
+                    });
+                }
             }
         }
         // Default-serving fallback for serving-billed requests the noun match

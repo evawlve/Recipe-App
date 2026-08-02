@@ -24,7 +24,16 @@
  *
  * So the defect this module closes is not "the FatSecret path is wrong". It is
  * "the same rule is maintained in three places", which guarantees that the next
- * correction lands in one of them. One owner, three callers.
+ * correction lands in one of them.
+ *
+ * ONE OWNER, ONE CALLER SO FAR. Only `buildFatSecretResult()` calls this today.
+ * `buildOffResult()` and `buildFdcResult()` still carry their inline copies, and
+ * FDC is still the copy WITHOUT the paste tier — bare `1 tbsp peanut butter` on
+ * an FDC winner bills 7.5g. Converging them changes which grams those cascades
+ * bill, so each needs its own winner-gate run; this module exists so that work
+ * is a deletion rather than a fourth transcription. Do not read the existence of
+ * an owner as evidence the callers use it — count them:
+ *   grep -rn "volume-density" src/ | grep -v __tests__
  *
  * Re-derive the divergence:
  *   grep -rn "isPaste" src/            # was 1 file before this module existed
@@ -76,9 +85,20 @@ export interface VolumeGrams {
 /**
  * Resolve grams-per-volume-unit for a food, by NAME.
  *
- * `names` are tried in order and the first non-empty one classifies — callers
- * pass the candidate's name and then the parsed query name, matching what the
- * OFF path did.
+ * `names` are tried in order and the FIRST NON-EMPTY one classifies; the rest
+ * are fallbacks for an unnamed record, not additional evidence. Callers pass
+ * the matched candidate's name first because that is what the OFF path
+ * classifies on (`isLiquid`/`isPaste` in `buildOffResult()` test
+ * `candidate.name` alone).
+ *
+ * KNOWN DIVERGENCE, not closed here: `buildFdcResult()` tests the query name
+ * TOO (`RE.test(candidate.name) || RE.test(parsed?.name || '')`), so the three
+ * cascades disagree about whether what the USER typed may classify the food.
+ * It matters — `1 tbsp peanut butter` matching a record named "Skippy Creamy"
+ * has no paste token in the candidate name and bills the dry-goods 7.5g.
+ * Widening this to consider every name is a BEHAVIOUR change that moves grams,
+ * so it needs its own winner-gate run; it is deliberately not bundled with the
+ * de-duplication.
  */
 export function resolveVolumeGrams(...names: Array<string | null | undefined>): VolumeGrams {
     const name = names.find(n => n && n.trim().length > 0)?.trim() ?? '';

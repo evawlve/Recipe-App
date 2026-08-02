@@ -66,6 +66,7 @@ import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, type BrandKeyInput } from './cache-key';
 import {
     applyOffBareQueryGuard, isBareUnitlessQty1, usableBareLabelServing,
+    isBarePluralRequest,
     isDoseAnchoredBareQuery,
     BARE_LABEL_MIN_GRAMS, BARE_LABEL_MAX_GRAMS, BARE_MIN_PIECE_SERVING_GRAMS,
 } from '../servings/bare-query-guard';
@@ -529,42 +530,14 @@ export function makeSortedFilteredComparator(
 
 // ============================================================
 // Bare-plural request detection (PR D pt3, Lever A3)
+//
+// The predicate moved to `src/lib/servings/bare-query-guard.ts`, which owns
+// every bare-request eligibility rule and — unlike this file — can be imported
+// by `buildFatSecretResult` without an import cycle. It lived here, called from
+// exactly one place, while the FatSecret count branch had no bare-plural
+// suppression at all. Re-exported so existing importers keep working.
 // ============================================================
-
-// Snack-style names that read plural without plural morphology ("goldfish").
-const BARE_PLURAL_STYLE_NAMES = /\b(goldfish|chex mix|trail mix|popcorn|granola)\b/i;
-
-/**
- * True when the token is a plain -s plural. singularizeUnit alone is NOT a
- * plural test: 'hummus'→'hummu', 'couscous'→'couscou', 'molasses'→'molass'
- * all change without being plural. Require an -s ending that is not one of
- * the pseudo-plural shapes 'ss' (swiss), 'us' (hummus/couscous), 'is'
- * (debris), 'sses' (molasses — the plain 'ss' check misses it).
- */
-function isMorphologicalPluralToken(token: string): boolean {
-    const t = token.toLowerCase();
-    if (t.length < 3 || !t.endsWith('s')) return false;
-    if (t.endsWith('ss') || t.endsWith('us') || t.endsWith('is') || t.endsWith('sses')) return false;
-    return singularizeUnit(t) !== t;
-}
-
-/**
- * A bare-plural request ("almonds", "goldfish") is a digitless unitless qty-1
- * line whose food name is plural: the user asked for A SERVING of the food,
- * not one piece. Explicit counts ("3 almonds" — digit gate), singular bare
- * queries ("almond"), and unit-carrying lines never qualify.
- */
-export function isBarePluralRequest(
-    parsed: ParsedIngredient | null,
-    rawLine: string,
-    itemNameForCount: string
-): boolean {
-    if (!parsed || parsed.unit || parsed.qty !== 1) return false;
-    if (/\d/.test(rawLine)) return false;
-    const tokens = (parsed.name || '').trim().split(/\s+/).filter(t => t.length > 0);
-    const lastFoodToken = tokens[tokens.length - 1] ?? '';
-    return isMorphologicalPluralToken(lastFoodToken) || BARE_PLURAL_STYLE_NAMES.test(itemNameForCount);
-}
+export { isBarePluralRequest };
 
 // ============================================================
 // Main Entry Point

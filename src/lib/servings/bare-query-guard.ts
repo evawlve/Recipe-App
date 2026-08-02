@@ -19,7 +19,7 @@
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import { getBareQueryDefault } from '../ai/ambiguous-serving-estimator';
-import { discretePieceFloor } from '../mapping/count-label';
+import { discretePieceFloor, singularizeUnit } from '../mapping/count-label';
 
 /**
  * Tiers whose grams come from real package/label machinery and can only be
@@ -89,6 +89,55 @@ export function isBareUnitlessQty1(parsed: ParsedIngredient | null, rawLine: str
     if (!parsed || parsed.unit || parsed.qty !== 1 || parsed.multiplier !== 1) return false;
     if (/\d/.test(rawLine)) return false;
     return true;
+}
+
+/**
+ * Foods whose bare NAME is already a portion word even though it is not
+ * morphologically plural — "popcorn", "granola", "trail mix". Same intent as
+ * the plural test: the user named a serving, not a piece.
+ */
+const BARE_PLURAL_STYLE_NAMES = /\b(goldfish|chex mix|trail mix|popcorn|granola)\b/i;
+
+/**
+ * True when the token is a plain -s plural. singularizeUnit alone is NOT a
+ * plural test: 'hummus'→'hummu', 'couscous'→'couscou', 'molasses'→'molass'
+ * all change without being plural. Require an -s ending that is not one of
+ * the pseudo-plural shapes 'ss' (swiss), 'us' (hummus/couscous), 'is'
+ * (debris), 'sses' (molasses — the plain 'ss' check misses it).
+ */
+function isMorphologicalPluralToken(token: string): boolean {
+    const t = token.toLowerCase();
+    if (t.length < 3 || !t.endsWith('s')) return false;
+    if (t.endsWith('ss') || t.endsWith('us') || t.endsWith('is') || t.endsWith('sses')) return false;
+    return singularizeUnit(t) !== t;
+}
+
+/**
+ * A digitless qty-1 PLURAL request ("almonds", "goldfish"): the user asked for
+ * A SERVING, not one piece. Every per-piece resolution branch must be
+ * suppressed for these — one almond is 1.2 g against a 28 g serving, one grape
+ * 5 g — and resolution must fall through to serving-scale tiers.
+ *
+ * THIS PREDICATE LIVES HERE, NOT IN A BUILDER. It was defined inside
+ * `map-ingredient-with-fallback.ts` and called from exactly one place, the OFF
+ * cascade; `buildFatSecretResult` could not even import it without an import
+ * cycle, so the FatSecret count branch had no bare-plural suppression at all
+ * and billed bare `almonds` at 1.2 g (measured 2026-08-01 by the winner-gate,
+ * 28 g `bare_plural_serving` → 1.2 g `fs_label_count`). That is the same defect
+ * shape as the volume-density hand-copies: a rule maintained in one of N
+ * cascades. This module already owns the bare-request eligibility predicates
+ * and is imported by every builder — one owner, every caller.
+ */
+export function isBarePluralRequest(
+    parsed: ParsedIngredient | null,
+    rawLine: string,
+    itemNameForCount: string
+): boolean {
+    if (!parsed || parsed.unit || parsed.qty !== 1) return false;
+    if (/\d/.test(rawLine)) return false;
+    const tokens = (parsed.name || '').trim().split(/\s+/).filter(t => t.length > 0);
+    const lastFoodToken = tokens[tokens.length - 1] ?? '';
+    return isMorphologicalPluralToken(lastFoodToken) || BARE_PLURAL_STYLE_NAMES.test(itemNameForCount);
 }
 
 /**
