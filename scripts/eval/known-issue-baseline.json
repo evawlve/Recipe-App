@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-07-31T18:07:08.000Z",
+  "writtenAt": "2026-08-02T13:58:42.245Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
@@ -84,10 +84,10 @@
       "itemCount": 1
     },
     "n-cook-06": {
-      "foodId": "cmrs5ej1z00002qaag5mhai74",
+      "foodId": "off_9348219004831",
       "foodName": "Rolled Oats",
-      "grams": 90,
-      "kcal100": 361,
+      "grams": 86.39999999999999,
+      "kcal100": 400,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -138,10 +138,10 @@
       "itemCount": 1
     },
     "n-mq-47": {
-      "foodId": "off_0261638011855",
+      "foodId": "fs_4881229",
       "foodName": "Skinless Chicken Breast",
-      "grams": 112,
-      "kcal100": 125,
+      "grams": 90,
+      "kcal100": 110,
       "abstained": false,
       "errored": false,
       "itemCount": 1
