@@ -461,6 +461,20 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // gate — the one playbook section 5a requires before any admission or ranking
     // change — could not be run without `--allow-drift`. It was not run.
     '9e5634f738b23ba7': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes. Delta from 9e5634f7 is the rerank
+    // WINDOW: `filtered.slice(0, 10)` (a prefix over gather order) became
+    // `buildRerankPool(filtered, RERANK_POOL_LIMIT)` (per-lane composition), and the
+    // count-label extension now walks the remainder by difference instead of
+    // `filtered.slice(10)`.
+    //
+    // Still 'gate-backstop', and the variant taxonomy is deliberately NOT extended:
+    // `SelectionVariant` models what the confidence GATE does relative to Step 4
+    // (pre-empt vs backstop), and that is untouched here. Adding a variant per
+    // window shape would mean section 9 has to reproduce both, which is only worth
+    // doing when one tree must produce both sides of an A/B. This change is gated
+    // the other way — two trees, each transcribing its own caller — so the base
+    // tree's own pin (9e5634f7) covers the base side.
+    '16bec3f864088b83': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -497,7 +511,7 @@ const PINNED_HELPERS_HASH = '7535716631ca65c8';
  * (that shape is genuinely known, and naming it is more useful than "unrecognised"),
  * but it can no longer claim the replay mirrors it.
  */
-const TRANSCRIBED_CALLER = '9e5634f738b23ba7';
+const TRANSCRIBED_CALLER = '16bec3f864088b83';
 
 interface DriftResult {
     caller: string;
@@ -594,6 +608,13 @@ const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = req
 
 // Everything below is IMPORTED FROM THE REAL MODULES, never reimplemented. A probe
 // that reimplements the caller's argument list is a different function.
+//
+// `rerank-pool` is imported for the same reason, and it was written leaf-safe so
+// that it could be: no imports of its own, structural `{ source }` typing rather
+// than `UnifiedCandidate`. Requiring it here pulls in nothing from `config.ts`
+// (which snapshots flags and warms ONNX — playbook section 4).
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } = require('../../src/lib/mapping/rerank-pool');
 const { confidenceGate } = gatherMod;
 const { filterCandidatesByTokens, hasCoreTokenMismatch, hasNullOrInvalidMacros, detectGrainCookingContext } = filterMod;
 const { simpleRerank, toRerankCandidate, stripPrepModifiers } = rerankMod;
@@ -1307,13 +1328,32 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
         // caller 1657
         const countedNoun = countedPieceNoun(parsed);
 
-        // caller 1660-1668: NON-MONOTONE #1 — slice over GATHER order, not score
-        // order; the count-label extension pulls from filtered.slice(10) to a hard
-        // cap of 13. In BOTH variants this is now the ONLY way a candidate with
-        // indexInFiltered >= 10 can reach the reranker.
-        const candidatesForRerank: UnifiedCandidate[] = filtered.slice(0, 10);
+        // NON-MONOTONE #1 — the rerank window.
+        //
+        // The caller no longer takes a PREFIX of `filtered`. It composes the window
+        // per retrieval lane (`buildRerankPool`), because a prefix over gather order
+        // deleted whole lanes: measured cold 2026-08-01, 207 of 249 already-asked
+        // lines lost at least one entire lane, and the FatSecret lane reached the
+        // reranker on 42 of 249.
+        //
+        // IMPORTED, NOT TRANSCRIBED. `rerank-pool.ts` is leaf-safe by construction
+        // (no imports at all, structural `{ source }` typing rather than
+        // `UnifiedCandidate`), specifically so this harness can call the real
+        // function. Every hand-copy in this file is a drift liability — section 2
+        // exists because of them — so where the caller's logic can be imported
+        // instead, it is.
+        //
+        // The window SIZE is unchanged (RERANK_POOL_LIMIT === the old literal 10),
+        // so this is a re-composition, not an admission change. It is still
+        // non-monotone: a candidate that reaches the reranker under a prefix can be
+        // evicted by lane composition, which is exactly what this harness is for.
+        //
+        // The count-label extension now walks the REMAINDER (by difference), not
+        // `filtered.slice(10)` — the window is no longer a prefix, so the old form
+        // would re-offer candidates already inside it. Hard cap of 13 unchanged.
+        const candidatesForRerank: UnifiedCandidate[] = buildRerankPool(filtered, RERANK_POOL_LIMIT);
         if (countedNoun) {
-            for (const c of filtered.slice(10)) {
+            for (const c of rerankPoolRemainder(filtered, candidatesForRerank)) {
                 if (candidatesForRerank.length >= 13) break;
                 if (copy_candidateHasCountLabel(c, countedNoun)) candidatesForRerank.push(c);
             }
@@ -1637,6 +1677,12 @@ function mkWinner(
         confidence: clamped,
         selectionReason,
         indexInFiltered: idx,
+        // POSITIONAL ONLY. Since the rerank window is composed per lane rather
+        // than taken as a prefix, "in the first 10 of `filtered`" and "reached
+        // the reranker" are different facts. `inRerankWindow` below is the one
+        // that answers the second, and it is derived from the actual window ids.
+        // Kept because it still describes gather position, which is what the
+        // starvation analysis is about; do not read it as window membership.
         inTop10: idx >= 0 && idx < 10,
         inRerankWindow: rerankRan && windowIds.includes(w.id),
     };

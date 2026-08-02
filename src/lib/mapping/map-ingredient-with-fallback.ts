@@ -23,6 +23,7 @@ import {
     detectGrainCookingContext,
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery, stripPrepModifiers } from './simple-rerank';
+import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
 import {
     singularizeUnit, extractLabelServingUnit,
     LABEL_COUNT_PIECE_NOUNS, GENERIC_PIECE_WORDS,
@@ -1900,25 +1901,49 @@ export async function mapIngredientWithFallback(
                     const countedNoun = countedPieceNoun(parsed);
 
                     // Enrich Generic candidates with cached nutrition data.
-                    const candidatesForRerank = filtered.slice(0, 10);
-                    // Counted queries: let count-labeled SKUs below the top-10 cutoff
-                    // compete too (they still have to win the rerank on merit).
+                    //
+                    // THE WINDOW IS COMPOSED PER LANE, NOT TAKEN AS A PREFIX.
+                    // `filtered` is in GATHER order and gatherCandidates concatenates
+                    // its lanes, so a prefix (the old `filtered.slice(0, 10)`) deleted
+                    // every later lane whenever the earlier ones filled the window.
+                    // Measured cold 2026-08-01 over a 20-query cold-seed population:
+                    // 17 of 20 admitted ZERO FatSecret candidates while the lane had
+                    // gathered 8 — `grilled chicken breast` gathered
+                    // { fdc: 2, openfoodfacts: 14, fatsecret: 8 } and reranked
+                    // { fdc: 2, openfoodfacts: 8 }. Rationale, invariants and the
+                    // re-derive command: `buildRerankPool()` in
+                    // `src/lib/mapping/rerank-pool.ts`.
+                    //
+                    // The budget is unchanged (RERANK_POOL_LIMIT === the old 10), so
+                    // this is a RE-COMPOSITION, not an admission relaxation. It is
+                    // non-monotone in both directions — candidates that reach the
+                    // reranker today can be evicted — which is why it ships with a
+                    // winner-gate regression population and not with an argument.
+                    const candidatesForRerank = buildRerankPool(filtered, RERANK_POOL_LIMIT);
+                    // Counted queries: let count-labeled SKUs below the cutoff compete
+                    // too (they still have to win the rerank on merit). The remainder
+                    // is computed by DIFFERENCE, not as `filtered.slice(10)` — the
+                    // window is no longer a prefix, so the old form would have
+                    // re-offered candidates already inside it.
                     if (countedNoun) {
-                        for (const c of filtered.slice(10)) {
+                        for (const c of rerankPoolRemainder(filtered, candidatesForRerank)) {
                             if (candidatesForRerank.length >= 13) break;
                             if (candidateHasCountLabel(c, countedNoun)) candidatesForRerank.push(c);
                         }
                     }
                     // NOT DONE HERE, DELIBERATELY, AND THE REASON IS WORTH KEEPING.
                     //
-                    // `filtered.slice(0, 10)` above truncates over GATHER order, not
-                    // score order. On 17 of the 441 measured gate-firing lines the
-                    // gate's pick sits past index 10, so simpleRerank cannot re-select
-                    // it — those lines are a DELETION, not an adjudication, and the
-                    // backstop below cannot rescue them because the reranker did return
-                    // a winner, just a different one. `kirkland almonds` is the sharpest:
-                    // the Kirkland record is at gather index 22, so the reranker only
-                    // ever sees a Members Mark record.
+                    // The window truncates over GATHER order. On 17 of the 441 measured
+                    // gate-firing lines the gate's pick sits past the cutoff, so
+                    // simpleRerank cannot re-select it — those lines are a DELETION, not
+                    // an adjudication, and the backstop below cannot rescue them because
+                    // the reranker did return a winner, just a different one.
+                    // `kirkland almonds` is the sharpest: the Kirkland record is at
+                    // gather index 22, so the reranker only ever sees a Members Mark
+                    // record. Per-lane composition NARROWS this — a starved lane is no
+                    // longer deleted wholesale — but it does not close it: a candidate
+                    // past its own lane's share of the window is still unseen, and
+                    // `kirkland almonds` gathers 16 OFF rows for 5 lane slots.
                     //
                     // The obvious repair — append `gateSelection` to candidatesForRerank
                     // — was written, measured, and REVERTED. Scored against the project's

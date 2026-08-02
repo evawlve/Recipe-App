@@ -135,6 +135,36 @@ fi
 
 RUN='npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/winner-diff.ts'
 
+# ------------------------------------------------------- blind spot A, part 2
+# THE VARIANT MUST BE THE ONE THE TREES ACTUALLY CONTAIN.
+#
+# `resolveVariant()` defaults to 'baseline', and this driver never passed
+# --variant, so every run it has ever done replayed `baseline` -- the PRE-#168
+# caller, where confidenceGate PRE-EMPTS Step 4 and simpleRerank never runs. No
+# tree has contained that shape since 2026-07-26 (`fb211474`). On the ~10.6% of
+# lines where the gate fires, both sides were therefore modelling a caller
+# neither tree has, and any change living inside Step 4 is INVISIBLE on exactly
+# those rows -- understating both its benefit and its risk.
+#
+# winner-diff says this out loud (`announceVariantFit`). The driver piped it to
+# `tail -6` and it scrolled past. A warning nobody can see is not a warning,
+# which is the same lesson as the drift banner it sits next to.
+#
+# Derived from the tree, never assumed: `hashes` resolves this tree's caller hash
+# through KNOWN_CALLERS. If the tree is UNRECOGNISED there is no honest variant
+# to pick and we stop -- that is the drift guard's job and it must not be routed
+# around here.
+TREE_VARIANT="$(eval "$RUN" hashes 2>/dev/null | sed -n 's/^this tree is: \([a-z-]*\) .*/\1/p' | head -1)"
+if [[ -z "$TREE_VARIANT" || "$TREE_VARIANT" == "UNRECOGNISED" ]]; then
+    echo "ABORT: cannot resolve this tree's caller variant (got '${TREE_VARIANT:-<empty>}')." >&2
+    echo "The caller block is drifted or unrecognised. Re-pin it in winner-diff.ts" >&2
+    echo "(KNOWN_CALLERS + TRANSCRIBED_CALLER) after running \`winner-diff verify\`." >&2
+    echo "Replaying a variant this tree does not contain is not a measurement." >&2
+    exit 3
+fi
+VARIANT_ARG="--variant $TREE_VARIANT"
+echo "variant:   $TREE_VARIANT (resolved from this tree's caller hash)"
+
 # ------------------------------------------------------------ base worktree
 # A worktree, NOT `git checkout <ref> -- <file>`: that form silently discards
 # uncommitted edits when HEAD is the base commit (playbook section 9).
@@ -178,12 +208,12 @@ fi
 # bugs were caught.
 noise_floor_both_trees() {
     local snap="$1" name="$2"
-    if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$snap" $SERVING ) 2>&1 | tail -6; then
+    if ! ( cd "$BASE_TREE" && eval "$RUN" noise-floor --snapshot "$snap" $VARIANT_ARG $SERVING ) 2>&1 | tail -6; then
         echo "ABORT: noise floor non-zero on BASE for $name. The replay is not" >&2
         echo "deterministic, so any before/after claim below it is not a result." >&2
         exit 4
     fi
-    if ! eval "$RUN" noise-floor --snapshot "$snap" $SERVING 2>&1 | tail -6; then
+    if ! eval "$RUN" noise-floor --snapshot "$snap" $VARIANT_ARG $SERVING 2>&1 | tail -6; then
         echo "ABORT: noise floor non-zero on BRANCH for $name. Your change" >&2
         echo "introduced nondeterminism into replay — that is itself the finding." >&2
         exit 4
@@ -205,15 +235,15 @@ fi
 # ------------------------------------------------------------ replays
 echo "[4/5] replay BASE, then BRANCH, against the identical frozen pool"
 ( cd "$BASE_TREE" && eval "$RUN" replay --snapshot "$OUT/snap.json" \
-    --out "$OUT/A-base.json" --label BASE $SERVING ) 2>&1 | tail -6
+    --out "$OUT/A-base.json" --label BASE $VARIANT_ARG $SERVING ) 2>&1 | tail -6
 eval "$RUN" replay --snapshot "$OUT/snap.json" \
-    --out "$OUT/B-branch.json" --label BRANCH $SERVING 2>&1 | tail -6
+    --out "$OUT/B-branch.json" --label BRANCH $VARIANT_ARG $SERVING 2>&1 | tail -6
 
 if [[ "$REGRESSION_N" -gt 0 ]]; then
     ( cd "$BASE_TREE" && eval "$RUN" replay --snapshot "$OUT/snap-regression.json" \
-        --out "$OUT/A-base-regression.json" --label BASE $SERVING ) 2>&1 | tail -4
+        --out "$OUT/A-base-regression.json" --label BASE $VARIANT_ARG $SERVING ) 2>&1 | tail -4
     eval "$RUN" replay --snapshot "$OUT/snap-regression.json" \
-        --out "$OUT/B-branch-regression.json" --label BRANCH $SERVING 2>&1 | tail -4
+        --out "$OUT/B-branch-regression.json" --label BRANCH $VARIANT_ARG $SERVING 2>&1 | tail -4
 fi
 
 # ------------------------------------------------------------ diff

@@ -71,6 +71,8 @@ export interface WinnerInfo {
     selectionReason: string;
     /** index in `filtered` (GATHER order) — >= 10 means it was outside slice(0,10) */
     indexInFiltered: number;
+    /** Positional: index in `filtered` < 10. NOT window membership — the rerank
+     *  window is lane-composed, so use `inRerankWindow` for "reached the reranker". */
     inTop10: boolean;
     inRerankWindow: boolean;
 }
