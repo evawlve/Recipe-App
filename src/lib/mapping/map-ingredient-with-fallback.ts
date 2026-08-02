@@ -5640,6 +5640,7 @@ export async function buildOffResult(
         rawLine,
         queryName: parsed?.name || '',
         foodName: hydrated.foodName,
+        servingDescription,
     });
     if (bareOverride) {
         logger.info('off.build_result.bare_category_default', {

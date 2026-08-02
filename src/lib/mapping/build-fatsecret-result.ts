@@ -204,7 +204,22 @@ export async function buildFatSecretResult(
     // 1. Hydrate from the local store (persisted at retrieval time by the lane).
     const row = await prisma.fatSecretFood.findUnique({
         where: { fsId },
-        include: { servings: true },
+        // ORDER IS LOAD-BEARING and was unspecified. The default-serving branch
+        // falls back to `usableServings[0]` — a POSITIONAL pick — whenever
+        // `defaultServingId` does not resolve, and it very often does not:
+        // 598 FatSecretFood rows declare a flat-100g panel row as their default
+        // (measured 2026-08-02, box), and `isPer100gPanelServing()` demotes
+        // exactly that row out of `usableServings`. For all 598 the billed grams
+        // were therefore decided by Postgres row order, which no query pins.
+        //
+        // `servingId` is the stable natural key. This asserts reproducibility
+        // only — it makes no claim that the first serving is the RIGHT one.
+        // Re-derive the population:
+        //   SELECT count(*) FROM "FatSecretFood" f
+        //   JOIN "FatSecretServing" s ON s."fsId"=f."fsId"
+        //    AND s."servingId"=f."defaultServingId"
+        //   WHERE s.description ~* '^\s*100\s*g';
+        include: { servings: { orderBy: { servingId: 'asc' } } },
     }).catch((err: Error) => {
         logger.warn('fs.build_result.hydrate_failed', {
             foodId: candidate.id,
@@ -319,6 +334,34 @@ export async function buildFatSecretResult(
     const brandName = row?.brandName ?? candidate.brandName ?? null;
     const qty = parsed ? parsed.qty * parsed.multiplier : 1;
     const unit = parsed?.unit?.toLowerCase().trim();
+
+    // INSTRUMENT, NOT A FIX — and deliberately so.
+    //
+    // `EXPLICIT_MEASURE_UNIT_RE` is a promise that a unit bills deterministically
+    // from grams or millilitres; `requestBillsByServing()` skips the entire
+    // count/serving branch on the strength of it. But `pint`, `quart`, `gallon`
+    // and `l` are in that regex and in NEITHER table below, so they fall past
+    // everything to the flat per-100g tier: `1 pint ice cream` bills 100g.
+    //
+    // NOT fixed, on measurement. Those units appear in 0 of 54,083 production
+    // `MappingEventLog` lines and 0 across every eval and warm corpus (measured
+    // 2026-08-02). And the obvious fix is still wrong: adding the ml keys would
+    // send `2 liters coca cola` from 200g to 1000g against a true ~2,080g,
+    // because the failure is on the DENSITY side — `LIQUID_RE` in
+    // `src/lib/units/volume-density.ts` classifies cola, beer, coffee and
+    // smoothies as 0.5 g/ml SOLIDS. That trades an obviously absurd number for
+    // a plausible wrong one, which is strictly harder to catch.
+    //
+    // So count it rather than guess at it. This is the instrument-fail-open
+    // lesson applied deliberately: the existing `volume_unit_table_mismatch`
+    // warning sits INSIDE the volume branch, which these units can never enter,
+    // so it can never fire for them. Build the fix if and only if this warns.
+    if (unit && EXPLICIT_MEASURE_UNIT_RE.test(unit)
+        && WEIGHT_TO_GRAMS[unit] == null && VOLUME_UNIT_ML[unit] == null) {
+        logger.warn('fs.build_result.declared_unit_has_no_conversion', {
+            foodId: candidate.id, unit, foodName, qty,
+        });
+    }
 
     // 3. Gram resolution cascade.
     let grams: number | null = null;
@@ -602,6 +645,7 @@ export async function buildFatSecretResult(
             rawLine,
             queryName: parsed?.name || '',
             foodName,
+            servingDescription: pickedServing?.description ?? servingDescription,
         });
         if (bareOverride) {
             logger.info('fs.build_result.bare_category_default', {

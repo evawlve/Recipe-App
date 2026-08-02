@@ -28,20 +28,49 @@
  *
  * ONE OWNER, ONE CALLER SO FAR. Only `buildFatSecretResult()` calls this today.
  * `buildOffResult()` and `buildFdcResult()` still carry their inline copies, and
- * FDC is still the copy WITHOUT the paste tier — bare `1 tbsp peanut butter` on
- * an FDC winner bills 7.5g. Converging them changes which grams those cascades
- * bill, so each needs its own winner-gate run; this module exists so that work
- * is a deletion rather than a fourth transcription. Do not read the existence of
- * an owner as evidence the callers use it — count them:
+ * FDC is still the copy WITHOUT the paste tier. Do not read the existence of an
+ * owner as evidence the callers use it — count them:
  *   grep -rn "volume-density" src/ | grep -v __tests__
+ *
+ * A caveat on FDC, measured 2026-08-02 and worth carrying, because it is the
+ * opposite of what the code reads like: FDC's inline density table has NEVER
+ * billed a live query. Of 4,491 `volume_unit` events, ZERO have an FDC winner —
+ * `findOwnFdcVolumeServing()` and `insertFdcAiServing()` absorb every FDC volume
+ * request ahead of it (`fdc_label_volume` 865, `fdc_volume_cached` 317,
+ * `fdc_volume_ai` 318, density fallback 0). So converging FDC is a near-free
+ * deletion of a latent landmine, not a repair of live billing; the live
+ * population is entirely OFF's. Re-derive:
+ *   SELECT "servingTier", count(*) FROM "MappingEventLog"
+ *   WHERE "servingTier" LIKE '%volume%' GROUP BY 1;
+ *
+ * Note also that OFF and FDC both stamp the SAME tier string `volume_unit`, so
+ * the event log cannot attribute a wrong gram bill to a lane. That is how the
+ * FDC copy stayed divergent unseen; splitting the tiers belongs with the
+ * convergence commit.
  *
  * Re-derive the divergence:
  *   grep -rn "isPaste" src/            # was 1 file before this module existed
  *
- * NOT A DENSITY MODEL. These are the tuned constants the OFF path already
- * shipped, moved verbatim — deliberately, so this change is a de-duplication
- * and not a re-tuning. Any change to the NUMBERS is a separate PR with its own
+ * NOT A DENSITY MODEL. Any change to the NUMBERS is a separate PR with its own
  * winner-gate run, because grams feed the save gates and the cached row.
+ *
+ * PROVENANCE, corrected 2026-08-02 — an earlier version of this header claimed
+ * the constants were "the OFF path's constants verbatim". That is FALSE for
+ * `ml`, `floz` and `fl oz`. `cup`/`tbsp`/`tsp` came from OFF; `ml`/`floz` came
+ * from FDC, which is what `buildFatSecretResult()` already did before the move,
+ * so nothing regressed — but the header was asserting agreement that does not
+ * exist. Measured over 9 foods x 15 unit keys, 21 of 135 cells differ from OFF.
+ *
+ * The disagreement is real and OFF is the wrong one: OFF hardcodes `ml: 1` and
+ * `floz: 30` UNSCALED, so it bills `1 cup flour` at 127.2g and `240 ml flour`
+ * at 240g — the same volume of the same food, 1.89x apart, contradicting the
+ * density it computed one line earlier. This module scales them. Converging OFF
+ * onto it is measured to move 0 of 4,473 live `volume_unit` events (`ml`/`floz`
+ * have zero production traffic), but it is a constant change and belongs in its
+ * own commit with its own gate.
+ *
+ * Re-derive the cell-level diff by executing both inline blocks:
+ *   the OFF block in `buildOffResult()` vs `resolveVolumeGrams()`, same inputs.
  */
 
 import {
