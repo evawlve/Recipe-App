@@ -1027,6 +1027,18 @@
         "value": "^t$"
       },
       "verified": "2026-08-02"
+    },
+    {
+      "id": "fs-label-count-uses-label-divisor",
+      "claim": "buildFatSecretResult divides a piece-enumerating FatSecret serving by the LABEL's own count, not numberOfUnits. numberOfUnits counts servings, so it is 1 on fs_63588's '13 chips' (28.35 g) and '13 tortilla chips' billed 13 x 28.35 = 368.55 g / 1950 kcal cold. The predicate is count-label.ts's, reused rather than re-derived, so this checks both the call site and the export it depends on.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
+      "where": "backend",
+      "command": "echo \"$(grep -c 'servingLabelCountsPiece(match.description, match.grams, noun)' src/lib/mapping/build-fatsecret-result.ts)@$(grep -c '^export function labelLeadingCount' src/lib/mapping/count-label.ts)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^1@1$"
+      },
+      "verified": "2026-08-02"
     }
   ]
 }
