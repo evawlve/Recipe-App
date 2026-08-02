@@ -18,15 +18,28 @@
  *       else default serving                            ('fs_default_serving')
  *   (d) nothing usable        → per-100g × qty          ('fs_per100g_fallback')
  * Bare unitless qty-1 requests get the same bare-query-guard CAP/REPLACE
- * parity as buildOffResult (see the guard wire-in below).
+ * parity as buildOffResult (see the guard wire-in below), and the same
+ * per-piece suppression: a bare PLURAL ("almonds") never resolves to one
+ * piece, and a bare SINGULAR never bills a sub-20g piece. Both rules come from
+ * `src/lib/servings/bare-query-guard.ts` — the ONE owner — because the two
+ * previous copies of this cascade's rules diverged silently.
  */
 
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
-import { singularizeUnit, inferDiscreteUnit } from './count-label';
+import { singularizeUnit, inferDiscreteUnit, extractLabelServingUnit } from './count-label';
 import { num, servingMacros, type Macros } from './fs-serving-macros';
-import { applyOffBareQueryGuard } from '../servings/bare-query-guard';
+import {
+    applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
+    usableBareLabelServing, BARE_MIN_PIECE_SERVING_GRAMS, BARE_LABEL_MIN_GRAMS,
+} from '../servings/bare-query-guard';
+import { volumeToGrams } from '../units/volume-density';
+// Ambiguous/count-unit resolution, shared with the OFF and FDC cascades. Safe
+// to import here: `ambiguous-unit-backfill` pulls only `db` and `logger`, so
+// there is no cycle back through map-ingredient-with-fallback.
+import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
+import { classifyUnit } from './unit-type';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
@@ -42,6 +55,16 @@ const EXPLICIT_MEASURE_UNIT_RE = /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|po
 function requestBillsByServing(parsed: ParsedIngredient | null): boolean {
     return !(parsed?.unit && EXPLICIT_MEASURE_UNIT_RE.test(parsed.unit.trim()));
 }
+
+/**
+ * A serving row that literally calls itself one serving ("1 serving (85 g)",
+ * "1 serving, cooked"). Deliberately anchored and count-1: "2 servings" is a
+ * multiple and "1 serving size" style prose is not what FatSecret emits. 3,565
+ * such rows exist on the box, 3,422 of them inside the 3-400g bare band
+ * (measured 2026-08-02). Read by the default-serving fallback below, where it
+ * replaces a positional pick — see the reasoning there.
+ */
+const EXPLICIT_ONE_SERVING_RE = /^\s*1\s+serving\b/i;
 
 const WEIGHT_TO_GRAMS: Record<string, number> = {
     'g': 1, 'gram': 1, 'grams': 1,
@@ -196,7 +219,22 @@ export async function buildFatSecretResult(
     // 1. Hydrate from the local store (persisted at retrieval time by the lane).
     const row = await prisma.fatSecretFood.findUnique({
         where: { fsId },
-        include: { servings: true },
+        // ORDER IS LOAD-BEARING and was unspecified. The default-serving branch
+        // falls back to `usableServings[0]` — a POSITIONAL pick — whenever
+        // `defaultServingId` does not resolve, and it very often does not:
+        // 598 FatSecretFood rows declare a flat-100g panel row as their default
+        // (measured 2026-08-02, box), and `isPer100gPanelServing()` demotes
+        // exactly that row out of `usableServings`. For all 598 the billed grams
+        // were therefore decided by Postgres row order, which no query pins.
+        //
+        // `servingId` is the stable natural key. This asserts reproducibility
+        // only — it makes no claim that the first serving is the RIGHT one.
+        // Re-derive the population:
+        //   SELECT count(*) FROM "FatSecretFood" f
+        //   JOIN "FatSecretServing" s ON s."fsId"=f."fsId"
+        //    AND s."servingId"=f."defaultServingId"
+        //   WHERE s.description ~* '^\s*100\s*g';
+        include: { servings: { orderBy: { servingId: 'asc' } } },
     }).catch((err: Error) => {
         logger.warn('fs.build_result.hydrate_failed', {
             foodId: candidate.id,
@@ -312,6 +350,34 @@ export async function buildFatSecretResult(
     const qty = parsed ? parsed.qty * parsed.multiplier : 1;
     const unit = parsed?.unit?.toLowerCase().trim();
 
+    // INSTRUMENT, NOT A FIX — and deliberately so.
+    //
+    // `EXPLICIT_MEASURE_UNIT_RE` is a promise that a unit bills deterministically
+    // from grams or millilitres; `requestBillsByServing()` skips the entire
+    // count/serving branch on the strength of it. But `pint`, `quart`, `gallon`
+    // and `l` are in that regex and in NEITHER table below, so they fall past
+    // everything to the flat per-100g tier: `1 pint ice cream` bills 100g.
+    //
+    // NOT fixed, on measurement. Those units appear in 0 of 54,083 production
+    // `MappingEventLog` lines and 0 across every eval and warm corpus (measured
+    // 2026-08-02). And the obvious fix is still wrong: adding the ml keys would
+    // send `2 liters coca cola` from 200g to 1000g against a true ~2,080g,
+    // because the failure is on the DENSITY side — `LIQUID_RE` in
+    // `src/lib/units/volume-density.ts` classifies cola, beer, coffee and
+    // smoothies as 0.5 g/ml SOLIDS. That trades an obviously absurd number for
+    // a plausible wrong one, which is strictly harder to catch.
+    //
+    // So count it rather than guess at it. This is the instrument-fail-open
+    // lesson applied deliberately: the existing `volume_unit_table_mismatch`
+    // warning sits INSIDE the volume branch, which these units can never enter,
+    // so it can never fire for them. Build the fix if and only if this warns.
+    if (unit && EXPLICIT_MEASURE_UNIT_RE.test(unit)
+        && WEIGHT_TO_GRAMS[unit] == null && VOLUME_UNIT_ML[unit] == null) {
+        logger.warn('fs.build_result.declared_unit_has_no_conversion', {
+            foodId: candidate.id, unit, foodName, qty,
+        });
+    }
+
     // 3. Gram resolution cascade.
     let grams: number | null = null;
     let servingDescription: string | null = null;
@@ -337,23 +403,31 @@ export async function buildFatSecretResult(
             servingTier = 'fs_label_volume';
             pickedServing = volMatch;
         } else {
-            // Category-density fallback, mirroring buildFdcResult: dry-granular
-            // categories get their tuned density, everything else the flat
-            // liquid=1.0 / solid=0.5 defaults.
-            const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i
-                .test(`${foodName} ${parsed?.name ?? ''}`);
-            let densityGml = isLiquid ? 1.0 : 0.5;
-            try {
-                const { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } = require('../units/density');
-                const category = inferCategoryFromName(foodName) || inferCategoryFromName(parsed?.name || '');
-                if (category && DRY_GRANULE_DENSITY_CATEGORIES.has(category)) {
-                    const catDensity = categoryDensity(category);
-                    if (catDensity && catDensity > 0) densityGml = catDensity;
-                }
-            } catch {
-                // density.ts unavailable — keep the flat default
+            // Density fallback, from the ONE owner of this rule
+            // (`resolveVolumeGrams()` in `src/lib/units/volume-density.ts`).
+            //
+            // This block used to be a hand-copy that "mirrored buildFdcResult".
+            // It mirrored the wrong copy: the OFF path carries an `isPaste` tier
+            // (~1 g/ml for spreads) that neither this nor the FDC copy ever got,
+            // so a tablespoon of peanut butter billed 15ml × 0.5 = 7.5 g here
+            // against ~16 g there. Measured 2026-08-01 — when the rerank window
+            // stopped starving the FatSecret lane, 73 of 250 already-asked
+            // queries changed what the user is billed, and this was the cause.
+            //
+            // Nothing about the NUMBERS changed in the move; they are the OFF
+            // path's tuned constants verbatim. Re-tuning is a separate PR with
+            // its own winner-gate run, because grams feed the save gates and the
+            // cached row.
+            const resolved = volumeToGrams(qty, unit, foodName, parsed?.name);
+            // `unit` already passed `VOLUME_UNIT_ML[unit]` above, so a null here
+            // would mean the two unit tables disagree — fall back rather than
+            // bill NaN, and say so.
+            if (!resolved) {
+                logger.warn('fs.build_result.volume_unit_table_mismatch', { unit, foodName });
+                grams = totalMl * 0.5;
+            } else {
+                grams = resolved.grams;
             }
-            grams = totalMl * densityGml;
             servingDescription = `${qty} ${unit}`;
             servingTier = 'fs_volume_density';
         }
@@ -363,16 +437,39 @@ export async function buildFatSecretResult(
         // a discrete piece. Token-match the noun against serving descriptions —
         // the fs "1 bar" serving is exactly the missing-serving-shape class
         // this lane exists to fix.
-        let noun = unit
-            ? singularizeUnit(unit)
-            : inferDiscreteUnit(parsed?.name || foodName);
+        //
+        // BARE-REQUEST PER-PIECE SUPPRESSION — the same two rules the OFF
+        // cascade applies, now taken from their one owner in bare-query-guard
+        // rather than re-derived here:
+        //   (1) a digitless qty-1 PLURAL asks for A SERVING, not one piece, so
+        //       every per-piece branch is suppressed ("almonds" → a serving,
+        //       never one 1.2 g nut);
+        //   (2) a digitless qty-1 SINGULAR must not be answered by a tiny
+        //       per-piece weight either — bare "almond" still means a serving.
+        //       OFF spells this `BARE_MIN_PIECE_SERVING_GRAMS` (20 g); pieces
+        //       at or above it (banana, egg, bagel) ARE the serving.
+        //
+        // This branch had NEITHER rule. OFF suppresses (1) across its three
+        // per-piece branches and enforces (2) in its seed branch, but the
+        // plural predicate lived inside map-ingredient-with-fallback and could
+        // not be imported here without an import cycle — so the rule was
+        // structurally unavailable to this copy, not merely forgotten.
+        // Measured by the winner-gate 2026-08-01: bare `almonds` billed 1.2 g /
+        // 7 kcal here against OFF's 28 g / 160 kcal.
+        const barePlural = isBarePluralRequest(parsed, rawLine, parsed?.name || foodName);
+        const bareSingular = !barePlural && isBareUnitlessQty1(parsed, rawLine);
+        let noun = barePlural
+            ? null
+            : unit
+                ? singularizeUnit(unit)
+                : inferDiscreteUnit(parsed?.name || foodName);
         let match = noun ? usableServings.find(s => servingMatchesNoun(s, noun!)) : undefined;
         // Lexicon-free fallback for unitless lines ("15 pretzels"): the noun
         // lexicon is deliberately conservative, but an fs serving whose label
         // contains the request's trailing token ("1 pretzel (Include nuggets)")
         // is itself proof the token is a countable piece of THIS food. Only
         // fires when such a serving exists, so no false discrete billing.
-        if (!match && !unit) {
+        if (!match && !unit && !barePlural) {
             const lastToken = (parsed?.name || foodName)
                 .toLowerCase().trim().split(/\s+/).pop() ?? '';
             const fallbackNoun = singularizeUnit(lastToken);
@@ -389,26 +486,153 @@ export async function buildFatSecretResult(
                 const unitsPerServing = match.numberOfUnits && match.numberOfUnits > 0
                     ? match.numberOfUnits : 1;
                 const perUnitGrams = match.grams! / unitsPerServing;
-                grams = qty * perUnitGrams;
-                servingDescription = `${qty} ${noun} (${perUnitGrams.toFixed(1)}g each)`;
-                servingTier = 'fs_label_count';
-                pickedServing = match;
-                logger.info('fs.build_result.label_count_matched', {
+                if (bareSingular && perUnitGrams < BARE_MIN_PIECE_SERVING_GRAMS) {
+                    // Rule (2): leave `grams` null so resolution falls through
+                    // to the default serving, where the bare-query guard can
+                    // apply the category default.
+                    logger.info('fs.build_result.bare_tiny_piece_skipped', {
+                        foodId: candidate.id,
+                        noun,
+                        serving: match.description,
+                        perUnitGrams,
+                    });
+                } else {
+                    grams = qty * perUnitGrams;
+                    servingDescription = `${qty} ${noun} (${perUnitGrams.toFixed(1)}g each)`;
+                    servingTier = 'fs_label_count';
+                    pickedServing = match;
+                    logger.info('fs.build_result.label_count_matched', {
+                        foodId: candidate.id,
+                        noun,
+                        serving: match.description,
+                        perUnitGrams,
+                    });
+                }
+            }
+        }
+
+        // (c2) AMBIGUOUS / COUNT UNIT — the step the other two cascades have and
+        // this one did not.
+        //
+        // "1 handful almonds", "1 sleeve saltine crackers", "1 bowl cereal",
+        // "1 knob of butter": the unit is a real request the label cannot answer,
+        // and `buildOffResult()` and `buildFdcResult()` both resolve it through
+        // `getOrCreateAmbiguousServing()` (deterministic sub-piece defaults,
+        // then the per-food cache, then an estimate). `buildFatSecretResult()`
+        // never called it, so these fell straight to the declared default —
+        // whatever single piece the record happens to lead with.
+        //
+        // That was invisible while the FatSecret lane reached the reranker on
+        // 16.9% of queries. Fixing the lane starvation made FatSecret the winner
+        // for these lines and the gate measured the cost immediately
+        // (2026-08-02, regression pool): `1 handful almonds` 30g -> 1.2g and
+        // `1 sleeve saltine crackers` 113g / 490kcal -> 3g / 13kcal, both
+        // billing ONE almond and ONE cracker.
+        //
+        // Banding the default serving would NOT have fixed these. This builder
+        // is terminal — it always bills something — so a rejection lands on the
+        // flat per-100g tier, and the bare-query guard cannot rescue it either
+        // because its digit gate excludes every one of these lines by design.
+        // 100g for a handful of almonds is not better than 1.2g, it is just
+        // wrong in the other direction. The request needs an ANSWER, not a veto,
+        // and the answer already exists in a module this file can import.
+        //
+        // Ordered after the noun match and before the declared default,
+        // mirroring `buildOffResult()`: a serving the label genuinely enumerates
+        // still wins ("2 bars" on a record with a "1 bar" serving never reaches
+        // here), and a resolved container weight outranks a lead piece.
+        if (grams == null && unit
+            && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
+            const ambiguous = await getOrCreateAmbiguousServing(
+                candidate.id, foodName, unit, brandName
+            );
+            if ((ambiguous.status === 'success' || ambiguous.status === 'cached')
+                && ambiguous.grams && ambiguous.grams > 0) {
+                grams = qty * ambiguous.grams;
+                servingDescription = `${qty} ${unit} (${ambiguous.grams.toFixed(1)}g each)`;
+                servingTier = ambiguous.status === 'cached' ? 'count_unit_cached' : 'count_unit_ai';
+                logger.info('fs.build_result.unit_serving_resolved', {
                     foodId: candidate.id,
-                    noun,
-                    serving: match.description,
-                    perUnitGrams,
+                    unit,
+                    perUnitGrams: ambiguous.grams,
+                    status: ambiguous.status,
+                });
+            } else {
+                logger.warn('fs.build_result.unit_serving_unresolved', {
+                    foodId: candidate.id,
+                    unit,
+                    error: ambiguous.error,
                 });
             }
         }
+
         // Default-serving fallback for serving-billed requests the noun match
         // couldn't resolve (bare qty-1, "1 serving", unmatched nouns).
+        //
+        // BAND ON THE BARE PATH. A record's declared default is not necessarily
+        // single-serving-scale: FatSecret's own `defaultServingId` for `Almonds`
+        // (fs_37040) is the 1.2g "1 almond" row, so suppressing the count branch
+        // above changed only which TIER billed 1.2g, not the number — measured
+        // by the winner-gate, 2026-08-01. OFF gates its equivalent step on
+        // `usableBareLabelServing()` and routes onward when it fails; this
+        // cascade had no band and no successor, so an out-of-band serving was
+        // simply billed.
+        //
+        // AND THE FALLBACK BELOW THE DECLARED DEFAULT WAS A COIN FLIP, with a
+        // measurable population. `defaultServingId` resolves for 23,837 of
+        // 23,837 FatSecret foods, so `?? usableServings[0]` fires in exactly
+        // one situation: the declared default IS the per-100g panel row that
+        // `isPer100gPanelServing` demotes out of `usableServings` above. That is
+        // 569 foods, 568 of which have another serving to land on positionally
+        // (measured 2026-08-02, box). `Chicken` (fs_1623) is one: its declared
+        // default is the shared "100 g" row, and the positional pick billed
+        // whichever serving the include happened to return first — 85g before
+        // this branch was ordered, 7g ("1 thin slice") after. Ordering made it
+        // reproducible without making it right; reproducible-and-wrong is worse,
+        // because it stops being noticed.
+        //
+        // 278 of those 569 records answer the question themselves with an
+        // explicit "1 serving (Xg)" row, and 3,422 of the 3,565 such rows
+        // corpus-wide are inside the 3-400g band. Preferring it is the record's
+        // own statement of what a serving is, which is the whole hierarchy this
+        // branch implements; position is not evidence of anything.
+        //
+        // No lexicon rescue exists for this class, which is why it matters:
+        // `getBareQueryDefault` returns NOTHING for chicken, beef, steak,
+        // salmon, pork, turkey, rice, pasta, bread, egg, ham or sausage
+        // (measured 2026-08-02). The staple proteins and grains have no category
+        // default, so falling through to the bare-query guard would not have
+        // corrected `chicken` either — it would have billed the flat 100g.
+        //
+        // Reject, do NOT substitute. Picking "the next in-band serving" looks
+        // better and is not safe: `usableServings` comes from an unordered
+        // include, and fs_37040's other in-band servings are 28.35g AND 143g.
+        // Falling through is deterministic — the request lands on the fabricated
+        // per-100g tier, which the bare-query guard REPLACEs with the category
+        // default (`almonds` -> 28g, `coca cola` -> 355g). That only ever fires
+        // where the current answer is already outside 3–400g or is the flat-100g
+        // placeholder, i.e. exactly the answers that were wrong.
+        const bareServingUsable = (s: FsServingView): boolean =>
+            !bareSingular && !barePlural
+                ? true
+                : usableBareLabelServing(s.grams, extractLabelServingUnit(s.description)) != null;
         if (grams == null) {
-            const defaultServing =
+            const declaredDefault =
                 (row?.defaultServingId
                     ? usableServings.find(s => s.servingId === row!.defaultServingId)
                     : undefined)
+                ?? usableServings.find(s => EXPLICIT_ONE_SERVING_RE.test(s.description))
                 ?? usableServings[0];
+            const defaultServing = declaredDefault && bareServingUsable(declaredDefault)
+                ? declaredDefault
+                : undefined;
+            if (declaredDefault && !defaultServing) {
+                logger.info('fs.build_result.bare_default_serving_out_of_band', {
+                    foodId: candidate.id,
+                    serving: declaredDefault.description,
+                    grams: declaredDefault.grams,
+                });
+            }
             if (defaultServing) {
                 grams = qty * defaultServing.grams!;
                 servingDescription = qty === 1
@@ -444,6 +668,29 @@ export async function buildFatSecretResult(
                 // written for.
                 const fromPanel = per100 ? gramsFromPer100gPanel(m, per100) : null;
                 const estPerServingGrams = fromPanel ?? estimateServingGrams(m);
+                // FLOOR ONLY — not the label band. This tier is the next thing
+                // to catch a bare request the default-serving band just
+                // rejected, and it reaches the identical answer by a different
+                // route: inverting the 1-almond serving's 7 kcal against a 578
+                // kcal/100g panel is 1.2g again. Banding one branch and not the
+                // other would have made the fix inert while looking like it
+                // worked.
+                //
+                // But only the FLOOR transfers. The first version applied the
+                // full 3–400g label band here and the existing panel-inversion
+                // tests killed it: a brewed coffee legitimately inverts to
+                // ~477g, and a 400g ceiling sent it to the flat 100g default.
+                // These grams are not a label — they are arithmetic on the
+                // record's own panel, validated at 98.1% within 5% — so the
+                // upper bound has no basis on this tier. The defect being fixed
+                // is a 1.2g UNDER-bill.
+                if ((bareSingular || barePlural) && estPerServingGrams < BARE_LABEL_MIN_GRAMS) {
+                    logger.info('fs.build_result.bare_macro_serving_out_of_band', {
+                        foodId: candidate.id,
+                        serving: macroServing.description,
+                        estGrams: estPerServingGrams,
+                    });
+                } else {
                 macroServing.grams = estPerServingGrams;
                 grams = qty * estPerServingGrams;
                 servingDescription = qty === 1
@@ -458,6 +705,7 @@ export async function buildFatSecretResult(
                     estGrams: estPerServingGrams,
                     gramsSource: fromPanel != null ? 'per100g_panel_inversion' : 'energy_density',
                 });
+                }
             }
         }
     }
@@ -495,6 +743,7 @@ export async function buildFatSecretResult(
             rawLine,
             queryName: parsed?.name || '',
             foodName,
+            servingDescription: pickedServing?.description ?? servingDescription,
         });
         if (bareOverride) {
             logger.info('fs.build_result.bare_category_default', {

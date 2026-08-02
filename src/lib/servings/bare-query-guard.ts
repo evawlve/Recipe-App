@@ -19,7 +19,7 @@
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import { getBareQueryDefault } from '../ai/ambiguous-serving-estimator';
-import { discretePieceFloor } from '../mapping/count-label';
+import { discretePieceFloor, singularizeUnit } from '../mapping/count-label';
 
 /**
  * Tiers whose grams come from real package/label machinery and can only be
@@ -89,6 +89,55 @@ export function isBareUnitlessQty1(parsed: ParsedIngredient | null, rawLine: str
     if (!parsed || parsed.unit || parsed.qty !== 1 || parsed.multiplier !== 1) return false;
     if (/\d/.test(rawLine)) return false;
     return true;
+}
+
+/**
+ * Foods whose bare NAME is already a portion word even though it is not
+ * morphologically plural — "popcorn", "granola", "trail mix". Same intent as
+ * the plural test: the user named a serving, not a piece.
+ */
+const BARE_PLURAL_STYLE_NAMES = /\b(goldfish|chex mix|trail mix|popcorn|granola)\b/i;
+
+/**
+ * True when the token is a plain -s plural. singularizeUnit alone is NOT a
+ * plural test: 'hummus'→'hummu', 'couscous'→'couscou', 'molasses'→'molass'
+ * all change without being plural. Require an -s ending that is not one of
+ * the pseudo-plural shapes 'ss' (swiss), 'us' (hummus/couscous), 'is'
+ * (debris), 'sses' (molasses — the plain 'ss' check misses it).
+ */
+function isMorphologicalPluralToken(token: string): boolean {
+    const t = token.toLowerCase();
+    if (t.length < 3 || !t.endsWith('s')) return false;
+    if (t.endsWith('ss') || t.endsWith('us') || t.endsWith('is') || t.endsWith('sses')) return false;
+    return singularizeUnit(t) !== t;
+}
+
+/**
+ * A digitless qty-1 PLURAL request ("almonds", "goldfish"): the user asked for
+ * A SERVING, not one piece. Every per-piece resolution branch must be
+ * suppressed for these — one almond is 1.2 g against a 28 g serving, one grape
+ * 5 g — and resolution must fall through to serving-scale tiers.
+ *
+ * THIS PREDICATE LIVES HERE, NOT IN A BUILDER. It was defined inside
+ * `map-ingredient-with-fallback.ts` and called from exactly one place, the OFF
+ * cascade; `buildFatSecretResult` could not even import it without an import
+ * cycle, so the FatSecret count branch had no bare-plural suppression at all
+ * and billed bare `almonds` at 1.2 g (measured 2026-08-01 by the winner-gate,
+ * 28 g `bare_plural_serving` → 1.2 g `fs_label_count`). That is the same defect
+ * shape as the volume-density hand-copies: a rule maintained in one of N
+ * cascades. This module already owns the bare-request eligibility predicates
+ * and is imported by every builder — one owner, every caller.
+ */
+export function isBarePluralRequest(
+    parsed: ParsedIngredient | null,
+    rawLine: string,
+    itemNameForCount: string
+): boolean {
+    if (!parsed || parsed.unit || parsed.qty !== 1) return false;
+    if (/\d/.test(rawLine)) return false;
+    const tokens = (parsed.name || '').trim().split(/\s+/).filter(t => t.length > 0);
+    const lastFoodToken = tokens[tokens.length - 1] ?? '';
+    return isMorphologicalPluralToken(lastFoodToken) || BARE_PLURAL_STYLE_NAMES.test(itemNameForCount);
 }
 
 /**
@@ -250,6 +299,13 @@ export interface BareQueryGuardInput {
     queryName: string;
     /** Matched product's name, used as a REPLACE-only lexicon fallback. */
     foodName: string;
+    /**
+     * The billed serving's own description ("1 tbsp", "1 medium", "1 cracker").
+     * Read ONLY by the dose-count reconciliation below, which requires a
+     * spoon/scoop word on both sides — so a caller that omits it loses that
+     * rule and nothing else.
+     */
+    servingDescription?: string | null;
 }
 
 export interface BareQueryGuardOverride {
@@ -266,7 +322,7 @@ export interface BareQueryGuardOverride {
 export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGuardOverride | null {
     if (process.env.OFF_BARE_SERVING_GUARD === '0') return null;
 
-    const { grams, servingTier, parsed, rawLine, queryName, foodName } = input;
+    const { grams, servingTier, parsed, rawLine, queryName, foodName, servingDescription } = input;
 
     // Eligibility: bare unitless qty-1 request only. The digit gate keeps every
     // explicit count out ("15 pretzels" must retain its count_unresolved_floor
@@ -282,6 +338,63 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
     // what the guard is for. The REPLACE path below is untouched entirely, since
     // there the grams are fabricated and nothing real is being overwritten.
     const capAllowed = capMayOverrideLabelServing(queryName, servingTier);
+
+    // DOSE-COUNT RECONCILIATION — deliberately NOT a floor direction.
+    //
+    // A floor was the obvious answer to bare `peanut butter` billing 16g against
+    // the lexicon's 32g, and it is wrong twice over. It does not even fire:
+    // 16 is EXACTLY 32/2 and the condition would be `grams < queryDefault/2`.
+    // And measured over 18,456 FatSecret default servings, the 660 rows below
+    // half the category default are mostly records being RIGHT — a floor would
+    // take `flour tortilla` 13g -> 120g (matching the lexicon on "flour"),
+    // `water spinach` 30g -> 240g, `milk bread` 36g -> 240g, `lemonade powder`
+    // 18g -> 355g. All are <=2-token names, so `capMayOverrideLabelServing()`
+    // cannot block them: the cap's damage lives in long product queries, the
+    // floor's in short generic ones, and the existing gate points the wrong way.
+    // The guard being CAP-only is a correct asymmetry, not an oversight — a
+    // declared serving is data and the lexicon is a guess, and downward that
+    // guess is wrong more often than right.
+    //
+    // What is actually wrong for peanut butter is narrower. Both sides agree the
+    // food is billed in tablespoons and that a tablespoon is ~16g; they disagree
+    // only on HOW MANY a bare request means. That is a claim about user intent,
+    // where the lexicon is the right authority and the record has no view.
+    //
+    // So this rule never reads the lexicon's GRAMS. It reads its COUNT and
+    // multiplies the record's OWN per-unit grams. Worst case is an integer
+    // multiple of a number the record itself published.
+    //
+    // The guard that makes the hijack class IMPOSSIBLE rather than unlikely is
+    // the LEXICON-side parse, not the record-side one — measured, by mutating
+    // each away in turn. Those four queries' bare defaults are "1 cup" (flour
+    // tortilla, water spinach, milk bread) and "1 can" (lemonade); none is a
+    // spoon/scoop dose, so the rule exits before the record is consulted, and
+    // dropping the same-unit-word check leaves all four still blocked. Only the
+    // nut-butter category pairs a spoon word with a count above 1, which is what
+    // confines this rule to 9 of 18,456 records.
+    //
+    // Measured 2026-08-02: 9 of 18,456 records reach it, all peanut butter —
+    // only the nut-butter category has a lexicon count > 1, which confines the
+    // rule by construction.
+    if (DECLARED_LABEL_TIERS.has(servingTier)
+        && capAllowed
+        && queryDefault
+        && isDoseAnchoredBareQuery(queryName)) {
+        const lex = /^\s*(\d+)\s+(tsp|tbsp|scoop)s?\b/i.exec(queryDefault.description);
+        const rec = /^\s*(\d+(?:\.\d+)?)\s*(tsp|tbsp|scoop)s?\b/i.exec(servingDescription ?? '');
+        if (lex && rec && lex[2].toLowerCase() === rec[2].toLowerCase()) {
+            const lexCount = Number(lex[1]);
+            const recCount = Number(rec[1]);
+            if (recCount > 0 && lexCount > recCount) {
+                const scaled = grams * (lexCount / recCount);
+                return {
+                    grams: scaled,
+                    servingTier: 'bare_dose_count_reconciled',
+                    servingDescription: `${lexCount} ${rec[2].toLowerCase()} (~${scaled}g)`,
+                };
+            }
+        }
+    }
 
     if (CAP_TIERS.has(servingTier)) {
         // CAP consults ONLY the query-side lexicon. A foodName fallback here
