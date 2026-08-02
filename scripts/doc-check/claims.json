@@ -954,6 +954,19 @@
       },
       "verified": "2026-08-01",
       "timeoutMs": 60000
+    },
+    {
+      "id": "box-rules-file-has-no-cooking-verbs",
+      "claim": "THE DELIVERED HALF of PR #211, and the only check that can see it. data/ is in the box's .stignore, so Syncthing has NEVER carried data/fatsecret/normalization-rules.json to /home/owner/Recipe-App — the box held the 2026-07-24 content until an scp on 2026-08-01 — and readRulesFile() in src/lib/mapping/normalization-rules.ts prefers that on-disk JSON over DEFAULT_RULES. A stale copy therefore reinstates the cooking-state key collapse on the LIVE service while every Mac-side gate stays green, including the backend-context twin cooking-verbs-out-of-prep-phrases-and-cache-bumped, which reads the Mac's file. Asserts zero of the verbs PR #211 removed (grilled/roasted/baked/broiled/scrambled/steamed/poached/boiled — the last also covering the hard[-\\s]?boiled and soft[-\\s]?boiled forms — /sauteed/sautéed/smoked), matched on word boundaries so the deliberately RETAINED parboiled, blanched and microwaved do not trip it. Output is verbCount@prepPhraseCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
+      "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
+      "where": "box",
+      "command": "node -e \"const p='/home/owner/Recipe-App/data/fatsecret/normalization-rules.json';const r=JSON.parse(require('fs').readFileSync(p,'utf8'));const V=['grilled','roasted','baked','broiled','scrambled','steamed','poached','boiled','sauteed','saut\\u00e9ed','smoked'];const re=new RegExp('[^a-z]('+V.join('|')+')[^a-z]','i');const h=r.prep_phrases.filter(x=>re.test(' '+String(x).toLowerCase()+' '));process.stdout.write(h.length+'@'+r.prep_phrases.length)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^0@[1-9][0-9]*$"
+      },
+      "verified": "2026-08-01",
+      "timeoutMs": 60000
     }
   ]
 }
