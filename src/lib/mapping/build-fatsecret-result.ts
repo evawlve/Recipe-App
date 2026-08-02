@@ -28,11 +28,11 @@
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
-import { singularizeUnit, inferDiscreteUnit } from './count-label';
+import { singularizeUnit, inferDiscreteUnit, extractLabelServingUnit } from './count-label';
 import { num, servingMacros, type Macros } from './fs-serving-macros';
 import {
     applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
-    BARE_MIN_PIECE_SERVING_GRAMS,
+    usableBareLabelServing, BARE_MIN_PIECE_SERVING_GRAMS, BARE_LABEL_MIN_GRAMS,
 } from '../servings/bare-query-guard';
 import { volumeToGrams } from '../units/volume-density';
 import type { ParsedIngredient } from '../parse/ingredient-line';
@@ -454,12 +454,44 @@ export async function buildFatSecretResult(
         }
         // Default-serving fallback for serving-billed requests the noun match
         // couldn't resolve (bare qty-1, "1 serving", unmatched nouns).
+        //
+        // BAND ON THE BARE PATH. A record's declared default is not necessarily
+        // single-serving-scale: FatSecret's own `defaultServingId` for `Almonds`
+        // (fs_37040) is the 1.2g "1 almond" row, so suppressing the count branch
+        // above changed only which TIER billed 1.2g, not the number — measured
+        // by the winner-gate, 2026-08-01. OFF gates its equivalent step on
+        // `usableBareLabelServing()` and routes onward when it fails; this
+        // cascade had no band and no successor, so an out-of-band serving was
+        // simply billed.
+        //
+        // Reject, do NOT substitute. Picking "the next in-band serving" looks
+        // better and is not safe: `usableServings` comes from an unordered
+        // include, and fs_37040's other in-band servings are 28.35g AND 143g.
+        // Falling through is deterministic — the request lands on the fabricated
+        // per-100g tier, which the bare-query guard REPLACEs with the category
+        // default (`almonds` -> 28g, `coca cola` -> 355g). That only ever fires
+        // where the current answer is already outside 3–400g or is the flat-100g
+        // placeholder, i.e. exactly the answers that were wrong.
+        const bareServingUsable = (s: FsServingView): boolean =>
+            !bareSingular && !barePlural
+                ? true
+                : usableBareLabelServing(s.grams, extractLabelServingUnit(s.description)) != null;
         if (grams == null) {
-            const defaultServing =
+            const declaredDefault =
                 (row?.defaultServingId
                     ? usableServings.find(s => s.servingId === row!.defaultServingId)
                     : undefined)
                 ?? usableServings[0];
+            const defaultServing = declaredDefault && bareServingUsable(declaredDefault)
+                ? declaredDefault
+                : undefined;
+            if (declaredDefault && !defaultServing) {
+                logger.info('fs.build_result.bare_default_serving_out_of_band', {
+                    foodId: candidate.id,
+                    serving: declaredDefault.description,
+                    grams: declaredDefault.grams,
+                });
+            }
             if (defaultServing) {
                 grams = qty * defaultServing.grams!;
                 servingDescription = qty === 1
@@ -495,6 +527,29 @@ export async function buildFatSecretResult(
                 // written for.
                 const fromPanel = per100 ? gramsFromPer100gPanel(m, per100) : null;
                 const estPerServingGrams = fromPanel ?? estimateServingGrams(m);
+                // FLOOR ONLY — not the label band. This tier is the next thing
+                // to catch a bare request the default-serving band just
+                // rejected, and it reaches the identical answer by a different
+                // route: inverting the 1-almond serving's 7 kcal against a 578
+                // kcal/100g panel is 1.2g again. Banding one branch and not the
+                // other would have made the fix inert while looking like it
+                // worked.
+                //
+                // But only the FLOOR transfers. The first version applied the
+                // full 3–400g label band here and the existing panel-inversion
+                // tests killed it: a brewed coffee legitimately inverts to
+                // ~477g, and a 400g ceiling sent it to the flat 100g default.
+                // These grams are not a label — they are arithmetic on the
+                // record's own panel, validated at 98.1% within 5% — so the
+                // upper bound has no basis on this tier. The defect being fixed
+                // is a 1.2g UNDER-bill.
+                if ((bareSingular || barePlural) && estPerServingGrams < BARE_LABEL_MIN_GRAMS) {
+                    logger.info('fs.build_result.bare_macro_serving_out_of_band', {
+                        foodId: candidate.id,
+                        serving: macroServing.description,
+                        estGrams: estPerServingGrams,
+                    });
+                } else {
                 macroServing.grams = estPerServingGrams;
                 grams = qty * estPerServingGrams;
                 servingDescription = qty === 1
@@ -509,6 +564,7 @@ export async function buildFatSecretResult(
                     estGrams: estPerServingGrams,
                     gramsSource: fromPanel != null ? 'per100g_panel_inversion' : 'energy_density',
                 });
+                }
             }
         }
     }

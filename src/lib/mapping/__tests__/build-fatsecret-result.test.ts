@@ -590,7 +590,14 @@ describe('per-100g panel inversion recovers the true serving weight', () => {
     // fs-shaped Diet Coke: every panel nutrient is 0, so nothing is derivable.
     // Demoting the panel here would swap a 100g display for a 1g one showing
     // the same correct 0 kcal, so the row is deliberately left in place.
-    it('leaves a genuinely zero-calorie drink exactly as it was', async () => {
+    //
+    // UPDATED 2026-08-01, bare-request serving band. This is a BARE query, and
+    // its `100 g` default serving is the per-100g placeholder the band exists
+    // to reject, so it now falls through to the bare-query guard and bills the
+    // category default: 355g, one can — the same answer buildOffResult gives
+    // for `coca cola`. The assertion this test was written to defend is
+    // unchanged and still checked below: never the 1g shape, always 0 kcal.
+    it('leaves a genuinely zero-calorie drink at a sane weight and 0 kcal', async () => {
         mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
             name: 'Diet Coke (Can)',
             brandName: 'Coca-Cola',
@@ -615,7 +622,8 @@ describe('per-100g panel inversion recovers the true serving weight', () => {
             0.9,
             'diet coke'
         );
-        expect(result!.grams).toBe(100);
+        expect(result!.grams).toBe(355);
+        expect(result!.grams).toBeGreaterThan(3);   // never the 1g shape
         expect(result!.kcal).toBe(0);
     });
 

@@ -211,6 +211,96 @@ describe('rule (2) — a bare SINGULAR must not bill a tiny piece either', () =>
     });
 });
 
+describe('the default-serving sink — suppression alone was not enough', () => {
+    /**
+     * The real fs_37040 "Almonds" record, read off the box 2026-08-01:
+     *   35301  1 almond                  1.2g   <- defaultServingId
+     *   44764  1 oz                     28.35g
+     *   35300  1 oz (23 whole kernels)  28.35g
+     *   59771  100 g                     100g
+     *   35299  1 cup whole                143g
+     * Suppressing the count branch moved `almonds` from fs_label_count to
+     * fs_default_serving and left the billed grams at 1.2 — the declared
+     * default IS the per-piece row. A fix that only suppresses is inert here.
+     */
+    function almondsRow() {
+        return makeRow({
+            defaultServingId: 'svPiece',
+            servings: [
+                {
+                    servingId: 'svPiece', description: '1 almond', measurementDescription: 'almond',
+                    grams: 1.2, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 7, protein: 0.3, carbohydrate: 0.2, fat: 0.6 },
+                },
+                {
+                    servingId: 'svOz', description: '1 oz (23 whole kernels)', measurementDescription: 'oz',
+                    grams: 28.35, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 164, protein: 6, carbohydrate: 6.1, fat: 14.2 },
+                },
+                {
+                    servingId: 'svCup', description: '1 cup whole', measurementDescription: 'cup',
+                    grams: 143, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 827, protein: 30.4, carbohydrate: 30.8, fat: 71.4 },
+                },
+            ],
+        });
+    }
+
+    it('bare "almonds" bills a serving, not the 1.2g declared default', async () => {
+        // MUTATION: delete the bareServingUsable() band on the default-serving
+        // branch -> 1.2g comes straight back, with every other test still green.
+        mockFatSecretFoodFindUnique.mockResolvedValue(almondsRow());
+        const r = await buildFatSecretResult(
+            makeCandidate(), parsedLine({ name: 'almonds' }), 0.9, 'almonds'
+        );
+        expect(r!.grams).toBe(28);           // bare-query lexicon: 1 oz
+        expect(r!.servingTier).toBe('bare_category_default');
+    });
+
+    it('rejects, and does NOT substitute another serving off the record', async () => {
+        // The tempting fix is "take the next in-band serving". It is not safe:
+        // prisma include has no orderBy, so the next in-band row here is either
+        // 28.35g or 143g depending on DB order. Falling through to the guard is
+        // deterministic. This asserts we never land on the cup.
+        mockFatSecretFoodFindUnique.mockResolvedValue(almondsRow());
+        const r = await buildFatSecretResult(
+            makeCandidate(), parsedLine({ name: 'almonds' }), 0.9, 'almonds'
+        );
+        expect(r!.grams).not.toBe(143);
+        expect(r!.grams).not.toBe(28.35);
+    });
+
+    it('an in-band declared default is still billed untouched', async () => {
+        // The band must only fire where the answer was already out of band.
+        // MUTATION: invert the band condition -> this goes red.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            name: 'Greek Yogurt',
+            defaultServingId: 'svCup',
+            servings: [{
+                servingId: 'svCup', description: '1 container', measurementDescription: 'container',
+                grams: 170, volumeMl: null, numberOfUnits: 1,
+                nutrients: { calories: 100, protein: 17, carbohydrate: 6, fat: 0 },
+            }],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ name: 'Greek Yogurt' }),
+            parsedLine({ name: 'greek yogurt' }), 0.9, 'greek yogurt'
+        );
+        expect(r!.servingTier).toBe('fs_default_serving');
+        expect(r!.grams).toBe(170);
+    });
+
+    it('a NON-bare request keeps an out-of-band default serving', async () => {
+        // The band is bare-only. "3 almonds" is an explicit count and must still
+        // resolve per piece. MUTATION: drop the bare gate from bareServingUsable.
+        mockFatSecretFoodFindUnique.mockResolvedValue(almondsRow());
+        const r = await buildFatSecretResult(
+            makeCandidate(), parsedLine({ qty: 3, name: 'almonds' }), 0.9, '3 almonds'
+        );
+        expect(r!.grams).toBeCloseTo(3.6, 3);
+    });
+});
+
 describe('what the suppression must NOT touch', () => {
     it('an explicit count keeps per-piece resolution ("3 almonds" -> 3.6g)', async () => {
         // The digit gate is the whole reason a counted request still works.
