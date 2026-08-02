@@ -1,5 +1,5 @@
 {
-  "$comment": "Doc-claims registry. Every entry: the claim as its owner doc states it, the ONE doc that owns the fact, the command that re-derives it, the expected value, and the date last measured. Run: npm run doc-check (or npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts). A failing claim means the DOC is now wrong — fix the owner doc AND this entry together, with a fresh date. Contexts: backend = this repo, mobile = KindaHealthyMobile repo, box = the OptiPlex (ssh when not local). The box has no copy of the mobile repo, so its nightly run uses --where backend,box; mobile claims are covered from the Mac.",
+  "$comment": "Doc-claims registry. Every entry: the claim as its owner doc states it, the ONE doc that owns the fact, the command that re-derives it, the expected value, and the date last measured. Run: npm run doc-check (or npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts). A failing claim means the DOC is now wrong — fix the owner doc AND this entry together, with a fresh date. Contexts: backend = this repo, mobile = KindaHealthyMobile repo, box = the OptiPlex (ssh when not local). The box has a receive-only copy of the mobile repo (since 2026-07-30) and its nightly run uses --where backend,box,mobile; devmachine claims (an installed toolchain, e.g. npx tsc) are covered from the Mac.",
   "claims": [
     {
       "id": "attribution-client-sources",
@@ -967,6 +967,42 @@
       },
       "verified": "2026-08-01",
       "timeoutMs": 60000
+    },
+    {
+      "id": "eval-run-eval-supports-nocache",
+      "claim": "run-eval.ts passes ?nocache=1 when --nocache is given, so the golden gate can be made to reach the mapper instead of serving 84.9% of cases from the FoodMapping cache",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "where": "backend",
+      "command": "grep -c \"nocache=1\" scripts/eval/run-eval.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-02"
+    },
+    {
+      "id": "eval-nocache-refuses-write-baseline",
+      "claim": "--nocache with --write-baseline exits 2 rather than overwrite the WARM knownIssue baseline the batch gate compares against with cold values",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "where": "backend",
+      "command": "grep -c 'NO_CACHE && WRITE_BASELINE' scripts/eval/run-eval.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-02"
+    },
+    {
+      "id": "offfood-too-large-to-snapshot-per-batch",
+      "claim": "OffFood exceeds 1GB, which is why the warm rollback reverts aux tables with a key-set snapshot instead of widening the per-batch pg_dump",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT pg_total_relation_size('\\\"OffFood\\\"') > 1000000000\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^t$"
+      },
+      "verified": "2026-08-02"
     }
   ]
 }
