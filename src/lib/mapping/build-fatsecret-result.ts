@@ -35,6 +35,11 @@ import {
     usableBareLabelServing, BARE_MIN_PIECE_SERVING_GRAMS, BARE_LABEL_MIN_GRAMS,
 } from '../servings/bare-query-guard';
 import { volumeToGrams } from '../units/volume-density';
+// Ambiguous/count-unit resolution, shared with the OFF and FDC cascades. Safe
+// to import here: `ambiguous-unit-backfill` pulls only `db` and `logger`, so
+// there is no cycle back through map-ingredient-with-fallback.
+import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
+import { classifyUnit } from './unit-type';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
@@ -505,6 +510,62 @@ export async function buildFatSecretResult(
                 }
             }
         }
+
+        // (c2) AMBIGUOUS / COUNT UNIT — the step the other two cascades have and
+        // this one did not.
+        //
+        // "1 handful almonds", "1 sleeve saltine crackers", "1 bowl cereal",
+        // "1 knob of butter": the unit is a real request the label cannot answer,
+        // and `buildOffResult()` and `buildFdcResult()` both resolve it through
+        // `getOrCreateAmbiguousServing()` (deterministic sub-piece defaults,
+        // then the per-food cache, then an estimate). `buildFatSecretResult()`
+        // never called it, so these fell straight to the declared default —
+        // whatever single piece the record happens to lead with.
+        //
+        // That was invisible while the FatSecret lane reached the reranker on
+        // 16.9% of queries. Fixing the lane starvation made FatSecret the winner
+        // for these lines and the gate measured the cost immediately
+        // (2026-08-02, regression pool): `1 handful almonds` 30g -> 1.2g and
+        // `1 sleeve saltine crackers` 113g / 490kcal -> 3g / 13kcal, both
+        // billing ONE almond and ONE cracker.
+        //
+        // Banding the default serving would NOT have fixed these. This builder
+        // is terminal — it always bills something — so a rejection lands on the
+        // flat per-100g tier, and the bare-query guard cannot rescue it either
+        // because its digit gate excludes every one of these lines by design.
+        // 100g for a handful of almonds is not better than 1.2g, it is just
+        // wrong in the other direction. The request needs an ANSWER, not a veto,
+        // and the answer already exists in a module this file can import.
+        //
+        // Ordered after the noun match and before the declared default,
+        // mirroring `buildOffResult()`: a serving the label genuinely enumerates
+        // still wins ("2 bars" on a record with a "1 bar" serving never reaches
+        // here), and a resolved container weight outranks a lead piece.
+        if (grams == null && unit
+            && (isAmbiguousUnit(unit) || classifyUnit(unit) === 'count')) {
+            const ambiguous = await getOrCreateAmbiguousServing(
+                candidate.id, foodName, unit, brandName
+            );
+            if ((ambiguous.status === 'success' || ambiguous.status === 'cached')
+                && ambiguous.grams && ambiguous.grams > 0) {
+                grams = qty * ambiguous.grams;
+                servingDescription = `${qty} ${unit} (${ambiguous.grams.toFixed(1)}g each)`;
+                servingTier = ambiguous.status === 'cached' ? 'count_unit_cached' : 'count_unit_ai';
+                logger.info('fs.build_result.unit_serving_resolved', {
+                    foodId: candidate.id,
+                    unit,
+                    perUnitGrams: ambiguous.grams,
+                    status: ambiguous.status,
+                });
+            } else {
+                logger.warn('fs.build_result.unit_serving_unresolved', {
+                    foodId: candidate.id,
+                    unit,
+                    error: ambiguous.error,
+                });
+            }
+        }
+
         // Default-serving fallback for serving-billed requests the noun match
         // couldn't resolve (bare qty-1, "1 serving", unmatched nouns).
         //
