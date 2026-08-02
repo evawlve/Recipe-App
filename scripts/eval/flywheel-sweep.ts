@@ -119,8 +119,14 @@ const COVERAGE_ONLY = args.includes('--coverage-only');
 
 const RESULTS_DIR = path.join(__dirname, 'results');
 const REPO_ROOT = path.join(__dirname, '..', '..');
+// Cut 2026-08-02 by scripts/eval/_cut_coverage_corpus.ts: the 2026-07-24 corpus
+// (3,307 seeds) plus 447 branded-CPG seeds from warm batches 17-24 that were not
+// already in it by cache key. `coverage-corpus.tsv` stays COMMITTED and unchanged
+// so every reading logged before this date stays readable against its own
+// denominator — that is why this is a new file rather than an append.
+// Restated baseline at the cut: 1954/3754 = 52.1% cached, growth 0% by construction.
 const COVERAGE_CORPUS = argValue('--coverage-corpus')
-    ?? path.join(__dirname, 'coverage-corpus.tsv');
+    ?? path.join(__dirname, 'coverage-corpus-2026-08-02.tsv');
 
 // ---------------------------------------------------------------------------
 // 1. Telemetry

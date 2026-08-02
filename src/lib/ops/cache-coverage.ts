@@ -26,9 +26,16 @@
  * are already cached and so reports near-100% by construction. It answers "did
  * the cache hold?", not "is the cache big enough yet?".
  *
- * The corpus is COMMITTED (scripts/eval/coverage-corpus.tsv) so the denominator
- * is fixed. Changing it breaks comparability with every earlier reading — cut a
- * new file under a new name instead, and restate the baseline.
+ * The corpus is COMMITTED so the denominator is fixed. Changing it breaks
+ * comparability with every earlier reading — cut a new file under a new name
+ * instead, and restate the baseline. `scripts/eval/_cut_coverage_corpus.ts` does
+ * exactly that and refuses to overwrite an existing cut.
+ *
+ * Cuts so far: `coverage-corpus.tsv` (2026-07-24, 3,307 seeds, baseline 28.8%)
+ * and `coverage-corpus-2026-08-02.tsv` (3,754 seeds, restated baseline 52.1%),
+ * which is what the sweep reads by default now. Both stay committed. Note that
+ * `computeCoverageTrend()` returns null across different corpora — subtracting
+ * two fractions with different denominators is not a trend.
  */
 
 import * as fs from 'fs';
@@ -166,7 +173,7 @@ export async function collectCacheCoverage(
 export function findPreviousCoverage(
     resultsDir: string,
     excludeFile?: string,
-): { file: string; pct: number } | null {
+): { file: string; pct: number; corpus?: string } | null {
     let names: string[];
     try {
         names = fs.readdirSync(resultsDir);
@@ -183,7 +190,7 @@ export function findPreviousCoverage(
             const parsed = JSON.parse(fs.readFileSync(path.join(resultsDir, name), 'utf8'));
             const prev = parsed?.coverage;
             if (prev && prev.ok === true && typeof prev.pct === 'number') {
-                return { file: name, pct: prev.pct };
+                return { file: name, pct: prev.pct, corpus: prev.corpus };
             }
         } catch {
             // Unreadable or partial report — keep looking further back.
@@ -194,9 +201,17 @@ export function findPreviousCoverage(
 
 export function computeCoverageTrend(
     report: CacheCoverageReport,
-    previous: { file: string; pct: number } | null,
+    previous: { file: string; pct: number; corpus?: string } | null,
 ): CoverageTrend | null {
     if (!report.ok || !previous) return null;
+    // A delta across two DIFFERENT corpora is not a trend, it is two unrelated
+    // fractions subtracted. Cutting coverage-corpus-2026-08-02.tsv made the very
+    // first read of the new file print "+2.8pt vs <a report on the old one>",
+    // which is exactly the comparability break this module's header tells you to
+    // avoid by cutting a new file — and then reintroduced it in the trend line.
+    // A previous report from before `corpus` was recorded is also not comparable:
+    // absent is not "same".
+    if (!previous.corpus || previous.corpus !== report.corpus) return null;
     return {
         previousFile: previous.file,
         previousPct: previous.pct,

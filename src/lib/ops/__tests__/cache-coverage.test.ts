@@ -126,13 +126,40 @@ describe('trend', () => {
         expect(findPreviousCoverage(dir, 'flywheel-2026-07-25.json')).toBeNull();
     });
 
-    it('computes the delta in points', async () => {
+    it('computes the delta in points when both reads used the SAME corpus', async () => {
         const dir = tmpdir();
         const p = writeCorpus(dir, ['a\tnew\tbanana', 'a\tnew\tegg']);
         const report = await collectCacheCoverage(db(['banana']), p, RAN_AT);
-        const trend = computeCoverageTrend(report, { file: 'prev.json', pct: 28.8 });
+        const trend = computeCoverageTrend(report, { file: 'prev.json', pct: 28.8, corpus: report.corpus });
         expect(report.pct).toBe(50);
         expect(trend?.deltaPct).toBe(21.2);
+    });
+
+    // Cutting a new corpus is the documented way to extend the denominator, so the
+    // very first read of a new file WILL find a previous report on the old one.
+    // Subtracting those two fractions is not a trend.
+    it('refuses to trend across two different corpora', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['a\tnew\tbanana', 'a\tnew\tegg']);
+        const report = await collectCacheCoverage(db(['banana']), p, RAN_AT);
+        expect(computeCoverageTrend(report, {
+            file: 'prev.json', pct: 28.8, corpus: 'coverage-corpus-OLD.tsv',
+        })).toBeNull();
+    });
+
+    it('refuses to trend against a report that predates corpus recording', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['a\tnew\tbanana']);
+        const report = await collectCacheCoverage(db([]), p, RAN_AT);
+        // absent is not "same corpus" — an old report simply cannot say.
+        expect(computeCoverageTrend(report, { file: 'prev.json', pct: 10 })).toBeNull();
+    });
+
+    it('carries the previous report\'s corpus through so the trend can check it', () => {
+        const dir = tmpdir();
+        fs.writeFileSync(path.join(dir, 'flywheel-2026-08-01.json'),
+            JSON.stringify({ coverage: { ok: true, pct: 44, corpus: 'coverage-corpus.tsv' } }));
+        expect(findPreviousCoverage(dir)?.corpus).toBe('coverage-corpus.tsv');
     });
 
     it('has no trend on the first run', async () => {
