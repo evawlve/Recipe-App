@@ -917,21 +917,21 @@
       "verified": "2026-08-01"
     },
     {
-      "id": "normalize-collapses-cooking-state",
-      "claim": "THE KEY COLLISION. normalizeIngredientName() in src/lib/mapping/normalization-rules.ts strips the cooking modifier, so 'grilled chicken' and 'chicken' both clean to 'chicken' and share ONE FoodMapping key. Output is cleaned(grilled chicken)|cleaned(chicken)|equal?|stripped. When this claim FAILS the cooking-state key fork has shipped — update the report, the displacement-bar entry and this one together, because the bar's freeze is only load-bearing while the keys collide.",
+      "id": "cooking-state-survives-into-key",
+      "claim": "THE FORK, SHIPPED 2026-08-01. Cooking state now survives into the FoodMapping cache key: 'grilled chicken' and 'chicken' derive DIFFERENT keys, as do 'scrambled eggs' and 'eggs'. Fixed by removing the cooking verbs from prep_phrases (both data/fatsecret/normalization-rules.json and the DEFAULT_RULES fallback) rather than by adding them to QUALIFIERS — the latter would also strip the word from the retrieval text, and retrieval needs it to find a cooked record. Output is key(grilled chicken)|key(chicken)|equal?|scrambled-equals-eggs?. If this claim fails the collision is BACK, and the cross-source displacement freeze silently becomes load-bearing again — update the report and the displacement-bar entry together with this one.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
       "where": "backend",
-      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');const a=n('grilled chicken'),b=n('chicken');process.stdout.write(a.cleaned+'|'+b.cleaned+'|'+String(a.cleaned===b.cleaned)+'|'+a.stripped.join(','))\"",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');const {deriveCacheKeyName:d}=require('./src/lib/mapping/cache-key-core');const k=s=>{const x=p(s);return d(n(x.name).cleaned,x)};const a=k('grilled chicken'),b=k('chicken'),c=k('scrambled eggs'),e=k('eggs');process.stdout.write(a+'|'+b+'|'+String(a===b)+'|'+String(c===e))\"",
       "expect": {
         "kind": "equals",
-        "value": "chicken|chicken|true|grilled"
+        "value": "chicken grilled|chicken|false|false"
       },
       "verified": "2026-08-01",
       "timeoutMs": 180000
     },
     {
       "id": "qualifier-strip-precedes-normalization",
-      "claim": "The strip that actually reaches production keys is extractQualifiers() inside parseIngredientLine() (src/lib/parse/ingredient-line.ts), which runs BEFORE normalizeIngredientName() ever sees the string — not the prep_phrases list. Proof by the one input where they disagree: parseIngredientLine('dried apricots').name is 'apricots' while normalizeIngredientName('dried apricots').cleaned is 'dried apricots' (its PRODUCT_TYPE_MODIFIERS guard fires). Every production call site takes parsed.name first, so editing prep_phrases to fix cooking state is a measured no-op.",
+      "claim": "Two strippers exist with DISJOINT token sets, which is why one-lever fixes kept missing. extractQualifiers() inside parseIngredientLine() removes tokens in QUALIFIERS (raw/dried/canned/whole) before normalizeIngredientName() sees them — proof by the one input where the two disagree: parseIngredientLine('dried apricots').name is 'apricots' while normalizeIngredientName('dried apricots').cleaned is 'dried apricots'. But the cooking verbs (grilled/scrambled/steamed/...) are ABSENT from QUALIFIERS, so for them the prep_phrases strip is the only one and is fully load-bearing. CORRECTS the pre-2026-08-01 reading that editing prep_phrases is a no-op: that holds only for the QUALIFIERS tokens.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
       "where": "backend",
       "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');process.stdout.write(p('dried apricots').name+'|'+n('dried apricots').cleaned)\"",
@@ -941,6 +941,19 @@
       },
       "verified": "2026-08-01",
       "timeoutMs": 180000
+    },
+    {
+      "id": "cooking-verbs-out-of-prep-phrases-and-cache-bumped",
+      "claim": "Paired guard. The cooking verbs stay OUT of prep_phrases AND RULES_VERSION stays >= 2. These must move together: re-adding a verb restores the key collision, and changing the rules WITHOUT bumping RULES_VERSION leaves AiNormalizeCache replaying the old collapse (31 rows measured 2026-08-01, led by 'scrambled eggs'->'eggs' at 235 uses) while every unit test stays green, because the tests call the normalizer directly and never touch the cache. Output is verbCount@RULES_VERSION.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
+      "where": "backend",
+      "command": "node -e \"const r=require('./data/fatsecret/normalization-rules.json');const V=['grilled','scrambled','steamed','boiled','poached','baked','roasted','broiled','sauteed','saut\\u00e9ed','smoked'];const h=r.prep_phrases.filter(x=>V.includes(String(x).trim().toLowerCase())).length;const s=require('fs').readFileSync('src/lib/mapping/validated-mapping-helpers.ts','utf8');const m=s.match(/RULES_VERSION\\s*=\\s*(\\d+)/);process.stdout.write(h+'@'+m[1])\"",
+      "expect": {
+        "kind": "equals",
+        "value": "0@2"
+      },
+      "verified": "2026-08-01",
+      "timeoutMs": 60000
     }
   ]
 }

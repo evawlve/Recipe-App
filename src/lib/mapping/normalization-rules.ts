@@ -50,23 +50,26 @@ const DEFAULT_RULES: NormalizationRules = {
     'deboned',
     'pitted',
 
-    // Cooking methods that DON'T significantly change nutritional profile
-    // (no added fat/calories - scrambled eggs ≈ eggs, boiled chicken ≈ chicken)
-    'scrambled',
-    'boiled',
-    'hard[-\\s]?boiled',
-    'soft[-\\s]?boiled',
-    'steamed',
-    'poached',
-    'grilled',
-    'baked',
-    'roasted',
-    'broiled',
+    // Cooking methods that do not move the panel BASIS.
+    //
+    // The methods that DO move it were removed on 2026-08-01 — 'grilled',
+    // 'scrambled', 'steamed', 'boiled' (+hard/soft), 'poached', 'baked',
+    // 'roasted', 'broiled', 'sauteed'/'sautéed', 'smoked'. They lived here
+    // under the premise "no added fat/calories, so scrambled eggs ≈ eggs",
+    // which is true per EGG and false per 100 GRAMS: cooking drives off water
+    // and concentrates every macro. Stripping them collapsed the modifier-
+    // bearing line onto the bare line's cache key, so 'grilled chicken' and
+    // 'chicken' shared one FoodMapping row and proteins billed raw with no
+    // escape (chicken breast 116 kcal/100g against ~165 intended).
+    //
+    // These entries are load-bearing for the KEY, not just the name: the
+    // parser does not capture them (they are absent from QUALIFIERS), so a
+    // strip here is the last place the state exists. Deliberately fixed HERE
+    // rather than by adding them to QUALIFIERS — that would also strip them
+    // from the retrieval text, and retrieval needs the word to find a cooked
+    // record. Owner: sync-docs/reports/2026-08-01_cooking-state-key-collision.md
     'blanched',
-    'sauteed',  // minimal oil typically
-    'sautéed',
     'microwaved',
-    'smoked',   // adds flavor, minimal calorie change
     'dried',
     'dehydrated',
     'raw',

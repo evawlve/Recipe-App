@@ -36,21 +36,8 @@
     "deveined",
     "deboned",
     "pitted",
-    "scrambled",
-    "boiled",
-    "hard[-\\s]?boiled",
-    "soft[-\\s]?boiled",
-    "steamed",
-    "poached",
-    "grilled",
-    "baked",
-    "roasted",
-    "broiled",
     "blanched",
-    "sauteed",
-    "sautéed",
     "microwaved",
-    "smoked",
     "dried",
     "dehydrated",
     "raw",
@@ -418,7 +405,6 @@
       "from": "rice vinegar",
       "to": "plain rice vinegar"
     },
-
     {
       "from": "cooking spray",
       "to": "non-stick cooking spray"

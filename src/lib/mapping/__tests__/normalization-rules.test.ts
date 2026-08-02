@@ -93,19 +93,50 @@ describe('normalizeIngredientName', () => {
     });
 
     // ======================================================================
-    // NEUTRAL COOKING METHODS - Should be STRIPPED (no nutrition change)
+    // COOKING STATE - MUST be PRESERVED (it moves the panel basis)
+    //
+    // These cases asserted the opposite until 2026-08-01. The premise was
+    // "no added fat or calories, so scrambled eggs ≈ eggs" — true per EGG and
+    // false per 100 GRAMS, which is the basis every panel here is on. Cooking
+    // drives off water and concentrates every macro. Stripping the word
+    // collapsed the modifier-bearing line onto the bare line's FoodMapping key,
+    // so proteins billed raw with no escape.
+    // Owner: sync-docs/reports/2026-08-01_cooking-state-key-collision.md
     // ======================================================================
-    describe('neutral cooking methods (SHOULD strip)', () => {
+    describe('cooking state (MUST be preserved)', () => {
+        const stateMethods = [
+            { method: 'scrambled', food: 'eggs' },
+            { method: 'boiled', food: 'eggs' },
+            { method: 'hard-boiled', food: 'eggs' },
+            { method: 'poached', food: 'eggs' },
+            { method: 'steamed', food: 'broccoli' },
+            { method: 'grilled', food: 'chicken' },
+            { method: 'baked', food: 'potato' },
+            { method: 'broiled', food: 'salmon' },
+        ];
+
+        stateMethods.forEach(({ method, food }) => {
+            it(`keeps "${method}" in "${method} ${food}"`, () => {
+                const result = normalizeIngredientName(`${method} ${food}`);
+                expect(result.cleaned.toLowerCase()).toBe(`${method} ${food}`);
+            });
+        });
+
+        it('keeps the state but still strips texture noise: "scrambled eggs until fluffy"', () => {
+            const result = normalizeIngredientName('scrambled eggs until fluffy');
+            expect(result.cleaned).toBe('scrambled eggs');
+        });
+    });
+
+    // ======================================================================
+    // BASIS-PRESERVING PREP - still STRIPPED
+    //
+    // Non-vacuity for the block above: prep_phrases still strips. What changed
+    // is WHICH words are in it, not that the mechanism runs.
+    // ======================================================================
+    describe('basis-preserving prep (SHOULD strip)', () => {
         const neutralMethods = [
-            { method: 'scrambled', food: 'eggs', expected: 'eggs' },
-            { method: 'boiled', food: 'eggs', expected: 'eggs' },
-            { method: 'hard-boiled', food: 'eggs', expected: 'eggs' },
-            { method: 'poached', food: 'eggs', expected: 'eggs' },
-            { method: 'steamed', food: 'broccoli', expected: 'broccoli' },
-            { method: 'grilled', food: 'chicken', expected: 'chicken' },
-            { method: 'baked', food: 'potato', expected: 'potato' },
             { method: 'blanched', food: 'vegetables', expected: 'vegetables' },
-            { method: 'broiled', food: 'salmon', expected: 'salmon' },
             { method: 'microwaved', food: 'rice', expected: 'rice' },
         ];
 
@@ -114,11 +145,6 @@ describe('normalizeIngredientName', () => {
                 const result = normalizeIngredientName(`${method} ${food}`);
                 expect(result.cleaned.toLowerCase()).toBe(expected.toLowerCase());
             });
-        });
-
-        it('strips "scrambled eggs until fluffy" to just "eggs"', () => {
-            const result = normalizeIngredientName('scrambled eggs until fluffy');
-            expect(result.cleaned).toBe('eggs');
         });
     });
 
@@ -185,10 +211,10 @@ describe('normalizeIngredientName', () => {
             expect(result.cleaned.toLowerCase()).not.toContain('chopped');
         });
 
-        it('strips neutral cooking but preserves dietary: "grilled lowfat cheese"', () => {
+        it('preserves cooking state AND dietary modifier: "grilled lowfat cheese"', () => {
             const result = normalizeIngredientName('grilled lowfat cheese');
             expect(result.cleaned.toLowerCase()).toContain('lowfat');
-            expect(result.cleaned.toLowerCase()).not.toContain('grilled');
+            expect(result.cleaned.toLowerCase()).toContain('grilled');
         });
 
         it('preserves nutrition-altering method AND dietary modifier: "fried fat-free cheese"', () => {
@@ -302,8 +328,11 @@ describe('end-to-end: parse and normalize', () => {
         expect(parsed).not.toBeNull();
         expect(parsed!.qty).toBe(3);
 
+        // The state survives the full parse->normalize path, not just a direct
+        // normalizeIngredientName() call. This is the assertion that would have
+        // caught the collision: the parser is what production feeds the mapper.
         const normalized = normalizeIngredientName(parsed!.name);
-        expect(normalized.cleaned.toLowerCase()).toBe('eggs');
+        expect(normalized.cleaned.toLowerCase()).toBe('scrambled eggs');
     });
 
     it('handles "1 cup sugar-free pudding mix"', () => {
@@ -333,8 +362,10 @@ describe('end-to-end: parse and normalize', () => {
         expect(parsed).not.toBeNull();
         expect(parsed!.qty).toBe(4);
 
-        // After full normalization, should just be "eggs"
+        // The cooking state survives; size ('large') and cut ('chopped') do not.
+        // That split is the whole point — 'large' and 'chopped' leave the panel
+        // basis alone, 'hard-boiled' does not.
         const normalized = normalizeIngredientName(parsed!.name);
-        expect(normalized.cleaned.toLowerCase()).toBe('eggs');
+        expect(normalized.cleaned.toLowerCase()).toBe('hard-boiled eggs');
     });
 });
