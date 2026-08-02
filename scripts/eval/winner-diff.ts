@@ -273,6 +273,35 @@ const COPIED_HELPERS = [
     'function isMatchableVolumeUnit(',
     'function servingLeadingCount(',
 ];
+/**
+ * THE TERMINATOR TEST IS `trimEnd() === '}'`, NOT `=== '}'`, AND THAT IS THE WHOLE
+ * POINT OF THIS COMMENT.
+ *
+ * `map-ingredient-with-fallback.ts` is 100% CRLF (`file` says so; re-derive with
+ * `file src/lib/mapping/map-ingredient-with-fallback.ts`, and commit 5b4a170 is
+ * literally "restore CRLF"). Split on '\n', every line therefore ends '\r', so the
+ * old `src[j] !== '}'` matched NOTHING: `src.findIndex(l => l === '}')` returns -1
+ * over the whole file. Every anchor ran to EOF, and each helper's "source" was the
+ * entire tail of the file from its own start.
+ *
+ * Measured 2026-08-01, before this fix: the five anchors captured 1,624 / 1,593 /
+ * 1,582 / 1,546 / 1,533 lines — 7,878 in total, all terminating on the same line —
+ * against the 54 lines the five helpers actually occupy (22/3/15/3/11).
+ *
+ * The failure direction was NOISE, not blindness, which is why it survived: the
+ * hash covered thousands of lines of unrelated code, so it moved whenever anything
+ * below line 4935 moved. `81e1d72` (a hydration-budget change inside
+ * `buildOffResult`, nowhere near these helpers) was enough to rot the pin. A guard
+ * that fires on changes it does not care about trains its readers to reach for
+ * `--allow-drift`, and that is how a real drift gets waved through.
+ *
+ * Section 2's header already warned that this function is line-ending sensitive.
+ * It was right about the hash and wrong about the scope: the extraction was
+ * sensitive too, and nobody re-derived the narrow claim (playbook section 1).
+ *
+ * Fails closed: running to EOF without finding a terminator is now an error, not a
+ * silently over-broad capture.
+ */
 function copiedHelperSource(): string {
     const src = fs.readFileSync(MAPPER_FILE, 'utf8').split('\n');
     const out: string[] = [];
@@ -280,7 +309,15 @@ function copiedHelperSource(): string {
         const i = src.findIndex(l => l.trimStart().startsWith(anchor));
         if (i < 0) throw new Error('drift-guard: helper not found: ' + anchor);
         let j = i;
-        while (j < src.length && src[j] !== '}') j++;
+        while (j < src.length && src[j].trimEnd() !== '}') j++;
+        if (j >= src.length) {
+            throw new Error(
+                'drift-guard: no closing brace found for ' + anchor + ' before EOF. '
+                + 'These helpers are top-level functions, so this means the anchor matched '
+                + 'something else (a comment, a type) or the file moved. Do not "fix" this '
+                + 'by widening the capture — that is the bug this check replaced.',
+            );
+        }
         out.push(src.slice(i, j + 1).join('\n'));
     }
     return out.join('\n---\n');
@@ -404,8 +441,41 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // the one above. Do not skip the proof — "it was only comments" is exactly the
     // claim a hash exists to check.
     '3fc2ca073ff0f047': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes. Behaviourally identical to
+    // 3fc2ca07; the ONLY delta is observability, and here is the receipt rather
+    // than the assurance:
+    //
+    //   $ diff <(strip <pinned block>) <(strip <this block>)   # comments+blanks out
+    //   117a118,122  > logger.audit('rerank.ai_generated_candidate_seen', {...})
+    //   198c203      < logger.info('mapping.confidence_gate_overridden', {
+    //                > logger.audit('mapping.confidence_gate_overridden', {
+    //
+    // Two logging statements, 236 -> 241 code lines. `replaySelection()` models
+    // selection and emits no telemetry at all, so neither can reach it. Re-pinned
+    // rather than left drifting for the reason spelled out on 3fc2ca07: the guard
+    // hashes block TEXT and cannot tell a log line from a decision, which is the
+    // right conservative default.
+    //
+    // The delta was PR #209 (`6271792`, 2026-08-01). Nobody re-pinned, so from that
+    // merge until 2026-08-01 the drift guard was tripped on clean master and this
+    // gate — the one playbook section 5a requires before any admission or ranking
+    // change — could not be run without `--allow-drift`. It was not run.
+    '9e5634f738b23ba7': 'gate-backstop',
 };
-const PINNED_HELPERS_HASH = 'af86765a0a67abd6';
+/**
+ * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
+ *
+ * `af86765a0a67abd6` was a hash of ~7,878 lines (five overlapping runs to EOF),
+ * not of the five helpers. Under the corrected extraction the five helpers are
+ * BYTE-IDENTICAL to the commit that pin was taken at:
+ *
+ *   $ diff <(helpers e9b6899) <(helpers HEAD)   # corrected extractor, both sides
+ *   (no output)
+ *
+ * So this is not "the helpers changed and we accepted it" — the helpers never
+ * changed, and the old number was measuring something else.
+ */
+const PINNED_HELPERS_HASH = '7535716631ca65c8';
 
 /**
  * The ONE caller hash section 9 actually transcribes.
@@ -427,7 +497,7 @@ const PINNED_HELPERS_HASH = 'af86765a0a67abd6';
  * (that shape is genuinely known, and naming it is more useful than "unrecognised"),
  * but it can no longer claim the replay mirrors it.
  */
-const TRANSCRIBED_CALLER = '3fc2ca073ff0f047';
+const TRANSCRIBED_CALLER = '9e5634f738b23ba7';
 
 interface DriftResult {
     caller: string;
@@ -1435,6 +1505,37 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
             }
         }
 
+        // THE CLAMP LIVES OUTSIDE THE TRANSCRIBED WINDOW, AND IT MUST BE MIRRORED.
+        //
+        // `confidence = Math.max(0, Math.min(1, confidence))` sits in the caller a
+        // few hundred lines BELOW CALLER_END_ANCHOR, so `callerBlockSource()` never
+        // sees it, the drift guard cannot notice its absence, and a transcription
+        // that stops at the anchor reports RAW ENGINE SCORES as confidences.
+        // Retrieval scores are open-scale (winner.score reached 8.85 in the
+        // 2026-07-20 parity sweep), so this is not a rounding difference.
+        //
+        // Caught 2026-08-01 by `verify --from-events --limit 60`, which returned
+        // 60/60 MATCH on foodId and CONF-UNEXPLAINED 1: `sugar` took the
+        // `scored_by_confidence` floor path at real=1.000 / replay=1.365. The
+        // record axis could never have found it — the winner is identical; only
+        // the number attached to it was wrong. That is the confidence axis doing
+        // exactly the job its own doc comment describes.
+        //
+        // Direction matters for how long this survived: the replay over-reports,
+        // and both 1.365 and 1.000 clear the >= 0.85 save gate, so the error was
+        // invisible in every verdict anyone had looked at. It would have shown up
+        // as a phantom confidence DELTA the first time a diff compared the two
+        // sides on a `scored_by_confidence` row.
+        //
+        // Anchor-bounded transcription has this failure mode structurally: the
+        // window is chosen by two string anchors, and anything the caller does to
+        // these variables afterwards is silently out of scope. When you move
+        // CALLER_END_ANCHOR, re-ask what now falls outside it.
+        //
+        // The clamp itself is applied in `mkWinner()` — once, on every path, which
+        // is where the caller applies it and is the only placement that cannot be
+        // half-done. Two of the three call sites here were unclamped; fixing just
+        // the one `verify` happened to flag would have left the other two.
         const windowIds = candidatesForRerank.map(c => c.id);
         return {
             path: s4path,
@@ -1517,6 +1618,12 @@ function mkWinner(
 ): WinnerInfo {
     const idx = filtered.findIndex((c: UnifiedCandidate) => c.id === w.id);
     const n: any = w.nutrition;
+    // Mirror of the caller's post-cascade clamp, which lives BELOW
+    // CALLER_END_ANCHOR and so is invisible to both the transcription and the
+    // drift guard. Applied here, at the single point every path funnels through,
+    // for the same reason the caller applies it once at the end of the cascade:
+    // "so no raw score escapes". See the note above the Step 4 return.
+    const clamped = Math.max(0, Math.min(1, confidence));
     return {
         foodId: w.id,
         foodName: w.name,
@@ -1527,7 +1634,7 @@ function mkWinner(
             kcal: n.kcal ?? 0, protein: n.protein ?? 0, carbs: n.carbs ?? 0,
             fat: n.fat ?? 0, per100g: !!n.per100g,
         } : null,
-        confidence,
+        confidence: clamped,
         selectionReason,
         indexInFiltered: idx,
         inTop10: idx >= 0 && idx < 10,
