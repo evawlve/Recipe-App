@@ -1,5 +1,5 @@
 {
-  "$comment": "Doc-claims registry. Every entry: the claim as its owner doc states it, the ONE doc that owns the fact, the command that re-derives it, the expected value, and the date last measured. Run: npm run doc-check (or npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts). A failing claim means the DOC is now wrong — fix the owner doc AND this entry together, with a fresh date. Contexts: backend = this repo, mobile = KindaHealthyMobile repo, box = the OptiPlex (ssh when not local). The box has no copy of the mobile repo, so its nightly run uses --where backend,box; mobile claims are covered from the Mac.",
+  "$comment": "Doc-claims registry. Every entry: the claim as its owner doc states it, the ONE doc that owns the fact, the command that re-derives it, the expected value, and the date last measured. Run: npm run doc-check (or npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts). A failing claim means the DOC is now wrong — fix the owner doc AND this entry together, with a fresh date. Contexts: backend = this repo, mobile = KindaHealthyMobile repo, box = the OptiPlex (ssh when not local). The box has a receive-only copy of the mobile repo (since 2026-07-30) and its nightly run uses --where backend,box,mobile; devmachine claims (an installed toolchain, e.g. npx tsc) are covered from the Mac.",
   "claims": [
     {
       "id": "attribution-client-sources",
@@ -834,7 +834,7 @@
     },
     {
       "id": "warm-runner-still-hardcodes-llm",
-      "claim": "TRIPWIRE. The per-batch screen in warm-plan-2026-07-25/run-batches.sh still routes to the OpenRouter --llm tier; the agent migration (handoff §3, two-phase runner split) is specified but NOT built. When this claim FAILS, the split has shipped — update the handoff, CLAUDE.md and this entry together. The file lives in a gitignored sync-docs data dir the box does not receive, so this is a devmachine claim.",
+      "claim": "The OpenRouter --llm screen tier still exists in warm-plan-2026-07-25/run-batches.sh and SCREEN_MODE still defaults to it. NOT a tripwire for the agent migration any more: the two-phase agent split SHIPPED and ran end to end on 2026-08-02 (batches 10, 17-22), while this command kept returning 1 because --screen agent was added ALONGSIDE the api tier rather than replacing it. The command never measured what the old claim text asserted. When this FAILS, the api tier has been removed. The file lives in a gitignored sync-docs data dir the box does not receive, so this is a devmachine claim.",
       "ownerDoc": "mobile:sync-docs/reports/2026-07-31_warm-push-handoff.md#3-the-warm-push",
       "where": "devmachine",
       "command": "grep -c -- 'correctness-screen.ts .*--llm ' sync-docs/warm-plan-2026-07-25/run-batches.sh",
@@ -842,7 +842,7 @@
         "kind": "equals",
         "value": "1"
       },
-      "verified": "2026-07-31"
+      "verified": "2026-08-02"
     },
     {
       "id": "cross-source-bar-has-no-ceiling",
@@ -893,16 +893,28 @@
       "verified": "2026-08-01"
     },
     {
-      "id": "ai-nutrition-hydration-budget-documented",
-      "claim": "Hydration-time AI nutrition has its OWN allowance, separate from the parse-time one: AI_NUTRITION_HYDRATION_MAX_PER_REQUEST and AI_NUTRITION_HYDRATION_MAX_PER_BATCH are both exported from src/lib/mapping/config.ts AND documented in .env.example. Sharing the parse-time budget made the exhaustion guard in requestAiNutrition() unreachable.",
+      "id": "ai-nutrition-hydration-budget-code",
+      "claim": "Hydration-time AI nutrition has its OWN allowance, separate from the parse-time one: AI_NUTRITION_HYDRATION_MAX_PER_REQUEST and AI_NUTRITION_HYDRATION_MAX_PER_BATCH are both exported from src/lib/mapping/config.ts. Sharing the parse-time budget made the exhaustion guard in requestAiNutrition() unreachable.",
       "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
       "where": "backend",
-      "command": "printf '%s@%s\\n' \"$(grep -cE '^AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH)=' .env.example)\" \"$(grep -cE '^export const AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH) =' src/lib/mapping/config.ts)\"",
+      "command": "grep -cE '^export const AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH) =' src/lib/mapping/config.ts",
       "expect": {
         "kind": "equals",
-        "value": "2@2"
+        "value": "2"
       },
-      "verified": "2026-08-01"
+      "verified": "2026-08-02"
+    },
+    {
+      "id": "ai-nutrition-hydration-budget-documented",
+      "claim": "Both hydration-time AI nutrition budget vars are documented in .env.example. DEVMACHINE ONLY: Syncthing does not deliver .env* files, so the box's .env.example is a stale copy (dated 2026-07-25) and this claim ran red there nightly from 2026-08-01 while the fact was TRUE on every host that actually has the file.",
+      "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
+      "where": "devmachine",
+      "command": "grep -cE '^AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH)=' .env.example",
+      "expect": {
+        "kind": "equals",
+        "value": "2"
+      },
+      "verified": "2026-08-02"
     },
     {
       "id": "ai-nutrition-three-call-sites",
@@ -967,6 +979,42 @@
       },
       "verified": "2026-08-01",
       "timeoutMs": 60000
+    },
+    {
+      "id": "eval-run-eval-supports-nocache",
+      "claim": "run-eval.ts passes ?nocache=1 when --nocache is given, so the golden gate can be made to reach the mapper instead of serving 84.9% of cases from the FoodMapping cache",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "where": "backend",
+      "command": "grep -c \"nocache=1\" scripts/eval/run-eval.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-02"
+    },
+    {
+      "id": "eval-nocache-refuses-write-baseline",
+      "claim": "--nocache with --write-baseline exits 2 rather than overwrite the WARM knownIssue baseline the batch gate compares against with cold values",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "where": "backend",
+      "command": "grep -c 'NO_CACHE && WRITE_BASELINE' scripts/eval/run-eval.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-02"
+    },
+    {
+      "id": "offfood-too-large-to-snapshot-per-batch",
+      "claim": "OffFood exceeds 1GB, which is why the warm rollback reverts aux tables with a key-set snapshot instead of widening the per-batch pg_dump",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT pg_total_relation_size('\\\"OffFood\\\"') > 1000000000\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^t$"
+      },
+      "verified": "2026-08-02"
     }
   ]
 }
