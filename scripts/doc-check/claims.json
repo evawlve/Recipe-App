@@ -1039,6 +1039,18 @@
         "value": "^1@1$"
       },
       "verified": "2026-08-02"
+    },
+    {
+      "id": "fs-piece-scan-uses-label-piece-matches-item",
+      "claim": "buildFatSecretResult's counted-request fallback scans for a serving whose label word is a word of the REQUEST, via count-label.ts's labelPieceMatchesItem, not only the request's last token. FatSecret labels the piece with a modifier of the name (fs_519595 'Cherry Tomatoes' carries '1 cherry' at 17 g), so a head-noun-only scan missed it and '5 cherry tomatoes' billed 5 x the declared 123 g serving = 615 g cold. That predicate is also the guard -- '1 cup' and '1 oz' on the same record are rejected because neither word is in the request -- so this checks the call site AND that no measure-word allowlist crept in beside it.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
+      "where": "backend",
+      "command": "echo \"$(grep -c 'labelPieceMatchesItem(labelWord, requestName)' src/lib/mapping/build-fatsecret-result.ts)@$(grep -c '^export function labelPieceMatchesItem' src/lib/mapping/count-label.ts)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^1@1$"
+      },
+      "verified": "2026-08-02"
     }
   ]
 }
