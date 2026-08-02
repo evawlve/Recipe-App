@@ -30,7 +30,7 @@ import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
 import {
     singularizeUnit, inferDiscreteUnit, extractLabelServingUnit,
-    servingLabelCountsPiece, labelLeadingCount,
+    servingLabelCountsPiece, labelLeadingCount, labelPieceMatchesItem,
 } from './count-label';
 import { num, servingMacros, type Macros } from './fs-serving-macros';
 import {
@@ -499,27 +499,64 @@ export async function buildFatSecretResult(
         // `DISCRETE_ITEM_UNIT_RE` path is strong evidence — "1 bar" on a protein
         // bar SHOULD outrank a generic serving row — and is left alone.
         if (!match && !unit && !barePlural) {
-            const lastToken = (parsed?.name || foodName)
+            const requestName = parsed?.name || foodName;
+            const lastToken = requestName
                 .toLowerCase().trim().split(/\s+/).pop() ?? '';
             const fallbackNoun = singularizeUnit(lastToken);
+            let matchedNoun: string | null = null;
+            let fallbackMatch: FsServingView | undefined;
             if (fallbackNoun && fallbackNoun.length >= 3) {
-                const fallbackMatch = usableServings.find(s => servingMatchesNoun(s, fallbackNoun));
+                fallbackMatch = usableServings.find(s => servingMatchesNoun(s, fallbackNoun));
+                if (fallbackMatch) matchedNoun = fallbackNoun;
+            }
+            // HEAD-NOUN-ONLY WAS TOO NARROW. The scan above asks only whether a
+            // serving names the request's LAST token, but FatSecret routinely
+            // labels the piece with a MODIFIER of the product name instead of its
+            // head noun. `fs_519595` "Cherry Tomatoes" carries `1 cherry` at 17 g
+            // — the record's own per-piece row, and exactly the answer golden
+            // n-serv-13 wants (5 x 17 = 85 g, band [50, 120]) — while the request
+            // head noun is `tomatoes`. Nothing matched, so resolution fell through
+            // to the declared `1 serving (123 g)` row and `5 cherry tomatoes`
+            // billed 5 x 123 = 615 g / 110 kcal.
+            //
+            // `labelPieceMatchesItem` is the predicate for this and count-label.ts
+            // has owned it since the OFF lane adopted it: is the label's piece word
+            // literally one of the words the user is counting? This branch simply
+            // never called it — its only caller is the cache escape in
+            // map-ingredient-with-fallback (re-derive: `grep -rn labelPieceMatchesItem src/`).
+            //
+            // It is also the guard, which is why no measure-word exclusion list is
+            // needed here: `1 cup` (149 g) and `1 oz` (26 g) sit on this very
+            // record and are rejected because neither `cup` nor `oz` is a word in
+            // "cherry tomatoes". A serving must be named by the request itself to
+            // be billed per-piece against it.
+            if (!fallbackMatch) {
+                for (const s of usableServings) {
+                    const labelWord = extractLabelServingUnit(s.description);
+                    if (labelWord && labelWord.length >= 3
+                        && labelPieceMatchesItem(labelWord, requestName)) {
+                        fallbackMatch = s;
+                        matchedNoun = labelWord;
+                        break;
+                    }
+                }
+            }
+            if (fallbackMatch && matchedNoun) {
                 const declaredOneServing = bareSingular
                     ? usableServings.find(s =>
                         EXPLICIT_ONE_SERVING_RE.test(s.description)
                         && usableBareLabelServing(
                             s.grams, extractLabelServingUnit(s.description)) != null)
                     : undefined;
-                if (fallbackMatch && declaredOneServing) {
+                if (declaredOneServing) {
                     logger.info('fs.build_result.bare_fallback_yielded_to_declared_serving', {
                         foodId: candidate.id,
-                        fallbackNoun,
+                        fallbackNoun: matchedNoun,
                         fallbackServing: fallbackMatch.description,
                         declaredServing: declaredOneServing.description,
                     });
-                }
-                if (fallbackMatch && !declaredOneServing) {
-                    noun = fallbackNoun;
+                } else {
+                    noun = matchedNoun;
                     match = fallbackMatch;
                 }
             }
