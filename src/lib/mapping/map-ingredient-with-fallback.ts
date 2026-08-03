@@ -63,7 +63,7 @@ import { assessSubThresholdAdmission } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
-import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, type BrandKeyInput } from './cache-key';
+import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
 import {
     applyOffBareQueryGuard, isBareUnitlessQty1, usableBareLabelServing,
     isBarePluralRequest,
@@ -611,6 +611,42 @@ export async function mapIngredientWithFallback(
     // This eliminates "selection drift" where raw line variations would get different mappings
     let parsed = parseIngredientLine(preProcessLine);
     let baseName = options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine;
+
+    // IDENTITY HINT RESTORATION — the discriminator survives into the cache KEY
+    // and was being lost from the search QUERY.
+    //
+    // `extractUnitHint()` strips `white`/`yolk` off the name, so
+    // `parseIngredientLine("egg whites")` yields `name: "egg"` with
+    // `unitHint: "white"`, and baseName — the primary search term — became bare
+    // `egg`. Measured cold: `MappingEventLog.normalizedForm` is `egg` for BOTH
+    // `egg whites` and `egg yolk`, and both resolve to `fs_3092` "Egg"
+    // (147 kcal, 9.9 g fat) — one record answering two opposite halves of a food
+    // (golden n-mq-31 fat100 [0,1], n-mq-32 fat100 [20,40]).
+    //
+    // `deriveCacheKeyName()` in cache-key-core.ts already restores exactly these
+    // hints via IDENTITY_UNIT_HINTS, which is why the WARM keys `egg white` and
+    // `egg yolk` hold the correct FDC records and pass. Nothing did the same for
+    // retrieval: the only code that ever did is `buildCoreQuery()` in
+    // query-builder.ts, which has NO runtime importer anywhere (re-derive:
+    // `grep -rn 'query-builder\|buildCoreQuery' src scripts` — the only hits are
+    // a doc comment and winner-gate.sh's RETRIEVAL_PATHS, both of which believe
+    // it is live). So this is the same "one owner, not every caller" shape as the
+    // serving cascades, with the caller being dead code rather than absent.
+    //
+    // Reuses IDENTITY_UNIT_HINTS rather than re-deriving the set, so the key and
+    // the query cannot drift apart again. Scoped tight: the set is {white, yolk},
+    // `white` is egg-scoped at the parse layer, and this only fires when the
+    // caller supplied no normalizedForm of its own.
+    if (!options.normalizedForm?.trim()
+        && parsed?.unitHint
+        && IDENTITY_UNIT_HINTS.has(parsed.unitHint.toLowerCase())
+        && !baseName.toLowerCase().split(/\s+/).includes(parsed.unitHint.toLowerCase())) {
+        const withHint = `${baseName} ${parsed.unitHint.toLowerCase()}`.trim();
+        logger.info('mapping.identity_hint_restored', {
+            rawLine: trimmed, baseName, unitHint: parsed.unitHint, restored: withHint,
+        });
+        baseName = withHint;
+    }
 
     // Brand-preservation guard.
     // A segmenter — especially the LLM splitter in /api/nlp/parse — can hand us a
