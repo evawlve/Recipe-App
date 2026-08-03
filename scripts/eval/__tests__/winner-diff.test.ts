@@ -477,7 +477,11 @@ describe('parseGoldenSet', () => {
         expect(n(c => !!c.grams)).toBe(148);              // the majority assertion
         expect(n(c => !!c.macros)).toBe(65);
         expect(n(c => typeof c.expectItems === 'number')).toBe(47);
-        expect(n(c => !!c.total)).toBe(35);
+        // 36 since 2026-08-04: n-cook-03 gained a total band, because its scale-free
+        // kcal100/carbs100 were passing on a 240 g / 295 kcal bill against USDA's
+        // 172 g / 227 kcal. Adding one here also adds one to the `total` blind count
+        // below — this screen cannot judge totals at all.
+        expect(n(c => !!c.total)).toBe(36);
         // documented in _readme, no live case uses them — parsed anyway so the screen
         // does not go blind the moment one is added back
         expect(n(c => !!c.forbidName)).toBe(0);
@@ -716,7 +720,7 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         const kind = (k: string) => cov.byKind.find(b => b.kind === k)!;
         expect(cov.cases).toBe(243);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 148, blind: 148 });
-        expect(kind('total')).toEqual({ kind: 'total', asserted: 35, blind: 35 });
+        expect(kind('total')).toEqual({ kind: 'total', asserted: 36, blind: 36 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 47, blind: 47 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
