@@ -894,22 +894,10 @@
     },
     {
       "id": "ai-nutrition-hydration-budget-code",
-      "claim": "Hydration-time AI nutrition has its OWN allowance, separate from the parse-time one: AI_NUTRITION_HYDRATION_MAX_PER_REQUEST and AI_NUTRITION_HYDRATION_MAX_PER_BATCH are both exported from src/lib/mapping/config.ts. Sharing the parse-time budget made the exhaustion guard in requestAiNutrition() unreachable.",
+      "claim": "Hydration-time AI nutrition has its OWN allowance, separate from the parse-time one: AI_NUTRITION_HYDRATION_MAX_PER_REQUEST and AI_NUTRITION_HYDRATION_MAX_PER_BATCH are both exported from src/lib/mapping/config.ts. Sharing the parse-time budget made the exhaustion guard in requestAiNutrition() unreachable. The .env.example half of this fact is NOT a doc-check claim and must not be re-added as one: it was tried as `where: backend` (red on the box, which Syncthing cannot deliver .env* to) and then as `where: devmachine` (which runs with cwd = the MOBILE repo, where .env.example does not exist, so it returned empty and was red on the Mac too). It needs no claim -- CI's `check` job runs scripts/check-env-example.js on every PR and fails if any literal process.env.X in src/** is missing from .env.example, and both of these are read literally. That gate is blocking and always runs; this registry cannot beat it.",
       "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
       "where": "backend",
       "command": "grep -cE '^export const AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH) =' src/lib/mapping/config.ts",
-      "expect": {
-        "kind": "equals",
-        "value": "2"
-      },
-      "verified": "2026-08-02"
-    },
-    {
-      "id": "ai-nutrition-hydration-budget-documented",
-      "claim": "Both hydration-time AI nutrition budget vars are documented in .env.example. DEVMACHINE ONLY: Syncthing does not deliver .env* files, so the box's .env.example is a stale copy (dated 2026-07-25) and this claim ran red there nightly from 2026-08-01 while the fact was TRUE on every host that actually has the file.",
-      "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
-      "where": "devmachine",
-      "command": "grep -cE '^AI_NUTRITION_HYDRATION_MAX_PER_(REQUEST|BATCH)=' .env.example",
       "expect": {
         "kind": "equals",
         "value": "2"
