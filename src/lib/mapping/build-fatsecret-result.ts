@@ -13,6 +13,8 @@
  * Gram-resolution priority:
  *   (a) explicit weight unit  → direct conversion       ('fs_weight_direct')
  *   (b) volume unit           → serving volumeMl match  ('fs_label_volume'),
+ *       else the record's own declared serving when its
+ *       description names the unit           ('fs_label_volume_declared'),
  *       else category-density fallback                  ('fs_volume_density')
  *   (c) count/serving request → noun-matched serving    ('fs_label_count'),
  *       else default serving                            ('fs_default_serving')
@@ -43,6 +45,12 @@ import { volumeToGrams } from '../units/volume-density';
 // there is no cycle back through map-ingredient-with-fallback.
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from './ambiguous-unit-backfill';
 import { classifyUnit } from './unit-type';
+// Leading-quantity parsing for serving labels ("1/2 cup" -> 0.5, "1 1/4 cups"
+// -> 1.25). The ONE owner of that grammar; it has no imports of its own, so
+// there is no cycle risk here. Deliberately NOT a local copy: 40.1% of the
+// labels this module now reads lead with a fraction (measured below), and a
+// second parser is exactly how this cascade's rules diverged before.
+import { parseQuantityTokens } from '../parse/quantity';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import type { UnifiedCandidate } from './gather-candidates';
 import type { FatsecretMappedIngredient } from './map-ingredient-with-fallback';
@@ -200,11 +208,60 @@ function servingMatchesNoun(s: FsServingView, noun: string): boolean {
 }
 
 /** True when the serving's description names the requested volume unit. */
-function servingMatchesVolumeUnit(s: FsServingView, unit: string): boolean {
+function textMatchesVolumeUnit(text: string, unit: string): boolean {
     const stems = VOLUME_UNIT_STEMS[unit];
     if (!stems) return false;
-    const text = `${s.description ?? ''} ${s.measurementDescription ?? ''}`;
     return stems.some(stem => new RegExp(`\\b${stem.replace(' ', '\\s+')}s?\\b`, 'i').test(text));
+}
+
+function servingMatchesVolumeUnit(s: FsServingView, unit: string): boolean {
+    return textMatchesVolumeUnit(`${s.description ?? ''} ${s.measurementDescription ?? ''}`, unit);
+}
+
+/**
+ * Grams for ONE of the requested volume unit, read off a serving that NAMES
+ * that unit in its own description but carries no `volumeMl`.
+ *
+ * Why this exists: the density path above filters on `volumeMl != null` BEFORE
+ * any description is consulted, so a label that states the answer outright is
+ * structurally unreachable. That is not a rare shape — 7,768 FatSecretServing
+ * rows carry grams and a volume-named description with NULL volumeMl, against
+ * 2,478 rows the density path can see at all (measured 2026-08-03, box; see the
+ * call site for the re-derive). `fs_4501` "White Rice" is the worked example:
+ * its servings are `1 cup cooked` = 158 g and `1 cup, dry, yields` = 570 g, both
+ * volumeMl NULL, so `1 cup white rice` fell to the category density fallback and
+ * billed 240 ml x 0.5 = 120 g.
+ *
+ * Three things this rule is careful about, each measured over the 3,677
+ * cup-named default servings on the box (2026-08-03):
+ *
+ *  1. THE LEADING QUANTITY IS USUALLY NOT 1. 1,474 of them (40.1%) lead with a
+ *     fraction ("1/2 cup" x519, "1/4 cup" x382, "2/3 cup" x239) and 91 more are
+ *     mixed numbers ("1 1/4 cups"). Reading those as one unit would under-bill a
+ *     full cup by 2-4x, so the label's own quantity is divided out. Note that
+ *     `labelLeadingCount()` in count-label.ts CANNOT be reused for this: it is
+ *     integer-only and returns null below 2, i.e. null for every shape above.
+ *  2. A YIELD IS NOT A PORTION. "1 cup, dry, yields" states what a cup of the
+ *     dry product becomes after cooking (570 g for rice), not what a cup weighs
+ *     — billing it would be ~3x wrong. Only 5 of the 3,677 defaults say "yield",
+ *     but they are the worst-wrong rows in the set, so they are refused. Plain
+ *     "dry" is NOT refused: those 77 rows are ordinary fractional portions
+ *     ("1/4 cup dry" = 43 g) and are a correct answer to a volume request.
+ *  3. IT READS THE DESCRIPTION ONLY, not `measurementDescription`. The
+ *     population above was measured on `description`, and the quantity is parsed
+ *     from that same string — gating on a field the measurement never covered
+ *     would be a claim about rows nobody counted.
+ */
+function declaredVolumeUnitGrams(s: FsServingView, unit: string): number | null {
+    if (s.grams == null || s.grams <= 0) return null;
+    const description = s.description ?? '';
+    if (!textMatchesVolumeUnit(description, unit)) return null;
+    if (/yield/i.test(description)) return null;
+    const parsedQty = parseQuantityTokens(description.trim().split(/\s+/));
+    // No leading quantity means the label is not self-describing ("cup, chopped"
+    // with no count); 4 of 3,677 are that shape. Refuse rather than assume 1.
+    if (!parsedQty || !(parsedQty.qty > 0)) return null;
+    return s.grams / parsedQty.qty;
 }
 
 // ============================================================
@@ -400,11 +457,62 @@ export async function buildFatSecretResult(
         const totalMl = qty * VOLUME_UNIT_ML[unit];
         const volServings = usableServings.filter(s => s.volumeMl != null && s.volumeMl > 0);
         const volMatch = volServings.find(s => servingMatchesVolumeUnit(s, unit)) ?? volServings[0];
+        // The record's OWN declared default, when it names the requested unit.
+        // Only reached when no volumeMl-bearing serving exists, so this never
+        // displaces the more precise density path above.
+        //
+        // Scoped to `defaultServingId` deliberately, and NOT widened to "any
+        // serving whose description matches". 3,677 of the 4,822 cup-named
+        // NULL-volumeMl rows (76.3%) ARE the record's default, so the declared
+        // row carries most of the population anyway — and a record can hold
+        // several cup rows ("1 cup cooked" 158 g vs "1 cup, dry, yields" 570 g
+        // on fs_4501 itself), where picking among them without a declaration is
+        // the positional pick this module already had to fix once at the hydrate
+        // step. An explicit declaration beats an inference and needs no
+        // threshold; widening this is a separate change with its own gate run.
+        //
+        // Re-derive the population (box, read-only):
+        //   SELECT count(*) FILTER (WHERE s."volumeMl" IS NULL OR s."volumeMl" <= 0),
+        //          count(*) FILTER (WHERE s."volumeMl" > 0)
+        //   FROM "FatSecretServing" s
+        //   WHERE s.grams IS NOT NULL AND s.description ~* '\ycups?\y';
+        const declaredDefault = row?.defaultServingId
+            ? usableServings.find(s => s.servingId === row.defaultServingId)
+            : undefined;
+        // ...and only when that declaration is UNAMBIGUOUS for this unit.
+        //
+        // A record can carry several rows naming the same unit, and then the
+        // default's choice among them is a claim about PRODUCT FORM, not about
+        // what the user asked for. `fs_39558` "Brown Sugar" is the case: it holds
+        // `1 tsp unpacked` = 3 g (its declared default), `1 tsp brownulated` =
+        // 3.2 g and `1 tsp packed` = 4.6 g. Billing a bare "1 tsp brown sugar"
+        // as unpacked is picking a variant the request never named — recipes mean
+        // packed, which is why golden `n-dens-03` bands [3.5, 5.5]. Refusing here
+        // falls through to the category density, which answers the generic
+        // question generically.
+        //
+        // Cheap, measured 2026-08-03 on the box: of the 3,672 records whose
+        // declared default is a non-yield cup row, 3,624 (98.7%) have exactly one
+        // such row, so this gives up 1.3% of the population. Note `fs_4501`
+        // "White Rice" stays in: its second cup row is `1 cup, dry, yields`,
+        // which the yield rule already removed before this count is taken.
+        const sameUnitDeclarations = declaredDefault
+            ? usableServings.filter(s => declaredVolumeUnitGrams(s, unit) != null).length
+            : 0;
+        const declaredGramsPerUnit = declaredDefault && sameUnitDeclarations === 1
+            ? declaredVolumeUnitGrams(declaredDefault, unit)
+            : null;
+
         if (volMatch) {
             grams = totalMl * (volMatch.grams! / volMatch.volumeMl!);
             servingDescription = `${qty} ${unit}`;
             servingTier = 'fs_label_volume';
             pickedServing = volMatch;
+        } else if (declaredGramsPerUnit != null) {
+            grams = qty * declaredGramsPerUnit;
+            servingDescription = `${qty} ${unit}`;
+            servingTier = 'fs_label_volume_declared';
+            pickedServing = declaredDefault!;
         } else {
             // Density fallback, from the ONE owner of this rule
             // (`resolveVolumeGrams()` in `src/lib/units/volume-density.ts`).
