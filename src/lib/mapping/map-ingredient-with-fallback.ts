@@ -64,7 +64,7 @@ import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-pla
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
-import { stripIntroducedFoodTokens } from './llm-output-guards';
+import { stripIntroducedFoodTokens, resolveIsBrandedQuery } from './llm-output-guards';
 import {
     applyOffBareQueryGuard, isBareUnitlessQty1, usableBareLabelServing,
     isBarePluralRequest,
@@ -962,6 +962,14 @@ export async function mapIngredientWithFallback(
             matchedBrand: options.brand?.trim() || brandDetectionResult.matchedBrand
         };
         let isBrandedQuery = brandDetection.isBranded;
+        // Whether the static brand evidence spans two words, and so outranks a
+        // model that answers is_branded=false. Computed here because both
+        // overwrite sites below need it and only this scope has the raw line.
+        // See resolveIsBrandedQuery() for why an unconditional upgrade-only
+        // rule is refuted.
+        const decisiveBrandContext = brandDetection.matchedBrand
+            ? hasDecisiveBrandContext(trimmed, brandDetection.matchedBrand.trim())
+            : false;
         if (brandDetection.isBranded) {
             logger.debug('brand_detector.matched', {
                 rawLine,
@@ -1348,7 +1356,11 @@ export async function mapIngredientWithFallback(
         // ── Brand detection (already computed above, available here too) ────
         // isBrandedQuery and brandDetection are set before the early cache check.
         // The LLM result below may upgrade isBrandedQuery to true if the AI
-        // returns isBranded=true even when the static detector missed it.
+        // returns isBranded=true even when the static detector missed it, and
+        // may downgrade it only where the static brand evidence is not decisive
+        // — both through resolveIsBrandedQuery(). Until 2026-08-03 the
+        // assignments were unconditional, so this comment described an
+        // upgrade-only rule the code did not implement.
 
         // Kept from the quick gate check so the full gather can reuse the FDC
         // results instead of re-running identical searches.
@@ -1453,7 +1465,13 @@ export async function mapIngredientWithFallback(
                         logger.info('mapping.ai_synonyms', { rawLine: trimmed, synonyms: aiSynonyms });
                     }
                     aiNutritionEstimate = aiHint.nutritionEstimate;
-                    isBrandedQuery = aiHint.isBranded ?? false;  // Capture brand signal for scoring
+                    // Upgrade freely; downgrade only where the static evidence
+                    // is not decisive. Measured rationale in the guard.
+                    isBrandedQuery = resolveIsBrandedQuery(
+                        brandDetection.isBranded,
+                        aiHint.isBranded,
+                        decisiveBrandContext,
+                    );
                 }
             } else {
                 logger.info('normalize_gate.skipped_llm', {
@@ -1488,9 +1506,17 @@ export async function mapIngredientWithFallback(
                         confidence: aiNutritionEstimate.confidence,
                     });
                 }
-                // Also restore isBranded from cached normalize result
+                // Also restore isBranded from cached normalize result. Same
+                // resolution as the live path: this replays a STORED model
+                // answer, so it can downgrade exactly as the live one does, and
+                // 85.7% of AiNormalizeCache rows were written on warm-campaign
+                // days — the replay is the common case, not the rare one.
                 if (cachedNormalize) {
-                    isBrandedQuery = (cachedNormalize as any).isBranded ?? false;
+                    isBrandedQuery = resolveIsBrandedQuery(
+                        brandDetection.isBranded,
+                        (cachedNormalize as any).isBranded,
+                        decisiveBrandContext,
+                    );
                 }
             }
         }

@@ -1,4 +1,4 @@
-import { stripIntroducedFoodTokens } from '../llm-output-guards';
+import { stripIntroducedFoodTokens, resolveIsBrandedQuery } from '../llm-output-guards';
 
 /**
  * Guards the flavour-word promotion measured 2026-08-03: ai-normalize appends
@@ -95,5 +95,46 @@ describe('stripIntroducedFoodTokens', () => {
             const twice = stripIntroducedFoodTokens('vanilla yogurt', once).cleaned;
             expect(twice).toBe(once);
         });
+    });
+});
+
+/**
+ * The branded-query flag when the static detector and the model disagree.
+ *
+ * MEASURED 2026-08-03 over the 2,881 user-namespace AiNormalizeCache rows on
+ * the live box: the model downgrades a static `true` on 56 of them, and on 42
+ * — carrying 292 of the population's 310 reads — the static detector is the one
+ * that is wrong. So this is deliberately NOT a plain upgrade-only rule. See
+ * resolveIsBrandedQuery()'s comment for the full split (and for why a bare "56"
+ * is ambiguous in this population) and for what a false positive costs.
+ */
+describe('resolveIsBrandedQuery', () => {
+    it('lets the model UPGRADE unconditionally — the documented intent', () => {
+        expect(resolveIsBrandedQuery(false, true, false)).toBe(true);
+        expect(resolveIsBrandedQuery(false, true, true)).toBe(true);
+    });
+
+    it('REFUSES a downgrade when the static brand evidence is decisive', () => {
+        // `just bare chicken breast strips`, `diet dr pepper`, `once again
+        // cashew butter` — real brands the model answered `false` on.
+        expect(resolveIsBrandedQuery(true, false, true)).toBe(true);
+        expect(resolveIsBrandedQuery(true, undefined, true)).toBe(true);
+    });
+
+    it('ALLOWS a downgrade when the static hit is not decisive', () => {
+        // `greek yogurt with granola` (148 reads), `mirin` (44), `bell pepper`,
+        // `roasted brussels sprouts`, `pico de gallo`. The detector matched a
+        // common food word; the model is correcting it, and preserving the
+        // static `true` would newly reject these rows through `brand_guard`.
+        expect(resolveIsBrandedQuery(true, false, false)).toBe(false);
+        expect(resolveIsBrandedQuery(true, undefined, false)).toBe(false);
+    });
+
+    it('stays false when neither signal says branded', () => {
+        expect(resolveIsBrandedQuery(false, false, false)).toBe(false);
+        // Decisiveness alone is not a brand signal: it is only a tiebreak, so it
+        // must never manufacture a `true` the static detector never produced.
+        expect(resolveIsBrandedQuery(false, false, true)).toBe(false);
+        expect(resolveIsBrandedQuery(false, undefined, true)).toBe(false);
     });
 });
