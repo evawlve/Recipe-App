@@ -1,0 +1,22 @@
+# Line endings — deliberately NARROW. Read the scope note before widening this.
+#
+# This repo is Syncthing-mirrored across a Mac, a Windows PC and the box. With no
+# .gitattributes and core.autocrlf unset, source files flip CRLF <-> LF on their
+# own: src/lib/mapping/map-ingredient-with-fallback.ts was 6,531 CRLF lines at
+# abbe55a and 0 from c16a24e onward, with no commit intending the change.
+#
+# That flip tripped the winner-diff drift guard on selection code that had not
+# changed — the guard reported DRIFT against a caller block byte-identical to the
+# shape it transcribes. The guard now normalizes line endings before hashing, which
+# is the real fix; this file stops the churn reaching the guard's inputs at all.
+#
+# SCOPE: pinned to the two files the drift guard reads. Both are already LF in the
+# index, so this is a zero-diff change — verify with `git add --renormalize .` on a
+# clean tree, which must report nothing.
+#
+# A repo-wide `*.ts text eol=lf` would renormalize 76 of 646 tracked TypeScript
+# files (measured 2026-08-03) and, because Syncthing carries working-tree files,
+# push that rewrite to all three machines. That may well be worth doing — but as its
+# own reviewed commit, not as a side effect of fixing an eval harness.
+src/lib/mapping/map-ingredient-with-fallback.ts text eol=lf
+scripts/eval/winner-diff.ts text eol=lf
