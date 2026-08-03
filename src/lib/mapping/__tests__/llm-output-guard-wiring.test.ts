@@ -32,6 +32,8 @@ import { queueForDeferredHydration } from '../deferred-hydration';
 import { backfillOnDemand } from '../serving-backfill';
 import { insertAiServing } from '../ai-backfill';
 import { gatherCandidates } from '../gather-candidates';
+import { shouldNormalizeLlm } from '../normalize-gate';
+import { detectBrandInQuery } from '../brand-detector';
 
 jest.mock('../../db', () => ({
     prisma: {
@@ -49,6 +51,10 @@ jest.mock('../../db', () => ({
 }));
 
 jest.mock('../ai-normalize');
+jest.mock('../normalize-gate', () => {
+    const actual = jest.requireActual('../normalize-gate');
+    return { ...actual, shouldNormalizeLlm: jest.fn() };
+});
 jest.mock('../validated-mapping-helpers', () => {
     const actual = jest.requireActual('../validated-mapping-helpers');
     return {
@@ -104,8 +110,32 @@ function gatherNames(): string[] {
     return (gatherCandidates as jest.Mock).mock.calls.map((c) => c[2]);
 }
 
+/** The GatherOptions handed to retrieval, in call order. */
+function gatherOpts(): any[] {
+    return (gatherCandidates as jest.Mock).mock.calls.map((c) => c[3] ?? {});
+}
+
+/**
+ * The branded flag on the full gather for the ORIGINAL line.
+ *
+ * Deliberately the FIRST call that carries the flag, not the last. The quick
+ * gate gather omits the option entirely, and on a miss the mapper re-enters via
+ * `mapping.fallback_simplification` with a SIMPLIFIED line whose brand has been
+ * stripped — so a last-call assertion reads a different query's flag and passes
+ * for the wrong reason.
+ */
+function fullGatherIsBrandedQuery(): boolean | undefined {
+    const withFlag = gatherOpts().filter((o) => 'isBrandedQuery' in o);
+    return withFlag[0]?.isBrandedQuery;
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
+    (shouldNormalizeLlm as jest.Mock).mockReturnValue({
+        shouldCallLlm: true,
+        reason: 'test_forces_llm',
+        confidence: 0.9,
+    });
     (aiNormalizeIngredient as jest.Mock).mockResolvedValue({ status: 'error', reason: 'skip' });
     (getValidatedMapping as jest.Mock).mockResolvedValue(null);
     (getValidatedMappingByNormalizedName as jest.Mock).mockResolvedValue(null);
@@ -218,5 +248,102 @@ describe('the decisive-brand preservation repair is wired into the mapper', () =
 
         const names = gatherNames();
         expect(names[names.length - 1]).toBe('one birthday cake bar');
+    });
+});
+
+/**
+ * WIRING for the branded-query resolution.
+ *
+ * `isBrandedQuery` is the option that gates the brand-targeted supplementary
+ * OFF query in `gatherCandidates()` — the one retrieval path that re-injects
+ * the brand token — so the value that reaches retrieval IS the defect. Asserting
+ * `resolveIsBrandedQuery()` in isolation would not have caught the flavour bug
+ * one file over, and would not catch a missed call site here either.
+ *
+ * The static detector runs for real in this suite (`brand-detector` is not
+ * mocked), so each case also pins that the lexicon still behaves as measured.
+ */
+describe('the branded-query downgrade guard is wired into the mapper', () => {
+    it('keeps a DECISIVE static brand when the model answers is_branded=false', () => {
+        expect(detectBrandInQuery('just bare chicken breast strips').matchedBrand).toBe('just bare');
+    });
+
+    it('sends isBrandedQuery=true for a decisive brand the model downgraded', async () => {
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'skinless chicken breast strips',
+            canonicalBase: 'chicken breast strips',
+            isBranded: false, // the measured downgrade
+        });
+
+        await mapIngredientWithFallback('just bare chicken breast strips');
+
+        expect(fullGatherIsBrandedQuery()).toBe(true);
+    });
+
+    it('lets the model downgrade a NON-decisive hit — "granola" is not a brand here', async () => {
+        // 148 reads, the highest-traffic downgrade in AiNormalizeCache. Keeping
+        // the static `true` would newly reject its cache rows via brand_guard.
+        expect(detectBrandInQuery('greek yogurt with granola').isBranded).toBe(true);
+
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'greek yogurt with granola',
+            canonicalBase: 'greek yogurt with granola',
+            isBranded: false,
+        });
+
+        await mapIngredientWithFallback('greek yogurt with granola');
+
+        expect(fullGatherIsBrandedQuery()).toBe(false);
+    });
+
+    it('keeps "bell pepper" unbranded — the refuted regression stays dead', async () => {
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'capsicum',
+            canonicalBase: 'capsicum',
+            isBranded: false,
+        });
+
+        await mapIngredientWithFallback('bell pepper');
+
+        expect(fullGatherIsBrandedQuery()).toBe(false);
+    });
+
+    it('still lets the model UPGRADE a line the static detector missed', async () => {
+        expect(detectBrandInQuery('protein shake').isBranded).toBe(false);
+
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'protein shake',
+            canonicalBase: 'protein shake',
+            isBranded: true,
+        });
+
+        await mapIngredientWithFallback('protein shake');
+
+        expect(fullGatherIsBrandedQuery()).toBe(true);
+    });
+
+    it('applies the same resolution on the CACHED normalize path', async () => {
+        // 85.7% of AiNormalizeCache rows were written on warm-campaign days, so
+        // the replay is the common path. A fix wired only into the live LLM
+        // branch would be inert for most traffic — the exact shape of #211's
+        // near-miss, where a cached RESULT outvoted a shipped rule.
+        (shouldNormalizeLlm as jest.Mock).mockReturnValue({
+            shouldCallLlm: false,
+            reason: 'test_forces_cache_path',
+            confidence: 0.9,
+        });
+        (getAiNormalizeCache as jest.Mock).mockResolvedValue({
+            normalizedName: 'skinless chicken breast strips',
+            canonicalBase: 'chicken breast strips',
+            isBranded: false, // the stored downgrade, replayed
+        });
+
+        await mapIngredientWithFallback('just bare chicken breast strips');
+
+        expect(fullGatherIsBrandedQuery()).toBe(true);
     });
 });

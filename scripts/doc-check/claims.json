@@ -1077,6 +1077,19 @@
       },
       "verified": "2026-08-03",
       "timeoutMs": 60000
+    },
+    {
+      "id": "isbranded-overwrite-goes-through-the-resolver",
+      "claim": "The model may UPGRADE the branded-query flag and may downgrade it only where the static brand evidence is decisive. mapIngredientWithFallback() seeds isBrandedQuery from detectBrandInQuery() and then overwrites it at TWO sites - the live LLM branch and the normalize-gate-skipped branch that replays AiNormalizeCache.isBranded. Both were plain assignments, so a model answering false vetoed the static detector, suppressing the brand-targeted supplementary OFF query in gatherCandidates(), the brand_guard escape, the canReuseQuickGather brand re-search, and the +4 admission bonus in computeOffScore(). This guards the WIRING, which is the failure that recurs here (#221, #223, #226 were each a correct rule with a caller that never used it, and #230's own predicate test passed while an earlier draft sat at the wrong layer). Plain upgrade-only is REFUTED: 42 of 56 downgrades are the model correcting a lexicon false positive and carry 292 of the population's 310 reads. Output is resolverCallSites@rawOverwritesRemaining.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-03_branded-flag-downgrade.md",
+      "where": "backend",
+      "command": "node -e \"const s=require('fs').readFileSync('src/lib/mapping/map-ingredient-with-fallback.ts','utf8');const wired=(s.match(/isBrandedQuery = resolveIsBrandedQuery\\(/g)||[]).length;const bare=(s.match(/isBrandedQuery = (?:\\(cachedNormalize as any\\)|aiHint)\\./g)||[]).length;process.stdout.write(wired+'@'+bare)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "2@0"
+      },
+      "verified": "2026-08-03",
+      "timeoutMs": 60000
     }
   ]
 }

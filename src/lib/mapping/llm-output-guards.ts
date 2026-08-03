@@ -120,3 +120,85 @@ export function stripIntroducedFoodTokens(
 
     return { cleaned: out, removed };
 }
+
+/**
+ * Decide the branded-query flag from the static detector and the model, when
+ * they disagree.
+ *
+ * `mapIngredientWithFallback()` seeds `isBrandedQuery` from
+ * `detectBrandInQuery(rawLine)` and then overwrites it with the model's
+ * `is_branded` — a plain assignment, so a model answering `false` DOWNGRADES a
+ * static `true`. The comment above those assignments has always described the
+ * intent as upgrade-only ("may upgrade isBrandedQuery to true ... even when the
+ * static detector missed it"); the code never implemented it. A downgrade is not
+ * cosmetic: it suppresses the brand-targeted supplementary OFF query in
+ * `gatherCandidates()` (the one retrieval path that re-injects the brand token,
+ * and no ranking fix can recover a candidate that was never retrieved), it
+ * disables the `brand_guard` cache rejection so a cached row from a DIFFERENT
+ * brand is served, and it lets `canReuseQuickGather` replay a gather that ran
+ * without `targetBrand`.
+ *
+ * BUT PLAIN UPGRADE-ONLY IS REFUTED BY MEASUREMENT, and that is why this takes
+ * a decisiveness argument.
+ *
+ * MEASURED 2026-08-03 over `AiNormalizeCache` on the live box (3,131 rows, of
+ * which 250 are `SIMPLIFY:`-namespaced and 2,881 are user-namespace). Headline
+ * figures are the **2,881**: the normalize-gate-skipped path calls
+ * `getAiNormalizeCache(baseName)` with no namespace and therefore cannot read a
+ * SIMPLIFY row at all, and those rows are warm-campaign synthetic lines rather
+ * than traffic.
+ *
+ *     downgrades (static true, model false)   56 rows / 310 reads
+ *       decisive     — this guard keeps true  14 rows /  18 reads
+ *       non-decisive — downgrade allowed      42 rows / 292 reads
+ *     upgrades   (static false, model true)  372 rows
+ *
+ * NOTE FOR ANYONE RE-DERIVING: over ALL 3,131 rows the downgrade count is 79,
+ * and that 79 splits 23/56 by decisiveness while ALSO splitting 23/56 by
+ * SIMPLIFY-vs-user. Two different partitions with the same shape — do not quote
+ * a bare "56" without saying which.
+ *
+ * On 42 of the 56 the static detector is simply WRONG: the lexicon matches
+ * common food words — `granola` in `greek yogurt with granola` (148 reads, the
+ * single highest-traffic downgrade), `mirin` (44), `one` in `one milk` (9),
+ * `sprouts` in `roasted brussels sprouts`, `poblano`, `sriracha`, `star` in
+ * `star anise`, `gallo` in `pico de gallo`, `bell` in `bell pepper`. There the
+ * downgrade is the model CORRECTING the detector. **94% of the reads in this
+ * population (292 of 310) are on lines where the downgrade is right**, so a
+ * blanket upgrade-only rule is a net loss weighted by traffic.
+ *
+ * So the static detector only outranks the model where its evidence spans two
+ * words. `hasDecisiveBrandContext()` is that test and is already load-bearing
+ * for the brand-preservation repair; it clears the real ones
+ * (`just bare chicken breast strips`, `once again cashew butter`,
+ * `ryse protein ...`, `diet dr pepper`) and refuses every false positive above.
+ *
+ * WHAT A FALSE POSITIVE WOULD COST, if you are tempted to widen this. `true`
+ * makes `getTokenBloatPenalty()` return 0 up to +3 excess tokens — a swing of
+ * up to 0.45, larger than `WEIGHTS.EXACT_MATCH` — which is the guard that keeps
+ * `Bell Pepper & Onion Stir Fry Kit` off `bell pepper`. It adds +4 in
+ * `computeOffScore()` (`src/lib/openfoodfacts/search.ts`) to any OFF row whose
+ * brand is a substring of the query, and because `searchOffSimple()` sorts and
+ * slices on that raw score it changes which rows are ADMITTED, not merely how
+ * they rank; a lone survivor can then take the `single_candidate` path at 0.95
+ * and clear the 0.85 save gate. And it turns on the `brand_guard` escape
+ * against the normalized cache, which is recorded in `readEscapes` and forfeits
+ * that row's cross-source displacement margin — a state change, not a read miss.
+ *
+ * Known under-reach, deliberate: single-word brands with no adjacent
+ * product-form token stay downgraded — `fairlife chocolate milk`, `bragg
+ * nutritional yeast`. Widening the context-token set is a change to the brand
+ * lexicon's precision, measured separately; under-reaching costs a retrieval
+ * lane, over-reaching evicts live cache rows for non-brands.
+ */
+export function resolveIsBrandedQuery(
+    staticIsBranded: boolean,
+    modelIsBranded: boolean | undefined,
+    brandContextIsDecisive: boolean,
+): boolean {
+    // The model may always UPGRADE — that direction is the documented intent and
+    // it is the common case (372 of these rows), so it stays unconditional.
+    if (modelIsBranded === true) return true;
+    // It may only DOWNGRADE where the static evidence is not decisive.
+    return staticIsBranded && brandContextIsDecisive;
+}
