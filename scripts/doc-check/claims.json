@@ -1051,6 +1051,18 @@
         "value": "^1@1$"
       },
       "verified": "2026-08-02"
+    },
+    {
+      "id": "jest-llm-egress-gate-wired",
+      "claim": "Both jest projects load jest.setup.no-llm.js via setupFiles, so no test can reach a live LLM provider. Five mapper modules import 'dotenv/config' at module scope, so before this a test importing the mapper chain held the developer's real keys -- measured 129 billable OpenRouter round trips over 10 runs of one suite. The second half of the command is the load-bearing one: the gate must ASSIGN '' and must never `delete process.env.X`, because dotenv only writes a key it does not already own, so a delete hands the real key straight back and the gate looks identical while doing nothing. CI has no key and was green throughout, so CI is not a check on this.",
+      "ownerDoc": "backend:jest.setup.no-llm.js",
+      "where": "backend",
+      "command": "echo \"$(grep -c 'jest.setup.no-llm.js' jest.config.js)@$(grep -c 'delete process.env' jest.setup.no-llm.js)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^2@0$"
+      },
+      "verified": "2026-08-02"
     }
   ]
 }
