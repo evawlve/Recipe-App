@@ -64,6 +64,7 @@ import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-pla
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
+import { stripIntroducedFoodTokens } from './llm-output-guards';
 import {
     applyOffBareQueryGuard, isBareUnitlessQty1, usableBareLabelServing,
     isBarePluralRequest,
@@ -1357,10 +1358,31 @@ export async function mapIngredientWithFallback(
                 // FIX: Pass baseName instead of rawLine so the LLM output is cached by the normalized quantity-free string
                 const aiHint = await aiNormalizeIngredient(baseName, normalizedName);
                 if (aiHint.status === 'success') {
+                    // The model's output is otherwise taken on trust here. Strip
+                    // any food-REPLACING token it introduced that the user never
+                    // typed: `vanilla yogurt` -> `vanilla yogurt extract` sends a
+                    // 288 kcal/100g ingredient to retrieval and wins with it.
+                    // Compared against the raw line AND baseName, so a user who
+                    // really did say "extract" (or GENERIC_FALLBACKS expanding the
+                    // bare word into one) is never second-guessed.
+                    const guardInput = `${trimmed} ${baseName}`;
                     if (aiHint.normalizedName) {
-                        normalizedName = aiHint.normalizedName;
+                        const repaired = stripIntroducedFoodTokens(guardInput, aiHint.normalizedName);
+                        if (repaired.removed.length > 0) {
+                            logger.info('mapping.llm_introduced_food_token', {
+                                rawLine: trimmed,
+                                llmOutput: aiHint.normalizedName,
+                                repaired: repaired.cleaned,
+                                removed: repaired.removed,
+                            });
+                        }
+                        normalizedName = repaired.cleaned;
                     }
-                    aiCanonicalBase = aiHint.canonicalBase;
+                    // canonicalBase carries the same pollution and becomes the
+                    // rerank query verbatim, so it needs the same repair.
+                    aiCanonicalBase = aiHint.canonicalBase
+                        ? stripIntroducedFoodTokens(guardInput, aiHint.canonicalBase).cleaned
+                        : aiHint.canonicalBase;
                     aiCookingModifier = aiHint.cookingModifier;
                     aiSynonyms = aiHint.synonyms || [];
                     if (aiSynonyms.length > 0) {
@@ -1387,7 +1409,15 @@ export async function mapIngredientWithFallback(
                 const cachedNormalize = await getAiNormalizeCache(baseName);
                 if (cachedNormalize?.nutritionEstimate) {
                     aiNutritionEstimate = cachedNormalize.nutritionEstimate;
-                    aiCanonicalBase = cachedNormalize.canonicalBase;
+                    // Same repair as the live path: AiNormalizeCache is 86.5%
+                    // v1 rows written before this guard existed, so the polluted
+                    // canonicalBase is replayed from here too.
+                    aiCanonicalBase = cachedNormalize.canonicalBase
+                        ? stripIntroducedFoodTokens(
+                              `${trimmed} ${baseName}`,
+                              cachedNormalize.canonicalBase,
+                          ).cleaned
+                        : cachedNormalize.canonicalBase;
                     logger.debug('normalize_gate.cached_nutrition_estimate', {
                         baseName,
                         estimate: aiNutritionEstimate.caloriesPer100g,

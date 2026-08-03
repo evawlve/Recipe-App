@@ -1051,6 +1051,32 @@
         "value": "^2@0$"
       },
       "verified": "2026-08-02"
+    },
+    {
+      "id": "vanilla-rewrite-is-context-gated",
+      "claim": "A flavour word must not become a distinct ingredient. data/fatsecret/normalization-rules.json carried an unguarded synonym_rewrites entry vanilla -> vanilla extract which fired before any LLM ran, so `vanilla yogurt` was searched as `vanilla extract yogurt` and resolved to a 288 kcal/100g, 4.2 g ingredient (MEASURED cold on the live box 2026-08-03; `vanilla protein shake` billed 150 g = 429 kcal of extract). DEFAULT_RULES never held that entry and the in-code rule implementing the same recipe default IS context-gated on a following food noun, but readRulesFile() prefers the on-disk JSON so the naive entry won. Asserts BOTH halves: the flavour-plus-food form is left alone AND bare vanilla still gets the intended recipe default. Output is normalize(vanilla yogurt)|normalize(vanilla).",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-03_flavour-word-promotion.md",
+      "where": "backend",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');process.stdout.write(n('vanilla yogurt').cleaned+'|'+n('vanilla').cleaned)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "vanilla yogurt|vanilla extract"
+      },
+      "verified": "2026-08-03",
+      "timeoutMs": 180000
+    },
+    {
+      "id": "box-rules-file-has-no-bare-vanilla-rewrite",
+      "claim": "THE DELIVERED HALF of the flavour-promotion fix, and the only check that can see it. data/ is in the box's .stignore so Syncthing NEVER carries data/fatsecret/normalization-rules.json to /home/owner/Recipe-App, and readRulesFile() prefers that on-disk JSON over DEFAULT_RULES. A stale copy therefore reinstates vanilla -> vanilla extract on the LIVE service while every Mac-side gate stays green, including the backend-context twin vanilla-rewrite-is-context-gated, which reads the Mac file. Same failure shape as PR #211, which sat inert on the box until an scp on 2026-08-01. Output is bareVanillaRewriteCount@synonymRewriteCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
+      "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
+      "where": "box",
+      "command": "node -e \"const p='/home/owner/Recipe-App/data/fatsecret/normalization-rules.json';const r=JSON.parse(require('fs').readFileSync(p,'utf8'));const h=(r.synonym_rewrites||[]).filter(a=>String(a.from||'').trim().toLowerCase()==='vanilla');process.stdout.write(h.length+'@'+(r.synonym_rewrites||[]).length)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^0@[1-9][0-9]*$"
+      },
+      "verified": "2026-08-03",
+      "timeoutMs": 60000
     }
   ]
 }
