@@ -1,0 +1,141 @@
+{
+  "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
+  "writtenAt": "2026-08-03T15:58:48.279Z",
+  "cases": {
+    "s-typo-08": {
+      "foodId": "off_9310653104835",
+      "foodName": "banna yoghurt",
+      "grams": null,
+      "kcal100": 73.69999694824219,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 21
+    },
+    "s-typo-14": {
+      "foodId": "off_5060929632145",
+      "foodName": "Banan",
+      "grams": null,
+      "kcal100": 80,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 21
+    },
+    "n-supp-12": {
+      "foodId": "off_0810169607039",
+      "foodName": "Ghost Clear Whey Blue Raspberry",
+      "grams": 21.5,
+      "kcal100": 312.5,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-serv-24": {
+      "foodId": "off_5449000008299",
+      "foodName": "Capri sun",
+      "grams": 330,
+      "kcal100": 7,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-serv-51": {
+      "foodId": "off_0259645028140",
+      "foodName": "Ribeye",
+      "grams": 100,
+      "kcal100": 250,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-27": {
+      "foodId": "fs_5268",
+      "foodName": "Lemon",
+      "grams": 58,
+      "kcal100": 29,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-34": {
+      "foodId": "fs_793",
+      "foodName": "Milk",
+      "grams": 240,
+      "kcal100": 50,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-36": {
+      "foodId": "off_9415077369829",
+      "foodName": "Rolled Oats",
+      "grams": 40,
+      "kcal100": 378,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-cook-06": {
+      "foodId": "off_9415077369829",
+      "foodName": "Rolled Oats",
+      "grams": 86.39999999999999,
+      "kcal100": 378,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-brand-05": {
+      "foodId": "off_0810076291826",
+      "foodName": "Fruit Punch Pre Workout",
+      "grams": 19.8,
+      "kcal100": 50.5,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-brand-06": {
+      "foodId": "fs_2528458",
+      "foodName": "Cotton Candy",
+      "grams": 28,
+      "kcal100": 394,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-38": {
+      "foodId": "off_3393977744423733154062300",
+      "foodName": "Chipotle, Chicken",
+      "grams": 118.294,
+      "kcal100": 140,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-39": {
+      "foodId": "off_45994633744286743131",
+      "foodName": "Qdoba, Tequila Lime Chicken",
+      "grams": 50,
+      "kcal100": 448,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-40": {
+      "foodId": "off_0898328002222",
+      "foodName": "Harissa",
+      "grams": 28,
+      "kcal100": 250,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-47": {
+      "foodId": "off_0296763206050",
+      "foodName": "Boneless Skinless Chicken Breast",
+      "grams": 112,
+      "kcal100": 116,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    }
+  }
+}

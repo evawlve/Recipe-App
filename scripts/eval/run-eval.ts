@@ -300,7 +300,16 @@ async function main() {
     const searchCases = (ONLY && ONLY !== 'search') ? [] : golden.search.filter((c: any) => !GREP || c.id.includes(GREP));
     const nlpCases = (ONLY && ONLY !== 'nlp') ? [] : golden.nlp.filter((c: any) => !GREP || c.id.includes(GREP));
 
-    console.log(`Eval against ${BASE} — ${searchCases.length} search + ${nlpCases.length} nlp cases\n`);
+    // Which build answered? Recorded in the results file so a later diff can tell "two runs of
+    // one build" (noise) from "two runs spanning a deploy" (an effect). Older API versions do not
+    // return it and Vercel cannot read it, so a null is expected and never fatal.
+    const buildId = await fetch(`${BASE}/api/ok`)
+        .then(r => r.json())
+        .then((j: any) => (typeof j?.buildId === 'string' ? j.buildId : null))
+        .catch(() => null);
+
+    console.log(`Eval against ${BASE} — ${searchCases.length} search + ${nlpCases.length} nlp cases`);
+    console.log(`build: ${buildId ?? 'UNKNOWN (API does not report one — record it by hand)'}\n`);
 
     // Warm the API (dev-mode compile, embedding model) so case 1 isn't penalized.
     await fetch(`${BASE}/api/foods/search?s=warmup&local=true`, { headers: { 'x-api-key': API_KEY } }).catch(() => {});
@@ -328,7 +337,7 @@ async function main() {
     // noCache is recorded because a cold run and a warm run are not comparable and
     // the file is the only thing a later reader has. The batch gate's baseline was
     // recorded warm; a cold report scored against it would read as mass regression.
-    const summary: any = { base: BASE, noCache: NO_CACHE, ranAt: new Date().toISOString(), kinds: {}, categories: {} };
+    const summary: any = { base: BASE, noCache: NO_CACHE, buildId, ranAt: new Date().toISOString(), kinds: {}, categories: {} };
 
     for (const kind of ['search', 'nlp']) {
         const rs = byKind(kind);
