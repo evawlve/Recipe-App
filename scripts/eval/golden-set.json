@@ -5755,7 +5755,7 @@
           140
         ]
       },
-      "notes": "PR D pt3 class (c) KNOWN ISSUE — INGEST GAP. 'cooked' becomes a key discriminator (stops sibling-poisoning the bare 'quinoa' key immediately) but no cooked-quinoa record exists in the corpus (FDC 168917 ~120 kcal/100g not ingested), so dry ~368 kcal keeps winning and the case churns until the ingest lands. Promote after cooked-record ingest + 2 stable runs. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
+      "notes": "FIXED 2026-08-03. The 'INGEST GAP — FDC 168917 not ingested' claim here was FALSE: that record was present and in-band throughout. The bare 'quinoa' search term caused filterCandidatesByTokens to drop it as bloated, so dry 'uncooked quinoa' (368 kcal/100g) kept winning. Fixed by restoring IDENTITY_QUALIFIERS into the retrieval query, mirroring what deriveCacheKeyName() already did for the cache key. PROMOTED HARD 2026-07-21."
     },
     {
       "id": "n-mq-36",
@@ -6060,7 +6060,7 @@
           28
         ]
       },
-      "notes": "DEFECT + CORPUS-BLOCKED. Explicit 'cooked quinoa' still returns FDC 'uncooked quinoa' (kcal100=368, carbs100=64.2) because NO cooked-quinoa record is retrievable. Band is a TARGET (cooked quinoa ~21g carb/100g), NOT observed-correct. Same root as n-serv-06's nutrition. Needs ingest, not ranking. knownIssue, non-gating. PROMOTED HARD 2026-07-21: passed x3 post-PR-D-pt3-deploy evals."
+      "notes": "FIXED 2026-08-03. The 'CORPUS-BLOCKED / needs ingest' reading here was FALSE and cost two rankings: FDC 168917 'Quinoa, cooked' (120 kcal/100g, 21.3g carbs) was ingested the whole time. It was gathered and then DROPPED by filterCandidatesByTokens, because the search term was bare 'quinoa' and its extra 'cooked' token read as bloat. Cause was ADMISSION, not ingest and not ranking. Restoring IDENTITY_QUALIFIERS into the retrieval query fixed it. PROMOTED HARD 2026-07-21."
     },
     {
       "id": "n-cook-06",
@@ -6078,7 +6078,7 @@
         ]
       },
       "knownIssue": true,
-      "notes": "DEFECT + CORPUS-BLOCKED. 'cooked oats'/'oatmeal' returns DRY 'Rolled Oats' (kcal100=361) — no cooked-oatmeal record in corpus, explicit-cooked token ignored. Band is a TARGET (cooked oatmeal ~70 kcal/100g), NOT observed. Needs ingest. knownIssue, non-gating."
+      "notes": "NOW PASSING 2026-08-03, still flagged knownIssue — promote after 2 more stable cold runs. The 'CORPUS-BLOCKED / needs ingest' reading was FALSE here too: restoring IDENTITY_QUALIFIERS into the retrieval query moved this from dry 'Rolled Oats' (361 kcal/100g) to FatSecret 'Steel Cut Oats (Cooked)' with no ingest. Note the sibling n-mq-36 'oatmeal' is a DIFFERENT case — it carries no 'cooked' token, so no qualifier can be restored and it still returns dry oats."
     },
     {
       "id": "n-brand-02",

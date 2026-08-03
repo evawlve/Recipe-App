@@ -9,6 +9,7 @@
  */
 
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
+import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
 import { normalizeIngredientName } from './normalization-rules';
 import { gatherCandidates, confidenceGate, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
 import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
@@ -664,6 +665,43 @@ export async function mapIngredientWithFallback(
             rawLine: trimmed, baseName, unitHint: parsed.unitHint, restored: withHint,
         });
         baseName = withHint;
+    }
+
+    // The SAME gap, one set over: IDENTITY_QUALIFIERS.
+    //
+    // `deriveCacheKeyName()` restores unit hints AND qualifiers into the key; the
+    // block above restored only the hints into the QUERY. So `extractQualifiers()`
+    // strips `cooked` out of `parsed.name`, the key keeps it, and the search term
+    // does not — `1 cup cooked quinoa` is retrieved as bare `quinoa`.
+    //
+    // Measured 2026-08-03 with filter-trace-probe: on query `quinoa` the FDC record
+    // "cooked quinoa" is gathered and then DROPPED by filterCandidatesByTokens
+    // (the extra `cooked` token reads as bloat against a bare query), leaving
+    // "uncooked quinoa" to win. On `cooked quinoa` it is kept. So this is an
+    // ADMISSION defect, not a ranking one — pool never contained the right answer.
+    //
+    // Note this NARROWS the query, which is the opposite of the usual relaxation,
+    // so it cannot be waved through as admit-only. Blast radius measured before
+    // shipping: 12 of 348 golden cases carry one of these tokens and 57 of 5,586
+    // distinct live lines (1.0%). `whole` is in the set but cannot reach here on a
+    // unit-less line — `unit.ts` consumes it as a count unit first — so in practice
+    // this fires for cooked/raw/dried/canned.
+    //
+    // Reuses IDENTITY_QUALIFIERS rather than re-deriving it, for the same reason
+    // the block above reuses IDENTITY_UNIT_HINTS: the key and the query must not
+    // drift apart again.
+    if (!options.normalizedForm?.trim() && parsed?.qualifiers?.length) {
+        const present = new Set(baseName.toLowerCase().split(/\s+/));
+        const restore = parsed.qualifiers
+            .map(q => q.toLowerCase())
+            .filter(q => IDENTITY_QUALIFIERS.has(q) && !present.has(q));
+        if (restore.length) {
+            const withQualifiers = `${[...new Set(restore)].join(' ')} ${baseName}`.trim();
+            logger.info('mapping.identity_qualifier_restored', {
+                rawLine: trimmed, baseName, qualifiers: restore, restored: withQualifiers,
+            });
+            baseName = withQualifiers;
+        }
     }
 
     // Brand-preservation guard.
