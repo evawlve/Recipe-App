@@ -242,11 +242,29 @@ function sayAll(lines: string[]) { for (const l of lines) say(l); }
 //    move"; it says nothing about whether the transcription was ever right.
 //    Only `verify` mode tests faithfulness.
 //
-//    LINE-ENDING SENSITIVE. The hash is computed over
-//    fs.readFileSync(f,'utf8').split('\n') — reading the same file with a reader
-//    that performs universal-newline translation (e.g. Python's open()) produces a
-//    DIFFERENT hash and a false DRIFT. If you are about to "fix" a drift, first
-//    reproduce the hash with this exact reader.
+//    LINE-ENDING INDEPENDENT since 2026-08-03. Both hashes strip '\r' before
+//    hashing, so a CRLF tree and an LF tree of the same code produce the SAME
+//    hash. This is not a nicety — it closed the guard's third false drift.
+//
+//    The history: this repo is Syncthing-mirrored across a Mac, a Windows PC and
+//    the box, with no `.gitattributes` and `core.autocrlf` unset, so the mapper's
+//    line endings flip on their own. `map-ingredient-with-fallback.ts` was 6,531
+//    CRLF lines at `abbe55a` (where the pins below were taken) and 0 CRLF from
+//    `c16a24e` onward. That flip alone moved BOTH hashes, and the gate reported
+//    DRIFT on a tree whose selection code was byte-identical to the shape section
+//    9 transcribes:
+//
+//      caller  16bec3f864088b83 (CRLF, 560915f) == f64c553ece3b0eec (LF, HEAD)
+//      helpers 7535716631ca65c8 (CRLF)          == 8c1e518d30331976 (LF)
+//      $ diff <(block 560915f | tr -d '\r') <(block HEAD | tr -d '\r')   # 576 lines
+//      (no output)
+//
+//    A guard that fires on changes it does not care about trains its readers to
+//    reach for `--allow-drift` — the same lesson `copiedHelperSource()` records
+//    below, one layer up. Measured 2026-08-03.
+//
+//    The hashes below are therefore hashes of LF-NORMALIZED text. Re-derive any of
+//    them with `winner-diff hashes`, never by hand off a raw file.
 // ============================================================
 
 const MAPPER_FILE = path.join(REPO_ROOT, 'src/lib/mapping/map-ingredient-with-fallback.ts');
@@ -254,8 +272,13 @@ const MAPPER_FILE = path.join(REPO_ROOT, 'src/lib/mapping/map-ingredient-with-fa
 const CALLER_START_ANCHOR = '// Step 3: Apply must-have token filter';
 const CALLER_END_ANCHOR = "selectionReason = 'scored_by_confidence';";
 
+/** Read the mapper with line endings normalized, so hashes are CRLF/LF invariant. */
+function mapperLines(): string[] {
+    return fs.readFileSync(MAPPER_FILE, 'utf8').replace(/\r/g, '').split('\n');
+}
+
 function callerBlockSource(): { text: string; startLine: number; endLine: number; lines: string[] } {
-    const src = fs.readFileSync(MAPPER_FILE, 'utf8').split('\n');
+    const src = mapperLines();
     const start = src.findIndex(l => l.includes(CALLER_START_ANCHOR));
     const end = src.findIndex(l => l.includes(CALLER_END_ANCHOR));
     if (start < 0 || end < 0 || end <= start) {
@@ -277,12 +300,16 @@ const COPIED_HELPERS = [
  * THE TERMINATOR TEST IS `trimEnd() === '}'`, NOT `=== '}'`, AND THAT IS THE WHOLE
  * POINT OF THIS COMMENT.
  *
- * `map-ingredient-with-fallback.ts` is 100% CRLF (`file` says so; re-derive with
- * `file src/lib/mapping/map-ingredient-with-fallback.ts`, and commit 5b4a170 is
- * literally "restore CRLF"). Split on '\n', every line therefore ends '\r', so the
- * old `src[j] !== '}'` matched NOTHING: `src.findIndex(l => l === '}')` returns -1
- * over the whole file. Every anchor ran to EOF, and each helper's "source" was the
- * entire tail of the file from its own start.
+ * `map-ingredient-with-fallback.ts` USED TO BE 100% CRLF (commit 5b4a170 is
+ * literally "restore CRLF"; it measures 0 CRLF today — the endings flip on their
+ * own, see the section header). Split on '\n', every line therefore ended '\r', so
+ * the old `src[j] !== '}'` matched NOTHING: `src.findIndex(l => l === '}')` returns
+ * -1 over the whole file. Every anchor ran to EOF, and each helper's "source" was
+ * the entire tail of the file from its own start.
+ *
+ * `trimEnd()` is kept even though `mapperLines()` now strips '\r' before this ever
+ * runs: it is what makes the terminator test independent of trailing whitespace,
+ * and belt-and-braces on a check whose failure mode was silent over-capture.
  *
  * Measured 2026-08-01, before this fix: the five anchors captured 1,624 / 1,593 /
  * 1,582 / 1,546 / 1,533 lines — 7,878 in total, all terminating on the same line —
@@ -303,7 +330,7 @@ const COPIED_HELPERS = [
  * silently over-broad capture.
  */
 function copiedHelperSource(): string {
-    const src = fs.readFileSync(MAPPER_FILE, 'utf8').split('\n');
+    const src = mapperLines();
     const out: string[] = [];
     for (const anchor of COPIED_HELPERS) {
         const i = src.findIndex(l => l.trimStart().startsWith(anchor));
@@ -401,32 +428,43 @@ function sha(s: string) { return createHash('sha256').update(s).digest('hex').sl
  * hash with its variant. Do not just re-pin. Results from a drifted harness are not a
  * measurement of the pipeline.
  *
- * The hashes are LINE-ENDING SENSITIVE (see the section header). Reproduce with
+ * The hashes are LINE-ENDING INDEPENDENT since 2026-08-03 (see the section header),
+ * and every entry below was re-derived on that date. Reproduce with
  * `winner-diff hashes` before concluding anything drifted.
+ *
+ * THREE CRLF-era pins were DROPPED in that re-key rather than translated:
+ * `5190a9ae93dbf642`, `349af8359fd7b90b` and `4ea700da8becee0c`. No commit in the
+ * mapper's 48-commit history reproduces them (they were squash-merged away), so
+ * their normalized equivalents cannot be derived, only guessed — and a guessed pin
+ * is the one thing this table must not contain. A tree still on one of those shapes
+ * now reads UNRECOGNISED and trips DRIFT, which is the correct outcome: section 9
+ * stopped reproducing all three, so their pins could never have claimed the replay
+ * mirrored that tree (see TRANSCRIBED_CALLER below). Their commentary is kept in
+ * place because the reasoning is still the record of why each was abandoned.
  */
 const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // The pre-demotion shape. Still transcribed exactly, still the A-side of every
     // A/B of the demotion; nothing in either mitigation round touched it.
-    '3a20888d65bd8cbd': 'baseline',
+    // (CRLF-era hash was 3a20888d65bd8cbd, re-derived from 5a973e4 on 2026-08-03.)
+    'c7e6e0f84dacff8d': 'baseline',
     // SUPERSEDED (shape 1 of 3 in the gate-backstop family). The demotion with NO
-    // mitigations. Left in the table because it is a real shape a tree can still be
-    // on, but it is the shape the first adversarial review found defective, and
-    // section 9 no longer reproduces it.
-    '5190a9ae93dbf642': 'gate-backstop',
+    // mitigations — the shape the first adversarial review found defective, and
+    // section 9 no longer reproduces it. DROPPED in the 2026-08-03 re-key: CRLF-era
+    // hash 5190a9ae93dbf642, not re-derivable (see the header).
     // SUPERSEDED (shape 2 of 3). The demotion + Mitigation A (gate pick appended to
     // the rerank window) + Mitigation B UNSCOPED. Pinned 2026-07-26 and abandoned the
     // same day: the second review measured A against the 296-row adjudication and
     // found it bought no regression reduction while turning one adjudicated-wrong
     // record into a CACHED one, and found B's other two gate exits return numbers
     // that are not confidences. Section 9 no longer reproduces this shape either.
-    '349af8359fd7b90b': 'gate-backstop',
+    // DROPPED in the 2026-08-03 re-key: CRLF-era hash 349af8359fd7b90b.
     // CURRENT — the shape section 9 actually transcribes. A reverted, B scoped to
     // `high_confidence_clear_winner`. Pinned only AFTER re-reading the caller and
     // re-running `transcript` + `verify` against it, and only after the verify was
     // shown capable of going RED on THIS shape (stub the B scope -> mismatches).
     // Receipts are in the section 9 RECEIPTS block; they are measurements, not
-    // inherited from the 349af835 pin.
-    '4ea700da8becee0c': 'gate-backstop',
+    // inherited from the 349af835 pin. Superseded by 3fc2ca07 (comment-only delta).
+    // DROPPED in the 2026-08-03 re-key: CRLF-era hash 4ea700da8becee0c.
     // CURRENT. Behaviourally IDENTICAL to 4ea700da — the only edits were comments,
     // correcting three false claims a review found in them (simpleRerank's confidence
     // range, "the gate handed back candidates[0]", and attributing every gate
@@ -440,7 +478,8 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // default; the cost is that a documentation fix needs a re-pin plus a proof like
     // the one above. Do not skip the proof — "it was only comments" is exactly the
     // claim a hash exists to check.
-    '3fc2ca073ff0f047': 'gate-backstop',
+    // (CRLF-era hash was 3fc2ca073ff0f047, re-derived from 81e1d72 on 2026-08-03.)
+    '44f45a42e1b4b8ad': 'gate-backstop',
     // CURRENT — the shape section 9 transcribes. Behaviourally identical to
     // 3fc2ca07; the ONLY delta is observability, and here is the receipt rather
     // than the assurance:
@@ -460,7 +499,8 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // merge until 2026-08-01 the drift guard was tripped on clean master and this
     // gate — the one playbook section 5a requires before any admission or ranking
     // change — could not be run without `--allow-drift`. It was not run.
-    '9e5634f738b23ba7': 'gate-backstop',
+    // (CRLF-era hash was 9e5634f738b23ba7, re-derived from 387878b on 2026-08-03.)
+    '8c1521a72927607a': 'gate-backstop',
     // CURRENT — the shape section 9 transcribes. Delta from 9e5634f7 is the rerank
     // WINDOW: `filtered.slice(0, 10)` (a prefix over gather order) became
     // `buildRerankPool(filtered, RERANK_POOL_LIMIT)` (per-lane composition), and the
@@ -474,7 +514,10 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // doing when one tree must produce both sides of an A/B. This change is gated
     // the other way — two trees, each transcribing its own caller — so the base
     // tree's own pin (9e5634f7) covers the base side.
-    '16bec3f864088b83': 'gate-backstop',
+    // (CRLF-era hash was 16bec3f864088b83, re-derived from 560915f on 2026-08-03.
+    // This is the shape HEAD is on: the two differ ONLY in line endings, which is
+    // what the 2026-08-03 normalization proved — see the section-2 header.)
+    'f64c553ece3b0eec': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -488,8 +531,16 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
  *
  * So this is not "the helpers changed and we accepted it" — the helpers never
  * changed, and the old number was measuring something else.
+ *
+ * Re-keyed 2026-08-03 to the LF-normalized hash. `7535716631ca65c8` was the same
+ * five helpers read as CRLF; the bodies are byte-identical across the flip:
+ *
+ *   $ helpers(abbe55a | tr -d '\r') == helpers(HEAD) == 8c1e518d30331976
+ *
+ * Again not "the helpers changed and we accepted it" — the helpers still have never
+ * changed. Both re-pins this hash has ever had were measurement bugs, not code.
  */
-const PINNED_HELPERS_HASH = '7535716631ca65c8';
+const PINNED_HELPERS_HASH = '8c1e518d30331976';
 
 /**
  * The ONE caller hash section 9 actually transcribes.
@@ -511,7 +562,7 @@ const PINNED_HELPERS_HASH = '7535716631ca65c8';
  * (that shape is genuinely known, and naming it is more useful than "unrecognised"),
  * but it can no longer claim the replay mirrors it.
  */
-const TRANSCRIBED_CALLER = '16bec3f864088b83';
+const TRANSCRIBED_CALLER = 'f64c553ece3b0eec';
 
 interface DriftResult {
     caller: string;
