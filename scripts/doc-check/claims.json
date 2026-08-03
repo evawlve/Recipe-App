@@ -1005,6 +1005,30 @@
       "verified": "2026-08-02"
     },
     {
+      "id": "eval-results-record-the-build",
+      "claim": "A golden-eval results file records the buildId it ran against, fetched from /api/ok. Without it, base and noCache are the only provenance a results file carries, and two runs spanning a deploy are indistinguishable from two runs of one build -- which is how PR #226's effect read as a 10-case noise floor on 2026-08-03.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
+      "where": "backend",
+      "command": "grep -c 'buildId' scripts/eval/run-eval.ts src/app/api/ok/route.ts | awk -F: '{s+=$2} END {print s}'",
+      "expect": {
+        "kind": "matches",
+        "value": "^([5-9]|[1-9][0-9]+)$"
+      },
+      "verified": "2026-08-03"
+    },
+    {
+      "id": "eval-diff-requires-a-build-id",
+      "claim": "diff-eval-runs.ts refuses to run without --build, and fails closed on a cold-vs-warm or cross-base pair. A noise floor computed across a deploy is not a noise floor, and nothing in a results file prevents it, so the guard lives in the tool.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
+      "where": "backend",
+      "command": "grep -c 'MODE MISMATCH\\|BASE MISMATCH\\|--build <BUILD_ID> is REQUIRED' scripts/eval/diff-eval-runs.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^3$"
+      },
+      "verified": "2026-08-03"
+    },
+    {
       "id": "offfood-too-large-to-snapshot-per-batch",
       "claim": "OffFood exceeds 1GB, which is why the warm rollback reverts aux tables with a key-set snapshot instead of widening the per-batch pg_dump",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-02_batch-rollback-is-partial.md",
