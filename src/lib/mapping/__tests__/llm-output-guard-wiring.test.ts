@@ -170,3 +170,53 @@ describe('the introduced-food-token guard is wired into the mapper', () => {
         expect(names[names.length - 1]).toBe('rolled oats');
     });
 });
+
+describe('the decisive-brand preservation repair is wired into the mapper', () => {
+    it('puts back a decisive brand the model dropped', async () => {
+        // Measured shape: the ONE bar, whose brand the normalizer classifies as
+        // the numeral and strips as a size phrase.
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'birthday cake',
+            canonicalBase: 'birthday cake',
+        });
+
+        await mapIngredientWithFallback('one bar birthday cake');
+
+        const names = gatherNames();
+        expect(names[names.length - 1]).toBe('one birthday cake');
+    });
+
+    it('does NOT prefix a non-decisive brand — the "bell capsicum" regression stays dead', async () => {
+        // `bell` is a real lexicon brand (Bell & Evans) and a false positive
+        // here. An unconditional prefix produced key `bell capsicum` and
+        // orphaned the live human-triage `capsicum` row (golden n-mq-30).
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'capsicum',
+            canonicalBase: 'capsicum',
+        });
+
+        await mapIngredientWithFallback('bell pepper');
+
+        const names = gatherNames();
+        expect(names[names.length - 1]).toBe('capsicum');
+        // NB: an earlier gather legitimately contains `bell` — that is the
+        // user's own text (`bell pepper`) before the rewrite, not a prefix.
+        // The regression to exclude is specifically the fused brand+rewrite.
+        expect(names).not.toContain('bell capsicum');
+    });
+
+    it('leaves the name alone when the model kept the brand', async () => {
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'one birthday cake bar',
+            canonicalBase: 'one birthday cake bar',
+        });
+
+        await mapIngredientWithFallback('one bar birthday cake');
+
+        const names = gatherNames();
+        expect(names[names.length - 1]).toBe('one birthday cake bar');
+    });
+});

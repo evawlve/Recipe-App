@@ -22,7 +22,7 @@ import {
     hasNullOrInvalidMacros,
     detectGrainCookingContext,
 } from './filter-candidates';
-import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery, stripPrepModifiers } from './simple-rerank';
+import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery, stripPrepModifiers, hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
 import {
     singularizeUnit, extractLabelServingUnit,
@@ -98,12 +98,29 @@ async function lookupValidatedMappingWithLegacyFallback(
     brandDetection: BrandKeyInput,
     rawLine: string,
     rejection?: CacheLookupRejection,
+    /**
+     * Name to derive the LEGACY key from, when it differs from the name used
+     * for the symmetric key.
+     *
+     * The brand-preservation repair re-injects a decisive brand into
+     * `normalizedName`. Deriving the brandless legacy key from that repaired
+     * value would make `legacyKey === symmetricKey`, short-circuit this
+     * fallback, and orphan every pre-Track-1c row that only exists under a
+     * brandless key. MEASURED 2026-08-03 over the whole observed corpus (5,585
+     * distinct lines / 64,046 events): 0 rows are actually lost, because
+     * `legacyHitReflectsBrand()` below already refuses all 15 legacy hits that
+     * occur. But the corpus is not a complete record of queries, and the
+     * corpus-independent bound is 142 always-decisive rows — 5 of them at 100+
+     * uses, one `human-triage`. Passing the pre-injection name removes the
+     * exposure by construction rather than relying on that measurement.
+     */
+    legacyName?: string,
 ): Promise<CachedMappedIngredient | null> {
     const symmetricKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, rawLine);
     const hit = await getValidatedMappingByNormalizedName(symmetricKey, 'fatsecret', rawLine, rejection);
     if (hit) return hit;
 
-    const legacyKey = deriveCacheKeyName(normalizedName, parsed);
+    const legacyKey = deriveCacheKeyName(legacyName ?? normalizedName, parsed);
     if (legacyKey === symmetricKey || isMalformedCacheKey(legacyKey)) return null;
 
     const legacyHit = await getValidatedMappingByNormalizedName(legacyKey, 'fatsecret', rawLine, rejection);
@@ -930,6 +947,11 @@ export async function mapIngredientWithFallback(
         }
 
         let normalizedName = normalizeIngredientName(baseName).cleaned || baseName;
+        // Set only when the brand-preservation repair below rewrites
+        // normalizedName. The legacy (brandless) cache key must keep being
+        // derived from the PRE-injection value or the legacy fallback
+        // short-circuits — see lookupValidatedMappingWithLegacyFallback().
+        let preBrandNormalizedName: string | undefined;
 
         // ── Brand detection (static list + AI passed brand) ─────────────
         // Must run before the early cache check so the brand guard is available
@@ -1383,6 +1405,48 @@ export async function mapIngredientWithFallback(
                     aiCanonicalBase = aiHint.canonicalBase
                         ? stripIntroducedFoodTokens(guardInput, aiHint.canonicalBase).cleaned
                         : aiHint.canonicalBase;
+
+                    // Brand preservation over the model's OWN output. The guard
+                    // near the top of this function cannot cover this: it is
+                    // gated on a caller-supplied options.normalizedForm AND it
+                    // runs before these assignments overwrite normalizedName.
+                    // The prompt does carry the rule ("INCLUDE the brand name in
+                    // canonical_base when is_branded") and nothing enforces it —
+                    // measured 2026-08-03, the brand is dropped on ~58 of 1,776
+                    // brand-bearing lines in AiNormalizeCache.
+                    //
+                    // GATED ON DECISIVENESS, and that gate is the design. An
+                    // UNCONDITIONAL prefix is already refuted: `bell pepper`
+                    // matches the lexicon brand `bell` (Bell & Evans), the model
+                    // rewrites the food to `capsicum`, and prefixing produced key
+                    // `bell capsicum` — orphaning the live human-triage
+                    // `capsicum` row (golden n-mq-30). See deriveMappingCacheKey()
+                    // and cache-key-symmetry.test.ts, which pins it.
+                    // llm-brand-preservation.test.ts asserts the two symptoms
+                    // stay separated; if they ever converge, disable this repair
+                    // rather than re-tuning it.
+                    //
+                    // REPAIRS, never rejects: dropping the model's name would
+                    // also discard its typo repair and cooked-state retention.
+                    const targetBrand = brandDetection.matchedBrand?.trim();
+                    if (targetBrand && hasDecisiveBrandContext(trimmed, targetBrand)) {
+                        const keepBrand = (s: string | undefined) =>
+                            s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
+                                ? `${targetBrand} ${s}`.trim()
+                                : s;
+                        const rebranded = keepBrand(normalizedName);
+                        if (rebranded !== normalizedName) {
+                            logger.info('mapping.llm_dropped_decisive_brand', {
+                                rawLine: trimmed,
+                                llmOutput: normalizedName,
+                                repaired: rebranded,
+                                brand: targetBrand,
+                            });
+                            preBrandNormalizedName = normalizedName;
+                        }
+                        normalizedName = rebranded ?? normalizedName;
+                        aiCanonicalBase = keepBrand(aiCanonicalBase);
+                    }
                     aiCookingModifier = aiHint.cookingModifier;
                     aiSynonyms = aiHint.synonyms || [];
                     if (aiSynonyms.length > 0) {
@@ -1489,7 +1553,7 @@ export async function mapIngredientWithFallback(
             // request-stable, so this key matches the save key exactly. A
             // miss falls back to the legacy (pre-Track-1c) key.
             const normalizedLookupRejection: CacheLookupRejection = { reason: null };
-            const normalizedCache = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed, normalizedLookupRejection);
+            const normalizedCache = skipCache ? null : await lookupValidatedMappingWithLegacyFallback(normalizedName, parsed, brandDetection, trimmed, normalizedLookupRejection, preBrandNormalizedName);
             if (!normalizedCache && normalizedLookupRejection.reason) {
                 if (telemetry) telemetry.cacheEscape = 'lookup_normalized:' + normalizedLookupRejection.reason;
                 noteReadEscape(normalizedLookupRejection.targetKey, 'lookup_normalized:' + normalizedLookupRejection.reason);
