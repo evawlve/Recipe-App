@@ -6026,7 +6026,13 @@
           29
         ]
       },
-      "notes": "Lock-in. Cooked black beans -> FDC 'black turtle...cooked' (kcal100=130, carbs100=24.4), stable. Legumes already resolve cooked (unlike grains). Hard."
+      "total": {
+        "calories": [
+          180,
+          280
+        ]
+      },
+      "notes": "Lock-in. Cooked black beans -> FDC 'black turtle...cooked' (kcal100=130, carbs100=24.4), stable. Legumes already resolve cooked (unlike grains). Hard. TOTAL BAND ADDED 2026-08-04, and it is EXPECTED RED until the source-score asymmetry is fixed: the case was green while billing a ~30% over-bill, because scale-free kcal100/carbs100 cannot see grams. Measured on box TqkY7MBZjJjmnKuqDjeoF, 3/3 stable: off_0039400019442 (Bush's) at 240 g / 295 kcal, vs USDA 1 cup cooked black beans = 172 g / 227 kcal. Band is reference +/-23%, matching n-tot-02's style. A case that cannot see a doubled bill is not a test."
     },
     {
       "id": "n-cook-04",
