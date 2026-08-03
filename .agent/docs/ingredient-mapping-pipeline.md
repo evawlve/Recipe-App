@@ -868,6 +868,23 @@ AI normalize now returns additional fields:
 - `isBranded=true`: Relax token containment penalty (allow branded matches)
 - `isMultiIngredient=true`: Log warning, map first ingredient only
 
+**The model is NOT the only producer of `isBranded`, and this section used to imply it was.**
+`mapIngredientWithFallback()` seeds a local `isBrandedQuery` from the *static* detector
+`detectBrandInQuery()` in `brand-detector.ts`, before any model runs. The model's answer is then
+merged in — at two sites, the live LLM branch and the normalize-gate-skipped branch that replays
+`AiNormalizeCache.isBranded`.
+
+**Precedence (PR #230):** `resolveIsBrandedQuery()` in `llm-output-guards.ts`. The model may
+**upgrade** `false → true` unconditionally. It may **downgrade** `true → false` only where the
+static evidence is *not* decisive per `hasDecisiveBrandContext()`. Plain upgrade-only is refuted by
+measurement — 42 of 56 downgrades are the model correctly overriding a brand-lexicon false positive
+(`granola` in `greek yogurt with granola`). Owner, with the full population split:
+mobile `sync-docs/reports/2026-08-03_branded-flag-downgrade.md`.
+
+Downstream, `isBrandedQuery` alone (not recoverable from `targetBrand`) gates the brand-targeted
+supplementary OFF query in `gatherCandidates()`, the `+4` in `computeOffScore()` — which changes OFF
+**admission**, not just ranking — the `brand_guard` cache escape, and `canReuseQuickGather`.
+
 ### Test Cases
 
 ```bash
