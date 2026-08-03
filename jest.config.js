@@ -22,6 +22,10 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
       },
+      // Blanks the provider credentials BEFORE any module is imported, so no test can
+      // reach a live LLM. Must stay in `setupFiles`, not `setupFilesAfterEnv` — the
+      // keys are captured into module-scope consts at import time. See the file.
+      setupFiles: ['<rootDir>/jest.setup.no-llm.js'],
     },
     {
       displayName: 'components',
@@ -38,6 +42,9 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
       },
+      // Same gate as the `api` project: a component test can import the mapper chain
+      // transitively, so the jsdom project needs it too.
+      setupFiles: ['<rootDir>/jest.setup.no-llm.js'],
       setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
       extensionsToTreatAsEsm: ['.ts', '.tsx'],
       globals: {
