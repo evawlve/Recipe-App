@@ -388,6 +388,18 @@
       "verified": "2026-07-30"
     },
     {
+      "id": "flywheel-sweep-timer-stopped-for-program",
+      "claim": "flywheel-sweep.timer is STOPPED for the duration of the pipeline-hardening program, so no nightly writer sits underneath the program's warm numbers (it regenerated the wrong n-mq-22 pick within 24h once already). TEMPORARY: when the program closes, restart the timer and DELETE this claim in the same commit. The unit is still `enabled`, so a box reboot re-arms it and turns this claim red -- which is the point, since nothing else guards a paused timer.",
+      "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
+      "where": "box",
+      "command": "systemctl --user is-active flywheel-sweep.timer",
+      "expect": {
+        "kind": "equals",
+        "value": "inactive"
+      },
+      "verified": "2026-08-04"
+    },
+    {
       "id": "typesense-healthy",
       "claim": "Typesense answers healthy on :8108",
       "ownerDoc": "mobile:CLAUDE.md#topology",

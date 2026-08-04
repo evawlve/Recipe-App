@@ -10,6 +10,7 @@ import { extractModifierConstraints, applyModifierConstraints, type ModifierCons
 import { detectGrainCookingContext } from './filter-candidates';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
+import { normalizeNameKey } from '../search/dedupe-candidates';
 
 export interface RerankCandidate {
     id: string;
@@ -1238,7 +1239,23 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
         score += WEIGHTS.SHORT_NAME * (1 - nameLength / 60);
     }
 
-    // 6. Original API score (normalized to 0-1)
+    // 6. Original API score (capped at 1; NOT floored at 0 -- read on)
+    // The clamp is one-sided and that is UNRESOLVED, not endorsed.
+    // computeOffScore() is unbounded below (-1 per unmatched word,
+    // -0.05 * wordCount), so a badly-matching OFF row reaches this term at full
+    // negative strength -- measured to -2.407 across 223 of 4,670 cross-source
+    // contests (2026-08-04, from logs/mapping-analysis-*.json) -- while the
+    // upside is capped at +0.45.
+    // Adding Math.max(0, ...) was tried and reverted the same day, on the
+    // reasoning that it REMOVES a penalty from exactly the rows that deserve it
+    // and OFF rows winning when they should not is this pipeline's dominant
+    // defect (95.2% of cross-source contests already put an OFF row at index 0).
+    // That reasoning is NOT a measurement: what those 223 rows do under a floor
+    // was never measured, and a test written to pin the current behaviour turned
+    // out to be inert under mutation. So the honest state is "unmeasured, so
+    // unchanged". Before touching this, measure whether the 223 get better or
+    // worse -- footprint is not benefit (CLAUDE.md #230: a bug can be
+    // load-bearing, and so can a one-sided clamp).
     score += Math.min(candidate.score, 1) * WEIGHTS.ORIGINAL_SCORE;
 
     return score;
@@ -1867,19 +1884,38 @@ export function simpleRerank(
     // CONSENSUS_AGREE_TOLERANCE of the median, demote any sibling that
     // deviates beyond the outlier thresholds. Source-agnostic: a bad OFF row
     // is demoted exactly like a bad fatsecret row.
-    // Gated on a detected target brand, NOT the stricter decisive two-word
-    // adjacency: "1 quest chocolate chip protein bar" puts a flavor token
-    // next to the brand word and fails the adjacency test, yet its sibling
-    // pack is exactly where consensus matters. The sibling conditions below
-    // (>=3 same-brand records covering a non-brand query token, majority
+    // NOT gated on the stricter decisive two-word adjacency: "1 quest chocolate
+    // chip protein bar" puts a flavor token next to the brand word and fails the
+    // adjacency test, yet its sibling pack is exactly where consensus matters.
+    // The sibling conditions below (>=3 records covering the query, majority
     // agreement) are the real safety rail against coincidental brand words.
+    //
+    // As of 2026-08-04 this pass ALSO runs for generic (brand-less) queries,
+    // grouping siblings by name instead of by brand. It previously required a
+    // detected targetBrand, which meant the one mechanism we have for "this row
+    // disagrees with its identically-named siblings" never ran for exactly the
+    // queries that need it: `apple` resolving to a 23.9 kcal/100g record against
+    // a 52.8 sibling median (n=53), `unsweetened almond milk` to 60.0 against
+    // 16.5 (n=32). Both sit inside the corrupt-panel detector's direction bands
+    // and are rejected by its rescale clause -- it is a panel-SCALE detector, so
+    // a plainly wrong panel that is not a serving-scale artifact is invisible to
+    // it. Measured 2026-08-04: 29,394 unmarked live OffFood rows sit >=1.6x or
+    // <=0.6x their identically-named sibling median in a group of >=4, and
+    // 97.9% of them are structurally invisible to that detector.
+    //
+    // Sibling grouping uses normalizeNameKey(), the SAME key the corrupt-panel
+    // detector and dedupe use. There were two competing definitions in play
+    // (raw lower(name) vs this one); picking the detector's keeps one owner.
     // Kill-switch: RANK_BRAND_CONSENSUS="0" disables the pass.
-    if (targetBrand && process.env.RANK_BRAND_CONSENSUS !== '0') {
-        const siblings = scored.filter(s =>
-            candidateMatchesTargetBrand(s.candidate.brandName, s.candidate.name, targetBrand!)
-            && coversNonBrandQueryToken(s.candidate.name, query, targetBrand!)
-            && s.candidate.nutrition?.per100g === true
-            && s.candidate.nutrition.kcal > 0);
+    if (process.env.RANK_BRAND_CONSENSUS !== '0') {
+        const queryKey = targetBrand ? '' : normalizeNameKey(query);
+        const siblings = scored.filter(s => {
+            if (s.candidate.nutrition?.per100g !== true || s.candidate.nutrition.kcal <= 0) return false;
+            return targetBrand
+                ? candidateMatchesTargetBrand(s.candidate.brandName, s.candidate.name, targetBrand)
+                    && coversNonBrandQueryToken(s.candidate.name, query, targetBrand)
+                : queryKey.length > 0 && normalizeNameKey(s.candidate.name) === queryKey;
+        });
         if (siblings.length >= 3) {
             const median = (vals: number[]): number => {
                 const sorted = [...vals].sort((a, b) => a - b);
@@ -2030,6 +2066,7 @@ export function simpleRerank(
             const phrase = getExactPhraseBoost(query, s.candidate.name);
             const modifier = getModifierMatchBoost(query, s.candidate.name);
             const coverage = getWordCoverageBonus(query, s.candidate.name);
+            // Must track the scoring expression above exactly, or DEBUG_RERANK_SCORES lies.
             const apiScore = Math.min(s.candidate.score, 1) * WEIGHTS.ORIGINAL_SCORE;
             const fdcBoost = (s.candidate.source === 'fdc' && isProduceOrMeat(query)) ? 0.03 : 0;
             const fsBoost = (s.candidate.source === 'fatsecret' && (isBranded || targetBrand)) ? 0.03 : 0;

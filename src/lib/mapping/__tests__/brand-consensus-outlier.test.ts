@@ -141,3 +141,65 @@ describe('brand macro-consensus outlier demotion', () => {
         expect(result.winner?.id).toBe('fs_42');
     });
 });
+
+/**
+ * Generic-query consensus (2026-08-04). The pass used to require a detected
+ * targetBrand, so the one mechanism for "this row disagrees with its
+ * identically-named siblings" never ran for the generic queries that need it.
+ * Measured: 29,394 unmarked OffFood rows sit >=1.6x or <=0.6x their
+ * identically-named sibling median, 97.9% invisible to the panel-scale detector.
+ */
+describe('macro-consensus outlier demotion on generic (brand-less) queries', () => {
+    const apple = (partial: Partial<RerankCandidate> & { id: string }): RerankCandidate => ({
+        name: 'Apple',
+        score: 0.6,
+        source: 'openfoodfacts',
+        nutrition: { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, per100g: true },
+        ...partial,
+    });
+
+    // No targetBrand, no isBranded — the exact shape of the n-prod-01 failure.
+    const rerankGeneric = (candidates: RerankCandidate[]) =>
+        simpleRerank('apple', candidates, undefined, 'apple', false, undefined);
+
+    it('demotes a kcal outlier among identically-named siblings (the n-prod-01 class)', () => {
+        // KILLS the mutation: restoring `if (targetBrand && ...)` on the pass.
+        const candidates = [
+            apple({ id: 'off_bad', score: 1.0, nutrition: { kcal: 23.9, protein: 0.3, carbs: 6, fat: 0.2, per100g: true } }),
+            apple({ id: 'off_1', nutrition: { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2, per100g: true } }),
+            apple({ id: 'off_2', nutrition: { kcal: 53, protein: 0.3, carbs: 14, fat: 0.2, per100g: true } }),
+            apple({ id: 'off_3', nutrition: { kcal: 52.8, protein: 0.3, carbs: 14, fat: 0.2, per100g: true } }),
+        ];
+        const result = rerankGeneric(candidates);
+        expect(result.winner?.id).not.toBe('off_bad');
+    });
+
+    it('groups siblings by normalizeNameKey, so plural and word order still match', () => {
+        // KILLS the mutation: swapping normalizeNameKey for raw string equality.
+        const candidates = [
+            apple({ id: 'off_bad', score: 1.0, nutrition: { kcal: 23.9, protein: 0.3, carbs: 6, fat: 0.2, per100g: true } }),
+            apple({ id: 'off_1', name: 'Apples' }),
+            apple({ id: 'off_2', name: 'apple' }),
+            apple({ id: 'off_3', name: 'Apple' }),
+        ];
+        expect(rerankGeneric(candidates).winner?.id).not.toBe('off_bad');
+    });
+
+    it('does NOT fire on a differently-named pack — siblings must share the query key', () => {
+        // KILLS the mutation: dropping the name-key predicate so every scored
+        // candidate counts as a sibling. These are all plausible DIFFERENT foods.
+        const candidates = [
+            apple({ id: 'off_bad', score: 1.0, name: 'Apple Juice', nutrition: { kcal: 46, protein: 0.1, carbs: 11, fat: 0.1, per100g: true } }),
+            apple({ id: 'off_1', name: 'Apple Pie', nutrition: { kcal: 265, protein: 2, carbs: 37, fat: 12, per100g: true } }),
+            apple({ id: 'off_2', name: 'Apple Sauce', nutrition: { kcal: 68, protein: 0.2, carbs: 18, fat: 0.1, per100g: true } }),
+            apple({ id: 'off_3', name: 'Apple Chips', nutrition: { kcal: 243, protein: 1, carbs: 60, fat: 1, per100g: true } }),
+        ];
+        // None shares normalizeNameKey('apple'), so the pass must not run at all.
+        // simpleRerank withholds a winner here (every candidate is bloated
+        // against a bare "apple"), so — as elsewhere in this file — inactivity
+        // shows in the ORDER: the highest-scoring candidate keeps its lead
+        // instead of being demoted as a consensus outlier.
+        expect(rerankGeneric(candidates).sortedCandidates[0]?.id).toBe('off_bad');
+    });
+
+});
