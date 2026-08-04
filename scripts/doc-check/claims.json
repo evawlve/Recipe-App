@@ -665,6 +665,18 @@
       "verified": "2026-07-31"
     },
     {
+      "id": "flywheel-sweep-timer-is-deliberately-stopped",
+      "claim": "flywheel-sweep.timer is STOPPED on purpose for the duration of the pipeline-hardening program (decided 2026-08-04, plan section 'Running under all of this'), so no nightly writer moves a warm number underneath a measurement. It is still `is-enabled`=enabled, so the pause is NOT durable across a box reboot — this claim goes red the moment the timer is running again, which is the prompt to update the plan's restart line rather than let a stale 'stopped for the duration' outlive the program.",
+      "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
+      "where": "box",
+      "command": "systemctl --user is-active flywheel-sweep.timer 2>/dev/null || true",
+      "expect": {
+        "kind": "equals",
+        "value": "inactive"
+      },
+      "verified": "2026-08-04"
+    },
+    {
       "id": "off-corrupt-marks-restored",
       "claim": "OffFood.corruptReason is populated: 6,905 rows marked 2026-07-31 (6,901 from corrupt-panel-scan-2026-07-31T14-49-22-771Z.json + 4 hand-audited panel-inflated-family rows). Replaces the off-corrupt-marks-wiped tripwire, which fired when the restore ran.",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
