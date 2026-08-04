@@ -140,9 +140,13 @@ describe('buildRerankPool — invariants', () => {
             .filter(x => x.semanticSimilarity != null)).toHaveLength(0);
 
         const pool = buildRerankPool(ROLLED_OATS);
+        // OFF still gets its 4 slots (invariant 6) — but spends 2 on each block
+        // instead of all 4 on the keyword block. That is the entire change.
+        expect(bySource(pool)).toEqual({ fdc: 2, openfoodfacts: 4, fatsecret: 4 });
         expect(pool.filter(x => x.semanticSimilarity != null).map(x => x.id))
-            .toEqual(['sem0', 'sem1', 'sem2']);
-        // Mutation: revert laneKey() to `c.source ?? ''` -> zero semantic rows.
+            .toEqual(['sem0', 'sem1']);
+        // Mutation: drop the mode level (group by `c.source ?? ''` only) -> zero
+        // semantic rows, and this goes red.
     });
 
     it('a lane with no semantic path is not split, so invariant 4 cannot move', () => {
@@ -158,11 +162,32 @@ describe('buildRerankPool — invariants', () => {
         const pool = buildRerankPool(mixed);
         expect(pool.find(x => x.source === 'fdc')!.id).toBe('fdc0');
         expect(pool.filter(x => x.source === 'fdc').map(x => x.id)).toEqual(['fdc0', 'fdc1', 'fdc2']);
-        // Four lanes now, not three — and this is the COST, pinned deliberately:
-        // OFF claims two round-robin slots per pass instead of one, so on a
-        // budget of 10 it takes 5 where it used to take 4, and FatSecret drops
-        // 3 -> 2. Splitting a lane is not free to the lanes that did not split.
-        expect(bySource(pool)).toEqual({ fdc: 3, openfoodfacts: 5, fatsecret: 2 });
+        // Per-source shares are untouched by OFF's internal split (invariant 6).
+        expect(bySource(pool)).toEqual({ fdc: 3, openfoodfacts: 4, fatsecret: 3 });
+    });
+
+    it('6. splitting a source does not take capacity from a source that did not split', () => {
+        // This is the invariant the FLAT form (one round-robin over source#mode)
+        // violated. Gated 2026-08-04 over 253 cold seeds + 600 traffic queries:
+        // the flat form moved identity the right way but pushed 29 rows into the
+        // no-serving-anchor tier family against 6 out, because OFF took two slots
+        // per pass and FatSecret — the source carrying real label servings —
+        // dropped 3 -> 2. Nesting is what makes the split budget-neutral.
+        //
+        // Mutation: flatten the grouping to a single Map keyed `src + '#' + mode`
+        // -> fatsecret goes 3 -> 2 and this goes red.
+        const withSemantic = [
+            ...Array.from({ length: 3 }, (_, i) => c(`fdc${i}`, 'fdc')),
+            ...Array.from({ length: 6 }, (_, i) => c(`kw${i}`, 'openfoodfacts')),
+            ...Array.from({ length: 6 }, (_, i) => s(`sem${i}`, 'openfoodfacts')),
+            ...Array.from({ length: 6 }, (_, i) => c(`fs${i}`, 'fatsecret')),
+        ];
+        // The same input with the semantic rows relabelled as keyword: one lane
+        // per source, i.e. exactly the pre-change grouping.
+        const asOneLanePerSource = withSemantic.map(x => c(x.id, x.source));
+
+        expect(bySource(buildRerankPool(withSemantic)))
+            .toEqual(bySource(buildRerankPool(asOneLanePerSource)));
     });
 
     it('tags an OVERLAP row semantic even though it arrived by keyword — pinned, not hidden', () => {
