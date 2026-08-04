@@ -94,12 +94,13 @@
  * partition: on a dedupe hit gather keeps the KEYWORD copy at its keyword
  * position and merges the similarity onto it, so an overlap row is tagged
  * semantic while sitting in the keyword block. That misattribution is real and
- * measured small — 50 of 1,372 flagged OFF candidates (3.6%), costing 14 of 429
- * window slots, over 191 cold seeds enriched for this defect on 2026-08-04.
+ * measured small — 71 of 1,745 flagged OFF candidates (4.1%), costing 14 of 382
+ * window slots under this nested form (20 of 551 under the flat one), over 241
+ * usable rows from 253 cold seeds enriched for this defect on 2026-08-04.
  * Re-derive:
  *   npx ts-node --project tsconfig.scripts.json --transpile-only \
  *     -r tsconfig-paths/register scripts/eval/_lane_identity_probe.ts \
- *     --snapshot <snap.json> --replay <replay.json>
+ *     --snapshot <snap.json> --replay <replay.json> --variant nested
  * An exact discriminator would be a provenance field stamped at retrieval time,
  * but that is a change inside gather — which winner-diff structurally cannot
  * gate (its pool is frozen at gather's output, blind spot (A)), and which

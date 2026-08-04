@@ -195,8 +195,8 @@ describe('buildRerankPool — invariants', () => {
         // dedupe hit and merges the similarity onto it, so `semanticSimilarity` is
         // a SUPERSET of "arrived by semantic search". This test pins that known
         // imperfection so it stays visible: kw1 jumps lanes despite sitting in the
-        // keyword block. Measured cost 2026-08-04: 50 of 1,372 flagged OFF
-        // candidates (3.6%), 14 of 429 window slots. Fixing it exactly needs a
+        // keyword block. Measured cost 2026-08-04: 71 of 1,745 flagged OFF
+        // candidates (4.1%), 14 of 382 window slots. Fixing it exactly needs a
         // provenance field stamped in gather, which winner-diff cannot gate.
         const withOverlap: C[] = [
             c('kw0', 'openfoodfacts'),
