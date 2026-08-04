@@ -212,7 +212,7 @@ export function buildRerankPool<T extends LaneTagged>(
             // forfeiting the slot.
             for (let n = 0; n < modeKeys.length && !taken; n++) {
                 const mk = modeKeys[((modeCursor.get(src) ?? 0) + n) % modeKeys.length];
-                const ck = `${src} ${mk}`;
+                const ck = `${src} ${mk}`;
                 const i = cursors.get(ck) ?? 0;
                 const bucket = modes.get(mk)!;
                 if (i >= bucket.length) continue;
