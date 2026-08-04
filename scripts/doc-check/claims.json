@@ -1126,6 +1126,42 @@
       },
       "verified": "2026-08-03",
       "timeoutMs": 60000
+    },
+    {
+      "id": "ai-tag-gate-skip-rate",
+      "claim": "The normalize-gate SKIP rate over the box's [AI:*] tag stream is in the 50s percent (56% measured 2026-08-04: 8,667 GATE vs 6,784 NORM). The `-h` on grep is load-bearing — without it `grep -o` over a multi-file glob prefixes each match with its filename and a per-file count reads as the corpus, which is how a 74.9% figure once got documented here. Counting the bare tag body rather than the whole [AI:...] token keeps combined tags like [AI:GATE+SERV] counted once.",
+      "ownerDoc": "mobile:CLAUDE.md",
+      "where": "box",
+      "command": "cd /home/owner/Recipe-App/logs && g=$(grep -oh \"AI:GATE\" mapping-summary-*.txt | wc -l) && n=$(grep -oh \"AI:NORM\" mapping-summary-*.txt | wc -l) && echo $(( g * 100 / (g + n) ))",
+      "expect": {
+        "kind": "matches",
+        "value": "^5[0-9]$"
+      },
+      "verified": "2026-08-04"
+    },
+    {
+      "id": "serving-tier-null-share-small",
+      "claim": "The legacy fatsecret/ai serving cascade stamps no servingTier, so aiCalls.serving (PR #237) reads called:false for those lines whatever they did. That blind spot is only 0.8% of MappingEventLog (measured 2026-08-04), which is what makes [AI:SERV] usable as a FLOOR. If this climbs the tag stops being a floor and becomes misleading.",
+      "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc 'SELECT round(100.0*count(*) FILTER (WHERE \"servingTier\" IS NULL)/NULLIF(count(*),0))::int FROM \"MappingEventLog\";'",
+      "expect": {
+        "kind": "max",
+        "value": "2"
+      },
+      "verified": "2026-08-04"
+    },
+    {
+      "id": "serving-ai-tiers-is-an-allowlist",
+      "claim": "SERVING_AI_TIERS excludes ai_generated_serving. The tier names are unreliable in BOTH directions: getAiServingGrams() runs no model despite the name, while fdc_size_estimate (the largest AI-serving tier) has no 'ai' in its name and getOrCreateFdcSizeServings() has no cache. A substring rule on 'ai' gets both wrong, so the table must stay an explicit allowlist.",
+      "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
+      "where": "backend",
+      "command": "sed -n '/SERVING_AI_TIERS/,/});/p' src/lib/mapping/serving-ai-tiers.ts | grep -cE \"^ *ai_generated_serving:\"",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "verified": "2026-08-04"
     }
   ]
 }
