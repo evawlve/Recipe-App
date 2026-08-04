@@ -56,28 +56,77 @@
  *     first member of that lane is that lane's first member in `input`. The
  *     caller depends on this: its FDC nutrition-estimate fallback takes
  *     `find(c => c.source === 'fdc')`, and that consumer must not move.
- *  5. Degenerate input (one lane, or a missing/blank `source`) reduces exactly to
- *     the old `slice(0, limit)`. A single-lane corpus sees no change at all.
+ *  5. Degenerate input (ONE lane — i.e. one source AND one retrieval mode, or a
+ *     missing/blank `source` with no semantic hits) reduces exactly to the old
+ *     `slice(0, limit)`.
+ *
+ * LANE IDENTITY IS `source` x RETRIEVAL MODE
+ * ------------------------------------------
+ * Grouping on `source` alone left the founding defect intact one level down.
+ * The OFF lane is not one ranked list: gatherCandidates() pushes
+ * `searchOffSemantic()` LAST, so an OFF lane is two already-sorted blocks
+ * concatenated — keyword hits, then the semantic-only tail — and
+ * `computeOffScore()` sorts within each block but never across the join. When
+ * the keyword block alone fills the OFF budget the semantic block is
+ * structurally unreachable, which is exactly the starvation this module was
+ * built to fix. Splitting the lane lets the existing round-robin give the
+ * semantic block its own slots, with no score comparison at all.
+ *
+ * `semanticSimilarity` is a SUPERSET of "arrived by semantic search", not a
+ * partition: on a dedupe hit gather keeps the KEYWORD copy at its keyword
+ * position and merges the similarity onto it, so an overlap row is tagged
+ * semantic while sitting in the keyword block. That misattribution is real and
+ * measured small — 50 of 1,372 flagged OFF candidates (3.6%), costing 14 of 429
+ * window slots, over 191 cold seeds enriched for this defect on 2026-08-04.
+ * Re-derive:
+ *   npx ts-node --project tsconfig.scripts.json --transpile-only \
+ *     -r tsconfig-paths/register scripts/eval/_lane_identity_probe.ts \
+ *     --snapshot <snap.json> --replay <replay.json>
+ * An exact discriminator would be a provenance field stamped at retrieval time,
+ * but that is a change inside gather — which winner-diff structurally cannot
+ * gate (its pool is frozen at gather's output, blind spot (A)), and which
+ * winner-gate.sh aborts on by design.
+ *
+ * FDC and FatSecret have no semantic path today, so their lane identity is
+ * unchanged and invariant 4's consumer (`find(c => c.source === 'fdc')`) cannot
+ * move. Re-derive: `semanticSimilarity` has exactly one write site outside
+ * gather, `searchOffSemantic()` in src/lib/openfoodfacts/search.ts.
  */
 
-/** Candidates only need a lane tag; keeping this structural avoids importing
- *  gather-candidates.ts, which is not leaf-safe (playbook section 4 — read-only
- *  eval tooling must be able to import this without warming ONNX). */
+/** Candidates need a lane tag and a retrieval-mode tag; keeping this structural
+ *  avoids importing gather-candidates.ts, which is not leaf-safe (playbook
+ *  section 4 — read-only eval tooling must be able to import this without
+ *  warming ONNX). */
 export interface LaneTagged {
     source?: string | null;
+    /** Set by semantic retrieval, or merged on at dedupe when keyword and
+     *  semantic search agree. Presence, not magnitude, is the lane tag. */
+    semanticSimilarity?: number | null;
 }
 
 /** The pre-rerank window size. Was the literal `10` inside the caller. */
 export const RERANK_POOL_LIMIT = 10;
 
 /**
+ * The lane a candidate belongs to: source crossed with retrieval mode.
+ *
+ * Exported so the eval harness can reproduce a window without transcribing the
+ * key — a ported key that drifts from this one silently invalidates every
+ * number taken from it.
+ */
+export function laneKey(c: LaneTagged): string {
+    return `${c.source ?? ''}#${c.semanticSimilarity != null ? 's' : 'k'}`;
+}
+
+/**
  * Round-robin the candidates across their retrieval lanes, preserving each
  * lane's internal (gather) order, until `limit` is reached.
  *
- * Lane identity is the raw `source` string. An absent or empty `source` is its
- * own lane rather than an error: mis-tagging a candidate must not be able to
- * delete it, and a corpus where nothing is tagged degenerates to the old
- * behaviour (invariant 5) instead of behaving unpredictably.
+ * Lane identity is the raw `source` string crossed with retrieval mode. An
+ * absent or empty `source` is its own lane rather than an error: mis-tagging a
+ * candidate must not be able to delete it, and a corpus where nothing is tagged
+ * degenerates to the old behaviour (invariant 5) instead of behaving
+ * unpredictably.
  */
 export function buildRerankPool<T extends LaneTagged>(
     candidates: readonly T[],
@@ -91,7 +140,7 @@ export function buildRerankPool<T extends LaneTagged>(
     // ordering decision rather than making one of its own.
     const lanes = new Map<string, T[]>();
     for (const c of candidates) {
-        const key = c.source ?? '';
+        const key = laneKey(c);
         const lane = lanes.get(key);
         if (lane) lane.push(c);
         else lanes.set(key, [c]);
