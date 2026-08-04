@@ -25,6 +25,7 @@ import {
 } from './filter-candidates';
 import { simpleRerank, toRerankCandidate, extractLeanPercentage, isGenericGroundMeatQuery, stripPrepModifiers, hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
+import { servingAiCallForTier } from './serving-ai-tiers';
 import {
     singularizeUnit, extractLabelServingUnit,
     LABEL_COUNT_PIECE_NOUNS, GENERIC_PIECE_WORDS,
@@ -2735,6 +2736,10 @@ export async function mapIngredientWithFallback(
                                     called: !skippedLlmNormalize && !usedGenericFallback,
                                     skipped: skippedLlmNormalize,
                                 },
+                                // 0.5(b). `ai_generated_serving` is NOT an AI call —
+                                // getAiServingGrams() only reads AiGeneratedServing rows.
+                                serving: servingAiCallForTier(aiMapped.servingTier),
+                                nutrition: { called: true, cached: aiResult.cached, success: true },
                             },
                         });
                     }
@@ -3260,6 +3265,9 @@ export async function mapIngredientWithFallback(
                                     called: !skippedLlmNormalize,
                                     skipped: skippedLlmNormalize,
                                 },
+                                // 0.5(b). See the sibling site above.
+                                serving: servingAiCallForTier(aiMapped.servingTier),
+                                nutrition: { called: true, cached: aiResult.cached, success: true },
                             },
                         });
                     }
@@ -3483,6 +3491,14 @@ export async function mapIngredientWithFallback(
                         skipped: skippedLlmNormalize,
                         reason: skippedLlmNormalize ? 'gate_skipped' : undefined,
                     },
+                    // 0.5(b): derived from the tier that billed the grams — see
+                    // serving-ai-tiers.ts for why the tier NAMES cannot be trusted
+                    // and why this is a lower bound.
+                    serving: servingAiCallForTier(result.servingTier),
+                    // requestAiNutrition() is reached only on the backfill branch,
+                    // which returns at its own log sites above. Every path arriving
+                    // here left the nutrition model untouched.
+                    nutrition: { called: false, cached: false, success: false },
                 },
             });
         }

@@ -909,12 +909,12 @@
       "claim": "requestAiNutrition() has exactly three production call sites in src/ (tests and comments excluded): two last-resort arms in mapIngredientWithFallback() and one in buildOffResult(). A fourth call site is a new AI-spend path and must be given a budget explicitly — the hydration arm was uncapped precisely because it was added without one.",
       "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
       "where": "backend",
-      "command": "grep -rn 'requestAiNutrition(' src --include='*.ts' | grep -v '/__tests__/' | grep -vE ':[0-9]+: *\\*' | grep -v 'export async function' | wc -l",
+      "command": "grep -rn 'requestAiNutrition(' src --include='*.ts' | grep -v '/__tests__/' | grep -vE ':[0-9]+: *(\\*|//)' | grep -v 'export async function' | wc -l",
       "expect": {
         "kind": "count",
         "value": "3"
       },
-      "verified": "2026-08-01"
+      "verified": "2026-08-04"
     },
     {
       "id": "cooking-state-survives-into-key",
