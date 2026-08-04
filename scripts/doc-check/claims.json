@@ -1174,6 +1174,18 @@
         "value": "0"
       },
       "verified": "2026-08-04"
+    },
+    {
+      "id": "rerank-abstention-has-two-labelled-exits",
+      "claim": "simpleRerank abstention (the `if (!winner)` block in mapIngredientWithFallback()) has TWO labelled exits, not one: confidence_gate_backstop when confidenceGate() had a pick, scored_by_confidence otherwise — plus a third leg below MIN_FALLBACK_CONFIDENCE that writes no selectionReason at all. Counting abstention by grepping confidence_gate_backstop alone undercounts it ~10x (15 vs 159 on the post-cee10fd corpus), which is exactly how the autonomous brief's original W1 decision rule would have closed a live population. This claim reddens if a leg is added or renamed, which is the prompt to re-measure the population in the owner doc.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_why-simplererank-abstains.md",
+      "where": "backend",
+      "command": "grep -cE \"selectionReason = '(confidence_gate_backstop|scored_by_confidence)'\" src/lib/mapping/map-ingredient-with-fallback.ts",
+      "expect": {
+        "kind": "count",
+        "value": "2"
+      },
+      "verified": "2026-08-04"
     }
   ]
 }
