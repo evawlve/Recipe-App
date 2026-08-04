@@ -53,8 +53,12 @@ describe('deriveCacheKeyName', () => {
     // IDENTITY QUALIFIERS (cooked, whole)
     // ======================================================================
     describe('identity qualifiers', () => {
-        it('"whole milk" → key "milk whole"', () => {
-            const p = parseIngredientLine('1 cup whole milk')!;
+        // This test was titled `"whole milk" → key "milk whole"` while actually
+        // parsing `1 cup whole milk` — the unit-led spelling, which was the only
+        // one that worked. Both spellings now derive the same key, so assert on
+        // both and let the title be true.
+        it.each(['whole milk', '1 cup whole milk'])('"%s" → key "milk whole"', (line) => {
+            const p = parseIngredientLine(line)!;
             expect(p.qualifiers).toContain('whole');
             expect(deriveCacheKeyName(p.name, p)).toBe('milk whole');
         });

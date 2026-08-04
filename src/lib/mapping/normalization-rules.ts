@@ -297,6 +297,82 @@ export type NormalizationResult = {
   stripped: string[];
 };
 
+/**
+ * PROTECTED PRODUCT PHRASES: compound phrases that must be preserved as-is.
+ * These are phrases where the combination IS the product type.
+ *
+ * Module-scoped and exported so the parser can consult the same list instead of
+ * re-deriving it. `parseIngredientLine()` needs the `whole` entries specifically
+ * (see `isIdentityWholePhrase`), and a second copy would drift: the whole point
+ * of these three strings is that they draw a product-judgement line, so the
+ * judgement must live in exactly one place.
+ */
+export const PROTECTED_PRODUCT_PHRASES = [
+  // Compound cooking method phrases
+  'fire roasted',
+  'fire-roasted',
+  'oven roasted',
+  'oven-roasted',
+  'slow roasted',
+  'slow-roasted',
+  'sun dried',
+  'sun-dried',
+  'flame grilled',
+  'flame-grilled',
+  'char grilled',
+  'char-grilled',
+  'pan fried',
+  'stir fried',
+  'stir-fried',
+  'deep fried',
+  // Specific product names that contain prep words
+  'smoked salmon',
+  'tomato paste',
+  'tomato sauce',
+  'tomato puree',
+  'cream cheese',
+  'cottage cheese',
+  'peanut butter',
+  'apple sauce',
+  'apple butter',
+  'coconut milk',
+  'coconut cream',
+  // "whole" as identity (not prep): whole milk is a distinct product from
+  // milk; whole wheat/grain are distinct from refined. Deliberately NOT
+  // listed: "whole chicken"/"whole almonds" ("whole" is prep there).
+  'whole milk',
+  'whole wheat',
+  'whole grain',
+];
+
+/**
+ * Does this line use `whole` as IDENTITY rather than as a portion word?
+ *
+ * `whole` is polysemous and the two readings want opposite handling:
+ *   - portion  — "1 whole banana", "whole roasted chicken": `whole` is a count
+ *     unit, and dropping it would lose the serving size (a banana bills 118 g).
+ *   - identity — "whole milk", "whole wheat bread": `whole` names a DIFFERENT
+ *     PRODUCT from the bare noun, and eating it as a unit collapses the two onto
+ *     one cache key. `whole milk` served a2 skim-ish "Milk" to 222 live events.
+ *
+ * The disambiguator is the `whole` half of PROTECTED_PRODUCT_PHRASES, which
+ * already draws exactly this line and is guarded by shipped tests. Only these
+ * three phrases are treated as identity; every other `whole` keeps the portion
+ * reading, which is why the genuine counts above are untouched.
+ *
+ * Substring, not word-boundary, to match how the phrase list is used in
+ * `normalizeIngredientName()`. The known failure mode is a longer product name
+ * that merely CONTAINS one of them — `whole milk chocolate` reads as identity.
+ * Not present in the coverage corpus, the seed corpora, or MappingEventLog as of
+ * 2026-08-04, but that is the shape a regression here would take.
+ */
+export function isIdentityWholePhrase(line: string): boolean {
+  const lower = line.toLowerCase();
+  return PROTECTED_PRODUCT_PHRASES.some(
+    (p) => p.startsWith('whole ') && lower.includes(p)
+  );
+}
+
 export function normalizeIngredientName(raw: string): NormalizationResult {
   const rules = readRulesFile();
   const stripped: string[] = [];
@@ -440,46 +516,6 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   // e.g., "pineapple, canned" → don't preserve (not at start)
   const firstWord = workingLower.split(/\s+/)[0]?.replace(/[^a-z]/g, '');
   const startsWithProductModifier = PRODUCT_TYPE_MODIFIERS.has(firstWord);
-
-  // PROTECTED PRODUCT PHRASES: Compound phrases that must be preserved as-is
-  // These are phrases where the combination is the product type
-  const PROTECTED_PRODUCT_PHRASES = [
-    // Compound cooking method phrases
-    'fire roasted',
-    'fire-roasted',
-    'oven roasted',
-    'oven-roasted',
-    'slow roasted',
-    'slow-roasted',
-    'sun dried',
-    'sun-dried',
-    'flame grilled',
-    'flame-grilled',
-    'char grilled',
-    'char-grilled',
-    'pan fried',
-    'stir fried',
-    'stir-fried',
-    'deep fried',
-    // Specific product names that contain prep words
-    'smoked salmon',
-    'tomato paste',
-    'tomato sauce',
-    'tomato puree',
-    'cream cheese',
-    'cottage cheese',
-    'peanut butter',
-    'apple sauce',
-    'apple butter',
-    'coconut milk',
-    'coconut cream',
-    // "whole" as identity (not prep): whole milk is a distinct product from
-    // milk; whole wheat/grain are distinct from refined. Deliberately NOT
-    // listed: "whole chicken"/"whole almonds" ("whole" is prep there).
-    'whole milk',
-    'whole wheat',
-    'whole grain',
-  ];
 
   const protectedPhrasesInInput = PROTECTED_PRODUCT_PHRASES.filter(p =>
     workingLower.includes(p)

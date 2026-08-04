@@ -30,12 +30,17 @@ const QUALIFIERS = new Set([
 // it. 'raw'/'dried'/'canned' were added 2026-08-01 — they were already being
 // captured as qualifiers and then dropped at the key.
 //
-// 'whole' is the standing counter-example and is NOT fixed by this list:
-// src/lib/parse/unit.ts consumes it as a UNIT, so "whole milk" reaches here
-// with qualifiers=[] and derives key "milk", identical to bare "milk"
-// (measured 2026-08-01; suspected cause of golden n-mq-34, "whole milk" ->
-// "Milk" at fat100 1.3, which is skim). Fixing it means touching unit parsing
-// and therefore serving sizes, so it is deliberately a separate change.
+// 'whole' WAS the standing counter-example — src/lib/parse/unit.ts classifies it
+// as a count unit, so "whole milk" used to reach here with qualifiers=[] and
+// derive key "milk", identical to bare "milk". Closed 2026-08-04: the parser now
+// declines to consume `whole` as a unit when the line matches the `whole` half of
+// PROTECTED_PRODUCT_PHRASES (normalization-rules.ts), which is the list that
+// already draws the identity-vs-portion line. Membership in THIS set is still
+// necessary but not sufficient — the token has to survive the parser first, and
+// that is where the fix lives, not here.
+//
+// The gate is deliberately narrow: "1 whole banana" and "whole egg" keep the
+// count-unit reading, because there `whole` really is the portion.
 export const IDENTITY_QUALIFIERS = new Set([
   'cooked',
   'whole',

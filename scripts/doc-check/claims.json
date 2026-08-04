@@ -1186,6 +1186,18 @@
         "value": "2"
       },
       "verified": "2026-08-04"
+    },
+    {
+      "id": "rerank-window-is-wider-than-the-analysis-log",
+      "claim": "The mapping-analysis corpus records topCandidates = filtered.slice(0, 5) in GATHER order, while simpleRerank actually scores buildRerankPool(filtered, RERANK_POOL_LIMIT) with RERANK_POOL_LIMIT = 10. Any pool size read from mapping-analysis-*.json is therefore a LOWER BOUND, and scored[0] cannot be reconstructed offline unless the slice returned fewer than 5 (which proves filtered fit inside the window). Measured 2026-08-04: this makes 124 of the 159 post-cee10fd abstentions unmeasurable read-only, and an offline reconstruction that ignores the truncation validates at 43.0% against 98.6% on determined pools. Value is <log-site count>@<pool limit>; it reddens if either side of the asymmetry moves.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_why-simplererank-abstains.md",
+      "where": "backend",
+      "command": "echo \"$(grep -c 'topCandidates: filtered.slice(0, 5)' src/lib/mapping/map-ingredient-with-fallback.ts)@$(grep -oE 'RERANK_POOL_LIMIT = [0-9]+' src/lib/mapping/rerank-pool.ts | grep -oE '[0-9]+')\"",
+      "expect": {
+        "kind": "equals",
+        "value": "3@10"
+      },
+      "verified": "2026-08-04"
     }
   ]
 }

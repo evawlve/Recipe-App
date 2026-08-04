@@ -4,6 +4,7 @@ import { extractQualifiers, extractQualifiersFromParentheses } from './qualifier
 import { extractUnitHint } from './unit-hint';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
+import { isIdentityWholePhrase } from '../mapping/normalization-rules';
 
 /**
  * Flavor/product words that mark "rocket" as part of a branded product name
@@ -105,6 +106,20 @@ function parseFraction(str: string): number {
   const parsed = parseFloat(trimmed);
   return isNaN(parsed) ? 1 : parsed;
 }
+
+/**
+ * Tokens classified as count units that are really HINTS about the food, not
+ * portions ("3 egg whites" — `white` describes the egg, it is not a measure).
+ *
+ * Hoisted to module scope because `parseIngredientLine()` consumes count units
+ * at THREE separate sites and two of them carried byte-identical private copies
+ * of this list. A hint added to one copy and not the other silently changes
+ * behaviour depending on which site a given line happens to reach.
+ */
+const POSSIBLE_UNIT_HINTS = [
+  'cloves', 'clove', 'leaves', 'leaf', 'yolks', 'yolk',
+  'whites', 'white', 'sheets', 'sheet', 'stalks', 'stalk',
+];
 
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
@@ -331,8 +346,25 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Check if first token is a unit (e.g., "pinch of salt")
   // If so, we'll use default qty of 1
+  // `whole` is classified as a count unit (alongside small/medium/large) so that
+  // "1 whole banana" routes to the AI weight estimator. On a UNIT-LESS identity
+  // line that is wrong: "whole milk" loses the word entirely, so it never reaches
+  // extractQualifiers() and derives the same cache key as bare "milk".
+  //
+  // Decide once, here, and have ALL THREE consumption sites below honour it:
+  // the `startsWithUnit` branch, the `kind === 'count'` branch, and the
+  // after-parentheses check. They consume count units independently, so guarding
+  // any subset leaves the defect intact — and the third is the one that actually
+  // fires here, because it is gated on `!unit` and therefore reached precisely
+  // when the first two decline. Measured while building this: guarding only the
+  // first two left `whole milk` completely unchanged.
+  const wholeIsIdentity =
+    mergedTokens.length > 0 &&
+    mergedTokens[0].toLowerCase() === 'whole' &&
+    isIdentityWholePhrase(mergedTokens.join(' '));
+
   let startsWithUnit = false;
-  if (mergedTokens.length > 0) {
+  if (mergedTokens.length > 0 && !wholeIsIdentity) {
     const firstToken = mergedTokens[0];
     const firstNormalized = normalizeUnitToken(firstToken);
     if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count') {
@@ -446,9 +478,11 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       // But we'll check later if they're actually unit hints (like "leaves", "cloves")
       // First check if it's a unit hint - if so, don't consume as unit
       const lowerToken = firstToken.toLowerCase();
-      const possibleHints = ['cloves', 'clove', 'leaves', 'leaf', 'yolks', 'yolk', 'whites', 'white', 'sheets', 'sheet', 'stalks', 'stalk'];
-      if (possibleHints.includes(lowerToken)) {
-        // Don't consume - it's a unit hint, not a unit
+      if (POSSIBLE_UNIT_HINTS.includes(lowerToken) || (lowerToken === 'whole' && wholeIsIdentity)) {
+        // Don't consume - it's a unit hint, or `whole` acting as identity
+        // ("whole milk"), not a portion. See wholeIsIdentity above: this is the
+        // SECOND branch that consumes count units, and it is the one a unit-less
+        // line actually reaches once startsWithUnit has been suppressed.
       } else {
         unit = firstNormalized.unit;
         rawUnit = firstToken;
@@ -522,8 +556,10 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     if (afterParenNormalized.kind === 'mass' || afterParenNormalized.kind === 'volume' || afterParenNormalized.kind === 'count') {
       // Check if it's not a unit hint
       const lowerToken = afterParenToken.toLowerCase();
-      const possibleHints = ['cloves', 'clove', 'leaves', 'leaf', 'yolks', 'yolk', 'whites', 'white', 'sheets', 'sheet', 'stalks', 'stalk'];
-      if (!possibleHints.includes(lowerToken)) {
+      // THIRD count-unit consumption site. It is guarded on `!unit`, so it is
+      // reached precisely when the two branches above declined — which makes it
+      // the one that actually fires for a unit-less identity line.
+      if (!POSSIBLE_UNIT_HINTS.includes(lowerToken) && !(lowerToken === 'whole' && wholeIsIdentity)) {
         unit = afterParenNormalized.unit;
         rawUnit = afterParenToken;
         i++; // Consume the unit
