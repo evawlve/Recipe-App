@@ -59,16 +59,53 @@ describe('IDENTITY_QUALIFIERS keeps state off the bare generic key', () => {
     expect(key('large egg')).toBe(key('egg'));
   });
 
-  it('KNOWN GAP: "whole" is consumed as a unit, so whole milk still collides', () => {
-    // 'whole' is in IDENTITY_QUALIFIERS and the comment there claims it keeps
-    // "whole milk" off "milk". It does not: src/lib/parse/unit.ts maps
-    // 'whole' as a UNIT, so it never reaches parsed.qualifiers. Suspected cause
-    // of golden n-mq-34 ("whole milk" -> "Milk" at fat100 1.3, i.e. skim).
-    // Deliberately NOT fixed with the cooking-state change — it runs through
-    // serving sizes. This test documents the gap; when it is fixed this
-    // assertion flips to .not.toBe and the comment in qualifiers.ts comes out.
-    expect(IDENTITY_QUALIFIERS.has('whole')).toBe(true);
-    expect(parseIngredientLine('whole milk')!.qualifiers ?? []).not.toContain('whole');
-    expect(key('whole milk')).toBe(key('milk'));
+  // This block was `KNOWN GAP: "whole" is consumed as a unit, so whole milk
+  // still collides` — a test that deliberately pinned the broken behaviour.
+  // Fixed by gating the parser's count-unit consumption on the `whole` half of
+  // PROTECTED_PRODUCT_PHRASES; the assertions below are the same three, flipped.
+  describe('"whole" reaches the key on identity phrases, and only those', () => {
+    it('splits whole milk off bare milk', () => {
+      expect(IDENTITY_QUALIFIERS.has('whole')).toBe(true);
+      expect(parseIngredientLine('whole milk')!.qualifiers ?? []).toContain('whole');
+      expect(key('whole milk')).not.toBe(key('milk'));
+    });
+
+    it('agrees with the unit-led spelling of the same food', () => {
+      // The collision this fix closes has a second half nobody had written down:
+      // `whole milk` and `1 cup whole milk` derived DIFFERENT keys, because a
+      // preceding unit token left `whole` in the name. They must now agree.
+      expect(key('whole milk')).toBe(key('1 cup whole milk'));
+    });
+
+    it.each([
+      ['whole wheat bread', 'wheat bread'],
+      ['whole wheat pasta', 'wheat pasta'],
+      ['whole grain oats', 'grain oats'],
+    ])('splits %s off %s', (identity, bare) => {
+      expect(key(identity)).not.toBe(key(bare));
+      expect(parseIngredientLine(identity)!.qualifiers ?? []).toContain('whole');
+    });
+
+    // NEGATIVE CONTROLS — the reason this fix is gated rather than blanket.
+    // `whole` is a portion word here, and dropping it as a unit would lose the
+    // serving size: a banana bills 118 g and a whole egg 50 g through the count
+    // estimator. The blanket fix (removing `whole` from countUnits in unit.ts)
+    // regresses all three of these; measured 2026-08-04.
+    it.each([
+      '1 whole organic banana',
+      'whole egg',
+      '2 whole eggs',
+      'whole pita bread',
+      'whole chicken',
+      'whole almonds',
+    ])('keeps %s on the count-unit route', (line) => {
+      const parsed = parseIngredientLine(line)!;
+      expect(parsed.unit).toBe('whole');
+      expect(parsed.qualifiers ?? []).not.toContain('whole');
+    });
+
+    it('keeps the whole-egg base key, which n-mq-33 depends on', () => {
+      expect(key('whole egg')).toBe(key('egg'));
+    });
   });
 });

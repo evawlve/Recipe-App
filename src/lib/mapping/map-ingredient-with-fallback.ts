@@ -684,9 +684,11 @@ export async function mapIngredientWithFallback(
     // Note this NARROWS the query, which is the opposite of the usual relaxation,
     // so it cannot be waved through as admit-only. Blast radius measured before
     // shipping: 12 of 348 golden cases carry one of these tokens and 57 of 5,586
-    // distinct live lines (1.0%). `whole` is in the set but cannot reach here on a
-    // unit-less line — `unit.ts` consumes it as a count unit first — so in practice
-    // this fires for cooked/raw/dried/canned.
+    // distinct live lines (1.0%). `whole` reaches here as of 2026-08-04 on the
+    // three PROTECTED_PRODUCT_PHRASES identity lines (`whole milk`, `whole wheat`,
+    // `whole grain`) — previously `unit.ts` consumed it as a count unit first and
+    // it could never fire. Elsewhere `whole` is still a portion word and is still
+    // consumed as a unit, so this fires for those three plus cooked/raw/dried/canned.
     //
     // Reuses IDENTITY_QUALIFIERS rather than re-deriving it, for the same reason
     // the block above reuses IDENTITY_UNIT_HINTS: the key and the query must not

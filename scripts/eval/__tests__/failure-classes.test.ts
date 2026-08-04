@@ -312,7 +312,12 @@ describe('finding 2 — the key is the DERIVED key, not canonicalizeCacheKey alo
 
     it('is idempotent under an already-discriminated form', () => {
         expect(makeFunnelRow({ rawLine: 'egg white', normalizedForm: 'egg white' }).cacheKey).toBe('egg white');
-        expect(makeFunnelRow({ rawLine: 'whole milk', normalizedForm: 'milk' }).cacheKey).toBe('milk');
+        // `whole milk` used to derive bare 'milk' here, because the parser ate
+        // `whole` as a count unit before it could reach the qualifiers. It now
+        // carries the discriminator. deriveFunnelCacheKey() parses rawLine, so
+        // this row moves with the parser even though normalizedForm is unchanged
+        // — which is precisely why it has to flip in the same PR as the fix.
+        expect(makeFunnelRow({ rawLine: 'whole milk', normalizedForm: 'milk' }).cacheKey).toBe('milk whole');
     });
 
     it('PINS the one step that is still missing — the brand prefix — instead of implying it is closed', () => {
