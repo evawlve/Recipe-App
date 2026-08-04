@@ -88,6 +88,54 @@ const SINGLE_PRODUCT_EXCEPTIONS = [
     'cream cheese with',
     'yogurt with',
     'oatmeal with',
+
+    // ---- Added for plan Phase 2 #9 (measured 2026-08-04) ----
+    // Derived from the 2,280-seed warm-plan corpus (mobile
+    // sync-docs/warm-plan-2026-07-25/, non-quarantine batches): 91 seeds trip
+    // isMultiIngredient() with the list above, 77 of them via /\band\b/i. These
+    // 28 strings silence exactly 51 of that 77. The remaining 26 are composite
+    // DISH names (`spaghetti and meatballs`, `biscuits and gravy`) which need a
+    // different predicate — deliberately not chased with more strings, because
+    // matching here is bare substring and the list is already brittle that way:
+    // `rice and beans` is above, yet the corpus's `red beans and rice` does not
+    // match it and must not be "fixed" by adding the reversed spelling.
+    //
+    // TWO THINGS TO KNOW BEFORE ADDING TO THIS LIST:
+    //  1. A hit here short-circuits ALL FIVE MULTI_INGREDIENT_PATTERNS, not just
+    //     `and` — so a new string can silently disable comma/&/plus detection on
+    //     a line it was never meant to cover. Measured 0 such cases for these 28.
+    //  2. `includes()` has no word boundary. `m and m` was the derived spelling
+    //     and is a landmine: it matches `ham and mustard sandwich`, `cream and
+    //     milk` and `program and merge`. It ships as `m and ms`, the spelling the
+    //     corpus actually carries. Check any new entry against a mid-word split.
+    'sweet and salty',
+    'shells and cheddar',
+    'ben and jerry',
+    'wasabi and soy sauce',
+    'light and fit',
+    'dave and buster',
+    'dietz and watson',
+    'fit and active',
+    'good and gather',
+    'half and half',
+    'marinade and sauce',
+    'nuts and sea salt',
+    'lenny and larry',
+    'turkey and cheddar',
+    'm and ms',
+    'cookies and cream',
+    'oats and honey',
+    'thin and crispy',
+    'noodles and company',
+    'now and later',
+    'chive and onion',
+    'nut and chocolate',
+    'avocado and tomato',
+    'cheddar and sour cream',
+    'grilled and ready',
+    'protein and greens',
+    'shells and cheese',
+    'roasted and salted',
 ];
 
 /**
