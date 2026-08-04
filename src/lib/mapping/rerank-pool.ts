@@ -65,6 +65,9 @@
  *  eval tooling must be able to import this without warming ONNX). */
 export interface LaneTagged {
     source?: string | null;
+    /** Retrieval score. Compared only against candidates from the SAME lane — see
+     *  the within-lane ordering note in buildRerankPool(). */
+    score?: number | null;
 }
 
 /** The pre-rerank window size. Was the literal `10` inside the caller. */
@@ -97,10 +100,31 @@ export function buildRerankPool<T extends LaneTagged>(
         else lanes.set(key, [c]);
     }
 
+    // WITHIN a lane, spend the budget on the best-scoring candidates, not the
+    // first-gathered ones. Gather order is not score order: measured over 194
+    // real-traffic queries (2026-08-04), 21.6% had a same-lane candidate excluded
+    // from the window while scoring ABOVE one that got in — `1 bottle premier
+    // protein caramel` never scored an OpenFoodFacts row named "Premier Protein
+    // Caramel" at 12.85 because a 5.90 row sat earlier in the lane.
+    //
+    // This is a WITHIN-lane comparison only, and that is what makes it safe: the
+    // source score scales genuinely diverge (computeOffScore() is unbounded
+    // additive, computePositionScore() is [0,1]), so a cross-lane sort would be
+    // comparing incomparable numbers — the de-ranked Phase 2 item 6. Round-robin
+    // still decides how many slots each lane gets; this only decides which of a
+    // lane's own candidates take them.
+    //
+    // Sort is STABLE (ES2019+), so equal scores keep gather order.
+    for (const lane of lanes.values()) {
+        lane.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    }
+
     // A single lane cannot be starved by definition, and round-robining it would
-    // be an identity transform anyway. Return early so the degenerate case is
-    // provably byte-identical to the old slice.
-    if (lanes.size <= 1) return candidates.slice(0, limit);
+    // be an identity transform anyway. It still gets the score ordering above:
+    // the budget defect is a WITHIN-lane one, so it applies just as much when
+    // there is only one lane. (Before the ordering change this returned
+    // `candidates.slice(0, limit)` and the whole degenerate case was a no-op.)
+    if (lanes.size <= 1) return lanes.values().next().value!.slice(0, limit);
 
     const out: T[] = [];
     const cursors = new Map<string, number>();
