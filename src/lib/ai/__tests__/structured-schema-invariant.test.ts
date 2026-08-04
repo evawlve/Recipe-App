@@ -51,7 +51,6 @@ import {
     RESPONSE_SCHEMA as AMBIGUOUS_SERVING_SCHEMA,
     PRODUCE_SIZE_RESPONSE_SCHEMA,
 } from '@/lib/ai/ambiguous-serving-estimator';
-import { RESPONSE_SCHEMA as SIMPLE_SERVING_SCHEMA } from '@/lib/ai/simple-serving-estimator';
 import { NLP_SPLIT_SCHEMA } from '@/lib/nlp/ai-segmenter';
 
 type StructuredSchema = {
@@ -77,7 +76,6 @@ const ALL_SCHEMAS: StructuredSchema[] = [
     SERVING_SCHEMA,
     AMBIGUOUS_SERVING_SCHEMA,
     PRODUCE_SIZE_RESPONSE_SCHEMA,
-    SIMPLE_SERVING_SCHEMA,
     NLP_SPLIT_SCHEMA,
 ];
 
