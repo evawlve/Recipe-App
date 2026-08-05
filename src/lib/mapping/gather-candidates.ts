@@ -621,9 +621,14 @@ export function confidenceGate(
             // 0.67551 — all six the same line, `grilled chicken with brown rice
             // and steamed broccoli` -> fdc_174567 "cream of chicken dry mix
             // prepared with water soup", a visibly wrong pick. 0.67551 is below
-            // SUB_THRESHOLD_SAVE_FLOOR (0.75), i.e. not cacheable at all today;
-            // a flat 0.78 would make it cacheable and lift its badge from "AI
-            // Estimated" to "Good Estimate". Re-derive:
+            // SUB_THRESHOLD_SAVE_FLOOR (0.75), i.e. not cacheable at all today,
+            // and a flat 0.78 would make it cacheable. THAT is the whole reason
+            // for the cap. The badge does NOT move and an earlier version of this
+            // comment said it did: mobile `CONFIDENCE_LEVELS.medium.min` is 0.5
+            // and `getConfidenceLevel()` uses `>=`, so 0.67551 and 0.78 both
+            // render medium "Good Estimate" (same under this repo's own
+            // `confidence >= 0.6 ? 'medium'` mapping). Cacheability carries the
+            // justification alone. Re-derive:
             //   ssh owner@192.168.1.133 'cd /home/owner/Recipe-App/logs && node -e "…"'
             //   grouping selectedCandidate.confidence by selectionReason.
             // The clamp inside is retained for its original reason: raw engine

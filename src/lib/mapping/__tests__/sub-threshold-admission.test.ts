@@ -260,7 +260,11 @@ describe('RERANK_DECLINED_CONFIDENCE', () => {
         //    with `>=`) in src/constants/nutrition.ts. At 0.80 the green
         //    "✓ Exact Match" badge still renders and the user-visible half of
         //    the defect is unfixed. That repo has no CI, so this assertion and
-        //    its mobile-side twin on getConfidenceLevel() are the only guards.
+        //    its mobile-side twin are the only guards. THE TWIN NOW EXISTS —
+        //    mobile `src/constants/__tests__/confidence-levels.test.ts`, added
+        //    2026-08-05. It did not when this comment first named it, which is
+        //    the "a doc names a mitigation nobody wrote" failure mode; if you
+        //    move this boundary, three of its four cases die.
         expect(RERANK_DECLINED_CONFIDENCE).toBeLessThan(0.80);
     });
 

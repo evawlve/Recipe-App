@@ -157,8 +157,18 @@ describe('basic_produce_bypass confidence is not a laundered engine score', () =
      * `grilled chicken with brown rice and steamed broccoli` resolving to
      * fdc_174567 "cream of chicken dry mix prepared with water soup". That value
      * is BELOW SUB_THRESHOLD_SAVE_FLOOR (0.75), so those decisions are not
-     * cacheable at all today. A flat 0.78 would make them cacheable and lift the
-     * mobile badge from low ("AI Estimated") to medium ("Good Estimate").
+     * cacheable at all today, and a flat 0.78 would make them cacheable. That is
+     * the entire justification for the cap.
+     *
+     * IT IS NOT A BADGE CHANGE, and an earlier version of this comment claimed it
+     * was. Mobile `CONFIDENCE_LEVELS.medium.min` is 0.5 and `getConfidenceLevel()`
+     * compares with `>=`, so 0.67551 already renders medium "Good Estimate" —
+     * the same tier as 0.78. Verified in the mobile repo's
+     * `src/constants/nutrition.ts` 2026-08-05. The claim was false under this
+     * repo's own mapping too (`confidence >= 0.6 ? 'medium'` yields medium for
+     * both). It mattered because the doc-check claim carrying the same sentence
+     * does not test the badge assertion, so the nightly would have reported it
+     * green indefinitely — CLAUDE.md doc rules 1 and 2.
      *
      * MUTATION PROOF: delete the `Math.min(RERANK_DECLINED_CONFIDENCE, …)`
      * wrapper in `confidenceGate()` — i.e. return the bare constant — and this
