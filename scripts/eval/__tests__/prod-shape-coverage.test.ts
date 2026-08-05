@@ -21,7 +21,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { AI_SERVING_TIER_RE, realServing, tierD, type ScreenRow } from '../correctness-screen';
+import { realServing, tierD, type ScreenRow } from '../correctness-screen';
+import { isReplayNondeterministicTier } from '../../../src/lib/mapping/serving-ai-tiers';
 
 const FIXTURES = path.join(__dirname, 'fixtures');
 
@@ -127,12 +128,13 @@ describe('the shapes batch 01 was missing are actually SCREENED, not merely pres
 
     it('every fdc row resolves on an AI-ESTIMATED tier, so D5/D6 may never gate on it', () => {
         // Measured over the whole cache: all 78 fdc rows come back on
-        // `fdc_size_estimate`, which AI_SERVING_TIER_RE matches on 'estimat'. The one
-        // source the fixture had no coverage of is also the one whose serving anchor
-        // is a fresh model guess — a number that can differ on the next request and
-        // therefore cannot ground a decision to throw a cache row away.
+        // `fdc_size_estimate`, an explicit member of
+        // REPLAY_NONDETERMINISTIC_SERVING_TIERS. The one source the fixture had no
+        // coverage of is also the one whose serving anchor is a fresh model guess —
+        // a number that can differ on the next request and therefore cannot ground a
+        // decision to throw a cache row away.
         for (const r of fdcRows) {
-            expect(AI_SERVING_TIER_RE.test(r.real?.tier ?? '')).toBe(true);
+            expect(isReplayNondeterministicTier(r.real?.tier)).toBe(true);
             expect(realServing(r).judged).toBe(false);
             const serving = tierD(r, 'strict').filter(h => h.rule === 'D5' || h.rule === 'D6');
             expect(serving.map(h => h.severity)).not.toContain('EVICT');
