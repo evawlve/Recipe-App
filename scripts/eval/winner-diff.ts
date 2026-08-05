@@ -638,6 +638,7 @@ function announceVariantFit(drift: DriftResult, variant: SelectionVariant) {
 // ============================================================
 
 import type { ParsedIngredient } from '../../src/lib/parse/ingredient-line';
+import { isReplayNondeterministicTier } from '../../src/lib/mapping/serving-ai-tiers';
 import type { UnifiedCandidate, GatherOptions } from '../../src/lib/mapping/gather-candidates';
 import type { MappingTelemetry } from '../../src/lib/mapping/map-ingredient-with-fallback';
 
@@ -1779,8 +1780,13 @@ async function preEnrichAiGenerated(entries: SnapshotEntry[]): Promise<number> {
  * Tiers whose grams came from a model rather than from data. They do not replay
  * deterministically, so they are flagged and reported in their own bucket rather
  * than counted as movement the change under test caused.
+ *
+ * The predicate is `isReplayNondeterministicTier()` in
+ * src/lib/mapping/serving-ai-tiers.ts — the one owner, shared with
+ * correctness-screen.ts. It replaced a private `/(^|_)ai(_|$)|estimate/i` here
+ * that missed `discrete_unit_backfill` and `fdc_size_qualifier` (1,614 of 69,529
+ * events), charging their movement to the change under test.
  */
-const AI_SERVING_TIER_RE = /(^|_)ai(_|$)|estimate/i;
 
 /**
  * Run the REAL serving layer for every row that has a winner, and record what the
@@ -1829,7 +1835,7 @@ async function resolveServings(snap: SnapshotFile, rows: ReplayRow[]): Promise<v
                 // grams, not a per-100g figure — it is verbatim what route.ts:296
                 // records as MappingEventLog.totalKcal, i.e. the number on screen.
                 totalKcal: typeof r.kcal === 'number' ? r.kcal : null,
-                aiTouched: tier != null && AI_SERVING_TIER_RE.test(tier),
+                aiTouched: isReplayNondeterministicTier(tier),
             };
         } catch (err: any) {
             row.serving = {
