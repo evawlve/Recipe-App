@@ -50,7 +50,7 @@ import { isEstimableUnknownUnit } from '../ai/ambiguous-serving-estimator';
 import { shouldNormalizeLlm } from './normalize-gate';
 import { extractModifierConstraints } from './modifier-constraints';
 import { incrementSkippedByGate, incrementCacheHit } from '../ai/structured-client';
-import { extractPrepModifier, generatePreemptiveServings } from './preemptive-backfill';
+import { extractPrepModifier } from './preemptive-backfill';
 import {
     requestAiNutrition, extractBaseFoodContext, getAiServingGrams,
     createAiNutritionBudget, type AiNutritionBudget,
