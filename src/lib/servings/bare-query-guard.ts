@@ -16,12 +16,20 @@
  * This module owns the eligibility predicate, the label-usability band, and
  * the post-cascade override (CAP / REPLACE / floor). Pure functions, no I/O.
  *
- * 'bare_name_sibling_serving' (N1, Aug 2026) is DELIBERATELY absent from every
- * tier set below, and that is not an omission to fix. That rung runs AFTER this
- * guard — it is gated on the guard having already declined (tier still
+ * 'bare_name_sibling_serving' (N1, Aug 2026) and its downward twin
+ * 'bare_name_sibling_serving_tight' are DELIBERATELY absent from every tier set
+ * below, and that is not an omission to fix. That rung runs AFTER this guard —
+ * it is gated on the guard having already declined (tier still
  * 'count_unresolved_floor') — so any membership here would be dead code. Adding
- * it would also re-create the pre-emption bug the rung was placed low to avoid:
- * see the (E) rung comment in buildOffResult (map-ingredient-with-fallback.ts).
+ * either would also re-create the pre-emption bug the rung was placed low to
+ * avoid: see the (E) rung comment in buildOffResult
+ * (map-ingredient-with-fallback.ts).
+ *
+ * The two are ONE rung stamping TWO tiers, split by the DIRECTION the median
+ * moved the bill — up off the floor, or down into a measured-tight name group.
+ * They are not a hit/miss pair and neither implies anything about caching; the
+ * `_cached`-sibling naming convention that misled a previous instrument does
+ * not apply here.
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
