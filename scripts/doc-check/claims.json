@@ -1237,6 +1237,66 @@
       },
       "verified": "2026-08-05",
       "timeoutMs": 60000
+    },
+    {
+      "id": "llm-usage-counted-before-the-content-guard",
+      "claim": "The Phase 0.5(c) billed-response counter fires in makeRequest() the moment the envelope has been read, and BEFORE the rawContent guard. That ordering is the whole item: makeRequest() returns success:false for FOUR separate shapes of billed 2xx -- an envelope that fails response.json(), an empty choices array, content that fails JSON.parse, and an error field inside the model's own JSON -- so a counter placed in callStructuredLlm()'s success branch would rebuild exactly the structural undercount 0.5(c) exists to close. SEMANTICS, and they are the reason this claim was re-cut: `responses` is EXACT, not a floor. makeRequest() counts exactly one outcome per HTTP attempt (countResponse / countFailure), so responses + failures === attempts. The first cut made it a LOWER BOUND -- response.json() threw into the outer catch, so a billed 2xx with an unreadable envelope incremented only failures. That shape now increments responses and unparseableEnvelopes. Token and cost sums remain FLOORS, read against usageReported / costReported. The command asserts the source order response.json() < countResponse() < rawContent-guard; it prints 'bad' on master @ 136d0e5 (verified 2026-08-04), so it is a real check and not a tautology. Mutation-proved by structured-client-usage-capture.test.ts > '200 with empty choices is counted as a billed response' and > 'a 200 whose envelope will not parse is still counted as a billed response'.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_ai-serving-spend-audit.md",
+      "where": "backend",
+      "command": "awk '/await response.json\\(\\)/{if(!p)p=NR} /countResponse\\(/{if(p&&!r)r=NR} /const rawContent = payload/{if(!c)c=NR} END{print (p>0 && r>p && c>r) ? \"ok\" : \"bad\"}' src/lib/ai/structured-client.ts",
+      "expect": {
+        "kind": "equals",
+        "value": "ok"
+      },
+      "verified": "2026-08-04"
+    },
+    {
+      "id": "llm-counters-cannot-fail-the-request",
+      "claim": "Every usage-counter call in structured-client.ts goes through countSafely(), so a throw from telemetry can never change the outcome of the request it measures. This is the fail-open instrument class INVERTED: the counters sit inside code the request's own error handling owns, so an unguarded throw from recordLlmResponse() would land in makeRequest()'s catch and turn an ALREADY BILLED, usable LLM answer into success:false and then into a retry that bills again, while an unguarded throw from recordLlmLogicalSuccess() would reject the caller's promise outright -- nothing catches around that call site. The command reads '<all recordLlm*({ call sites>@<those wrapped in countSafely>' with whitespace stripped (the file is CRLF, so \\r must be stripped too or the multi-line call reads as unwrapped); 3@3 here, 0@0 on master @ 136d0e5 which has no counters. A new counter call added raw moves the left number only. Mutation-proved by structured-client-telemetry-cannot-fail-the-call.test.ts: replacing countSafely()'s body with a bare record() call kills 3 of its 4 tests (measured 2026-08-04).",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_ai-serving-spend-audit.md",
+      "where": "backend",
+      "command": "echo \"$(tr -d ' \\t\\r\\n' < src/lib/ai/structured-client.ts | grep -o 'recordLlm[A-Za-z]*({' | wc -l | tr -d ' ')@$(tr -d ' \\t\\r\\n' < src/lib/ai/structured-client.ts | grep -o 'countSafely(()=>recordLlm[A-Za-z]*({' | wc -l | tr -d ' ')\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^3@3$"
+      },
+      "verified": "2026-08-04"
+    },
+    {
+      "id": "test-provider-keys-are-fake-and-fetch-mocked",
+      "claim": "Exactly two test files assign a provider credential into process.env, and BOTH replace global.fetch with a mock -- so neither is an escape hatch around jest.setup.no-llm.js. They are structured-client-usage-capture.test.ts and structured-client-telemetry-cannot-fail-the-call.test.ts; both exercise makeRequest() itself, which sits below the point where an empty provider chain short-circuits, so stubbing callStructuredLlm would stub away the code under test. The gate's blackhole base URLs are left in place as defence in depth. The command reads '<files assigning a key>@<of those, how many do NOT mock global.fetch>'; the right number must stay 0. Reads 0@0 on master @ 136d0e5 -- this claim is about this branch's test files, not a repo-wide invariant. Added because jest.setup.no-llm.js carried a re-derive command claiming NO test file names a provider key, which was already false on master (no-live-llm-egress.test.ts matched it); measured 2026-08-04.",
+      "ownerDoc": "backend:jest.setup.no-llm.js",
+      "where": "backend",
+      "command": "echo \"$(grep -rl 'process.env.OPENAI_API_KEY = \\|process.env.OPENROUTER_API_KEY = ' --include='*.test.ts' src scripts | wc -l | tr -d ' ')@$(for f in $(grep -rl 'process.env.OPENAI_API_KEY = \\|process.env.OPENROUTER_API_KEY = ' --include='*.test.ts' src scripts); do grep -q 'global.fetch = ' \"$f\" || echo x; done | wc -l | tr -d ' ')\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^2@0$"
+      },
+      "verified": "2026-08-04"
+    },
+    {
+      "id": "structured-llm-produce-purpose-has-no-call-site",
+      "claim": "The 'produce' member of STRUCTURED_LLM_PURPOSES has ZERO callStructuredLlm() call sites in src/. Its /api/ok counters therefore read a STRUCTURAL 0, which must never be quoted as 'no produce calls happen' -- the same fail-open shape that made [AI:SERV]'s pre-deploy 0 look like a measurement. Not to be confused with ServingAiCallType's 'produce' in src/lib/mapping/serving-ai-tiers.ts, which is a logger tag in a different namespace. src/lib/ai/llm-purposes.ts deliberately does NOT quote this grep pattern in its docstring: the search is for the literal call-site spelling, so quoting it would make that file match itself and this claim would read 1. Measured 2026-08-04.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_ai-serving-spend-audit.md",
+      "where": "backend",
+      "command": "grep -rc \"purpose: 'produce'\" --include=\"*.ts\" src | grep -v ':0' | wc -l | tr -d ' '",
+      "expect": {
+        "kind": "equals",
+        "value": "0"
+      },
+      "verified": "2026-08-04"
+    },
+    {
+      "id": "llm-egress-files-are-four",
+      "claim": "Exactly four non-test files under src/ build an OpenAI-shaped chat/completions request: the counted chokepoint src/lib/ai/structured-client.ts plus three UNREACHABLE direct-fetch modules (ai-rerank, ai-search-refine, ai-synonym-generator), whose entry points rerankFatsecretCandidates / refineSearchQuery / generateSynonymsWithAi / generateAndSaveSynonyms have no non-test caller in src, scripts or eval (measured 2026-08-04). That is what makes '/api/ok counts all reachable LLM egress' true. A fifth direct-fetch module, or a caller wired to one of the three, opens a silent under-report -- so this claim and the jest guard src/lib/ai/__tests__/llm-egress-is-single-chokepoint.test.ts must be revisited together, not patched. This is NOT a dead-code claim: 'a rule that exists with a caller that never reaches it' is this repo's signature bug, so deleting the three is a separate evidenced decision.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_ai-serving-spend-audit.md",
+      "where": "backend",
+      "command": "grep -rl \"chat/completions\" --include=\"*.ts\" src | grep -v __tests__ | wc -l | tr -d ' '",
+      "expect": {
+        "kind": "equals",
+        "value": "4"
+      },
+      "verified": "2026-08-04"
     }
   ]
 }
