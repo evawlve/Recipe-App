@@ -28,39 +28,73 @@
  *    `responses > 0` means NO USAGE DATA WAS RETURNED, not zero tokens.
  *
  * `responses` VS `logicalSuccesses` — quote the right one:
- *   `responses`        = HTTP 200 bodies received. A model ran; we were billed. Includes 200s
- *                        we then failed to use (empty `choices`, an `error` field in the
- *                        model's own JSON, unparseable content). This is the COST/LATENCY number.
+ *   `responses`        = HTTP 2xx responses received from a provider. A model ran; we were
+ *                        billed. Includes every 2xx we then failed to use: an envelope that
+ *                        fails `response.json()`, an empty `choices` array, an `error` field in
+ *                        the model's own JSON, content that fails `JSON.parse`. This is the
+ *                        COST/LATENCY number.
  *   `logicalSuccesses` = `callStructuredLlm()` invocations that returned `status:'success'`.
  *                        This is the "a line got an answer from a model" number.
  * Retries and provider fallback make several HTTP attempts possible per logical call, so
  * `responses >= logicalSuccesses`. Quoting only one of the two is exactly how `[AI:SERV]`
  * became an upper bound that read as a count.
+ *
+ * `responses` IS EXACT, NOT A FLOOR — and saying which it is, is the point. Every field on this
+ * store is one of exactly two kinds and the doc-check claims quote the kind:
+ *   EXACT   — `responses`, `failures`, `logicalSuccesses`. The chokepoint counts exactly one
+ *             outcome per HTTP attempt (`countResponse()` / `countFailure()` in
+ *             `structured-client.ts`), so `responses + failures === attempts` holds by
+ *             construction. The first cut of this module made `responses` a LOWER BOUND: a 2xx
+ *             whose envelope failed `response.json()` was billed but reached only the failure
+ *             path. That shape now increments `responses` and `unparseableEnvelopes`.
+ *   FLOOR   — `promptTokens` / `completionTokens` / `totalTokens` / `costUsd`, each a sum over
+ *             only those responses that actually reported the field. `usageReported` and
+ *             `costReported` are the denominators that say how much of `responses` each sum
+ *             covers; a sum whose denominator is below `responses` is a floor, never a total.
+ * This project has just spent a week on `SERVING_AI_TIERS` being an upper bound that a doc read
+ * as a count. Do not add a field here without writing down which kind it is.
  */
 
 import { STRUCTURED_LLM_PURPOSES } from './llm-purposes';
 
 export interface LlmPurposeUsage {
-    /** HTTP 200 bodies received. A model ran and we were billed — INCLUDING responses we then failed to use. */
+    /**
+     * EXACT. HTTP 2xx responses received. A model ran and we were billed — INCLUDING responses we
+     * then failed to use, and including one whose envelope would not parse as JSON.
+     */
     responses: number;
     /**
-     * callStructuredLlm() invocations that returned status:'success'. responses >= logicalSuccesses
-     * because retries and provider fallback make several HTTP attempts per logical call. Quote the
-     * right one.
+     * EXACT. callStructuredLlm() invocations that returned status:'success'. responses >=
+     * logicalSuccesses because retries and provider fallback make several HTTP attempts per
+     * logical call. Quote the right one.
      */
     logicalSuccesses: number;
-    /** Attempts that never produced a 200 body (non-2xx, network error, abort). Not billed. */
+    /**
+     * EXACT. Attempts that never produced a 2xx response (non-2xx, network error, abort). Not
+     * billed. `responses + failures === attempts` — exactly one of the two is counted per attempt.
+     */
     failures: number;
     /**
-     * Of `responses`, how many carried a finite numeric usage.total_tokens.
+     * EXACT, and a SUBSET of `responses`. Billed 2xx responses whose body failed
+     * `response.json()`, so no usage block could be read from them at all. Non-zero here means
+     * `usageReported` is short by at least this much for a reason that is not "the provider
+     * omitted usage".
+     */
+    unparseableEnvelopes: number;
+    /**
+     * DENOMINATOR. Of `responses`, how many carried a finite numeric usage.total_tokens.
      * usageReported=0 with responses>0 means NO USAGE DATA — it does not mean zero tokens.
      */
     usageReported: number;
+    /** FLOOR — summed only over responses that reported it. Read against `usageReported`. */
     promptTokens: number;
+    /** FLOOR — summed only over responses that reported it. Read against `usageReported`. */
     completionTokens: number;
+    /** FLOOR — summed only over responses that reported it. Read against `usageReported`. */
     totalTokens: number;
-    /** Of `responses`, how many carried a finite numeric usage.cost (OpenRouter accounting field). */
+    /** DENOMINATOR. Of `responses`, how many carried a finite numeric usage.cost (OpenRouter accounting field). */
     costReported: number;
+    /** FLOOR — summed only over responses that reported it. Read against `costReported`. */
     costUsd: number;
 }
 
@@ -90,6 +124,7 @@ function emptyUsage(): LlmPurposeUsage {
         responses: 0,
         logicalSuccesses: 0,
         failures: 0,
+        unparseableEnvelopes: 0,
         usageReported: 0,
         promptTokens: 0,
         completionTokens: 0,
@@ -152,12 +187,22 @@ function modelBucket(store: LlmUsageStore, model: string): LlmPurposeUsage {
 }
 
 /**
- * Record an HTTP 200 body from a provider. Call this the moment the body is parsed and BEFORE any
- * content guard — an empty `choices`, an `error` field in the model's own JSON and unparseable
- * content were all billed. Counting at `callStructuredLlm()`'s success branch instead would rebuild
- * a structural undercount, which is the defect class this counter exists to close.
+ * Record an HTTP 2xx response from a provider. Call this the moment the envelope has been read and
+ * BEFORE any content guard — an unreadable envelope, an empty `choices`, an `error` field in the
+ * model's own JSON and unparseable content were all billed. Counting at `callStructuredLlm()`'s
+ * success branch instead would rebuild a structural undercount, which is the defect class this
+ * counter exists to close.
+ *
+ * `envelopeUnparsed` is how the caller says "billed, but `response.json()` threw, so there is no
+ * usage block to read" — a different statement from "the provider omitted usage", and the reason
+ * `responses` can stay exact without `usageReported` quietly absorbing the difference.
  */
-export function recordLlmResponse(a: { purpose: string; model: string; usage: unknown }): void {
+export function recordLlmResponse(a: {
+    purpose: string;
+    model: string;
+    usage: unknown;
+    envelopeUnparsed?: boolean;
+}): void {
     const store = getStore();
     const buckets = [purposeBucket(store, a.purpose), modelBucket(store, a.model)];
 
@@ -169,6 +214,10 @@ export function recordLlmResponse(a: { purpose: string; model: string; usage: un
 
     for (const b of buckets) {
         b.responses++;
+        // MUTATION-PROVED: deleting this line kills llm-usage-metrics.test.ts > 'an unparseable
+        // envelope is a billed response with its own field'; making it unconditional kills
+        // > 'a readable envelope leaves unparseableEnvelopes at zero' (measured 2026-08-04).
+        if (a.envelopeUnparsed === true) b.unparseableEnvelopes++;
         if (total !== null) {
             b.usageReported++;
             b.totalTokens += total;
@@ -183,7 +232,7 @@ export function recordLlmResponse(a: { purpose: string; model: string; usage: un
     }
 }
 
-/** An attempt that never produced a 200 body (non-2xx, network error, abort). Not billed. */
+/** An attempt that never produced a 2xx response (non-2xx, network error, abort). Not billed. */
 export function recordLlmFailure(a: { purpose: string; model: string }): void {
     const store = getStore();
     purposeBucket(store, a.purpose).failures++;

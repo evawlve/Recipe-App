@@ -40,6 +40,7 @@ describe('llm-usage-metrics: the counter store', () => {
                 responses: 0,
                 logicalSuccesses: 0,
                 failures: 0,
+                unparseableEnvelopes: 0,
                 usageReported: 0,
                 promptTokens: 0,
                 completionTokens: 0,
@@ -111,6 +112,35 @@ describe('llm-usage-metrics: recording a billed response', () => {
         expect(snap.byPurpose.normalize.responses).toBe(1);
         expect(snap.byPurpose.normalize.usageReported).toBe(1);
         expect(snap.byPurpose.normalize.totalTokens).toBe(0);
+    });
+
+    it('an unparseable envelope is a billed response with its own field, not a missing usage block', () => {
+        // MUTATION TARGET: drop the `envelopeUnparsed` increment and this dies. The distinction it
+        // buys: `usageReported < responses` normally means "the provider omitted usage", but for
+        // these there was never a body to read, so the shortfall has a different cause and must
+        // not be attributed to the provider.
+        recordLlmResponse({
+            purpose: 'normalize',
+            model: 'openai/gpt-4o-mini',
+            usage: undefined,
+            envelopeUnparsed: true,
+        });
+        const b = getLlmUsageSnapshot().byPurpose.normalize;
+        expect(b.responses).toBe(1);
+        expect(b.unparseableEnvelopes).toBe(1);
+        expect(b.usageReported).toBe(0);
+        // Not a failure: the provider answered and billed for it.
+        expect(b.failures).toBe(0);
+    });
+
+    it('a readable envelope leaves unparseableEnvelopes at zero', () => {
+        recordLlmResponse({
+            purpose: 'normalize',
+            model: 'openai/gpt-4o-mini',
+            usage: { total_tokens: 47 },
+        });
+        // MUTATION TARGET: making the increment unconditional kills this.
+        expect(getLlmUsageSnapshot().byPurpose.normalize.unparseableEnvelopes).toBe(0);
     });
 
     it.each([
