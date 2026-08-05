@@ -1297,6 +1297,19 @@
         "value": "4"
       },
       "verified": "2026-08-04"
+    },
+    {
+      "id": "llm-usage-counters-live-on-the-box",
+      "claim": "the DEPLOYED build serves a keyed /api/ok carrying a per-purpose byPurpose block, i.e. the 0.5(c) LLM egress counter is live in production and not merely merged",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_ai-serving-spend-audit.md",
+      "where": "box",
+      "command": "key=$(grep '^DEV_API_KEY=' /home/owner/Recipe-App/.env | cut -d= -f2- | tr -d '\"'); curl -s --max-time 10 -H \"x-api-key: $key\" http://localhost:3000/api/ok | grep -c '\"byPurpose\"'",
+      "expect": {
+        "kind": "equals",
+        "value": "1"
+      },
+      "verified": "2026-08-05",
+      "note": "Deliberately a box claim reading the SERVED artifact rather than a backend claim greping src/: per CLAUDE.md a backend claim proves only that someone has the code checked out, which is exactly the merge-is-never-a-deploy gap this counter exists to close. Key read from the box's own .env rather than embedded, matching fatsecret-live-wire. Falsifier steps 1-5 passed before this landed; adding it pre-deploy would have redded the 04:50 nightly."
     }
   ]
 }
