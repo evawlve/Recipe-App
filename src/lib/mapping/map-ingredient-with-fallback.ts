@@ -11,7 +11,7 @@
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
 import { normalizeIngredientName } from './normalization-rules';
-import { gatherCandidates, confidenceGate, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
+import { gatherCandidates, confidenceGate, assessConfidence, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
 import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
 import {
     filterCandidatesByTokens,
@@ -61,7 +61,7 @@ import {
 } from './config';
 import { hydrateOffCandidate } from '../openfoodfacts/hydrate';
 import { detectBrandInQuery } from './brand-detector';
-import { assessSubThresholdAdmission } from './sub-threshold-admission';
+import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
@@ -2410,18 +2410,48 @@ export async function mapIngredientWithFallback(
                             });
                         } else if (sortedFiltered.length > 0) {
                             // Fallback to top scorer ONLY if above minimum threshold
-                            const MIN_FALLBACK_CONFIDENCE = 0.80;
-                            if (sortedFiltered[0].score >= MIN_FALLBACK_CONFIDENCE) {
-                                winner = sortedFiltered[0];
-                                confidence = winner.score;
+                            //
+                            // TWO thresholds because the old single one conflated two jobs.
+                            //
+                            // MIN_FALLBACK_RAW_SCORE is the ORIGINAL 0.80, kept byte-for-byte in
+                            // value and deliberately NOT normalised per source. It compares a RAW
+                            // cross-source retrieval score, so it is scale-blind: near-inert for
+                            // OpenFoodFacts (computeOffScore is unbounded additive, median 6.900 on
+                            // this population), partly real for FatSecret (positionScore reaches
+                            // 1.425), and a genuine gate only for FDC (computePositionScore is
+                            // already [0,1]). Normalising it is plan item #6, which is DE-RANKED —
+                            // measured inert in 80.9% of cross-source contests. It stays here
+                            // unchanged so this edit cannot LOOSEN admission for any source.
+                            //
+                            // MIN_FALLBACK_NAME_MATCH is the scale-free term the raw floor never
+                            // supplied. assessConfidence() is token coverage over the query, in
+                            // [0,1] for every source, and is the same judge confidenceGate uses.
+                            // It is a NARROWING-ONLY addition: nothing is admitted that was not
+                            // admitted before. Measured 2026-08-05 over the 208 recorded
+                            // post-partition abstention decisions, 0.60 drops 13 (6.3%) — and the
+                            // choice is flat, because 0.50 and 0.60 drop the identical 13. The
+                            // drops fall through to the existing aiSimplify fallback, not to
+                            // nothing, and they include `oatmeal` -> "Konjac Cooked Rice oats",
+                            // one of this defect's headline outcomes.
+                            const MIN_FALLBACK_RAW_SCORE = 0.80;
+                            const MIN_FALLBACK_NAME_MATCH = 0.60;
+                            const fallbackTop = sortedFiltered[0];
+                            const fallbackNameMatch = assessConfidence(searchQuery, fallbackTop);
+                            if (fallbackTop.score >= MIN_FALLBACK_RAW_SCORE
+                                && fallbackNameMatch >= MIN_FALLBACK_NAME_MATCH) {
+                                winner = fallbackTop;
+                                // NOT winner.score. See RERANK_DECLINED_CONFIDENCE.
+                                confidence = RERANK_DECLINED_CONFIDENCE;
                                 selectionReason = 'scored_by_confidence';
                             } else {
                                 // Below threshold - let fallback step handle it
                                 logger.info('mapping.fallback_rejected', {
                                     rawLine: trimmed,
-                                    topCandidate: sortedFiltered[0].name,
-                                    score: sortedFiltered[0].score,
-                                    threshold: MIN_FALLBACK_CONFIDENCE,
+                                    topCandidate: fallbackTop.name,
+                                    score: fallbackTop.score,
+                                    nameMatch: fallbackNameMatch,
+                                    rawThreshold: MIN_FALLBACK_RAW_SCORE,
+                                    nameThreshold: MIN_FALLBACK_NAME_MATCH,
                                 });
                             }
                         }

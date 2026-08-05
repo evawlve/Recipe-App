@@ -14,6 +14,11 @@ import { searchFatSecretLane } from './fatsecret-lane';
 import { countedPieceNoun } from './count-label';
 import { detectGrainCookingContext } from './filter-candidates';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
+// Import the LEAF module, not sub-threshold-admission (which re-exports this).
+// sub-threshold-admission pulls simple-rerank -> modifier-constraints, and
+// modifier-constraints imports THIS file — a cycle that leaves
+// MODIFIER_SYNONYM_GROUPS undefined at module-eval time.
+import { RERANK_DECLINED_CONFIDENCE } from './declined-confidence';
 
 // Start loading the ONNX query-embedding model as soon as the mapping
 // subsystem is loaded, so the first magic-log request doesn't pay for it.
@@ -599,9 +604,15 @@ export function confidenceGate(
         return {
             skipAiRerank: true,
             selected: top1,
-            // Raw engine scores are not on the confidence scale (OFF ~0-10,
-            // FDC ~0-1.5) — clamp so the bypass can't report confidence > 1
-            confidence: Math.max(0, Math.min(1, top1.score)),
+            // NOT a clamped raw engine score. top1.score is cross-source and
+            // unbounded for OFF, so the old Math.min(1, …) SATURATED here rather
+            // than rejecting — and confidence_gate_backstop in
+            // map-ingredient-with-fallback.ts writes this value straight into the
+            // cache with no reason scope. This exit names a candidate by REGEX on
+            // the query, not by any assessment of it, so the honest number is the
+            // declined constant. Owner:
+            // mobile:sync-docs/reports/2026-08-05_the-abstention-writes-a-laundered-confidence.md
+            confidence: RERANK_DECLINED_CONFIDENCE,
             reason: 'basic_produce_bypass'
         };
     }
