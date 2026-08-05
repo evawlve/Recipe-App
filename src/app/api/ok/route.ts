@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getLlmUsageSnapshot } from '@/lib/ai/llm-usage-metrics';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,41 @@ function readBuildId(): string | null {
   return buildIdCache;
 }
 
-export async function GET() {
-  return NextResponse.json({ ok: true, ts: Date.now(), buildId: readBuildId() });
+/**
+ * Health probe, and — since Phase 0.5(c) — the READ SIDE of the LLM usage counters.
+ *
+ * Three properties of this response shape are deliberate:
+ *
+ * 1. `ok` / `ts` / `buildId` are UNCONDITIONAL and unchanged. The deploy-verification `curl` and
+ *    the #232 buildId reader keep working byte-for-byte.
+ *
+ * 2. `llm` is ALWAYS PRESENT. An absent `llm` means an old build; `llm.authorized === false` means
+ *    the key was wrong. Neither is confusable with "zero calls" — which is the whole point, given
+ *    that a zeroed instrument reading as a measurement is this repo's most repeated defect.
+ *
+ * 3. It reuses the EXISTING `DEV_API_KEY` check (the same one `admin/food-stats` and the five
+ *    key-only routes use), hardcoded fallback included. A new env var would be a var the box does
+ *    not have — which is exactly how 0.5(a)'s instrument went silent — and would make this counter
+ *    structurally unreadable on the box on day one.
+ *
+ * Counters and `buildId` come back in ONE response, so a counter can never be attributed to the
+ * wrong build. Same reason #232 exists.
+ *
+ * READ RECIPE: two reads are a delta only if `since`, `pid` AND `buildId` are identical on both.
+ * Any difference means the process restarted or the build changed — throw the measurement away.
+ * On Vercel the counters are per-lambda and short-lived; `since`/`pid` make that visible rather
+ * than misleading, but a Vercel read must never be quoted as a fleet number.
+ *
+ * `console.log` is DROPPED on the box, so grepping `next-start.log` is not a way to check whether
+ * the counter works. This route is the only correct read.
+ */
+export async function GET(req: NextRequest) {
+  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
+  const authorized = apiKey === (process.env.DEV_API_KEY || 'dev-key-123');
+  return NextResponse.json({
+    ok: true,
+    ts: Date.now(),
+    buildId: readBuildId(),
+    llm: authorized ? { authorized: true, ...getLlmUsageSnapshot() } : { authorized: false },
+  });
 }

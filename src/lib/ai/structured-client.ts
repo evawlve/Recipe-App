@@ -27,12 +27,27 @@ import {
     OLLAMA_TIMEOUT_MS,
     NUTRITION_AI_MODEL,
 } from '../mapping/config';
+// Type-only: this module has no use for the STRUCTURED_LLM_PURPOSES array value (the union is
+// DERIVED from it, so `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` is already
+// exhaustive against it). Importing the value as well would add an unused-var lint warning for
+// nothing. llm-usage-metrics.ts is the consumer of the array.
+import type { StructuredLlmPurpose } from './llm-purposes';
+import {
+    recordLlmResponse,
+    recordLlmFailure,
+    recordLlmLogicalSuccess,
+} from './llm-usage-metrics';
 
 // ============================================================
 // Types
 // ============================================================
 
-export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse' | 'simplify' | 'nutrition';
+// The purpose list moved to ./llm-purposes so that llm-usage-metrics.ts — and through it
+// /api/ok — can seed its per-purpose counters without importing this module (and with it
+// ../mapping/config and dotenv). Re-exported here so every existing importer of
+// `StructuredLlmPurpose` from 'structured-client' keeps compiling unchanged, and so
+// `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` below keeps its exhaustiveness check.
+export type { StructuredLlmPurpose };
 export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
 
 export interface StructuredLlmOptions {
@@ -290,8 +305,24 @@ interface RequestResult {
     status?: number;
 }
 
+/**
+ * THE SINGLE HTTP CHOKEPOINT for structured LLM egress, and therefore where the usage counters
+ * live (Phase 0.5(c)).
+ *
+ * `purpose` is a parameter purely so the counters can be keyed by it — it does not affect the
+ * request. It is NOT optional on purpose: a default would let a new call site silently drop its
+ * calls out of the counters.
+ *
+ * The counter call sits immediately after the body is parsed and BEFORE the `rawContent` guard,
+ * because `makeRequest` returns `success:false` for three separate shapes of HTTP 200 — an empty
+ * `choices` array, content that fails `JSON.parse`, and an `error` field inside the model's own
+ * JSON — and ALL THREE WERE BILLED. Counting in `callStructuredLlm()`'s success branch instead
+ * would rebuild a structural undercount. Guarded by the doc-check claim
+ * `llm-usage-counted-before-the-content-guard`.
+ */
 async function makeRequest(
     provider: ProviderConfig,
+    purpose: StructuredLlmPurpose,
     schema: object,
     systemPrompt: string,
     userPrompt: string,
@@ -331,6 +362,8 @@ async function makeRequest(
         clearTimeout(timeoutId);
 
         if (!response.ok) {
+            // Never produced a 200 body, so not billed.
+            recordLlmFailure({ purpose, model: provider.model });
             const errorBody = await response.text();
             return {
                 success: false,
@@ -341,7 +374,12 @@ async function makeRequest(
 
         const payload = (await response.json()) as {
             choices?: Array<{ message?: { content?: string } }>;
+            usage?: unknown;
         };
+
+        // A 200 body is in hand: a model ran and we were billed, whatever happens to it below.
+        // This line must stay ABOVE the rawContent guard — see the function docstring.
+        recordLlmResponse({ purpose, model: provider.model, usage: payload.usage });
 
         const rawContent = payload.choices?.[0]?.message?.content;
         if (!rawContent) {
@@ -358,6 +396,15 @@ async function makeRequest(
         return { success: true, content: parsed, raw: parsed };
     } catch (err) {
         clearTimeout(timeoutId);
+
+        // Network error or abort: no 200 body, not billed.
+        //
+        // ONE KNOWN OVERLAP, recorded rather than silently smoothed: a 200 whose content fails
+        // `JSON.parse` throws INTO this catch, so that one shape increments `responses` (correct —
+        // it was billed) and also `failures`. `responses` is the cost number and stays right;
+        // `failures` is therefore an upper bound on "never got a body". Splitting it would need a
+        // second counter, which is outside 0.5(c) as adjudicated.
+        recordLlmFailure({ purpose, model: provider.model });
 
         if ((err as Error).name === 'AbortError') {
             return { success: false, error: `Request timeout (${timeout}ms)` };
@@ -419,7 +466,7 @@ export async function callStructuredLlm(
             lastProvider = provider;
 
             for (let attempt = 0; attempt < STRUCTURED_LLM_MAX_RETRIES; attempt++) {
-                const result = await makeRequest(provider, schema, systemPrompt, userPrompt, timeout, maxTokens);
+                const result = await makeRequest(provider, purpose, schema, systemPrompt, userPrompt, timeout, maxTokens);
 
                 if (result.success) {
                     const durationMs = Date.now() - startTime;
@@ -429,8 +476,14 @@ export async function callStructuredLlm(
                         `[structured-llm] ${purpose} call successful: provider=${provider.name}, model=${provider.model}, duration=${durationMs}ms`
                     );
 
-                    // Increment session metrics
+                    // Increment session metrics (still read by scripts/pilot-batch-import.ts —
+                    // deliberately left untouched by 0.5(c)).
                     incrementAiCall(purpose);
+
+                    // The "a line got an answer from a model" number. Distinct from the
+                    // `responses` counter in makeRequest(), which counts billed HTTP 200s:
+                    // retries and provider fallback make responses >= logicalSuccesses.
+                    recordLlmLogicalSuccess({ purpose, model: provider.model });
 
                     return {
                         status: 'success',
