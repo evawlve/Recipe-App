@@ -7,6 +7,7 @@
  */
 
 import { assessConfidence, confidenceGate, type UnifiedCandidate } from '../gather-candidates';
+import { RERANK_DECLINED_CONFIDENCE } from '../sub-threshold-admission';
 
 const mockCandidate = (name: string, score: number): UnifiedCandidate => ({
     id: '123',
@@ -116,5 +117,44 @@ describe('confidenceGate', () => {
 
         expect(result.skipAiRerank).toBe(true);
         expect(result.selected?.name).toBe('Olive Oil');
+    });
+});
+
+/**
+ * basic_produce_bypass feeds confidence_gate_backstop in
+ * map-ingredient-with-fallback.ts, which writes gateResult.confidence into the
+ * cache with NO reason scope. The bypass names a candidate by REGEX on the
+ * query, not by any assessment of it, so it must not report a number the
+ * mobile badge reads as "✓ Exact Match".
+ */
+describe('basic_produce_bypass confidence is not a laundered engine score', () => {
+    test('T4 does not launder a raw engine score', () => {
+        // 6.9 is the measured computeOffScore median on the abstention
+        // population. The old code did Math.max(0, Math.min(1, top1.score)),
+        // which SATURATED to exactly 1 rather than rejecting.
+        const candidates = [
+            mockCandidate('Broccoli, raw', 6.9),
+            mockCandidate('Broccoli Florets', 5.2),
+        ];
+        const result = confidenceGate('broccoli', candidates);
+
+        expect(result.reason).toBe('basic_produce_bypass');
+        expect(result.confidence).toBe(RERANK_DECLINED_CONFIDENCE);
+        expect(result.confidence).not.toBe(1);
+    });
+
+    test('T5 high_confidence_clear_winner is untouched', () => {
+        // Pins that this edit did not collapse all three gate exits onto one
+        // number: this exit returns assessConfidence()'s real value, which for
+        // an exact match is 1.0.
+        const candidates = [
+            mockCandidate('Cheddar Cheese', 0.95),
+            mockCandidate('Swiss Cheese', 0.90),
+        ];
+        const result = confidenceGate('cheddar cheese', candidates);
+
+        expect(result.reason).toBe('high_confidence_clear_winner');
+        expect(result.confidence).toBe(assessConfidence('cheddar cheese', candidates[0]));
+        expect(result.confidence).not.toBe(RERANK_DECLINED_CONFIDENCE);
     });
 });

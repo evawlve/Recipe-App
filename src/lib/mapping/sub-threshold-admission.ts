@@ -71,6 +71,24 @@ export const SUB_THRESHOLD_SAVE_FLOOR = 0.75;
 /** The long-standing gate this is a conditional relaxation of. */
 export const SAVE_CONFIDENCE_THRESHOLD = 0.85;
 
+/**
+ * The confidence written when simpleRerank() DECLINED to name a winner.
+ *
+ * Re-exported here, rather than declared here, so that all three save-gate
+ * constants are importable — and assertable — from one module (T1 in
+ * `__tests__/sub-threshold-admission.test.ts` pins 0.78 against the floor above
+ * and the threshold above that). The value and the full derivation of why it is
+ * 0.78 live in `./declined-confidence`, which is a LEAF module with no imports.
+ *
+ * It has to be a leaf: `gather-candidates.ts` needs the same constant for the
+ * basic_produce_bypass exit, and importing it from THIS file closes the cycle
+ * gather-candidates -> sub-threshold-admission -> simple-rerank ->
+ * modifier-constraints -> gather-candidates, which leaves
+ * MODIFIER_SYNONYM_GROUPS undefined at module-eval time. tsc and eslint pass
+ * through that cycle; only the test suite catches it.
+ */
+export { RERANK_DECLINED_CONFIDENCE } from './declined-confidence';
+
 export interface SubThresholdAdmissionInput {
     /** The raw user line, used for brand-context adjudication. */
     rawLine: string;

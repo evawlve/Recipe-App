@@ -16,6 +16,7 @@ import {
     assessSubThresholdAdmission,
     SUB_THRESHOLD_SAVE_FLOOR,
     SAVE_CONFIDENCE_THRESHOLD,
+    RERANK_DECLINED_CONFIDENCE,
 } from '../sub-threshold-admission';
 
 const plausible = { kcal: 150, protein: 8, carbs: 20, fat: 4 };
@@ -240,5 +241,54 @@ describe('does not reopen the degenerate-nutrition class that fix 1 closed', () 
         });
         expect(r.admit).toBe(false);
         expect(r.reason).toBe('no_macros');
+    });
+});
+
+/**
+ * RERANK_DECLINED_CONFIDENCE — the constant written when simpleRerank()
+ * abstained. These pin the four boundaries its doc comment claims, because the
+ * value is only correct RELATIVE to them: two of the four live in this file,
+ * and one lives in a different repo with no CI (see T1's third assertion).
+ */
+describe('RERANK_DECLINED_CONFIDENCE', () => {
+    it('T1 lands in the insertOnly tier', () => {
+        // 1. Still offered to the cache at all.
+        expect(SUB_THRESHOLD_SAVE_FLOOR).toBeLessThanOrEqual(RERANK_DECLINED_CONFIDENCE);
+        // 2. insertOnly: may create a row on a virgin key, never displace one.
+        expect(RERANK_DECLINED_CONFIDENCE).toBeLessThan(SAVE_CONFIDENCE_THRESHOLD);
+        // 3. Below the MOBILE repo's CONFIDENCE_LEVELS.high.min (0.8, compared
+        //    with `>=`) in src/constants/nutrition.ts. At 0.80 the green
+        //    "✓ Exact Match" badge still renders and the user-visible half of
+        //    the defect is unfixed. That repo has no CI, so this assertion and
+        //    its mobile-side twin on getConfidenceLevel() are the only guards.
+        expect(RERANK_DECLINED_CONFIDENCE).toBeLessThan(0.80);
+    });
+
+    it('T2 a declined pick is admitted insert-only, not full-overwrite', () => {
+        const r = assessSubThresholdAdmission({
+            rawLine: 'grilled salmon',
+            confidence: RERANK_DECLINED_CONFIDENCE,
+            foodName: 'Cooked Salmon',
+            brandName: null,
+            nutrientsPer100g: { kcal: 139, protein: 23.5, carbs: 0, fat: 4.3 },
+        });
+        expect(r).toEqual({ admit: true });
+    });
+
+    it('T3 a declined pick that names the wrong brand is not cached at all', () => {
+        // This is the guard that makes the admission drop INTENTIONAL rather
+        // than incidental: the abstention leg now writes 0.78, which lands
+        // inside assessSubThresholdAdmission()'s window, so the cross-brand
+        // substitution class becomes reachable and must stay blocked.
+        const r = assessSubThresholdAdmission({
+            rawLine: 'golden corral fried chicken',
+            confidence: RERANK_DECLINED_CONFIDENCE,
+            brandDetection: { isBranded: true, matchedBrand: 'golden corral' },
+            foodName: 'Fried Chicken',
+            brandName: "Smith's",
+            nutrientsPer100g: { kcal: 250, protein: 20, carbs: 10, fat: 15 },
+        });
+        expect(r.admit).toBe(false);
+        expect(r.reason).toBe('record_lacks_query_brand');
     });
 });

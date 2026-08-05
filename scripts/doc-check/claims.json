@@ -1260,6 +1260,19 @@
         "value": "4"
       },
       "verified": "2026-08-04"
+    },
+    {
+      "id": "abstention-writes-a-named-constant",
+      "claim": "Both simpleRerank-abstention legs write the named constant RERANK_DECLINED_CONFIDENCE (0.78), never a raw retrieval score. Site A is the scored_by_confidence arm of the `if (!winner)` block in mapIngredientWithFallback(); it used to write `confidence = winner.score`, which is a cross-source, unbounded retrieval score (computeOffScore median 6.900 on this population) and saturated to a cached 1.000 at the clamp downstream -- a decision the reranker REFUSED to make, stored as maximally confident. Site B is confidenceGate()'s basic_produce_bypass exit in gather-candidates.ts, which returned Math.max(0, Math.min(1, top1.score)); confidence_gate_backstop reads gateResult.confidence with no reason scope, so that clamp was the same laundering one layer up. The three output terms are declined@raw@siteB: term 1 is 1 when site A writes the constant, term 2 is 1 if `confidence = winner.score` ever returns to that arm (it must stay 0), term 3 counts site B's use. NOTE the file holds a THIRD `confidence = winner.score` in the fallback_simplified arm at `winner = fallbackCandidate` -- that one is CORRECT and deliberately out of scope, because its score is `fbr.confidence * 0.85`, an already-scaled confidence rather than a retrieval score. A bare file-wide grep for `confidence = winner.score` therefore cannot express this claim, which is why the command isolates site A's block. Standard caveat: a `backend` claim greps a CHECKED-OUT tree, not master and not the box's built .next.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_the-abstention-writes-a-laundered-confidence.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const s=fs.readFileSync('src/lib/mapping/map-ingredient-with-fallback.ts','utf8');const m=s.match(/const MIN_FALLBACK_RAW_SCORE[\\s\\S]{0,1200}?selectionReason = 'scored_by_confidence';/);const declined=m&&/confidence = RERANK_DECLINED_CONFIDENCE;/.test(m[0])?1:0;const raw=m&&/confidence = winner\\.score;/.test(m[0])?1:0;const g=fs.readFileSync('src/lib/mapping/gather-candidates.ts','utf8');const b=(g.match(/confidence: RERANK_DECLINED_CONFIDENCE,/g)||[]).length;process.stdout.write(declined+'@'+raw+'@'+b)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@0@1"
+      },
+      "verified": "2026-08-05",
+      "timeoutMs": 60000
     }
   ]
 }
