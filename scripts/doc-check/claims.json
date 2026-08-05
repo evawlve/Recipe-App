@@ -1211,6 +1211,19 @@
       },
       "verified": "2026-08-04",
       "timeoutMs": 60000
+    },
+    {
+      "id": "fs-ambiguous-serving-persist-is-short-circuited",
+      "claim": "upsertServing() in ambiguous-unit-backfill.ts short-circuits fs_ ids (returns false, no write attempted) AND the caller keeps its try/catch warn on ambiguous_backfill.save_failed. TWO separate guards, and the command checks both -- a cleanup that deletes the catch 'now that the FK cannot fire' would break the second half while the first stays green. The trailing else writes AiGeneratedServing, whose FK targets AiGeneratedFood.id, and no fs_ row exists there (SELECT count(*) FROM AiGeneratedFood WHERE id LIKE 'fs_%' = 0, measured 2026-08-05), so every FatSecret ambiguous estimate raised AiGeneratedServing_foodId_fkey: 311 warns box-wide over 61 foods and 167 food+unit pairs. The estimate is still RETURNED, so this moves no grams. The catch must survive because 27 of the 338 historical save_failed lines are non-fs_ (a real fdc_ write-failure class this warn is the only witness for). Do NOT convert this into a write target: FatSecretServing has no source/isAiEstimated/confidence/note column (the attribution boundary in CLAUDE.md) and fsHasServingShape() in validated-mapping-helpers.ts is a findFirst on grams>0 with no provenance filter, so a synthetic row would flip 5 of those 61 records SHAPELESS->SHAPED at the save gate -- 5 measured, not the 3,472 corpus-wide #16 ceiling it was confused with.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_serving-fix-build-order.md",
+      "where": "backend",
+      "command": "node -e \"const s=require('fs').readFileSync('src/lib/mapping/ambiguous-unit-backfill.ts','utf8');const g=/if \\(foodId\\.startsWith\\('fs_'\\)\\) \\{[\\s\\S]{0,240}?return false;/.test(s)?1:0;const c=/catch \\(error\\) \\{[\\s\\S]{0,200}?ambiguous_backfill\\.save_failed/.test(s)?1:0;process.stdout.write(g+'@'+c)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@1"
+      },
+      "verified": "2026-08-05",
+      "timeoutMs": 60000
     }
   ]
 }

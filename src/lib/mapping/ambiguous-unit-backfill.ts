@@ -54,6 +54,40 @@ async function findExistingServing(foodId: string, normalizedUnit: string) {
     }
 }
 
+/**
+ * Persist an ambiguous-unit estimate into the per-source serving table.
+ *
+ * Returns `true` when a row was written and `false` when this id has NO write
+ * target. That is not a success/failure signal: a genuine write failure still
+ * THROWS, and every caller must keep its `try`/`catch` warn so an `fdc_`/`off_`
+ * failure stays loud. 27 of the 338 historical `ambiguous_backfill.save_failed`
+ * lines on the box are non-`fs_` (measured 2026-08-05 — see the fs_ note below
+ * for the command); silencing the catch would hide that class.
+ *
+ * `fs_` IDS HAVE NO WRITE TARGET, AND THAT IS DELIBERATE (B3, 2026-08-05).
+ * The trailing `else` writes `AiGeneratedServing`, whose FK targets
+ * `AiGeneratedFood.id`, and no `fs_` row exists there — so every FatSecret
+ * estimate raised `AiGeneratedServing_foodId_fkey` and was swallowed by the
+ * caller's catch. 311 such warns box-wide over 61 foods / 167 food+unit pairs
+ * (re-derive: `ssh owner@192.168.1.133 'grep -h ambiguous_backfill.save_failed
+ * /home/owner/Recipe-App/logs/*.log | grep -c "\"foodId\":\"fs_"'`, measured
+ * 2026-08-05). The estimate is still RETURNED and the line is still billed
+ * correctly; only persistence is lost, so this short-circuit changes no grams.
+ *
+ * Do NOT "fix" this by adding a write target — both obvious ones are refuted
+ * in `sync-docs/reports/2026-08-05_serving-fix-build-order.md` §1:
+ *   - writing `FatSecretServing` (DNB-1) has no `source`/`isAiEstimated`
+ *     column, so an estimate becomes indistinguishable from a licensed label
+ *     serving under the FatSecret Web Badge (an attribution boundary, CLAUDE.md
+ *     §Attribution), and `fsHasServingShape()` in `validated-mapping-helpers.ts`
+ *     is a `findFirst({ fsId, grams: { gt: 0 } })` with no provenance filter, so
+ *     a synthetic row flips a record SHAPELESS→SHAPED at the save gate — 5 of
+ *     the 61 failing foods, measured, not the 3,472 that number was confused
+ *     with (that is the corpus-wide #16 ceiling, a 694x inflation);
+ *   - seeding an `AiGeneratedFood` shell keyed by an `fs_` id (DNB-2) makes a
+ *     0-kcal food that `searchFatSecretCacheFoods()` returns as a selectable
+ *     search result.
+ */
 async function upsertServing(
     foodId: string,
     normalizedUnit: string,
@@ -62,7 +96,16 @@ async function upsertServing(
     note?: string,
     source: string = 'ai',
     isAiEstimated: boolean = true,
-) {
+): Promise<boolean> {
+    if (foodId.startsWith('fs_')) {
+        logger.debug('ambiguous_backfill.persist_skipped_no_target', {
+            foodId,
+            unit: normalizedUnit,
+            grams,
+        });
+        return false;
+    }
+
     if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) {
         const id = foodId.startsWith('fdc:') ? parseInt(foodId.split(':')[1], 10) : parseInt(foodId.split('_')[1], 10);
         await prisma.fdcServing.upsert({
@@ -120,6 +163,7 @@ async function upsertServing(
             }
         });
     }
+    return true;
 }
 
 // ============================================================
@@ -366,17 +410,21 @@ export async function getOrCreateAmbiguousServing(
         return { status: 'error', error: result.error ?? 'AI estimation failed' };
     }
 
-    // Save
+    // Save. `saved` is logged ONLY when a row was actually written — an id with
+    // no write target returns false and is not a save. The catch below stays:
+    // a genuine `fdc_`/`off_` write failure must remain loud.
     try {
-        await upsertServing(foodId, normalizedUnit, result.estimatedGrams, result.confidence ?? 1, result.reasoning?.slice(0, 200));
+        const persisted = await upsertServing(foodId, normalizedUnit, result.estimatedGrams, result.confidence ?? 1, result.reasoning?.slice(0, 200));
 
-        logger.info('ambiguous_backfill.saved', {
-            foodId,
-            foodName,
-            unit: normalizedUnit,
-            grams: result.estimatedGrams,
-            confidence: result.confidence,
-        });
+        if (persisted) {
+            logger.info('ambiguous_backfill.saved', {
+                foodId,
+                foodName,
+                unit: normalizedUnit,
+                grams: result.estimatedGrams,
+                confidence: result.confidence,
+            });
+        }
     } catch (error) {
         logger.warn('ambiguous_backfill.save_failed', {
             foodId,
