@@ -61,8 +61,15 @@ async function findExistingServing(foodId: string, normalizedUnit: string) {
  * target. That is not a success/failure signal: a genuine write failure still
  * THROWS, and every caller must keep its `try`/`catch` warn so an `fdc_`/`off_`
  * failure stays loud. 27 of the 338 historical `ambiguous_backfill.save_failed`
- * lines on the box are non-`fs_` (measured 2026-08-05 — see the fs_ note below
- * for the command); silencing the catch would hide that class.
+ * lines on the box are non-`fs_`; silencing the catch would hide that class.
+ * Those 27 are NOT under `logs/` — they sit one directory up, which is why the
+ * `logs/*.log` command below counts 311 and finds zero non-`fs_` (re-derive:
+ * `ssh owner@192.168.1.133 'grep -h ambiguous_backfill.save_failed
+ * /home/owner/Recipe-App/*.log | grep -vc "\"foodId\":\"fs_"'` → 27, measured
+ * 2026-08-05; 311 + 27 = 338). They are all `fdc_`, all dated 2026-03-31, and
+ * all raised by `prisma.fatSecretServingCache.upsert()` in a since-deleted
+ * module — so they are evidence that this catch HAS a real non-`fs_` class,
+ * not a measurement of its current rate, which is unmeasured rather than zero.
  *
  * `fs_` IDS HAVE NO WRITE TARGET, AND THAT IS DELIBERATE (B3, 2026-08-05).
  * The trailing `else` writes `AiGeneratedServing`, whose FK targets
