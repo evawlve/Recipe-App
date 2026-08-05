@@ -41,12 +41,24 @@
  *
  * `responses` IS EXACT, NOT A FLOOR — and saying which it is, is the point. Every field on this
  * store is one of exactly two kinds and the doc-check claims quote the kind:
- *   EXACT   — `responses`, `failures`, `logicalSuccesses`. The chokepoint counts exactly one
- *             outcome per HTTP attempt (`countResponse()` / `countFailure()` in
- *             `structured-client.ts`), so `responses + failures === attempts` holds by
- *             construction. The first cut of this module made `responses` a LOWER BOUND: a 2xx
- *             whose envelope failed `response.json()` was billed but reached only the failure
- *             path. That shape now increments `responses` and `unparseableEnvelopes`.
+ *   EXACT   — `responses`, `failures`, `logicalSuccesses`, counted against the HTTP outcome. The
+ *             chokepoint counts exactly one outcome per HTTP attempt (`countResponse()` /
+ *             `countFailure()` in `structured-client.ts`), so `responses + failures === attempts`
+ *             holds — with ONE stated exception: `countSafely()` swallows a telemetry throw so the
+ *             instrument can never degrade the request it measures, and a swallowed throw drops
+ *             that attempt from both sides. It is therefore an invariant of the counting, not of
+ *             the arithmetic; assert it in tests, do not assume it of a live reading.
+ *             The first cut of this module made `responses` a LOWER BOUND: a 2xx whose envelope
+ *             failed `response.json()` was billed but reached only the failure path. That shape
+ *             now increments `responses` and `unparseableEnvelopes`.
+ *
+ *             **`responses` is exact as a count of 2xx RESPONSES. That a 2xx was BILLED is
+ *             REASONING, not a measurement** — a CDN or proxy can return an HTTP 200 error page
+ *             the model never saw, and that is precisely the shape `unparseableEnvelopes` catches.
+ *             So `responses` is an upper bound on billed calls, exact on responses received, and
+ *             `responses - unparseableEnvelopes` is the conservative read. Subtract it before
+ *             quoting spend. Naming this is the whole lesson of `SERVING_AI_TIERS`: the fork that
+ *             makes a count an upper bound sits BELOW the place the count is taken.
  *   FLOOR   — `promptTokens` / `completionTokens` / `totalTokens` / `costUsd`, each a sum over
  *             only those responses that actually reported the field. `usageReported` and
  *             `costReported` are the denominators that say how much of `responses` each sum
@@ -59,8 +71,10 @@ import { STRUCTURED_LLM_PURPOSES } from './llm-purposes';
 
 export interface LlmPurposeUsage {
     /**
-     * EXACT. HTTP 2xx responses received. A model ran and we were billed — INCLUDING responses we
-     * then failed to use, and including one whose envelope would not parse as JSON.
+     * EXACT as a count of HTTP 2xx responses received — INCLUDING responses we then failed to use,
+     * and including one whose envelope would not parse as JSON. "A model ran and we were billed" is
+     * the DERIVED reading and is an upper bound: a proxy 200 error page never reached a model.
+     * Quote `responses - unparseableEnvelopes` for spend. See the module header.
      */
     responses: number;
     /**

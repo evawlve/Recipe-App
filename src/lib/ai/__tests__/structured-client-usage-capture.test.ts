@@ -183,6 +183,33 @@ describe('structured-client counts LLM egress at the HTTP chokepoint', () => {
         expect(snap.byPurpose.normalize.totalTokens).toBe(0);
     });
 
+    it('a 200 whose body is the JSON literal null is a clean parse, NOT an unparseable envelope', async () => {
+        // MUTATION TARGET for the discriminator in makeRequest(). `response.json()` returns null
+        // here and throws nothing, so `payload === null` and `envelopeError === null` — the two
+        // predicates disagree, and only `envelopeError` means "the envelope would not parse".
+        // Restore `countResponse(payload?.usage, payload === null)` and this dies twice over:
+        // unparseableEnvelopes reads 1 for a body that parsed fine, and the caller's error string
+        // interpolates `envelopeError?.message` on a null error, emitting a literal "undefined".
+        // A null body is a billed, parsed response with no content — the Empty-response guard owns
+        // it, which is what keeps unparseableEnvelopes honest as the subtrahend for spend.
+        fetchMock.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => null,
+            text: async () => 'null',
+        } as unknown as Response);
+
+        const result = await callStructuredLlm(CALL);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('Empty response');
+        expect(result.error).not.toContain('undefined');
+
+        const snap = getLlmUsageSnapshot();
+        expect(snap.byPurpose.normalize.responses).toBe(1);
+        expect(snap.byPurpose.normalize.failures).toBe(0);
+        expect(snap.byPurpose.normalize.unparseableEnvelopes).toBe(0);
+    });
+
     it('an abort DURING the body read is a billed response to the counter and a timeout to the caller', async () => {
         // The two views differ on purpose and both must hold: the provider produced a 2xx and
         // billed for it, but the caller's error string is what the retry/fallback logs read, so it

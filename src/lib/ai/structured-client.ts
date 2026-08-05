@@ -449,9 +449,16 @@ async function makeRequest(
 
         // A 2xx is in hand: a model ran and we were billed, whatever happens to it below.
         // This line must stay ABOVE the rawContent guard — see the function docstring.
-        countResponse(payload?.usage, payload === null);
+        //
+        // The unparseable flag keys on `envelopeError`, NOT on `payload === null`. Those are not
+        // the same predicate: a 2xx whose body is the JSON literal `null` parses perfectly and
+        // leaves `payload` null with no error, so keying on the payload would record a clean parse
+        // as an unparseable envelope AND interpolate a literal "undefined" into the caller's error
+        // string. A null body is a billed, parsed response with no content — it belongs to the
+        // `Empty response from LLM` guard below, which is where it now lands.
+        countResponse(payload?.usage, envelopeError !== null);
 
-        if (payload === null) {
+        if (envelopeError !== null) {
             // The COUNTER's view and the CALLER's view of this failure differ on purpose. An abort
             // can land while the body is being read: for the counter that is still a billed 2xx
             // (above), but the caller must keep being told it timed out — the error string this
@@ -459,13 +466,13 @@ async function makeRequest(
             return {
                 success: false,
                 error:
-                    envelopeError?.name === 'AbortError'
+                    envelopeError.name === 'AbortError'
                         ? `Request timeout (${timeout}ms)`
-                        : `Unparseable response envelope from LLM provider: ${envelopeError?.message}`,
+                        : `Unparseable response envelope from LLM provider: ${envelopeError.message}`,
             };
         }
 
-        const rawContent = payload.choices?.[0]?.message?.content;
+        const rawContent = payload?.choices?.[0]?.message?.content;
         if (!rawContent) {
             return { success: false, error: 'Empty response from LLM', raw: payload };
         }
