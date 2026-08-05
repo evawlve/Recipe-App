@@ -3996,19 +3996,37 @@ export async function hydrateAndSelectServing(
                         reason: 'Cached/estimated weight implausibly large, deleting stale cache and skipping',
                     });
 
-                    // Delete the stale cached AI entry so next run gets a fresh estimate
+                    // Delete the stale cached AI entry so next run gets a fresh estimate.
+                    //
+                    // `isAiEstimated: true` is LOAD-BEARING on the fdc_/off_ branches. Without it
+                    // these deleteMany calls match on (id, description) alone, and `targetSizeUnit`
+                    // is exactly 'small' | 'medium' | 'large' — the same key space USDA's own size
+                    // servings occupy. 94 of the 109 exact-name size rows in FdcServing are genuine
+                    // `source='usda_fdc'` / isAiEstimated=false (re-derive:
+                    //   SELECT source,"isAiEstimated",count(*) FROM "FdcServing"
+                    //   WHERE lower(description) IN ('small','medium','large') GROUP BY 1,2;
+                    // -> usda_fdc|f|94, ai|t|15, measured 2026-08-04), so an unfiltered delete
+                    // removes curated USDA data. It fires precisely on legitimately heavy foods: a
+                    // genuine 'medium' cabbage head at 588 g trips `> maxAIGrams` (500) and the row
+                    // is destroyed for being correct. Nothing regenerates it.
+                    //
+                    // The branch's own comment above names a STALE FATSECRET-derived value as the
+                    // motivating case, not a USDA row — deleting genuine rows was never the intent.
+                    //
+                    // AiGeneratedServing deliberately takes no filter: it has no `source` or
+                    // `isAiEstimated` column because every row there is AI by construction.
                     try {
                         const { prisma: prismaDb } = await import('../db');
                         const staleId = `ai_${candidate.id}_${targetSizeUnit}`;
                         if (candidate.id.startsWith('fdc_')) {
                             const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
                             await prismaDb.fdcServing.deleteMany({
-                                where: { fdcId, description: targetSizeUnit },
+                                where: { fdcId, description: targetSizeUnit, isAiEstimated: true },
                             });
                         } else if (candidate.id.startsWith('off_')) {
                             const barcode = candidate.id.replace('off_', '');
                             await prismaDb.offServing.deleteMany({
-                                where: { barcode, description: targetSizeUnit },
+                                where: { barcode, description: targetSizeUnit, isAiEstimated: true },
                             });
                         } else {
                             await prismaDb.aiGeneratedServing.deleteMany({

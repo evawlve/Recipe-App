@@ -1198,6 +1198,19 @@
         "value": "3@10"
       },
       "verified": "2026-08-04"
+    },
+    {
+      "id": "stale-cache-delete-is-provenance-filtered",
+      "claim": "hydrateAndSelectServing()'s stale-cache branch deletes a cached size serving when the resolved weight exceeds maxAIGrams. Its fdc_/off_ deleteMany calls MUST filter on isAiEstimated:true. targetSizeUnit is exactly 'small'|'medium'|'large', which is the same key space USDA's own size servings occupy: 94 of the 109 exact-name size rows in FdcServing are genuine source='usda_fdc'/isAiEstimated=false against 15 ai/true (measured 2026-08-04). Unfiltered, the branch destroys curated USDA data, and it fires precisely on foods that are legitimately heavy -- a genuine 'medium' cabbage head at 588g trips the 500g ceiling and is deleted for being correct. Nothing regenerates FdcServing rows. The branch's own comment names a stale FatSecret-derived value as the motivating case, so deleting genuine rows was never the intent. The aiGeneratedServing branch deliberately takes NO filter: that table has no source/isAiEstimated column because every row is AI by construction, so adding one is a typecheck failure. The firing rate is NOT measurable read-only -- the surrounding logs are logger.info and the box runs at warn -- but the guard is unconditionally correct and does not need the count.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-05_ai-serving-spend-audit.md",
+      "where": "backend",
+      "command": "node -e \"const s=require('fs').readFileSync('src/lib/mapping/map-ingredient-with-fallback.ts','utf8');const m=s.match(/(fdcServing|offServing)\\.deleteMany\\(\\{[^}]*\\}/g)||[];const guarded=m.filter(x=>/isAiEstimated:\\s*true/.test(x)).length;process.stdout.write(guarded+'@'+m.length)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "2@2"
+      },
+      "verified": "2026-08-04",
+      "timeoutMs": 60000
     }
   ]
 }
