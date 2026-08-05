@@ -5445,14 +5445,18 @@ async function borrowSiblingLabelServing(
 async function borrowNameSiblingLabelServing(
     foodName: string | null | undefined,
     selfBarcode: string,
-): Promise<{ grams: number; samples: number } | null> {
+): Promise<{ grams: number; samples: number; p25: number; p75: number } | null> {
     const nm = foodName?.trim();
     if (!nm || nm.length < 2) return null;
     try {
         const { prisma } = await import('../db');
-        const rows = await prisma.$queryRaw<Array<{ med: number | null; n: number }>>`
+        const rows = await prisma.$queryRaw<
+            Array<{ med: number | null; n: number; p25: number | null; p75: number | null }>
+        >`
             SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
-                   count(*)::int AS n
+                   count(*)::int AS n,
+                   percentile_cont(0.25) WITHIN GROUP (ORDER BY "servingGrams") AS p25,
+                   percentile_cont(0.75) WITHIN GROUP (ORDER BY "servingGrams") AS p75
             FROM "OffFood"
             WHERE lower(name) = lower(${nm})
               AND barcode <> ${selfBarcode}
@@ -5462,10 +5466,49 @@ async function borrowNameSiblingLabelServing(
               AND "servingGrams" <> 100`;
         const row = rows[0];
         if (!row?.med || row.n < 3) return null;
-        return { grams: row.med, samples: row.n };
+        // p25/p75 come from the same aggregate as `med`, so a non-null med over
+        // n >= 3 rows in a [3, 400] band implies both are non-null and >= 3. The
+        // fallbacks exist so a NULL can never silently read as a TIGHT group
+        // (p75 = Infinity, p25 = 0 both force isTightNameGroup false).
+        return {
+            grams: row.med,
+            samples: row.n,
+            p25: row.p25 ?? 0,
+            p75: row.p75 ?? Number.POSITIVE_INFINITY,
+        };
     } catch {
         return null;
     }
+}
+
+/**
+ * Interquartile spread of a name group, as a RATIO so it is scale-free (a
+ * cheese group at 28 g and a chicken group at 112 g are comparable).
+ *
+ * The threshold exists to separate two populations the RAISE-ONLY clamp at
+ * rung (E) treats identically:
+ *  - MIXTURES, which is what the clamp was justified on: `hot chocolate`
+ *    (p75/p25 2.13, powder sachets vs made-up mugs), `pasta` (2.06, dry vs
+ *    cooked). Their median is not a serving size, it is the midpoint of two
+ *    different products, and billing it is worse than the floor.
+ *  - CONVENTIONAL LABEL SERVINGS, which are near-uniform: `Broccoli florets`
+ *    n=130 all 85 g (ratio 1.00), `Wide egg noodles` n=26 all 56 g (1.00),
+ *    `Mature cheddar` n=17 all 30 g (1.00). For these the group median IS the
+ *    label serving, and the 100 g floor is a bare literal outranking it.
+ *
+ * 1.5 measured 2026-08-05 over the 28-row #18 residual: it admits 20 and
+ * excludes 8, and both raise-blocked exclusions (`hot chocolate`, `pasta`) are
+ * the mixtures above. Re-derive with the p25/p75 query in
+ * `sync-docs/reports/2026-08-05_the-raise-only-clamp-is-calibrated-on-the-wrong-population.md`.
+ */
+const NAME_GROUP_TIGHT_RATIO = 1.5;
+
+/** Exported for tests. A group is tight when its IQR ratio is finite and <= the threshold. */
+export function isTightNameGroup(p25: number, p75: number): boolean {
+    if (!Number.isFinite(p25) || !Number.isFinite(p75)) return false;
+    if (p25 <= 0 || p75 <= 0) return false;
+    if (p75 < p25) return false;
+    return p75 / p25 <= NAME_GROUP_TIGHT_RATIO;
 }
 
 // Exported for tests (tier cascade + bare-query guard wire-in).
@@ -5977,9 +6020,18 @@ export async function buildOffResult(
     // bare_category_default, label_serving_default and package_count_*; measured
     // 2026-08-05, that lowers 207 events, 196 of them `coca cola` 355 -> 275.
     //
-    // RAISE-ONLY: a name group is a MIXTURE (asparagus 85 g, blueberries 62.5 g,
-    // strawberries 65.0 g — dried/freeze-dried products dominate), and the
-    // downward half is worse than the floor it would replace.
+    // RAISE-ONLY BY DEFAULT: a name group is usually a MIXTURE (asparagus 85 g,
+    // blueberries 62.5 g, strawberries 65.0 g — dried/freeze-dried products
+    // dominate), and the downward half is worse than the floor it would replace.
+    //
+    // The one exception is a TIGHT group (`isTightNameGroup`, p75/p25 <= 1.5),
+    // which is not a mixture at all but a conventional label serving repeated
+    // across near-identical SKUs. There the clamp is the defect: it pins a
+    // 130-row group of `Broccoli florets` that all declare 85 g to a bare 100 g
+    // literal. Lowering is allowed ONLY for those, and stamps a SEPARATE tier
+    // so the two directions stay independently measurable — merging them would
+    // repeat the serving-cascade-divergence mistake this rung's own borrow
+    // function documents.
     //
     // The tier gate structurally implies five of rung (C2)'s own clauses, which
     // are therefore NOT restated here: grams == null (by construction of the
@@ -6005,15 +6057,23 @@ export async function buildOffResult(
         const nameSib = await borrowNameSiblingLabelServing(
             hydrated.foodName, candidate.id.replace(/^off_/, '')
         );
-        if (nameSib != null && nameSib.grams > grams) {
+        const lowersIntoTightGroup = nameSib != null
+            && nameSib.grams < grams
+            && isTightNameGroup(nameSib.p25, nameSib.p75);
+        if (nameSib != null && (nameSib.grams > grams || lowersIntoTightGroup)) {
+            const tier = lowersIntoTightGroup
+                ? 'bare_name_sibling_serving_tight'
+                : 'bare_name_sibling_serving';
             grams = nameSib.grams;
             servingDescription = `1 serving (~${nameSib.grams.toFixed(0)}g, name median)`;
-            servingTier = 'bare_name_sibling_serving';
-            logger.info('off.build_result.bare_name_sibling_serving', {
+            servingTier = tier;
+            logger.info(`off.build_result.${tier}`, {
                 foodId: candidate.id,
                 name: hydrated.foodName,
                 grams: nameSib.grams,
                 samples: nameSib.samples,
+                p25: nameSib.p25,
+                p75: nameSib.p75,
             });
         }
     }
