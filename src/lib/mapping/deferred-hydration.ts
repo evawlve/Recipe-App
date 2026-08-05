@@ -1,13 +1,22 @@
 /**
- * Deferred Hydration Queue
- * 
- * Queues non-selected candidates for hydration AFTER all mappings complete.
- * This prioritizes fast automapping over cache population.
- * 
- * Flow:
- * 1. During mapping: only hydrate the selected candidate
- * 2. Queue remaining candidates for later
- * 3. After batch completes: process the queue
+ * Background hydration of runner-up candidates.
+ *
+ * There is NO QUEUE in this module. It once held an in-memory
+ * `hydrationQueue` with `processDeferredQueue()`/`drainQueue()` batch
+ * drainers, but nothing ever pushed to it — the queue had no producer and
+ * was therefore unreachable in every code path. That machinery is deleted.
+ *
+ * What actually happens: `queueForDeferredHydration()` calls
+ * `processImmediately()` fire-and-forget. The "queue"/"deferred" in that
+ * name is a leftover from the removed design — DO NOT read it as evidence
+ * that work is being buffered for later. The name is kept only because it
+ * has live callers and test importers.
+ *
+ * Flow: hydrate the winner during mapping; hand the top 3 runner-ups to
+ * `queueForDeferredHydration()`, which hydrates them immediately in the
+ * background. Every fire-and-forget promise is tracked in
+ * `pendingBackgroundTasks` so `drainPendingBackgroundTasks()` can await
+ * them before `prisma.$disconnect()`.
  */
 
 import { logger } from '../logger';
@@ -62,24 +71,13 @@ async function doProduceBackfill(foodId: string, foodName: string): Promise<void
 }
 
 // ============================================================
-// Queue Storage
+// Background Task Tracking
 // ============================================================
 
 interface ServingContext {
     unit?: string;
     unitType: 'count' | 'volume' | 'weight';
 }
-
-interface QueuedCandidate {
-    candidate: UnifiedCandidate;
-    priority: number; // Lower = higher priority
-    queuedAt: number;
-    servingContext?: ServingContext;
-}
-
-// In-memory queue (cleared on process restart)
-let hydrationQueue: QueuedCandidate[] = [];
-let isProcessingQueue = false;
 
 // Tracks all background fire-and-forget promises so callers can await them
 // before disconnecting Prisma (prevents stale-transaction errors).
@@ -109,7 +107,7 @@ export function registerBackgroundTask(task: Promise<void>): void {
 }
 
 // ============================================================
-// Queue Management
+// Runner-up Hydration
 // ============================================================
 
 
@@ -117,6 +115,10 @@ export function registerBackgroundTask(task: Promise<void>): void {
  * Fire-and-forget hydration for runner-up candidates.
  * Kicks off immediately when candidates are scored - does NOT block.
  * Hydrates candidates and backfills common servings in parallel.
+ *
+ * NAMING TRAP: nothing here is queued or deferred. This calls
+ * `processImmediately()` right now; the name predates the removal of the
+ * producer-less `hydrationQueue` and is retained only for its callers.
  */
 export function queueForDeferredHydration(
     candidates: UnifiedCandidate[],
@@ -189,121 +191,3 @@ async function processImmediately(
     });
 }
 
-/**
- * Get current queue size.
- */
-export function getQueueSize(): number {
-    return hydrationQueue.length;
-}
-
-/**
- * Clear the queue (useful for testing).
- */
-export function clearQueue(): void {
-    hydrationQueue = [];
-}
-
-// ============================================================
-// Queue Processing
-// ============================================================
-
-/**
- * Process the deferred hydration queue.
- * Called after batch mapping completes.
- * Parallelizes hydration and serving backfill for speed.
- *
- * @param batchSize - Number of candidates to process at once
- */
-export async function processDeferredQueue(
-    batchSize: number = 50
-): Promise<{ processed: number; remaining: number }> {
-    if (isProcessingQueue) {
-        logger.debug('deferred_hydration.already_processing');
-        return { processed: 0, remaining: hydrationQueue.length };
-    }
-
-    if (hydrationQueue.length === 0) {
-        return { processed: 0, remaining: 0 };
-    }
-
-    isProcessingQueue = true;
-    let processed = 0;
-
-    try {
-        // Import functions dynamically to avoid circular deps
-        const { hydrateSingleCandidate } = await import('./hydrate-cache');
-
-        // Take batch from front of queue
-        const batch = hydrationQueue.splice(0, batchSize);
-
-        logger.info('deferred_hydration.processing_batch', {
-            batchSize: batch.length,
-            remainingInQueue: hydrationQueue.length,
-        });
-
-        // Process batch in PARALLEL with Promise.allSettled
-        const results = await Promise.allSettled(
-            batch.map(async (item) => {
-                // 1. Hydrate the candidate to cache
-                await hydrateSingleCandidate(item.candidate);
-
-                // 2. Backfill common servings based on food type
-                const { backfillCommonServings } = await import('./serving-backfill');
-                await backfillCommonServings(
-                    item.candidate.id,
-                    item.candidate.name,
-                    item.servingContext?.unit
-                );
-
-                return 'success';
-            })
-        );
-
-        processed = results.filter(r => r.status === 'fulfilled').length;
-        const errors = results.filter(r => r.status === 'rejected').length;
-
-        logger.info('deferred_hydration.batch_complete', {
-            processed,
-            errors,
-            remainingInQueue: hydrationQueue.length,
-        });
-    } catch (err) {
-        logger.error('deferred_hydration.batch_failed', {
-            error: (err as Error).message,
-        });
-    } finally {
-        isProcessingQueue = false;
-    }
-
-    return { processed, remaining: hydrationQueue.length };
-}
-
-/**
- * Process entire queue until empty.
- * Use after all mappings complete.
- */
-export async function drainQueue(
-    batchSize: number = 50
-): Promise<{ totalProcessed: number }> {
-    let totalProcessed = 0;
-
-    logger.info('deferred_hydration.drain_start', {
-        queueSize: hydrationQueue.length,
-    });
-
-    while (hydrationQueue.length > 0) {
-        const result = await processDeferredQueue(batchSize);
-        totalProcessed += result.processed;
-
-        // Small delay between batches to not overwhelm APIs
-        if (hydrationQueue.length > 0) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-    }
-
-    logger.info('deferred_hydration.drain_complete', {
-        totalProcessed,
-    });
-
-    return { totalProcessed };
-}

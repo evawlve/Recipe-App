@@ -27,12 +27,27 @@ import {
     OLLAMA_TIMEOUT_MS,
     NUTRITION_AI_MODEL,
 } from '../mapping/config';
+// Type-only: this module has no use for the STRUCTURED_LLM_PURPOSES array value (the union is
+// DERIVED from it, so `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` is already
+// exhaustive against it). Importing the value as well would add an unused-var lint warning for
+// nothing. llm-usage-metrics.ts is the consumer of the array.
+import type { StructuredLlmPurpose } from './llm-purposes';
+import {
+    recordLlmResponse,
+    recordLlmFailure,
+    recordLlmLogicalSuccess,
+} from './llm-usage-metrics';
 
 // ============================================================
 // Types
 // ============================================================
 
-export type StructuredLlmPurpose = 'normalize' | 'serving' | 'ambiguous' | 'produce' | 'parse' | 'simplify' | 'nutrition';
+// The purpose list moved to ./llm-purposes so that llm-usage-metrics.ts — and through it
+// /api/ok — can seed its per-purpose counters without importing this module (and with it
+// ../mapping/config and dotenv). Re-exported here so every existing importer of
+// `StructuredLlmPurpose` from 'structured-client' keeps compiling unchanged, and so
+// `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` below keeps its exhaustiveness check.
+export type { StructuredLlmPurpose };
 export type StructuredLlmProvider = 'ollama' | 'openrouter' | 'openai';
 
 export interface StructuredLlmOptions {
@@ -290,8 +305,64 @@ interface RequestResult {
     status?: number;
 }
 
+/**
+ * Run a usage counter so that a throw inside it can NEVER change the outcome of the request it
+ * measures. EVERY counter call in this module goes through here.
+ *
+ * WHY: all three counter calls sit inside code paths the request's own error handling owns. Called
+ * directly, a throw from `recordLlmResponse()` would land in `makeRequest()`'s `catch` and be
+ * turned into `{ success: false }` — converting an already-billed, perfectly good LLM answer into
+ * a failure, and then into a retry that bills again. The instrument would be CAUSING the defect it
+ * exists to measure. The `recordLlmLogicalSuccess()` call in `callStructuredLlm()` is worse still:
+ * nothing catches there, so a throw would reject the promise the caller is awaiting.
+ *
+ * Swallowing is correct here and is not the fail-open instrument hole this repo keeps hitting. The
+ * counters are advisory aggregates read through `/api/ok`, where `since`/`pid` and a structural
+ * zero are already documented as "not a measurement"; the request's answer is not advisory. A lost
+ * increment is a wrong NUMBER, a thrown increment is a wrong ANSWER. It is logged at `warn` so a
+ * counter that is throwing is still discoverable.
+ *
+ * Mutation-proved by `src/lib/ai/__tests__/structured-client-telemetry-cannot-fail-the-call.test.ts`:
+ * inline this `try` (call `record()` directly) and ALL FOUR of its tests die (measured
+ * 2026-08-04). Guarded at the source level by the doc-check claim
+ * `llm-counters-cannot-fail-the-request`.
+ */
+function countSafely(record: () => void): void {
+    try {
+        record();
+    } catch (err) {
+        console.warn(
+            `[structured-llm] usage counter threw and was ignored: ${(err as Error)?.message}`
+        );
+    }
+}
+
+/**
+ * THE SINGLE HTTP CHOKEPOINT for structured LLM egress, and therefore where the usage counters
+ * live (Phase 0.5(c)).
+ *
+ * `purpose` is a parameter purely so the counters can be keyed by it — it does not affect the
+ * request. It is NOT optional on purpose: a default would let a new call site silently drop its
+ * calls out of the counters.
+ *
+ * The counter call sits immediately after the envelope is read and BEFORE the `rawContent` guard,
+ * because `makeRequest` returns `success:false` for FOUR separate shapes of billed 2xx — an
+ * envelope that fails `response.json()`, an empty `choices` array, content that fails
+ * `JSON.parse`, and an `error` field inside the model's own JSON — and ALL FOUR WERE BILLED.
+ * Counting in `callStructuredLlm()`'s success branch instead would rebuild a structural
+ * undercount. Guarded by the doc-check claim `llm-usage-counted-before-the-content-guard`.
+ *
+ * EXACTLY ONE OUTCOME IS COUNTED PER ATTEMPT — `responses` if a 2xx came back, `failures` if none
+ * ever did, so `responses + failures === attempts` and `responses` is an EXACT count of billed
+ * provider responses rather than a lower bound. That is what `countResponse()` / `countFailure()`
+ * below buy: the unparseable-envelope shape used to reach only the `catch` (one billed call
+ * recorded as a failure and not as a response), and a `JSON.parse(rawContent)` throw used to
+ * increment BOTH. Both are mutation-proved in
+ * `src/lib/ai/__tests__/structured-client-usage-capture.test.ts`.
+ */
 async function makeRequest(
     provider: ProviderConfig,
+    purpose: StructuredLlmPurpose,
     schema: object,
     systemPrompt: string,
     userPrompt: string,
@@ -300,6 +371,22 @@ async function makeRequest(
 ): Promise<RequestResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    // One outcome per attempt. `countFailure()` is a no-op once a response has been counted, which
+    // is what stops a post-body throw (`JSON.parse(rawContent)`, or `response.text()` on the error
+    // path) from being billed twice — once as a response and again as a failure.
+    let outcomeCounted = false;
+    const countResponse = (usage: unknown, envelopeUnparsed: boolean): void => {
+        outcomeCounted = true;
+        countSafely(() =>
+            recordLlmResponse({ purpose, model: provider.model, usage, envelopeUnparsed })
+        );
+    };
+    const countFailure = (): void => {
+        if (outcomeCounted) return;
+        outcomeCounted = true;
+        countSafely(() => recordLlmFailure({ purpose, model: provider.model }));
+    };
 
     try {
         const headers: Record<string, string> = {
@@ -331,6 +418,8 @@ async function makeRequest(
         clearTimeout(timeoutId);
 
         if (!response.ok) {
+            // Never produced a 2xx body, so not billed.
+            countFailure();
             const errorBody = await response.text();
             return {
                 success: false,
@@ -339,11 +428,51 @@ async function makeRequest(
             };
         }
 
-        const payload = (await response.json()) as {
+        // The envelope is read INSIDE its own try. A 2xx whose body is not JSON at all (a proxy
+        // error page, a truncated stream) was still billed, and letting `response.json()` throw
+        // into the outer catch is exactly how `responses` became a lower bound: that call was
+        // recorded as a failure and never as a response.
+        let payload: {
             choices?: Array<{ message?: { content?: string } }>;
-        };
+            usage?: unknown;
+        } | null = null;
+        let envelopeError: Error | null = null;
+        try {
+            payload = (await response.json()) as {
+                choices?: Array<{ message?: { content?: string } }>;
+                usage?: unknown;
+            };
+        } catch (err) {
+            payload = null;
+            envelopeError = err as Error;
+        }
 
-        const rawContent = payload.choices?.[0]?.message?.content;
+        // A 2xx is in hand: a model ran and we were billed, whatever happens to it below.
+        // This line must stay ABOVE the rawContent guard — see the function docstring.
+        //
+        // The unparseable flag keys on `envelopeError`, NOT on `payload === null`. Those are not
+        // the same predicate: a 2xx whose body is the JSON literal `null` parses perfectly and
+        // leaves `payload` null with no error, so keying on the payload would record a clean parse
+        // as an unparseable envelope AND interpolate a literal "undefined" into the caller's error
+        // string. A null body is a billed, parsed response with no content — it belongs to the
+        // `Empty response from LLM` guard below, which is where it now lands.
+        countResponse(payload?.usage, envelopeError !== null);
+
+        if (envelopeError !== null) {
+            // The COUNTER's view and the CALLER's view of this failure differ on purpose. An abort
+            // can land while the body is being read: for the counter that is still a billed 2xx
+            // (above), but the caller must keep being told it timed out — the error string this
+            // path used to produce, and the one the retry/fallback logic and its logs read.
+            return {
+                success: false,
+                error:
+                    envelopeError.name === 'AbortError'
+                        ? `Request timeout (${timeout}ms)`
+                        : `Unparseable response envelope from LLM provider: ${envelopeError.message}`,
+            };
+        }
+
+        const rawContent = payload?.choices?.[0]?.message?.content;
         if (!rawContent) {
             return { success: false, error: 'Empty response from LLM', raw: payload };
         }
@@ -358,6 +487,14 @@ async function makeRequest(
         return { success: true, content: parsed, raw: parsed };
     } catch (err) {
         clearTimeout(timeoutId);
+
+        // Network error or abort: no 2xx body, not billed.
+        //
+        // A `JSON.parse(rawContent)` throw also lands here, and that attempt HAS already been
+        // counted as a billed response — so this is a no-op for it. That is deliberate: without
+        // the guard, one billed call would increment both `responses` and `failures` and the two
+        // fields would stop summing to attempts.
+        countFailure();
 
         if ((err as Error).name === 'AbortError') {
             return { success: false, error: `Request timeout (${timeout}ms)` };
@@ -419,7 +556,7 @@ export async function callStructuredLlm(
             lastProvider = provider;
 
             for (let attempt = 0; attempt < STRUCTURED_LLM_MAX_RETRIES; attempt++) {
-                const result = await makeRequest(provider, schema, systemPrompt, userPrompt, timeout, maxTokens);
+                const result = await makeRequest(provider, purpose, schema, systemPrompt, userPrompt, timeout, maxTokens);
 
                 if (result.success) {
                     const durationMs = Date.now() - startTime;
@@ -429,8 +566,18 @@ export async function callStructuredLlm(
                         `[structured-llm] ${purpose} call successful: provider=${provider.name}, model=${provider.model}, duration=${durationMs}ms`
                     );
 
-                    // Increment session metrics
+                    // Increment session metrics (still read by scripts/pilot-batch-import.ts —
+                    // deliberately left untouched by 0.5(c)).
                     incrementAiCall(purpose);
+
+                    // The "a line got an answer from a model" number. Distinct from the
+                    // `responses` counter in makeRequest(), which counts billed 2xx responses:
+                    // retries and provider fallback make responses >= logicalSuccesses.
+                    //
+                    // Through countSafely() because NOTHING catches here — a raw throw would
+                    // reject the promise the caller is awaiting, i.e. the instrument would fail
+                    // the very call it just observed succeed.
+                    countSafely(() => recordLlmLogicalSuccess({ purpose, model: provider.model }));
 
                     return {
                         status: 'success',

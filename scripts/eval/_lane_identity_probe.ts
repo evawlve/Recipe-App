@@ -91,7 +91,62 @@ function buildRerankPoolKeyed<T extends { source?: string | null }>(
 }
 
 const KEY_OLD = (c: Meta) => c.source ?? '';
-const KEY_NEW = (c: Meta) => `${c.source ?? ''}#${c.sem != null ? 's' : 'k'}`;
+/** The FLAT split, gated 2026-08-04 and rejected: it hands a split source two
+ *  round-robin slots per pass, taken from the sources that did not split. Kept
+ *  so the rejection stays reproducible, not because it is a candidate. */
+const KEY_FLAT = (c: Meta) => `${c.source ?? ''}#${c.sem != null ? 's' : 'k'}`;
+
+/**
+ * The NESTED split — outer round-robin over `source`, inner rotation over that
+ * source's retrieval blocks. Transcribed from buildRerankPool() on branch
+ * `rerank/lane-identity-source-x-mode`; PORT-CHECK below proves the shared
+ * skeleton against the real function before any number is quoted.
+ */
+function buildNested(candidates: readonly Meta[], limit: number): Meta[] {
+    if (limit <= 0) return [];
+    if (candidates.length <= limit) return candidates.slice();
+
+    const sources = new Map<string, Map<string, Meta[]>>();
+    for (const c of candidates) {
+        const src = c.source ?? '';
+        let modes = sources.get(src);
+        if (!modes) { modes = new Map(); sources.set(src, modes); }
+        const mode = c.sem != null ? 's' : 'k';
+        const bucket = modes.get(mode);
+        if (bucket) bucket.push(c);
+        else modes.set(mode, [c]);
+    }
+    if (sources.size <= 1) {
+        const only = sources.values().next().value;
+        if (!only || only.size <= 1) return candidates.slice(0, limit);
+    }
+
+    const out: Meta[] = [];
+    const modeCursor = new Map<string, number>();
+    const cursors = new Map<string, number>();
+    let progressed = true;
+    while (out.length < limit && progressed) {
+        progressed = false;
+        for (const [src, modes] of sources) {
+            if (out.length >= limit) break;
+            const modeKeys = [...modes.keys()];
+            let taken = false;
+            for (let n = 0; n < modeKeys.length && !taken; n++) {
+                const mk = modeKeys[((modeCursor.get(src) ?? 0) + n) % modeKeys.length];
+                const ck = `${src} ${mk}`;
+                const i = cursors.get(ck) ?? 0;
+                const bucket = modes.get(mk)!;
+                if (i >= bucket.length) continue;
+                out.push(bucket[i]);
+                cursors.set(ck, i + 1);
+                modeCursor.set(src, ((modeCursor.get(src) ?? 0) + n + 1) % modeKeys.length);
+                taken = true;
+            }
+            if (taken) progressed = true;
+        }
+    }
+    return out;
+}
 
 /**
  * Positional provenance within one source's candidates, in gather order.
@@ -133,6 +188,13 @@ function main() {
         }
         metaByQuery.set(e.query, m);
     }
+
+    const variant = (argStr('variant') ?? 'nested') as 'flat' | 'nested';
+    if (variant !== 'flat' && variant !== 'nested') {
+        console.error('--variant must be flat | nested');
+        process.exit(2);
+    }
+    let budgetViolations = 0;
 
     let rows = 0;
     let skippedNoMeta = 0;
@@ -212,7 +274,19 @@ function main() {
         if (overlapIds.size > 0) queriesWithAnyOverlap++;
         if (semOnlyIds.size > 0 && cut > 0) queriesWithOffSplit++;
 
-        const newWin = buildRerankPoolKeyed(filtered, RERANK_POOL_LIMIT, KEY_NEW).map(c => c.id);
+        const newWin = (variant === 'flat'
+            ? buildRerankPoolKeyed(filtered, RERANK_POOL_LIMIT, KEY_FLAT)
+            : buildNested(filtered, RERANK_POOL_LIMIT)).map(c => c.id);
+        // Invariant 6, checked per row rather than asserted: the nested form must
+        // not change any source's share. Counted, and reported, never assumed.
+        if (variant === 'nested') {
+            const share = (ids: string[]) => {
+                const m: Record<string, number> = {};
+                for (const id of ids) { const s = meta.get(id)!.source ?? ''; m[s] = (m[s] ?? 0) + 1; }
+                return JSON.stringify(Object.entries(m).sort());
+            };
+            if (share(real) !== share(newWin)) budgetViolations++;
+        }
         const oldSet = new Set(real);
         const newSet = new Set(newWin);
         const added = newWin.filter(id => !oldSet.has(id));
@@ -245,7 +319,10 @@ function main() {
 
     const pct = (n: number, d: number) => (d === 0 ? 'n/a' : `${((n / d) * 100).toFixed(1)}%`);
 
-    console.log(`\n=== LANE IDENTITY PROBE — source  vs  source x (semanticSimilarity != null) ===`);
+    console.log(`\n=== LANE IDENTITY PROBE — variant=${variant} ===`);
+    console.log(variant === 'nested'
+        ? '    baseline `source`  vs  outer source / inner retrieval mode (budget-neutral)'
+        : '    baseline `source`  vs  FLAT source#mode  (GATED AND REJECTED 2026-08-04)');
     console.log(`snapshot: ${snapPath}`);
     console.log(`replay:   ${replayPath}\n`);
     console.log(`rows usable                 ${rows}`);
@@ -266,6 +343,9 @@ function main() {
     console.log(`  slots given to sem-only    ${newAdmitsSemanticOnly}   <-- the intended rescue`);
     console.log(`  slots given to OVERLAP     ${newAdmitsOverlap}   <-- wasted: keyword already surfaced these`);
     console.log(`  candidates evicted         ${evictedTotal}`);
+    if (variant === 'nested') {
+        console.log(`  INVARIANT 6 violations     ${budgetViolations}   (a source's share changed; must be 0)`);
+    }
     console.log(`baseline winner reachable only in NEW window: ${winnerInNewWindowOnly}`);
 
     if (examples.length) {
