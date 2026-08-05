@@ -330,10 +330,18 @@ describe('guard 4: sibling-borrow carries persisted, it does not assume it', () 
         expect(mockedEstimate).not.toHaveBeenCalled();
     });
 
-    it('still logs the borrow, with persisted:false, if the write is skipped', async () => {
-        // borrowSiblingServing() is OFF-only today, so this shape is not
-        // currently reachable — the assertion exists so that widening it
-        // without widening upsertServing()'s targets cannot go unnoticed.
+    it('the OFF-only guard holds, so an fs_ id never reaches the sibling-borrow log at all', async () => {
+        // NAME MATTERS HERE. An earlier name said this pinned `persisted:false` on a borrow event;
+        // it does the opposite — it asserts the borrow never happens for an fs_ id, because
+        // borrowSiblingServing() is OFF-only today. NOTHING asserts `persisted:false` on a
+        // sibling_borrow event, and nothing can until that function is widened. A reader scanning
+        // test NAMES would have believed coverage exists that does not, which is this repo's
+        // signature drift shape one layer down.
+        //
+        // The assertion exists so that widening borrowSiblingServing() without widening
+        // upsertServing()'s targets cannot go unnoticed: it flips from `toBeUndefined()` to a
+        // logged event the moment the guard moves, and whoever widens it must then decide what
+        // `persisted` should read.
         mockedQueryRaw.mockResolvedValue([
             { grams: 40, description: '1 bar (40g)' },
             { grams: 42, description: '1 bar (42g)' },
