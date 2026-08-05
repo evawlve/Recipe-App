@@ -78,9 +78,40 @@ function bareParsed(name: string, qty = 1): ParsedIngredient {
 
 const mockedQueryRaw = prisma.$queryRaw as jest.Mock;
 
+/**
+ * `prisma.$queryRaw` is a TAGGED TEMPLATE — argument 0 is the template-strings
+ * array, not a SQL string. Both sibling borrows go through this one mock:
+ * `borrowSiblingLabelServing` (brand-keyed) and `borrowNameSiblingLabelServing`
+ * (name-keyed, N1). Under a single `mockResolvedValue` the two stubs could
+ * never differ, which makes every raise-only clamp assertion VACUOUS — the
+ * clamp test would pass with the clamp deleted. Dispatch on the SQL text, and
+ * record the shapes actually issued so a refactor that stops issuing one of
+ * them cannot pass silently (T3).
+ */
+let brandSiblingRows: unknown[] = [];   // borrowSiblingLabelServing     ("brandName" ILIKE)
+let nameSiblingRows: unknown[] = [];    // borrowNameSiblingLabelServing (lower(name) =)
+let otherQueryRows: unknown[] = [];     // borrowSiblingPackageGrams, and anything else
+const observedSql: string[] = [];
+
+/** The pre-dispatch behaviour: every borrow saw the same rows. */
+function setAllSiblingRows(rows: unknown[]) {
+    brandSiblingRows = rows;
+    otherQueryRows = rows;
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
-    mockedQueryRaw.mockResolvedValue([]);
+    brandSiblingRows = [];
+    nameSiblingRows = [];
+    otherQueryRows = [];
+    observedSql.length = 0;
+    mockedQueryRaw.mockImplementation((strings: TemplateStringsArray) => {
+        const sql = Array.isArray(strings) ? strings.join('?') : String(strings);
+        observedSql.push(sql);
+        if (sql.includes('"brandName" ILIKE')) return Promise.resolve(brandSiblingRows);
+        if (sql.includes('lower(name) =')) return Promise.resolve(nameSiblingRows);
+        return Promise.resolve(otherQueryRows);
+    });
     (getOrCreateAmbiguousServing as jest.Mock).mockResolvedValue({ status: 'error', error: 'not mocked' });
 });
 
@@ -180,7 +211,7 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
             servingGrams: 100,
             servingDescription: '1 portion (100 g)',
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 39.8, n: 148 }]);
+        setAllSiblingRows([{ med: 39.8, n: 148 }]);
 
         const result = await buildOffResult(
             makeCandidate('Snickers'), bareParsed('snickers'), 0.9, 'snickers'
@@ -197,7 +228,7 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
             servingGrams: 100,
             servingDescription: '100 g',
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 55, n: 200 }]);
+        setAllSiblingRows([{ med: 55, n: 200 }]);
 
         const result = await buildOffResult(
             makeCandidate('Caramel Cashew'),
@@ -215,7 +246,7 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
             servingGrams: 1,
             servingDescription: '1.0g',
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 127, n: 12 }]);
+        setAllSiblingRows([{ med: 127, n: 12 }]);
 
         const result = await buildOffResult(
             makeCandidate('Ham & Cheese Hot Pocket'),
@@ -233,7 +264,7 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
             servingGrams: 100,
             servingDescription: '1 portion (100 g)',
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 55, n: 2 }]);
+        setAllSiblingRows([{ med: 55, n: 2 }]);
 
         const result = await buildOffResult(
             makeCandidate('Butter Chicken'), bareParsed('butter chicken'), 0.9, 'butter chicken'
@@ -256,7 +287,7 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
             packageQuantity: 591,
             packageQuantityUnit: 'ml',
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 355, n: 190 }]);
+        setAllSiblingRows([{ med: 355, n: 190 }]);
 
         const result = await buildOffResult(
             makeCandidate('Gatorade Thirst Quencher'), bareParsed('gatorade'), 0.9, '1 gatorade'
@@ -274,7 +305,7 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
             packageQuantity: 591,
             packageQuantityUnit: 'ml',
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 355, n: 190 }]);
+        setAllSiblingRows([{ med: 355, n: 190 }]);
 
         const result = await buildOffResult(
             makeCandidate('Gatorade Thirst Quencher'), bareParsed('gatorade'), 0.9, 'gatorade'
@@ -376,7 +407,7 @@ describe('dose-anchored categories — own-label/sibling steps must NOT outrank 
             servingDescription: '0.5 cup (104 g)',
         }));
         // Even a plausible sibling median must not answer either.
-        mockedQueryRaw.mockResolvedValue([{ med: 104, n: 12 }]);
+        setAllSiblingRows([{ med: 104, n: 12 }]);
 
         const result = await buildOffResult(
             makeCandidate('Granulated White Sugar'), bareParsed('sugar'), 0.9, 'sugar'
@@ -392,7 +423,7 @@ describe('dose-anchored categories — own-label/sibling steps must NOT outrank 
             brandName: 'Domino',
             servingGrams: null,
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 104, n: 12 }]);
+        setAllSiblingRows([{ med: 104, n: 12 }]);
 
         const result = await buildOffResult(
             makeCandidate('Granulated White Sugar'), bareParsed('sugar'), 0.9, 'sugar'
@@ -412,7 +443,7 @@ describe('dose-anchored categories — own-label/sibling steps must NOT outrank 
             brandName: 'Ghost',
             servingGrams: null,
         }));
-        mockedQueryRaw.mockResolvedValue([{ med: 32.5, n: 147 }]);
+        setAllSiblingRows([{ med: 32.5, n: 147 }]);
 
         const result = await buildOffResult(
             makeCandidate('Ghost Legend Pre Workout Cherry Limeade'),
@@ -459,5 +490,101 @@ describe('step (4) — bounded discrete floor, never flat-100g for piece names',
 
         expect(result?.servingTier).toBe('bare_discrete_floor');
         expect(result?.grams).toBe(50);
+    });
+});
+
+/**
+ * (E) NAME-GROUP SIBLING MEDIAN — N1, item #16, Aug 2026.
+ *
+ * The rung sits BELOW applyOffBareQueryGuard and is gated on the surviving
+ * fabricated tier ('count_unresolved_floor'), so the category lexicon, every
+ * package/label tier and rung (C2)'s brand borrow all keep precedence. Only the
+ * UPWARD half of the name-group mixture ships: a name group is a mixture
+ * (asparagus 85 g, blueberries 62.5 g — dried/freeze-dried products dominate)
+ * and the downward half is worse than the 100 g floor it would replace.
+ */
+describe('step (E) — name-group sibling median, raise-only', () => {
+    it('raise-only: a below-floor name median is refused (asparagus 85 g does not beat the 100 g floor)', async () => {
+        // 'asparagus' ends in -us, so isMorphologicalPluralToken excludes it and
+        // the line genuinely REACHES this rung. A plural fixture (blueberries)
+        // would be stopped by the bare-plural gate and pass for the wrong reason.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Asparagus',
+            brandName: null,
+            servingGrams: null,
+            nutrientsPer100g: { calories: 20, protein: 2.2, carbs: 3.9, fat: 0.1 },
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 85, n: 25 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Asparagus'), bareParsed('asparagus'), 0.9, 'asparagus'
+        );
+
+        // MUTATION TEST: deleting `&& nameSib.grams > grams` from the (E) rung
+        // makes this fail with 'bare_name_sibling_serving' / 85.
+        expect(result?.servingTier).toBe('count_unresolved_floor');
+        expect(result?.grams).toBe(100);
+    });
+
+    it('name-group median raises the fabricated floor (big mac 100 → 232 g at n=3)', async () => {
+        // brandForBorrow is the food name's first token gated at length >= 4, so
+        // 'Big' is null and rung (C2) is structurally unreachable here — which is
+        // exactly why the plan's flagship line needs a NAME-keyed borrow.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Big Mac',
+            brandName: null,
+            servingGrams: null,
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 232, n: 3 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Big Mac'), bareParsed('big mac'), 0.9, 'big mac'
+        );
+
+        // n=3 pins the minimum as well: 'a big mac' sits at exactly n=3 live, so
+        // raising the borrow to n>=5 turns this red.
+        expect(result?.servingTier).toBe('bare_name_sibling_serving');
+        expect(result?.grams).toBe(232);
+    });
+
+    it('issues both the brand-keyed and the name-keyed sibling query', async () => {
+        // Instrument tripwire: without it, a refactor that stops issuing the
+        // name-keyed query makes the raise-only test above pass vacuously.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Asparagus',
+            brandName: null,
+            servingGrams: null,
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 85, n: 25 }];
+
+        await buildOffResult(
+            makeCandidate('Asparagus'), bareParsed('asparagus'), 0.9, 'asparagus'
+        );
+
+        expect(observedSql.some(s => s.includes('"brandName" ILIKE'))).toBe(true);
+        expect(observedSql.some(s => s.includes('lower(name) ='))).toBe(true);
+    });
+
+    it('the category lexicon still wins over a name median (coca cola stays 355 g)', async () => {
+        // GUARD-PRECEDENCE PIN — this encodes the entire narrowing. Moving the
+        // rung up to (C2) turns it red: 'bare_sibling_serving' is guard-exempt,
+        // so a borrow there pre-empts bare_category_default and this bills 275.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Coca Cola',
+            brandName: null,
+            servingGrams: null,
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 275, n: 6 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Coca Cola'), bareParsed('coca cola'), 0.9, 'coca cola'
+        );
+
+        expect(result?.servingTier).toBe('bare_category_default');
+        expect(result?.grams).toBe(355);
     });
 });

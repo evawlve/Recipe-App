@@ -14,6 +14,7 @@
 import { buildOffResult, isBarePluralRequest } from '../map-ingredient-with-fallback';
 import { hydrateOffCandidate } from '../../openfoodfacts/hydrate';
 import { getOrCreateAmbiguousServing } from '../ambiguous-unit-backfill';
+import { prisma } from '../../db';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
 jest.mock('../../db', () => ({
@@ -72,8 +73,33 @@ function bareParsed(name: string, qty = 1): ParsedIngredient {
     return { qty, multiplier: 1, unit: null, name };
 }
 
+const mockedQueryRaw = prisma.$queryRaw as jest.Mock;
+
+/**
+ * `prisma.$queryRaw` is a TAGGED TEMPLATE — argument 0 is the template-strings
+ * array. Both sibling borrows (`borrowSiblingLabelServing`, brand-keyed; and
+ * `borrowNameSiblingLabelServing`, name-keyed, N1) share this one mock, so a
+ * single blanket resolved value makes any per-borrow assertion vacuous.
+ * Dispatch on the SQL text so each is independently controllable. Every bucket
+ * defaults to [] here, which is byte-identical to the previous behaviour — the
+ * point is that the `grapes` pin below cannot silently start depending on a
+ * borrow it is supposed to prove is suppressed.
+ */
+let brandSiblingRows: unknown[] = [];   // borrowSiblingLabelServing     ("brandName" ILIKE)
+let nameSiblingRows: unknown[] = [];    // borrowNameSiblingLabelServing (lower(name) =)
+let otherQueryRows: unknown[] = [];     // borrowSiblingPackageGrams, and anything else
+
 beforeEach(() => {
     jest.clearAllMocks();
+    brandSiblingRows = [];
+    nameSiblingRows = [];
+    otherQueryRows = [];
+    mockedQueryRaw.mockImplementation((strings: TemplateStringsArray) => {
+        const sql = Array.isArray(strings) ? strings.join('?') : String(strings);
+        if (sql.includes('"brandName" ILIKE')) return Promise.resolve(brandSiblingRows);
+        if (sql.includes('lower(name) =')) return Promise.resolve(nameSiblingRows);
+        return Promise.resolve(otherQueryRows);
+    });
     (getOrCreateAmbiguousServing as jest.Mock).mockResolvedValue({ status: 'success', grams: 5 });
 });
 
@@ -182,6 +208,11 @@ describe('buildOffResult — bare-plural inversion (A3)', () => {
             foodName: 'Grapes',
             servingGrams: null,
         }));
+        // A RAISING name-group median is offered on purpose: the (E) rung
+        // (N1) carries `!isBarePluralRequest(...)` for parity with rung (C2),
+        // and dropping that clause bills 200g here instead of the floor. With
+        // an empty stub this pin would be green either way.
+        nameSiblingRows = [{ med: 200, n: 40 }];
 
         const result = await buildOffResult(
             makeCandidate('Grapes'), bareParsed('grapes'), 0.9, 'grapes'

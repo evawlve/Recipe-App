@@ -15,6 +15,13 @@
  *       ('bare_discrete_floor', wired below in the REPLACE path).
  * This module owns the eligibility predicate, the label-usability band, and
  * the post-cascade override (CAP / REPLACE / floor). Pure functions, no I/O.
+ *
+ * 'bare_name_sibling_serving' (N1, Aug 2026) is DELIBERATELY absent from every
+ * tier set below, and that is not an omission to fix. That rung runs AFTER this
+ * guard — it is gated on the guard having already declined (tier still
+ * 'count_unresolved_floor') — so any membership here would be dead code. Adding
+ * it would also re-create the pre-emption bug the rung was placed low to avoid:
+ * see the (E) rung comment in buildOffResult (map-ingredient-with-fallback.ts).
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';

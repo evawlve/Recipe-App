@@ -5442,6 +5442,62 @@ async function borrowSiblingLabelServing(
     }
 }
 
+/**
+ * Median NAME-GROUP label serving — the brandless twin of
+ * borrowSiblingLabelServing (N1, item #16, Aug 2026). A brandless OFF row
+ * ("Asparagus", "Big Mac") has 58.1% NULL servingGrams against branded rows'
+ * 17.7% (measured 2026-08-05, `GROUP BY brandName IS NULL` over OffFood), and
+ * the brand-keyed borrow above is structurally unreachable for it:
+ * brandForBorrow falls back to the food name's FIRST TOKEN, so 'Asparagus'
+ * queries `brandName ILIKE 'Asparagus'` and matches nothing.
+ *
+ * DELIBERATELY A SEPARATE FUNCTION, not a key-mode argument on the brand
+ * borrow. MappingEventLog.servingTier is the only post-deploy instrument we
+ * have, and merging the two mechanisms under one tier string makes the split
+ * unmeasurable — the serving-cascade-divergence failure shape.
+ *
+ * Predicate notes, all measured 2026-08-05 and NOT free to "optimise":
+ *  - `lower(name)`, not a case-sensitive `name =`. The indexed form is ~2,800x
+ *    faster (0.132 ms vs 369 ms) but loses 43.7% of raise events, and 'a big
+ *    mac' drops to n=2 and fails the n>=3 minimum. The seq scan is the price.
+ *  - `duplicateOfBarcode`/`corruptReason` NULL: a name key concentrates
+ *    near-duplicates by construction (dedupe-off-mark.ts marks rows sharing an
+ *    exact name), so 18.9% of in-band siblings in the affected name groups
+ *    carry one of these marks vs 10.9% corpus-wide.
+ *  - The 3 g floor looks inert because the CALLER is raise-only against a 100 g
+ *    floor, so the accepted OUTPUT range is (100, 400]. It is NOT inert on the
+ *    INPUT rows, where it keeps sub-3 g garbage out of the median. Do not
+ *    delete half this band. MAX=400 still binds (largest firing medians
+ *    350/355).
+ *  - `n >= 3`: n=3 carries 22.2% of RAISE events and only 5.1% of LOWER events,
+ *    and 'a big mac' sits at exactly n=3. Raising to 5 costs 205 RAISE events.
+ */
+async function borrowNameSiblingLabelServing(
+    foodName: string | null | undefined,
+    selfBarcode: string,
+): Promise<{ grams: number; samples: number } | null> {
+    const nm = foodName?.trim();
+    if (!nm || nm.length < 2) return null;
+    try {
+        const { prisma } = await import('../db');
+        const rows = await prisma.$queryRaw<Array<{ med: number | null; n: number }>>`
+            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
+                   count(*)::int AS n
+            FROM "OffFood"
+            WHERE lower(name) = lower(${nm})
+              AND barcode <> ${selfBarcode}
+              AND "duplicateOfBarcode" IS NULL
+              AND "corruptReason" IS NULL
+              AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
+              AND "servingGrams" <> 100`;
+        const row = rows[0];
+        if (!row?.med || row.n < 3) return null;
+        return { grams: row.med, samples: row.n };
+    } catch {
+        return null;
+    }
+}
+
 // Exported for tests (tier cascade + bare-query guard wire-in).
 export async function buildOffResult(
     candidate: UnifiedCandidate,
@@ -5937,6 +5993,59 @@ export async function buildOffResult(
         grams = bareOverride.grams;
         servingDescription = bareOverride.servingDescription;
         servingTier = bareOverride.servingTier;
+    }
+
+    // (E) NAME-GROUP SIBLING MEDIAN, RAISE-ONLY. Reaching here still stamped
+    // 'count_unresolved_floor' means every rung above AND the category lexicon
+    // (applyOffBareQueryGuard runs first and stamps its own tier) had no answer:
+    // no label, no package, no piece seed, no lexicon default. The 100 is a bare
+    // literal, not data.
+    //
+    // This rung is deliberately BELOW the guard. At rung (C2) a borrow is
+    // guard-EXEMPT ('bare_sibling_serving' is in none of CAP_TIERS /
+    // HEAD_GATED_CAP_TIERS / REPLACE_TIERS) and therefore pre-empts
+    // bare_category_default, label_serving_default and package_count_*; measured
+    // 2026-08-05, that lowers 207 events, 196 of them `coca cola` 355 -> 275.
+    //
+    // RAISE-ONLY: a name group is a MIXTURE (asparagus 85 g, blueberries 62.5 g,
+    // strawberries 65.0 g — dried/freeze-dried products dominate), and the
+    // downward half is worse than the floor it would replace.
+    //
+    // The tier gate structurally implies five of rung (C2)'s own clauses, which
+    // are therefore NOT restated here: grams == null (by construction of the
+    // branch that stamped the tier), bareLabelGrams == null (345 of 345 zone
+    // records have servingGrams NULL or <= 0), !doseAnchored (a non-null
+    // getBareQueryDefault would have fired the guard's REPLACE path and changed
+    // the tier), the ml drink-the-unit exception (1 record / 1 event in the
+    // zone), and "the guard already declined". All measured 2026-08-05.
+    if (
+        servingTier === 'count_unresolved_floor'
+        // Excludes 113 digit-line floor events: for "15 pretzels" a 30 g median
+        // billed once is WORSE than the floor.
+        && bareRequest
+        // Leaves 64 branded digitless floor events to rung (C2), which already
+        // ran against their real brand and returned n < 3.
+        && hydrated.brandName == null
+        // Parity with rung (C2); keeps the `grapes` pin green. Costs ~64 RAISE
+        // events and is cheaply reversible. Recomputed rather than hoisted:
+        // barePluralRequest/itemNameForCount are block-scoped inside the
+        // unitless-count branch, and hoisting them changes rung-(C2) ordering.
+        && !isBarePluralRequest(parsed, rawLine, parsed?.name || hydrated.foodName)
+    ) {
+        const nameSib = await borrowNameSiblingLabelServing(
+            hydrated.foodName, candidate.id.replace(/^off_/, '')
+        );
+        if (nameSib != null && nameSib.grams > grams) {
+            grams = nameSib.grams;
+            servingDescription = `1 serving (~${nameSib.grams.toFixed(0)}g, name median)`;
+            servingTier = 'bare_name_sibling_serving';
+            logger.info('off.build_result.bare_name_sibling_serving', {
+                foodId: candidate.id,
+                name: hydrated.foodName,
+                grams: nameSib.grams,
+                samples: nameSib.samples,
+            });
+        }
     }
 
     const factor = grams / 100;
