@@ -14,7 +14,7 @@
  * count-label divide).
  */
 
-import { buildOffResult } from '../map-ingredient-with-fallback';
+import { buildOffResult, isTightNameGroup } from '../map-ingredient-with-fallback';
 import { hydrateOffCandidate } from '../../openfoodfacts/hydrate';
 import { getOrCreateAmbiguousServing } from '../ambiguous-unit-backfill';
 import { prisma } from '../../db';
@@ -515,14 +515,122 @@ describe('step (E) — name-group sibling median, raise-only', () => {
             nutrientsPer100g: { calories: 20, protein: 2.2, carbs: 3.9, fat: 0.1 },
         }));
         setAllSiblingRows([]);
-        nameSiblingRows = [{ med: 85, n: 25 }];
+        // A genuine MIXTURE, which is the population the clamp was justified on:
+        // fresh spears sit near 85 g and dried/freeze-dried packs near 20-30 g,
+        // so p75/p25 = 200/40 = 5.0 and the group median is not a serving size.
+        nameSiblingRows = [{ med: 85, n: 25, p25: 40, p75: 200 }];
 
         const result = await buildOffResult(
             makeCandidate('Asparagus'), bareParsed('asparagus'), 0.9, 'asparagus'
         );
 
         // MUTATION TEST: deleting `&& nameSib.grams > grams` from the (E) rung
-        // makes this fail with 'bare_name_sibling_serving' / 85.
+        // makes this fail with 'bare_name_sibling_serving' / 85. Deleting the
+        // `isTightNameGroup(...)` conjunct from `lowersIntoTightGroup` fails it
+        // with 'bare_name_sibling_serving_tight' / 85.
+        expect(result?.servingTier).toBe('count_unresolved_floor');
+        expect(result?.grams).toBe(100);
+    });
+
+    it('TIGHT group lowers below the floor (mature cheddar 100 → 30 g, n=17 all 30)', async () => {
+        // Real corpus group, measured 2026-08-05: 17 in-band siblings named
+        // 'Mature cheddar', every one declaring 30 g, so p75/p25 = 1.00. This is
+        // a conventional label serving repeated across near-identical SKUs, not
+        // a mixture — the 100 g floor is a bare literal outranking it.
+        //
+        // SINGULAR on purpose. 'Broccoli florets' is the more vivid uniform
+        // group (n=130, all 85 g) but it is bare-PLURAL, so rung (E) never runs
+        // for it and the fixture would prove nothing about this clamp. The two
+        // blockers partition the residual: 15 raise-blocked, 13 plural-blocked.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Mature cheddar',
+            brandName: null,
+            servingGrams: null,
+            nutrientsPer100g: { calories: 416, protein: 25.4, carbs: 0.1, fat: 34.9 },
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 30, n: 17, p25: 30, p75: 30 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Mature cheddar'), bareParsed('mature cheddar'), 0.9, 'mature cheddar'
+        );
+
+        // MUTATION TEST: restoring the raise-only clamp (dropping the
+        // `|| lowersIntoTightGroup` disjunct) fails this with
+        // 'count_unresolved_floor' / 100.
+        expect(result?.servingTier).toBe('bare_name_sibling_serving_tight');
+        expect(result?.grams).toBe(30);
+    });
+
+    it('the bare-PLURAL gate still pre-empts a tight lowering (broccoli florets stays on the floor)', async () => {
+        // The uniform group above (n=130, all 85 g) is unreachable BY DESIGN:
+        // rung (E) requires !isBarePluralRequest. This pins that the tight-group
+        // relaxation did NOT quietly widen the plural gate — 13 of the 28
+        // residual rows are blocked here, and closing them is a separate change
+        // with its own gate.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Broccoli florets',
+            brandName: null,
+            servingGrams: null,
+            nutrientsPer100g: { calories: 34, protein: 2.8, carbs: 6.6, fat: 0.4 },
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 85, n: 130, p25: 85, p75: 85 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Broccoli florets'), bareParsed('broccoli florets'), 0.9, 'broccoli florets'
+        );
+
+        expect(result?.servingTier).toBe('count_unresolved_floor');
+        expect(result?.grams).toBe(100);
+    });
+
+    it('the SEPARATE tier is keyed on DIRECTION, not on tightness (a tight RAISE stays the original tier)', async () => {
+        // Without this the two axes are confounded and a tier-keyed instrument
+        // reading `_tight` would silently be reading "was measured tight", not
+        // "billed below the floor". 'Big Mac' is tight AND raises.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Big Mac',
+            brandName: null,
+            servingGrams: null,
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 232, n: 3, p25: 220, p75: 240 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Big Mac'), bareParsed('big mac'), 0.9, 'big mac'
+        );
+
+        expect(result?.servingTier).toBe('bare_name_sibling_serving');
+        expect(result?.grams).toBe(232);
+    });
+
+    it('a NULL p25/p75 never reads as tight (fail-closed on absent dispersion)', async () => {
+        // The borrow coalesces NULLs to p25=0 / p75=Infinity precisely so a
+        // missing aggregate cannot be mistaken for a uniform group. A fixture
+        // that simply omits the columns is the shape an older cached/mocked row
+        // has, and it must decline rather than lower.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Asparagus',
+            brandName: null,
+            servingGrams: null,
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 85, n: 25, p25: null, p75: null }];
+
+        const result = await buildOffResult(
+            makeCandidate('Asparagus'), bareParsed('asparagus'), 0.9, 'asparagus'
+        );
+
+        // MUTATION TEST: coalescing a missing percentile to `row.med` — the
+        // "helpful" refactor, which makes every NULL group read as p25 == p75
+        // and therefore perfectly tight — fails this with 30 g.
+        //
+        // Swapping the 0/Infinity sentinels for each other does NOT fail it, and
+        // that was checked rather than assumed: the ratio arithmetic already
+        // fails closed for every NULL combination, so the sentinel choice is
+        // unobservable here. This is a REGRESSION PIN on the outcome, not a
+        // guard test for those two literals.
         expect(result?.servingTier).toBe('count_unresolved_floor');
         expect(result?.grams).toBe(100);
     });
@@ -537,7 +645,7 @@ describe('step (E) — name-group sibling median, raise-only', () => {
             servingGrams: null,
         }));
         setAllSiblingRows([]);
-        nameSiblingRows = [{ med: 232, n: 3 }];
+        nameSiblingRows = [{ med: 232, n: 3, p25: 220, p75: 240 }];
 
         const result = await buildOffResult(
             makeCandidate('Big Mac'), bareParsed('big mac'), 0.9, 'big mac'
@@ -586,5 +694,50 @@ describe('step (E) — name-group sibling median, raise-only', () => {
 
         expect(result?.servingTier).toBe('bare_category_default');
         expect(result?.grams).toBe(355);
+    });
+});
+
+/**
+ * The dispersion predicate on its own. Every ratio below is a real name group
+ * measured over `OffFood` on 2026-08-05 (the 28-row #18 residual), so the
+ * boundary is pinned by the corpus rather than by invented numbers.
+ */
+describe('isTightNameGroup', () => {
+    it.each([
+        ['Broccoli florets — 130 rows all 85 g', 85, 85, true],
+        ['Mature cheddar — 17 rows all 30 g', 30, 30, true],
+        ['Chicken tenderloins — 112/113.4', 112, 113.4, true],
+        ['Rotisserie chicken — 84/113, ratio 1.345', 84, 113, true],
+        ['Albacore tuna — 75.75/113, ratio 1.492 (just inside)', 75.75, 113, true],
+        ['Spaghetti and meatballs — 198.75/336, ratio 1.69', 198.75, 336, false],
+        ['pasta — 56/115.5, ratio 2.06 (dry vs cooked)', 56, 115.5, false],
+        ['hot chocolate — 15.5/33, ratio 2.13 (sachet vs mug)', 15.5, 33, false],
+        ['Roasted red peppers — 30/130, ratio 4.33', 30, 130, false],
+    ])('%s', (_label, p25, p75, expected) => {
+        expect(isTightNameGroup(p25 as number, p75 as number)).toBe(expected);
+    });
+
+    it('the boundary is inclusive at exactly 1.5 and excludes just above it', () => {
+        // MUTATION TEST: flipping `<=` to `<` fails the first of these.
+        expect(isTightNameGroup(100, 150)).toBe(true);
+        expect(isTightNameGroup(100, 150.01)).toBe(false);
+    });
+
+    it('degenerate inputs are never tight', () => {
+        // p25 = 0 would make the ratio Infinity or NaN; Infinity is the borrow's
+        // coalesce for a NULL p75. Each must decline, not divide.
+        expect(isTightNameGroup(0, 0)).toBe(false);
+        expect(isTightNameGroup(0, 85)).toBe(false);
+        expect(isTightNameGroup(85, 0)).toBe(false);
+        expect(isTightNameGroup(0, Number.POSITIVE_INFINITY)).toBe(false);
+        expect(isTightNameGroup(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)).toBe(false);
+        expect(isTightNameGroup(Number.NaN, 85)).toBe(false);
+        expect(isTightNameGroup(-30, -20)).toBe(false);
+    });
+
+    it('an inverted pair is refused rather than silently reordered', () => {
+        // p75 < p25 can only mean the aggregate was misread. Sorting the pair
+        // here would turn a broken instrument into a plausible answer.
+        expect(isTightNameGroup(113, 84)).toBe(false);
     });
 });

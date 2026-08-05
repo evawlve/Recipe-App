@@ -5503,7 +5503,18 @@ async function borrowNameSiblingLabelServing(
  */
 const NAME_GROUP_TIGHT_RATIO = 1.5;
 
-/** Exported for tests. A group is tight when its IQR ratio is finite and <= the threshold. */
+/**
+ * Exported for tests. A group is tight when its IQR ratio is <= the threshold.
+ *
+ * The `<= 0` and inverted-pair guards are load-bearing and each has a test that
+ * dies without it (negative percentiles otherwise divide to a plausible ratio;
+ * an inverted pair otherwise gets silently reordered into one). The `isFinite`
+ * guard is deliberately redundant — verified by mutation on 2026-08-05, nothing
+ * observes its removal, because every non-finite input already fails the checks
+ * below or the comparison itself. It is kept because it is what makes the
+ * Infinity sentinel in the borrow legible, and it is recorded as redundant here
+ * so nobody later reads its presence as evidence of a case it handles alone.
+ */
 export function isTightNameGroup(p25: number, p75: number): boolean {
     if (!Number.isFinite(p25) || !Number.isFinite(p75)) return false;
     if (p25 <= 0 || p75 <= 0) return false;
