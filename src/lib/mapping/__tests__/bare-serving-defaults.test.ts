@@ -562,12 +562,15 @@ describe('step (E) — name-group sibling median, raise-only', () => {
         expect(result?.grams).toBe(30);
     });
 
-    it('the bare-PLURAL gate still pre-empts a tight lowering (broccoli florets stays on the floor)', async () => {
-        // The uniform group above (n=130, all 85 g) is unreachable BY DESIGN:
-        // rung (E) requires !isBarePluralRequest. This pins that the tight-group
-        // relaxation did NOT quietly widen the plural gate — 13 of the 28
-        // residual rows are blocked here, and closing them is a separate change
-        // with its own gate.
+    it('a TIGHT bare-PLURAL group lowers, on its own tier (broccoli florets 100 → 85 g, n=130)', async () => {
+        // Real corpus group, measured 2026-08-05: n=130 in-band siblings named
+        // 'Broccoli florets', every one declaring 85 g (1 cup), ratio 1.00 — the
+        // most uniform group in the whole residual population.
+        //
+        // This test previously asserted the OPPOSITE, as a deliberate pin that
+        // #252's tight relaxation had not widened the plural gate. Widening it is
+        // this change, and the pin is inverted rather than deleted so the flip is
+        // visible in history.
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
             foodName: 'Broccoli florets',
             brandName: null,
@@ -581,8 +584,60 @@ describe('step (E) — name-group sibling median, raise-only', () => {
             makeCandidate('Broccoli florets'), bareParsed('broccoli florets'), 0.9, 'broccoli florets'
         );
 
+        // MUTATION TEST: restoring `&& !isBarePluralRequest(...)` to the (E)
+        // condition fails this with 'count_unresolved_floor' / 100. Stamping the
+        // singular '_tight' tier instead of '_plural' fails it too — the arms
+        // must stay separately countable.
+        expect(result?.servingTier).toBe('bare_name_sibling_serving_plural');
+        expect(result?.grams).toBe(85);
+    });
+
+    it('a DISPERSED bare-PLURAL group is still refused (roasted red peppers, ratio 4.33)', async () => {
+        // The other half of the plural population, and the reason the relaxation
+        // is tight-gated rather than a plain gate removal. Real corpus group,
+        // measured 2026-08-05: n=13, median 45 g, p25 30 / p75 130 — jarred
+        // whole peppers against sliced portions, exactly the MIXTURE shape.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Roasted red peppers',
+            brandName: null,
+            servingGrams: null,
+            nutrientsPer100g: { calories: 27, protein: 1.1, carbs: 5.4, fat: 0.2 },
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 45, n: 13, p25: 30, p75: 130 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Roasted red peppers'), bareParsed('roasted red peppers'), 0.9, 'roasted red peppers'
+        );
+
+        // MUTATION TEST: dropping the plural arm's `tightGroup` requirement — the
+        // naive "just delete the plural gate" change — fails this with
+        // 'bare_name_sibling_serving_plural' / 45.
         expect(result?.servingTier).toBe('count_unresolved_floor');
         expect(result?.grams).toBe(100);
+    });
+
+    it('a TIGHT bare-PLURAL group also RAISES (cod fillets 100 → 113 g, ratio 1.01)', async () => {
+        // The plural arm is direction-free: tightness alone admits. Real corpus
+        // group, measured 2026-08-05: n=22, median 113 g (4 oz), p25 112 / p75
+        // 113. Only 2 of the 7 tight plural repairs are raises, which is why
+        // DIRECTION was the wrong axis to gate this on — a raise-only plural rule
+        // would have repaired 2 and admitted 3 mixtures.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Cod fillets',
+            brandName: null,
+            servingGrams: null,
+            nutrientsPer100g: { calories: 82, protein: 17.8, carbs: 0, fat: 0.7 },
+        }));
+        setAllSiblingRows([]);
+        nameSiblingRows = [{ med: 113, n: 22, p25: 112, p75: 113 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Cod fillets'), bareParsed('cod fillets'), 0.9, 'cod fillets'
+        );
+
+        expect(result?.servingTier).toBe('bare_name_sibling_serving_plural');
+        expect(result?.grams).toBe(113);
     });
 
     it('the SEPARATE tier is keyed on DIRECTION, not on tightness (a tight RAISE stays the original tier)', async () => {

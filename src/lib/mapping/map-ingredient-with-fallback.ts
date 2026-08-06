@@ -6044,6 +6044,38 @@ export async function buildOffResult(
     // repeat the serving-cascade-divergence mistake this rung's own borrow
     // function documents.
     //
+    // A BARE PLURAL takes the tight test in BOTH directions, and that is the
+    // whole of its admission rule. `isBarePluralRequest` exists to suppress
+    // PER-PIECE resolution — label count, seed table, discrete-unit backfill,
+    // the grapes-5g / m&ms-0.9g class — and its own contract says such a
+    // request "must fall through to serving-scale tiers". This rung IS a
+    // serving-scale tier: it borrows the median DECLARED SERVING of same-named
+    // records. Applying a per-piece suppressor to it was over-broad.
+    //
+    // Tightness, not direction, is what makes a plural median safe, and that
+    // was measured rather than argued (2026-08-05, over the 13 plural-blocked
+    // rows of #18's residual): 7 are tight and every one of them is a
+    // conventional serving — `Wide egg noodles` 56 g (2 oz dry, ratio 1.00),
+    // `Broccoli florets` 85 g (1 cup, 1.00), `Cod fillets` 113 g (4 oz, 1.01),
+    // `Chicken tenderloins` 112 g (1.01). The 6 dispersed ones are exactly the
+    // mixtures the clamp was built for (`roasted red peppers` 4.33, `frozen
+    // mozzarella sticks` 4.33). DIRECTION does not separate them — only 2 of
+    // the 7 repairs are RAISES — so a direction rule admits mixtures and
+    // rejects real servings in both directions at once.
+    //
+    // This is also what keeps the `grapes` pin green, and on the real corpus
+    // rather than by accident: `Grapes` measures n=8, median 142 g, ratio 1.71
+    // — genuinely a mixture of bunches and portions, so it is rejected for the
+    // reason the clamp names. A bare relaxation bills it 142 g. Highest
+    // admitted ratio is 1.29 and lowest rejected 1.69, so 1.5 sits in open
+    // space here (it binds at 1.49 for the singular arm — a tighter margin).
+    //
+    // The plural arm stamps its own tier so the new population is countable
+    // and revertible on its own. It needs no direction suffix: this rung only
+    // runs on `count_unresolved_floor` + `bareRequest`, where `grams` is always
+    // the flat 100 literal, so the tier's own grams read the direction (>100
+    // raise, <100 lower) — which is how the singular pair reads live today.
+    //
     // The tier gate structurally implies five of rung (C2)'s own clauses, which
     // are therefore NOT restated here: grams == null (by construction of the
     // branch that stamped the tier), bareLabelGrams == null (345 of 345 zone
@@ -6059,22 +6091,32 @@ export async function buildOffResult(
         // Leaves 64 branded digitless floor events to rung (C2), which already
         // ran against their real brand and returned n < 3.
         && hydrated.brandName == null
-        // Parity with rung (C2); keeps the `grapes` pin green. Costs ~64 RAISE
-        // events and is cheaply reversible. Recomputed rather than hoisted:
-        // barePluralRequest/itemNameForCount are block-scoped inside the
-        // unitless-count branch, and hoisting them changes rung-(C2) ordering.
-        && !isBarePluralRequest(parsed, rawLine, parsed?.name || hydrated.foodName)
     ) {
+        // Recomputed rather than hoisted: barePluralRequest/itemNameForCount are
+        // block-scoped inside the unitless-count branch, and hoisting them
+        // changes rung-(C2) ordering. Computed inside the block, not in the
+        // condition, because it is no longer a gate — only a policy selector.
+        const barePlural = isBarePluralRequest(
+            parsed, rawLine, parsed?.name || hydrated.foodName
+        );
         const nameSib = await borrowNameSiblingLabelServing(
             hydrated.foodName, candidate.id.replace(/^off_/, '')
         );
-        const lowersIntoTightGroup = nameSib != null
-            && nameSib.grams < grams
-            && isTightNameGroup(nameSib.p25, nameSib.p75);
-        if (nameSib != null && (nameSib.grams > grams || lowersIntoTightGroup)) {
-            const tier = lowersIntoTightGroup
-                ? 'bare_name_sibling_serving_tight'
-                : 'bare_name_sibling_serving';
+        const tightGroup = nameSib != null && isTightNameGroup(nameSib.p25, nameSib.p75);
+        // SINGULAR: raise unconditionally, lower only into a tight group (#252).
+        // PLURAL:   tight group only, either direction.
+        // `grams !== grams` is impossible to reach for the singular arm (both of
+        // its disjuncts already imply a move) and is stated once here so the
+        // plural arm cannot stamp a tier on a median that equals the floor.
+        const admitted = nameSib != null
+            && nameSib.grams !== grams
+            && (barePlural ? tightGroup : (nameSib.grams > grams || tightGroup));
+        if (nameSib != null && admitted) {
+            const tier = barePlural
+                ? 'bare_name_sibling_serving_plural'
+                : nameSib.grams < grams
+                    ? 'bare_name_sibling_serving_tight'
+                    : 'bare_name_sibling_serving';
             grams = nameSib.grams;
             servingDescription = `1 serving (~${nameSib.grams.toFixed(0)}g, name median)`;
             servingTier = tier;
