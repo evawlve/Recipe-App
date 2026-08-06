@@ -78,9 +78,35 @@ process.env.OPENROUTER_BASE_URL = BLACKHOLE;
 process.env.OPENAI_API_BASE_URL = BLACKHOLE;
 process.env.OLLAMA_BASE_URL = BLACKHOLE;
 
-// Deliberately NOT provided: an escape hatch such as JEST_ALLOW_LIVE_LLM. No test in
-// this repo asserts real provider behaviour (re-derive: `grep -rln
-// "OPENROUTER_API_KEY\|OPENAI_API_KEY\|OLLAMA" --include="*.test.ts" src scripts` ->
-// no matches, measured 2026-08-02). A test that genuinely needs LLM behaviour should
-// stub `callStructuredLlm` — the single chokepoint — the way
+// ---------------------------------------------------------------------------
+// 4. Deliberately NOT provided: an escape hatch such as JEST_ALLOW_LIVE_LLM. There is
+// still no way to switch this gate off, and no test in this repo asserts real provider
+// behaviour.
+//
+// THREE test files name a provider credential, and none of them is a hole (re-derive:
+// `grep -rln "OPENROUTER_API_KEY\|OPENAI_API_KEY\|OLLAMA" --include="*.test.ts" src
+// scripts` -> 3, measured 2026-08-04):
+//   - src/lib/ai/__tests__/no-live-llm-egress.test.ts ASSERTS this file's invariants —
+//     it loads `dotenv/config` itself and then requires the provider chain to still be
+//     empty. It is the gate's own test.
+//   - src/lib/ai/__tests__/structured-client-usage-capture.test.ts and
+//     structured-client-telemetry-cannot-fail-the-call.test.ts each ASSIGN a fake
+//     `OPENAI_API_KEY` before requiring the client, because what they test is
+//     `makeRequest()` itself — the Phase 0.5(c) usage counters live inside it, below
+//     the point where an empty chain short-circuits, so stubbing `callStructuredLlm`
+//     would stub away the code under test. Both replace `global.fetch` with a jest mock
+//     for every test and leave the blackhole base URLs from section 3 in place, so a
+//     request cannot leave the process even if the mock were forgotten. `setupFiles`
+//     re-runs per test file, so neither assignment can leak into another suite.
+// The invariant that keeps that safe — every credential-assigning test file also mocks
+// `global.fetch` — is checked by the doc-check claim
+// `test-provider-keys-are-fake-and-fetch-mocked`, not by prose here.
+//
+// The previous version of this comment claimed the grep returned NO matches. That was
+// already untrue on master @136d0e5, where `no-live-llm-egress.test.ts` matched it
+// (measured 2026-08-04) — a re-derive command nobody had re-run.
+//
+// A test that needs LLM *behaviour* rather than transport should still stub
+// `callStructuredLlm` — the single chokepoint — the way
 // src/lib/mapping/__tests__/fs-cache-nutrition-validation.test.ts does.
+// ---------------------------------------------------------------------------

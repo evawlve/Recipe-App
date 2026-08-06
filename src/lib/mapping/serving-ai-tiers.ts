@@ -70,3 +70,111 @@ export function servingAiCallForTier(
     const type = tier ? SERVING_AI_TIERS[tier] : undefined;
     return type ? { called: true, type } : { called: false };
 }
+
+/**
+ * REPLAY NONDETERMINISM — a DIFFERENT predicate from `SERVING_AI_TIERS`, and the
+ * reason this is a second export rather than a reuse of the first.
+ *
+ * `SERVING_AI_TIERS` answers "was a model BILLED for this line" (spend). The two
+ * offline instruments need a different question: **"can this tier's grams differ
+ * between two replays of the same frozen pool"** (attribution). Their own comments
+ * already say so — winner-diff's `aiTouched` exists because such rows "do not
+ * replay deterministically, so they are flagged... rather than counted as movement
+ * the change under test caused", and correctness-screen abstains because the anchor
+ * "is a fresh model guess that can differ on the next request".
+ *
+ * The two predicates are close but NOT equal, in both directions:
+ *   - `ai_generated_serving` bills NOTHING (`getAiServingGrams()` is a findUnique
+ *     plus density maths) so it is absent from `SERVING_AI_TIERS` — but the row it
+ *     reads is written by the model-backed nutrition backfill, so replay 1 can
+ *     create what replay 2 then reads. It is nondeterministic and belongs here.
+ *   - `discrete_unit_backfill` is the mirror image: it is nondeterministic, but it
+ *     is deliberately NOT added to `SERVING_AI_TIERS`, because that allowlist forks
+ *     hit-from-miss by tier NAME (`count_unit_cached` vs `count_unit_ai`) and this
+ *     tier collapses both — see the note on its entry below.
+ *
+ * WHY AN ALLOWLIST AND NOT A REGEX. Until 2026-08-05 each instrument carried its
+ * own private pattern — `/(^|_)ai(_|$)|estimate/i` in winner-diff.ts and
+ * `/(^|_)ai(_|$)|estimat/i` in correctness-screen.ts. The `estimate`/`estimat`
+ * divergence was inert on the live tier set (only `fdc_size_estimate` contains
+ * either), so the visible symptom was harmless. **The real defect was the half they
+ * AGREED on**: a name pattern silently returns false for a tier it has never heard
+ * of, and two tiers stamped directly on an AI producer's result matched neither —
+ * `discrete_unit_backfill` (1,269 events) and `fdc_size_qualifier` (345), 1,614 of
+ * 69,529 (2.3%), measured on the box 2026-08-05. Both instruments were therefore
+ * charging that movement to the change under test.
+ *
+ * Every entry was settled by reading the branch that CONSUMES the producer's
+ * result, not by proximity. An adjacency scan over the same call sites also
+ * nominated `volume_unit` (5,379), `bare_plural_serving` (2,268),
+ * `bare_sibling_serving` (2,230) and `bare_query_default` (463); all four sit in
+ * sibling `else` branches that never read the AI result and are REFUTED — they are
+ * pinned as non-members in the test so the adjacency mistake cannot be re-made.
+ *
+ * Re-derive the population:
+ * `ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire
+ *  -c "SELECT \"servingTier\", count(*) FROM \"MappingEventLog\" GROUP BY 1 ORDER BY 2 DESC;"'`
+ *
+ * EXPORTED AS A FROZEN ARRAY, NOT A FROZEN SET, AND THAT IS DELIBERATE.
+ * `Object.freeze(new Set([...]))` is a no-op protection: `Object.isFrozen()` returns
+ * true while `.add()` still mutates, because a Set's contents are internal slots and
+ * not own properties. The first cut of this module did exactly that, and its test
+ * asserted `isFrozen` — a green assertion for a guard that does not hold. A frozen
+ * ARRAY throws on push in strict mode, so the freeze here is real and the sibling
+ * `SERVING_AI_TIERS` (a plain object, where freeze does work) keeps its own pattern.
+ */
+export const REPLAY_NONDETERMINISTIC_SERVING_TIERS: readonly string[] = Object.freeze(
+    ([
+        // --- getOrCreateAmbiguousServing() ---
+        // Cache MISS. Its cached sibling `count_unit_cached` is deterministic and absent.
+        'count_unit_ai',
+        // Same producer, but this call site stamps ONE name for `success` AND `cached`
+        // (map-ingredient-with-fallback.ts, the discrete-unit backfill branch), so no
+        // name-based rule can ever separate them. That is why it is here and not in
+        // SERVING_AI_TIERS: as a nondeterminism flag it is correct on both statuses,
+        // whereas as a BILLING flag it would count every cache hit as a model call.
+        // The durable fix is a provenance field at the producer, not a longer list —
+        // owner: sync-docs/reports/2026-08-05_ai-serving-spend-audit.md.
+        'discrete_unit_backfill',
+
+        // --- getOrCreateFdcSizeServings() -> estimateAmbiguousServing() ---
+        // Uncached by construction (its own docstring says caching is "a future
+        // enhancement"), so every one of these is a live round trip.
+        'fdc_size_estimate',
+        'fdc_medium_estimate',
+        // Third tier off that same producer, stamped on the size-qualifier branch.
+        // Already recorded as a known omission from SERVING_AI_TIERS; it is not
+        // silently added there here, because that allowlist has its own owner doc
+        // and doc-check claims that quote its totals.
+        'fdc_size_qualifier',
+
+        // --- estimateAmbiguousServing(), unitless piece estimation for produce ---
+        'fdc_piece_ai',
+
+        // --- insertFdcAiServing('volume') --- sibling `fdc_volume_cached` is a hit.
+        'fdc_volume_ai',
+
+        // --- ai-nutrition backfill --- bills nothing itself (see header), but the
+        // AiGeneratedServing row it reads is model-written, so it is replay-unstable.
+        // Both retired regexes matched this, so keeping it is the status quo.
+        'ai_generated_serving',
+    ] as const),
+);
+
+/** Lookup index. Module-private so the exported constant stays genuinely frozen. */
+const REPLAY_NONDETERMINISTIC_INDEX = new Set<string>(REPLAY_NONDETERMINISTIC_SERVING_TIERS);
+
+/**
+ * True when `tier`'s grams may differ between two replays of the same frozen pool.
+ *
+ * Returns false for an unclassified tier — the same reading both retired regexes
+ * gave, and deliberately not changed here: flipping the default would mark all ~35
+ * tiers nondeterministic and silence both instruments on the whole corpus, which is
+ * the expensive direction. The guard against a silent miss is instead the producer
+ * call-site census in `serving-ai-tiers.test.ts`: a NEW AI producer cannot be added
+ * without a test failure forcing a decision here. That census is the durable half of
+ * this fix; the two-tier correction is the one-off half.
+ */
+export function isReplayNondeterministicTier(tier: string | null | undefined): boolean {
+    return tier != null && REPLAY_NONDETERMINISTIC_INDEX.has(tier);
+}

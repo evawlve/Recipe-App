@@ -148,8 +148,21 @@ describe('a row whose real anchor did not run can NEVER produce an EVICT-severit
         ['the --with-serving pass never ran', { real: undefined }],
         ['hydrateAndSelectServing returned nothing', { real: null }],
         ['hydration threw', { real: { grams: null, tier: null, kcal: null, error: 'FDC API 503' } }],
-        ['the anchor is a fresh AI guess', { real: { grams: 1.2, tier: 'ai_estimated_serving', kcal: 7 } }],
+        // EVERY tier below is a real string the mapper stamps and MappingEventLog
+        // holds. The first of these used to read `ai_estimated_serving`, which exists
+        // nowhere in src/ and has zero live rows — it passed only because the retired
+        // regex matched any invented name containing an `ai` token. Fixtures drawn
+        // from imagination could never have surfaced the two tiers that regex missed,
+        // which is exactly how it missed them for as long as it did.
+        ['the anchor is a fresh AI guess', { real: { grams: 1.2, tier: 'ai_generated_serving', kcal: 7 } }],
         ['the anchor is an fdc size ESTIMATE', { real: { grams: 900, tier: 'fdc_size_estimate', kcal: 1400 } }],
+        // The two the retired regexes missed — pinned here so a future "simplify this
+        // back to a pattern" reintroduces a red test rather than a silent blind spot.
+        // Absurd anchors on purpose, like the two above: D5/D6 only FIRE on a wide
+        // divergence, so a plausible 60 g would make these vacuously green by never
+        // reaching the assertion at all.
+        ['the anchor is a discrete-unit backfill', { real: { grams: 1.4, tier: 'discrete_unit_backfill', kcal: 8 } }],
+        ['the anchor is an fdc size QUALIFIER', { real: { grams: 950, tier: 'fdc_size_qualifier', kcal: 1500 } }],
     ];
 
     /** Rows engineered so the ONLY rule that can fire is a serving rule. */
