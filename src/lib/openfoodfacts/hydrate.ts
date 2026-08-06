@@ -41,8 +41,8 @@ export interface HydratedOffFood {
 /**
  * Hydrate an OpenFoodFacts candidate into the local DB cache.
  *
- * Called when an OFF candidate wins the scoring phase in
- * map-ingredient-with-fallback.ts.
+ * Called when an OFF candidate wins the scoring phase, from buildOffResult
+ * in mapping/serving/hydration-lane.ts.
  *
  * Idempotent — safe to call multiple times for the same barcode.
  *

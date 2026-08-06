@@ -268,6 +268,9 @@ function sayAll(lines: string[]) { for (const l of lines) say(l); }
 // ============================================================
 
 const MAPPER_FILE = path.join(REPO_ROOT, 'src/lib/mapping/map-ingredient-with-fallback.ts');
+// Phase 1 stage 1a (2026-08-06) moved the hydration/serving lane — including the
+// five COPIED_HELPERS bodies below — out of the mapper into this module:
+const SERVING_LANE_FILE = path.join(REPO_ROOT, 'src/lib/mapping/serving/hydration-lane.ts');
 
 const CALLER_START_ANCHOR = '// Step 3: Apply must-have token filter';
 const CALLER_END_ANCHOR = "selectionReason = 'scored_by_confidence';";
@@ -275,6 +278,11 @@ const CALLER_END_ANCHOR = "selectionReason = 'scored_by_confidence';";
 /** Read the mapper with line endings normalized, so hashes are CRLF/LF invariant. */
 function mapperLines(): string[] {
     return fs.readFileSync(MAPPER_FILE, 'utf8').replace(/\r/g, '').split('\n');
+}
+
+/** Same normalization for the extracted serving lane (home of the copied helpers). */
+function servingLaneLines(): string[] {
+    return fs.readFileSync(SERVING_LANE_FILE, 'utf8').replace(/\r/g, '').split('\n');
 }
 
 function callerBlockSource(): { text: string; startLine: number; endLine: number; lines: string[] } {
@@ -288,7 +296,11 @@ function callerBlockSource(): { text: string; startLine: number; endLine: number
     return { text: lines.join('\n'), startLine: start + 1, endLine: end + 1, lines };
 }
 
-/** The caller-local, NON-EXPORTED helpers copied verbatim into section 4. */
+/**
+ * The helpers copied verbatim into section 4. Since stage 1a they live in
+ * SERVING_LANE_FILE (exported via a bottom-of-file list precisely so these
+ * `function <name>(` anchors — and therefore the pinned hash — stay valid).
+ */
 const COPIED_HELPERS = [
     'function candidateHasCountLabel(',
     'function requestBillsByServing(',
@@ -330,7 +342,7 @@ const COPIED_HELPERS = [
  * silently over-broad capture.
  */
 function copiedHelperSource(): string {
-    const src = mapperLines();
+    const src = servingLaneLines();
     const out: string[] = [];
     for (const anchor of COPIED_HELPERS) {
         const i = src.findIndex(l => l.trimStart().startsWith(anchor));
@@ -617,6 +629,7 @@ function checkDrift(allowDrift: boolean): DriftResult {
             Object.entries(KNOWN_CALLERS).map(([h, v]) => `${h}=${v}`).join(', '));
         say('!!   helpers pinned=' + PINNED_HELPERS_HASH + '  actual=' + helpersHash);
         say('!! Re-transcribe replaySelection() from ' + MAPPER_FILE);
+        say('!! (helpers-hash drift originates in ' + SERVING_LANE_FILE + ' — the copied helper bodies live there since stage 1a)');
         say('!! lines ' + cb.startLine + '-' + cb.endLine + ', run `winner-diff verify`, THEN add the');
         say('!! new hash to KNOWN_CALLERS with the variant it corresponds to.');
         say('!! (Check the hash was not produced by a newline-translating reader first.)');
@@ -727,9 +740,10 @@ const { assessMacroPlausibility } = plausibilityMod;
 
 // ============================================================
 // 4. VERBATIM COPIES of caller-local helpers (drift-guarded above)
-//    Source: map-ingredient-with-fallback.ts :4446, :4477, :4488, :4524, :4537
-//    They are not exported, so they cannot be imported. Any edit to them upstream
-//    moves PINNED_HELPERS_HASH and this harness refuses to run.
+//    Source since stage 1a: src/lib/mapping/serving/hydration-lane.ts (four of
+//    the five are exported there now, but these copies predate that and stay —
+//    replaySelection() must not import live selection code). Any edit to them
+//    upstream moves PINNED_HELPERS_HASH and this harness refuses to run.
 // ============================================================
 
 function copy_servingLeadingCount(description: string): number {
@@ -2784,6 +2798,9 @@ function gitHead(): string {
  */
 const HASHED_SOURCE_PATHS = [
     'src/lib/mapping',
+    // gitDirtyHash() reads only DIRECT .ts children of a directory entry, so the
+    // stage-1a subdirectory needs its own row or the moved lane goes unhashed:
+    'src/lib/mapping/serving',
     'src/lib/servings',
     // The bare-query lexicon getBareQueryDefault() lives here; it decides grams.
     'src/lib/ai/ambiguous-serving-estimator.ts',

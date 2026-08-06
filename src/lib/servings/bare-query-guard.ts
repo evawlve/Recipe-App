@@ -24,7 +24,7 @@
  * 'count_unresolved_floor') — so any membership here would be dead code. Adding
  * any of them would also re-create the pre-emption bug the rung was placed low
  * to avoid: see the (E) rung comment in buildOffResult
- * (map-ingredient-with-fallback.ts).
+ * (mapping/serving/hydration-lane.ts).
  *
  * The three are ONE rung stamping THREE tiers. The first two split by the
  * DIRECTION the median moved the bill — up off the floor, or down into a
