@@ -3386,154 +3386,314 @@ export async function mapIngredientWithFallback(
             return null;
         }
 
-        // Per-100g macros of the pick. Hoisted above the save decision because
-        // conditional sub-threshold admission needs them too (funnel fix 4) —
-        // they still feed the save-time plausibility gate inside
-        // saveValidatedMapping (PR D), which serves corrupt picks but declines
-        // to cache them.
-        const savedNutrientsPer100g = result.grams > 0 ? {
-            kcal: (result.kcal / result.grams) * 100,
-            protein: (result.protein / result.grams) * 100,
-            carbs: (result.carbs / result.grams) * 100,
-            fat: (result.fat / result.grams) * 100,
+        return await finalizeAndSaveResult({
+            result,
+            confidence,
+            selectionReason,
+            normalizedName,
+            brandDetection,
+            aiNutritionEstimate,
+            aiCanonicalBase,
+            aiCookingModifier,
+            readEscapes,
+            filtered,
+            skippedLlmNormalize,
+            usedGenericFallback,
+            trimmed,
+            parsed,
+            rawLine,
+            telemetry,
+            skipSave,
+        });
+    } finally {
+        // Release the in-flight lock and resolve waiting threads
+        inFlightLocks.delete(lockKey);
+        resolveLock!(null);  // Resolve with null - waiting threads will re-fetch from cache
+    }
+}
+
+// ============================================================
+// Post-selection: the Step 6 save gate, sub-threshold admission,
+// analysis logging, synonym/produce fire-and-forget, and the final
+// sanity caps. Reads the selected result and never writes back into
+// selection. The caller invokes it as the LAST statement inside the
+// in-flight-lock try, so the awaited save completes before the lock
+// is released.
+// ============================================================
+
+async function finalizeAndSaveResult(params: {
+    result: FatsecretMappedIngredient;
+    confidence: number;
+    selectionReason: string;
+    normalizedName: string;
+    brandDetection: BrandKeyInput;
+    aiNutritionEstimate: { caloriesPer100g: number; proteinPer100g: number; carbsPer100g: number; fatPer100g: number; confidence: number } | undefined;
+    aiCanonicalBase: string | undefined;
+    aiCookingModifier: string | undefined;
+    readEscapes: ReadEscapeRecord[];
+    filtered: UnifiedCandidate[];
+    skippedLlmNormalize: boolean;
+    usedGenericFallback: boolean;
+    trimmed: string;
+    parsed: ParsedIngredient | null;
+    rawLine: string;
+    telemetry: MappingTelemetry | undefined;
+    skipSave: boolean;
+}): Promise<FatsecretMappedIngredient | null> {
+    const {
+        result, confidence, selectionReason, normalizedName, brandDetection,
+        aiNutritionEstimate, aiCanonicalBase, aiCookingModifier, readEscapes,
+        filtered, skippedLlmNormalize, usedGenericFallback, trimmed, parsed,
+        rawLine, telemetry, skipSave,
+    } = params;
+
+    // Per-100g macros of the pick. Hoisted above the save decision because
+    // conditional sub-threshold admission needs them too (funnel fix 4) —
+    // they still feed the save-time plausibility gate inside
+    // saveValidatedMapping (PR D), which serves corrupt picks but declines
+    // to cache them.
+    const savedNutrientsPer100g = result.grams > 0 ? {
+        kcal: (result.kcal / result.grams) * 100,
+        protein: (result.protein / result.grams) * 100,
+        carbs: (result.carbs / result.grams) * 100,
+        fat: (result.fat / result.grams) * 100,
+    } : undefined;
+
+    // Funnel fix 4: a pick just under the gate may still be offered to the
+    // cache when the query decisively names a brand the record carries.
+    // See sub-threshold-admission.ts — the brand requirement is also what
+    // bounds the blast radius, since such a pick's cache key provably
+    // contains a brand token and so can never be a bare generic key.
+    const subThreshold = assessSubThresholdAdmission({
+        rawLine: trimmed,
+        confidence,
+        brandDetection,
+        foodName: result.foodName,
+        brandName: result.brandName,
+        nutrientsPer100g: savedNutrientsPer100g,
+    });
+    const admitToCache = confidence >= 0.85 || subThreshold.admit;
+
+    // Step 6: Save to validated cache if high confidence
+    if (admitToCache && selectionReason === 'normalized_cache_hit') {
+        // PR D pt3 (B6): a cache hit must NOT re-save itself — the resave
+        // is what let the escape→overwrite loop churn rows. Mirrors the
+        // early-cache path, which returns before ever reaching Step 6.
+        logger.debug('mapping.cache_hit_resave_skipped', {
+            rawLine: trimmed,
+            normalizedName,
+            foodId: result.foodId,
+        });
+    } else if (admitToCache) {
+        // Use normalizedName (preserves nutritional modifiers like "powdered", "reduced fat")
+        // instead of canonicalBase (which collapses variants to a shared base).
+        // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
+        // caused 73+ subsequent "peanut butter" queries to return powdered PB.
+        // Key symmetry (Track 1c): the SAME function of (normalizedName,
+        // parsed, brandDetection, rawLine) as both cache lookups —
+        // identity discriminators AND the brand-prefix decision now live
+        // inside deriveMappingCacheKey. The old site-local brand prepend
+        // used a substring includes() that singularization defeated
+        // ("oikos" vs canonical token "oiko" → dead "oiko oiko" rows);
+        // the shared function gates the prefix on decisive brand context
+        // (so false-positive lexicon hits like "bell" on "bell pepper"
+        // never mutate the key), stem-matches tokens, and collapses
+        // duplicate tokens.
+        // Note: brandDetection (request-stable), NOT isBrandedQuery — the
+        // AI-upgraded flag doesn't exist at early-lookup time, so a key
+        // built from it could never be symmetric.
+        const cacheKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, trimmed);
+
+        const expectedNutrition = aiNutritionEstimate ? {
+            caloriesPer100g: aiNutritionEstimate.caloriesPer100g,
+            proteinPer100g: aiNutritionEstimate.proteinPer100g,
+            confidence: aiNutritionEstimate.confidence,
         } : undefined;
 
-        // Funnel fix 4: a pick just under the gate may still be offered to the
-        // cache when the query decisively names a brand the record carries.
-        // See sub-threshold-admission.ts — the brand requirement is also what
-        // bounds the blast radius, since such a pick's cache key provably
-        // contains a brand token and so can never be a bare generic key.
-        const subThreshold = assessSubThresholdAdmission({
-            rawLine: trimmed,
-            confidence,
-            brandDetection,
-            foodName: result.foodName,
-            brandName: result.brandName,
-            nutrientsPer100g: savedNutrientsPer100g,
-        });
-        const admitToCache = confidence >= 0.85 || subThreshold.admit;
-
-        // Step 6: Save to validated cache if high confidence
-        if (admitToCache && selectionReason === 'normalized_cache_hit') {
-            // PR D pt3 (B6): a cache hit must NOT re-save itself — the resave
-            // is what let the escape→overwrite loop churn rows. Mirrors the
-            // early-cache path, which returns before ever reaching Step 6.
-            logger.debug('mapping.cache_hit_resave_skipped', {
-                rawLine: trimmed,
-                normalizedName,
-                foodId: result.foodId,
-            });
-        } else if (admitToCache) {
-            // Use normalizedName (preserves nutritional modifiers like "powdered", "reduced fat")
-            // instead of canonicalBase (which collapses variants to a shared base).
-            // This prevents cache poisoning where "powdered peanut butter" → "peanut butter" key
-            // caused 73+ subsequent "peanut butter" queries to return powdered PB.
-            // Key symmetry (Track 1c): the SAME function of (normalizedName,
-            // parsed, brandDetection, rawLine) as both cache lookups —
-            // identity discriminators AND the brand-prefix decision now live
-            // inside deriveMappingCacheKey. The old site-local brand prepend
-            // used a substring includes() that singularization defeated
-            // ("oikos" vs canonical token "oiko" → dead "oiko oiko" rows);
-            // the shared function gates the prefix on decisive brand context
-            // (so false-positive lexicon hits like "bell" on "bell pepper"
-            // never mutate the key), stem-matches tokens, and collapses
-            // duplicate tokens.
-            // Note: brandDetection (request-stable), NOT isBrandedQuery — the
-            // AI-upgraded flag doesn't exist at early-lookup time, so a key
-            // built from it could never be symmetric.
-            const cacheKey = deriveMappingCacheKey(normalizedName, parsed, brandDetection, trimmed);
-
-            const expectedNutrition = aiNutritionEstimate ? {
-                caloriesPer100g: aiNutritionEstimate.caloriesPer100g,
-                proteinPer100g: aiNutritionEstimate.proteinPer100g,
-                confidence: aiNutritionEstimate.confidence,
-            } : undefined;
-
-            // Optimistic: a save gate inside saveValidatedMapping downgrades
-            // this to 'save_rejected' (with its own class ID) if it blocks.
-            markFunnel(telemetry, 'saved');
-            // Logged, not funnel-tagged: markFunnel deliberately clears the
-            // class on successful stages, so the next funnel read measures this
-            // relaxation from this line rather than from a dropReason.
-            if (subThreshold.admit) {
-                logger.audit('mapping.sub_threshold_admitted', {
-                    rawLine: trimmed,
-                    normalizedName,
-                    confidence,
-                    foodId: result.foodId,
-                    foodName: result.foodName,
-                });
-            }
-
-            // skipSave: a measurement must not rewrite what it measures. Placed
-            // around the call rather than inside saveValidatedMapping() so the
-            // save-gate telemetry classes keep meaning "a gate rejected this
-            // write" — a suppressed write is not a rejected one, and folding the
-            // two together would corrupt the save_rejected counters the funnel
-            // reads.
-            if (!skipSave) await saveValidatedMapping(rawLine, result, {
-                approved: true,
-                confidence,
-                reason: selectionReason,
-            }, {
-                telemetry,               // save gates tag their own rejection class
-                canonicalBase: cacheKey,  // Use normalizedName as cache key
-                persistCanonicalBase: aiCanonicalBase,   // AI base identity → canonicalBase column (grouping only)
-                persistCookingModifier: aiCookingModifier,
-                nutrientsPer100g: savedNutrientsPer100g,
-                expectedNutrition,
-                insertOnly: subThreshold.admit,
-                // The rows the read path refused this request (see readEscapes
-                // above). If the incumbent at the save key is one of them it
-                // forfeits its cross-source margin — it demonstrably cannot
-                // serve, so re-blocking the replacement just re-arms the loop.
-                readEscapes,
-            });
-
-            // NO ALIAS SAVES HERE. Removed 2026-08-01 (campaign gate G1/F1).
-            //
-            // A loop used to re-run saveValidatedMapping once per AI synonym,
-            // passing the SAME `canonicalBase: cacheKey` as the primary save.
-            // canonicalBase is the highest-priority input to normalizedForm, so
-            // every "alias" resolved to the byte-identical key and simply
-            // UPDATEd the row the primary had just written — at
-            // `confidence * 0.9`, and bumping usedCount once per synonym. It
-            // never created a synonym key in any version of this file, and the
-            // schema-level alias concept is retired (`createFoodAlias()` in
-            // alias-manager.ts is an explicit no-op).
-            //
-            // Synonyms still work, at QUERY time, where a wrong one costs one
-            // bad candidate that ranking can reject rather than a sticky
-            // >=0.85 cache identity that bypasses ranking forever:
-            //   - Step 0a `findCanonicalName()` rewrites the query;
-            //   - Step 1b `getLearnedSynonyms()` feeds `allSynonyms` into
-            //     `gatherCandidates()` as `aiSynonyms` (two call sites above).
-            // Exactly ONE saveValidatedMapping per resolution, stamping the
-            // confidence the >=0.85 gate actually tested. Do not re-add.
-        } else if (selectionReason !== 'normalized_cache_hit') {
-            // THE SILENT CLASS (sprint F1): 0.3 <= confidence < 0.85. This pick
-            // serves the user but is never offered to the cache — historically
-            // with no log line at all, so the population cache-warming exists to
-            // convert was only reconstructable by after-the-fact SQL inference.
-            // Tag it with the reason the selection cascade settled where it did.
-            // Only the FIRST segment of selectionReason is kept as the class:
-            // 'fallback_simplified: <AI rationale>' would otherwise make this an
-            // unbounded-cardinality column.
-            markFunnel(telemetry, 'under_gate', selectionReason.split(':')[0]);
-            logger.debug('mapping.under_save_gate', {
+        // Optimistic: a save gate inside saveValidatedMapping downgrades
+        // this to 'save_rejected' (with its own class ID) if it blocks.
+        markFunnel(telemetry, 'saved');
+        // Logged, not funnel-tagged: markFunnel deliberately clears the
+        // class on successful stages, so the next funnel read measures this
+        // relaxation from this line rather than from a dropReason.
+        if (subThreshold.admit) {
+            logger.audit('mapping.sub_threshold_admitted', {
                 rawLine: trimmed,
                 normalizedName,
                 confidence,
-                selectionReason,
                 foodId: result.foodId,
-                // Which conditional-admission condition declined it (fix 4).
-                // Kept on the debug line rather than in the funnel class so the
-                // existing selectionReason taxonomy stays comparable run to run.
-                subThresholdReason: subThreshold.reason,
+                foodName: result.foodName,
             });
         }
 
-        // Log success
+        // skipSave: a measurement must not rewrite what it measures. Placed
+        // around the call rather than inside saveValidatedMapping() so the
+        // save-gate telemetry classes keep meaning "a gate rejected this
+        // write" — a suppressed write is not a rejected one, and folding the
+        // two together would corrupt the save_rejected counters the funnel
+        // reads.
+        if (!skipSave) await saveValidatedMapping(rawLine, result, {
+            approved: true,
+            confidence,
+            reason: selectionReason,
+        }, {
+            telemetry,               // save gates tag their own rejection class
+            canonicalBase: cacheKey,  // Use normalizedName as cache key
+            persistCanonicalBase: aiCanonicalBase,   // AI base identity → canonicalBase column (grouping only)
+            persistCookingModifier: aiCookingModifier,
+            nutrientsPer100g: savedNutrientsPer100g,
+            expectedNutrition,
+            insertOnly: subThreshold.admit,
+            // The rows the read path refused this request (see readEscapes
+            // above). If the incumbent at the save key is one of them it
+            // forfeits its cross-source margin — it demonstrably cannot
+            // serve, so re-blocking the replacement just re-arms the loop.
+            readEscapes,
+        });
+
+        // NO ALIAS SAVES HERE. Removed 2026-08-01 (campaign gate G1/F1).
+        //
+        // A loop used to re-run saveValidatedMapping once per AI synonym,
+        // passing the SAME `canonicalBase: cacheKey` as the primary save.
+        // canonicalBase is the highest-priority input to normalizedForm, so
+        // every "alias" resolved to the byte-identical key and simply
+        // UPDATEd the row the primary had just written — at
+        // `confidence * 0.9`, and bumping usedCount once per synonym. It
+        // never created a synonym key in any version of this file, and the
+        // schema-level alias concept is retired (`createFoodAlias()` in
+        // alias-manager.ts is an explicit no-op).
+        //
+        // Synonyms still work, at QUERY time, where a wrong one costs one
+        // bad candidate that ranking can reject rather than a sticky
+        // >=0.85 cache identity that bypasses ranking forever:
+        //   - Step 0a `findCanonicalName()` rewrites the query;
+        //   - Step 1b `getLearnedSynonyms()` feeds `allSynonyms` into
+        //     `gatherCandidates()` as `aiSynonyms` (two call sites above).
+        // Exactly ONE saveValidatedMapping per resolution, stamping the
+        // confidence the >=0.85 gate actually tested. Do not re-add.
+    } else if (selectionReason !== 'normalized_cache_hit') {
+        // THE SILENT CLASS (sprint F1): 0.3 <= confidence < 0.85. This pick
+        // serves the user but is never offered to the cache — historically
+        // with no log line at all, so the population cache-warming exists to
+        // convert was only reconstructable by after-the-fact SQL inference.
+        // Tag it with the reason the selection cascade settled where it did.
+        // Only the FIRST segment of selectionReason is kept as the class:
+        // 'fallback_simplified: <AI rationale>' would otherwise make this an
+        // unbounded-cardinality column.
+        markFunnel(telemetry, 'under_gate', selectionReason.split(':')[0]);
+        logger.debug('mapping.under_save_gate', {
+            rawLine: trimmed,
+            normalizedName,
+            confidence,
+            selectionReason,
+            foodId: result.foodId,
+            // Which conditional-admission condition declined it (fix 4).
+            // Kept on the debug line rather than in the funnel class so the
+            // existing selectionReason taxonomy stays comparable run to run.
+            subThresholdReason: subThreshold.reason,
+        });
+    }
+
+    // Log success
+    if (ENABLE_MAPPING_ANALYSIS) {
+        logMappingAnalysis({
+            rawIngredient: trimmed,
+            parsed: {
+                amount: parsed?.qty,
+                unit: parsed?.unit,
+                ingredient: parsed?.name,
+            },
+            topCandidates: filtered.slice(0, 5).map((c, i) => ({
+                rank: i + 1,
+                foodId: c.id,
+                foodName: c.name,
+                brandName: c.brandName || null,
+                score: c.score,
+                source: c.source,
+                // Include nutrition if available (from FDC candidates)
+                nutrition: c.nutrition ? {
+                    calories: c.nutrition.kcal,
+                    protein: c.nutrition.protein,
+                    fat: c.nutrition.fat,
+                    carbs: c.nutrition.carbs,
+                } : undefined,
+            })),
+            selectedCandidate: {
+                foodId: result.foodId,
+                foodName: result.foodName,
+                brandName: result.brandName || '',
+                confidence,
+                selectionReason,
+            },
+            // Add nutrition for easy false positive detection
+            selectedNutrition: {
+                calories: result.kcal,
+                protein: result.protein,
+                carbs: result.carbs,
+                fat: result.fat,
+                perGrams: result.grams,
+            },
+            servingSelection: {
+                servingDescription: result.servingDescription || 'N/A',
+                grams: result.grams,
+                backfillUsed: false,
+            },
+            finalResult: 'success',
+            source: selectionReason === 'normalized_cache_hit' ? 'normalized_cache' : 'full_pipeline',
+            // Track AI calls made during this mapping
+            aiCalls: {
+                normalize: {
+                    called: !skippedLlmNormalize && !usedGenericFallback,
+                    skipped: skippedLlmNormalize,
+                    reason: skippedLlmNormalize ? 'gate_skipped' : undefined,
+                },
+                // 0.5(b): derived from the tier that billed the grams — see
+                // serving-ai-tiers.ts for why the tier NAMES cannot be trusted
+                // and why this is a lower bound.
+                serving: servingAiCallForTier(result.servingTier),
+                // requestAiNutrition() is reached only on the backfill branch,
+                // which returns at its own log sites above. Every path arriving
+                // here left the nutrition model untouched.
+                nutrition: { called: false, cached: false, success: false },
+            },
+        });
+    }
+
+    // Phase 3: Save known British/American synonyms (non-blocking, no AI call)
+    // We use the known synonym mappings instead of calling AI again
+    const knownSyns = getKnownSynonyms(result.foodName);
+    if (knownSyns && knownSyns.length > 0) {
+        saveSynonyms(result.foodName, knownSyns, 'known').catch(err => {
+            logger.debug('mapping.synonym_save_failed', { error: (err as Error).message });
+        });
+    }
+
+    // Phase 4: Proactive produce backfill (fire-and-forget)
+    // For produce items, pre-populate small/medium/large servings so future
+    // size-based queries (e.g., "1 large avocado") hit cached servings
+    proactiveProduceBackfill(result.foodId, result.foodName);
+
+    // ============================================================
+    // FINAL SANITY CHECK: Reject wildly unreasonable computed values
+    // ============================================================
+    // This catches cases where:
+    // 1. User genuinely entered an absurd quantity (e.g., "5000 cups flour")
+    // 2. Upstream calculation errors produced unreasonable results
+    // 3. Import/OCR artifacts created malformed inputs
+    const MAX_REASONABLE_GRAMS = 10000;  // 10kg - more than any typical ingredient
+    const MAX_REASONABLE_KCAL = 50000;   // ~20 days of calories - clearly an error
+
+    if (result.grams > MAX_REASONABLE_GRAMS || result.kcal > MAX_REASONABLE_KCAL) {
+        logger.warn('mapping.result_sanity_check_failed', {
+            rawLine: trimmed,
+            grams: result.grams,
+            kcal: result.kcal,
+            foodName: result.foodName,
+            reason: result.grams > MAX_REASONABLE_GRAMS
+                ? 'grams_exceeds_10kg'
+                : 'kcal_exceeds_50000',
+        });
+
         if (ENABLE_MAPPING_ANALYSIS) {
             logMappingAnalysis({
                 rawIngredient: trimmed,
@@ -3542,21 +3702,7 @@ export async function mapIngredientWithFallback(
                     unit: parsed?.unit,
                     ingredient: parsed?.name,
                 },
-                topCandidates: filtered.slice(0, 5).map((c, i) => ({
-                    rank: i + 1,
-                    foodId: c.id,
-                    foodName: c.name,
-                    brandName: c.brandName || null,
-                    score: c.score,
-                    source: c.source,
-                    // Include nutrition if available (from FDC candidates)
-                    nutrition: c.nutrition ? {
-                        calories: c.nutrition.kcal,
-                        protein: c.nutrition.protein,
-                        fat: c.nutrition.fat,
-                        carbs: c.nutrition.carbs,
-                    } : undefined,
-                })),
+                topCandidates: [],
                 selectedCandidate: {
                     foodId: result.foodId,
                     foodName: result.foodName,
@@ -3564,7 +3710,6 @@ export async function mapIngredientWithFallback(
                     confidence,
                     selectionReason,
                 },
-                // Add nutrition for easy false positive detection
                 selectedNutrition: {
                     calories: result.kcal,
                     protein: result.protein,
@@ -3572,104 +3717,15 @@ export async function mapIngredientWithFallback(
                     fat: result.fat,
                     perGrams: result.grams,
                 },
-                servingSelection: {
-                    servingDescription: result.servingDescription || 'N/A',
-                    grams: result.grams,
-                    backfillUsed: false,
-                },
-                finalResult: 'success',
-                source: selectionReason === 'normalized_cache_hit' ? 'normalized_cache' : 'full_pipeline',
-                // Track AI calls made during this mapping
-                aiCalls: {
-                    normalize: {
-                        called: !skippedLlmNormalize && !usedGenericFallback,
-                        skipped: skippedLlmNormalize,
-                        reason: skippedLlmNormalize ? 'gate_skipped' : undefined,
-                    },
-                    // 0.5(b): derived from the tier that billed the grams — see
-                    // serving-ai-tiers.ts for why the tier NAMES cannot be trusted
-                    // and why this is a lower bound.
-                    serving: servingAiCallForTier(result.servingTier),
-                    // requestAiNutrition() is reached only on the backfill branch,
-                    // which returns at its own log sites above. Every path arriving
-                    // here left the nutrition model untouched.
-                    nutrition: { called: false, cached: false, success: false },
-                },
+                finalResult: 'failed',
+                failureReason: `sanity_check_failed: grams=${result.grams.toFixed(0)}, kcal=${result.kcal.toFixed(0)}`,
             });
         }
 
-        // Phase 3: Save known British/American synonyms (non-blocking, no AI call)
-        // We use the known synonym mappings instead of calling AI again
-        const knownSyns = getKnownSynonyms(result.foodName);
-        if (knownSyns && knownSyns.length > 0) {
-            saveSynonyms(result.foodName, knownSyns, 'known').catch(err => {
-                logger.debug('mapping.synonym_save_failed', { error: (err as Error).message });
-            });
-        }
-
-        // Phase 4: Proactive produce backfill (fire-and-forget)
-        // For produce items, pre-populate small/medium/large servings so future
-        // size-based queries (e.g., "1 large avocado") hit cached servings
-        proactiveProduceBackfill(result.foodId, result.foodName);
-
-        // ============================================================
-        // FINAL SANITY CHECK: Reject wildly unreasonable computed values
-        // ============================================================
-        // This catches cases where:
-        // 1. User genuinely entered an absurd quantity (e.g., "5000 cups flour")
-        // 2. Upstream calculation errors produced unreasonable results
-        // 3. Import/OCR artifacts created malformed inputs
-        const MAX_REASONABLE_GRAMS = 10000;  // 10kg - more than any typical ingredient
-        const MAX_REASONABLE_KCAL = 50000;   // ~20 days of calories - clearly an error
-
-        if (result.grams > MAX_REASONABLE_GRAMS || result.kcal > MAX_REASONABLE_KCAL) {
-            logger.warn('mapping.result_sanity_check_failed', {
-                rawLine: trimmed,
-                grams: result.grams,
-                kcal: result.kcal,
-                foodName: result.foodName,
-                reason: result.grams > MAX_REASONABLE_GRAMS
-                    ? 'grams_exceeds_10kg'
-                    : 'kcal_exceeds_50000',
-            });
-
-            if (ENABLE_MAPPING_ANALYSIS) {
-                logMappingAnalysis({
-                    rawIngredient: trimmed,
-                    parsed: {
-                        amount: parsed?.qty,
-                        unit: parsed?.unit,
-                        ingredient: parsed?.name,
-                    },
-                    topCandidates: [],
-                    selectedCandidate: {
-                        foodId: result.foodId,
-                        foodName: result.foodName,
-                        brandName: result.brandName || '',
-                        confidence,
-                        selectionReason,
-                    },
-                    selectedNutrition: {
-                        calories: result.kcal,
-                        protein: result.protein,
-                        carbs: result.carbs,
-                        fat: result.fat,
-                        perGrams: result.grams,
-                    },
-                    finalResult: 'failed',
-                    failureReason: `sanity_check_failed: grams=${result.grams.toFixed(0)}, kcal=${result.kcal.toFixed(0)}`,
-                });
-            }
-
-            return null;  // Reject the mapping - better to fail than return garbage
-        }
-
-        return result;
-    } finally {
-        // Release the in-flight lock and resolve waiting threads
-        inFlightLocks.delete(lockKey);
-        resolveLock!(null);  // Resolve with null - waiting threads will re-fetch from cache
+        return null;  // Reject the mapping - better to fail than return garbage
     }
+
+    return result;
 }
 
 // ============================================================
