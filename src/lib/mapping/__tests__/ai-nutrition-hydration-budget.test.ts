@@ -266,9 +266,14 @@ describe('MIGRATION GUARD — every hydration call site inside the mapper uses t
      * exactly the regression that reintroduces the shared pool, and it is
      * invisible to the typechecker because both parameters have the same type.
      */
-    const SRC = require('node:fs').readFileSync(
+    // Stage 1a moved the hydration lane into serving/hydration-lane.ts; scan
+    // BOTH files so a call site added inside the lane (e.g. a new retry that
+    // passes the wrong budget) stays visible to this guard.
+    const SRC = (require('node:fs').readFileSync(
         require('node:path').join(__dirname, '..', 'map-ingredient-with-fallback.ts'), 'utf8',
-    ) as string;
+    ) as string) + (require('node:fs').readFileSync(
+        require('node:path').join(__dirname, '..', 'serving', 'hydration-lane.ts'), 'utf8',
+    ) as string);
 
     /** Argument text of each `name(...)` invocation, balanced-paren scanned. */
     function callArgs(src: string, name: string): string[] {
