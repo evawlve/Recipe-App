@@ -10,7 +10,8 @@
 # shape it transcribes. The guard now normalizes line endings before hashing, which
 # is the real fix; this file stops the churn reaching the guard's inputs at all.
 #
-# SCOPE: pinned to the two files the drift guard reads. Both are already LF in the
+# SCOPE: pinned to the three files the drift guard reads (stage 1a moved the
+# COPIED_HELPERS bodies into serving/hydration-lane.ts). All are already LF in the
 # index, so this is a zero-diff change — verify with `git add --renormalize .` on a
 # clean tree, which must report nothing.
 #
@@ -20,3 +21,4 @@
 # own reviewed commit, not as a side effect of fixing an eval harness.
 src/lib/mapping/map-ingredient-with-fallback.ts text eol=lf
 scripts/eval/winner-diff.ts text eol=lf
+src/lib/mapping/serving/hydration-lane.ts text eol=lf

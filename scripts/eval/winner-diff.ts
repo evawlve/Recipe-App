@@ -629,6 +629,7 @@ function checkDrift(allowDrift: boolean): DriftResult {
             Object.entries(KNOWN_CALLERS).map(([h, v]) => `${h}=${v}`).join(', '));
         say('!!   helpers pinned=' + PINNED_HELPERS_HASH + '  actual=' + helpersHash);
         say('!! Re-transcribe replaySelection() from ' + MAPPER_FILE);
+        say('!! (helpers-hash drift originates in ' + SERVING_LANE_FILE + ' — the copied helper bodies live there since stage 1a)');
         say('!! lines ' + cb.startLine + '-' + cb.endLine + ', run `winner-diff verify`, THEN add the');
         say('!! new hash to KNOWN_CALLERS with the variant it corresponds to.');
         say('!! (Check the hash was not produced by a newline-translating reader first.)');
@@ -739,9 +740,10 @@ const { assessMacroPlausibility } = plausibilityMod;
 
 // ============================================================
 // 4. VERBATIM COPIES of caller-local helpers (drift-guarded above)
-//    Source: map-ingredient-with-fallback.ts :4446, :4477, :4488, :4524, :4537
-//    They are not exported, so they cannot be imported. Any edit to them upstream
-//    moves PINNED_HELPERS_HASH and this harness refuses to run.
+//    Source since stage 1a: src/lib/mapping/serving/hydration-lane.ts (four of
+//    the five are exported there now, but these copies predate that and stay —
+//    replaySelection() must not import live selection code). Any edit to them
+//    upstream moves PINNED_HELPERS_HASH and this harness refuses to run.
 // ============================================================
 
 function copy_servingLeadingCount(description: string): number {

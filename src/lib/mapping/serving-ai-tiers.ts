@@ -129,7 +129,7 @@ export const REPLAY_NONDETERMINISTIC_SERVING_TIERS: readonly string[] = Object.f
         // Cache MISS. Its cached sibling `count_unit_cached` is deterministic and absent.
         'count_unit_ai',
         // Same producer, but this call site stamps ONE name for `success` AND `cached`
-        // (map-ingredient-with-fallback.ts, the discrete-unit backfill branch), so no
+        // (serving/hydration-lane.ts, the discrete-unit backfill branch), so no
         // name-based rule can ever separate them. That is why it is here and not in
         // SERVING_AI_TIERS: as a nondeterminism flag it is correct on both statuses,
         // whereas as a BILLING flag it would count every cache hit as a model call.
