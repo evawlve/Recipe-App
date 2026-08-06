@@ -1011,36 +1011,44 @@ export function isProduce(name: string): boolean {
 
 ```mermaid
 flowchart TD
-    A[Ingredient Mapped Successfully] --> B{isProduce?}
-    B -->|No| C[Done]
-    B -->|Yes| D[proactiveProduceBackfill]
-    D --> E[Fire-and-Forget]
-    E --> F[estimateProduceSizes - 1 AI call]
-    F --> G[Save small/medium/large to cache]
+    A[Ingredient Mapped Successfully] --> B[proactiveProduceBackfill]
+    B --> C[Fire-and-Forget, tracked for drainPendingBackgroundTasks]
+    C --> D{isProduce?}
+    D -->|No| E[Done]
+    D -->|Yes| F[backfillCommonServings]
+    F --> G[small / medium / large, Promise.allSettled]
+    G --> H[getOrCreateAmbiguousServing per size]
 ```
 
 **Key Files**:
 | File | Function |
 |------|----------|
-| `deferred-hydration.ts` | `proactiveProduceBackfill()` - triggered after winner mapping |
-| `serving-backfill.ts` | `isProduce()` - pattern-based detection |
-| `ambiguous-unit-backfill.ts` | `batchBackfillProduceSizes()` - batched saving |
-| `ambiguous-serving-estimator.ts` | `estimateProduceSizes()` - single AI call for all 3 sizes |
+| `deferred-hydration.ts` | `proactiveProduceBackfill()` - triggered after winner mapping; `doProduceBackfill()` holds the `isProduce()` gate |
+| `serving-backfill.ts` | `isProduce()` - pattern-based detection; `backfillCommonServings()` - picks the unit set and fans out |
+| `ambiguous-unit-backfill.ts` | `getOrCreateAmbiguousServing()` - one call per size unit |
 
-#### Batched AI Estimation
+#### The batching this section used to describe NO LONGER EXISTS
 
-Instead of 3 separate AI calls per produce item, uses a single batched call:
+`estimateProduceSizes()` and `batchBackfillProduceSizes()` were **deleted** in PR #245
+(2026-08-04, the 1,695-line dead-serving-surface sweep). Both had zero call sites at the time
+they were removed, so the "1 AI call" form documented here had already stopped running well
+before that.
+
+The live shape is back to one call per size, issued **in parallel** rather than serially —
+`backfillCommonServings()` builds `['small','medium','large']` for produce and fans them out
+through `Promise.allSettled`, each landing on `getOrCreateAmbiguousServing()`:
 
 ```typescript
-// Before: 3 AI calls
-await estimateAmbiguousServing(food, 'small');
-await estimateAmbiguousServing(food, 'medium');
-await estimateAmbiguousServing(food, 'large');
-
-// After: 1 AI call
-const result = await estimateProduceSizes(foodName);
-// Returns: { small: 101, medium: 118, large: 136, confidence: 0.85 }
+// Live path (derived by reading backfillCommonServings() in serving-backfill.ts)
+const unique = ['small', 'medium', 'large'];
+await Promise.allSettled(unique.map(u => getOrCreateAmbiguousServing(foodId, foodName, u)));
 ```
+
+**Do not read "3 calls" as "3 model round trips."** `getOrCreateAmbiguousServing()` reaches
+`estimateAmbiguousServing()`, whose first step is a non-LLM `getFdcServingWeight()` USDA lookup
+that can return `status:'success'` before `callStructuredLlm()` is reached — measured at 6,155
+of 6,473 allowlisted rows (95.1%). Owner for that number and for what the serving tiers do and
+do not mean: `sync-docs/reports/2026-08-05_ai-serving-spend-audit.md` (mobile repo).
 
 **AI Prompt Examples**:
 ```

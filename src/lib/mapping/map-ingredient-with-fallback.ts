@@ -204,12 +204,6 @@ export function legacyHitReflectsBrand(
 // only the first one runs the full pipeline. Others wait for its result.
 const inFlightLocks = new Map<string, Promise<FatsecretMappedIngredient | null>>();
 
-// Minimum confidence to SKIP AI simplify fallback
-// If winner confidence is below this, we try AI simplify even if there's a winner
-// This catches cases like "burger relish" -> "Black Bean Burger" (0.80 conf)
-// where AI simplify would correctly map to "Pickle Relish"
-const MIN_CONFIDENCE_FOR_FALLBACK_SKIP = 0.85;
-
 // ============================================================
 // AI Parse Event Logger (for debugging/learning)
 // ============================================================
@@ -217,8 +211,21 @@ const MIN_CONFIDENCE_FOR_FALLBACK_SKIP = 0.85;
 // 1. See exactly which ingredients triggered AI parsing
 // 2. Compare regex parser output vs AI output
 // 3. Identify patterns to improve the regex parser
+//
+// GUARDED, and deliberately opt-in. This is a SYNCHRONOUS appendFileSync on a
+// request path, and it ran unguarded in production for 17 days (496 events into
+// logs/ai-parse-events.jsonl on the box). Every one of the ten sibling analysis
+// writes in this file is already behind ENABLE_MAPPING_ANALYSIS; this one was
+// simply missed. The volume is trivial (~29/day) — the reason to guard it is
+// that neither required CI gate can see an unguarded disk write, so nothing
+// else was ever going to.
+//
+// The structured logger.* calls at each call site are NOT guarded and must stay
+// that way: they are the observability, this file is the debugging convenience.
 import { appendFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
+
+const ENABLE_AI_PARSE_LOG = process.env.ENABLE_AI_PARSE_LOG === 'true';
 
 interface AiParseLogEntry {
     rawLine: string;
@@ -229,6 +236,7 @@ interface AiParseLogEntry {
 }
 
 function logAiParseEvent(entry: AiParseLogEntry): void {
+    if (!ENABLE_AI_PARSE_LOG) return;
     try {
         const logsDir = join(process.cwd(), 'logs');
         if (!existsSync(logsDir)) {
@@ -794,7 +802,17 @@ export async function mapIngredientWithFallback(
                 });
             }
         } else {
-            // Log failed AI parse attempts  
+            // This is the ONLY record of an aiParseIngredient() failure. The two
+            // sibling branches above each emit a structured logger.* line before
+            // their logAiParseEvent() call; this one did not, so once the file
+            // write went behind ENABLE_AI_PARSE_LOG the outcome would have gone
+            // dark entirely. Keep the warn unguarded.
+            logger.warn('mapping.ai_parse_failed', {
+                rawLine: trimmed,
+                reason: aiParsed.status === 'error' ? aiParsed.reason : 'no_result',
+            });
+
+            // Log failed AI parse attempts
             logAiParseEvent({
                 rawLine: trimmed,
                 regexResult: parsed,
