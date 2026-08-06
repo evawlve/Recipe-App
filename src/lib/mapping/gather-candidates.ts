@@ -14,6 +14,11 @@ import { searchFatSecretLane } from './fatsecret-lane';
 import { countedPieceNoun } from './count-label';
 import { detectGrainCookingContext } from './filter-candidates';
 import { SEMANTIC_SEARCH_ENABLED, warmupEmbedder } from '../search/query-embedding';
+// Import the LEAF module, not sub-threshold-admission (which re-exports this).
+// sub-threshold-admission pulls simple-rerank -> modifier-constraints, and
+// modifier-constraints imports THIS file — a cycle that leaves
+// MODIFIER_SYNONYM_GROUPS undefined at module-eval time.
+import { RERANK_DECLINED_CONFIDENCE } from './declined-confidence';
 
 // Start loading the ONNX query-embedding model as soon as the mapping
 // subsystem is loaded, so the first magic-log request doesn't pay for it.
@@ -599,9 +604,38 @@ export function confidenceGate(
         return {
             skipAiRerank: true,
             selected: top1,
-            // Raw engine scores are not on the confidence scale (OFF ~0-10,
-            // FDC ~0-1.5) — clamp so the bypass can't report confidence > 1
-            confidence: Math.max(0, Math.min(1, top1.score)),
+            // A CEILING on the clamped raw engine score, never a replacement for
+            // it. This exit names a candidate by REGEX on the query, not by any
+            // assessment of it, and `confidence_gate_backstop` in
+            // map-ingredient-with-fallback.ts writes whatever comes back straight
+            // into the cache with no reason scope — so the number must be capped
+            // at the declined constant. Owner:
+            // mobile:sync-docs/reports/2026-08-05_the-abstention-writes-a-laundered-confidence.md
+            //
+            // The `Math.min(RERANK_DECLINED_CONFIDENCE, …)` is load-bearing and
+            // this exit is MONOTONE-DOWNWARD by construction: min(0.78, x) <= x
+            // for every x, so no decision's confidence can rise. A flat 0.78
+            // would be a LOOSENING for the low tail. Measured 2026-08-05 over the
+            // box's 111 mapping-analysis-*.json (295 basic_produce_bypass
+            // decisions): 288 sit at a saturated 1.000, 1 at 0.810, and 6 at
+            // 0.67551 — all six the same line, `grilled chicken with brown rice
+            // and steamed broccoli` -> fdc_174567 "cream of chicken dry mix
+            // prepared with water soup", a visibly wrong pick. 0.67551 is below
+            // SUB_THRESHOLD_SAVE_FLOOR (0.75), i.e. not cacheable at all today,
+            // and a flat 0.78 would make it cacheable. THAT is the whole reason
+            // for the cap. The badge does NOT move and an earlier version of this
+            // comment said it did: mobile `CONFIDENCE_LEVELS.medium.min` is 0.5
+            // and `getConfidenceLevel()` uses `>=`, so 0.67551 and 0.78 both
+            // render medium "Good Estimate" (same under this repo's own
+            // `confidence >= 0.6 ? 'medium'` mapping). Cacheability carries the
+            // justification alone. Re-derive:
+            //   ssh owner@192.168.1.133 'cd /home/owner/Recipe-App/logs && node -e "…"'
+            //   grouping selectedCandidate.confidence by selectionReason.
+            // The clamp inside is retained for its original reason: raw engine
+            // scores are not on the confidence scale (OFF ~0-10, FDC ~0-1.5), so
+            // the bypass must not report a negative or a value above 1.
+            // Guarded by T4b in __tests__/confidence-gate.test.ts.
+            confidence: Math.min(RERANK_DECLINED_CONFIDENCE, Math.max(0, Math.min(1, top1.score))),
             reason: 'basic_produce_bypass'
         };
     }

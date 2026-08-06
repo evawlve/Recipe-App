@@ -518,6 +518,37 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // This is the shape HEAD is on: the two differ ONLY in line endings, which is
     // what the 2026-08-03 normalization proved — see the section-2 header.)
     'f64c553ece3b0eec': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes, and the FIRST pin in this table
+    // whose delta is a behaviour change inside the transcribed leg rather than a
+    // comment, a log line or a window re-composition.
+    //
+    // Delta from f64c553e (= master 136d0e5, verified by extracting the caller
+    // block from `git show 136d0e5:src/lib/mapping/map-ingredient-with-fallback.ts`
+    // with the guard's own LF-normalising reader — its hash is f64c553ece3b0eec):
+    //
+    //   const MIN_FALLBACK_CONFIDENCE = 0.80;              const MIN_FALLBACK_RAW_SCORE = 0.80;
+    //   if (sortedFiltered[0].score >= …) {          ->    const MIN_FALLBACK_NAME_MATCH = 0.60;
+    //       winner = sortedFiltered[0];                    if (top.score >= RAW && nameMatch >= NAME) {
+    //       confidence = winner.score;                         winner = top;
+    //                                                          confidence = RERANK_DECLINED_CONFIDENCE;
+    //
+    // plus `basic_produce_bypass` in gather-candidates.ts capping its return at
+    // RERANK_DECLINED_CONFIDENCE. That second half is NOT in this block and needs
+    // no re-transcription — `confidenceGate` is required live from the tree — which
+    // is exactly why the two halves fell out of step: site B moved under the
+    // instrument automatically while site A did not, so between the branch's first
+    // commit and this re-pin the harness mismeasured its own PR.
+    //
+    // DRIFT PROVEN SEMANTIC BEFORE RE-TRANSCRIBING (the check this project has now
+    // skipped three times). `.gitattributes` pins both this file and the mapper to
+    // `text eol=lf`; the mapper measures 0 CR in the worktree and on master; the
+    // helpers hash is UNCHANGED at 8c1e518d30331976, so the file was not re-encoded;
+    // and an LF-normalised `diff` of the two caller blocks returns the statement
+    // change quoted above. A line-ending flip cannot produce that.
+    //
+    // Still 'gate-backstop': `SelectionVariant` models what the confidence GATE does
+    // relative to Step 4 (pre-empt vs backstop), and that is untouched here.
+    '2aa35e26b52161d1': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -562,7 +593,7 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
  * (that shape is genuinely known, and naming it is more useful than "unrecognised"),
  * but it can no longer claim the replay mirrors it.
  */
-const TRANSCRIBED_CALLER = 'f64c553ece3b0eec';
+const TRANSCRIBED_CALLER = '2aa35e26b52161d1';
 
 interface DriftResult {
     caller: string;
@@ -667,7 +698,20 @@ const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = req
 // (which snapshots flags and warms ONNX — playbook section 4).
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } = require('../../src/lib/mapping/rerank-pool');
-const { confidenceGate } = gatherMod;
+const { confidenceGate, assessConfidence } = gatherMod;
+/**
+ * The confidence the caller writes when simpleRerank abstained. Imported from the
+ * LEAF module (`declined-confidence`), not restated, for the same reason the rest
+ * of this section imports rather than reimplements — and not from
+ * `sub-threshold-admission`, which re-exports it but pulls simple-rerank ->
+ * modifier-constraints -> gather-candidates behind it.
+ *
+ * No `eslint-disable` for no-var-requires here, unlike the neighbours above: the
+ * rule is not enabled in this config, so the directive lints as UNUSED and every
+ * one of those neighbours is already emitting that warning. Adding a sixth would
+ * have moved `lint:ci` off its baseline for no benefit.
+ */
+const { RERANK_DECLINED_CONFIDENCE } = require('../../src/lib/mapping/declined-confidence');
 const { filterCandidatesByTokens, hasCoreTokenMismatch, hasNullOrInvalidMacros, detectGrainCookingContext } = filterMod;
 const { simpleRerank, toRerankCandidate, stripPrepModifiers } = rerankMod;
 const {
@@ -1199,7 +1243,8 @@ const VARIANTS: SelectionVariant[] = ['baseline', 'gate-backstop'];
 //   caller 1750-1751  rerankQuery + simpleRerank (NON-MONOTONE #4 lives inside:
 //                     simple-rerank.ts:1883 `siblings.length >= 3`)
 //   caller 1753-1760  re-resolve the winner out of `filtered` by id     -> path=rerank
-//   caller 1762-1768  MIN_FALLBACK_CONFIDENCE = 0.80 on sortedFiltered[0].score
+//   caller 1762-1768  MIN_FALLBACK_RAW_SCORE = 0.80 AND MIN_FALLBACK_NAME_MATCH = 0.60
+//                     on sortedFiltered[0]; writes RERANK_DECLINED_CONFIDENCE, not the score
 //
 // gate-backstop ONLY (no counterpart in the baseline caller; line numbers verified
 // by grep in THIS tree at caller hash 4ea700da8becee0c, not inferred from the diff):
@@ -1354,7 +1399,7 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
      * statements in identical order; the only change is that the caller's assignments
      * to `winner` / `confidence` / `selectionReason` became locals that are returned.
      *
-     * NOTE THE SCOPE: the `MIN_FALLBACK_CONFIDENCE = 0.80` fallback (caller 1762-1778)
+     * NOTE THE SCOPE: the raw-score + name-match fallback (caller 1762-1778)
      * is INSIDE this else-branch, so when the gate fires today the 0.80 floor never
      * runs either. Putting it inside this closure is what makes `counter` answer the
      * question the demotion decision actually needs — "what would the caller have
@@ -1583,17 +1628,49 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
             s4notes.push(`gate BACKSTOP (gate reason: ${backstop.reason}) — rerank declined, gate pick used ahead of the 0.80 score floor`);
         }
 
-        // caller 1762-1778: fall back to the top scorer ONLY above the floor.
+        // Fall back to the top scorer ONLY above the floor AND only if it actually
+        // matches the query by name. Mirrors the `else if (sortedFiltered.length > 0)`
+        // arm of the caller's `if (!winner)` block, statement for statement.
+        //
+        // TWO CHANGES FROM THE PREVIOUS TRANSCRIPTION, both of which this instrument
+        // was silently mismeasuring:
+        //
+        //  1. The caller no longer writes `confidence = winner.score`. It writes the
+        //     named constant RERANK_DECLINED_CONFIDENCE, because the reranker DECLINED
+        //     to name a winner and a raw cross-source retrieval score is not a
+        //     confidence. Transcribing the old assignment made every replayed
+        //     `scored_by_confidence` row report a raw engine score — the exact
+        //     CONF-UNEXPLAINED failure the clamp note below records, except no clamp
+        //     can repair it because the number was never on the confidence scale.
+        //
+        //  2. The single `MIN_FALLBACK_CONFIDENCE = 0.80` became a conjunction of a
+        //     raw-score floor and a scale-free name-match term. Dropping the second
+        //     term here would make the replay ADMIT rows the caller rejects.
+        //
+        // WHY THIS MATTERS FOR THIS INSTRUMENT SPECIFICALLY: `confidenceGate` is
+        // required live from the tree (see the imports above), so a change inside the
+        // gate moves under the harness automatically, while this hand-transcribed leg
+        // does not. The two halves of the same PR therefore drift apart unless this
+        // block is re-transcribed with it. That asymmetry is the standing hazard of
+        // anchor-bounded transcription, not a one-off.
+        //
+        // The two thresholds are function-local `const`s in the caller and cannot be
+        // imported; they are restated. `assessConfidence` and
+        // RERANK_DECLINED_CONFIDENCE are imported live and must not be restated.
         if (!s4winner && sortedFiltered.length > 0) {
-            const MIN_FALLBACK_CONFIDENCE = 0.80;
-            if (sortedFiltered[0].score >= MIN_FALLBACK_CONFIDENCE) {
-                s4winner = sortedFiltered[0];
-                s4confidence = sortedFiltered[0].score;
+            const MIN_FALLBACK_RAW_SCORE = 0.80;
+            const MIN_FALLBACK_NAME_MATCH = 0.60;
+            const fallbackTop = sortedFiltered[0];
+            const fallbackNameMatch = assessConfidence(searchQuery, fallbackTop);
+            if (fallbackTop.score >= MIN_FALLBACK_RAW_SCORE
+                && fallbackNameMatch >= MIN_FALLBACK_NAME_MATCH) {
+                s4winner = fallbackTop;
+                s4confidence = RERANK_DECLINED_CONFIDENCE;
                 s4reason = 'scored_by_confidence';
                 s4path = 'scored_by_confidence';
             } else {
                 s4path = 'no_winner_rerank_declined';
-                s4notes.push(`top scorer "${sortedFiltered[0].name}" score ${sortedFiltered[0].score.toFixed(3)} < ${MIN_FALLBACK_CONFIDENCE} floor`);
+                s4notes.push(`top scorer "${fallbackTop.name}" score ${fallbackTop.score.toFixed(3)} (floor ${MIN_FALLBACK_RAW_SCORE}) nameMatch ${fallbackNameMatch.toFixed(3)} (floor ${MIN_FALLBACK_NAME_MATCH})`);
             }
         }
 
@@ -1628,6 +1705,14 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
         // is where the caller applies it and is the only placement that cannot be
         // half-done. Two of the three call sites here were unclamped; fixing just
         // the one `verify` happened to flag would have left the other two.
+        //
+        // Reasoning, not a measurement: the clamp is now INERT on the
+        // `scored_by_confidence` path specifically, because that path assigns the
+        // named constant 0.78 rather than a raw score. Do not conclude from that
+        // that the clamp is dead — `confidence_gate_early_exit` and
+        // `confidence_gate_backstop` still forward `gateResult.confidence`, and
+        // `yeast_variant_preference` returns a hardcoded 0.95 that no floor bounds.
+        // Keep it on every path; the failure mode it guards was silent.
         const windowIds = candidatesForRerank.map(c => c.id);
         return {
             path: s4path,
