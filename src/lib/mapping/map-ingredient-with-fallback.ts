@@ -586,38 +586,23 @@ export function makeSortedFilteredComparator(
 export { isBarePluralRequest };
 
 // ============================================================
-// Main Entry Point
+// Preflight: Steps 0a–1-WATER — synonym canonicalization, pre-parse unit
+// cleanup, parse + identity restoration, AI parse fallback, unit-only
+// rejection, and the zero-calorie early exit. Runs entirely BEFORE the
+// in-flight lock is registered, so a `done` outcome returns to the caller
+// without any lock bookkeeping.
 // ============================================================
 
-export async function mapIngredientWithFallback(
-    rawLine: string,
-    options: MapIngredientOptions = {}
-): Promise<FatsecretMappedIngredient | MapIngredientPendingResult | null> {
-    const {
-        minConfidence = 0,
-        debug = false,
-        skipCache = false,
-        skipSave = false,
-        skipFdc = false,
-        allowLiveFallback = true,
-        _skipInFlightLock = false,
-        _skipFallback = false,
-        skipOnLock = false,
-        telemetry,
-        // THE single decision point for callers that decline to own a budget:
-        // one fresh per-call allowance. A looping caller MUST pass its own
-        // shared object instead (see MapIngredientOptions.aiNutritionBudget) —
-        // otherwise every query in the loop mints a new allowance and the run
-        // is unbounded.
-        aiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST),
-        // The SECOND allowance. Defaulted independently — a caller that owns one
-        // budget and not the other must not silently get its last-resort pool
-        // spent on hydration (or the reverse).
-        aiHydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_REQUEST),
-    } = options;
+type PreflightOutcome =
+    | { done: true; result: FatsecretMappedIngredient | null }
+    | { done: false; parsed: ParsedIngredient | null; baseName: string };
 
-    const trimmed = rawLine.trim();
-    if (!trimmed) return null;
+async function preflightIngredientLine(
+    rawLine: string,
+    trimmed: string,
+    options: MapIngredientOptions,
+): Promise<PreflightOutcome> {
+    const { _skipFallback = false, telemetry } = options;
 
     // Step 0a: Check if this is a known synonym, use canonical name if so
     const canonicalName = await findCanonicalName(trimmed);
@@ -828,7 +813,7 @@ export async function mapIngredientWithFallback(
     const UNIT_ONLY_PATTERN = /^\s*(\d[\d\s\/\.]*\s*)?(oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|cup|cups|tbsp|tsp|quart|gallon)?\s*$/i;
     if (!baseName || UNIT_ONLY_PATTERN.test(baseName.trim())) {
         logger.warn('mapping.no_food_name', { rawLine: trimmed, baseName });
-        return null;
+        return { done: true, result: null };
     }
 
     // ============================================================
@@ -868,7 +853,7 @@ export async function mapIngredientWithFallback(
         const qty = parsed ? parsed.qty * parsed.multiplier : 1;
         const totalGrams = gramsPerUnit * qty;
 
-        return {
+        const waterResult: FatsecretMappedIngredient = {
             source: 'cache',
             foodId: 'water_default',
             foodName: 'Water',
@@ -884,7 +869,49 @@ export async function mapIngredientWithFallback(
             quality: 'high',
             rawLine,
         };
+        return { done: true, result: waterResult };
     }
+
+    return { done: false, parsed, baseName };
+}
+
+// ============================================================
+// Main Entry Point
+// ============================================================
+
+export async function mapIngredientWithFallback(
+    rawLine: string,
+    options: MapIngredientOptions = {}
+): Promise<FatsecretMappedIngredient | MapIngredientPendingResult | null> {
+    const {
+        minConfidence = 0,
+        debug = false,
+        skipCache = false,
+        skipSave = false,
+        skipFdc = false,
+        allowLiveFallback = true,
+        _skipInFlightLock = false,
+        _skipFallback = false,
+        skipOnLock = false,
+        telemetry,
+        // THE single decision point for callers that decline to own a budget:
+        // one fresh per-call allowance. A looping caller MUST pass its own
+        // shared object instead (see MapIngredientOptions.aiNutritionBudget) —
+        // otherwise every query in the loop mints a new allowance and the run
+        // is unbounded.
+        aiNutritionBudget = createAiNutritionBudget(AI_NUTRITION_MAX_PER_REQUEST),
+        // The SECOND allowance. Defaulted independently — a caller that owns one
+        // budget and not the other must not silently get its last-resort pool
+        // spent on hydration (or the reverse).
+        aiHydrationBudget = createAiNutritionBudget(AI_NUTRITION_HYDRATION_MAX_PER_REQUEST),
+    } = options;
+
+    const trimmed = rawLine.trim();
+    if (!trimmed) return null;
+
+    const pre = await preflightIngredientLine(rawLine, trimmed, options);
+    if (pre.done) return pre.result;
+    let { parsed, baseName } = pre;
 
     // ============================================================
     // IN-FLIGHT LOCK: Prevent parallel processing of identical ingredients
