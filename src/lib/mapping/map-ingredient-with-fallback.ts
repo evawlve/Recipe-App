@@ -5412,6 +5412,116 @@ async function borrowSiblingLabelServing(
     }
 }
 
+/**
+ * Median NAME-GROUP label serving — the brandless twin of
+ * borrowSiblingLabelServing (N1, item #16, Aug 2026). A brandless OFF row
+ * ("Asparagus", "Big Mac") has 58.1% NULL servingGrams against branded rows'
+ * 17.7% (measured 2026-08-05, `GROUP BY brandName IS NULL` over OffFood), and
+ * the brand-keyed borrow above is structurally unreachable for it:
+ * brandForBorrow falls back to the food name's FIRST TOKEN, so 'Asparagus'
+ * queries `brandName ILIKE 'Asparagus'` and matches nothing.
+ *
+ * DELIBERATELY A SEPARATE FUNCTION, not a key-mode argument on the brand
+ * borrow. MappingEventLog.servingTier is the only post-deploy instrument we
+ * have, and merging the two mechanisms under one tier string makes the split
+ * unmeasurable — the serving-cascade-divergence failure shape.
+ *
+ * Predicate notes, all measured 2026-08-05 and NOT free to "optimise":
+ *  - `lower(name)`, not a case-sensitive `name =`. The indexed form is ~2,800x
+ *    faster (0.132 ms vs 369 ms) but loses 43.7% of raise events, and 'a big
+ *    mac' drops to n=2 and fails the n>=3 minimum. The seq scan is the price.
+ *  - `duplicateOfBarcode`/`corruptReason` NULL: a name key concentrates
+ *    near-duplicates by construction (dedupe-off-mark.ts marks rows sharing an
+ *    exact name), so 18.9% of in-band siblings in the affected name groups
+ *    carry one of these marks vs 10.9% corpus-wide.
+ *  - The 3 g floor looks inert because the CALLER is raise-only against a 100 g
+ *    floor, so the accepted OUTPUT range is (100, 400]. It is NOT inert on the
+ *    INPUT rows, where it keeps sub-3 g garbage out of the median. Do not
+ *    delete half this band. MAX=400 still binds (largest firing medians
+ *    350/355).
+ *  - `n >= 3`: n=3 carries 22.2% of RAISE events and only 5.1% of LOWER events,
+ *    and 'a big mac' sits at exactly n=3. Raising to 5 costs 205 RAISE events.
+ */
+async function borrowNameSiblingLabelServing(
+    foodName: string | null | undefined,
+    selfBarcode: string,
+): Promise<{ grams: number; samples: number; p25: number; p75: number } | null> {
+    const nm = foodName?.trim();
+    if (!nm || nm.length < 2) return null;
+    try {
+        const { prisma } = await import('../db');
+        const rows = await prisma.$queryRaw<
+            Array<{ med: number | null; n: number; p25: number | null; p75: number | null }>
+        >`
+            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
+                   count(*)::int AS n,
+                   percentile_cont(0.25) WITHIN GROUP (ORDER BY "servingGrams") AS p25,
+                   percentile_cont(0.75) WITHIN GROUP (ORDER BY "servingGrams") AS p75
+            FROM "OffFood"
+            WHERE lower(name) = lower(${nm})
+              AND barcode <> ${selfBarcode}
+              AND "duplicateOfBarcode" IS NULL
+              AND "corruptReason" IS NULL
+              AND "servingGrams" BETWEEN ${BARE_LABEL_MIN_GRAMS} AND ${BARE_LABEL_MAX_GRAMS}
+              AND "servingGrams" <> 100`;
+        const row = rows[0];
+        if (!row?.med || row.n < 3) return null;
+        // p25/p75 come from the same aggregate as `med`, so a non-null med over
+        // n >= 3 rows in a [3, 400] band implies both are non-null and >= 3. The
+        // fallbacks exist so a NULL can never silently read as a TIGHT group
+        // (p75 = Infinity, p25 = 0 both force isTightNameGroup false).
+        return {
+            grams: row.med,
+            samples: row.n,
+            p25: row.p25 ?? 0,
+            p75: row.p75 ?? Number.POSITIVE_INFINITY,
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Interquartile spread of a name group, as a RATIO so it is scale-free (a
+ * cheese group at 28 g and a chicken group at 112 g are comparable).
+ *
+ * The threshold exists to separate two populations the RAISE-ONLY clamp at
+ * rung (E) treats identically:
+ *  - MIXTURES, which is what the clamp was justified on: `hot chocolate`
+ *    (p75/p25 2.13, powder sachets vs made-up mugs), `pasta` (2.06, dry vs
+ *    cooked). Their median is not a serving size, it is the midpoint of two
+ *    different products, and billing it is worse than the floor.
+ *  - CONVENTIONAL LABEL SERVINGS, which are near-uniform: `Broccoli florets`
+ *    n=130 all 85 g (ratio 1.00), `Wide egg noodles` n=26 all 56 g (1.00),
+ *    `Mature cheddar` n=17 all 30 g (1.00). For these the group median IS the
+ *    label serving, and the 100 g floor is a bare literal outranking it.
+ *
+ * 1.5 measured 2026-08-05 over the 28-row #18 residual: it admits 20 and
+ * excludes 8, and both raise-blocked exclusions (`hot chocolate`, `pasta`) are
+ * the mixtures above. Re-derive with the p25/p75 query in
+ * `sync-docs/reports/2026-08-05_the-raise-only-clamp-is-calibrated-on-the-wrong-population.md`.
+ */
+const NAME_GROUP_TIGHT_RATIO = 1.5;
+
+/**
+ * Exported for tests. A group is tight when its IQR ratio is <= the threshold.
+ *
+ * The `<= 0` and inverted-pair guards are load-bearing and each has a test that
+ * dies without it (negative percentiles otherwise divide to a plausible ratio;
+ * an inverted pair otherwise gets silently reordered into one). The `isFinite`
+ * guard is deliberately redundant — verified by mutation on 2026-08-05, nothing
+ * observes its removal, because every non-finite input already fails the checks
+ * below or the comparison itself. It is kept because it is what makes the
+ * Infinity sentinel in the borrow legible, and it is recorded as redundant here
+ * so nobody later reads its presence as evidence of a case it handles alone.
+ */
+export function isTightNameGroup(p25: number, p75: number): boolean {
+    if (!Number.isFinite(p25) || !Number.isFinite(p75)) return false;
+    if (p25 <= 0 || p75 <= 0) return false;
+    if (p75 < p25) return false;
+    return p75 / p25 <= NAME_GROUP_TIGHT_RATIO;
+}
+
 // Exported for tests (tier cascade + bare-query guard wire-in).
 export async function buildOffResult(
     candidate: UnifiedCandidate,
@@ -5907,6 +6017,118 @@ export async function buildOffResult(
         grams = bareOverride.grams;
         servingDescription = bareOverride.servingDescription;
         servingTier = bareOverride.servingTier;
+    }
+
+    // (E) NAME-GROUP SIBLING MEDIAN, RAISE-ONLY. Reaching here still stamped
+    // 'count_unresolved_floor' means every rung above AND the category lexicon
+    // (applyOffBareQueryGuard runs first and stamps its own tier) had no answer:
+    // no label, no package, no piece seed, no lexicon default. The 100 is a bare
+    // literal, not data.
+    //
+    // This rung is deliberately BELOW the guard. At rung (C2) a borrow is
+    // guard-EXEMPT ('bare_sibling_serving' is in none of CAP_TIERS /
+    // HEAD_GATED_CAP_TIERS / REPLACE_TIERS) and therefore pre-empts
+    // bare_category_default, label_serving_default and package_count_*; measured
+    // 2026-08-05, that lowers 207 events, 196 of them `coca cola` 355 -> 275.
+    //
+    // RAISE-ONLY BY DEFAULT: a name group is usually a MIXTURE (asparagus 85 g,
+    // blueberries 62.5 g, strawberries 65.0 g — dried/freeze-dried products
+    // dominate), and the downward half is worse than the floor it would replace.
+    //
+    // The one exception is a TIGHT group (`isTightNameGroup`, p75/p25 <= 1.5),
+    // which is not a mixture at all but a conventional label serving repeated
+    // across near-identical SKUs. There the clamp is the defect: it pins a
+    // 130-row group of `Broccoli florets` that all declare 85 g to a bare 100 g
+    // literal. Lowering is allowed ONLY for those, and stamps a SEPARATE tier
+    // so the two directions stay independently measurable — merging them would
+    // repeat the serving-cascade-divergence mistake this rung's own borrow
+    // function documents.
+    //
+    // A BARE PLURAL takes the tight test in BOTH directions, and that is the
+    // whole of its admission rule. `isBarePluralRequest` exists to suppress
+    // PER-PIECE resolution — label count, seed table, discrete-unit backfill,
+    // the grapes-5g / m&ms-0.9g class — and its own contract says such a
+    // request "must fall through to serving-scale tiers". This rung IS a
+    // serving-scale tier: it borrows the median DECLARED SERVING of same-named
+    // records. Applying a per-piece suppressor to it was over-broad.
+    //
+    // Tightness, not direction, is what makes a plural median safe, and that
+    // was measured rather than argued (2026-08-05, over the 13 plural-blocked
+    // rows of #18's residual): 7 are tight and every one of them is a
+    // conventional serving — `Wide egg noodles` 56 g (2 oz dry, ratio 1.00),
+    // `Broccoli florets` 85 g (1 cup, 1.00), `Cod fillets` 113 g (4 oz, 1.01),
+    // `Chicken tenderloins` 112 g (1.01). The 6 dispersed ones are exactly the
+    // mixtures the clamp was built for (`roasted red peppers` 4.33, `frozen
+    // mozzarella sticks` 4.33). DIRECTION does not separate them — only 2 of
+    // the 7 repairs are RAISES — so a direction rule admits mixtures and
+    // rejects real servings in both directions at once.
+    //
+    // This is also what keeps the `grapes` pin green, and on the real corpus
+    // rather than by accident: `Grapes` measures n=8, median 142 g, ratio 1.71
+    // — genuinely a mixture of bunches and portions, so it is rejected for the
+    // reason the clamp names. A bare relaxation bills it 142 g. Highest
+    // admitted ratio is 1.29 and lowest rejected 1.69, so 1.5 sits in open
+    // space here (it binds at 1.49 for the singular arm — a tighter margin).
+    //
+    // The plural arm stamps its own tier so the new population is countable
+    // and revertible on its own. It needs no direction suffix: this rung only
+    // runs on `count_unresolved_floor` + `bareRequest`, where `grams` is always
+    // the flat 100 literal, so the tier's own grams read the direction (>100
+    // raise, <100 lower) — which is how the singular pair reads live today.
+    //
+    // The tier gate structurally implies five of rung (C2)'s own clauses, which
+    // are therefore NOT restated here: grams == null (by construction of the
+    // branch that stamped the tier), bareLabelGrams == null (345 of 345 zone
+    // records have servingGrams NULL or <= 0), !doseAnchored (a non-null
+    // getBareQueryDefault would have fired the guard's REPLACE path and changed
+    // the tier), the ml drink-the-unit exception (1 record / 1 event in the
+    // zone), and "the guard already declined". All measured 2026-08-05.
+    if (
+        servingTier === 'count_unresolved_floor'
+        // Excludes 113 digit-line floor events: for "15 pretzels" a 30 g median
+        // billed once is WORSE than the floor.
+        && bareRequest
+        // Leaves 64 branded digitless floor events to rung (C2), which already
+        // ran against their real brand and returned n < 3.
+        && hydrated.brandName == null
+    ) {
+        // Recomputed rather than hoisted: barePluralRequest/itemNameForCount are
+        // block-scoped inside the unitless-count branch, and hoisting them
+        // changes rung-(C2) ordering. Computed inside the block, not in the
+        // condition, because it is no longer a gate — only a policy selector.
+        const barePlural = isBarePluralRequest(
+            parsed, rawLine, parsed?.name || hydrated.foodName
+        );
+        const nameSib = await borrowNameSiblingLabelServing(
+            hydrated.foodName, candidate.id.replace(/^off_/, '')
+        );
+        const tightGroup = nameSib != null && isTightNameGroup(nameSib.p25, nameSib.p75);
+        // SINGULAR: raise unconditionally, lower only into a tight group (#252).
+        // PLURAL:   tight group only, either direction.
+        // `grams !== grams` is impossible to reach for the singular arm (both of
+        // its disjuncts already imply a move) and is stated once here so the
+        // plural arm cannot stamp a tier on a median that equals the floor.
+        const admitted = nameSib != null
+            && nameSib.grams !== grams
+            && (barePlural ? tightGroup : (nameSib.grams > grams || tightGroup));
+        if (nameSib != null && admitted) {
+            const tier = barePlural
+                ? 'bare_name_sibling_serving_plural'
+                : nameSib.grams < grams
+                    ? 'bare_name_sibling_serving_tight'
+                    : 'bare_name_sibling_serving';
+            grams = nameSib.grams;
+            servingDescription = `1 serving (~${nameSib.grams.toFixed(0)}g, name median)`;
+            servingTier = tier;
+            logger.info(`off.build_result.${tier}`, {
+                foodId: candidate.id,
+                name: hydrated.foodName,
+                grams: nameSib.grams,
+                samples: nameSib.samples,
+                p25: nameSib.p25,
+                p75: nameSib.p75,
+            });
+        }
     }
 
     const factor = grams / 100;

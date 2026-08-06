@@ -986,12 +986,26 @@ describe('realServing() — the anchor D5/D6 judge', () => {
         // corpus cannot anchor. That number is not a property of the cached row; it can
         // differ on the next request. Same rule as the serving gate's
         // AI-NONDETERMINISTIC verdict (PR #174): report it, never gate on it.
-        for (const tier of ['ai_estimated_serving', 'fdc_size_estimated', 'count_ai_default']) {
+        //
+        // ALL FIVE NAMES BELOW ARE REAL. This loop used to read
+        // `ai_estimated_serving`, `fdc_size_estimated`, `count_ai_default` — not one
+        // of which appears anywhere in src/ or has a single row in MappingEventLog.
+        // They passed because the retired regex matched any invented string with an
+        // `ai` token or `estimat` in it, so the test proved the REGEX worked on names
+        // its author made up, never that the PREDICATE worked on names the mapper
+        // stamps. That is why `discrete_unit_backfill` (1,269 live events) and
+        // `fdc_size_qualifier` (345) went unnoticed: no fixture ever contained them.
+        // Re-derive the real set:
+        //   SELECT "servingTier", count(*) FROM "MappingEventLog" GROUP BY 1;
+        for (const tier of [
+            'ai_generated_serving', 'fdc_size_estimate', 'count_unit_ai',
+            'discrete_unit_backfill', 'fdc_size_qualifier',
+        ]) {
             const r = realServing(baseRow({ real: { grams: 28, tier, kcal: 90 } }));
             expect(r.judged).toBe(false);
             expect(r.from).toContain('ai-estimated');
         }
-        const h = tierD(baseRow({ real: { grams: 1.0, tier: 'ai_estimated_serving', kcal: 5 } }), 'balanced')
+        const h = tierD(baseRow({ real: { grams: 1.0, tier: 'ai_generated_serving', kcal: 5 } }), 'balanced')
             .find(x => x.rule === 'D6');
         expect(h?.severity).toBe('INFO');
     });

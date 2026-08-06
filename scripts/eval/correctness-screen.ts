@@ -138,6 +138,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { detectBrandInQuery } from '../../src/lib/mapping/brand-detector';
 import { servingMacros } from '../../src/lib/mapping/fs-serving-macros';
+import { isReplayNondeterministicTier } from '../../src/lib/mapping/serving-ai-tiers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -415,18 +416,20 @@ export function realServing(r: ScreenRow): { grams: number | null; from: string;
     // guess that can differ on the next request, so it cannot ground a decision to
     // throw the row away. Same rule the serving gate uses (PR #174's
     // AI-NONDETERMINISTIC verdict): name it, never silently read it as agreement.
-    if (AI_SERVING_TIER_RE.test(r.real.tier ?? '')) {
+    if (isReplayNondeterministicTier(r.real.tier)) {
         return { grams: r.real.grams, from: `ai-estimated:${r.real.tier}`, judged: false };
     }
     return { grams: r.real.grams, from: `hydrateAndSelectServing:${r.real.tier ?? 'no-tier'}`, judged: true };
 }
 
 /**
- * Tiers produced by a model call rather than by corpus data. Matching one means the
- * screen spent an LLM call resolving that row — see the cost note on
- * `resolveRealServings`.
+ * Tiers produced by a model call rather than by corpus data — see the cost note on
+ * `resolveRealServings`. The predicate now lives in
+ * src/lib/mapping/serving-ai-tiers.ts as `isReplayNondeterministicTier()`, shared
+ * with winner-diff.ts, which is the point: this file and that one each carried a
+ * private regex, and the two disagreed (`estimat` here, `estimate` there). The
+ * divergence was inert on the live tier set; the DEFECT was what both missed.
  */
-export const AI_SERVING_TIER_RE = /(^|_)ai(_|$)|estimat/i;
 
 /**
  * Serving tiers that are a FALLBACK, not a measured portion. A row on one of these
@@ -1034,7 +1037,7 @@ function candidateId(r: ScreenRow): string | null {
  * (one gpt-4o-mini call per ambiguous row). Over the full 3,248-row cache that is
  * minutes of wall clock and a few hundred model calls, NOT the offline pure-function
  * cost of Tier D. Rows it resolves through the estimator come back on an
- * `AI_SERVING_TIER_RE` tier and D5/D6 abstain on them, so the model spend buys
+ * replay-nondeterministic tier and D5/D6 abstain on them, so the model spend buys
  * information about the row but never a verdict. Budget for it, or pass
  * `--no-serving` and accept that D5/D6 report instead of gate.
  */
@@ -1348,7 +1351,7 @@ async function main(): Promise<number> {
         await resolveRealServings(rows);
         const ok = rows.filter(r => r.real && !r.real.error).length;
         const failed = rows.filter(r => r.real?.error).length;
-        const ai = rows.filter(r => r.real && !r.real.error && AI_SERVING_TIER_RE.test(r.real.tier ?? '')).length;
+        const ai = rows.filter(r => r.real && !r.real.error && isReplayNondeterministicTier(r.real.tier)).length;
         console.log(`serving: real anchor resolved for ${ok}/${rows.length} row(s)`
             + (failed ? `, ${failed} errored (D5/D6 abstain on those)` : '')
             + (ai ? `, ${ai} via an AI estimator (D5/D6 abstain on those too)` : ''));
