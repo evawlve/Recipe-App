@@ -16,20 +16,29 @@
  * This module owns the eligibility predicate, the label-usability band, and
  * the post-cascade override (CAP / REPLACE / floor). Pure functions, no I/O.
  *
- * 'bare_name_sibling_serving' (N1, Aug 2026) and its downward twin
- * 'bare_name_sibling_serving_tight' are DELIBERATELY absent from every tier set
+ * 'bare_name_sibling_serving' (N1, Aug 2026), its downward twin
+ * 'bare_name_sibling_serving_tight' and the bare-plural arm
+ * 'bare_name_sibling_serving_plural' are DELIBERATELY absent from every tier set
  * below, and that is not an omission to fix. That rung runs AFTER this guard —
  * it is gated on the guard having already declined (tier still
  * 'count_unresolved_floor') — so any membership here would be dead code. Adding
- * either would also re-create the pre-emption bug the rung was placed low to
- * avoid: see the (E) rung comment in buildOffResult
+ * any of them would also re-create the pre-emption bug the rung was placed low
+ * to avoid: see the (E) rung comment in buildOffResult
  * (map-ingredient-with-fallback.ts).
  *
- * The two are ONE rung stamping TWO tiers, split by the DIRECTION the median
- * moved the bill — up off the floor, or down into a measured-tight name group.
- * They are not a hit/miss pair and neither implies anything about caching; the
- * `_cached`-sibling naming convention that misled a previous instrument does
- * not apply here.
+ * The three are ONE rung stamping THREE tiers. The first two split by the
+ * DIRECTION the median moved the bill — up off the floor, or down into a
+ * measured-tight name group. The third splits on the REQUEST SHAPE instead: a
+ * bare plural takes the tight test in both directions, so it needs no direction
+ * suffix (the rung only runs where grams is the flat 100 literal, so its own
+ * grams read the direction). They are not a hit/miss family and none implies
+ * anything about caching; the `_cached`-sibling naming convention that misled a
+ * previous instrument does not apply here.
+ *
+ * Note the plural arm is a DELIBERATE narrowing of isBarePluralRequest's reach,
+ * not a bypass. That predicate suppresses PER-PIECE resolution (see its own
+ * docstring); the name-median rung is serving-scale, which is precisely what it
+ * says such requests should fall through to.
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';

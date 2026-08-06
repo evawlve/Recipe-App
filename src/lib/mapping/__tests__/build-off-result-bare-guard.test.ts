@@ -208,11 +208,18 @@ describe('buildOffResult — bare-plural inversion (A3)', () => {
             foodName: 'Grapes',
             servingGrams: null,
         }));
-        // A RAISING name-group median is offered on purpose: the (E) rung
-        // (N1) carries `!isBarePluralRequest(...)` for parity with rung (C2),
-        // and dropping that clause bills 200g here instead of the floor. With
-        // an empty stub this pin would be green either way.
-        nameSiblingRows = [{ med: 200, n: 40 }];
+        // The REAL 'Grapes' name group, measured 2026-08-05: n=8 in-band
+        // siblings, median 142 g, p25 108.05 / p75 184.46 — ratio 1.71, a
+        // genuine mixture of bunch-scale and portion-scale packs. Rung (E)
+        // admits a bare plural only from a TIGHT group (<= 1.5), so this is
+        // refused for the reason the clamp names, not by luck.
+        //
+        // The previous fixture here was a synthetic `{ med: 200, n: 40 }` with
+        // NO percentiles, which declines through the degenerate-sentinel path
+        // (p25=0 / p75=Infinity) instead — i.e. it would have stayed green
+        // whatever the plural rule did. Real values are what make it a pin.
+        // A plain gate removal bills 142 g here.
+        nameSiblingRows = [{ med: 142, n: 8, p25: 108.05, p75: 184.46 }];
 
         const result = await buildOffResult(
             makeCandidate('Grapes'), bareParsed('grapes'), 0.9, 'grapes'
