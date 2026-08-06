@@ -268,6 +268,9 @@ function sayAll(lines: string[]) { for (const l of lines) say(l); }
 // ============================================================
 
 const MAPPER_FILE = path.join(REPO_ROOT, 'src/lib/mapping/map-ingredient-with-fallback.ts');
+// Phase 1 stage 1a (2026-08-06) moved the hydration/serving lane — including the
+// five COPIED_HELPERS bodies below — out of the mapper into this module:
+const SERVING_LANE_FILE = path.join(REPO_ROOT, 'src/lib/mapping/serving/hydration-lane.ts');
 
 const CALLER_START_ANCHOR = '// Step 3: Apply must-have token filter';
 const CALLER_END_ANCHOR = "selectionReason = 'scored_by_confidence';";
@@ -275,6 +278,11 @@ const CALLER_END_ANCHOR = "selectionReason = 'scored_by_confidence';";
 /** Read the mapper with line endings normalized, so hashes are CRLF/LF invariant. */
 function mapperLines(): string[] {
     return fs.readFileSync(MAPPER_FILE, 'utf8').replace(/\r/g, '').split('\n');
+}
+
+/** Same normalization for the extracted serving lane (home of the copied helpers). */
+function servingLaneLines(): string[] {
+    return fs.readFileSync(SERVING_LANE_FILE, 'utf8').replace(/\r/g, '').split('\n');
 }
 
 function callerBlockSource(): { text: string; startLine: number; endLine: number; lines: string[] } {
@@ -288,7 +296,11 @@ function callerBlockSource(): { text: string; startLine: number; endLine: number
     return { text: lines.join('\n'), startLine: start + 1, endLine: end + 1, lines };
 }
 
-/** The caller-local, NON-EXPORTED helpers copied verbatim into section 4. */
+/**
+ * The helpers copied verbatim into section 4. Since stage 1a they live in
+ * SERVING_LANE_FILE (exported via a bottom-of-file list precisely so these
+ * `function <name>(` anchors — and therefore the pinned hash — stay valid).
+ */
 const COPIED_HELPERS = [
     'function candidateHasCountLabel(',
     'function requestBillsByServing(',
@@ -330,7 +342,7 @@ const COPIED_HELPERS = [
  * silently over-broad capture.
  */
 function copiedHelperSource(): string {
-    const src = mapperLines();
+    const src = servingLaneLines();
     const out: string[] = [];
     for (const anchor of COPIED_HELPERS) {
         const i = src.findIndex(l => l.trimStart().startsWith(anchor));
@@ -2784,6 +2796,9 @@ function gitHead(): string {
  */
 const HASHED_SOURCE_PATHS = [
     'src/lib/mapping',
+    // gitDirtyHash() reads only DIRECT .ts children of a directory entry, so the
+    // stage-1a subdirectory needs its own row or the moved lane goes unhashed:
+    'src/lib/mapping/serving',
     'src/lib/servings',
     // The bare-query lexicon getBareQueryDefault() lives here; it decides grams.
     'src/lib/ai/ambiguous-serving-estimator.ts',
