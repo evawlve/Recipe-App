@@ -331,24 +331,3 @@ export function shouldNormalizeLlm(
     };
 }
 
-/**
- * Quick check if LLM normalization is likely needed.
- * Use this for early-exit optimization before gathering candidates.
- * 
- * @param rawLine - The original ingredient line
- * @returns true if LLM is definitely needed (multi-ingredient, brand, etc.)
- */
-export function definitelyNeedsLlm(rawLine: string): boolean {
-    // Multi-ingredient always needs LLM parsing
-    if (isMultiIngredient(rawLine)) {
-        return true;
-    }
-
-    // Very short inputs might need LLM clarification
-    const words = rawLine.trim().split(/\s+/).filter(w => w.length > 1);
-    if (words.length <= 1 && words[0]?.length <= 3) {
-        return true; // e.g., "oil", "egg" - might need type clarification
-    }
-
-    return false;
-}
