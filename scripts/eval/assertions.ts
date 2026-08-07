@@ -12,9 +12,37 @@ export function textOf(hit: any): string {
     return `${hit?.name ?? hit?.foodName ?? ''} ${hit?.brand ?? hit?.brandName ?? ''}`.toLowerCase();
 }
 
-/** True if any alternative (each = list of required substrings) matches the text. */
+/**
+ * Canonical form for name matching: lowercase, every run of non-alphanumerics
+ * becomes one space, edges trimmed. "Pre-workout", "pre workout" and
+ * "PRE  WORKOUT!" all collapse to "pre workout".
+ */
+export function normalizeForMatch(s: string): string {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * True if any alternative (each = list of required substrings) matches the text.
+ *
+ * Containment is over the NORMALIZED text (see normalizeForMatch), so
+ * hyphen/space/punctuation variants agree: alt "pre workout" matches record name
+ * "Pre-workout". Raw substring containment could never satisfy that (n-supp-20
+ * sat red on exactly this for as long as the matcher existed). Semantics are
+ * otherwise unchanged — it is still substring-of-the-token-SEQUENCE, not token
+ * set membership: partial-token prefixes like "strawberr" still match
+ * "strawberries", and "burrito chicken" still does NOT match "chicken burrito".
+ *
+ * A sub that normalizes to EMPTY (punctuation-only, e.g. "&") falls back to the
+ * old raw containment rather than matching vacuously — no golden-set alt has
+ * that shape today, and `''.includes('')` must never become a silent pass.
+ */
 export function matchesAlt(text: string, alternatives: string[][]): boolean {
-    return alternatives.some(alt => alt.every(sub => text.includes(sub.toLowerCase())));
+    const raw = text.toLowerCase();
+    const norm = normalizeForMatch(text);
+    return alternatives.some(alt => alt.every(sub => {
+        const n = normalizeForMatch(sub);
+        return n ? norm.includes(n) : raw.includes(sub.toLowerCase());
+    }));
 }
 
 /**
