@@ -561,6 +561,22 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // Still 'gate-backstop': `SelectionVariant` models what the confidence GATE does
     // relative to Step 4 (pre-empt vs backstop), and that is untouched here.
     '2aa35e26b52161d1': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes. The second behaviour-change pin
+    // (2026-08-07): the backstop assignment takes the DECLINED CEILING,
+    //
+    //   confidence = gateResult.confidence;
+    //     ->
+    //   confidence = Math.min(RERANK_DECLINED_CONFIDENCE, gateResult.confidence);
+    //
+    // closing the last leg that stored an unbounded gate confidence on a row the
+    // reranker declined (the exact-name assessConfidence 1.0 —
+    // `high_confidence_clear_winner` — which cannot be capped at the producer
+    // because the agreement lift legitimately consumes it). The transcription's
+    // backstop mirror at `if (!s4winner && backstop)` carries the same
+    // `Math.min`; the agreement-lift mirror is deliberately NOT capped, matching
+    // the caller. Still 'gate-backstop': the gate's relation to Step 4 is
+    // untouched.
+    '4d990223908a0828': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -605,7 +621,7 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
  * (that shape is genuinely known, and naming it is more useful than "unrecognised"),
  * but it can no longer claim the replay mirrors it.
  */
-const TRANSCRIBED_CALLER = '2aa35e26b52161d1';
+const TRANSCRIBED_CALLER = '4d990223908a0828';
 
 interface DriftResult {
     caller: string;
@@ -1634,9 +1650,16 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
         // `selectionReason.split(':')[0]` through normalizeClassId, which strips digits
         // and parentheses, so echoing the gate's own reason string here would silently
         // put a different class in the telemetry than production emits.
+        // The DECLINED CEILING, mirrored from the caller (2026-08-07): the
+        // backstop no longer forwards `gateResult.confidence` unbounded — the
+        // reranker declined, so the stored number is capped at
+        // RERANK_DECLINED_CONFIDENCE. Without this mirror the replay would
+        // report 1.0 on every exact-name backstop row the caller now stores at
+        // 0.78 — a phantom CONF delta on exactly the population the fix is
+        // about.
         if (!s4winner && backstop) {
             s4winner = backstop.selected;
-            s4confidence = backstop.confidence;
+            s4confidence = Math.min(RERANK_DECLINED_CONFIDENCE, backstop.confidence);
             s4reason = 'confidence_gate_backstop';
             s4path = 'confidence_gate_backstop';
             s4notes.push(`gate BACKSTOP (gate reason: ${backstop.reason}) — rerank declined, gate pick used ahead of the 0.80 score floor`);
@@ -1722,11 +1745,13 @@ function replaySelection(e: SnapshotEntry, debug: boolean, variant: SelectionVar
         //
         // Reasoning, not a measurement: the clamp is now INERT on the
         // `scored_by_confidence` path specifically, because that path assigns the
-        // named constant 0.78 rather than a raw score. Do not conclude from that
-        // that the clamp is dead — `confidence_gate_early_exit` and
-        // `confidence_gate_backstop` still forward `gateResult.confidence`, and
-        // `yeast_variant_preference` returns a hardcoded 0.95 that no floor bounds.
-        // Keep it on every path; the failure mode it guards was silent.
+        // named constant 0.78 rather than a raw score — and since 2026-08-07 on
+        // `confidence_gate_backstop` too, which takes `gateResult.confidence`
+        // under the declined ceiling. Do not conclude from that that the clamp
+        // is dead — the baseline variant's pre-emption leg still forwards
+        // `gateResult.confidence` unbounded, and `yeast_variant_preference`
+        // returns a hardcoded 0.95 that no floor bounds. Keep it on every path;
+        // the failure mode it guards was silent.
         const windowIds = candidatesForRerank.map(c => c.id);
         return {
             path: s4path,
