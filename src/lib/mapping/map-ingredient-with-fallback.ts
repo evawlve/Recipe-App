@@ -2916,53 +2916,10 @@ export async function mapIngredientWithFallback(
             return null;
         }
 
-        // Step 5: Hydrate and select serving with fallback to next candidates
-        let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
-
         // Step 5a: If hydration failed and user requested a weight unit (oz, g, lb),
         // try AI backfill for weight serving on the winner BEFORE falling back to other candidates.
         // This prevents falling back to lower-ranked candidates just because they have gram servings.
         const isWeightUnit = parsed?.unit && /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms)$/i.test(parsed.unit);
-
-        if (!result && isWeightUnit && winner.source === 'ai_generated') {
-            // See the rerank instrumentation note above. If this never fires, weight
-            // serving backfill has been silently off since the lane was relabelled
-            // 'fatsecret' — corroborated by MEASURED 0 occurrences of the warn-level
-            // mapping.weight_backfill_failed in 12 days of production log. The repair
-            // would then be to WIDEN this guard to 'fatsecret', not to delete it.
-            logger.audit('backfill.ai_generated_winner_seen', {
-                foodId: winner.id,
-                foodName: winner.name,
-                path: 'weight',
-            });
-            logger.info('mapping.weight_backfill_attempt', {
-                foodId: winner.id,
-                foodName: winner.name,
-                unit: parsed!.unit,
-            });
-
-            const backfillResult = await backfillWeightServing(winner.id);
-
-            if (backfillResult.success) {
-                // Retry hydration now that we have a weight serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
-
-                if (result) {
-                    logger.info('mapping.weight_backfill_success', {
-                        foodId: winner.id,
-                        foodName: winner.name,
-                        unit: parsed!.unit,
-                        grams: result.grams,
-                    });
-                    selectionReason = 'weight_backfill_success';
-                }
-            } else {
-                logger.warn('mapping.weight_backfill_failed', {
-                    foodId: winner.id,
-                    reason: backfillResult.reason,
-                });
-            }
-        }
 
         // Step 5a-VOLUME: If hydration failed for a VOLUME unit (cup, tbsp, tsp, etc.),
         // try AI volume backfill to estimate density for the winner BEFORE falling back to other candidates.
@@ -2972,413 +2929,47 @@ export async function mapIngredientWithFallback(
         // Extract prep modifier from ingredient line for modifier-aware serving labels
         const prepModifier = extractPrepModifier(rawLine, parsed?.qualifiers);
 
-        // Enable AI backfill for BOTH FatSecret and FDC sources (FDC often lacks volume servings)
-        if (!result && isVolumeUnit && (winner.source === 'ai_generated' || winner.source === 'fdc')) {
-            if (winner.source === 'ai_generated') {
-                logger.audit('backfill.ai_generated_winner_seen', {
-                    foodId: winner.id,
-                    foodName: winner.name,
-                    path: 'volume',
-                });
-            }
-            logger.info('mapping.volume_backfill_attempt', {
-                foodId: winner.id,
-                foodName: winner.name,
-                unit: parsed!.unit,
-                source: winner.source,
-                prepModifier,
-            });
-
-            const volumeBackfillResult = await insertAiServing(winner.id, 'volume', {
-                targetServingUnit: parsed?.unit ?? undefined,
-                prepModifier,
-                candidateData: winner,  // Pass candidate data to avoid DB lookup race condition
-            });
-
-            if (volumeBackfillResult.success) {
-                // Retry hydration now that we have a volume serving
-                result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
-
-                if (result) {
-                    logger.info('mapping.volume_backfill_success', {
-                        foodId: winner.id,
-                        foodName: winner.name,
-                        unit: parsed!.unit,
-                        grams: result.grams,
-                    });
-                    selectionReason = 'volume_backfill_success';
-                }
-            } else {
-                logger.warn('mapping.volume_backfill_failed', {
-                    foodId: winner.id,
-                    reason: volumeBackfillResult.reason,
-                });
-            }
-        }
+        // Step 5: Hydrate and select serving with fallback to next candidates
+        const hydrated = await hydrateWinnerWithBackfills({
+            winner, parsed, confidence, rawLine, aiHydrationBudget,
+            isWeightUnit, isVolumeUnit, prepModifier,
+        });
+        let result = hydrated.result;
+        if (hydrated.selectionReason !== undefined) selectionReason = hydrated.selectionReason;
 
         // If first choice fails (e.g., branded item without serving weights), try next candidates
         // Note: filtered may be empty if winner came from cache hit - skip fallback in that case
         if (!result && filtered.length > 0) {
-            logger.info('mapping.hydration_failed_retrying', {
-                failedId: winner.id,
-                failedName: winner.name,
-                remainingCandidates: filtered.length - 1
+            const servingFallback = await attemptServingFailureFallback({
+                winner, filtered, parsed, confidence, rawLine, trimmed, normalizedName,
+                aiHydrationBudget, isWeightUnit, isVolumeUnit, prepModifier,
             });
-
-            // Try next 3 candidates as fallbacks
-            const fallbackCandidates = filtered
-                .filter(c => c.id !== winner.id)
-                .slice(0, 3);
-
-            const failedWinnerId = winner.id;
-            const tryFallbackCandidate = async (fallback: UnifiedCandidate): Promise<boolean> => {
-                let fallbackResult = await hydrateAndSelectServing(
-                    fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
-                );
-
-                // If hydration failed for a FatSecret candidate, try backfill before giving up
-                if (!fallbackResult && fallback.source === 'ai_generated') {
-                    logger.audit('backfill.ai_generated_winner_seen', {
-                        foodId: fallback.id,
-                        foodName: fallback.name,
-                        path: 'fallback',
-                    });
-                    if (isVolumeUnit) {
-                        logger.info('mapping.fallback_volume_backfill_attempt', {
-                            foodId: fallback.id,
-                            foodName: fallback.name,
-                            unit: parsed?.unit,
-                            prepModifier,
-                        });
-                        const backfillResult = await insertAiServing(fallback.id, 'volume', {
-                            targetServingUnit: parsed?.unit ?? undefined,
-                            prepModifier,
-                            candidateData: fallback,  // Pass candidate data to avoid DB lookup race condition
-                        });
-                        if (backfillResult.success) {
-                            fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
-                            );
-                        }
-                    } else if (isWeightUnit) {
-                        logger.info('mapping.fallback_weight_backfill_attempt', {
-                            foodId: fallback.id,
-                            foodName: fallback.name,
-                            unit: parsed?.unit,
-                        });
-                        const backfillResult = await backfillWeightServing(fallback.id);
-                        if (backfillResult.success) {
-                            fallbackResult = await hydrateAndSelectServing(
-                                fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
-                            );
-                        }
-                    }
-                }
-
-                if (fallbackResult) {
-                    logger.info('mapping.fallback_success', {
-                        originalId: failedWinnerId,
-                        fallbackId: fallback.id,
-                        fallbackName: fallback.name,
-                    });
-                    logger.audit('mapping.recovery_path', {
-                        path: 'serving_failure_fallback',
-                        from: failedWinnerId,
-                        to: fallback.id,
-                    });
-                    result = fallbackResult;
-                    selectionReason = 'fallback_after_serving_failure';
-                    return true;
-                }
-                return false;
-            };
-
-            // PR D pt3 (B4): floor-hit fallbacks are set aside and only tried
-            // as a last resort; denylisted records are never accepted.
-            const floorRejectedFallbacks: UnifiedCandidate[] = [];
-
-            for (const fallback of fallbackCandidates) {
-                // CRITICAL: Validate semantic relevance before accepting fallback
-                // This prevents "golden flaxseed meal" → "Golden Delicious Apples" syndrome
-                // where the fallback is selected just because it has the right serving,
-                // despite being semantically unrelated to the query
-                if (hasCoreTokenMismatch(normalizedName, fallback.name, fallback.brandName)) {
-                    logger.debug('mapping.fallback_rejected_token_mismatch', {
-                        query: normalizedName,
-                        fallbackName: fallback.name,
-                        fallbackBrand: fallback.brandName,
-                    });
-                    continue; // Skip this fallback, try next one
-                }
-                if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(fallback.id)) {
-                    logger.warn('mapping.denylisted_candidate_dropped', {
-                        rawLine: trimmed,
-                        candidate: fallback.name,
-                        foodId: fallback.id,
-                    });
-                    continue;
-                }
-                if (candidateHitsPlausibilityFloor(normalizedName, fallback)) {
-                    logger.debug('mapping.fallback_rejected_plausibility_floor', {
-                        query: normalizedName,
-                        fallbackName: fallback.name,
-                    });
-                    floorRejectedFallbacks.push(fallback);
-                    continue;
-                }
-
-                if (await tryFallbackCandidate(fallback)) break;
-            }
-
-            // Last resort: every acceptable fallback was floor-hit — a
-            // floor-hit record still beats returning nothing (floors demote,
-            // never drop).
-            if (!result) {
-                for (const fallback of floorRejectedFallbacks) {
-                    if (await tryFallbackCandidate(fallback)) break;
-                }
+            if (servingFallback) {
+                result = servingFallback.result;
+                selectionReason = servingFallback.selectionReason;
             }
         }
 
         // Step 5b: If winner came from cache and serving selection failed, try full search
         // This handles cases where cached food has missing serving data
         if (!result && filtered.length === 0 && selectionReason === 'normalized_cache_hit') {
-            logger.info('mapping.cache_serving_failed_retrying_search', {
-                failedId: winner.id,
-                failedName: winner.name,
+            const cacheResearch = await attemptCacheFailureResearch({
+                winner, trimmed, normalizedName, parsed, rawLine, confidence, aiHydrationBudget,
+                aiNutritionEstimate, aiCanonicalBase, isBrandedQuery, brandDetection,
+                allSynonyms, skipCache, skipFdc, debug,
             });
-            logger.audit('mapping.recovery_path', {
-                path: 'cache_failure_research',
-                from: winner.id,
-            });
-
-            // Run full search to find candidates with working servings
-            const searchGatherOptions: GatherOptions = {
-                skipCache,
-                skipFdc,
-                isBrandedQuery,
-                targetBrand: brandDetection.matchedBrand ?? undefined,
-                aiSynonyms: allSynonyms,
-            };
-
-            const searchCandidates = await gatherCandidates(rawLine, parsed, normalizedName, searchGatherOptions);
-
-            if (searchCandidates.length > 0) {
-                const searchFilterResult = filterCandidatesByTokens(searchCandidates, normalizedName, { debug, rawLine: trimmed });
-
-                // Run reranker to ensure anomaly penalties (e.g. canned beans) are applied
-                const countedNounFB = countedPieceNoun(parsed);
-                const billsByServingFB = requestBillsByServing(parsed);
-                // Same grain-scoped volume serving-shape wiring as the primary
-                // rerank site (n-serv-06).
-                const grainVolumeUnitFB = !billsByServingFB && parsed?.unit
-                    && isMatchableVolumeUnit(parsed.unit)
-                    && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
-                    ? parsed.unit : null;
-                const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
-                    id: c.id,
-                    name: c.name,
-                    brandName: c.brandName,
-                    foodType: c.foodType,
-                    score: c.score,
-                    source: c.source,
-                    nutrition: c.nutrition,
-                    countLabelMatch: countedNounFB ? candidateHasCountLabel(c, countedNounFB) : undefined,
-                    servingLabelMatch: billsByServingFB ? candidateHasServingData(c)
-                        : grainVolumeUnitFB ? candidateHasVolumeServing(c, grainVolumeUnitFB) : undefined,
-                }));
-                const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
-                const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
-                
-                // simpleRerank returns the fully sorted list based on semantic score, nutrition ties, and FDC preferencing
-                const sortedFallbackCandidates = rerankResult.sortedCandidates.map(
-                    rerankCand => searchFilterResult.filtered.find(c => c.id === rerankCand.id)!
-                ).filter(Boolean);
-
-                // Try each candidate until one works — denylisted records are
-                // never accepted; floor-hit ones only as a last resort (PR D pt3 B4).
-                const failedCacheWinnerId = winner.id;
-                const tryCacheFallbackCandidate = async (candidate: UnifiedCandidate): Promise<boolean> => {
-                    const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine, aiHydrationBudget);
-                    if (!retryResult) return false;
-                    logger.info('mapping.cache_fallback_search_success', {
-                        originalId: failedCacheWinnerId,
-                        fallbackId: candidate.id,
-                        fallbackName: candidate.name,
-                    });
-                    logger.audit('mapping.recovery_path', {
-                        path: 'cache_failure_rebilled',
-                        from: failedCacheWinnerId,
-                        to: candidate.id,
-                    });
-                    result = retryResult;
-                    selectionReason = 'fallback_search_after_cache_failure';
-                    return true;
-                };
-
-                const floorRejectedRetries: UnifiedCandidate[] = [];
-                for (const candidate of sortedFallbackCandidates.slice(0, 5)) {
-                    if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(candidate.id)) {
-                        logger.warn('mapping.denylisted_candidate_dropped', {
-                            rawLine: trimmed,
-                            candidate: candidate.name,
-                            foodId: candidate.id,
-                        });
-                        continue;
-                    }
-                    if (candidateHitsPlausibilityFloor(normalizedName, candidate)) {
-                        logger.debug('mapping.fallback_rejected_plausibility_floor', {
-                            query: normalizedName,
-                            fallbackName: candidate.name,
-                        });
-                        floorRejectedRetries.push(candidate);
-                        continue;
-                    }
-                    if (await tryCacheFallbackCandidate(candidate)) break;
-                }
-                if (!result) {
-                    for (const candidate of floorRejectedRetries) {
-                        if (await tryCacheFallbackCandidate(candidate)) break;
-                    }
-                }
+            if (cacheResearch) {
+                result = cacheResearch.result;
+                selectionReason = cacheResearch.selectionReason;
             }
         }
 
         if (!result) {
-            if (ENABLE_MAPPING_ANALYSIS) {
-                logMappingAnalysis({
-                    rawIngredient: trimmed,
-                    parsed: {
-                        amount: parsed?.qty,
-                        unit: parsed?.unit,
-                        ingredient: parsed?.name,
-                    },
-                    topCandidates: filtered.slice(0, 5).map((c, i) => ({
-                        rank: i + 1,
-                        foodId: c.id,
-                        foodName: c.name,
-                        brandName: c.brandName || null,
-                        score: c.score,
-                        source: c.source,
-                    })),
-                    selectedCandidate: {
-                        foodId: winner.id,
-                        foodName: winner.name,
-                        brandName: winner.brandName || '',
-                        confidence,
-                        selectionReason,
-                    },
-                    finalResult: 'failed',
-                    failureReason: 'no_suitable_serving_found',
-                });
-            }
-
-            // Attempt AI Nutrition Backfill if all API pipeline candidates failed hydration
-            if (AI_NUTRITION_BACKFILL_ENABLED) {
-                logger.info('mapping.pipeline_failed_attempting_ai_backfill', { rawLine: trimmed });
-                const baseFoodContext = extractBaseFoodContext(allCandidates);
-                const aiResult = await requestAiNutrition(normalizedName, {
-                    rawLine: trimmed,
-                    baseFoodContext,
-                    budget: aiNutritionBudget,
-                });
-                logger.audit('mapping.recovery_path', {
-                    path: 'backfill_after_winner',
-                    from: winner.id,
-                    served: aiResult.status === 'success',
-                });
-
-                if (aiResult.status === 'success') {
-                    const parsedQty = parsed ? parsed.qty * parsed.multiplier : 1;
-                    const parsedUnit = parsed?.unit || 'serving';
-
-                    const servingResult = await getAiServingGrams(
-                        aiResult.foodId,
-                        parsedUnit,
-                        parsedQty,
-                    );
-
-                    const grams = servingResult?.grams ?? 100;
-                    const scale = grams / 100;
-
-                    const aiMapped: FatsecretMappedIngredient = {
-                        source: 'ai_generated',
-                        foodId: aiResult.foodId,
-                        foodName: aiResult.displayName,
-                        brandName: null,
-                        servingId: null,
-                        servingDescription: servingResult?.servingLabel ?? `${parsedQty} ${parsedUnit}`,
-                        grams,
-                        kcal: aiResult.caloriesPer100g * scale,
-                        protein: aiResult.proteinPer100g * scale,
-                        carbs: aiResult.carbsPer100g * scale,
-                        fat: aiResult.fatPer100g * scale,
-                        confidence: aiResult.confidence * 0.8,
-                        quality: aiResult.confidence >= 0.7 ? 'medium' : 'low',
-                        rawLine,
-                        servingTier: servingResult?.grams != null ? 'ai_generated_serving' : 'flat_100g_default',
-                    };
-
-                    if (ENABLE_MAPPING_ANALYSIS) {
-                        logMappingAnalysis({
-                            rawIngredient: trimmed,
-                            parsed: {
-                                amount: parsed?.qty,
-                                unit: parsed?.unit,
-                                ingredient: parsed?.name,
-                            },
-                            topCandidates: [],
-                            selectedCandidate: {
-                                foodId: aiResult.foodId,
-                                foodName: aiResult.displayName,
-                                brandName: '',
-                                confidence: aiMapped.confidence,
-                                selectionReason: aiResult.cached ? 'ai_nutrition_cache_hit' : 'ai_nutrition_generated',
-                            },
-                            selectedNutrition: {
-                                calories: aiMapped.kcal,
-                                protein: aiMapped.protein,
-                                carbs: aiMapped.carbs,
-                                fat: aiMapped.fat,
-                                perGrams: aiMapped.grams,
-                            },
-                            servingSelection: {
-                                servingDescription: aiMapped.servingDescription || 'N/A',
-                                grams: aiMapped.grams,
-                                backfillUsed: true,
-                                backfillType: 'weight',
-                            },
-                            finalResult: 'success',
-                            source: 'full_pipeline',
-                            aiCalls: {
-                                normalize: {
-                                    called: !skippedLlmNormalize,
-                                    skipped: skippedLlmNormalize,
-                                },
-                                // 0.5(b). See the sibling site above.
-                                serving: servingAiCallForTier(aiMapped.servingTier),
-                                nutrition: { called: true, cached: aiResult.cached, success: true },
-                            },
-                        });
-                    }
-
-                    logger.info('mapping.ai_nutrition_backfill_success_after_hydration_failure', {
-                        rawLine: trimmed,
-                        foodName: aiResult.displayName,
-                        confidence: aiMapped.confidence,
-                        cached: aiResult.cached,
-                    });
-
-                    return aiMapped;
-                } else {
-                    logger.warn('mapping.ai_nutrition_backfill_failed_after_hydration_failure', {
-                        rawLine: trimmed,
-                        reason: aiResult.reason,
-                    });
-                }
-            }
-
-            return null;
+            return await runBackfillAfterWinner({
+                winner, trimmed, parsed, filtered, confidence, selectionReason,
+                allCandidates, normalizedName, aiNutritionBudget, rawLine,
+                skippedLlmNormalize,
+            });
         }
 
         return await finalizeAndSaveResult({
@@ -3405,6 +2996,546 @@ export async function mapIngredientWithFallback(
         inFlightLocks.delete(lockKey);
         resolveLock!(null);  // Resolve with null - waiting threads will re-fetch from cache
     }
+}
+
+// ============================================================
+// Step 5 cascade tail, extracted in stage 1d. Each function below is
+// module-private, takes a single params object destructured to the
+// original orchestrator identifier names, and carries its block
+// verbatim. Entry guards stay in the orchestrator; each function
+// reports back via its return value and never writes orchestrator
+// state directly.
+// ============================================================
+
+async function hydrateWinnerWithBackfills(params: {
+    winner: UnifiedCandidate;
+    parsed: ParsedIngredient | null;
+    confidence: number;
+    rawLine: string;
+    aiHydrationBudget: AiNutritionBudget;
+    isWeightUnit: boolean | '' | null | undefined;
+    isVolumeUnit: boolean | '' | null | undefined;
+    prepModifier: string | undefined;
+}): Promise<{ result: FatsecretMappedIngredient | null; selectionReason?: string }> {
+    const {
+        winner, parsed, confidence, rawLine, aiHydrationBudget,
+        isWeightUnit, isVolumeUnit, prepModifier,
+    } = params;
+    let selectionReason: string | undefined;
+
+    let result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
+
+    if (!result && isWeightUnit && winner.source === 'ai_generated') {
+        // See the rerank instrumentation note above. If this never fires, weight
+        // serving backfill has been silently off since the lane was relabelled
+        // 'fatsecret' — corroborated by MEASURED 0 occurrences of the warn-level
+        // mapping.weight_backfill_failed in 12 days of production log. The repair
+        // would then be to WIDEN this guard to 'fatsecret', not to delete it.
+        logger.audit('backfill.ai_generated_winner_seen', {
+            foodId: winner.id,
+            foodName: winner.name,
+            path: 'weight',
+        });
+        logger.info('mapping.weight_backfill_attempt', {
+            foodId: winner.id,
+            foodName: winner.name,
+            unit: parsed!.unit,
+        });
+
+        const backfillResult = await backfillWeightServing(winner.id);
+
+        if (backfillResult.success) {
+            // Retry hydration now that we have a weight serving
+            result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
+
+            if (result) {
+                logger.info('mapping.weight_backfill_success', {
+                    foodId: winner.id,
+                    foodName: winner.name,
+                    unit: parsed!.unit,
+                    grams: result.grams,
+                });
+                selectionReason = 'weight_backfill_success';
+            }
+        } else {
+            logger.warn('mapping.weight_backfill_failed', {
+                foodId: winner.id,
+                reason: backfillResult.reason,
+            });
+        }
+    }
+
+    // Enable AI backfill for BOTH FatSecret and FDC sources (FDC often lacks volume servings)
+    if (!result && isVolumeUnit && (winner.source === 'ai_generated' || winner.source === 'fdc')) {
+        if (winner.source === 'ai_generated') {
+            logger.audit('backfill.ai_generated_winner_seen', {
+                foodId: winner.id,
+                foodName: winner.name,
+                path: 'volume',
+            });
+        }
+        logger.info('mapping.volume_backfill_attempt', {
+            foodId: winner.id,
+            foodName: winner.name,
+            unit: parsed!.unit,
+            source: winner.source,
+            prepModifier,
+        });
+
+        const volumeBackfillResult = await insertAiServing(winner.id, 'volume', {
+            targetServingUnit: parsed?.unit ?? undefined,
+            prepModifier,
+            candidateData: winner,  // Pass candidate data to avoid DB lookup race condition
+        });
+
+        if (volumeBackfillResult.success) {
+            // Retry hydration now that we have a volume serving
+            result = await hydrateAndSelectServing(winner, parsed, confidence, rawLine, aiHydrationBudget);
+
+            if (result) {
+                logger.info('mapping.volume_backfill_success', {
+                    foodId: winner.id,
+                    foodName: winner.name,
+                    unit: parsed!.unit,
+                    grams: result.grams,
+                });
+                selectionReason = 'volume_backfill_success';
+            }
+        } else {
+            logger.warn('mapping.volume_backfill_failed', {
+                foodId: winner.id,
+                reason: volumeBackfillResult.reason,
+            });
+        }
+    }
+
+    return { result, selectionReason };
+}
+
+async function attemptServingFailureFallback(params: {
+    winner: UnifiedCandidate;
+    filtered: UnifiedCandidate[];
+    parsed: ParsedIngredient | null;
+    confidence: number;
+    rawLine: string;
+    trimmed: string;
+    normalizedName: string;
+    aiHydrationBudget: AiNutritionBudget;
+    isWeightUnit: boolean | '' | null | undefined;
+    isVolumeUnit: boolean | '' | null | undefined;
+    prepModifier: string | undefined;
+}): Promise<{ result: FatsecretMappedIngredient; selectionReason: string } | null> {
+    const {
+        winner, filtered, parsed, confidence, rawLine, trimmed, normalizedName,
+        aiHydrationBudget, isWeightUnit, isVolumeUnit, prepModifier,
+    } = params;
+    let result: FatsecretMappedIngredient | null = null;
+    let selectionReason = '';
+
+    logger.info('mapping.hydration_failed_retrying', {
+        failedId: winner.id,
+        failedName: winner.name,
+        remainingCandidates: filtered.length - 1
+    });
+
+    // Try next 3 candidates as fallbacks
+    const fallbackCandidates = filtered
+        .filter(c => c.id !== winner.id)
+        .slice(0, 3);
+
+    const failedWinnerId = winner.id;
+    const tryFallbackCandidate = async (fallback: UnifiedCandidate): Promise<boolean> => {
+        let fallbackResult = await hydrateAndSelectServing(
+            fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
+        );
+
+        // If hydration failed for a FatSecret candidate, try backfill before giving up
+        if (!fallbackResult && fallback.source === 'ai_generated') {
+            logger.audit('backfill.ai_generated_winner_seen', {
+                foodId: fallback.id,
+                foodName: fallback.name,
+                path: 'fallback',
+            });
+            if (isVolumeUnit) {
+                logger.info('mapping.fallback_volume_backfill_attempt', {
+                    foodId: fallback.id,
+                    foodName: fallback.name,
+                    unit: parsed?.unit,
+                    prepModifier,
+                });
+                const backfillResult = await insertAiServing(fallback.id, 'volume', {
+                    targetServingUnit: parsed?.unit ?? undefined,
+                    prepModifier,
+                    candidateData: fallback,  // Pass candidate data to avoid DB lookup race condition
+                });
+                if (backfillResult.success) {
+                    fallbackResult = await hydrateAndSelectServing(
+                        fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
+                    );
+                }
+            } else if (isWeightUnit) {
+                logger.info('mapping.fallback_weight_backfill_attempt', {
+                    foodId: fallback.id,
+                    foodName: fallback.name,
+                    unit: parsed?.unit,
+                });
+                const backfillResult = await backfillWeightServing(fallback.id);
+                if (backfillResult.success) {
+                    fallbackResult = await hydrateAndSelectServing(
+                        fallback, parsed, confidence * 0.95, rawLine, aiHydrationBudget
+                    );
+                }
+            }
+        }
+
+        if (fallbackResult) {
+            logger.info('mapping.fallback_success', {
+                originalId: failedWinnerId,
+                fallbackId: fallback.id,
+                fallbackName: fallback.name,
+            });
+            logger.audit('mapping.recovery_path', {
+                path: 'serving_failure_fallback',
+                from: failedWinnerId,
+                to: fallback.id,
+            });
+            result = fallbackResult;
+            selectionReason = 'fallback_after_serving_failure';
+            return true;
+        }
+        return false;
+    };
+
+    // PR D pt3 (B4): floor-hit fallbacks are set aside and only tried
+    // as a last resort; denylisted records are never accepted.
+    const floorRejectedFallbacks: UnifiedCandidate[] = [];
+
+    for (const fallback of fallbackCandidates) {
+        // CRITICAL: Validate semantic relevance before accepting fallback
+        // This prevents "golden flaxseed meal" → "Golden Delicious Apples" syndrome
+        // where the fallback is selected just because it has the right serving,
+        // despite being semantically unrelated to the query
+        if (hasCoreTokenMismatch(normalizedName, fallback.name, fallback.brandName)) {
+            logger.debug('mapping.fallback_rejected_token_mismatch', {
+                query: normalizedName,
+                fallbackName: fallback.name,
+                fallbackBrand: fallback.brandName,
+            });
+            continue; // Skip this fallback, try next one
+        }
+        if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(fallback.id)) {
+            logger.warn('mapping.denylisted_candidate_dropped', {
+                rawLine: trimmed,
+                candidate: fallback.name,
+                foodId: fallback.id,
+            });
+            continue;
+        }
+        if (candidateHitsPlausibilityFloor(normalizedName, fallback)) {
+            logger.debug('mapping.fallback_rejected_plausibility_floor', {
+                query: normalizedName,
+                fallbackName: fallback.name,
+            });
+            floorRejectedFallbacks.push(fallback);
+            continue;
+        }
+
+        if (await tryFallbackCandidate(fallback)) break;
+    }
+
+    // Last resort: every acceptable fallback was floor-hit — a
+    // floor-hit record still beats returning nothing (floors demote,
+    // never drop).
+    if (!result) {
+        for (const fallback of floorRejectedFallbacks) {
+            if (await tryFallbackCandidate(fallback)) break;
+        }
+    }
+
+    return result ? { result, selectionReason } : null;
+}
+
+async function attemptCacheFailureResearch(params: {
+    winner: UnifiedCandidate;
+    trimmed: string;
+    normalizedName: string;
+    parsed: ParsedIngredient | null;
+    rawLine: string;
+    confidence: number;
+    aiHydrationBudget: AiNutritionBudget;
+    aiNutritionEstimate: { caloriesPer100g: number; proteinPer100g: number; carbsPer100g: number; fatPer100g: number; confidence: number } | undefined;
+    aiCanonicalBase: string | undefined;
+    isBrandedQuery: boolean;
+    brandDetection: BrandKeyInput;
+    allSynonyms: string[];
+    skipCache: boolean;
+    skipFdc: boolean;
+    debug: boolean;
+}): Promise<{ result: FatsecretMappedIngredient; selectionReason: string } | null> {
+    const {
+        winner, trimmed, normalizedName, parsed, rawLine, confidence, aiHydrationBudget,
+        aiNutritionEstimate, aiCanonicalBase, isBrandedQuery, brandDetection,
+        allSynonyms, skipCache, skipFdc, debug,
+    } = params;
+    let result: FatsecretMappedIngredient | null = null;
+    let selectionReason = '';
+
+    logger.info('mapping.cache_serving_failed_retrying_search', {
+        failedId: winner.id,
+        failedName: winner.name,
+    });
+    logger.audit('mapping.recovery_path', {
+        path: 'cache_failure_research',
+        from: winner.id,
+    });
+
+    // Run full search to find candidates with working servings
+    const searchGatherOptions: GatherOptions = {
+        skipCache,
+        skipFdc,
+        isBrandedQuery,
+        targetBrand: brandDetection.matchedBrand ?? undefined,
+        aiSynonyms: allSynonyms,
+    };
+
+    const searchCandidates = await gatherCandidates(rawLine, parsed, normalizedName, searchGatherOptions);
+
+    if (searchCandidates.length > 0) {
+        const searchFilterResult = filterCandidatesByTokens(searchCandidates, normalizedName, { debug, rawLine: trimmed });
+
+        // Run reranker to ensure anomaly penalties (e.g. canned beans) are applied
+        const countedNounFB = countedPieceNoun(parsed);
+        const billsByServingFB = requestBillsByServing(parsed);
+        // Same grain-scoped volume serving-shape wiring as the primary
+        // rerank site (n-serv-06).
+        const grainVolumeUnitFB = !billsByServingFB && parsed?.unit
+            && isMatchableVolumeUnit(parsed.unit)
+            && detectGrainCookingContext(trimmed, normalizedName).softCooked === true
+            ? parsed.unit : null;
+        const rerankCandidates = searchFilterResult.filtered.map(c => toRerankCandidate({
+            id: c.id,
+            name: c.name,
+            brandName: c.brandName,
+            foodType: c.foodType,
+            score: c.score,
+            source: c.source,
+            nutrition: c.nutrition,
+            countLabelMatch: countedNounFB ? candidateHasCountLabel(c, countedNounFB) : undefined,
+            servingLabelMatch: billsByServingFB ? candidateHasServingData(c)
+                : grainVolumeUnitFB ? candidateHasVolumeServing(c, grainVolumeUnitFB) : undefined,
+        }));
+        const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
+        const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
+
+        // simpleRerank returns the fully sorted list based on semantic score, nutrition ties, and FDC preferencing
+        const sortedFallbackCandidates = rerankResult.sortedCandidates.map(
+            rerankCand => searchFilterResult.filtered.find(c => c.id === rerankCand.id)!
+        ).filter(Boolean);
+
+        // Try each candidate until one works — denylisted records are
+        // never accepted; floor-hit ones only as a last resort (PR D pt3 B4).
+        const failedCacheWinnerId = winner.id;
+        const tryCacheFallbackCandidate = async (candidate: UnifiedCandidate): Promise<boolean> => {
+            const retryResult = await hydrateAndSelectServing(candidate, parsed, confidence * 0.9, rawLine, aiHydrationBudget);
+            if (!retryResult) return false;
+            logger.info('mapping.cache_fallback_search_success', {
+                originalId: failedCacheWinnerId,
+                fallbackId: candidate.id,
+                fallbackName: candidate.name,
+            });
+            logger.audit('mapping.recovery_path', {
+                path: 'cache_failure_rebilled',
+                from: failedCacheWinnerId,
+                to: candidate.id,
+            });
+            result = retryResult;
+            selectionReason = 'fallback_search_after_cache_failure';
+            return true;
+        };
+
+        const floorRejectedRetries: UnifiedCandidate[] = [];
+        for (const candidate of sortedFallbackCandidates.slice(0, 5)) {
+            if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(candidate.id)) {
+                logger.warn('mapping.denylisted_candidate_dropped', {
+                    rawLine: trimmed,
+                    candidate: candidate.name,
+                    foodId: candidate.id,
+                });
+                continue;
+            }
+            if (candidateHitsPlausibilityFloor(normalizedName, candidate)) {
+                logger.debug('mapping.fallback_rejected_plausibility_floor', {
+                    query: normalizedName,
+                    fallbackName: candidate.name,
+                });
+                floorRejectedRetries.push(candidate);
+                continue;
+            }
+            if (await tryCacheFallbackCandidate(candidate)) break;
+        }
+        if (!result) {
+            for (const candidate of floorRejectedRetries) {
+                if (await tryCacheFallbackCandidate(candidate)) break;
+            }
+        }
+    }
+
+    return result ? { result, selectionReason } : null;
+}
+
+async function runBackfillAfterWinner(params: {
+    winner: UnifiedCandidate;
+    trimmed: string;
+    parsed: ParsedIngredient | null;
+    filtered: UnifiedCandidate[];
+    confidence: number;
+    selectionReason: string;
+    allCandidates: UnifiedCandidate[];
+    normalizedName: string;
+    aiNutritionBudget: AiNutritionBudget;
+    rawLine: string;
+    skippedLlmNormalize: boolean;
+}): Promise<FatsecretMappedIngredient | null> {
+    const {
+        winner, trimmed, parsed, filtered, confidence, selectionReason,
+        allCandidates, normalizedName, aiNutritionBudget, rawLine,
+        skippedLlmNormalize,
+    } = params;
+
+    if (ENABLE_MAPPING_ANALYSIS) {
+        logMappingAnalysis({
+            rawIngredient: trimmed,
+            parsed: {
+                amount: parsed?.qty,
+                unit: parsed?.unit,
+                ingredient: parsed?.name,
+            },
+            topCandidates: filtered.slice(0, 5).map((c, i) => ({
+                rank: i + 1,
+                foodId: c.id,
+                foodName: c.name,
+                brandName: c.brandName || null,
+                score: c.score,
+                source: c.source,
+            })),
+            selectedCandidate: {
+                foodId: winner.id,
+                foodName: winner.name,
+                brandName: winner.brandName || '',
+                confidence,
+                selectionReason,
+            },
+            finalResult: 'failed',
+            failureReason: 'no_suitable_serving_found',
+        });
+    }
+
+    // Attempt AI Nutrition Backfill if all API pipeline candidates failed hydration
+    if (AI_NUTRITION_BACKFILL_ENABLED) {
+        logger.info('mapping.pipeline_failed_attempting_ai_backfill', { rawLine: trimmed });
+        const baseFoodContext = extractBaseFoodContext(allCandidates);
+        const aiResult = await requestAiNutrition(normalizedName, {
+            rawLine: trimmed,
+            baseFoodContext,
+            budget: aiNutritionBudget,
+        });
+        logger.audit('mapping.recovery_path', {
+            path: 'backfill_after_winner',
+            from: winner.id,
+            served: aiResult.status === 'success',
+        });
+
+        if (aiResult.status === 'success') {
+            const parsedQty = parsed ? parsed.qty * parsed.multiplier : 1;
+            const parsedUnit = parsed?.unit || 'serving';
+
+            const servingResult = await getAiServingGrams(
+                aiResult.foodId,
+                parsedUnit,
+                parsedQty,
+            );
+
+            const grams = servingResult?.grams ?? 100;
+            const scale = grams / 100;
+
+            const aiMapped: FatsecretMappedIngredient = {
+                source: 'ai_generated',
+                foodId: aiResult.foodId,
+                foodName: aiResult.displayName,
+                brandName: null,
+                servingId: null,
+                servingDescription: servingResult?.servingLabel ?? `${parsedQty} ${parsedUnit}`,
+                grams,
+                kcal: aiResult.caloriesPer100g * scale,
+                protein: aiResult.proteinPer100g * scale,
+                carbs: aiResult.carbsPer100g * scale,
+                fat: aiResult.fatPer100g * scale,
+                confidence: aiResult.confidence * 0.8,
+                quality: aiResult.confidence >= 0.7 ? 'medium' : 'low',
+                rawLine,
+                servingTier: servingResult?.grams != null ? 'ai_generated_serving' : 'flat_100g_default',
+            };
+
+            if (ENABLE_MAPPING_ANALYSIS) {
+                logMappingAnalysis({
+                    rawIngredient: trimmed,
+                    parsed: {
+                        amount: parsed?.qty,
+                        unit: parsed?.unit,
+                        ingredient: parsed?.name,
+                    },
+                    topCandidates: [],
+                    selectedCandidate: {
+                        foodId: aiResult.foodId,
+                        foodName: aiResult.displayName,
+                        brandName: '',
+                        confidence: aiMapped.confidence,
+                        selectionReason: aiResult.cached ? 'ai_nutrition_cache_hit' : 'ai_nutrition_generated',
+                    },
+                    selectedNutrition: {
+                        calories: aiMapped.kcal,
+                        protein: aiMapped.protein,
+                        carbs: aiMapped.carbs,
+                        fat: aiMapped.fat,
+                        perGrams: aiMapped.grams,
+                    },
+                    servingSelection: {
+                        servingDescription: aiMapped.servingDescription || 'N/A',
+                        grams: aiMapped.grams,
+                        backfillUsed: true,
+                        backfillType: 'weight',
+                    },
+                    finalResult: 'success',
+                    source: 'full_pipeline',
+                    aiCalls: {
+                        normalize: {
+                            called: !skippedLlmNormalize,
+                            skipped: skippedLlmNormalize,
+                        },
+                        // 0.5(b). See the sibling site above.
+                        serving: servingAiCallForTier(aiMapped.servingTier),
+                        nutrition: { called: true, cached: aiResult.cached, success: true },
+                    },
+                });
+            }
+
+            logger.info('mapping.ai_nutrition_backfill_success_after_hydration_failure', {
+                rawLine: trimmed,
+                foodName: aiResult.displayName,
+                confidence: aiMapped.confidence,
+                cached: aiResult.cached,
+            });
+
+            return aiMapped;
+        } else {
+            logger.warn('mapping.ai_nutrition_backfill_failed_after_hydration_failure', {
+                rawLine: trimmed,
+                reason: aiResult.reason,
+            });
+        }
+    }
+
+    return null;
 }
 
 // ============================================================
