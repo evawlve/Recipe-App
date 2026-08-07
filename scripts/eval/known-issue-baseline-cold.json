@@ -57,10 +57,11 @@
       "itemCount": 1
     },
     "n-mq-34": {
-      "foodId": "fs_793",
-      "foodName": "Milk",
-      "grams": 240,
-      "kcal100": 50,
+      "_note": "re-pinned by hand 2026-08-07 from three byte-identical cold runs on build iOjeeUZoaUFpuJkD1eTbO (eval-2026-08-07T05-01/05-04/05-07); the previous pin (fs_793 'Milk' 240g/kcal100 50) was stale — the case now cold-resolves to fs_794 'Whole Milk'.",
+      "foodId": "fs_794",
+      "foodName": "Whole Milk",
+      "grams": 244,
+      "kcal100": 60,
       "abstained": false,
       "errored": false,
       "itemCount": 1

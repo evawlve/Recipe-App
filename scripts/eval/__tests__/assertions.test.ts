@@ -103,6 +103,36 @@ describe('forbidName', () => {
     });
 });
 
+describe('matchesAlt normalization (hyphen/space variants)', () => {
+    it('alt "pre workout" matches record name "Pre-workout" — the n-supp-20 shape', () => {
+        // Raw substring containment could never satisfy this: "pre-workout"
+        // contains no "pre workout". The record is real (off_9680463978828).
+        expect(matchesAlt(textOf({ foodName: 'Pre-workout', brandName: null }), [['pre workout']])).toBe(true);
+    });
+
+    it('matches in the other direction too (hyphenated alt, spaced record)', () => {
+        expect(matchesAlt(textOf({ foodName: 'Pre Workout', brandName: null }), [['pre-workout']])).toBe(true);
+    });
+
+    it('preserves partial-token prefixes (the golden set relies on "strawberr")', () => {
+        expect(matchesAlt(textOf({ foodName: 'Strawberries', brandName: null }), [['strawberr']])).toBe(true);
+    });
+
+    it('is still sequence containment, NOT token-set membership', () => {
+        expect(matchesAlt(textOf({ foodName: 'Chicken Burrito Bowl', brandName: null }), [['chicken burrito']])).toBe(true);
+        expect(matchesAlt(textOf({ foodName: 'Chicken Burrito Bowl', brandName: null }), [['burrito chicken']])).toBe(false);
+    });
+
+    it('ignores punctuation noise inside the record name', () => {
+        expect(matchesAlt(textOf({ foodName: "Ben & Jerry's Chocolate", brandName: null }), [['ben jerry']])).toBe(true);
+    });
+
+    it('a punctuation-only sub keeps the OLD raw-containment semantics, never a vacuous pass', () => {
+        expect(matchesAlt('m&m chocolate ', [['&']])).toBe(true);   // raw containment, as before
+        expect(matchesAlt('plain chocolate ', [['&']])).toBe(false); // must NOT match via ''.includes('')
+    });
+});
+
 describe('textOf', () => {
     it('joins name and brand from either naming convention', () => {
         expect(textOf({ foodName: 'Pad Thai', brandName: 'Noodles & Company' })).toBe('pad thai noodles & company');

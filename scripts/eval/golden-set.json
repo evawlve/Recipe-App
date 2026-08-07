@@ -2939,7 +2939,8 @@
           "honey"
         ]
       ],
-      "notes": "Composite collapse family. Was knownIssue (nondeterministic: some runs collapsed to ONE Greek-yogurt-honey-granola item at 12g); PROMOTED to hard 2026-07-21 after 3 consecutive stable runs post PR #112/#116. If it flaps again, demote with a dated note rather than deleting."
+      "knownIssue": true,
+      "notes": "Composite collapse family. Was knownIssue (nondeterministic: some runs collapsed to ONE Greek-yogurt-honey-granola item at 12g); PROMOTED to hard 2026-07-21 after 3 consecutive stable runs post PR #112/#116. DEMOTED back to knownIssue 2026-08-07 per this note's own prescription, after a third documented flap: cold run eval-2026-08-07T05-07-13-126Z (build iOjeeUZoaUFpuJkD1eTbO) collapsed to ONE item ('expected >=3 items, got 1', winner off_4088700149973) while the two sibling runs on the SAME build (05-01, 05-04) segmented 4 items and passed — the ~1-in-3 parse-stage segmentation collapse also seen as this case's rotator seat in the stage-1b cold gate (2026-08-06). DELIBERATELY UNPINNED in known-issue-baseline-cold.json (2026-08-06): driftedKnownIssues() skips unpinned cases, and that is the intended state here — the itemCount 4-vs-1 flap would register as drift every ~third run and pollute the drift list; drift tracking is knowingly waived for this case until re-promotion. Re-promote with a dated note after 3 consecutive stable cold runs."
     },
     {
       "id": "n-seg-19",
@@ -5733,8 +5734,14 @@
           10
         ]
       },
+      "total": {
+        "calories": [
+          130,
+          160
+        ]
+      },
       "knownIssue": true,
-      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity qualifier stripped (2026-07-20 triage: 'whole milk' collapsed to the bare 'milk' key and could serve skim/low-fat macros). 'whole' joins IDENTITY_QUALIFIERS in the cache key (+ PROTECTED_PRODUCT_PHRASES keeps it through the segmenter); whole milk >=3.25g fat/100g (upper 10 = one-sided '>=3'). Promote after the data-ops batch + 2 stable runs."
+      "notes": "PR D pt3 class (c) KNOWN ISSUE — identity qualifier stripped (2026-07-20 triage: 'whole milk' collapsed to the bare 'milk' key and could serve skim/low-fat macros). 'whole' joins IDENTITY_QUALIFIERS in the cache key (+ PROTECTED_PRODUCT_PHRASES keeps it through the segmenter); whole milk >=3.25g fat/100g (upper 10 = one-sided '>=3'). total.calories [130,160] added 2026-08-07, derived from three recorded observations: warm fs_794 146.0 kcal (recorded 2026-08-05), cold fs_794 146.0 kcal (2026-08-07 x3 byte-identical on build iOjeeUZoaUFpuJkD1eTbO, files eval-2026-08-07T05-0*Z), and the older cold arm off_0853655005056 at 139.2 kcal. knownIssue KEPT 2026-08-07: the most recent warm results file on disk (eval-2026-08-03T11-34-35-909Z.json, localhost) still records the collapse (off_9335390000028 'Milk', fat100=1.3, kcal 108.5, RED), so 'green on both arms' is not established — un-flag after the next box-served warm run is green on this case."
     },
     {
       "id": "n-mq-35",
