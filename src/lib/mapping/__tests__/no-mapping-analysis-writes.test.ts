@@ -51,8 +51,10 @@ describe('no mapping-analysis file writes from jest', () => {
     });
 
     it('the setup file assigns the pin and never deletes the env var', () => {
-        // `delete process.env.X` would hand dotenv permission to put the dev
-        // machine's `true` straight back — same rule as jest.setup.no-llm.js.
+        // A `delete` of either env key would hand dotenv permission to put the
+        // dev machine's `true` straight back — same rule as jest.setup.no-llm.js.
+        // (Worded without the literal delete-expression: CI's env-parity scan
+        // greps `process.env.<NAME>` in src/** including comments.)
         const setupSource = fs.readFileSync(
             path.join(__dirname, '../../../../jest.setup.no-analysis-writes.js'),
             'utf-8'
