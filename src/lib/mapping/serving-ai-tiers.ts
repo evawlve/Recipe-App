@@ -1,5 +1,15 @@
 /**
- * serving-ai-tiers.ts — which `servingTier` values mean "an LLM ran for this line".
+ * serving-ai-tiers.ts — which `servingTier` values mean "an LLM MAY have run for
+ * this line". `SERVING_AI_TIERS` is a maybeCalled predicate: membership means the
+ * producer CAN reach a model, not that a model ran. Its event count is an UPPER
+ * BOUND on model calls, and the overstatement is MEASURED, not derived: 42
+ * allowlisted-tier events against 16 actual model responses per run — 2.6× —
+ * over three bracketed box-served cold runs, 2026-08-05. That figure is owned by
+ * sync-docs/reports/2026-08-05_ai-serving-spend-audit.md §3 (mobile repo; the §7
+ * live-falsifier step 5 is the run transcript) — link, don't re-derive here.
+ * Do NOT average in §3's derived 95.1%: it is a different population (the
+ * historical corpus, not the cold golden set) and agrees on DIRECTION only —
+ * it would predict ~2 calls per run where 16 were measured.
  *
  * WHY THIS EXISTS
  * ---------------
@@ -18,7 +28,38 @@
  *     `fdc_medium_estimate` both come from `getOrCreateFdcSizeServings()`
  *     (src/lib/usda/fdc-ai-backfill.ts), which despite the "getOrCreate" name has
  *     NO CACHE — its own docstring says results "should be cached in a future
- *     enhancement" — so every event is an unconditional live LLM round trip.
+ *     enhancement".
+ *
+ *     REFUTED (2026-08-05) — this header used to conclude that bullet with "so
+ *     every event is an unconditional live LLM round trip". The old claim stays
+ *     stated here because deleting it silently would let it be re-derived: it
+ *     reasoned uncached ⇒ model ran. Measured instead (three bracketed box-served
+ *     cold runs, 2026-08-05, same owner doc §7): the four tiers off this producer
+ *     (`fdc_size_estimate`, `fdc_medium_estimate`, `fdc_piece_ai`,
+ *     `fdc_size_qualifier`) produced 41 events and ZERO model responses of any
+ *     purpose. "No cache" is still true of the function; the false step was the
+ *     inference from it.
+ *
+ *     RESOLVING MECHANISM — settled 2026-08-06 (the follow-up §7 left open).
+ *     The two candidates were (a) `getFdcServingWeight()`'s non-LLM USDA lookup
+ *     inside `estimateAmbiguousServing()`, or (b) persisted `FdcServing` rows
+ *     making the "getOrCreate" name accurate. Measured: all 7 fdcIds behind the
+ *     recent `fdc_size_*` events DO have persisted `FdcServing` rows (36 rows:
+ *     30 `usda_fdc` + 6 `ai`; re-derive:
+ *     `ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire -c "SELECT count(*) FROM \"FdcServing\" WHERE \"fdcId\" IN (168917,170379,169640,167762,173944,171711,171545);"'`
+ *     → 36, measured 2026-08-06), so row existence alone arbitrates nothing.
+ *     What settles it is the code (reasoning, verified 2026-08-06): NOTHING on
+ *     this path reads `FdcServing` — `getOrCreateFdcSizeServings()` calls
+ *     `estimateAmbiguousServing()` directly, and its non-LLM first step
+ *     (`fetchFdcServingOptions()` in src/lib/fdc/fdc-servings.ts) queries the
+ *     LIVE USDA FDC API behind a 200-entry/24 h in-process cache, never the
+ *     local table. A stamped `fdc_size_*` tier requires `status:'success'`, and
+ *     success with zero counted model responses can only exit at the
+ *     `getFdcServingWeight()` return — so (a) is the mechanism and (b) is
+ *     eliminated by the absence of any read site. Corroborating measurement:
+ *     the billed grams equal USDA portion values (banana 118 g = "medium",
+ *     honey 21 g = "tbsp", strawberry 12 g = "medium"; box MappingEventLog vs
+ *     FdcServing, 2026-08-06).
  *
  *   - `ai_generated_serving` does the opposite: it is stamped by the AI-nutrition
  *     backfill path, but its grams come from `getAiServingGrams()`, which only does
@@ -26,29 +67,42 @@
  *     No model runs. Mapping it to `called: true` would INVENT calls that never
  *     happened, which is the same class of defect as the missing tag.
  *
- * KNOWN BLIND SPOT — the count this produces is a LOWER BOUND.
- * The legacy fatsecret/ai serving path stamps no `servingTier` at all (the field is
- * documented `undefined` there), so those lines read as `called: false` whatever
- * they did. That is 529 of 67,842 rows, 0.78% (re-derive:
+ * TWO ERRORS IN OPPOSITE DIRECTIONS — AND THE MEASURED NET IS OVERSTATEMENT.
+ * Under-inclusion: the legacy fatsecret/ai serving path stamps no `servingTier`
+ * at all (the field is documented `undefined` there), so those lines read as
+ * `called: false` whatever they did — 529 of 67,842 rows, 0.78% (re-derive:
  * `SELECT count(*) FROM "MappingEventLog" WHERE "servingTier" IS NULL;`, measured
- * 2026-08-04). Quote `[AI:SERV]` as a floor, never as a total.
+ * 2026-08-04). Over-statement: within the allowlist, the maybeCalled semantics
+ * above (2.6× on live traffic). An earlier version of this header weighed only
+ * the first error and told readers to "quote `[AI:SERV]` as a floor, never as a
+ * total"; the spend audit corrects that: quote `[AI:SERV]` as an UPPER BOUND on
+ * model calls. The only per-process ground truth for "did a model actually run"
+ * is the `/api/ok` `llm` block (#248), counted at the `makeRequest()` chokepoint.
  */
 
 /** The logger's `aiCalls.serving.type` union, kept in sync with mapping-logger.ts. */
 export type ServingAiCallType = 'ambiguous' | 'produce' | 'weight';
 
 /**
- * Tiers whose producer makes a live LLM call, mapped to the call's purpose.
+ * Tiers whose producer MAY make a live LLM call (maybeCalled), mapped to the
+ * call's purpose. An UPPER BOUND, never a call count — see the header: the
+ * LLM/non-LLM fork sits BELOW the tier stamp, measured at 2.6× overstatement
+ * (owner: sync-docs/reports/2026-08-05_ai-serving-spend-audit.md §3).
  *
  * Deliberately an ALLOWLIST rather than a name pattern: `count_unit_cached` and
  * `fdc_volume_cached` are the cached siblings of members here, and a substring
  * rule on "ai" would take `ai_generated_serving` (no model) while missing
- * `fdc_size_estimate` (always a model).
+ * `fdc_size_estimate` (a model at most — 41 events / 0 responses in the
+ * 2026-08-05 measurement).
  */
 export const SERVING_AI_TIERS: Readonly<Record<string, ServingAiCallType>> = Object.freeze({
     // getOrCreateAmbiguousServing(), cache miss — the sibling `count_unit_cached` is a hit.
+    // maybeCalled even so: 77.3% of events bill a `default-count-grams` seed value
+    // or an integer multiple (owner doc §3).
     count_unit_ai: 'ambiguous',
-    // getOrCreateFdcSizeServings() -> estimateAmbiguousServing(). Uncached by construction.
+    // getOrCreateFdcSizeServings() -> estimateAmbiguousServing(). Uncached by
+    // construction, but the estimator's USDA first step resolves without a model
+    // (see header: REFUTED / RESOLVING MECHANISM).
     fdc_size_estimate: 'produce',
     fdc_medium_estimate: 'produce',
     // Unitless piece estimation for produce.
@@ -59,6 +113,11 @@ export const SERVING_AI_TIERS: Readonly<Record<string, ServingAiCallType>> = Obj
 
 /**
  * Derive the `aiCalls.serving` record from the tier that billed this line.
+ *
+ * Read `called: true` as maybeCalled — "this tier's producer can reach a model",
+ * an upper bound per the header, not "a model ran". (The field name predates the
+ * 2026-08-05 measurement and is kept for wire stability; renaming it is a
+ * behaviour change this module deliberately does not make.)
  *
  * Returns `called: false` for an absent tier rather than `undefined`, so the
  * analysis log distinguishes "resolved without a model" from "never populated" —
@@ -139,7 +198,12 @@ export const REPLAY_NONDETERMINISTIC_SERVING_TIERS: readonly string[] = Object.f
 
         // --- getOrCreateFdcSizeServings() -> estimateAmbiguousServing() ---
         // Uncached by construction (its own docstring says caching is "a future
-        // enhancement"), so every one of these is a live round trip.
+        // enhancement"). NOT "always a live round trip" — that claim is refuted
+        // in the header (41 events / 0 model responses, 2026-08-05); the USDA
+        // first step usually resolves these. They stay HERE because the LLM
+        // fallback remains reachable, and the USDA path itself sits behind a
+        // live API + 24 h in-process cache — neither replays deterministically
+        // from a frozen pool.
         'fdc_size_estimate',
         'fdc_medium_estimate',
         // Third tier off that same producer, stamped on the size-qualifier branch.
