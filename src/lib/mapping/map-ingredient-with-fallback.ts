@@ -82,6 +82,20 @@ export {
     isTightNameGroup, buildOffResult,
 } from './serving/hydration-lane';
 
+/**
+ * Unit-class predicates for Step 5a's isWeightUnit / isVolumeUnit flags,
+ * hoisted above the cascade in Phase 1 stage 1d. They evaluate parsed.unit
+ * BEFORE the hydration lane runs — and hydrateAndSelectServing (no `()` here:
+ * the budget migration guard scans this file's text for call sites, comments
+ * included) mutates parsed.unit via trailing-unit recovery,
+ * TRAILING_UNIT_REGEX in ./serving/hydration-lane. The hoist is only
+ * divergence-free while the trailing-unit set matches NEITHER regex; exported so
+ * __tests__/trailing-unit-hoist-divergence.test.ts can pin that disjointness
+ * against the real symbols (log/2026-08-07_0230, Findings).
+ */
+export const WEIGHT_UNIT_REGEX = /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms)$/i;
+export const VOLUME_UNIT_REGEX = /^(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*ounce|l|liter|liters)$/i;
+
 // ============================================================
 // Symmetric cache lookup with legacy-key fallback (Track 1c)
 // ============================================================
@@ -2483,12 +2497,12 @@ export async function mapIngredientWithFallback(
         // Step 5a: If hydration failed and user requested a weight unit (oz, g, lb),
         // try AI backfill for weight serving on the winner BEFORE falling back to other candidates.
         // This prevents falling back to lower-ranked candidates just because they have gram servings.
-        const isWeightUnit = parsed?.unit && /^(g|gram|grams|oz|ounce|ounces|lb|lbs|pound|pounds|kg|kilogram|kilograms)$/i.test(parsed.unit);
+        const isWeightUnit = parsed?.unit && WEIGHT_UNIT_REGEX.test(parsed.unit);
 
         // Step 5a-VOLUME: If hydration failed for a VOLUME unit (cup, tbsp, tsp, etc.),
         // try AI volume backfill to estimate density for the winner BEFORE falling back to other candidates.
         // This prevents falling back to semantically unrelated candidates just because they have volume servings.
-        const isVolumeUnit = parsed?.unit && /^(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*ounce|l|liter|liters)$/i.test(parsed.unit);
+        const isVolumeUnit = parsed?.unit && VOLUME_UNIT_REGEX.test(parsed.unit);
 
         // Extract prep modifier from ingredient line for modifier-aware serving labels
         const prepModifier = extractPrepModifier(rawLine, parsed?.qualifiers);
