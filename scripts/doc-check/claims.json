@@ -1165,7 +1165,7 @@
     },
     {
       "id": "serving-ai-tiers-is-an-allowlist",
-      "claim": "SERVING_AI_TIERS excludes ai_generated_serving. The tier names are unreliable in BOTH directions: getAiServingGrams() runs no model despite the name, while fdc_size_estimate (the largest AI-serving tier) has no 'ai' in its name and getOrCreateFdcSizeServings() has no cache. A substring rule on 'ai' gets both wrong, so the table must stay an explicit allowlist.",
+      "claim": "SERVING_AI_TIERS excludes ai_generated_serving. The tier names are unreliable in BOTH directions: getAiServingGrams() runs no model despite the name, while fdc_size_estimate (the largest maybeCalled serving tier) has no 'ai' in its name. A substring rule on 'ai' gets both wrong, so the table must stay an explicit allowlist. Membership means maybeCalled -- an UPPER BOUND on model calls, measured 2.6x overstatement 2026-08-05 (owner: mobile sync-docs/reports/2026-08-05_ai-serving-spend-audit.md section 3); the earlier registry text's 'getOrCreateFdcSizeServings() has no cache' stayed true, but the inference from it (every event a live LLM round trip) is REFUTED -- 41 fdc_size_* events, 0 model responses.",
       "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
       "where": "backend",
       "command": "sed -n '/SERVING_AI_TIERS/,/});/p' src/lib/mapping/serving-ai-tiers.ts | grep -cE \"^ *ai_generated_serving:\"",
@@ -1173,7 +1173,7 @@
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-04"
+      "verified": "2026-08-06"
     },
     {
       "id": "rerank-abstention-has-two-labelled-exits",
