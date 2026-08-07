@@ -21,12 +21,21 @@ describe('no mapping-analysis file writes from jest', () => {
         expect(process.env.ENABLE_MAPPING_ANALYSIS).toBe('false');
     });
 
-    it('dotenv cannot restore the dev .env value over the pin', async () => {
+    it('ENABLE_AI_PARSE_LOG is pinned too — a separate const guards the ai-parse-events.jsonl append', () => {
+        // The logs/ai-parse-events.jsonl appendFileSync in the same file is gated
+        // by its own module-scope const (ENABLE_AI_PARSE_LOG), not by
+        // ENABLE_MAPPING_ANALYSIS — pinning only the latter would still leak on a
+        // machine opting into ENABLE_AI_PARSE_LOG=true.
+        expect(process.env.ENABLE_AI_PARSE_LOG).toBe('false');
+    });
+
+    it('dotenv cannot restore the dev .env values over the pins', async () => {
         // dotenv only writes keys that are not already own-properties of
-        // process.env, so the setup file's assignment must survive this import
-        // even on a machine whose .env sets ENABLE_MAPPING_ANALYSIS=true.
+        // process.env, so the setup file's assignments must survive this import
+        // even on a machine whose .env sets either flag to true.
         await import('dotenv/config');
         expect(process.env.ENABLE_MAPPING_ANALYSIS).toBe('false');
+        expect(process.env.ENABLE_AI_PARSE_LOG).toBe('false');
     });
 
     it('both jest projects load the no-analysis-writes setup file', () => {
@@ -54,6 +63,7 @@ describe('no mapping-analysis file writes from jest', () => {
             .replace(/\/\*[\s\S]*?\*\//g, '')
             .replace(/\/\/[^\n]*/g, '');
         expect(codeOnly).toContain("process.env.ENABLE_MAPPING_ANALYSIS = 'false'");
+        expect(codeOnly).toContain("process.env.ENABLE_AI_PARSE_LOG = 'false'");
         expect(codeOnly).not.toMatch(/delete\s+process\.env/);
     });
 });

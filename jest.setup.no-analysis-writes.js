@@ -5,9 +5,12 @@
  * Every `logMappingAnalysis()` call site sits behind
  * `if (ENABLE_MAPPING_ANALYSIS)` in src/lib/mapping/map-ingredient-with-fallback.ts,
  * and that gate is a module-scope const:
- * `process.env.ENABLE_MAPPING_ANALYSIS === 'true'`, captured at import time. The
- * same flag guards the `logs/ai-parse-events.jsonl` appendFileSync in the same
- * file. On a dev Mac the mapper chain's `import 'dotenv/config'` loads a `.env`
+ * `process.env.ENABLE_MAPPING_ANALYSIS === 'true'`, captured at import time.
+ * A SEPARATE const, ENABLE_AI_PARSE_LOG (same file, same capture-at-import
+ * mechanism), guards the `logs/ai-parse-events.jsonl` appendFileSync — it is
+ * pinned to 'false' below as well, or a dev machine opting into
+ * ENABLE_AI_PARSE_LOG=true would still leak from jest.
+ * On a dev Mac the mapper chain's `import 'dotenv/config'` loads a `.env`
  * that sets ENABLE_MAPPING_ANALYSIS=true, so any suite that drives the mapper far
  * enough to select a candidate writes real `logs/mapping-analysis-*.json` +
  * `logs/mapping-summary-*.txt` files — the same namespace the box's decision
@@ -45,3 +48,4 @@
  * the mapper chain transitively, same as the no-llm gate).
  */
 process.env.ENABLE_MAPPING_ANALYSIS = 'false';
+process.env.ENABLE_AI_PARSE_LOG = 'false';
