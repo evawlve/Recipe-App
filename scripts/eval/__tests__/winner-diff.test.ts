@@ -481,7 +481,9 @@ describe('parseGoldenSet', () => {
         // kcal100/carbs100 were passing on a 240 g / 295 kcal bill against USDA's
         // 172 g / 227 kcal. Adding one here also adds one to the `total` blind count
         // below — this screen cannot judge totals at all.
-        expect(n(c => !!c.total)).toBe(36);
+        // 37 since 2026-08-07: n-mq-34 gained total.calories [130,160] (its fat100
+        // band alone could not distinguish the two recorded arms; see its note).
+        expect(n(c => !!c.total)).toBe(37);
         // documented in _readme, no live case uses them — parsed anyway so the screen
         // does not go blind the moment one is added back
         expect(n(c => !!c.forbidName)).toBe(0);
@@ -500,7 +502,8 @@ describe('parseGoldenSet', () => {
         expect([item.length, text.length]).toEqual([160, 83]);
         expect(item.filter(c => c.grams).length).toBe(117);
         expect(item.filter(c => c.macros).length).toBe(47);
-        expect(item.filter(c => c.total).length).toBe(16);
+        // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
+        expect(item.filter(c => c.total).length).toBe(17);
         expect(text.filter(c => c.grams).length).toBe(31);
         expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(47);
 
@@ -720,7 +723,8 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         const kind = (k: string) => cov.byKind.find(b => b.kind === k)!;
         expect(cov.cases).toBe(243);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 148, blind: 148 });
-        expect(kind('total')).toEqual({ kind: 'total', asserted: 36, blind: 36 });
+        // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
+        expect(kind('total')).toEqual({ kind: 'total', asserted: 37, blind: 37 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 47, blind: 47 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
@@ -738,10 +742,11 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         const cov = goldenCoverage(all.filter(c => c.shape === 'item'));
         expect(cov.cases).toBe(160);
         expect(cov.byKind.find(b => b.kind === 'grams')).toEqual({ kind: 'grams', asserted: 117, blind: 117 });
-        // 117 item cases assert grams + 16 assert a total, less the 9 that assert both.
-        // The `total` term was 7 before PR #167 added calorie bands.
+        // 117 item cases assert grams + 17 assert a total, less the 9 that assert both.
+        // The `total` term was 7 before PR #167 added calorie bands, 16 before
+        // 2026-08-07 added n-mq-34's (an item case with a total and no grams band).
         expect(all.filter(c => c.shape === 'item' && c.grams && c.total).length).toBe(9);
-        expect(cov.casesWithBlindBand).toBe(117 + 16 - 9);
+        expect(cov.casesWithBlindBand).toBe(117 + 17 - 9);
     });
 
     it('an item case with only a name and a measurable macro band is fully judgeable', () => {
