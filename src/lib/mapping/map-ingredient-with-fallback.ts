@@ -2625,6 +2625,11 @@ export async function mapIngredientWithFallback(
                         food: dietaryFallbackResult.foodName,
                         confidence: dietaryFallbackResult.confidence,
                     });
+                    logger.audit('mapping.recovery_path', {
+                        path: 'dietary_direct_return',
+                        original: trimmed,
+                        servedBy: dietaryFallbackResult.foodId,
+                    });
                     return dietaryFallbackResult;
                 }
             }
@@ -2696,6 +2701,11 @@ export async function mapIngredientWithFallback(
                                 mappedTo: fbr.foodName,
                                 serving: rehydratedResult.servingDescription,
                                 grams: rehydratedResult.grams,
+                            });
+                            logger.audit('mapping.recovery_path', {
+                                path: 'simplify_direct_return',
+                                original: trimmed,
+                                servedBy: rehydratedResult.foodId,
                             });
                             return rehydratedResult;
                         }
@@ -3071,6 +3081,11 @@ export async function mapIngredientWithFallback(
                         fallbackId: fallback.id,
                         fallbackName: fallback.name,
                     });
+                    logger.audit('mapping.recovery_path', {
+                        path: 'serving_failure_fallback',
+                        from: failedWinnerId,
+                        to: fallback.id,
+                    });
                     result = fallbackResult;
                     selectionReason = 'fallback_after_serving_failure';
                     return true;
@@ -3132,6 +3147,10 @@ export async function mapIngredientWithFallback(
                 failedId: winner.id,
                 failedName: winner.name,
             });
+            logger.audit('mapping.recovery_path', {
+                path: 'cache_failure_research',
+                from: winner.id,
+            });
 
             // Run full search to find candidates with working servings
             const searchGatherOptions: GatherOptions = {
@@ -3186,6 +3205,11 @@ export async function mapIngredientWithFallback(
                         originalId: failedCacheWinnerId,
                         fallbackId: candidate.id,
                         fallbackName: candidate.name,
+                    });
+                    logger.audit('mapping.recovery_path', {
+                        path: 'cache_failure_rebilled',
+                        from: failedCacheWinnerId,
+                        to: candidate.id,
                     });
                     result = retryResult;
                     selectionReason = 'fallback_search_after_cache_failure';
@@ -3257,6 +3281,11 @@ export async function mapIngredientWithFallback(
                     rawLine: trimmed,
                     baseFoodContext,
                     budget: aiNutritionBudget,
+                });
+                logger.audit('mapping.recovery_path', {
+                    path: 'backfill_after_winner',
+                    from: winner.id,
+                    served: aiResult.status === 'success',
                 });
 
                 if (aiResult.status === 'success') {
