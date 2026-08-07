@@ -47,6 +47,24 @@ import { buildFatSecretResult } from '../build-fatsecret-result';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 
 /**
+ * Trailing-unit recovery set: units the parser sometimes fails to extract,
+ * leaving them in the name (e.g. "5 mint 1 bunch" => unit: null, name:
+ * "mint 1 bunch"). hydrateAndSelectServing and buildFdcResult both recover
+ * them from parsed.name; the first MUTATES parsed.unit when it fires.
+ * (Symbol names here deliberately carry no parens — the migration guard in
+ * __tests__/ai-nutrition-hydration-budget.test.ts scans this file's raw text
+ * for that name followed by an open paren, comments included.)
+ *
+ * INVARIANT (pinned by __tests__/trailing-unit-hoist-divergence.test.ts):
+ * this set must stay DISJOINT from WEIGHT_UNIT_REGEX and VOLUME_UNIT_REGEX in
+ * ../map-ingredient-with-fallback.ts. The 1d-hoisted isWeightUnit /
+ * isVolumeUnit flags evaluate parsed.unit BEFORE that mutation runs, so the
+ * hoist is only divergence-free while no member of this set reads as a weight
+ * or volume unit (log/2026-08-07_0230, Findings).
+ */
+export const TRAILING_UNIT_REGEX = /\b(bunch|head|stalk)\b/i;
+
+/**
  * Annotate ground meat food name with lean percentage when query didn't specify one.
  * This ensures users can see what lean % they're getting when they just typed "ground beef".
  * 
@@ -216,7 +234,7 @@ export async function hydrateAndSelectServing(
     // FIX: Sometimes the parser fails to extract units like "bunch" or "head", leaving them in the name.
     // E.g. "5 mint 1 bunch" => unit: null, name: "mint 1 bunch"
     if (parsed && !parsed.unit && parsed.name) {
-        const trailingUnitMatch = parsed.name.match(/\b(bunch|head|stalk)\b/i);
+        const trailingUnitMatch = parsed.name.match(TRAILING_UNIT_REGEX);
         if (trailingUnitMatch) {
             parsed.unit = trailingUnitMatch[1].toLowerCase();
         }
@@ -1172,7 +1190,7 @@ async function buildFdcResult(
 
     // FIX: Sometimes the parser fails to extract units like "bunch" or "head", leaving them in the name.
     if (parsed && !unit && parsed.name) {
-        const trailingUnitMatch = parsed.name.match(/\b(bunch|head|stalk)\b/i);
+        const trailingUnitMatch = parsed.name.match(TRAILING_UNIT_REGEX);
         if (trailingUnitMatch) {
             unit = trailingUnitMatch[1].toLowerCase();
         }
