@@ -65,7 +65,18 @@
 import fs from 'fs';
 
 const DIR = process.argv[2];
-if (!DIR) { console.error('usage: split-flips-existing-vs-future.ts <dir>'); process.exit(2); }
+if (!DIR) { console.error('usage: split-flips-existing-vs-future.ts <dir> [--emit-keys]'); process.exit(2); }
+// --emit-keys: instead of the two-part report, print one line per LAUNDERED
+// saturated incumbent row as `normalizedForm<TAB>attributedReason`.
+// `normalizedForm` is FoodMapping's PRIMARY KEY (prisma/schema.prisma:
+// `normalizedForm String @id`), i.e. exactly the identifier a backfill UPDATE
+// needs — which no other output of this pipeline retains (PART 1 tallies by
+// verdict and discards column 0). Added 2026-08-07 for docket D1 so the
+// backfill's row set is derived by the SAME classifier that measured 150,
+// not by a hand-rewritten copy of it. UNATTRIBUTED rows are deliberately NOT
+// emitted: a row the corpus cannot attribute is a row the backfill must not
+// touch.
+const EMIT_KEYS = process.argv[3] === '--emit-keys';
 
 const CROSS_SOURCE_DISPLACEMENT_MARGIN = 0.05;
 const DECLINED = 0.78;
@@ -93,11 +104,19 @@ const srcOf = (id: string) =>
 const incs = fs.readFileSync(`${DIR}/incumbents.tsv`, 'utf8').split('\n').filter(Boolean).map(l => {
     const c = l.split('\\t');
     return {
+        norm: c[0],
         conf: Number(c[1]),
         target: c[2] ? `off_${c[2]}` : c[3] ? `fdc_${c[3]}` : c[4] ? (c[4].startsWith('fs_') ? c[4] : `fs_${c[4]}`) : '',
     };
 });
 const sat = incs.filter(i => i.conf >= 0.999);
+if (EMIT_KEYS) {
+    for (const i of sat) {
+        const c = classify(i.target, i.conf);
+        if (c.v === 'LAUNDERED') console.log(`${i.norm}\t${c.reason}`);
+    }
+    process.exit(0);
+}
 const satTally: Record<string, number> = {};
 let launderedExisting = 0;
 for (const i of sat) {

@@ -191,6 +191,62 @@ describe('T7 SITE A: the abstention leg writes the constant, not the retrieval s
     });
 });
 
+/**
+ * SITE C: the `confidence_gate_backstop` leg. The pool is chosen so ONLY the
+ * backstop can produce a winner: both scores sit below MIN_FALLBACK_RAW_SCORE
+ * (0.80), so if the backstop leg were deleted the `scored_by_confidence` arm
+ * rejects and the result is null — the leg under test is isolated by
+ * construction, not by reading selectionReason. The food is deliberately
+ * NON-GRAIN and NON-PRODUCE: a grain query trips
+ * `soft_cooked_grain_full_rerank` and a produce query trips
+ * `basic_produce_bypass`, either of which would move the test onto a
+ * different gate exit. "celery" == "Celery" makes assessConfidence() return
+ * its exact-match 1.0, which is precisely the number the ceiling exists to
+ * stop reaching the cache.
+ */
+const BACKSTOP_POOL = [
+    cand('fdc_5555555', 'Celery', 0.5),
+    cand('fdc_6666666', 'Toasted Sesame Dressing', 0.4),
+];
+
+describe('T9 SITE C: the backstop leg takes the declined ceiling', () => {
+    it('an exact-name gate pick after simpleRerank declined is capped at RERANK_DECLINED_CONFIDENCE', async () => {
+        // MUTATION: revert `confidence = Math.min(RERANK_DECLINED_CONFIDENCE,
+        // gateResult.confidence)` back to `confidence = gateResult.confidence`
+        // in the backstop arm of mapIngredientWithFallback(). Kills this test —
+        // assessConfidence('celery', 'Celery') is exactly 1.0 (the perfect-match
+        // early return), and 1.0 is what the mobile badge renders as
+        // "✓ 100% Exact Match" on a pick the reranker refused to make.
+        const r = await mapWith('1 cup celery', BACKSTOP_POOL);
+
+        expect(r).not.toBeNull();
+        expect(r!.foodId).toBe('fdc_5555555');
+        expect(r!.confidence).toBe(RERANK_DECLINED_CONFIDENCE);
+        expect(r!.confidence).not.toBe(1);
+    });
+
+    it('the winner came from the backstop, not the scored_by_confidence arm', () => {
+        // The isolation argument, executed: both candidates sit below the raw
+        // floor, so the fallback arm cannot have admitted them. If this ever
+        // fails the pool no longer isolates the leg and T9 is testing nothing.
+        expect(BACKSTOP_POOL[0].score).toBeLessThan(0.80);
+        expect(BACKSTOP_POOL[1].score).toBeLessThan(0.80);
+    });
+
+    it('lands in the insert-only save tier, so it can create but never displace', async () => {
+        const r = await mapWith('1 cup celery', BACKSTOP_POOL);
+
+        expect(r!.confidence).toBeGreaterThanOrEqual(SUB_THRESHOLD_SAVE_FLOOR);
+        expect(r!.confidence).toBeLessThan(SAVE_CONFIDENCE_THRESHOLD);
+    });
+
+    it('emits quality "medium", not "high"', async () => {
+        const r = await mapWith('1 cup celery', BACKSTOP_POOL);
+
+        expect(r!.quality).toBe('medium');
+    });
+});
+
 describe('T8 SITE A: the name-match term actually gates admission', () => {
     it('rejects a high-scoring candidate that shares no core token with the query', async () => {
         // MUTATION: delete `&& fallbackNameMatch >= MIN_FALLBACK_NAME_MATCH`

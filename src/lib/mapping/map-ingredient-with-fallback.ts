@@ -2210,45 +2210,50 @@ export async function mapIngredientWithFallback(
                             // no digits and no parentheses on purpose: the under_gate
                             // class is `selectionReason.split(':')[0]` through
                             // normalizeClassId, which strips both.
-                            // Takes the gate's confidence with NO reason scope, unlike
-                            // the agreement lift above. That asymmetry is deliberate,
-                            // not an oversight, and it is worth stating because the two
-                            // sit 100 lines apart and look inconsistent.
+                            // Takes the gate's confidence with NO reason scope — unlike
+                            // the agreement lift above — but UNDER THE DECLINED CEILING:
+                            // min(RERANK_DECLINED_CONFIDENCE, x). The two halves have
+                            // separate rationales, stated separately, because the two
+                            // sites sit 100 lines apart and look inconsistent.
                             //
-                            // On this branch simpleRerank named nobody, so there is no
-                            // second number to choose between — the alternative is not a
-                            // better-scaled confidence, it is no winner at all and a
-                            // fall-through to the AI-simplify path. Baseline behaved
-                            // exactly this way on exactly these rows, so scoping here
-                            // would be a NEW regression rather than a restoration.
-                            //
-                            // The cost used to be real: of the 9 backstop rows in the
-                            // 4,165-query population, 6 were `basic_produce_bypass` and
-                            // were therefore cached at a saturated raw engine score of
-                            // 1.000 (`chicken and rice bowl`, `rice and peas`,
-                            // `steamed carrots`, `steamed rice`, `sauteed spinach`).
-                            // That is FIXED AT THE PRODUCER, not here: the bypass exit in
-                            // gather-candidates.ts now caps its return at
-                            // RERANK_DECLINED_CONFIDENCE, which corrects this site and the
-                            // instrument (`scripts/eval/winner-diff.ts` imports
-                            // confidenceGate live) in one move.
-                            //
-                            // Scoping the read here to `high_confidence_clear_winner` was
-                            // the considered alternative and is deliberately NOT what
-                            // shipped. It would leave the producer still emitting a
-                            // saturated 1.000 for every other consumer, and on this branch
-                            // it would be a NEW regression: simpleRerank named nobody, so
-                            // the alternative is not a better-scaled confidence, it is no
+                            // NO REASON SCOPE: on this branch simpleRerank named nobody,
+                            // so there is no second number to choose between — the
+                            // alternative is not a better-scaled confidence, it is no
                             // winner at all and a fall-through to the AI-simplify path.
+                            // Baseline behaved exactly this way on exactly these rows, so
+                            // scoping here would be a NEW regression, and it would leave
+                            // the producer emitting the same numbers for every other
+                            // consumer anyway.
                             //
-                            // The producer-side cap is MONOTONE-DOWNWARD — min(0.78, x)
-                            // <= x — which matters because the bypass has no score floor
-                            // of its own. Writing a flat 0.78 there would have RAISED the
-                            // low tail: 6 of 295 bypass decisions sit at 0.67551, below
-                            // SUB_THRESHOLD_SAVE_FLOOR, i.e. uncacheable today (measured
-                            // 2026-08-05 over the box's 111 mapping-analysis-*.json).
+                            // THE CEILING: this read used to be unbounded, and it was the
+                            // last laundering leg. Of the 9 backstop rows in the
+                            // 4,165-query population, 6 were `basic_produce_bypass`
+                            // cached at a saturated raw engine score of 1.000; that half
+                            // was fixed AT THE PRODUCER (the bypass exit in
+                            // gather-candidates.ts caps its return at
+                            // RERANK_DECLINED_CONFIDENCE, correcting this site and the
+                            // instrument — winner-diff imports confidenceGate live — in
+                            // one move). But the producer cap cannot close the leg:
+                            // `high_confidence_clear_winner` returns assessConfidence's
+                            // real match score, exactly 1.0 on a name==query candidate,
+                            // and THAT producer must stay uncapped because the agreement
+                            // lift above legitimately consumes it — a rerank WIN the gate
+                            // agrees with was declined by nobody. T5 in
+                            // __tests__/confidence-gate.test.ts pins the producer on
+                            // purpose. So the ceiling lives HERE, on the one consumer
+                            // where the reranker DID decline: 2 backstop rows were
+                            // observed writing 1.0 on the frozen pool and one carries it
+                            // live on the cold gate (n-cook-03, an exact-name pick billed
+                            // 240 g vs USDA's 172 g, stored maximally confident). Owner:
+                            // mobile:sync-docs/reports/2026-08-05_the-abstention-writes-a-laundered-confidence.md
+                            //
+                            // min(0.78, x) <= x is MONOTONE-DOWNWARD: it cannot raise the
+                            // low tail (the 0.67551 bypass rows stay uncacheable, same
+                            // argument as the producer cap), and it cannot change the
+                            // winner — `winner` is assigned before `confidence` and no
+                            // later winner assignment reads the value.
                             winner = gateSelection;
-                            confidence = gateResult.confidence;
+                            confidence = Math.min(RERANK_DECLINED_CONFIDENCE, gateResult.confidence);
                             selectionReason = 'confidence_gate_backstop';
                             logger.info('mapping.confidence_gate_backstop', {
                                 rawLine: trimmed,
