@@ -139,6 +139,9 @@ import * as path from 'path';
 import { detectBrandInQuery } from '../../src/lib/mapping/brand-detector';
 import { servingMacros } from '../../src/lib/mapping/fs-serving-macros';
 import { isReplayNondeterministicTier } from '../../src/lib/mapping/serving-ai-tiers';
+// Type-only: erased at compile time, so importing this module still does not load
+// the parse chain. The parser itself is lazy-required inside bareUnitlessRequest.
+import type { ParsedIngredient } from '../../src/lib/parse/ingredient-line';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -201,6 +204,15 @@ export interface RealServing {
     grams: number | null;
     tier: string | null;
     kcal: number | null;
+    /**
+     * The serving description the hydration lane itself chose for these grams
+     * (e.g. "1 leaf", "28.0g"). Card-display only: it lets llmUserPrompt pair the
+     * billed grams with THEIR OWN label instead of the record's stored
+     * default-serving description, which can belong to a different serving row
+     * entirely (FatSecret "Baby Spinach": 0.6 g is the "1 baby leaf" row's grams,
+     * "1 cup" a different row's description — see servingLabelFor).
+     */
+    desc?: string | null;
     error?: string;
 }
 
@@ -784,8 +796,46 @@ Use UNSURE when you cannot tell whether it is the same product from the informat
  * is unusable but serving-level nutrition exists, the card now prints that panel
  * and says where the billed number comes from.
  */
+/**
+ * The label description that may honestly sit next to `sg.grams` on the LLM card
+ * — or null when no stored description corresponds to those grams.
+ *
+ * The card used to print `label: ${r.off_serving_size || r.fs_serving_desc}` next
+ * to whatever grams realServing() returned: the record's STORED default-serving
+ * description paired with the CASCADE's billed grams, which can come from a
+ * different serving row entirely. Real example (2026-08-08): FatSecret
+ * "Baby Spinach" printed `0.6 g  (label: 1 cup)` — 0.6 g is the "1 baby leaf"
+ * row's grams, "1 cup" a different row's description — and a judge reads that
+ * pairing as label corruption on a correct record.
+ *
+ * Rules:
+ *   - grams from the real pass (`hydrateAndSelectServing:*` / `ai-estimated:*`)
+ *     pair only with the description the hydration result itself carried
+ *     (`r.real.desc`); when it carried none, the label is dropped;
+ *   - reconstruction grams pair only with the stored description of the SAME
+ *     row resolveServingGrams read them from (OffFood.servingGrams ↔
+ *     off_serving_size, FatSecretServing.grams ↔ fs_serving_desc — each pair is
+ *     one DB row by construction, see ROW_SQL's joins);
+ *   - every other origin (OffServing/FdcServing minima, FdcFood.servingSize)
+ *     has no stored description in the row, so no label.
+ */
+export function servingLabelFor(
+    r: ScreenRow,
+    sg: { grams: number | null; from: string },
+): string | null {
+    if (sg.grams == null) return null;
+    if (sg.from.startsWith('hydrateAndSelectServing:') || sg.from.startsWith('ai-estimated:')) {
+        const d = r.real && !r.real.error ? r.real.desc : null;
+        return d && d.trim() !== '' ? d.trim() : null;
+    }
+    if (sg.from === 'OffFood.servingGrams') return r.off_serving_size?.trim() || null;
+    if (sg.from === 'FatSecretServing.grams') return r.fs_serving_desc?.trim() || null;
+    return null;
+}
+
 export function llmUserPrompt(r: ScreenRow): string {
     const sg = realServing(r);
+    const label = servingLabelFor(r, sg);
     const aw = atwater(r.per100g);
     const p = r.per100g ?? {};
     const servKcal = servingLevelKcal(r);
@@ -812,7 +862,7 @@ export function llmUserPrompt(r: ScreenRow): string {
             : '',
         aw ? `Atwater check: declared/computed = ${aw.ratio.toFixed(2)}` : 'Atwater check: not computable',
         sg.grams != null
-            ? `default serving: ${sg.grams} g  (label: ${r.off_serving_size || r.fs_serving_desc || 'n/a'}, via ${sg.from})  -> a "1 x" log bills ${billed}`
+            ? `default serving: ${sg.grams} g  (${label ? `label: ${label}, ` : ''}via ${sg.from})  -> a "1 x" log bills ${billed}`
             : `default serving: NONE resolved (${sg.from}) -> a "1 x" log bills a flat 100 g = ${billed}`,
         r.pkg_qty ? `package quantity: ${r.pkg_qty} ${r.pkg_unit}` : '',
     ].filter(Boolean);
@@ -1020,6 +1070,41 @@ function candidateId(r: ScreenRow): string | null {
 }
 
 /**
+ * The ParsedIngredient a real unitless "1 x" request carries, built by the REAL
+ * parser (`parseIngredientLine`, the same function `preflightIngredientLine` in
+ * map-ingredient-with-fallback.ts calls) on the shopper's seed phrase — falling
+ * back to the stored key when the seed is missing (token-sorted, but still a
+ * digitless unitless phrase, which is all the bare-request predicates read).
+ *
+ * This exists because the real-anchor pass used to hand `hydrateAndSelectServing`
+ * a literal `null` for `parsed`. Both bare-request predicates in
+ * src/lib/servings/bare-query-guard.ts — `isBareUnitlessQty1` and
+ * `isBarePluralRequest` — return `false` on a null parsed, so every bare-serving
+ * guard (the category-default CAP/REPLACE override, the name-sibling rungs, the
+ * FatSecret bare-plural suppression) was OFF in the screen while ON in
+ * production. Measured 2026-08-08: 12 of 14 serving-flagged triage rows showed
+ * `flat_100g_default` on their cards while production billed
+ * `bare_category_default` 14 g / `bare_name_sibling_serving_tight` 5–30 g /
+ * `fs_default_serving` label servings. The screen was grading a pipeline
+ * production never runs.
+ *
+ * Parser is lazy-required so importing this module stays side-effect-light for
+ * the unit tests that never run the real pass (same pattern as
+ * resolveRealServings' own require of the mapper).
+ */
+export function bareUnitlessRequest(
+    seed: string | undefined,
+    key: string,
+): { parsed: ParsedIngredient | null; rawLine: string } {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { parseIngredientLine } =
+        require('../../src/lib/parse/ingredient-line') as typeof import('../../src/lib/parse/ingredient-line');
+    const rawLine = (seed ?? '').trim() || (key ?? '').trim();
+    if (!rawLine) return { parsed: null, rawLine };
+    return { parsed: parseIngredientLine(rawLine), rawLine };
+}
+
+/**
  * Fill `row.real` with what the REQUEST PATH would bill for a unitless `1 x`.
  *
  * This calls `hydrateAndSelectServing` — the same function route.ts calls — rather
@@ -1027,6 +1112,11 @@ function candidateId(r: ScreenRow): string | null {
  * could not see count-label serving, dose-anchored serving or the FatSecret weight
  * oracle, and PR #174 moved the real anchor further from it still. A screen that
  * evicts cache rows on a number the user is not billed is grading the wrong thing.
+ *
+ * The `parsed` argument is built by `bareUnitlessRequest` above — the real parser
+ * over the seed phrase — never a literal `null`, which would switch every
+ * bare-serving guard off and bill a pipeline production never runs (see that
+ * function's comment for the measured artifact).
  *
  * Rows it cannot resolve get `error` set, which makes D5/D6 abstain. Failure is
  * never silently converted into agreement.
@@ -1071,7 +1161,8 @@ export async function resolveRealServings(rows: ScreenRow[], concurrency = 8): P
                 rawData: {},
             };
             try {
-                const res = await hydrateAndSelectServing(candidate, null, r.conf ?? 0.9, r.seed || r.key);
+                const { parsed, rawLine } = bareUnitlessRequest(r.seed, r.key);
+                const res = await hydrateAndSelectServing(candidate, parsed, r.conf ?? 0.9, rawLine);
                 if (!res) { r.real = null; continue; }
                 r.real = {
                     grams: typeof res.grams === 'number' ? res.grams : null,
@@ -1079,6 +1170,11 @@ export async function resolveRealServings(rows: ScreenRow[], concurrency = 8): P
                     // `kcal` is the TOTAL for the resolved grams — the same field
                     // route.ts records as MappingEventLog.totalKcal.
                     kcal: typeof res.kcal === 'number' ? res.kcal : null,
+                    // The description the lane chose for THESE grams; the card must
+                    // never pair them with the stored default-serving description.
+                    desc: typeof res.servingDescription === 'string' && res.servingDescription.trim() !== ''
+                        ? res.servingDescription
+                        : null,
                 };
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
