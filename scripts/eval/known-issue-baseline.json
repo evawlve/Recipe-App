@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-08-02T13:58:42.245Z",
+  "writtenAt": "2026-08-08T18:30:33.348Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
@@ -50,7 +50,7 @@
     "n-serv-51": {
       "foodId": "off_0259645028140",
       "foodName": "Ribeye",
-      "grams": 100,
+      "grams": 112,
       "kcal100": 250,
       "abstained": false,
       "errored": false,
@@ -66,10 +66,10 @@
       "itemCount": 1
     },
     "n-mq-34": {
-      "foodId": "off_9335390000028",
-      "foodName": "Milk",
+      "foodId": "off_0853655005056",
+      "foodName": "Whole milk",
       "grams": 240,
-      "kcal100": 45.21988677978516,
+      "kcal100": 58,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -84,10 +84,10 @@
       "itemCount": 1
     },
     "n-cook-06": {
-      "foodId": "off_9348219004831",
-      "foodName": "Rolled Oats",
-      "grams": 86.39999999999999,
-      "kcal100": 400,
+      "foodId": "fs_112745332",
+      "foodName": "Steel Cut Oats (Cooked)",
+      "grams": 240,
+      "kcal100": 73,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -138,13 +138,22 @@
       "itemCount": 1
     },
     "n-mq-47": {
-      "foodId": "fs_4881229",
-      "foodName": "Skinless Chicken Breast",
-      "grams": 90,
-      "kcal100": 110,
+      "foodId": "off_0296763206050",
+      "foodName": "Boneless Skinless Chicken Breast",
+      "grams": 112,
+      "kcal100": 116,
       "abstained": false,
       "errored": false,
       "itemCount": 1
+    },
+    "n-seg-18": {
+      "foodId": "off_0074175009397",
+      "foodName": "Greek Yogurt With Granola",
+      "grams": 150,
+      "kcal100": 113,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 3
     }
   }
 }
