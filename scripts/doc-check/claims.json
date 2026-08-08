@@ -665,16 +665,16 @@
       "verified": "2026-07-31"
     },
     {
-      "id": "flywheel-sweep-timer-is-deliberately-stopped",
-      "claim": "flywheel-sweep.timer is durably DISABLED (docket D3, decided and executed 2026-08-07): is-active=inactive AND is-enabled=disabled, so a box reboot no longer silently re-arms it. Re-enable deliberately when the item-17 warm campaign resumes (plan section 'Running under all of this'), repairing the failed service at the same time. This claim goes red if the timer is re-enabled or running again, which is the prompt to rewrite that plan section rather than let 'disabled' outlive the decision.",
+      "id": "flywheel-sweep-timer-re-enabled-for-item-17",
+      "claim": "flywheel-sweep.timer is RE-ENABLED (2026-08-08, item-17 warm campaign resume): is-active=active AND is-enabled=enabled. Its D3 re-enable condition was met and executed — the 2026-08-03 service failure was diagnosed (eval-gate red on n-prod-01, not infra) and repaired cache-side (apple key repointed to FDC 171688 as a human-triage pin), plus a second warm red found on the proof run (n-mq-41 brand_guard escape bypassing the correct fs_81276 row; promoted to human-triage). This claim goes red if the timer is stopped or disabled again, which is the prompt to rewrite the plan section 'Running under all of this' rather than let the state outlive the decision.",
       "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
       "where": "box",
       "command": "echo \"$(systemctl --user is-active flywheel-sweep.timer 2>/dev/null || true):$(systemctl --user is-enabled flywheel-sweep.timer 2>/dev/null || true)\"",
       "expect": {
         "kind": "equals",
-        "value": "inactive:disabled"
+        "value": "active:enabled"
       },
-      "verified": "2026-08-07"
+      "verified": "2026-08-08"
     },
     {
       "id": "off-corrupt-marks-restored",
