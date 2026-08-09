@@ -214,4 +214,15 @@ describe('getBareQueryDefault — token-containment guards (warm-2026-07-21 regr
         expect(grams('honey graham crackers')).toBe(28);   // salty snack (crackers)
         expect(grams('honey mustard')).toBe(14);           // still a condiment via mustard
     });
+
+    // `soy sauce` was always covered by the `sauce` token; `tamari` is the same
+    // condiment class spelled without it, so bare `tamari` returned null and the
+    // guard's CAP had no value to bound rung (D)'s brand-median PACKAGE borrow —
+    // live it billed 117.5g off `off_5400313430320` (Yakso). Measured 2026-08-08.
+    it('tamari is a condiment (14g) — without it the package-count borrow is uncapped', () => {
+        expect(grams('tamari')).toBe(14);
+        expect(grams('tamari sauce')).toBe(14);
+        expect(grams('gluten free tamari')).toBe(14);
+        expect(grams('soy sauce')).toBe(14); // the token that already covered the class
+    });
 });
