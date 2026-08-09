@@ -246,9 +246,11 @@ describe('does not reopen the degenerate-nutrition class that fix 1 closed', () 
 
 /**
  * RERANK_DECLINED_CONFIDENCE — the constant written when simpleRerank()
- * abstained. These pin the four boundaries its doc comment claims, because the
- * value is only correct RELATIVE to them: two of the four live in this file,
- * and one lives in a different repo with no CI (see T1's third assertion).
+ * abstained. These pin the boundaries its doc comment claims, because the value
+ * is only correct RELATIVE to them, and the two that matter live in this file.
+ *
+ * T1's third assertion used to be a USER-VISIBLE guard and is now only a
+ * cross-repo drift pin — see the comment on it.
  */
 describe('RERANK_DECLINED_CONFIDENCE', () => {
     it('T1 lands in the insertOnly tier', () => {
@@ -257,15 +259,35 @@ describe('RERANK_DECLINED_CONFIDENCE', () => {
         // 2. insertOnly: may create a row on a virgin key, never displace one.
         expect(RERANK_DECLINED_CONFIDENCE).toBeLessThan(SAVE_CONFIDENCE_THRESHOLD);
         // 3. Below the MOBILE repo's CONFIDENCE_LEVELS.high.min (0.8, compared
-        //    with `>=`) in src/constants/nutrition.ts. At 0.80 the green
-        //    "✓ Exact Match" badge still renders and the user-visible half of
-        //    the defect is unfixed. That repo has no CI, so this assertion and
-        //    its mobile-side twin are the only guards. THE TWIN NOW EXISTS —
-        //    mobile `src/constants/__tests__/confidence-levels.test.ts`, added
-        //    2026-08-05. It did not when this comment first named it, which is
-        //    the "a doc names a mitigation nobody wrote" failure mode; if you
-        //    move this boundary, three of its four cases die.
+        //    with `>=`) in src/constants/nutrition.ts.
+        //
+        //    THIS ASSERTION'S ORIGINAL REASON IS DISCHARGED, and saying so is
+        //    the point of this comment. It used to read "at 0.80 the green
+        //    '✓ Exact Match' badge still renders, so the user-visible half of
+        //    the defect is unfixed". That badge was deleted on 2026-08-09:
+        //    getConfidenceLevel() was its only production consumer, the tiers
+        //    now carry no label or colour, and the mobile badge was rebuilt on
+        //    structural signals instead of the score. 0.80 vs 0.78 changes
+        //    nothing a user sees.
+        //
+        //    Keep the assertion anyway, for a NARROWER reason: mobile's
+        //    confidence-levels.test.ts hand-copies this constant and asserts
+        //    the same relationship, and that repo has no CI. Keeping it here
+        //    means raising this value to 0.80+ fails in the repo that DOES run
+        //    tests on every PR, instead of silently desyncing a hand-copied
+        //    number nobody would rerun. It is a drift pin, not a guard.
+        //
+        //    The boundaries that substantively place 0.78 are assertions 1 and
+        //    2 above: the cacheable insert-only window [0.75, 0.85).
         expect(RERANK_DECLINED_CONFIDENCE).toBeLessThan(0.80);
+        // 4. NEW 2026-08-09, closing a gap declined-confidence.ts had claimed
+        //    was already closed: it said "those four boundaries are asserted by
+        //    T1" while T1 had exactly three `expect`s. The missing one is the
+        //    only bound here that is STILL user-visible after the badge was
+        //    deleted — mobile's buildStagedLogPayload stamps an 'AI portion
+        //    estimate' warning when servingConfidence < 0.6, and that string is
+        //    shown. It was asserted only in mobile, the repo with no CI.
+        expect(RERANK_DECLINED_CONFIDENCE).toBeGreaterThanOrEqual(0.60);
     });
 
     it('T2 a declined pick is admitted insert-only, not full-overwrite', () => {
