@@ -1323,6 +1323,19 @@
       },
       "verified": "2026-08-07",
       "timeoutMs": 60000
+    },
+    {
+      "id": "off-records-are-effectively-single-serving",
+      "claim": "OFF records that carry any serving row carry EXACTLY ONE of them, and that is the load-bearing fact behind the 2026-08-09 decision NOT to build serving-class cache keys. Measured 2026-08-09: of 770,995 OffFood barcodes with an OffServing row, 770,902 have exactly one and only 93 have two or more (n=2 -> 42, n=3 -> 13, n=4 -> 37, n=5 -> 1), i.e. 0.012%. Contrast FatSecretFood, where 20,616 of 24,123 (85.5%) carry >=2 and ZERO carry none. That separation is why 'prefer the candidate carrying the requested unit' is not a per-record ranking feature at all but a LANE PREFERENCE in disguise (OFF is 3,550 of the 4,702 cached identities), which re-opens plan item #18 and collides with the cross_source_margin save gate. If an OFF ingest ever starts delivering genuinely multi-descriptor records, the ranking half of that decision must be re-adjudicated: there would finally be something to select over. This claim is deliberately a THRESHOLD, not a count, so ordinary ingest drift does not red it and a structural change does: it emits 1 while >=2-descriptor OFF records stay under 1% of OFF records with any serving row. It says NOTHING about whether the descriptors are good; OffServing is ~8.7% pure restatements of the per-100g basis ('100g', '1 portion (100 g)'), so the real per-unit choice inside the OFF lane is smaller than even 0.012% suggests.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-09_serving-class-keys-the-pick-is-already-unit-aware.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -At -c \"SELECT CASE WHEN (SELECT count(*) FROM (SELECT barcode FROM \\\"OffServing\\\" GROUP BY 1 HAVING count(*)>=2) t) * 100.0 / GREATEST((SELECT count(DISTINCT barcode) FROM \\\"OffServing\\\"),1) < 1.0 THEN 1 ELSE 0 END\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1"
+      },
+      "verified": "2026-08-09",
+      "timeoutMs": 120000
     }
   ]
 }
