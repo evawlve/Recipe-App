@@ -1336,6 +1336,32 @@
       },
       "verified": "2026-08-09",
       "timeoutMs": 120000
+    },
+    {
+      "id": "nutrition-modifier-keep-class-is-ordered-but-not-enforced",
+      "claim": "A nutrition modifier (sugar free / fat free / low sodium / diet / unsweetened) can be dropped from `normalizedName` before retrieval, and this claim pins the four code facts that decide where the fix must go. Measured 2026-08-10 by A/B on the injected string alone, same rawText, same build WFq5Sm-42xjvhD2N6mbel: normalizedForm 'bbq sauce' -> off_0665591893051 at 36 g / 90 kcal / 22 g sugar (panel 250 kcal, 61.11 g sugar per 100 g) versus 'sugar free bbq sauce' -> off_0628251683140 Firebarns Sugar Free BBQ Sauce at 30 g / 15 kcal / 2 g sugar. 6.0x kcal, 11x sugar, so a COMPLIANT STRING FIXES THE BILL and the string is the whole defect. The four output terms are ordered@segPrep@segDiet@idDiet. Term 1 is 1 while ai-normalize.ts's prompt ORDERS this exact preservation ('MUST PRESERVE nutrition-affecting modifiers in BOTH normalized_name AND canonical_base', with \"sugar free pudding\" as a worked example) -- it is load-bearing because the drops happen ANYWAY, which is the measured evidence that a prompt is a request and not a mechanism; if that rule is ever deleted the argument for siting the fix in code loses its precedent and this doc must be re-reasoned. Term 2 is 1 while SEGMENT_SYSTEM_PROMPT in ai-segmenter.ts names prep modifiers as its keep-class. Terms 3 and 4 are TRIPWIRES THAT MUST STAY 0 UNTIL THE FIX SHIPS, and are expected to flip to 1 when it does: term 3 goes 1 when the segmenter prompt starts naming diet/nutrition modifiers, term 4 goes 1 when IDENTITY_QUALIFIERS (today exactly {cooked, whole, raw, dried, canned}) gains a diet member. A red on 3 or 4 therefore means 'the fix landed, re-date the owner doc', not 'the code regressed'. Note the fix cannot be a prompt edit alone and cannot be sited inside `if (options.normalizedForm?.trim())`: 9 of the 14 prior drop events in MappingEventLog are on the SOLO path, where no segmenter runs. Standard caveat: a `backend` claim greps a CHECKED-OUT tree, not master and not the box's built .next.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-10_the-nutrition-modifier-is-dropped-and-a-food-can-vanish.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const n=fs.readFileSync('src/lib/mapping/ai-normalize.ts','utf8');const s=fs.readFileSync('src/lib/nlp/ai-segmenter.ts','utf8');const q=fs.readFileSync('src/lib/parse/qualifiers.ts','utf8');const ordered=/MUST PRESERVE nutrition-affecting modifiers/.test(n)?1:0;const segPrep=/keep prep modifiers/.test(s)?1:0;const segDiet=/sugar free|nutrition-affecting/.test(s)?1:0;const m=q.match(/IDENTITY_QUALIFIERS = new Set\\(\\[[\\s\\S]*?\\]\\)/);const idDiet=m&&/sugar free|fat free|diet|low sodium|unsweetened/.test(m[0])?1:0;process.stdout.write(ordered+'@'+segPrep+'@'+segDiet+'@'+idDiet)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@1@0@0"
+      },
+      "verified": "2026-08-10",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "normalizedname-has-a-second-writer",
+      "claim": "`MappingEventLog.normalizedForm` reports `normalizedName` in mapIngredientWithFallback(), and that variable has at least TWO writers -- which is why a restoration guard placed at the first one fixes only part of the defect. Writer 1 is the AI segmenter's string arriving as `options.normalizedForm` and becoming `baseName` (composite lines only; singleItemFromText() short-circuits any solo phrase <=60 chars / <=6 words with no MULTI_ITEM_SIGNALS, so a solo phrase never reaches the segmenter). Writer 2 is `normalizedName = repaired.cleaned` from aiNormalizeIngredient(), gated only on !usedGenericFallback and shouldNormalizeLlm() -- never on whether a caller supplied options.normalizedForm -- so a second LLM can rewrite the field on EITHER path. Measured 2026-08-10 over MappingEventLog before this session: 14 modifier-loss events over 4 phrase pairs, and 9 of the 14 carry segCacheHit NULL, i.e. the segmenter provably did not run (diet coke->coke first seen 2026-07-21, low sodium soy sauce->soy sauce, kikkoman low sodium soy sauce->kikkoman soy sauce); per-path loss rates are indistinguishable, segmenter 5/479 (1.04%) vs solo 9/826 (1.09%). Same corpus shows a modifier being ADDED downstream (chicken breast -> skinless chicken breast), independent evidence the field is rewritten after the segmenter. The two output terms are second@restored: term 1 is 1 while writer 2 exists, and term 2 is a TRIPWIRE THAT MUST STAY 0 until a nutrition-modifier restoration is sited in that file -- when the fix ships it flips to 1 and the owner doc must be re-dated. The correct siting, from the measurement, is a restoration into `baseName` UNCONDITIONALLY plus a re-assert AFTER the `normalizedName = repaired.cleaned` overwrite, so that both writers are downstream of it. That change NARROWS the retrieval query exactly as the IDENTITY_QUALIFIERS restoration does, so it is not admit-only and needs winner-diff.ts plus the cold golden gate before merge. Standard caveat: a `backend` claim greps a CHECKED-OUT tree.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-10_the-nutrition-modifier-is-dropped-and-a-food-can-vanish.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const s=fs.readFileSync('src/lib/mapping/map-ingredient-with-fallback.ts','utf8');const second=/normalizedName = repaired\\.cleaned/.test(s)?1:0;const restored=/NUTRITION_MODIFIER/.test(s)?1:0;process.stdout.write(second+'@'+restored)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@0"
+      },
+      "verified": "2026-08-10",
+      "timeoutMs": 60000
     }
   ]
 }
