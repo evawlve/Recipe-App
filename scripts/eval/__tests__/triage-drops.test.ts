@@ -654,12 +654,17 @@ describe('repoint target vocabulary', () => {
         return decideVerdict({ dossier: d, cls: classById(d.classId) ?? null, evidence: ev });
     }
 
-    it('accepts exactly off_<barcode> and fdc_<digits>', () => {
+    it('accepts exactly off_<barcode>, fdc_<digits> and fs_<digits>', () => {
         expect(isApplyRepointsTarget('off_0840609112113')).toBe(true);
         expect(isApplyRepointsTarget('fdc_171705')).toBe(true);
-        // apply-repoints.ts:102 does parseInt(target.slice(4)) for ANY non-off_ target,
-        // so each of these would resolve to an unrelated FdcFood (or NaN) and upsert.
-        for (const bad of ['fs_12345', 'ai_9', 'fdc_abc', 'fdc_', 'off_', 'x', '', 'OFF_123']) {
+        // fs_ joined the vocabulary on 2026-08-11, together with the branch in
+        // parseTargetRef() — never before it.
+        expect(isApplyRepointsTarget('fs_4513')).toBe(true);
+        // Everything else stays out. apply-repoints.ts now REFUSES a batch
+        // containing an unparseable target rather than guessing, so an id that
+        // reaches it fails the run loudly instead of resolving a wrong record —
+        // but the point of this vocabulary is that such an id never gets emitted.
+        for (const bad of ['ai_9', 'fdc_abc', 'fdc_', 'fs_', 'fs_abc', 'off_', 'x', '', 'OFF_123', 'FS_1']) {
             expect(isApplyRepointsTarget(bad)).toBe(false);
         }
         expect(isApplyRepointsTarget(null)).toBe(false);
@@ -671,15 +676,22 @@ describe('repoint target vocabulary', () => {
         expect(v).toMatchObject({ action: 'repoint', targetId: 'off_right', withheldTargetId: null });
     });
 
-    it('WITHHOLDS an fs_ target instead of one apply-repoints.ts would mis-resolve', () => {
-        const v = verdictWithCandidate('fs_12345');
+    it('REPORTS an fs_ target now that apply-repoints.ts can resolve one', () => {
+        const v = verdictWithCandidate('fs_4513');
+        expect(v).toMatchObject({ action: 'repoint', targetId: 'fs_4513', withheldTargetId: null });
+    });
+
+    it('WITHHOLDS a target outside the vocabulary rather than emitting one', () => {
+        // `ai_` names a generated record with no stable identity to repoint at,
+        // so it stays outside the vocabulary even after fs_ joined it.
+        const v = verdictWithCandidate('ai_estimate_1');
         expect(v.targetId).toBeNull();
-        expect(v.withheldTargetId).toBe('fs_12345');
+        expect(v.withheldTargetId).toBe('ai_estimate_1');
         // the record is not lost — it is named in the note, with the reason
         expect(v.note).toContain('REPOINT TARGET WITHHELD');
-        expect(v.note).toContain('fs_12345');
+        expect(v.note).toContain('ai_estimate_1');
         expect(v.note).toContain("Michelangelo's Chicken Parmesan");
-        expect(v.note).toContain('slice(4)');
+        expect(v.note).toContain('fs_<digits>');
         expect(v.confirmed).toBe(true);
     });
 
@@ -710,7 +722,7 @@ describe('repoint target vocabulary', () => {
             retrieval: retrievalProbe({ total: 2 }),
             filterTrace: filterTrace({
                 gathered: 2, survivors: 1,
-                candidates: [{ id: 'fs_12345', name: "Michelangelo's Chicken Parmesan", kept: true }],
+                candidates: [{ id: 'ai_estimate_1', name: "Michelangelo's Chicken Parmesan", kept: true }],
             }),
         };
         for (const d of sel.selected) d.evidence = deriveEvidence(d, probes, 'q');
@@ -718,7 +730,7 @@ describe('repoint target vocabulary', () => {
         expect(r.withheldTargetCount).toBe(1);
         const line = r.log.find(l => l.includes('WITHHELD'))!;
         expect(line).toContain('1 repoint suggestion(s) WITHHELD');
-        expect(line).toContain('fs_');
+        expect(line).toContain('ai_');
         expect(line).toContain('apply-repoints.ts');
         expect(renderMarkdown(r)).toContain('repoint target(s) withheld');
     });
