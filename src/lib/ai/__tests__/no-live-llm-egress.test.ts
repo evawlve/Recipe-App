@@ -42,6 +42,7 @@ const ALL_PURPOSES: Record<StructuredLlmPurpose, true> = {
     parse: true,
     simplify: true,
     nutrition: true,
+    cache_validate: true,
 };
 
 const ALL_PROVIDERS: Record<StructuredLlmProvider, true> = {

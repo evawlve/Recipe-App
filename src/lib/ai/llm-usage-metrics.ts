@@ -117,7 +117,7 @@ export interface LlmUsageSnapshot {
     since: string;
     /** process.pid. TWO READS WITH DIFFERENT since/pid ARE NOT A DELTA — the process restarted. */
     pid: number;
-    /** Pre-seeded with all 7 STRUCTURED_LLM_PURPOSES at zero, so a purpose is never absent-and-ambiguous. */
+    /** Pre-seeded with all 8 STRUCTURED_LLM_PURPOSES at zero, so a purpose is never absent-and-ambiguous. */
     byPurpose: Record<string, LlmPurposeUsage>;
     /** Created lazily. Key is `provider.model` (e.g. `openai/gpt-4o-mini`), never `provider.name`. */
     byModel: Record<string, LlmPurposeUsage>;
