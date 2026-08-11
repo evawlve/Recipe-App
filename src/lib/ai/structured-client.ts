@@ -26,6 +26,7 @@ import {
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT_MS,
     NUTRITION_AI_MODEL,
+    VALIDATOR_AI_MODEL,
 } from '../mapping/config';
 // Type-only: this module has no use for the STRUCTURED_LLM_PURPOSES array value (the union is
 // DERIVED from it, so `CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number>` is already
@@ -146,6 +147,7 @@ const CONCURRENCY_LIMITS: Record<StructuredLlmPurpose, number> = {
     parse: 5,  // AI parse assist (Ollama only)
     simplify: 5,  // AI ingredient simplification fallback
     nutrition: 3,  // AI nutrition generation (rare, uses more capable model)
+    cache_validate: 2,  // async post-save review flag (capable model, off the request path)
 };
 
 const limiters: Record<StructuredLlmPurpose, Semaphore> = {
@@ -156,6 +158,7 @@ const limiters: Record<StructuredLlmPurpose, Semaphore> = {
     parse: new Semaphore(CONCURRENCY_LIMITS.parse),
     simplify: new Semaphore(CONCURRENCY_LIMITS.simplify),
     nutrition: new Semaphore(CONCURRENCY_LIMITS.nutrition),
+    cache_validate: new Semaphore(CONCURRENCY_LIMITS.cache_validate),
 };
 
 // ============================================================
@@ -228,6 +231,26 @@ export function getProviderChain(
             apiKey: 'ollama',
             model: OLLAMA_MODEL,
         });
+    }
+
+    // cache_validate runs on the capable tier ONLY — a single-entry chain
+    // with NO cheap fallback legs and no OpenAI leg. The 2026-08-10 audit
+    // measured the gpt-4o-mini class FAILING the retention bar for this task,
+    // so a failed capable call must surface as status:'error' (→ no verdict
+    // row, the module's fail-closed path), never as a silently-cheap verdict:
+    // a retired/typo'd slug 400s on every call and would otherwise route ALL
+    // validation to the cheap tier indefinitely. Unset model → empty chain →
+    // error (the shouldRunCacheValidator gate makes that unreachable from the
+    // hook; this covers direct script callers).
+    if (purpose === 'cache_validate') {
+        return VALIDATOR_AI_MODEL !== '' && OPENROUTER_API_KEY
+            ? [{
+                name: 'openrouter',
+                baseUrl: OPENROUTER_BASE_URL,
+                apiKey: OPENROUTER_API_KEY,
+                model: VALIDATOR_AI_MODEL,
+            }]
+            : [];
     }
 
     // 2. Cloud providers (OpenRouter -> OpenAI fallback)
@@ -677,6 +700,8 @@ export interface AiCallMetrics {
     simplify: number;
     /** Count of AI nutrition generation calls */
     nutrition: number;
+    /** Count of async post-save cache-validation calls */
+    cache_validate: number;
     /** Total LLM calls made */
     total: number;
     /** Count of LLM calls skipped by normalize gate */
@@ -694,6 +719,7 @@ let sessionMetrics: AiCallMetrics = {
     parse: 0,
     simplify: 0,
     nutrition: 0,
+    cache_validate: 0,
     total: 0,
     skippedByGate: 0,
     cacheHits: 0,
@@ -718,6 +744,7 @@ export function resetAiCallMetrics(): void {
         parse: 0,
         simplify: 0,
         nutrition: 0,
+        cache_validate: 0,
         total: 0,
         skippedByGate: 0,
         cacheHits: 0,
@@ -770,6 +797,7 @@ export function getAiCallSummary(): string {
         `    - Parse (Ollama): ${m.parse}`,
         `    - Simplify: ${m.simplify}`,
         `    - Nutrition: ${m.nutrition}`,
+        `    - CacheValidate: ${m.cache_validate}`,
         `  Skip Rate: ${skipRate}%`,
     ].join('\n');
 }

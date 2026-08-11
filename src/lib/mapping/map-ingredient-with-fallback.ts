@@ -35,6 +35,7 @@ import { servingAiCallForTier } from './serving-ai-tiers';
 import { countedPieceNoun, servingLabelCountsPiece } from './count-label';
 import { getValidatedMappingByNormalizedName, saveValidatedMapping, getAiNormalizeCache, isTrustedHumanRow, isHumanTrustSkippableEscape, targetKeyOfFoodId, type CacheLookupRejection, type ReadEscapeRecord } from './validated-mapping-helpers';
 import { logMappingAnalysis } from './mapping-logger';
+import { shouldRunCacheValidator, kickCacheValidation } from './cache-validator';
 import { logger } from '../logger';
 import type { FatSecretServing } from './client';
 import { insertAiServing, backfillWeightServing } from './ai-backfill';
@@ -3810,6 +3811,26 @@ async function finalizeAndSaveResult(params: {
             // serve, so re-blocking the replacement just re-arms the loop.
             readEscapes,
         });
+
+        // Async cache validator (flag-gated, default off): review-flag the row
+        // this save just wrote. Void + registration-only — NOTHING here is
+        // awaited on the request path. The funnelStage test means "the
+        // optimistic 'saved' survived every save gate", so rejected writes,
+        // human-row skips, skipSave measurement runs and cache hits never
+        // validate. Inputs are deliberately capped at experiment parity
+        // (2026-08-10 audit §2) — do not widen them.
+        if (shouldRunCacheValidator({ skipSave, selectionReason, funnelStage: telemetry?.funnelStage })) {
+            kickCacheValidation({
+                phrase: trimmed,
+                foodName: result.foodName,
+                brandName: result.brandName ?? null,
+                source: result.source,
+                recordId: result.foodId,
+                billedGrams: result.grams,
+                billedKcal: result.kcal,
+                servingTier: result.servingTier ?? null,
+            }, cacheKey);
+        }
 
         // NO ALIAS SAVES HERE. Removed 2026-08-01 (campaign gate G1/F1).
         //

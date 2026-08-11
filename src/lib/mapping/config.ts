@@ -105,6 +105,15 @@ export const OLLAMA_TIMEOUT_MS = Number.parseInt(process.env.OLLAMA_TIMEOUT_MS ?
 // AI Nutrition Backfill configuration
 export const AI_NUTRITION_BACKFILL_ENABLED = getFlag('AI_NUTRITION_BACKFILL_ENABLED', true);
 export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/mistral-nemo';
+
+// Async cache validator (2026-08-11): post-save review-flag on freshly written
+// FoodMapping rows. Default OFF, and DELIBERATELY no capable-tier model default
+// in code — the 2026-08-10 audit measured the gpt-4o-mini class as failing the
+// retention bar for this task, so an unset VALIDATOR_AI_MODEL disables the
+// validator (fail-closed) rather than silently running it on the cheap tier.
+// The exact slug is an enable-time box-.env value, not code.
+export const CACHE_VALIDATOR_ENABLED = getFlag('CACHE_VALIDATOR_ENABLED', false);
+export const VALIDATOR_AI_MODEL = process.env.VALIDATOR_AI_MODEL ?? '';
 /**
  * Budget SIZE a batch/warm run asks for (see `createAiNutritionBudget`). This is
  * no longer a process ceiling — the run owns one budget object and passes it to

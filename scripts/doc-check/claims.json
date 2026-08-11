@@ -1,5 +1,5 @@
 {
-  "$comment": "Doc-claims registry. Every entry: the claim as its owner doc states it, the ONE doc that owns the fact, the command that re-derives it, the expected value, and the date last measured. Run: npm run doc-check (or npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts). A failing claim means the DOC is now wrong — fix the owner doc AND this entry together, with a fresh date. Contexts: backend = this repo, mobile = KindaHealthyMobile repo, box = the OptiPlex (ssh when not local). The box has a receive-only copy of the mobile repo (since 2026-07-30) and its nightly run uses --where backend,box,mobile; devmachine claims (an installed toolchain, e.g. npx tsc) are covered from the Mac.",
+  "$comment": "Doc-claims registry. Every entry: the claim as its owner doc states it, the ONE doc that owns the fact, the command that re-derives it, the expected value, and the date last measured. Run: npm run doc-check (or npx ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts). A failing claim means the DOC is now wrong \u2014 fix the owner doc AND this entry together, with a fresh date. Contexts: backend = this repo, mobile = KindaHealthyMobile repo, box = the OptiPlex (ssh when not local). The box has a receive-only copy of the mobile repo (since 2026-07-30) and its nightly run uses --where backend,box,mobile; devmachine claims (an installed toolchain, e.g. npx tsc) are covered from the Mac.",
   "claims": [
     {
       "id": "attribution-client-sources",
@@ -99,7 +99,7 @@
     },
     {
       "id": "search-route-key-only",
-      "claim": "/api/foods/search has no bearer-token path — key-only auth (part of why item #23 is not a one-liner)",
+      "claim": "/api/foods/search has no bearer-token path \u2014 key-only auth (part of why item #23 is not a one-liner)",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
       "command": "grep -cE 'Authorization|Bearer' src/app/api/foods/search/route.ts",
@@ -159,7 +159,7 @@
     },
     {
       "id": "search-uses-gathercandidates",
-      "claim": "Manual search calls the same gatherCandidates() as the mapper — retrieval is shared; the pick layer is the gap",
+      "claim": "Manual search calls the same gatherCandidates() as the mapper \u2014 retrieval is shared; the pick layer is the gap",
       "ownerDoc": "mobile:sync-docs/reports/2026-07-29_search-unification-plan.md",
       "where": "backend",
       "command": "grep -c 'gatherCandidates' src/app/api/foods/search/route.ts",
@@ -171,7 +171,7 @@
     },
     {
       "id": "coverage-dominance-not-implemented",
-      "claim": "No CODE implements a coverage-dominance partition — the term exists only in golden-set case notes as a PROPOSED fix (it was once misdocumented as shipped)",
+      "claim": "No CODE implements a coverage-dominance partition \u2014 the term exists only in golden-set case notes as a PROPOSED fix (it was once misdocumented as shipped)",
       "ownerDoc": "mobile:sync-docs/reports/2026-07-29_search-unification-plan.md",
       "where": "backend",
       "command": "grep -rl 'coverage-dominance' src --include='*.ts' --include='*.tsx' | wc -l",
@@ -195,7 +195,7 @@
     },
     {
       "id": "tsc-baseline-30-total-0-src",
-      "claim": "Mobile `npx tsc --noEmit` exits non-zero on exactly 30 pre-existing errors, 0 of them under src/ — all backend probe scripts Syncthing'd into sync-docs/. Needs an installed toolchain, so it runs on a dev machine, not the box.",
+      "claim": "Mobile `npx tsc --noEmit` exits non-zero on exactly 30 pre-existing errors, 0 of them under src/ \u2014 all backend probe scripts Syncthing'd into sync-docs/. Needs an installed toolchain, so it runs on a dev machine, not the box.",
       "ownerDoc": "mobile:CLAUDE.md#ci",
       "where": "devmachine",
       "command": "npx tsc --noEmit 2>&1 | awk '/error TS/{t++} /^src\\// {s++} END{print t\":\"s+0}'",
@@ -208,7 +208,7 @@
     },
     {
       "id": "mobile-no-ci",
-      "claim": "The mobile repo has no CI — no .github directory at all; every gate is local",
+      "claim": "The mobile repo has no CI \u2014 no .github directory at all; every gate is local",
       "ownerDoc": "mobile:CLAUDE.md#ci",
       "where": "mobile",
       "command": "test -d .github && echo present || echo none",
@@ -232,7 +232,7 @@
     },
     {
       "id": "resolve-default-serving-five-sites",
-      "claim": "resolveDefaultServing() is called at exactly 5 sites in logging.tsx — the ONE way to pick a card's starting weight",
+      "claim": "resolveDefaultServing() is called at exactly 5 sites in logging.tsx \u2014 the ONE way to pick a card's starting weight",
       "ownerDoc": "mobile:CLAUDE.md#logging-traps",
       "where": "mobile",
       "command": "grep -c 'resolveDefaultServing(' 'src/app/(tabs)/logging.tsx'",
@@ -244,7 +244,7 @@
     },
     {
       "id": "resolve-watcher-gate",
-      "claim": "The resolve watcher is gated on status==='loading' && !item.foodId — mapped items must be constructed as 'success'",
+      "claim": "The resolve watcher is gated on status==='loading' && !item.foodId \u2014 mapped items must be constructed as 'success'",
       "ownerDoc": "mobile:CLAUDE.md#logging-traps",
       "where": "mobile",
       "command": "grep -c \"status === 'loading' && !item.foodId\" 'src/app/(tabs)/logging.tsx'",
@@ -256,7 +256,7 @@
     },
     {
       "id": "parsed-to-staged-wired",
-      "claim": "handleParse routes mapper output through stagedItemsFromParsed (src/lib/parsed-to-staged.ts) — never spreads a parse item onto a card",
+      "claim": "handleParse routes mapper output through stagedItemsFromParsed (src/lib/parsed-to-staged.ts) \u2014 never spreads a parse item onto a card",
       "ownerDoc": "mobile:plans/v1/api-contract.md",
       "where": "mobile",
       "command": "grep -c 'stagedItemsFromParsed' 'src/app/(tabs)/logging.tsx'",
@@ -280,7 +280,7 @@
     },
     {
       "id": "source-check-nullable",
-      "claim": "food_log_items.source is CHECK-constrained but nullable (no NOT NULL) — the basis of the toDbSource total-function safety argument",
+      "claim": "food_log_items.source is CHECK-constrained but nullable (no NOT NULL) \u2014 the basis of the toDbSource total-function safety argument",
       "ownerDoc": "mobile:plans/v1/api-contract.md",
       "where": "mobile",
       "command": "grep -c 'source TEXT CHECK' supabase/migrations/001_mobile_schema.sql",
@@ -292,7 +292,7 @@
     },
     {
       "id": "sprint-s4-total",
-      "claim": "Sprint plan §4 numbered items: 54 (re-derive, never trust the prose total)",
+      "claim": "Sprint plan \u00a74 numbered items: 54 (re-derive, never trust the prose total)",
       "ownerDoc": "mobile:sync-docs/sprint_plan_2026-07-28_queue_execution.md",
       "where": "mobile",
       "command": "awk '/^## 4\\. Open/,/^## 5\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^[0-9]+\\.'",
@@ -304,7 +304,7 @@
     },
     {
       "id": "sprint-s4-struck",
-      "claim": "Sprint plan §4 struck items: 6 (struck §4 items are 'N. ~~' list lines, NOT '| ~~' table rows — that pattern only fits §5)",
+      "claim": "Sprint plan \u00a74 struck items: 6 (struck \u00a74 items are 'N. ~~' list lines, NOT '| ~~' table rows \u2014 that pattern only fits \u00a75)",
       "ownerDoc": "mobile:sync-docs/sprint_plan_2026-07-28_queue_execution.md",
       "where": "mobile",
       "command": "awk '/^## 4\\. Open/,/^## 5\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^[0-9]+\\. ~~'",
@@ -316,7 +316,7 @@
     },
     {
       "id": "sprint-s5-struck",
-      "claim": "Sprint plan §5 struck rows: 11",
+      "claim": "Sprint plan \u00a75 struck rows: 11",
       "ownerDoc": "mobile:sync-docs/sprint_plan_2026-07-28_queue_execution.md",
       "where": "mobile",
       "command": "awk '/^## 5\\./,/^## 6\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^\\| ~~'",
@@ -328,7 +328,7 @@
     },
     {
       "id": "citations-zero-normative-docs",
-      "claim": "Zero file.ts:123-style line citations in normative docs (CLAUDE.md, plans/v1, sync-docs top level, log/README, the search plan) — symbols, not line numbers",
+      "claim": "Zero file.ts:123-style line citations in normative docs (CLAUDE.md, plans/v1, sync-docs top level, log/README, the search plan) \u2014 symbols, not line numbers",
       "ownerDoc": "mobile:CLAUDE.md#doc-rules",
       "where": "mobile",
       "command": "grep -roE '[a-zA-Z0-9_/.-]+\\.(ts|tsx|sql|json|js):[0-9]+' CLAUDE.md plans/v1 sync-docs/*.md sync-docs/log/README.md sync-docs/reports/2026-07-29_search-unification-plan.md 2>/dev/null | wc -l",
@@ -340,7 +340,7 @@
     },
     {
       "id": "banners-zero-normative-docs",
-      "claim": "No blanket verification banners in normative docs — they are how stale pointers survive",
+      "claim": "No blanket verification banners in normative docs \u2014 they are how stale pointers survive",
       "ownerDoc": "mobile:CLAUDE.md#doc-rules",
       "where": "mobile",
       "command": "grep -riE 'every [a-z ]+ below (was|were) (re-)?verified' CLAUDE.md plans/v1 sync-docs/*.md 2>/dev/null | wc -l",
@@ -364,7 +364,7 @@
     },
     {
       "id": "fatsecret-live-wire",
-      "claim": "Live search returns FatSecret rows (consumer-side proof the lane runs — verify at the consumer, not just the producer)",
+      "claim": "Live search returns FatSecret rows (consumer-side proof the lane runs \u2014 verify at the consumer, not just the producer)",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "box",
       "command": "key=$(grep \"^DEV_API_KEY=\" /home/owner/Recipe-App/.env | cut -d= -f2- | tr -d '\"'); best=0; for i in 1 2 3; do n=$(curl -s --max-time 30 \"http://localhost:3000/api/foods/search?s=chobani+greek+yogurt&local=true&api_key=${key:-adminAPI_dev_key_bypass}\" | grep -c '\"source\":\"fatsecret\"'); [ \"$n\" -gt \"$best\" ] && best=$n; [ \"$best\" -gt 0 ] && break; sleep 10; done; echo $best",
@@ -401,7 +401,7 @@
     },
     {
       "id": "aigen-zero-fatsecret-rows",
-      "claim": "AiGeneratedFood contains zero FatSecret-derived rows — why the fatsecret-cache label must render NO badge",
+      "claim": "AiGeneratedFood contains zero FatSecret-derived rows \u2014 why the fatsecret-cache label must render NO badge",
       "ownerDoc": "mobile:CLAUDE.md#attribution",
       "where": "box",
       "command": "docker exec mealspire-db psql -U postgres -d mealspire -t -A -c 'SELECT COUNT(*) FROM \"AiGeneratedFood\" WHERE \"aiModel\" ILIKE $$%fatsecret%$$'",
@@ -413,7 +413,7 @@
     },
     {
       "id": "box-git-stignored",
-      "claim": "The box's .stignore excludes .git — why the box's git state is meaningless and content hashes are the only comparison",
+      "claim": "The box's .stignore excludes .git \u2014 why the box's git state is meaningless and content hashes are the only comparison",
       "ownerDoc": "mobile:CLAUDE.md#deploy",
       "where": "box",
       "command": "grep -c '\\.git' /home/owner/Recipe-App/.stignore",
@@ -425,7 +425,7 @@
     },
     {
       "id": "claude-md-doc-pointers-resolve",
-      "claim": "Every sync-docs/ or plans/ markdown path cited in CLAUDE.md exists in this repo — a dead pointer in the read-now tier sends the next reader nowhere",
+      "claim": "Every sync-docs/ or plans/ markdown path cited in CLAUDE.md exists in this repo \u2014 a dead pointer in the read-now tier sends the next reader nowhere",
       "ownerDoc": "mobile:CLAUDE.md#doc-rules",
       "where": "mobile",
       "command": "grep -oE '`(sync-docs|plans)/[A-Za-z0-9_/.-]+\\.md`' CLAUDE.md | tr -d '`' | sort -u | while read p; do [ -e \"$p\" ] || echo \"$p\"; done | wc -l",
@@ -437,7 +437,7 @@
     },
     {
       "id": "read-now-tier-within-budget",
-      "claim": "The read-now tier (CLAUDE.md + the newest 2 files in sync-docs/log/) is at most 1,500 lines — the agreed reading budget",
+      "claim": "The read-now tier (CLAUDE.md + the newest 2 files in sync-docs/log/) is at most 1,500 lines \u2014 the agreed reading budget",
       "ownerDoc": "mobile:CLAUDE.md#reading",
       "where": "mobile",
       "command": "{ cat CLAUDE.md; ls -1t sync-docs/log/2026-*.md | head -2 | xargs cat; } | wc -l",
@@ -449,7 +449,7 @@
     },
     {
       "id": "handoff-format-retired",
-      "claim": "No handoff_*.md survives at the sync-docs top level — sync-docs/log/README.md declares that format replaced by session write-offs, and the 7 that remained were archived 2026-07-30",
+      "claim": "No handoff_*.md survives at the sync-docs top level \u2014 sync-docs/log/README.md declares that format replaced by session write-offs, and the 7 that remained were archived 2026-07-30",
       "ownerDoc": "mobile:sync-docs/log/README.md",
       "where": "mobile",
       "command": "ls sync-docs/handoff_*.md 2>/dev/null | wc -l",
@@ -461,7 +461,7 @@
     },
     {
       "id": "eval-golden-npm-script",
-      "claim": "npm run eval:golden runs the golden-set harness (scripts/eval/run-eval.ts) — the command CLAUDE.md's read-now tier names for running the eval",
+      "claim": "npm run eval:golden runs the golden-set harness (scripts/eval/run-eval.ts) \u2014 the command CLAUDE.md's read-now tier names for running the eval",
       "ownerDoc": "mobile:CLAUDE.md#commands",
       "where": "backend",
       "command": "node -e \"const s=require('./package.json').scripts['eval:golden']||'';process.stdout.write(String(s.includes('scripts/eval/run-eval.ts')?1:0))\"",
@@ -473,7 +473,7 @@
     },
     {
       "id": "doc-check-timer-installed-on-box",
-      "claim": "The nightly doc-claims checker is installed and enabled on the box (doc-check.timer, 04:50) — installed 2026-07-30 and verified by a manual run that exited 0",
+      "claim": "The nightly doc-claims checker is installed and enabled on the box (doc-check.timer, 04:50) \u2014 installed 2026-07-30 and verified by a manual run that exited 0",
       "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
       "where": "box",
       "command": "systemctl --user is-enabled doc-check.timer 2>/dev/null",
@@ -485,7 +485,7 @@
     },
     {
       "id": "sprint-s5-total",
-      "claim": "Sprint plan §5 numbered rows: 51 — the doc states this at the head of §5 and it moves with every edit",
+      "claim": "Sprint plan \u00a75 numbered rows: 51 \u2014 the doc states this at the head of \u00a75 and it moves with every edit",
       "ownerDoc": "mobile:sync-docs/sprint_plan_2026-07-28_queue_execution.md",
       "where": "mobile",
       "command": "awk '/^## 5\\./,/^## 6\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^\\| (~~)?\\*?\\*?[0-9]'",
@@ -497,7 +497,7 @@
     },
     {
       "id": "log-writeoffs-under-50-lines",
-      "claim": "Every session write-off in sync-docs/log/ is within the 50-line hard cap its README sets — the rule most likely to erode, since the pressure to exceed it is highest on the sessions worth recording",
+      "claim": "Every session write-off in sync-docs/log/ is within the 50-line hard cap its README sets \u2014 the rule most likely to erode, since the pressure to exceed it is highest on the sessions worth recording",
       "ownerDoc": "mobile:sync-docs/log/README.md",
       "where": "mobile",
       "command": "for f in sync-docs/log/2026-*.md; do n=$(wc -l < \"$f\"); [ \"$n\" -gt 50 ] && echo \"$f:$n\"; done | wc -l",
@@ -509,7 +509,7 @@
     },
     {
       "id": "off-ingest-timers-enabled",
-      "claim": "Both OFF ingest timers are enabled on the box — off-delta.timer (weekly) and off-parquet-refresh.timer (quarterly), installed 2026-07-30 after the Mini-PC retirement left the corpus with no refresh path at all",
+      "claim": "Both OFF ingest timers are enabled on the box \u2014 off-delta.timer (weekly) and off-parquet-refresh.timer (quarterly), installed 2026-07-30 after the Mini-PC retirement left the corpus with no refresh path at all",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "box",
       "command": "systemctl --user is-enabled off-delta.timer off-parquet-refresh.timer 2>/dev/null | sort -u | tr -d '\\n'",
@@ -521,7 +521,7 @@
     },
     {
       "id": "off-delta-cursor-fresh",
-      "claim": "The OFF delta cursor is inside its ~14-day retention window — outside it, un-ingested changes are only recoverable by a full Parquet re-ingest",
+      "claim": "The OFF delta cursor is inside its ~14-day retention window \u2014 outside it, un-ingested changes are only recoverable by a full Parquet re-ingest",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "box",
       "command": "node -e \"const s=require(process.env.HOME+'/Recipe-App/data/off-delta-state.json');process.stdout.write(String(Math.floor((Date.now()/1000-s.lastProcessedEnd)/86400)))\"",
@@ -533,7 +533,7 @@
     },
     {
       "id": "parquet-refresh-preflight-passes",
-      "claim": "The quarterly Parquet refresh's preflight passes on the box (duckdb, both TS entrypoints, ts-node, DATABASE_URL, >=15GB free, correct host) — the destructive run cannot be rehearsed, so this is the only advance warning that it would abort",
+      "claim": "The quarterly Parquet refresh's preflight passes on the box (duckdb, both TS entrypoints, ts-node, DATABASE_URL, >=15GB free, correct host) \u2014 the destructive run cannot be rehearsed, so this is the only advance warning that it would abort",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "box",
       "command": "$HOME/Recipe-App/scripts/refresh-off-from-parquet.sh --preflight-only >/dev/null 2>&1 && echo ok || echo broken",
@@ -545,7 +545,7 @@
     },
     {
       "id": "box-has-mobile-repo",
-      "claim": "The box holds a receive-only copy of the mobile repo at ~/KindaHealthyMobile (Syncthing folder msmwx-9fkha, added 2026-07-30) — this is what lets its nightly check mobile-context claims instead of skipping 15 of them",
+      "claim": "The box holds a receive-only copy of the mobile repo at ~/KindaHealthyMobile (Syncthing folder msmwx-9fkha, added 2026-07-30) \u2014 this is what lets its nightly check mobile-context claims instead of skipping 15 of them",
       "ownerDoc": "mobile:CLAUDE.md#machines--repos",
       "where": "box",
       "command": "test -f $HOME/KindaHealthyMobile/CLAUDE.md && test -d $HOME/KindaHealthyMobile/sync-docs/log && echo ok || echo missing",
@@ -557,7 +557,7 @@
     },
     {
       "id": "box-mobile-copy-stays-small",
-      "claim": "The box's mobile copy stays under 200MB — its ignores drop ios/, android/, assets/, node_modules and the sync-docs data dirs; without them it would pull the 2.4GB working tree",
+      "claim": "The box's mobile copy stays under 200MB \u2014 its ignores drop ios/, android/, assets/, node_modules and the sync-docs data dirs; without them it would pull the 2.4GB working tree",
       "ownerDoc": "mobile:CLAUDE.md#machines--repos",
       "where": "box",
       "command": "du -sm $HOME/KindaHealthyMobile 2>/dev/null | cut -f1",
@@ -569,7 +569,7 @@
     },
     {
       "id": "parquet-refresh-refuses-without-ack",
-      "claim": "The quarterly OFF refresh refuses (exit 3, nothing downloaded or written) unless a human sets OFF_REFRESH_I_ACCEPT_DATA_LOSS=1 — it destroys ~1.07M pgvector embeddings and NULLs the OFF pointer on ~81% of FoodMapping cache rows, so the timer must never run it unattended",
+      "claim": "The quarterly OFF refresh refuses (exit 3, nothing downloaded or written) unless a human sets OFF_REFRESH_I_ACCEPT_DATA_LOSS=1 \u2014 it destroys ~1.07M pgvector embeddings and NULLs the OFF pointer on ~81% of FoodMapping cache rows, so the timer must never run it unattended",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "box",
       "command": "$HOME/Recipe-App/scripts/refresh-off-from-parquet.sh >/dev/null 2>&1; echo $?",
@@ -630,7 +630,7 @@
     },
     {
       "id": "off-refresh-snapshots-derived-servings",
-      "claim": "refresh-off-from-parquet.sh snapshots the DERIVED OffServing rows (source <> openfoodfacts) before the truncate and replays them after the ingest. These are the one population neither the ingest nor a re-scan reproduces — re-running the estimator RE-ROLLS them, which is the n-svk-05 mechanism (a cached 150g sleeve was deleted, redrawn at 200g, and persisted).",
+      "claim": "refresh-off-from-parquet.sh snapshots the DERIVED OffServing rows (source <> openfoodfacts) before the truncate and replays them after the ingest. These are the one population neither the ingest nor a re-scan reproduces \u2014 re-running the estimator RE-ROLLS them, which is the n-svk-05 mechanism (a cached 150g sleeve was deleted, redrawn at 200g, and persisted).",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "backend",
       "command": "grep -c 'restore-off-servings.ts' scripts/refresh-off-from-parquet.sh",
@@ -666,7 +666,7 @@
     },
     {
       "id": "flywheel-sweep-timer-re-enabled-for-item-17",
-      "claim": "flywheel-sweep.timer is RE-ENABLED (2026-08-08, item-17 warm campaign resume): is-active=active AND is-enabled=enabled. Its D3 re-enable condition was met and executed — the 2026-08-03 service failure was diagnosed (eval-gate red on n-prod-01, not infra) and repaired cache-side (apple key repointed to FDC 171688 as a human-triage pin), plus a second warm red found on the proof run (n-mq-41 brand_guard escape bypassing the correct fs_81276 row; promoted to human-triage). This claim goes red if the timer is stopped or disabled again, which is the prompt to rewrite the plan section 'Running under all of this' rather than let the state outlive the decision.",
+      "claim": "flywheel-sweep.timer is RE-ENABLED (2026-08-08, item-17 warm campaign resume): is-active=active AND is-enabled=enabled. Its D3 re-enable condition was met and executed \u2014 the 2026-08-03 service failure was diagnosed (eval-gate red on n-prod-01, not infra) and repaired cache-side (apple key repointed to FDC 171688 as a human-triage pin), plus a second warm red found on the proof run (n-mq-41 brand_guard escape bypassing the correct fs_81276 row; promoted to human-triage). This claim goes red if the timer is stopped or disabled again, which is the prompt to rewrite the plan section 'Running under all of this' rather than let the state outlive the decision.",
       "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",
       "where": "box",
       "command": "echo \"$(systemctl --user is-active flywheel-sweep.timer 2>/dev/null || true):$(systemctl --user is-enabled flywheel-sweep.timer 2>/dev/null || true)\"",
@@ -750,7 +750,7 @@
     },
     {
       "id": "off-fresh-deletes-derived-servings",
-      "claim": "STRUCTURAL DEFECT tripwire: ingest-off.ts --fresh runs DELETE FROM \"OffServing\", which destroys the DERIVED servings (source ai / sibling_borrow), not just the OFF label rows. No snapshot covers them. This is the n-svk-05 mechanism: a cached 150 g 'sleeve' was deleted, the estimator redrew 200 g, and upsertServing persisted it — turning an intermittent bad sample into a permanent red.",
+      "claim": "STRUCTURAL DEFECT tripwire: ingest-off.ts --fresh runs DELETE FROM \"OffServing\", which destroys the DERIVED servings (source ai / sibling_borrow), not just the OFF label rows. No snapshot covers them. This is the n-svk-05 mechanism: a cached 150 g 'sleeve' was deleted, the estimator redrew 200 g, and upsertServing persisted it \u2014 turning an intermittent bad sample into a permanent red.",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
       "where": "backend",
       "command": "grep -c 'DELETE FROM \"OffServing\"' scripts/ingest-off.ts",
@@ -834,7 +834,7 @@
     },
     {
       "id": "corrupt-detector-reachability-gap",
-      "claim": "Sibling grouping in detect-corrupt-panel.ts is a coverage decision: rows in exact-name groups below MIN_GROUP=4 are never signature-tested. Measured 2026-07-31: 661,150 of 1,083,139 kcal-bearing rows (61.0%). The axis is NAME LENGTH, not brandedness — 25.5% unreachable at 1 token rising monotonically to 98.3% at 8+ tokens (branded 61.8% vs unbranded 58.9%). The scan prints these counters on every run so the number re-derives itself.",
+      "claim": "Sibling grouping in detect-corrupt-panel.ts is a coverage decision: rows in exact-name groups below MIN_GROUP=4 are never signature-tested. Measured 2026-07-31: 661,150 of 1,083,139 kcal-bearing rows (61.0%). The axis is NAME LENGTH, not brandedness \u2014 25.5% unreachable at 1 token rising monotonically to 98.3% at 8+ tokens (branded 61.8% vs unbranded 58.9%). The scan prints these counters on every run so the number re-derives itself.",
       "ownerDoc": "mobile:sync-docs/mapping_investigation_playbook.md",
       "where": "backend",
       "command": "grep -c 'UNREACHABLE by tier 1' scripts/eval/detect-corrupt-panel.ts",
@@ -870,7 +870,7 @@
     },
     {
       "id": "row-quality-escapes-exactly-two",
-      "claim": "ROW_QUALITY_ESCAPES in src/lib/mapping/validated-mapping-helpers.ts holds exactly corrupt_record and nutrition_invalid, and the save-time margin forfeit is gated on isRowQualityEscape(e.reason). A read-path escape has two meanings — the row is bad, or this query wants a different food sharing the key — and only the first justifies waiving the margin. MEASURED 2026-08-01: all 440 save_rejected:cross_source_margin events carrying a cacheEscape are query-fit classes, so the forfeit fires ZERO times today; widening this set turns a key collision into a silent displacement.",
+      "claim": "ROW_QUALITY_ESCAPES in src/lib/mapping/validated-mapping-helpers.ts holds exactly corrupt_record and nutrition_invalid, and the save-time margin forfeit is gated on isRowQualityEscape(e.reason). A read-path escape has two meanings \u2014 the row is bad, or this query wants a different food sharing the key \u2014 and only the first justifies waiving the margin. MEASURED 2026-08-01: all 440 save_rejected:cross_source_margin events carrying a cacheEscape are query-fit classes, so the forfeit fires ZERO times today; widening this set turns a key collision into a silent displacement.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
       "where": "backend",
       "command": "printf '%s@%s\\n' \"$(awk '/^const ROW_QUALITY_ESCAPES = new Set/,/^\\]\\);/' src/lib/mapping/validated-mapping-helpers.ts | grep -oE \"'[a-z_]+'\" | tr -d \"'\" | sort | paste -sd, -)\" \"$(grep -c 'isRowQualityEscape(e.reason)' src/lib/mapping/validated-mapping-helpers.ts)\"",
@@ -882,7 +882,7 @@
     },
     {
       "id": "next-config-still-strips-console-info",
-      "claim": "next.config.ts still applies compiler.removeConsole in production with exclude exactly ['error','warn'] — PR #209 KEPT the strip rather than adding 'info' to the exclude list, because that would switch on every logger.info call site at once against an unrotated log. SWC deletes matching console.<method>() calls at BUILD time, which is why 976,124 lines of the box's next-start.log carried zero \"level\":\"info\". Anything built on console.info/console.debug compiles away in production silently; route new logging through logger instead.",
+      "claim": "next.config.ts still applies compiler.removeConsole in production with exclude exactly ['error','warn'] \u2014 PR #209 KEPT the strip rather than adding 'info' to the exclude list, because that would switch on every logger.info call site at once against an unrotated log. SWC deletes matching console.<method>() calls at BUILD time, which is why 976,124 lines of the box's next-start.log carried zero \"level\":\"info\". Anything built on console.info/console.debug compiles away in production silently; route new logging through logger instead.",
       "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
       "where": "backend",
       "command": "awk '/^  compiler: \\{/,/^  \\},/' next.config.ts | tr -d '[:space:]'",
@@ -894,7 +894,7 @@
     },
     {
       "id": "logger-bypasses-console",
-      "claim": "src/lib/logger.ts makes ZERO console.<method>() calls and writes via process.stdout/process.stderr instead — the only shape SWC removeConsole cannot match. Reverting it to console.* reintroduces the silent production strip that made logger.info unloggable.",
+      "claim": "src/lib/logger.ts makes ZERO console.<method>() calls and writes via process.stdout/process.stderr instead \u2014 the only shape SWC removeConsole cannot match. Reverting it to console.* reintroduces the silent production strip that made logger.info unloggable.",
       "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
       "where": "backend",
       "command": "printf '%s@%s\\n' \"$(grep -cE 'console\\.[a-z]+ *\\(' src/lib/logger.ts)\" \"$(grep -cE 'process\\.(stdout|stderr)\\.write' src/lib/logger.ts)\"",
@@ -918,7 +918,7 @@
     },
     {
       "id": "ai-nutrition-three-call-sites",
-      "claim": "requestAiNutrition() has exactly three production call sites in src/ (tests and comments excluded): two last-resort arms in mapIngredientWithFallback() and one in buildOffResult(). A fourth call site is a new AI-spend path and must be given a budget explicitly — the hydration arm was uncapped precisely because it was added without one.",
+      "claim": "requestAiNutrition() has exactly three production call sites in src/ (tests and comments excluded): two last-resort arms in mapIngredientWithFallback() and one in buildOffResult(). A fourth call site is a new AI-spend path and must be given a budget explicitly \u2014 the hydration arm was uncapped precisely because it was added without one.",
       "ownerDoc": "mobile:sync-docs/log/2026-08-01_1539_prelaunch-mapping-cleanup.md",
       "where": "backend",
       "command": "grep -rn 'requestAiNutrition(' src --include='*.ts' | grep -v '/__tests__/' | grep -vE ':[0-9]+: *(\\*|//)' | grep -v 'export async function' | wc -l",
@@ -930,7 +930,7 @@
     },
     {
       "id": "cooking-state-survives-into-key",
-      "claim": "THE FORK, SHIPPED 2026-08-01. Cooking state now survives into the FoodMapping cache key: 'grilled chicken' and 'chicken' derive DIFFERENT keys, as do 'scrambled eggs' and 'eggs'. Fixed by removing the cooking verbs from prep_phrases (both data/fatsecret/normalization-rules.json and the DEFAULT_RULES fallback) rather than by adding them to QUALIFIERS — the latter would also strip the word from the retrieval text, and retrieval needs it to find a cooked record. Output is key(grilled chicken)|key(chicken)|equal?|scrambled-equals-eggs?. If this claim fails the collision is BACK, and the cross-source displacement freeze silently becomes load-bearing again — update the report and the displacement-bar entry together with this one.",
+      "claim": "THE FORK, SHIPPED 2026-08-01. Cooking state now survives into the FoodMapping cache key: 'grilled chicken' and 'chicken' derive DIFFERENT keys, as do 'scrambled eggs' and 'eggs'. Fixed by removing the cooking verbs from prep_phrases (both data/fatsecret/normalization-rules.json and the DEFAULT_RULES fallback) rather than by adding them to QUALIFIERS \u2014 the latter would also strip the word from the retrieval text, and retrieval needs it to find a cooked record. Output is key(grilled chicken)|key(chicken)|equal?|scrambled-equals-eggs?. If this claim fails the collision is BACK, and the cross-source displacement freeze silently becomes load-bearing again \u2014 update the report and the displacement-bar entry together with this one.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
       "where": "backend",
       "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');const {deriveCacheKeyName:d}=require('./src/lib/mapping/cache-key-core');const k=s=>{const x=p(s);return d(n(x.name).cleaned,x)};const a=k('grilled chicken'),b=k('chicken'),c=k('scrambled eggs'),e=k('eggs');process.stdout.write(a+'|'+b+'|'+String(a===b)+'|'+String(c===e))\"",
@@ -943,7 +943,7 @@
     },
     {
       "id": "qualifier-strip-precedes-normalization",
-      "claim": "Two strippers exist with DISJOINT token sets, which is why one-lever fixes kept missing. extractQualifiers() inside parseIngredientLine() removes tokens in QUALIFIERS (raw/dried/canned/whole) before normalizeIngredientName() sees them — proof by the one input where the two disagree: parseIngredientLine('dried apricots').name is 'apricots' while normalizeIngredientName('dried apricots').cleaned is 'dried apricots'. But the cooking verbs (grilled/scrambled/steamed/...) are ABSENT from QUALIFIERS, so for them the prep_phrases strip is the only one and is fully load-bearing. CORRECTS the pre-2026-08-01 reading that editing prep_phrases is a no-op: that holds only for the QUALIFIERS tokens.",
+      "claim": "Two strippers exist with DISJOINT token sets, which is why one-lever fixes kept missing. extractQualifiers() inside parseIngredientLine() removes tokens in QUALIFIERS (raw/dried/canned/whole) before normalizeIngredientName() sees them \u2014 proof by the one input where the two disagree: parseIngredientLine('dried apricots').name is 'apricots' while normalizeIngredientName('dried apricots').cleaned is 'dried apricots'. But the cooking verbs (grilled/scrambled/steamed/...) are ABSENT from QUALIFIERS, so for them the prep_phrases strip is the only one and is fully load-bearing. CORRECTS the pre-2026-08-01 reading that editing prep_phrases is a no-op: that holds only for the QUALIFIERS tokens.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
       "where": "backend",
       "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');process.stdout.write(p('dried apricots').name+'|'+n('dried apricots').cleaned)\"",
@@ -969,7 +969,7 @@
     },
     {
       "id": "box-rules-file-has-no-cooking-verbs",
-      "claim": "THE DELIVERED HALF of PR #211, and the only check that can see it. data/ is in the box's .stignore, so Syncthing has NEVER carried data/fatsecret/normalization-rules.json to /home/owner/Recipe-App — the box held the 2026-07-24 content until an scp on 2026-08-01 — and readRulesFile() in src/lib/mapping/normalization-rules.ts prefers that on-disk JSON over DEFAULT_RULES. A stale copy therefore reinstates the cooking-state key collapse on the LIVE service while every Mac-side gate stays green, including the backend-context twin cooking-verbs-out-of-prep-phrases-and-cache-bumped, which reads the Mac's file. Asserts zero of the verbs PR #211 removed (grilled/roasted/baked/broiled/scrambled/steamed/poached/boiled — the last also covering the hard[-\\s]?boiled and soft[-\\s]?boiled forms — /sauteed/sautéed/smoked), matched on word boundaries so the deliberately RETAINED parboiled, blanched and microwaved do not trip it. Output is verbCount@prepPhraseCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
+      "claim": "THE DELIVERED HALF of PR #211, and the only check that can see it. data/ is in the box's .stignore, so Syncthing has NEVER carried data/fatsecret/normalization-rules.json to /home/owner/Recipe-App \u2014 the box held the 2026-07-24 content until an scp on 2026-08-01 \u2014 and readRulesFile() in src/lib/mapping/normalization-rules.ts prefers that on-disk JSON over DEFAULT_RULES. A stale copy therefore reinstates the cooking-state key collapse on the LIVE service while every Mac-side gate stays green, including the backend-context twin cooking-verbs-out-of-prep-phrases-and-cache-bumped, which reads the Mac's file. Asserts zero of the verbs PR #211 removed (grilled/roasted/baked/broiled/scrambled/steamed/poached/boiled \u2014 the last also covering the hard[-\\s]?boiled and soft[-\\s]?boiled forms \u2014 /sauteed/saut\u00e9ed/smoked), matched on word boundaries so the deliberately RETAINED parboiled, blanched and microwaved do not trip it. Output is verbCount@prepPhraseCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
       "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
       "where": "box",
       "command": "node -e \"const p='/home/owner/Recipe-App/data/fatsecret/normalization-rules.json';const r=JSON.parse(require('fs').readFileSync(p,'utf8'));const V=['grilled','roasted','baked','broiled','scrambled','steamed','poached','boiled','sauteed','saut\\u00e9ed','smoked'];const re=new RegExp('[^a-z]('+V.join('|')+')[^a-z]','i');const h=r.prep_phrases.filter(x=>re.test(' '+String(x).toLowerCase()+' '));process.stdout.write(h.length+'@'+r.prep_phrases.length)\"",
@@ -1177,7 +1177,7 @@
     },
     {
       "id": "rerank-abstention-has-two-labelled-exits",
-      "claim": "simpleRerank abstention (the `if (!winner)` block in mapIngredientWithFallback()) has TWO labelled exits, not one: confidence_gate_backstop when confidenceGate() had a pick, scored_by_confidence otherwise — plus a third leg below MIN_FALLBACK_CONFIDENCE that writes no selectionReason at all. Counting abstention by grepping confidence_gate_backstop alone undercounts it ~10x (15 vs 159 on the post-cee10fd corpus), which is exactly how the autonomous brief's original W1 decision rule would have closed a live population. This claim reddens if a leg is added or renamed, which is the prompt to re-measure the population in the owner doc.",
+      "claim": "simpleRerank abstention (the `if (!winner)` block in mapIngredientWithFallback()) has TWO labelled exits, not one: confidence_gate_backstop when confidenceGate() had a pick, scored_by_confidence otherwise \u2014 plus a third leg below MIN_FALLBACK_CONFIDENCE that writes no selectionReason at all. Counting abstention by grepping confidence_gate_backstop alone undercounts it ~10x (15 vs 159 on the post-cee10fd corpus), which is exactly how the autonomous brief's original W1 decision rule would have closed a live population. This claim reddens if a leg is added or renamed, which is the prompt to re-measure the population in the owner doc.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-05_why-simplererank-abstains.md",
       "where": "backend",
       "command": "grep -cE \"selectionReason = '(confidence_gate_backstop|scored_by_confidence)'\" src/lib/mapping/map-ingredient-with-fallback.ts",
@@ -1388,6 +1388,30 @@
       },
       "verified": "2026-08-11",
       "timeoutMs": 60000
+    },
+    {
+      "id": "cache-validator-flag-default-off",
+      "claim": "The async cache validator ships default-OFF (getFlag false) and VALIDATOR_AI_MODEL has no capable default in code (empty string fail-closes), so a fresh deploy can never silently run it, and never on the cheap tier. Shape guard on the checked-out tree, not an attestation about any box env.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-11_the-head-repoint-campaign-31-of-35-fixed.md",
+      "where": "backend",
+      "command": "echo \"$(grep -c \"getFlag('CACHE_VALIDATOR_ENABLED', false)\" src/lib/mapping/config.ts)@$(grep -c \"process.env.VALIDATOR_AI_MODEL ?? ''\" src/lib/mapping/config.ts)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^1@1$"
+      },
+      "verified": "2026-08-11"
+    },
+    {
+      "id": "cache-validator-never-awaited-on-the-request-path",
+      "claim": "kickCacheValidation is called exactly once in the mapper and never awaited \u2014 the validator adds zero request latency by construction.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-11_the-head-repoint-campaign-31-of-35-fixed.md",
+      "where": "backend",
+      "command": "echo \"$(grep -c 'kickCacheValidation(' src/lib/mapping/map-ingredient-with-fallback.ts)@$(grep -c 'await kickCacheValidation' src/lib/mapping/map-ingredient-with-fallback.ts)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^1@0$"
+      },
+      "verified": "2026-08-11"
     }
   ]
 }
