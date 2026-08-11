@@ -169,9 +169,12 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
         systemPrompt: SYSTEM_PROMPT,
         userPrompt: userPrompt(input),
         purpose: 'cache_validate',
-        // The sibling correctness screen measured 200 tokens truncating 16/81
-        // verdicts on a reasoning model; 600 is headroom, not a target.
-        maxTokens: 600,
+        // Measured at enable time (2026-08-11): 600 STARVED claude-sonnet-5 —
+        // 2 of the first 3 live calls came back truncated mid-JSON or empty
+        // (reasoning shares the output budget). The sibling screen's lesson
+        // (200 truncated a reasoning model) under-scaled; 2000 is roomy and
+        // still bounded — billing is by tokens used, not by the cap.
+        maxTokens: 2000,
     });
 
     if (result.status !== 'success' || !result.content) {
