@@ -765,6 +765,40 @@ model MappingEventLog {
   @@index([dropReason])
 }
 
+// Async post-save cache-validator verdicts (2026-08-11, Block C). One row per
+// validated save; a review-flag stream feeding a future triage queue — no read
+// path consults it and it never overwrites a mapping. normalizedForm is
+// indexed, NOT unique: verdicts are point-in-time and accumulate (join by
+// (normalizedForm, createdAt); a later repoint/eviction makes older verdicts
+// historical, not wrong). Deliberately NO FK to FoodMapping so verdicts
+// survive row eviction/repoint. FoodMapping.validatedBy/validatedAt stay
+// untouched by this feature — both write-guard comparisons are exact-string
+// and must remain two-valued.
+model MappingValidationVerdict {
+  id             String    @id @default(cuid())
+  // Canonical FoodMapping key at save time (token-sorted PK). NOTE: NOT the
+  // same value as MappingEventLog.normalizedForm, which stores the word-order
+  // normalizedName — joining the two tables on this column name silently
+  // misses word-order variants (the documented 66.8% join-reach trap).
+  normalizedForm String
+  foodId         String // prefixed target of the save (off_/fdc_/fs_)
+  phrase         String // the line as judged (experiment-parity input)
+  verdict        String // 'OK' | 'SUSPECT'
+  axis           String // 'none' | 'identity' | 'serving' | 'panel'
+  reason         String
+  model          String // result.model that judged (attributes fallback-tier verdicts)
+  billedGrams    Float
+  billedKcal     Float
+  servingTier    String?
+  reviewedAt     DateTime? // future triage queue
+  reviewedBy     String?
+  createdAt      DateTime  @default(now())
+
+  @@index([normalizedForm])
+  @@index([verdict])
+  @@index([createdAt])
+}
+
 // AI segmentation-result cache (magic-log): repeat free-text lines skip the
 // ~2-4s LLM split. Keyed by canonicalized line (src/lib/nlp/seg-line-key.ts)
 // + SEG_PARSER_VERSION (src/lib/nlp/ai-segmenter.ts — bump on any prompt/

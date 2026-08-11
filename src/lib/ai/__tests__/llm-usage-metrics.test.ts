@@ -31,10 +31,10 @@ beforeEach(() => {
 });
 
 describe('llm-usage-metrics: the counter store', () => {
-    it('pre-seeds byPurpose with exactly the 7 STRUCTURED_LLM_PURPOSES, all zeroed', () => {
+    it('pre-seeds byPurpose with exactly the 8 STRUCTURED_LLM_PURPOSES, all zeroed', () => {
         const snap = getLlmUsageSnapshot();
         expect(Object.keys(snap.byPurpose).sort()).toEqual([...STRUCTURED_LLM_PURPOSES].sort());
-        expect(Object.keys(snap.byPurpose)).toHaveLength(7);
+        expect(Object.keys(snap.byPurpose)).toHaveLength(8);
         for (const purpose of STRUCTURED_LLM_PURPOSES) {
             expect(snap.byPurpose[purpose]).toEqual({
                 responses: 0,
