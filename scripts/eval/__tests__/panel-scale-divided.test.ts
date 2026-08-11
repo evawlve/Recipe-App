@@ -131,9 +131,25 @@ describe('family key: size words collapse, the product does not', () => {
         for (const t of ['mini', 'small', 'sm', 'regular', 'reg', 'medium', 'med', 'large', 'lg',
             'giant', 'kid', 'kids', 'cub', 'junior', 'jr', 'whatameal', 'whatabox', 'combo',
             'value', 'snack', 'single', 'double', 'triple', 'oz', 'fl', 'in', 'inch',
-            'footlong', 'half', 'full', 'meal', 'box', '12', '440']) {
+            'footlong', 'half', 'full', 'meal', 'box', 'wrap', 'wraps', 'tub', 'tubs',
+            '12', '440']) {
             expect(stripSizeTokens(`Burrito ${t}`)).toBe('burrito');
         }
+    });
+
+    it('wrap/tub variants join the base family (the #44 class), exact-token only', () => {
+        // The flagship residue: the Wrap variant must land in the SAME family
+        // as the Regular/Giant sizes so the detector can examine it.
+        const keys = new Set([
+            '#44 Buffalo Chicken Cheese Steak On White Regular',
+            '#44 Buffalo Chicken Cheese Steak On White Giant',
+            '#44 Buffalo Chicken Cheese Steak On White Wrap',
+        ].map(n => familyKey(n, "Jersey Mike's Subs")));
+        expect(keys.size).toBe(1);
+        // Exact-token stripping: 'crunchwrap' is a product name, not a format
+        // token, and must survive (the over-stripping trap the POSITIVE
+        // CONTROL below guards in general form).
+        expect(stripSizeTokens('Taco Bell, Crunchwrap Supreme')).toContain('crunchwrap');
     });
 
     it('POSITIVE CONTROL — two genuinely different products do NOT collapse', () => {

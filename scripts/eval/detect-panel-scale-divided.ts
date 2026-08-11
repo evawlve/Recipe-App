@@ -149,6 +149,14 @@ export const SIZE_TOKENS: ReadonlySet<string> = new Set([
     'giant', 'kid', 'kids', 'cub', 'junior', 'jr', 'whatameal', 'whatabox',
     'combo', 'value', 'snack', 'single', 'double', 'triple', 'oz', 'fl', 'in',
     'inch', 'footlong', 'half', 'full', 'meal', 'box',
+    // 2026-08-11: FORMAT tokens — the same menu item sold as a wrap/tub
+    // variant formed a single-size family the detector never examined, which
+    // is how "#44 On Wheat Wrap" stayed divided (bills 178 kcal) after the
+    // Regular (937 kcal) was repaired. Scope rule from the token survey:
+    // format/size words for the SAME recipe only — product-type words (bowl,
+    // bar, pita) name different recipes and stay identity. Exact-token
+    // stripping keeps 'crunchwrap' safe (pinned by test).
+    'wrap', 'wraps', 'tub', 'tubs',
 ]);
 
 /** Base filter: serving masses outside this band are parse junk, not portions. */
