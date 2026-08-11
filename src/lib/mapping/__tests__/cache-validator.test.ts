@@ -131,7 +131,7 @@ describe('kickCacheValidation', () => {
         expect(mockCall).toHaveBeenCalledTimes(1);
         const opts = mockCall.mock.calls[0][0];
         expect(opts.purpose).toBe('cache_validate');
-        expect(opts.maxTokens).toBe(600);
+        expect(opts.maxTokens).toBe(2000);
         // parity inputs present…
         for (const needle of ['2 grilled chicken breasts', 'Chicken Breast, Grilled', 'fatsecret', 'fs_12345', '240 g', '396 kcal', '165 kcal/100g', 'count_unit_ai']) {
             expect(opts.userPrompt).toContain(needle);
