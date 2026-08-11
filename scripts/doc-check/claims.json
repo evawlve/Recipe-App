@@ -1362,6 +1362,32 @@
       },
       "verified": "2026-08-10",
       "timeoutMs": 60000
+    },
+    {
+      "id": "off-divided-panel-repair-holds",
+      "claim": "The divided-panel corpus repair is still applied on the box. This population -- chain OFF imports whose stored per-100g panel is the per-SERVING panel divided by the serving size -- has been destroyed twice by an OFF re-ingest (repaired 2026-07-27, wiped by the 2026-07-30 refresh, and the loss was not noticed for NINE DAYS because nothing checked). Re-executed 2026-08-08 on Diego's approval: tier 1 2,087 + tier 2 1,079 = 3,166 rows, 0 guard refusals. This claim is the nightly check that was missing both previous times. It reads the flagship pair by BARCODE (avoiding the apostrophe in the brand name): 9039713284064100139 is the #44 Buffalo Chicken Cheese Steak On White Regular at 541 g and 21021796406979553492283 is the Giant at 1060 g. Repaired, they carry 173.12 and 172.78 kcal/100g -- a true density that is size-invariant, so their RATIO is 1.00 and they bill 937 and 1,831 kcal. Divided, both store the same ~173 kcal/100g figure derived from their own serving, the ratio goes to roughly 2, and both sizes bill an identical 173. The two output terms are count@ratio. THE COUNT TERM IS LOAD-BEARING: max/min over a single surviving row is 1.00, so a refresh that DELETED one of the pair would otherwise read as a false green -- 2@1.00 is fail-closed where 1.00 alone is not. A red here means the repair is lost and must be re-run FROM A DEV MACHINE (both the OffFood snapshot and its verification go over ssh, so neither half runs box-side), followed by a FULL sync-typesense.ts or search keeps billing the old panels off the Typesense hit. Note this is a CANARY on one dish, not a census: it proves the population was not wholesale-wiped, and it cannot see partial loss. Measured 2026-08-11.",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -t -A -c \"SELECT count(*) || '@' || coalesce(round(max(k)/nullif(min(k),0),2)::text,'NONE') FROM (SELECT (\\\"nutrientsPer100g\\\"->>'calories')::numeric AS k FROM \\\"OffFood\\\" WHERE barcode IN ('9039713284064100139','21021796406979553492283')) t;\"",
+      "expect": {
+        "kind": "equals",
+        "value": "2@1.00"
+      },
+      "verified": "2026-08-11",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "off-divided-panel-repair-is-partial",
+      "claim": "The 2026-08-08 divided-panel repair did NOT cover its whole population, and the residue is visible inside the repair's own flagship dish. Jersey Mike's #44 Buffalo Chicken Cheese Steak exists in 18 rows: 8 carry a repaired density >= 80 kcal/100g (On White/Wheat Regular at 541 g -> 173.12, Giant at 1060 g -> 172.78, billing 937 and 1,831 kcal) and 10 are STILL DIVIDED at ~33-35 kcal/100g (the Wrap and In A Tub variants at 537 g and 433 g, billing 178 and 151 kcal for the same sandwich -- a 5.3x under-bill against the repaired Regular). MECHANISM, and it is a detector-coverage bug rather than a repair failure: detect-panel-scale-divided.ts groups rows into families by name with SIZE_TOKENS stripped, then requires >= 2 distinct servingGrams with a spread >= 1.3 before a family is examined at all. SIZE_TOKENS contains regular/giant/large/half/footlong and 26 others but NOT 'wrap' and NOT 'tub', so 'On Wheat Wrap' and 'In A Tub' each form their own single-size family, never qualify, and are never looked at -- which is the script's own documented failure mode ('0 flagged means NOT LOOKED AT, not CLEAN'). A coarse SQL approximation of the detector's filter counts 578 such rows over 51 brands (Jersey Mike's 190, Bob Evans 47, Subway 44, Perkins 43, Denny's 30) with a 12-of-12 hand-confirmed sample; that 578 is NOT pinned here because the query is an approximation whose exclusion of already-repaired rows relies on a decaying updatedAt date filter -- drop the filter and it reads 627. This claim pins the exact, stable subset instead. The two output terms are divided@repaired. IT IS A TRIPWIRE EXPECTED TO FLIP: extending SIZE_TOKENS and re-running detect + repair should take it toward 0@18, so a red means 'the residue was fixed, re-date the owner doc', not 'something regressed'. Do NOT extend SIZE_TOKENS without re-running the detector first -- merging wrap and regular into one family changes which rows qualify, and the r2 gate exists precisely to reject families whose members genuinely differ in density. Measured 2026-08-11.",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -t -A -c \"SELECT count(*) FILTER (WHERE k < 80) || '@' || count(*) FILTER (WHERE k >= 80) FROM (SELECT (\\\"nutrientsPer100g\\\"->>'calories')::numeric AS k FROM \\\"OffFood\\\" WHERE name LIKE 'Jersey Mike%Buffalo Chicken Cheese Steak%') t;\"",
+      "expect": {
+        "kind": "equals",
+        "value": "10@8"
+      },
+      "verified": "2026-08-11",
+      "timeoutMs": 60000
     }
   ]
 }
