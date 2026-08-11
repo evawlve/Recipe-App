@@ -1,0 +1,805 @@
+{
+ "planKind": "panel-scale-divided-repair",
+ "planVersion": 1,
+ "at": "2026-08-11T21:27:19.609Z",
+ "arm": "synthetic",
+ "unsettled": "UNSETTLED: 3,173 rows is a FLOOR, not the class size — singleton defective rows are invisible to the family test (a one-size product never forms a multi-size family, so its panel is never examined). Closing the gap needs the FatSecret/FDC cross-source join — a separate queued task, not this script.",
+ "scan": {
+  "scanned": 638847,
+  "baseFilterPassed": 638847,
+  "skippedEmptyNameKey": 1818,
+  "families": 560158,
+  "qualifyingFamilies": 9161,
+  "flaggedFamilies": 8,
+  "flaggedRows": 14,
+  "flaggedRowsAllArms": 488,
+  "flaggedFamiliesAllArms": 287
+ },
+ "tierTotals": {
+  "tier1": {
+   "rows": 2,
+   "families": 1
+  },
+  "tier2": {
+   "rows": 10,
+   "families": 5
+  }
+ },
+ "exclusions": [
+  {
+   "barcode": "50571723466684",
+   "name": "Thai sticky rice",
+   "brandName": "Asda",
+   "familyKey": "Asda|thai sticky rice",
+   "reason": "Asda | Thai sticky rice — the one non-chain row the synthetic arm emits; hand-excluded per the mobile repo sync-docs/archive/handoff_cache_audit_2026-07-27.md corrections table"
+  }
+ ],
+ "refusals": [
+  {
+   "barcode": "47911742573939869745",
+   "name": "Taco Bell, Crunchwrap Supreme",
+   "brandName": "Taco Bell",
+   "servingGrams": 260,
+   "current": {
+    "calories": 204,
+    "protein": 5.769999980926514,
+    "carbs": 28.10000038146973,
+    "fat": 7.690000057220459,
+    "fiber": 2.309999942779541,
+    "sugars": 2.309999942779541,
+    "sodium": 0.4690000116825104
+   },
+   "repaired": {
+    "calories": 530.4,
+    "protein": 15.001999950408935,
+    "carbs": 73.0600009918213,
+    "fat": 19.994000148773193,
+    "fiber": 6.0059998512268065,
+    "sugars": 6.0059998512268065,
+    "sodium": 1.219400030374527
+   },
+   "familyKey": "Taco Bell|taco bell crunchwrap supreme",
+   "reasons": [
+    "repaired-macro-sum-impossible: 108.1 > 105 g/100g"
+   ]
+  }
+ ],
+ "refusalCount": 1,
+ "movedDuringPlan": [],
+ "familySummaries": [
+  {
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for california club",
+   "brandName": "Jersey Mike's Subs",
+   "tier": 2,
+   "slope": -1.0849833242893285,
+   "r2": 0.999999999999822,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "plannedServings": [
+    187
+   ],
+   "plannedRows": 2
+  },
+  {
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for chipotle turkey",
+   "brandName": "Jersey Mike's Subs",
+   "tier": 2,
+   "slope": -1.0667394509474222,
+   "r2": 0.9999999999999742,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "plannedServings": [
+    159
+   ],
+   "plannedRows": 2
+  },
+  {
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for club sub",
+   "brandName": "Jersey Mike's Subs",
+   "tier": 1,
+   "slope": -0.9045919469995068,
+   "r2": 0.9949339350444399,
+   "familySize": 6,
+   "familyDistinctServings": 3,
+   "plannedServings": [
+    196
+   ],
+   "plannedRows": 2
+  },
+  {
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for original italian",
+   "brandName": "Jersey Mike's Subs",
+   "tier": 2,
+   "slope": -1.1009256609001217,
+   "r2": 1.0000000000000362,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "plannedServings": [
+    186
+   ],
+   "plannedRows": 2
+  },
+  {
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for roast beef provolone",
+   "brandName": "Jersey Mike's Subs",
+   "tier": 2,
+   "slope": -0.9951661727102988,
+   "r2": 0.9999999999999272,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "plannedServings": [
+    153
+   ],
+   "plannedRows": 2
+  },
+  {
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for turkey breast provolone",
+   "brandName": "Jersey Mike's Subs",
+   "tier": 2,
+   "slope": -1.1412833046338324,
+   "r2": 1.000000000000019,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "plannedServings": [
+    159
+   ],
+   "plannedRows": 2
+  }
+ ],
+ "byBrand": [
+  {
+   "brandName": "Jersey Mike's Subs",
+   "rows": 12,
+   "tier1Rows": 2,
+   "tier2Rows": 10,
+   "families": 6,
+   "refusals": 0
+  },
+  {
+   "brandName": "Taco Bell",
+   "rows": 0,
+   "tier1Rows": 0,
+   "tier2Rows": 0,
+   "families": 0,
+   "refusals": 1
+  }
+ ],
+ "entries": [
+  {
+   "barcode": "3486405347148224042",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For California Club, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 187,
+   "current": {
+    "calories": 126,
+    "protein": 11.80000019073486,
+    "carbs": 0.5350000262260437,
+    "fat": 8.5600004196167,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.4350000023841858
+   },
+   "repaired": {
+    "calories": 235.62,
+    "protein": 22.066000356674188,
+    "carbs": 1.0004500490427017,
+    "fat": 16.007200784683228,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.8134500044584275
+   },
+   "currentServingKcal": 235.62,
+   "repairedServingKcal": 440.60940000000005,
+   "understatementFactor": 1.87,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for california club",
+   "familySlope": -1.0849833242893285,
+   "familyR2": 0.999999999999822,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 8.5600004196167,
+    "carbs": 0.5350000262260437,
+    "fiber": 0,
+    "sodium": 0.4350000023841858,
+    "sugars": 0,
+    "protein": 11.80000019073486,
+    "calories": 126
+   },
+   "rawAfter": {
+    "fat": 16.007200784683228,
+    "carbs": 1.0004500490427017,
+    "fiber": 0,
+    "sodium": 0.8134500044584275,
+    "sugars": 0,
+    "protein": 22.066000356674188,
+    "calories": 235.62
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": null
+  },
+  {
+   "barcode": "77388583467680389268385",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For California Club, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 187,
+   "current": {
+    "calories": 126,
+    "protein": 11.80000019073486,
+    "carbs": 0.5350000262260437,
+    "fat": 8.5600004196167,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.4350000023841858
+   },
+   "repaired": {
+    "calories": 235.62,
+    "protein": 22.066000356674188,
+    "carbs": 1.0004500490427017,
+    "fat": 16.007200784683228,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.8134500044584275
+   },
+   "currentServingKcal": 235.62,
+   "repairedServingKcal": 440.60940000000005,
+   "understatementFactor": 1.87,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for california club",
+   "familySlope": -1.0849833242893285,
+   "familyR2": 0.999999999999822,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 8.5600004196167,
+    "carbs": 0.5350000262260437,
+    "fiber": 0,
+    "sodium": 0.4350000023841858,
+    "sugars": 0,
+    "protein": 11.80000019073486,
+    "calories": 126
+   },
+   "rawAfter": {
+    "fat": 16.007200784683228,
+    "carbs": 1.0004500490427017,
+    "fiber": 0,
+    "sodium": 0.8134500044584275,
+    "sugars": 0,
+    "protein": 22.066000356674188,
+    "calories": 235.62
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": "3486405347148224042"
+  },
+  {
+   "barcode": "4391658934874576041466",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For Chipotle Turkey, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 159,
+   "current": {
+    "calories": 121,
+    "protein": 11.89999961853027,
+    "carbs": 1.259999990463257,
+    "fat": 7.550000190734863,
+    "fiber": 0,
+    "sugars": 1.259999990463257,
+    "sodium": 0.7099999785423279
+   },
+   "repaired": {
+    "calories": 192.39000000000001,
+    "protein": 18.92099939346313,
+    "carbs": 2.003399984836579,
+    "fat": 12.004500303268433,
+    "fiber": 0,
+    "sugars": 2.003399984836579,
+    "sodium": 1.1288999658823013
+   },
+   "currentServingKcal": 192.39,
+   "repairedServingKcal": 305.9001,
+   "understatementFactor": 1.59,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for chipotle turkey",
+   "familySlope": -1.0667394509474222,
+   "familyR2": 0.9999999999999742,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 7.550000190734863,
+    "carbs": 1.259999990463257,
+    "fiber": 0,
+    "sodium": 0.7099999785423279,
+    "sugars": 1.259999990463257,
+    "protein": 11.89999961853027,
+    "calories": 121
+   },
+   "rawAfter": {
+    "fat": 12.004500303268433,
+    "carbs": 2.003399984836579,
+    "fiber": 0,
+    "sodium": 1.1288999658823013,
+    "sugars": 2.003399984836579,
+    "protein": 18.92099939346313,
+    "calories": 192.39000000000001
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": null
+  },
+  {
+   "barcode": "474993467696031193",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For Chipotle Turkey, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 159,
+   "current": {
+    "calories": 121,
+    "protein": 11.89999961853027,
+    "carbs": 1.259999990463257,
+    "fat": 7.550000190734863,
+    "fiber": 0,
+    "sugars": 1.259999990463257,
+    "sodium": 0.7099999785423279
+   },
+   "repaired": {
+    "calories": 192.39000000000001,
+    "protein": 18.92099939346313,
+    "carbs": 2.003399984836579,
+    "fat": 12.004500303268433,
+    "fiber": 0,
+    "sugars": 2.003399984836579,
+    "sodium": 1.1288999658823013
+   },
+   "currentServingKcal": 192.39,
+   "repairedServingKcal": 305.9001,
+   "understatementFactor": 1.59,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for chipotle turkey",
+   "familySlope": -1.0667394509474222,
+   "familyR2": 0.9999999999999742,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 7.550000190734863,
+    "carbs": 1.259999990463257,
+    "fiber": 0,
+    "sodium": 0.7099999785423279,
+    "sugars": 1.259999990463257,
+    "protein": 11.89999961853027,
+    "calories": 121
+   },
+   "rawAfter": {
+    "fat": 12.004500303268433,
+    "carbs": 2.003399984836579,
+    "fiber": 0,
+    "sodium": 1.1288999658823013,
+    "sugars": 2.003399984836579,
+    "protein": 18.92099939346313,
+    "calories": 192.39000000000001
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": "4391658934874576041466"
+  },
+  {
+   "barcode": "434348709968707623",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #8 Club Sub, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 196,
+   "current": {
+    "calories": 118,
+    "protein": 10.69999980926514,
+    "carbs": 0.5099999904632568,
+    "fat": 8.15999984741211,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.4650000035762787
+   },
+   "repaired": {
+    "calories": 231.28,
+    "protein": 20.971999626159676,
+    "carbs": 0.9995999813079833,
+    "fat": 15.993599700927733,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.9114000070095062
+   },
+   "currentServingKcal": 231.28,
+   "repairedServingKcal": 453.30879999999996,
+   "understatementFactor": 1.9599999999999997,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for club sub",
+   "familySlope": -0.9045919469995068,
+   "familyR2": 0.9949339350444399,
+   "familySize": 6,
+   "familyDistinctServings": 3,
+   "tier": 1,
+   "rawBefore": {
+    "fat": 8.15999984741211,
+    "carbs": 0.5099999904632568,
+    "fiber": 0,
+    "sodium": 0.4650000035762787,
+    "sugars": 0,
+    "protein": 10.69999980926514,
+    "calories": 118
+   },
+   "rawAfter": {
+    "fat": 15.993599700927733,
+    "carbs": 0.9995999813079833,
+    "fiber": 0,
+    "sodium": 0.9114000070095062,
+    "sugars": 0,
+    "protein": 20.971999626159676,
+    "calories": 231.28
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": null
+  },
+  {
+   "barcode": "92500294897035365",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #8 Club Sub, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 196,
+   "current": {
+    "calories": 118,
+    "protein": 10.69999980926514,
+    "carbs": 0.5099999904632568,
+    "fat": 8.15999984741211,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.4650000035762787
+   },
+   "repaired": {
+    "calories": 231.28,
+    "protein": 20.971999626159676,
+    "carbs": 0.9995999813079833,
+    "fat": 15.993599700927733,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.9114000070095062
+   },
+   "currentServingKcal": 231.28,
+   "repairedServingKcal": 453.30879999999996,
+   "understatementFactor": 1.9599999999999997,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for club sub",
+   "familySlope": -0.9045919469995068,
+   "familyR2": 0.9949339350444399,
+   "familySize": 6,
+   "familyDistinctServings": 3,
+   "tier": 1,
+   "rawBefore": {
+    "fat": 8.15999984741211,
+    "carbs": 0.5099999904632568,
+    "fiber": 0,
+    "sodium": 0.4650000035762787,
+    "sugars": 0,
+    "protein": 10.69999980926514,
+    "calories": 118
+   },
+   "rawAfter": {
+    "fat": 15.993599700927733,
+    "carbs": 0.9995999813079833,
+    "fiber": 0,
+    "sodium": 0.9114000070095062,
+    "sugars": 0,
+    "protein": 20.971999626159676,
+    "calories": 231.28
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": "434348709968707623"
+  },
+  {
+   "barcode": "1770603440219236048",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #13 Original Italian, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 186,
+   "current": {
+    "calories": 120,
+    "protein": 10.19999980926514,
+    "carbs": 1.610000014305115,
+    "fat": 8.0600004196167,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.531000018119812
+   },
+   "repaired": {
+    "calories": 223.20000000000002,
+    "protein": 18.97199964523316,
+    "carbs": 2.994600026607514,
+    "fat": 14.991600780487062,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.9876600337028504
+   },
+   "currentServingKcal": 223.2,
+   "repairedServingKcal": 415.15200000000004,
+   "understatementFactor": 1.8600000000000003,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for original italian",
+   "familySlope": -1.1009256609001217,
+   "familyR2": 1.0000000000000362,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 8.0600004196167,
+    "carbs": 1.610000014305115,
+    "fiber": 0,
+    "sodium": 0.531000018119812,
+    "sugars": 0,
+    "protein": 10.19999980926514,
+    "calories": 120
+   },
+   "rawAfter": {
+    "fat": 14.991600780487062,
+    "carbs": 2.994600026607514,
+    "fiber": 0,
+    "sodium": 0.9876600337028504,
+    "sugars": 0,
+    "protein": 18.97199964523316,
+    "calories": 223.20000000000002
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": null
+  },
+  {
+   "barcode": "1931432578566763",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #13 Original Italian, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 186,
+   "current": {
+    "calories": 120,
+    "protein": 10.19999980926514,
+    "carbs": 1.610000014305115,
+    "fat": 8.0600004196167,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.531000018119812
+   },
+   "repaired": {
+    "calories": 223.20000000000002,
+    "protein": 18.97199964523316,
+    "carbs": 2.994600026607514,
+    "fat": 14.991600780487062,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.9876600337028504
+   },
+   "currentServingKcal": 223.2,
+   "repairedServingKcal": 415.15200000000004,
+   "understatementFactor": 1.8600000000000003,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for original italian",
+   "familySlope": -1.1009256609001217,
+   "familyR2": 1.0000000000000362,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 8.0600004196167,
+    "carbs": 1.610000014305115,
+    "fiber": 0,
+    "sodium": 0.531000018119812,
+    "sugars": 0,
+    "protein": 10.19999980926514,
+    "calories": 120
+   },
+   "rawAfter": {
+    "fat": 14.991600780487062,
+    "carbs": 2.994600026607514,
+    "fiber": 0,
+    "sodium": 0.9876600337028504,
+    "sugars": 0,
+    "protein": 18.97199964523316,
+    "calories": 223.20000000000002
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": "1770603440219236048"
+  },
+  {
+   "barcode": "234237986402791950199708",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #6 Roast Beef & Provolone, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 153,
+   "current": {
+    "calories": 173,
+    "protein": 19,
+    "carbs": 0.6539999842643738,
+    "fat": 10.5,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.101000003516674
+   },
+   "repaired": {
+    "calories": 264.69,
+    "protein": 29.07,
+    "carbs": 1.0006199759244918,
+    "fat": 16.065,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.15453000538051123
+   },
+   "currentServingKcal": 264.69,
+   "repairedServingKcal": 404.9757,
+   "understatementFactor": 1.53,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for roast beef provolone",
+   "familySlope": -0.9951661727102988,
+   "familyR2": 0.9999999999999272,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 10.5,
+    "carbs": 0.6539999842643738,
+    "fiber": 0,
+    "sodium": 0.101000003516674,
+    "sugars": 0,
+    "protein": 19,
+    "calories": 173
+   },
+   "rawAfter": {
+    "fat": 16.065,
+    "carbs": 1.0006199759244918,
+    "fiber": 0,
+    "sodium": 0.15453000538051123,
+    "sugars": 0,
+    "protein": 29.07,
+    "calories": 264.69
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": null
+  },
+  {
+   "barcode": "579343496145659242474674626",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #6 Roast Beef & Provolone, Giant",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 153,
+   "current": {
+    "calories": 173,
+    "protein": 19,
+    "carbs": 0.6539999842643738,
+    "fat": 10.5,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.101000003516674
+   },
+   "repaired": {
+    "calories": 264.69,
+    "protein": 29.07,
+    "carbs": 1.0006199759244918,
+    "fat": 16.065,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.15453000538051123
+   },
+   "currentServingKcal": 264.69,
+   "repairedServingKcal": 404.9757,
+   "understatementFactor": 1.53,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for roast beef provolone",
+   "familySlope": -0.9951661727102988,
+   "familyR2": 0.9999999999999272,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 10.5,
+    "carbs": 0.6539999842643738,
+    "fiber": 0,
+    "sodium": 0.101000003516674,
+    "sugars": 0,
+    "protein": 19,
+    "calories": 173
+   },
+   "rawAfter": {
+    "fat": 16.065,
+    "carbs": 1.0006199759244918,
+    "fiber": 0,
+    "sodium": 0.15453000538051123,
+    "sugars": 0,
+    "protein": 29.07,
+    "calories": 264.69
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": "234237986402791950199708"
+  },
+  {
+   "barcode": "32753210470151698909",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #7 Turkey Breast & Provolone, Regular & Tub",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 159,
+   "current": {
+    "calories": 112,
+    "protein": 13.19999980926514,
+    "carbs": 0.6290000081062317,
+    "fat": 6.289999961853027,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.3959999978542328
+   },
+   "repaired": {
+    "calories": 178.08,
+    "protein": 20.987999696731574,
+    "carbs": 1.0001100128889084,
+    "fat": 10.001099939346314,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.6296399965882301
+   },
+   "currentServingKcal": 178.08,
+   "repairedServingKcal": 283.1472,
+   "understatementFactor": 1.5899999999999999,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for turkey breast provolone",
+   "familySlope": -1.1412833046338324,
+   "familyR2": 1.000000000000019,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 6.289999961853027,
+    "carbs": 0.6290000081062317,
+    "fiber": 0,
+    "sodium": 0.3959999978542328,
+    "sugars": 0,
+    "protein": 13.19999980926514,
+    "calories": 112
+   },
+   "rawAfter": {
+    "fat": 10.001099939346314,
+    "carbs": 1.0001100128889084,
+    "fiber": 0,
+    "sodium": 0.6296399965882301,
+    "sugars": 0,
+    "protein": 20.987999696731574,
+    "calories": 178.08
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": null
+  },
+  {
+   "barcode": "9103417614094505565196065",
+   "name": "Jersey Mike's Subs, Extra Meat & Cheese, For #7 Turkey Breast & Provolone, Regular & Tub",
+   "brandName": "Jersey Mike's Subs",
+   "servingGrams": 159,
+   "current": {
+    "calories": 112,
+    "protein": 13.19999980926514,
+    "carbs": 0.6290000081062317,
+    "fat": 6.289999961853027,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.3959999978542328
+   },
+   "repaired": {
+    "calories": 178.08,
+    "protein": 20.987999696731574,
+    "carbs": 1.0001100128889084,
+    "fat": 10.001099939346314,
+    "fiber": 0,
+    "sugars": 0,
+    "sodium": 0.6296399965882301
+   },
+   "currentServingKcal": 178.08,
+   "repairedServingKcal": 283.1472,
+   "understatementFactor": 1.5899999999999999,
+   "familyKey": "Jersey Mike's Subs|jersey mike s subs extra meat cheese for turkey breast provolone",
+   "familySlope": -1.1412833046338324,
+   "familyR2": 1.000000000000019,
+   "familySize": 4,
+   "familyDistinctServings": 2,
+   "tier": 2,
+   "rawBefore": {
+    "fat": 6.289999961853027,
+    "carbs": 0.6290000081062317,
+    "fiber": 0,
+    "sodium": 0.3959999978542328,
+    "sugars": 0,
+    "protein": 13.19999980926514,
+    "calories": 112
+   },
+   "rawAfter": {
+    "fat": 10.001099939346314,
+    "carbs": 1.0001100128889084,
+    "fiber": 0,
+    "sodium": 0.6296399965882301,
+    "sugars": 0,
+    "protein": 20.987999696731574,
+    "calories": 178.08
+   },
+   "corruptReason": null,
+   "duplicateOfBarcode": "32753210470151698909"
+  }
+ ]
+}
