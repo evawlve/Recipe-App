@@ -233,14 +233,28 @@ export function getProviderChain(
         });
     }
 
+    // cache_validate runs on the capable tier ONLY — a single-entry chain
+    // with NO cheap fallback legs and no OpenAI leg. The 2026-08-10 audit
+    // measured the gpt-4o-mini class FAILING the retention bar for this task,
+    // so a failed capable call must surface as status:'error' (→ no verdict
+    // row, the module's fail-closed path), never as a silently-cheap verdict:
+    // a retired/typo'd slug 400s on every call and would otherwise route ALL
+    // validation to the cheap tier indefinitely. Unset model → empty chain →
+    // error (the shouldRunCacheValidator gate makes that unreachable from the
+    // hook; this covers direct script callers).
+    if (purpose === 'cache_validate') {
+        return VALIDATOR_AI_MODEL !== '' && OPENROUTER_API_KEY
+            ? [{
+                name: 'openrouter',
+                baseUrl: OPENROUTER_BASE_URL,
+                apiKey: OPENROUTER_API_KEY,
+                model: VALIDATOR_AI_MODEL,
+            }]
+            : [];
+    }
+
     // 2. Cloud providers (OpenRouter -> OpenAI fallback)
-    const useCapableModel = purpose === 'nutrition' || purpose === 'cache_validate';
-    // cache_validate has its own model slot (no in-code capable default —
-    // cache-validator.ts refuses to run when VALIDATOR_AI_MODEL is unset, so
-    // the NUTRITION_AI_MODEL fallback here is defensive, not a live path).
-    const capableModel = purpose === 'cache_validate' && VALIDATOR_AI_MODEL !== ''
-        ? VALIDATOR_AI_MODEL
-        : NUTRITION_AI_MODEL;
+    const useCapableModel = purpose === 'nutrition';
 
     // OpenRouter primary (cheap cloud)
     if (OPENROUTER_API_KEY) {
@@ -248,7 +262,7 @@ export function getProviderChain(
             name: 'openrouter',
             baseUrl: OPENROUTER_BASE_URL,
             apiKey: OPENROUTER_API_KEY,
-            model: useCapableModel ? capableModel : CHEAP_AI_MODEL_PRIMARY,
+            model: useCapableModel ? NUTRITION_AI_MODEL : CHEAP_AI_MODEL_PRIMARY,
         });
 
         // OpenRouter fallback (also cheap, different model)

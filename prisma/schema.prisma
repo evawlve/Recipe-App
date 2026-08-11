@@ -776,7 +776,11 @@ model MappingEventLog {
 // and must remain two-valued.
 model MappingValidationVerdict {
   id             String    @id @default(cuid())
-  normalizedForm String // canonical FoodMapping key at save time
+  // Canonical FoodMapping key at save time (token-sorted PK). NOTE: NOT the
+  // same value as MappingEventLog.normalizedForm, which stores the word-order
+  // normalizedName — joining the two tables on this column name silently
+  // misses word-order variants (the documented 66.8% join-reach trap).
+  normalizedForm String
   foodId         String // prefixed target of the save (off_/fdc_/fs_)
   phrase         String // the line as judged (experiment-parity input)
   verdict        String // 'OK' | 'SUSPECT'

@@ -107,7 +107,7 @@ const SYSTEM_PROMPT = [
     'resolved and saved. You see exactly what the server knew at save time: the phrase as',
     'the user typed it, the mapped record identity, the billed grams and kcal (plus derived',
     'kcal/100g), and the serving tier. A SUSPECT verdict feeds a human triage queue; it',
-    'never overwrites anything, so flag on genuine doubt rather than certainty.',
+    'never overwrites anything.',
     '',
     'Judge in this order:',
     '1. IDENTITY: is the mapped record plausibly the food the phrase means? Match the',
@@ -186,15 +186,30 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
         return;
     }
 
+    // Defense-in-depth behind the single-entry provider chain: never persist
+    // a verdict a different model produced (forceProvider or a future chain
+    // edit could reintroduce a fallback, and the measured operating point
+    // belongs to the configured capable tier alone).
+    if (result.model !== VALIDATOR_AI_MODEL) {
+        logger.warn('cache_validator.wrong_tier_dropped', {
+            phrase: input.phrase,
+            model: result.model,
+        });
+        return;
+    }
+
     const verdict = result.content.verdict;
     const axis = result.content.axis;
     const reason = result.content.reason;
     // Fail-closed enum re-check despite schema strict mode — a malformed
-    // verdict is dropped, never coerced.
+    // verdict is dropped, never coerced. Coherence per the experiment
+    // vocabulary: OK carries axis 'none', SUSPECT names a defect axis;
+    // incoherent pairs are dropped, not stored.
     if (
         (verdict !== 'OK' && verdict !== 'SUSPECT') ||
         (axis !== 'none' && axis !== 'identity' && axis !== 'serving' && axis !== 'panel') ||
-        typeof reason !== 'string'
+        typeof reason !== 'string' ||
+        (verdict === 'OK') !== (axis === 'none')
     ) {
         logger.warn('cache_validator.malformed_verdict', {
             phrase: input.phrase,

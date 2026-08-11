@@ -1,13 +1,18 @@
 /**
  * cache-validator tests — flag gating, experiment-parity inputs, fail-closed
- * verdict handling, and the tracked fire-and-forget contract.
+ * verdict handling, tier guarding, and the tracked fire-and-forget contract.
  *
  * callStructuredLlm is stubbed at the single chokepoint (the sanctioned
  * pattern — there is deliberately no env-var bypass) and prisma is mocked, so
  * nothing in this file can dial out or touch a database. Config consts freeze
  * at import time, so every scenario re-imports the module via
- * jest.resetModules() with the env set first.
+ * jest.resetModules() with the env set first. Env originals are restored in
+ * afterAll so this file cannot leak validator flags into later suites in the
+ * same worker.
  */
+
+import * as fs from 'fs';
+import * as path from 'path';
 
 const mockCall = jest.fn();
 const mockCreate = jest.fn();
@@ -25,6 +30,7 @@ jest.mock('@/lib/db', () => ({
 
 type ValidatorModule = typeof import('../cache-validator');
 type HydrationModule = typeof import('../deferred-hydration');
+type LoggerModule = typeof import('../../logger');
 
 const INPUT = {
     phrase: '2 grilled chicken breasts',
@@ -38,18 +44,37 @@ const INPUT = {
 };
 
 const GOOD_ARGS = { skipSave: false, selectionReason: 'rerank_win', funnelStage: 'saved' };
+const MODEL = 'anthropic/claude-sonnet-5';
 
-/** Re-import cache-validator (+ the REAL deferred-hydration from the same
- *  module registry, so drain sees the validator's tasks) under a given env. */
-function load(env: Record<string, string>): { cv: ValidatorModule; dh: HydrationModule } {
+const ORIGINAL_ENV = {
+    CACHE_VALIDATOR_ENABLED: process.env.CACHE_VALIDATOR_ENABLED,
+    VALIDATOR_AI_MODEL: process.env.VALIDATOR_AI_MODEL,
+};
+
+afterAll(() => {
+    for (const [k, v] of Object.entries(ORIGINAL_ENV)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+});
+
+/** Re-import cache-validator (+ the REAL deferred-hydration and logger from
+ *  the same module registry, so drain sees the validator's tasks and spies see
+ *  its log calls) under a given env. Pass `undefined` to DELETE a var — the
+ *  default-off test must exercise getFlag's absent-env branch, not a '0'. */
+function load(env: Record<string, string | undefined>): { cv: ValidatorModule; dh: HydrationModule; log: LoggerModule } {
     jest.resetModules();
-    process.env.CACHE_VALIDATOR_ENABLED = env.CACHE_VALIDATOR_ENABLED ?? '0';
-    process.env.VALIDATOR_AI_MODEL = env.VALIDATOR_AI_MODEL ?? '';
+    for (const k of ['CACHE_VALIDATOR_ENABLED', 'VALIDATOR_AI_MODEL'] as const) {
+        const v = env[k];
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
     /* eslint-disable @typescript-eslint/no-var-requires */
     const cv = require('../cache-validator') as ValidatorModule;
     const dh = require('../deferred-hydration') as HydrationModule;
+    const log = require('../../logger') as LoggerModule;
     /* eslint-enable @typescript-eslint/no-var-requires */
-    return { cv, dh };
+    return { cv, dh, log };
 }
 
 beforeEach(() => {
@@ -58,18 +83,23 @@ beforeEach(() => {
 });
 
 describe('shouldRunCacheValidator gating', () => {
-    it('flag off (default) → never runs, regardless of a configured model', () => {
-        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '0', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
+    it('BOTH env vars absent → off (the shipped default, not a configured 0)', () => {
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: undefined, VALIDATOR_AI_MODEL: undefined });
+        expect(cv.shouldRunCacheValidator(GOOD_ARGS)).toBe(false);
+    });
+
+    it('flag explicitly 0 → off, regardless of a configured model', () => {
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '0', VALIDATOR_AI_MODEL: MODEL });
         expect(cv.shouldRunCacheValidator(GOOD_ARGS)).toBe(false);
     });
 
     it('flag on but model unset → fail-closed disabled (never the cheap tier)', () => {
-        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: '' });
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: undefined });
         expect(cv.shouldRunCacheValidator(GOOD_ARGS)).toBe(false);
     });
 
     it('flag on + model → true only for a genuinely written save', () => {
-        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
+        const { cv } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
         expect(cv.shouldRunCacheValidator(GOOD_ARGS)).toBe(true);
         // cache-hit re-serve
         expect(cv.shouldRunCacheValidator({ ...GOOD_ARGS, selectionReason: 'normalized_cache_hit' })).toBe(false);
@@ -84,12 +114,12 @@ describe('shouldRunCacheValidator gating', () => {
 
 describe('kickCacheValidation', () => {
     it('happy path: exactly one chokepoint call with experiment-parity inputs, verdict row written', async () => {
-        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
         mockCall.mockResolvedValue({
             status: 'success',
             provider: 'openrouter',
-            model: 'anthropic/claude-sonnet-5',
-            content: { verdict: 'SUSPECT', axis: 'serving', reason: '396 kcal for 2 breasts is fine; test row' },
+            model: MODEL,
+            content: { verdict: 'SUSPECT', axis: 'serving', reason: 'test row' },
         });
         mockCreate.mockResolvedValue({});
 
@@ -115,7 +145,7 @@ describe('kickCacheValidation', () => {
         expect(data.verdict).toBe('SUSPECT');
         expect(data.axis).toBe('serving');
         expect(data.foodId).toBe('fs_12345');
-        expect(data.model).toBe('anthropic/claude-sonnet-5');
+        expect(data.model).toBe(MODEL);
         expect(data.billedGrams).toBe(240);
         expect(data.billedKcal).toBe(396);
         // the stored key is the pipeline's own canonical form of the raw key
@@ -124,9 +154,9 @@ describe('kickCacheValidation', () => {
     });
 
     it('OK verdicts are written too (false-flag denominator)', async () => {
-        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
         mockCall.mockResolvedValue({
-            status: 'success', provider: 'openrouter', model: 'anthropic/claude-sonnet-5',
+            status: 'success', provider: 'openrouter', model: MODEL,
             content: { verdict: 'OK', axis: 'none', reason: 'bill matches phrase' },
         });
         mockCreate.mockResolvedValue({});
@@ -137,17 +167,31 @@ describe('kickCacheValidation', () => {
     });
 
     it('LLM error → no verdict row, task resolves (never throws)', async () => {
-        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
-        mockCall.mockResolvedValue({ status: 'error', provider: 'openrouter', model: 'anthropic/claude-sonnet-5', error: 'timeout' });
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        mockCall.mockResolvedValue({ status: 'error', provider: 'openrouter', model: MODEL, error: 'timeout' });
         cv.kickCacheValidation(INPUT, 'chicken');
         await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
         expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it('malformed verdict enum → dropped fail-closed, no row', async () => {
-        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
+    it('a verdict from any OTHER model than the configured tier is dropped, never persisted', async () => {
+        const { cv, dh, log } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const warn = jest.spyOn(log.logger, 'warn').mockImplementation(() => undefined);
         mockCall.mockResolvedValue({
-            status: 'success', provider: 'openrouter', model: 'anthropic/claude-sonnet-5',
+            status: 'success', provider: 'openrouter', model: 'openai/gpt-4o-mini',
+            content: { verdict: 'OK', axis: 'none', reason: 'cheap-tier verdict' },
+        });
+        cv.kickCacheValidation(INPUT, 'chicken');
+        await dh.drainPendingBackgroundTasks();
+        expect(mockCreate).not.toHaveBeenCalled();
+        expect(warn).toHaveBeenCalledWith('cache_validator.wrong_tier_dropped', expect.objectContaining({ model: 'openai/gpt-4o-mini' }));
+        warn.mockRestore();
+    });
+
+    it('malformed verdict enum → dropped fail-closed, no row', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        mockCall.mockResolvedValue({
+            status: 'success', provider: 'openrouter', model: MODEL,
             content: { verdict: 'MAYBE', axis: 'serving', reason: 'x' },
         });
         cv.kickCacheValidation(INPUT, 'chicken');
@@ -155,14 +199,51 @@ describe('kickCacheValidation', () => {
         expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it('a throwing verdict write is swallowed (no unhandled rejection)', async () => {
-        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: 'anthropic/claude-sonnet-5' });
+    it('incoherent verdict/axis pairs (OK+serving, SUSPECT+none) are dropped', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        for (const content of [
+            { verdict: 'OK', axis: 'serving', reason: 'x' },
+            { verdict: 'SUSPECT', axis: 'none', reason: 'x' },
+        ]) {
+            mockCall.mockResolvedValue({ status: 'success', provider: 'openrouter', model: MODEL, content });
+            cv.kickCacheValidation(INPUT, 'chicken');
+            await dh.drainPendingBackgroundTasks();
+        }
+        expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('a throwing verdict write is swallowed AND takes the handled path (write_failed logged)', async () => {
+        const { cv, dh, log } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const warn = jest.spyOn(log.logger, 'warn').mockImplementation(() => undefined);
         mockCall.mockResolvedValue({
-            status: 'success', provider: 'openrouter', model: 'anthropic/claude-sonnet-5',
+            status: 'success', provider: 'openrouter', model: MODEL,
             content: { verdict: 'OK', axis: 'none', reason: 'x' },
         });
         mockCreate.mockRejectedValue(new Error('db down'));
         cv.kickCacheValidation(INPUT, 'chicken');
         await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+        // Not vacuous: proves the rejection was caught by runCacheValidation's
+        // own handler (allSettled in drain would mask an unhandled one).
+        expect(warn).toHaveBeenCalledWith('cache_validator.write_failed', expect.objectContaining({ error: 'db down' }));
+        warn.mockRestore();
+    });
+});
+
+describe('hook-site shape (source pin — the mapper is not mockable at unit scale)', () => {
+    it('finalizeAndSaveResult calls kickCacheValidation exactly once, after the save await, gated on telemetry funnelStage', () => {
+        const src = fs.readFileSync(
+            path.resolve(__dirname, '../map-ingredient-with-fallback.ts'),
+            'utf8',
+        );
+        const kicks = src.match(/kickCacheValidation\(/g) ?? [];
+        expect(kicks).toHaveLength(1);
+        expect(src).not.toContain('await kickCacheValidation');
+        // gate reads the post-save funnel stage, so rejected writes never validate
+        expect(src).toContain('shouldRunCacheValidator({ skipSave, selectionReason, funnelStage: telemetry?.funnelStage })');
+        // the hook sits AFTER the save call in the same function body
+        const saveIdx = src.indexOf('if (!skipSave) await saveValidatedMapping(rawLine, result,');
+        const kickIdx = src.indexOf('kickCacheValidation(');
+        expect(saveIdx).toBeGreaterThan(-1);
+        expect(kickIdx).toBeGreaterThan(saveIdx);
     });
 });
