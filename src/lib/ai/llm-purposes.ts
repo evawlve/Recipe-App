@@ -35,6 +35,7 @@ export const STRUCTURED_LLM_PURPOSES = [
     'parse',
     'simplify',
     'nutrition',
+    'cache_validate',
 ] as const;
 
 export type StructuredLlmPurpose = typeof STRUCTURED_LLM_PURPOSES[number];

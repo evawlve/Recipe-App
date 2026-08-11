@@ -71,6 +71,32 @@ async function main() {
       }
     }
 
+    try {
+      // No FK by design (verdicts survive eviction/repoint), so a plain
+      // create must succeed — this exercises the table the migration added.
+      await prisma.mappingValidationVerdict.create({
+        data: {
+          normalizedForm: 'smoke validator key',
+          foodId: 'fs_smoke',
+          phrase: 'smoke line',
+          verdict: 'SUSPECT',
+          axis: 'serving',
+          reason: 'smoke',
+          model: 'smoke/model',
+          billedGrams: 100,
+          billedKcal: 100,
+          servingTier: 'label_serving'
+        }
+      });
+      console.log('  ✅ MappingValidationVerdict seeded');
+    } catch (error: any) {
+      if (error.code === 'P2025' || error.message?.includes('does not exist')) {
+        console.log('  ℹ️  MappingValidationVerdict table does not exist (skipping)');
+      } else {
+        throw error;
+      }
+    }
+
     console.log('✅ Test data seeded\n');
 
     // Step 3: Reset migrations (verify down works)
