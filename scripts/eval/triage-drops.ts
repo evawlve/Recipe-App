@@ -185,26 +185,28 @@ export function coarseClassOf(classId: string): CoarseClass {
 export type TriageAction = 'repoint' | 'evict' | 'mark-corrupt' | 'ingest' | 'pipeline-fix' | 'triage' | 'none';
 
 /**
- * EXACTLY what apply-repoints.ts can consume as `target`, read off its own code
- * (scripts/eval/apply-repoints.ts:83-104):
+ * EXACTLY what apply-repoints.ts can consume as `target`, mirroring
+ * parseTargetRef() in `scripts/eval/apply-repoints.ts`. That function is an
+ * explicit three-way allowlist — off_ / fdc_ / fs_ — and it validates each
+ * payload shape, so an id this regex accepts is one that script can resolve.
  *
- *   if (r.target.startsWith('off_')) { barcode = target.slice(4); ...OffFood... }
- *   const fdcId = parseInt(r.target.slice(4), 10);   // EVERYTHING ELSE
+ * `fs_` was ADDED to both together on 2026-08-11. Until then apply-repoints had
+ * one `startsWith('off_')` test and an unguarded fall-through that treated
+ * everything else as FDC, so `fs_12345` did not error: `'fs_12345'.slice(4)` is
+ * `'2345'`, which looked up FdcFood 2345 — an unrelated record — and would
+ * upsert the cache key onto it under validatedBy 'human-triage', pinned against
+ * future warm waves. That is why this vocabulary was deliberately NARROWER than
+ * the candidate-id space and why fs_ ids were withheld.
  *
- * There is no third branch and no validation. `fs_12345` therefore does not error —
- * `'fs_12345'.slice(4)` is `'2345'`, so it looks up FdcFood 2345, an unrelated
- * record, and if that row has nutrition it UPSERTS the cache key onto it. That is a
- * silent wrong-record cache poisoning applied under validatedBy 'human-triage', i.e.
- * pinned against future warm waves — the same shape as the 2026-07-24 clobber
- * incident that had to be surgically reverted.
+ * The candidate space is still wider than this: a served `foodId` can also be
+ * `ai_`, which names a generated record with no stable identity to repoint at,
+ * so it is still WITHHELD. Extend this regex only together with a branch in
+ * apply-repoints.ts, never before it.
  *
- * So the vocabulary is off_<barcode> and fdc_<digits>, and NOTHING else. Candidate
- * ids from the probes span a wider space (`off_` / `fdc_` / `fs_`, and the served
- * `foodId` can also be `ai_`), so an fs_ candidate — reachable whenever `--fatsecret`
- * is passed — must be WITHHELD rather than reported as a target. Extend this regex
- * only together with a branch in apply-repoints.ts, never before it.
+ * `fs_` ids are digits — all 24,123 FatSecretFood rows match ^[0-9]+$ (measured
+ * 2026-08-11) — so the shape is pinned rather than left open.
  */
-export const APPLY_REPOINTS_TARGET_RE = /^(off_[A-Za-z0-9._-]+|fdc_\d+)$/;
+export const APPLY_REPOINTS_TARGET_RE = /^(off_[A-Za-z0-9._-]+|fdc_\d+|fs_\d+)$/;
 
 /** Can apply-repoints.ts resolve this candidate id to the record it names? */
 export function isApplyRepointsTarget(id: string | null | undefined): boolean {
@@ -980,9 +982,9 @@ export function decideVerdict(args: {
     if (better && withheldTargetId != null) {
         evidenceNote += ` REPOINT TARGET WITHHELD: the probe DID find ${describeCandidate(better)} covering the `
             + `dropped token(s) [${better.coversUncovered.join(', ')}], but apply-repoints.ts can only consume `
-            + 'off_<barcode> / fdc_<id> targets — it parses anything else as an fdcId via target.slice(4), so '
-            + `reporting "${withheldTargetId}" would silently repoint this key onto an unrelated FdcFood under `
-            + 'validatedBy=human-triage. Act on this by hand, or add the branch to apply-repoints.ts first.';
+            + 'off_<barcode> / fdc_<digits> / fs_<digits> targets, and it now REFUSES a batch containing any '
+            + `other prefix rather than guessing at it. Reporting "${withheldTargetId}" would therefore fail `
+            + 'the whole run. Act on this by hand, or add the branch to apply-repoints.ts first.';
     }
 
     // An ingest class claims "no record exists". When the probe found survivors that
