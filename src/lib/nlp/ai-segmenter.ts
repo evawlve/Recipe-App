@@ -31,7 +31,7 @@ import { callStructuredLlm } from '@/lib/ai/structured-client';
  * garbage-collects them). Bumping is always safe and cheap — forgetting to
  * bump serves STALE segmentations for up to 30 days.
  */
-export const SEG_PARSER_VERSION = 'seg-v1';
+export const SEG_PARSER_VERSION = 'seg-v2';
 
 export type SegmentedMealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
 
@@ -96,8 +96,8 @@ const SEGMENT_SYSTEM_PROMPT = `Split the food-log text into individual food item
 - mealType: breakfast|lunch|dinner|snacks (default "snacks")
 - brand: explicit brand name, else ""
 - normalizedForm: base food name without quantity/unit, keep prep modifiers ("2 scrambled eggs" -> "scrambled eggs", "1 tbsp Heinz ketchup" -> "ketchup")
-Attached condiments stay with their item ("toast with butter" = 1 item); distinct foods are separate items.
-Two distinct whole foods joined by "and" are SEPARATE items ("chicken and rice" -> 2, "eggs and bacon" -> 2, "rice and beans" -> 2). Keep "and" together ONLY when the whole phrase names ONE product or a single flavor ("cookies and cream", "peaches and cream", "mac and cheese", "peanut butter and jelly" = 1 item).
+"with" SPLITS: when "with" joins a base food to another real food that has its own calories, output them as SEPARATE items ("toast with butter" -> 2, "toast with peanut butter" -> 2, "coffee with milk" -> 2, "granola with yogurt" -> 2, "chicken with rice and broccoli" -> 3). Only two exceptions: do not split inside a single branded product or restaurant menu item name ("mcdonalds sausage mcmuffin with egg" -> 1, "nature valley biscuits with almond butter" -> 1), and never split off zero-calorie seasonings, spices or herbs.
+Two distinct whole foods joined by "and" are SEPARATE items ("chicken and rice" -> 2, "eggs and bacon" -> 2, "rice and beans" -> 2). Keep "and" together ONLY when the whole phrase names ONE product or a single flavor ("cookies and cream", "peaches and cream", "mac and cheese", "peanut butter and jelly" = 1 item). A restaurant or brand name containing "and" is part of the item name, NEVER a split point ("noodles and company buttered noodles" -> 1, "slim chickens mac and cheese" -> 1, "cheesecake factory bang bang chicken and shrimp" -> 1).
 Example: "2 eggs and wheat toast for breakfast" -> {"items":[{"rawText":"2 eggs","mealType":"breakfast","brand":"","normalizedForm":"eggs"},{"rawText":"wheat toast","mealType":"breakfast","brand":"","normalizedForm":"wheat toast"}]}`;
 
 // Per-attempt timeout 6s, overall deadline 8s: a hung provider chain
