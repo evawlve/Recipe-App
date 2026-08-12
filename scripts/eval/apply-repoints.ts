@@ -24,6 +24,33 @@
  * script. That is why --apply refuses without --snapshot: the snapshot is the
  * restore anchor, and there is no staging copy of this database.
  *
+ * THE NUTRITION GUARD ASKS PRODUCTION'S QUESTION, NOT ITS OWN. Until
+ * 2026-08-12 every branch read kcal from `nutrientsPer100g` alone and SKIPped
+ * the row when it was absent. For FatSecret that is the wrong test: an empty
+ * per-100g panel is not "no nutrition". persistFatSecretHits() in
+ * src/lib/mapping/fatsecret-lane.ts writes `nutrientsPer100g: (per100 ?? {})`,
+ * and FatSecret's generic chain-restaurant records are exactly the shape
+ * `{}` + a single macro-bearing `1 serving` / `1 can` row with no grams.
+ * buildFatSecretResult() bills those directly — it refuses a record only when
+ * `!per100 && !anyServingHasMacros` — so the script was refusing rows
+ * production serves every day. Measured 2026-08-12: 3,472 of 24,123
+ * FatSecretFood rows (14.4%) carry an empty panel; re-derive with
+ *   SELECT count(*) FILTER (WHERE "nutrientsPer100g"::text = '{}'), count(*)
+ *     FROM "FatSecretFood";
+ * That refusal, not a missing panel, is what killed repair batch 1's
+ * `claw mango white` row (owner:
+ * sync-docs/reports/2026-08-12_repair-batch-2-executed.md §4, mobile repo).
+ * fsServingKcalBasis() below now supplies the fallback, and it reads the
+ * serving Json through servingMacros() — the SAME function the lane bills
+ * from — rather than re-deriving it (playbook §11 class A). OffFood and
+ * FdcFood keep the panel-only test on purpose: neither production read path
+ * has a per-serving macro source to fall back to.
+ *
+ * A serving-basis plan reports kcal PER SERVING, never per 100 g, and it
+ * cannot predict billed grams: those come from the serving cascade, which
+ * chose a rung nobody predicted on batch 2's `stevia`. A newly-unblocked row
+ * still needs a verification draw.
+ *
  * Target vocabulary is an EXPLICIT ALLOWLIST — off_ / fdc_ / fs_ — and an
  * unrecognised prefix fails the whole run before any DB work. It used to be one
  * `startsWith('off_')` test with an unguarded fall-through that treated
@@ -46,6 +73,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { canonicalizeCacheKey } from '../../src/lib/mapping/normalization-rules';
+import { servingMacros } from '../../src/lib/mapping/fs-serving-macros';
 
 const prisma = new PrismaClient();
 
@@ -73,6 +101,18 @@ export interface Plan {
     newFood?: string;
     newBrand?: string | null;
     kcal100?: number | null;
+    /**
+     * Set ONLY when the target's per-100g panel carries no kcal and the plan's
+     * nutrition evidence is a serving row instead (the FatSecret empty-panel
+     * shape — see the header). Deliberately ABSENT, not null, on every
+     * panel-backed plan: a row that planned before this field existed must
+     * serialize byte-identically after it, so the dry-run parity diff that
+     * gates this change can only show newly-unblocked rows.
+     *
+     * `kcal` here is PER SERVING. It is not interchangeable with kcal100 and
+     * the printer labels the two differently for that reason.
+     */
+    servingBasis?: { kcal: number; servingId: string; description: string };
     target: string;
     source?: string;
     offBarcode?: string | null;
@@ -142,6 +182,49 @@ export function targetColumns(ref: TargetRef): { source: string; offBarcode: str
     }
 }
 
+/** The FatSecretFood columns the nutrition guard reads. Structural, so a test can build one. */
+export interface FsNutritionSource {
+    defaultServingId: string | null;
+    servings: Array<{ servingId: string; description: string; nutrients: unknown }>;
+}
+
+/**
+ * The kcal basis production would bill for a FatSecret record whose per-100g
+ * panel is empty — i.e. the serving buildFatSecretResult()'s macro-only branch
+ * picks: the record's own default serving when that serving carries macros,
+ * otherwise the first serving that does. Returns null exactly when
+ * `anyServingHasMacros` is false there, which is the condition under which the
+ * lane itself logs `fs.build_result.no_nutrition` and returns null.
+ *
+ * The macro read goes through servingMacros() from
+ * src/lib/mapping/fs-serving-macros.ts, which is that module's stated contract:
+ * "any future caller that needs 'what kcal does the FatSecret lane bill from
+ * this nutrients Json' must import this, never re-derive it." A re-derivation
+ * here would fork on string-typed Json exactly as the correctness screen's
+ * first draft did.
+ *
+ * NOTE the deliberate scope limit: this answers "can production bill this
+ * record", not "what will it bill". Grams on this shape come from the serving
+ * cascade (panel inversion / estimateServingGrams / the bare-query rungs), and
+ * that rung is not predictable from a record read — batch 2's `stevia` landed
+ * on `bare_sibling_serving` against three independent predictions of
+ * `label_serving_default`.
+ */
+export function fsServingKcalBasis(
+    food: FsNutritionSource,
+): { kcal: number; servingId: string; description: string } | null {
+    const hasMacros = (s: { nutrients: unknown }) =>
+        servingMacros(s.nutrients as Record<string, unknown> | null) != null;
+    const picked =
+        (food.defaultServingId
+            ? food.servings.find(s => s.servingId === food.defaultServingId && hasMacros(s))
+            : undefined)
+        ?? food.servings.find(hasMacros);
+    if (!picked) return null;
+    const m = servingMacros(picked.nutrients as Record<string, unknown> | null)!;
+    return { kcal: m.kcal, servingId: picked.servingId, description: picked.description };
+}
+
 async function planOne(r: Repoint): Promise<Plan> {
     const key = canonicalizeCacheKey(r.key ?? r.seed);
     const existing = await prisma.foodMapping.findUnique({ where: { normalizedForm: key } });
@@ -157,6 +240,7 @@ async function planOne(r: Repoint): Promise<Plan> {
     let brand: string | null;
     let kcal: number | null;
     let dupNote = '';
+    let servingBasis: Plan['servingBasis'];
 
     if (ref.kind === 'off') {
         const off = await prisma.offFood.findUnique({ where: { barcode: ref.barcode } });
@@ -172,11 +256,21 @@ async function planOne(r: Repoint): Promise<Plan> {
         brand = fdc.brandName;
         kcal = readKcal(fdc.nutrientsPer100g);
     } else {
-        const fsFood = await prisma.fatSecretFood.findUnique({ where: { fsId: ref.fsId } });
+        const fsFood = await prisma.fatSecretFood.findUnique({
+            where: { fsId: ref.fsId },
+            select: {
+                name: true, brandName: true, nutrientsPer100g: true, defaultServingId: true,
+                servings: { select: { servingId: true, description: true, nutrients: true } },
+            },
+        });
         if (!fsFood) return { ...base, action: 'SKIP', reason: 'target FatSecretFood not found' };
         name = fsFood.name;
         brand = fsFood.brandName;
         kcal = readKcal(fsFood.nutrientsPer100g);
+        // An empty per-100g panel is not "no nutrition" on this lane — see the
+        // header. Ask the question buildFatSecretResult() asks, through the
+        // reader it bills with.
+        if (kcal == null) servingBasis = fsServingKcalBasis(fsFood) ?? undefined;
     }
 
     // The nutrition test is `== null`, never `!kcal`. persistFatSecretHits()
@@ -184,8 +278,18 @@ async function planOne(r: Repoint): Promise<Plan> {
     // when derivation fails, so readKcal returns null and this catches it; but
     // a genuine zero-calorie record (fs_6409498 Bang Energy Drink) must pass.
     // The FDC branch used not to check at all; it does now.
-    if (kcal == null) {
-        return { ...base, action: 'SKIP', reason: `target ${ref.kind} record has no nutrition` };
+    if (kcal == null && servingBasis == null) {
+        return {
+            ...base,
+            action: 'SKIP',
+            reason: ref.kind === 'fs'
+                // Say which of the two sources was empty, so a skip cannot be
+                // written up as "our copy has no nutrition" again — batch 1
+                // recorded exactly that for a record whose `1 can` row carries
+                // 100 kcal.
+                ? 'target fs record has no nutrition: per-100g panel is empty AND no FatSecretServing carries macros'
+                : `target ${ref.kind} record has no nutrition`,
+        };
     }
 
     return {
@@ -195,6 +299,8 @@ async function planOne(r: Repoint): Promise<Plan> {
         newFood: name + dupNote,
         newBrand: brand,
         kcal100: kcal,
+        // Absent, not null, on panel-backed plans — see the field's doc.
+        ...(servingBasis ? { servingBasis } : {}),
         ...cols,
     };
 }
@@ -267,6 +373,19 @@ export function checkSnapshotCoversPlans(snapshotRaw: string, plans: Plan[]): Sn
     return { ok: true, rowCount: snap.rows.length, sha256: crypto.createHash('sha256').update(snapshotRaw).digest('hex') };
 }
 
+/**
+ * The nutrition figure printed for a plan, LABELLED with its basis. Never label
+ * a per-serving figure "kcal/100g": on the empty-panel FatSecret shape the two
+ * differ by the serving weight, which is the one number this plan does not
+ * know. Exported so the byte-identical-output property the dry-run parity gate
+ * rests on is pinned by a test and not only by a diff someone ran once.
+ */
+export function formatNutritionBasis(p: Plan): string {
+    if (p.kcal100 != null) return `${Math.round(p.kcal100)} kcal/100g`;
+    if (p.servingBasis) return `${Math.round(p.servingBasis.kcal)} kcal per "${p.servingBasis.description}"`;
+    return 'kcal n/a';
+}
+
 function argValue(args: string[], flag: string): string | undefined {
     const i = args.indexOf(flag);
     return i >= 0 ? args[i + 1] : undefined;
@@ -324,10 +443,15 @@ async function main() {
             console.log(`  SKIP   ${p.seed.padEnd(32)} ${p.target}: ${p.reason}`);
             continue;
         }
-        const kcal = p.kcal100 != null ? `${Math.round(p.kcal100)} kcal/100g` : 'kcal n/a';
+        const kcal = formatNutritionBasis(p);
         console.log(`  ${p.action.padEnd(6)} ${p.seed.padEnd(32)} key="${p.key}"`);
         if (p.oldFood) console.log(`         was: ${p.oldFood}`);
         console.log(`         now: ${p.newFood}${p.newBrand ? ` [${p.newBrand}]` : ''} (${p.target}, ${kcal})`);
+        if (p.servingBasis) {
+            console.log('         note: per-100g panel EMPTY — nutrition basis is a SERVING row, which is what'
+                + ' production bills from. Billed GRAMS come from the serving cascade and are NOT predictable'
+                + ' from this plan; verify with a draw before believing it.');
+        }
     }
 
     const updates = plans.filter(p => p.action === 'UPDATE');
@@ -399,6 +523,11 @@ async function main() {
             seed: p.seed, key: p.key, action: p.action, target: p.target,
             source: p.source, offBarcode: p.offBarcode ?? null, fdcId: p.fdcId ?? null, fsId: p.fsId ?? null,
             wasFood: p.oldFood ?? null, nowFood: p.newFood ?? null,
+            // Absent on panel-backed rows, so an outcome file written before
+            // this field existed stays comparable. Present it identifies the
+            // rows whose portion is cascade-decided and therefore unverified
+            // until a draw says otherwise.
+            ...(p.servingBasis ? { servingBasis: p.servingBasis } : {}),
         })),
     }, null, 2) + '\n');
     console.log(`Outcome written to ${outPath}`);
@@ -406,8 +535,9 @@ async function main() {
 }
 
 // Guarded so the pure helpers above are importable by tests. Every comparable
-// script in this directory does the same; this one did not, which is why it has
-// never had a test.
+// script in this directory does the same; this one did not until the guard was
+// added, which is why it had gone untested. Its tests now live in
+// scripts/eval/__tests__/apply-repoints.test.ts.
 if (require.main === module) {
     main()
         .catch(err => { console.error(err); process.exit(2); })
