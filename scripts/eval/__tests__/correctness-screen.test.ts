@@ -40,6 +40,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
     D1_FALSE_EVICT_RATE_REAL_CACHE,
+    D3_REVIEW_WARNING,
     D8_FATSECRET_FALSE_FIRE_RATE_REAL_CACHE,
     FITTED_GOOD_FP_RATE,
     FlagError,
@@ -55,7 +56,9 @@ import {
     confusionOf,
     contentStems,
     decide,
+    evictRules,
     llmUserPrompt,
+    parseD3Mode,
     parseIntFlag,
     parsePolicy,
     parseSeedFile,
@@ -67,6 +70,7 @@ import {
     stem,
     tierD,
     toks,
+    type D3Mode,
     type Hit,
     type Label,
     type LlmVerdict,
@@ -812,6 +816,144 @@ describe('policies', () => {
     });
 });
 
+/**
+ * The `--d3 evict|review` operator flag, approved by Diego 2026-08-12 after the
+ * labels pass over the two batches D3 halted (batch 32 frozen, batch 33
+ * protein-supplements). Owner (mobile repo):
+ * sync-docs/reports/2026-08-09_the-screen-evicts-what-its-own-rubric-accepts.md §7.
+ *
+ * The flag exists because D3's precision is DOMAIN-DEPENDENT — 60.0% on frozen
+ * against 11.8% on supplements, both measured on hand labels — so it must be
+ * demotable per run and per batch, and never by default. These tests pin both
+ * halves of that: the default path is today's screen exactly, and the override
+ * moves D3 and NOTHING else.
+ *
+ * Batch 01 is a store-brand batch, the domain D3 was calibrated on and the one
+ * where it is a workhorse, so the fixture is the WORST case for the override.
+ * That is deliberate: the numbers below are the cost, stated where it is largest.
+ */
+describe('--d3 operator flag', () => {
+    /** Decisions as a comparable value, so "unchanged" means every row, not a count. */
+    const decisionsOf = (policy: Policy, d3?: D3Mode) =>
+        screenBatch(BATCH01, policy, undefined, d3).map(v => `${v.key}=${v.decision}`);
+
+    const tally = (policy: Policy, d3?: D3Mode) => {
+        const verdicts = screenBatch(BATCH01, policy, undefined, d3);
+        const ev = new Set(verdicts.filter(v => v.decision === 'EVICT').map(v => v.key));
+        const rv = new Set(verdicts.filter(v => v.decision === 'REVIEW').map(v => v.key));
+        return {
+            evict: ev.size, evictBad: confusionOf(ev, LABELS).badCaught, evictGood: confusionOf(ev, LABELS).goodFlagged,
+            review: rv.size, reviewBad: confusionOf(rv, LABELS).badCaught,
+            keep: verdicts.filter(v => v.decision === 'KEEP').length,
+        };
+    };
+
+    // --- 1. the default path is byte-for-byte today's screen
+    it('DEFAULT: D3 is still in the balanced evict set, and the whole set is unchanged', () => {
+        // The exact set, not a `.toContain`: an accidental widening is as much a
+        // regression as an accidental loosening.
+        expect(evictRules('balanced')).toEqual(['D3', 'D4', 'D8', 'D9', 'L']);
+        expect(evictRules('balanced', 'evict')).toEqual(POLICIES.balanced.evict);
+        expect(evictRules('strict', 'evict')).toEqual(POLICIES.strict.evict);
+        expect(evictRules('lenient', 'evict')).toEqual(POLICIES.lenient.evict);
+    });
+
+    it('DEFAULT: omitting the flag decides every row identically to passing `evict`', () => {
+        // The optional parameter is the whole compatibility argument — every existing
+        // two- and three-argument call site must be unaffected by this change.
+        for (const p of ['lenient', 'balanced', 'strict'] as Policy[]) {
+            expect([p, decisionsOf(p)]).toEqual([p, decisionsOf(p, 'evict')]);
+            // Through tierD DIRECTLY and over every row, not one row via screenBatch:
+            // a wrong default on tierD is otherwise masked by screenBatch passing its
+            // own, and a single row that never fires D3 cannot see the difference.
+            const direct = (d3?: D3Mode) => BATCH01.map(r => JSON.stringify(tierD(r, p, d3)));
+            expect([p, direct()]).toEqual([p, direct('evict')]);
+        }
+        // And the shipped operating point still measures what §2's matrix pins.
+        expect(tally('balanced')).toEqual({ evict: 16, evictBad: 15, evictGood: 0, review: 10, reviewBad: 4, keep: 55 });
+    });
+
+    // --- 2. `review` moves D3 under balanced, and moves nothing else
+    it('REVIEW: D3 leaves the balanced evict set and the rest of the set is UNCHANGED', () => {
+        expect(evictRules('balanced', 'review')).toEqual(['D4', 'D8', 'D9', 'L']);
+        // Stated as a difference so a future edit that also drops D4 or L fails here:
+        // exactly one rule may move, and it is D3.
+        const removed = POLICIES.balanced.evict.filter(r => !evictRules('balanced', 'review').includes(r));
+        expect(removed).toEqual(['D3']);
+        // 'L' staying is load-bearing: an agent/Tier-L REJECT must still evict, which
+        // is what keeps the demotion from touching the reconciler's union.
+        expect(decide([], { verdict: 'REJECT', axis: 'identity', confidence: 1, reason: '' }, 'balanced', 'review')).toBe('EVICT');
+    });
+
+    it('REVIEW: the D3 PREDICATE is untouched — same rows, same detail, only the severity moves', () => {
+        const fires = (d3: D3Mode) => BATCH01
+            .map(r => tierD(r, 'balanced', d3).filter(h => h.rule === 'D3'))
+            .flat();
+        const asEvict = fires('evict');
+        const asReview = fires('review');
+        expect(asEvict.length).toBe(16);
+        expect(asReview.map(h => h.detail)).toEqual(asEvict.map(h => h.detail));
+        expect(new Set(asEvict.map(h => h.severity))).toEqual(new Set(['EVICT']));
+        expect(new Set(asReview.map(h => h.severity))).toEqual(new Set(['REVIEW']));
+    });
+
+    it('REVIEW: on batch 01, 13 rows move EVICT -> REVIEW, none to KEEP, none the other way', () => {
+        // Batch 01 is store brands — D3's best domain — so this is the maximum cost,
+        // not the expected one. 12 of the 13 are labelled BAD and would no longer be
+        // auto-deleted by Tier D. That is the trade the per-batch labels gate exists
+        // to authorise, and it is why `review` is not the default and not a policy.
+        expect(tally('balanced', 'review')).toEqual({ evict: 3, evictBad: 3, evictGood: 0, review: 23, reviewBad: 16, keep: 55 });
+
+        const evictedAt = (d3: D3Mode) => new Set(
+            screenBatch(BATCH01, 'balanced', undefined, d3).filter(v => v.decision === 'EVICT').map(v => v.key));
+        const before = evictedAt('evict');
+        const after = evictedAt('review');
+        const moved = [...before].filter(k => !after.has(k));
+        expect(moved.length).toBe(13);
+        expect([...after].filter(k => !before.has(k))).toEqual([]);
+
+        // NOTHING may reach KEEP: a demoted row must stay in the screen's sight, which
+        // is the entire difference between "REVIEW" and "narrowing the predicate".
+        const reviewAfter = new Set(
+            screenBatch(BATCH01, 'balanced', undefined, 'review').filter(v => v.decision === 'REVIEW').map(v => v.key));
+        expect(moved.filter(k => !reviewAfter.has(k))).toEqual([]);
+        expect(tally('balanced', 'review').keep).toBe(tally('balanced').keep);
+
+        // The three rows that stay evicted are D4's, not D3's — the rule that survives
+        // the demotion because zero seed content tokens reached the record at all.
+        for (const k of after) {
+            const row = BATCH01.find(r => r.key === k)!;
+            const rules = tierD(row, 'balanced', 'review').filter(h => h.severity === 'EVICT').map(h => h.rule);
+            expect([k, rules]).toEqual([k, ['D4']]);
+        }
+    });
+
+    // --- 3. strict is not weakened
+    it('REVIEW: `strict` is UNAFFECTED — it keeps D3 as an evictor', () => {
+        expect(evictRules('strict', 'review')).toEqual(POLICIES.strict.evict);
+        expect(evictRules('strict', 'review')).toContain('D3');
+        expect(decisionsOf('strict', 'review')).toEqual(decisionsOf('strict'));
+        expect(tally('strict', 'review')).toEqual(tally('strict'));
+        // lenient never listed D3, so the override is inert there too — asserted so a
+        // future refactor cannot make `review` mean "evict less than lenient".
+        expect(evictRules('lenient', 'review')).toEqual(POLICIES.lenient.evict);
+        expect(decisionsOf('lenient', 'review')).toEqual(decisionsOf('lenient'));
+    });
+
+    // --- 4. the banner, which is the only thing enforcing the standing rule
+    it('names the standing rule and BOTH adjudicated batches in the warning it prints', () => {
+        // The code cannot check whether this batch's domain was labelled — there is no
+        // domain field — so the banner IS the control. If it stops naming the bar or
+        // stops naming the batch that FAILED it, the operator loses the one signal
+        // that says this flag is not free.
+        expect(D3_REVIEW_WARNING).toMatch(/STANDING RULE/);
+        expect(D3_REVIEW_WARNING).toMatch(/at most 2 labelled-BAD/);
+        expect(D3_REVIEW_WARNING).toMatch(/batch 33 protein-supplements QUALIFIES/);
+        expect(D3_REVIEW_WARNING).toMatch(/batch 32 frozen\s+DOES NOT/);
+        expect(D3_REVIEW_WARNING).toMatch(/^WARN /);
+    });
+});
+
 describe('decide() — combining the tiers', () => {
     const accept: LlmVerdict = { verdict: 'ACCEPT', axis: 'none', confidence: 1, reason: '' };
     const reject: LlmVerdict = { verdict: 'REJECT', axis: 'identity', confidence: 1, reason: 'different food' };
@@ -907,6 +1049,21 @@ describe('flag validation — refused, not coerced', () => {
         expect(() => parsePolicy('balenced')).toThrow(FlagError);
         expect(parsePolicy(undefined)).toBe('balanced');
         expect(parsePolicy('strict')).toBe('strict');
+    });
+    it('rejects an unknown --d3 value instead of coercing it either way', () => {
+        // Both fallbacks are wrong and only one is obviously wrong. Coercing to
+        // `evict` runs full-strength D3 on a batch the operator believes is demoted
+        // (a red batch they will read as data); coercing to `review` deletes nothing
+        // while the log still says "screened". So: refuse.
+        expect(() => parseD3Mode('reveiw')).toThrow(FlagError);
+        expect(() => parseD3Mode('REVIEW')).toThrow(FlagError);
+        expect(() => parseD3Mode('')).toThrow(FlagError);
+        // The `--d3` with no value case: val() hands back the NEXT FLAG, which must
+        // not be read as a mode (the same shape parseIntFlag already guards).
+        expect(() => parseD3Mode('--policy')).toThrow(FlagError);
+        expect(parseD3Mode(undefined)).toBe('evict');
+        expect(parseD3Mode('evict')).toBe('evict');
+        expect(parseD3Mode('review')).toBe('review');
     });
     it('rejects a non-integer or out-of-range --concurrency', () => {
         expect(() => parseIntFlag('--concurrency', 'abc', 6, 1)).toThrow(FlagError);
