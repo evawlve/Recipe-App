@@ -25,6 +25,28 @@ describe('countedPieceNoun', () => {
         expect(countedPieceNoun({ qty: 1.5, multiplier: 1, unit: null, name: 'cookies' } as any)).toBeNull();
     });
 
+    it('qty gate: a qty=1 line is not a piece count (the parser defaults bare lines to 1)', () => {
+        // An explicit "1 tortilla chip" and a parser-default bare line
+        // ("goldfish crackers", "kirkland protein bar chocolate chip") both
+        // arrive here as qty=1 — indistinguishable, so neither may read as a
+        // counted-piece query; the label side (labelLeadingCount) already
+        // demands count >= 2. MUTATION: restore `qty < 1` — all three return
+        // a noun again and the count_label cache escape re-opens on every
+        // bare/qty-1 snack line (measured looping at up to 271 events/form).
+        expect(countedPieceNoun({ qty: 1, multiplier: 1, unit: null, name: 'tortilla chip' } as any)).toBeNull();
+        expect(countedPieceNoun({ qty: 1, multiplier: 1, unit: null, name: 'goldfish crackers' } as any)).toBeNull();
+        expect(countedPieceNoun({ qty: 1, multiplier: 1, unit: null, name: 'kirkland protein bar chocolate chip' } as any)).toBeNull();
+    });
+
+    it('qty >= 2 keeps the count reading, re-aimed at the head noun', () => {
+        expect(countedPieceNoun({ qty: 2, multiplier: 1, unit: null, name: 'chocolate chip cookie' } as any)).toBe('cookie');
+        // 'kirkland protein bar chocolate chip' has exactly ONE member noun
+        // ('bar' is deliberately not in LABEL_COUNT_PIECE_NOUNS), so no noun
+        // rule can re-aim it — the QTY gate, not last-match, is what silences
+        // its bare-line escape. At an explicit count it still counts 'chip'.
+        expect(countedPieceNoun({ qty: 2, multiplier: 1, unit: null, name: 'kirkland protein bar chocolate chip' } as any)).toBe('chip');
+    });
+
     it('returns null for non-snack nouns (produce stays on the seed table)', () => {
         expect(countedPieceNoun({ qty: 3, multiplier: 1, unit: null, name: 'baby carrots' } as any)).toBeNull();
         expect(countedPieceNoun({ qty: 2, multiplier: 1, unit: null, name: 'bananas' } as any)).toBeNull();
@@ -74,9 +96,17 @@ describe('servingLabelHasPieceCount (noun-agnostic, retrieval flag)', () => {
 });
 
 describe('pieceNounInName', () => {
-    it('finds the first snack noun, singularized', () => {
-        expect(pieceNounInName('chocolate chip cookies')).toBe('chip');
+    it('finds the LAST snack noun, singularized (flavor precedes the head in compounds)', () => {
         expect(pieceNounInName('chicken nuggets')).toBe('nugget');
         expect(pieceNounInName('almonds')).toBeNull();
+        // Multi-noun names: the head noun wins, not the flavor modifier.
+        // MUTATION: restore first-match — both flip back to 'chip'.
+        expect(pieceNounInName('chocolate chip cookie')).toBe('cookie');
+        expect(pieceNounInName('quest bar chocolate chip cookie dough')).toBe('cookie');
+        // Pre-existing -ies quirk, deliberately unchanged: singularizeUnit
+        // maps 'cookies' -> 'cooky', which misses the set, so the PLURAL
+        // spelling contributes no cookie match under either scan and 'chip'
+        // is the last member either way.
+        expect(pieceNounInName('chocolate chip cookies')).toBe('chip');
     });
 });
