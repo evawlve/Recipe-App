@@ -1,0 +1,74 @@
+[
+ {
+  "seed": "bell crunchwrap supreme taco",
+  "key": "bell crunchwrap supreme taco",
+  "target": "off_47911742573939869745",
+  "class": "tail-repair-identity",
+  "severity": "med",
+  "wasFood": "(tranche-2 WRONG, identity)",
+  "_idx": 0,
+  "_expectedGrams": "100",
+  "_expectedKcal": "204",
+  "_note": "[CONFIRM conf=HIGH band=200-215] AIM: fastfoodnutrition Crunchwrap Supreme = 530 kcal/21f/71c/16p; record 204 kcal/100g x 2.6 (260 g row) = 530.4/20.0/73.1/15.0, a four-macro match. corruptReason NULL, dup NULL, ONE serving row `1 Crunchwrap (260g)`. Replay phrase pins 100 g so the landing is the per-100g value. 20-digit barcode is a USDA-branded-import artifact, not a defect. Strictly better than fs_83500070 (same 530 but grams NULL => guard-blocked)."
+ },
+ {
+  "seed": "chicken shawarma",
+  "key": "chicken shawarma",
+  "target": "fs_11217340",
+  "class": "tail-repair-identity",
+  "severity": "high",
+  "wasFood": "(component, not composite)",
+  "_idx": 1,
+  "_expectedGrams": "390",
+  "_expectedKcal": "517",
+  "_note": "[CONFIRM conf=HIGH band=350-520] AIM: FatSecret's own generic `Chicken Shawarma`; defaultServingId IS the `1 shawarma` 390 g row at 517 kcal / 76.6 g carb, which FatSecret describes as the full sandwich (pita included). Generic record, no brand claim. Reverses the component-vs-composite defect. Default is inside [3,400]? NO - 390 g is inside the BARE_LABEL_MAX_GRAMS=400 ceiling, verified."
+ },
+ {
+  "seed": "egg roll",
+  "key": "egg roll",
+  "target": "off_0011251014333",
+  "class": "tail-repair-serving",
+  "severity": "med",
+  "wasFood": "Egg rolls (35 g mini/cocktail row)",
+  "_idx": 2,
+  "_expectedGrams": "86",
+  "_expectedKcal": "170",
+  "_note": "[CONFIRM conf=HIGH band=150-220] AIM: OFF API 0011251014333 Chicken Egg Rolls [Chung], 198 kcal/100g, single serving row `1 Egg Roll (86 g)` = 170 kcal. Real-label band: Panda Express 85 g/200, Great Value 77 g/150, Chung 86 g/170. Single-row structure is the `onion` recipe that held in batch 1. Current: 35 g via bare_label_serving on a mini/cocktail row (MEL 2026-08-12 19:29:28) - the row #295's key migration landed on."
+ },
+ {
+  "seed": "kit kat bar",
+  "key": "bar kat kit",
+  "target": "off_03475106",
+  "class": "tail-repair-serving",
+  "severity": "med",
+  "wasFood": "(wrong product form)",
+  "_idx": 3,
+  "_expectedGrams": "42",
+  "_expectedKcal": "210",
+  "_note": "[CONFIRM conf=HIGH band=205-225] AIM: OFF API 03475106 Kit Kat [Nestle], 500 kcal/100g, single row `1 bar (42 g)` = 210 kcal - the standard bar exactly. corrupt/dup NULL. Row description carries the phrase's own unit token `bar`. Runner-up fs_50628 [Hershey's] also lands 210 but carries a second 100 g row; the single-row OFF record is tighter."
+ },
+ {
+  "seed": "restaurant chow mein",
+  "key": "chow mein restaurant",
+  "target": "fs_2570",
+  "class": "tail-repair-identity",
+  "severity": "high",
+  "wasFood": "(dry pasta panel, 352 kcal/100g 0 g fat)",
+  "_idx": 4,
+  "_expectedGrams": "220",
+  "_expectedKcal": "418",
+  "_note": "[CONFIRM conf=MED-HIGH band=400-520] AIM: FatSecret generic `Chow Mein or Chop Suey with Meat and Noodles`, 190 kcal/100g, default `1 cup` 220 g = 418 kcal; every row carries real grams. 190/100g is an oiled noodle stir-fry and cross-checks against Panda Express chow mein 192 kcal/100g (510 kcal / 266 g), which kills the dry-pasta panel. Default 220 g inside [3,400]. Runner-up fs_51920 [Panda Express] has grams NULL on `1 serving`."
+ },
+ {
+  "seed": "stevia",
+  "key": "stevia",
+  "target": "off_0053351900574",
+  "class": "tail-repair-panel",
+  "severity": "med",
+  "wasFood": "(100 g via fs_per100g_fallback = 50 g carb billed)",
+  "_idx": 5,
+  "_expectedGrams": "1",
+  "_expectedKcal": "4",
+  "_note": "[CONFIRM conf=MED band=0-10 kcal / 0-2 g carb] AIM: OFF API 0053351900574 Clover Valley zero-calorie stevia, single row `1 PACKET (1 g)` = 4 kcal / 1 g carb; ingredients Dextrose, stevia leaf extract, cellulose. The harm today is not kcal (0 either way) but 50 g of CARBOHYDRATE billed off fs_51153's 100 g row (measured live 2026-08-12 17:24, tier fs_per100g_fallback). VERIFY: on the OFF path a sub-3 g label is not fatal - branch (1) bare_label_serving is skipped but the fall-through bills qty x servingGrams as label_serving_default; measured precedents at that tier: salt 1.3 g, nori 2.5 g, cinnamon 2.6 g. applyOffBareQueryGuard() is CAP-only and getBareQueryDefault('stevia') is null. Predicted landing 1 g / 4 kcal."
+ }
+]
