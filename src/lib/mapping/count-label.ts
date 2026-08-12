@@ -49,14 +49,29 @@ export const LABEL_COUNT_PIECE_NOUNS = new Set([
 // never masquerades as a per-piece weight).
 export const GENERIC_PIECE_WORDS = new Set(['piece', 'pc']);
 
-/** First packaged-snack piece noun appearing in a food/item name, else null. */
+/**
+ * LAST packaged-snack piece noun appearing in a food/item name, else null.
+ *
+ * Last, not first: in compound food names the flavor precedes the head noun
+ * ("chocolate chip cookie" — the user counts cookies, "chip" is flavor), so
+ * the first match counted the modifier. Measured 2026-08-09/12: first-match
+ * fed a non-terminating cache escape ("kirkland protein bar chocolate chip"
+ * counted *chip*, "built puff protein bar" counted *puff*). Identical
+ * null-set to the old scan — only multi-noun names change value — so the
+ * hydration lane's food-name-side callers (genericPieceNoun, the
+ * package-count gate's `== null` check) keep their firing populations.
+ * Known pre-existing limit, deliberately NOT changed here: singularizeUnit
+ * maps "cookies" -> "cooky", which misses the set, so the PLURAL spelling
+ * never contributes a cookie match either way (a separate, unmeasured fix).
+ */
 export function pieceNounInName(name: string): string | null {
+    let last: string | null = null;
     for (const tok of (name || '').toLowerCase().split(/[^a-z&]+/)) {
         if (tok === '') continue;
         const sing = singularizeUnit(tok);
-        if (LABEL_COUNT_PIECE_NOUNS.has(sing)) return sing;
+        if (LABEL_COUNT_PIECE_NOUNS.has(sing)) last = sing;
     }
-    return null;
+    return last;
 }
 
 /** True if the label's piece word is literally one of the words the user is counting. */
@@ -74,9 +89,16 @@ export function labelPieceMatchesItem(labelWord: string | null, itemName: string
  * ("13 tortilla chips" → "chip"), else null. Mirrors buildOffResult's
  * unitless-count gate so retrieval/rerank preference and serving resolution
  * stay aligned.
+ *
+ * qty >= 2, not >= 1: the parser defaults a bare line ("goldfish crackers")
+ * to qty=1, so qty=1 cannot distinguish "counting one piece" from "no count
+ * at all", and the label side (labelLeadingCount) already demands count >= 2.
+ * The 2026-07-26 triage measured the asymmetry feeding 494/664 provably
+ * looping escape events; the 2026-08-09 serving-class-keys report re-measured
+ * it at ~622/1,261 and named this exact change.
  */
 export function countedPieceNoun(parsed: ParsedIngredient | null): string | null {
-    if (!parsed || parsed.unit || !Number.isInteger(parsed.qty) || parsed.qty < 1) return null;
+    if (!parsed || parsed.unit || !Number.isInteger(parsed.qty) || parsed.qty < 2) return null;
     return pieceNounInName(parsed.name || '');
 }
 
