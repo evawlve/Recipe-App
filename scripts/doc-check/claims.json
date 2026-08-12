@@ -1412,6 +1412,30 @@
         "value": "^1@0$"
       },
       "verified": "2026-08-11"
+    },
+    {
+      "id": "corruptreason-values-are-produced-by-a-known-writer",
+      "claim": "Every live corruptReason value carries either one of the twelve CorruptDirection prefixes (written only by mark-corrupt-off.ts, gated by decideMark) or the hand-triage- prefix (written only by replay-hand-corrupt-marks.ts, gated by decideHandMark). A non-zero count means something wrote the column out of band \u2014 the raw-UPDATE class.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-12_corrupt-mark-machinery-design.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc 'SELECT count(*) FROM \"OffFood\" WHERE \"corruptReason\" IS NOT NULL AND \"corruptReason\" NOT LIKE '\"'\"'hand-triage-%'\"'\"' AND split_part(\"corruptReason\", '\"'\"':'\"'\"', 1) NOT IN ('\"'\"'panel-low'\"'\"','\"'\"'panel-inflated'\"'\"','\"'\"'panel-inflated-family'\"'\"','\"'\"'panel-inflated-serving'\"'\"','\"'\"'kcal-impossible'\"'\"','\"'\"'macro-sum-impossible'\"'\"','\"'\"'fiber-impossible'\"'\"','\"'\"'sugars-impossible'\"'\"','\"'\"'sodium-impossible'\"'\"','\"'\"'sodium-implausible'\"'\"','\"'\"'kj-as-kcal'\"'\"','\"'\"'sodium-sibling-outlier'\"'\"')'",
+      "expect": {
+        "kind": "equals",
+        "value": "0"
+      },
+      "verified": "2026-08-12"
+    },
+    {
+      "id": "hand-corrupt-marks-have-a-replay-mechanism",
+      "claim": "The hand-authored corruptReason population has BOTH halves of its replay mechanism present, and refresh-off-from-parquet.sh preflights both before the truncate. Losing either is permanent: no detector re-derives a hand mark. The file deliberately does NOT live under src/lib/mapping/data/ \u2014 the box .stignore excludes every directory named data at any depth, so a file there never reaches the host that runs the refresh (measured 2026-08-12).",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+      "where": "backend",
+      "command": "echo \"$(ls scripts/replay-hand-corrupt-marks.ts src/lib/mapping/corrupt-off-handmarks.json 2>/dev/null | wc -l | tr -d ' ')@$(grep -c 'replay-hand-corrupt-marks.ts' scripts/refresh-off-from-parquet.sh)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^2@[2-9]$"
+      },
+      "verified": "2026-08-12"
     }
   ]
 }

@@ -1,0 +1,406 @@
+[
+    {
+        "barcode": "0400000006529",
+        "class": "panel",
+        "seed": "half and half",
+        "reason": "Container panel in the per-100g field: 250 kcal/100g with 21.9 g fat against a 68-row same-name median of 133; no real half-and-half reaches it.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Half and half",
+            "kcal100": 250,
+            "protein": 6.25,
+            "fat": 21.875,
+            "carbs": 6.25,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0065900106627",
+        "class": "panel",
+        "seed": "sour cream",
+        "reason": "Panel is about half the truth: 100 kcal/100g at 6.67 g fat against a 229-row same-name median of 200 (full-fat 198, fat-free ~67 - it matches neither line).",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Sour cream",
+            "kcal100": 100,
+            "protein": 3.333300113677979,
+            "fat": 6.666699886322021,
+            "carbs": 6.666699886322021,
+            "servingGrams": null
+        },
+        "group": [
+            {
+                "barcode": "01615470",
+                "basis": "panel-twin",
+                "observed": {
+                    "name": "Sour cream",
+                    "kcal100": 100,
+                    "protein": 3.333333253860474,
+                    "fat": 6.666666507720947,
+                    "carbs": 6.666666507720947,
+                    "servingGrams": null
+                }
+            }
+        ],
+        "groupExclusions": [
+            {
+                "barcode": "0059749903943",
+                "why": "shares only the 100 kcal value; panel differs (P6.67/F5/C6.67) - not the same authored row, and a light sour cream can legitimately sit here"
+            },
+            {
+                "barcode": "0062325501006",
+                "why": "shares only the 100 kcal value; panel differs (F5)"
+            },
+            {
+                "barcode": "0065900106665",
+                "why": "shares only the 100 kcal value; panel differs (F5/C10)"
+            },
+            {
+                "barcode": "0067997100007",
+                "why": "shares only the 100 kcal value; panel differs (F5/C10)"
+            },
+            {
+                "barcode": "0070038600572",
+                "why": "shares only the 100 kcal value; panel differs (F8.33)"
+            },
+            {
+                "barcode": "0070253641015",
+                "why": "shares only the 100 kcal value; panel differs (C10)"
+            },
+            {
+                "barcode": "0688267020605",
+                "why": "shares only the 100 kcal value; panel differs (P1.67/F8.33/C3.33)"
+            }
+        ]
+    },
+    {
+        "barcode": "04530844",
+        "class": "panel",
+        "seed": "100g dressing goddess green",
+        "reason": "Panel is roughly a fifth of the truth: 66.7 kcal/100g against a 20-row same-name median of 350; the lightest real green goddess dressing is ~177.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Green Goddess Dressing",
+            "kcal100": 66.66666412353516,
+            "protein": 0,
+            "fat": 6.666666507720947,
+            "carbs": 3.333333253860474,
+            "servingGrams": null
+        },
+        "group": [
+            {
+                "barcode": "00599917",
+                "basis": "panel-twin",
+                "observed": {
+                    "name": "Green Goddess Dressing",
+                    "kcal100": 66.66666412353516,
+                    "protein": 0,
+                    "fat": 6.666666507720947,
+                    "carbs": 3.333333253860474,
+                    "servingGrams": 30
+                }
+            },
+            {
+                "barcode": "61336544",
+                "basis": "panel-twin",
+                "observed": {
+                    "name": "Green Goddess Dressing",
+                    "kcal100": 66.66666412353516,
+                    "protein": 0,
+                    "fat": 6.666666507720947,
+                    "carbs": 3.333333253860474,
+                    "servingGrams": null
+                }
+            }
+        ],
+        "groupExclusions": [
+            {
+                "barcode": "0628719221099",
+                "why": "shares the 66.67 kcal value under a third brand but the panel differs (C0 vs C3.33)"
+            }
+        ]
+    },
+    {
+        "barcode": "00000300",
+        "class": "panel",
+        "seed": "collagen powder protein vital",
+        "reason": "Per-scoop numbers stored per-100g: 70 kcal/100g against a 5-row same-name median of 360; 70 kcal is the 20 g scoop, so the true density is ~350.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Powder collagen peptides",
+            "kcal100": 70,
+            "protein": 18,
+            "fat": 0,
+            "carbs": 0,
+            "servingGrams": 100
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0039779014413",
+        "class": "identity",
+        "seed": "taco tacobell",
+        "reason": "Identity: the barcode resolves to a Roku remote control (go-upc), so the 535.7 kcal/100g panel describes no food at all; the same-name median is 270.8.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Taco",
+            "kcal100": 535.7142944335938,
+            "protein": 7.142857074737549,
+            "fat": 28.5714282989502,
+            "carbs": 60.71428680419922,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "5029220157818",
+        "class": "panel",
+        "seed": "100g dijon mustard",
+        "reason": "Panel inflated ~3.3x on fat: 220 kcal/100g against the matching product's true 66 and a 32-row same-name median of 148.5.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Dijon Mustard",
+            "kcal100": 220,
+            "protein": 14.60000038146973,
+            "fat": 13.89999961853027,
+            "carbs": 8.899999618530273,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0851666006017",
+        "class": "panel",
+        "seed": "100g butter granola peanut",
+        "reason": "Panel understates its own product: 321.4 kcal/100g at 10.7 g fat for a peanut-butter granola, against a 20-row same-name median of 459.5 (real ~400+).",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Peanut Butter Granola",
+            "kcal100": 321.4285583496094,
+            "protein": 10.7142858505249,
+            "fat": 10.7142858505249,
+            "carbs": 53.57143020629883,
+            "servingGrams": 28
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0581581005955",
+        "class": "panel",
+        "seed": "arancini",
+        "reason": "Panel internally implausible for a fried rice ball: 149 kcal/100g with only 11 g carbs/100g, against an 8-row same-name median of 223.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Arancini",
+            "kcal100": 149,
+            "protein": 8,
+            "fat": 7,
+            "carbs": 11,
+            "servingGrams": 140
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0024300806063",
+        "class": "panel",
+        "seed": "100g danish pastry",
+        "reason": "Little Debbie record bills 250 kcal/100g against its own product label's 366; the same-name group has 2 members, below the detector's MIN_GROUP.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Danish Pastry",
+            "kcal100": 250,
+            "protein": 3.470000028610229,
+            "fat": 11.89999961853027,
+            "carbs": 32.20000076293945,
+            "servingGrams": 142
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "5013158782600",
+        "class": "panel",
+        "seed": "ensure protein shake",
+        "reason": "Per-bottle panel in the per-100g field: 150 kcal/100g with 30 g protein/100g, ~3.3x the real ~46; a name-space singleton no sibling rule can reach.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Ensure max protein shake",
+            "kcal100": 150,
+            "protein": 30,
+            "fat": 1.5,
+            "carbs": 6,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0889392010145",
+        "class": "panel",
+        "seed": "celsius sparkling kiwi guava",
+        "reason": "Per-container panel: 10 kcal is the whole 354.882 g can, stored as 10 kcal/100g; the true density is ~2.82.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "SPARKLING KIWI GUAVA",
+            "kcal100": 10,
+            "protein": 0,
+            "fat": 0,
+            "carbs": 2,
+            "servingGrams": 354.882
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "4050033254500",
+        "class": "panel",
+        "seed": "philadelphia chive and onion cream cheese",
+        "reason": "The 31 g portion's numbers stored per-100g: 80 kcal/100g at 7 g fat, against 194-267 for every real chive-and-onion cream cheese.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Philadelphia cream cheese chive and onion",
+            "kcal100": 80,
+            "protein": 2,
+            "fat": 7,
+            "carbs": 2,
+            "servingGrams": 31
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0271638706996",
+        "class": "panel",
+        "seed": "buffalo chicken sandwich",
+        "reason": "Panel impossible for a bread-and-chicken sandwich: 4.07 g protein and 4.61 g carbs per 100g on a 369 g portion.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Buffalo Chicken Sandwich",
+            "kcal100": 81.30000305175781,
+            "protein": 4.070000171661377,
+            "fat": 5.150000095367432,
+            "carbs": 4.610000133514404,
+            "servingGrams": 369
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "4217347902626355",
+        "class": "panel",
+        "seed": "whataburger taquito",
+        "reason": "Synthetic chain-import barcode carrying a per-serving panel at per-100g scale: 153 kcal/100g on a 143 g taquito, against 400-440 for every real variant.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Whataburger, Taquito",
+            "kcal100": 153,
+            "protein": 6.989999771118164,
+            "fat": 7.690000057220459,
+            "carbs": 14,
+            "servingGrams": 143
+        },
+        "group": [
+            {
+                "barcode": "8510451122990",
+                "basis": "duplicate-group",
+                "observed": {
+                    "name": "Whataburger, Taquito",
+                    "kcal100": 153,
+                    "protein": 6.989999771118164,
+                    "fat": 7.690000057220459,
+                    "carbs": 14,
+                    "servingGrams": 143
+                }
+            }
+        ],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "6958166644797297267792",
+        "class": "panel",
+        "seed": "boston market meatloaf",
+        "reason": "Synthetic chain-import barcode carrying the whole-item panel in the per-100g field: 469 kcal/100g, ~2x any real Boston Market meatloaf (243.5/219.8), servingGrams a filler 100.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Boston Market, Meatloaf",
+            "kcal100": 469,
+            "protein": 26,
+            "fat": 33,
+            "carbs": 17,
+            "servingGrams": 100
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "4061459284072",
+        "class": "identity",
+        "seed": "sparkling ice",
+        "reason": "Identity: the row is named SPARKLING ICE but its ingredient list is wheat flour, yeast and dough conditioners - it carries a bread-roll panel (256.4 kcal/100g, 1 bun 39 g).",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "SPARKLING ICE",
+            "kcal100": 256.4102478027344,
+            "protein": 7.692307472229004,
+            "fat": 2.564102649688721,
+            "carbs": 53.84615325927734,
+            "servingGrams": 39
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "1781154461976987405190",
+        "class": "panel",
+        "seed": "chicago dog hot portillo style",
+        "reason": "Whole-item panel stored in the per-100g field: 388 kcal/100g with servingGrams a meaningless 100; the real Sonic 6in Chicago Dog is ~400 kcal for a ~236-240 g item, a true density of ~168. Marking it also retires the batch-1 repoint proposal that would have laundered this panel into a human-authored aim.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-12",
+        "observed": {
+            "name": "Sonic, 6&quot; Chicago Dog",
+            "kcal100": 388,
+            "protein": 11,
+            "fat": 20,
+            "carbs": 41,
+            "servingGrams": 100
+        },
+        "group": [
+            {
+                "barcode": "355980649788503212113472",
+                "basis": "duplicate-group",
+                "observed": {
+                    "name": "Sonic, 6&quot; Chicago Dog",
+                    "kcal100": 388,
+                    "protein": 11,
+                    "fat": 20,
+                    "carbs": 41,
+                    "servingGrams": 100
+                }
+            }
+        ],
+        "groupExclusions": []
+    }
+]
