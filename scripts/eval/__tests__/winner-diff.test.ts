@@ -470,11 +470,13 @@ describe('parseGoldenSet', () => {
         const all = parseGoldenSet(GOLDEN_RAW, { includeMultiItem: true });
         const nlp = (GOLDEN_RAW as { nlp: Array<Record<string, unknown>> }).nlp;
         expect(all.length).toBe(nlp.length);
-        expect(all.length).toBe(243);
+        // 245 since 2026-08-12: n-mq-48/49, the adjectival-egg parser-gate cases
+        // (egg noodles: expectName + grams; egg salad sandwich: expectName only).
+        expect(all.length).toBe(245);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(243);
-        expect(n(c => !!c.grams)).toBe(148);              // the majority assertion
+        expect(n(c => c.expectName.length > 0)).toBe(245);
+        expect(n(c => !!c.grams)).toBe(149);              // the majority assertion; 149 since 2026-08-12 (n-mq-48)
         expect(n(c => !!c.macros)).toBe(65);
         expect(n(c => typeof c.expectItems === 'number')).toBe(47);
         // 36 since 2026-08-04: n-cook-03 gained a total band, because its scale-free
@@ -491,16 +493,19 @@ describe('parseGoldenSet', () => {
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
         expect(n(c => assertedBands(c).length === 0)).toBe(0);
-        // 37 assert a name and no numeric band — the population the _readme names.
+        // 38 assert a name and no numeric band — the population the _readme names.
         // Was 47 before PR #167 added calorie bands; those 10 are the whole point of
-        // that PR, and this line is the receipt that they landed.
-        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(37);
+        // that PR, and this line is the receipt that they landed. 38 since
+        // 2026-08-12: n-mq-49 is deliberately identity-only — its key is virgin
+        // post-fix and no record serving has been measured to band against (its
+        // notes carry the add-a-band-once-measured instruction).
+        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(38);
 
         // split by shape: `--golden` replays item-shaped cases unless --include-multi-item
         const item = all.filter(c => c.shape === 'item');
         const text = all.filter(c => c.shape === 'text');
-        expect([item.length, text.length]).toEqual([160, 83]);
-        expect(item.filter(c => c.grams).length).toBe(117);
+        expect([item.length, text.length]).toEqual([162, 83]);
+        expect(item.filter(c => c.grams).length).toBe(118);
         expect(item.filter(c => c.macros).length).toBe(47);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
         expect(item.filter(c => c.total).length).toBe(17);
@@ -721,18 +726,19 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
     it('reports how much of the corpus this screen can and cannot judge', () => {
         const cov = goldenCoverage(all);
         const kind = (k: string) => cov.byKind.find(b => b.kind === k)!;
-        expect(cov.cases).toBe(243);
-        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 148, blind: 148 });
+        // 245 / 149 since 2026-08-12: n-mq-48/49 (see the count pin above).
+        expect(cov.cases).toBe(245);
+        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 149, blind: 149 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
         expect(kind('total')).toEqual({ kind: 'total', asserted: 37, blind: 37 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 47, blind: 47 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(243);
+        expect(en.asserted).toBe(245);
         expect(en.blind).toBeGreaterThan(0);
-        expect(en.blind).toBeLessThan(243);
+        expect(en.blind).toBeLessThan(245);
         // every grams band in the corpus is unjudgeable here...
-        expect(cov.gramsCases).toBe(148);
+        expect(cov.gramsCases).toBe(149);
         // ...and only a handful would be record-INdependent even with a resolver,
         // i.e. the blindness sits exactly where a winner change moves the answer.
         expect(cov.gramsRecordIndependent).toBeLessThanOrEqual(5);
@@ -740,13 +746,14 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
 
     it('the item-only population (what `--golden` replays by default) is mostly blind too', () => {
         const cov = goldenCoverage(all.filter(c => c.shape === 'item'));
-        expect(cov.cases).toBe(160);
-        expect(cov.byKind.find(b => b.kind === 'grams')).toEqual({ kind: 'grams', asserted: 117, blind: 117 });
-        // 117 item cases assert grams + 17 assert a total, less the 9 that assert both.
+        // 162 / 118 since 2026-08-12: n-mq-48/49 are item-shaped; n-mq-48 carries grams.
+        expect(cov.cases).toBe(162);
+        expect(cov.byKind.find(b => b.kind === 'grams')).toEqual({ kind: 'grams', asserted: 118, blind: 118 });
+        // 118 item cases assert grams + 17 assert a total, less the 9 that assert both.
         // The `total` term was 7 before PR #167 added calorie bands, 16 before
         // 2026-08-07 added n-mq-34's (an item case with a total and no grams band).
         expect(all.filter(c => c.shape === 'item' && c.grams && c.total).length).toBe(9);
-        expect(cov.casesWithBlindBand).toBe(117 + 17 - 9);
+        expect(cov.casesWithBlindBand).toBe(118 + 17 - 9);
     });
 
     it('an item case with only a name and a measurable macro band is fully judgeable', () => {

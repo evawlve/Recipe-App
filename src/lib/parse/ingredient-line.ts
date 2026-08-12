@@ -121,6 +121,29 @@ const POSSIBLE_UNIT_HINTS = [
   'whites', 'white', 'sheets', 'sheet', 'stalks', 'stalk',
 ];
 
+// `egg` leading a unit-less line is almost always an ADJECTIVE naming a
+// product ("egg noodles", "egg salad sandwich", "egg drop soup"), not a count
+// of eggs: 16 of the 17 `egg `-leading corpus seeds are adjectival, and eating
+// the word bills ~50 g whatever the food is AND drops `egg` from the derived
+// cache key ("egg salad sandwich" -> key "salad sandwich"). Same defect shape
+// as `whole` (#242), commoner word. The EXCEPTION is the egg-part lines
+// ("egg whites", "egg yolk"): there the count-unit reading is load-bearing —
+// extractUnitHint()'s egg-scoped 'white'/'yolk' gates rebuild name='egg' from
+// the consumed unit, and suppressing it would push those lines into the
+// token-side white-hint path that produces the "pasteurized egg whites" ->
+// "pasteurized white" misroute (a separate, unfixed mechanism). The denylist
+// is exactly the egg-part subset of POSSIBLE_UNIT_HINTS, kept a separate
+// const: the hint list also carries cloves/leaves/etc., which must NOT exempt.
+// Owner: sync-docs/reports/2026-08-09_egg-is-eaten-as-a-count-unit.md.
+const EGG_PART_TOKENS = new Set(['white', 'whites', 'yolk', 'yolks']);
+function leadingEggIsAdjectival(mergedTokens: string[]): boolean {
+  if (mergedTokens.length < 2) return false;           // bare "egg"/"eggs" keep the count reading
+  const t0 = mergedTokens[0].toLowerCase();
+  if (t0 !== 'egg' && t0 !== 'eggs') return false;     // an explicit qty ("2 eggs", "3 egg whites")
+                                                       // puts a number at [0] -> unaffected
+  return !EGG_PART_TOKENS.has(mergedTokens[1].toLowerCase());
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
@@ -362,9 +385,12 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     mergedTokens.length > 0 &&
     mergedTokens[0].toLowerCase() === 'whole' &&
     isIdentityWholePhrase(mergedTokens.join(' '));
+  // Same decide-once/honour-at-all-three-sites contract as wholeIsIdentity,
+  // for a leading adjectival `egg`/`eggs` (see leadingEggIsAdjectival above).
+  const eggIsAdjectival = leadingEggIsAdjectival(mergedTokens);
 
   let startsWithUnit = false;
-  if (mergedTokens.length > 0 && !wholeIsIdentity) {
+  if (mergedTokens.length > 0 && !wholeIsIdentity && !eggIsAdjectival) {
     const firstToken = mergedTokens[0];
     const firstNormalized = normalizeUnitToken(firstToken);
     if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count') {
@@ -478,11 +504,14 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       // But we'll check later if they're actually unit hints (like "leaves", "cloves")
       // First check if it's a unit hint - if so, don't consume as unit
       const lowerToken = firstToken.toLowerCase();
-      if (POSSIBLE_UNIT_HINTS.includes(lowerToken) || (lowerToken === 'whole' && wholeIsIdentity)) {
-        // Don't consume - it's a unit hint, or `whole` acting as identity
-        // ("whole milk"), not a portion. See wholeIsIdentity above: this is the
-        // SECOND branch that consumes count units, and it is the one a unit-less
-        // line actually reaches once startsWithUnit has been suppressed.
+      if (POSSIBLE_UNIT_HINTS.includes(lowerToken)
+          || (lowerToken === 'whole' && wholeIsIdentity)
+          || ((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)) {
+        // Don't consume - it's a unit hint, `whole` acting as identity
+        // ("whole milk"), or an adjectival `egg` ("egg noodles") — not a
+        // portion. See wholeIsIdentity above: this is the SECOND branch that
+        // consumes count units, and it is the one a unit-less line actually
+        // reaches once startsWithUnit has been suppressed.
       } else {
         unit = firstNormalized.unit;
         rawUnit = firstToken;
@@ -559,7 +588,9 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       // THIRD count-unit consumption site. It is guarded on `!unit`, so it is
       // reached precisely when the two branches above declined — which makes it
       // the one that actually fires for a unit-less identity line.
-      if (!POSSIBLE_UNIT_HINTS.includes(lowerToken) && !(lowerToken === 'whole' && wholeIsIdentity)) {
+      if (!POSSIBLE_UNIT_HINTS.includes(lowerToken)
+          && !(lowerToken === 'whole' && wholeIsIdentity)
+          && !((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)) {
         unit = afterParenNormalized.unit;
         rawUnit = afterParenToken;
         i++; // Consume the unit

@@ -66,6 +66,20 @@ test('2 eggs', () => {
   expect(p.name).toBe('eggs');
 });
 
+test('egg noodles (leading adjectival egg is not a count unit)', () => {
+  const p = parseIngredientLine('egg noodles')!;
+  expect(p.qty).toBeCloseTo(1);
+  expect(p.unit).toBeNull();
+  expect(p.name).toBe('egg noodles');
+});
+
+test('eggs benedict (plural leading adjectival egg)', () => {
+  const p = parseIngredientLine('eggs benedict')!;
+  expect(p.qty).toBeCloseTo(1);
+  expect(p.unit).toBeNull();
+  expect(p.name).toBe('eggs benedict');
+});
+
 test('unknown unit is not consumed as unit (part of name)', () => {
   const p = parseIngredientLine('1 smaccamoo protein bar')!;
   expect(p.rawUnit).toBeNull();
