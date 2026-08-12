@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-08-08T18:30:33.348Z",
+  "writtenAt": "2026-08-12T21:58:32.205Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
@@ -39,28 +39,28 @@
       "itemCount": 1
     },
     "n-serv-24": {
-      "foodId": "off_5449000008299",
-      "foodName": "Capri sun",
-      "grams": 330,
-      "kcal100": 7,
+      "foodId": "fs_8148992",
+      "foodName": "Fruit Punch",
+      "grams": 177,
+      "kcal100": 28.25,
       "abstained": false,
       "errored": false,
       "itemCount": 1
     },
     "n-serv-51": {
-      "foodId": "off_0259645028140",
-      "foodName": "Ribeye",
-      "grams": 112,
-      "kcal100": 250,
+      "foodId": "fdc_169557",
+      "foodName": "Beef, rib eye, small end (ribs 10-12), separable lean and fat, trimmed to 0\" fat, all grades, cooked, broiled",
+      "grams": 170,
+      "kcal100": 249,
       "abstained": false,
       "errored": false,
       "itemCount": 1
     },
     "n-mq-27": {
-      "foodId": "off_0651544502002",
+      "foodId": "fs_5268",
       "foodName": "Lemon",
       "grams": 58,
-      "kcal100": 108.6956558227539,
+      "kcal100": 29,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -93,19 +93,19 @@
       "itemCount": 1
     },
     "n-brand-05": {
-      "foodId": "off_0810076291826",
-      "foodName": "Fruit Punch Pre Workout",
-      "grams": 19.8,
-      "kcal100": 50.5,
+      "foodId": "off_0639001461536",
+      "foodName": "Fruit punch",
+      "grams": 355,
+      "kcal100": 46,
       "abstained": false,
       "errored": false,
       "itemCount": 1
     },
     "n-brand-06": {
-      "foodId": "fs_2528458",
-      "foodName": "Cotton Candy",
-      "grams": 28,
-      "kcal100": 394,
+      "foodId": "fs_6409498",
+      "foodName": "Bang Energy Drink",
+      "grams": 454.54545454545456,
+      "kcal100": 0,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -147,13 +147,22 @@
       "itemCount": 1
     },
     "n-seg-18": {
-      "foodId": "off_0074175009397",
-      "foodName": "Greek Yogurt With Granola",
-      "grams": 150,
-      "kcal100": 113,
+      "foodId": "off_9340955111613",
+      "foodName": "Greek yogurt",
+      "grams": 170,
+      "kcal100": 120,
       "abstained": false,
       "errored": false,
-      "itemCount": 3
+      "itemCount": 4
+    },
+    "n-mq-48": {
+      "foodId": "off_0843167089620",
+      "foodName": "Egg noodles",
+      "grams": 56,
+      "kcal100": 350.877197265625,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
     }
   }
 }
