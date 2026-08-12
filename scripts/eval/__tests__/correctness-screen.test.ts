@@ -863,7 +863,11 @@ describe('--d3 operator flag', () => {
         // two- and three-argument call site must be unaffected by this change.
         for (const p of ['lenient', 'balanced', 'strict'] as Policy[]) {
             expect([p, decisionsOf(p)]).toEqual([p, decisionsOf(p, 'evict')]);
-            expect([p, tierD(BATCH01[0], p)]).toEqual([p, tierD(BATCH01[0], p, 'evict')]);
+            // Through tierD DIRECTLY and over every row, not one row via screenBatch:
+            // a wrong default on tierD is otherwise masked by screenBatch passing its
+            // own, and a single row that never fires D3 cannot see the difference.
+            const direct = (d3?: D3Mode) => BATCH01.map(r => JSON.stringify(tierD(r, p, d3)));
+            expect([p, direct()]).toEqual([p, direct('evict')]);
         }
         // And the shipped operating point still measures what §2's matrix pins.
         expect(tally('balanced')).toEqual({ evict: 16, evictBad: 15, evictGood: 0, review: 10, reviewBad: 4, keep: 55 });
