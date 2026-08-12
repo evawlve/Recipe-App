@@ -115,10 +115,13 @@
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
  *     scripts/eval/correctness-screen.ts \
  *       --bdir <batch dir containing added.txt> --seeds <batch seed file> \
- *       [--llm] [--policy strict|balanced|lenient] [--out screen.json] \
- *       [--rows rows.json] [--dump-rows rows.json] [--labels labels.json]
+ *       [--llm] [--policy strict|balanced|lenient] [--d3 evict|review] \
+ *       [--out screen.json] [--rows rows.json] [--dump-rows rows.json] [--labels labels.json]
  *
  *   --rows        skip the DB and read a previously dumped row pull (offline replay)
+ *   --d3          per-run override for rule D3 only: `evict` (default, today's
+ *                 behaviour byte-for-byte) or `review`, which demotes D3 to REVIEW
+ *                 under `balanced`. Evidence-gated per batch — see evictRules().
  *   --dump-rows   write the DB pull to this path so a later run can use --rows
  *   --labels      score the screen against a hand-labelled ground truth and print
  *                 per-rule and per-tier confusion matrices
@@ -148,6 +151,13 @@ import type { ParsedIngredient } from '../../src/lib/parse/ingredient-line';
 // ---------------------------------------------------------------------------
 
 export type Policy = 'strict' | 'balanced' | 'lenient';
+/**
+ * Per-run operator override for rule D3 only. `evict` is the default and is
+ * today's behaviour byte-for-byte; `review` demotes D3 from EVICT to REVIEW
+ * under `balanced` ONLY. See evictRules() for the evidence and the standing
+ * usage rule.
+ */
+export type D3Mode = 'evict' | 'review';
 export type Severity = 'EVICT' | 'REVIEW' | 'INFO';
 export type Decision = 'EVICT' | 'REVIEW' | 'KEEP';
 /** Tier-D rule ids are stable and greppable; 'L' is Tier L's slot in a policy. */
@@ -318,6 +328,16 @@ export function parsePolicy(raw: string | undefined): Policy {
     if (raw === 'strict' || raw === 'balanced' || raw === 'lenient') return raw;
     throw new FlagError(`--policy must be one of strict|balanced|lenient, got "${raw}". `
         + 'An unknown policy would evict nothing, which reads as a clean batch.');
+}
+
+export function parseD3Mode(raw: string | undefined): D3Mode {
+    if (raw === undefined) return 'evict';
+    if (raw === 'evict' || raw === 'review') return raw;
+    throw new FlagError(`--d3 must be one of evict|review, got "${raw}".`
+        + (raw.trim().startsWith('--') ? ' That looks like the next flag — --d3 takes a value.' : '')
+        + ' Refused rather than defaulted: an unrecognised value silently falling back to `evict` '
+        + 'would run a batch the operator believes is demoted at full D3 strength, and one that '
+        + 'silently fell back to `review` would delete nothing while reading as a screen.');
 }
 
 // ---------------------------------------------------------------------------
@@ -571,6 +591,78 @@ export const POLICIES: Record<Policy, { evict: RuleId[] }> = {
 export const TIER_D_RULE_IDS: RuleId[] = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11'];
 
 /**
+ * THE PER-RUN D3 OVERRIDE (`--d3 evict|review`), approved by Diego 2026-08-12.
+ *
+ * D3's predicate is UNTOUCHED by this flag — it fires on exactly the rows it
+ * always fired on, with the same detail string. All the flag changes is whether
+ * a D3 fire is severity EVICT or severity REVIEW, and only under `balanced`.
+ *
+ * WHY IT EXISTS. D3 takes the seed's LAST content token as the head noun. In
+ * flavour- and form-heavy grocery domains that trailing token is a flavour
+ * (`chocolate`, `birthday cake`) or a form (`patty`, `tenders`, `bowl`) — the two
+ * variant classes the Tier-L rubric shipped in this same file always ACCEPTs. The
+ * evict list is a UNION (Tier-D EVICT u agent REJECT, see
+ * `_agent_screen_reconcile.ts`), so an agent ACCEPT can never rescue a row D3
+ * flagged. [measured] 2026-08-09, one phase-A run per batch: D3 flagged 7% of
+ * condiments, 16% of snacks-candy, 23% of bakery-desserts — but 80% of frozen
+ * (batch 32) and 69% of protein-supplements (batch 33), halting both on the
+ * runner's `screen_evict_share` guard.
+ *
+ * WHY IT IS A PER-RUN FLAG AND NOT A POLICY CHANGE. [measured] 2026-08-12, 74
+ * two-pass blinded labels over the two halted batches (batch 32 = 11 GOOD / 14
+ * BAD, batch 33 = 37 GOOD / 12 BAD, 0 SUSPECT), D3-alone confusion:
+ *
+ *   batch 32 frozen               recall 12/14 = 85.7%  precision 60.0%
+ *   batch 33 protein-supplements  recall  4/12 = 33.3%  precision 11.8%
+ *
+ * D3 is near-pure noise on supplements and a real workhorse on frozen, so a
+ * wholesale demote is wrong in one domain and right in the other. The approved
+ * bar is per-batch: the keep-set (rows evicted SOLELY by D3) may carry at most 2
+ * labelled-BAD rows. Batch 33's keep-set carries 1 and PASSES; batch 32's carries
+ * 3 and FAILS, so batch 32 stays under D3-as-EVICT. Owner (mobile repo):
+ * sync-docs/reports/2026-08-09_the-screen-evicts-what-its-own-rubric-accepts.md §7.
+ *
+ * STANDING RULE, enforced by the operator and not by this code: `--d3 review` may
+ * be passed ONLY for a batch whose domain has a labels pass meeting that bar. It
+ * is deliberately not inferable from the batch dir — there is no domain field to
+ * key on, and a lexicon of "safe domains" is the wider rule surface this flag was
+ * chosen over.
+ *
+ * `strict` is UNAFFECTED: it keeps D3 as an evictor for any future store-brand
+ * batch, where D3 measured 15/23 BAD and 0/48 GOOD — almost the whole
+ * deterministic gain. `lenient` never listed D3 at all. D4/D8/D9/L still evict
+ * under `balanced` in both modes, and an agent REJECT still evicts downstream:
+ * the demotion moves rows OUT of the Tier-D evict file, it does not touch the
+ * union that consumes it.
+ */
+export function evictRules(policy: Policy, d3: D3Mode = 'evict'): RuleId[] {
+    const base = POLICIES[policy].evict;
+    // Only `balanced` is overridable. Returning `base` unchanged for strict/lenient
+    // is what makes "--d3 review does not weaken strict" a property of this function
+    // rather than of every call site.
+    if (d3 === 'evict' || policy !== 'balanced') return base;
+    return base.filter(r => r !== 'D3');
+}
+
+/**
+ * Printed whenever `--d3 review` is passed. It names the standing rule and the
+ * two batches the 2026-08-12 labels actually adjudicated, because the code cannot
+ * check either: the flag trusts the operator, so the operator must be told what
+ * they are asserting. Exported so the pinned test can prove the banner still
+ * carries the bar and both batch verdicts.
+ */
+export const D3_REVIEW_WARNING = [
+    'WARN --d3 review: rule D3 is DEMOTED from EVICT to REVIEW for this run (policy `balanced` only).',
+    '     D3 fires unchanged; its rows now land in REVIEW instead of being withheld for deletion.',
+    '     STANDING RULE — this flag may be passed ONLY for a batch whose domain has a labels pass',
+    '     showing at most 2 labelled-BAD rows in the D3-only keep-set. On the 2026-08-12 labels:',
+    '       batch 33 protein-supplements QUALIFIES (keep-set 31 rows, 1 labelled-BAD; D3 precision 11.8%)',
+    '       batch 32 frozen              DOES NOT   (keep-set 11 rows, 3 labelled-BAD; D3 recall 85.7%)',
+    '     No other domain has been labelled. Passing this for an unlabelled batch keeps bad rows',
+    '     that D3 would have caught, and nothing downstream will notice.',
+].join('\n');
+
+/**
  * The deterministic tier. No network, no API key, no DB — given a row and a policy
  * this is a pure function, which is what lets the pinned confusion matrix in
  * __tests__/correctness-screen.test.ts defend the screen's recall against refactors.
@@ -578,15 +670,19 @@ export const TIER_D_RULE_IDS: RuleId[] = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D
  * A row with no seed (attribution failed) has an empty seedContent, which makes
  * D1/D2/D3/D4/D10/D11 ABSTAIN rather than fire. The screen goes quiet, not loud,
  * when it does not know what was asked for.
+ *
+ * `d3` defaults to 'evict', so every existing two-argument call is byte-for-byte
+ * unchanged. See evictRules() for what 'review' does and when it may be used.
  */
-export function tierD(r: ScreenRow, policy: Policy): Hit[] {
+export function tierD(r: ScreenRow, policy: Policy, d3: D3Mode = 'evict'): Hit[] {
     const hits: Hit[] = [];
     const seed = r.seed ?? '';
     const brand = brandTokens(seed);
     const keyStems = new Set(toks(r.key).map(stem));
     const seedContent = contentStems(seed, brand);
     const recStems = new Set([...stems(r.recname), ...stems(r.recbrand), ...stems(r.mapfoodname)]);
-    const sev = (rule: RuleId): Severity => POLICIES[policy].evict.includes(rule) ? 'EVICT' : 'REVIEW';
+    const evicting = evictRules(policy, d3);
+    const sev = (rule: RuleId): Severity => evicting.includes(rule) ? 'EVICT' : 'REVIEW';
 
     // D1 — bare-brand / bare-category key. The key carries no content token at all,
     // so ANY future query that reduces to the brand answers with this one SKU.
@@ -959,11 +1055,13 @@ export async function runLlm(rows: ScreenRow[], cfg: LlmConfig): Promise<Map<str
  * language models reading a product name — and Tier D caught all 3. Deleting either
  * tier silently drops rows the other cannot see.
  */
-export function decide(hits: Hit[], l: LlmVerdict | null | undefined, policy: Policy): Decision {
+export function decide(hits: Hit[], l: LlmVerdict | null | undefined, policy: Policy, d3: D3Mode = 'evict'): Decision {
     const lReject = !!l && l.verdict === 'REJECT';
     const lUnsure = !!l && l.verdict === 'UNSURE';
     if (hits.some(h => h.severity === 'EVICT')) return 'EVICT';
-    if (lReject && POLICIES[policy].evict.includes('L')) return 'EVICT';
+    // `--d3 review` never removes 'L' from any policy, so a Tier-L REJECT evicts in
+    // both modes. Reading the set through evictRules() keeps one source of truth.
+    if (lReject && evictRules(policy, d3).includes('L')) return 'EVICT';
     if (hits.some(h => h.severity === 'REVIEW') || lReject || lUnsure) return 'REVIEW';
     return 'KEEP';
 }
@@ -985,14 +1083,14 @@ export function screenExitCode(rowsScreened: number, nEvict: number): 0 | 1 | 2 
 }
 
 /** Tier D over every row, plus (optionally) the Tier-L verdicts already gathered. */
-export function screenBatch(rows: ScreenRow[], policy: Policy, llm?: Map<string, LlmVerdict>): Verdict[] {
+export function screenBatch(rows: ScreenRow[], policy: Policy, llm?: Map<string, LlmVerdict>, d3: D3Mode = 'evict'): Verdict[] {
     return rows.map(r => {
-        const hits = tierD(r, policy);
+        const hits = tierD(r, policy, d3);
         const l = llm?.get(r.key) ?? null;
         return {
             key: r.key, seed: r.seed ?? '', record: r.recname, brand: r.recbrand,
             source: r.src, recid: r.recid,
-            decision: decide(hits, l, policy),
+            decision: decide(hits, l, policy, d3),
             tierD: hits, tierL: l,
         };
     });
@@ -1334,11 +1432,15 @@ function confusion(name: string, flagged: Set<string>, labels: Map<string, Label
 
 const USAGE = [
     'Usage: correctness-screen.ts (--bdir <batch dir> | --rows <rows.json>) [--seeds <seed file>]',
-    '  [--policy strict|balanced|lenient] [--llm] [--llm-all] [--model <id>] [--concurrency N]',
-    '  [--out <screen.json>] [--dump-rows <rows.json>] [--labels <labels.json>] [--no-serving]',
+    '  [--policy strict|balanced|lenient] [--d3 evict|review] [--llm] [--llm-all] [--model <id>]',
+    '  [--concurrency N] [--out <screen.json>] [--dump-rows <rows.json>] [--labels <labels.json>]',
+    '  [--no-serving]',
     '',
     '  --bdir        batch directory produced by gate.py; reads <bdir>/added.txt',
     '  --rows        replay a previously dumped row pull instead of reading the DB',
+    '  --d3          evict (default, unchanged) | review = demote D3 to REVIEW under `balanced`.',
+    '                EVIDENCE-GATED, per batch: pass `review` ONLY for a domain whose labels pass',
+    '                shows <=2 labelled-BAD in the D3-only keep-set (batch 33 yes, batch 32 no).',
     '  --llm         add Tier L. WITHOUT it, measured BAD recall falls 100% -> 78%.',
     '  --labels      score against a hand-labelled ground truth (how the shipped numbers were made)',
     '  --no-serving  skip the real billing anchor. D5/D6 then report INFO, never EVICT,',
@@ -1370,6 +1472,19 @@ async function main(): Promise<number> {
     const llmAll = has('--llm-all');
     const useLlm = has('--llm') || llmAll;
     const policy = parsePolicy(val('--policy'));
+    const d3 = parseD3Mode(val('--d3'));
+    if (d3 === 'review') {
+        console.log(D3_REVIEW_WARNING);
+        // An operator who demoted D3 and then ran a policy that ignores the override
+        // would otherwise get full-strength D3 (strict) or a policy that never evicted
+        // on it anyway (lenient), with nothing in the log saying so.
+        if (policy !== 'balanced') {
+            console.log(`WARN --d3 review is INERT under --policy ${policy}: the override applies to `
+                + `\`balanced\` only. ${policy === 'strict'
+                    ? 'D3 is STILL AN EVICTOR in this run.'
+                    : 'D3 already evicts under no policy here, so nothing changed.'}`);
+        }
+    }
     const concurrency = parseIntFlag('--concurrency', val('--concurrency'), 6, 1);
     // Default ON, mirroring winner-gate.sh: the instrument should see the number the
     // user is billed unless someone explicitly opts out. An offline --rows replay has
@@ -1463,7 +1578,7 @@ async function main(): Promise<number> {
 
     // --- Tier D (pure, offline)
     const dHits = new Map<string, Hit[]>();
-    for (const r of rows) dHits.set(r.key, tierD(r, policy));
+    for (const r of rows) dHits.set(r.key, tierD(r, policy, d3));
 
     // --- Tier L, on the rows Tier D did not already EVICT
     const dEvicted = new Set([...dHits].filter(([, h]) => h.some(x => x.severity === 'EVICT')).map(([k]) => k));
@@ -1479,11 +1594,14 @@ async function main(): Promise<number> {
         }
     }
 
-    const verdicts = screenBatch(rows, policy, llm);
+    const verdicts = screenBatch(rows, policy, llm, d3);
     const nEvict = verdicts.filter(v => v.decision === 'EVICT').length;
     const nReview = verdicts.filter(v => v.decision === 'REVIEW').length;
 
-    console.log(`\nscreened ${rows.length} rows | policy=${policy} | tiers=${llmCfg ? 'D+L' : 'D only'}`
+    // The `d3=` segment appears ONLY when the override is in force, so a default run's
+    // stdout is byte-identical to every run this screen has ever produced.
+    console.log(`\nscreened ${rows.length} rows | policy=${policy}${d3 === 'review' ? ' | d3=review (DEMOTED to REVIEW)' : ''}`
+        + ` | tiers=${llmCfg ? 'D+L' : 'D only'}`
         + ` | EVICT ${nEvict} · REVIEW ${nReview} · KEEP ${rows.length - nEvict - nReview}`);
     // The expectation the operator gets is the HELD-OUT one. The 0/48 the shipped
     // rubric measured on batch 01 is FITTED (its variant taxonomy was written after
@@ -1505,6 +1623,10 @@ async function main(): Promise<number> {
     if (outPath) {
         fs.writeFileSync(outPath, JSON.stringify({
             policy,
+            // Provenance, emitted only when the override was used: a default run's
+            // artifact stays byte-identical to the historical ones, and a demoted run
+            // can never be mistaken for a full-strength screen after the fact.
+            ...(d3 === 'review' ? { d3 } : {}),
             model: llmCfg ? llmCfg.model : null,
             heldOutGoodFalsePositiveRate: HELD_OUT_GOOD_FP_RATE,
             verdicts,
@@ -1534,7 +1656,7 @@ async function main(): Promise<number> {
         console.log('');
         confusion('TIER D (any rule)', dAny, labels);
         const dEv = new Set([...dHits].filter(([, h]) => h.some(x => x.severity === 'EVICT')).map(([k]) => k));
-        confusion(`TIER D (EVICT only, ${policy})`, dEv, labels);
+        confusion(`TIER D (EVICT only, ${policy}${d3 === 'review' ? ' +d3=review' : ''})`, dEv, labels);
         if (llmCfg) {
             const lFlag = new Set([...llm].filter(([, v]) => v.verdict === 'REJECT').map(([k]) => k));
             const lFlagU = new Set([...llm].filter(([, v]) => v.verdict !== 'ACCEPT').map(([k]) => k));
