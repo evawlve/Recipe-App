@@ -1253,8 +1253,13 @@ export async function mapIngredientWithFallback(
             // Counted-piece cache escape (Cluster A pt2, Jul 2026): the user is
             // counting pieces but the cached OFF food's label can't provide a
             // per-piece weight. Fall through to the full pipeline so rerank's
-            // count-label preference can pick a SKU that can; the write-back to
-            // FoodMapping makes this a one-time re-resolution per name.
+            // count-label preference can pick a SKU that can. NOT a one-time
+            // re-resolution: when no count-labeled SKU exists to win, the same
+            // form escapes on every request (measured 2026-08-09/12: 1,261+
+            // events over 34+ forms, up to 271 per form). countedPieceNoun's
+            // qty >= 2 gate keeps bare/qty-1 lines — the bulk of that loop —
+            // out of this escape entirely; the owner is
+            // sync-docs/reports/2026-08-09_serving-class-keys-the-pick-is-already-unit-aware.md §8.
             const earlyCountedNoun = countedPieceNoun(parsed);
             const earlyCountLabelEscape = earlyCountedNoun != null
                 && earlyCacheHit.foodId.startsWith('off_')
