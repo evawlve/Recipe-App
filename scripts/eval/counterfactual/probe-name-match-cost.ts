@@ -4,8 +4,11 @@
  * rows take the EARLIER branch of `if (!winner)` and never reach the name-match
  * term, so including them in the denominator would understate the drop rate.
  *
- * No pick is reconstructed (see risk 3: topCandidates is filtered.slice(0,5), a
- * display cap). For a `scored_by_confidence` decision the recorded
+ * No pick is reconstructed (see risk 3: topCandidates is
+ * `filtered.slice(0, MAPPING_ANALYSIS_TOP_N)`, which DEFAULTS to the historical
+ * 5 -- a display cap unless a session was run with that env var raised, and
+ * every file written before 2026-08-12 predates the knob). For a
+ * `scored_by_confidence` decision the recorded
  * selectedCandidate IS sortedFiltered[0] by construction -- the leg does
  * `winner = sortedFiltered[0]` -- and the recorded confidence IS that
  * candidate's raw score, because the leg did `confidence = winner.score`. So

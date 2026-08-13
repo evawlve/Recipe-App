@@ -58,9 +58,12 @@
  *   and can add or delete flips on either side. Numbers taken before those land
  *   do not describe the tree that would ship an unfreeze.
  *
- * Standard caveats: `topCandidates` is `filtered.slice(0, 5)`, a display cap, so
- * pool sizes read from the corpus are lower bounds; `MappingEventLog` is
- * winner-only; and the sessions are eval/warm traffic, not user traffic.
+ * Standard caveats: `topCandidates` is `filtered.slice(0, MAPPING_ANALYSIS_TOP_N)`
+ * (`src/lib/mapping/config.ts`), which DEFAULTS to the historical 5 — so unless a
+ * session was run with that env var raised, the cap is a display cap and pool
+ * sizes read from the corpus are lower bounds. Every file written before
+ * 2026-08-12 predates the knob and is cap-5 by construction. `MappingEventLog`
+ * is winner-only; and the sessions are eval/warm traffic, not user traffic.
  */
 import fs from 'fs';
 
