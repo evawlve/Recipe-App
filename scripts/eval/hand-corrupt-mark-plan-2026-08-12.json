@@ -1,8 +1,8 @@
 {
-  "at": "2026-08-12T23:44:58.258Z",
+  "at": "2026-08-13T00:22:01.658Z",
   "generator": "scripts/replay-hand-corrupt-marks.ts",
   "handmarksFile": "src/lib/mapping/corrupt-off-handmarks.json",
-  "handmarksSha256": "2739039be3e93ab5bbd0272095940cc0ee28316170069db1de60417a677d5211",
+  "handmarksSha256": "f0d24aec629741189b31b9e3eccfd64f171ff0966035a6f1cd6d673c8a871374",
   "reasonPrefixes": [
     "hand-triage-2026-08-12"
   ],
@@ -55,26 +55,8 @@
       "groupGaps": [],
       "calorieTwins": [
         {
-          "barcode": "0688267020605",
-          "name": "Sour cream",
-          "brandName": "Ahold",
-          "kcal": 100
-        },
-        {
           "barcode": "0059749903943",
           "name": "Sour Cream",
-          "brandName": null,
-          "kcal": 100
-        },
-        {
-          "barcode": "0070038600572",
-          "name": "Sour cream",
-          "brandName": null,
-          "kcal": 100
-        },
-        {
-          "barcode": "0070253641015",
-          "name": "Sour cream",
           "brandName": null,
           "kcal": 100
         },
@@ -91,9 +73,27 @@
           "kcal": 100
         },
         {
+          "barcode": "0070038600572",
+          "name": "Sour cream",
+          "brandName": null,
+          "kcal": 100
+        },
+        {
           "barcode": "0067997100007",
           "name": "Sour cream",
           "brandName": null,
+          "kcal": 100
+        },
+        {
+          "barcode": "0070253641015",
+          "name": "Sour cream",
+          "brandName": null,
+          "kcal": 100
+        },
+        {
+          "barcode": "0688267020605",
+          "name": "Sour cream",
+          "brandName": "Ahold",
           "kcal": 100
         }
       ],
@@ -396,61 +396,6 @@
       ]
     },
     {
-      "barcode": "4217347902626355",
-      "class": "panel",
-      "seed": "whataburger taquito",
-      "authoredReason": "Synthetic chain-import barcode carrying a per-serving panel at per-100g scale: 153 kcal/100g on a 143 g taquito, against 400-440 for every real variant.",
-      "units": [
-        {
-          "barcode": "4217347902626355",
-          "basis": "target",
-          "verdict": "write",
-          "reason": "hand-triage-2026-08-12:panel",
-          "servingDrift": false
-        },
-        {
-          "barcode": "8510451122990",
-          "basis": "duplicate-group",
-          "verdict": "write",
-          "reason": "hand-triage-2026-08-12:panel",
-          "servingDrift": false
-        }
-      ],
-      "groupGaps": [],
-      "calorieTwins": [],
-      "affectedCacheRows": [
-        {
-          "normalizedForm": "taquito whataburger",
-          "foodName": "Whataburger, Taquito",
-          "validatedBy": "ai"
-        }
-      ]
-    },
-    {
-      "barcode": "6958166644797297267792",
-      "class": "panel",
-      "seed": "boston market meatloaf",
-      "authoredReason": "Synthetic chain-import barcode carrying the whole-item panel in the per-100g field: 469 kcal/100g, ~2x any real Boston Market meatloaf (243.5/219.8), servingGrams a filler 100.",
-      "units": [
-        {
-          "barcode": "6958166644797297267792",
-          "basis": "target",
-          "verdict": "write",
-          "reason": "hand-triage-2026-08-12:panel",
-          "servingDrift": false
-        }
-      ],
-      "groupGaps": [],
-      "calorieTwins": [],
-      "affectedCacheRows": [
-        {
-          "normalizedForm": "boston market meatloaf",
-          "foodName": "Boston Market, Meatloaf",
-          "validatedBy": "ai"
-        }
-      ]
-    },
-    {
       "barcode": "4061459284072",
       "class": "identity",
       "seed": "sparkling ice",
@@ -566,18 +511,6 @@
       "reason": "hand-triage-2026-08-12:panel"
     },
     {
-      "barcode": "4217347902626355",
-      "reason": "hand-triage-2026-08-12:panel"
-    },
-    {
-      "barcode": "8510451122990",
-      "reason": "hand-triage-2026-08-12:panel"
-    },
-    {
-      "barcode": "6958166644797297267792",
-      "reason": "hand-triage-2026-08-12:panel"
-    },
-    {
       "barcode": "4061459284072",
       "reason": "hand-triage-2026-08-12:identity"
     },
@@ -601,7 +534,7 @@
     "panel-inflated-family": 4
   },
   "snapshotSql": {
-    "pre": "COPY (SELECT barcode, \"corruptReason\", \"duplicateOfBarcode\", \"nutrientsPer100g\", \"servingGrams\", \"updatedAt\" FROM \"OffFood\" WHERE barcode IN ('0400000006529','0065900106627','01615470','04530844','00599917','61336544','00000300','0039779014413','5029220157818','0851666006017','0581581005955','0024300806063','5013158782600','0889392010145','4050033254500','0271638706996','4217347902626355','8510451122990','6958166644797297267792','4061459284072','1781154461976987405190','355980649788503212113472') ORDER BY barcode) TO STDOUT WITH (FORMAT csv, HEADER)",
-    "post": "COPY (SELECT barcode, \"corruptReason\", \"duplicateOfBarcode\", \"nutrientsPer100g\", \"servingGrams\", \"updatedAt\" FROM \"OffFood\" WHERE barcode IN ('0400000006529','0065900106627','01615470','04530844','00599917','61336544','00000300','0039779014413','5029220157818','0851666006017','0581581005955','0024300806063','5013158782600','0889392010145','4050033254500','0271638706996','4217347902626355','8510451122990','6958166644797297267792','4061459284072','1781154461976987405190','355980649788503212113472') ORDER BY barcode) TO STDOUT WITH (FORMAT csv, HEADER)"
+    "pre": "COPY (SELECT barcode, \"corruptReason\", \"duplicateOfBarcode\", \"nutrientsPer100g\", \"servingGrams\", \"updatedAt\" FROM \"OffFood\" WHERE barcode IN ('0400000006529','0065900106627','01615470','04530844','00599917','61336544','00000300','0039779014413','5029220157818','0851666006017','0581581005955','0024300806063','5013158782600','0889392010145','4050033254500','0271638706996','4061459284072','1781154461976987405190','355980649788503212113472') ORDER BY barcode) TO STDOUT WITH (FORMAT csv, HEADER)",
+    "post": "COPY (SELECT barcode, \"corruptReason\", \"duplicateOfBarcode\", \"nutrientsPer100g\", \"servingGrams\", \"updatedAt\" FROM \"OffFood\" WHERE barcode IN ('0400000006529','0065900106627','01615470','04530844','00599917','61336544','00000300','0039779014413','5029220157818','0851666006017','0581581005955','0024300806063','5013158782600','0889392010145','4050033254500','0271638706996','4061459284072','1781154461976987405190','355980649788503212113472') ORDER BY barcode) TO STDOUT WITH (FORMAT csv, HEADER)"
   }
 }
