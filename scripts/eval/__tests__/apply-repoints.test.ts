@@ -16,15 +16,29 @@
  *      the mangled ids happened to exist in FdcFood.
  *   2. The three target columns are mutually exclusive.
  *   3. A genuine zero-calorie record is not a missing-nutrition record.
+ *
+ * Added 2026-08-12, for the FatSecret empty-panel guard defect:
+ *   4. An empty `nutrientsPer100g` is not "no nutrition" on the FatSecret lane.
+ *      The panel-only guard refused 3,472 of 24,123 FatSecretFood rows (14.4%,
+ *      measured 2026-08-12) that production bills every day, which is what
+ *      actually killed repair batch 1's `claw mango white`. fsServingKcalBasis()
+ *      mirrors buildFatSecretResult()'s macro-only pick and reads the Json
+ *      through servingMacros(), the lane's own reader.
+ *   5. The printed line for a row that already planned must be byte-identical
+ *      after the change — that is what the dry-run parity gate asserts against
+ *      the live corpus, and formatNutritionBasis() pins it here.
  */
 
 import {
     parseTargetRef,
     targetColumns,
     readKcal,
+    fsServingKcalBasis,
+    formatNutritionBasis,
     unparseableTargets,
     conflictingKeys,
     checkSnapshotCoversPlans,
+    type FsNutritionSource,
     type Plan,
     type Repoint,
 } from '../apply-repoints';
@@ -134,6 +148,133 @@ describe('readKcal', () => {
         expect(readKcal(null)).toBeNull();
         expect(readKcal(undefined)).toBeNull();
         expect(readKcal({ calories: 'x' })).toBeNull();
+    });
+});
+
+describe('fsServingKcalBasis — the empty-panel fallback the guard was missing', () => {
+    const food = (over: Partial<FsNutritionSource> = {}): FsNutritionSource => ({
+        defaultServingId: null,
+        servings: [],
+        ...over,
+    });
+
+    it('reads the live shape that was being refused: fs_67788437, panel {} + "1 can" 100 kcal', () => {
+        // Measured on the box 2026-08-12:
+        //   SELECT f."nutrientsPer100g"::text, f."defaultServingId", s."servingId",
+        //          s.description, s.grams, s.nutrients::text
+        //     FROM "FatSecretFood" f JOIN "FatSecretServing" s ON s."fsId" = f."fsId"
+        //    WHERE f."fsId" = '67788437';
+        //   -> {} | 55576913 | 55576913 | 1 can | NULL |
+        //      {"fat":0,"sugar":2,"sodium":20,"protein":0,"calories":100,"carbohydrate":2}
+        const basis = fsServingKcalBasis(food({
+            defaultServingId: '55576913',
+            servings: [{
+                servingId: '55576913',
+                description: '1 can',
+                nutrients: { fat: 0, sugar: 2, sodium: 20, protein: 0, calories: 100, carbohydrate: 2 },
+            }],
+        }));
+        expect(basis).toEqual({ kcal: 100, servingId: '55576913', description: '1 can' });
+    });
+
+    it('prefers the record\'s OWN default serving, matching the lane\'s macro-only pick', () => {
+        // buildFatSecretResult() looks for row.defaultServingId FIRST and only
+        // then falls back to "any serving with macros". A basis that ignored
+        // defaultServingId would report the wrong portion on the multi-serving
+        // records where the two disagree.
+        const basis = fsServingKcalBasis(food({
+            defaultServingId: 'B',
+            servings: [
+                { servingId: 'A', description: '1 oz', nutrients: { calories: 40 } },
+                { servingId: 'B', description: '1 serving', nutrients: { calories: 560 } },
+            ],
+        }));
+        expect(basis).toEqual({ kcal: 560, servingId: 'B', description: '1 serving' });
+    });
+
+    it('falls back to the first macro-bearing serving when the default carries none', () => {
+        const basis = fsServingKcalBasis(food({
+            defaultServingId: 'A',
+            servings: [
+                { servingId: 'A', description: '1 oz', nutrients: null },
+                { servingId: 'B', description: '1 serving', nutrients: { calories: 630 } },
+            ],
+        }));
+        expect(basis).toEqual({ kcal: 630, servingId: 'B', description: '1 serving' });
+    });
+
+    it('returns null only when NO serving carries macros — the lane\'s own refusal condition', () => {
+        expect(fsServingKcalBasis(food())).toBeNull();
+        expect(fsServingKcalBasis(food({
+            servings: [{ servingId: 'A', description: '1 cup', nutrients: null }],
+        }))).toBeNull();
+        expect(fsServingKcalBasis(food({
+            servings: [{ servingId: 'A', description: '1 cup', nutrients: { protein: 3 } }],
+        }))).toBeNull();
+    });
+
+    it('treats a genuine zero-calorie serving as billable, not as missing', () => {
+        // Same trap readKcal has: a falsy check refuses a real 0 kcal drink.
+        expect(fsServingKcalBasis(food({
+            servings: [{ servingId: 'A', description: '1 can', nutrients: { calories: 0 } }],
+        }))).toEqual({ kcal: 0, servingId: 'A', description: '1 can' });
+    });
+
+    it('reads string-typed Json the way the lane bills it, because it IS the lane\'s reader', () => {
+        // A re-implementation using Number() would read '' as a genuine 0 kcal
+        // billing basis. servingMacros() parseFloats and refuses it. This test
+        // dies if anyone re-derives the reader here.
+        expect(fsServingKcalBasis(food({
+            servings: [{ servingId: 'A', description: '1 bar', nutrients: { calories: '210' } }],
+        }))).toEqual({ kcal: 210, servingId: 'A', description: '1 bar' });
+        expect(fsServingKcalBasis(food({
+            servings: [{ servingId: 'A', description: '1 bar', nutrients: { calories: '' } }],
+        }))).toBeNull();
+    });
+
+    it('does NOT apply to OffFood or FdcFood: neither production path has a serving macro source', () => {
+        // Guard against a future "generalise it to all three lanes" edit. The
+        // OFF and FDC reads select nutrientsPer100g (+ servingSize/servingGrams
+        // for OFF) and no per-serving nutrients exist to fall back to, so the
+        // panel-only test there matches production and must stay.
+        expect(readKcal({})).toBeNull();
+    });
+});
+
+describe('formatNutritionBasis — the printed line, and the parity property', () => {
+    it('prints a panel-backed plan EXACTLY as it did before the serving fallback existed', () => {
+        // This is the gate the whole change rests on: a row that planned before
+        // must print byte-identically after. The literal is the pre-change
+        // format string, written out rather than re-derived.
+        expect(formatNutritionBasis(plan({ kcal100: 204 }))).toBe('204 kcal/100g');
+        expect(formatNutritionBasis(plan({ kcal100: 39.6 }))).toBe('40 kcal/100g');
+        expect(formatNutritionBasis(plan({ kcal100: 0 }))).toBe('0 kcal/100g');
+        expect(formatNutritionBasis(plan({}))).toBe('kcal n/a');
+    });
+
+    it('labels a serving-basis plan per SERVING and as a CAPABILITY, never per 100 g and never as a forecast', () => {
+        const s = formatNutritionBasis(plan({
+            servingBasis: { kcal: 100, servingId: '55576913', description: '1 can' },
+        }));
+        expect(s).toBe('billable from "1 can" (100 kcal)');
+        expect(s).not.toContain('/100g');
+        // "billable from", never "bills": this function has no input that can
+        // tell it what production will actually charge. The serving cascade
+        // picks the grams (batch 2's `stevia` defeated three independent
+        // predictions of the rung), and buildFatSecretResult() refuses a bare
+        // query outright under BARE_LABEL_MIN_GRAMS = 3 g, which covers 127 of
+        // the 3,472 empty-panel FatSecret rows. An operator reading this line as
+        // a forecast is how a verification draw gets downgraded to a formality.
+        expect(s).not.toMatch(/\bbills\b/);
+        // Parity is unaffected: a serving-basis line can only appear on a row
+        // that previously SKIPped, so no already-planned row's output moves.
+    });
+
+    it('lets the panel win when both are somehow set, so no existing line can change', () => {
+        expect(formatNutritionBasis(plan({
+            kcal100: 204,
+            servingBasis: { kcal: 100, servingId: 'A', description: '1 can' },
+        }))).toBe('204 kcal/100g');
     });
 });
 
