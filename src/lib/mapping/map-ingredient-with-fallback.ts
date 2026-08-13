@@ -55,7 +55,7 @@ import {
 } from './ai-nutrition-backfill';
 import {
     AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_REQUEST,
-    AI_NUTRITION_HYDRATION_MAX_PER_REQUEST,
+    AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
@@ -2482,7 +2482,7 @@ export async function mapIngredientWithFallback(
                         unit: parsed?.unit,
                         ingredient: parsed?.name,
                     },
-                    topCandidates: filtered.slice(0, 5).map((c, i) => ({
+                    topCandidates: filtered.slice(0, MAPPING_ANALYSIS_TOP_N).map((c, i) => ({
                         rank: i + 1,
                         foodId: c.id,
                         foodName: c.name,
@@ -3550,7 +3550,7 @@ async function runBackfillAfterWinner(params: {
                 unit: parsed?.unit,
                 ingredient: parsed?.name,
             },
-            topCandidates: filtered.slice(0, 5).map((c, i) => ({
+            topCandidates: filtered.slice(0, MAPPING_ANALYSIS_TOP_N).map((c, i) => ({
                 rank: i + 1,
                 foodId: c.id,
                 foodName: c.name,
@@ -3889,7 +3889,7 @@ async function finalizeAndSaveResult(params: {
                 unit: parsed?.unit,
                 ingredient: parsed?.name,
             },
-            topCandidates: filtered.slice(0, 5).map((c, i) => ({
+            topCandidates: filtered.slice(0, MAPPING_ANALYSIS_TOP_N).map((c, i) => ({
                 rank: i + 1,
                 foodId: c.id,
                 foodName: c.name,

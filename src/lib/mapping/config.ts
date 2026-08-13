@@ -114,6 +114,73 @@ export const NUTRITION_AI_MODEL = process.env.NUTRITION_AI_MODEL ?? 'mistralai/m
 // The exact slug is an enable-time box-.env value, not code.
 export const CACHE_VALIDATOR_ENABLED = getFlag('CACHE_VALIDATOR_ENABLED', false);
 export const VALIDATOR_AI_MODEL = process.env.VALIDATOR_AI_MODEL ?? '';
+
+// ---------------------------------------------------------------------------
+// mapping-analysis candidate depth (2026-08-12)
+// ---------------------------------------------------------------------------
+
+/**
+ * Depth cap the mapping-analysis writers apply to `topCandidates[]`.
+ *
+ * `logs/mapping-analysis-*.json` is the only corpus that records the losing
+ * candidates of a decision, so it is the only instrument that can separate
+ * "the right record was gathered and out-ranked" from "the right record was
+ * never gathered at all". Until now the three write sites in
+ * `map-ingredient-with-fallback.ts` hard-coded a 5-candidate DISPLAY cap, which
+ * collapses those two cases: a record absent from `topCandidates` may be ranked
+ * 7th or may not exist. The reranker itself scores `RERANK_POOL_LIMIT` = 10
+ * (`rerank-pool.ts`), so the log has always been narrower than the pool it
+ * describes and any pool size read from it is a LOWER BOUND.
+ *
+ * This knob widens the log ONLY. It is read at the `.slice()` calls and nowhere
+ * else — nothing selects, ranks, filters or persists on it — so changing it
+ * changes what a log file contains and nothing about what the pipeline serves.
+ *
+ * DEFAULT 5, so an unset environment writes byte-identical records to every
+ * mapping-analysis file produced before this constant existed.
+ *
+ * A rejected value is not announced (this module is deliberately side-effect
+ * free — no logger import). The artifact is the check: over a session the
+ * longest `topCandidates` array equals `min(effective cap, largest pool)`, so a
+ * value that silently fell back to 5 is visible in the log it governs.
+ */
+export const MAPPING_ANALYSIS_TOP_N_DEFAULT = 5;
+
+/**
+ * Upper bound on the knob above. `RERANK_POOL_LIMIT` is 10 today and the
+ * pre-rerank `filtered` list is larger still, so 50 is generous enough to hold
+ * a whole realistic pool while keeping one absurd env value from turning a
+ * per-decision log line into a dump of every candidate ever gathered.
+ */
+export const MAPPING_ANALYSIS_TOP_N_MAX = 50;
+
+/**
+ * Parse `MAPPING_ANALYSIS_TOP_N` FAIL-CLOSED.
+ *
+ * Exported for its unit test. `Number.parseInt` is deliberately NOT used on the
+ * raw string: it accepts partial matches (`parseInt('5x')` is 5,
+ * `parseInt('1e3')` is 1), which is exactly the silent-partial-parse failure
+ * this project keeps re-finding in its own instruments. Only a string that is
+ * entirely digits is honoured.
+ *
+ *   unset / empty / whitespace     -> default (5)
+ *   non-numeric, partial, float,   -> default (5)
+ *   signed, hex, exponent
+ *   0                              -> default (5); a 0 cap would silently empty
+ *                                     `topCandidates` and read as "no pool"
+ *   1 .. MAPPING_ANALYSIS_TOP_N_MAX-> the value
+ *   > MAPPING_ANALYSIS_TOP_N_MAX   -> clamped to MAPPING_ANALYSIS_TOP_N_MAX
+ */
+export function parseMappingAnalysisTopN(raw: string | undefined | null): number {
+  if (raw == null) return MAPPING_ANALYSIS_TOP_N_DEFAULT;
+  const trimmed = raw.trim();
+  if (!/^[0-9]+$/.test(trimmed)) return MAPPING_ANALYSIS_TOP_N_DEFAULT;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return MAPPING_ANALYSIS_TOP_N_DEFAULT;
+  return Math.min(parsed, MAPPING_ANALYSIS_TOP_N_MAX);
+}
+
+export const MAPPING_ANALYSIS_TOP_N = parseMappingAnalysisTopN(process.env.MAPPING_ANALYSIS_TOP_N);
 /**
  * Budget SIZE a batch/warm run asks for (see `createAiNutritionBudget`). This is
  * no longer a process ceiling — the run owns one budget object and passes it to
