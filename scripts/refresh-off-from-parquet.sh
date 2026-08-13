@@ -31,14 +31,24 @@
 #                             snapshot: they are derivations of the panel, and a
 #                             refresh can bring a CORRECTED panel — replaying a
 #                             stale mark would suppress a row OFF has since fixed.
-#                             corruptReason has TWO producers, both required:
-#                             detect-corrupt-panel.ts (sibling-median, 6,905
-#                             marks) and detect-corrupt-nutrition.ts (per-field
-#                             physics, 22,087). Naming one restores a quarter of
-#                             the column while looking like it worked.
-#                             NOT covered: the hand-authored marks, which no
-#                             re-derivation can reproduce. Open — see
-#                             backend_integration_guide.md.
+#                             corruptReason has TWO detector producers, both
+#                             required: detect-corrupt-panel.ts (sibling-median,
+#                             6,905 marks) and detect-corrupt-nutrition.ts
+#                             (per-field physics, 22,087). Naming one restores a
+#                             quarter of the column while looking like it worked.
+#   corruptReason,         -> REPLAYED from src/lib/mapping/corrupt-off-handmarks.json
+#   HAND-AUTHORED half        by replay-hand-corrupt-marks.ts. Same column, the
+#                             OPPOSITE mechanism, and that is the whole point:
+#                             no rule produces these, so re-derivation
+#                             reproduces exactly zero of them. The 2026-07-21
+#                             batch of 50 died in the 2026-07-30 refresh for
+#                             precisely this reason.
+#                             The replay is NOT a restore: every entry carries
+#                             the panel it was authored from and is re-verified
+#                             against the live row first, so a row OFF has since
+#                             corrected is SKIPPED and queued for re-audit
+#                             rather than re-marked. That is what lets a replay
+#                             coexist with the re-derive argument above.
 #   derived OffServing     -> SNAPSHOT + REPLAY. These ('ai', 'sibling_borrow')
 #                             are the only population that is neither ingested
 #                             nor derivable: re-running the estimator RE-ROLLS
@@ -147,6 +157,12 @@ else
 fi
 [ -f "$REPO/scripts/mark-corrupt-off.ts" ]           || { echo "  ❌ scripts/mark-corrupt-off.ts missing — corruptReason could not be regenerated"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/scripts/dedupe-off-mark.ts" ]            || { echo "  ❌ scripts/dedupe-off-mark.ts missing — duplicateOfBarcode could not be regenerated"; PREFLIGHT_FAIL=1; }
+# The HAND-AUTHORED half of corruptReason. Both halves of its mechanism are
+# checked here, before the truncate, because either one missing is a permanent
+# loss discovered afterwards — which is exactly how the 2026-07-21 batch of 50
+# hand marks was lost, silently, with the re-derive chain reporting success.
+[ -f "$REPO/scripts/replay-hand-corrupt-marks.ts" ]  || { echo "  ❌ scripts/replay-hand-corrupt-marks.ts missing — the hand-authored corruptReason marks would be permanently lost (no rule re-derives them)"; PREFLIGHT_FAIL=1; }
+[ -f "$REPO/src/lib/mapping/corrupt-off-handmarks.json" ] || { echo "  ❌ src/lib/mapping/corrupt-off-handmarks.json missing — the hand-authored marks have no source of truth to replay from and would be permanently lost"; PREFLIGHT_FAIL=1; }
 # THIRD detector, and the only one this script cannot act on — see its stage
 # below for why it reports rather than repairs.
 [ -f "$REPO/scripts/eval/detect-panel-scale-divided.ts" ] || { echo "  ❌ scripts/eval/detect-panel-scale-divided.ts missing — the divided-panel population would be silently re-corrupted"; PREFLIGHT_FAIL=1; }
@@ -180,6 +196,10 @@ const { PrismaClient } = require("@prisma/client");
     -- (fails with: column openfoodfacts does not exist).
     (SELECT count(*) FROM "OffServing" WHERE source <> $$openfoodfacts$$)  AS derived_servings,
     (SELECT count(*) FROM "OffFood" WHERE "corruptReason" IS NOT NULL)   AS corrupt_marks,
+    -- The hand-authored subset, counted SEPARATELY because it is the half no
+    -- detector re-derives. Rolled into the total above it is invisible: 50 of
+    -- 6,955 marks went missing in 2026-07-30 and the restore reported success.
+    (SELECT count(*) FROM "OffFood" WHERE "corruptReason" LIKE $$hand-triage-%$$) AS hand_marks,
     (SELECT count(*) FROM "OffFood" WHERE "duplicateOfBarcode" IS NOT NULL) AS dupe_marks,
     (SELECT count(*) FROM "OffFood" WHERE "packageQuantity" IS NOT NULL) AS pkg_qty,
     -- The divided-panel repair has NO column of its own, so it cannot be
@@ -196,6 +216,7 @@ const { PrismaClient } = require("@prisma/client");
   console.log(`  ...of which DERIVED         : ${r.derived_servings}  (ai / sibling_borrow — SNAPSHOTTED and replayed after the ingest)`);
   console.log(`  FoodMapping.offBarcode NULLed: ${r.mapped}  (RESTORED automatically after the ingest, minus products OFF delisted)`);
   console.log(`  corruptReason marks wiped   : ${r.corrupt_marks}  (REGENERATED after the ingest by the detect->mark chain)`);
+  console.log(`  ...of which HAND-AUTHORED   : ${r.hand_marks}  (REPLAYED from src/lib/mapping/corrupt-off-handmarks.json — nothing re-derives these)`);
   console.log(`  duplicateOfBarcode wiped    : ${r.dupe_marks}  (REGENERATED after the ingest by dedupe-off-mark.ts)`);
   console.log(`  packageQuantity rows        : ${r.pkg_qty}  (REGENERATED by the ingest itself since 2026-07-31)`);
   // No apostrophes in this string: the whole node -e program sits inside a
@@ -225,6 +246,9 @@ if [ "${OFF_REFRESH_I_ACCEPT_DATA_LOSS:-0}" != "1" ]; then
   echo "       - derived OffServing ('ai'/'sibling_borrow') — snapshotted and replayed after."
   echo "       - corruptReason + duplicateOfBarcode — re-derived after the ingest, before the"
   echo "         Typesense sync, so the index never holds the bad rows."
+  echo "       - the HAND-AUTHORED corruptReason marks — replayed from"
+  echo "         src/lib/mapping/corrupt-off-handmarks.json, each re-verified against the"
+  echo "         live panel first. Nothing re-derives these; the file is their only copy."
   echo "       - packageQuantity — written by the ingest itself since 2026-07-31."
   echo "     NOT recovered here, plan for it first:"
   echo "       - the pgvector embeddings. Re-run scripts/embed_foods.py afterwards"
@@ -350,6 +374,47 @@ echo "[$(date -Is)] Regenerating duplicateOfBarcode marks..."
 node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
   -r tsconfig-paths/register scripts/dedupe-off-mark.ts
 
+# REPLAY the hand-authored corruptReason marks. This is the ONE curation
+# population in this column that no detector re-derives, so unlike the two
+# stages above it is a replay from a git-tracked file rather than a re-scan.
+#
+# ORDER IS LOAD-BEARING, and it is why this sits AFTER dedupe rather than beside
+# the detector marks:
+#   - running it BEFORE dedupe lets the election see the fresh marks, and
+#     isBetterRepresentative() ranks a CLEAN row above a marked one ahead of
+#     completeness — so it would elect an unmarked twin and clear its
+#     duplicateOfBarcode, putting the identical bad panel straight back into the
+#     Typesense sync's WHERE;
+#   - running it AFTER means the replay's group-completeness check is evaluated
+#     against the groups that actually exist post-dedupe.
+# It is still before the Typesense sync below, so the index never holds the rows.
+#
+# --replay, not --plan: the git-tracked file IS the approval record (it was read
+# in a PR), and there is no fresh set for a human to approve mid-refresh. Every
+# row is still re-verified against the live panel first, so a product OFF has
+# corrected since authoring is skipped, not re-marked.
+# Exit 3 = "applied, with residue an operator must reconcile" (a skipped row or
+# a group member the file does not cover), the same contract the pointer and
+# serving restores use above; 2 = refused and NOTHING written.
+echo "[$(date -Is)] Replaying hand-authored corruptReason marks..."
+set +e
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
+  -r tsconfig-paths/register scripts/replay-hand-corrupt-marks.ts --apply --replay
+HANDMARK_RC=$?
+set -e
+case "$HANDMARK_RC" in
+  0) echo "[$(date -Is)] Hand marks fully replayed." ;;
+  3) echo "[$(date -Is)] ⚠️  Hand marks replayed with residue (see the skip list above)."
+     echo "     A skipped row is a RE-AUDIT queue item, not an error: OFF changed the panel the"
+     echo "     mark was authored from, so the authored evidence no longer describes that row." ;;
+  *) echo "[$(date -Is)] ❌ Hand-mark replay FAILED or REFUSED (rc=$HANDMARK_RC) — NOTHING was written."
+     echo "     These marks are unrecoverable by any re-derivation. Fix and replay by hand:"
+     echo "     scripts/replay-hand-corrupt-marks.ts            # dry run, prints every refusal"
+     echo "     scripts/replay-hand-corrupt-marks.ts --apply --replay"
+     echo "     Then re-run scripts/purge-corrupt-typesense.ts (or a full sync-typesense.ts)."
+     HANDMARK_FAILED=1 ;;
+esac
+
 # THIRD detector: the divided-panel population — chain OFF imports whose stored
 # per-100g panel is the per-serving panel divided by the serving size, so a
 # Jersey Mike's Giant and Regular both bill an identical ~173 kcal.
@@ -388,6 +453,12 @@ rm -f "$PARQUET"
 # The snapshot is deliberately NOT deleted: it is the only record of what the
 # pointers were, and the restore's residue worklist is only actionable against it.
 echo "[$(date -Is)] ✅ Refresh complete."
+if [ "${HANDMARK_FAILED:-0}" -eq 1 ]; then
+  echo "[$(date -Is)] ⚠️  HAND-AUTHORED CORRUPT MARKS ARE NOT IN THE CORPUS: the replay above"
+  echo "     refused or crashed and wrote nothing. Nothing else in this script re-derives them —"
+  echo "     that is the whole reason they are replayed. Until you re-run it, those records are"
+  echo "     back in the Typesense index and can win picks again."
+fi
 if [ "$PANEL_FLAGGED" -gt 0 ] 2>/dev/null; then
   echo "[$(date -Is)] ⚠️  DIVIDED-PANEL REPAIR IS LOST: $PANEL_FLAGGED rows are billing a"
   echo "     per-serving panel at per-100g scale again. This refresh re-imported OFF's own"

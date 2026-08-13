@@ -27,6 +27,13 @@
  * rows, by contrast, are removed from the index entirely.
  */
 
+// The hand-mark replay compares names by the SAME key the dedupe election
+// groups on. Importing it rather than re-deriving it is deliberate: a second
+// definition that drifted would make the group-completeness gate below
+// (which reasons about dedupe groups) verify a grouping dedupe does not use.
+// Runtime-safe: dedupe-candidates imports only a TYPE from the mapper.
+import { normalizeNameKey } from '../search/dedupe-candidates';
+
 /** Kill-switch: set CORRUPT_RECORD_EXCLUSION=0 to stop filtering marked rows
  *  at the PG fallback and to disable the cache-row escape. Index-level
  *  exclusion (sync WHERE + purge) is data-level and not affected. */
@@ -524,4 +531,333 @@ export function decideMark(flag: CorruptScanFlag): MarkDecision {
             }
             return { mark: true, reason: `${flag.direction}:${flag.tier}` };
     }
+}
+
+// ===========================================================================
+// HAND-AUTHORED MARKS — the replay class
+// ===========================================================================
+//
+// TWO POPULATIONS, ONE COLUMN, OPPOSITE RECOVERY MECHANISMS. Everything above
+// this line is DETECTOR-DERIVED: a rule found it, so after an OFF refresh the
+// rule finds it again. Those marks are deliberately NOT replayed — a refresh
+// can deliver a CORRECTED panel and replaying a stale mark would suppress a row
+// OFF has since fixed (owner: mobile sync-docs/backend_integration_guide.md
+// §"The marks are data").
+//
+// Everything below is the other population: a mark a human authored because NO
+// rule produces it. Re-derivation cannot reproduce it by construction, so it
+// must be REPLAYED from a git-tracked file — and the 2026-07-21 batch of 50
+// such marks is simply gone because that file did not exist (owner: the same
+// doc, §"The hand-authored marks did not come back").
+//
+// The trap the replay has to avoid is exactly the one that justifies
+// re-deriving the detector marks, so the replay is NOT a restore: every unit is
+// re-verified against the LIVE row before it is written, and a row whose
+// evidence has moved is skipped and queued for re-audit rather than re-marked.
+// That is the same discipline decideMark() applies to panel-inflated-serving —
+// re-run the verdict from measurements, never trust a stored conclusion.
+//
+// Deliberately NOT a thirteenth CorruptDirection: decideMark()'s cases each
+// re-verify a measurable rule, and a case that returned mark:true on a human's
+// say-so would make every existing caller's re-verification meaningless. The
+// hand path gets its own gate function and its own reason prefix.
+
+/** Reason-string prefix that distinguishes a hand-authored mark from every
+ *  detector generation. Two things depend on the exact string: the rollback
+ *  (`mark-corrupt-off.ts --clear --clear-prefix hand-triage-<date>`) and the
+ *  doc-check claim that every live corruptReason traces to a known writer. */
+export const HAND_MARK_PREFIX = 'hand-triage-';
+
+/** What the human judged wrong about the row.
+ *  - panel:    the per-100g nutrition is wrong for this food
+ *  - serving:  the panel is sound, servingGrams is not
+ *  - identity: the panel is internally coherent but belongs to another food */
+export type HandMarkClass = 'panel' | 'serving' | 'identity';
+
+/** The raw observations a hand mark is authored from. Every field is a
+ *  measurement of the row at authoring time — nothing here is a conclusion, so
+ *  the replay can re-run the human's comparison instead of trusting it. */
+export interface HandMarkObservation {
+    /** Row name AS STORED. Compared by normalizeNameKey equality, not raw
+     *  equality: OFF re-punctuates names constantly and that is not a
+     *  correction. A changed name key IS a correction signal — for an
+     *  identity-class mark it is the only correction signal there is, because
+     *  the panel can stay byte-identical while the row stops being the food the
+     *  human judged. */
+    name: string;
+    kcal100: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+    /** null is a real observation (the row carries no serving mass), not
+     *  "unknown" — a row that GAINS one has moved. */
+    servingGrams: number | null;
+}
+
+/** Why a barcode other than the authored target is written in the same batch.
+ *  - duplicate-group: same dedupe groupKey() as the target. Mechanically
+ *    required: dedupe-off-mark.ts clears and recomputes every
+ *    duplicateOfBarcode on each run and elects a CLEAN row over a marked one,
+ *    so marking only the representative causes the next dedupe run to promote
+ *    an unmarked twin and put the identical bad panel straight back into the
+ *    Typesense sync's WHERE.
+ *  - panel-twin: same normalized name key and a byte-identical panel under a
+ *    different brand (so a different groupKey). Marking one barcode does not
+ *    remove the bad VALUE from the corpus; the re-resolution lands on the twin.
+ *    This is the 2026-08-08 eviction no-op one layer up. */
+export type HandMarkGroupBasis = 'duplicate-group' | 'panel-twin';
+
+export interface HandMarkGroupMember {
+    barcode: string;
+    basis: HandMarkGroupBasis;
+    observed: HandMarkObservation;
+}
+
+/** A live group member the author looked at and DECLINED to mark. Present so a
+ *  decline is auditable and so the completeness gate cannot be satisfied by
+ *  silently omitting a row — the same visible-exclusions idiom
+ *  repair-panel-scale-divided.ts uses for its refused entries. */
+export interface HandMarkGroupExclusion {
+    barcode: string;
+    why: string;
+}
+
+export interface HandMarkEntry {
+    barcode: string;
+    class: HandMarkClass;
+    /** The measured-to-reach replay phrase, verbatim. Not an input to any
+     *  verdict — it is what a verification draw must send. */
+    seed: string;
+    /** Prose: what the human judged wrong. Never parsed. */
+    reason: string;
+    /** Where the judgement came from, e.g. a tail-audit tranche. */
+    source: string;
+    /** ISO date. Becomes the reason-string generation, so it is also the
+     *  rollback selector. */
+    authoredAt: string;
+    observed: HandMarkObservation;
+    group: HandMarkGroupMember[];
+    groupExclusions?: HandMarkGroupExclusion[];
+}
+
+/** One barcode to verify and write. The target and every group member reduce to
+ *  this, so both go through exactly the same re-verification. */
+export interface HandMarkUnit {
+    barcode: string;
+    class: HandMarkClass;
+    authoredAt: string;
+    observed: HandMarkObservation;
+    /** false for the authored target, true for a group member. */
+    isGroupMember: boolean;
+    basis?: HandMarkGroupBasis;
+}
+
+/** The live row as the replay reads it. Panel fields are already extracted from
+ *  nutrientsPer100g by readLivePanel() so the decision function stays pure and
+ *  free of JSON shape knowledge. */
+export interface HandMarkLiveRow {
+    barcode: string;
+    name: string;
+    corruptReason: string | null;
+    kcal100: number | null;
+    protein: number | null;
+    fat: number | null;
+    carbs: number | null;
+    servingGrams: number | null;
+}
+
+/** Any nutrient may drift by this much and still be the same panel. Matches the
+ *  0.5 the detector marker's own staleness re-check uses, so the two paths
+ *  cannot disagree about what "the corpus changed" means. */
+export const HAND_MARK_PANEL_TOL = 0.5;
+/** Same tolerance on the serving mass. */
+export const HAND_MARK_SERVING_TOL = 0.5;
+
+export type HandMarkSkip =
+    | 'entry_invalid'
+    | 'row_missing'
+    | 'already_marked'
+    | 'panel_moved'
+    | 'serving_moved'
+    | 'name_moved';
+
+export type HandMarkDecision =
+    | { mark: true; reason: string }
+    | { mark: false; skip: HandMarkSkip; detail?: string };
+
+/** The reason string a hand mark is written as: hand-triage-<authoredAt>:<class>.
+ *  split_part(reason, ':', 1) therefore reads hand-triage-<authoredAt> — one
+ *  mark GENERATION per authoring date, which is what makes
+ *  `--clear-prefix hand-triage-<date>` reverse exactly one batch. */
+export function handMarkReason(unit: Pick<HandMarkUnit, 'class' | 'authoredAt'>): string {
+    return `${HAND_MARK_PREFIX}${unit.authoredAt}:${unit.class}`;
+}
+
+/** True for a reason string this module produced. Used by the census/claim side
+ *  so "is this a known writer's value?" never becomes a hand-typed regex. */
+export function isHandMarkReason(reason: string | null | undefined): boolean {
+    return typeof reason === 'string' && reason.startsWith(HAND_MARK_PREFIX);
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isFiniteNumber(v: unknown): v is number {
+    return typeof v === 'number' && isFinite(v);
+}
+
+function observationValid(o: HandMarkObservation | null | undefined): boolean {
+    return !!o
+        && typeof o.name === 'string' && o.name.trim().length > 0
+        && isFiniteNumber(o.kcal100)
+        && isFiniteNumber(o.protein) && isFiniteNumber(o.fat) && isFiniteNumber(o.carbs)
+        && (o.servingGrams === null || isFiniteNumber(o.servingGrams));
+}
+
+/** Structural validity of one unit. Fail-closed: anything malformed is a skip,
+ *  never a write. */
+export function handMarkUnitValid(unit: HandMarkUnit | null | undefined): boolean {
+    return !!unit
+        && typeof unit.barcode === 'string' && unit.barcode.trim().length > 0
+        && (unit.class === 'panel' || unit.class === 'serving' || unit.class === 'identity')
+        && typeof unit.authoredAt === 'string' && ISO_DATE.test(unit.authoredAt)
+        && observationValid(unit.observed);
+}
+
+/** Flatten an entry into the units the replay verifies and writes: the authored
+ *  target first, then every group member. The target's class and authoring date
+ *  carry to its members, so one entry writes exactly one reason string. */
+export function handMarkUnits(entry: HandMarkEntry): HandMarkUnit[] {
+    const units: HandMarkUnit[] = [{
+        barcode: entry.barcode,
+        class: entry.class,
+        authoredAt: entry.authoredAt,
+        observed: entry.observed,
+        isGroupMember: false,
+    }];
+    for (const m of entry.group ?? []) {
+        units.push({
+            barcode: m.barcode,
+            class: entry.class,
+            authoredAt: entry.authoredAt,
+            observed: m.observed,
+            isGroupMember: true,
+            basis: m.basis,
+        });
+    }
+    return units;
+}
+
+/**
+ * THE REPLAY GATE. Re-runs the hand verdict's PREMISES against the live row and
+ * refuses to write when any of them has moved.
+ *
+ * This is what makes a replay not a restore. A restore reapplies a stored
+ * conclusion; this reapplies a mark only while the row it was authored about is
+ * still the row that is there. `panel_moved` / `name_moved` / `serving_moved`
+ * are RE-AUDIT SIGNALS, not errors: the caller exits 0 and prints them, and a
+ * nonzero count is the queue for the next audit.
+ */
+export function decideHandMark(
+    unit: HandMarkUnit,
+    live: HandMarkLiveRow | null | undefined
+): HandMarkDecision {
+    if (!handMarkUnitValid(unit)) {
+        return { mark: false, skip: 'entry_invalid' };
+    }
+    if (!live) {
+        return { mark: false, skip: 'row_missing' };
+    }
+    // Idempotent re-run, and non-destructive of a detector mark: a row another
+    // instrument has already judged is left exactly as that instrument wrote
+    // it. The write predicate carries the same rule in SQL.
+    if (live.corruptReason != null) {
+        return { mark: false, skip: 'already_marked', detail: live.corruptReason };
+    }
+    if (normalizeNameKey(live.name ?? '') !== normalizeNameKey(unit.observed.name)) {
+        return { mark: false, skip: 'name_moved', detail: `live "${live.name}"` };
+    }
+    const fields: Array<[string, number, number | null]> = [
+        ['kcal100', unit.observed.kcal100, live.kcal100],
+        ['protein', unit.observed.protein, live.protein],
+        ['fat', unit.observed.fat, live.fat],
+        ['carbs', unit.observed.carbs, live.carbs],
+    ];
+    for (const [name, authored, liveValue] of fields) {
+        if (liveValue == null || !isFinite(liveValue) || Math.abs(liveValue - authored) > HAND_MARK_PANEL_TOL) {
+            return { mark: false, skip: 'panel_moved', detail: `${name}: ${authored} -> ${liveValue}` };
+        }
+    }
+    // The serving mass is the EVIDENCE for a serving-class mark, so a move
+    // invalidates the verdict outright. For panel/identity classes the panel is
+    // the evidence and a serving edit does not touch it — the drift is reported
+    // by the caller instead of blocking, because blocking there would retire a
+    // still-true mark on an unrelated field edit.
+    if (unit.class === 'serving') {
+        const a = unit.observed.servingGrams;
+        const l = live.servingGrams;
+        const moved = (a == null) !== (l == null)
+            || (a != null && l != null && Math.abs(l - a) > HAND_MARK_SERVING_TOL);
+        if (moved) {
+            return { mark: false, skip: 'serving_moved', detail: `${a} -> ${l}` };
+        }
+    }
+    return { mark: true, reason: handMarkReason(unit) };
+}
+
+/** True when a panel/identity-class unit's serving mass has moved. Reported,
+ *  never blocking — see decideHandMark(). */
+export function handMarkServingDrifted(unit: HandMarkUnit, live: HandMarkLiveRow): boolean {
+    const a = unit.observed.servingGrams;
+    const l = live.servingGrams;
+    if ((a == null) !== (l == null)) return true;
+    if (a == null || l == null) return false;
+    return Math.abs(l - a) > HAND_MARK_SERVING_TOL;
+}
+
+/**
+ * GROUP COMPLETENESS — the §3.2 gate, and it is fail-closed by design.
+ *
+ * `liveGroupBarcodes` is every barcode the LIVE corpus puts in the target's
+ * write unit (its dedupe group, plus byte-identical-panel rows under other
+ * brands). Returns the ones the entry neither marks nor explicitly declines.
+ * A non-empty result must refuse the BATCH rather than write a mark that
+ * dedupe-off-mark.ts's next run silently reverts.
+ *
+ * An already-marked live member is covered: it is out of the index already, so
+ * the election cannot promote it over a marked twin on the strength of being
+ * clean. Anything else — including a member currently carrying
+ * duplicateOfBarcode — is NOT covered, because that column is cleared and
+ * recomputed on every dedupe run.
+ */
+export function handMarkGroupGaps(
+    entry: HandMarkEntry,
+    liveGroupBarcodes: readonly string[],
+    alreadyMarked: ReadonlySet<string> = new Set()
+): string[] {
+    const covered = new Set<string>([entry.barcode]);
+    for (const m of entry.group ?? []) covered.add(m.barcode);
+    for (const x of entry.groupExclusions ?? []) covered.add(x.barcode);
+    return liveGroupBarcodes.filter(b => !covered.has(b) && !alreadyMarked.has(b));
+}
+
+/** Extract the panel a hand mark is verified against from a live OffFood row.
+ *  Key aliases mirror mark-corrupt-off.ts's checkValueOf() so the two staleness
+ *  checks cannot read the same row differently. */
+export function readLivePanel(
+    row: { barcode: string; name: string | null; corruptReason: string | null; nutrientsPer100g: unknown; servingGrams: number | null }
+): HandMarkLiveRow {
+    const n = (row.nutrientsPer100g && typeof row.nutrientsPer100g === 'object')
+        ? row.nutrientsPer100g as Record<string, unknown>
+        : {};
+    const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : null);
+    return {
+        barcode: row.barcode,
+        name: row.name ?? '',
+        corruptReason: row.corruptReason,
+        kcal100: num(n.calories) ?? num(n.energy) ?? num(n.kcal),
+        protein: num(n.protein),
+        fat: num(n.fat),
+        carbs: num(n.carbs),
+        servingGrams: row.servingGrams,
+    };
 }
