@@ -306,55 +306,6 @@
         "groupExclusions": []
     },
     {
-        "barcode": "4217347902626355",
-        "class": "panel",
-        "seed": "whataburger taquito",
-        "reason": "Synthetic chain-import barcode carrying a per-serving panel at per-100g scale: 153 kcal/100g on a 143 g taquito, against 400-440 for every real variant.",
-        "source": "tail-audit-phase1-2026-08-11",
-        "authoredAt": "2026-08-12",
-        "observed": {
-            "name": "Whataburger, Taquito",
-            "kcal100": 153,
-            "protein": 6.989999771118164,
-            "fat": 7.690000057220459,
-            "carbs": 14,
-            "servingGrams": 143
-        },
-        "group": [
-            {
-                "barcode": "8510451122990",
-                "basis": "duplicate-group",
-                "observed": {
-                    "name": "Whataburger, Taquito",
-                    "kcal100": 153,
-                    "protein": 6.989999771118164,
-                    "fat": 7.690000057220459,
-                    "carbs": 14,
-                    "servingGrams": 143
-                }
-            }
-        ],
-        "groupExclusions": []
-    },
-    {
-        "barcode": "6958166644797297267792",
-        "class": "panel",
-        "seed": "boston market meatloaf",
-        "reason": "Synthetic chain-import barcode carrying the whole-item panel in the per-100g field: 469 kcal/100g, ~2x any real Boston Market meatloaf (243.5/219.8), servingGrams a filler 100.",
-        "source": "tail-audit-phase1-2026-08-11",
-        "authoredAt": "2026-08-12",
-        "observed": {
-            "name": "Boston Market, Meatloaf",
-            "kcal100": 469,
-            "protein": 26,
-            "fat": 33,
-            "carbs": 17,
-            "servingGrams": 100
-        },
-        "group": [],
-        "groupExclusions": []
-    },
-    {
         "barcode": "4061459284072",
         "class": "identity",
         "seed": "sparkling ice",

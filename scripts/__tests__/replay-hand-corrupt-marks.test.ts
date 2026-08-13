@@ -221,7 +221,28 @@ describe('buildPlan — the group gate is fail-closed at the ENTRY, not per row'
         expect(plan.write.map(w => w.barcode)).toEqual(['T']);
     });
 
-    it('skips a unit whose live panel has moved, and still writes its siblings', () => {
+    it('writes NOTHING for an entry whose group member trips panel_moved', () => {
+        // This case used to assert the opposite — that the target is written and
+        // only the moved member is skipped — inside a describe block whose own
+        // title says the gate is fail-closed at the ENTRY. The suite contradicted
+        // itself, which is how the fail-open survived review.
+        //
+        // `gaps` proves only that the group is DECLARED covered; it is built from
+        // the entry's barcode, group and groupExclusions and never consults what
+        // will actually be written. So a member that decideHandMark refuses was
+        // recorded as a skip while its target was still pushed — a partial group
+        // mark, the exact state dedupe re-elects out of.
+        //
+        // Holding the whole entry is deliberately conservative. `panel_moved` here
+        // means OFF corrected the member since authoring, so the group is no longer
+        // uniformly corrupt and the authored observation can no longer be vouched
+        // for in either direction. Under "re-run the verdict from measurements,
+        // never trust the file's stored conclusion" that is a re-adjudication, not
+        // an auto-write. The operator sees it as exit 3 and re-authors the entry.
+        //
+        // Deleting either half of the commit condition in buildPlan() — the
+        // `gaps.length === 0` or the `units.every(u => u.verdict === 'write')` —
+        // makes this fail.
         const e = entry({
             group: [{ barcode: 'M', basis: 'duplicate-group', observed: { name: 'Sour cream', kcal100: 100, protein: 3.33, fat: 6.67, carbs: 6.67, servingGrams: null } }],
         });
@@ -232,8 +253,14 @@ describe('buildPlan — the group gate is fail-closed at the ENTRY, not per row'
         ]);
         const groups = new Map<string, GroupClassification | null>([['T', { duplicateGroup: [], panelTwins: [], calorieTwins: [] }]]);
         const plan = buildPlan(planInput({ entries: [e], liveByBarcode, groups }));
-        expect(plan.write.map(w => w.barcode)).toEqual(['T']);
+        expect(plan.write).toEqual([]);
+        // The unit-level verdicts still report the truth, so the operator can see
+        // exactly which member moved and why the entry was held.
+        expect(plan.entries[0].units[0]).toMatchObject({ barcode: 'T', verdict: 'write' });
         expect(plan.entries[0].units[1]).toMatchObject({ barcode: 'M', verdict: 'skip', skip: 'panel_moved' });
+        // And the held entry must not leave its prefix behind: a prefix with no
+        // rows behind it makes --clear-prefix look like it has work to do.
+        expect(plan.prefixes ?? []).toEqual([]);
     });
 
     it('carries the calorie-only twins into the plan for review without writing them', () => {
@@ -493,21 +520,39 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         expect(parsed.ok).toBe(true);
     });
 
-    it('is the 2026-08-12 tail-audit batch: 17 entries over 22 barcodes', () => {
+    it('is the 2026-08-12 tail-audit batch: 15 entries over 19 barcodes', () => {
+        // Narrowed from 17/22 on 2026-08-12 after the pre-apply review. Two
+        // entries were withdrawn because the mark does not buy a better answer,
+        // which is the same criterion that deferred maple and callaloo:
+        //   - whataburger taquito (4217347902626355 + twin 8510451122990): the
+        //     row promoted in its place is another synthetic-barcode Whataburger
+        //     row of the SAME defect class, so the whole family carries the error.
+        //   - boston market meatloaf (6958166644797297267792): the live row bills
+        //     within 0.2% of the real serving; the replacement lands the Kids SKU
+        //     51% low, i.e. marking makes it worse.
+        // Both are re-authorable as a separate prefix once verification draws can
+        // run; they were held, not refuted.
         if (!parsed.ok) throw new Error('unparseable');
-        expect(parsed.entries.length).toBe(17);
-        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(22);
+        expect(parsed.entries.length).toBe(15);
+        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(19);
     });
 
-    it('carries the two duplicate-group members that make a barcode-scoped mark self-reverting', () => {
-        // Measured 2026-08-12: 355980649788503212113472 -> 1781154461976987405190
-        // and 8510451122990 -> 4217347902626355 are twins currently pointing at
-        // the targets. Marking only the target lets the next dedupe run elect
-        // the twin, so dropping either from this file re-opens §3.2 silently.
+    it('carries the duplicate-group members that make a barcode-scoped mark self-reverting', () => {
+        // Measured 2026-08-12: these twins currently point at their targets.
+        // Marking only the target lets the next dedupe run elect the twin, so
+        // dropping either from this file re-opens §3.2 silently.
+        //
+        // The whataburger pair (8510451122990 -> 4217347902626355) was in this
+        // list until the batch narrowed; it left with its whole entry, not on its
+        // own, which is the only way a member may leave.
         if (!parsed.ok) throw new Error('unparseable');
         const members = new Map(parsed.entries.flatMap(e => e.group.map(m => [m.barcode, { target: e.barcode, basis: m.basis }])));
         expect(members.get('355980649788503212113472')).toEqual({ target: '1781154461976987405190', basis: 'duplicate-group' });
-        expect(members.get('8510451122990')).toEqual({ target: '4217347902626355', basis: 'duplicate-group' });
+        // A withdrawn entry must take its members with it — a member left behind
+        // pointing at an absent target is an orphan the group gate cannot see.
+        expect(members.get('8510451122990')).toBeUndefined();
+        expect(parsed.entries.some(e => e.barcode === '4217347902626355')).toBe(false);
+        expect(parsed.entries.some(e => e.barcode === '6958166644797297267792')).toBe(false);
     });
 
     it('writes exactly one reason generation', () => {

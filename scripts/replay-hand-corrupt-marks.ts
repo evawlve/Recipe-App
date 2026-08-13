@@ -429,13 +429,15 @@ export function buildPlan(input: BuildPlanInput): HandMarkPlan {
             : [GROUP_NOT_SCANNED];
 
         const units: PlanUnit[] = [];
+        const entryWrites: Array<{ barcode: string; reason: string }> = [];
+        const entryPrefixes = new Set<string>();
         for (const unit of handMarkUnits(entry)) {
             const raw = input.liveByBarcode.get(unit.barcode);
             const live = raw ? readLivePanel({ ...raw }) : null;
             const decision = decideHandMark(unit, live);
             const basis: PlanUnit['basis'] = unit.isGroupMember ? (unit.basis ?? 'panel-twin') : 'target';
             if (decision.mark) {
-                prefixes.add(`${HAND_MARK_PREFIX}${unit.authoredAt}`);
+                entryPrefixes.add(`${HAND_MARK_PREFIX}${unit.authoredAt}`);
                 units.push({
                     barcode: unit.barcode,
                     basis,
@@ -443,14 +445,27 @@ export function buildPlan(input: BuildPlanInput): HandMarkPlan {
                     reason: decision.reason,
                     servingDrift: live ? handMarkServingDrifted(unit, live) : false,
                 });
-                // A refusable entry contributes NO writes: the group gate is
-                // fail-closed at the entry level, not per row, because a
-                // partially marked group is exactly the state dedupe re-elects
-                // out of.
-                if (gaps.length === 0) write.push({ barcode: unit.barcode, reason: decision.reason });
+                entryWrites.push({ barcode: unit.barcode, reason: decision.reason });
             } else {
                 units.push({ barcode: unit.barcode, basis, verdict: 'skip', skip: decision.skip, detail: decision.detail });
             }
+        }
+
+        // A refusable entry contributes NO writes: the group gate is fail-closed
+        // at the ENTRY level, not per row, because a partially marked group is
+        // exactly the state dedupe re-elects out of.
+        //
+        // Both conditions are load-bearing and the second one used to be missing.
+        // `gaps` proves only that the group is DECLARED covered — it is built from
+        // the entry's barcode, group and groupExclusions, never from what will
+        // actually be written. So a member that trips decideHandMark (panel_moved,
+        // say) was recorded as a skip while its target was still pushed, which is
+        // precisely the partial-group state this gate exists to prevent, and it
+        // fired unattended on every --replay refresh. Commit only when the
+        // declaration is complete AND every unit resolved to a write.
+        if (gaps.length === 0 && units.every(u => u.verdict === 'write')) {
+            for (const w of entryWrites) write.push(w);
+            for (const p of entryPrefixes) prefixes.add(p);
         }
 
         planEntries.push({
