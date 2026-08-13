@@ -252,12 +252,22 @@ describe('formatNutritionBasis — the printed line, and the parity property', (
         expect(formatNutritionBasis(plan({}))).toBe('kcal n/a');
     });
 
-    it('labels a serving-basis plan per SERVING, never per 100 g', () => {
+    it('labels a serving-basis plan per SERVING and as a CAPABILITY, never per 100 g and never as a forecast', () => {
         const s = formatNutritionBasis(plan({
             servingBasis: { kcal: 100, servingId: '55576913', description: '1 can' },
         }));
-        expect(s).toBe('100 kcal per "1 can"');
+        expect(s).toBe('billable from "1 can" (100 kcal)');
         expect(s).not.toContain('/100g');
+        // "billable from", never "bills": this function has no input that can
+        // tell it what production will actually charge. The serving cascade
+        // picks the grams (batch 2's `stevia` defeated three independent
+        // predictions of the rung), and buildFatSecretResult() refuses a bare
+        // query outright under BARE_LABEL_MIN_GRAMS = 3 g, which covers 127 of
+        // the 3,472 empty-panel FatSecret rows. An operator reading this line as
+        // a forecast is how a verification draw gets downgraded to a formality.
+        expect(s).not.toMatch(/\bbills\b/);
+        // Parity is unaffected: a serving-basis line can only appear on a row
+        // that previously SKIPped, so no already-planned row's output moves.
     });
 
     it('lets the panel win when both are somehow set, so no existing line can change', () => {

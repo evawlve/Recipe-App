@@ -209,6 +209,18 @@ export interface FsNutritionSource {
  * that rung is not predictable from a record read — batch 2's `stevia` landed
  * on `bare_sibling_serving` against three independent predictions of
  * `label_serving_default`.
+ *
+ * AND IT IS NOT EVEN A COMPLETE BILLABILITY TEST. Production carries a SECOND
+ * refusal this function cannot see: `buildFatSecretResult()` returns null when
+ * a bare query's estimated serving falls under `BARE_LABEL_MIN_GRAMS` (3 g), so
+ * a record with perfectly good serving macros is still refused on a bare line.
+ * That covers 127 of the 3,472 empty-panel FatSecret rows — zero-calorie chain
+ * items, Bubly and Dunkin black tea among them [measured 2026-08-12].
+ *
+ * So a non-null return here means "this record carries billable serving macros",
+ * NEVER "production will bill this". Callers reporting a basis to an operator
+ * must say the first and must not imply the second. `formatNutritionBasis()`
+ * below owns that wording and says "billable from", never "bills".
  */
 export function fsServingKcalBasis(
     food: FsNutritionSource,
@@ -260,7 +272,16 @@ async function planOne(r: Repoint): Promise<Plan> {
             where: { fsId: ref.fsId },
             select: {
                 name: true, brandName: true, nutrientsPer100g: true, defaultServingId: true,
-                servings: { select: { servingId: true, description: true, nutrients: true } },
+                // orderBy is load-bearing, not decoration. fsServingKcalBasis()
+                // falls back to `servings.find(hasMacros)` when defaultServingId
+                // is absent or macro-less, so WHICH row it lands on is decided by
+                // arrival order. Unordered, Postgres may return the set in any
+                // order and the plan's printed basis becomes a draw across runs —
+                // silently defeating the dry-run parity gate this fix is gated on.
+                servings: {
+                    select: { servingId: true, description: true, nutrients: true },
+                    orderBy: { servingId: 'asc' },
+                },
             },
         });
         if (!fsFood) return { ...base, action: 'SKIP', reason: 'target FatSecretFood not found' };
@@ -379,10 +400,20 @@ export function checkSnapshotCoversPlans(snapshotRaw: string, plans: Plan[]): Sn
  * differ by the serving weight, which is the one number this plan does not
  * know. Exported so the byte-identical-output property the dry-run parity gate
  * rests on is pinned by a test and not only by a diff someone ran once.
+ *
+ * The serving-basis wording is deliberately "billable from", not "bills". This
+ * function cannot tell you production WILL bill that figure, for two reasons it
+ * has no inputs for: the serving cascade picks the grams (see
+ * `fsServingKcalBasis()`'s header — batch 2's `stevia` defeated three
+ * predictions), and `buildFatSecretResult()` refuses a bare query outright when
+ * the estimated serving is under `BARE_LABEL_MIN_GRAMS` (3 g), which covers 127
+ * of the 3,472 empty-panel FatSecret rows [measured 2026-08-12]. Reading this
+ * string as a forecast is what turns a verification draw from load-bearing into
+ * "confirmation", and the draws are the only thing that has ever caught either.
  */
 export function formatNutritionBasis(p: Plan): string {
     if (p.kcal100 != null) return `${Math.round(p.kcal100)} kcal/100g`;
-    if (p.servingBasis) return `${Math.round(p.servingBasis.kcal)} kcal per "${p.servingBasis.description}"`;
+    if (p.servingBasis) return `billable from "${p.servingBasis.description}" (${Math.round(p.servingBasis.kcal)} kcal)`;
     return 'kcal n/a';
 }
 
