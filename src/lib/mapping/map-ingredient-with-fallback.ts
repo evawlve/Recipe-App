@@ -2489,6 +2489,7 @@ export async function mapIngredientWithFallback(
                         brandName: c.brandName || null,
                         score: c.score,
                         source: c.source,
+                        semanticSimilarity: c.semanticSimilarity ?? null,
                     })),
                     selectedCandidate: {
                         foodId: winner.id,
@@ -3557,6 +3558,7 @@ async function runBackfillAfterWinner(params: {
                 brandName: c.brandName || null,
                 score: c.score,
                 source: c.source,
+                semanticSimilarity: c.semanticSimilarity ?? null,
             })),
             selectedCandidate: {
                 foodId: winner.id,
@@ -3896,6 +3898,7 @@ async function finalizeAndSaveResult(params: {
                 brandName: c.brandName || null,
                 score: c.score,
                 source: c.source,
+                semanticSimilarity: c.semanticSimilarity ?? null,
                 // Include nutrition if available (from FDC candidates)
                 nutrition: c.nutrition ? {
                     calories: c.nutrition.kcal,
