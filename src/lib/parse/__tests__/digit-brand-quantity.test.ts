@@ -157,6 +157,55 @@ describe('digit-leading brand tokens are not quantities', () => {
     });
   });
 
+  describe('numeric-first private-label brands (2026-08-14)', () => {
+    // THE MUTATION THESE KILL, executed on master before the fix: with these
+    // phrases absent, `365 everyday value peanut butter` parses qty=365 against a
+    // name of "everyday value peanut butter", matches nothing, and the item is
+    // billed 0 g / 0 kcal with NO client marker — it vanishes from the meal total.
+    // Measured live 2026-08-14 on the composite path; the solo path with a literal
+    // prefix ("a scoop of ...") found the record at 32 g / 209.9 kcal, which is how
+    // the defect was isolated to the quantity strip rather than to coverage.
+    test('"365 everyday value peanut butter" keeps the brand and qty 1', () => {
+      const r = parseIngredientLine('365 everyday value peanut butter');
+      expect(r).not.toBeNull();
+      expect(r!.qty).toBe(1);
+      expect(r!.name).toBe('365 everyday value peanut butter');
+    });
+
+    test('an explicit count before the brand still counts', () => {
+      const r = parseIngredientLine('2 365 everyday value peanut butter');
+      expect(r).not.toBeNull();
+      expect(r!.qty).toBe(2);
+      expect(r!.name).toBe('365 everyday value peanut butter');
+    });
+
+    test('"7 select trail mix" and "7 eleven taquito" keep qty 1', () => {
+      expect(parseIngredientLine('7 select trail mix')!.qty).toBe(1);
+      expect(parseIngredientLine('7 eleven taquito')!.qty).toBe(1);
+    });
+
+    test('the 3-gram covers "365 whole foods market" without raising MAX_PHRASE_LEN', () => {
+      const r = parseIngredientLine('365 whole foods market almond butter');
+      expect(r!.qty).toBe(1);
+      // PARTIAL, and deliberately pinned as such: the digits are protected, but
+      // `whole` is still eaten as a count unit further down, so the name reads
+      // "365 foods market almond butter". That is the separately-documented
+      // IDENTITY_QUALIFIERS/`whole` defect (CLAUDE.md: `whole milk` collides with
+      // `milk` on unit-less lines) and is byte-identical on master — verified, not
+      // assumed. Fixing it here would mean claiming a token this file does not own.
+      expect(r!.name).toBe('365 foods market almond butter');
+    });
+
+    test('genuine counts are untouched — the declines in the lexicon comment', () => {
+      // Bare "365" stays a quantity: a bare leading number is what the parser is for.
+      expect(parseIngredientLine('365 almonds')!.qty).toBe(365);
+      expect(parseIngredientLine('7 almonds')!.qty).toBe(7);
+      // "7 days" is a real croissant brand, deliberately NOT claimed — too
+      // ambiguous against a count/duration, same reasoning as bare "5 hour".
+      expect(parseIngredientLine('7 days croissant')!.qty).toBe(7);
+    });
+  });
+
   // Deliberately deferred (documented, not implemented):
   // - Word-number brand forms ("seven up") still parse "seven" as qty 7. The
   //   word-number map predates this fix and "seven up" is a rare way to log
