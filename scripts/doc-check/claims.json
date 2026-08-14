@@ -496,16 +496,16 @@
       "verified": "2026-07-30"
     },
     {
-      "id": "log-writeoffs-under-70-lines",
-      "claim": "Every session write-off newer than 2026-08-13_0700 is within the 70-line ceiling its README sets. REVISED 2026-08-13 (Diego): the old rule was a 50-line HARD cap measured globally, and it hit both available failure modes. It went red \u2014 8 of 90 write-offs exceeded 50 and the last four sessions ran 74/93/97/101/102 \u2014 so the gate had stopped meaning anything; and the cap was itself driving waste, one agent spending five attempts landing a write-off at 52 by rewrapping lines, which does not reduce line count. 50 is now a target, 70 the ceiling. The six pre-revision write-offs at 73-102 lines are grandfathered by a filename cutoff rather than trimmed, because trimming them is the same waste this revision exists to stop; write-off filenames are a monotonic sequence, so a lexical cutoff cleanly separates new from grandfathered. If this claim FAILS, a write-off written after the revision exceeded 70 lines and its overflow belongs in sync-docs/reports/.",
+      "id": "log-writeoffs-under-75-lines",
+      "claim": "Every session write-off newer than 2026-08-13_0700 is within the 75-line GATE its README sets, which sits above the 70-line editorial ceiling. Two revisions, both by Diego. 2026-08-13: the original rule was a 50-line HARD cap measured globally, and it hit both available failure modes \u2014 it went red (8 of 90 write-offs exceeded 50, the last four sessions running 74/93/97/101/102) so the gate had stopped meaning anything, and the cap was itself driving waste, one agent spending five attempts landing a write-off at 52 by rewrapping lines, which does not reduce line count. That made 50 a target and 70 the ceiling. 2026-08-14: the ceiling was still being gated exactly, and the very next write-off tripped it at 72 \u2014 Diego's ruling was 'the write off limit doesnt need to be absolutely strict, a few over is fine'. So the GUIDANCE stays 70 and the GATE moved to 75, which is the only change that lets a limit be advisory and still be enforced: a two-line overshoot is a judgement call, a 100-line write-off is not. The six pre-revision write-offs at 73-102 lines are grandfathered by a filename cutoff rather than trimmed, because trimming them is the same waste this revision exists to stop; write-off filenames are a monotonic sequence, so a lexical cutoff cleanly separates new from grandfathered. If this claim FAILS, a write-off written after the revision exceeded 75 lines and its overflow belongs in sync-docs/reports/.",
       "ownerDoc": "mobile:sync-docs/log/README.md",
       "where": "mobile",
-      "command": "for f in $(ls sync-docs/log/2026-*.md | awk '$0 > \"sync-docs/log/2026-08-13_0700\"'); do n=$(wc -l < \"$f\"); [ \"$n\" -gt 70 ] && echo \"$f:$n\"; done | wc -l",
+      "command": "for f in $(ls sync-docs/log/2026-*.md | awk '$0 > \"sync-docs/log/2026-08-13_0700\"'); do n=$(wc -l < \"$f\"); [ \"$n\" -gt 75 ] && echo \"$f:$n\"; done | wc -l",
       "expect": {
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-13"
+      "verified": "2026-08-14"
     },
     {
       "id": "off-ingest-timers-enabled",
