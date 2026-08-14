@@ -242,3 +242,72 @@ const REPLAY_NONDETERMINISTIC_INDEX = new Set<string>(REPLAY_NONDETERMINISTIC_SE
 export function isReplayNondeterministicTier(tier: string | null | undefined): boolean {
     return tier != null && REPLAY_NONDETERMINISTIC_INDEX.has(tier);
 }
+
+/**
+ * SYNTHETIC GRAMS — a THIRD predicate, and again a different question from the two
+ * above. They ask "was a model billed" (spend) and "can this replay differ"
+ * (attribution). This one asks: **is the `grams` this tier reports a real weight at
+ * all, or a placeholder the pipeline invented so the row could have a number?**
+ *
+ * It exists because the answer leaves the backend and is multiplied. `/api/nlp/parse`
+ * emits `nutritionPer100g`, and for these rows it can only derive it as
+ * `billed_kcal x 100 / billed_grams` (`per100gFromBilledMacros()` in
+ * ../nlp/resolve-payload.ts, reached because the record's own panel is degenerate).
+ * With invented grams that quotient is not a density — it is the invention read back.
+ *
+ * THE ONE MEMBER, AND WHY THE SIBLING NAME IS NOT ONE.
+ * `fs_serving_macros_only_est` is stamped in build-fatsecret-result.ts when a
+ * FatSecret "1 serving" restaurant record carries per-serving macros, NO gram weight
+ * and NO per-100g panel. The macros are real and are billed directly and correctly;
+ * the weight is `estimateServingGrams()`, i.e. `kcal / PREPARED_FOOD_KCAL_PER_GRAM`
+ * with `PREPARED_FOOD_KCAL_PER_GRAM = 2.0`. So `grams x 2 == kcal` identically, and
+ * the derived panel is a flat 200 kcal/100 g for EVERY such row whatever the food.
+ *
+ * `fs_serving_macros_only` — same branch, same code, one line apart — is NOT a
+ * member: it fires when the record does have a panel, so the weight came from
+ * `gramsFromPer100gPanel()`, which is arithmetic on the record's own numbers
+ * (median ratio 1.000 against the 24,579 servings whose weight IS recorded). That
+ * near-collision is exactly why the tier was split rather than pattern-matched: the
+ * two halves were one string until 2026-08-14 and no consumer could tell them apart.
+ *
+ * MEASURED (2026-08-14, box `MappingEventLog` joined to `FatSecretFood`):
+ *   - 777 events / 147 records / ONE tier, `grams / totalKcal` exactly 0.500 on
+ *     777 of 777 — the `Math.max(macroMass, ...)` floor never binds, because
+ *     Atwater factors make `kcal/2 >= protein+carbs+fat` for any self-consistent panel.
+ *   - On the 76 tier-firing records that DO carry a panel (so the true weight is
+ *     recoverable by inversion), the estimate's median est/true is 0.273 —
+ *     3.7x too light — with p10 0.033, p90 1.105, and only 11 of 76 within +-25%.
+ *   - `FatSecretFood` partitions cleanly: 20,651 rows have a panel AND a weighted
+ *     serving row; 3,472 have NEITHER and nothing in between. `OffFood` has 0 of
+ *     1,085,525 panel-less rows, so this shape is FatSecret-only.
+ * Re-derive and owner: sync-docs/reports/2026-08-14_the-empty-panel-serving-is-synthetic.md
+ * (mobile repo), which also owns the consumer half.
+ *
+ * WHAT A CONSUMER SHOULD DO WITH A TRUE. Decline to offer gram- or volume-denominated
+ * portions, and say the weight is an estimate. NOT "substitute a better constant":
+ * the true densities behind this population run 0-494 kcal/100 g (p10 6.2, median
+ * 63.0), so no constant can serve a brewed coffee and a fried chicken thigh, and a
+ * plausible-but-wrong weight is worse than declining to state one — it is
+ * indistinguishable from a measured one at the point of use.
+ */
+export const SYNTHETIC_GRAMS_SERVING_TIERS: readonly string[] = Object.freeze(
+    ([
+        // build-fatsecret-result.ts, macro-only branch, `fromPanel == null` leg.
+        'fs_serving_macros_only_est',
+    ] as const),
+);
+
+/** Lookup index. Module-private so the exported constant stays genuinely frozen. */
+const SYNTHETIC_GRAMS_INDEX = new Set<string>(SYNTHETIC_GRAMS_SERVING_TIERS);
+
+/**
+ * True when `tier`'s reported grams are a placeholder rather than a measured or
+ * derived weight — so anything computed by dividing BY them is fabricated too.
+ *
+ * Returns false for an unclassified tier, matching the two siblings above: a new
+ * tier is assumed honest until someone reads its producer and says otherwise. The
+ * guard against a silent miss is the producer census in `serving-ai-tiers.test.ts`.
+ */
+export function isSyntheticGramsTier(tier: string | null | undefined): boolean {
+    return tier != null && SYNTHETIC_GRAMS_INDEX.has(tier);
+}
