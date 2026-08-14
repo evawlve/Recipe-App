@@ -32,10 +32,45 @@ function cand(name: string, brandName?: string, id = name): UnifiedCandidate {
 const names = (r: { filtered: UnifiedCandidate[] }) => r.filtered.map(c => c.name).sort();
 
 describe('the mechanism', () => {
-    it("tokenizes a possessive brand into a token the query can never carry", () => {
+    it("requires the brand and the FOOD, not two tokens of the brand", () => {
         // Not an assertion about the fix — an assertion about why the bug exists.
         // If this ever changes, the fix below is solving a problem that moved.
-        expect(deriveMustHaveTokens('trader joes scandinavian swimmers')).toEqual(['trader', 'joes']);
+        //
+        // RE-ADJUDICATED 2026-08-14, deliberately, not silently. This pinned
+        // ['trader','joes'] — both halves of the brand, no food token — as the
+        // mechanism behind the apostrophe bug this file fixes. That reading was
+        // right about the apostrophe and wrong about what it implied: requiring
+        // ['trader','joes'] means ANY Trader Joe's product satisfies admission,
+        // which is a second, brand-agnostic defect measured on 2026-08-14
+        // (`kirkland signature mini croissants` -> a Mini Choc Hazelnut Beignet,
+        // 4.9x under-billed). `keepAFoodToken()` now spends the second slot on the
+        // food, so the brand still constrains admission AND the food is required.
+        //
+        // The apostrophe fix this file exists for is untouched and still load-bearing:
+        // 'trader' only matches a "Trader Joe's" candidate because the fold puts
+        // {trader, joes} into the candidate token set. The behavioural assertions
+        // below are unchanged and still pass.
+        expect(deriveMustHaveTokens('trader joes scandinavian swimmers')).toEqual(['trader', 'scandinavian']);
+    });
+
+    it('leaves a query that already required a food token exactly as it was', () => {
+        // Single-token brands were never affected — the food already had a slot.
+        expect(deriveMustHaveTokens('costco mini croissants')).toEqual(['costco', 'croissants']);
+        // Non-brand queries must not move at all.
+        expect(deriveMustHaveTokens('grilled chicken breast')).toEqual(['grilled', 'chicken']);
+    });
+
+    it('leaves a bare brand query alone — there is no food token to require', () => {
+        expect(deriveMustHaveTokens('kirkland signature')).toEqual(['kirkland', 'signature']);
+    });
+
+    it('KNOWN LIMIT: a two-brand query is still not repaired', () => {
+        // `sams club members mark chicken` detects `members mark`, so ['sams','club']
+        // read as non-brand tokens against that entry and the guard declines. The
+        // result is still brand-only. Repairing it needs multi-brand detection inside
+        // detectBrandInQuery() — a brand-detector change the frozen-pool winner-diff
+        // structurally cannot observe. Pinned so the gap is visible, not forgotten.
+        expect(deriveMustHaveTokens('sams club members mark chicken')).toEqual(['sams', 'club']);
     });
 });
 
