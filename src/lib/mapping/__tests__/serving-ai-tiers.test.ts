@@ -5,6 +5,8 @@ import {
     SERVING_AI_TIERS,
     isReplayNondeterministicTier,
     REPLAY_NONDETERMINISTIC_SERVING_TIERS,
+    isSyntheticGramsTier,
+    SYNTHETIC_GRAMS_SERVING_TIERS,
 } from '../serving-ai-tiers';
 
 /**
@@ -251,4 +253,56 @@ describe('producer call-site census — the guard against the next silent miss',
             expect(countCallSites(fn)).toBe(expected);
         });
     }
+});
+
+/**
+ * SYNTHETIC GRAMS — the third predicate.
+ *
+ * Mutation that must kill this block: relaxing `isSyntheticGramsTier` to a
+ * `startsWith('fs_serving_macros_only')` prefix test. That is the tempting
+ * simplification and it is WRONG, because the honest half of the split shares the
+ * prefix: `fs_serving_macros_only` recovers a real weight by inverting the record's
+ * own panel, `fs_serving_macros_only_est` fabricates one at a flat 2.0 kcal/g. A
+ * prefix rule would flag both and suppress portion controls on 395 of 1,172 events
+ * that have nothing wrong with them (measured 2026-08-14).
+ */
+describe('isSyntheticGramsTier — placeholder grams vs a real weight', () => {
+    it('flags the fabricated leg of the macro-only branch', () => {
+        expect(isSyntheticGramsTier('fs_serving_macros_only_est')).toBe(true);
+    });
+
+    it('does NOT flag its panel-inverting sibling, which differs by one suffix', () => {
+        // The whole reason the tier was split. `gramsFromPer100gPanel()` is
+        // arithmetic on the record's own numbers, not an estimate.
+        expect(isSyntheticGramsTier('fs_serving_macros_only')).toBe(false);
+    });
+
+    it('does not flag the other fatsecret serving tiers, whose grams are declared', () => {
+        for (const tier of ['fs_default_serving', 'fs_per100g_fallback', 'label_serving_default']) {
+            expect(isSyntheticGramsTier(tier)).toBe(false);
+        }
+    });
+
+    it('treats an absent tier as honest, matching both sibling predicates', () => {
+        expect(isSyntheticGramsTier(null)).toBe(false);
+        expect(isSyntheticGramsTier(undefined)).toBe(false);
+        expect(isSyntheticGramsTier('')).toBe(false);
+    });
+
+    it('is a DIFFERENT question from the other two — no member is shared', () => {
+        // Spend and replay-attribution both answer "did/could a model run". This one
+        // answers "is the number real". A synthetic weight here comes from
+        // arithmetic on a constant, so it replays deterministically and bills nothing.
+        for (const tier of SYNTHETIC_GRAMS_SERVING_TIERS) {
+            expect(servingAiCallForTier(tier).called).toBe(false);
+            expect(isReplayNondeterministicTier(tier)).toBe(false);
+        }
+    });
+
+    it('rejects mutation for real, not just to Object.isFrozen', () => {
+        expect(() => {
+            (SYNTHETIC_GRAMS_SERVING_TIERS as unknown as string[]).push('nope');
+        }).toThrow();
+        expect(SYNTHETIC_GRAMS_SERVING_TIERS).not.toContain('nope');
+    });
 });

@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
       resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros,
       isPer100gInconsistentWithBilled,
     } = await import('@/lib/nlp/resolve-payload');
+    const { isSyntheticGramsTier } = await import('@/lib/mapping/serving-ai-tiers');
     const { logger } = await import('@/lib/logger');
 
     const body = await req.json();
@@ -444,6 +445,24 @@ export async function POST(req: NextRequest) {
         nutrition,
         nutritionPer100g,
         servingOptions: details.servingOptions,
+        // TRUE when `grams` above is a placeholder, not a weight — so `nutritionPer100g`
+        // is that placeholder read back rather than a density, and every gram- or
+        // volume-denominated portion the client offers is fabricated from it.
+        //
+        // It has to be said on the wire because the client CANNOT infer it. The only
+        // in-band tell would be `grams`, and this population is not the flat-100 g
+        // signature `assessMappingSignal()` already watches for — measured, 8 of 777
+        // events land on exactly 100 g, so that badge misses 99% of it. Sourced from
+        // `mapped.servingTier` through the owned predicate rather than a name match,
+        // because the honest and the fabricated halves differ by one suffix
+        // (`fs_serving_macros_only` vs `..._est`) and were one string until 2026-08-14.
+        //
+        // Omitted (not `false`) when the weight is real, so a client on an older build
+        // reads exactly what it read before. Owner:
+        // sync-docs/reports/2026-08-14_the-empty-panel-serving-is-synthetic.md (mobile).
+        ...(isSyntheticGramsTier((mapped as { servingTier?: string | null }).servingTier)
+          ? { portionEstimated: true as const }
+          : {}),
         // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
         // offline warm batches (scripts/eval/warm-cache.ts) read each seed's
         // funnel outcome straight off the response instead of re-deriving it

@@ -26,6 +26,7 @@ jest.mock('../../db', () => ({
 }));
 
 import { buildFatSecretResult } from '../build-fatsecret-result';
+import { isSyntheticGramsTier } from '../serving-ai-tiers';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
 function makeCandidate(overrides: Record<string, unknown> = {}) {
@@ -285,7 +286,7 @@ describe('buildFatSecretResult — gram resolution cascade', () => {
         );
 
         expect(result).not.toBeNull();
-        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        expect(result!.servingTier).toBe('fs_serving_macros_only_est');
         // Macros are billed DIRECTLY from the serving panel — authoritative.
         expect(result!.kcal).toBe(630);
         expect(result!.protein).toBe(28);
@@ -321,7 +322,7 @@ describe('buildFatSecretResult — gram resolution cascade', () => {
             0.9, '2 mcdonalds mcflurry oreo'
         );
 
-        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        expect(result!.servingTier).toBe('fs_serving_macros_only_est');
         expect(result!.kcal).toBe(820);
         expect(result!.carbs).toBe(128);
         expect(result!.servingDescription).toBe('2 x 1 serving');
@@ -646,8 +647,56 @@ describe('per-100g panel inversion recovers the true serving weight', () => {
             0.9,
             'impossible whopper'
         );
-        expect(result!.servingTier).toBe('fs_serving_macros_only');
+        expect(result!.servingTier).toBe('fs_serving_macros_only_est');
         expect(result!.grams).toBeCloseTo(315, 0); // 630 / 2.0
         expect(result!.kcal).toBeCloseTo(630, 0);
+    });
+
+    /**
+     * THE SPLIT ITSELF. One record, one serving, one branch — the ONLY difference
+     * between the two runs is whether a per-100g panel exists to invert. Before
+     * 2026-08-14 both stamped `fs_serving_macros_only`, so nothing downstream could
+     * tell a recovered weight from an invented one, and `/api/nlp/parse` published
+     * `billed_kcal x 100 / invented_grams` as if it were a density.
+     *
+     * MUTATION that must kill this: collapse the ternary in build-fatsecret-result.ts
+     * back to a single tier name, or relax `isSyntheticGramsTier` to a prefix match.
+     */
+    it('stamps a DIFFERENT tier for an invented weight than for a recovered one', async () => {
+        const serving = {
+            servingId: 'sv-serving', description: '1 serving', measurementDescription: 'serving',
+            grams: null, volumeMl: null, numberOfUnits: 1,
+            nutrients: { calories: 200, protein: 5, carbohydrate: 30, fat: 6 },
+        };
+        const run = async (nutrientsPer100g: Record<string, number>) => {
+            mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+                name: 'Chain Item', nutrientsPer100g,
+                defaultServingId: 'sv-serving', servings: [serving],
+            }));
+            return buildFatSecretResult(
+                makeCandidate({ name: 'Chain Item', brandName: 'A Chain' }),
+                parsedLine({ qty: 1, unit: null, name: 'chain item' }),
+                0.9, 'a chain chain item'
+            );
+        };
+
+        // No panel: the weight is `kcal / 2.0`, so grams x 2 == kcal identically and
+        // the derived per-100g is a flat 200 whatever the food actually is.
+        const invented = await run({});
+        expect(invented!.servingTier).toBe('fs_serving_macros_only_est');
+        expect(isSyntheticGramsTier(invented!.servingTier)).toBe(true);
+        expect(invented!.grams).toBeCloseTo(100, 6);
+        expect(invented!.kcal / invented!.grams).toBeCloseTo(2.0, 6);
+
+        // A panel exists: 200 kcal against 40 kcal/100g inverts to a real 500 g, and
+        // the same arithmetic no longer produces 2.0 kcal/g.
+        const recovered = await run({ kcal: 40, protein: 1, carbs: 6, fat: 1.2 });
+        expect(recovered!.servingTier).toBe('fs_serving_macros_only');
+        expect(isSyntheticGramsTier(recovered!.servingTier)).toBe(false);
+        expect(recovered!.grams).toBeCloseTo(500, 0);
+
+        // Both bill the serving's own macros — the split changes NO calorie count.
+        expect(invented!.kcal).toBeCloseTo(200, 6);
+        expect(recovered!.kcal).toBeCloseTo(200, 6);
     });
 });

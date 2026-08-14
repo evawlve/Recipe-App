@@ -908,7 +908,19 @@ export async function buildFatSecretResult(
                 servingDescription = qty === 1
                     ? macroServing.description
                     : `${qty} x ${macroServing.description}`;
-                servingTier = 'fs_serving_macros_only';
+                // TWO BRANCHES, TWO TIERS. `fromPanel` recovered a REAL weight by
+                // inverting the record's own panel; the fallback FABRICATED one at a
+                // flat 2.0 kcal/g. They are stamped separately so the fabricated half
+                // is queryable — and so no consumer has to pattern-match its way to
+                // the distinction, which the single name made impossible. Measured on
+                // the 76 tier-firing records that carry a panel (so true grams are
+                // recoverable): the estimate lands within +-25% of the truth on 11,
+                // and its median est/true is 0.273 — it under-states weight by 3.7x,
+                // p10 0.033 / p90 1.105. See the owner report.
+                // Membership predicate: `isSyntheticGramsTier()` in ./serving-ai-tiers.
+                servingTier = fromPanel != null
+                    ? 'fs_serving_macros_only'
+                    : 'fs_serving_macros_only_est';
                 pickedServing = macroServing;
                 logger.info('fs.build_result.serving_macros_only', {
                     foodId: candidate.id,
