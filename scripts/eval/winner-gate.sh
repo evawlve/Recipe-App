@@ -122,13 +122,18 @@ echo
 # committed, but winner-diff replays the WORKING TREE — so an uncommitted edit to a
 # retrieval or frozen-input file sailed past both aborts while actually changing the
 # BRANCH side. Union the committed diff with staged, unstaged and untracked. (2026-08-14)
+# `__tests__` is filtered out for the same reason gitDirtyHash() skips it: a test
+# file cannot change what a replay produces, so aborting on one is a FALSE abort.
+# That matters more than tidiness — a gate that cries wolf on a test-only edit is a
+# gate people learn to bypass, and it fired on the very first real change after the
+# aborts shipped (a digit-brands lexicon edit whose test file matched `src/lib/parse/`).
 changed_paths() {
     {
         git diff --name-only "$BASE_REF"...HEAD
         git diff --name-only
         git diff --name-only --cached
         git ls-files --others --exclude-standard
-    } | sort -u
+    } | grep -v '__tests__' | sort -u
 }
 
 RETRIEVAL_PATHS='src/lib/mapping/gather-candidates.ts|src/lib/search/|query-builder|typesense|fatsecret-lane|embedding'
