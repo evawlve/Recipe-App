@@ -57,6 +57,9 @@ import {
     structurallyBlindBands,
     windowChurn,
     windowChurnIsMeaningless,
+    selectHashablePaths,
+    isSkippedHashDir,
+    HASHED_EXTRA_FILES,
 } from '../winner-diff-screens';
 
 // ============================================================
@@ -858,5 +861,73 @@ describe('counterfactualSummary', () => {
 
     it('reports the measured cost of the Step 4 the gate skipped', () => {
         expect(counterfactualSummary(rows).medianCounterMicros).toBe(120);
+    });
+});
+
+/**
+ * selectHashablePaths — the tree-hash membership rule.
+ *
+ * THE MUTATION THESE KILL, and it was executed before the fix (2026-08-14):
+ * the old rule was a four-entry list read one directory deep for `.ts` only. Against
+ * the live tree it hashed 54 files where a replay can load 164. Touching
+ * `src/lib/mapping/data/corrupt-off-denylist.json` — which `dropDenylistedCandidates()`
+ * reads LIVE at replay — left the old hash byte-identical at `0240e08c`, so the BASE
+ * noise-floor receipt satisfied the BRANCH and the run declared itself a noise-floor
+ * check while real winners moved. Under the walk the same edit moves the hash
+ * (`5f8dc968` -> `89094528`) and restores deterministically.
+ *
+ * Revert `selectHashablePaths` to `.ts`-only, or to one-level-deep, or drop the JSON
+ * extension, and the corresponding case below fails.
+ */
+describe('selectHashablePaths — which files decide a replay', () => {
+    it('includes JSON the replay reads live, which the .ts-only rule missed', () => {
+        const got = selectHashablePaths(['src/lib/mapping/data/corrupt-off-denylist.json']);
+        expect(got).toEqual(['src/lib/mapping/data/corrupt-off-denylist.json']);
+    });
+
+    it('descends past one level, which the readdir-one-deep rule missed', () => {
+        const got = selectHashablePaths([
+            'src/lib/mapping/serving/hydration-lane.ts',
+            'src/lib/parse/ingredient-line.ts',
+            'src/lib/search/typesense-client.ts',
+        ]);
+        expect(got).toHaveLength(3);
+    });
+
+    it('covers the brand surface the frozen-input abort also names', () => {
+        const got = selectHashablePaths([
+            'src/lib/mapping/brand-detector.ts',
+            'src/lib/mapping/brand-lexicon.json',
+            'src/lib/mapping/digit-brands.ts',
+        ]);
+        expect(got).toHaveLength(3);
+    });
+
+    it('includes the cwd-relative rules JSON that overrides shipped code', () => {
+        expect(selectHashablePaths(['data/fatsecret/normalization-rules.json']))
+            .toEqual(['data/fatsecret/normalization-rules.json']);
+        expect(HASHED_EXTRA_FILES).toContain('data/fatsecret/normalization-rules.json');
+    });
+
+    it('excludes __tests__ at any depth — a test cannot change a replay', () => {
+        expect(selectHashablePaths([
+            'src/lib/mapping/__tests__/rerank-pool.test.ts',
+            'src/lib/servings/__tests__/deep/helper.ts',
+        ])).toEqual([]);
+        expect(isSkippedHashDir('__tests__')).toBe(true);
+    });
+
+    it('excludes files outside the hashed roots and non-source extensions', () => {
+        expect(selectHashablePaths([
+            'src/app/api/nlp/parse/route.ts',
+            'scripts/eval/winner-diff.ts',
+            'src/lib/mapping/README.md',
+            'src/lib/mapping/notes.txt',
+        ])).toEqual([]);
+    });
+
+    it('is sorted and deduped, so the hash is stable across readdir order', () => {
+        const a = selectHashablePaths(['src/lib/b.ts', 'src/lib/a.ts', 'src/lib/b.ts']);
+        expect(a).toEqual(['src/lib/a.ts', 'src/lib/b.ts']);
     });
 });

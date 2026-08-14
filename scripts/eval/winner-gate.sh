@@ -118,10 +118,23 @@ echo
 # A frozen-pool diff replays a pool BOTH variants inherit. If the branch changes
 # retrieval, each side would have produced a different pool and the comparison is
 # void — not conservative, void.
+# The change set must include UNCOMMITTED work. `$BASE_REF...HEAD` sees only what is
+# committed, but winner-diff replays the WORKING TREE — so an uncommitted edit to a
+# retrieval or frozen-input file sailed past both aborts while actually changing the
+# BRANCH side. Union the committed diff with staged, unstaged and untracked. (2026-08-14)
+changed_paths() {
+    {
+        git diff --name-only "$BASE_REF"...HEAD
+        git diff --name-only
+        git diff --name-only --cached
+        git ls-files --others --exclude-standard
+    } | sort -u
+}
+
 RETRIEVAL_PATHS='src/lib/mapping/gather-candidates.ts|src/lib/search/|query-builder|typesense|fatsecret-lane|embedding'
-if git diff --name-only "$BASE_REF"...HEAD | grep -qE "$RETRIEVAL_PATHS"; then
+if changed_paths | grep -qE "$RETRIEVAL_PATHS"; then
     echo "ABORT: this branch touches RETRIEVAL:" >&2
-    git diff --name-only "$BASE_REF"...HEAD | grep -E "$RETRIEVAL_PATHS" | sed 's/^/  /' >&2
+    changed_paths | grep -E "$RETRIEVAL_PATHS" | sed 's/^/  /' >&2
     cat >&2 <<'EOF'
 
 winner-diff freezes the candidate pool at gatherCandidates' output and replays it
@@ -129,6 +142,40 @@ through both variants. When retrieval itself changes, both sides replay a pool
 NEITHER would have produced, so the diff measures nothing. Re-snapshot per
 variant (--cross-snapshot) and accept that retrieval nondeterminism is then
 inside your signal — or gate this change a different way.
+EOF
+    exit 3
+fi
+
+# ---------------------------------------------------------------- blind spot A2
+# THE FROZEN INPUTS. replaySelection() reads normalizedName, parsed, isBrandedQuery
+# and targetBrand STRAIGHT OFF the snapshot entry — it never re-runs the parser, the
+# normalizer or the brand detector. So a change to any PRODUCER of those fields replays
+# identically on both sides and the diff reports SAME vacuously: a green receipt for a
+# change the instrument structurally cannot observe.
+#
+# The rule is the snapshot's own field list, NOT "four more filenames". It is deliberately
+# not an import closure either: src/lib/mapping is an import cycle, so the closure from
+# these roots is all 73 loaded files and the gate would abort on every mapping edit.
+FROZEN_INPUT_PATHS='src/lib/parse/|src/lib/mapping/normalization-rules\.ts|data/fatsecret/normalization-rules\.json|src/lib/mapping/brand-detector\.ts|src/lib/mapping/brand-lexicon\.json|src/lib/mapping/digit-brands\.ts|src/lib/mapping/ai-normalize\.ts|src/lib/mapping/normalize-gate\.ts'
+if changed_paths | grep -qE "$FROZEN_INPUT_PATHS"; then
+    echo "ABORT: this branch touches a FROZEN SNAPSHOT INPUT:" >&2
+    changed_paths | grep -E "$FROZEN_INPUT_PATHS" | sed 's/^/  /' >&2
+    cat >&2 <<'EOF'
+
+These files produce normalizedName / parsed / isBrandedQuery / targetBrand, which
+replaySelection() reads off the FROZEN snapshot rather than recomputing. Both sides
+would replay byte-identical inputs, so this run would report SAME no matter what your
+change does. That is not a pass — it is the instrument being blind.
+
+Two arms are available instead:
+  1. Re-cut the snapshot per side (--cross-snapshot). The harness brands the result
+     RETRIEVAL-NOISE-CONTAMINATED, and it means it; read the diff with that in mind.
+  2. Score a hand-cut corpus live, the way the tail-audit fleet runs. Slower, and the
+     only arm that observes a normalization or detector change end to end.
+
+Either way, pair it with a cold golden ×3 restarted against the §10x baseline, served
+from the host you are actually gating (run-eval.ts is an HTTP client; --base decides
+which build answers, NOT your working tree).
 EOF
     exit 3
 fi

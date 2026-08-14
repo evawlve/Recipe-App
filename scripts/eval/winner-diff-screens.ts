@@ -1561,3 +1561,59 @@ export function counterfactualSummary(rows: ReplayRow[]): CounterfactualSummary 
         pairs,
     };
 }
+
+// ============================================================================
+// 12. WHICH FILES DECIDE A REPLAY — the tree-hash membership rule
+// ============================================================================
+/**
+ * `gitDirtyHash()` in winner-diff.ts answers "did the two sides run the same code".
+ * The I/O lives there; the DECISION — which paths count — lives here, because that
+ * is the half that has a right and a wrong answer, and the half that has twice been
+ * wrong.
+ *
+ * History of the bug this encodes against (2026-08-14). The rule used to be a
+ * hand-maintained list of four entries read only one directory deep for `.ts`. It
+ * covered 54 files against the 164 a replay can load: 4 of 13 `src/lib` directories
+ * and NONE of the three JSON files. `dropDenylistedCandidates()` reads
+ * `src/lib/mapping/data/corrupt-off-denylist.json` LIVE at replay, so editing it
+ * moved real winners while the hash sat still — the BASE noise-floor receipt then
+ * satisfied the BRANCH and the header announced the run as a noise-floor check.
+ * The same shape had already happened once, with `src/lib/servings` in 2026-07-27.
+ *
+ * So the rule is now a WALK, not a list, and it is deliberately FAIL-CLOSED: hashing
+ * a file that cannot affect a replay costs one re-run (the driver re-takes both noise
+ * floors every time); missing one that can produces a green receipt for untested code.
+ * `__tests__` is excluded because a test file cannot change what a replay produces.
+ */
+export const HASHED_SOURCE_ROOTS = ['src/lib'] as const;
+/**
+ * Runtime data resolved off `process.cwd()` rather than imported. `readRulesFile()` in
+ * normalization-rules.ts prefers this file over the in-code DEFAULT_RULES, so a stale
+ * copy silently overrides a shipped code fix — that is the PR #211 incident, where the
+ * cooking-state fix was inert on the box with every local gate green.
+ */
+export const HASHED_EXTRA_FILES = ['data/fatsecret/normalization-rules.json'] as const;
+export const HASHED_EXTENSIONS = ['.ts', '.tsx', '.json'] as const;
+const HASH_SKIP_DIRS = new Set(['__tests__', 'node_modules']);
+
+/** True when a path segment must not be descended into when collecting hashable files. */
+export function isSkippedHashDir(name: string): boolean {
+    return HASH_SKIP_DIRS.has(name);
+}
+
+/**
+ * Given every relative path under the repo that a caller has already enumerated,
+ * return the subset whose contents decide a replay, sorted for a stable hash.
+ * Pure: no I/O, no filesystem assumptions beyond `/`-joined relative paths.
+ */
+export function selectHashablePaths(allRelPaths: readonly string[]): string[] {
+    const out: string[] = [];
+    for (const rel of allRelPaths) {
+        if (HASHED_EXTRA_FILES.includes(rel as typeof HASHED_EXTRA_FILES[number])) { out.push(rel); continue; }
+        if (!HASHED_SOURCE_ROOTS.some(root => rel === root || rel.startsWith(root + '/'))) continue;
+        if (rel.split('/').some(seg => isSkippedHashDir(seg))) continue;
+        if (!HASHED_EXTENSIONS.some(e => rel.endsWith(e))) continue;
+        out.push(rel);
+    }
+    return [...new Set(out)].sort();
+}

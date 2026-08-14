@@ -162,6 +162,10 @@ import {
     windowChurnIsMeaningless,
     runGoldenScreen,
     formatGoldenScreen,
+    HASHED_SOURCE_ROOTS,
+    HASHED_EXTRA_FILES,
+    isSkippedHashDir,
+    selectHashablePaths,
 } from './winner-diff-screens';
 
 // ============================================================
@@ -2823,31 +2827,54 @@ function gitHead(): string {
  * identical variant — this run is itself a noise-floor check" about a run that
  * was nothing of the sort.
  */
-const HASHED_SOURCE_PATHS = [
-    'src/lib/mapping',
-    // gitDirtyHash() reads only DIRECT .ts children of a directory entry, so the
-    // stage-1a subdirectory needs its own row or the moved lane goes unhashed:
-    'src/lib/mapping/serving',
-    'src/lib/servings',
-    // The bare-query lexicon getBareQueryDefault() lives here; it decides grams.
-    'src/lib/ai/ambiguous-serving-estimator.ts',
-];
+/**
+ * REWRITTEN 2026-08-14. The hand-maintained list was the bug, not its contents.
+ *
+ * The old form listed four entries and read only DIRECT `.ts` children of each, which
+ * covered 4 of the 13 `src/lib` directories a replay actually loads and NONE of the three
+ * JSON files. The sharpest miss was `src/lib/mapping/data/corrupt-off-denylist.json`, which
+ * `dropDenylistedCandidates()` reads LIVE at replay: editing it produced real winner changes
+ * under a header announcing the run as a noise-floor check. Every time the loaded set grew,
+ * the list silently fell behind — that is the failure this function keeps having.
+ *
+ * So: walk `src/lib` recursively and hash every `.ts`/`.tsx`/`.json`, skipping `__tests__`
+ * (test files cannot change a replay). Plus the ONE runtime data file that lives outside
+ * `src/` and is resolved off `process.cwd()`: `readRulesFile()` in normalization-rules.ts
+ * prefers `data/fatsecret/normalization-rules.json` over the in-code DEFAULT_RULES, so a
+ * stale copy silently overrides a shipped code fix (that is the PR #211 incident).
+ *
+ * Over-hashing is deliberately FAIL-CLOSED here. winner-gate.sh re-takes both noise floors
+ * every run, so a hash that moves on an irrelevant file costs one re-run; a hash that fails
+ * to move produces a false "identical tree" and a green receipt for untested code.
+ */
+/**
+ * The membership rule — which paths decide a replay — lives in winner-diff-screens.ts
+ * (`selectHashablePaths`), where it is pure and unit-tested. Only the I/O is here.
+ */
+function walkRelPaths(absDir: string, relDir: string, out: string[]): void {
+    for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
+        const rel = relDir + '/' + entry.name;
+        if (entry.isDirectory()) {
+            if (isSkippedHashDir(entry.name)) continue;
+            walkRelPaths(path.join(absDir, entry.name), rel, out);
+        } else {
+            out.push(rel);
+        }
+    }
+}
 
 function gitDirtyHash(): string {
     try {
-        const parts: string[] = [];
-        for (const rel of HASHED_SOURCE_PATHS) {
-            const p = path.join(REPO_ROOT, rel);
-            if (!fs.existsSync(p)) continue;
-            if (fs.statSync(p).isDirectory()) {
-                for (const f of fs.readdirSync(p).sort()) {
-                    if (!f.endsWith('.ts')) continue;
-                    parts.push(rel + '/' + f + ':' + sha(fs.readFileSync(path.join(p, f), 'utf8')));
-                }
-            } else {
-                parts.push(rel + ':' + sha(fs.readFileSync(p, 'utf8')));
-            }
+        const seen: string[] = [];
+        for (const root of HASHED_SOURCE_ROOTS) {
+            const p = path.join(REPO_ROOT, root);
+            if (fs.existsSync(p) && fs.statSync(p).isDirectory()) walkRelPaths(p, root, seen);
         }
+        for (const f of HASHED_EXTRA_FILES) {
+            if (fs.existsSync(path.join(REPO_ROOT, f))) seen.push(f);
+        }
+        const rels = selectHashablePaths(seen);
+        const parts = rels.map(rel => rel + ':' + sha(fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8')));
         return sha(parts.join('\n')).slice(0, 8);
     } catch { return 'unknown'; }
 }
