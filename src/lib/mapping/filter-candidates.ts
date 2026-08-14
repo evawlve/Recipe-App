@@ -7,6 +7,9 @@
 
 import type { UnifiedCandidate } from './gather-candidates';
 import { logger } from '../logger';
+// Import direction is safe: brand-detector imports only brand-lexicon.json and
+// digit-brands.ts, neither of which reaches back here, so this adds no cycle.
+import { detectBrandInQuery } from './brand-detector';
 
 // ============================================================
 // Types
@@ -3043,7 +3046,7 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
     // e.g. "low fat popcorn" → coreTokens=["popcorn"] ("low" is now a MODIFIER) → requires "popcorn"
     // e.g. "almond flour" → coreTokens=["almond","flour"] → requires both to be present
     if (coreTokens.length >= 1) {
-        return coreTokens.slice(0, 2);
+        return keepAFoodToken(coreTokens.slice(0, 2), coreTokens, normalizedName);
     }
 
     // If ALL tokens are modifiers (rare), just use the first token
@@ -3083,4 +3086,63 @@ function tokenize(text: string): Set<string> {
  */
 function foldApostrophes(text: string): string {
     return text.replace(/['’`]/g, '');
+}
+
+/**
+ * A brand-led query must still require something about the FOOD.
+ *
+ * `deriveMustHaveTokens()` takes the first two core tokens positionally, and
+ * `filterCandidatesByTokens()` requires `every()` one of them — a hard reject with no
+ * ratio and no coverage threshold. When the brand is two tokens long it fills both
+ * slots and the food token is never required at all:
+ *
+ *     kirkland signature mini croissants -> ['kirkland','signature']
+ *     great value fat free cheddar cheese -> ['great','value']
+ *     sams club members mark chicken     -> ['sams','club']
+ *
+ * so ANY product of that brand satisfies admission. Measured live 2026-08-14:
+ * `kirkland signature mini croissants` returned a Mini Choc Hazelnut Beignet at
+ * 25 g / 27.5 kcal, 4.9x under the generic form's 134.4 kcal. Single-token brands were
+ * never affected — `costco mini croissants` -> ['costco','croissants'] already keeps the
+ * food — so this is specifically a multi-token-brand defect, and it is brand-agnostic
+ * rather than retailer-specific.
+ *
+ * This matters more than a ranking bug: the correct record is deleted BEFORE
+ * `buildRerankPool()` is reached, so no reranking change can recover it. The empty-pool
+ * relax pass does not save it either — the caller retries with `{relaxed:true}` only when
+ * `filtered.length === 0`, and one surviving generic keeps the pool non-empty.
+ *
+ * The repair keeps ONE brand token (so the brand still constrains admission) and spends
+ * the second slot on the first non-brand core token. It is a no-op unless all of:
+ * the query is brand-detected, every selected token belongs to the brand, and a non-brand
+ * core token exists — i.e. it cannot loosen a query that already required a food token.
+ *
+ * KNOWN LIMIT, measured 2026-08-14, deliberately not fixed here. A query naming TWO brands
+ * is not repaired: `sams club members mark chicken` detects `members mark`, so the selected
+ * `['sams','club']` read as non-brand tokens against that lexicon entry and the guard
+ * correctly declines to touch them. The result is still brand-only and still requires no
+ * food token. Repairing it needs multi-brand detection inside `detectBrandInQuery()`, which
+ * is a brand-detector change — a different blast radius, and one the frozen-pool winner-diff
+ * cannot observe at all (it replays `isBrandedQuery`/`targetBrand` frozen). Pinned by a test.
+ */
+function keepAFoodToken(selected: string[], allCore: string[], normalizedName: string): string[] {
+    if (selected.length === 0) return selected;
+
+    const detection = detectBrandInQuery(normalizedName);
+    if (!detection.isBranded || !detection.matchedBrand) return selected;
+
+    const brandTokens = new Set(
+        foldApostrophes(detection.matchedBrand.toLowerCase()).split(/[^\w]+/).filter(Boolean)
+    );
+    if (brandTokens.size === 0) return selected;
+
+    const isBrandToken = (t: string): boolean => brandTokens.has(t) || brandTokens.has(foldApostrophes(t));
+
+    // Already requires something that is not the brand — leave it exactly as it was.
+    if (selected.some(t => !isBrandToken(t))) return selected;
+
+    const foodToken = allCore.find(t => !isBrandToken(t));
+    if (!foodToken) return selected;  // a bare brand query ("kirkland signature"); nothing to add
+
+    return [selected[0], foodToken];
 }
