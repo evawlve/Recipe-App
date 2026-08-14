@@ -12,3 +12,6 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 .env*
+// A conflict copy of .env is named ".sync-conflict-<id>.env", which .env* does NOT match.
+*.sync-conflict-*
+.sync-conflict-*

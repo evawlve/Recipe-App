@@ -49,6 +49,9 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 
 const MOBILE_CANDIDATES = [
     process.env.DOC_CHECK_MOBILE_ROOT ?? '',
+    '/Users/diego/dev/KindaHealthyMobile',
+    // Pre-2026-08-13 Mac location, under ~/Documents (an iCloud file-provider domain). Kept so a
+    // machine that has not been migrated still resolves; safe to drop once none remain.
     '/Users/diego/Documents/Github/KindaHealthyMobile/KindaHealthyMobile',
     '/home/owner/KindaHealthyMobile',
 ].filter(Boolean);
