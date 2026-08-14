@@ -19,6 +19,12 @@ export interface MappingAnalysisLog {
         brandName?: string | null;
         score: number;
         source: string;
+        /** Present iff the candidate was reached by semantic search. `laneMode()` in
+         *  `rerank-pool.ts` keys the lane split on PRESENCE, not magnitude, so an
+         *  offline replay of `buildRerankPool()` cannot reconstruct the lanes without
+         *  it — that is why an otherwise-complete log validated at only 82.1%. Null
+         *  means keyword-reached; absent means the record predates this field. */
+        semanticSimilarity?: number | null;
         serving?: {
             description?: string | null;
             grams?: number | null;
