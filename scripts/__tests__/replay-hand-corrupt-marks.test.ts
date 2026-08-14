@@ -520,7 +520,7 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         expect(parsed.ok).toBe(true);
     });
 
-    it('is the 2026-08-12 tail-audit batch: 15 entries over 19 barcodes', () => {
+    it('is the 2026-08-12 batch plus the 2026-08-14 panel batch: 23 entries over 27 barcodes', () => {
         // Narrowed from 17/22 on 2026-08-12 after the pre-apply review. Two
         // entries were withdrawn because the mark does not buy a better answer,
         // which is the same criterion that deferred maple and callaloo:
@@ -532,9 +532,16 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         //     51% low, i.e. marking makes it worse.
         // Both are re-authorable as a separate prefix once verification draws can
         // run; they were held, not refuted.
+        //
+        // 2026-08-14 added 8 panel entries, none carrying a group member: the
+        // panel-axis CORRUPT-MARK backlog was 26 candidates and 18 were refuted.
+        // The kill criterion was the same one that narrowed the 2026-08-12 batch
+        // — a mark is a deletion, so it is only worth writing when what gets
+        // promoted in its place is measurably better. Owner:
+        // sync-docs/reports/2026-08-14_corrupt-mark-panel-batch-plan.md (mobile).
         if (!parsed.ok) throw new Error('unparseable');
-        expect(parsed.entries.length).toBe(15);
-        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(19);
+        expect(parsed.entries.length).toBe(23);
+        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(27);
     });
 
     it('carries the duplicate-group members that make a barcode-scoped mark self-reverting', () => {
@@ -555,9 +562,19 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         expect(parsed.entries.some(e => e.barcode === '6958166644797297267792')).toBe(false);
     });
 
-    it('writes exactly one reason generation', () => {
+    it('writes only known reason generations, and each is a whole batch', () => {
+        // A generation is a `--clear-prefix` unit: the rollback for a batch is
+        // all-or-nothing on its prefix, so an entry authored on a stray date
+        // would be unrevertable as part of the batch it shipped with. Pin the
+        // set, and pin each generation's size, so adding an entry to an OLD
+        // generation (which would silently widen a shipped batch's rollback)
+        // fails here rather than at revert time.
         if (!parsed.ok) throw new Error('unparseable');
-        expect([...new Set(parsed.entries.map(e => e.authoredAt))]).toEqual(['2026-08-12']);
+        const byGen = new Map<string, number>();
+        for (const e of parsed.entries) byGen.set(e.authoredAt, (byGen.get(e.authoredAt) ?? 0) + 1);
+        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14']);
+        expect(byGen.get('2026-08-12')).toBe(15);
+        expect(byGen.get('2026-08-14')).toBe(8);
     });
 
     it('records a stated reason for every declined group member', () => {

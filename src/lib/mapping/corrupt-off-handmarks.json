@@ -353,5 +353,154 @@
             }
         ],
         "groupExclusions": []
+    },
+    {
+        "barcode": "0051000284730",
+        "class": "panel",
+        "seed": "breast chicken premium skinless swanson",
+        "reason": "Physically impossible: 70.59 kcal/100g against 21.18 g protein, i.e. kcal < 4 x protein, which no food can satisfy. All four fields are X/85x100, so the source label was 60 kcal / 18 g protein / 1.5 g fat per 85 g and 18 g protein alone is 72 kcal. Unique in the Swanson chunk-chicken family; the only other outlier already carries macro-sum-impossible.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "White Premium Chunk Chicken Breast",
+            "kcal100": 70.5882339477539,
+            "protein": 21.17646980285645,
+            "fat": 1.764705896377563,
+            "carbs": 1.176470637321472,
+            "servingGrams": 35.0
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0063383036356",
+        "class": "panel",
+        "seed": "bun cha",
+        "reason": "The 300 g whole-bowl panel written into the per-100g field. All SEVEN nutrient fields are exactly 3.000000x off_0060383068356 'Chicken Bun Cha' [President's Choice], and both rows carry servingGrams 300 - the factor IS the 300 g -> 100 g conversion that was never applied. Corroborated independently: macros sum to 92 g per 100 g, a 92%-dry-solids product, impossible for a wet pork-and-noodle bowl.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "Bun cha",
+            "kcal100": 430.0,
+            "protein": 16.0,
+            "fat": 13.0,
+            "carbs": 63.0,
+            "servingGrams": 300.0
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "9320443000001",
+        "class": "panel",
+        "seed": "cheese fetta",
+        "reason": "138.4 kcal/100g at 10.5 g fat and 8.7 g protein is roughly half real feta (FDC 173420 = 265 kcal / 21.5 g fat). Protein 8.7 is below every member of the feta cohort (9.6-30), and reduced-fat cheese RAISES protein, so a light-SKU reading is excluded. Tier-1 panel-low declines only because the row has no servingGrams and the rescale clause then divides by the group median 25 g.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "fetta cheese",
+            "kcal100": 138.3999938964844,
+            "protein": 8.699999809265137,
+            "fat": 10.5,
+            "carbs": 2.5,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0643131996547",
+        "class": "panel",
+        "seed": "chobani flip yogurt",
+        "reason": "380 kcal/100g against a two-corpus Chobani Flip population of 87-200 (OFF ~40 rows 123.6-200, mode 125-133; FatSecret 20 rows 87-153). It is 2.6-3.1x the entire population and 1.9x the next highest value in it. No same-name siblings, no servingGrams and macro sum 84 g, so every shipped rule declines.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "Chobani Flip Yogurt",
+            "kcal100": 380.0,
+            "protein": 22.0,
+            "fat": 10.0,
+            "carbs": 52.0,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0810116127047",
+        "class": "panel",
+        "seed": "hydration prime",
+        "reason": "The whole 500 mL bottle in the per-100g field, self-consistently: 5 g carbs x 4 = 20 kcal exactly, servingSize '1 bottle (500 ml)', servingGrams 500. 42 live Prime Hydration rows read 2-6 kcal/100g, so the target is a 5x outlier inside its own product cohort. Unreachable by panel-inflated-serving, which needs macro sum >= 95 g and implied serving >= 1500 kcal.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "Prime Hydration ufc",
+            "kcal100": 20.0,
+            "protein": 0.0,
+            "fat": 0.0,
+            "carbs": 5.0,
+            "servingGrams": 500.0
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0036632079053",
+        "class": "panel",
+        "seed": "milk oat silk",
+        "reason": "The per-SERVING panel of Silk Oatmilk Extra Creamy written into the per-100g fields. off_0036632074591 reads 66.7 / 0.417 P / 3.75 F / 7.5 C per 100 g with servingGrams 240; scaled to its own 240 g serving that is 160.08 / 1.00 / 9.00 / 18.00 - byte-for-byte this row's stored per-100g panel, which also carries servingGrams 240. The clean source row is live and must NOT be marked.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "Silk oat milk",
+            "kcal100": 160.0,
+            "protein": 1.0,
+            "fat": 9.0,
+            "carbs": 18.0,
+            "servingGrams": 240.0
+        },
+        "group": [],
+        "groupExclusions": [
+            {
+                "barcode": "0036632074591",
+                "why": "This is the CORRECT record whose per-serving panel was mis-filed here (66.7 kcal/100g, servingGrams 240). Marking it would delete the truth."
+            }
+        ]
+    },
+    {
+        "barcode": "6949682812287",
+        "class": "panel",
+        "seed": "potato starch sweet",
+        "reason": "120 kcal/100g at 28 g carb is physically impossible for a dry starch powder - 28 g carb per 100 g implies ~70% moisture. Both cohort survivors read 350 (80-90 g carb) and FDC 169698 cornstarch reads 381. Consistent with a ~35 g per-serving label written into the per-100g fields. Unreachable twice over: the cohort is 3 rows against a MIN_GROUP of 4, and servingGrams 100 sits in the (90,110) window the scan skips by design.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "Sweet Potato Starch",
+            "kcal100": 120.0,
+            "protein": 2.0,
+            "fat": 0.0,
+            "carbs": 28.0,
+            "servingGrams": 100.0
+        },
+        "group": [],
+        "groupExclusions": []
+    },
+    {
+        "barcode": "0894559000365",
+        "class": "panel",
+        "seed": "roll spring",
+        "reason": "Macros sum to exactly 100.0 g per 100 g (17.647 + 11.765 + 70.588), describing a food with zero moisture and zero ash - no spring roll, fried or fresh, is anhydrous. Stated 576.47 kcal against its own Atwater sum of 458.82 (+25.7%), and above all 41 members of its name cohort (max 300, median 199.5). Escapes macro-sum-impossible at the 105 g threshold and panel-inflated-serving on two side conditions.",
+        "source": "tail-audit-phase1-2026-08-11",
+        "authoredAt": "2026-08-14",
+        "observed": {
+            "name": "Spring Roll",
+            "kcal100": 576.4705810546875,
+            "protein": 17.64705848693848,
+            "fat": 11.76470565795898,
+            "carbs": 70.5882339477539,
+            "servingGrams": null
+        },
+        "group": [],
+        "groupExclusions": []
     }
 ]
