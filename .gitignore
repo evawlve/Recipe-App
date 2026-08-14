@@ -153,3 +153,8 @@ tmp/
 
 # Eval harness run outputs (timestamped JSON, diffed manually)
 scripts/eval/results/
+
+# DB restore anchors for repair batches (19MB of FoodMapping dumps).
+# Carried by Syncthing; the canonical copies live in the mobile repo at
+# sync-docs/cache-snapshots/. Never commit these to history.
+snapshots/
