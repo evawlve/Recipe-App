@@ -177,6 +177,8 @@ function loadDotEnv(): string[] {
         process.env.WINNER_DIFF_ENV_FILE,
         path.join(REPO_ROOT, '.env'),
         path.join(REPO_ROOT, '.env.local'),
+        '/Users/diego/dev/Recipe-App/.env',
+        // Pre-2026-08-13 Mac location, under ~/Documents (an iCloud file-provider domain).
         '/Users/diego/Documents/Github/Recipe App/Recipe-App/.env',
     ].filter(Boolean) as string[];
     for (const f of candidates) {
