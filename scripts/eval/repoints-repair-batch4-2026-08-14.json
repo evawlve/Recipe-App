@@ -1,0 +1,62 @@
+[
+  {
+    "seed": "cava harissa avocado bowl",
+    "key": "avocado bowl cava harissa",
+    "target": "fs_75421144",
+    "class": "tail-repair-identity",
+    "severity": "high",
+    "wasFood": "Harissa [Cava] (the condiment, not the bowl)",
+    "_idx": 0,
+    "_expectedGrams": "415",
+    "_expectedKcal": "830",
+    "_note": "[CONFIRM conf=HIGH] REPLAY PHRASE (probe VERBATIM): `cava harissa avocado bowl` | PRE 70 kcal (off_0898328002222 Harissa [Cava], 28 g) | TRUTH 830-880 kcal | LANDING BAND grams [414,416] AND servingTier == fs_serving_macros_only_est AND kcal [828,832] | TRUTH BAND [727,983] | WORSE iff kcal outside truth band AND |post-truth| > |pre-truth| | draws=4 | AIM: fs_75421144 `Harissa Avocado Curated Bowl` [Cava]; its nutrients JSON matches CAVA's published label on every field (830 kcal, 49 g fat, 62 g carbs, 41 g protein, 12 g fibre, 2010 mg sodium, 155 mg cholesterol). defaultServingId 61286144 = `1 serving`, grams NULL, 830 kcal, so the cascade invents grams at PREPARED_FOOD_KCAL_PER_GRAM=2.0 -> 415 g. TIER CORRECTED 2026-08-14: the plan's `fs_serving_macros_only` is the pre-#314 name; #314 split the tier and the fromPanel==null leg now emits `fs_serving_macros_only_est` (verified live: 86 `_est` events since 2026-08-14 alongside 89 un-suffixed). EXPOSURE: name-group singleton, no siblings to form a median. Independent corroboration on the band: golden case n-mq-40 pre-registers grams [250,700] and calories [400,1000] for this exact query and was authored before this batch; 415/830 sits inside both. The live validator flagged this row SUSPECT 7 of 7 times and no human ever read it."
+  },
+  {
+    "seed": "white claw mango",
+    "key": "claw mango white",
+    "target": "fs_67788437",
+    "class": "tail-repair-identity",
+    "severity": "med",
+    "wasFood": "Mango Passion Fruit White Claw Zero Proof (the 0% alcohol variant, which bills correctly for what it names)",
+    "_idx": 1,
+    "_expectedGrams": "50",
+    "_expectedKcal": "100",
+    "_note": "[CONFIRM conf=HIGH] REPLAY PHRASE (probe VERBATIM): `white claw mango` | PRE 10 kcal (off_0848819070025, 355 g) | TRUTH 100 kcal | LANDING BAND grams [49,51] AND servingTier == fs_serving_macros_only_est AND kcal [98,102] | TRUTH BAND [95,105] | WORSE iff kcal outside truth band AND |post-truth| > |pre-truth| | draws=4 | AIM: fs_67788437 `Hard Seltzer Mango` [White Claw]; defaultServingId 55576913 = `1 can`, grams NULL, 100 kcal -> invented at 2.0 kcal/g = 50 g. TIER CORRECTED 2026-08-14, same mechanism as row 1. This is an IDENTITY/retrieval defect, NOT a panel defect: `Mango Passion Fruit` is the Zero Proof (0% alcohol) flavour name and off_0848819070025 bills correctly for what it names (corroborated in-DB: 0063598580305 `Zero Proof Mango Passion Fruit` carries 2.94 kcal/100 g). A corrupt-mark route is therefore REFUTED - marking that record would be false and would break legitimate `white claw zero proof mango` queries. EXPOSURE: the 355 g -> 50 g change is NOT cosmetic; that framing is struck. per100gFor() in mobile src/lib/parsed-to-staged.ts lets billed macros win over the panel, so the card stores 200 kcal/100 g against a true 29.25 (measured from sibling fs_20773205 Natural Lime) - 6.8x over - and injectMetricOptions() adds 1 g/100 g/1 oz while this record's only serving row has NULL grams, so tapping 100 g bills 200 kcal and 12 oz bills 680. It still ships because the pre-state is ~10x UNDER on the same axis (2.82 kcal/100 g) and ~10x under on the default bill; the durable fix is the search/serving-options lane, not this repoint."
+  },
+  {
+    "seed": "grilled salmon",
+    "key": "grilled salmon",
+    "target": "off_0251518110662",
+    "class": "tail-repair-panel",
+    "severity": "med",
+    "wasFood": "Grilled salmon (off_0722515251011) - right name, panel understates density",
+    "_idx": 2,
+    "_expectedGrams": "142",
+    "_expectedKcal": "289.68",
+    "_note": "[CONFIRM conf=HIGH] REPLAY PHRASE (probe VERBATIM): `grilled salmon` | PRE 119.5 kcal (off_0722515251011, 116 g) | TRUTH ~290 kcal | LANDING BAND grams [141,143] AND servingTier == bare_label_serving AND kcal [288,291] | TRUTH BAND [235,350] | WORSE iff kcal outside truth band AND |post-truth| > |pre-truth| | draws=4 | AIM: off_0251518110662 `Salmon` [ALDI Atlantic Salmon]; the landing is MEASURED, not predicted - the bare `salmon` key already points here (usedCount 672) with 75 events at bare_label_serving 142 g / 289.68 kcal plus 7 label_serving_default at the same values. Its panel (204 kcal, 13.4 g fat, 20.4 g protein, 0 carbs, 0 sugars) is byte-identical to USDA fdc_175167 on fat and protein and within 1.9% on kcal. TWO DECISIONS, stated as decisions and not side effects: post-repoint `salmon` and `grilled salmon` bill identically, because the #211 fork separates keys and not records; and the replacement is ALSO branded, so what this buys is the right DENSITY, not the right CATEGORY. CORRECTION owed to the plan: its §4.1 states that no FoodMapping row points at any of the five targets, which is FALSE for this row - the bare `salmon` key does, as §4.1's own row-3 note says. conflictingKeys() still cannot fire, because it only detects duplicate keys WITHIN one plan file, so the plan's conclusion holds and its stated reason does not."
+  },
+  {
+    "seed": "buttered toast",
+    "key": "buttered toast",
+    "target": "fs_30917264",
+    "class": "tail-repair-identity",
+    "severity": "med",
+    "wasFood": "Buttered Toasts [Angelina] - packaged toast biscuits, not the dish",
+    "_idx": 3,
+    "_expectedGrams": "100",
+    "_expectedKcal": "260",
+    "_note": "[CONFIRM conf=MED] REPLAY PHRASE (probe VERBATIM): `buttered toast` | PRE 628 kcal (off_4806503950189, 130 g) | TRUTH 110-290 kcal | LANDING BAND grams [99,101] AND servingTier == fs_default_serving AND kcal [259,261] | TRUTH BAND none - there is no honest FIXED band, so this row can only be graded IMPROVED | WORSE iff kcal > 628 | draws=4 | AIM: fs_30917264 `Buttered Wheat Toast` [Perkins Restaurant]; defaultServingId 28103646 = `1 serving` 100 g / 260 kcal, verified against FatSecretServing. CORRECTION carried from the adversarial pass and NOT to be re-lost: the aim's claim that `260 kcal is Perkins' published figure for one order` is FALSE - both serving rows carry byte-identical nutrients and both are 100 g, so the `1 serving` row is a synthesized placeholder, not label data. FatSecret stores real Perkins order weights where it has them (sibling `Brioche French Toast - 2 Slices` = 225 g / 590 kcal) and has none for plain toast. So the bill is literally 100 g of buttered wheat toast, about three slices, and 260 is roughly right by cancellation: the panel understates butter at 8 g fat/100 g while the weight overstates the portion. Also corrected: the fallback rung if the default-serving branch were refused is fs_serving_macros_only, not fs_per100g_fallback - same numbers, wrong name in the original aim. EXPOSURE: the error shrinks from +214% to roughly +30-115% depending on anchor."
+  },
+  {
+    "seed": "iced mocha",
+    "key": "iced mocha",
+    "target": "fs_7338",
+    "class": "tail-repair-identity",
+    "severity": "med",
+    "wasFood": "Iced Mocha [Boss Coffee] - a canned RTD, not the cafe drink",
+    "_idx": 4,
+    "_expectedGrams": "486",
+    "_expectedKcal": "394",
+    "_note": "[CONFIRM conf=MED] REPLAY PHRASE (probe VERBATIM): `iced mocha` | PRE 95 kcal (off_9415767067042 Iced Mocha [Boss Coffee]) | TRUTH ~330 kcal | LANDING BAND grams [484,488] AND servingTier == fs_default_serving AND kcal [392,396] | TRUTH BAND [220,400] | WORSE iff kcal outside truth band AND |post-truth| > |pre-truth| | draws=4 | AIM: fs_7338 `Mocha Coffee` (generic, no brand); real per-100g panel at 81 kcal and defaultServingId 28466 = `1 medium` 486 g / 394 kcal, both verified against FatSecretServing. TIER CORRECTED 2026-08-14: the plan predicted fs_serving_macros_only, which this record structurally CANNOT produce - it carries a full per-100g panel AND a weighted default serving, so the macros-only (empty-panel) branch cannot fire. The plan's grams and kcal predictions were exact; only the tier name was wrong, and since the landing band asserts tier as well as grams and kcal, leaving it would have graded a correct landing as a deviation. EXPOSURE: eviction is NOT an exit for this row - a cold draw lands fs_10495687 [Black Medicine], which has ZERO rows in FatSecretFood (a live-API candidate we do not hold; its only two MEL events ever are nosave=1 probe draws), and at 170 against a ~330 anchor it is still -48%, materially wrong."
+  }
+]
