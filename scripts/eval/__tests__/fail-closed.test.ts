@@ -29,6 +29,7 @@ import {
     driftedKnownIssues,
     evalExitCode,
     mergeBaseline,
+    nutritionMissing,
     scoreNlpCase,
     scoreSearchCase,
     type BaselineEntry,
@@ -198,6 +199,81 @@ describe('golden-set harness: abstention is not a pass', () => {
         // legitimately return fewer rows, and a broad one must be held to more.
         expect(scoreSearchCase({ match: [['almond']], minItems: 1 }, fullList(1)).pass).toBe(true);
         expect(scoreSearchCase({ match: [['almond']], minItems: 20 }, fullList(19)).pass).toBe(false);
+    });
+
+    // -----------------------------------------------------------------------
+    // The manufactured zero (closed 2026-08-14)
+    //
+    // `/api/foods/search` writes `kcal100: c.nutrition?.kcal ?? 0`, so a candidate the
+    // route knows nothing about leaves as a finite 0 rather than as an absence. The
+    // pre-existing invariant reads `hasNum`, and `hasNum(0) === true`, so 3,394
+    // FatSecret chain records shipped 0 kcal past the one check written to stop them —
+    // and it only read `list.slice(0, rank ?? 3)` anyway, while those rows sit at
+    // ranks 9–22 of a ~25-row browse list.
+    // -----------------------------------------------------------------------
+
+    it('search: the null-nutrition invariant reads the WHOLE list, not just topN', () => {
+        // The row is at index 10, far outside `rank`. Before 2026-08-14 this passed.
+        const list: any[] = fullList(24);
+        list[10] = { name: 'Junk row', kcal100: null, protein100: null, carbs100: null, fat100: null };
+        const c = { match: [['almond']], minItems: 14 };
+        const r = scoreSearchCase(c, list);
+        expect(r.pass).toBe(false);
+        expect(r.detail).toContain('NULL-NUTRITION');
+        expect(r.detail).toContain('Junk row');
+        // POSITIVE CONTROL — the same list without the junk row.
+        expect(scoreSearchCase(c, fullList(24)).pass).toBe(true);
+    });
+
+    it('search: requireEnergy FAILS a named food returned at a manufactured zero', () => {
+        const list: any[] = fullList(24);
+        // The live shape, verbatim from the box 2026-08-14: real name, all-zero macros,
+        // fabricated portion. `nutritionMissing` cannot see it — assert that too, so a
+        // future "just widen nutritionMissing" edit has to confront why this test exists.
+        const whopper = {
+            name: 'Whopper Jr.', kcal100: 0, protein100: 0, carbs100: 0, fat100: 0,
+            servingOptions: [{ label: '100 g', grams: 100 }],
+        };
+        expect(nutritionMissing(whopper)).toBe(false);
+        list[19] = whopper;
+        const c = { match: [['almond']], minItems: 14, requireEnergy: [['whopper jr']] };
+        const r = scoreSearchCase(c, list);
+        expect(r.pass).toBe(false);
+        expect(r.detail).toContain('ZERO-KCAL');
+        expect(r.detail).toContain('Whopper Jr.');
+    });
+
+    it('search: requireEnergy passes once the row carries real energy', () => {
+        const list: any[] = fullList(24);
+        list[19] = {
+            name: 'Whopper Jr.', kcal100: 200, protein100: 8.82, carbs100: 17.65, fat100: 10.59,
+            servingOptions: [{ label: '1 serving', grams: 170 }], portionEstimated: true,
+        };
+        const c = { match: [['almond']], minItems: 14, requireEnergy: [['whopper jr']] };
+        expect(scoreSearchCase(c, list).pass).toBe(true);
+    });
+
+    it('search: requireEnergy is FAIL-CLOSED when the named food is absent entirely', () => {
+        // Otherwise "stop returning the row" would silence the assertion — the cheapest
+        // wrong fix for a zero-kcal row, and the one this must not reward.
+        const c = { match: [['almond']], minItems: 14, requireEnergy: [['whopper jr']] };
+        const r = scoreSearchCase(c, fullList(24));
+        expect(r.pass).toBe(false);
+        expect(r.detail).toContain('NO-ENERGY-CANDIDATE');
+    });
+
+    it('search: an all-zero hit NOT named by requireEnergy still passes', () => {
+        // THE REFUTED ALTERNATIVE. A global "all-zero macros == missing" rule reds
+        // s-edge-03 ("water") and s-sem-04 ("zero sugar soda") permanently, because
+        // 0/0/0/0 is a complete and correct panel for those foods. Measured on the box
+        // 2026-08-14: 16 such rows survive across 4 cases even after the chain-record
+        // defect is fixed. This test pins that they are allowed through.
+        const list: any[] = fullList(24);
+        list[21] = {
+            name: 'Tap Water', kcal100: 0, protein100: 0, carbs100: 0, fat100: 0,
+            servingOptions: [{ label: '1 cup', grams: 237 }],
+        };
+        expect(scoreSearchCase({ match: [['almond']], minItems: 14 }, list).pass).toBe(true);
     });
 
     it('search: a short list cannot LAUNDER a wrong winner into a pass', () => {
