@@ -16,6 +16,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -934,14 +935,64 @@ describe('selectHashablePaths — which files decide a replay', () => {
 });
 
 // ============================================================================
+// winner-gate.sh's abort membership — shared reader for all three path lists
+// ============================================================================
+/**
+ * WHY THESE ARE TESTED FROM THE SHELL FILE and not from a TypeScript constant.
+ * The aborts run BEFORE the driver starts any node process, deliberately: they must
+ * be cheap and must not depend on ts-node, node_modules or a database. So the
+ * patterns live in winner-gate.sh and those strings are the single source of truth.
+ * A mirror in TS would be a second copy free to drift; this reads the shipped ones —
+ * INCLUDING the test-file filter, which used to be restated here as a literal
+ * `grep -v '__tests__'` and would have silently kept passing after the shipped filter
+ * was widened to the colocated `*.test.ts` convention.
+ */
+const REPO_ROOT = path.join(__dirname, '..', '..', '..');
+const GATE_PATH = path.join(REPO_ROOT, 'scripts', 'eval', 'winner-gate.sh');
+const GATE_SRC = fs.readFileSync(GATE_PATH, 'utf8');
+
+/** One shipped `NAME='…'` assignment, read out of the script rather than restated. */
+function gatePattern(name: string): string {
+    const m = GATE_SRC.match(new RegExp(`^${name}='([^']*)'`, 'm'));
+    if (!m) {
+        throw new Error(
+            `winner-gate.sh no longer defines ${name}='…' on a single line. ` +
+            'This test cannot read the shipped membership, which is a FAILURE, not a skip.');
+    }
+    return m[1];
+}
+
+/**
+ * The gate's own predicate, run through the same tools the gate runs it through:
+ * `changed_paths | grep -vE "$NON_REPLAY_PATHS" | grep -qE "$PAT"`.
+ * A JS RegExp would be a MODEL of ERE; this is the thing itself, so a pattern that
+ * means something different to grep cannot pass here.
+ */
+function gateAbortsOn(patternName: string, changedPaths: string[]): boolean {
+    const res = spawnSync('bash', ['-c', 'grep -vE "$SKIP" | grep -qE "$PAT"'], {
+        input: changedPaths.join('\n') + '\n',
+        env: { ...process.env, PAT: gatePattern(patternName), SKIP: gatePattern('NON_REPLAY_PATHS') },
+        encoding: 'utf8',
+    });
+    if (res.error) throw res.error;
+    if (res.status !== 0 && res.status !== 1) {
+        throw new Error(`grep failed (status ${res.status}): ${res.stderr}`);
+    }
+    return res.status === 0;
+}
+
+/** Every pattern alternative must name a real path — a typo is a silent hole, not a red. */
+function missingPathsIn(patternName: string): string[] {
+    return gatePattern(patternName)
+        .split('|')
+        .map(p => p.replace(/\\/g, '').replace(/\/$/, ''))
+        .filter(rel => !fs.existsSync(path.join(REPO_ROOT, rel)));
+}
+
+// ============================================================================
 // winner-gate.sh's FROZEN_INPUT_PATHS — the abort membership
 // ============================================================================
 /**
- * WHY THIS IS TESTED FROM THE SHELL FILE and not from a TypeScript constant.
- * The two aborts run BEFORE the driver starts any node process, deliberately: they
- * must be cheap and must not depend on ts-node, node_modules or a database. So the
- * pattern lives in winner-gate.sh and that string is the single source of truth. A
- * mirror in TS would be a second copy free to drift; this reads the shipped one.
  *
  * WHAT IT KILLS (2026-08-15). `src/lib/mapping/llm-output-guards.ts` was absent from
  * the list while writing THREE of the seven frozen snapshot fields — normalizedName and
@@ -956,39 +1007,7 @@ describe('selectHashablePaths — which files decide a replay', () => {
  * pinning that they do NOT abort.
  */
 describe('winner-gate.sh FROZEN_INPUT_PATHS — what the frozen-pool diff must refuse', () => {
-    const REPO_ROOT = path.join(__dirname, '..', '..', '..');
-    const GATE_PATH = path.join(REPO_ROOT, 'scripts', 'eval', 'winner-gate.sh');
-    const GATE_SRC = fs.readFileSync(GATE_PATH, 'utf8');
-
-    /** The shipped pattern, read out of the script rather than restated here. */
-    function frozenPattern(): string {
-        const m = GATE_SRC.match(/^FROZEN_INPUT_PATHS='([^']*)'/m);
-        if (!m) {
-            throw new Error(
-                'winner-gate.sh no longer defines FROZEN_INPUT_PATHS=\'…\' on a single line. ' +
-                'This test cannot read the shipped membership, which is a FAILURE, not a skip.');
-        }
-        return m[1];
-    }
-
-    /**
-     * The gate's own predicate, run through the same tools the gate runs it through:
-     * `changed_paths | grep -v '__tests__' | grep -qE "$FROZEN_INPUT_PATHS"`.
-     * A JS RegExp would be a MODEL of ERE; this is the thing itself, so a pattern that
-     * means something different to grep cannot pass here.
-     */
-    function gateAborts(changedPaths: string[]): boolean {
-        const res = spawnSync('bash', ['-c', "grep -v '__tests__' | grep -qE \"$PAT\""], {
-            input: changedPaths.join('\n') + '\n',
-            env: { ...process.env, PAT: frozenPattern() },
-            encoding: 'utf8',
-        });
-        if (res.error) throw res.error;
-        if (res.status !== 0 && res.status !== 1) {
-            throw new Error(`grep failed (status ${res.status}): ${res.stderr}`);
-        }
-        return res.status === 0;
-    }
+    const gateAborts = (changed: string[]) => gateAbortsOn('FROZEN_INPUT_PATHS', changed);
 
     it('ABORTS on llm-output-guards.ts — the producer PR #316 changed with a green gate', () => {
         expect(gateAborts(['src/lib/mapping/llm-output-guards.ts'])).toBe(true);
@@ -1054,10 +1073,251 @@ describe('winner-gate.sh FROZEN_INPUT_PATHS — what the frozen-pool diff must r
     });
 
     it('every pattern names a path that EXISTS — a typo is a silent hole, not a red', () => {
-        const missing = frozenPattern()
-            .split('|')
-            .map(p => p.replace(/\\/g, '').replace(/\/$/, ''))
-            .filter(rel => !fs.existsSync(path.join(REPO_ROOT, rel)));
-        expect(missing).toEqual([]);
+        expect(missingPathsIn('FROZEN_INPUT_PATHS')).toEqual([]);
+    });
+
+    it('does NOT abort on an HTTP route — that is a DIFFERENT abort with a different reason', () => {
+        // Filing routes here was considered and rejected: the frozen-input reason
+        // ("the field is replayed off the snapshot") is FALSE for a route, and an abort
+        // that gives the wrong reason is worse than the honest one below.
+        expect(gateAborts(['src/app/api/foods/search/route.ts'])).toBe(false);
+        expect(gateAborts(['src/app/api/nlp/parse/route.ts'])).toBe(false);
+    });
+});
+
+// ============================================================================
+// winner-gate.sh's UNOBSERVED_SURFACE_PATHS — the code the replay never runs
+// ============================================================================
+/**
+ * THE THIRD STATEMENT, and it is neither of the other two.
+ *
+ * RETRIEVAL_PATHS says "winner-diff runs your change against a pool neither tree
+ * would have produced, so the diff is void". FROZEN_INPUT_PATHS says "winner-diff
+ * runs, but replays your changed field off the snapshot instead of recomputing it,
+ * so it reports SAME vacuously". Both describe an instrument POINTED AT the change.
+ *
+ * This one says winner-diff never executes the code at all. replaySelection() calls
+ * mapIngredientWithFallback directly and issues no HTTP request; `src/lib` imports
+ * `src/app` in zero files, so no refactor can put a route on the replay's path.
+ *
+ * WHAT IT KILLS. PR #324 changed `runLocalSearch()` in
+ * src/app/api/foods/search/route.ts — the route was billing kcal100 0 on 3,394
+ * FatSecret chain records — and every existing guard was quiet: it matches neither
+ * path list, and gitDirtyHash() does not hash `src/app/api` at all
+ * (HASHED_SOURCE_ROOTS = ['src/lib'], pinned by the selectHashablePaths cases above,
+ * which deliberately use a route file as their excluded example). A winner-gate run
+ * on that branch would have reported SAME on every row while measuring nothing about
+ * the defect.
+ *
+ * DELETE `src/app/api/` FROM UNOBSERVED_SURFACE_PATHS AND THE FIRST CASE BELOW FAILS.
+ *
+ * Asserted in both directions, same discipline as the frozen list: the whole point of
+ * a separate list is that it refuses a DIFFERENT population, so the src/lib files the
+ * replay does observe must be pinned as not aborting here.
+ */
+describe('winner-gate.sh UNOBSERVED_SURFACE_PATHS — the surface the replay never executes', () => {
+    const gateAborts = (changed: string[]) => gateAbortsOn('UNOBSERVED_SURFACE_PATHS', changed);
+
+    it('ABORTS on foods/search/route.ts — the file PR #324 shipped under a green gate', () => {
+        expect(gateAborts(['src/app/api/foods/search/route.ts'])).toBe(true);
+    });
+
+    it.each([
+        // the two lanes the mapper work actually reads through
+        ['src/app/api/foods/search/route.ts', 'the search lane; runLocalSearch serves all four mobile call sites'],
+        ['src/app/api/nlp/parse/route.ts', 'the parse lane; singleItemFromText decides whether the segmenter runs'],
+        // the routes the #324 write-off names as carrying the same latent defect. These
+        // are why the list is the whole directory rather than the two lanes: narrowing
+        // would hand exactly these a silent green.
+        ['src/app/api/foods/barcode/route.ts', 'needs the same isDegenerateNutrition fallback'],
+        ['src/app/api/foods/[id]/serving/route.ts', 'the one path in the blast radius that WRITES'],
+        // and the rest of the directory, which is equally unreachable from a replay
+        ['src/app/api/ok/route.ts', 'the LLM egress counters — read by every deploy receipt'],
+    ])('ABORTS on %s (%s)', (changed) => {
+        expect(gateAborts([changed])).toBe(true);
+    });
+
+    it.each([
+        // The replay RUNS these. They are the frozen list's business or the gate's own
+        // purpose; either way this abort must stay silent or it becomes the #311 failure
+        // at directory scale.
+        'src/lib/mapping/simple-rerank.ts',
+        'src/lib/mapping/filter-candidates.ts',
+        'src/lib/mapping/llm-output-guards.ts',
+        'src/lib/mapping/map-ingredient-with-fallback.ts',
+        'src/lib/parse/ingredient-line.ts',
+        'src/lib/mapping/data/corrupt-off-denylist.json',
+        // not an API route: src/app also holds pages, which this list does not claim
+        'src/app/page.tsx',
+        // the harness itself
+        'scripts/eval/winner-diff.ts',
+        'scripts/eval/winner-gate.sh',
+        'scripts/eval/winner-diff-screens.ts',
+    ])('does NOT abort on %s', (changed) => {
+        expect(gateAborts([changed])).toBe(false);
+    });
+
+    /**
+     * THE #311 FALSE ABORT, RESHAPED. `src/app/api` uses the COLOCATED test convention
+     * (`route.test.ts` beside `route.ts`), which has no `__tests__` segment — so the
+     * filter that made #311's fix work did not cover these files, and shipping this list
+     * against the old filter would have re-introduced the exact failure it was fixed for.
+     * All six of the repo's colocated route tests are represented here by shape.
+     */
+    it('does NOT abort on a colocated route test — a test cannot change what a replay produces', () => {
+        expect(gateAborts([
+            'src/app/api/foods/search/route.test.ts',
+            'src/app/api/foods/search/route.cache-ladder.test.ts',
+            'src/app/api/nlp/parse/route.seg-cache.test.ts',
+            'src/app/api/ok/route.usage.test.ts',
+        ])).toBe(false);
+    });
+
+    it('still aborts when a real route change rides along with its own test', () => {
+        expect(gateAborts([
+            'src/app/api/foods/search/route.test.ts',
+            'src/app/api/foods/search/route.ts',
+        ])).toBe(true);
+    });
+
+    it('aborts on a mixed change set — one route among files the replay does observe', () => {
+        expect(gateAborts([
+            'scripts/eval/winner-gate.sh',
+            'src/lib/mapping/simple-rerank.ts',
+            'src/app/api/nlp/parse/route.ts',
+        ])).toBe(true);
+    });
+
+    it('every pattern names a path that EXISTS — a typo is a silent hole, not a red', () => {
+        expect(missingPathsIn('UNOBSERVED_SURFACE_PATHS')).toEqual([]);
+    });
+
+    /**
+     * The exit code is the machine-readable half of "this is a different reason".
+     * Collapsing it onto 3 would make the two indistinguishable to anything that reads
+     * a status, which is the same conflation the separate list exists to prevent.
+     */
+    it('exits 5, distinct from the 3 the two vacuous-diff aborts use', () => {
+        const block = GATE_SRC.slice(GATE_SRC.indexOf('UNOBSERVED_SURFACE_PATHS='));
+        expect(block).toMatch(/\n\s*exit 5\n/);
+        expect(GATE_SRC.match(/\n\s*exit 5\n/g) ?? []).toHaveLength(1);
+    });
+});
+
+// ============================================================================
+// The route rule isDeterministicSingleItemText transcribes — drift pin
+// ============================================================================
+/**
+ * `isDeterministicSingleItemText()` in winner-diff-screens.ts is a HAND-TRANSCRIBED
+ * mirror of `singleItemFromText()` in src/app/api/nlp/parse/route.ts, and its own
+ * comment says "if the route's rule changes, this must change with it. It is pinned
+ * by a test." That was half true: the behavioural cases above pin what the MIRROR
+ * does, and nothing at all watched the ORIGINAL. Add `\bor\b` to the route's
+ * MULTI_ITEM_SIGNALS and every one of them still passes while the golden screen
+ * starts judging segmenter-bound cases as if a one-query replay reproduced them.
+ *
+ * winner-diff-screens.ts cannot hold this check itself — it declares "no I/O of any
+ * kind", which is load-bearing for its testability — so the pin lives here, in the
+ * one place that already reads shipped source off disk.
+ *
+ * WHAT IT COVERS, and why it is a REGION and not just the function: the rule is three
+ * pieces of source. Both regexes are module-level constants the function only
+ * references, so a hash over the function body alone would sit still through the most
+ * likely edit there is — adding a separator to MULTI_ITEM_SIGNALS.
+ *
+ * WHEN THIS GOES RED: read both sides, decide whether the mirror must change, change
+ * it, THEN re-pin. Re-pinning first is how a drift guard becomes a formality — this
+ * repo has the receipts (PINNED_HELPERS_HASH, whose only two re-pins were both
+ * measurement bugs rather than code changes, and which says so at the pin).
+ *
+ * Line endings are normalized before hashing. .gitattributes pins only the three files
+ * the winner-diff drift guard reads, and route.ts is NOT among them, so on a Windows
+ * checkout an un-normalized hash would flip with no source change — the exact bug that
+ * cost this repo a false DRIFT banner on unchanged selection code.
+ */
+describe('the parse route rule that winner-diff-screens transcribes', () => {
+    const ROUTE_REL = 'src/app/api/nlp/parse/route.ts';
+
+    /** The three source pieces that decide the rule, extracted fail-closed. */
+    function routeRuleSource(): string {
+        const src = fs.readFileSync(path.join(REPO_ROOT, ROUTE_REL), 'utf8')
+            .replace(/\r/g, '').split('\n');
+        const out: string[] = [];
+        for (const anchor of ['const MEAL_SUFFIX =', 'const MULTI_ITEM_SIGNALS =']) {
+            const i = src.findIndex(l => l.trimStart().startsWith(anchor));
+            if (i < 0) throw new Error(`drift pin: '${anchor}' not found in ${ROUTE_REL}`);
+            out.push(src[i]);
+        }
+        const start = src.findIndex(l => l.trimStart().startsWith('function singleItemFromText('));
+        if (start < 0) throw new Error(`drift pin: singleItemFromText not found in ${ROUTE_REL}`);
+        let end = start;
+        while (end < src.length && src[end].trimEnd() !== '}') end++;
+        if (end >= src.length) {
+            throw new Error(
+                'drift pin: no closing brace for singleItemFromText before EOF. The anchor '
+                + 'matched something else, or the function moved. Do NOT widen the capture — '
+                + 'an over-broad region moves on unrelated edits and trains readers to re-pin '
+                + 'without reading (see copiedHelperSource in winner-diff.ts).');
+        }
+        out.push(src.slice(start, end + 1).join('\n'));
+        return out.join('\n---\n');
+    }
+
+    /** Re-pin ONLY after reconciling isDeterministicSingleItemText with the route. */
+    const PINNED_ROUTE_RULE_HASH = '80719c0439bca3d4';
+
+    it('has not drifted from the transcription in winner-diff-screens.ts', () => {
+        const actual = createHash('sha256').update(routeRuleSource()).digest('hex').slice(0, 16);
+        expect({ hash: actual, note: 'route rule vs isDeterministicSingleItemText' })
+            .toEqual({ hash: PINNED_ROUTE_RULE_HASH, note: 'route rule vs isDeterministicSingleItemText' });
+    });
+
+    /**
+     * A hash alone cannot say WHICH way it drifted, so pin the two constants by value
+     * as well. These are the parts the mirror restates verbatim; a red here names the
+     * edit, which is what makes the red above actionable rather than just alarming.
+     */
+    it('carries the two separator rules the mirror restates verbatim', () => {
+        const src = routeRuleSource();
+        expect(src).toContain('/\\s*(?:for|at|as)\\s+(breakfast|lunch|dinner|snacks?)\\s*\\.?\\s*$/i');
+        expect(src).toContain('/[,;\\n+&]|\\b(?:and|with|plus)\\b/i');
+        expect(src).toContain('trimmed.length > 60');
+        expect(src).toContain("rawText.split(/\\s+/).length > 6");
+    });
+
+    /**
+     * The mirror and the original must agree on real inputs, not just look alike. This
+     * re-derives the route's decision from the extracted source rather than importing
+     * the route (which would pull next/server, Supabase and Prisma into a suite that
+     * deliberately touches none of them).
+     */
+    it('agrees with the mirror on the boundary cases the route decides', () => {
+        const src = routeRuleSource();
+        const mealRe = new RegExp(/\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.?\s*$/, 'i');
+        const multiRe = new RegExp(/[,;\n+&]|\b(?:and|with|plus)\b/, 'i');
+        // guard: the literals above are only a faithful stand-in while they are the
+        // ones the route actually ships, which the previous case has just asserted.
+        expect(src).toContain(mealRe.source);
+        expect(src).toContain(multiRe.source);
+
+        const routeSaysSingleItem = (text: string): boolean => {
+            const trimmed = (text ?? '').trim();
+            if (trimmed.length === 0 || trimmed.length > 60) return false;
+            let rawText = trimmed;
+            const m = trimmed.match(mealRe);
+            if (m) rawText = trimmed.slice(0, m.index).trim();
+            if (rawText.length === 0 || multiRe.test(rawText)) return false;
+            return rawText.split(/\s+/).length <= 6;
+        };
+
+        for (const t of [
+            '7up', '2 7up', 'three slices of bacon', 'chicken breast for lunch',
+            '2 eggs and toast', 'coffee, bagel', 'a b c d e f g', 'x'.repeat(61),
+            '   ', 'for lunch', 'toast with peanut butter', 'burger + fries',
+            'noodles and company buttered noodles', 'grilled chicken at dinner',
+        ]) {
+            expect({ t, mirror: isDeterministicSingleItemText(t) })
+                .toEqual({ t, mirror: routeSaysSingleItem(t) });
+        }
     });
 });
