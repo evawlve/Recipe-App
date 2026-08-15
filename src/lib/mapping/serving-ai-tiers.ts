@@ -290,10 +290,25 @@ export function isReplayNondeterministicTier(tier: string | null | undefined): b
  * plausible-but-wrong weight is worse than declining to state one — it is
  * indistinguishable from a measured one at the point of use.
  */
+/**
+ * The one member's name, exported so its PRODUCERS reference the registry rather
+ * than a bare literal.
+ *
+ * There are two producers as of 2026-08-14 and they are in different lanes:
+ * build-fatsecret-result.ts's macro-only branch (`fromPanel == null` leg, the
+ * mapper) and `runLocalSearch()` in app/api/foods/search/route.ts (the browse
+ * list, which recovers the same servings after `derivePer100gFromServings()`
+ * refuses them). Both must stamp THIS constant and gate their
+ * `portionEstimated` on `isSyntheticGramsTier()`, so removing the tier from the
+ * frozen list below stops both lanes claiming the flag at once.
+ */
+export const FS_SERVING_MACROS_ONLY_EST_TIER = 'fs_serving_macros_only_est';
+
 export const SYNTHETIC_GRAMS_SERVING_TIERS: readonly string[] = Object.freeze(
     ([
-        // build-fatsecret-result.ts, macro-only branch, `fromPanel == null` leg.
-        'fs_serving_macros_only_est',
+        // build-fatsecret-result.ts, macro-only branch, `fromPanel == null` leg;
+        // and runLocalSearch()'s recovery of the same shape in the search route.
+        FS_SERVING_MACROS_ONLY_EST_TIER,
     ] as const),
 );
 

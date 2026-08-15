@@ -385,6 +385,9 @@ export async function GET(req: NextRequest) {
       // Collapse near-duplicate entries (same normalized name + macro signature)
       // so generic queries like "grapes" return one representative per food
       // instead of 15+ near-identical OFF rows.
+      const { recoverMacroOnlyServing } = await import('@/lib/mapping/fs-serving-macros');
+      const { isSyntheticGramsTier } = await import('@/lib/mapping/serving-ai-tiers');
+
       const { dedupeCandidates } = await import('@/lib/search/dedupe-candidates');
       const beforeDedupe = sortedCandidates.length;
       sortedCandidates = dedupeCandidates(sortedCandidates);
@@ -400,13 +403,45 @@ export async function GET(req: NextRequest) {
 
       const data = sortedCandidates.map(c => {
         const raw = c.rawData ?? {};
-        const nutrients = raw.nutrientsPer100g || {};
-        
+        let nutrients = raw.nutrientsPer100g || {};
+
+        // A FatSecret "1 serving" restaurant record carries per-serving macros but no
+        // gram weight and no per-100g panel, so `derivePer100gFromServings()` refuses
+        // it and `c.nutrition` arrives undefined — whereupon the `?? 0` below used to
+        // MANUFACTURE a zero and the `servingOptions` fallback a `100 g` portion, and
+        // "Whopper Jr." shipped to the browse list as 0 kcal / 0 P / 0 C / 0 F. The
+        // macros were never missing; only the weight was. Recover them from the
+        // servings the lane already put on `rawData`.
+        //
+        // WHAT `recovered.per100` IS AND IS NOT: not a density. The weight behind it
+        // is `kcal / 2.0`, so the quotient is a flat 200 kcal/100 g for ~99.9% of this
+        // population whatever the food. It is admissible only as the self-consistency
+        // term that keeps `kcal100 x grams / 100 === the record's own billed kcal`, and
+        // only alongside `portionEstimated`. The two ship as a pair or not at all — see
+        // recoverMacroOnlyServing()'s header, which owns the reasoning and the numbers.
         let servingOptions = (c.servings || []).map(s => ({
           label: s.description,
           grams: s.grams ?? 100
         }));
-        
+
+        // `c.servings` is already filtered to servings with a usable weight, so an
+        // EMPTY list is the precise statement "this record weighs nothing we can
+        // read" — the same condition build-fatsecret-result.ts's macro-only branch
+        // reaches. Requiring it keeps the recovered figures self-consistent: scaling
+        // one serving's macros while displaying another serving's grams would make
+        // `kcal100 x grams / 100` disagree with the record's own billing.
+        const recovered = c.source === 'fatsecret' && !c.nutrition && servingOptions.length === 0
+          ? recoverMacroOnlyServing(raw.servings)
+          : null;
+        if (recovered) {
+          nutrients = recovered.per100;
+          // The record's own serving replaces the fabricated `100 g`. When its weight
+          // is unknowable (a 0 kcal drink: nothing to estimate from) keep 100 g as the
+          // neutral placeholder — at a zero panel the bill is 0 either way, so nothing
+          // is over- or under-stated — and let `portionEstimated` carry the caveat.
+          servingOptions = [{ label: recovered.label, grams: recovered.grams ?? 100 }];
+        }
+
         if (servingOptions.length === 0) {
           if (raw.servingSize) {
             servingOptions.push({
@@ -430,15 +465,23 @@ export async function GET(req: NextRequest) {
           // now becomes null ("no provider claim") instead of passing straight through.
           source: toWireSource(c.source),
           verification: c.source === 'fdc' ? 'verified' : 'unverified',
-          kcal100: c.nutrition?.kcal ?? 0,
-          protein100: c.nutrition?.protein ?? 0,
-          carbs100: c.nutrition?.carbs ?? 0,
-          fat100: c.nutrition?.fat ?? 0,
+          kcal100: c.nutrition?.kcal ?? recovered?.per100.kcal ?? 0,
+          protein100: c.nutrition?.protein ?? recovered?.per100.protein ?? 0,
+          carbs100: c.nutrition?.carbs ?? recovered?.per100.carbs ?? 0,
+          fat100: c.nutrition?.fat ?? recovered?.per100.fat ?? 0,
           fiber100: nutrients.fiber ?? 0,
           sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
           sodium100: nutrients.sodium ?? 0,
           confidence: Math.min(1.0, Math.max(0.1, relevanceOf(c).relevance)),
-          servingOptions
+          servingOptions,
+          // OMITTED rather than `false` when the portion is honest, so every response
+          // this lane already sends stays byte-identical and an older client cannot
+          // read a new key as a claim. Gated on the tier registry, not on a local
+          // boolean, so dropping the tier from SYNTHETIC_GRAMS_SERVING_TIERS silences
+          // the mapper and this lane together.
+          ...(recovered && isSyntheticGramsTier(recovered.tier)
+            ? { portionEstimated: true as const }
+            : {}),
         };
 
         const impactPayload = buildImpact(
