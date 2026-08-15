@@ -147,11 +147,24 @@ beforeEach(() => {
     (gatherCandidates as jest.Mock).mockResolvedValue([]);
 });
 
-describe('legacy-key fallback at the EARLY lookup site', () => {
-    it('finds a legacy-keyed (unprefixed) row for a branded query and serves it', async () => {
-        // options.brand "optimum nutrition" is decisive (multi-word), so the
-        // symmetric key is brand-prefixed: "nutrition optimum protein shake".
-        // The pre-Track-1c row lives under the legacy read key "protein shake".
+describe('the EARLY lookup site does not invent a brand prefix', () => {
+    it('serves the unprefixed row directly when options.brand is absent from the line', async () => {
+        // THIS FIXTURE USED TO ASSERT THE OPPOSITE, and it was pinning a defect.
+        // `options.brand` is the AI segmenter's field, not the line's own words:
+        // here the line is "1 cup protein shake" and nothing in it says "optimum
+        // nutrition". hasDecisiveBrandContext() short-circuited to true on token
+        // COUNT alone, so the symmetric key became "nutrition optimum protein
+        // shake" — a key derived from a brand the user never typed — and the row
+        // was only found by falling back to the legacy key.
+        //
+        // With the presence test in place the brand is not decisive, the key is
+        // simply "protein shake", and the row is found on the FIRST lookup. The
+        // legacy fallback is not needed because there is nothing to fall back
+        // from: symmetric === legacy, and the function short-circuits.
+        //
+        // Fallback ORDERING (symmetric first, legacy second) is still covered —
+        // by the STEP-1C case below, whose single-word brand "ghost" reaches
+        // decisiveness through product-form adjacency and is unaffected.
         const legacyRow = {
             foodId: 'ps-1',
             foodName: 'Optimum Nutrition Protein Shake',
@@ -182,11 +195,9 @@ describe('legacy-key fallback at the EARLY lookup site', () => {
             telemetry,
         });
 
-        // Symmetric (brand-prefixed) key first, legacy key on miss — in order.
-        expect(lookupKeys().slice(0, 2)).toEqual([
-            'nutrition optimum protein shake',
-            'protein shake',
-        ]);
+        // ONE lookup, on the line's own words. No brand the user never typed.
+        expect(lookupKeys()[0]).toBe('protein shake');
+        expect(lookupKeys()).not.toContain('nutrition optimum protein shake');
         // The legacy row is served as an early cache hit.
         expect(result).not.toBeNull();
         expect(result && 'foodId' in result ? result.foodId : null).toBe('ps-1');

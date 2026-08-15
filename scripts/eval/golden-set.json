@@ -1383,6 +1383,46 @@
       ],
       "notes": "PROMOTED 2026-07-19 after 3 consecutive passing runs (Ghost Gamer in corpus, ranking stable). | Previously: DEFECT (flavor-ingest-blocked), SEARCH. Ghost Gamer line IS in corpus (off_0810028292666 'Gamer' brand 'Ghost') but the 'sour patch' flavor is not; nearest is 'Sour Watermelon' with an empty brand field. Not ranking-fixable without the flavor SKU. knownIssue, non-gating.",
       "minItems": 9
+    },
+    {
+      "id": "s-chain-01",
+      "category": "chain_restaurant",
+      "query": "burger king whopper jr",
+      "rank": 3,
+      "match": [["whopper jr"]],
+      "requireEnergy": [["whopper jr"]],
+      "minItems": 12,
+      "notes": "Observed 2026-08-14: n=16, first match rank 0, 7 of 8 'whopper jr' hits at kcal100 0 (fs_68444899 'Whopper Jr.' and siblings). Chain-record energy class, added 2026-08-14. FatSecret's generic \"1 serving\" restaurant records carry per-serving macros but no gram weight and no per-100g panel, so derivePer100gFromServings() refuses them and runLocalSearch() shipped them as kcal100 0 / protein100 0 / carbs100 0 / fat100 0 with a fabricated '100 g' portion. 3,394 of 24,124 FatSecretFood rows are that shape (measured on the box 2026-08-14). requireEnergy is deliberately per-case rather than a global all-zero invariant: 0/0/0/0 is a correct panel for water and diet soda, and a global rule reds s-edge-03 and s-sem-04 forever \u2014 see SearchCaseSpec.requireEnergy in scripts/eval/assertions.ts. rank/minItems MEASURED at cut time against the box (szIZeR6Ah_JBjJL3xHs5K), three consecutive runs, list length and first-match rank identical in all three; minItems set ~25%% below the observed length so a fail-open FatSecret lane reds the case but ordinary corpus churn does not. Re-derive: run-eval.ts --only search --grep s-chain."
+    },
+    {
+      "id": "s-chain-02",
+      "category": "chain_restaurant",
+      "query": "panera mac and cheese",
+      "rank": 3,
+      "match": [["mac", "cheese"]],
+      "requireEnergy": [["mac", "cheese"]],
+      "minItems": 15,
+      "notes": "Observed 2026-08-14: n=20, first match rank 0, 8 of 15 'mac cheese' hits at kcal100 0 (fs_84357270 'Mac & Cheese - Cup' and siblings)."
+    },
+    {
+      "id": "s-chain-03",
+      "category": "chain_restaurant",
+      "query": "dunkin iced latte with oatmilk",
+      "rank": 3,
+      "match": [["latte", "oatmilk"]],
+      "requireEnergy": [["latte", "oatmilk"]],
+      "minItems": 17,
+      "notes": "Observed 2026-08-14: n=23, first match rank 1, 6 of 9 'latte oatmilk' hits at kcal100 0 (fs_68757780 'Iced Latte with Oatmilk - Medium' and siblings)."
+    },
+    {
+      "id": "s-chain-04",
+      "category": "chain_restaurant",
+      "query": "chipotle steak bowl",
+      "rank": 3,
+      "match": [["steak bowl"]],
+      "requireEnergy": [["bowl"]],
+      "minItems": 18,
+      "notes": "Observed 2026-08-14: n=24, first match rank 0, 3 of 14 'bowl' hits at kcal100 0 (fs_77419819 'Steak Bowl', 'Amelaine Bowl', 'Wholesome Bowl'). requireEnergy is the broad ['bowl'] rather than ['steak bowl'] because it catches 3 defect rows instead of 1."
     }
   ],
   "nlp": [
