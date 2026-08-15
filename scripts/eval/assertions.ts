@@ -186,6 +186,12 @@ export function scoreNlpCase(c: NlpCaseSpec, items: unknown): string[] {
     // surface as a wrong billed total ("1 tbsp olive oil" must bill ~119 kcal,
     // whether the failure was density, record choice, or grams math).
     // Keys: calories | protein | carbs | fat (also fiber/sugar/sodium).
+    //
+    // UNITS: calories is kcal, EVERY OTHER KEY INCLUDING `sodium` IS GRAMS —
+    // the billed block is `nutritionPer100g x grams / 100`, so it inherits that
+    // type's units. A `sodium` band is therefore written as 0.56, never 560.
+    // Owner of the contract: ResolvedNutritionPer100g in
+    // src/lib/nlp/resolve-payload.ts. n-micro-01 is the case that pins it.
     if (c.total) {
         const tot = items[0]?.nutrition ?? {};
         for (const [key, range] of Object.entries(c.total)) {

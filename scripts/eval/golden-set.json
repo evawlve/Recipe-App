@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Re-deriving these counts against the current file gives the AFTER figures; the BEFORE figures are recorded so the delta stays legible. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Both figures are a 2026-07-26 SNAPSHOT of that PR's delta and are deliberately frozen so it stays legible \u2014 they are NOT the current corpus. Cases added since have moved them (38 / 113 / 150 at 2026-08-15), and the live counts are pinned, with a dated note per movement, in scripts/eval/__tests__/winner-diff.test.ts, which is their owner; re-derive there, not here. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test.",
   "search": [
     {
       "id": "s-gen-01",
@@ -6613,6 +6613,128 @@
         ]
       ],
       "notes": "ADJECTIVAL-EGG PARSER GATE, identity half (2026-08-12, same fix as n-mq-48). Before the fix the parser consumed leading `egg` as a count unit AND dropped it from the derived key, so `egg salad sandwich` mapped under key `salad sandwich` and served a 'Salad Sandwich' record with the egg gone from the identity entirely (56 word-boundary events of egg-named-record-under-egg-less-key in MappingEventLog, 2026-08-12). The assertion is deliberately identity-only: the inner-AND requires both `egg` and `salad` in the resolved name, which no egg-less salad-sandwich record satisfies; `sandwich` is deliberately not required so a legitimate 'Egg Salad' record also passes. Deliberately no numeric band — the post-fix key is virgin and no record serving has been measured for it; adding an unmeasured band would gate the cold run on a guess (the calorie-blindness rule wants a band here once one is MEASURED — add total.calories at the first post-deploy adjudication). Owner: sync-docs/reports/2026-08-09_egg-is-eaten-as-a-count-unit.md."
+    },
+    {
+      "id": "n-chain-01",
+      "category": "chain_restaurant",
+      "item": {
+        "rawText": "burger king whopper jr",
+        "quantity": 1,
+        "name": "burger king whopper jr"
+      },
+      "expectName": [
+        [
+          "whopper jr"
+        ]
+      ],
+      "total": {
+        "calories": [
+          220,
+          460
+        ],
+        "fiber": [
+          1.3,
+          2.7
+        ],
+        "sugar": [
+          4.5,
+          9.5
+        ],
+        "sodium": [
+          0.36,
+          0.76
+        ]
+      },
+      "notes": "MICRONUTRIENT half of the chain-record class, added 2026-08-15. The nlp twin of s-chain-01, deliberately the SAME record so the two lanes are gated on one food: fs_68444899 'Whopper Jr.' [Burger King]. FatSecret's generic '1 serving' restaurant records store their nutrition on the serving row and leave nutrientsPer100g an empty `{}` (3,472 of 24,124 FatSecretFood rows, measured on the box 2026-08-15; re-derive: SELECT count(*) FROM \"FatSecretFood\" WHERE \"nutrientsPer100g\"::text = '{}'). resolveFoodDetails() read only that panel, so /api/nlp/parse billed fiber 0 / sugar 0 / sodium 0 while /api/foods/search reported 1.18 / 4.12 / 0.329 for the identical record. The four MACROS were never wrong here — the parse route re-derives those from the line's own billed totals (per100gFromBilledMacros) — which is exactly why total.calories alone could not see this and three micro bands are required. THE BANDS ARE ON `total`, NOT `macros`, ON PURPOSE: per-100g on this population is a self-consistency term, not a density (the weight behind it is kcal/2.0, flat 200 kcal/100g for ~99.9% of the class), so a sodium100 band would pin a fabricated density. The BILLED figure is sound — it is the record's own per-serving value by construction, so total.sodium equals serving mg/1000 x quantity exactly. Bands from Burger King's published figures (340 kcal, 2 g fibre, 7 g sugar, 560 mg sodium) at ~+/-35%, per the STANDING RULE, not from an observed value. Expected post-fix: 340 / 2.0 / 7.0 / 0.6. NOTE THE UNIT: `total.sodium` is GRAMS, matching sodium100 — see ResolvedNutritionPer100g in src/lib/nlp/resolve-payload.ts, which owns that contract. Record identity attested from MappingEventLog on the box (rawLine 'burger king whopper jr' -> fs_68444899, grams 170, tier fs_serving_macros_only_est, 2026-08-15); the billed micros are DERIVED arithmetic, not a post-fix live measurement — run `run-eval.ts --only nlp --grep n-chain` against the deployed build to convert them."
+    },
+    {
+      "id": "n-chain-02",
+      "category": "chain_restaurant",
+      "item": {
+        "rawText": "applebees boneless wings",
+        "quantity": 1,
+        "name": "applebees boneless wings"
+      },
+      "expectName": [
+        [
+          "boneless",
+          "wings"
+        ]
+      ],
+      "total": {
+        "calories": [
+          430,
+          890
+        ],
+        "sodium": [
+          1.1,
+          2.3
+        ]
+      },
+      "notes": "Second chain-record micronutrient case, added 2026-08-15 — a different chain from n-chain-01 so the class is not pinned on one brand. fs_69473528 'Boneless Wings' [Applebee's], empty `{}` panel, one '1 serving' row carrying 660 kcal / 1720 mg sodium. Attested in MappingEventLog on the box (grams 330, tier fs_serving_macros_only_est, 2026-08-15). Bands at ~+/-35% of the record's published figures; expected post-fix 660 / 1.7, and 0 sodium before the fix. Sodium is in GRAMS on this wire. Deliberately no fiber/sugar band: 1 g of sugar is inside the rounding of a toFixed(1) bill, so a band there would be noise rather than signal — n-chain-01 carries the full three."
+    },
+    {
+      "id": "n-chain-03",
+      "category": "chain_restaurant",
+      "item": {
+        "rawText": "cheesecake factory chicken madeira",
+        "quantity": 1,
+        "name": "cheesecake factory chicken madeira"
+      },
+      "expectName": [
+        [
+          "chicken",
+          "madeira"
+        ]
+      ],
+      "total": {
+        "calories": [
+          840,
+          1760
+        ],
+        "sodium": [
+          1.5,
+          3.2
+        ]
+      },
+      "notes": "Third chain-record micronutrient case, added 2026-08-15, chosen for scale: fs_407418 'Chicken Madeira' [Cheesecake Factory] is the high end of the class at 1300 kcal / 2390 mg sodium on one '1 serving' row with an empty `{}` panel. A dish this size makes the zero conspicuous — the pre-fix wire billed 2.4 g of sodium as 0, a whole day's allowance. Attested in MappingEventLog on the box (grams 650, tier fs_serving_macros_only_est, 2026-08-15). Bands ~+/-35% of the record's own figures; expected post-fix 1300 / 2.4. Sodium is in GRAMS on this wire."
+    },
+    {
+      "id": "n-micro-01",
+      "category": "micronutrients",
+      "item": {
+        "rawText": "1 tbsp soy sauce",
+        "quantity": 1,
+        "unit": "tbsp",
+        "name": "soy sauce"
+      },
+      "expectName": [
+        [
+          "soy",
+          "sauce"
+        ]
+      ],
+      "grams": [
+        12,
+        20
+      ],
+      "macros": {
+        "sodium100": [
+          3.6,
+          7.5
+        ]
+      },
+      "total": {
+        "calories": [
+          4,
+          16
+        ],
+        "sodium": [
+          0.6,
+          1.2
+        ]
+      },
+      "notes": "THE UNIT CONTROL, added 2026-08-15 alongside n-chain-01..03. Passes before AND after the micronutrient fix — that is the job. sodium100 is GRAMS per 100 g on every branch of resolveFoodDetails, and this is the only case in the set that pins it: fs_3272 'Soy Sauce' carries panel sodium 5.637 and its own '100 g' serving row reads 5637 mg, so the two spellings of the same fact are one factor of 1000 apart and a lane that mixes them is caught here. A well-meaning 'convert sodium to mg' change reds this case twice over — macros.sodium100 would read 5637 (outside [3.6, 7.5]) and total.sodium 902 (outside [0.6, 1.2]). This is deliberately a PANEL-BEARING record, i.e. the majority path the chain cases do not exercise: there macros.sodium100 IS a real density and a band on it is sound, which is why the assertion appears here and nowhere else. Bands ~+/-35% of USDA's published soy sauce (~5,490 mg/100 g, 8-11 kcal per tbsp); expected 16 g / 8.5 kcal / 5.637 / 0.9. Attested on the parse lane before the fix (sodium100 5.637, 2026-08-15), which also proves the lane is not structurally sodium-blind — only the empty-panel class was."
     }
   ]
 }

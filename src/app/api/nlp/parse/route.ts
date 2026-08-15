@@ -408,9 +408,18 @@ export async function POST(req: NextRequest) {
         protein: Number(mapped.protein.toFixed(1)),
         carbs: Number(mapped.carbs.toFixed(1)),
         fat: Number(mapped.fat.toFixed(1)),
-        fiber: Number(((details.nutritionPer100g.fiber100 ?? 0) * scale).toFixed(1)),
-        sugar: Number(((details.nutritionPer100g.sugar100 ?? 0) * scale).toFixed(1)),
-        sodium: Number(((details.nutritionPer100g.sodium100 ?? 0) * scale).toFixed(1)),
+        // SCALED FROM THE MERGED BLOCK, not from `details.nutritionPer100g`.
+        // These three used to read the raw resolver output while the response
+        // shipped the merged one a few lines down, so the billed micros were
+        // structurally unable to see any repair applied above them — a divergence
+        // that cost nothing only because `per100gFromBilledMacros()` happens to
+        // return no micro keys today. Reading the same object the client is sent
+        // is the invariant; that it is currently a no-op is an accident, not a
+        // guarantee. `sodium100` is GRAMS per 100 g on every branch, so `sodium`
+        // here is grams too — see ResolvedNutritionPer100g in resolve-payload.ts.
+        fiber: Number(((nutritionPer100g.fiber100 ?? 0) * scale).toFixed(1)),
+        sugar: Number(((nutritionPer100g.sugar100 ?? 0) * scale).toFixed(1)),
+        sodium: Number(((nutritionPer100g.sodium100 ?? 0) * scale).toFixed(1)),
       };
 
       // Provenance is the RESOLVED RECORD's (`details.source`, derived from the foodId prefix
