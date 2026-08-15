@@ -15,6 +15,7 @@
  *   - snapshot capture. It requires Typesense, FatSecret and the LLM.
  */
 
+import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -929,5 +930,134 @@ describe('selectHashablePaths — which files decide a replay', () => {
     it('is sorted and deduped, so the hash is stable across readdir order', () => {
         const a = selectHashablePaths(['src/lib/b.ts', 'src/lib/a.ts', 'src/lib/b.ts']);
         expect(a).toEqual(['src/lib/a.ts', 'src/lib/b.ts']);
+    });
+});
+
+// ============================================================================
+// winner-gate.sh's FROZEN_INPUT_PATHS — the abort membership
+// ============================================================================
+/**
+ * WHY THIS IS TESTED FROM THE SHELL FILE and not from a TypeScript constant.
+ * The two aborts run BEFORE the driver starts any node process, deliberately: they
+ * must be cheap and must not depend on ts-node, node_modules or a database. So the
+ * pattern lives in winner-gate.sh and that string is the single source of truth. A
+ * mirror in TS would be a second copy free to drift; this reads the shipped one.
+ *
+ * WHAT IT KILLS (2026-08-15). `src/lib/mapping/llm-output-guards.ts` was absent from
+ * the list while writing THREE of the seven frozen snapshot fields — normalizedName and
+ * aiCanonicalBase (stripIntroducedFoodTokens, restoreNutritionModifiers) and
+ * isBrandedQuery (resolveIsBrandedQuery). PR #316 changed that file and the gate did
+ * not abort, so a frozen-pool receipt on that branch would have been green and vacuous.
+ * Delete `llm-output-guards` from FROZEN_INPUT_PATHS and the first case below fails.
+ *
+ * The membership is asserted in BOTH directions on purpose. Over-inclusion is not free:
+ * a gate that aborts on changes it can see is a gate people learn to bypass (#311, the
+ * false abort on a `__tests__` edit), so the files the replay RUNS have their own cases
+ * pinning that they do NOT abort.
+ */
+describe('winner-gate.sh FROZEN_INPUT_PATHS — what the frozen-pool diff must refuse', () => {
+    const REPO_ROOT = path.join(__dirname, '..', '..', '..');
+    const GATE_PATH = path.join(REPO_ROOT, 'scripts', 'eval', 'winner-gate.sh');
+    const GATE_SRC = fs.readFileSync(GATE_PATH, 'utf8');
+
+    /** The shipped pattern, read out of the script rather than restated here. */
+    function frozenPattern(): string {
+        const m = GATE_SRC.match(/^FROZEN_INPUT_PATHS='([^']*)'/m);
+        if (!m) {
+            throw new Error(
+                'winner-gate.sh no longer defines FROZEN_INPUT_PATHS=\'…\' on a single line. ' +
+                'This test cannot read the shipped membership, which is a FAILURE, not a skip.');
+        }
+        return m[1];
+    }
+
+    /**
+     * The gate's own predicate, run through the same tools the gate runs it through:
+     * `changed_paths | grep -v '__tests__' | grep -qE "$FROZEN_INPUT_PATHS"`.
+     * A JS RegExp would be a MODEL of ERE; this is the thing itself, so a pattern that
+     * means something different to grep cannot pass here.
+     */
+    function gateAborts(changedPaths: string[]): boolean {
+        const res = spawnSync('bash', ['-c', "grep -v '__tests__' | grep -qE \"$PAT\""], {
+            input: changedPaths.join('\n') + '\n',
+            env: { ...process.env, PAT: frozenPattern() },
+            encoding: 'utf8',
+        });
+        if (res.error) throw res.error;
+        if (res.status !== 0 && res.status !== 1) {
+            throw new Error(`grep failed (status ${res.status}): ${res.stderr}`);
+        }
+        return res.status === 0;
+    }
+
+    it('ABORTS on llm-output-guards.ts — the producer PR #316 changed with a green gate', () => {
+        expect(gateAborts(['src/lib/mapping/llm-output-guards.ts'])).toBe(true);
+    });
+
+    it.each([
+        // pre-existing members, re-pinned so a cleanup cannot quietly drop one
+        ['src/lib/parse/ingredient-line.ts', 'parsed'],
+        ['src/lib/parse/qualifiers.ts', 'parsed / baseName'],
+        ['src/lib/mapping/normalization-rules.ts', 'normalizedName'],
+        ['data/fatsecret/normalization-rules.json', 'normalizedName (read off cwd at runtime)'],
+        ['src/lib/mapping/brand-detector.ts', 'isBrandedQuery / targetBrand'],
+        ['src/lib/mapping/brand-lexicon.json', 'isBrandedQuery / targetBrand'],
+        ['src/lib/mapping/digit-brands.ts', 'isBrandedQuery, before BRAND_SET is consulted'],
+        ['src/lib/mapping/ai-normalize.ts', 'normalizedName / aiCanonicalBase / aiNutritionEstimate'],
+        ['src/lib/mapping/normalize-gate.ts', 'whether the LLM writer of normalizedName runs'],
+        // added 2026-08-15
+        ['src/lib/mapping/llm-output-guards.ts', 'normalizedName / aiCanonicalBase / isBrandedQuery'],
+        ['src/lib/mapping/ai-parse.ts', 'parsed, replaced wholesale when the regex parser finds no unit'],
+        ['src/lib/mapping/ai-synonym-generator.ts', 'the query itself, before parseIngredientLine()'],
+        ['src/lib/mapping/modifier-constraints.ts', 'an input to shouldNormalizeLlm()'],
+        ['src/lib/mapping/cache-key-core.ts', 'IDENTITY_UNIT_HINTS -> baseName -> normalizedName'],
+    ])('ABORTS on %s (produces: %s)', (changed) => {
+        expect(gateAborts([changed])).toBe(true);
+    });
+
+    it.each([
+        // The replay RUNS these, so both sides are observed and the diff is a real
+        // measurement. Aborting here would refuse the gate its own purpose.
+        'src/lib/mapping/simple-rerank.ts',
+        'src/lib/mapping/filter-candidates.ts',
+        'src/lib/mapping/rerank-pool.ts',
+        'src/lib/mapping/count-label.ts',
+        'src/lib/mapping/macro-plausibility.ts',
+        'src/lib/mapping/data/corrupt-off-denylist.json',
+        // Deliberate exclusion, reasoned in the script: an orchestrator that 76 of 637
+        // commits touch. If this ever starts aborting it must be a conscious decision,
+        // taken by editing this case.
+        'src/lib/mapping/map-ingredient-with-fallback.ts',
+        'src/lib/mapping/validated-mapping-helpers.ts',
+        // retrieval — a DIFFERENT abort (RETRIEVAL_PATHS), not this one
+        'src/lib/mapping/gather-candidates.ts',
+        // the harness itself
+        'scripts/eval/winner-diff.ts',
+        'scripts/eval/winner-gate.sh',
+    ])('does NOT abort on %s', (changed) => {
+        expect(gateAborts([changed])).toBe(false);
+    });
+
+    it('does NOT abort on a test-only edit to a frozen producer (the #311 false abort)', () => {
+        expect(gateAborts([
+            'src/lib/mapping/__tests__/llm-output-guards.test.ts',
+            'src/lib/parse/__tests__/ingredient-line.test.ts',
+        ])).toBe(false);
+    });
+
+    it('aborts on a mixed change set — one frozen producer among innocent files', () => {
+        expect(gateAborts([
+            'scripts/eval/winner-gate.sh',
+            'src/lib/mapping/simple-rerank.ts',
+            'src/lib/mapping/llm-output-guards.ts',
+        ])).toBe(true);
+    });
+
+    it('every pattern names a path that EXISTS — a typo is a silent hole, not a red', () => {
+        const missing = frozenPattern()
+            .split('|')
+            .map(p => p.replace(/\\/g, '').replace(/\/$/, ''))
+            .filter(rel => !fs.existsSync(path.join(REPO_ROOT, rel)));
+        expect(missing).toEqual([]);
     });
 });
