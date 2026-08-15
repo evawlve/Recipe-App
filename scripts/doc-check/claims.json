@@ -1486,6 +1486,32 @@
         "value": "enabled"
       },
       "verified": "2026-08-14"
+    },
+    {
+      "id": "sodium100-is-grams-on-every-branch",
+      "claim": "`sodium100` means GRAMS per 100 g on every branch of resolveFoodDetails(), and the AiGeneratedFood branch is the ONLY one that converts -- because it is the only store holding milligrams. `AiGeneratedFood.sodiumMgPer100g` is correctly named (measured on the box 2026-08-15: 213 rows, min 0, max 1200, mean 427.5; 1200 is the falsifier, since as grams per 100 g it would be twelve times the mass of the food) and was assigned straight through, so one wire field carried two units 1000x apart, separable only by `source`. THIS IS A CROSS-REPO CONTRACT, which is why it is registered rather than left to a comment: the mobile client renders the field with a fixed `mg` label and a single conversion factor, so it can only ever be right for one convention, and the mobile half multiplies by 1000. Reverting the backend half turns a 1000x understatement into a 1000x OVERSTATEMENT on AI-estimated foods -- strictly worse than the bug it replaced. Grams is the convention that holds because three of four branches already emitted it, the sibling fields are grams, and /api/foods/search divides mg by 1000 in both derivePer100gFromServings() and recoverMacroOnlyServing(), so grams is what makes the parse and search lanes agree on one record. The three output terms are converted@bare@passthrough: term 1 is 1 while the AI branch divides by 1000, term 2 is the TRIPWIRE and must stay 0 (it counts the unconverted assignment this claim exists to catch), term 3 counts the three stores that already hold grams and pass through unchanged (fdc/off/fs). Reaches the client from /api/nlp/parse and /api/foods/barcode; /api/foods/[id] emits no sodium at all. n-micro-01 in the golden set is the live end of the same assertion. Standard caveat: a `backend` claim greps a CHECKED-OUT tree, not master and not the box's built .next.",
+      "ownerDoc": "backend:src/lib/nlp/resolve-payload.ts",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const s=fs.readFileSync('src/lib/nlp/resolve-payload.ts','utf8');const c=s.split('sodium100: (aiFood.sodiumMgPer100g ?? 0) / 1000,').length-1;const b=s.split('sodium100: aiFood.sodiumMgPer100g ?? 0,').length-1;const p=s.split('sodium100: nutrients.sodium ?? 0,').length-1;process.stdout.write(c+'@'+b+'@'+p)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@0@3"
+      },
+      "verified": "2026-08-15",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "both-lanes-read-one-macro-only-recovery",
+      "claim": "The empty-panel FatSecret class (a `1 serving` restaurant record whose nutrition sits on the serving row and whose nutrientsPer100g is `{}` -- 3,472 of 24,124 rows, measured on the box 2026-08-15) is recovered through ONE function, recoverMacroOnlyServing() in src/lib/mapping/fs-serving-macros.ts, read by BOTH consumer lanes. /api/foods/search reads the live FatSecret API shape directly; /api/nlp/parse and /api/foods/barcode reach the same records through resolveFoodDetails(), which reads the persisted FatSecretFood/FatSecretServing rows and therefore goes through flattenPersistedServings() -- a shape ADAPTER, deliberately not a second derivation. This claim exists because a second derivation is exactly how the two lanes came apart in the first place: search billed kcal 0 on this class (fixed in #324) while parse billed fiber/sugar/sodium 0 on the same records, and each was invisible from the other lane. The four output terms are parseCall@adapterCall@definitions@searchCall: term 3 must stay 1 -- a second `export function recoverMacroOnlyServing` anywhere in that file is the fork this guards against -- and terms 1 and 4 must both stay 1, because a lane that stops calling it has either regressed or grown its own copy. It does NOT assert the two lanes produce equal numbers; that is asserted end-to-end against the live search response for fs_68444899 in src/lib/nlp/__tests__/resolve-payload-fs.test.ts. Standard caveat: a `backend` claim greps a CHECKED-OUT tree, not master and not the box's built .next.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-15_the-search-lane-billed-zero-on-chain-records.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const rp=fs.readFileSync('src/lib/nlp/resolve-payload.ts','utf8');const call=rp.split('= recoverMacroOnlyServing(').length-1;const adapt=rp.split('flattenPersistedServings(').length-1;const fm=fs.readFileSync('src/lib/mapping/fs-serving-macros.ts','utf8');const def=fm.split('export function recoverMacroOnlyServing').length-1;const sr=fs.readFileSync('src/app/api/foods/search/route.ts','utf8');const scall=sr.split('recoverMacroOnlyServing(raw.servings)').length-1;process.stdout.write(call+'@'+adapt+'@'+def+'@'+scall)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@1@1@1"
+      },
+      "verified": "2026-08-15",
+      "timeoutMs": 60000
     }
   ]
 }

@@ -100,6 +100,23 @@ export async function GET(req: NextRequest) {
       source: details.source,
       nutritionPer100g: details.nutritionPer100g,
       servingOptions: details.servingOptions,
+      // TRUE when resolveFoodDetails recovered this record's nutrition from a
+      // serving row because its per-100g panel was empty — a FatSecret record
+      // with per-serving macros and no weight. The figures are then a
+      // self-consistency term computed against an INVENTED weight (kcal / 2.0),
+      // not a density, and `servingOptions` here is the fabricated metric set
+      // rather than the record's own portion. Surfaced because
+      // recoverMacroOnlyServing()'s header requires the pair to travel together
+      // and this route, unlike /api/nlp/parse, has no mapper result carrying
+      // `servingTier` to derive it from.
+      //
+      // Omitted (not `false`) when the panel is real, so existing responses stay
+      // byte-identical. NOT a portion fix: this route still offers a fabricated
+      // `100 g` for these records, and a consumer that trusts it would log ~200
+      // kcal for any of them. Wire the flag into the UI before giving this route
+      // a client. Owner of the class:
+      // sync-docs/reports/2026-08-15_the-search-lane-billed-zero-on-chain-records.md (mobile).
+      ...(details.portionEstimated ? { portionEstimated: true as const } : {}),
     };
 
     return NextResponse.json(responsePayload);

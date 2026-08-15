@@ -1,6 +1,7 @@
 import { prisma } from '../db';
 import { deriveServingOptions } from '../units/servings';
 import { extractCacheNutrients, buildServingOptionsForCacheFood } from '../mapping/cache-search';
+import { recoverMacroOnlyServing, flattenPersistedServings } from '../mapping/fs-serving-macros';
 
 export function getServingType(label: string): 'weight' | 'volume' | 'count' {
   const normalized = label.toLowerCase().trim();
@@ -19,14 +20,36 @@ export function getServingType(label: string): 'weight' | 'volume' | 'count' {
   return 'count';
 }
 
-/** Per-100g block as resolveFoodDetails returns it. */
+/**
+ * Per-100g block as resolveFoodDetails returns it.
+ *
+ * UNITS — kcal100 is kilocalories; EVERY OTHER FIELD, `sodium100` INCLUDED, is
+ * GRAMS per 100 g. Stated here because this one type is emitted by four
+ * branches reading four different stores, and one of them used to disagree:
+ * `AiGeneratedFood.sodiumMgPer100g` is milligrams (correctly named) and was
+ * assigned straight through, so `sodium100` carried two units 1000x apart,
+ * separable only by `source`. The mobile client renders this field with a fixed
+ * `mg` label and one conversion factor, so it can only ever be right for one of
+ * two conventions. Grams is the one that holds: three of the four branches
+ * already emitted it, the sibling fields (`protein100`/`carbs100`/`fat100`) are
+ * grams, and `/api/foods/search` divides mg by 1000 in both
+ * `derivePer100gFromServings()` and `recoverMacroOnlyServing()` — so grams is
+ * what makes the parse and search lanes agree on the same record.
+ *
+ * Reaches the client from `/api/nlp/parse`, `/api/foods/barcode` and (computed
+ * separately, same convention) `/api/foods/search`. `/api/foods/[id]` emits no
+ * sodium at all.
+ */
 export interface ResolvedNutritionPer100g {
   kcal100: number;
   protein100: number;
   carbs100: number;
   fat100: number;
+  /** Grams per 100 g. */
   fiber100: number;
+  /** Grams per 100 g. */
   sugar100: number;
+  /** GRAMS per 100 g — never milligrams. See the type doc. */
   sodium100: number;
 }
 
@@ -137,6 +160,15 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
     sodium100: 0,
   };
   let rawServingOptions: Array<{ label: string; grams: number }> = [];
+  // Set only by the fs_ macro-only recovery below. `recoverMacroOnlyServing`'s
+  // header states the rule this exists to keep: the recovered per-100g figures
+  // are a self-consistency term computed against an INVENTED weight, so they are
+  // admissible only alongside a flag saying so — ship the pair or ship neither.
+  // /api/nlp/parse does not read this: it already sources the same flag from
+  // `mapped.servingTier` through `isSyntheticGramsTier()`, which is the owned
+  // predicate and also covers records this function never sees. This field is
+  // for the callers that have no mapper result to ask, i.e. /api/foods/barcode.
+  let portionEstimated = false;
 
   if (foodId.startsWith('fdc_')) {
     const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
@@ -156,9 +188,10 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         fat100: nutrients.fat ?? nutrients.totalFat ?? 0,
         fiber100: nutrients.fiber ?? 0,
         sugar100: nutrients.sugar ?? 0,
+        // Already grams per 100 g in this store. No conversion.
         sodium100: nutrients.sodium ?? 0,
       };
-      
+
       const units = fdcFood.servings.map(s => ({
         label: s.description,
         grams: s.grams
@@ -187,6 +220,7 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         fat100: nutrients.fat ?? 0,
         fiber100: nutrients.fiber ?? 0,
         sugar100: nutrients.sugar ?? nutrients.sugars ?? 0,
+        // Already grams per 100 g in this store (OFF's own column unit). No conversion.
         sodium100: nutrients.sodium ?? 0,
       };
 
@@ -226,6 +260,8 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         fat100: nutrients.fat ?? 0,
         fiber100: nutrients.fiber ?? 0,
         sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
+        // Already grams per 100 g in this store: fs_3272 "Soy Sauce" holds
+        // 5.637, and its own "100 g" serving row holds 5637 mg. No conversion.
         sodium100: nutrients.sodium ?? 0,
       };
 
@@ -235,6 +271,64 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
           label: s.description,
           grams: s.grams as number
         }));
+
+      // MACRO-ONLY RECOVERY — the same repair /api/foods/search made in #324,
+      // reading the same function, so the two lanes cannot bill one record two
+      // ways. A FatSecret "1 serving" restaurant record stores its nutrition on
+      // the serving row and leaves `nutrientsPer100g` an empty `{}`, so every
+      // field above reads 0 and the parse wire billed a Whopper Jr. at fiber 0 /
+      // sugar 0 / sodium 0 while search reported 1.18 / 4.12 / 0.329 for the
+      // identical record. The macros survived only because the parse ROUTE
+      // re-derives those four from the line's own billed totals
+      // (`per100gFromBilledMacros`); it has no billed figure for the three
+      // micros, so nothing downstream could repair them and the zeros shipped.
+      //
+      // THE GATE IS THE MIRROR OF SEARCH'S, field for field: a degenerate panel
+      // (search: `!c.nutrition`) plus no serving carrying a usable weight
+      // (search: `servingOptions.length === 0`). Both halves are required.
+      // Measured on the box 2026-08-15: 3,472 of 24,124 `FatSecretFood` rows
+      // have an empty panel, all 3,472 also have no weighed serving, and NO row
+      // has one condition without the other — so the conjunction costs nothing
+      // and buys a guarantee. It excludes the 291 rows that are all-macro-zero
+      // WITH a weighed serving: bottled water and Coke Zero really are 0/0/0/0,
+      // and a rule that "recovered" those would overwrite a correct panel. That
+      // is the refutation §3 of the search-lane report records in full.
+      //
+      // WHAT MOVES AND WHAT DOES NOT. `nutritionPer100g` and the
+      // `portionEstimated` flag, and nothing else. `servingOptions` is left
+      // exactly as it was — for this class that is the fabricated metric set
+      // deriveServingOptions() builds from an empty unit list (`100 g`, `1 oz`,
+      // …), NOT an empty array, and NOT the record's own serving the way the
+      // search lane now substitutes it. Deliberate: the mapper's `grams` already
+      // carries the portion on the parse wire, and every mobile call site
+      // re-injects metric options unconditionally, so changing this list is a
+      // client-visible portion change rather than part of this defect. The
+      // fabricated portion for these records is a REAL and separate defect,
+      // still open on this lane. Re-derive the population:
+      //   SELECT count(*) FROM "FatSecretFood" WHERE "nutrientsPer100g"::text = '{}';
+      if (units.length === 0 && isDegenerateNutrition(nutritionPer100g)) {
+        const recovered = recoverMacroOnlyServing(
+          flattenPersistedServings(fsFood.servings, fsFood.defaultServingId),
+        );
+        if (recovered) {
+          nutritionPer100g = {
+            kcal100: recovered.per100.kcal,
+            protein100: recovered.per100.protein,
+            carbs100: recovered.per100.carbs,
+            fat100: recovered.per100.fat,
+            // Omitted rather than zeroed by the recovery when the serving is
+            // silent about a micro — a manufactured zero is the defect being
+            // fixed, so the fallback stays 0 only where there is genuinely
+            // nothing to read. `sugars` is the recovery's key; `sodium` arrives
+            // already converted mg -> g, matching the panel branch above.
+            fiber100: recovered.per100.fiber ?? 0,
+            sugar100: recovered.per100.sugars ?? 0,
+            sodium100: recovered.per100.sodium ?? 0,
+          };
+          portionEstimated = true;
+        }
+      }
+
       rawServingOptions = deriveServingOptions({
         units,
         densityGml: null,
@@ -258,7 +352,17 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         fat100: aiFood.fatPer100g,
         fiber100: aiFood.fiberPer100g ?? 0,
         sugar100: aiFood.sugarPer100g ?? 0,
-        sodium100: aiFood.sodiumMgPer100g ?? 0,
+        // THE ONLY BRANCH THAT CONVERTS, because it is the only store holding
+        // milligrams — the column name says so and is accurate; the bug was the
+        // unconverted assignment, which put mg on a grams-denominated wire field
+        // and made `sodium100` mean two different things 1000x apart depending on
+        // `source`. Measured on the box 2026-08-15: 213 rows, min 0, max 1200,
+        // mean 427.5 — and 1200 is arithmetically impossible as grams per 100 g,
+        // which is the falsifier that settles which unit the column holds.
+        // Re-derive: SELECT max("sodiumMgPer100g") FROM "AiGeneratedFood";
+        // The column is NOT renamed: it is correct about what it stores, and a
+        // rename is a migration. See ResolvedNutritionPer100g for the contract.
+        sodium100: (aiFood.sodiumMgPer100g ?? 0) / 1000,
       };
       
       const units = aiFood.servings.map(s => ({
@@ -297,5 +401,9 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
     source: source as 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated',
     nutritionPer100g,
     servingOptions,
+    // OMITTED, not `false`, when the weight behind nutritionPer100g is real —
+    // the #314 convention, so every response an existing caller already gets
+    // stays byte-identical and no client can read a new key as a claim.
+    ...(portionEstimated ? { portionEstimated: true as const } : {}),
   };
 }

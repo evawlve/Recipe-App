@@ -147,6 +147,57 @@ export interface MacroOnlyServingRecovery {
  * Accepts `unknown` because its search-lane caller reads it off an `any`-typed
  * `rawData`; every field is re-validated here rather than trusted.
  */
+/**
+ * One PERSISTED serving row, as `FatSecretServing` stores it.
+ *
+ * Structurally the same nutrition as the API shape `recoverMacroOnlyServing`
+ * reads, but nested: the API puts `calories`/`sodium`/... on the serving object
+ * itself, while the DB holds them in a `nutrients` Json column beside the
+ * description. Declared loosely (not as the Prisma type) so this module keeps
+ * its no-prisma promise — see the file header.
+ */
+export interface PersistedFatSecretServing {
+    servingId?: string | null;
+    description?: string | null;
+    measurementDescription?: string | null;
+    nutrients?: unknown;
+}
+
+/**
+ * Adapt PERSISTED serving rows to the flat shape `recoverMacroOnlyServing`
+ * reads, so a DB-side caller reuses that recovery instead of writing a second
+ * one. `/api/nlp/parse` and `/api/foods/barcode` reach this class through
+ * `resolveFoodDetails()`, which reads `FatSecretFood`/`FatSecretServing`, where
+ * `/api/foods/search` reads the live API — same records, two storage shapes, and
+ * duplicating the derivation is exactly how the two lanes came to bill the same
+ * food differently in the first place.
+ *
+ * ALSO RESTORES SELECTION PARITY. `recoverMacroOnlyServing` takes the first
+ * serving carrying macros, which on an API-shaped array IS the record's default
+ * (fatsecret-lane.ts sets `defaultServingId` to `hit.servings[0].id`). Prisma
+ * returns rows in no guaranteed order, so the default is hoisted to the front
+ * here — matching build-fatsecret-result.ts's macro-only branch, which prefers
+ * `defaultServingId` and otherwise falls back to first-with-macros. The sort is
+ * stable, so the fallback order is untouched. Measured on the box 2026-08-15:
+ * this can only change the answer for 8 of the 3,472 empty-panel records (the
+ * only ones carrying more than one macro-bearing serving); re-derive with the
+ * count in the owner report.
+ */
+export function flattenPersistedServings(
+    servings: readonly PersistedFatSecretServing[],
+    defaultServingId?: string | null,
+): Array<Record<string, unknown>> {
+    const ordered = defaultServingId
+        ? [...servings].sort((a, b) =>
+            Number(b.servingId === defaultServingId) - Number(a.servingId === defaultServingId))
+        : servings;
+    return ordered.map(s => ({
+        ...(s.nutrients && typeof s.nutrients === 'object' ? s.nutrients as Record<string, unknown> : {}),
+        description: s.description ?? '',
+        measurementDescription: s.measurementDescription ?? '',
+    }));
+}
+
 export function recoverMacroOnlyServing(servings: unknown): MacroOnlyServingRecovery | null {
     if (!Array.isArray(servings)) return null;
     for (const s of servings) {
