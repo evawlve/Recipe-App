@@ -34,7 +34,13 @@ import {
     singularizeUnit, inferDiscreteUnit, extractLabelServingUnit,
     servingLabelCountsPiece, labelLeadingCount, labelPieceMatchesItem,
 } from './count-label';
-import { num, servingMacros, type Macros } from './fs-serving-macros';
+import {
+    num,
+    servingMacros,
+    estimateServingGrams,
+    type Macros,
+} from './fs-serving-macros';
+import { FS_SERVING_MACROS_ONLY_EST_TIER } from './serving-ai-tiers';
 import {
     applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
     usableBareLabelServing, BARE_MIN_PIECE_SERVING_GRAMS, BARE_LABEL_MIN_GRAMS,
@@ -120,23 +126,12 @@ interface FsServingView {
 // `Macros`, `num` and `servingMacros` moved VERBATIM to ./fs-serving-macros.ts
 // (2026-07-27) so the correctness screen reads serving-level nutrition through
 // the exact function this lane bills from, instead of re-implementing it.
-
-/**
- * Estimate a serving's gram weight from its per-serving macros, used ONLY for
- * FatSecret records that carry per-serving macros but no metric weight and no
- * per-100g panel (FatSecret's generic "1 serving" restaurant records — e.g.
- * "Impossible Whopper", "Cheese Fries [Shake Shack]"). Grams is secondary
- * metadata on this path: the per-serving macros are billed directly and stay
- * authoritative, so a neutral energy-density estimate is sufficient. Floored at
- * the physical macro mass (protein + carbs + fat), which a food can never weigh
- * less than, so the reported density can never exceed a plausible value.
- */
-const PREPARED_FOOD_KCAL_PER_GRAM = 2.0;
-function estimateServingGrams(m: Macros): number {
-    const macroMass = m.protein + m.carbs + m.fat;
-    const byEnergy = m.kcal > 0 ? m.kcal / PREPARED_FOOD_KCAL_PER_GRAM : 0;
-    return Math.max(macroMass, byEnergy, 1);
-}
+//
+// `PREPARED_FOOD_KCAL_PER_GRAM` and `estimateServingGrams` moved there too
+// (2026-08-14), verbatim and for the identical reason: `/api/foods/search`'s
+// local lane now recovers the same macro-only servings this branch bills, and a
+// second copy of the estimator would let the two lanes report different weights
+// for the same record. Imported at the top of this file.
 
 /**
  * Recover a serving's TRUE gram weight by inverting the record's own per-100g
@@ -920,7 +915,7 @@ export async function buildFatSecretResult(
                 // Membership predicate: `isSyntheticGramsTier()` in ./serving-ai-tiers.
                 servingTier = fromPanel != null
                     ? 'fs_serving_macros_only'
-                    : 'fs_serving_macros_only_est';
+                    : FS_SERVING_MACROS_ONLY_EST_TIER;
                 pickedServing = macroServing;
                 logger.info('fs.build_result.serving_macros_only', {
                     foodId: candidate.id,

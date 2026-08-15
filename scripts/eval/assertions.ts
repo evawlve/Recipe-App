@@ -209,6 +209,33 @@ export interface SearchCaseSpec {
      * this exists at all; see the golden set for how each value was derived.
      */
     minItems?: number;
+    /**
+     * Names that must come back with REAL energy. Same shape as `match`: a list of
+     * alternatives, each a list of required substrings. EVERY hit anywhere in the
+     * list whose text matches one of them must report `kcal100 > 0`, and at least
+     * one hit must match at all (fail-closed — a route that simply stopped
+     * returning the row must not pass by having nothing to check).
+     *
+     * WHY THIS IS PER-CASE AND NOT A GLOBAL INVARIANT. `requireNutrition` cannot
+     * see a manufactured zero, because `hasNum(0) === true`. The obvious repair —
+     * "treat all-zero macros as missing", applied list-wide — was MEASURED against
+     * the box on 2026-08-14 (build szIZeR6Ah_JBjJL3xHs5K) and REFUTED: it lights
+     * 49 rows across 9 of the 105 search cases, and it stays red on 16 of them
+     * after the defect is fixed, because 0/0/0/0 is a COMPLETE AND CORRECT panel
+     * for water, black coffee and diet soda. `s-edge-03` ("water") alone returns
+     * five genuine zero-calorie rows carrying real FatSecret servings ("Tap Water",
+     * 1 cup / 237 g). Narrowing it with "...and the row's only portion is the
+     * route's own `100 g` placeholder" does not rescue it either: `Coke Zero (Can)`
+     * (fs_4041569) and `Bottled Water` (fs_450123) carry a REAL FatSecret `100 g`
+     * serving whose label is byte-identical to the placeholder.
+     *
+     * So there is no wire-observable predicate separating "we manufactured this
+     * zero" from "this food has no calories" — the two shapes are equal on the
+     * wire. Naming the food that must have calories is the honest instrument, and
+     * it can never fire on water because no case asks water for energy.
+     * Re-derive: scripts/eval/run-eval.ts --only search --grep s-chain.
+     */
+    requireEnergy?: string[][];
 }
 
 /**
@@ -231,9 +258,28 @@ const MACRO_KEYS = ['kcal100', 'protein100', 'carbs100', 'fat100'];
 function hasNum(v: unknown): boolean {
     return typeof v === 'number' && Number.isFinite(v);
 }
-/** A search hit with NO finite macro at all — the null-nutrition rows the OFF filter should drop. */
+/**
+ * A search hit with NO finite macro at all — the null-nutrition rows the OFF filter
+ * should drop.
+ *
+ * NOTE `hasNum(0) === true`, deliberately and unavoidably: a finite 0 is a real
+ * reading. That is why this predicate could not see /api/foods/search's
+ * `kcal100: c.nutrition?.kcal ?? 0`, which turns "we have nothing" into a finite
+ * zero. `requireEnergy` is the assertion that covers that class; its doc comment
+ * records why widening THIS one is refuted rather than merely unattempted.
+ */
 export function nutritionMissing(h: any): boolean {
     return !MACRO_KEYS.some(k => hasNum(h?.[k]));
+}
+
+/**
+ * Every hit matching `patterns` that reports no positive energy, or `null` when
+ * nothing matched at all (the fail-closed case the caller must also treat as bad).
+ */
+function energylessMatches(list: any[], patterns: string[][]): any[] | null {
+    const matched = list.filter(h => matchesAlt(textOf(h), patterns));
+    if (matched.length === 0) return null;
+    return matched.filter(h => !(hasNum(h?.kcal100) && h.kcal100 > 0));
 }
 
 /**
@@ -254,9 +300,33 @@ export function scoreSearchCase(c: SearchCaseSpec, hits: unknown): { pass: boole
         : `top${c.rank ?? 3}: [${topN.map(h => `"${h.name}"`).join(', ') || 'EMPTY'}]`;
     // Invariant (unless opted out): no returned hit may lack all nutrition — verifies
     // the OFF null-nutrition filter keeps junk rows out of manual search results.
-    if (c.requireNutrition !== false && topN.length) {
-        const bad = topN.find(nutritionMissing);
+    //
+    // Applied to the WHOLE list since 2026-08-14, not `topN`. It had been checking
+    // `list.slice(0, rank ?? 3)`, i.e. 3 rows of a ~25-row browse list, so 88% of
+    // what manual search actually renders was exempt from the one invariant written
+    // to police it — the same blind spot DEFAULT_MIN_ITEMS was added for, one field
+    // over. The widening is free on today's corpus: measured against the box
+    // 2026-08-14 (szIZeR6Ah_JBjJL3xHs5K) over all 105 search cases, list-wide finds
+    // ZERO additional rows, because every row this predicate can see was already
+    // being filtered upstream. It is a guard against the next regression, not a
+    // reading of the current one.
+    if (c.requireNutrition !== false && list.length) {
+        const bad = list.find(nutritionMissing);
         if (bad) { pass = false; detail = `NULL-NUTRITION "${bad.name}" | ${detail}`; }
+    }
+    // Named foods that must carry real energy. Whole list, and fail-closed on "no
+    // hit matched" — see SearchCaseSpec.requireEnergy for why this is per-case.
+    if (c.requireEnergy) {
+        const energyless = energylessMatches(list, c.requireEnergy);
+        if (energyless === null) {
+            pass = false;
+            detail = `NO-ENERGY-CANDIDATE (nothing matched requireEnergy) | ${detail}`;
+        } else if (energyless.length) {
+            pass = false;
+            detail = `ZERO-KCAL ${energyless.length} of ${
+                list.filter(h => matchesAlt(textOf(h), c.requireEnergy!)).length
+            } ["${energyless.slice(0, 3).map(h => h.name).join('", "')}"] | ${detail}`;
+        }
     }
     // Browse-list invariant. Checked AFTER the match so the detail still names the
     // winner: "the right hit is still first" and "the list was gutted" are different
