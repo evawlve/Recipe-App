@@ -1372,11 +1372,29 @@ const BRAND_PRODUCT_CONTEXT_TOKENS = new Set([
  * single brand token sits directly next to a product-form token in the text.
  * Single-word brands that double as common English words ("ghost", "one",
  * "built") never qualify on their own.
+ *
+ * BOTH branches now test that the brand is actually IN the text. The single-token
+ * branch always did (`indexOf` === -1 declines). The multi-token branch did not:
+ * it was a bare `return true` on token count alone, so any >= 2-word brand was
+ * declared decisive for a query that never named it. That is not cosmetic —
+ * `deriveMappingCacheKey()` PREFIXES the key with a decisive brand, so a brand the
+ * text does not contain silently moves the read/write key onto a row nothing else
+ * addresses, and the brandless `legacyKey` fallback cannot rescue it because it
+ * derives from `normalizedName`, which carries the query's own words. The same
+ * predicate also gates the brand-mismatch save gate, sub-threshold admission and
+ * DECISIVE_BRAND_BOOST, so an absent brand was spending all five.
+ *
+ * The multi-token brand does NOT always come from the text. `detectBrandInQuery()`
+ * rebuilds `matchedBrand` from the query's own tokens, but `options.brand` is the
+ * AI segmenter's field ("brand: explicit brand name, else \"\"") and is a model
+ * output — measured live, it emits `Noodles and Company` for an item whose rawText
+ * is `buttered noodles`. See brandPhrasePresentInText() for why the test is a
+ * contiguous TOKEN match and not a substring.
  */
 export function hasDecisiveBrandContext(text: string, targetBrand: string): boolean {
     const brandTokens = targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (brandTokens.length === 0) return false;
-    if (brandTokens.length >= 2) return true;
+    if (brandTokens.length >= 2) return brandPhrasePresentInText(text, targetBrand);
     const tokens = text.toLowerCase().split(/[\s,()[\]{}]+/).filter(t => t.length > 0);
     const idx = tokens.indexOf(brandTokens[0]);
     if (idx === -1) return false;
@@ -1397,6 +1415,71 @@ export function hasDecisiveBrandContext(text: string, targetBrand: string): bool
  */
 function foldApostrophes(token: string): string {
     return token.replace(/['’`]/g, '');
+}
+
+/**
+ * Connector words carried by brand names ("Ben & Jerry's", "Good & Gather",
+ * "dietz and watson"). Dropped from BOTH sides before the adjacency test, which
+ * is what makes the `&`-vs-`and` spelling irrelevant. `&` needs no entry: it is
+ * one character and the length filter below already removes it — the same filter
+ * `detectBrandInQuery()` applies, which is why a detector-derived brand can never
+ * contain `&` in the first place.
+ */
+const BRAND_PRESENCE_CONNECTORS = new Set(['and']);
+
+/**
+ * The token view both sides of the presence test are compared in. Deliberately
+ * the SAME shape `detectBrandInQuery()` tokenizes into — same delimiter class,
+ * same `length > 1` filter — because that is what makes the presence test a
+ * provable no-op on detector-derived brands (below). Plus two folds:
+ *   - apostrophes, so "dave's" / "daves" are one token (foldApostrophes);
+ *   - a trailing plural/possessive "s" on tokens long enough to survive it, so
+ *     "Ben & Jerry's" still matches the line "ben jerry". Both folds only ever
+ *     MERGE token forms, i.e. they can only make the test more permissive, which
+ *     is the safe direction for a change that strictly removes decisiveness.
+ */
+function brandPresenceTokens(s: string): string[] {
+    return s.toLowerCase()
+        .split(/[\s,()[\]{}]+/)
+        .map(foldApostrophes)
+        .filter(t => t.length > 1 && !BRAND_PRESENCE_CONNECTORS.has(t))
+        .map(t => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
+}
+
+/**
+ * Is the multi-token brand actually named in the text? CONTIGUOUS token match,
+ * and the choice is load-bearing. Two alternatives were rejected:
+ *
+ *   SUBSTRING (`text.includes(brand)`) — rejected. `detectBrandInQuery()` returns
+ *   `originalTokens.slice(i, i + size).join(' ')`, a phrase REBUILT from the
+ *   query's tokens, so a brand written in the line with a comma, bracket or
+ *   double space is not a substring of that line. It also fails on every
+ *   re-punctuation the segmenter performs ("Ben & Jerry's" for a line reading
+ *   "ben and jerrys", "M&M's" for "m and ms"). Those are queries that DO name
+ *   the brand, so a substring test would strip decisiveness from them — the
+ *   opposite of the defect being fixed.
+ *
+ *   ALL TOKENS PRESENT, ORDER-FREE — rejected as not meaning what decisiveness
+ *   claims. The brand was found as a contiguous n-gram; an order-free test would
+ *   declare "365 whole foods market" named by a line reading "whole wheat market
+ *   foods". Adjacency is the predicate that FOUND the brand, so reusing it keeps
+ *   one definition of "the query named this brand" across detection and use.
+ *
+ * The consequence worth stating: on a brand from `detectBrandInQuery()` this
+ * returns true BY CONSTRUCTION — same tokenizer, same length filter, same
+ * adjacency, and the folds only widen it — so the whole behaviour change is
+ * confined to brands that did not come from the text, i.e. the segmenter's
+ * `options.brand`. A brand with no testable content tokens returns true rather
+ * than guess, preserving the prior behaviour where the test cannot run.
+ */
+function brandPhrasePresentInText(text: string, targetBrand: string): boolean {
+    const brand = brandPresenceTokens(targetBrand);
+    if (brand.length === 0) return true;
+    const hay = brandPresenceTokens(text);
+    for (let i = 0; i + brand.length <= hay.length; i++) {
+        if (brand.every((bt, j) => hay[i + j] === bt)) return true;
+    }
+    return false;
 }
 
 /**

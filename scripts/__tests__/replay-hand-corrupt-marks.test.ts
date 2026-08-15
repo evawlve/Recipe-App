@@ -520,7 +520,7 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         expect(parsed.ok).toBe(true);
     });
 
-    it('is the 2026-08-12 batch plus the 2026-08-14 panel batch: 23 entries over 27 barcodes', () => {
+    it('is the 2026-08-12 + 2026-08-14 + 2026-08-15 batches: 24 entries over 32 barcodes', () => {
         // Narrowed from 17/22 on 2026-08-12 after the pre-apply review. Two
         // entries were withdrawn because the mark does not buy a better answer,
         // which is the same criterion that deferred maple and callaloo:
@@ -539,9 +539,16 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         // — a mark is a deletion, so it is only worth writing when what gets
         // promoted in its place is measurably better. Owner:
         // sync-docs/reports/2026-08-14_corrupt-mark-panel-batch-plan.md (mobile).
+        //
+        // 2026-08-15 added ONE entry carrying FOUR group members — the
+        // 4-and-5-barcode cross-name group the 2026-08-14 batch listed as
+        // re-submittable and did not re-submit. It is the first entry whose
+        // group the tool's own classifyGroupCandidates() cannot fully compute:
+        // two members sit under different names, so the name-scoped gate is
+        // blind to them and they are hand-declared.
         if (!parsed.ok) throw new Error('unparseable');
-        expect(parsed.entries.length).toBe(23);
-        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(27);
+        expect(parsed.entries.length).toBe(24);
+        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(32);
     });
 
     it('carries the duplicate-group members that make a barcode-scoped mark self-reverting', () => {
@@ -555,6 +562,17 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         if (!parsed.ok) throw new Error('unparseable');
         const members = new Map(parsed.entries.flatMap(e => e.group.map(m => [m.barcode, { target: e.barcode, basis: m.basis }])));
         expect(members.get('355980649788503212113472')).toEqual({ target: '1781154461976987405190', basis: 'duplicate-group' });
+        // 2026-08-15: the almond-milk group is the cross-name case. Two of its
+        // four members share the target's normalizeNameKey and are therefore
+        // computed by classifyGroupCandidates(); the other two sit under
+        // different names and are invisible to it, so only this file carries
+        // them. 00826638 additionally carries duplicateOfBarcode today — that
+        // column is recomputed on every dedupe run and isBetterRepresentative()
+        // ranks a CLEAN row above a marked one, so leaving it unmarked is what
+        // would hand the identical panel straight back.
+        for (const b of ['00826637', '00826638', '0036632079800', '0025293001367']) {
+            expect(members.get(b)).toEqual({ target: '78797703', basis: 'panel-twin' });
+        }
         // A withdrawn entry must take its members with it — a member left behind
         // pointing at an absent target is an orphan the group gate cannot see.
         expect(members.get('8510451122990')).toBeUndefined();
@@ -572,9 +590,10 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         if (!parsed.ok) throw new Error('unparseable');
         const byGen = new Map<string, number>();
         for (const e of parsed.entries) byGen.set(e.authoredAt, (byGen.get(e.authoredAt) ?? 0) + 1);
-        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14']);
+        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14', '2026-08-15']);
         expect(byGen.get('2026-08-12')).toBe(15);
         expect(byGen.get('2026-08-14')).toBe(8);
+        expect(byGen.get('2026-08-15')).toBe(1);
     });
 
     it('records a stated reason for every declined group member', () => {

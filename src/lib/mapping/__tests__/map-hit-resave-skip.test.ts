@@ -501,6 +501,15 @@ describe('read escapes are threaded to the save gate', () => {
         // audit line, i.e. the one counter for waivers pointed at the wrong row.
         // Both rows really were refused, so either is a legitimate forfeit; only
         // a self-consistent one is diagnosable.
+        //
+        // The two-key lookup is driven through the STEP-1C brand-preservation
+        // repair, NOT through options.brand. It used to be the latter: the line
+        // was "1 cup protein shake" with options.brand "optimum nutrition", and
+        // the symmetric key was brand-prefixed only because
+        // hasDecisiveBrandContext() short-circuited on token count without
+        // checking the line. Now the line names the brand and AI normalize
+        // strips it, which is the real production shape that makes symmetric and
+        // legacy keys differ — and it yields the same two keys mocked below.
         const ROW_A = 'off:1111111111111';   // refused by the symmetric-key lookup
         const ROW_B = '2222222222222';       // refused by the legacy lookup (brand mismatch)
         (getValidatedMappingByNormalizedName as jest.Mock).mockImplementation(
@@ -525,9 +534,15 @@ describe('read escapes are threaded to the save gate', () => {
                 return null;
             },
         );
-        (gatherCandidates as jest.Mock).mockResolvedValue([
-            { id: 'ps-2', source: 'ai_generated', name: 'Optimum Nutrition Protein Shake', brandName: 'Optimum Nutrition', score: 0.9, rawData: {} },
-        ]);
+        // First gather feeds the normalize GATE: with no candidates it returns
+        // `no_candidates` and the LLM normalize runs, which is what lets the
+        // brand-preservation repair set preBrandNormalizedName and so make the
+        // step-1c symmetric and legacy keys differ. Later gathers feed selection.
+        (gatherCandidates as jest.Mock)
+            .mockResolvedValueOnce([])
+            .mockResolvedValue([
+                { id: 'ps-2', source: 'ai_generated', name: 'Optimum Nutrition Protein Shake', brandName: 'Optimum Nutrition', score: 0.9, rawData: {} },
+            ]);
         (getCachedFoodWithRelations as jest.Mock).mockResolvedValue({
             id: 'ps-2',
             displayName: 'Optimum Nutrition Protein Shake',
@@ -539,7 +554,14 @@ describe('read escapes are threaded to the save gate', () => {
             servings: [{ id: 'srv-ps2', label: '1 cup', grams: 240, volumeMl: 240 }],
         });
 
-        await mapIngredientWithFallback('1 cup protein shake', {
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'protein shake',   // brand stripped by the model
+            synonyms: [],
+            isBranded: true,
+        });
+
+        await mapIngredientWithFallback('1 cup optimum nutrition protein shake', {
             minConfidence: 0,
             skipFdc: true,
             brand: 'optimum nutrition',
