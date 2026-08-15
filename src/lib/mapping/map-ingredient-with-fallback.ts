@@ -63,7 +63,7 @@ import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-pla
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
-import { stripIntroducedFoodTokens, resolveIsBrandedQuery } from './llm-output-guards';
+import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers } from './llm-output-guards';
 import { isBarePluralRequest } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
 import { buildFatSecretResult } from './build-fatsecret-result';
@@ -853,6 +853,40 @@ async function preflightIngredientLine(
         return { done: true, result: waterResult };
     }
 
+    // NUTRITION-MODIFIER RESTORATION (site A). Placed LAST in preflight on
+    // purpose: `baseName` is reassigned wholesale by three later steps — the
+    // brand guard, the AI-parse fallback and `GENERIC_FALLBACKS` — so a
+    // restoration nearer the top is silently clobbered by any of them.
+    //
+    // MEASURED 2026-08-15: the segmenter's per-item `normalizedForm` becomes
+    // `baseName` outright for a composite line, and it strips the modifier while
+    // the sibling `rawText` keeps it — 16 of 23 modifier-bearing cached segments.
+    // `rawText` is what arrives here as `rawLine` (see the mapper's call site in
+    // `app/api/nlp/parse/route.ts`), so the user's own words are the evidence.
+    //
+    // Live consequence this repairs: `a plate with sugar free greek yogurt`
+    // derived the cache key for bare `greek yogurt`, hit that row, and billed
+    // 3.9 g of sugar; the solo path resolved the same request to a genuinely
+    // sugar-free record at 0 g. The composite request was being served the
+    // unmodified food.
+    //
+    // It ADDS ONLY, and only words already present in the user's text, so it
+    // cannot manufacture a claim the user did not make. That is what makes it
+    // safe to run unconditionally — the two existing restorations here are both
+    // gated `!options.normalizedForm?.trim()` and are therefore structurally
+    // unable to fire on the composite path, which is the only path with this bug.
+    const modifierRepair = restoreNutritionModifiers(`${rawLine} ${baseName}`, baseName);
+    if (modifierRepair.added.length > 0) {
+        logger.info('mapping.nutrition_modifier_restored', {
+            rawLine,
+            site: 'preflight',
+            before: baseName,
+            after: modifierRepair.restored,
+            restored: modifierRepair.added,
+        });
+        baseName = modifierRepair.restored;
+    }
+
     return { done: false, parsed, baseName };
 }
 
@@ -1489,6 +1523,37 @@ export async function mapIngredientWithFallback(
                     aiCanonicalBase = aiHint.canonicalBase
                         ? stripIntroducedFoodTokens(guardInput, aiHint.canonicalBase).cleaned
                         : aiHint.canonicalBase;
+
+                    // NUTRITION-MODIFIER RESTORATION (site C). The LLM normalizer
+                    // is a SECOND dropper of the same words, independent of the
+                    // segmenter, and it overwrites whatever site A restored — so
+                    // site A alone would be undone here on every line that reaches
+                    // the model. `ai-normalize.ts`'s prompt already orders this
+                    // preservation with a worked example and is not obeyed, which
+                    // is why the enforcement is code and not a prompt edit.
+                    //
+                    // `aiCanonicalBase` gets the same treatment because it becomes
+                    // the rerank query verbatim, exactly as the strip above argues.
+                    //
+                    // Runs AFTER stripIntroducedFoodTokens and BEFORE the brand
+                    // re-assert below: the two guards move in opposite directions
+                    // (one removes invented tokens, this one restores dropped
+                    // ones) and cannot fight, and leaving the brand block last
+                    // preserves its leading word order and `preBrandNormalizedName`.
+                    const aiModifierRepair = restoreNutritionModifiers(guardInput, normalizedName);
+                    if (aiModifierRepair.added.length > 0) {
+                        logger.info('mapping.nutrition_modifier_restored', {
+                            rawLine: trimmed,
+                            site: 'ai_normalize',
+                            before: normalizedName,
+                            after: aiModifierRepair.restored,
+                            restored: aiModifierRepair.added,
+                        });
+                        normalizedName = aiModifierRepair.restored;
+                    }
+                    if (aiCanonicalBase) {
+                        aiCanonicalBase = restoreNutritionModifiers(guardInput, aiCanonicalBase).restored;
+                    }
 
                     // Brand preservation over the model's OWN output. The guard
                     // near the top of this function cannot cover this: it is

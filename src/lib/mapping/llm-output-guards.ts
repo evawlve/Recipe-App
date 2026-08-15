@@ -202,3 +202,172 @@ export function resolveIsBrandedQuery(
     // It may only DOWNGRADE where the static evidence is not decisive.
     return staticIsBranded && brandContextIsDecisive;
 }
+
+// ============================================================
+// Nutrition-modifier restoration
+// ============================================================
+
+/**
+ * Nutrition modifiers the normalizer drops from its output while the user's own
+ * text still carries them.
+ *
+ * MEASURED 2026-08-15 on box `BU4urjF_aMOJ1oBawuCLD`. The segmenter emits a
+ * per-item `normalizedForm` that becomes the mapper's primary search term, and
+ * it strips these words while retaining them in the sibling `rawText`. Of 23
+ * cached segments whose `rawText` carries one of these phrases, 16 lose it from
+ * `normalizedForm` (re-derive: the `SegmentationCache` census in
+ * `sync-docs/reports/2026-08-15_the-nutrition-modifier-is-dropped.md`). The
+ * discriminator is the FOOD, not the phrase and not the carrier: the same
+ * `fat free` survives on `milk` and dies on `greek yogurt` under an identical
+ * carrier, in the same cache.
+ *
+ * Every member clears four independent tests, and membership is gated on them
+ * rather than on intuition — the brand lexicon shipped 179 hand-authored
+ * zero-corpus entries and that is the failure being avoided:
+ *
+ *   1. it carries a non-zero `conflictPenalty` in `MODIFIER_CONFLICTS`, so the
+ *      pipeline already treats it as identity-bearing;
+ *   2. it is already in `MODIFIER_SYNONYM_GROUPS`, so retrieval knows its class;
+ *   3. it is already in `deriveMustHaveTokens()`'s `MODIFIER_TOKENS` — which is
+ *      the load-bearing safety fact: restoring these adds NO must-have token, so
+ *      the `every()`-gated admission filter is not tightened. This change shifts
+ *      the pool, it does not narrow admission;
+ *   4. `ai-normalize.ts`'s own prompt already lists it as never-strip, so this
+ *      enforces a rule the system claims to follow and does not.
+ *
+ * DELIBERATELY EXCLUDED, each for a measured or structural reason:
+ *   - `light`/`lite` — collides with live `synonym_rewrites` that CREATE the
+ *     word (`corn syrup` -> `light corn syrup`, `single cream` -> `light cream`).
+ *     Restoring it would fight a data file.
+ *   - `organic`/`natural`/`vegan`/`keto`/`gluten free` — `MODIFIER_CONFLICTS`
+ *     gives `organic` `conflictPenalty: 0`, "user preference, not nutrition".
+ *     Three golden cases carry it; narrowing there buys no nutrition accuracy.
+ *   - `whole` — owned by `IDENTITY_QUALIFIERS` and `isIdentityWholePhrase()`.
+ *     Restoring it here would double-restore and reopen the count-unit collision
+ *     closed on 2026-08-04.
+ *   - `sweetened` — widens toward the sugary product; no consequence argument.
+ *     Also a substring hazard against `unsweetened`, which is why matching is
+ *     whole-phrase and longest-first.
+ *   - `low sodium`/`less sodium` — REAL, but dropped by a different writer:
+ *     `normalizeIngredientName()` strips them via `prep_phrases`, deterministically,
+ *     on BOTH paths. Restoring them here without that fix would have this guard
+ *     re-adding what the static rules strip again one line later. They ship with
+ *     the `RULES_VERSION` bump, not here.
+ *
+ * Longest-first so `no sugar added` matches before any `sugar` sub-phrase.
+ */
+export const NUTRITION_MODIFIER_PHRASES: readonly string[] = Object.freeze([
+    'no sugar added',
+    'no added sugar',
+    'zero sugar',
+    'sugar free',
+    'sugarfree',
+    'unsweetened',
+    'reduced fat',
+    'fat free',
+    'nonfat',
+    'lowfat',
+    'low fat',
+    'skim',
+    'diet',
+] as const);
+
+/**
+ * `diet` is the one member that is not self-evidently a nutrition claim: it is
+ * also an ordinary noun (`my diet`, `keto diet snack`). It is kept because it is
+ * the brand word in `Diet Coke` — 0 kcal against Coke's ~42 kcal/100 g, the
+ * largest single-token bill difference in the set — and refused positionally
+ * rather than by special-casing the phrase, the same shape as #312's fix for
+ * leading-digit brands (`matchDigitBrandTokens`'s `startIdx`).
+ *
+ * Requires a following token, which alone refuses the noun sense in the observed
+ * shapes (`i changed my diet`, `a snack on my diet` — `diet` is terminal in
+ * both), plus a preceding-possessive refusal. Articles are deliberately NOT
+ * refused: `a diet coke` is the canonical attributive case and an early version
+ * of this guard blocked it, which the target list caught.
+ */
+const DIET_NOUN_PRECEDERS = new Set(['my', 'his', 'her', 'their', 'your', 'our']);
+
+function dietIsAttributive(evidenceTokens: readonly string[], at: number): boolean {
+    if (at === evidenceTokens.length - 1) return false;
+    if (at > 0 && DIET_NOUN_PRECEDERS.has(evidenceTokens[at - 1])) return false;
+    return true;
+}
+
+export interface NutritionModifierRepair {
+    /** The repaired string. Never empty, never shorter than the input. */
+    restored: string;
+    /** Phrases prepended, lowercased and in evidence order. Empty when nothing fired. */
+    added: string[];
+}
+
+/** Hyphen- and case-folded token list, for whole-phrase matching. */
+function foldTokens(text: string): string[] {
+    return text.toLowerCase().split(WORD_SPLIT).filter(Boolean);
+}
+
+/** True when `phrase` appears as a whole-token run inside `tokens`. */
+function phraseAt(tokens: readonly string[], phrase: readonly string[]): number {
+    outer: for (let i = 0; i + phrase.length <= tokens.length; i++) {
+        for (let j = 0; j < phrase.length; j++) {
+            if (tokens[i + j] !== phrase[j]) continue outer;
+        }
+        return i;
+    }
+    return -1;
+}
+
+/**
+ * Restore nutrition modifiers the user typed that the normalizer dropped.
+ *
+ * ADDS ONLY — it never removes a token, so the sibling repairs in this file and
+ * the normalizer's own typo/form fixes all survive it. That is also why it is
+ * safe to run after `stripIntroducedFoodTokens()`: the two move in opposite
+ * directions and cannot fight.
+ *
+ * A phrase is restored only when it is present in `evidence` (the user's own
+ * words) AND absent from `candidate`. Nothing is invented: this cannot add a
+ * claim the user did not make, which is the property that makes it safe to run
+ * unconditionally on both the solo and composite paths.
+ *
+ * Why this is not `IDENTITY_QUALIFIERS`: that set feeds `deriveCacheKeyName()`'s
+ * discriminator append and its own header says "keep this list tiny — every
+ * entry splits the cache keyspace". Membership there is also necessary but not
+ * sufficient, since a token must first survive `extractQualifiers()`, and none
+ * of these multi-word phrases do.
+ */
+export function restoreNutritionModifiers(
+    evidence: string,
+    candidate: string | null | undefined,
+): NutritionModifierRepair {
+    const base = (candidate ?? '').trim();
+    if (!base || !evidence) return { restored: base, added: [] };
+
+    const evidenceTokens = foldTokens(evidence);
+    const candidateTokens = foldTokens(base);
+    if (evidenceTokens.length === 0) return { restored: base, added: [] };
+
+    const added: string[] = [];
+    // Track the evidence position of each hit so the restored prefix reads in the
+    // order the user typed, not the order of the phrase table.
+    const hits: { phrase: string; at: number }[] = [];
+
+    for (const phrase of NUTRITION_MODIFIER_PHRASES) {
+        const parts = phrase.split(' ');
+        const at = phraseAt(evidenceTokens, parts);
+        if (at < 0) continue;
+        // Already present downstream — nothing to restore.
+        if (phraseAt(candidateTokens, parts) >= 0) continue;
+        // A shorter phrase already covered by a longer one that fired.
+        if (hits.some((h) => h.phrase.includes(phrase) || phrase.includes(h.phrase))) continue;
+        if (phrase === 'diet' && !dietIsAttributive(evidenceTokens, at)) continue;
+        hits.push({ phrase, at });
+    }
+
+    if (hits.length === 0) return { restored: base, added: [] };
+
+    hits.sort((a, b) => a.at - b.at);
+    for (const h of hits) added.push(h.phrase);
+
+    return { restored: `${added.join(' ')} ${base}`.trim(), added };
+}
