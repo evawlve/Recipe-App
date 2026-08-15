@@ -24,8 +24,27 @@ const DEFAULT_RULES: NormalizationRules = {
     'cut into \'.+?\'',
     'cut into .+',
     'links [0-9]+\\s*/?\\s*lb',
-    'less sodium',
-    'low sodium',
+    // 'less sodium' and 'low sodium' were removed on 2026-08-14. They are the
+    // same defect the cooking verbs were, one nutrient over: stripping them
+    // collapsed the modifier-bearing line onto the bare line's cache key, so
+    // 'low sodium soy sauce' and 'soy sauce' shared one FoodMapping row.
+    // MEASURED live before the change: both served off_0074261182164
+    // (4.467 g Na/100 g) at funnelStage=cache_hit on the solo AND composite
+    // paths, against a truth cluster of 2.85-3.58 for genuine reduced-sodium
+    // soy sauce -- a ~1.4x warm over-bill on the one nutrient the modifier
+    // names, and ~1.8x cold (fs_3272, 5.637). Sodium IS the panel here.
+    //
+    // Load-bearing for the KEY, like the cooking verbs and for the same
+    // reason: 'low sodium' is absent from QUALIFIERS, so this strip was the
+    // last place the state existed. Deliberately NOT fixed by adding it to
+    // IDENTITY_QUALIFIERS -- that set is the cache-key discriminator and its
+    // own header asks for it to stay tiny. Shipped with the RULES_VERSION
+    // 2 -> 3 bump it needs, or AiNormalizeCache replays the old collapse
+    // while every unit test stays green (the #211 precedent).
+    //
+    // The siblings are already safe and deliberately NOT touched: 'reduced
+    // sodium', 'sodium free', 'no salt added', 'low fat', 'reduced fat',
+    // 'fat free' and 'unsalted' were all measured to pass through unchanged.
     'extra',
     'whole',
     'split',
@@ -112,8 +131,18 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'green peppers', to: 'bell pepper' },
     { from: 'hot sausage', to: 'spicy sausage' },
     { from: 'mostaccioli', to: 'mostaccioli pasta' },
+    // Canonicalises the two shopper spellings onto one key. KEPT.
     { from: 'less sodium soy sauce', to: 'low sodium soy sauce' },
-    { from: 'low sodium soy sauce', to: 'soy sauce low sodium' },
+    // 'low sodium soy sauce' -> 'soy sauce low sodium' was removed 2026-08-14.
+    // These two rules were entangled: the rewrite ran FIRST (synonym_rewrites
+    // precede the prep strip in normalizeIngredientName), moving the modifier
+    // to the tail, and the prep strip then deleted it -- so the word-order
+    // shuffle's only consumer was the strip that is now gone. Removing the
+    // strip alone would have left the odd tail form. MEASURED on the live
+    // search lane: the natural order retrieves BETTER -- 'low sodium soy
+    // sauce' -> fs_1146892 (2.848 g Na/100 g) vs 'soy sauce low sodium' ->
+    // fs_38416 (3.333). Both find a genuine low-sodium record; neither needs
+    // the shuffle.
     { from: 'cube chicken bouillon', to: 'chicken bouillon cube' },
     { from: 'polish beef sausage', to: 'polish sausage' },
     { from: 'polish sausage', to: 'kielbasa' },

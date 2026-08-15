@@ -8,8 +8,6 @@
     "bone and skin removed",
     "boneless skinless",
     "links [0-9]+\\s*/?\\s*lb",
-    "less sodium",
-    "low sodium",
     "low-moisture",
     "extra",
     "whole",
@@ -142,10 +140,6 @@
     {
       "from": "less sodium soy sauce",
       "to": "low sodium soy sauce"
-    },
-    {
-      "from": "low sodium soy sauce",
-      "to": "soy sauce low sodium"
     },
     {
       "from": "cube chicken bouillon",

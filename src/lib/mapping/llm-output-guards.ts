@@ -253,6 +253,23 @@ export function resolveIsBrandedQuery(
  *     on BOTH paths. Restoring them here without that fix would have this guard
  *     re-adding what the static rules strip again one line later. They ship with
  *     the `RULES_VERSION` bump, not here.
+ *     THAT FIX SHIPPED 2026-08-14 (prep_phrases entries removed, RULES_VERSION
+ *     2 -> 3), so the blocking reason above is discharged. Membership here is
+ *     still declined, but ONLY for scope — it is a second behaviour change and
+ *     the exclusion is pinned by this module's own test. It is NOT declined for
+ *     want of a case: the rules fix repairs the SOLO path completely and the
+ *     COMPOSITE path only partly, and the residue is measured. Cold, x4 each, on
+ *     the fixed tree: `rice with low sodium soy sauce` resolves to fs_1146892
+ *     "Low Sodium Soy Sauce" 4/4, while `a bowl with low sodium soy sauce` stays
+ *     on plain fs_3272 4/4 and `a plate with ...` splits 3/4. So a sodium
+ *     modifier CAN still be lost on the composite path after the rules fix.
+ *     What is NOT distinguished is the mechanism — whether the segmenter strips
+ *     the modifier out of the per-item `normalizedForm`, which is what this guard
+ *     would repair, or whether the line simply segments differently (the same x4
+ *     sweep saw `a bowl with sugar free greek yogurt` fail to split at all on 2 of
+ *     4 draws, and `a plate with ...` drop its carrier on 1 of 4). Quote the
+ *     measurement, not the mechanism. Settle the mechanism BEFORE adding a member
+ *     here; a guard aimed at the wrong writer buys nothing.
  *
  * Longest-first so `no sugar added` matches before any `sugar` sub-phrase.
  */
