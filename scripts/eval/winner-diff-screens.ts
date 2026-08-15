@@ -1020,7 +1020,8 @@ const MEAL_SUFFIX_RE = /\s*(?:for|at|as)\s+(breakfast|lunch|dinner|snacks?)\s*\.
 const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus)\b/i;
 
 /**
- * Byte-for-byte mirror of `singleItemFromText` (src/app/api/nlp/parse/route.ts:29-45).
+ * Byte-for-byte mirror of `singleItemFromText()` in src/app/api/nlp/parse/route.ts,
+ * together with the two module constants it reads there.
  *
  * WHY IT MATTERS HERE: a `text` case does not automatically mean "the segmenter ran".
  * The route short-circuits short, separator-free lines straight to one
@@ -1030,7 +1031,15 @@ const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus)\b/i;
  * `text` case unevaluable would be as dishonest in the other direction as the
  * silent pass this file exists to remove.
  *
- * If the route's rule changes, this must change with it. It is pinned by a test.
+ * IF THE ROUTE'S RULE CHANGES, THIS MUST CHANGE WITH IT — and that is now enforced
+ * rather than requested. `__tests__/winner-diff.test.ts` hashes the route's own source
+ * region (both regexes plus the function) against a pinned value, so an edit there goes
+ * red here. It had to live in the test file: this file performs no I/O of any kind (see
+ * the header), which is what keeps it importable without the box.
+ *
+ * Nothing else watches this seam. winner-gate.sh's UNOBSERVED_SURFACE_PATHS abort stops
+ * a route change being sold as a green frozen-pool receipt, but it fires on the branch
+ * that makes the edit — it cannot notice that this transcription has since gone stale.
  */
 export function isDeterministicSingleItemText(text: string): boolean {
     const trimmed = (text ?? '').trim();
@@ -1584,6 +1593,20 @@ export function counterfactualSummary(rows: ReplayRow[]): CounterfactualSummary 
  * a file that cannot affect a replay costs one re-run (the driver re-takes both noise
  * floors every time); missing one that can produces a green receipt for untested code.
  * `__tests__` is excluded because a test file cannot change what a replay produces.
+ *
+ * `src/app/api` IS DELIBERATELY ABSENT, and this is the decision, not an oversight
+ * (2026-08-15). A replay never executes an HTTP route: it calls the mapper directly,
+ * and `src/lib` imports `src/app` in zero files, so no route can reach a replay however
+ * the app is refactored. Adding the 72 route files would take the hashed set 164 -> 236
+ * (+43.9%) with files no replay loads, and — worse — mint a fresh-looking tree id on a
+ * route edit, converting an honest vacuous SAME into one that LOOKS like it was
+ * measured. (re-derive: walk each root with HASHED_EXTENSIONS, skipping
+ * HASH_SKIP_DIRS, and add the one HASHED_EXTRA_FILES entry; measured 2026-08-15.)
+ * Fail-closed does not apply: these files cannot affect a replay, so hashing them buys
+ * no safety, only false confidence. The blindness is real and stays; what changed is
+ * that winner-gate.sh now REFUSES the run (UNOBSERVED_SURFACE_PATHS, exit 5) instead of
+ * letting the receipt be quoted. Keep the route example in the selectHashablePaths tests
+ * — it pins this exclusion.
  */
 export const HASHED_SOURCE_ROOTS = ['src/lib'] as const;
 /**

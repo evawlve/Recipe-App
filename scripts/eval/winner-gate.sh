@@ -17,8 +17,10 @@
 #   1. REFUSES to run without a cold-seed file (winner-diff blind spot (D): a
 #      population of already-asked queries cannot contain the cases a fix is
 #      supposed to CREATE — that blind spot has invalidated a gate before);
-#   2. ABORTS when the branch touches retrieval, because a frozen-pool diff is
-#      meaningless then (blind spot (A));
+#   2. ABORTS when the diff it is about to print would not be a measurement of the
+#      change — retrieval (blind spot (A)), a frozen snapshot input, or a surface
+#      the replay never executes at all. See EXIT CODES: those are three different
+#      failures with three different remedies, so they are three different aborts;
 #   3. builds the BASE tree as a git worktree instead of `git checkout -- <file>`,
 #      which is how uncommitted work gets destroyed;
 #   4. takes ONE snapshot shared by both sides, so retrieval nondeterminism
@@ -56,6 +58,20 @@
 # EXAMPLE
 #   scripts/eval/winner-gate.sh --cold-seeds /tmp/mac-and-cheese-seeds.txt
 #
+# EXIT CODES — three different NOs, and the difference is the whole point
+#   0  the gate ran and printed a diff (a diff is not a verdict; read the questions
+#      it prints at the end)
+#   2  bad invocation, or no --cold-seeds
+#   3  THE DIFF WOULD BE VACUOUS. The run can happen, would report SAME, and that
+#      SAME means nothing: retrieval changed (the pool is one neither tree makes) or
+#      a FROZEN SNAPSHOT INPUT changed (the field is replayed, not recomputed).
+#   4  the noise floor is non-zero, so nothing below it is a result.
+#   5  THE DIFF WOULD BE ABOUT A DIFFERENT PROGRAM. The change is on a surface
+#      winner-diff never executes — see UNOBSERVED_SURFACE_PATHS. Distinct from 3
+#      on purpose: 3 says "the instrument was pointed at your change and is blind",
+#      5 says "the instrument was never pointed at your change at all", and those
+#      two have different remedies.
+#
 set -euo pipefail
 
 BASE_REF="origin/master"
@@ -73,7 +89,7 @@ while [[ $# -gt 0 ]]; do
         --label)      LABEL="$2";      shift 2 ;;
         --keep)       KEEP=1;          shift ;;
         --no-serving) SERVING="";      shift ;;
-        -h|--help)    sed -n '2,58p' "$0"; exit 0 ;;
+        -h|--help)    sed -n '2,74p' "$0"; exit 0 ;;
         *) echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -122,18 +138,33 @@ echo
 # committed, but winner-diff replays the WORKING TREE — so an uncommitted edit to a
 # retrieval or frozen-input file sailed past both aborts while actually changing the
 # BRANCH side. Union the committed diff with staged, unstaged and untracked. (2026-08-14)
-# `__tests__` is filtered out for the same reason gitDirtyHash() skips it: a test
+# TEST FILES ARE FILTERED OUT for the same reason gitDirtyHash() skips them: a test
 # file cannot change what a replay produces, so aborting on one is a FALSE abort.
 # That matters more than tidiness — a gate that cries wolf on a test-only edit is a
 # gate people learn to bypass, and it fired on the very first real change after the
 # aborts shipped (a digit-brands lexicon edit whose test file matched `src/lib/parse/`).
+#
+# EXTENDED 2026-08-15 from a bare `__tests__` to also cover the COLOCATED convention
+# (`foo.test.ts` next to `foo.ts`), because this repo uses both and the second half was
+# unprotected: 11 tracked files match `*.test.ts` outside any `__tests__` directory, 6
+# of them under src/app/api (re-derive: `find src -name '*.test.ts' -not -path
+# '*__tests__*' | wc -l` -> 11; `find src/app/api -name '*.test.ts' | wc -l` -> 6,
+# measured 2026-08-15). Nothing currently listed matched one, so this fixes no live
+# red — it is what keeps UNOBSERVED_SURFACE_PATHS below from shipping the #311 false
+# abort a second time, since `src/app/api/foods/search/route.test.ts` is a route-shaped
+# path with no `__tests__` segment in it.
+#
+# It is a NAMED variable so the test suite can read the shipped filter instead of
+# restating it. A restated copy is free to drift, which is exactly the failure the
+# pattern-read-from-source discipline below exists to prevent.
+NON_REPLAY_PATHS='__tests__|\.test\.tsx?$|\.spec\.tsx?$'
 changed_paths() {
     {
         git diff --name-only "$BASE_REF"...HEAD
         git diff --name-only
         git diff --name-only --cached
         git ls-files --others --exclude-standard
-    } | grep -v '__tests__' | sort -u
+    } | grep -vE "$NON_REPLAY_PATHS" | sort -u
 }
 
 RETRIEVAL_PATHS='src/lib/mapping/gather-candidates.ts|src/lib/search/|query-builder|typesense|fatsecret-lane|embedding'
@@ -244,6 +275,95 @@ from the host you are actually gating (run-eval.ts is an HTTP client; --base dec
 which build answers, NOT your working tree).
 EOF
     exit 3
+fi
+
+# ------------------------------------------------------- THE UNOBSERVED SURFACE
+# A THIRD KIND OF BLINDNESS, AND IT IS NOT EITHER OF THE TWO ABOVE. Filing it under
+# them was considered and rejected, because the reason a reader is given is the whole
+# value of an abort:
+#
+#   RETRIEVAL_PATHS   winner-diff RUNS your change, on a pool neither tree would have
+#                     produced. The diff happens and is VOID.
+#   FROZEN_INPUT      winner-diff RUNS, but reads your changed field off the frozen
+#                     snapshot instead of recomputing it. The diff reports SAME
+#                     vacuously — blind about a surface it is genuinely pointed at.
+#   here              winner-diff NEVER EXECUTES THIS CODE. replaySelection() calls
+#                     the mapper directly; the HTTP route is not on that path at all.
+#                     A green receipt is not a weak result about your change, it is an
+#                     accurate result about a DIFFERENT program.
+#
+# THE MEMBERSHIP RULE IS ONE CLAUSE, and it is structural rather than a judgement
+# call: the import direction is one-way. `src/lib` imports `src/app` in ZERO files
+# (re-derive: `grep -rl '@/app/' src/lib | wc -l` -> 0, measured 2026-08-15), and the
+# replay's import closure roots entirely in `src/lib`, so nothing under `src/app/api`
+# can be reached by a replay however the routes are refactored. That is why the whole
+# directory is listed and not just the two lane routes: narrowing to
+# `foods/search|nlp/parse` would state a rule weaker than the one that is actually
+# true, and would hand a silent green to `/api/foods/barcode` and
+# `/api/foods/[id]/serving` — the two routes the #324 write-off names as carrying the
+# same latent defect.
+#
+# THE PRICE, measured against the boundary this gate has already accepted. 30 of the
+# 656 commits since 2026-07-01 touch `src/app/api` (4.6%); narrowing to the two lane
+# routes would be 27 (4.1%), so the extra breadth costs THREE commits in that window.
+# `map-ingredient-with-fallback.ts` is deliberately absent from FROZEN_INPUT_PATHS at
+# 76/656 (11.6%) on the stated grounds that listing it converts "refuse what you
+# cannot see" into "refuse almost everything"; 4.6% is comfortably inside that
+# accepted boundary and buys a rule with no exceptions in it. (re-derive:
+# `git log --since=2026-07-01 --oneline -- src/app/api | wc -l` -> 30 against
+# `git log --since=2026-07-01 --oneline | wc -l` -> 656, measured 2026-08-15.)
+#
+# WHY THIS IS AN ABORT AND NOT A WARNING. It is the weakest of the three cases —
+# the diff it suppresses is honest about the mapper — and a warning was the obvious
+# proportionate answer. It loses to this file's own precedent: `announceVariantFit`
+# printed exactly such a warning, the driver piped it to `tail -6`, and every run
+# this driver had ever done replayed the wrong variant behind it. A warning nobody
+# can see is not a warning. The escape hatch is a SPLIT, named in the message.
+#
+# WHAT THIS DOES NOT FIX, so nobody reads the abort as a closure. gitDirtyHash() still
+# never hashes these files, and it should not — the reasoning is owned by
+# HASHED_SOURCE_ROOTS in winner-diff-screens.ts. Short version: hashing 72 files no
+# replay loads (164 -> 236, +43.9%) would mint a fresh-looking tree id that proves
+# nothing, which is worse than an honest vacuous SAME. The blindness is structural and
+# stays. This abort only stops it being sold as a receipt.
+UNOBSERVED_SURFACE_PATHS='src/app/api/'
+if changed_paths | grep -qE "$UNOBSERVED_SURFACE_PATHS"; then
+    echo "ABORT: this branch changes an HTTP ROUTE, a surface winner-diff never executes:" >&2
+    changed_paths | grep -E "$UNOBSERVED_SURFACE_PATHS" | sed 's/^/  /' >&2
+    cat >&2 <<'EOF'
+
+THIS IS NOT THE USUAL "the instrument is blind here" ABORT. winner-diff does not
+execute this code AT ALL. It replays a frozen pool through mapIngredientWithFallback
+directly and never issues an HTTP request, and nothing under src/app/api is reachable
+from src/lib (the import direction is one-way). gitDirtyHash() does not even hash
+these files, so the tree id identifying the two sides does not move when you edit one.
+
+So a SAME here is not a weak result about your change. It is an accurate result about
+a different program, and quoting it as a receipt is the mistake PR #324 made: the
+search route billed kcal100 0 on 3,394 FatSecret chain records, and a winner-gate run
+on that branch would have reported SAME on every row while saying nothing whatsoever
+about the defect.
+
+DO NOT PRESENT A GREEN WINNER-GATE AS A RECEIPT FOR A ROUTE CHANGE.
+
+What DOES constitute evidence for a route, in the order you should build it:
+  1. A per-case golden assertion naming the wire field, list-wide and fail-closed —
+     PR #321's `requireEnergy` is the worked example. Write it FIRST and watch it go
+     red on master; an assertion added after the fix proves only that the fix is
+     self-consistent.
+  2. Cold golden x3, restarted, against the current baseline, served from the host you
+     are actually gating (run-eval.ts is an HTTP client, so --base decides which build
+     answers, NOT your working tree). That arm DOES call the route.
+  3. A live probe at the CONSUMER, both directions: the record you fixed AND an honest
+     one that must not move. And probe BOTH lanes — search and parse disagree in both
+     directions on the same record, so a value verified on one says nothing about the
+     other.
+
+If the route edit is incidental and the change you want gated lives under src/lib,
+SPLIT IT: gate the src/lib half on a branch that does not carry the route edit. That
+is the supported way past this abort. There is no --force, deliberately.
+EOF
+    exit 5
 fi
 
 RUN='npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/winner-diff.ts'
