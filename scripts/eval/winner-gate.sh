@@ -152,25 +152,86 @@ EOF
 fi
 
 # ---------------------------------------------------------------- blind spot A2
-# THE FROZEN INPUTS. replaySelection() reads normalizedName, parsed, isBrandedQuery
-# and targetBrand STRAIGHT OFF the snapshot entry — it never re-runs the parser, the
-# normalizer or the brand detector. So a change to any PRODUCER of those fields replays
-# identically on both sides and the diff reports SAME vacuously: a green receipt for a
-# change the instrument structurally cannot observe.
+# THE FROZEN INPUTS. replaySelection() reads SEVEN fields straight off the snapshot
+# entry and never recomputes any of them:
+#     trimmed  parsed  normalizedName  isBrandedQuery  targetBrand
+#     aiCanonicalBase  aiNutritionEstimate
+# (the first five are read at the top of replaySelection(); aiCanonicalBase becomes the
+# rerank query and aiNutritionEstimate the reranker's nutrition tiebreak, both inside
+# runStep4()). So a change to any PRODUCER of those fields replays identically on both
+# sides and the diff reports SAME vacuously: a green receipt for a change the instrument
+# structurally cannot observe.
 #
-# The rule is the snapshot's own field list, NOT "four more filenames". It is deliberately
-# not an import closure either: src/lib/mapping is an import cycle, so the closure from
-# these roots is all 73 loaded files and the gate would abort on every mapping edit.
-FROZEN_INPUT_PATHS='src/lib/parse/|src/lib/mapping/normalization-rules\.ts|data/fatsecret/normalization-rules\.json|src/lib/mapping/brand-detector\.ts|src/lib/mapping/brand-lexicon\.json|src/lib/mapping/digit-brands\.ts|src/lib/mapping/ai-normalize\.ts|src/lib/mapping/normalize-gate\.ts'
+# THE MEMBERSHIP RULE — two clauses, and the second is what keeps the gate usable:
+#   (1) a change to the file can move one of the seven fields, i.e. the file is on the
+#       PRE-GATHER path that computes them; AND
+#   (2) the file is NOT itself executed by replaySelection(). A file the replay runs is
+#       observed on both sides, so a frozen-pool diff is a real measurement of it —
+#       aborting there would refuse the gate its own purpose.
+# It is the snapshot's field list, NOT an import closure: src/lib/mapping is an import
+# cycle, so the closure from these roots is all 73 loaded files and the gate would abort
+# on every mapping edit.
+#
+# EXTENDED 2026-08-15, because clause (1) had four dedicated producers missing and the
+# hole was paid for. `llm-output-guards.ts` writes THREE of the seven — normalizedName
+# (stripIntroducedFoodTokens, restoreNutritionModifiers), aiCanonicalBase (same two) and
+# isBrandedQuery (resolveIsBrandedQuery) — and was absent. All three commits that have
+# ever touched it are frozen-field changes that this abort should have caught and did
+# not: the flavour-word strip (#228/#229 era), the branded-flag downgrade (#230) and the
+# nutrition-modifier restoration (#316). #316 is the measured case: its frozen-pool
+# receipt would have been green and vacuous, and the deploy write-off says so
+# (KindaHealthyMobile sync-docs/reports/2026-08-15_the-modifier-is-dropped-at-the-cache-key.md §4).
+# Also added, same rule, same reasoning:
+#   ai-parse.ts            aiParseIngredient() REPLACES `parsed` (and baseName) wholesale
+#                          when the regex parser finds no unit.
+#   ai-synonym-generator.ts findCanonicalName() rewrites the query BEFORE
+#                          parseIngredientLine() runs, so it moves `parsed` and
+#                          `normalizedName` together.
+#   modifier-constraints.ts feeds shouldNormalizeLlm(), i.e. it decides whether the LLM
+#                          writer of normalizedName runs at all — exactly the basis on
+#                          which normalize-gate.ts is already listed.
+#   cache-key-core.ts      owns IDENTITY_UNIT_HINTS, consumed pre-parse to restore
+#                          `egg white`/`egg yolk` into baseName -> normalizedName. Only
+#                          that one constant is frozen-relevant; a path regex cannot say
+#                          "this symbol", so the file is listed and the abort is
+#                          conservative on the rest of it.
+#
+# DELIBERATELY ABSENT, so nobody re-derives them and adds them (each one is a residual
+# blind spot this gate KNOWS about and accepts, not an oversight):
+#   simple-rerank.ts       hasDecisiveBrandContext() + candidateMatchesTargetBrand()
+#                          rewrite normalizedName in the brand re-assert, and the first
+#                          also feeds resolveIsBrandedQuery(). But simpleRerank() is what
+#                          the replay RUNS. Listing it aborts every ranking change — the
+#                          gate's primary use — so the brand-re-assert half stays
+#                          unobservable and that is the cheaper of the two failures.
+#   map-ingredient-with-fallback.ts  The orchestrator writes frozen fields from its own
+#                          literals (GENERIC_FALLBACKS, the identity-hint and qualifier
+#                          restorations, the pepper/bouillon/corn rewrites). It is also
+#                          partly executed by the replay (computeFloorHitIds,
+#                          makeSortedFilteredComparator) and its selection region is
+#                          already guarded by the caller-hash drift abort below, which
+#                          exits 3 on an unrecognised tree. 76 of the 637 commits since
+#                          2026-07-01 touch it (measured: `git log --since=2026-07-01
+#                          --oneline -- <path> | wc -l`), so listing it converts "refuse
+#                          what you cannot see" into "refuse almost everything" — the
+#                          #311 false-abort failure at scale, and a gate people learn to
+#                          bypass measures nothing at all.
+#   validated-mapping-helpers.ts  getAiNormalizeCache() supplies aiCanonicalBase /
+#                          isBranded / aiNutritionEstimate on the gate-skip branch, so it
+#                          is a producer; but it is the save-gate + lookup file (33
+#                          commits in the same window, second-most-edited in the mapper)
+#                          and the rest of it is entirely invisible to a replay.
+FROZEN_INPUT_PATHS='src/lib/parse/|src/lib/mapping/normalization-rules\.ts|data/fatsecret/normalization-rules\.json|src/lib/mapping/brand-detector\.ts|src/lib/mapping/brand-lexicon\.json|src/lib/mapping/digit-brands\.ts|src/lib/mapping/ai-normalize\.ts|src/lib/mapping/normalize-gate\.ts|src/lib/mapping/llm-output-guards\.ts|src/lib/mapping/ai-parse\.ts|src/lib/mapping/ai-synonym-generator\.ts|src/lib/mapping/modifier-constraints\.ts|src/lib/mapping/cache-key-core\.ts'
 if changed_paths | grep -qE "$FROZEN_INPUT_PATHS"; then
     echo "ABORT: this branch touches a FROZEN SNAPSHOT INPUT:" >&2
     changed_paths | grep -E "$FROZEN_INPUT_PATHS" | sed 's/^/  /' >&2
     cat >&2 <<'EOF'
 
-These files produce normalizedName / parsed / isBrandedQuery / targetBrand, which
-replaySelection() reads off the FROZEN snapshot rather than recomputing. Both sides
-would replay byte-identical inputs, so this run would report SAME no matter what your
-change does. That is not a pass — it is the instrument being blind.
+These files produce trimmed / parsed / normalizedName / isBrandedQuery / targetBrand /
+aiCanonicalBase / aiNutritionEstimate, which replaySelection() reads off the FROZEN
+snapshot rather than recomputing. Both sides would replay byte-identical inputs, so this
+run would report SAME no matter what your change does. That is not a pass — it is the
+instrument being blind.
 
 Two arms are available instead:
   1. Re-cut the snapshot per side (--cross-snapshot). The harness brands the result
