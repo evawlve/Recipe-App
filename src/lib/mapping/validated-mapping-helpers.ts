@@ -1377,7 +1377,18 @@ function classifyFailureType(
 // led by "scrambled eggs" -> "eggs" (235 uses) and "grilled chicken salad" ->
 // "chicken salad" (203). Without this the fix is invisible on the hottest lines
 // while every unit test stays green, because the tests call the normalizer direct.
-export const RULES_VERSION = 2;
+//
+// 3 (2026-08-14): 'low sodium' and 'less sodium' were removed from prep_phrases
+// (and the entangled 'low sodium soy sauce' -> 'soy sauce low sodium' word-order
+// rewrite with them), for the same reason and by the same mechanism as the 2 bump.
+// A v2 row replays the old collapse and outvotes the rules change. Cost measured
+// on the box the day of the bump: 1,243 rows sit at v2 and ALL of them become
+// MISSes. That is re-derivation spend, not a DB write and not a delete -- the rows
+// stay, they are simply unreadable until re-stamped, one gpt-4o-mini
+// purpose:'normalize' call per row that is actually read again. Most never are:
+// 75.8% of AiNormalizeCache rows are used exactly once, and the reuse that does
+// occur is 82.5% golden-set traffic, i.e. the eval hitting itself.
+export const RULES_VERSION = 3;
 
 /**
  * Compute a normalized cache key from a raw ingredient line, optionally inside a namespace.

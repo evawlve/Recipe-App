@@ -956,15 +956,41 @@
     },
     {
       "id": "cooking-verbs-out-of-prep-phrases-and-cache-bumped",
-      "claim": "Paired guard. The cooking verbs stay OUT of prep_phrases AND RULES_VERSION stays >= 2. These must move together: re-adding a verb restores the key collision, and changing the rules WITHOUT bumping RULES_VERSION leaves AiNormalizeCache replaying the old collapse (31 rows measured 2026-08-01, led by 'scrambled eggs'->'eggs' at 235 uses) while every unit test stays green, because the tests call the normalizer directly and never touch the cache. Output is verbCount@RULES_VERSION.",
+      "claim": "Paired guard. The cooking verbs stay OUT of prep_phrases AND RULES_VERSION stays >= 2. These must move together: re-adding a verb restores the key collision, and changing the rules WITHOUT bumping RULES_VERSION leaves AiNormalizeCache replaying the old collapse (31 rows measured 2026-08-01, led by 'scrambled eggs'->'eggs' at 235 uses) while every unit test stays green, because the tests call the normalizer directly and never touch the cache. Output is verbCount@RULES_VERSION. The version half is asserted as >= 2 rather than == 2 because RULES_VERSION is shared: any LATER rules change bumps it too (3 on 2026-08-14 for the sodium modifiers), and pinning it exactly made an unrelated bump red this claim without any cooking verb having moved.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-01_cooking-state-key-collision.md",
       "where": "backend",
       "command": "node -e \"const r=require('./data/fatsecret/normalization-rules.json');const V=['grilled','scrambled','steamed','boiled','poached','baked','roasted','broiled','sauteed','saut\\u00e9ed','smoked'];const h=r.prep_phrases.filter(x=>V.includes(String(x).trim().toLowerCase())).length;const s=require('fs').readFileSync('src/lib/mapping/validated-mapping-helpers.ts','utf8');const m=s.match(/RULES_VERSION\\s*=\\s*(\\d+)/);process.stdout.write(h+'@'+m[1])\"",
       "expect": {
-        "kind": "equals",
-        "value": "0@2"
+        "kind": "matches",
+        "value": "^0@([2-9]|[1-9][0-9]+)$"
       },
-      "verified": "2026-08-01",
+      "verified": "2026-08-14",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "sodium-modifiers-out-of-prep-phrases-and-cache-bumped",
+      "claim": "Paired guard, the sodium twin of cooking-verbs-out-of-prep-phrases-and-cache-bumped and the same defect class one nutrient over. 'low sodium' and 'less sodium' stay OUT of prep_phrases AND RULES_VERSION stays >= 3. Re-adding either restores the key collision that made 'low sodium soy sauce' serve bare 'soy sauce''s cached row (off_0074261182164, 4.467 g Na/100 g, funnelStage=cache_hit, measured live on the box 2026-08-14, against a 2.85-3.58 truth cluster for genuine reduced-sodium soy sauce); reverting the rules WITHOUT dropping RULES_VERSION back leaves AiNormalizeCache replaying the old collapse while every unit test stays green. Output is sodiumPhraseCount@shuffleRewriteCount@RULES_VERSION, where the middle term guards the entangled 'low sodium soy sauce' -> 'soy sauce low sodium' word-order rewrite whose only consumer was that strip.",
+      "ownerDoc": "mobile:CLAUDE.md#state-digest",
+      "where": "backend",
+      "command": "node -e \"const r=require('./data/fatsecret/normalization-rules.json');const P=['low sodium','less sodium'];const h=r.prep_phrases.filter(x=>P.includes(String(x).trim().toLowerCase())).length;const w=r.synonym_rewrites.filter(x=>String(x.to).trim().toLowerCase()==='soy sauce low sodium').length;const s=require('fs').readFileSync('src/lib/mapping/validated-mapping-helpers.ts','utf8');const m=s.match(/RULES_VERSION\\s*=\\s*(\\d+)/);process.stdout.write(h+'@'+w+'@'+m[1])\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^0@0@([3-9]|[1-9][0-9]+)$"
+      },
+      "verified": "2026-08-14",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "box-rules-file-has-no-sodium-prep-phrases",
+      "claim": "THE DELIVERED HALF of the sodium-modifier fix, and the only check that can see it — the exact shape of box-rules-file-has-no-cooking-verbs, which is the precedent for why this claim has to exist separately. data/ is in the box's .stignore, so Syncthing NEVER carries data/fatsecret/normalization-rules.json to /home/owner/Recipe-App, and readRulesFile() prefers that on-disk JSON over DEFAULT_RULES — so the TS edit alone is INERT on the live service and the backend-context twin sodium-modifiers-out-of-prep-phrases-and-cache-bumped reads the Mac's file and stays green regardless. This claim is EXPECTED RED from merge until the file is scp'd to the box; it is the delivery receipt, and going green IS the confirmation the deploy carried the half Syncthing cannot. Output is sodiumPhraseCount@prepPhraseCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
+      "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
+      "where": "box",
+      "command": "node -e \"const p='/home/owner/Recipe-App/data/fatsecret/normalization-rules.json';const r=JSON.parse(require('fs').readFileSync(p,'utf8'));const P=['low sodium','less sodium'];const h=r.prep_phrases.filter(x=>P.includes(String(x).trim().toLowerCase())).length;process.stdout.write(h+'@'+r.prep_phrases.length)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^0@[1-9][0-9]*$"
+      },
+      "verified": "2026-08-14",
       "timeoutMs": 60000
     },
     {
