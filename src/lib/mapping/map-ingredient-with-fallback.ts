@@ -307,6 +307,26 @@ export type FatsecretMappedIngredient = {
      * MappingEventLog; undefined on the legacy fatsecret/ai serving path.
      */
     servingTier?: string;
+    /**
+     * TRUE when this row's per-100g PANEL came from the LLM rather than from the
+     * record the `foodId` names. Set only by `buildOffResult()`'s AI-nutrition
+     * backfill branch, which returns an `off_` id — so without this flag the
+     * parse route derives `source: 'openfoodfacts'` from the prefix and renders
+     * the ODbL credit beside numbers Open Food Facts did not supply.
+     * Over-attribution is a defect in both directions (mobile CLAUDE.md
+     * §Attribution), so the route floors this to `ai_estimated`, the one
+     * non-badging member of the contract union.
+     *
+     * OMITTED rather than `false` when honest, matching the `portionEstimated`
+     * convention — an absent key keeps the wire byte-identical for every row
+     * that does not need it.
+     *
+     * The producing branch is currently UNREACHABLE in production; it is
+     * guarded by the claim `off-food-rows-all-carry-a-panel`, which is what
+     * turns "latent" into "monitored". See that claim for why, and do not read
+     * the flag's absence from live traffic as evidence it is unnecessary.
+     */
+    panelFromAi?: true;
 };
 
 /**

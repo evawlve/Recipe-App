@@ -431,12 +431,22 @@ export async function POST(req: NextRequest) {
       // map-ingredient-with-fallback.ts:2112) as FatSecret-supplied data. Unknown values floor
       // to 'ai_estimated' — the only non-badging member of the contract union — so a new
       // pipeline stage can never again promote itself to a provider claim by default.
+      //
+      // `mapped.panelFromAi` OVERRIDES the resolved record, and it is the one case
+      // where the foodId prefix is an actively wrong answer rather than an unknown
+      // one. `buildOffResult()`'s AI-nutrition backfill returns an `off_` id whose
+      // entire per-100g panel came from the model, so the prefix says
+      // "openfoodfacts" about numbers OFF never supplied. Under-attribution is the
+      // safe direction — rendering nothing is always true — so it floors to
+      // `ai_estimated` rather than picking a provider.
       const STANDARD_SOURCES = ['fatsecret', 'fdc', 'openfoodfacts', 'ai_estimated'] as const;
       type StandardSource = typeof STANDARD_SOURCES[number];
       const standardSource: StandardSource =
-        (STANDARD_SOURCES as readonly string[]).includes(details.source)
-          ? (details.source as StandardSource)
-          : 'ai_estimated';
+        mapped.panelFromAi
+          ? 'ai_estimated'
+          : (STANDARD_SOURCES as readonly string[]).includes(details.source)
+            ? (details.source as StandardSource)
+            : 'ai_estimated';
 
       return {
         rawText,

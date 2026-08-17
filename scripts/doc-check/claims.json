@@ -1512,6 +1512,18 @@
       },
       "verified": "2026-08-15",
       "timeoutMs": 60000
+    },
+    {
+      "id": "off-food-rows-all-carry-a-panel",
+      "claim": "Every OffFood row carries a usable per-100g panel, which is what makes buildOffResult()'s AI-nutrition backfill branch UNREACHABLE in production. That branch returns an off_ foodId with every macro from the model, and the parse route derives provenance from the prefix \u2014 so if it ever fires, the client renders the ODbL credit over numbers Open Food Facts did not supply. Measured 2026-08-17: 0 of 1,085,526 rows are null, {}, missing calories, or zero-kcal, and the branch requires hydrated.nutrientsPer100g.calories == null. Two other legs hold it shut \u2014 hydrateOffCandidate() is cache-first, and gathering never calls the live OFF API (searchOffSimple() reads Typesense with a prisma.offFood.findMany fallback, both built from OffFood) \u2014 but this is the leg a command can watch. THIS CLAIM IS A TRIPWIRE, NOT A DESCRIPTION: the mapper is already guarded (mapped.panelFromAi floors standardSource to ai_estimated), so a RED here does not mean an attribution defect shipped. It means the reachability assumption that made the branch latent has stopped holding, that the guard is now load-bearing rather than dormant, and that the two unwatched legs above need re-checking. AI_NUTRITION_BACKFILL_ENABLED defaults true, so nothing else announces the change.",
+      "ownerDoc": "mobile:CLAUDE.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT count(*) FROM \\\"OffFood\\\" WHERE \\\"nutrientsPer100g\\\" IS NULL OR \\\"nutrientsPer100g\\\"::text = '{}' OR \\\"nutrientsPer100g\\\"->>'calories' IS NULL OR (\\\"nutrientsPer100g\\\"->>'calories')::numeric = 0;\"",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "verified": "2026-08-17"
     }
   ]
 }
