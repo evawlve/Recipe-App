@@ -61,6 +61,32 @@
  *     honey 21 g = "tbsp", strawberry 12 g = "medium"; box MappingEventLog vs
  *     FdcServing, 2026-08-06).
  *
+ *     NARROWED (2026-08-17) — (a) is A mechanism, not THE mechanism, and the
+ *     "ZERO model responses" figure above is a property of that 2026-08-05
+ *     population, NOT of this producer. Measured on the box: six cold `honey`
+ *     probes (`nocache=1&nosave=1`) inside 35 s on one process billed
+ *     21/28/21/21/14 g and moved `/api/ok`'s `ambiguous` counter 101 → 106 —
+ *     one model response per probe, `since`/`pid`/`buildId` identical either
+ *     side, `FoodMapping` 4,756 before and after. So the LLM fallback IS
+ *     reached, and `fdc_size_estimate` is unstable on 17 of 28 repeat-drawn
+ *     lines within a single build against 0 of 335 on nine other tiers.
+ *     Two traps this cost, both worth keeping stated:
+ *       - The counter cannot attribute by itself. `estimateAmbiguousServing()`
+ *         passes `purpose: 'ambiguous'`, the SAME purpose as
+ *         `getOrCreateAmbiguousServing()`, so only a bracketed probe of a known
+ *         line separates the two producers. A corpus-wide `ambiguous` total
+ *         says nothing about which one spent it.
+ *       - Do NOT reach for the `produce` counter to fix that. It reads 0 and
+ *         always will: `produce` has zero call sites (claim
+ *         `structured-llm-produce-purpose-has-no-call-site`), so its 0 is
+ *         STRUCTURAL. The `ServingAiCallType` map below is a logger tag, not a
+ *         `StructuredLlmPurpose`, and reading one as the other is how the
+ *         attribution went wrong on first attempt.
+ *     Owner, with the per-tier stability table and the control:
+ *     sync-docs/reports/2026-08-17_one-producer-owns-the-serving-nondeterminism.md
+ *     (mobile repo). Note the practical consequence is gate integrity, not user
+ *     billing: cold traffic is unreachable from the client.
+ *
  *   - `ai_generated_serving` does the opposite: it is stamped by the AI-nutrition
  *     backfill path, but its grams come from `getAiServingGrams()`, which only does
  *     `aiGeneratedServing.findUnique` reads plus deterministic unit/density maths.
