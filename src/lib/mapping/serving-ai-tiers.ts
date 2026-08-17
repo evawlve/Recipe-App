@@ -352,3 +352,200 @@ const SYNTHETIC_GRAMS_INDEX = new Set<string>(SYNTHETIC_GRAMS_SERVING_TIERS);
 export function isSyntheticGramsTier(tier: string | null | undefined): boolean {
     return tier != null && SYNTHETIC_GRAMS_INDEX.has(tier);
 }
+
+/**
+ * BORROWED OR DEFAULTED — a FOURTH predicate, and the fourth different question.
+ *
+ * The three above ask "was a model billed" (spend), "can this replay differ"
+ * (attribution) and "is this number a placeholder" (synthetic grams). This one asks
+ * about PROVENANCE: **did the gram weight come from somewhere other than this
+ * record and other than the user?**
+ *
+ * A member is a tier whose grams are either
+ *   - BORROWED — read off a DIFFERENT product's label or package (a same-brand
+ *     sibling SKU, a same-name group median); or
+ *   - DEFAULTED — read out of a generic table that knows nothing about this
+ *     record (the count-seed table, the bare-query category lexicon, the
+ *     volume-density lexicon, a hardcoded per-unit constant).
+ *
+ * WHAT IT IS NOT.
+ *   - NOT "the weight is wrong". No member has a measured wrongness rate of its
+ *     own. The only tier-level wrongness numbers this programme has measured are
+ *     for `fs_serving_macros_only_est` (owner:
+ *     sync-docs/reports/2026-08-14_the-empty-panel-serving-is-synthetic.md) and
+ *     nothing comparable exists for the other fifteen. Do not borrow one.
+ *   - NOT "a model ran" and NOT "this replays nondeterministically". The set is
+ *     DISJOINT from `REPLAY_NONDETERMINISTIC_SERVING_TIERS` by construction and
+ *     asserted so in the test: every member resolves from a table or a DB read,
+ *     so all sixteen replay deterministically and bill nothing.
+ *   - NOT the honest floors. `count_unresolved_floor`, `flat_100g_default` and
+ *     `fs_per100g_fallback` are deliberately OUT — see the pinned non-members.
+ *   - NOT `portionEstimated`, and not any other wire field. Nothing on the wire
+ *     is derived from this predicate today.
+ *
+ * IT HAS NO PRODUCTION CONSUMER. NONE. It is a definition and a measurement,
+ * shipped ahead of the decision it informs, and that is a known-dangerous shape
+ * here: this codebase has shipped "a rule that already existed with a caller that
+ * never used it" FIVE separate times (#221, #223, #226, #228/#229, #233/#234 —
+ * CLAUDE.md §State digest owns that list). The mitigation is that this predicate
+ * is deliberately NOT wired anywhere: it does not silently duplicate a rule a
+ * caller is already meant to be using, it is a new one with no caller yet, and the
+ * test asserts only its own membership. Before wiring it, read
+ * sync-docs/reports/2026-08-17_the-badge-flicker-blocker-is-three-inflations.md §5:
+ * `portionEstimated` already has TWO consumers wanting different populations (the
+ * badge, and mobile's suppression of gram/volume portion options), and widening
+ * that one flag to this set over-reaches on the second.
+ *
+ * MEMBERSHIP WAS SETTLED BY READING EVERY PRODUCER, NOT BY THE TIER NAMES —
+ * the same discipline the two lists above document, and it is load-bearing here
+ * in both directions. `volume_unit` and `weight_unit` are named as siblings and
+ * are opposites (one is a lexicon density, the other is the number the user
+ * typed). `package_count_own` and `package_count_sibling` differ by one word and
+ * by whether the weight is this SKU's or another's. `bare_label_serving` and
+ * `bare_sibling_serving` both say "bare" and only one reads this record.
+ *
+ * SIZING (measured 2026-08-17 on the box in ONE query, so the rows are mutually
+ * consistent; all-time `MappingEventLog` held 129,628 events / 6,581 records at
+ * the time, and it grows with every gate run — re-derive rather than trust these):
+ *   - this set: **30,764 events (23.7%) / 1,188 distinct records**
+ *   - split: borrowed 7,061 / 483 · defaulted 23,703 / 727
+ *   - last 21 days: 19,110 / 775
+ *   - with `REPLAY_NONDETERMINISTIC_SERVING_TIERS`: 47,029 / 1,557 all-time
+ * Re-derive (substitute the array below for the tier list):
+ * `ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire
+ *  -c "SELECT count(*), count(DISTINCT \"foodId\") FROM \"MappingEventLog\"
+ *      WHERE \"servingTier\" IN (...);"'`
+ * Owner for the full per-tier classification table and how this membership
+ * differs from the flicker report's ten-tier aim B:
+ * sync-docs/reports/2026-08-17_the-b-tier-set-enumerated.md (mobile repo).
+ *
+ * EXPORTED AS A FROZEN ARRAY for the reason the sibling list above spells out:
+ * `Object.freeze(new Set(...))` is a no-op protection, a frozen array is not.
+ */
+export const BORROWED_OR_DEFAULTED_SERVING_TIERS: readonly string[] = Object.freeze(
+    ([
+        // ===================== BORROWED — another product's data =====================
+
+        // borrowSiblingLabelServing() in serving/hydration-lane.ts — the MEDIAN
+        // `servingGrams` of >=3 OTHER same-brand OFF SKUs, explicitly excluding
+        // this barcode (`barcode <> selfBarcode`). Snickers' 39.8 g comes from 148
+        // sibling bars, not from the row being billed.
+        'bare_sibling_serving',
+        // borrowSiblingPackageGrams() in the same file, reached from the (D)
+        // whole-package-count branch when this SKU has no `packageQuantity` of its
+        // own — `packageGrams != null` picks the OWN tier instead, which is why
+        // `package_count_own` is a pinned non-member below.
+        'package_count_sibling',
+        // Same borrow function, reached from the package-like-unit branch
+        // ("1 bottle gatorade") on the same own-vs-sibling fork.
+        'package_quantity_sibling',
+        // borrowNameSiblingLabelServing() — the brandless twin: the median declared
+        // serving of OTHER OFF rows sharing this row's NAME. Three tiers, one rung,
+        // splitting on direction and request shape (its own producer comment in
+        // serving/hydration-lane.ts owns why they are three strings). All three are
+        // another product's label by construction.
+        'bare_name_sibling_serving',
+        'bare_name_sibling_serving_tight',
+        'bare_name_sibling_serving_plural',
+
+        // =================== DEFAULTED — a generic table, not this food ===================
+
+        // getDefaultCountServing() in servings/default-count-grams.ts — a curated
+        // per-piece seed table keyed by food NAME words. It is the mechanism the
+        // producer comment calls "GENERIC SEED TABLE"; nothing about the matched
+        // record is consulted.
+        'seed_count_default',
+        // buildOverride() in servings/bare-query-guard.ts, grams straight from
+        // getBareQueryDefault() — the category lexicon. This is the tier the guard
+        // stamps on ALL of its CAP and REPLACE paths, so a member here is a lexicon
+        // number regardless of which tier it displaced.
+        'bare_category_default',
+        // Same lexicon, different call site: the bare-query inflation guard inside
+        // buildFdcResult() (serving/hydration-lane.ts) overwrites the cascade's
+        // grams with `bareDefault.grams` when they exceed 2x it.
+        'bare_query_default',
+        // discretePieceFloor() in mapping/count-label.ts, off the hardcoded
+        // DISCRETE_PIECE_FLOOR_GRAMS map. The guard's REPLACE path only, and only
+        // when the category lexicon had nothing.
+        'bare_discrete_floor',
+        // The density lexicon. Both buildOffResult() and buildFdcResult() stamp this
+        // name on their `!volumeResolved` fallback: grams = qty x a per-unit ml
+        // constant x a NAME-inferred category density (resolveVolumeGrams() in
+        // units/volume-density.ts, or buildFdcResult's in-line copy of the same
+        // table). The record's own servings are not read on this leg — the legs that
+        // DO read them stamp `fdc_label_volume` / `fs_label_volume` /
+        // `fs_label_volume_declared`, which is exactly the fork that makes this
+        // classification a reading and not a guess.
+        'volume_unit',
+        // The FatSecret leg of the identical fallback, calling the same
+        // volumeToGrams() owner. Same rule, different cascade, different string.
+        'fs_volume_density',
+        // getSubPieceDefault() in servings/default-count-grams.ts, from
+        // buildFdcResult()'s high-count branch. Zero events all-time (the same
+        // producer is reached earlier via getOrCreateAmbiguousServing() on the OFF
+        // and FS lanes, where it collapses into `count_unit_ai`) — listed because it
+        // is live code, and an unlisted live tier is how the two retired regexes
+        // missed `discrete_unit_backfill`.
+        'fdc_sub_piece_default',
+        // UNIT_HEURISTIC_DEFAULTS, a nineteen-row hardcoded (unit, name-pattern) ->
+        // grams table at the top of buildFdcResult(). Zero events all-time. Same
+        // reason for listing it.
+        'fdc_unit_heuristic',
+        // applyOffBareQueryGuard()'s dose-count reconciliation. A JUDGEMENT CALL,
+        // stated so the next reader can overturn it rather than re-derive it: the
+        // per-unit grams ARE the record's own published number, and the rule's own
+        // comment defends it as "an integer multiple of a number the record itself
+        // published". What it takes from the lexicon is the COUNT — how many
+        // tablespoons a serving is — and the count is the whole of the disagreement
+        // the rule exists to settle, so the lexicon decides the bill. 125 events on
+        // ONE record (all 32 g, the peanut-butter case), so the sizing is
+        // insensitive to this either way.
+        'bare_dose_count_reconciled',
+        // The synthetic-grams tier, ALSO a member here — `estimateServingGrams()` is
+        // `kcal / PREPARED_FOOD_KCAL_PER_GRAM` with the constant a flat 2.0, i.e. a
+        // hardcoded category constant, which is what "defaulted" means.
+        //
+        // THIS OVERLAP IS DELIBERATE AND IS PINNED BY THE TEST as
+        // SYNTHETIC_GRAMS_SERVING_TIERS being a SUBSET of this list. The reason is a
+        // consumer, not tidiness: `/api/nlp/parse` derives `portionEstimated` from
+        // `isSyntheticGramsTier()` today, and the flicker report contemplates
+        // swapping that call site to a wider predicate. A wider predicate that did
+        // not contain this tier would silently UNFLAG the 189 events #314 shipped
+        // the flag for — a regression dressed as a widening.
+        FS_SERVING_MACROS_ONLY_EST_TIER,
+    ] as const),
+);
+
+/** Lookup index. Module-private so the exported constant stays genuinely frozen. */
+const BORROWED_OR_DEFAULTED_INDEX = new Set<string>(BORROWED_OR_DEFAULTED_SERVING_TIERS);
+
+/**
+ * True when `tier`'s grams came from a different product or a generic table,
+ * rather than from this record's own data or from the user.
+ *
+ * RETURNS FALSE FOR NULL, and that is a decision rather than an inherited
+ * default. `servingTier` is null on 805 events / 73 records — 0.6% of the table,
+ * 414 of them in the last 21 days (measured 2026-08-17) — and the population is
+ * NOT homogeneous, so no single answer is right for all of it:
+ *   - ~365 carry `funnelStage='fast_path'`, the zero-calorie water/ice early exit
+ *     in map-ingredient-with-fallback.ts. Its grams come from WATER_UNIT_GRAMS, a
+ *     hardcoded table — so by provenance those ARE defaulted, and a true would be
+ *     defensible for them alone.
+ *   - ~370 carry `source='ai_generated'` with no funnel stage: the legacy
+ *     fatsecret/ai serving path, which the module header above already documents
+ *     as stamping no tier at all.
+ * Returning true would badge every one of them, including a glass of water, on no
+ * evidence about the food; returning false under-reports a known ~0.3%. False is
+ * the cheaper error, it matches both sibling predicates so a consumer reading all
+ * four gets one null rule rather than three, and the durable fix is at the
+ * PRODUCERS — stamp a tier — which is the same shape as the missing `[AI:SERV]`
+ * write sites the header calls Phase 0.5(b), not a null branch here.
+ *
+ * Returns false for an unclassified tier for the reason the two siblings give: a
+ * new tier is assumed to read its own record until someone reads the producer and
+ * says otherwise, and the guard against a silent miss is the census in
+ * `serving-ai-tiers.test.ts`.
+ */
+export function isBorrowedOrDefaultedTier(tier: string | null | undefined): boolean {
+    return tier != null && BORROWED_OR_DEFAULTED_INDEX.has(tier);
+}

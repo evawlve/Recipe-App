@@ -7,6 +7,8 @@ import {
     REPLAY_NONDETERMINISTIC_SERVING_TIERS,
     isSyntheticGramsTier,
     SYNTHETIC_GRAMS_SERVING_TIERS,
+    isBorrowedOrDefaultedTier,
+    BORROWED_OR_DEFAULTED_SERVING_TIERS,
 } from '../serving-ai-tiers';
 
 /**
@@ -304,5 +306,203 @@ describe('isSyntheticGramsTier — placeholder grams vs a real weight', () => {
             (SYNTHETIC_GRAMS_SERVING_TIERS as unknown as string[]).push('nope');
         }).toThrow();
         expect(SYNTHETIC_GRAMS_SERVING_TIERS).not.toContain('nope');
+    });
+});
+
+/**
+ * BORROWED-OR-DEFAULTED — the fourth predicate.
+ *
+ * The mutation this whole block exists to kill: "simplify" the membership into a
+ * name rule. Every plausible one is wrong on live tiers, and each is pinned below.
+ *   - /sibling/       misses all six DEFAULTED members and takes nothing extra.
+ *   - /default/       takes `label_serving_default` (the record's OWN label) and
+ *                     `fs_default_serving` (the record's OWN declared serving),
+ *                     and misses every borrow.
+ *   - /^bare_/        splits the borrows from the own-label tiers at random:
+ *                     `bare_label_serving` and `bare_plural_serving` read THIS
+ *                     record, `bare_sibling_serving` reads another one.
+ *   - "not from this record" (aim A) sweeps in `count_unresolved_floor`, which is
+ *     the honest "we do not know" floor and was the stated reason aim A was
+ *     rejected.
+ *
+ * Sizing and the full per-tier classification table are owned by
+ * sync-docs/reports/2026-08-17_the-b-tier-set-enumerated.md (mobile repo); this
+ * file pins MEMBERSHIP only, so a corpus that grows cannot red it.
+ */
+describe('isBorrowedOrDefaultedTier — weights that are not this food\'s', () => {
+    // MUTATION: drop any one of these. Each is a DIFFERENT product's label or
+    // package, read by a named borrow function in serving/hydration-lane.ts.
+    it('flags the six BORROWED tiers, all three borrow functions', () => {
+        // borrowSiblingLabelServing() — same-brand median label serving.
+        expect(isBorrowedOrDefaultedTier('bare_sibling_serving')).toBe(true);
+        // borrowSiblingPackageGrams() — same-brand median packageQuantity, two
+        // call sites and therefore two tier strings.
+        expect(isBorrowedOrDefaultedTier('package_count_sibling')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('package_quantity_sibling')).toBe(true);
+        // borrowNameSiblingLabelServing() — same-NAME median, one rung, three tiers.
+        expect(isBorrowedOrDefaultedTier('bare_name_sibling_serving')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('bare_name_sibling_serving_tight')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('bare_name_sibling_serving_plural')).toBe(true);
+    });
+
+    // MUTATION: drop any one of these. Each reads a table that knows nothing
+    // about the matched record.
+    it('flags the ten DEFAULTED tiers, from four generic tables', () => {
+        // getDefaultCountServing() / getSubPieceDefault() — the count seed table.
+        expect(isBorrowedOrDefaultedTier('seed_count_default')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('fdc_sub_piece_default')).toBe(true);
+        // getBareQueryDefault() — the bare-query category lexicon, two call sites.
+        expect(isBorrowedOrDefaultedTier('bare_category_default')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('bare_query_default')).toBe(true);
+        // discretePieceFloor() — DISCRETE_PIECE_FLOOR_GRAMS.
+        expect(isBorrowedOrDefaultedTier('bare_discrete_floor')).toBe(true);
+        // resolveVolumeGrams() / volumeToGrams() — the density lexicon, two lanes.
+        expect(isBorrowedOrDefaultedTier('volume_unit')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('fs_volume_density')).toBe(true);
+        // Hardcoded per-unit constants.
+        expect(isBorrowedOrDefaultedTier('fdc_unit_heuristic')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('bare_dose_count_reconciled')).toBe(true);
+        expect(isBorrowedOrDefaultedTier('fs_serving_macros_only_est')).toBe(true);
+    });
+
+    // MUTATION: change the array length without deciding about the new member.
+    // Sixteen is not a magic number — it is the count that the classification
+    // table in the owner report justifies row by row.
+    it('has exactly sixteen members and no duplicates', () => {
+        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(16);
+        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(16);
+    });
+});
+
+describe('isBorrowedOrDefaultedTier — the pinned NON-members', () => {
+    /**
+     * MUTATION: add any of these. Each was read and rejected, and each is a
+     * name-neighbour of a member, which is why they are pinned rather than merely
+     * absent.
+     */
+    it('does not flag the honest floors — the reason aim A was rejected', () => {
+        // `count_unresolved_floor` bills a flat 100 g on 3,280 of its own 3,280
+        // events (measured 2026-08-17). It is not a claim about a different
+        // product or a table lookup; it is the absence of an answer, and the
+        // bare-query guard's own REPLACE_TIERS groups it with flat_100g_default
+        // for exactly that reason.
+        expect(isBorrowedOrDefaultedTier('count_unresolved_floor')).toBe(false);
+        // Same class. `grams = 100 * qty`, so only 11 of its 27 events are
+        // literally 100 g — the tier is the placeholder, not the number.
+        expect(isBorrowedOrDefaultedTier('flat_100g_default')).toBe(false);
+        // The FatSecret twin: `grams = 100 * qty` when no serving is usable.
+        expect(isBorrowedOrDefaultedTier('fs_per100g_fallback')).toBe(false);
+    });
+
+    it('does not flag the tiers that read THIS record\'s own label', () => {
+        for (const tier of [
+            'bare_label_serving',          // usableBareLabelServing(hydrated.servingGrams)
+            'label_serving_default',       // qty * hydrated.servingGrams
+            'label_serving_package_unit',  // same field, package-like unit
+            'label_unit_match',            // hydrated.servingGrams / servingUnitCount
+            'label_count_derived',         // the same, divided by the label's own count
+            'bare_plural_serving',         // hydrated.servingGrams, plural band
+            'fs_default_serving',          // this record's declared defaultServingId
+            'fs_label_count',              // this record's serving, label-enumerated
+            'fs_label_volume',             // this record's volumeMl-bearing serving
+            'fs_label_volume_declared',    // this record's declared cup/tbsp row
+            'fdc_label_volume',            // findOwnFdcVolumeServing(), genuine leg
+            'fs_serving_macros_only',      // gramsFromPer100gPanel(), own panel
+            'package_count_own',           // this SKU's own packageQuantity
+            'package_quantity_own',        // the same, package-like-unit branch
+        ]) {
+            expect(isBorrowedOrDefaultedTier(tier)).toBe(false);
+        }
+    });
+
+    it('does not flag the tiers where the USER stated the weight', () => {
+        // Nothing is borrowed or defaulted when the line says "150 g" — the
+        // conversion table is unit arithmetic, not a claim about the food. This is
+        // the fork that makes `volume_unit` a member and `weight_unit` not: a
+        // volume needs a DENSITY this record does not publish.
+        expect(isBorrowedOrDefaultedTier('weight_unit')).toBe(false);
+        expect(isBorrowedOrDefaultedTier('fs_weight_direct')).toBe(false);
+    });
+
+    it('does not flag the two cached tiers, whose provenance the NAME cannot see', () => {
+        // `count_unit_cached` is a `findExistingServing()` hit on a row keyed
+        // (foodId, bare unit) — written either by an AI estimate for THIS food or
+        // by borrowSiblingServing() from another. Of the OFF rows reachable that
+        // way, 223 are source='ai' and 37 source='sibling_borrow' (measured
+        // 2026-08-17), and 7,236 of the tier's 7,242 events are on off_ records.
+        // So it is ~14% genuinely borrowed and a tier-keyed predicate cannot say
+        // which — the same shape as `discrete_unit_backfill`'s note above, and the
+        // same fix: a provenance field at the producer, not a longer list.
+        expect(isBorrowedOrDefaultedTier('count_unit_cached')).toBe(false);
+        // `fdc_volume_cached` is findOwnFdcVolumeServing()'s `genuine: false` leg —
+        // a persisted isAiEstimated FdcServing row for THIS fdcId. Not another
+        // product and not a generic table, so it is out by definition, even though
+        // an independent audit lists it as a mis-filed HONEST tier. It wants a
+        // fifth predicate ("persisted estimate"), not membership here.
+        expect(isBorrowedOrDefaultedTier('fdc_volume_cached')).toBe(false);
+    });
+
+    it('treats an absent tier as own-record, matching all three sibling predicates', () => {
+        // Deliberate, not inherited — 805 null-tier events are two populations
+        // (the zero-calorie fast path, and the legacy unstamped cascade) and only
+        // one of them is defaulted. See the predicate's own docstring.
+        expect(isBorrowedOrDefaultedTier(null)).toBe(false);
+        expect(isBorrowedOrDefaultedTier(undefined)).toBe(false);
+        expect(isBorrowedOrDefaultedTier('')).toBe(false);
+    });
+
+    it('rejects mutation for real, not just to Object.isFrozen', () => {
+        const before = BORROWED_OR_DEFAULTED_SERVING_TIERS.length;
+        expect(() => (BORROWED_OR_DEFAULTED_SERVING_TIERS as string[]).push('x')).toThrow(TypeError);
+        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(before);
+    });
+});
+
+/**
+ * THE RELATIONSHIPS BETWEEN THE FOUR SETS.
+ *
+ * Pinned so a future edit cannot slide a tier from one list into another and
+ * quietly change what a consumer of the OTHER list sees. Two of these are
+ * strict subset/disjointness claims and one is an overlap that is on purpose.
+ */
+describe('the four predicates: what must stay disjoint and what must overlap', () => {
+    // MUTATION: add any REPLAY_NONDETERMINISTIC member to the borrowed list, or
+    // vice versa. `count_unit_ai` is the tempting one — it can resolve from the
+    // seed table OR from a sibling borrow OR from a live model, and it is in N
+    // precisely because the name collapses all three. Putting it in both sets
+    // would make the two counts non-additive and break the union arithmetic the
+    // aim comparison rests on.
+    it('is DISJOINT from replay-nondeterminism — no tier is in both', () => {
+        for (const tier of BORROWED_OR_DEFAULTED_SERVING_TIERS) {
+            expect(isReplayNondeterministicTier(tier)).toBe(false);
+        }
+        for (const tier of REPLAY_NONDETERMINISTIC_SERVING_TIERS) {
+            expect(isBorrowedOrDefaultedTier(tier)).toBe(false);
+        }
+    });
+
+    // Follows from the above (SERVING_AI_TIERS ⊆ N is asserted higher up), and is
+    // stated separately because it is the claim a reader actually wants: nothing
+    // in this set bills a model.
+    it('bills nothing — no member is in the spend allowlist', () => {
+        for (const tier of BORROWED_OR_DEFAULTED_SERVING_TIERS) {
+            expect(servingAiCallForTier(tier).called).toBe(false);
+        }
+    });
+
+    // MUTATION: remove FS_SERVING_MACROS_ONLY_EST_TIER from the borrowed list.
+    // The overlap is deliberate: `/api/nlp/parse` derives `portionEstimated` from
+    // isSyntheticGramsTier() today, so any wider predicate that does NOT contain
+    // this tier would silently unflag the population #314 shipped the flag for.
+    it('CONTAINS the synthetic-grams set — a widening must not unflag it', () => {
+        for (const tier of SYNTHETIC_GRAMS_SERVING_TIERS) {
+            expect(isBorrowedOrDefaultedTier(tier)).toBe(true);
+        }
+        // …but not the reverse: this set is strictly larger.
+        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length)
+            .toBeGreaterThan(SYNTHETIC_GRAMS_SERVING_TIERS.length);
+        // …and the synthetic set's honest sibling stays out of BOTH.
+        expect(isSyntheticGramsTier('fs_serving_macros_only')).toBe(false);
+        expect(isBorrowedOrDefaultedTier('fs_serving_macros_only')).toBe(false);
     });
 });
