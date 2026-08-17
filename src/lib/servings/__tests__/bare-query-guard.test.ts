@@ -303,6 +303,50 @@ describe('usableBareLabelServing — own-label usability band (Track 3)', () => 
         expect(usableBareLabelServing(355, 'portion')).toBe(355);
     });
 
+    /**
+     * REFUTED DESIGN, pinned so it is not re-derived (investigated 2026-08-17).
+     *
+     * The proposal: make the ceiling UNIT-AWARE — a record whose label serving
+     * names a single-serve container (bottle / can / container / pouch / carton)
+     * is "declaring ONE serving regardless of grams", so let it past 400 g. It
+     * was motivated by `core fairlife power`, which bills a 250 g same-brand
+     * sibling median while its own record declares `1 bottle (414 ml)` — 414 g,
+     * fourteen grams over this ceiling. The claimed principle was handoff item
+     * #17's, "the record already declared it", carried over from the FDC lane.
+     *
+     * IT DOES NOT TRANSFER, and the counter-example is the row directly above:
+     * the miso tub declares `container` at 623.7 g and is emphatically not one
+     * serving. The container word names the PACKAGE SHAPE, not the serving
+     * count, so it cannot be the discriminator [measured — the 623.7/'container'
+     * pin predates this investigation and is a committed counter-example].
+     *
+     * The deeper reason the #17 analogy fails: `FdcServing` rows are curated
+     * USDA reference portions, whereas OFF `servingGrams` is parsed by
+     * `parseOffServingSize()` in `openfoodfacts/serving-resolver.ts` out of a
+     * contributor-entered free-text `serving_size` / `serving_quantity`.
+     * BARE_LABEL_MAX_GRAMS is a DATA-QUALITY filter on a crowd-sourced field,
+     * not a portion-semantics rule — the same distrust `bareServingUsable()` in
+     * `mapping/build-fatsecret-result.ts` documents for the FatSecret lane,
+     * where the provider's own declared default for `Almonds` is the 1.2 g
+     * "1 almond" row.
+     *
+     * Raising the ceiling outright is separately dead: `C6` in the mobile repo's
+     * `reports/2026-08-12_cascade-serving-row-selection-design.md` measured it at
+     * 10,404 `OffFood` records newly billable against two evidence rows, and
+     * refused it as the `DNB-8` shape (a global size bound).
+     */
+    it('refuses a >400g label even when the unit word names a single-serve container', () => {
+        // The refuted rule would have accepted all three of these.
+        expect(usableBareLabelServing(414, 'bottle')).toBeNull();   // core fairlife power
+        expect(usableBareLabelServing(425, 'can')).toBeNull();      // a standard multi-serve can
+        expect(usableBareLabelServing(623.7, 'container')).toBeNull();
+        // ...and the band is the ONLY thing refusing them: identical weights a
+        // hair under the ceiling are accepted, so this is a magnitude rule, which
+        // is precisely why a word-based exemption cannot express it.
+        expect(usableBareLabelServing(399, 'bottle')).toBe(399);
+        expect(usableBareLabelServing(399, 'can')).toBe(399);
+    });
+
     it('rejects null/zero', () => {
         expect(usableBareLabelServing(null, null)).toBeNull();
         expect(usableBareLabelServing(0, null)).toBeNull();
