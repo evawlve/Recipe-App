@@ -404,11 +404,13 @@ export function isSyntheticGramsTier(tier: string | null | undefined): boolean {
  * by whether the weight is this SKU's or another's. `bare_label_serving` and
  * `bare_sibling_serving` both say "bare" and only one reads this record.
  *
- * SIZING (measured 2026-08-17 on the box, all-time `MappingEventLog`;
- * 129,605 events / 6,568 records in the table at the time):
- *   - this set: **30,762 events (23.7%) / 1,186 distinct records**
- *   - last 21 days: 19,108 / 773
- *   - with `REPLAY_NONDETERMINISTIC_SERVING_TIERS`: 47,022 / 1,555 all-time
+ * SIZING (measured 2026-08-17 on the box in ONE query, so the rows are mutually
+ * consistent; all-time `MappingEventLog` held 129,628 events / 6,581 records at
+ * the time, and it grows with every gate run — re-derive rather than trust these):
+ *   - this set: **30,764 events (23.7%) / 1,188 distinct records**
+ *   - split: borrowed 7,061 / 483 · defaulted 23,703 / 727
+ *   - last 21 days: 19,110 / 775
+ *   - with `REPLAY_NONDETERMINISTIC_SERVING_TIERS`: 47,029 / 1,557 all-time
  * Re-derive (substitute the array below for the tier list):
  * `ssh owner@192.168.1.133 'docker exec mealspire-db psql -U postgres -d mealspire
  *  -c "SELECT count(*), count(DISTINCT \"foodId\") FROM \"MappingEventLog\"
@@ -522,9 +524,9 @@ const BORROWED_OR_DEFAULTED_INDEX = new Set<string>(BORROWED_OR_DEFAULTED_SERVIN
  * rather than from this record's own data or from the user.
  *
  * RETURNS FALSE FOR NULL, and that is a decision rather than an inherited
- * default. `servingTier` is null on 805 of 129,605 events / 73 records (0.6%;
- * 414 in the last 21 days — measured 2026-08-17), and the population is NOT
- * homogeneous, so no single answer is right for all of it:
+ * default. `servingTier` is null on 805 events / 73 records — 0.6% of the table,
+ * 414 of them in the last 21 days (measured 2026-08-17) — and the population is
+ * NOT homogeneous, so no single answer is right for all of it:
  *   - ~365 carry `funnelStage='fast_path'`, the zero-calorie water/ice early exit
  *     in map-ingredient-with-fallback.ts. Its grams come from WATER_UNIT_GRAMS, a
  *     hardcoded table — so by provenance those ARE defaulted, and a true would be
