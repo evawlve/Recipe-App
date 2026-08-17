@@ -65,7 +65,7 @@
  *     "ZERO model responses" figure above is a property of that 2026-08-05
  *     population, NOT of this producer. Measured on the box: six cold `honey`
  *     probes (`nocache=1&nosave=1`) inside 35 s on one process billed
- *     21/28/21/21/14 g and moved `/api/ok`'s `ambiguous` counter 101 → 106 —
+ *     21/28/21/21/14/21 g and moved `/api/ok`'s `ambiguous` counter 101 → 106 —
  *     one model response per probe, `since`/`pid`/`buildId` identical either
  *     side, `FoodMapping` 4,756 before and after. So the LLM fallback IS
  *     reached, and `fdc_size_estimate` is unstable on 17 of 28 repeat-drawn
