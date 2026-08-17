@@ -1307,7 +1307,19 @@ async function buildFdcResult(
     let grams: number = 100 * qty;
     let servingDescription: string = `${grams.toFixed(1)}g`;
     // Telemetry: which branch below billed the grams (MappingEventLog.servingTier).
-    // Starts at the flat default; every resolving branch overwrites it.
+    //
+    // This is an INITIALIZER, not a tier any branch chooses. Until 2026-08-17 the
+    // resolving branches overwrote it and the FALLBACK arms did not, so a
+    // size-estimate failure, a piece-estimate failure, a low-count failure, an
+    // ambiguous-unit failure and a genuinely unknown unit all reached
+    // MappingEventLog as the same string `flat_100g_default` — five different
+    // events, one label, no way to tell them apart after the fact. Every arm now
+    // stamps its own name (`fdc_*_unresolved` / `fdc_unknown_unit`), so this value
+    // is unreachable from buildFdcResult and survives only as the initializer.
+    // `buildOffResult` still uses it as a real terminal tier; the 27 live
+    // `flat_100g_default` events include BOTH lanes' history (re-derive:
+    // `SELECT count(*) FROM "MappingEventLog" WHERE "servingTier"='flat_100g_default';`
+    // → 27, measured 2026-08-17).
     let servingTier = 'flat_100g_default';
 
     if (unit && weightToGrams[unit]) {
@@ -1381,9 +1393,10 @@ async function buildFdcResult(
         const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
         const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
 
-        if (sizes) {
-            const gramsPerUnit = unit ? sizes[unit] : undefined;
-            grams = qty * (gramsPerUnit ?? 100);
+        const gramsPerUnit = sizes && unit ? sizes[unit] : undefined;
+
+        if (gramsPerUnit != null) {
+            grams = qty * gramsPerUnit;
             servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
             servingTier = 'fdc_size_qualifier';
             logger.info('fdc.size_qualifier_resolved', {
@@ -1392,10 +1405,37 @@ async function buildFdcResult(
                 gramsPerUnit,
                 totalGrams: grams,
             });
+        } else if (sizes) {
+            // THE ESTIMATOR ANSWERED, BUT NOT FOR THIS SIZE. Split out 2026-08-17:
+            // `isSizeQualifier()` accepts ten spellings and
+            // `getOrCreateFdcSizeServings()` returns a map keyed by nine of them —
+            // `extralarge` is in the qualifier set and absent from the map — so this
+            // arm billed `qty * (undefined ?? 100)` while stamping the SAME
+            // `fdc_size_qualifier` as a genuine resolution, and additionally rendered
+            // the literal string "undefinedg each" to the user. A vocabulary gap and
+            // a working estimate are different events; they now have different names.
+            //
+            // The "undefinedg each" string is DELIBERATELY PRESERVED here. This PR
+            // claims zero wire change, and `servingDescription` is on the wire
+            // (`/api/nlp/parse` passes it to `resolveFoodDetails()` as
+            // `matchedServingDescription`). Repairing the label is a separate,
+            // measurable change; making it here would make this PR's own claim false.
+            grams = 100 * qty;
+            servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
+            servingTier = 'fdc_size_key_missing';
+            logger.warn('fdc.size_qualifier_key_missing', {
+                foodName: candidate.name,
+                size: unit,
+                knownSizes: Object.keys(sizes),
+                fallbackGrams: grams,
+            });
         } else {
-            // Fallback to 100g if AI estimation fails
+            // The estimator itself failed (LLM error, or a `status` other than
+            // success). Distinct from the arm above, which got an answer that did
+            // not cover the requested spelling.
             grams = 100 * qty;
             servingDescription = `${grams.toFixed(1)}g (estimated)`;
+            servingTier = 'fdc_size_unresolved';
             logger.warn('fdc.size_qualifier_fallback', {
                 foodName: candidate.name,
                 size: unit,
@@ -1504,8 +1544,15 @@ async function buildFdcResult(
                         totalGrams: grams,
                     });
                 } else {
+                    // HIGH COUNT, nothing resolved: the sub-piece table had no entry,
+                    // per-piece AI estimation failed or returned non-success, and the
+                    // `medium` proxy was either skipped (branded goods are excluded by
+                    // design two lines up) or itself failed. Named separately from the
+                    // LOW COUNT arm below because the two reach 100 g through different
+                    // ladders — this one has three rungs, that one has one.
                     grams = 100 * qty;
                     servingDescription = `${grams.toFixed(1)}g`;
+                    servingTier = 'fdc_piece_unresolved';
                     logger.warn('fdc.unitless_fallback', {
                         foodName: candidate.name,
                         fallbackGrams: grams,
@@ -1535,9 +1582,11 @@ async function buildFdcResult(
                     totalGrams: grams,
                 });
             } else {
-                // Fallback to 100g if AI estimation fails
+                // LOW COUNT, size estimation failed (or answered without the
+                // small/medium key this arm asks for). "1 cucumber" billed as 100 g.
                 grams = 100 * qty;
                 servingDescription = `${grams.toFixed(1)}g`;
+                servingTier = 'fdc_size_estimate_unresolved';
                 logger.warn('fdc.unitless_fallback', {
                     foodName: candidate.name,
                     fallbackGrams: grams,
@@ -1565,9 +1614,12 @@ async function buildFdcResult(
                 totalGrams: grams,
             });
         } else {
-            // Fallback to 100g if AI estimation fails
+            // The ambiguous-unit estimator returned neither `success` nor `cached`.
+            // Its two resolving siblings are `count_unit_ai` / `count_unit_cached`,
+            // so this arm is the only one of the three that was previously invisible.
             grams = 100 * qty;
             servingDescription = `${grams.toFixed(1)}g (estimated)`;
+            servingTier = 'count_unit_unresolved';
             logger.warn('fdc.ambiguous_unit_fallback', {
                 foodName: candidate.name,
                 unit,
@@ -1575,9 +1627,16 @@ async function buildFdcResult(
             });
         }
     } else {
-        // Unknown units (slices, pieces, etc.) - use 100g default
+        // TERMINAL ARM — a unit that reached none of the five branches above:
+        // not a weight, not a volume, not a size qualifier, not a count unit, not
+        // ambiguous. Nothing was attempted and nothing failed, which is why it is
+        // named for the input rather than for an unresolved estimate. The comment
+        // this replaces read "Unknown units (slices, pieces, etc.)" and was wrong
+        // about its own examples: `slice`/`piece` are matched by branch 4's list
+        // and cannot arrive here.
         grams = 100 * qty;
         servingDescription = `${grams.toFixed(1)}g`;
+        servingTier = 'fdc_unknown_unit';
     }
 
     // === BARE QUERY INFLATION GUARD (FDC) ===
