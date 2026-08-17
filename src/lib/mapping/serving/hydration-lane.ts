@@ -44,7 +44,70 @@ import {
     BARE_MIN_PIECE_SERVING_GRAMS,
 } from '../../servings/bare-query-guard';
 import { buildFatSecretResult } from '../build-fatsecret-result';
+import { resolveVolumeGrams, pickVolumeUnits } from '../../units/volume-density';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
+
+/**
+ * The volume-unit SPELLINGS `buildOffResult()` accepts. UNCHANGED by the B1a
+ * convergence, and that is the point: this set is the gate on the whole volume
+ * branch (`unit && volumeToGrams[unit]`), so adding a spelling routes a line
+ * that reaches some other branch today. The owner also carries `milliliter` /
+ * `milliliters`, which this lane has never accepted; whether to admit them is
+ * lane B1b, not this change.
+ *
+ * `ml` / `floz` / `fl oz` are absent here on purpose — `buildOffResult()` pins
+ * its own flat values for those three (see the comment at the call site).
+ *
+ * Reachability, measured 2026-08-17 by reading `parseIngredientLine()` in
+ * `src/lib/parse/ingredient-line.ts`: `parsed.unit` normally comes from
+ * `normalizeUnitToken()`, which canonicalises `cups`→`cup`, `tablespoons`→
+ * `tbsp`, `teaspoons`→`tsp`, so the long spellings are unreachable on that
+ * path — but `mapIngredientWithFallback()`'s `aiParseIngredient()` fallback
+ * assigns the model's RAW string, so they are reachable and must stay.
+ */
+export const OFF_VOLUME_UNIT_SPELLINGS: readonly string[] = [
+    'cup', 'cups',
+    'tbsp', 'tablespoon', 'tablespoons',
+    'tsp', 'teaspoon', 'teaspoons',
+    'dash', 'dashes', 'pinch', 'pinches',
+];
+
+/**
+ * The volume-unit SPELLINGS `buildFdcResult()` accepts. Also unchanged by B1a,
+ * and here the gate matters more than it does on the OFF side: this branch's
+ * density fallback is dead (0 live events), but the same gate admits the three
+ * LIVE rungs above it — `fdc_label_volume` (2,134), `fdc_volume_cached` (632)
+ * and `fdc_volume_ai` (318), measured 2026-08-17. Adding `cups`, `fl oz` or
+ * `milliliter(s)` — all of which the owner carries and this lane never has —
+ * would move real traffic into them. Lane B1b decides that.
+ */
+export const FDC_VOLUME_UNIT_SPELLINGS: readonly string[] = [
+    'cup',
+    'tbsp', 'tablespoon', 'tablespoons',
+    'tsp', 'teaspoon', 'teaspoons',
+    'ml', 'floz',
+    'dash', 'dashes', 'pinch', 'pinches',
+];
+
+/**
+ * Micro-volume measures this lane accepts and the owner has no opinion on:
+ * absolute grams, never density-scaled — a pinch of anything is a pinch. Kept
+ * verbatim from the inline table B1a replaced so the branch gate is unchanged.
+ * `sprinkle` / `shake` reach `parsed.unit` only through the partitive-"of" path
+ * in `parseIngredientLine()` ("1 sprinkle of salt"), which assigns the raw
+ * lowercase token; `drop` / `second` are canonical outputs of
+ * `normalizeUnitToken()`. Whether these belong in the owner is lane B1b.
+ */
+export const FDC_MICRO_VOLUME_GRAMS: Record<string, number> = {
+    'sprinkle': 0.2, // ~1/25 tsp
+    'shake': 0.2,
+    // True micro-volume units (e.g., drops of hot sauce, liquid stevia)
+    'drop': 0.05,    // 1 drop ≈ 0.05ml ≈ 0.05g water-density liquid
+    'drops': 0.05,
+    // Cooking spray duration (s) — 1 second of spray ≈ 0.25g oil
+    'second': 0.25,
+    'seconds': 0.25,
+};
 
 /**
  * Trailing-unit recovery set: units the parser sometimes fails to extract,
@@ -1255,53 +1318,34 @@ async function buildFdcResult(
         'kg': 1000, 'kilogram': 1000,
     };
 
-    // Handle volume units - estimate grams based on typical density
-    // Note: This is an approximation. Actual density varies by food.
-    const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(candidate.name) || /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(parsed?.name || '');
-
-    // Resolve a food-specific density (g/ml) instead of a flat liquid/solid guess.
-    // The old binary split billed every non-liquid solid at 0.5 g/ml, which is fine
-    // for light powders (flour ~0.53, cocoa ~0.55) but under-weights DENSE solids by
-    // ~40%: granulated/brown sugar (~0.85), packed grains, etc. Reuse the category
-    // density table (density.ts) — the same one gramsForServing() already trusts — and
-    // only fall back to the old liquid=1.0 / solid=0.5 defaults when no category is
-    // inferred, so uncategorized spices (cinnamon) keep their correct ~0.5. (n-serv-14:
-    // "1 tsp sugar" 2.5g → 4.25g; "1 cup sugar" 120g → 204g.)
-    let densityGml = isLiquid ? 1.0 : 0.5;
-    try {
-        const { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } = require('../../units/density');
-        const inferredCategory = inferCategoryFromName(candidate.name) || inferCategoryFromName(parsed?.name || '');
-        // Only override for unambiguous dry-granular categories (sugar/flour/…) so
-        // cooked/dry-ambiguous grains and high-water foods keep the flat default.
-        if (inferredCategory && DRY_GRANULE_DENSITY_CATEGORIES.has(inferredCategory)) {
-            const catDensity = categoryDensity(inferredCategory);
-            if (catDensity && catDensity > 0) densityGml = catDensity;
-        }
-    } catch {
-        // density.ts unavailable — keep the flat liquid/solid default
-    }
-
+    // Handle volume units. The density rule — liquid / paste / dry-granule
+    // category — is owned by `resolveVolumeGrams()` in
+    // `src/lib/units/volume-density.ts`. This branch carried a hand-copy of it
+    // until 2026-08-17 (lane B1a), and it was the copy WITHOUT the paste tier,
+    // so `1 tbsp peanut butter` billed 7.5 g here against 16 g on the other two
+    // paths.
+    //
+    // The convergence closes THREE differences, not one, and all three are
+    // confined to the `volume_unit` fallback at the bottom of this branch —
+    // which has never billed a live query (all 8,200 `volume_unit` events have
+    // an `openfoodfacts` winner, 0 an FDC one; measured 2026-08-17, re-derive:
+    // `SELECT "source", count(*) FROM "MappingEventLog"
+    //    WHERE "servingTier"='volume_unit' GROUP BY 1;`):
+    //   (1) the paste tier now applies here too;
+    //   (2) the dry-granule category override no longer stomps the LIQUID
+    //       default. This copy applied it unconditionally, so a food that is
+    //       liquid AND categorised dry-granular billed the granule density:
+    //       `1 cup maple syrup` 204 g here against the owner's 240 g;
+    //   (3) the QUERY name no longer classifies the food. This copy tested
+    //       `RE.test(candidate.name) || RE.test(parsed.name)` for both the
+    //       liquid check and the category; the owner takes the FIRST NON-EMPTY
+    //       name, which is the matched record's. Widening the owner to weigh
+    //       every name is a real behaviour change with its own gate — see the
+    //       KNOWN DIVERGENCE note on `resolveVolumeGrams()` — and is not this.
+    const volumeDensity = resolveVolumeGrams(candidate.name, parsed?.name);
     const volumeToGrams: Record<string, number> = {
-        'cup': 240 * densityGml,       // 1 cup ≈ 240ml × density
-        'tbsp': 15 * densityGml,       // 1 tbsp ≈ 15ml × density
-        'tablespoon': 15 * densityGml, 'tablespoons': 15 * densityGml,
-        'tsp': 5 * densityGml,         // 1 tsp ≈ 5ml × density
-        'teaspoon': 5 * densityGml, 'teaspoons': 5 * densityGml,
-        'ml': densityGml,              // 1 ml × density
-        'floz': 30 * densityGml,       // 1 fl oz ≈ 30ml × density
-        // Micro-volume units (spice measures)
-        'dash': 0.6,     // 1 dash ≈ 1/8 tsp ≈ 0.6ml ≈ 0.5-0.6g
-        'dashes': 0.6,
-        'pinch': 0.3,    // 1 pinch ≈ 1/16 tsp ≈ 0.3g
-        'pinches': 0.3,
-        'sprinkle': 0.2, // ~1/25 tsp
-        'shake': 0.2,
-        // True micro-volume units (e.g., drops of hot sauce, liquid stevia)
-        'drop': 0.05,    // 1 drop ≈ 0.05ml ≈ 0.05g water-density liquid
-        'drops': 0.05,
-        // Cooking spray duration (s) — 1 second of spray ≈ 0.25g oil
-        'second': 0.25,
-        'seconds': 0.25,
+        ...pickVolumeUnits(volumeDensity.perUnit, FDC_VOLUME_UNIT_SPELLINGS),
+        ...FDC_MICRO_VOLUME_GRAMS,
     };
 
     let grams: number = 100 * qty;
@@ -2460,38 +2504,31 @@ export async function buildOffResult(
         'lb': 453.6, 'lbs': 453.6, 'pound': 453.6, 'pounds': 453.6,
         'kg': 1000, 'kilogram': 1000,
     };
-    const isLiquid = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i.test(candidate.name);
-    // Dense pastes/spreads (~1g/ml): the dry-goods 7.5g/tbsp default badly
-    // undercounts them (2 tbsp peanut butter is ~32g, not 15g).
-    const isPaste = !isLiquid && /butter|spread|hummus|yogurt|yoghurt|honey|mayo|mayonnaise|jam|jelly|nutella|tahini|cream cheese|sour cream|ricotta|paste|dressing|ketchup|mustard/i.test(candidate.name);
-    // Dry-solid density (g/ml): prefer the food's category density (sugar 0.85,
-    // flour 0.53, oats 0.36, rice 0.85 …) over a flat 0.5, which under-weighted
-    // DENSE solids ~40% — granulated/brown sugar billed 2.5g/tsp instead of ~4.25g
-    // (n-serv-14). Uncategorized solids (salt, cinnamon) keep the 0.5 default, so
-    // light spices/powders don't regress. Liquids and pastes keep their tuned values.
-    let solidDensity = 0.5;
-    try {
-        const { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } = require('../../units/density');
-        const solidCategory = inferCategoryFromName(candidate.name);
-        // Only override for unambiguous dry-granular categories (sugar/flour/…);
-        // rice/grain/dairy stay at 0.5 to avoid overshooting cooked servings and
-        // tripping serving bands (n-serv-01/03/04).
-        if (solidCategory && DRY_GRANULE_DENSITY_CATEGORIES.has(solidCategory)) {
-            const solidCatDensity = categoryDensity(solidCategory);
-            if (solidCatDensity && solidCatDensity > 0) solidDensity = solidCatDensity;
-        }
-    } catch {
-        // density.ts unavailable — keep the flat 0.5 g/ml solid default
-    }
-    const cupG  = isLiquid ? 240 : isPaste ? 250 : 240 * solidDensity;
-    const tbspG = isLiquid ? 15  : isPaste ? 16  : 15 * solidDensity;
-    const tspG  = isLiquid ? 5   : isPaste ? 5.3 : 5 * solidDensity;
+    // The density rule — liquid / paste / dry-granule category — is owned by
+    // `resolveVolumeGrams()` in `src/lib/units/volume-density.ts`. This branch
+    // carried a hand-copy of it until 2026-08-17 (lane B1a). It was the ONE
+    // copy that had the paste tier, which is why the owner's cup/tbsp/tsp
+    // constants came from here; measured cell-for-cell over 12 foods x 23 unit
+    // keys, every cup/tbsp/tsp/dash/pinch value is identical to the copy it
+    // replaces for every volume class, so this lane's 8,200 live `volume_unit`
+    // events do not move.
+    const volumeDensity = resolveVolumeGrams(candidate.name);
     const volumeToGrams: Record<string, number> = {
-        'cup': cupG, 'cups': cupG,
-        'tbsp': tbspG, 'tablespoon': tbspG, 'tablespoons': tbspG,
-        'tsp': tspG,  'teaspoon': tspG,  'teaspoons': tspG,
+        ...pickVolumeUnits(volumeDensity.perUnit, OFF_VOLUME_UNIT_SPELLINGS),
+        // PINNED, deliberately NOT converged, and the ONLY cell family where
+        // this lane and the owner disagree: the owner scales ml/floz by the
+        // same density it computed for cup/tbsp/tsp, and this lane bills them
+        // flat. Converging is a CONSTANT change rather than a de-duplication —
+        // the owner's own header says it belongs in its own commit with its own
+        // gate — and it is not free in either direction. The owner is right
+        // about `240 ml flour` (billed here at 240 g while `1 cup flour` of the
+        // same food bills 127.2 g) and wrong about `250 ml red bull`, because
+        // its LIQUID_RE misses cola, beer, coffee and energy drinks, so a
+        // water-density beverage classifies SOLID and would bill 125 g. Those
+        // 2 events are the only ml/floz traffic in the whole live `volume_unit`
+        // population (8,200 events: cup 5,533, tbsp 2,059, tsp 606, ml 2,
+        // floz 0 — measured 2026-08-17). The fix is on the classification side.
         'ml': 1, 'floz': 30, 'fl oz': 30,
-        'dash': 0.6, 'dashes': 0.6, 'pinch': 0.3, 'pinches': 0.3,
     };
 
     let grams: number | null = null;
