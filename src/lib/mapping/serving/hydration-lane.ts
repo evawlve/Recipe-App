@@ -1388,59 +1388,79 @@ async function buildFdcResult(
             });
         }
     } else if (isSizeQualifier(unit)) {
-        // Unit is a size qualifier (small/medium/large)
-        // Get AI-estimated weight for this size, caching for future use
+        // Unit is a size qualifier (small/medium/large). Resolution order
+        // (Lane G, 2026-08-17), mirroring the volume branch above:
+        //   (0) the record's OWN matching size row — a USDA household measure,
+        //       deterministic and food-specific;
+        //   (1) getOrCreateFdcSizeServings(), which is a live-USDA-search-then-LLM
+        //       estimate scaled by hardcoded ratios and reads no local row at all.
         const fdcId = parseInt(candidate.id.replace('fdc_', ''), 10);
-        const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
 
-        const gramsPerUnit = sizes && unit ? sizes[unit] : undefined;
-
-        if (gramsPerUnit != null) {
-            grams = qty * gramsPerUnit;
-            servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
-            servingTier = 'fdc_size_qualifier';
-            logger.info('fdc.size_qualifier_resolved', {
-                foodName: candidate.name,
-                size: unit,
-                gramsPerUnit,
-                totalGrams: grams,
-            });
-        } else if (sizes) {
-            // THE ESTIMATOR ANSWERED, BUT NOT FOR THIS SIZE. Split out 2026-08-17:
-            // `isSizeQualifier()` accepts ten spellings and
-            // `getOrCreateFdcSizeServings()` returns a map keyed by nine of them —
-            // `extralarge` is in the qualifier set and absent from the map — so this
-            // arm billed `qty * (undefined ?? 100)` while stamping the SAME
-            // `fdc_size_qualifier` as a genuine resolution, and additionally rendered
-            // the literal string "undefinedg each" to the user. A vocabulary gap and
-            // a working estimate are different events; they now have different names.
-            //
-            // The "undefinedg each" string is DELIBERATELY PRESERVED here. This PR
-            // claims zero wire change, and `servingDescription` is on the wire
-            // (`/api/nlp/parse` passes it to `resolveFoodDetails()` as
-            // `matchedServingDescription`). Repairing the label is a separate,
-            // measurable change; making it here would make this PR's own claim false.
-            grams = 100 * qty;
-            servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
-            servingTier = 'fdc_size_key_missing';
-            logger.warn('fdc.size_qualifier_key_missing', {
-                foodName: candidate.name,
-                size: unit,
-                knownSizes: Object.keys(sizes),
-                fallbackGrams: grams,
+        const ownSize = await findOwnFdcSizeServing(fdcId, unit);
+        if (ownSize) {
+            grams = qty * ownSize.perUnitGrams;
+            // The row's OWN description, verbatim: /api/nlp/parse hands this to
+            // resolveFoodDetails() as `matchedServingDescription`, which flags
+            // `isDefault` by exact case-insensitive label match. A synthesized
+            // "1 medium (118g each)" can never match; the row's own label does.
+            servingDescription = ownSize.description;
+            servingTier = ownSize.genuine ? 'fdc_own_size_serving' : 'fdc_own_size_cached';
+            logger.info('fdc.size_own_serving', {
+                foodName: candidate.name, size: unit,
+                gramsPerUnit: ownSize.perUnitGrams, totalGrams: grams,
+                description: ownSize.description, genuine: ownSize.genuine,
             });
         } else {
-            // The estimator itself failed (LLM error, or a `status` other than
-            // success). Distinct from the arm above, which got an answer that did
-            // not cover the requested spelling.
-            grams = 100 * qty;
-            servingDescription = `${grams.toFixed(1)}g (estimated)`;
-            servingTier = 'fdc_size_unresolved';
-            logger.warn('fdc.size_qualifier_fallback', {
-                foodName: candidate.name,
-                size: unit,
-                fallbackGrams: grams,
-            });
+            const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
+            const gramsPerUnit = sizes && unit ? sizes[unit] : undefined;
+
+            if (gramsPerUnit != null) {
+                grams = qty * gramsPerUnit;
+                servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
+                servingTier = 'fdc_size_qualifier';
+                logger.info('fdc.size_qualifier_resolved', {
+                    foodName: candidate.name,
+                    size: unit,
+                    gramsPerUnit,
+                    totalGrams: grams,
+                });
+            } else if (sizes) {
+                // THE ESTIMATOR ANSWERED, BUT NOT FOR THIS SIZE. Split out 2026-08-17:
+                // `isSizeQualifier()` accepts ten spellings and
+                // `getOrCreateFdcSizeServings()` returns a map keyed by nine of them —
+                // `extralarge` is in the qualifier set and absent from the map — so this
+                // arm billed `qty * (undefined ?? 100)` while stamping the SAME
+                // `fdc_size_qualifier` as a genuine resolution, and additionally rendered
+                // the literal string "undefinedg each" to the user. A vocabulary gap and
+                // a working estimate are different events; they now have different names.
+                //
+                // The "undefinedg each" string is DELIBERATELY PRESERVED here. The tier
+                // PR claims zero wire change and `servingDescription` is on the wire
+                // (`/api/nlp/parse` passes it to `resolveFoodDetails()` as
+                // `matchedServingDescription`). Repairing the label is a separate,
+                // measurable change; making it here would make that claim false.
+                grams = 100 * qty;
+                servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
+                servingTier = 'fdc_size_key_missing';
+                logger.warn('fdc.size_qualifier_key_missing', {
+                    foodName: candidate.name,
+                    size: unit,
+                    knownSizes: Object.keys(sizes),
+                    fallbackGrams: grams,
+                });
+            } else {
+                // The estimator itself failed (LLM error, or a `status` other than
+                // success). Distinct from the arm above, which got an answer that did
+                // not cover the requested spelling.
+                grams = 100 * qty;
+                servingDescription = `${grams.toFixed(1)}g (estimated)`;
+                servingTier = 'fdc_size_unresolved';
+                logger.warn('fdc.size_qualifier_fallback', {
+                    foodName: candidate.name,
+                    size: unit,
+                    fallbackGrams: grams,
+                });
+            }
         }
     } else if (!unit || ['slice', 'slices', 'piece', 'pieces', 'chunk', 'chunks', 'wedge', 'wedges', 'strip', 'strips', 'segment', 'segments'].includes(unit)) {
         // UNITLESS items or COUNT items (pieces/slices) — two cases:
@@ -1459,10 +1479,48 @@ async function buildFdcResult(
             // (parsed.name = "grape tomatoes" is more specific than candidate.name = "grape raw tomatoes")
             const itemName = parsed?.name || candidate.name;
             let resolved = false;
+            const unitHint = parsed?.unitHint || '';
+
+            // 0. The record's OWN serving row (Lane G, 2026-08-17). First, like the
+            //    volume branch's rung (0): a USDA household measure beats every
+            //    estimator below it and is the only rung here that replays.
+            //
+            //    Two attempts, in the order the request expresses:
+            //      (a) the parsed COUNT unit, so "4 slice ham" can reach a real
+            //          `slice` row rather than being told what a slice weighs;
+            //      (b) `medium` as the per-piece proxy — the same editorial choice
+            //          rung 3 below already makes with
+            //          `getOrCreateFdcSizeServings()['medium']`, just sourced from
+            //          the record instead of from a model. This is the arm
+            //          `5 strawberries` (n-serv-31) takes.
+            //
+            //    Both are capped at COUNT_SERVING_MAX_GRAMS: the request names a
+            //    count and no size, so a `piece` row that is a whole raw brisket
+            //    must not answer it.
+            //
+            //    Ordering note: this now precedes the sub-piece default table at
+            //    rung 1. That table currently bills NOTHING — `fdc_sub_piece_default`
+            //    has 0 events in MappingEventLog (measured on the box 2026-08-17) —
+            //    so the precedence question between them is live only in principle.
+            const ownCountToken = unitHint || unit;
+            const ownPiece =
+                await findOwnFdcSizeServing(fdcId, ownCountToken, { maxPerUnitGrams: COUNT_SERVING_MAX_GRAMS })
+                ?? await findOwnFdcSizeServing(fdcId, 'medium', { maxPerUnitGrams: COUNT_SERVING_MAX_GRAMS });
+
+            if (ownPiece) {
+                grams = qty * ownPiece.perUnitGrams;
+                servingDescription = ownPiece.description;
+                servingTier = ownPiece.genuine ? 'fdc_own_size_serving' : 'fdc_own_size_cached';
+                resolved = true;
+                logger.info('fdc.piece_own_serving', {
+                    foodName: candidate.name, requestedUnit: ownCountToken || null,
+                    gramsPerUnit: ownPiece.perUnitGrams, qty, totalGrams: grams,
+                    description: ownPiece.description, genuine: ownPiece.genuine,
+                });
+            }
 
             // 1. Try deterministic sub-piece defaults first (cheaper & more reliable than AI)
-            const unitHint = parsed?.unitHint || '';
-            if (unitHint) {
+            if (!resolved && unitHint) {
                 try {
                     const { getSubPieceDefault } = await import('../../servings/default-count-grams');
                     const cleanItemName = itemName
@@ -1561,40 +1619,88 @@ async function buildFdcResult(
             }
         } else {
             // LOW COUNT: "1 cucumber", "2 avocados" → "medium" estimation
-            const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
 
             // Apply mini override identical to hydrateAndSelectServing
             const hasMiniModifier = parsed?.name?.toLowerCase().includes('mini');
             const targetSize = hasMiniModifier ? 'small' : 'medium';
 
-            if (sizes && sizes[targetSize]) {
-                const baseGramsPerUnit = sizes[targetSize]!;
-                // For "mini" modifier, reduce below "small" weight (mini ≈ 80% of small)
-                const gramsPerUnit = hasMiniModifier ? Math.round(baseGramsPerUnit * 0.8) : baseGramsPerUnit;
-                
-                grams = qty * gramsPerUnit;
-                servingDescription = `${qty} ${hasMiniModifier ? 'mini' : targetSize} (${gramsPerUnit}g each)`;
-                servingTier = 'fdc_size_estimate';
-                logger.info('fdc.unitless_size_resolved', {
-                    foodName: candidate.name,
-                    sizeUsed: targetSize,
-                    gramsPerUnit,
-                    totalGrams: grams,
+            // 0. The record's OWN row (Lane G, 2026-08-17). A `mini` request tries
+            //    the record's real `mini` row before its `small` one.
+            //
+            //    NO 0.8 FUDGE ON A REAL ROW. The estimator branch below multiplies
+            //    `small` by 0.8 to approximate "mini", because it only ever has a
+            //    scaled `medium` to work with. A row the record itself declares is
+            //    a measurement, and scaling a measurement by a guess re-imports the
+            //    guess this rung exists to remove. If the record has no `mini` row
+            //    the rung falls through and the estimator's 0.8 applies exactly as
+            //    it does today.
+            //
+            //    No gram ceiling here, unlike the high-count rung: "1 large
+            //    spaghetti squash" really is the 800 g row, and the request names
+            //    the size.
+            const ownLowCount =
+                (hasMiniModifier ? await findOwnFdcSizeServing(fdcId, 'mini') : null)
+                ?? await findOwnFdcSizeServing(fdcId, targetSize);
+
+            if (ownLowCount) {
+                grams = qty * ownLowCount.perUnitGrams;
+                servingDescription = ownLowCount.description;
+                servingTier = ownLowCount.genuine ? 'fdc_own_size_serving' : 'fdc_own_size_cached';
+                logger.info('fdc.unitless_own_serving', {
+                    foodName: candidate.name, sizeUsed: targetSize,
+                    gramsPerUnit: ownLowCount.perUnitGrams, totalGrams: grams,
+                    description: ownLowCount.description, genuine: ownLowCount.genuine,
                 });
             } else {
-                // LOW COUNT, size estimation failed (or answered without the
-                // small/medium key this arm asks for). "1 cucumber" billed as 100 g.
-                grams = 100 * qty;
-                servingDescription = `${grams.toFixed(1)}g`;
-                servingTier = 'fdc_size_estimate_unresolved';
-                logger.warn('fdc.unitless_fallback', {
-                    foodName: candidate.name,
-                    fallbackGrams: grams,
-                });
+                const sizes = await getOrCreateFdcSizeServings(fdcId, candidate.name);
+
+                if (sizes && sizes[targetSize]) {
+                    const baseGramsPerUnit = sizes[targetSize]!;
+                    // For "mini" modifier, reduce below "small" weight (mini ≈ 80% of small)
+                    const gramsPerUnit = hasMiniModifier ? Math.round(baseGramsPerUnit * 0.8) : baseGramsPerUnit;
+
+                    grams = qty * gramsPerUnit;
+                    servingDescription = `${qty} ${hasMiniModifier ? 'mini' : targetSize} (${gramsPerUnit}g each)`;
+                    servingTier = 'fdc_size_estimate';
+                    logger.info('fdc.unitless_size_resolved', {
+                        foodName: candidate.name,
+                        sizeUsed: targetSize,
+                        gramsPerUnit,
+                        totalGrams: grams,
+                    });
+                } else {
+                    // LOW COUNT, size estimation failed (or answered without the
+                    // small/medium key this arm asks for). "1 cucumber" billed as 100 g.
+                    grams = 100 * qty;
+                    servingDescription = `${grams.toFixed(1)}g`;
+                    servingTier = 'fdc_size_estimate_unresolved';
+                    logger.warn('fdc.unitless_fallback', {
+                        foodName: candidate.name,
+                        fallbackGrams: grams,
+                    });
+                }
             }
         }
     } else if (unit && (isAmbiguousUnit(unit) || ['cup', 'cups', 'c', 'tbsp', 'tablespoon', 'tablespoons', 'tbs', 'tsp', 'teaspoon', 'teaspoons', 'floz', 'fl oz', 'fluid ounce', 'ml'].includes(unit.toLowerCase()))) {
         // AMBIGUOUS UNITS (egg, packet, container, etc.) - use AI estimation
+        //
+        // DELIBERATELY NOT GIVEN A RUNG (0) BY LANE G (2026-08-17), and the reason
+        // is not scope. The data is there — 432 FdcServing rows are anchored on one
+        // of this branch's units (can 167, package 111, container 80, packet 34,
+        // …; box, 2026-08-17) — but two things separate it from branches 3 and 4:
+        //
+        //  - The defect Lane G removes is "a fresh estimate every request". It does
+        //    not hold here: `getOrCreateAmbiguousServing()` is genuinely cached and
+        //    stamps `count_unit_cached` on a hit, so this branch already replays.
+        //    `getOrCreateFdcSizeServings()` is the one with no cache at all.
+        //  - The vocabulary names PACKAGES, not portions. An FDC `container` or
+        //    `can` row is a package weight, which is the class the volume matcher's
+        //    density band exists to reject, and this branch's estimator carries
+        //    clamps and floor guards (`GENERIC_UNKNOWN_MAX`, the portion-unit floor
+        //    in ambiguous-serving-estimator.ts) that a raw row read would bypass.
+        //
+        // So it is a separate change with its own measurement, not a rider on this
+        // one. Stated here rather than in a report so the next reader finds it.
         const ambiguousResult = await getOrCreateAmbiguousServing(
             candidate.id,
             candidate.name,
@@ -1887,6 +1993,205 @@ export async function findOwnFdcVolumeServing(
         });
     if (matches.length === 0) return null;
     return matches.find(m => m.genuine) ?? matches[0];
+}
+
+// ============================================================
+// Size / count-serving matching (Lane G, 2026-08-17)
+//
+// The sibling of the volume matcher above, for branches 3 and 4 of
+// buildFdcResult. Same shape, same reason: the record's OWN FdcServing row is
+// deterministic and food-specific, and until now only the VOLUME branch read
+// one. Branches 3 and 4 went straight to `getOrCreateFdcSizeServings()`, which
+// despite its name touches no database, ignores its `fdcId` except for logging,
+// and scales one `estimateAmbiguousServing()` answer by hardcoded ratios
+// (small 0.70 / large 1.40 / xl 1.60 / mini 0.55). That estimator's own first
+// step is a LIVE HTTP search of the remote USDA API BY NAME, which can land on
+// a different fdcId than the mapper picked; if it misses, a model answers.
+//
+// Measured consequence (box, 2026-08-17): `5 strawberries` resolves to
+// fdc_167762 "Strawberries, raw", whose own rows include `medium (1-1/4" dia)`
+// = 12 g — a row the parse response ALREADY LISTS in its own servingOptions —
+// while billing an LLM per-piece guess that came back 75/50/75 g on three
+// probes ~90 s apart.
+// ============================================================
+
+/**
+ * Requested token -> serving-description stems. The size half mirrors
+ * `SIZE_QUALIFIERS` in ../../usda/fdc-ai-backfill (ten spellings, so `sm`/`med`/
+ * `lg`/`xl` reach the same rows as their long forms); the count half mirrors
+ * buildFdcResult branch 4's own unit list, so a `4 slice ham` request can reach
+ * a real `slice` row.
+ */
+const SIZE_SERVING_STEMS: Record<string, string[]> = {
+    mini: ['mini'],
+    small: ['small'], sm: ['small'],
+    medium: ['medium'], med: ['medium'],
+    large: ['large'], lg: ['large'],
+    'extra-large': ['extra large', 'extra-large'],
+    extralarge: ['extra large', 'extra-large'],
+    xl: ['extra large', 'extra-large'],
+    slice: ['slice'], slices: ['slice'],
+    piece: ['piece'], pieces: ['piece'],
+    chunk: ['chunk'], chunks: ['chunk'],
+    wedge: ['wedge'], wedges: ['wedge'],
+    strip: ['strip'], strips: ['strip'],
+    segment: ['segment'], segments: ['segment'],
+};
+
+/**
+ * A USDA YIELD row, not a portion.
+ *
+ * `piece, cooked, excluding refuse (yield from 1 lb raw meat with refuse)` is
+ * what 1 lb of raw meat cooks down to — it is anchored on `piece` and it is not
+ * a piece of anything. 187 of the 476 anchored count rows (39.3%) are this
+ * shape, and they are the whole heavy tail: excluding them takes the count
+ * population's >300 g band from 111 rows to 35 (measured on the box 2026-08-17;
+ * re-derive with the two counts in the PR body). Zero of the 221 anchored SIZE
+ * rows match, so the filter costs nothing on that rung and removes exactly the
+ * class that would have billed "3 pieces of beef tenderloin" as 990 g.
+ */
+const FDC_YIELD_ROW_RE = /\byields?\b|\brefuse\b/i;
+
+/**
+ * Per-unit ceiling for the COUNT rung only.
+ *
+ * The eight rows above it are all raw beef/pork primals whose USDA "1 piece"
+ * really is the whole cut — brisket flat half 1967 g, pork leg sirloin tip
+ * roast 765 g. Honest data, implausible request: someone typing "3 pieces of
+ * brisket" does not mean three briskets. There is a clean gap in the measured
+ * distribution between 446 g and 514 g and the constant sits in it (post-yield
+ * -filter counts, box 2026-08-17: 8 rows >500 g, 24 >400 g, 289 total).
+ *
+ * DELIBERATELY NOT APPLIED TO THE SIZE RUNG. There the user named the size, so
+ * the 800 g `large` row on spaghetti squash is the correct answer to "1 large
+ * spaghetti squash". The ceiling exists for requests that name a COUNT and no
+ * size; failing it drops through to today's estimator, i.e. to the status quo.
+ */
+const COUNT_SERVING_MAX_GRAMS = 500;
+
+/** Strips a leading count from a serving description ("1 medium" -> "medium"). */
+function stripServingLeadingCount(description: string): string {
+    return description.replace(/^\s*(?:\d+\s*\/\s*\d+|\d+(?:\.\d+)?)\s*/, '').trim();
+}
+
+/**
+ * True when a serving description STARTS with one of `stems`.
+ *
+ * ANCHORED, NEVER A FREE SUBSTRING, AND THAT IS THE WHOLE DESIGN. A substring
+ * test for "medium" matches 104 rows on the live table, of which 34 (32.7%) are
+ * UNIT-qualified rather than size-qualified — `slice, medium` 28 g,
+ * `leaf, medium` 7.5 g, `stalk, medium` 180 g, `head, medium (6" dia)` 539 g.
+ * Those describe a medium SLICE, not a medium onion, and a free match would let
+ * a 539 g cabbage head answer "1 medium tomato". Anchoring also gets the
+ * converse right for free: `slice, medium` IS the correct answer to a `slice`
+ * request, because there the stem is `slice` and it leads.
+ *
+ * Two more properties the anchor buys, both measured on the box 2026-08-17:
+ *   - `extra small (less than 6" long)` correctly does NOT answer a `small`
+ *     request (banana fdc_173944 carries both that and a real `small` row).
+ *   - Anchored size matching has NO ties at all: every (fdcId, size token) group
+ *     has exactly one row — large 72, medium 70, small 62, mini 11, extra 6.
+ *     The free-substring version has 7 records carrying >=2 `%medium%` rows with
+ *     a 67.4x spread. The ambiguity rule below therefore only ever fires on the
+ *     COUNT rung, where 28 of 147 records (19%) do carry several `slice` rows.
+ */
+function servingDescriptionStartsWithStem(description: string | null | undefined, stems: string[]): boolean {
+    if (!description) return false;
+    const body = stripServingLeadingCount(description);
+    return stems.some(s => {
+        // Escape first, THEN loosen whitespace, so "extra large" also matches
+        // "extra  large" without the escape pass reintroducing a literal space.
+        const pattern = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+        return new RegExp(`^${pattern}s?\\b`, 'i').test(body);
+    });
+}
+
+/**
+ * The record's OWN serving row for a size qualifier or a count unit, per unit.
+ *
+ * Returns null — DECLINING to the caller's existing estimator — whenever the
+ * record does not name one row unambiguously. That is the deliberate failure
+ * direction: a decline costs nothing (the caller behaves exactly as it does
+ * today), whereas guessing between the record's own rows would invent a
+ * preference the data does not express.
+ *
+ * SELECTION RULE, in order:
+ *   1. anchored on the requested stem (above), grams > 0, not a yield row, and
+ *      within `maxPerUnitGrams` when the caller passes one;
+ *   2. genuine (`isAiEstimated === false`) rows shut out AI-written ones
+ *      entirely — honey carries a real `tbsp` 21 g AND an AI `1 tbsp` 21 g, so
+ *      without this the pick would depend on row order;
+ *   3. among what survives, take the least-qualified CLASS: an exact bare row
+ *      (`slice`) beats a `medium`-qualified one (`slice, medium`) beats anything
+ *      else (`slice, thin` / `slice, thick`);
+ *   4. if that class holds exactly one row, return it; otherwise return null.
+ *
+ * Rung 3's middle step is not a new editorial choice — it is the same one the
+ * caller already makes, since branch 4's existing fallback reads
+ * `getOrCreateFdcSizeServings()['medium']`. Worked examples from the live table:
+ * bologna fdc_168101 {slice, slice medium, slice thick, slice thin} -> the bare
+ * `slice` 28 g; bologna fdc_167685 {medium, thick, thin} with no bare row ->
+ * `slice, medium` 28 g; sharp cheddar fdc_170899 {slice (1 oz), slice (2/3 oz),
+ * slice (3/4 oz)} -> NULL, because the record genuinely does not say which.
+ *
+ * `orderBy` is explicit. The volume sibling above has none and tie-breaks with
+ * `matches.find(m => m.genuine) ?? matches[0]`, which is a database-order
+ * dependency — harmless there only because its density band is narrow. Removing
+ * one source of nondeterminism while importing another would be self-defeating,
+ * so the read is ordered on `description` (unique per fdcId by the
+ * `FdcServing_fdcId_description_key` constraint, hence a total order) with `id`
+ * behind it.
+ */
+export async function findOwnFdcSizeServing(
+    fdcId: number,
+    token: string | null | undefined,
+    opts: { maxPerUnitGrams?: number } = {},
+): Promise<{ perUnitGrams: number; genuine: boolean; description: string } | null> {
+    if (!token || !Number.isFinite(fdcId)) return null;
+    const stems = SIZE_SERVING_STEMS[token.toLowerCase().trim()];
+    if (!stems) return null;
+
+    let rows: Array<{ description: string; grams: number | null; isAiEstimated: boolean | null }>;
+    try {
+        const { prisma } = await import('../../db');
+        rows = await prisma.fdcServing.findMany({
+            where: { fdcId },
+            select: { description: true, grams: true, isAiEstimated: true },
+            orderBy: [{ description: 'asc' }, { id: 'asc' }],
+        });
+    } catch {
+        return null;
+    }
+
+    const candidates = rows
+        .filter(r =>
+            r.grams != null && r.grams > 0 &&
+            !FDC_YIELD_ROW_RE.test(r.description) &&
+            servingDescriptionStartsWithStem(r.description, stems))
+        .map(r => {
+            const count = servingLeadingCount(r.description);
+            return {
+                perUnitGrams: (r.grams as number) / (count > 0 ? count : 1),
+                genuine: !r.isAiEstimated,
+                description: r.description,
+            };
+        })
+        .filter(m => opts.maxPerUnitGrams == null || m.perUnitGrams <= opts.maxPerUnitGrams);
+
+    if (candidates.length === 0) return null;
+
+    const genuine = candidates.filter(m => m.genuine);
+    const pool = genuine.length > 0 ? genuine : candidates;
+
+    const rank = (m: { description: string }): number => {
+        const body = stripServingLeadingCount(m.description).toLowerCase();
+        if (stems.some(s => body === s.toLowerCase())) return 0;      // the bare unit row
+        if (/\bmed(ium)?\b/.test(body)) return 1;                     // the middle of thin/medium/thick
+        return 2;
+    };
+    const best = Math.min(...pool.map(rank));
+    const finalists = pool.filter(m => rank(m) === best);
+    return finalists.length === 1 ? finalists[0] : null;
 }
 
 /**

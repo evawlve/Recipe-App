@@ -79,8 +79,8 @@ import {
 // Facade re-exports: the public serving API moved to ./serving/hydration-lane
 // (Phase 1 stage 1a); instruments and tests import it from this module's path.
 export {
-    hydrateAndSelectServing, findOwnFdcVolumeServing, candidateHasVolumeServing,
-    isTightNameGroup, buildOffResult,
+    hydrateAndSelectServing, findOwnFdcVolumeServing, findOwnFdcSizeServing,
+    candidateHasVolumeServing, isTightNameGroup, buildOffResult,
 } from './serving/hydration-lane';
 
 /**
