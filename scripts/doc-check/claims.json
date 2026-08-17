@@ -982,7 +982,7 @@
     },
     {
       "id": "box-rules-file-has-no-sodium-prep-phrases",
-      "claim": "THE DELIVERED HALF of the sodium-modifier fix, and the only check that can see it — the exact shape of box-rules-file-has-no-cooking-verbs, which is the precedent for why this claim has to exist separately. data/ is in the box's .stignore, so Syncthing NEVER carries data/fatsecret/normalization-rules.json to /home/owner/Recipe-App, and readRulesFile() prefers that on-disk JSON over DEFAULT_RULES — so the TS edit alone is INERT on the live service and the backend-context twin sodium-modifiers-out-of-prep-phrases-and-cache-bumped reads the Mac's file and stays green regardless. This claim is EXPECTED RED from merge until the file is scp'd to the box; it is the delivery receipt, and going green IS the confirmation the deploy carried the half Syncthing cannot. Output is sodiumPhraseCount@prepPhraseCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
+      "claim": "THE DELIVERED HALF of the sodium-modifier fix, and the only check that can see it \u2014 the exact shape of box-rules-file-has-no-cooking-verbs, which is the precedent for why this claim has to exist separately. data/ is in the box's .stignore, so Syncthing NEVER carries data/fatsecret/normalization-rules.json to /home/owner/Recipe-App, and readRulesFile() prefers that on-disk JSON over DEFAULT_RULES \u2014 so the TS edit alone is INERT on the live service and the backend-context twin sodium-modifiers-out-of-prep-phrases-and-cache-bumped reads the Mac's file and stays green regardless. This claim is EXPECTED RED from merge until the file is scp'd to the box; it is the delivery receipt, and going green IS the confirmation the deploy carried the half Syncthing cannot. Output is sodiumPhraseCount@prepPhraseCount: a missing, unreadable or unparseable file emits nothing and FAILS, never passes.",
       "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
       "where": "box",
       "command": "node -e \"const p='/home/owner/Recipe-App/data/fatsecret/normalization-rules.json';const r=JSON.parse(require('fs').readFileSync(p,'utf8'));const P=['low sodium','less sodium'];const h=r.prep_phrases.filter(x=>P.includes(String(x).trim().toLowerCase())).length;process.stdout.write(h+'@'+r.prep_phrases.length)\"",
@@ -1465,7 +1465,7 @@
     },
     {
       "id": "dev-api-key-fallback-sites-seven",
-      "claim": "Seven production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`, so an UNSET DEV_API_KEY fails OPEN onto a committed literal rather than refusing the request. This is the ROTATION surface for item #23 and it is deliberately a DIFFERENT count from the 5 that CLAUDE.md also carries: that 5 is 'key-only routes with zero bearer references' and is still correct. The extra two here are nlp/parse (which does have a bearer path) and ok. Two distinct literals are in play — dev-key-123 on admin/food-stats and ok, adminAPI_dev_key_bypass on the other five — so a rotation that assumes one literal or five sites leaves a committed key live. If this claim FAILS the surface moved and #23 must be re-sized before anything is rotated.",
+      "claim": "Seven production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`, so an UNSET DEV_API_KEY fails OPEN onto a committed literal rather than refusing the request. This is the ROTATION surface for item #23 and it is deliberately a DIFFERENT count from the 5 that CLAUDE.md also carries: that 5 is 'key-only routes with zero bearer references' and is still correct. The extra two here are nlp/parse (which does have a bearer path) and ok. Two distinct literals are in play \u2014 dev-key-123 on admin/food-stats and ok, adminAPI_dev_key_bypass on the other five \u2014 so a rotation that assumes one literal or five sites leaves a committed key live. If this claim FAILS the surface moved and #23 must be re-sized before anything is rotated.",
       "ownerDoc": "mobile:CLAUDE.md#state-digest",
       "where": "backend",
       "command": "grep -rl 'process.env.DEV_API_KEY ||' src/app/api --include=route.ts | wc -l",
@@ -1512,6 +1512,18 @@
       },
       "verified": "2026-08-15",
       "timeoutMs": 60000
+    },
+    {
+      "id": "off-food-rows-all-carry-a-panel",
+      "claim": "Every OffFood row carries a usable per-100g panel, which is what makes buildOffResult()'s AI-nutrition backfill branch UNREACHABLE in production. That branch returns an off_ foodId with every macro from the model, and the parse route derives provenance from the prefix \u2014 so if it ever fires, the client renders the ODbL credit over numbers Open Food Facts did not supply. Measured 2026-08-17: 0 of 1,085,526 rows are null, {}, missing calories, or zero-kcal, and the branch requires hydrated.nutrientsPer100g.calories == null. Two other legs hold it shut \u2014 hydrateOffCandidate() is cache-first, and gathering never calls the live OFF API (searchOffSimple() reads Typesense with a prisma.offFood.findMany fallback, both built from OffFood) \u2014 but this is the leg a command can watch. THIS CLAIM IS A TRIPWIRE, NOT A DESCRIPTION: the mapper is already guarded (mapped.panelFromAi floors standardSource to ai_estimated), so a RED here does not mean an attribution defect shipped. It means the reachability assumption that made the branch latent has stopped holding, that the guard is now load-bearing rather than dormant, and that the two unwatched legs above need re-checking. AI_NUTRITION_BACKFILL_ENABLED defaults true, so nothing else announces the change.",
+      "ownerDoc": "mobile:CLAUDE.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT count(*) FROM \\\"OffFood\\\" WHERE \\\"nutrientsPer100g\\\" IS NULL OR \\\"nutrientsPer100g\\\"::text = '{}' OR \\\"nutrientsPer100g\\\"->>'calories' IS NULL OR (\\\"nutrientsPer100g\\\"->>'calories')::numeric = 0;\"",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "verified": "2026-08-17"
     }
   ]
 }

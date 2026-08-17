@@ -3071,6 +3071,12 @@ export async function buildOffResult(
     }
 
     return {
+        // `source` here is the PIPELINE STAGE, not a provider claim — the parse
+        // route derives provenance from the foodId prefix instead, which for an
+        // `off_` id means Open Food Facts. Every macro below came from the model,
+        // so `panelFromAi` is what stops that prefix from rendering an ODbL credit
+        // over numbers OFF did not supply. Do not "fix" this by changing `source`:
+        // resolveFoodDetails() never reads it.
         source: 'openfoodfacts',
         foodId: candidate.id,
         foodName: hydrated.foodName,
@@ -3086,6 +3092,7 @@ export async function buildOffResult(
         quality: 'low',
         rawLine,
         servingTier,
+        panelFromAi: true,
     };
 }
 
