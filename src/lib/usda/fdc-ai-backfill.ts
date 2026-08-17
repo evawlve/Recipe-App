@@ -44,14 +44,40 @@ const COUNT_UNITS = new Set([
     'small', 'medium', 'large', 'whole',
 ]);
 
-// Size qualifiers for produce (small, medium, large, etc.)
-const SIZE_QUALIFIERS = new Set([
-    'mini',
-    'small', 'sm',
-    'medium', 'med',
-    'large', 'lg',
-    'extra-large', 'xl', 'extralarge',
-]);
+/**
+ * Size qualifiers for produce, each with the ratio it scales `medium` by.
+ *
+ * ONE DECLARATION ON PURPOSE (2026-08-17). This used to be two: a `SIZE_QUALIFIERS`
+ * Set that `isSizeQualifier()` gates on, and a separate hand-written object literal
+ * inside `getOrCreateFdcSizeServings()` that the caller then indexes. The Set held
+ * TEN spellings and the literal NINE — `extralarge` was accepted and never answered,
+ * so `buildFdcResult()` branch 3 (serving/hydration-lane.ts) entered the size arm on
+ * a successful estimate, read `undefined`, and billed a flat 100 g.
+ *
+ * Two lists whose only relationship is that a human keeps them equal is the drift
+ * this repo has paid for repeatedly (the retired winner-diff/correctness-screen tier
+ * regexes, both missing `discrete_unit_backfill`). Deriving the acceptance set FROM
+ * the answer table makes the two incapable of disagreeing: a spelling that cannot be
+ * answered can no longer be accepted.
+ *
+ * The nine pre-existing ratios are unchanged and `extralarge` takes 1.60, the value
+ * its two synonyms `extra-large` and `xl` already carry.
+ */
+const SIZE_RATIOS: Readonly<Record<string, number>> = Object.freeze({
+    'mini': 0.55,
+    'small': 0.70, 'sm': 0.70,
+    'medium': 1, 'med': 1,
+    'large': 1.40, 'lg': 1.40,
+    'extra-large': 1.60, 'xl': 1.60, 'extralarge': 1.60,
+});
+
+/**
+ * The spellings `isSizeQualifier()` accepts. Exported so the invariant
+ * "everything accepted is answerable" can be asserted against the map
+ * `getOrCreateFdcSizeServings()` returns, rather than restated in a test —
+ * a restated copy is free to drift, which is the defect above.
+ */
+export const SIZE_QUALIFIERS: ReadonlySet<string> = new Set(Object.keys(SIZE_RATIOS));
 
 /**
  * Check if a unit is a size qualifier (small, medium, large, etc.)
@@ -93,21 +119,19 @@ export async function getOrCreateFdcSizeServings(
                 reasoning: result.reasoning,
             });
 
-            // Return estimated weights for all sizes based on medium
-            // Standard ratios: small ≈ 70% of medium, large ≈ 140% of medium
+            // Return estimated weights for EVERY spelling isSizeQualifier() accepts,
+            // built from SIZE_RATIOS so the two can never disagree again.
+            // Standard ratios: small ≈ 70% of medium, large ≈ 140% of medium.
             const mediumGrams = result.estimatedGrams;
-            return {
-                'mini': Math.round(mediumGrams * 0.55),
-                'small': Math.round(mediumGrams * 0.70),
-                'sm': Math.round(mediumGrams * 0.70),
-                'medium': Math.round(mediumGrams),
-                'med': Math.round(mediumGrams),
-                'large': Math.round(mediumGrams * 1.40),
-                'lg': Math.round(mediumGrams * 1.40),
-                'extra-large': Math.round(mediumGrams * 1.60),
-                'xl': Math.round(mediumGrams * 1.60),
-                'whole': Math.round(mediumGrams),  // "whole" = "medium" by default
-            };
+            const sizes: Record<string, number> = {};
+            for (const [size, ratio] of Object.entries(SIZE_RATIOS)) {
+                sizes[size] = Math.round(mediumGrams * ratio);
+            }
+            // `whole` is deliberately NOT a SIZE_QUALIFIERS member — it is a COUNT_UNITS
+            // spelling that branch 3 never asks for — but callers indexing this map by a
+            // parsed unit can, so it is answered here as it always has been.
+            sizes['whole'] = Math.round(mediumGrams);  // "whole" = "medium" by default
+            return sizes;
         }
 
         logger.warn('fdc.size_servings_ai_failed', {

@@ -1425,20 +1425,29 @@ async function buildFdcResult(
                     totalGrams: grams,
                 });
             } else if (sizes) {
-                // THE ESTIMATOR ANSWERED, BUT NOT FOR THIS SIZE. Split out 2026-08-17:
-                // `isSizeQualifier()` accepts ten spellings and
-                // `getOrCreateFdcSizeServings()` returns a map keyed by nine of them —
-                // `extralarge` is in the qualifier set and absent from the map — so this
-                // arm billed `qty * (undefined ?? 100)` while stamping the SAME
-                // `fdc_size_qualifier` as a genuine resolution, and additionally rendered
-                // the literal string "undefinedg each" to the user. A vocabulary gap and
-                // a working estimate are different events; they now have different names.
+                // THE ESTIMATOR ANSWERED, BUT NOT FOR THIS SIZE. Split out 2026-08-17
+                // because `isSizeQualifier()` accepted ten spellings while
+                // `getOrCreateFdcSizeServings()` returned a map keyed by nine: an
+                // `extralarge` request was accepted and never answered, so this arm
+                // billed `qty * (undefined ?? 100)` while stamping the SAME
+                // `fdc_size_qualifier` as a genuine resolution, and additionally
+                // rendered the literal string "undefinedg each" to the user.
                 //
-                // The "undefinedg each" string is DELIBERATELY PRESERVED here. The tier
-                // PR claims zero wire change and `servingDescription` is on the wire
+                // THAT POPULATION IS GONE (2026-08-17, same day): the producer now
+                // derives its acceptance set from its answer table, so no spelling
+                // `isSizeQualifier()` admits can be missing from the map. This arm is
+                // kept as the DEFENSIVE one — the map is a `Record<string, number>`
+                // and this branch indexes it with a caller-supplied unit, so "answered,
+                // but not for this key" stays structurally reachable and is worth a
+                // name distinct from "the estimator failed". A vocabulary gap and a
+                // working estimate are different events.
+                //
+                // The "undefinedg each" string is DELIBERATELY PRESERVED here, and the
+                // extralarge fix did NOT touch it: `servingDescription` is on the wire
                 // (`/api/nlp/parse` passes it to `resolveFoodDetails()` as
-                // `matchedServingDescription`). Repairing the label is a separate,
-                // measurable change; making it here would make that claim false.
+                // `matchedServingDescription`), so repairing the label is a separate,
+                // measurable change with its own gate. What the fix changed is that
+                // real traffic no longer REACHES this arm, not what it renders.
                 grams = 100 * qty;
                 servingDescription = `${qty} ${unit} (${gramsPerUnit}g each)`;
                 servingTier = 'fdc_size_key_missing';
