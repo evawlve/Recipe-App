@@ -2,6 +2,7 @@ import { prisma } from '../db';
 import { deriveServingOptions } from '../units/servings';
 import { extractCacheNutrients, buildServingOptionsForCacheFood } from '../mapping/cache-search';
 import { recoverMacroOnlyServing, flattenPersistedServings } from '../mapping/fs-serving-macros';
+import { portionProvenanceForTier, type PortionProvenance } from '../mapping/serving-ai-tiers';
 
 export function getServingType(label: string): 'weight' | 'volume' | 'count' {
   const normalized = label.toLowerCase().trim();
@@ -169,6 +170,15 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
   // predicate and also covers records this function never sees. This field is
   // for the callers that have no mapper result to ask, i.e. /api/foods/barcode.
   let portionEstimated = false;
+  // The badge's field, and the SAME limit as the flag above: this resolver has no
+  // mapper result and so no `servingTier` — the only tier it can know is the one
+  // the macro-only recovery returns (`recovered.tier`, a BORROWED_OR_DEFAULTED
+  // member), so `'borrowed'` on that branch is the whole of what it can say.
+  // Every other record resolves with NO field, which means "no provenance claim
+  // from this resolver", NOT "own weight" — a caller that has a mapper result
+  // (/api/nlp/parse) derives the field from `mapped.servingTier` and does not
+  // read this. For the callers that do not (/api/foods/barcode) this is it.
+  let portionProvenance: PortionProvenance | undefined;
 
   if (foodId.startsWith('fdc_')) {
     const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
@@ -326,6 +336,7 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
             sodium100: recovered.per100.sodium ?? 0,
           };
           portionEstimated = true;
+          portionProvenance = portionProvenanceForTier(recovered.tier);
         }
       }
 
@@ -405,5 +416,7 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
     // the #314 convention, so every response an existing caller already gets
     // stays byte-identical and no client can read a new key as a claim.
     ...(portionEstimated ? { portionEstimated: true as const } : {}),
+    // Same convention: omitted, never null, when the resolver has no tier to read.
+    ...(portionProvenance ? { portionProvenance } : {}),
   };
 }

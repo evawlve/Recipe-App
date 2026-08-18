@@ -386,7 +386,7 @@ export async function GET(req: NextRequest) {
       // so generic queries like "grapes" return one representative per food
       // instead of 15+ near-identical OFF rows.
       const { recoverMacroOnlyServing } = await import('@/lib/mapping/fs-serving-macros');
-      const { isSyntheticGramsTier } = await import('@/lib/mapping/serving-ai-tiers');
+      const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
 
       const { dedupeCandidates } = await import('@/lib/search/dedupe-candidates');
       const beforeDedupe = sortedCandidates.length;
@@ -456,6 +456,8 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        const portionProvenance = recovered ? portionProvenanceForTier(recovered.tier) : undefined;
+
         const item: any = {
           id: c.id,
           name: c.name,
@@ -482,6 +484,15 @@ export async function GET(req: NextRequest) {
           ...(recovered && isSyntheticGramsTier(recovered.tier)
             ? { portionEstimated: true as const }
             : {}),
+          // The badge's field, mirrored from /api/nlp/parse for the ONE tier this
+          // lane can know. The browse list runs no gram cascade, so `recovered.tier`
+          // (always `fs_serving_macros_only_est`, a BORROWED_OR_DEFAULTED member) is
+          // the only `servingTier` in scope here; every other row has no tier and
+          // therefore no field — which is correct, not a gap: absent means "this
+          // lane makes no provenance claim", and the record's own servings are what
+          // it lists. Same omit-when-absent rule and the same shared derivation as
+          // the parse route, so the two lanes cannot disagree on the same record.
+          ...(portionProvenance ? { portionProvenance } : {}),
         };
 
         const impactPayload = buildImpact(
