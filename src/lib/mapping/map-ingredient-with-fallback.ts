@@ -392,12 +392,26 @@ export interface MapIngredientOptions {
      * changed 20 rows and added 3 in a cache that had just been agent-screened,
      * replacing screened rows with unscreened ones.
      *
-     * Scope, precisely: this gates the FoodMapping write — the curated identity
-     * map. It does NOT make the request read-only. Hydration still persists
-     * upstream records (FatSecretFood, OffFood, AiGenerated*, FdcServing,
-     * OffServing) and telemetry still writes MappingEventLog. Those are caches
-     * of other people's data, not curated rows; the identity map is the asset a
-     * measurement must not disturb.
+     * SCOPE, PRECISELY: this option gates ONE write — FoodMapping, the curated
+     * identity map. It is not the whole of what `nosave=1` means, and it never
+     * was: passing it does not by itself make a request read-only.
+     *
+     * WHAT DOES THE REST (2026-08-18, P6). `/api/nlp/parse?nosave=1` now also
+     * opens a request-scoped write policy (`src/lib/write-policy.ts`) that
+     * refuses the AI-serving writes and the segmentation-cache write at their
+     * writers: `insertFdcAiServing()`, `insertAiServing()`,
+     * `backfillWeightServing()`, the ambiguous-unit `upsertServing()` and
+     * `writeSegmentationCache()`. That policy travels through
+     * AsyncLocalStorage, NOT through this options object, which is why this
+     * docstring and that mechanism have to be read together — a caller that
+     * sets `skipSave` WITHOUT opening a policy (every script, every other
+     * route) still gets the narrow meaning described above and still persists
+     * FdcServing/OffServing/AiGenerated* rows.
+     *
+     * Still unsuppressed under either: MappingEventLog (the measurement
+     * itself), the FoodMapping usedCount/lastUsedAt bumps on a warm READ, and
+     * the upstream mirrors FatSecretFood/OffFood/AiGeneratedFood/LearnedSynonym.
+     * Owner: mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md
      */
     skipSave?: boolean;
     skipFdc?: boolean;

@@ -30,6 +30,7 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { isWriteSuppressed, noteRefusedWrite } from '@/lib/write-policy';
 import { SEG_PARSER_VERSION, SegmentedItem, isSegmentedItemArray } from './ai-segmenter';
 
 export const SEG_CACHE_TTL_DAYS = 30;
@@ -77,6 +78,19 @@ export async function lookupSegmentationCache(lineKey: string): Promise<Segmente
  * rather than conflicts. Fail-open: errors are logged and swallowed.
  */
 export async function writeSegmentationCache(lineKey: string, segments: SegmentedItem[]): Promise<void> {
+  // REQUEST-SCOPED WRITE SUPPRESSION (nosave=1). Returns void, so there is nothing to
+  // degrade: the caller's split is already in hand and is used exactly as it would be on
+  // a cache-write failure, which this function has always swallowed anyway.
+  //
+  // This also skips maybeSweepExpired(), and that is CORRECT rather than incidental: the
+  // sweep is a `deleteMany`, so a measurement run that "wrote nothing" would otherwise
+  // still be able to delete rows. A run that persists nothing it computed must not be
+  // able to remove what someone else computed either.
+  if (isWriteSuppressed('segmentationCache')) {
+    noteRefusedWrite('segmentationCache', 'SegmentationCache', lineKey);
+    return;
+  }
+
   try {
     const segmentsJson = segments as unknown as Prisma.InputJsonValue;
     await prisma.segmentationCache.upsert({

@@ -14,9 +14,10 @@
  * Nothing here can reach a model or a database.
  */
 
-import { insertAiServing } from '../ai-backfill';
+import { insertAiServing, backfillWeightServing } from '../ai-backfill';
 import { requestAiServing } from '../../ai/serving-estimator';
 import { prisma } from '../../db';
+import { runWithWritePolicy, currentWriteReceipt } from '../../write-policy';
 
 jest.mock('../../ai/serving-estimator', () => {
     const actual = jest.requireActual('../../ai/serving-estimator');
@@ -187,5 +188,83 @@ describe('insertAiServing — the load-bearing count paths are untouched (both t
 
         expect(r).toEqual({ success: false, reason: 'missing_volume_unit' });
         expect(transaction).not.toHaveBeenCalled();
+    });
+});
+
+// ============================================================================
+// Request-scoped write suppression (nosave=1)
+//
+// This writer refuses BEFORE the model call, which is the opposite of
+// insertFdcAiServing()'s placement, and the asymmetry is deliberate: this
+// function's return carries NO grams, so every request-path caller re-reads the
+// row from the DB. A suppressed upsert reported as `success: true` would send
+// the caller back for a row that is not there and have it log
+// `volume_backfill_success` over unchanged grams. `success: false` is the shape
+// all five request-path callers already treat as "warn and fall through".
+// ============================================================================
+
+describe('insertAiServing / backfillWeightServing under a suppressed write policy', () => {
+    it('insertAiServing refuses with a grep-able reason and opens no transaction', async () => {
+        answer({ servingLabel: '1 cup', grams: 240, volumeUnit: 'cup', volumeAmount: 1 });
+
+        const r = await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            insertAiServing('fdc_747997', 'volume', {
+                targetServingUnit: 'cup',
+                candidateData: FDC_EGG_WHITE,
+            }),
+        );
+
+        expect(r).toEqual({ success: false, reason: 'write_suppressed' });
+        expect(transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses BEFORE the estimator — no model call is spent on a value nothing can consume', async () => {
+        answer({ servingLabel: '1 cup', grams: 240, volumeUnit: 'cup', volumeAmount: 1 });
+
+        await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            insertAiServing('fdc_747997', 'volume', {
+                targetServingUnit: 'cup',
+                candidateData: FDC_EGG_WHITE,
+            }),
+        );
+
+        expect(mockedRequest).not.toHaveBeenCalled();
+    });
+
+    it('backfillWeightServing refuses the same way, before it reads the food', async () => {
+        const r = await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            backfillWeightServing('ai_egg_white'),
+        );
+
+        expect(r).toEqual({ success: false, reason: 'write_suppressed' });
+        expect(prisma.aiGeneratedFood.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('the receipt names the table each refusal would have written', async () => {
+        const receipt = await runWithWritePolicy({ suppress: ['aiServing'], line: '1 cup egg whites' }, async () => {
+            await insertAiServing('fdc_747997', 'volume', { candidateData: FDC_EGG_WHITE });
+            await insertAiServing('off_0042400265177', 'volume', {});
+            await insertAiServing('ai_egg_white', 'weight', { candidateData: AI_EGG_WHITE });
+            await backfillWeightServing('ai_egg_white');
+            return currentWriteReceipt();
+        });
+
+        expect(receipt!.refusedTotal).toBe(4);
+        expect(receipt!.refused.map((r) => r.table)).toEqual([
+            'FdcServing', 'OffServing', 'AiGeneratedServing', 'AiGeneratedServing',
+        ]);
+        expect(receipt!.refused.every((r) => r.line === '1 cup egg whites')).toBe(true);
+    });
+
+    it('outside any policy both writers behave exactly as before', async () => {
+        answer({ servingLabel: '1 cup', grams: 240, volumeUnit: 'cup', volumeAmount: 1 });
+
+        const r = await insertAiServing('fdc_747997', 'volume', {
+            targetServingUnit: 'cup',
+            candidateData: FDC_EGG_WHITE,
+        });
+
+        expect(r).toEqual({ success: true });
+        expect(transaction).toHaveBeenCalledTimes(1);
     });
 });

@@ -1597,6 +1597,42 @@
       },
       "verified": "2026-08-17",
       "timeoutMs": 180000
+    },
+    {
+      "id": "nosave-refuses-ai-serving-writes",
+      "claim": "All four AI-serving writers refuse BEFORE they write when a request suppresses 'aiServing' (/api/nlp/parse?nosave=1): insertFdcAiServing(), the private upsertServing() in ambiguous-unit-backfill.ts, insertAiServing() and backfillWeightServing() each carry an isWriteSuppressed('aiServing') guard, and in each one the guard line precedes that function's own write call. Output is guarded@ordered over the four. THE PLACEMENT IS THE CLAIM: a bare grep -c passes just as happily with a guard sitting AFTER the upsert it is supposed to prevent, which is the one arrangement that reads as protection and is not. 0@0 is the pre-P6 tree; 4@1..4@3 means a guard moved below its write.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const t=[['src/lib/usda/fdc-ai-backfill.ts','insertFdcAiServing','prisma.fdcServing.upsert('],['src/lib/mapping/ambiguous-unit-backfill.ts','upsertServing','prisma.fdcServing.upsert('],['src/lib/mapping/ai-backfill.ts','insertAiServing','prisma.\\$transaction('],['src/lib/mapping/ai-backfill.ts','backfillWeightServing','prisma.aiGeneratedServing.upsert(']];let g=0,o=0;for(const x of t){const L=fs.readFileSync(x[0],'utf8').split(/\\r?\\n/);const s=L.findIndex(l=>l.includes('function '+x[1]+'('));if(s<0)continue;let e=L.length;for(let i=s+1;i<L.length;i++){if(/^\\}/.test(L[i])){e=i;break;}}const b=L.slice(s,e);const gi=b.findIndex(l=>/isWriteSuppressed\\(.aiServing.\\)/.test(l));const wi=b.findIndex(l=>l.includes(x[2]));if(gi>=0)g++;if(gi>=0&&wi>=0&&gi<wi)o++;}process.stdout.write(g+'@'+o)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "4@4"
+      },
+      "verified": "2026-08-18"
+    },
+    {
+      "id": "write-policy-store-is-on-globalthis",
+      "claim": "src/lib/write-policy.ts holds its AsyncLocalStorage on globalThis and constructs exactly ONE of them. Output is globalThis-occurrences@constructor-count. Zero globalThis mentions, or a second constructor, is the fail-open the deployed build makes possible: Next demonstrably emits src/lib/** into more than one server chunk (2026-08-17, logicalSuccesses in both chunks/2130.js and app/api/ok/route.js), so a module-local instance would give the route and the writers different stores — every writer would read no store and WRITE, invisibly to jest.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const s=fs.readFileSync('src/lib/write-policy.ts','utf8');process.stdout.write((s.match(/globalThis/g)||[]).length+'@'+(s.match(/new AsyncLocalStorage/g)||[]).length)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^[1-9][0-9]*@1$"
+      },
+      "verified": "2026-08-18"
+    },
+    {
+      "id": "nosave-refuses-segmentation-cache-writes",
+      "claim": "writeSegmentationCache() carries exactly one isWriteSuppressed('segmentationCache') guard, so nosave=1 refuses the SegmentationCache upsert — and with it the opportunistic TTL deleteMany sweep — at the WRITER, not at the single call site in the route. Before 2026-08-18 only nocache=1 gated this table, and only at the route.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md",
+      "where": "backend",
+      "command": "grep -c \"isWriteSuppressed('segmentationCache')\" src/lib/nlp/segmentation-cache.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-18"
     }
   ]
 }

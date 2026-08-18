@@ -10,6 +10,7 @@
 
 import { prisma } from '../db';
 import { logger } from '../logger';
+import { isWriteSuppressed, noteRefusedWrite } from '../write-policy';
 import {
     isAmbiguousUnit,
     isEstimableUnknownUnit,
@@ -73,6 +74,18 @@ export interface AmbiguousBackfillResult {
  */
 function hasServingWriteTarget(foodId: string): boolean {
     return !foodId.startsWith('fs_');
+}
+
+/**
+ * Which table `upsertServing()` would route this id to. Reporting only — it names the
+ * table on a write-suppression receipt so "no row landed" says WHERE no row landed.
+ * Mirrors the branch order in `upsertServing()` below; if that order ever changes, this
+ * goes with it.
+ */
+function servingTableFor(foodId: string): string {
+    if (foodId.startsWith('fdc_') || foodId.startsWith('fdc:')) return 'FdcServing';
+    if (foodId.startsWith('off_')) return 'OffServing';
+    return 'AiGeneratedServing';
 }
 
 async function findExistingServing(foodId: string, normalizedUnit: string) {
@@ -171,6 +184,17 @@ async function upsertServing(
             unit: normalizedUnit,
             grams,
         });
+        return false;
+    }
+
+    // REQUEST-SCOPED WRITE SUPPRESSION (nosave=1). `false` here means what it has always
+    // meant on this function — "not persisted", NOT "failed" — so every caller is
+    // unchanged: `getOrCreateAmbiguousServing()` returns the computed grams either way
+    // and `ambiguous_backfill.saved` is already conditional on `persisted`. Zero caller
+    // edits across the seven call sites. Placed after the write-target guard so the two
+    // reasons a row does not land stay distinguishable in the logs and on the receipt.
+    if (isWriteSuppressed('aiServing')) {
+        noteRefusedWrite('aiServing', servingTableFor(foodId), `${foodId}:${normalizedUnit}`);
         return false;
     }
 

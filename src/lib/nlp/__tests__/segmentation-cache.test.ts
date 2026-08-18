@@ -178,4 +178,96 @@ describe('segmentation-cache', () => {
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('TTL sweep failed'), expect.any(Error));
     });
   });
+
+  // ------------------------------------------------------------------
+  // Request-scoped write suppression (nosave=1).
+  //
+  // `nocache=1` already bypassed this cache in both directions at the ROUTE.
+  // This is the other half: `nosave=1` (which does NOT imply nocache — a cold
+  // run reads nothing but a nosave run may still want the read) now refuses the
+  // write at the writer, where no caller can forget it.
+  //
+  // NOTE the write-policy module is required fresh here, AFTER the
+  // jest.resetModules() in beforeEach, while segmentation-cache captured its own
+  // copy — they agree only because the AsyncLocalStorage lives on globalThis.
+  // ------------------------------------------------------------------
+  describe('write suppression', () => {
+    /* eslint-disable @typescript-eslint/no-var-requires */
+    const policy = () => require('@/lib/write-policy');
+    /* eslint-enable @typescript-eslint/no-var-requires */
+
+    test('a suppressed request writes no row', async () => {
+      const { runWithWritePolicy } = policy();
+
+      await runWithWritePolicy({ suppress: ['segmentationCache'] }, () =>
+        segCache.writeSegmentationCache('2 eggs and toast', validItems as never),
+      );
+
+      expect(prisma.segmentationCache.upsert).not.toHaveBeenCalled();
+    });
+
+    test('the TTL sweep — a deleteMany — is skipped too', async () => {
+      // A run that persists nothing it computed must not be able to DELETE what
+      // someone else computed. The sweep is throttled to one per N writes, so
+      // drive well past the throttle and prove neither side fires.
+      const { runWithWritePolicy } = policy();
+
+      await runWithWritePolicy({ suppress: ['segmentationCache'] }, async () => {
+        for (let i = 0; i < segCache.TTL_SWEEP_EVERY_N_WRITES * 2; i++) {
+          await segCache.writeSegmentationCache(`line ${i}`, validItems as never);
+        }
+      });
+      await flush();
+
+      expect(prisma.segmentationCache.upsert).not.toHaveBeenCalled();
+      expect(prisma.segmentationCache.deleteMany).not.toHaveBeenCalled();
+    });
+
+    test('the refusal is on the receipt, keyed by the line key', async () => {
+      const { runWithWritePolicy, currentWriteReceipt } = policy();
+
+      const receipt = await runWithWritePolicy({ suppress: ['segmentationCache'] }, async () => {
+        await segCache.writeSegmentationCache('2 eggs and toast', validItems as never);
+        return currentWriteReceipt();
+      });
+
+      expect(receipt.refusedTotal).toBe(1);
+      expect(receipt.refused[0]).toMatchObject({
+        kind: 'segmentationCache',
+        table: 'SegmentationCache',
+        key: '2 eggs and toast',
+      });
+    });
+
+    test('the READ side is untouched — suppression is on writes only', async () => {
+      const { runWithWritePolicy } = policy();
+      prisma.segmentationCache.findUnique.mockResolvedValue({
+        segmentsJson: validItems,
+        parserVersion: SEG_PARSER_VERSION,
+      });
+
+      const hit = await runWithWritePolicy({ suppress: ['segmentationCache'] }, () =>
+        segCache.lookupSegmentationCache('2 eggs and toast'),
+      );
+
+      expect(hit).toEqual(validItems);
+      expect(prisma.segmentationCache.findUnique).toHaveBeenCalledTimes(1);
+    });
+
+    test('suppressing the OTHER kind leaves this writer alone', async () => {
+      const { runWithWritePolicy } = policy();
+
+      await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+        segCache.writeSegmentationCache('2 eggs and toast', validItems as never),
+      );
+
+      expect(prisma.segmentationCache.upsert).toHaveBeenCalledTimes(1);
+    });
+
+    test('outside any policy the write-through happens exactly as before', async () => {
+      await segCache.writeSegmentationCache('2 eggs and toast', validItems as never);
+
+      expect(prisma.segmentationCache.upsert).toHaveBeenCalledTimes(1);
+    });
+  });
 });
