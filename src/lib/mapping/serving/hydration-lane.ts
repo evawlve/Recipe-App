@@ -1351,11 +1351,25 @@ async function buildFdcResult(
     // paths.
     //
     // The convergence closes THREE differences, not one, and all three are
-    // confined to the `volume_unit` fallback at the bottom of this branch —
-    // which has never billed a live query (all 8,200 `volume_unit` events have
-    // an `openfoodfacts` winner, 0 an FDC one; measured 2026-08-17, re-derive:
+    // confined to the `volume_unit` fallback at the bottom of this branch,
+    // which no user query has ever billed. That tier is `openfoodfacts` traffic
+    // in all but a rounding error — 8,601 events with an `openfoodfacts` winner
+    // against 5 with an `fdc` one, all-time (the query carries no date
+    // predicate), measured 2026-08-18. Re-derive:
     // `SELECT "source", count(*) FROM "MappingEventLog"
-    //    WHERE "servingTier"='volume_unit' GROUP BY 1;`):
+    //    WHERE "servingTier"='volume_unit' GROUP BY 1;`
+    //
+    // The 5 are worth naming rather than rounding away. All 5 are warm
+    // (`noCache = false`) and all 5 carry
+    // `rawLine = 'about 1 cup of egg whites'` — the golden case `n-prose-01`,
+    // which is our own eval traffic and not a user. Re-derive:
+    // `SELECT "noCache", "rawLine", count(*) FROM "MappingEventLog"
+    //    WHERE "servingTier"='volume_unit' AND "source"='fdc' GROUP BY 1,2;`
+    //
+    // The same first query read 8,200 / 0 on 2026-08-17, and this comment
+    // stated that as "has never billed a live query" — an absolute with no date
+    // on it, which stopped being true without anything going red. The figure
+    // carries its measurement date now for that reason:
     //   (1) the paste tier now applies here too;
     //   (2) the dry-granule category override no longer stomps the LIQUID
     //       default. This copy applied it unconditionally, so a food that is
@@ -2582,8 +2596,10 @@ export async function buildOffResult(
     // copy that had the paste tier, which is why the owner's cup/tbsp/tsp
     // constants came from here; measured cell-for-cell over 12 foods x 23 unit
     // keys, every cup/tbsp/tsp/dash/pinch value is identical to the copy it
-    // replaces for every volume class, so this lane's 8,200 live `volume_unit`
-    // events do not move.
+    // replaces for every volume class, so this lane's live `volume_unit` events
+    // do not move — 8,601 of them all-time, measured 2026-08-18. (The same
+    // count read 8,200 when this line was first written on 2026-08-17, with no
+    // date attached to say so.)
     const volumeDensity = resolveVolumeGrams(candidate.name);
     const volumeToGrams: Record<string, number> = {
         ...pickVolumeUnits(volumeDensity.perUnit, OFF_VOLUME_UNIT_SPELLINGS),
