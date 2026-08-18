@@ -44,7 +44,7 @@ import {
     BARE_MIN_PIECE_SERVING_GRAMS,
 } from '../../servings/bare-query-guard';
 import { buildFatSecretResult } from '../build-fatsecret-result';
-import { resolveVolumeGrams, pickVolumeUnits } from '../../units/volume-density';
+import { resolveVolumeGrams, pickVolumeUnits, LARGE_VOLUME_UNIT_SPELLINGS } from '../../units/volume-density';
 import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback';
 
 /**
@@ -52,8 +52,8 @@ import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback'
  * convergence, and that is the point: this set is the gate on the whole volume
  * branch (`unit && volumeToGrams[unit]`), so adding a spelling routes a line
  * that reaches some other branch today. The owner also carries `milliliter` /
- * `milliliters`, which this lane has never accepted; whether to admit them is
- * lane B1b, not this change.
+ * `milliliters`, which this lane has never accepted; admitting them is still
+ * an open decision (B1b admitted only the large units — see below).
  *
  * `ml` / `floz` / `fl oz` are absent here on purpose — `buildOffResult()` pins
  * its own flat values for those three (see the comment at the call site).
@@ -64,12 +64,25 @@ import type { FatsecretMappedIngredient } from '../map-ingredient-with-fallback'
  * `tbsp`, `teaspoons`→`tsp`, so the long spellings are unreachable on that
  * path — but `mapIngredientWithFallback()`'s `aiParseIngredient()` fallback
  * assigns the model's RAW string, so they are reachable and must stay.
+ *
+ * Lane B1b (2026-08-17) added `LARGE_VOLUME_UNIT_SPELLINGS` — `l`/`liter(s)`/
+ * `litre(s)`, `pint(s)`, `quart(s)`, `gallon(s)`. Before that every one of them
+ * fell past this branch (and every branch below it) to `flat_100g_default`:
+ * `1 gallon of milk` billed 100 g live, 38x under. They now bill the owner's
+ * density-scaled cell (`1 l` = 1000 x the ml cell), which for a LIQUID is
+ * 1000 g — note this is the OWNER's ml scaling, not the flat `ml: 1` pin
+ * below, so a SOLID-classed food bills `1000 x solidDensity` for a litre while
+ * `1000 ml` of the same food bills 1000 g. That asymmetry is the ml/floz
+ * disagreement documented at the call site and is not widened here: the live
+ * lines are milk (LIQUID), and the beverage classifier (#340, `BEVERAGE_RE`
+ * in the owner) moves named drinks to the pourable class.
  */
 export const OFF_VOLUME_UNIT_SPELLINGS: readonly string[] = [
     'cup', 'cups',
     'tbsp', 'tablespoon', 'tablespoons',
     'tsp', 'teaspoon', 'teaspoons',
     'dash', 'dashes', 'pinch', 'pinches',
+    ...LARGE_VOLUME_UNIT_SPELLINGS,
 ];
 
 /**
@@ -79,7 +92,18 @@ export const OFF_VOLUME_UNIT_SPELLINGS: readonly string[] = [
  * LIVE rungs above it — `fdc_label_volume` (2,134), `fdc_volume_cached` (632)
  * and `fdc_volume_ai` (318), measured 2026-08-17. Adding `cups`, `fl oz` or
  * `milliliter(s)` — all of which the owner carries and this lane never has —
- * would move real traffic into them. Lane B1b decides that.
+ * would move real traffic into them; that is still open.
+ *
+ * Lane B1b (2026-08-17) added `LARGE_VOLUME_UNIT_SPELLINGS`. Before that they
+ * landed on the terminal `fdc_unknown_unit` arm at a flat 100 g (the pin in
+ * `__tests__/fdc-fallback-tiers.test.ts`, flipped by B1b). Admitting them here
+ * routes a `1 quart milk` FDC line through the SAME three rungs a `1 cup milk`
+ * line takes: own USDA row (`findOwnFdcVolumeServing()` — its stem table below
+ * knows `pint`/`quart`/`gallon`/`liter`), then `insertFdcAiServing()`
+ * (`fdc_volume_ai`, a live-model rung), then the density fallback. Note
+ * `fdc-ai-backfill.ts`'s own ml table knows `l`/`liter(s)`/`litre(s)` but not
+ * `pint`/`quart`/`gallon`, so a model answer phrased in those units fails its
+ * `missing_volume_unit` check and falls to density — correct, if unhelpful.
  */
 export const FDC_VOLUME_UNIT_SPELLINGS: readonly string[] = [
     'cup',
@@ -87,6 +111,7 @@ export const FDC_VOLUME_UNIT_SPELLINGS: readonly string[] = [
     'tsp', 'teaspoon', 'teaspoons',
     'ml', 'floz',
     'dash', 'dashes', 'pinch', 'pinches',
+    ...LARGE_VOLUME_UNIT_SPELLINGS,
 ];
 
 /**
@@ -1963,17 +1988,32 @@ function candidateHasServingData(candidate: UnifiedCandidate): boolean {
 
 // Requested-volume-unit → serving-description stems. FDC household measures
 // store "cup" / "1 cup" / "0.25 cup, sliced"; tbsp rows may spell "tablespoon".
+// Lane B1b (2026-08-17) added the large volume units so a `1 quart milk` request
+// can reach a genuine USDA "1 quart" household-measure row (SR Legacy carries
+// them for milk, juices, broths) instead of skipping straight to the AI rung.
+// The stems are the LONG words only — a bare `l` stem would match inside too
+// many descriptions — and the millilitres are the owner's `VOLUME_UNIT_ML`
+// values in `src/lib/units/volume-density.ts`.
 const VOLUME_UNIT_STEMS: Record<string, string[]> = {
     cup: ['cup'], cups: ['cup'],
     tbsp: ['tbsp', 'tablespoon'], tablespoon: ['tbsp', 'tablespoon'], tablespoons: ['tbsp', 'tablespoon'],
     tsp: ['tsp', 'teaspoon'], teaspoon: ['tsp', 'teaspoon'], teaspoons: ['tsp', 'teaspoon'],
     floz: ['fl oz', 'fluid ounce'], 'fl oz': ['fl oz', 'fluid ounce'],
+    l: ['liter', 'litre'], liter: ['liter', 'litre'], liters: ['liter', 'litre'],
+    litre: ['liter', 'litre'], litres: ['liter', 'litre'],
+    pint: ['pint'], pints: ['pint'],
+    quart: ['quart'], quarts: ['quart'],
+    gallon: ['gallon'], gallons: ['gallon'],
 };
 const VOLUME_UNIT_ML: Record<string, number> = {
     cup: 240, cups: 240,
     tbsp: 15, tablespoon: 15, tablespoons: 15,
     tsp: 5, teaspoon: 5, teaspoons: 5,
     floz: 30, 'fl oz': 30,
+    l: 1000, liter: 1000, liters: 1000, litre: 1000, litres: 1000,
+    pint: 473.176, pints: 473.176,
+    quart: 946.353, quarts: 946.353,
+    gallon: 3785.41, gallons: 3785.41,
 };
 
 /** True when the requested unit is one the volume-serving matcher understands. */

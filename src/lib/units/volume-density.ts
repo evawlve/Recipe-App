@@ -37,7 +37,10 @@
  * caller builds is the GATE on whether a line enters its volume branch at all
  * (`unit && volumeToGrams[unit]`), so a spelling this module happens to carry
  * would re-route traffic that reaches a different branch today. Spellings are a
- * separate axis from "how many grams is one ml" and are not settled here.
+ * separate axis from "how many grams is one ml" and are not settled here — with
+ * ONE named exception: `LARGE_VOLUME_UNIT_SPELLINGS` below (lane B1b,
+ * 2026-08-17) is exported so the three gates admit the litre/pint/quart/gallon
+ * family in lockstep; each gate still spreads it into its own list.
  *
  * A caveat on FDC, first measured 2026-08-02 and re-measured 2026-08-17, worth
  * carrying because it is the opposite of what the code reads like: FDC's density
@@ -111,7 +114,40 @@ export const VOLUME_UNIT_ML: Record<string, number> = {
     'tsp': 5, 'teaspoon': 5, 'teaspoons': 5,
     'ml': 1, 'milliliter': 1, 'milliliters': 1,
     'floz': 30, 'fl oz': 30,
+    // Large volume units, added 2026-08-17 (lane B1b). Same millilitres as
+    // `VOLUME_IN_ML` in `src/lib/parse/unit.ts`. `normalizeUnitToken()` emits
+    // the SHORT forms (`l`, `pint`, `quart`, `gallon`); the long forms reach
+    // `parsed.unit` only through the AI-parse arm (raw model string) and
+    // `litre(s)`, which the tokenizer does not know, arrives raw via the
+    // partitive-"of" path ("1 litre of milk"). Every spelling is a key here so
+    // both arms resolve to the same number.
+    'l': 1000, 'liter': 1000, 'liters': 1000, 'litre': 1000, 'litres': 1000,
+    'pint': 473.176, 'pints': 473.176,
+    'quart': 946.353, 'quarts': 946.353,
+    'gallon': 3785.41, 'gallons': 3785.41,
 };
+
+/**
+ * The spellings lane B1b (2026-08-17) admitted to every volume branch at once —
+ * `buildOffResult()`, `buildFdcResult()` (both via their `*_VOLUME_UNIT_SPELLINGS`
+ * gates in `mapping/serving/hydration-lane.ts`) and `buildFatSecretResult()`
+ * (which gates on `VOLUME_UNIT_ML` directly). Exported so the three gates cannot
+ * drift on this family; each gate still spreads it into its OWN list, so the
+ * per-caller ownership of spellings described in the header stands.
+ *
+ * Why these and only these: `normalizeUnitToken()` emits `l`/`pint`/`quart`/
+ * `gallon`, and before this every one of them fell past every branch to a flat
+ * 100 g — `1 gallon of milk` billed 100 g live (38x under; measured 2026-08-17).
+ * `serving`/`portion`/`mg`/`kilograms`/`milliliter(s)` are deliberately NOT here:
+ * the first two need a per-lane answer (OFF routes them through
+ * PACKAGE_LIKE_UNITS, FDC does not) and the rest are a separate decision.
+ */
+export const LARGE_VOLUME_UNIT_SPELLINGS: readonly string[] = [
+    'l', 'liter', 'liters', 'litre', 'litres',
+    'pint', 'pints',
+    'quart', 'quarts',
+    'gallon', 'gallons',
+];
 
 /** Foods that pour. ~1 g/ml. */
 const LIQUID_RE = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i;
@@ -187,6 +223,18 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
             'tsp': tspG, 'teaspoon': tspG, 'teaspoons': tspG,
             'ml': mlG, 'milliliter': mlG, 'milliliters': mlG,
             'floz': flozG, 'fl oz': flozG,
+            // Large volume units (lane B1b): the ml cell scaled by the unit's
+            // millilitres, so each class bills them the way it bills `ml` and
+            // `floz` — liquid 1 g/ml, paste 1 g/ml, solid at `solidDensity`.
+            // (`cup`/`tbsp`/`tsp` carry a paste cell ~4% above 1 g/ml; the
+            // absolute-volume family here follows `ml`, not that.) The
+            // millilitres are read off `VOLUME_UNIT_ML` so the number lives once.
+            'l': VOLUME_UNIT_ML['l'] * mlG,
+            'liter': VOLUME_UNIT_ML['liter'] * mlG, 'liters': VOLUME_UNIT_ML['liters'] * mlG,
+            'litre': VOLUME_UNIT_ML['litre'] * mlG, 'litres': VOLUME_UNIT_ML['litres'] * mlG,
+            'pint': VOLUME_UNIT_ML['pint'] * mlG, 'pints': VOLUME_UNIT_ML['pints'] * mlG,
+            'quart': VOLUME_UNIT_ML['quart'] * mlG, 'quarts': VOLUME_UNIT_ML['quarts'] * mlG,
+            'gallon': VOLUME_UNIT_ML['gallon'] * mlG, 'gallons': VOLUME_UNIT_ML['gallons'] * mlG,
             // Micro-volume spice measures: absolute, not density-scaled. A pinch
             // of anything is a pinch.
             'dash': 0.6, 'dashes': 0.6,
