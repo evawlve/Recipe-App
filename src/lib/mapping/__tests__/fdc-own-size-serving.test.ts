@@ -383,7 +383,8 @@ describe('findOwnFdcSizeServing — the ambiguity rule DECLINES rather than gues
 
     // MUTATION: remove `orderBy` from the findMany call. This is the guard against
     // re-importing the nondeterminism the whole PR is removing; the volume sibling
-    // has no orderBy and tie-breaks on database order.
+    // had no orderBy and tie-broke on database order until 2026-08-17 (P5), when it
+    // took this same one — its own tripwire is in fdc-volume-serving.test.ts.
     it('reads with an explicit deterministic orderBy', async () => {
         rows(...STRAWBERRY_ROWS);
         await findOwnFdcSizeServing(167762, 'medium');
