@@ -26,42 +26,70 @@ export function singularizeUnit(w: string): string {
 }
 
 /**
- * The numeric run a label serving may lead with: a MIXED NUMBER ("1 1/4"), a
- * bare FRACTION ("1/2"), or nothing (the plain integer/decimal case each
- * consumer spells for itself below).
+ * A leading label FRACTION: "1/2", or the mixed number "1 1/4".
  *
- * ORDER IS LOAD-BEARING. Regex alternation is ordered, so the mixed-number arm
- * must precede the fraction arm — otherwise "1 1/4 cups" matches the plain
- * leading "1" and the mixed number is silently halved off.
+ * THE WHOLE PART IS PINNED TO 1, and that is the load-bearing part of this
+ * pattern. A mixed number on a serving panel states ONE unit and a fraction;
+ * measured over all 1,220 mixed-number `OffFood` labels on the box 2026-08-18,
+ * 1,047 (86%) lead with `1`, and the larger whole parts are a WEIGHT glued in
+ * front of the food noun rather than a count of units:
+ *
+ *     "4 1/4 fillet (113 g)"      -> 26.6 g/unit, i.e. 4.25 OUNCES of one fillet
+ *     "8 1/2 ONZ (241 g)"         -> 28.35 g/unit, the same shape spelled out
+ *     "320 1/2 package (320 g)"   -> 1.00 g/package, the GRAM figure glued on
+ *     "30 1/3 Can (30 g)"         -> 0.99 g/can
+ *
+ * Reading those as counts divides the serving by its own weight. `1 package`
+ * of `0761898375006` would bill 1 g instead of 320 g — and that record is a
+ * REGRESSION rather than merely a new error, because `label_unit_match` sits
+ * ahead of `label_serving_package_unit` in the branch chain, so a unit word
+ * that did not exist before pre-empts a branch that was already correct.
+ * `label_count_derived`'s [0.2, 500] per-piece band does not catch it either:
+ * 1.00 g is inside the band. The count is what is implausible, so the count is
+ * where the guard belongs.
+ *
+ * The numerator and denominator are `[1-9]\d*`, which refuses `0/2` and `1/0`
+ * outright rather than leaving them to the qty guard below. No `\s*` is
+ * allowed around the slash: "1 /3 cup (151 g)" (21 rows) must stay unreadable
+ * to BOTH halves, and a pattern that accepted it would hand
+ * `parseQuantityTokens` the tokens ["1","/","3"], which it cannot parse — it
+ * would fall through to its plain-number path and return 1, so the unit would
+ * say "cup" while the count still said one. Reintroducing that disagreement is
+ * this module's own defect in miniature.
+ *
+ * The `(?![\d./])` lookahead refuses a CONTINUING numeric run — "1/2/3",
+ * "3//4" — so a malformed shape falls back whole rather than half-parsed. It
+ * is not what refuses hyphens: "1-1/4 cup" and "2-3 Tbsp" (405 rows) fail
+ * earlier, because a hyphen is neither a slash nor whitespace, so neither arm
+ * can start.
  */
-const MIXED_OR_FRACTION = String.raw`\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+`;
+const LABEL_FRACTION_RE = /^\s*(1\s+[1-9]\d*\/[1-9]\d*|[1-9]\d*\/[1-9]\d*)(?![\d./])/;
+
+/** The ORIGINAL unit pattern, unchanged — the fallback both halves share. */
+const LABEL_SERVING_UNIT_RE = /^\s*\d*\.?\d*\s*([a-z]+)/i;
+
+/** The ORIGINAL leading-quantity pattern, unchanged — same fallback. */
+const LABEL_PLAIN_QUANTITY_RE = /^\s*(\d+(?:\.\d+)?)/;
 
 /**
- * The unit word, past an optional leading quantity. The trailing `\d*\.?\d*`
- * arm is the ORIGINAL pattern, kept verbatim: it also has to match the empty
- * string (a bare "cup") and digits glued to the unit ("100.0g" → "g", which
- * `usableBareLabelServing`'s per-100g placeholder rule depends on). The new
- * arms therefore only ever fire where the old pattern matched NOTHING —
- * verified over the whole corpus on the box 2026-08-18: of 1,085,526 OffFood
- * rows and 55,004 FatSecretServing rows, 16,531 + 2,422 change from null to a
- * word and ZERO change from one word to a different word.
+ * The ONE place a label fraction is recognised, and the reason the unit half
+ * and the count half cannot disagree about where the quantity ends: both call
+ * this, so a fraction is read by BOTH of them or by NEITHER, and "neither" is
+ * byte-for-byte the behaviour that shipped before this function existed.
+ *
+ * The arithmetic is `parseQuantityTokens`'s, reused rather than re-derived —
+ * `declaredVolumeUnitGrams()` in build-fatsecret-result.ts already uses it for
+ * exactly this. Only the SHAPE above is new, which is also what keeps that
+ * parser's recipe-line rules (range averaging, word numbers, "a dozen") away
+ * from a serving panel.
  */
-const LABEL_SERVING_UNIT_RE = new RegExp(
-    String.raw`^\s*(?:${MIXED_OR_FRACTION}|\d*\.?\d*)\s*([a-z]+)`, 'i',
-);
-
-/**
- * The leading quantity, for consumers that DIVIDE by it. Requires a digit (so a
- * word-number label — "One Slice (50 g)", 241 rows — keeps defaulting to 1),
- * and the lookahead refuses a numeric run followed by `-`, `/` or another
- * digit, so the 405 hyphen-led rows ("2-3 Tbsp", "1-1/4 cup") keep reading
- * their first number exactly as they always have. `parseQuantityTokens`
- * averages a range into 2.5, which is a recipe-line rule nobody has measured
- * against a serving panel.
- */
-const LABEL_LEADING_QUANTITY_RE = new RegExp(
-    String.raw`^\s*(${MIXED_OR_FRACTION}|\d+(?:\.\d+)?)(?![\d./])`,
-);
+function leadingLabelFraction(description: string): { qty: number; length: number } | null {
+    const m = description.match(LABEL_FRACTION_RE);
+    if (!m) return null;
+    const parsed = parseQuantityTokens(m[1].trim().split(/\s+/));
+    if (!parsed || !Number.isFinite(parsed.qty) || parsed.qty <= 0) return null;
+    return { qty: parsed.qty, length: m[0].length };
+}
 
 /**
  * The unit word of a label serving description ("2 scoops" → "scoop",
@@ -77,7 +105,10 @@ const LABEL_LEADING_QUANTITY_RE = new RegExp(
  */
 export function extractLabelServingUnit(description: string | null): string | null {
     if (!description) return null;
-    const m = description.match(LABEL_SERVING_UNIT_RE);
+    const frac = leadingLabelFraction(description);
+    const m = frac
+        ? description.slice(frac.length).match(/^\s*([a-z]+)/i)
+        : description.match(LABEL_SERVING_UNIT_RE);
     if (!m) return null;
     return singularizeUnit(m[1]);
 }
@@ -85,16 +116,7 @@ export function extractLabelServingUnit(description: string | null): string | nu
 /**
  * The leading quantity of a label serving, fractions included — "1/2 cup
  * (110 g)" → 0.5, "1 1/4 cup (40 g)" → 1.25, "18 chips (28 g)" → 18 — or null
- * when the label does not lead with a digit.
- *
- * The arithmetic is `parseQuantityTokens`'s, deliberately: it already parses
- * every fraction and mixed-number shape, `declaredVolumeUnitGrams()` in
- * build-fatsecret-result.ts already uses it for exactly this purpose, and a
- * third fraction parser in this repo is how the volume-density hand-copies
- * happened. This adds only the SHAPE gate above, which decides which strings
- * are eligible — the recipe-line rules `parseQuantityTokens` also carries
- * (range averaging, word numbers, "a dozen") are not label rules and are
- * refused before it is called.
+ * when the label does not lead with a usable number.
  *
  * `labelLeadingCount()` below is NOT this function and could not be reused for
  * it: it is integer-only and returns null under 2, i.e. null for every shape
@@ -103,11 +125,12 @@ export function extractLabelServingUnit(description: string | null): string | nu
  */
 export function labelLeadingQuantity(description: string | null | undefined): number | null {
     if (!description) return null;
-    const m = description.match(LABEL_LEADING_QUANTITY_RE);
+    const frac = leadingLabelFraction(description);
+    if (frac) return frac.qty;
+    const m = description.match(LABEL_PLAIN_QUANTITY_RE);
     if (!m) return null;
-    const parsed = parseQuantityTokens(m[1].trim().split(/\s+/));
-    if (!parsed || !Number.isFinite(parsed.qty) || parsed.qty <= 0) return null;
-    return parsed.qty;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 // Packaged-snack nouns whose OFF label serving natively enumerates pieces.

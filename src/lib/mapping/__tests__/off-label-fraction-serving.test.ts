@@ -227,6 +227,23 @@ describe('parseOffServingSize — the leading quantity', () => {
         expect(parseOffServingSize('1 1/2 Tbsp (23 g)', 23).unitCount).toBe(1.5);
     });
 
+    it('CONTROL: a mixed number with a whole part above 1 keeps the OLD read', () => {
+        // The whole-part-1 guard. `320 1/2 package (320 g)` is the gram figure
+        // glued to the front and `4 1/4 fillet (113 g)` is 4.25 OUNCES; both
+        // divide the serving by its own weight if read as counts. Refusing
+        // restores the shipped behaviour exactly, in BOTH halves at once.
+        expect(parseOffServingSize('320 1/2 package (320 g)', 320).unitCount).toBe(320);
+        expect(parseOffServingSize('4 1/4 fillet (113 g)', 113).unitCount).toBe(4);
+        expect(parseOffServingSize('2 1/2 cup (85 g)', 85).unitCount).toBe(2);
+    });
+
+    it('CONTROL: whitespace inside the fraction keeps the OLD read, in both halves', () => {
+        // 21 rows. If only the unit half saw it, "1 /3 cup (151 g)" would bill
+        // 151 g/cup against a 453 g truth — this PR's own defect, in miniature.
+        expect(parseOffServingSize('1 /3 cup (151 g)', 151).unitCount).toBe(1);
+        expect(extractLabelServingUnit(parseOffServingSize('1 /3 cup (151 g)', 151).description)).toBeNull();
+    });
+
     it('integers and decimals are unchanged', () => {
         expect(parseOffServingSize('2 tbsp (30 g)', 30).unitCount).toBe(2);
         expect(parseOffServingSize('18 chips (28 g)', 28).unitCount).toBe(18);
@@ -293,14 +310,14 @@ describe('blast radius of a label word that now exists', () => {
         // the EU per-100g panel placeholder, and its own docstring says
         // "A genuine `1 cup (100 g)` passes via its unit word". A fraction-led
         // cup label is exactly that, and was being rejected only because the
-        // reader could not see the word. Measured 2026-08-18: 197 OffFood rows
-        // and 48 FatSecretServing rows are in this class, 46 of the latter
-        // being their food's DECLARED DEFAULT (so they also stop tripping
-        // `fs.build_result.bare_default_serving_out_of_band`). ZERO of either
-        // set has a MappingEventLog event in 90 days. The honest caveat: some
-        // are per-100 g panels wearing a household word — but so are the
-        // WHOLE-number "1 cup (100 g)" labels this rule already admits, and
-        // narrowing it is a different change with its own arm.
+        // reader could not see the word. This is the ONE class in the PR that
+        // moves a rung on live traffic, and it is small: the whole-part-1 guard
+        // removes `off_0041512162565` ("2 1/2 cup (100 g)", the only such SKU
+        // with events) from the moving set, leaving 0 events in 90 days over
+        // the rest. The honest caveat: some of these are per-100 g panels
+        // wearing a household word — but so are the WHOLE-number "1 cup
+        // (100 g)" labels this rule already admits, and narrowing it is a
+        // different change with its own arm.
         const label = parseOffServingSize('2/3 cup (100 g)', 100);   // off_0015418011197, Vanilla gelato
         expect(usableBareLabelServing(100, extractLabelServingUnit(label.description))).toBe(100);
 
