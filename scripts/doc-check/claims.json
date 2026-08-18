@@ -1574,6 +1574,18 @@
       "verified": "2026-08-17"
     },
     {
+      "id": "count-answer-refused-for-volume-gap",
+      "claim": "insertFdcAiServing() returns { success: false, reason: 'count_answer_for_volume_gap' } for a count answer to a volume gap BEFORE its FdcServing upsert (nothing persisted; the caller falls through to the density fallback), and the FatSecret twin insertAiServing() refuses the same when the requested unit converts to millilitres, before its transaction",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md",
+      "where": "backend",
+      "command": "echo \"$(awk '/reason: .count_answer_for_volume_gap./{r=NR} /prisma\\.fdcServing\\.upsert\\(/{u=NR} END{print (r>0 && u>r) ? \"fdc-refuses-before-upsert\" : \"NO:\" r \":\" u}' src/lib/usda/fdc-ai-backfill.ts)@$(awk '/reason: .count_answer_for_volume_gap./{r=NR} /prisma\\.\\$transaction\\(/{u=NR} END{print (r>0 && u>r) ? \"fs-refuses-before-transaction\" : \"NO:\" r \":\" u}' src/lib/mapping/ai-backfill.ts)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^fdc-refuses-before-upsert@fs-refuses-before-transaction$"
+      },
+      "verified": "2026-08-17"
+    },
+    {
       "id": "hedge-strip-is-positional",
       "claim": "A leading hedge word (about/around/roughly/approximately/approx/nearly/almost/like/maybe) is stripped by parseIngredientLine() ONLY at token 0 and ONLY when parseQuantityTokens() recognises what follows as a quantity, so 'about 1 cup egg whites' parses unit 'cup' (was unit null, name 'about 1 cup' \u2014 the mapper then spent a `parse` model call recovering it) while 'about time seasoning' keeps its name byte-identical (no number follows). Output is unit(about 1 cup egg whites)|name(about time seasoning). If the first half fails the hedge is back at the quantity slot; if the second half fails the strip has stopped being positional/number-gated and is eating food names.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md",

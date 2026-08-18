@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
       resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros,
       isPer100gInconsistentWithBilled,
     } = await import('@/lib/nlp/resolve-payload');
-    const { isSyntheticGramsTier } = await import('@/lib/mapping/serving-ai-tiers');
+    const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
     const { logger } = await import('@/lib/logger');
 
     const body = await req.json();
@@ -186,6 +186,18 @@ export async function POST(req: NextRequest) {
     // than implied by nocache: some cold runs (a warm-from-cold) do want the write.
     const noSave = isDevBypass &&
       (req.nextUrl.searchParams.get('nosave') === '1' || body.nosave === true);
+
+    // Diagnostic echo for the golden eval (2026-08-17): put `servingTier` and
+    // `cacheHit` on each response item. DEV-BYPASS ONLY, and only when asked —
+    // without the flag the response is byte-identical to before this existed
+    // (pinned by route.debug-echo.test.ts). `servingTier` is a pipeline taxonomy
+    // the client may never read ("it may never say WHY"); the honest client field
+    // is `portionEstimated` below. It is here because the tier is otherwise
+    // written to MappingEventLog only, and scripts/eval/run-eval.ts is
+    // deliberately dependency-free — it sends `debug=1` in --nocache mode and
+    // scores `expectServingTier` off this field.
+    const debugEcho = isDevBypass &&
+      (req.nextUrl.searchParams.get('debug') === '1' || body.debug === true);
 
     let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
@@ -310,6 +322,10 @@ export async function POST(req: NextRequest) {
       });
       const mapLatencyMs = Date.now() - mapStart;
       const isMapped = !!mapped && !('status' in mapped);
+      // One read of the tier for the telemetry row and the debug echo alike. The
+      // serving-tier census (src/lib/mapping/__tests__/serving-tier-census.test.ts)
+      // knows this exact expression as the route's pass-through.
+      const servingTier: string | null = isMapped ? ((mapped as any).servingTier ?? null) : null;
       if (telemetryEnabled) {
         eventRows.push({
           rawLine: rawText,
@@ -321,7 +337,7 @@ export async function POST(req: NextRequest) {
           brandName: isMapped ? ((mapped as any).brandName ?? null) : null,
           source: isMapped ? (mapped as any).source : null,
           confidence: isMapped ? (mapped as any).confidence : null,
-          servingTier: isMapped ? ((mapped as any).servingTier ?? null) : null,
+          servingTier,
           grams: isMapped ? (mapped as any).grams : null,
           totalKcal: isMapped ? (mapped as any).kcal : null,
           latencyMs: mapLatencyMs,
@@ -368,6 +384,10 @@ export async function POST(req: NextRequest) {
           servingOptions: [],
           funnelStage: telemetry.funnelStage,
           dropReason: telemetry.dropReason,
+          // Debug echo (dev bypass + debug=1 only): null tier, whichever cache
+          // layer answered. Same shape as the mapped branch so a scorer can read
+          // the KEY as "the echo is on".
+          ...(debugEcho ? { servingTier, cacheHit: telemetry.cacheHit ?? null } : {}),
         };
       }
 
@@ -448,6 +468,8 @@ export async function POST(req: NextRequest) {
             ? (details.source as StandardSource)
             : 'ai_estimated';
 
+      const portionProvenance = portionProvenanceForTier(mapped.servingTier);
+
       return {
         rawText,
         foodName: mapped.foodName,
@@ -482,12 +504,37 @@ export async function POST(req: NextRequest) {
         ...(isSyntheticGramsTier((mapped as { servingTier?: string | null }).servingTier)
           ? { portionEstimated: true as const }
           : {}),
+        // WHERE THE GRAMS CAME FROM, when it was not this record and not the user:
+        // `'borrowed'` — another product's label or a generic table
+        // (BORROWED_OR_DEFAULTED_SERVING_TIERS, 16 tiers); `'floor'` — every rung
+        // failed and the pipeline billed a flat 100 g x qty knowing it had nothing
+        // (FLOOR_SERVING_TIERS, 9 tiers). Both lists and the ONE derivation live in
+        // serving-ai-tiers.ts; this route only reads `mapped.servingTier` through
+        // it, so a tier moving list moves the wire without a route edit.
+        //
+        // The client CANNOT infer this either. Mobile's flat-100 rule badged only
+        // the qty = 1 floors and none of the borrowed rows — 236 g of a sibling
+        // SKU's serving is indistinguishable from 236 g read off this label — and
+        // this field is what lets that inference retire without regressing the
+        // floor half. It says the serving AXIS only: no accuracy claim, no cause
+        // beyond the word.
+        //
+        // `portionEstimated` above is UNCHANGED (its population and consumers are
+        // its own); a #314 row carries both, and a client reading both gives
+        // `portionEstimated` precedence. Omitted (never `null`) when the tier is in
+        // neither list, so every honest row stays byte-identical on the wire.
+        // Owner: sync-docs/reports/2026-08-17_can-the-badge-be-aimed.md §6 (mobile),
+        // and the plan that named the field, 2026-08-17_ultracode-execution-plan-2.md Lane D.
+        ...(portionProvenance ? { portionProvenance } : {}),
         // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
         // offline warm batches (scripts/eval/warm-cache.ts) read each seed's
         // funnel outcome straight off the response instead of re-deriving it
         // from MappingEventLog. Clients ignore unknown fields.
         funnelStage: telemetry.funnelStage,
         dropReason: telemetry.dropReason,
+        // Debug echo — dev bypass + debug=1 only; absent (not null) otherwise, so
+        // the response is byte-identical for every real client. See `debugEcho`.
+        ...(debugEcho ? { servingTier, cacheHit: telemetry.cacheHit ?? null } : {}),
       };
     }));
 

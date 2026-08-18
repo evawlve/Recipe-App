@@ -481,13 +481,27 @@ describe('parseGoldenSet', () => {
         // (chain records whose fibre/sugar/sodium billed 0, expectName + total)
         // and n-micro-01 (the grams-not-milligrams unit control, the only case in
         // the corpus asserting macros.sodium100; expectName + grams + macros + total).
-        expect(all.length).toBe(249);
+        // 265 since 2026-08-17: the PROSE SET, n-prose-01..16 (category `prose`) —
+        // sixteen `text` cases: twelve one-item hedge/partitive/filler lines with
+        // TRUTH bands (grams + total.calories on all twelve, kcal100/protein100
+        // on three, expectItems 1 on all) and four multi-item sentences asserting
+        // expectItems + identities only. Two are knownIssue (n-prose-01 egg whites
+        // until P3; n-prose-03 pasta, a measured nondeterministic rung). Five carry
+        // `expectServingTier`, which this parser does not read (the replay screen
+        // cannot see a tier; the live eval scores it under the debug echo only).
+        expect(all.length).toBe(265);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(249);
-        expect(n(c => !!c.grams)).toBe(150);              // the majority assertion; 150 since 2026-08-15 (n-micro-01)
-        expect(n(c => !!c.macros)).toBe(66);              // 66 since 2026-08-15 (n-micro-01's sodium100 band)
-        expect(n(c => typeof c.expectItems === 'number')).toBe(47);
+        expect(n(c => c.expectName.length > 0)).toBe(265);
+        // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
+        expect(n(c => !!c.grams)).toBe(162);              // the majority assertion
+        // 66 since 2026-08-15 (n-micro-01's sodium100 band); 69 since 2026-08-17
+        // (n-prose-01 protein100/fat100, n-prose-03 and n-prose-10 kcal100 as the
+        // cooked-vs-dry discriminator the _readme's STANDING RULE asks for)
+        expect(n(c => !!c.macros)).toBe(69);
+        // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
+        // twelve one-item lines, 7/2/3/3 on the four sentences)
+        expect(n(c => typeof c.expectItems === 'number')).toBe(63);
         // 36 since 2026-08-04: n-cook-03 gained a total band, because its scale-free
         // kcal100/carbs100 were passing on a 240 g / 295 kcal bill against USDA's
         // 172 g / 227 kcal. Adding one here also adds one to the `total` blind count
@@ -500,7 +514,9 @@ describe('parseGoldenSet', () => {
         // so only the BILLED figure is a sound assertion there. n-micro-01 is the
         // exception that proves it: a panel-bearing record, where sodium100 IS a
         // density and is banded.
-        expect(n(c => !!c.total)).toBe(41);
+        // 53 since 2026-08-17: all twelve one-item prose lines carry total.calories
+        // (the STANDING RULE for one-food cases; two also band total.fat).
+        expect(n(c => !!c.total)).toBe(53);
         // documented in _readme, no live case uses them — parsed anyway so the screen
         // does not go blind the moment one is added back
         expect(n(c => !!c.forbidName)).toBe(0);
@@ -515,7 +531,10 @@ describe('parseGoldenSet', () => {
         // post-fix and no record serving has been measured to band against (its
         // notes carry the add-a-band-once-measured instruction).
         // UNCHANGED at 38 by the 2026-08-15 additions: all four carry a numeric band.
-        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(38);
+        // 42 since 2026-08-17: the four multi-item prose sentences (n-prose-13..16)
+        // are identity + expectItems only, by the _readme's own rule — bands read
+        // items[0], and index 0 of a seven-item sentence is a segmentation artefact.
+        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(42);
 
         // split by shape: `--golden` replays item-shaped cases unless --include-multi-item
         const item = all.filter(c => c.shape === 'item');
@@ -523,14 +542,19 @@ describe('parseGoldenSet', () => {
         // 166 since 2026-08-15: the four micronutrient cases are all item-shaped,
         // deliberately — an `item` bypasses AI segmentation, so the assertion is
         // about the mapper and not about a segmenter draw. `text` is unchanged.
-        expect([item.length, text.length]).toEqual([166, 83]);
+        // [166, 99] since 2026-08-17: the sixteen prose cases are ALL `text` —
+        // the point of the set is the route's prose path (single-item fast path
+        // or the segmenter), so none is item-shaped and the item counts below are
+        // untouched by it.
+        expect([item.length, text.length]).toEqual([166, 99]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
         // 21 since 2026-08-15: n-chain-01..03 + n-micro-01.
         expect(item.filter(c => c.total).length).toBe(21);
-        expect(text.filter(c => c.grams).length).toBe(31);
-        expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(47);
+        // 31 -> 43 and 47 -> 63 on 2026-08-17 (prose set; see the count pin above)
+        expect(text.filter(c => c.grams).length).toBe(43);
+        expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(63);
 
         // and the individual bands survive the round-trip
         expect(all.find(c => c.id === 'n-qty-04')!.grams).toEqual([24, 120]);
@@ -751,18 +775,23 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // wholly in the `blind` column, because this screen replays the selection
         // cascade and the defect they gate lives in resolveFoodDetails(), which
         // the replay never calls. They are gated by the LIVE golden eval only.
-        expect(cov.cases).toBe(249);
-        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 150, blind: 150 });
+        // 265 / 162 / 53 / 63 since 2026-08-17: the prose set. Same story one
+        // more time — every prose band lands in `blind`: the one-item lines are
+        // deterministicSingleItem `text` (the route's fast path) but grams/total
+        // are replay-blind by construction, and the four sentences are
+        // segmenter-bound. Their `expectServingTier` is not even parsed here.
+        expect(cov.cases).toBe(265);
+        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 162, blind: 162 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
-        expect(kind('total')).toEqual({ kind: 'total', asserted: 41, blind: 41 });
-        expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 47, blind: 47 });
+        expect(kind('total')).toEqual({ kind: 'total', asserted: 53, blind: 53 });
+        expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(249);
+        expect(en.asserted).toBe(265);
         expect(en.blind).toBeGreaterThan(0);
-        expect(en.blind).toBeLessThan(249);
+        expect(en.blind).toBeLessThan(265);
         // every grams band in the corpus is unjudgeable here...
-        expect(cov.gramsCases).toBe(150);
+        expect(cov.gramsCases).toBe(162);
         // ...and only a handful would be record-INdependent even with a resolver,
         // i.e. the blindness sits exactly where a winner change moves the answer.
         expect(cov.gramsRecordIndependent).toBeLessThanOrEqual(5);

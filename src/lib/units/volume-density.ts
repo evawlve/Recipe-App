@@ -37,7 +37,10 @@
  * caller builds is the GATE on whether a line enters its volume branch at all
  * (`unit && volumeToGrams[unit]`), so a spelling this module happens to carry
  * would re-route traffic that reaches a different branch today. Spellings are a
- * separate axis from "how many grams is one ml" and are not settled here.
+ * separate axis from "how many grams is one ml" and are not settled here — with
+ * ONE named exception: `LARGE_VOLUME_UNIT_SPELLINGS` below (lane B1b,
+ * 2026-08-17) is exported so the three gates admit the litre/pint/quart/gallon
+ * family in lockstep; each gate still spreads it into its own list.
  *
  * A caveat on FDC, first measured 2026-08-02 and re-measured 2026-08-17, worth
  * carrying because it is the opposite of what the code reads like: FDC's density
@@ -84,14 +87,17 @@
  *   - this module is right about `240 ml flour`, which OFF bills at 240 g while
  *     billing the same volume as `1 cup flour` at 127.2 g — 1.89x apart, from a
  *     density it computed one line earlier;
- *   - and wrong about `250 ml red bull`, because `LIQUID_RE` below misses cola,
- *     beer, coffee and energy drinks, so a water-density beverage classifies
+ *   - and wrong about `250 ml red bull`, because the classifier missed cola,
+ *     beer, coffee and energy drinks, so a water-density beverage classified
  *     SOLID and would bill 125 g instead of 250 g. Those 2 events are the ONLY
  *     ml/floz traffic in the entire live `volume_unit` population (8,200 events:
  *     cup 5,533, tbsp 2,059, tsp 606, ml 2, floz 0 — measured 2026-08-17 by
  *     bucketing `rawLine`; re-derive with the query in that report).
- * The fix belongs on the CLASSIFICATION side, not the scaling side, and it needs
- * its own commit and its own gate.
+ * The fix belongs on the CLASSIFICATION side, not the scaling side, and it got
+ * its own commit: `BEVERAGE_RE` below (lane B1b). That does NOT close the ml/floz
+ * convergence — the classifier now reaches a drink NAMED as one, and the literal
+ * string `Red Bull` carries no such token, so the pin in
+ * `mapping/__tests__/volume-density-convergence.test.ts` is still live.
  *
  * Re-derive the cell-level diff by executing both tables over the same inputs:
  *   `resolveVolumeGrams()` vs the pinned literals in `buildOffResult()`.
@@ -111,10 +117,127 @@ export const VOLUME_UNIT_ML: Record<string, number> = {
     'tsp': 5, 'teaspoon': 5, 'teaspoons': 5,
     'ml': 1, 'milliliter': 1, 'milliliters': 1,
     'floz': 30, 'fl oz': 30,
+    // Large volume units, added 2026-08-17 (lane B1b). Same millilitres as
+    // `VOLUME_IN_ML` in `src/lib/parse/unit.ts`. `normalizeUnitToken()` emits
+    // the SHORT forms (`l`, `pint`, `quart`, `gallon`); the long forms reach
+    // `parsed.unit` only through the AI-parse arm (raw model string) and
+    // `litre(s)`, which the tokenizer does not know, arrives raw via the
+    // partitive-"of" path ("1 litre of milk"). Every spelling is a key here so
+    // both arms resolve to the same number.
+    'l': 1000, 'liter': 1000, 'liters': 1000, 'litre': 1000, 'litres': 1000,
+    'pint': 473.176, 'pints': 473.176,
+    'quart': 946.353, 'quarts': 946.353,
+    'gallon': 3785.41, 'gallons': 3785.41,
 };
+
+/**
+ * The spellings lane B1b (2026-08-17) admitted to every volume branch at once —
+ * `buildOffResult()`, `buildFdcResult()` (both via their `*_VOLUME_UNIT_SPELLINGS`
+ * gates in `mapping/serving/hydration-lane.ts`) and `buildFatSecretResult()`
+ * (which gates on `VOLUME_UNIT_ML` directly). Exported so the three gates cannot
+ * drift on this family; each gate still spreads it into its OWN list, so the
+ * per-caller ownership of spellings described in the header stands.
+ *
+ * Why these and only these: `normalizeUnitToken()` emits `l`/`pint`/`quart`/
+ * `gallon`, and before this every one of them fell past every branch to a flat
+ * 100 g — `1 gallon of milk` billed 100 g live (38x under; measured 2026-08-17).
+ * `serving`/`portion`/`mg`/`kilograms`/`milliliter(s)` are deliberately NOT here:
+ * the first two need a per-lane answer (OFF routes them through
+ * PACKAGE_LIKE_UNITS, FDC does not) and the rest are a separate decision.
+ */
+export const LARGE_VOLUME_UNIT_SPELLINGS: readonly string[] = [
+    'l', 'liter', 'liters', 'litre', 'litres',
+    'pint', 'pints',
+    'quart', 'quarts',
+    'gallon', 'gallons',
+];
 
 /** Foods that pour. ~1 g/ml. */
 const LIQUID_RE = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i;
+
+/**
+ * DRINKABLE BEVERAGES — the second half of "foods that pour", added 2026-08-17
+ * (lane B1b) because `LIQUID_RE` above names nine tokens and none of them is a
+ * drink anyone orders.
+ *
+ * THE MEASUREMENT. Classify the 314 seeds the coverage corpus itself labels
+ * `sodas-energy` / `coffee-tea` / `alcohol` and `LIQUID_RE` calls 32 of them
+ * liquid — 10.2% recall, so 89.5% of drinkable foods were billed at the
+ * dry-goods 0.5 g/ml and `1 cup coffee` came to 120 g. This vocabulary takes
+ * that to 153 of 314 (48.7%). Measured 2026-08-17; re-derive by running
+ * `resolveVolumeGrams()` over column 3 of
+ * `scripts/eval/coverage-corpus-2026-08-08.tsv`, grouped by column 1.
+ *
+ * WHY IT IS A SECOND REGEX AND NOT MORE TOKENS IN THE FIRST. `LIQUID_RE`
+ * matches unanchored substrings, which is why `water` classifies WATERMELON and
+ * `oil` classifies BOILED anything. Adding `\b` to those tokens is a behaviour
+ * change in the opposite direction on live `cup` traffic, so it is not bundled
+ * here. Keeping the new vocabulary separate — and checking it LAST, after both
+ * existing tiers — is what makes this change provably one-directional: a name
+ * that is `liquid` or `paste` today keeps its class and its grams, and the only
+ * transition this commit can produce is `solid` -> `beverage`.
+ *
+ * NOT A DENSITY CHANGE. `beverage` bills the LIQUID numbers, cell for cell; the
+ * separate class name exists so the two populations stay independently
+ * countable (same reason `bare_name_sibling_serving_tight` is its own tier), not
+ * because it is worth a different g/ml. The module header's rule stands: moving
+ * a NUMBER is a separate PR.
+ *
+ * PRECISION, measured over the other 3,788 corpus seeds. 100 of them change
+ * class. 97 are unambiguously drinkable (coffee, tea, soda, wine, kombucha,
+ * protein shakes, kefir); the other three are `agave nectar`, `beer cheese dip`
+ * and `root beer float`, which are not drinks but ARE ~1 g/ml, so the move is
+ * right in direction and wrong in kind — recorded rather than excluded, because
+ * a guard for them would cost more precision elsewhere than it buys. ZERO of the
+ * 3,788 move in the wrong direction. The shapes below are the ones that had to
+ * be excluded by hand; they are pinned in
+ * `__tests__/beverage-classification.test.ts`:
+ *   - `shake` is two chain names before it is a drink ("Shake Shack Crinkle Cut
+ *     Fries", "Steak n Shake Chili"), so it is admitted only in the three
+ *     compound forms or at the END of a name. Tail-anchoring is used HERE and
+ *     nowhere else: as a general head-noun rule it is refuted — that is warm
+ *     screen rule D3, which flags branded grocery on its flavour word.
+ *   - distilled spirits are absent outright. They name solids as flavour words
+ *     ("Bourbon Street Chicken", "Penne Vodka", "Whiskey River BBQ Burger"), and
+ *     at ~0.94 g/ml a 40% ABV spirit is not the 1.0 class anyway. Fermented
+ *     drinks (beer/wine/cider/sake, ~0.99) are in.
+ *   - `soda` excludes `baking soda`. Note the exclusion COSTS accuracy and is
+ *     kept anyway: baking soda is ~0.92 g/ml, so calling it a drink would have
+ *     billed it better than the 0.5 it keeps. Do not "fix" this back.
+ *   - `cocoa` is admitted only as `hot cocoa`; cocoa POWDER is a 0.55 g/ml dry
+ *     solid that the category override already handles.
+ *
+ * WHAT IT STILL MISSES, and no vocabulary can reach: brand-only names. 161 of
+ * the 314 drink seeds stay solid and they are almost all brands — `bud light`,
+ * `heineken`, `mountain dew`, `white claw`, `celsius`, `cabernet sauvignon`.
+ * Note this module classifies the MATCHED RECORD's name, not the query, and OFF
+ * record names are fuller than corpus seeds ("Energy Drink", "Pale Ale"), so
+ * 48.7% is a floor on seeds rather than an estimate on records [reasoning, not
+ * measured — it needs the live index]. The mechanism that would reach brands is
+ * not a longer list: `OffFood.packageQuantityUnit == 'ml'` says the SKU is sold
+ * by volume, which is a data-side answer to the same question. It is not built
+ * here because it needs a signature that carries hydrate data into this module
+ * and FDC/FatSecret have no equivalent field. Re-derive its reach first:
+ *   SELECT count(*) FILTER (WHERE "packageQuantityUnit" = 'ml'), count(*)
+ *   FROM "OffFood" WHERE "packageQuantity" IS NOT NULL;
+ */
+const BEVERAGE_RE = new RegExp([
+    // Coffee bar.
+    '\\b(?:coffees?|espressos?|lattes?|cappuccinos?|americanos?|macchiatos?',
+    '|mochas?|cortados?|frappuccinos?|frappes?|brew)\\b',
+    // Tea bar.
+    '|\\b(?:teas?|chai|kombucha|yerba mate)\\b',
+    // Soft drinks and mixers.
+    '|\\b(?:colas?|lemonades?|limeades?|seltzers?|tonic|nectar)\\b',
+    '|(?<!baking )\\bsodas?\\b',
+    // Drinkable by name.
+    '|\\b(?:drinks?|beverages?|smoothies?|horchata|lassi|kefir|eggnog)\\b',
+    '|\\bhot (?:chocolate|cocoa)\\b',
+    '|\\b(?:protein|meal replacement|milk) ?shakes?\\b|\\bshakes?$',
+    // Fermented alcohol only — see PRECISION above.
+    '|\\b(?:beers?|ales?|lagers?|pilsners?|stouts?|ciders?|wines?',
+    '|champagne|prosecco|sake)\\b',
+].join(''), 'i');
 
 /**
  * Dense pastes and spreads, ~1 g/ml rather than the dry-goods default.
@@ -124,7 +247,12 @@ const LIQUID_RE = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i;
 const PASTE_RE =
     /butter|spread|hummus|yogurt|yoghurt|honey|mayo|mayonnaise|jam|jelly|nutella|tahini|cream cheese|sour cream|ricotta|paste|dressing|ketchup|mustard/i;
 
-export type VolumeClass = 'liquid' | 'paste' | 'solid';
+/**
+ * `beverage` bills exactly what `liquid` bills — see BEVERAGE_RE. It is a
+ * separate member so the two vocabularies stay independently countable, not
+ * because it is worth a different g/ml.
+ */
+export type VolumeClass = 'liquid' | 'beverage' | 'paste' | 'solid';
 
 export interface VolumeGrams {
     /** Grams for one of each supported volume unit. */
@@ -158,6 +286,13 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
 
     const isLiquid = LIQUID_RE.test(name);
     const isPaste = !isLiquid && PASTE_RE.test(name);
+    // Checked LAST, so this tier can only ever claim a name that would otherwise
+    // be a `solid`. That ordering is the whole blast-radius argument for B1b —
+    // see BEVERAGE_RE. `Port Wine Cheese Spread` is the case it protects: it
+    // carries a beverage token and is a spread.
+    const isBeverage = !isLiquid && !isPaste && BEVERAGE_RE.test(name);
+    /** Pours at ~1 g/ml, by either vocabulary. */
+    const isPourable = isLiquid || isBeverage;
 
     // Dry-solid density: prefer the food's category density (sugar 0.85, flour
     // 0.53, oats 0.36 …) over a flat 0.5, which under-weighted DENSE solids by
@@ -174,11 +309,11 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
         if (catDensity && catDensity > 0) solidDensity = catDensity;
     }
 
-    const cupG = isLiquid ? 240 : isPaste ? 250 : 240 * solidDensity;
-    const tbspG = isLiquid ? 15 : isPaste ? 16 : 15 * solidDensity;
-    const tspG = isLiquid ? 5 : isPaste ? 5.3 : 5 * solidDensity;
-    const mlG = isLiquid ? 1 : isPaste ? 1 : solidDensity;
-    const flozG = isLiquid ? 30 : isPaste ? 30 : 30 * solidDensity;
+    const cupG = isPourable ? 240 : isPaste ? 250 : 240 * solidDensity;
+    const tbspG = isPourable ? 15 : isPaste ? 16 : 15 * solidDensity;
+    const tspG = isPourable ? 5 : isPaste ? 5.3 : 5 * solidDensity;
+    const mlG = isPourable ? 1 : isPaste ? 1 : solidDensity;
+    const flozG = isPourable ? 30 : isPaste ? 30 : 30 * solidDensity;
 
     return {
         perUnit: {
@@ -187,12 +322,24 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
             'tsp': tspG, 'teaspoon': tspG, 'teaspoons': tspG,
             'ml': mlG, 'milliliter': mlG, 'milliliters': mlG,
             'floz': flozG, 'fl oz': flozG,
+            // Large volume units (lane B1b): the ml cell scaled by the unit's
+            // millilitres, so each class bills them the way it bills `ml` and
+            // `floz` — liquid 1 g/ml, paste 1 g/ml, solid at `solidDensity`.
+            // (`cup`/`tbsp`/`tsp` carry a paste cell ~4% above 1 g/ml; the
+            // absolute-volume family here follows `ml`, not that.) The
+            // millilitres are read off `VOLUME_UNIT_ML` so the number lives once.
+            'l': VOLUME_UNIT_ML['l'] * mlG,
+            'liter': VOLUME_UNIT_ML['liter'] * mlG, 'liters': VOLUME_UNIT_ML['liters'] * mlG,
+            'litre': VOLUME_UNIT_ML['litre'] * mlG, 'litres': VOLUME_UNIT_ML['litres'] * mlG,
+            'pint': VOLUME_UNIT_ML['pint'] * mlG, 'pints': VOLUME_UNIT_ML['pints'] * mlG,
+            'quart': VOLUME_UNIT_ML['quart'] * mlG, 'quarts': VOLUME_UNIT_ML['quarts'] * mlG,
+            'gallon': VOLUME_UNIT_ML['gallon'] * mlG, 'gallons': VOLUME_UNIT_ML['gallons'] * mlG,
             // Micro-volume spice measures: absolute, not density-scaled. A pinch
             // of anything is a pinch.
             'dash': 0.6, 'dashes': 0.6,
             'pinch': 0.3, 'pinches': 0.3,
         },
-        volumeClass: isLiquid ? 'liquid' : isPaste ? 'paste' : 'solid',
+        volumeClass: isLiquid ? 'liquid' : isBeverage ? 'beverage' : isPaste ? 'paste' : 'solid',
         solidDensity,
     };
 }

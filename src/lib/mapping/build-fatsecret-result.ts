@@ -45,7 +45,7 @@ import {
     applyOffBareQueryGuard, isBarePluralRequest, isBareUnitlessQty1,
     usableBareLabelServing, BARE_MIN_PIECE_SERVING_GRAMS, BARE_LABEL_MIN_GRAMS,
 } from '../servings/bare-query-guard';
-import { volumeToGrams } from '../units/volume-density';
+import { volumeToGrams, VOLUME_UNIT_ML } from '../units/volume-density';
 // Ambiguous/count-unit resolution, shared with the OFF and FDC cascades. Safe
 // to import here: `ambiguous-unit-backfill` pulls only `db` and `logger`, so
 // there is no cycle back through map-ingredient-with-fallback.
@@ -90,13 +90,13 @@ const WEIGHT_TO_GRAMS: Record<string, number> = {
     'kg': 1000, 'kilogram': 1000,
 };
 
-const VOLUME_UNIT_ML: Record<string, number> = {
-    'cup': 240, 'cups': 240,
-    'tbsp': 15, 'tablespoon': 15, 'tablespoons': 15,
-    'tsp': 5, 'teaspoon': 5, 'teaspoons': 5,
-    'ml': 1, 'milliliter': 1, 'milliliters': 1,
-    'floz': 30, 'fl oz': 30,
-};
+// The volume-unit table this builder gates its volume branch on is the OWNER's
+// `VOLUME_UNIT_ML` (imported above). Until 2026-08-17 (lane B1b) this module
+// carried a private copy that was key-for-key and value-for-value identical to
+// the owner's export — pinned as such in
+// `__tests__/volume-unit-spellings.test.ts` — so converging it changed nothing
+// for the thirteen spellings it had, and admitted the large units (`l`, `pint`,
+// `quart`, `gallon` and their long forms) that the owner grew in the same lane.
 
 /** Serving-description stems for matching a requested volume unit ("1 cup" for "cup"). */
 const VOLUME_UNIT_STEMS: Record<string, string[]> = {
@@ -105,6 +105,13 @@ const VOLUME_UNIT_STEMS: Record<string, string[]> = {
     'tsp': ['tsp', 'teaspoon'], 'teaspoon': ['tsp', 'teaspoon'], 'teaspoons': ['tsp', 'teaspoon'],
     'floz': ['fl oz', 'fluid ounce'], 'fl oz': ['fl oz', 'fluid ounce'],
     'ml': ['ml', 'milliliter'], 'milliliter': ['ml', 'milliliter'], 'milliliters': ['ml', 'milliliter'],
+    // Lane B1b: the large units, so a FatSecret "1 pint" / "1 quart" row can
+    // anchor the request the way a "1 cup" row does.
+    'l': ['liter', 'litre'], 'liter': ['liter', 'litre'], 'liters': ['liter', 'litre'],
+    'litre': ['liter', 'litre'], 'litres': ['liter', 'litre'],
+    'pint': ['pint'], 'pints': ['pint'],
+    'quart': ['quart'], 'quarts': ['quart'],
+    'gallon': ['gallon'], 'gallons': ['gallon'],
 };
 
 // ============================================================
@@ -409,23 +416,22 @@ export async function buildFatSecretResult(
     //
     // `EXPLICIT_MEASURE_UNIT_RE` is a promise that a unit bills deterministically
     // from grams or millilitres; `requestBillsByServing()` skips the entire
-    // count/serving branch on the strength of it. But `pint`, `quart`, `gallon`
-    // and `l` are in that regex and in NEITHER table below, so they fall past
-    // everything to the flat per-100g tier: `1 pint ice cream` bills 100g.
+    // count/serving branch on the strength of it. Until 2026-08-17 `pint`,
+    // `quart`, `gallon` and `l` were in that regex and in NEITHER table below,
+    // so they fell past everything to the flat per-100g tier: `1 pint ice cream`
+    // billed 100 g. Lane B1b closed that family (the owner's `VOLUME_UNIT_ML`
+    // now carries them, and this builder gates on the owner's table); the
+    // density-side objection that held the fix back — the classifier called
+    // cola, beer and coffee 0.5 g/ml solids, so `2 liters coca cola` would have
+    // gone 200 g -> 1000 g against a true ~2,080 g — is answered by `BEVERAGE_RE`
+    // in the owner (#340), which sequences ahead of B1b in the deploy queue.
     //
-    // NOT fixed, on measurement. Those units appear in 0 of 54,083 production
-    // `MappingEventLog` lines and 0 across every eval and warm corpus (measured
-    // 2026-08-02). And the obvious fix is still wrong: adding the ml keys would
-    // send `2 liters coca cola` from 200g to 1000g against a true ~2,080g,
-    // because the failure is on the DENSITY side — `LIQUID_RE` in
-    // `src/lib/units/volume-density.ts` classifies cola, beer, coffee and
-    // smoothies as 0.5 g/ml SOLIDS. That trades an obviously absurd number for
-    // a plausible wrong one, which is strictly harder to catch.
-    //
-    // So count it rather than guess at it. This is the instrument-fail-open
-    // lesson applied deliberately: the existing `volume_unit_table_mismatch`
-    // warning sits INSIDE the volume branch, which these units can never enter,
-    // so it can never fire for them. Build the fix if and only if this warns.
+    // What is STILL uncounted rather than fixed: `kilograms` and
+    // `fluid ounce(s)`, which the regex promises and no table converts. This
+    // is the instrument-fail-open lesson applied deliberately: the existing
+    // `volume_unit_table_mismatch` warning sits INSIDE the volume branch, which
+    // those units can never enter, so it can never fire for them. Build the fix
+    // if and only if this warns.
     if (unit && EXPLICIT_MEASURE_UNIT_RE.test(unit)
         && WEIGHT_TO_GRAMS[unit] == null && VOLUME_UNIT_ML[unit] == null) {
         logger.warn('fs.build_result.declared_unit_has_no_conversion', {

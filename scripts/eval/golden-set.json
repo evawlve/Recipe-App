@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Both figures are a 2026-07-26 SNAPSHOT of that PR's delta and are deliberately frozen so it stays legible \u2014 they are NOT the current corpus. Cases added since have moved them (38 / 113 / 150 at 2026-08-15), and the live counts are pinned, with a dated note per movement, in scripts/eval/__tests__/winner-diff.test.ts, which is their owner; re-derive there, not here. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Both figures are a 2026-07-26 SNAPSHOT of that PR's delta and are deliberately frozen so it stays legible \u2014 they are NOT the current corpus. Cases added since have moved them (38 / 113 / 150 at 2026-08-15), and the live counts are pinned, with a dated note per movement, in scripts/eval/__tests__/winner-diff.test.ts, which is their owner; re-derive there, not here. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test. NEW ASSERTION (2026-08-17): `expectServingTier` (a tier name, a `prefix*` glob such as `bare_*`, or a list of alternatives) bands the serving rung that billed items[0] — `servingTier` as the pipeline stamps it (names owned by src/lib/mapping/serving-ai-tiers.ts and the census in src/lib/mapping/__tests__/serving-tier-census.test.ts). It is SCORED ONLY WHEN THE RESPONSE ITEM CARRIES `servingTier`, which /api/nlp/parse sends only to the dev bypass with `debug=1` — run-eval sends that in --nocache mode, so the band is judged cold and SKIPPED (fail-open, never a failure) warm; with the key present a null tier is a mismatch. The `prose` category (n-prose-01..16, 2026-08-17) is the first user of it: full-sentence lines with hedges (about/roughly/around/like/maybe/nearly), partitives (some/a bit of/a handful of/a slice of) and filler. Its one-item lines carry TRUTH bands (the published weight, not the pipeline's current bill — the egg-white case is banded to USDA's 243 g cup and stays knownIssue until the sibling-borrow lands); its multi-item lines assert expectItems + identities only, per the rule above.",
   "search": [
     {
       "id": "s-gen-01",
@@ -6735,6 +6735,437 @@
         ]
       },
       "notes": "THE UNIT CONTROL, added 2026-08-15 alongside n-chain-01..03. Passes before AND after the micronutrient fix — that is the job. sodium100 is GRAMS per 100 g on every branch of resolveFoodDetails, and this is the only case in the set that pins it: fs_3272 'Soy Sauce' carries panel sodium 5.637 and its own '100 g' serving row reads 5637 mg, so the two spellings of the same fact are one factor of 1000 apart and a lane that mixes them is caught here. A well-meaning 'convert sodium to mg' change reds this case twice over — macros.sodium100 would read 5637 (outside [3.6, 7.5]) and total.sodium 902 (outside [0.6, 1.2]). This is deliberately a PANEL-BEARING record, i.e. the majority path the chain cases do not exercise: there macros.sodium100 IS a real density and a band on it is sound, which is why the assertion appears here and nowhere else. Bands ~+/-35% of USDA's published soy sauce (~5,490 mg/100 g, 8-11 kcal per tbsp); expected 16 g / 8.5 kcal / 5.637 / 0.9. Attested on the parse lane before the fix (sodium100 5.637, 2026-08-15), which also proves the lane is not structurally sodium-blind — only the empty-panel class was."
+    },
+    {
+      "id": "n-prose-01",
+      "category": "prose",
+      "text": "about 1 cup of egg whites",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "egg",
+          "white"
+        ]
+      ],
+      "grams": [
+        200,
+        280
+      ],
+      "macros": {
+        "protein100": [
+          9,
+          20
+        ],
+        "fat100": [
+          0,
+          1
+        ]
+      },
+      "total": {
+        "calories": [
+          85,
+          180
+        ]
+      },
+      "expectServingTier": [
+        "volume_unit",
+        "fdc_label_volume"
+      ],
+      "knownIssue": true,
+      "notes": "PROSE SET (2026-08-17) — the sitting's own lead line; owner: sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md (mobile). Bands assert TRUTH, not the pipeline: USDA SR Legacy 172183 'Egg, white, raw, fresh' carries a genuine cup = 243 g row (~126 kcal, ~26 g protein). Bills 33 g via fdc_volume_ai today (65 g on the replay; measured MappingEventLog 2026-08-17 21:31/21:38 UTC on fdc_747997 — the model's COUNT answer accepted for a VOLUME gap in insertFdcAiServing(), and the leading hedge costs the parser its unit so an AI parse has to recover 'cup' first); 120 g after P1 (density fallback, tier volume_unit; the 21:39 nocache draw already landed there on an OFF record); ~243 g needs P3 (borrow the same-stem sibling's genuine cup row, tier fdc_label_volume). knownIssue until P3 — P1's receipt is its keyed /api/ok bracket, NOT this case; do NOT widen the band to 120 g. expectServingTier names the two honest rungs and excludes fdc_volume_ai on purpose; it is scored only under the debug echo (cold runs), fail-open warm."
+    },
+    {
+      "id": "n-prose-02",
+      "category": "prose",
+      "text": "roughly 2 tbsp olive oil",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "olive oil"
+        ],
+        [
+          "oil"
+        ]
+      ],
+      "grams": [
+        22,
+        34
+      ],
+      "total": {
+        "calories": [
+          190,
+          305
+        ],
+        "fat": [
+          21,
+          35
+        ]
+      },
+      "expectServingTier": [
+        "fdc_label_volume",
+        "fdc_volume_cached",
+        "fdc_volume_ai",
+        "fs_label_volume",
+        "fs_label_volume_declared",
+        "fs_volume_density",
+        "volume_unit"
+      ],
+      "notes": "PROSE SET (2026-08-17). Hedge before a VOLUME unit. Truth: 2 x 13.5 g = 27 g, ~239 kcal, all fat (n-tot-01's per-tbsp figures doubled). `roughly` sits in QUALIFIERS (src/lib/parse/qualifiers.ts, for 'roughly chopped') and is captured AFTER quantity parsing, so parseIngredientLine() returns unit null / name '2 tbsp olive oil' for this line today — the AI parse rescue is what stands between the qty and a bare-name bill (P2 owns the positional strip). Un-hedged '2 tbsp olive oil' billed 30 g volume_unit (measured MappingEventLog 2026-07-28); '1 tbsp olive oil' 13.5-15 g on fs_label_volume_declared / fs_volume_density / volume_unit (685 events). expectServingTier = the volume family (any lane): a volume request must bill through a volume rung, not a bare or count one."
+    },
+    {
+      "id": "n-prose-03",
+      "category": "prose",
+      "text": "around 1 cup cooked pasta",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "pasta"
+        ],
+        [
+          "spaghetti"
+        ],
+        [
+          "macaroni"
+        ],
+        [
+          "penne"
+        ]
+      ],
+      "grams": [
+        100,
+        200
+      ],
+      "macros": {
+        "kcal100": [
+          110,
+          165
+        ]
+      },
+      "total": {
+        "calories": [
+          130,
+          330
+        ]
+      },
+      "knownIssue": true,
+      "notes": "PROSE SET (2026-08-17). Truth: USDA cooked spaghetti/macaroni 1 cup = 140 g (~220 kcal); shapes run 107-160 g. kcal100 band is the cooked-vs-dry discriminator (n-cook-02 precedent). knownIssue because the un-hedged twin is MEASURED NONDETERMINISTIC on the volume-AI rung: '1 cup cooked pasta' on fdc_169730 has billed 120/140/142/145/150/180/190/200/240/250 g across fdc_volume_ai / fdc_volume_cached / fs_volume_density / volume_unit (345 events, MappingEventLog, prose report §3) — the 240-250 g draws are outside the band and a hard band here would flap. Pinned so its DRIFT is the instrument: the cold baseline records the draw, and knownIssueDrift reports every move. Unpin when the rung is deterministic (P3/P5 own it). No tier assertion: with a genuine USDA cup row absent on the winner, fdc_volume_ai is the designed path, not the defect."
+    },
+    {
+      "id": "n-prose-04",
+      "category": "prose",
+      "text": "a slice of texas toast",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "texas toast"
+        ],
+        [
+          "toast"
+        ],
+        [
+          "bread"
+        ]
+      ],
+      "grams": [
+        30,
+        60
+      ],
+      "total": {
+        "calories": [
+          90,
+          220
+        ]
+      },
+      "notes": "PROSE SET (2026-08-17) — the sitting's last line. 'a slice of' is an article + partitive the parser does not own (parseIngredientLine() returns name 'a of texas toast', unit null). Truth: Texas toast is the double-thick slice, ~40 g (the label serving of off_0074175016838 is 1 slice = 40 g / 160 kcal); a plain 25-29 g bread slice is NOT a slice of Texas toast. Measured: warm 40 g bare_label_serving (2026-08-17 21:31/21:38 UTC), cold 26 g fs_default_serving on fs_299848 (21:39 UTC) — the cold landing is out of band by design, it bills a plain slice for a thick one. Left HARD (not knownIssue): warm passes, and the cold red is the finding this set exists to record."
+    },
+    {
+      "id": "n-prose-05",
+      "category": "prose",
+      "text": "some cereal",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "cereal"
+        ]
+      ],
+      "grams": [
+        25,
+        70
+      ],
+      "total": {
+        "calories": [
+          80,
+          280
+        ]
+      },
+      "expectServingTier": [
+        "bare_*",
+        "fs_default_serving",
+        "label_serving_default"
+      ],
+      "notes": "PROSE SET (2026-08-17). A vague partitive with NO quantity: nothing can turn 'some' into grams (P4), so the honest bill is the record's own serving — a bare_* rung, or the FS/OFF default-serving tier — never a flat 100 g / count floor. Truth band = one label serving of dry cereal (n-serv-26's [25,70]). Measured 26 g bare_label_serving on off_0042400265177 (2026-08-15; the mapper's key is 'some cereal', the word survives to the search term). Contrast bare 'cereal': 40 g bare_category_default AND 100 g count_unresolved_floor across 82 events — the floor is exactly what expectServingTier excludes. Tier band scored cold only (debug echo), fail-open warm."
+    },
+    {
+      "id": "n-prose-06",
+      "category": "prose",
+      "text": "a handful of almonds",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "almond"
+        ]
+      ],
+      "grams": [
+        18,
+        45
+      ],
+      "total": {
+        "calories": [
+          100,
+          270
+        ]
+      },
+      "notes": "PROSE SET (2026-08-17). Truth: one handful ~28 g / ~160 kcal (n-serv-25 and n-mq-07's band). The partitive is NOT parsed: parseIngredientLine() returns name 'a handful of almonds' with no unit, so this is the bare cascade billing a plural serving, not the handful estimator that '1 handful almonds' reaches (count_unit_ai / count_unit_cached, 28-43 g, 338 events). Measured: 1.2 g seed_count_default (ONE almond) x3 on 2026-07-20 before the bare-plural inversion fix, 28 g bare_plural_serving on off_09664784 since 2026-07-28 (MappingEventLog). No tier assertion: the honest rung (a handful estimate) does not exist on this path until P4 strips the partitive; the grams band is the truth claim."
+    },
+    {
+      "id": "n-prose-07",
+      "category": "prose",
+      "text": "a bit of avocado oil",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "avocado oil"
+        ],
+        [
+          "avocado",
+          "oil"
+        ]
+      ],
+      "grams": [
+        3,
+        15
+      ],
+      "total": {
+        "calories": [
+          25,
+          135
+        ]
+      },
+      "notes": "PROSE SET (2026-08-17) — the sitting's sixth line. No gram table for 'a bit of' and none should be built (P4: strip for identity only). The truth claim is a CEILING: a bit of cooking oil is at most a tablespoon (14-15 g, ~130 kcal), so the band's top is the label serving and anything above it (a flat 100 g = 884 kcal) is the failure. Measured 15 g fdc_own_size_cached on fdc_173573 (2026-08-17, warm); bare 'avocado oil' 14-20 g bare_query_default / fdc_size_estimate. A cold FS landing at 1 tbsp = 14 g is in band."
+    },
+    {
+      "id": "n-prose-08",
+      "category": "prose",
+      "text": "approximately 2 cups of spinach",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "spinach"
+        ]
+      ],
+      "grams": [
+        40,
+        100
+      ],
+      "total": {
+        "calories": [
+          8,
+          30
+        ]
+      },
+      "notes": "PROSE SET (2026-08-17). Hedge + plural volume unit + partitive 'of'. Truth: raw leaves are the diary meaning — USDA 1 cup raw spinach = 30 g, so 60 g / ~14 kcal; fs_36577 declares the same (measured '1 cup spinach' fs_label_volume_declared 30 g, 2026-08-03). The band deliberately EXCLUDES the solid-density fallback (volume_unit: 2 x 120 g = 240 g, the 'solid' class in resolveVolumeGrams()) and cooked spinach (2 x 180 g): both are the wrong food state for a cup of leaves. Bare 'spinach' with no quantity bills 85 g bare_name_sibling_serving_tight (prose report §0) — a hedge that kills the quantity lands there, which the band also excludes."
+    },
+    {
+      "id": "n-prose-09",
+      "category": "prose",
+      "text": "like 3 eggs",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "grams": [
+        130,
+        170
+      ],
+      "total": {
+        "calories": [
+          165,
+          285
+        ]
+      },
+      "notes": "PROSE SET (2026-08-17). A filler hedge ('like') with no quantity semantics in front of a plain COUNT. Truth: 3 x 50 g = 150 g, ~215 kcal (n-qty-06's band, n-svg-04's per-egg calories x3). Un-hedged '3 eggs' bills 126-150 g count_unit_ai / label_unit_match over 339 events (measured 2026-08-17). If the hedge survives into the name the bare cascade bills ONE egg (~50 g) — that is what the floor of the band catches."
+    },
+    {
+      "id": "n-prose-10",
+      "category": "prose",
+      "text": "maybe half a cup of rice",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "grams": [
+        56,
+        116
+      ],
+      "macros": {
+        "kcal100": [
+          100,
+          175
+        ]
+      },
+      "total": {
+        "calories": [
+          70,
+          160
+        ]
+      },
+      "notes": "PROSE SET (2026-08-17). Hedge in front of a WORD fraction the parser owns ('half' in WORD_NUMBERS, quantity.ts). Truth: half a cup of cooked rice = 79-93 g (USDA 158-186 g/cup), ~110 kcal; band is +/-35% around 86 g, and its 56 g floor knowingly admits the corpus's low declared-cup record ('Cooked White Rice' 120 g/cup per n-serv-01 -> 60 g). Un-hedged '1/2 cup white rice' bills 60/79/97.5 g across fdc_label_volume / fdc_volume_ai / fs_label_volume_declared / fs_volume_density / volume_unit (339 events, measured 2026-08-17) — all in band. kcal100 is the cooked-vs-dry discriminator (dry rice ~365 kcal/100 g), per the _readme STANDING RULE."
+    },
+    {
+      "id": "n-prose-11",
+      "category": "prose",
+      "text": "around 4 oz of chicken breast",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "chicken"
+        ]
+      ],
+      "grams": [
+        105,
+        122
+      ],
+      "total": {
+        "calories": [
+          110,
+          235
+        ]
+      },
+      "expectServingTier": [
+        "weight_unit",
+        "fs_weight_direct"
+      ],
+      "notes": "PROSE SET (2026-08-17). Hedge before a WEIGHT unit — the one family where the answer is a pure constant (4 oz = 113.4 g) and the rung is USER-class by definition (weight_unit on the OFF/FDC lanes, fs_weight_direct on FatSecret; the census's USER class). Un-hedged, digit+unit at token 0 is honoured in 91% of rows (prose report §3); the hedge moves the line into the 9% bare bucket unless the AI parse rescue fires, and a bare 'chicken breast' bills a label serving (84-112 g on the measured 'just bare chicken breast …' lines) on a bare_* / fs_default_serving tier — which is exactly what expectServingTier excludes. Calories admit cooked (165 kcal/100 g -> ~187) and raw (120 -> ~136). Tier scored cold only, fail-open warm."
+    },
+    {
+      "id": "n-prose-12",
+      "category": "prose",
+      "text": "nearly 2 cups of milk",
+      "expectItems": 1,
+      "expectName": [
+        [
+          "milk"
+        ]
+      ],
+      "grams": [
+        460,
+        510
+      ],
+      "total": {
+        "calories": [
+          140,
+          340
+        ]
+      },
+      "expectServingTier": [
+        "fdc_label_volume",
+        "fdc_volume_cached",
+        "fdc_volume_ai",
+        "fs_label_volume",
+        "fs_label_volume_declared",
+        "fs_volume_density",
+        "volume_unit"
+      ],
+      "notes": "PROSE SET (2026-08-17). LIQUID control with a hedge: 2 x 244 g (n-svg-05's [230,255] doubled). '1 cup milk' bills 240 g volume_unit on OFF records (338 events, measured 2026-08-17). Calories span skim (2 x 83) to whole (2 x 149) because a bare 'milk' may land on any fat level. expectServingTier = the volume family (any lane); a hedge that costs the quantity would bill a label serving on a bare_* tier and read ~240 g — both the grams band and the tier band see that."
+    },
+    {
+      "id": "n-prose-13",
+      "category": "prose",
+      "text": "about 1 cup of egg whites scrambled with a bit of chopped bell peppers, onions, mushrooms, and spinach all cooked with a bit of avocado oil. Followed by a slice of texas toast.",
+      "expectItems": 7,
+      "expectName": [
+        [
+          "egg",
+          "white"
+        ],
+        [
+          "pepper"
+        ],
+        [
+          "onion"
+        ],
+        [
+          "mushroom"
+        ],
+        [
+          "spinach"
+        ],
+        [
+          "avocado oil"
+        ],
+        [
+          "toast"
+        ]
+      ],
+      "notes": "PROSE SET (2026-08-17) — the sitting's log VERBATIM; owner: sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md (mobile). The AI split was clean (seven items, seg-v2 SegmentationCache row: egg whites / chopped bell peppers / onions / mushrooms / spinach / avocado oil / texas toast; filler dropped, nothing invented) but not deterministic in rawText — a nocache re-run emitted 'scrambled with a bit of chopped bell peppers' as a rawText with identity unchanged. The COUNT and the identities are the assertion; grams/total are deliberately absent because bands read items[0] and which line lands at index 0 is a segmentation artefact (_readme). Its single-line halves are banded on their own: n-prose-01 (egg whites), n-prose-07 (avocado oil), n-prose-04 (texas toast). Costs a segmenter call on every cold run."
+    },
+    {
+      "id": "n-prose-14",
+      "category": "prose",
+      "text": "I had about 2 eggs and roughly a cup of oatmeal for breakfast",
+      "expectItems": 2,
+      "expectName": [
+        [
+          "egg"
+        ],
+        [
+          "oat"
+        ]
+      ],
+      "notes": "PROSE SET (2026-08-17). First-person filler ('I had'), two hedges, an article-quantity ('a cup'), a meal suffix. Two items, both identities; unbanded (_readme: bands read items[0] only). The single-line hedge+count and hedge+volume shapes are banded in n-prose-09 and n-prose-01/-10."
+    },
+    {
+      "id": "n-prose-15",
+      "category": "prose",
+      "text": "some grilled chicken with maybe half a cup of rice and a bit of broccoli",
+      "expectItems": 3,
+      "expectName": [
+        [
+          "chicken"
+        ],
+        [
+          "rice"
+        ],
+        [
+          "broccoli"
+        ]
+      ],
+      "notes": "PROSE SET (2026-08-17). Three partitive/hedge shapes in one line — 'some X', 'maybe half a cup of X', 'a bit of X' — the segmenter must yield three lines with the hedges NOT promoted to foods and NOT merged into their neighbours. Unbanded; the shapes are banded singly in n-prose-05, n-prose-10 and n-prose-07."
+    },
+    {
+      "id": "n-prose-16",
+      "category": "prose",
+      "text": "a handful of almonds and like 2 tbsp of peanut butter, then a slice of toast",
+      "expectItems": 3,
+      "expectName": [
+        [
+          "almond"
+        ],
+        [
+          "peanut butter"
+        ],
+        [
+          "toast"
+        ],
+        [
+          "bread"
+        ]
+      ],
+      "notes": "PROSE SET (2026-08-17). Partitive + filler-hedge-before-volume + 'then' as a separator + article-partitive. Three items; the 'then' must split, not become a food. Unbanded; the single-line shapes are n-prose-06 (handful), n-prose-02 (hedge + tbsp) and n-prose-04 (a slice of)."
     }
   ]
 }
