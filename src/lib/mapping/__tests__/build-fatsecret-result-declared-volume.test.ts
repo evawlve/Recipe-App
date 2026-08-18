@@ -515,7 +515,8 @@ describe('LIVE RECORDS — the row that answers need not be defaultServingId', (
         // FatSecret having flagged its cup row as the default — so the OLD gate
         // fires on it too. It is here to prove the rewrite MOVES NOTHING that
         // already worked: if this test is the one that goes red, the change is
-        // wrong. Golden n-prose-06's band is built on this record's 30 g.
+        // wrong. Golden n-prose-08 ("approximately 2 cups of spinach", band
+        // [40, 100] g) is built on this record's 30 g.
         mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
             fsId: '36577', name: 'Spinach',
             nutrientsPer100g: { calories: 23, protein: 2.86, carbs: 3.63, fat: 0.39 },
