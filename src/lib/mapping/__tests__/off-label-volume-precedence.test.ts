@@ -21,26 +21,52 @@
  * thing the user asked for ... For these, trust servingGrams over estimation."*
  * Volume was never added to it, and no comment anywhere defended the order.
  *
- * WHAT CHANGED. ONE new `else if` inserted ahead of `volume_unit`. Zero existing
- * lines modified. The new branch re-tests `volumeToGrams[unit]` itself, so its
- * firing population is provably a SUBSET of what `volume_unit` billed before —
- * nothing that reached any other branch can reach this one.
+ * WHAT CHANGED. One added conjunct on the `volume_unit` branch —
+ * `&& !ownLabelBeatsVolumeConstant` — and the derived boolean behind it. No
+ * branch body moved; the existing `label_unit_match` branch picks the request up
+ * unchanged.
  *
- * THE BAND. The new branch reuses `findOwnFdcVolumeServing()`'s density band
+ * TWO STRUCTURAL PROPERTIES make the blast radius provable rather than merely
+ * tested, and both matter more than any assertion in this file:
+ *
+ *   SUBSET. `ownLabelBeatsVolumeConstant` re-tests `volumeToGrams[unit]` itself,
+ *   so it can only ever intercept a bill the `volume_unit` branch would have
+ *   made. Nothing that reached any other branch can reach this one.
+ *
+ *   STRICT SUPERSET, i.e. no fall-through. Its conjuncts are a strict superset
+ *   of the `label_unit_match` branch's own condition (`unit && labelUnitWord &&
+ *   perLabelUnitGrams && singularizeUnit(unit) === labelUnitWord`), so a line it
+ *   demotes is GUARANTEED to be caught by that branch on the very next test. A
+ *   demoted line cannot fall past it into `PACKAGE_LIKE_UNITS`, the count rungs
+ *   or `flat_100g_default`. The dangerous shape for a precedence change — "the
+ *   winner was disqualified and the line landed somewhere worse" — is
+ *   unreachable by construction, not by luck.
+ *
+ * THE BAND. The guard reuses `findOwnFdcVolumeServing()`'s density band
  * `[VOLUME_SERVING_MIN_DENSITY, VOLUME_SERVING_MAX_DENSITY]` = [0.1, 1.6] g/ml,
- * and REFUSES any unit with no millilitre cell (`ml`, `dash`, `pinch`). Block 5
- * below is the measurement that justifies reusing rather than inventing a band,
- * and blocks 3 and 6 are its negative controls.
+ * and holds out `dash`/`pinch` (absolute cells, not densities) plus the whole
+ * pinned flat family `OFF_FLAT_VOLUME_CELLS` (`ml`, `floz`, `fl oz`). Block 5
+ * states exactly what the reuse argument does and does not buy; block 4 records
+ * the low edge's known cost in the same breath.
  *
- * RED ON MASTER: blocks 1 and 2 (120 g / `volume_unit` where 30 g / 240 g /
- * `label_unit_match` is asserted). Blocks 3-7 are GREEN ON BOTH TREES — they are
- * the controls, and per the plan they matter more than the RED.
+ * WHICH BLOCKS WITNESS WHAT — stated because "23 passed" hides it:
+ *   1, 2      RED on master, GREEN here. The behaviour change.
+ *   3, 6, 7   MASTER-PINNED CONTROLS. Every expectation is the value master
+ *             produces, recorded before the fix existed. Green on both trees,
+ *             and non-vacuously so: they assert values master genuinely computes.
+ *   4         Evidence about the band. Green on master too, but VACUOUSLY —
+ *             master answers `volume_unit:120` to every cup request. Not a
+ *             control. See the note on that block.
+ *   5         Pure derivation over the constants. Tree-independent.
+ *   8         The wire field. Tree-independent derivation, driven by the real
+ *             branch's real tier.
  */
 
 import { buildOffResult, findOwnFdcVolumeServing } from '../map-ingredient-with-fallback';
 import { hydrateOffCandidate } from '../../openfoodfacts/hydrate';
 import { resolveVolumeGrams } from '../../units/volume-density';
 import { categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES } from '../../units/density';
+import { portionProvenanceForTier } from '../serving-ai-tiers';
 import { prisma } from '../../db';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
@@ -222,21 +248,54 @@ describe('3. the class constant is still the fallback', () => {
 });
 
 // ------------------------------------------------------------------
-// 4. THE BAND REFUSES A JUNK LABEL
+// 4. WHAT THE BAND REFUSES — one junk label, and one that is NOT junk
 // ------------------------------------------------------------------
-describe('4. out-of-band labels are refused and fall to the constant', () => {
-    it('"1 cup (500 g)" implies 2.08 g/ml — denser than any food — so the constant wins', async () => {
+/**
+ * NOTE ON WHAT THESE TWO REFUSAL TESTS CAN AND CANNOT WITNESS. They pass on
+ * master too, but VACUOUSLY: master answers `volume_unit:120` to every cup
+ * request because the label branch is unreachable there, so on master they
+ * cannot tell "the band refused the label" apart from "no label was ever
+ * consulted." They discriminate only on this branch, where the same fixture
+ * with an in-band gram figure returns `label_unit_match`. They are evidence
+ * about the band, not master-pinned controls — blocks 3, 6 and 7 are the
+ * master-pinned controls.
+ */
+describe('4. what the band refuses', () => {
+    it('JUNK, correctly refused: "1 cup (500 g)" implies 2.08 g/ml, denser than honey', async () => {
         mockedHydrateOff.mockResolvedValue(offHydrated({
             servingGrams: 500, servingDescription: '1 cup (500 g)', servingUnitCount: 1,
         }));
         expect(await bill({ qty: 1, unit: 'cup' }, '1 cup cereal')).toBe(`volume_unit:${CLASS_CONSTANT_CUP_G}`);
     });
 
-    it('"1 cup (12 g)" implies 0.05 g/ml — lighter than puffed cereal — so the constant wins', async () => {
+    /**
+     * NOT JUNK. This test pins a KNOWN LIMITATION, not a desired behaviour.
+     *
+     * A cup of popcorn really is ~8 g (0.033 g/ml). The label is CORRECT and the
+     * band refuses it anyway, so the line bills the flat-solid class constant of
+     * 120 g — a ~15x overbill, ~630 kcal charged for ~31 kcal of food. Puffed
+     * wheat at `1 cup (15 g)` (0.0625 g/ml) is the same failure at ~8x.
+     * `popcorn` matches no CATEGORY_KEYWORDS entry, so it cannot even reach a
+     * dry-granule density and takes the flat 0.5.
+     *
+     * It is asserted here because it is TRUE OF THIS BRANCH, and because the
+     * alternative — leaving it unasserted — is how a reader concludes the low
+     * edge is calibrated. It is not. The band's low edge was inherited from
+     * `findOwnFdcVolumeServing()` and is unmeasured against the OFF label
+     * population; the corpus read that would settle it was written and refused
+     * by this session's permission classifier.
+     *
+     * NOT A REGRESSION: master bills 120 g for this exact line too, by a
+     * different route (the label branch is unreachable there). This lane neither
+     * causes nor fixes it. Narrowing the low edge is a separate change that
+     * needs the measurement first — whoever gets it owns this test.
+     */
+    it('LIMITATION, carried forward from master: real popcorn at "1 cup (8 g)" is refused and overbilled 15x', async () => {
         mockedHydrateOff.mockResolvedValue(offHydrated({
-            servingGrams: 12, servingDescription: '1 cup (12 g)', servingUnitCount: 1,
+            foodName: 'Popcorn', servingGrams: 8, servingDescription: '1 cup (8 g)', servingUnitCount: 1,
         }));
-        expect(await bill({ qty: 1, unit: 'cup' }, '1 cup cereal')).toBe(`volume_unit:${CLASS_CONSTANT_CUP_G}`);
+        expect(await bill({ qty: 1, unit: 'cup', name: 'popcorn' }, '1 cup popcorn', 'Popcorn'))
+            .toBe('volume_unit:120');
     });
 
     it('the band edges are INCLUSIVE and admit the extremes ([0.1, 1.6] g/ml on a 240 ml cup)', async () => {
@@ -257,24 +316,32 @@ describe('4. out-of-band labels are refused and fall to the constant', () => {
 // ------------------------------------------------------------------
 describe('5. the band is strictly wider than every density the estimator itself can produce', () => {
     /**
-     * The band's job here is NOT to second-guess a plausible label — it is to
-     * refuse a label the estimator's OWN physics could never have produced.
+     * WHAT THIS BLOCK PROVES, AND — read this first — WHAT IT DOES NOT.
+     *
      * `resolveVolumeGrams()` emits exactly four shapes of cup cell:
      *   pourable (liquid | beverage)  240 g   -> 1.0000 g/ml
      *   paste                         250 g   -> 1.0417 g/ml
      *   solid, flat default           120 g   -> 0.5000 g/ml
      *   solid, dry-granule category   240 x categoryDensity(c)
      *                                         -> {oats .36 ... sugar .85}
-     * so the whole reachable range is [0.36, 1.0417] g/ml. [0.1, 1.6] brackets
-     * that with 3.6x of slack below and 1.54x above. A label the band refuses is
-     * therefore MORE extreme than anything the constant it is replacing could
-     * ever say — which is the only condition under which "the record is wrong
-     * and the class guess is better" can be asserted without a corpus read.
+     * so the whole reachable range is [0.36, 1.0417] g/ml, and [0.1, 1.6]
+     * brackets it with 3.6x of slack below and 1.54x above.
      *
-     * (A live-corpus read of the actual OFF label density distribution was
-     * attempted and refused by this session's permission classifier — see the
-     * PR body. This is the argument that stands in for it, and unlike prose it
-     * goes RED if a future constants PR pushes a class density past the band.)
+     * PROVES: a bound on the CHANGE. Wherever the band refuses a label, the line
+     * falls to a constant that was already at least that far from the label's
+     * number, so a refusal cannot bill worse than master billed the same line.
+     * That is what makes reusing the band safe to ship.
+     *
+     * DOES NOT PROVE: that the band is right about FOOD. It is a fact about the
+     * estimator's cells; the band is applied to the LABEL's implied density, and
+     * labels are a different population — real foods sit outside [0.36, 1.0417]
+     * in both directions, and the low edge demonstrably refuses correct labels
+     * (block 4's popcorn case, ~15x overbill). The corpus read that would
+     * calibrate the edges against real OFF labels was written and refused by
+     * this session's permission classifier, so no such claim is made here.
+     *
+     * Unlike prose, this goes RED if a future constants PR pushes a class
+     * density past the band.
      */
     const reachableDensities = (): number[] => {
         const solids = [0.5, ...[...DRY_GRANULE_DENSITY_CATEGORIES]
@@ -328,9 +395,29 @@ describe('5. the band is strictly wider than every density the estimator itself 
 });
 
 // ------------------------------------------------------------------
-// 6. UNITS WITH NO MILLILITRE CELL ARE REFUSED — the ml / dash / pinch guard
+// 6. THE HELD-OUT UNITS — the pinned flat family, plus dash/pinch
 // ------------------------------------------------------------------
-describe('6. a unit with no millilitre cell cannot be banded, so it keeps the constant', () => {
+/**
+ * `volume-unit-spellings.test.ts` block 4 is a real no-regression pin for the
+ * flat-ml asymmetry, but it CANNOT witness this guard: all four of its OFF
+ * fixtures carry `servingGrams: null, servingDescription: null`, so no label
+ * exists for the new branch to prefer and the guard is never consulted. This
+ * block is the only evidence the hold-out works, so it uses fixtures that DO
+ * carry a matching label and asserts the constant wins anyway.
+ */
+describe('6. the pinned flat family and the absolute cells are held out', () => {
+    it('`floz` on a record labelled "1 floz (45 g)" keeps the flat 30 g, NOT the label', async () => {
+        // 45/30 = 1.5 g/ml is INSIDE [0.1, 1.6], so only the OFF_FLAT_VOLUME_CELLS
+        // hold-out stops this. Without it the whole pinned family would be
+        // half-applied: `ml` protected, `floz` label-readable. floz traffic is 0
+        // events, which is why it must be the consistent rule and not a judgement
+        // call made under pressure from a number.
+        mockedHydrateOff.mockResolvedValue(offHydrated({
+            servingGrams: 45, servingDescription: '1 floz (45 g)', servingUnitCount: 1,
+        }));
+        expect(await bill({ qty: 1, unit: 'floz' }, '1 floz cereal')).toBe('volume_unit:30');
+    });
+
     it('`ml` on a record labelled "250 ml" still bills the flat ml pin, label or no label', async () => {
         // What parseOffServingSize() actually produces for a "250 ml" label:
         // leadingCount("250 ml") = 250, so perLabelUnitGrams = 250/250 = 1 g/ml.
@@ -407,5 +494,81 @@ describe('7. `labelUnitWord`\'s four other consumers are untouched', () => {
             servingGrams: 30, servingDescription: '1 cup (30 g)', servingUnitCount: 1,
         }));
         expect(await bill({ qty: 100, unit: 'g' }, '100 g cereal')).toBe('weight_unit:100');
+    });
+});
+
+// ------------------------------------------------------------------
+// 8. THE WIRE FIELD — portionProvenance goes from 'borrowed' to ABSENT
+// ------------------------------------------------------------------
+/**
+ * A DECISION, not a side effect. Moving a line from `volume_unit` to
+ * `label_unit_match` also moves what `/api/nlp/parse` puts on the wire for it,
+ * because `portionProvenanceForTier()` is derived from the tier — and
+ * `PortionProvenance` is `'borrowed' | 'floor'`, with NO `'own'` member.
+ * `volume_unit` is in `BORROWED_OR_DEFAULTED_SERVING_TIERS`; `label_unit_match`
+ * is in none of the five class lists. So the field goes from `'borrowed'` to
+ * ABSENT on 4.3% of serving-tier traffic, and the mobile badge that reads it
+ * stops badging those lines.
+ *
+ * ABSENT IS THE CORRECT VALUE, and this is the argument:
+ *
+ *   1. The field is a WARNING, not a provenance enum — its two members are
+ *      "borrowed from another record" and "fabricated floor". The route spreads
+ *      it `...(p ? { portionProvenance: p } : {})` and its own comment at
+ *      `route.ts:567-568` says the field is "omitted (never null) when the tier
+ *      is in neither list, so every honest row stays byte-identical on the
+ *      wire." A line billed from the record's OWN label, in the very unit the
+ *      user asked for, is the definition of an honest row.
+ *   2. It is NOT A NEW WIRE STATE. `label_unit_match` already ships with the
+ *      field absent today, for every non-volume label ("1 scoop" on a
+ *      "2 scoops (46g)" tub). This lane routes more lines onto a tier whose
+ *      provenance was already settled and tested; it invents nothing.
+ *   3. The direction is strictly honest: lines stop claiming 'borrowed' when
+ *      they are not borrowed. A line that KEEPS the constant keeps 'borrowed',
+ *      which is still true of it.
+ *
+ * `route.portion-provenance.test.ts` mocks the tier directly, so it cannot see
+ * this move. These assertions drive the REAL branch and feed its actual tier to
+ * the real derivation, which is the only way the move is observable in jest.
+ */
+describe('8. portionProvenance: the moved lines stop claiming borrowed', () => {
+    /** The route's own emit shape, `route.ts:571`. */
+    const wire = (tier: string | undefined) => {
+        const p = portionProvenanceForTier(tier);
+        return { foodName: 'x', ...(p ? { portionProvenance: p } : {}) } as Record<string, unknown>;
+    };
+
+    it('the derivation itself: volume_unit -> borrowed, label_unit_match -> undefined', () => {
+        expect(portionProvenanceForTier('volume_unit')).toBe('borrowed');
+        expect(portionProvenanceForTier('label_unit_match')).toBeUndefined();
+        // There is no 'own' member to move to — the absence IS the value.
+        expect(portionProvenanceForTier('label_unit_match')).not.toBe('own');
+    });
+
+    it('a MOVED line ships no portionProvenance key at all (not null, not undefined — absent)', async () => {
+        mockedHydrateOff.mockResolvedValue(offHydrated({
+            servingGrams: 30, servingDescription: '1 cup (30 g)', servingUnitCount: 1,
+        }));
+        const r = await buildOffResult(offCandidate(), parsed({ qty: 1, unit: 'cup' }), 0.9, '1 cup cereal');
+        expect(r?.servingTier).toBe('label_unit_match');
+        expect(Object.prototype.hasOwnProperty.call(wire(r?.servingTier), 'portionProvenance')).toBe(false);
+    });
+
+    it('a line the band REFUSED keeps portionProvenance borrowed — it really is a class default', async () => {
+        mockedHydrateOff.mockResolvedValue(offHydrated({
+            servingGrams: 500, servingDescription: '1 cup (500 g)', servingUnitCount: 1,
+        }));
+        const r = await buildOffResult(offCandidate(), parsed({ qty: 1, unit: 'cup' }), 0.9, '1 cup cereal');
+        expect(r?.servingTier).toBe('volume_unit');
+        expect(wire(r?.servingTier).portionProvenance).toBe('borrowed');
+    });
+
+    it('the non-volume label_unit_match already shipped the field absent — this lane invents no state', async () => {
+        mockedHydrateOff.mockResolvedValue(offHydrated({
+            servingGrams: 46, servingDescription: '2 scoops (46 g)', servingUnitCount: 2,
+        }));
+        const r = await buildOffResult(offCandidate(), parsed({ qty: 1, unit: 'scoop' }), 0.9, '1 scoop cereal');
+        expect(r?.servingTier).toBe('label_unit_match');
+        expect(Object.prototype.hasOwnProperty.call(wire(r?.servingTier), 'portionProvenance')).toBe(false);
     });
 });

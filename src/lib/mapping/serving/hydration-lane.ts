@@ -2049,6 +2049,25 @@ const VOLUME_SERVING_MIN_DENSITY = 0.1;
 const VOLUME_SERVING_MAX_DENSITY = 1.6;
 
 /**
+ * The three cells `buildOffResult()` pins FLAT — the one cell family where this
+ * lane and `volume-density.ts` deliberately disagree (the owner density-scales
+ * ml/floz; this lane bills them at 1 g/ml and 30 g). The full argument, and why
+ * converging is a CONSTANT change rather than a de-duplication, is on the table
+ * that spreads this in `buildOffResult()`.
+ *
+ * Hoisted out of that table 2026-08-18 (lane V2a) so the PRECEDENCE GUARD can
+ * hold out exactly the pinned family instead of hand-copying part of it. It was
+ * `ml` only on the first cut, which left `floz`/`fl oz` label-readable while the
+ * comment claimed the pinned family was kept bit-identical — true of `ml`, not
+ * of the family. Nothing moves either way today (measured 2026-08-17: ml 2
+ * events, floz 0), which is exactly why it should be the consistent rule rather
+ * than the convenient one. The object VALUE is unchanged, so
+ * `volume-density-convergence.test.ts`'s cell-for-cell `offTable()` comparison
+ * is unaffected.
+ */
+const OFF_FLAT_VOLUME_CELLS: Record<string, number> = { 'ml': 1, 'floz': 30, 'fl oz': 30 };
+
+/**
  * The record's OWN volume serving matching the requested unit, per-unit
  * (n-serv-06): the USDA cooked-quinoa "cup"=185g row must beat both a fresh
  * AI estimate and the generic 240ml×density fallback. Genuine (non-AI) rows
@@ -2581,7 +2600,7 @@ export async function buildOffResult(
         // 2 events are the only ml/floz traffic in the whole live `volume_unit`
         // population (8,200 events: cup 5,533, tbsp 2,059, tsp 606, ml 2,
         // floz 0 — measured 2026-08-17). The fix is on the classification side.
-        'ml': 1, 'floz': 30, 'fl oz': 30,
+        ...OFF_FLAT_VOLUME_CELLS,
     };
 
     let grams: number | null = null;
@@ -2638,22 +2657,47 @@ export async function buildOffResult(
     //     are crowd-entered, so if USDA's curated rows need the band these need
     //     it more. A label reading `1 cup` against a 500 g serving implies
     //     2.08 g/ml — denser than honey, i.e. a package weight filed under a
-    //     cup description. Reused rather than re-derived because it brackets
-    //     every density `resolveVolumeGrams()` can itself produce — [0.36
-    //     (oats), 1.0417 (paste)] — with more than 1.5x of slack on BOTH sides,
-    //     so it can only refuse a label more extreme than the constant it then
-    //     defers to. That bracketing is asserted, not asserted-by-comment, in
+    //     cup description.
+    //
+    //     REUSED rather than re-derived, and the reason is a boundary on the
+    //     CHANGE, not a claim about food: the band brackets every density
+    //     `resolveVolumeGrams()` can itself produce ([0.36 oats, 1.0417 paste])
+    //     with >1.5x of slack on both sides, so wherever it refuses a label the
+    //     line lands on a constant that was ALREADY going to be at least that
+    //     far from the label's own number. Refusal therefore cannot make any
+    //     line worse than master billed it. That is all this argument buys.
+    //
+    //     WHAT IT DOES NOT BUY, stated plainly because a band that is trusted
+    //     for the wrong reason is worse than none: the band is applied to the
+    //     LABEL's implied density, and labels are a different population from
+    //     the estimator's cells. THE LOW EDGE REFUSES GENUINELY LIGHT FOODS.
+    //     Popcorn at `1 cup (8 g)` is 0.033 g/ml and is REAL, not corrupt; it
+    //     is refused here and billed the flat-solid 120 g, a ~15x overbill.
+    //     Puffed wheat at `1 cup (15 g)` is 0.0625 and ~8x. Both are exactly
+    //     what master bills — this lane neither causes nor fixes them — so it
+    //     is a KNOWN LIMITATION carried forward, not a regression. It is not
+    //     narrowed here because nobody in this session could measure the real
+    //     OFF label-density distribution (the corpus read was written and
+    //     refused by the permission classifier), and moving a threshold on a
+    //     guess is the thing this whole lane argues against. Whoever gets that
+    //     measurement owns the low edge.
+    //
+    //     The bracketing is asserted, not asserted-by-comment, in
     //     `__tests__/off-label-volume-precedence.test.ts` block 5, which also
-    //     pins these two constants through their other consumer.
+    //     pins these two constants through their other consumer; block 4
+    //     records the popcorn refusal as a limitation rather than as intent.
     //
     // (3) A UNIT WITH NO `VOLUME_UNIT_ML` CELL IS REFUSED, not admitted
-    //     unbanded — `ml`, `dash`, `pinch`. `dash`/`pinch` are ABSOLUTE cells
-    //     (0.6 g / 0.3 g, "a pinch of anything is a pinch"), so a g/ml band is
-    //     meaningless for them; holding `ml` out keeps the deliberate OFF
-    //     flat-ml asymmetry pinned by `volume-unit-spellings.test.ts` block 4
-    //     (`1000 ml flour` = 1000 g) bit-identical rather than quietly making
-    //     it label-dependent. Costs 2 of this tier's 8,200 measured events.
-    const labelVolumeUnitMl = unit ? VOLUME_UNIT_ML[singularizeUnit(unit)] : undefined;
+    //     unbanded — that is `dash` and `pinch`, ABSOLUTE cells (0.6 g / 0.3 g,
+    //     "a pinch of anything is a pinch"), so a g/ml band is meaningless for
+    //     them. AND every cell in OFF_FLAT_VOLUME_CELLS is held out on top of
+    //     that — `ml`, `floz`, `fl oz` — so the deliberate flat family stays
+    //     bit-identical instead of quietly becoming label-dependent. `floz` has
+    //     a VOLUME_UNIT_ML cell and would otherwise have been admitted while
+    //     `ml` was not, which is a half-applied rule, not a decision. Costs 2 of
+    //     this tier's 8,200 measured events (ml 2, floz 0).
+    const labelVolumeUnitMl = unit && !(singularizeUnit(unit) in OFF_FLAT_VOLUME_CELLS)
+        ? VOLUME_UNIT_ML[singularizeUnit(unit)] : undefined;
     const ownLabelVolumeDensity = labelVolumeUnitMl && perLabelUnitGrams
         ? perLabelUnitGrams / labelVolumeUnitMl : null;
     const ownLabelBeatsVolumeConstant = !!(
