@@ -1,4 +1,4 @@
-import { resolveVolumeGrams, pickVolumeUnits } from '../../units/volume-density';
+import { resolveVolumeGrams, pickVolumeUnits, LARGE_VOLUME_UNIT_SPELLINGS } from '../../units/volume-density';
 import {
     OFF_VOLUME_UNIT_SPELLINGS,
     FDC_VOLUME_UNIT_SPELLINGS,
@@ -26,8 +26,17 @@ import { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES 
  * snapshot, not the code (the lesson #249 wrote down). It is the right one HERE
  * and only here, because the thing under test is precisely "does the new code
  * reproduce the old code", and the old code no longer exists to be imported.
- * Once B1b or a constants PR lands, these become history and should be deleted,
- * not "updated" — updating them would re-pin whatever the new code does.
+ * Once a constants PR lands, these become history and should be deleted, not
+ * "updated" — updating them would re-pin whatever the new code does.
+ *
+ * LANE B1b (2026-08-17) LANDED, and it did NOT retire this file: B1b added
+ * spellings (`LARGE_VOLUME_UNIT_SPELLINGS` — `l`/`liter(s)`/`litre(s)`, `pint(s)`,
+ * `quart(s)`, `gallon(s)`) to both gates and moved no existing cell, so the
+ * cell-for-cell identity below still holds on every pre-B1b spelling and is
+ * still worth asserting. What B1b FLIPPED (not deleted — the #242 precedent) is
+ * the "spelling sets are unchanged" block at the bottom: each lane now accepts
+ * exactly its pre-B1a set PLUS the large units, and the pins say so. The large
+ * units' own behaviour is pinned in `volume-unit-spellings.test.ts`.
  */
 
 const PRE_B1A_LIQUID_RE = /broth|stock|water|juice|milk|sauce|vinegar|oil|syrup/i;
@@ -109,11 +118,17 @@ const FOODS: Array<[string, string | null]> = [
     ['Whole Milk', 'milk'],
 ];
 
+/** The key set a lane accepts after B1b: its pre-B1a set plus the large units. */
+function withLargeUnits(preB1aKeys: string[]): string[] {
+    return [...preB1aKeys, ...LARGE_VOLUME_UNIT_SPELLINGS].sort();
+}
+
 describe('B1a — buildOffResult is a pure de-duplication (zero cells move)', () => {
-    it.each(FOODS.map(([c]) => c))('%s: every accepted spelling is byte-identical to the deleted copy', (name) => {
+    it.each(FOODS.map(([c]) => c))('%s: every pre-B1b spelling is byte-identical to the deleted copy', (name) => {
         const before = PRE_B1A_OFF_TABLE(name);
         const after = offTable(name);
-        expect(Object.keys(after).sort()).toEqual(Object.keys(before).sort());
+        // B1b added the large units and nothing else (flipped from strict equality).
+        expect(Object.keys(after).sort()).toEqual(withLargeUnits(Object.keys(before)));
         for (const spelling of Object.keys(before)) {
             expect(`${spelling}=${after[spelling]}`).toBe(`${spelling}=${before[spelling]}`);
         }
@@ -169,24 +184,26 @@ describe('B1a — buildFdcResult moves on exactly three named classes', () => {
     });
 });
 
-describe('B1a — the unit SPELLING sets are unchanged, because they are the branch gate', () => {
+describe('the unit SPELLING sets are the branch gate — B1a left them alone, B1b added exactly the large units', () => {
     // `unit && volumeToGrams[unit]` decides whether a line enters the volume
     // branch at all. On FDC that branch also holds the three LIVE rungs
     // (fdc_label_volume 2,134 / fdc_volume_cached 632 / fdc_volume_ai 318,
-    // measured 2026-08-17), so a spelling added here moves real traffic. B1b owns
-    // the decision; until then these sets are pinned to what each lane accepted
-    // before the convergence.
-    it('OFF accepts exactly what it accepted before', () => {
+    // measured 2026-08-17), so a spelling added here moves real traffic. B1a
+    // pinned each set to what its lane accepted before the convergence; B1b
+    // (2026-08-17) FLIPPED both pins to "that set plus LARGE_VOLUME_UNIT_SPELLINGS"
+    // — the eleven spellings that used to fall through every branch to a flat
+    // 100 g. Anything else appearing here is an unreviewed gate change.
+    it('OFF accepts exactly what it accepted before, plus the large units', () => {
         expect(Object.keys(offTable('Table Salt')).sort())
-            .toEqual(Object.keys(PRE_B1A_OFF_TABLE('Table Salt')).sort());
+            .toEqual(withLargeUnits(Object.keys(PRE_B1A_OFF_TABLE('Table Salt'))));
     });
 
-    it('FDC accepts exactly what it accepted before', () => {
+    it('FDC accepts exactly what it accepted before, plus the large units', () => {
         expect(Object.keys(fdcTable('Table Salt', null)).sort())
-            .toEqual(Object.keys(PRE_B1A_FDC_TABLE('Table Salt', null)).sort());
+            .toEqual(withLargeUnits(Object.keys(PRE_B1A_FDC_TABLE('Table Salt', null))));
     });
 
-    it('the owner carries spellings NEITHER lane admits — adding them is B1b, not B1a', () => {
+    it('the owner carries spellings NEITHER lane admits — B1b admitted only the large units', () => {
         const ownerKeys = Object.keys(resolveVolumeGrams('Table Salt').perUnit);
         expect(ownerKeys).toContain('milliliter');
         expect(ownerKeys).toContain('milliliters');

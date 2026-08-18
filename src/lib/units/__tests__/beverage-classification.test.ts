@@ -134,7 +134,12 @@ describe('B1b — control: the classes that existed before are unchanged', () =>
     });
 
     it('the units this module has no value for are still dropped, not undefined', () => {
-        expect(volumeToGrams(1, 'liter', 'Whole Milk')).toBeNull();
-        expect(volumeToGrams(1, 'gallon', 'Whole Milk')).toBeNull();
+        // Pin flipped when lane B1b (PR #344) merged behind this one: `liter`
+        // and `gallon` are now owner keys (1000 / 3785.41 ml), so the held-out
+        // spellings B1b deliberately did NOT add are the ones that still drop.
+        expect(volumeToGrams(1, 'kilograms', 'Whole Milk')).toBeNull();
+        expect(volumeToGrams(1, 'serving', 'Whole Milk')).toBeNull();
+        expect(volumeToGrams(1, 'liter', 'Whole Milk')).toEqual({ grams: 1000, volumeClass: 'liquid' });
+        expect(volumeToGrams(1, 'gallon', 'Whole Milk')).toEqual({ grams: 3785.41, volumeClass: 'liquid' });
     });
 });
