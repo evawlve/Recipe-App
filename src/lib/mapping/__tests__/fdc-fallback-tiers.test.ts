@@ -258,22 +258,39 @@ describe('the fallback arms each stamp their own tier', () => {
      * arrive: `slice`/`piece` are in branch 4's list. What actually lands here is
      * the DETERMINISTIC_UNITS set minus the spellings branches 1 and 2 enumerate —
      * `isEstimableUnknownUnit()` returns false for a deterministic unit, so
-     * `isAmbiguousUnit()` is false and branch 5 declines it too. 24 spellings,
-     * every one a unit the system says has an exact conversion, all billed at a
-     * flat 100 g: `l` `liter(s)` `litre(s)` `milliliter(s)` `millilitre(s)`
-     * `pint(s)` `quart(s)` `gallon(s)` `mg` `milligram(s)` `kilograms`
-     * `fluid ounces` `serving(s)` `portion(s)`.
+     * `isAmbiguousUnit()` is false and branch 5 declines it too. When this arm
+     * was named (2026-08-17) that was 24 spellings, every one a unit the system
+     * says has an exact conversion, all billed at a flat 100 g: `l` `liter(s)`
+     * `litre(s)` `milliliter(s)` `millilitre(s)` `pint(s)` `quart(s)` `gallon(s)`
+     * `mg` `milligram(s)` `kilograms` `fluid ounces` `serving(s)` `portion(s)`.
      *
      * Naming the tier does not fix the billing. It makes the billing countable,
-     * which is the only reason a fix can be sized.
+     * which is the only reason a fix can be sized — and lane B1b (same day) then
+     * moved the eleven large-volume spellings out of this arm and into branch 2
+     * (`FDC_VOLUME_UNIT_SPELLINGS` in ../serving/hydration-lane). The pin below
+     * is FLIPPED, not deleted (the #242 precedent): the same call that used to
+     * assert `fdc_unknown_unit` / 100 g now asserts the volume branch. What still
+     * lands here is the remainder — `kilograms` (next test), `milliliter(s)`,
+     * `mg`, `serving(s)`, `portion(s)` — each held out of B1b on purpose.
      */
-    it('terminal arm: a deterministic unit no branch converts → fdc_unknown_unit', async () => {
+    it('FLIPPED by B1b: `liter` (the AI-parse arm spelling) no longer terminates — it converts through the volume branch', async () => {
         const r = await hydrateAndSelectServing(
             candidate('Milk, whole'), parsed({ qty: 1, unit: 'liter', name: 'milk' }), 0.9, '1 liter milk',
         );
 
+        // Both AI rungs are mocked off in this file, so the density fallback is
+        // the resolver: LIQUID class, 1000 ml x 1 g/ml.
+        expect(r?.servingTier).toBe('volume_unit');
+        expect(r?.grams).toBe(1000);   // a litre of milk, billed as a litre of milk
+    });
+
+    it('terminal arm: a deterministic unit no branch converts → fdc_unknown_unit (`serving`, held out of B1b)', async () => {
+        const r = await hydrateAndSelectServing(
+            candidate('Milk, whole'), parsed({ qty: 1, unit: 'serving', name: 'milk' }), 0.9, '1 serving milk',
+        );
+
         expect(r?.servingTier).toBe('fdc_unknown_unit');
-        expect(r?.grams).toBe(100);   // a litre of milk, billed as 100 g
+        expect(r?.grams).toBe(100);
     });
 
     it('terminal arm: `kilograms` and `milliliters` land here too — branch 1/2 list singulars', async () => {
