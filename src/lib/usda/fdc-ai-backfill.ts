@@ -212,28 +212,46 @@ export async function insertFdcAiServing(
     }
 
     const suggestion = aiResult.suggestion;
-    let volumeMl =
+    const volumeMl =
         suggestion.volumeUnit && suggestion.volumeAmount
             ? convertVolumeToMl(suggestion.volumeUnit, suggestion.volumeAmount)
             : null;
 
-    let countServing = false;
-    let countUnit: string | undefined;
-
     if (gapType === 'volume' && !volumeMl) {
+        // A COUNT answer to a VOLUME question is refused, not rescued (2026-08-17).
+        //
+        // Until now this arm did the opposite: a suggestion whose `volumeUnit` was
+        // a COUNT_UNITS spelling — or that carried NO unit at all with a positive
+        // `volumeAmount` — was accepted as a "count serving", the density band was
+        // skipped for it, and the grams of the WHOLE label were persisted and
+        // returned undivided. The only caller, the volume branch of
+        // `buildFdcResult()` (serving/hydration-lane.ts), then billed
+        // `qty × grams` under `servingDescription "1 <unit>"`: FdcServing 8377
+        // (`3 egg whites = 65 g`, note "about equivalent to one cup of liquid egg
+        // whites") billed 65 g for ONE CUP of egg whites, and 8376 (`1 egg white =
+        // 33 g`) billed 33 g — the two answers flapping across cold draws.
+        //
+        // The prompt (`buildUserPrompt()` in ../ai/serving-estimator.ts) still
+        // solicits the count escape even when a target unit is named, because the
+        // FatSecret lane's on-demand callers rely on it for count targets. So the
+        // refusal lives here, where the question is always a volume unit: the
+        // caller falls through to its density fallback (`volume_unit`) and nothing
+        // is persisted. Weight gaps are untouched.
         const unit = suggestion.volumeUnit?.toLowerCase().trim();
-        if (suggestion.volumeAmount && suggestion.volumeAmount > 0 && (unit ? COUNT_UNITS.has(unit) : true)) {
-            countServing = true;
-            countUnit = unit ?? 'count';
-            volumeMl = suggestion.volumeAmount;
-        } else if (unit && COUNT_UNITS.has(unit)) {
-            countServing = true;
-            countUnit = unit;
-            volumeMl = suggestion.volumeAmount ?? 1;
+        const answeredAsCount = unit
+            ? COUNT_UNITS.has(unit)
+            : suggestion.volumeAmount != null && suggestion.volumeAmount > 0;
+        if (answeredAsCount) {
+            logger.info('fdc.volume_ai_count_answer_refused', {
+                fdcId: String(fdcId),
+                targetUnit: options.targetUnit,
+                label: suggestion.servingLabel,
+                volumeUnit: suggestion.volumeUnit,
+                volumeAmount: suggestion.volumeAmount,
+                grams: suggestion.grams,
+            });
+            return { success: false, reason: 'count_answer_for_volume_gap' };
         }
-    }
-
-    if (gapType === 'volume' && !volumeMl && !countServing) {
         return { success: false, reason: 'missing_volume_unit' };
     }
 
@@ -241,7 +259,7 @@ export async function insertFdcAiServing(
         return { success: false, reason: 'invalid_grams' };
     }
 
-    const density = volumeMl && !countServing ? suggestion.grams / volumeMl : null;
+    const density = volumeMl ? suggestion.grams / volumeMl : null;
     if (
         density &&
         (density < FATSECRET_CACHE_AI_MIN_DENSITY || density > FATSECRET_CACHE_AI_MAX_DENSITY)

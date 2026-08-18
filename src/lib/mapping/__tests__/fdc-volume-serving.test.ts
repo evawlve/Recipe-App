@@ -129,6 +129,47 @@ describe('findOwnFdcVolumeServing', () => {
     });
 });
 
+describe('findOwnFdcVolumeServing — the tie-break is pinned (P5, 2026-08-17)', () => {
+    // MUTATION: remove `orderBy` from the findMany call. Before this the read had
+    // none, so among several matching genuine rows the winner was whichever the
+    // database returned first. The size sibling has carried this orderBy since
+    // it shipped; the volume read now mirrors it. NOTE this can change WHICH
+    // matching row wins on a tie — it is deterministic, not behaviour-neutral.
+    it('reads with the same explicit deterministic orderBy as the size sibling', async () => {
+        mockedFindMany.mockResolvedValue([{ description: 'cup', grams: 185, isAiEstimated: false }]);
+        await findOwnFdcVolumeServing(168917, 'cup');
+        expect(mockedFindMany).toHaveBeenCalledWith(expect.objectContaining({
+            orderBy: [{ description: 'asc' }, { id: 'asc' }],
+        }));
+    });
+
+    it('a genuine row beats an AI row whatever order the rows arrive in', async () => {
+        const genuine = { description: 'cup, whole', grams: 144, isAiEstimated: false };
+        const ai = { description: '1 cup', grams: 240, isAiEstimated: true };
+        mockedFindMany.mockResolvedValue([ai, genuine]);
+        expect(await findOwnFdcVolumeServing(167762, 'cup')).toEqual({ perUnitGrams: 144, genuine: true });
+        mockedFindMany.mockResolvedValue([genuine, ai]);
+        expect(await findOwnFdcVolumeServing(167762, 'cup')).toEqual({ perUnitGrams: 144, genuine: true });
+    });
+
+    it('among genuine rows the FIRST BY DESCRIPTION wins (strawberries: `cup, halves` 152 g)', async () => {
+        // fdc_167762 rows verbatim, in the order the orderBy delivers them.
+        mockedFindMany.mockResolvedValue([
+            { description: 'cup, halves', grams: 152, isAiEstimated: false },
+            { description: 'cup, pureed', grams: 232, isAiEstimated: false },
+            { description: 'cup, sliced', grams: 166, isAiEstimated: false },
+            { description: 'cup, whole', grams: 144, isAiEstimated: false },
+        ]);
+        expect(await findOwnFdcVolumeServing(167762, 'cup')).toEqual({ perUnitGrams: 152, genuine: true });
+    });
+
+    it('never writes — the reader is SELECT-only', async () => {
+        mockedFindMany.mockResolvedValue([{ description: 'cup', grams: 185, isAiEstimated: false }]);
+        await findOwnFdcVolumeServing(168917, 'cup');
+        expect(prisma.fdcServing.upsert).not.toHaveBeenCalled();
+    });
+});
+
 describe('buildFdcResult volume branch (via hydrateAndSelectServing)', () => {
     it('n-serv-06: "1.5 cups cooked quinoa" bills 1.5 × the genuine 185g cup row — no AI call', async () => {
         mockedFindMany.mockResolvedValue([
