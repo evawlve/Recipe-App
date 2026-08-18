@@ -2054,6 +2054,17 @@ const VOLUME_SERVING_MAX_DENSITY = 1.6;
  * AI estimate and the generic 240ml×density fallback. Genuine (non-AI) rows
  * win over previously cached AI rows; either makes resolution deterministic
  * across runs. Density-banded so corrupt rows can't smuggle package weights.
+ *
+ * TIE-BREAK (2026-08-17): the read is ordered on `description` asc, `id` asc —
+ * the same explicit `orderBy` the size sibling `findOwnFdcSizeServing()` has
+ * carried since it shipped. A genuine row still beats an AI row whatever the
+ * order; among several genuine rows that match the unit and pass the density
+ * band (strawberries fdc_167762 carry `cup, halves` 152 g, `cup, pureed` 232 g,
+ * `cup, sliced` 166 g and `cup, whole` 144 g), the FIRST BY DESCRIPTION wins —
+ * `cup, halves` — where before it was whichever row the database returned
+ * first. That is a real behaviour change on ties, not a no-op: a record whose
+ * physical row order differed from its description order can now bill a
+ * different one of its own rows. It is deterministic either way from here on.
  */
 export async function findOwnFdcVolumeServing(
     fdcId: number,
@@ -2067,6 +2078,7 @@ export async function findOwnFdcVolumeServing(
         rows = await prisma.fdcServing.findMany({
             where: { fdcId },
             select: { description: true, grams: true, isAiEstimated: true },
+            orderBy: [{ description: 'asc' }, { id: 'asc' }],
         });
     } catch {
         return null;
@@ -2227,11 +2239,12 @@ function servingDescriptionStartsWithStem(description: string | null | undefined
  * `slice, medium` 28 g; sharp cheddar fdc_170899 {slice (1 oz), slice (2/3 oz),
  * slice (3/4 oz)} -> NULL, because the record genuinely does not say which.
  *
- * `orderBy` is explicit. The volume sibling above has none and tie-breaks with
- * `matches.find(m => m.genuine) ?? matches[0]`, which is a database-order
- * dependency — harmless there only because its density band is narrow. Removing
- * one source of nondeterminism while importing another would be self-defeating,
- * so the read is ordered on `description` (unique per fdcId by the
+ * `orderBy` is explicit. The volume sibling above tie-breaks with
+ * `matches.find(m => m.genuine) ?? matches[0]`, which was a database-order
+ * dependency until 2026-08-17 (harmless only because its density band is
+ * narrow); it now carries this same `orderBy`. Removing one source of
+ * nondeterminism while importing another would be self-defeating, so the read
+ * is ordered on `description` (unique per fdcId by the
  * `FdcServing_fdcId_description_key` constraint, hence a total order) with `id`
  * behind it.
  */

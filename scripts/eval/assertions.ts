@@ -88,6 +88,26 @@ export interface NlpCaseSpec {
     grams?: [number, number];
     total?: Record<string, [number, number]>;
     item?: { unit?: string };
+    /**
+     * Which serving rung(s) may bill items[0] — exact tier names, or a `prefix*`
+     * glob (`bare_*` = any bare rung). One string or a list of alternatives.
+     *
+     * SCORED ONLY WHEN THE RESPONSE CARRIES THE TIER, and it carries it only under
+     * the dev-bypass `debug=1` echo (`/api/nlp/parse`, run-eval sends it in --nocache
+     * mode). A response without the key is not a pass and not a failure: it is
+     * absence of the observable, so the band is skipped — a warm run cannot go red
+     * on a field the server never sent. When the key IS present, `null` counts as
+     * a mismatch: the echo says the producer stamped nothing, which no case that
+     * names a tier is asking for.
+     */
+    expectServingTier?: string | string[];
+}
+
+/** True when `tier` satisfies one alternative of `expected` (exact, or `prefix*`). */
+export function servingTierMatches(tier: string | null | undefined, expected: string | string[]): boolean {
+    if (typeof tier !== 'string') return false;
+    const alts = Array.isArray(expected) ? expected : [expected];
+    return alts.some(alt => alt.endsWith('*') ? tier.startsWith(alt.slice(0, -1)) : tier === alt);
 }
 
 /**
@@ -198,6 +218,23 @@ export function scoreNlpCase(c: NlpCaseSpec, items: unknown): string[] {
             const v = tot[key];
             if (typeof v !== 'number' || v < range[0] || v > range[1]) {
                 failures.push(`total.${key}=${typeof v === 'number' ? v.toFixed(1) : v} outside [${range[0]}, ${range[1]}] (grams=${items[0]?.grams}, mapped: "${items[0]?.foodName}")`);
+            }
+        }
+    }
+
+    // Which rung billed items[0]. Read the FIELD, not a truthy value: `servingTier`
+    // is on the wire only under the dev-bypass debug echo, and its absence must
+    // skip the band rather than fail it (see NlpCaseSpec.expectServingTier). With
+    // the key present, a null tier is a real mismatch and is reported as one.
+    if (c.expectServingTier !== undefined) {
+        const first = items[0];
+        const echoed = first != null && typeof first === 'object'
+            && Object.prototype.hasOwnProperty.call(first, 'servingTier');
+        if (echoed) {
+            const tier = (first as { servingTier?: unknown }).servingTier;
+            if (!servingTierMatches(typeof tier === 'string' ? tier : null, c.expectServingTier)) {
+                const want = Array.isArray(c.expectServingTier) ? c.expectServingTier.join('|') : c.expectServingTier;
+                failures.push(`servingTier=${tier === null || tier === undefined ? 'null' : String(tier)} not in [${want}] (mapped: "${(first as any).foodName}")`);
             }
         }
     }

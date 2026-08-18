@@ -286,6 +286,40 @@ export async function insertAiServing(
 
     if (gapType === 'volume' && !volumeMl) {
         const unit = suggestion.volumeUnit?.toLowerCase().trim();
+
+        // A COUNT answer to a VOLUME-UNIT question is refused, not rescued
+        // (2026-08-17; the FatSecret twin of `insertFdcAiServing()`'s refusal in
+        // ../usda/fdc-ai-backfill.ts). The count block below is LOAD-BEARING for
+        // this lane and stays: `/api/foods/[id]/serving?unit=clove`,
+        // `backfillServingOnDemand()` and the legacy cache lane in
+        // serving/hydration-lane.ts all pass `gapType: 'volume'` with a COUNT
+        // target (or no target) and expect the count row it writes. What is
+        // refused is narrower: the caller named a unit this file can convert to
+        // millilitres (`1 cup`, `2 tbsp` — the map-ingredient-with-fallback.ts
+        // `isVolumeUnit` sites) and the model answered with a count anyway
+        // (`3 egg whites = 65 g`). Rescuing that persisted the whole label's
+        // grams under `volumeMl = <count>` and `derivedViaDensity = false`, and
+        // re-hydration then billed them for the requested cup. Nothing is
+        // written on refusal; the caller sees `success: false` exactly as it does
+        // for `missing_volume_unit`.
+        const requestedVolumeMl = options.targetServingUnit
+            ? convertVolumeToMl(options.targetServingUnit, 1)
+            : null;
+        const answeredAsCount = unit
+            ? COUNT_UNITS.has(unit)
+            : suggestion.volumeAmount != null && suggestion.volumeAmount > 0;
+        if (requestedVolumeMl && answeredAsCount) {
+            logger.warn('ai_backfill.count_answer_for_volume_gap_refused', {
+                foodId,
+                targetServingUnit: options.targetServingUnit,
+                label: suggestion.servingLabel,
+                volumeUnit: suggestion.volumeUnit,
+                volumeAmount: suggestion.volumeAmount,
+                grams: suggestion.grams,
+            });
+            return { success: false, reason: 'count_answer_for_volume_gap' };
+        }
+
         if (suggestion.volumeAmount && suggestion.volumeAmount > 0 && (unit ? COUNT_UNITS.has(unit) : true)) {
             countServing = true;
             countUnit = unit ?? 'count';
