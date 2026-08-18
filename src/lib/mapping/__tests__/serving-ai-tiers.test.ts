@@ -9,6 +9,9 @@ import {
     SYNTHETIC_GRAMS_SERVING_TIERS,
     isBorrowedOrDefaultedTier,
     BORROWED_OR_DEFAULTED_SERVING_TIERS,
+    isFloorTier,
+    FLOOR_SERVING_TIERS,
+    portionProvenanceForTier,
 } from '../serving-ai-tiers';
 
 /**
@@ -504,5 +507,131 @@ describe('the four predicates: what must stay disjoint and what must overlap', (
         // …and the synthetic set's honest sibling stays out of BOTH.
         expect(isSyntheticGramsTier('fs_serving_macros_only')).toBe(false);
         expect(isBorrowedOrDefaultedTier('fs_serving_macros_only')).toBe(false);
+    });
+});
+
+/**
+ * FLOORS — the fifth list, promoted from the #337 census's test-local class in
+ * the PR that gave it a consumer (`portionProvenanceForTier()`, the wire field).
+ *
+ * The mutation this block exists to kill: "simplify" the membership into a name
+ * rule. `/floor/` takes `bare_discrete_floor` (a lexicon table lookup, and a
+ * BORROWED_OR_DEFAULTED member) and misses six of the nine; `/unresolved|default/`
+ * takes `label_serving_default`, `fs_default_serving` (the record's OWN serving)
+ * and `bare_category_default` (a lexicon number, not a floor). Membership is a
+ * reading of each producer arm; the census test pins the two directions.
+ */
+describe('isFloorTier — the pipeline billed a flat 100 g knowing it had nothing', () => {
+    it('flags the three floors that predate #331/#333', () => {
+        expect(isFloorTier('flat_100g_default')).toBe(true);
+        expect(isFloorTier('count_unresolved_floor')).toBe(true);
+        expect(isFloorTier('fs_per100g_fallback')).toBe(true);
+    });
+
+    it('flags the six #331/#333 split out of flat_100g_default', () => {
+        for (const tier of [
+            'fdc_size_key_missing',
+            'fdc_size_unresolved',
+            'fdc_piece_unresolved',
+            'fdc_size_estimate_unresolved',
+            'count_unit_unresolved',
+            'fdc_unknown_unit',
+        ]) {
+            expect([tier, isFloorTier(tier)]).toEqual([tier, true]);
+        }
+    });
+
+    it('has exactly nine members and no duplicates', () => {
+        expect(FLOOR_SERVING_TIERS).toHaveLength(9);
+        expect(new Set(FLOOR_SERVING_TIERS).size).toBe(9);
+    });
+
+    // MUTATION: replace the list with a /floor/ or /unresolved|default/ name rule.
+    it('does NOT flag the name-neighbours that read a table or the record itself', () => {
+        expect(isFloorTier('bare_discrete_floor')).toBe(false);   // lexicon table; B member
+        expect(isFloorTier('label_serving_default')).toBe(false); // the record's OWN label
+        expect(isFloorTier('fs_default_serving')).toBe(false);    // the record's OWN serving
+        expect(isFloorTier('bare_category_default')).toBe(false); // lexicon; B member
+        expect(isFloorTier('seed_count_default')).toBe(false);    // seed table; B member
+    });
+
+    it('treats an absent tier as own-record, matching every sibling predicate', () => {
+        expect(isFloorTier(null)).toBe(false);
+        expect(isFloorTier(undefined)).toBe(false);
+        expect(isFloorTier('')).toBe(false);
+    });
+
+    it('rejects mutation for real, not just to Object.isFrozen', () => {
+        const before = FLOOR_SERVING_TIERS.length;
+        expect(() => (FLOOR_SERVING_TIERS as string[]).push('x')).toThrow(TypeError);
+        expect(FLOOR_SERVING_TIERS.length).toBe(before);
+    });
+});
+
+/**
+ * THE WIRE FIELD'S DERIVATION. `portionProvenanceForTier()` is the one place the
+ * two lists become `'borrowed' | 'floor' | undefined`; every route that emits
+ * `portionProvenance` calls it. These pin the mapping and the property it rests
+ * on — the two lists are DISJOINT, so the order of the two checks inside the
+ * helper decides nothing.
+ */
+describe('portionProvenanceForTier — the two lists, and nothing else, on the wire', () => {
+    // MUTATION: put any FLOOR tier into BORROWED_OR_DEFAULTED_SERVING_TIERS or
+    // vice versa. `count_unresolved_floor` is the tempting one (aim A wanted it
+    // in B); the helper would still return SOMETHING for it, so this is the only
+    // assertion that notices, and it is why the helper may not lean on its order.
+    it('BORROWED_OR_DEFAULTED and FLOORS are disjoint — no tier is in both', () => {
+        for (const tier of FLOOR_SERVING_TIERS) {
+            expect([tier, isBorrowedOrDefaultedTier(tier)]).toEqual([tier, false]);
+        }
+        for (const tier of BORROWED_OR_DEFAULTED_SERVING_TIERS) {
+            expect([tier, isFloorTier(tier)]).toEqual([tier, false]);
+        }
+    });
+
+    it("returns 'borrowed' for every BORROWED_OR_DEFAULTED member", () => {
+        for (const tier of BORROWED_OR_DEFAULTED_SERVING_TIERS) {
+            expect([tier, portionProvenanceForTier(tier)]).toEqual([tier, 'borrowed']);
+        }
+    });
+
+    it("returns 'floor' for every FLOOR member", () => {
+        for (const tier of FLOOR_SERVING_TIERS) {
+            expect([tier, portionProvenanceForTier(tier)]).toEqual([tier, 'floor']);
+        }
+    });
+
+    it('returns undefined — never null or false — for own, user, nondeterministic and absent tiers', () => {
+        // The Phase B probe trio's third member, and the omit-when-absent contract:
+        // `undefined` is what lets a route spread `...(p ? {portionProvenance: p} : {})`.
+        expect(portionProvenanceForTier('weight_unit')).toBeUndefined();
+        expect(portionProvenanceForTier('bare_label_serving')).toBeUndefined();
+        expect(portionProvenanceForTier('bare_plural_serving')).toBeUndefined(); // OWN, not B
+        expect(portionProvenanceForTier('fdc_own_size_serving')).toBeUndefined();
+        for (const tier of REPLAY_NONDETERMINISTIC_SERVING_TIERS) {
+            expect([tier, portionProvenanceForTier(tier)]).toEqual([tier, undefined]);
+        }
+        expect(portionProvenanceForTier(null)).toBeUndefined();
+        expect(portionProvenanceForTier(undefined)).toBeUndefined();
+        expect(portionProvenanceForTier('')).toBeUndefined();
+    });
+
+    // MUTATION: drop FS_SERVING_MACROS_ONLY_EST_TIER from the borrowed list. The
+    // #314 flag and this field must AGREE on that tier — it is the one row that
+    // carries both, and `portionEstimated` is unchanged by this field.
+    it("the synthetic-grams tier ships BOTH flags: portionEstimated and 'borrowed'", () => {
+        for (const tier of SYNTHETIC_GRAMS_SERVING_TIERS) {
+            expect(isSyntheticGramsTier(tier)).toBe(true);
+            expect(portionProvenanceForTier(tier)).toBe('borrowed');
+        }
+    });
+
+    // The Phase B live-probe trio, pinned here so the arm and the unit test name
+    // the same three tiers: "spinach" (bare_name_sibling_serving_tight), "a shot of
+    // espresso" (count_unresolved_floor), "100 g chicken breast" (weight_unit).
+    it('the three probe tiers map to borrowed / floor / absent', () => {
+        expect(portionProvenanceForTier('bare_name_sibling_serving_tight')).toBe('borrowed');
+        expect(portionProvenanceForTier('count_unresolved_floor')).toBe('floor');
+        expect(portionProvenanceForTier('weight_unit')).toBeUndefined();
     });
 });

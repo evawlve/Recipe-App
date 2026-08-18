@@ -162,6 +162,16 @@ describe('resolveFoodDetails fs_ macro-only serving recovery', () => {
         expect(details.portionEstimated).toBe(true);
     });
 
+    it("sets portionProvenance: 'borrowed' on the same branch, from the recovery's own tier", async () => {
+        mockFsFindUnique.mockResolvedValue(WHOPPER_JR);
+        const details = await resolveFoodDetails('fs_68444899');
+        // The ONE branch of this resolver that knows a serving tier: the recovery
+        // returns `fs_serving_macros_only_est`, a BORROWED_OR_DEFAULTED member,
+        // and `portionProvenanceForTier()` is the shared derivation — so
+        // /api/foods/barcode can pass it through without a private mapping.
+        expect(details.portionProvenance).toBe('borrowed');
+    });
+
     it('OMITS the flag rather than sending false when the panel is real', async () => {
         mockFsFindUnique.mockResolvedValue({
             fsId: '1', name: 'Honest Food', brandName: null, defaultServingId: null, fetchedAt: new Date(),
@@ -171,6 +181,8 @@ describe('resolveFoodDetails fs_ macro-only serving recovery', () => {
         const details = await resolveFoodDetails('fs_1');
         // Omitted, not false — an existing caller's response stays byte-identical.
         expect('portionEstimated' in details).toBe(false);
+        // Same rule for the provenance field: no tier known, no key.
+        expect('portionProvenance' in details).toBe(false);
     });
 
     it('converts serving sodium from mg to g, like both search-lane derivations', async () => {

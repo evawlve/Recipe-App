@@ -59,6 +59,23 @@ const mockFsRows: Record<string, unknown> = {
       { servingId: 'sv-100', description: '100 g', measurementDescription: 'g', grams: 100, volumeMl: null, numberOfUnits: 100, nutrients: {} },
     ],
   },
+  // A FatSecret "1 serving" restaurant record: per-serving macros on the serving
+  // row, NO weight, and an EMPTY per-100g panel (fsId 68444899, the same record
+  // resolve-payload-fs.test.ts and the search-lane test pin). The one branch of
+  // resolveFoodDetails() that can know a serving tier — the macro-only recovery.
+  '68444899': {
+    fsId: '68444899',
+    name: 'Whopper Jr.',
+    brandName: 'Burger King',
+    nutrientsPer100g: {},
+    defaultServingId: '56035832',
+    fetchedAt: new Date(),
+    servings: [{
+      servingId: '56035832', description: '1 serving', measurementDescription: null,
+      grams: null, volumeMl: null, numberOfUnits: 1,
+      nutrients: { calories: 340, protein: 15, carbohydrate: 30, fat: 18, fiber: 2, sugar: 7, sodium: 560 },
+    }],
+  },
 };
 
 /** An OffFood row that is perfectly healthy and must not be shadowed. */
@@ -238,6 +255,34 @@ describe('/api/foods/barcode FatSecret branch', () => {
     const body = await response.json();
     expect(body.source).toBe('openfoodfacts');
     expect(body.nutritionPer100g.kcal100).toBeGreaterThan(0);
+  });
+
+  /**
+   * `portionProvenance` — passed through from resolveFoodDetails(). This route
+   * has no mapper result, so the ONLY tier it can ever learn is the macro-only
+   * recovery's (`fs_serving_macros_only_est`, a BORROWED_OR_DEFAULTED member):
+   * `'borrowed'` there, no key anywhere else. RED on the pre-fix tree for the
+   * 'borrowed' assertion; the two absent-key controls pass on both trees.
+   */
+  test("a macro-only FatSecret record ships portionProvenance: 'borrowed' beside portionEstimated: true", async () => {
+    lookupFatSecretBarcode.mockResolvedValue(fsHit('68444899'));
+
+    const response = await call('000000068444');
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.name).toBe('Whopper Jr.');
+    // #314's flag, unchanged.
+    expect(body.portionEstimated).toBe(true);
+    // The badge's field, from the recovery's tier through the shared derivation.
+    expect(body.portionProvenance).toBe('borrowed');
+  });
+
+  test('a record that resolved through its own panel ships neither key — control', async () => {
+    lookupFatSecretBarcode.mockResolvedValue(fsHit('95103'));
+
+    const body = await (await call('038000138416')).json();
+    expect('portionEstimated' in body).toBe(false);
+    expect('portionProvenance' in body).toBe(false);
   });
 
   test('when nothing resolves the answer is a 404, never a 200 with an empty name', async () => {

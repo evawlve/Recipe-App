@@ -117,6 +117,15 @@ export async function GET(req: NextRequest) {
       // a client. Owner of the class:
       // sync-docs/reports/2026-08-15_the-search-lane-billed-zero-on-chain-records.md (mobile).
       ...(details.portionEstimated ? { portionEstimated: true as const } : {}),
+      // Passed through from resolveFoodDetails(), which can set it on exactly one
+      // branch — the macro-only recovery above, where the tier is known and is a
+      // BORROWED_OR_DEFAULTED member, so the value here is always `'borrowed'` and
+      // travels with `portionEstimated`. This route has no mapper result and so
+      // no other `servingTier` to read; a barcode hit that resolved through its
+      // own label ships no field, which is "no claim", not "own weight". Same
+      // omit-when-absent rule as the flag above. Owner of the field:
+      // serving-ai-tiers.ts, `portionProvenanceForTier()`.
+      ...(details.portionProvenance ? { portionProvenance: details.portionProvenance } : {}),
     };
 
     return NextResponse.json(responsePayload);
