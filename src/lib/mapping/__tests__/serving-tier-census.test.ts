@@ -6,9 +6,12 @@ import {
     REPLAY_NONDETERMINISTIC_SERVING_TIERS,
     SYNTHETIC_GRAMS_SERVING_TIERS,
     BORROWED_OR_DEFAULTED_SERVING_TIERS,
+    FLOOR_SERVING_TIERS,
     isReplayNondeterministicTier,
     isSyntheticGramsTier,
     isBorrowedOrDefaultedTier,
+    isFloorTier,
+    portionProvenanceForTier,
     servingAiCallForTier,
 } from '../serving-ai-tiers';
 
@@ -22,7 +25,7 @@ import {
  * them returns FALSE for a string it has never heard of. That default is the right
  * one for a predicate — `isBorrowedOrDefaultedTier()`'s own docstring argues for it
  * — but it makes the whole family fail SILENTLY: a producer that stamps a new
- * string gets a confident "no" from all four questions and nothing anywhere goes
+ * string gets a confident "no" from all five questions and nothing anywhere goes
  * red.
  *
  * That is not hypothetical, it is this subsystem's recurring defect, three times:
@@ -47,12 +50,16 @@ import {
  *
  * WHAT IT DELIBERATELY DOES NOT DO
  * --------------------------------
- * It exports no predicate and wires nothing. The `FLOORS` class below is
- * test-local on purpose: a fifth exported predicate with no consumer is the
- * "a rule that already existed with a caller that never used it" shape this repo
- * has shipped five times (CLAUDE.md §State digest owns that list). Naming the
- * class here documents the gap and pins the membership for whoever builds the
- * consumer, without shipping the dangling rule.
+ * It exports no predicate and wires nothing. Every class below that has a
+ * shipped list is pinned to that list in BOTH directions, so this file can
+ * neither invent a member nor miss one. The `FLOORS` class was test-local when
+ * this file was written (#337): a fifth exported predicate with no consumer is
+ * the "a rule that already existed with a caller that never used it" shape this
+ * repo has shipped five times (CLAUDE.md §State digest owns that list), so the
+ * membership was pinned here for whoever built the consumer. That consumer is
+ * the `portionProvenance` wire field (`portionProvenanceForTier()`), and the
+ * class is now the shipped `FLOOR_SERVING_TIERS` — promoted in the same PR that
+ * wired it, which is the only order in which such a promotion is allowed here.
  *
  * NOTE ON A GREP THAT LOOKS COMPLETE AND IS NOT
  * ---------------------------------------------
@@ -93,8 +100,8 @@ type TierClass =
     /** The shipped `REPLAY_NONDETERMINISTIC_SERVING_TIERS`: a producer that can
      *  reach a live estimator, so two replays may disagree. */
     | 'NONDETERMINISTIC'
-    /** Grams are a FABRICATED flat 100 g (or a fabricated bounded floor) reached
-     *  because every rung above failed. Deliberately test-local — see the header. */
+    /** The shipped `FLOOR_SERVING_TIERS`: grams are a FABRICATED flat 100 g (or a
+     *  fabricated bounded floor) reached because every rung above failed. */
     | 'FLOORS';
 
 /**
@@ -163,7 +170,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     // the row's `.genuine` flag is precisely what splits the pair — a real USDA
     // household measure vs an AI-written one that has since been stored. They are
     // OWN here because the read is deterministic and record-specific, which is
-    // also why the shipped predicates answer "no" to all four questions for them.
+    // also why the shipped predicates answer "no" to all five questions for them.
     fdc_label_volume: 'OWN',
     fdc_volume_cached: 'OWN',
     fdc_own_size_serving: 'OWN',
@@ -185,7 +192,8 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
 
     // ============================ FLOORS — 9 members ===========================
     // `grams = 100 * qty` (or a bounded flat 100) with no data behind the number.
-    // Test-local class; see the header for why no predicate is exported.
+    // Mirrors FLOOR_SERVING_TIERS exactly, pinned both ways below like the two
+    // shipped sets above; that file's own comments own WHY each is a member.
     //
     // The three that predate #331/#333. All three are already PINNED NON-MEMBERS
     // of BORROWED_OR_DEFAULTED_SERVING_TIERS, and that file's header explains the
@@ -209,11 +217,12 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
 
 /**
  * The eight strings #331/#333 introduced, with the class each belongs in.
- * Named separately from the map so the gap is documented in code rather than
- * only in a report: NONE of them is in any exported set today, so all four
- * predicates answer false for all eight. Six of those falses are wrong-ish in
- * the sense that a FLOORS consumer would want them; two (`fdc_own_size_*`) are
- * correct, because reading the record's own row is exactly what the default
+ * Named separately from the map because they are the precedent this file was
+ * written for: when it was written NONE of them was in any exported set, so all
+ * four predicates of the day answered false for all eight. Six of those falses
+ * were the gap — a FLOORS consumer would want them — and are now members of
+ * `FLOOR_SERVING_TIERS`; two (`fdc_own_size_*`) stay unknown to every list,
+ * correctly, because reading the record's own row is exactly what the default
  * assumption says.
  */
 const TIERS_ADDED_BY_331_333: Readonly<Record<string, TierClass>> = Object.freeze({
@@ -447,7 +456,7 @@ describe('the census — every live tier is explicitly accounted for', () => {
     /**
      * THE POINT OF THE FILE. A producer that stamps a new string without a row in
      * EXPECTED_CLASS fails here, instead of receiving a silent `false` from all
-     * four predicates.
+     * five predicates.
      */
     it('every live tier is named in EXPECTED_CLASS', () => {
         const unclassified = LIVE_TIERS.filter((t) => !(t in EXPECTED_CLASS));
@@ -486,6 +495,33 @@ describe('the map agrees with the shipped predicates', () => {
         }
     });
 
+    /** Same deal for the list this file used to hold test-locally: the export
+     *  and the census can neither miss a floor nor invent one. */
+    it('FLOORS matches isFloorTier() exactly', () => {
+        expect(byClass('FLOORS')).toEqual([...FLOOR_SERVING_TIERS].sort());
+        expect(FLOOR_SERVING_TIERS).toHaveLength(9);
+        for (const t of LIVE_TIERS) {
+            expect(isFloorTier(t)).toBe(EXPECTED_CLASS[t] === 'FLOORS');
+        }
+    });
+
+    /**
+     * The wire field is the two lists read together, and nothing else: a
+     * BORROWED_OR_DEFAULTED tier ships `'borrowed'`, a FLOORS tier ships
+     * `'floor'`, every other live tier ships NO field. Asserted over the whole
+     * census so a tier that moves class moves the wire with it, and so a
+     * NONDETERMINISTIC tier can never leak onto the field by accident.
+     */
+    it('portionProvenanceForTier() is the class map, on every live tier', () => {
+        for (const t of LIVE_TIERS) {
+            const cls = EXPECTED_CLASS[t];
+            const want = cls === 'BORROWED_OR_DEFAULTED' ? 'borrowed'
+                : cls === 'FLOORS' ? 'floor'
+                : undefined;
+            expect([t, portionProvenanceForTier(t)]).toEqual([t, want]);
+        }
+    });
+
     it('every billed tier is classified NONDETERMINISTIC', () => {
         for (const t of Object.keys(SERVING_AI_TIERS)) {
             expect(EXPECTED_CLASS[t]).toBe('NONDETERMINISTIC');
@@ -502,17 +538,36 @@ describe('the map agrees with the shipped predicates', () => {
     });
 
     /**
-     * OWN, USER and FLOORS are exactly the tiers every shipped predicate answers
-     * "no" to. For OWN and USER that "no" is correct. For FLOORS it is the
-     * KNOWN GAP: nine tiers whose grams are fabricated, and no predicate that
-     * says so. Pinned so the gap stays visible and so wiring a FLOORS consumer
-     * later starts from a membership somebody read the producers for.
+     * OWN and USER are exactly the tiers every shipped predicate answers "no"
+     * to, and that "no" is correct: the weight is this record's or the user's.
+     * Pinned so a list cannot quietly absorb one of them.
      */
-    it('OWN, USER and FLOORS are unknown to all four shipped predicates', () => {
+    it('OWN and USER are unknown to all five shipped predicates', () => {
         const unclaimed = LIVE_TIERS.filter((t) =>
-            EXPECTED_CLASS[t] === 'OWN' || EXPECTED_CLASS[t] === 'USER' || EXPECTED_CLASS[t] === 'FLOORS');
-        expect(unclaimed.length).toBe(29);
+            EXPECTED_CLASS[t] === 'OWN' || EXPECTED_CLASS[t] === 'USER');
+        expect(unclaimed.length).toBe(20);
         for (const t of unclaimed) {
+            expect(isBorrowedOrDefaultedTier(t)).toBe(false);
+            expect(isReplayNondeterministicTier(t)).toBe(false);
+            expect(isSyntheticGramsTier(t)).toBe(false);
+            expect(isFloorTier(t)).toBe(false);
+            expect(servingAiCallForTier(t)).toEqual({ called: false });
+            expect(portionProvenanceForTier(t)).toBeUndefined();
+        }
+    });
+
+    /**
+     * FLOORS used to be the KNOWN GAP this test pinned: nine tiers whose grams
+     * are fabricated and no predicate that said so. They are now known to
+     * EXACTLY ONE predicate — `isFloorTier()` — and to no other, which is the
+     * disjointness the wire field's two values rest on.
+     */
+    it('FLOORS are known to isFloorTier() and to nothing else', () => {
+        const floors = LIVE_TIERS.filter((t) => EXPECTED_CLASS[t] === 'FLOORS');
+        expect(floors.length).toBe(9);
+        for (const t of floors) {
+            expect(isFloorTier(t)).toBe(true);
+            expect(portionProvenanceForTier(t)).toBe('floor');
             expect(isBorrowedOrDefaultedTier(t)).toBe(false);
             expect(isReplayNondeterministicTier(t)).toBe(false);
             expect(isSyntheticGramsTier(t)).toBe(false);
@@ -521,7 +576,7 @@ describe('the map agrees with the shipped predicates', () => {
     });
 });
 
-describe('the eight tiers PRs #331/#333 added, which no shipped set knows', () => {
+describe('the eight tiers PRs #331/#333 added, which no shipped set knew until FLOOR_SERVING_TIERS', () => {
     it('are all live', () => {
         for (const t of Object.keys(TIERS_ADDED_BY_331_333)) {
             expect(SCAN.tiers.has(t)).toBe(true);
@@ -535,20 +590,23 @@ describe('the eight tiers PRs #331/#333 added, which no shipped set knows', () =
     });
 
     /**
-     * DOCUMENTING A GAP, NOT ASSERTING IT IS CORRECT. Six of these fabricate a
-     * flat 100 g and every predicate calls them ordinary. That is the state as
-     * shipped; a later PR with a consumer is expected to make the six red here,
-     * and the reader who does that should update this block rather than delete it.
+     * THE GAP, CLOSED. When this file was written, six of these fabricated a
+     * flat 100 g and every predicate called them ordinary; the block recorded
+     * that state and asked the PR that shipped a consumer to update it rather
+     * than delete it. That PR is the `portionProvenance` wire field: the six
+     * are now in FLOOR_SERVING_TIERS and in NO other list, and the two OWN
+     * tiers stay out of every list — the state THIS census records.
      */
-    it('are absent from every exported set — the state this census records', () => {
-        const shipped = new Set<string>([
+    it('the six floors are in FLOOR_SERVING_TIERS only; the two OWN tiers are in no list', () => {
+        const nonFloorLists = new Set<string>([
             ...Object.keys(SERVING_AI_TIERS),
             ...REPLAY_NONDETERMINISTIC_SERVING_TIERS,
             ...SYNTHETIC_GRAMS_SERVING_TIERS,
             ...BORROWED_OR_DEFAULTED_SERVING_TIERS,
         ]);
-        for (const t of Object.keys(TIERS_ADDED_BY_331_333)) {
-            expect(shipped.has(t)).toBe(false);
+        for (const [t, cls] of Object.entries(TIERS_ADDED_BY_331_333)) {
+            expect(nonFloorLists.has(t)).toBe(false);
+            expect([t, isFloorTier(t)]).toEqual([t, cls === 'FLOORS']);
         }
     });
 

@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
       resolveFoodDetails, isDegenerateNutrition, per100gFromBilledMacros,
       isPer100gInconsistentWithBilled,
     } = await import('@/lib/nlp/resolve-payload');
-    const { isSyntheticGramsTier } = await import('@/lib/mapping/serving-ai-tiers');
+    const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
     const { logger } = await import('@/lib/logger');
 
     const body = await req.json();
@@ -448,6 +448,8 @@ export async function POST(req: NextRequest) {
             ? (details.source as StandardSource)
             : 'ai_estimated';
 
+      const portionProvenance = portionProvenanceForTier(mapped.servingTier);
+
       return {
         rawText,
         foodName: mapped.foodName,
@@ -482,6 +484,28 @@ export async function POST(req: NextRequest) {
         ...(isSyntheticGramsTier((mapped as { servingTier?: string | null }).servingTier)
           ? { portionEstimated: true as const }
           : {}),
+        // WHERE THE GRAMS CAME FROM, when it was not this record and not the user:
+        // `'borrowed'` — another product's label or a generic table
+        // (BORROWED_OR_DEFAULTED_SERVING_TIERS, 16 tiers); `'floor'` — every rung
+        // failed and the pipeline billed a flat 100 g x qty knowing it had nothing
+        // (FLOOR_SERVING_TIERS, 9 tiers). Both lists and the ONE derivation live in
+        // serving-ai-tiers.ts; this route only reads `mapped.servingTier` through
+        // it, so a tier moving list moves the wire without a route edit.
+        //
+        // The client CANNOT infer this either. Mobile's flat-100 rule badged only
+        // the qty = 1 floors and none of the borrowed rows — 236 g of a sibling
+        // SKU's serving is indistinguishable from 236 g read off this label — and
+        // this field is what lets that inference retire without regressing the
+        // floor half. It says the serving AXIS only: no accuracy claim, no cause
+        // beyond the word.
+        //
+        // `portionEstimated` above is UNCHANGED (its population and consumers are
+        // its own); a #314 row carries both, and a client reading both gives
+        // `portionEstimated` precedence. Omitted (never `null`) when the tier is in
+        // neither list, so every honest row stays byte-identical on the wire.
+        // Owner: sync-docs/reports/2026-08-17_can-the-badge-be-aimed.md §6 (mobile),
+        // and the plan that named the field, 2026-08-17_ultracode-execution-plan-2.md Lane D.
+        ...(portionProvenance ? { portionProvenance } : {}),
         // Funnel taxonomy (sprint F1) — diagnostic class IDs, additive. Lets
         // offline warm batches (scripts/eval/warm-cache.ts) read each seed's
         // funnel outcome straight off the response instead of re-deriving it

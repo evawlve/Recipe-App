@@ -380,21 +380,28 @@ export function isSyntheticGramsTier(tier: string | null | undefined): boolean {
  *     so all sixteen replay deterministically and bill nothing.
  *   - NOT the honest floors. `count_unresolved_floor`, `flat_100g_default` and
  *     `fs_per100g_fallback` are deliberately OUT — see the pinned non-members.
- *   - NOT `portionEstimated`, and not any other wire field. Nothing on the wire
- *     is derived from this predicate today.
+ *     They have their own list, `FLOOR_SERVING_TIERS` below, and the two are
+ *     asserted DISJOINT.
+ *   - NOT `portionEstimated`. That flag stays on `isSyntheticGramsTier()` (#314)
+ *     and its two consumers (the badge, and mobile's suppression of gram/volume
+ *     portion options) are untouched by this set — widening it to sixteen tiers
+ *     would over-reach on the second, which is why the badge got a field of its
+ *     own instead. Owner of that argument:
+ *     sync-docs/reports/2026-08-17_the-badge-flicker-blocker-is-three-inflations.md §5.
  *
- * IT HAS NO PRODUCTION CONSUMER. NONE. It is a definition and a measurement,
- * shipped ahead of the decision it informs, and that is a known-dangerous shape
+ * ITS PRODUCTION CONSUMER IS THE WIRE FIELD `portionProvenance`, derived by
+ * `portionProvenanceForTier()` at the bottom of this file: a member here ships
+ * as `portionProvenance: 'borrowed'` on `/api/nlp/parse` (per line, from
+ * `mapped.servingTier`), on `/api/foods/search`'s macro-only recovery, and via
+ * `resolveFoodDetails()` on `/api/foods/barcode` — omitted when the tier is not
+ * a member, the `portionEstimated` omit-when-false convention. Until that field
+ * shipped this predicate had NO consumer, and that was a known-dangerous shape
  * here: this codebase has shipped "a rule that already existed with a caller that
  * never used it" FIVE separate times (#221, #223, #226, #228/#229, #233/#234 —
- * CLAUDE.md §State digest owns that list). The mitigation is that this predicate
- * is deliberately NOT wired anywhere: it does not silently duplicate a rule a
- * caller is already meant to be using, it is a new one with no caller yet, and the
- * test asserts only its own membership. Before wiring it, read
- * sync-docs/reports/2026-08-17_the-badge-flicker-blocker-is-three-inflations.md §5:
- * `portionEstimated` already has TWO consumers wanting different populations (the
- * badge, and mobile's suppression of gram/volume portion options), and widening
- * that one flag to this set over-reaches on the second.
+ * CLAUDE.md §State digest owns that list). The consumer and the census test
+ * (`serving-tier-census.test.ts`) are what keep it from becoming the sixth:
+ * change the membership and the wire changes with it, and a producer that stamps
+ * a new string fails the census rather than silently reading as own-record.
  *
  * MEMBERSHIP WAS SETTLED BY READING EVERY PRODUCER, NOT BY THE TIER NAMES —
  * the same discipline the two lists above document, and it is load-bearing here
@@ -536,8 +543,8 @@ const BORROWED_OR_DEFAULTED_INDEX = new Set<string>(BORROWED_OR_DEFAULTED_SERVIN
  *     as stamping no tier at all.
  * Returning true would badge every one of them, including a glass of water, on no
  * evidence about the food; returning false under-reports a known ~0.3%. False is
- * the cheaper error, it matches both sibling predicates so a consumer reading all
- * four gets one null rule rather than three, and the durable fix is at the
+ * the cheaper error, it matches every sibling predicate (`isFloorTier()` below
+ * included) so a consumer reading all of them gets ONE null rule, and the durable fix is at the
  * PRODUCERS — stamp a tier — which is the same shape as the missing `[AI:SERV]`
  * write sites the header calls Phase 0.5(b), not a null branch here.
  *
@@ -548,4 +555,136 @@ const BORROWED_OR_DEFAULTED_INDEX = new Set<string>(BORROWED_OR_DEFAULTED_SERVIN
  */
 export function isBorrowedOrDefaultedTier(tier: string | null | undefined): boolean {
     return tier != null && BORROWED_OR_DEFAULTED_INDEX.has(tier);
+}
+
+/**
+ * FLOORS — a FIFTH list, and the FIFTH question. Not "was a model billed", not
+ * "can this replay differ", not "is the number a placeholder the pipeline
+ * INVENTED to look like a weight" (`fs_serving_macros_only_est`, whose grams are
+ * `kcal / 2.0` and read like a measurement), and not "whose data is this". This
+ * one asks: **did every rung fail, so that the pipeline billed a flat
+ * `100 g x qty` (or a bounded flat 100) knowing it had no data at all?**
+ *
+ * A floor is the one case where the pipeline already knows it does not know.
+ * That is why the members are pinned NON-members of
+ * `BORROWED_OR_DEFAULTED_SERVING_TIERS` above and why the two lists are asserted
+ * DISJOINT: a borrowed weight is a claim about a different product, a floor is
+ * the absence of a claim. A consumer wording a caveat needs to tell them apart
+ * — "portion is an estimate for this food" is wrong for a floor, where no
+ * estimate was made, and "no weight stated" is wrong for a borrowed sibling
+ * serving, where one was.
+ *
+ * MEMBERSHIP IS THE `FLOORS` CLASS OF THE #337 CENSUS, PROMOTED. The nine
+ * strings below lived test-locally in `serving-tier-census.test.ts` (which
+ * settled each by reading its producer arm in `serving/hydration-lane.ts` and
+ * `build-fatsecret-result.ts`, 2026-08-17) precisely so that no dangling
+ * predicate shipped without a consumer. This export exists BECAUSE it has one:
+ * `portionProvenanceForTier()` below, which puts `'floor'` on the wire in the
+ * same PR that added this list. Do not add a sixth list without its consumer.
+ *
+ * MEASURED (2026-08-17, box, one query; owner of the join and the caveats:
+ * sync-docs/reports/2026-08-17_can-the-badge-be-aimed.md §3, §6): the graded
+ * rows in this class are 62.3% wrong on the serving axis, but that figure rests
+ * on ONE tier — `count_unresolved_floor`, 58.3% on n = 48 — and six of the nine
+ * have never fired (they were split out of `flat_100g_default` by #331/#333 and
+ * are listed so the field is not blind to them). The A0 report weakens even the
+ * one tier: `count_unresolved_floor` bills a flat 100 g regardless of quantity,
+ * so mobile's per-unit inference goes quiet exactly where the discard is
+ * largest — and its qty >= 2 population is ~0.03% of the tier's events, so the
+ * client's inference already covers the floors in practice. The wire field
+ * carries `'floor'` anyway, on the argument the plan makes: retiring that
+ * client inference without a replacement read would REGRESS the floor badge,
+ * and the string costs nothing.
+ *
+ * WHY `bare_discrete_floor` IS NOT HERE despite the name: it is a table lookup
+ * (DISCRETE_PIECE_FLOOR_GRAMS, a real per-piece constant), which is what
+ * "defaulted" means, and it is a member of the list above. The census pins it.
+ *
+ * EXPORTED AS A FROZEN ARRAY for the reason the sibling lists spell out:
+ * `Object.freeze(new Set(...))` is a no-op protection, a frozen array is not.
+ */
+export const FLOOR_SERVING_TIERS: readonly string[] = Object.freeze(
+    ([
+        // The three that predate #331/#333 — the same three pinned as
+        // non-members of BORROWED_OR_DEFAULTED_SERVING_TIERS.
+        //
+        // The terminal `grams = 100 * qty` of buildOffResult() and the initial
+        // value buildFdcResult() starts from, both in serving/hydration-lane.ts;
+        // also the AI-panel exits in map-ingredient-with-fallback.ts when the
+        // serving estimator returned no grams. The tier is the placeholder, not
+        // the number — most of its events are not literally 100 g.
+        'flat_100g_default',
+        // buildOffResult()'s `unitlessCountUnresolved` leg: a unitless count with
+        // no per-piece weight and no label serving bills ONE bounded 100 g
+        // REGARDLESS of quantity — deliberately, so `15 pretzels` cannot bill
+        // 1,500 g. Owner of what that does to the client's flat-100 inference:
+        // sync-docs/reports/2026-08-17_a0-the-floor-ignores-quantity-and-nobody-asks-it-to.md.
+        'count_unresolved_floor',
+        // The FatSecret twin of flat_100g_default in build-fatsecret-result.ts:
+        // `grams = 100 * qty` when no serving is usable.
+        'fs_per100g_fallback',
+
+        // The six #331/#333 split out of `flat_100g_default`, one per failure
+        // mode, each billing `grams = 100 * qty` on an arm that used to reach
+        // MappingEventLog under the one string. Verified by reading each arm in
+        // serving/hydration-lane.ts (2026-08-17, the census PR).
+        'fdc_size_key_missing',          // estimator answered, not for this spelling
+        'fdc_size_unresolved',           // estimator itself failed
+        'fdc_piece_unresolved',          // high-count ladder, all three rungs failed
+        'fdc_size_estimate_unresolved',  // low-count size estimation failed
+        'count_unit_unresolved',         // ambiguous-unit estimator declined
+        'fdc_unknown_unit',              // terminal arm; nothing was even attempted
+    ] as const),
+);
+
+/** Lookup index. Module-private so the exported constant stays genuinely frozen. */
+const FLOOR_INDEX = new Set<string>(FLOOR_SERVING_TIERS);
+
+/**
+ * True when `tier` billed a flat fabricated 100 g (x qty) because every rung
+ * above it failed — the pipeline's own admission that it has no weight.
+ *
+ * Returns false for null and for an unclassified tier, for the reasons the four
+ * siblings give (`isBorrowedOrDefaultedTier()` owns the null argument in full);
+ * the guard against a silent miss is the census in `serving-tier-census.test.ts`,
+ * whose `FLOORS` class is pinned to this list in both directions.
+ */
+export function isFloorTier(tier: string | null | undefined): boolean {
+    return tier != null && FLOOR_INDEX.has(tier);
+}
+
+/**
+ * The wire field's value union. `'borrowed'` ⇐ `isBorrowedOrDefaultedTier()`
+ * (another product's data or a generic table); `'floor'` ⇐ `isFloorTier()`
+ * (no data at all — a fabricated flat 100 g). Absent means "the weight is this
+ * record's own or the user's, or the tier is unknown to both lists" — the same
+ * silent default every predicate in this file has, and the census is what
+ * stops a new tier from hiding in it.
+ */
+export type PortionProvenance = 'borrowed' | 'floor';
+
+/**
+ * The ONE derivation of `portionProvenance` for the wire — every route that emits
+ * the field calls this, so the two lists above and the field cannot drift apart
+ * and no route carries a private copy of the mapping.
+ *
+ * `'borrowed'` is checked first, but ORDER DOES NOT DECIDE ANYTHING: the two
+ * lists are disjoint by construction and the test asserts it, so no tier can
+ * reach the second branch having matched the first. If that assertion ever goes
+ * red, fix the membership — do not lean on the order here.
+ *
+ * `fs_serving_macros_only_est` returns `'borrowed'` AND `isSyntheticGramsTier()`
+ * is true for it, so a #314-style line ships `portionEstimated: true` and
+ * `portionProvenance: 'borrowed'` side by side. Deliberate: `portionEstimated`
+ * is UNCHANGED by this field (its own consumers depend on its population), and a
+ * client that reads both gives `portionEstimated` precedence.
+ *
+ * Returns `undefined`, never `null` or `false`, so callers can spread
+ * `...(p ? { portionProvenance: p } : {})` and an honest row stays byte-identical
+ * on the wire — the `portionEstimated` omit-when-false convention.
+ */
+export function portionProvenanceForTier(tier: string | null | undefined): PortionProvenance | undefined {
+    if (isBorrowedOrDefaultedTier(tier)) return 'borrowed';
+    if (isFloorTier(tier)) return 'floor';
+    return undefined;
 }
