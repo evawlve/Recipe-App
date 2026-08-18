@@ -46,11 +46,17 @@ function makeCandidate(over: Record<string, unknown> = {}) {
 function serving(
     servingId: string, description: string, grams: number,
     nutrients: Record<string, number> | null = null,
+    measurementDescription: string | null = null,
 ) {
     return {
-        servingId, description, measurementDescription: null,
+        servingId, description, measurementDescription,
         grams, volumeMl: null, numberOfUnits: 1, nutrients,
     };
+}
+
+/** A literal "100 g" panel row — `isPer100gPanelServing()` demotes exactly this. */
+function panelRow(servingId: string, nutrients: Record<string, number>) {
+    return { ...serving(servingId, '100 g', 100, nutrients, 'g'), numberOfUnits: 100 };
 }
 
 function makeRow(over: Record<string, unknown> = {}) {
@@ -130,7 +136,23 @@ describe('a YIELD is not a portion', () => {
         // default servings on the box say "yield", but they are the worst-wrong
         // rows in the set.
         // MUTATION: drop the /yield/i test -> this bills 570 g / 735 kcal.
-        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({ defaultServingId: '15284' }));
+        //
+        // The fixture drops fs_4501's OTHER cup row ("1 cup cooked" 158 g) on
+        // purpose. With the declaration no longer scoped to `defaultServingId`
+        // that row would answer the request itself, so the mutation above would
+        // land on `unitDeclarations.length === 1` instead and bill 120 g — the
+        // test would still pass while no longer testing the yield rule. One cup
+        // row, and it is the yield row, is the only fixture on which "570" is
+        // what a broken yield rule actually bills.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            defaultServingId: '15284',
+            servings: [
+                serving('15284', '1 cup, dry, yields', 570,
+                    { calories: 735, protein: 15.16, carbohydrate: 159.03, fat: 1.6 }, 'cup'),
+                serving('17592', '1 serving (105 g)', 105,
+                    { calories: 135, protein: 2.79, carbohydrate: 29.3, fat: 0.29 }),
+            ],
+        }));
         const r = await buildFatSecretResult(
             makeCandidate(), CUP_RICE(), 0.98, '1 cup white rice'
         );
@@ -274,15 +296,67 @@ describe('scope — the rule stays out of paths that already work', () => {
         expect(r!.servingTier).toBe('fs_volume_density');
     });
 
-    it('does not fire on a non-default serving that happens to name the unit', async () => {
-        // Deliberate scope limit: fs_4501 holds TWO cup rows, and picking among
-        // them without a declaration is a positional pick. With the default
-        // pointing elsewhere, the request falls through rather than guess.
+    it('FIRES on a non-default serving that names the unit — a cup row is a cup row', async () => {
+        // FLIPPED 2026-08-18. Was `does not fire on a non-default serving that
+        // happens to name the unit`, whose stated reason was: "fs_4501 holds TWO
+        // cup rows, and picking among them without a declaration is a positional
+        // pick."
+        //
+        // That reason does not survive its own fixture. fs_4501's second cup row
+        // is `1 cup, dry, yields`, and `declaredVolumeUnitGrams()` refuses
+        // /yield/i BEFORE anything is counted — commit b3821f4 says so itself,
+        // four lines above the count it wrote. There was exactly ONE candidate
+        // here and nothing to guess between; what the `defaultServingId` gate
+        // actually refused was a correct answer.
+        //
+        // What it refused, measured on the box 2026-08-18: the old gate fires on
+        // 6,194 (record, unit) pairs, this one on 9,276 — 3,082 newly admitted,
+        // 0 lost. There is no pair the old gate answers and this one does not.
+        //
+        // MUTATION: restore the `declaredDefault &&` scoping -> 120 g /
+        // fs_volume_density, which is what production billed.
         mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({ defaultServingId: '17592' }));
         const r = await buildFatSecretResult(
             makeCandidate(), CUP_RICE(), 0.98, '1 cup white rice'
         );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(158);
+        // The macros come from the row that answered, not from the default.
+        expect(r!.servingId).toBe('16834');
+        expect(r!.kcal).toBeCloseTo(204, 5);
+    });
+
+    it('still refuses TWO non-yield rows naming the unit when the default names none', async () => {
+        // The guard the flip above leaves doing ALL the work — and on the newly
+        // admitted set it does about 11x more of it: the single-declaration rate
+        // is 86.4% for cup there (90.4% across all units) against 96.7-98.8% on
+        // the default set (box, 2026-08-18). The old gate could not see this
+        // case at all: with the default naming no volume unit it refused for the
+        // wrong reason, so nothing pinned the ambiguity rule on a NON-default
+        // pair until now.
+        //
+        // fs_39558 "Brown Sugar" again, with the default moved to its "1 oz" row
+        // so `declaredDefault` is no longer what refuses.
+        // MUTATION: drop `unitDeclarations.length === 1` -> bills 145 or 220 by
+        // whichever row Postgres returned first, the positional pick this module
+        // already had to fix once at the hydrate step.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '39558', name: 'Brown Sugar',
+            nutrientsPer100g: { calories: 380, protein: 0.1, carbs: 98.1, fat: 0 },
+            defaultServingId: '45797',
+            servings: [
+                serving('45797', '1 oz', 28.35, null, 'oz'),
+                serving('40099', '1 cup unpacked', 145, null, 'cup'),
+                serving('40098', '1 cup packed', 220, null, 'cup'),
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_39558', name: 'Brown Sugar' }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'brown sugar' }), 0.9, '1 cup brown sugar'
+        );
         expect(r!.servingTier).toBe('fs_volume_density');
+        expect(r!.grams).not.toBe(145);
+        expect(r!.grams).not.toBe(220);
     });
 
     it('leaves an explicit WEIGHT request alone', async () => {
@@ -292,5 +366,209 @@ describe('scope — the rule stays out of paths that already work', () => {
         );
         expect(r!.servingTier).toBe('fs_weight_direct');
         expect(r!.grams).toBe(100);
+    });
+});
+
+describe('LIVE RECORDS — the row that answers need not be defaultServingId', () => {
+    // Four records read verbatim off the box 2026-08-18 (read-only SELECT over
+    // FatSecretFood + FatSecretServing, ordered by servingId ascending as the
+    // hydrate include's orderBy returns them; only the fields this module reads
+    // are kept). Every one of them:
+    //   - holds exactly ONE non-yield row naming the requested unit, so the
+    //     ambiguity guard passes;
+    //   - carries volumeMl NULL on every row, so `volMatch` cannot pre-empt;
+    //   - is NOT that row's `defaultServingId`, so the old gate refused it and
+    //     the 240 ml x category-density class constant billed instead.
+    //
+    // The defaults are the two shapes the gate never accounted for: a literal
+    // "100 g" panel row that `isPer100gPanelServing()` has already demoted out
+    // of `usableServings` (cilantro, parsley, shakshuka — so `declaredDefault`
+    // resolves to undefined and the record has NO default to speak of), and a
+    // piece row that names a different measure entirely (leek's "1 leek").
+    //
+    // MUTATION for every case below: restore the `declaredDefault &&` scoping ->
+    // each one falls back to fs_volume_density and the class constant.
+
+    /** fs_36457 "Parsley" — one cup row AND one tbsp row, neither the default. */
+    const PARSLEY = () => makeRow({
+        fsId: '36457', name: 'Parsley',
+        nutrientsPer100g: { calories: 36, protein: 2.97, carbs: 6.33, fat: 0.79 },
+        defaultServingId: '59188',
+        servings: [
+            serving('34330', '1 cup', 60,
+                { calories: 22, protein: 1.78, carbohydrate: 3.8, fat: 0.47 }, 'cup'),
+            serving('34331', '1 tbsp', 3.8,
+                { calories: 1, protein: 0.11, carbohydrate: 0.24, fat: 0.03 }, 'tbsp'),
+            serving('34332', '10 sprigs', 10, null, 'sprigs'),
+            serving('44202', '1 oz', 28.35, null, 'oz'),
+            panelRow('59188', { calories: 36, protein: 2.97, carbohydrate: 6.33, fat: 0.79 }),
+        ],
+    });
+
+    it('fs_6242 Cilantro — 1 cup = 16 g; the default is a demoted "100 g" panel', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '6242', name: 'Cilantro',
+            nutrientsPer100g: { calories: 23, protein: 2.13, carbs: 3.67, fat: 0.52 },
+            defaultServingId: '54922',
+            servings: [
+                serving('183724', '1 oz', 28.35, null, 'oz'),
+                serving('23482', '1 sprig', 1.1, null, 'sprig'),
+                serving('24288', '1 cup', 16,
+                    { calories: 4, protein: 0.34, carbohydrate: 0.59, fat: 0.08 }, 'cup'),
+                serving('24609', '1 bunch', 102, null, 'bunch'),
+                panelRow('54922', { calories: 23, protein: 2.86, carbohydrate: 3.67, fat: 0.52 }),
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_6242', name: 'Cilantro' }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'cilantro' }), 0.95, '1 cup cilantro'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(16);
+        // The row that answered is also the row the macros are read off, so the
+        // kcal stop being a per-100g rescale of a guessed weight.
+        expect(r!.servingId).toBe('24288');
+        expect(r!.kcal).toBeCloseTo(4, 5);
+    });
+
+    it('fs_6249 Leek — 1 cup = 89 g; the default is the "1 leek" piece row', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '6249', name: 'Leek',
+            nutrientsPer100g: { calories: 61, protein: 1.5, carbs: 14.15, fat: 0.3 },
+            defaultServingId: '23995',
+            servings: [
+                serving('183729', '1 oz', 28.35, null, 'oz'),
+                serving('22299', '1 slice', 6, null, 'slice'),
+                serving('23946', '1 cup', 89,
+                    { calories: 54, protein: 1.34, carbohydrate: 12.59, fat: 0.27 }, 'cup'),
+                serving('23995', '1 leek', 89,
+                    { calories: 54, protein: 1.34, carbohydrate: 12.59, fat: 0.27 }, 'leek'),
+                panelRow('54929', { calories: 61, protein: 1.5, carbohydrate: 14.15, fat: 0.3 }),
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_6249', name: 'Leek' }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'leek' }), 0.95, '1 cup leek'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(89);
+        // "1 leek" weighs the same 89 g, so grams alone cannot show WHICH row
+        // answered — the servingId can, and it must be the cup row.
+        expect(r!.servingId).toBe('23946');
+    });
+
+    it('fs_36457 Parsley — 1 cup = 60 g', async () => {
+        mockFatSecretFoodFindUnique.mockResolvedValue(PARSLEY());
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_36457', name: 'Parsley' }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'parsley' }), 0.95, '1 cup parsley'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(60);
+        expect(r!.servingId).toBe('34330');
+    });
+
+    it('fs_36457 Parsley — and 1 tbsp = 3.8 g off the OTHER non-default row', async () => {
+        // The same record answers two different units from two different
+        // non-default rows. Neither is ambiguous FOR ITS OWN UNIT, which is the
+        // per-unit shape of the guard (`:220` pins the same thing on the default
+        // side) — and this is the case a "prefer the default when ambiguous"
+        // widening would have got wrong in both directions.
+        mockFatSecretFoodFindUnique.mockResolvedValue(PARSLEY());
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_36457', name: 'Parsley' }),
+            parsedLine({ qty: 1, unit: 'tbsp', name: 'parsley' }), 0.95, '1 tbsp parsley'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBeCloseTo(3.8, 5);
+        expect(r!.servingId).toBe('34331');
+    });
+
+    it('fs_17779963 Shakshuka — 1 cup = 300 g', async () => {
+        // The sibling row "1 serving (300 g)" names no volume unit, so it is not
+        // counted and the cup declaration stays unambiguous.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '17779963', name: 'Shakshuka',
+            nutrientsPer100g: { calories: 131, protein: 6.62, carbs: 4.78, fat: 9.77 },
+            defaultServingId: '16766063',
+            servings: [
+                serving('16766061', '1 cup', 300,
+                    { calories: 393, protein: 19.86, carbohydrate: 14.35, fat: 29.31 }, 'cup'),
+                serving('16766062', '1 serving (300 g)', 300,
+                    { calories: 393, protein: 19.86, carbohydrate: 14.35, fat: 29.31 },
+                    'serving (300g)'),
+                panelRow('16766063', { calories: 131, protein: 6.62, carbohydrate: 4.78, fat: 9.77 }),
+                serving('16766075', '1 oz', 28.35, null, 'oz'),
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_17779963', name: 'Shakshuka' }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'shakshuka' }), 0.95, '1 cup shakshuka'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(300);
+        expect(r!.servingId).toBe('16766061');
+    });
+
+    it('CANDIDATE FALLBACK — the un-persisted path the census could not see', async () => {
+        // The second serving source, and the one no census over
+        // `FatSecretServing` can measure: `FATSECRET_PERSIST_RUNNERS_UP` defaults
+        // to 0 and nothing overrides it, so `searchFatSecretLane()` persists no
+        // hit speculatively and `ensureFatSecretParentPersisted()` does not run
+        // until SAVE. Every not-yet-seen FatSecret food therefore arrives here
+        // with `row` null and bills off `candidate.servings`.
+        //
+        // On this branch the OLD gate could not fire AT ALL, two ways over: there
+        // is no `row`, hence no `defaultServingId`; and `toUnifiedCandidate()`
+        // maps servings to {description, grams} only, so `servingId` is null
+        // regardless. `volMatch` cannot pre-empt either — no `volumeMl` is
+        // mapped. So 100% of the declared-volume bills on this path are new.
+        // MUTATION: restore `declaredDefault &&` -> 120 g, unconditionally, for
+        // every un-persisted FatSecret food in existence.
+        mockFatSecretFoodFindUnique.mockResolvedValue(null);
+        const r = await buildFatSecretResult(
+            makeCandidate({
+                id: 'fs_6242', name: 'Cilantro',
+                servings: [{ description: '1 cup', grams: 16 }, { description: '1 sprig', grams: 1.1 }],
+                nutrition: { kcal: 23, protein: 2.13, carbs: 3.67, fat: 0.52, per100g: true },
+            }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'cilantro' }), 0.95, '1 cup cilantro'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(16);
+        // The inline mapping carries neither `servingId` nor `nutrients`, so the
+        // row that answered has no panel and the macros fall to the SAME
+        // per-100g rescale they used before. Only GRAMS move on this path — the
+        // widening degrades safely when the source is thin.
+        expect(r!.servingId).toBeNull();
+        expect(r!.kcal).toBeCloseTo(23 * 0.16, 5);
+    });
+
+    it('NEGATIVE CONTROL fs_36577 Spinach — 1 cup = 30 g, green on BOTH trees', async () => {
+        // Spinach is already right in production, but only by accident of
+        // FatSecret having flagged its cup row as the default — so the OLD gate
+        // fires on it too. It is here to prove the rewrite MOVES NOTHING that
+        // already worked: if this test is the one that goes red, the change is
+        // wrong. Golden n-prose-08 ("approximately 2 cups of spinach", band
+        // [40, 100] g) is built on this record's 30 g.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '36577', name: 'Spinach',
+            nutrientsPer100g: { calories: 23, protein: 2.86, carbs: 3.63, fat: 0.39 },
+            defaultServingId: '34521',
+            servings: [
+                serving('34521', '1 cup', 30,
+                    { calories: 7, protein: 0.86, carbohydrate: 1.09, fat: 0.12 }, 'cup'),
+                serving('34523', '1 leaf', 10, null, 'leaf'),
+                serving('44322', '1 oz', 28.35, null, 'oz'),
+                panelRow('59308', { calories: 23, protein: 2.86, carbohydrate: 3.63, fat: 0.39 }),
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            makeCandidate({ id: 'fs_36577', name: 'Spinach' }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'spinach' }), 0.95, '1 cup spinach'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(30);
+        expect(r!.servingId).toBe('34521');
     });
 });
