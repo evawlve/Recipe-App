@@ -9,6 +9,9 @@
 
 import {
     countedPieceNoun,
+    extractLabelServingUnit,
+    labelLeadingCount,
+    labelLeadingQuantity,
     pieceNounInName,
     servingLabelCountsPiece,
     servingLabelHasPieceCount,
@@ -108,5 +111,106 @@ describe('pieceNounInName', () => {
         // spelling contributes no cookie match under either scan and 'chip'
         // is the last member either way.
         expect(pieceNounInName('chocolate chip cookies')).toBe('chip');
+    });
+});
+
+// ============================================================
+// The leading quantity of a label serving (fraction fix, 2026-08-18)
+// ============================================================
+
+describe('extractLabelServingUnit', () => {
+    it('reads the unit past a leading FRACTION', () => {
+        // The defect. `^\\s*\\d*\\.?\\d*\\s*([a-z]+)` consumed the `1`, then `/`
+        // is not `[a-z]`, so every fraction-led label read as "no unit at all"
+        // — 16,531 OffFood rows and 2,422 FatSecretServing rows (measured on
+        // the box 2026-08-18).
+        expect(extractLabelServingUnit('1/2 cup (110 g)')).toBe('cup');
+        expect(extractLabelServingUnit('1/4 cup (37 g)')).toBe('cup');
+        expect(extractLabelServingUnit('2/3 cup (100 g)')).toBe('cup');
+        expect(extractLabelServingUnit('3/4 tsp (2.5 g)')).toBe('tsp');
+        expect(extractLabelServingUnit('1/2 Cup (100g)')).toBe('cup');
+        expect(extractLabelServingUnit('1/12 package (50 g mix)')).toBe('package');
+    });
+
+    it('reads the unit past a leading MIXED NUMBER', () => {
+        expect(extractLabelServingUnit('1 1/4 cup (40 g)')).toBe('cup');
+        expect(extractLabelServingUnit('1 1/2 Tbsp (23 g)')).toBe('tbsp');
+        expect(extractLabelServingUnit('2 1/2 cup (85 g)')).toBe('cup');
+    });
+
+    it('every shape the old regex matched still returns the SAME word', () => {
+        // The fraction arms only ever fire where the old regex matched nothing:
+        // measured over all 1,085,526 OffFood rows and all 55,004
+        // FatSecretServing rows, ZERO records change from one word to a
+        // different word. These pin the arms that carry that property.
+        expect(extractLabelServingUnit('2 scoops (46g)')).toBe('scoop');
+        expect(extractLabelServingUnit('1 container (170g)')).toBe('container');
+        expect(extractLabelServingUnit('18 chips (28g)')).toBe('chip');
+        expect(extractLabelServingUnit('cup')).toBe('cup');
+        expect(extractLabelServingUnit('0.5 cup')).toBe('cup');
+        // Digits glued to the unit: `100.0g` must keep reading `g`, or the
+        // per-100g placeholder rule in usableBareLabelServing stops firing.
+        expect(extractLabelServingUnit('100 g')).toBe('g');
+        expect(extractLabelServingUnit('100.0g')).toBe('g');
+        expect(extractLabelServingUnit('1 portion (100 g)')).toBe('portion');
+        expect(extractLabelServingUnit(null)).toBeNull();
+        expect(extractLabelServingUnit('(28 g)')).toBeNull();
+    });
+
+    it('hyphen shapes stay unreadable, exactly as before', () => {
+        // "1-1/4 cup" is a hyphen-written mixed number and "2-3 Tbsp" a genuine
+        // range; both returned null before and still do. 405 OffFood rows lead
+        // with a hyphen — named, deliberately not fixed here, because the two
+        // shapes are not separable without a rule nobody has measured.
+        expect(extractLabelServingUnit('1-1/4 cup (85 g)')).toBeNull();
+        expect(extractLabelServingUnit('2-3 Tbsp (35 g)')).toBeNull();
+    });
+});
+
+describe('labelLeadingQuantity', () => {
+    it('parses fractions, mixed numbers, integers and decimals', () => {
+        expect(labelLeadingQuantity('1/2 cup (110 g)')).toBe(0.5);
+        expect(labelLeadingQuantity('1/12 package (50 g mix)')).toBeCloseTo(1 / 12, 12);
+        expect(labelLeadingQuantity('1 1/4 cup (40 g)')).toBe(1.25);
+        expect(labelLeadingQuantity('18 chips (28 g)')).toBe(18);
+        expect(labelLeadingQuantity('2.5 oz')).toBe(2.5);
+    });
+
+    it('returns null when the label does not LEAD with a digit', () => {
+        expect(labelLeadingQuantity('cup')).toBeNull();
+        expect(labelLeadingQuantity('One Slice (50g)')).toBeNull();
+        expect(labelLeadingQuantity('a dozen cookies')).toBeNull();
+        expect(labelLeadingQuantity('')).toBeNull();
+        expect(labelLeadingQuantity(null)).toBeNull();
+    });
+
+    it('refuses hyphen shapes to the plain leading number', () => {
+        // parseQuantityTokens averages a range ("2-3" -> 2.5). A serving label
+        // is not a recipe line, so the match refuses a numeric run followed by
+        // `-`, `/` or another digit and the caller keeps reading the first
+        // number, unchanged.
+        expect(labelLeadingQuantity('2-3 Tbsp (35 g)')).toBe(2);
+        expect(labelLeadingQuantity('1-1/4 cup (85 g)')).toBe(1);
+    });
+});
+
+describe('labelLeadingCount is NOT the fraction reader (and stays integer-only)', () => {
+    it('still returns null for every fractional shape', () => {
+        // build-fatsecret-result.ts:240-245 records why it cannot be reused:
+        // integer-only, and null below 2. That is load-bearing for
+        // servingLabelCountsPiece / servingLabelHasPieceCount, which is why
+        // exactly ONE OffFood row (0850057175004, "2 1/2 Cookie (114 g)")
+        // changes its piece-count verdict under this PR.
+        expect(labelLeadingCount('1/2 cup (110 g)')).toBeNull();
+        expect(labelLeadingCount('1 1/3 cookie (28 g)')).toBeNull();   // leading int is 1, < 2
+        expect(labelLeadingCount('1 container')).toBeNull();
+        expect(labelLeadingCount('15 pieces (28 g)')).toBe(15);
+        expect(labelLeadingCount('2 1/2 Cookie (114 g)')).toBe(2);
+    });
+
+    it('the piece-count predicates are unmoved for fraction-led labels', () => {
+        expect(servingLabelHasPieceCount('1/4 pretzel (59 g)', 59)).toBe(false);
+        expect(servingLabelHasPieceCount('1 1/3 cookie (28 g)', 28)).toBe(false);
+        expect(servingLabelCountsPiece('1/4 pretzel (59 g)', 59, 'pretzel')).toBe(false);
     });
 });

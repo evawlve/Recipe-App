@@ -11,6 +11,8 @@
  *   3. null              — no gram anchor found, triggers AI backfill
  */
 
+import { labelLeadingQuantity } from '../mapping/count-label';
+
 // ============================================================
 // Public API
 // ============================================================
@@ -29,12 +31,25 @@ export interface OffServingResult {
     unitCount: number;
 }
 
-/** Extract the leading quantity from a serving description ("2 scoops" → 2). */
+/**
+ * Extract the leading quantity from a serving description ("2 scoops" → 2,
+ * "1/2 cup (110 g)" → 0.5, "1 1/4 cup (40 g)" → 1.25); 1 when the label does
+ * not lead with a number.
+ *
+ * THE FRACTION IS THE POINT. This was `^\s*(\d+(?:\.\d+)?)` — it read the
+ * NUMERATOR of a fraction and stopped, so "1/2 cup (110 g)" reported one unit
+ * and the consumer's `servingGrams / unitCount` called 110 g a whole cup.
+ * 15,317 OffFood rows lead with a fraction and 1,196 with a mixed number
+ * (measured on the box 2026-08-18); `off_0081312620001` "Cottage cheese" is
+ * the worked case — 110 g per HALF cup, i.e. 220 g/cup against USDA's 226.
+ *
+ * The shape gate and the fraction arithmetic are `labelLeadingQuantity()`'s in
+ * `mapping/count-label.ts`, which owns the other half of the same read
+ * (`extractLabelServingUnit`) — the unit and the count must agree about where
+ * the quantity ends or one of them is describing a different string.
+ */
 function leadingCount(description: string): number {
-    const m = description.match(/^\s*(\d+(?:\.\d+)?)/);
-    if (!m) return 1;
-    const n = parseFloat(m[1]);
-    return Number.isFinite(n) && n > 0 ? n : 1;
+    return labelLeadingQuantity(description) ?? 1;
 }
 
 /**
