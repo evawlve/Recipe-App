@@ -1584,6 +1584,19 @@
         "value": "^fdc-refuses-before-upsert@fs-refuses-before-transaction$"
       },
       "verified": "2026-08-17"
+    },
+    {
+      "id": "hedge-strip-is-positional",
+      "claim": "A leading hedge word (about/around/roughly/approximately/approx/nearly/almost/like/maybe) is stripped by parseIngredientLine() ONLY at token 0 and ONLY when parseQuantityTokens() recognises what follows as a quantity, so 'about 1 cup egg whites' parses unit 'cup' (was unit null, name 'about 1 cup' \u2014 the mapper then spent a `parse` model call recovering it) while 'about time seasoning' keeps its name byte-identical (no number follows). Output is unit(about 1 cup egg whites)|name(about time seasoning). If the first half fails the hedge is back at the quantity slot; if the second half fails the strip has stopped being positional/number-gated and is eating food names.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md",
+      "where": "backend",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');process.stdout.write(String(p('about 1 cup egg whites').unit)+'|'+p('about time seasoning').name)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "cup|about time seasoning"
+      },
+      "verified": "2026-08-17",
+      "timeoutMs": 180000
     }
   ]
 }

@@ -144,6 +144,34 @@ function leadingEggIsAdjectival(mergedTokens: string[]): boolean {
   return !EGG_PART_TOKENS.has(mergedTokens[1].toLowerCase());
 }
 
+// Leading hedge words that a prose log puts IN FRONT of the quantity: "about 1
+// cup of egg whites", "roughly 2 tbsp olive oil", "like 3 eggs". Every arm of
+// parseQuantityTokens() reads tokens[0], so a hedge at [0] costs the line its
+// quantity AND its unit (name becomes "about 1 cup of"), and the mapper then
+// spends a `parse` model call to recover what the line already said.
+//
+// The strip is POSITIONAL and NUMBER-GATED: only mergedTokens[0], and only when
+// the owner (parseQuantityTokens) recognises the rest as opening with a
+// quantity. That keeps "about time seasoning" (no number follows) and every
+// food whose name merely contains one of these words intact, and it keeps
+// `roughly` in QUALIFIERS for "roughly chopped" — no number follows, so the
+// strip never sees it. Not a numeric regex: the owner decides what a quantity
+// is (word numbers, fractions, ranges), so the two cannot drift apart.
+//
+// Lives here, not in quantity.ts: parseQuantityTokens() has a second consumer
+// (build-fatsecret-result.ts runs it on FatSecret serving descriptions) that
+// must not learn to swallow leading words.
+// Owner: mobile sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md §2.
+const LEADING_HEDGES = new Set([
+  'about', 'around', 'roughly', 'approximately', 'approx',
+  'nearly', 'almost', 'like', 'maybe',
+]);
+function leadingHedgePrecedesQuantity(mergedTokens: string[]): boolean {
+  if (mergedTokens.length < 2) return false;
+  if (!LEADING_HEDGES.has(mergedTokens[0].toLowerCase())) return false;
+  return parseQuantityTokens(mergedTokens.slice(1)) !== null;
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
@@ -366,6 +394,16 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   let i = 0;
   let qty = 1; // Default quantity
+
+  // Positional leading-hedge strip (see leadingHedgePrecedesQuantity above):
+  // advance past "about"/"roughly"/... when a quantity follows, so the line
+  // parses exactly as its un-hedged form. The three decide-once reads of
+  // mergedTokens[0] below (wholeIsIdentity, eggIsAdjectival, startsWithUnit)
+  // are unaffected: on a stripped line [0] is the hedge, on the un-hedged form
+  // [0] is the quantity token, and none of the three recognises either.
+  if (leadingHedgePrecedesQuantity(mergedTokens)) {
+    i = 1;
+  }
 
   // Check if first token is a unit (e.g., "pinch of salt")
   // If so, we'll use default qty of 1
