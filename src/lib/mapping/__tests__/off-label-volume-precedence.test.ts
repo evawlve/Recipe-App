@@ -13,8 +13,16 @@
  * product whose own `serving_size` reads `1 cup (30 g)` the record states the
  * answer and the class constant billed `240 x 0.5 = 120 g` — 4x over, on the
  * highest-traffic volume tier in the system (`volume_unit`, 413 events / 7 days,
- * 4.3% of all serving-tier traffic; ALL of it OFF — the FDC arm of that tier has
- * never billed a live query).
+ * 4.3% of all serving-tier traffic).
+ *
+ * That tier is OFF traffic in all but a rounding error, which is why an OFF-only
+ * fix reaches it: measured 2026-08-18, `MappingEventLog` carries 5 rows with
+ * `source='fdc'` against 8,200+ `openfoodfacts`, and all 5 are warm rows whose
+ * `rawLine` is "about 1 cup of egg whites" — the golden case `n-prose-01`, i.e.
+ * OUR OWN eval traffic, not a user. Stated this way deliberately: an earlier
+ * draft of this file (and the plan it came from) asserted the absolute "the FDC
+ * arm has never billed a live query", and a census this session refuted it. The
+ * conclusion is unchanged; the absolute was wrong.
  *
  * The file already states the opposing principle a few lines above, about
  * `PACKAGE_LIKE_UNITS`: *"Units where the product's own label serving IS the
@@ -401,9 +409,22 @@ describe('5. the band is strictly wider than every density the estimator itself 
  * `volume-unit-spellings.test.ts` block 4 is a real no-regression pin for the
  * flat-ml asymmetry, but it CANNOT witness this guard: all four of its OFF
  * fixtures carry `servingGrams: null, servingDescription: null`, so no label
- * exists for the new branch to prefer and the guard is never consulted. This
- * block is the only evidence the hold-out works, so it uses fixtures that DO
- * carry a matching label and asserts the constant wins anyway.
+ * exists for the new branch to prefer and the guard is never consulted. So this
+ * block is the only place the hold-out is exercised at all — its fixtures DO
+ * carry a matching label, and assert the constant wins anyway.
+ *
+ * WHICH TEST HERE ACTUALLY WITNESSES THE HOLD-OUT: only the `floz` one. The
+ * lane's private `VOLUME_UNIT_ML` has NO `ml` key, so `ml` was already refused
+ * by the missing-cell arm of the guard — the `ml` test below stays green if
+ * `OFF_FLAT_VOLUME_CELLS` is mutated out of the guard, so it pins the BEHAVIOUR
+ * without witnessing the mechanism. `floz` has a cell (30) and an in-band label
+ * density (45/30 = 1.5), so it is the one case the hold-out decides, and it
+ * flips red when the hold-out is removed.
+ *
+ * COST OF THE HOLD-OUT: ZERO events, not 2. The `ml` half changes nothing (it
+ * was already refused) and measured `floz` traffic is 0. An earlier draft said
+ * "costs 2" by charging the hold-out for `ml`'s 2 events, which it does not
+ * cause.
  */
 describe('6. the pinned flat family and the absolute cells are held out', () => {
     it('`floz` on a record labelled "1 floz (45 g)" keeps the flat 30 g, NOT the label', async () => {

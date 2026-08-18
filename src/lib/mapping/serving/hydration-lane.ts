@@ -2665,7 +2665,23 @@ export async function buildOffResult(
     //     with >1.5x of slack on both sides, so wherever it refuses a label the
     //     line lands on a constant that was ALREADY going to be at least that
     //     far from the label's own number. Refusal therefore cannot make any
-    //     line worse than master billed it. That is all this argument buys.
+    //     line worse than master billed it. That is all this argument buys —
+    //     and note which HALF of the change it covers.
+    //
+    //     REFUSALS ARE BOUNDED; ADMISSIONS ARE NOT. When the band ADMITS a
+    //     label this branch bills it outright, and nothing here caps how far
+    //     that sits from the class constant. The sharp case is OFF's
+    //     `serving_quantity`, which `parseOffServingSize()` takes as GRAMS: a
+    //     label reading `1 cup (240 ml)` implies exactly 1.0 g/ml, dead centre
+    //     of the band, so a SOLID-classed record now bills 240 g where it
+    //     billed 120 g. For the classifier's known misses — cola, beer, coffee,
+    //     energy drinks, the same gap the flat-ml pin below complains about —
+    //     that is the fix working. For a genuinely dry food whose label states
+    //     ml it is a 2x overbill. This is not NEW trust: `bare_label_serving`,
+    //     `label_serving_default` and `label_serving_package_unit` already
+    //     trust `servingGrams` identically, and the PACKAGE_LIKE_UNITS
+    //     principle below IS that trust. It is written down because the bound
+    //     above is one-directional and a reader should not infer symmetry.
     //
     //     WHAT IT DOES NOT BUY, stated plainly because a band that is trusted
     //     for the wrong reason is worse than none: the band is applied to the
@@ -2694,8 +2710,15 @@ export async function buildOffResult(
     //     that — `ml`, `floz`, `fl oz` — so the deliberate flat family stays
     //     bit-identical instead of quietly becoming label-dependent. `floz` has
     //     a VOLUME_UNIT_ML cell and would otherwise have been admitted while
-    //     `ml` was not, which is a half-applied rule, not a decision. Costs 2 of
-    //     this tier's 8,200 measured events (ml 2, floz 0).
+    //     `ml` was not, which is a half-applied rule, not a decision.
+    //
+    //     COSTS ZERO EVENTS. The `ml` half of the hold-out is REDUNDANT — this
+    //     lane's private VOLUME_UNIT_ML has no `ml` key, so `ml` was already
+    //     refused by the missing-cell arm above; it is kept because the rule
+    //     should read as one rule, not because it decides anything. `floz` is
+    //     the half that decides, and its measured traffic is 0. (An earlier
+    //     draft said "costs 2", charging the hold-out for `ml`'s 2 events,
+    //     which it does not cause.)
     const labelVolumeUnitMl = unit && !(singularizeUnit(unit) in OFF_FLAT_VOLUME_CELLS)
         ? VOLUME_UNIT_ML[singularizeUnit(unit)] : undefined;
     const ownLabelVolumeDensity = labelVolumeUnitMl && perLabelUnitGrams
