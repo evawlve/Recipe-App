@@ -221,8 +221,17 @@ describe('the two predicates are related but NOT equal', () => {
 describe('producer call-site census — the guard against the next silent miss', () => {
     const SRC = join(__dirname, '..', '..', '..', '..', 'src');
 
-    // Counts measured 2026-08-05 on master @ 93a6219. Re-derive:
-    //   grep -rn "await <fn>(" src/ | grep -v __tests__ | wc -l
+    // Counts measured 2026-08-05 on master @ 93a6219, unchanged since. Re-derive:
+    //   grep -rn "await <fn>(" src/ | grep -v __tests__ | grep -v '\.test\.ts' | wc -l
+    //
+    // THE SECOND FILTER WAS ADDED 2026-08-18 AND MOVES NO NUMBER. The walk below
+    // skipped `__tests__` DIRECTORIES only, so a co-located `*.test.ts` beside the
+    // code it tests counted as a production call site. Nothing in src/ had that
+    // shape until route.write-policy.test.ts called the real insertFdcAiServing()
+    // from inside the parse route's own folder, which pushed this census to 2 for a
+    // function whose production call sites had not moved. All four counts are
+    // identical under both rules today (verified 2026-08-18) — this restores the
+    // census's stated meaning ("outside tests") without changing what it asserts.
     const EXPECTED: Record<string, number> = {
         getOrCreateAmbiguousServing: 7,
         getOrCreateFdcSizeServings: 3,
@@ -237,7 +246,7 @@ describe('producer call-site census — the guard against the next silent miss',
                 const p = join(dir, e.name);
                 if (e.isDirectory()) {
                     if (e.name !== '__tests__' && e.name !== 'node_modules') walk(p);
-                } else if (e.name.endsWith('.ts')) {
+                } else if (e.name.endsWith('.ts') && !e.name.endsWith('.test.ts')) {
                     out.push(p);
                 }
             }

@@ -18,6 +18,7 @@
 import { insertFdcAiServing } from '../fdc-ai-backfill';
 import { requestAiServing } from '../../ai/serving-estimator';
 import { prisma } from '../../db';
+import { runWithWritePolicy } from '../../write-policy';
 
 jest.mock('../../ai/serving-estimator', () => {
     const actual = jest.requireActual('../../ai/serving-estimator');
@@ -215,5 +216,81 @@ describe('insertFdcAiServing — controls that hold on both trees', () => {
             targetServingUnit: 'cup',
             isOnDemandBackfill: true,
         }));
+    });
+});
+
+// ============================================================================
+// Request-scoped write suppression (nosave=1)
+// ============================================================================
+
+describe('under a write policy that suppresses aiServing', () => {
+    /** A clean 1 cup = 240 g answer: density 1.0, inside the band, nothing else to refuse. */
+    const cupAnswer = () => answer({
+        servingLabel: '1 cup',
+        grams: 240,
+        volumeUnit: 'cup',
+        volumeAmount: 1,
+        rationale: 'a cup of egg whites is about 240 g',
+    });
+
+    it('writes no row', async () => {
+        cupAnswer();
+
+        await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' }),
+        );
+
+        noWriteHappened();
+    });
+
+    it('returns EXACTLY what the persisted path returns — success, grams AND label', async () => {
+        // THE ANTI-dryRun PIN. `dryRun` answers `{ success: true }` with no grams, and the
+        // volume caller in serving/hydration-lane.ts reads a missing `grams` as failure and
+        // reroutes to the hardcoded density — so a suppressed run would measure a different
+        // pipeline. Suppression must be invisible to the caller except for the missing row.
+        cupAnswer();
+
+        const persisted = await insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' });
+        jest.clearAllMocks();
+        findFood.mockResolvedValue(EGG_WHITE_FOOD);
+        cupAnswer();
+        const suppressed = await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' }),
+        );
+
+        expect(suppressed).toEqual(persisted);
+        expect(suppressed).toEqual({ success: true, grams: 240, servingLabel: '1 cup' });
+    });
+
+    it('still calls the model — the value the caller bills must be a real estimate', async () => {
+        // The refusal sits AFTER the answer on purpose here (unlike insertAiServing(), whose
+        // return carries no grams for anyone to bill). Skipping the call would make the
+        // suppressed path bill nothing at all.
+        cupAnswer();
+
+        await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' }),
+        );
+
+        expect(mockedRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('a policy that suppresses a DIFFERENT kind does not touch this writer', async () => {
+        cupAnswer();
+
+        const r = await runWithWritePolicy({ suppress: ['segmentationCache'] }, () =>
+            insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' }),
+        );
+
+        expect(r).toEqual({ success: true, grams: 240, servingLabel: '1 cup' });
+        expect(upsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('outside any policy the row is written exactly as before', async () => {
+        cupAnswer();
+
+        await insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' });
+
+        expect(upsert).toHaveBeenCalledTimes(1);
     });
 });

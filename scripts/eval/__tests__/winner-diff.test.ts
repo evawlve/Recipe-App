@@ -1239,6 +1239,34 @@ describe('winner-gate.sh UNOBSERVED_SURFACE_PATHS — the surface the replay nev
         ])).toBe(true);
     });
 
+    /**
+     * src/lib/nlp/ IS ON THIS LIST AND IS NOT A ROUTE (added 2026-08-18).
+     *
+     * The list's original argument was "src/lib imports src/app in zero files, so no
+     * refactor can put a route on the replay's path". src/lib/nlp/ earns the same abort by
+     * the same argument one level down: it is imported ONLY by src/app/api/nlp/parse/route.ts
+     * and that route's colocated tests. src/lib/mapping, src/lib/parse, src/lib/search and
+     * src/lib/servings — the set replaySelection() actually reaches through
+     * mapIngredientWithFallback — import it in ZERO files. Re-derive:
+     * `grep -rn "lib/nlp/" src --include=*.ts | grep -v '^src/lib/nlp/'`.
+     *
+     * BEFORE THIS, a segmenter change matched NONE of the three lists. The gate RAN, the
+     * replay never called the segmenter, and it printed a clean SAME over code it had not
+     * executed — a vacuous green with no warning attached, which is strictly worse than
+     * either abort. winner-diff-screens.ts already said so in its own words: item count
+     * "comes from the LLM segmenter, which a single-query replay never runs".
+     *
+     * DELETE `src/lib/nlp/` FROM UNOBSERVED_SURFACE_PATHS AND THE FOUR CASES BELOW FAIL.
+     */
+    it.each([
+        ['src/lib/nlp/ai-segmenter.ts', 'the segmenter itself; the replay never calls it'],
+        ['src/lib/nlp/segmentation-cache.ts', 'read and write both sit behind the route'],
+        ['src/lib/nlp/seg-line-key.ts', 'the cache key the prose path is keyed on'],
+        ['src/lib/nlp/segmentation-diff.ts', 'the drift instrument; nothing replays it'],
+    ])('ABORTS on %s (%s)', (changed) => {
+        expect(gateAborts([changed])).toBe(true);
+    });
+
     it('every pattern names a path that EXISTS — a typo is a silent hole, not a red', () => {
         expect(missingPathsIn('UNOBSERVED_SURFACE_PATHS')).toEqual([]);
     });

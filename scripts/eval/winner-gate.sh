@@ -326,7 +326,20 @@ fi
 # replay loads (164 -> 236, +43.9%) would mint a fresh-looking tree id that proves
 # nothing, which is worse than an honest vacuous SAME. The blindness is structural and
 # stays. This abort only stops it being sold as a receipt.
-UNOBSERVED_SURFACE_PATHS='src/app/api/'
+#
+# WHY src/lib/nlp/ IS HERE TOO (added 2026-08-18). It is not a route, but it is reachable
+# only THROUGH one: `grep -rn "lib/nlp/" src --include=*.ts` outside that directory returns
+# `src/app/api/nlp/parse/route.ts` and route tests, and nothing else — src/lib/mapping,
+# src/lib/parse, src/lib/search and src/lib/servings import it in ZERO files. replaySelection()
+# calls mapIngredientWithFallback directly and issues no HTTP request, so the segmenter, the
+# segmentation cache, the seg-line key and the segmentation diff are all code the replay cannot
+# execute. winner-diff-screens.ts says so in its own words: item count "comes from the LLM
+# segmenter, which a single-query replay never runs".
+#
+# Before this line, a segmenter change matched NONE of the three lists, so the gate RAN and
+# reported a clean SAME over code it never touched — the exact failure UNOBSERVED_SURFACE exists
+# to stop, one directory over from where it was first found.
+UNOBSERVED_SURFACE_PATHS='src/app/api/|src/lib/nlp/'
 if changed_paths | grep -qE "$UNOBSERVED_SURFACE_PATHS"; then
     echo "ABORT: this branch changes an HTTP ROUTE, a surface winner-diff never executes:" >&2
     changed_paths | grep -E "$UNOBSERVED_SURFACE_PATHS" | sed 's/^/  /' >&2

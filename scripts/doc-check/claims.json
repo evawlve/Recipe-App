@@ -437,15 +437,15 @@
     },
     {
       "id": "read-now-tier-within-budget",
-      "claim": "The read-now tier (CLAUDE.md + the newest 2 files in sync-docs/log/) is at most 1,500 lines — the agreed reading budget",
+      "claim": "The read-now tier (CLAUDE.md + the newest 2 files in sync-docs/log/) is at most 1,500 lines — the agreed reading budget. Ordered by FILENAME (ls -1 | tail -2), not mtime: sync-docs/log/README.md states that mtime ordering lies and records that it has already floated a superseded write-off to the top of the read path once - correcting a stale line in an older write-off touches its mtime. This command read `ls -1t | head -2` until 2026-08-18, so it measured a pair the read path would not have used.",
       "ownerDoc": "mobile:CLAUDE.md#reading",
       "where": "mobile",
-      "command": "{ cat CLAUDE.md; ls -1t sync-docs/log/2026-*.md | head -2 | xargs cat; } | wc -l",
+      "command": "{ cat CLAUDE.md; ls -1 sync-docs/log/2026-*.md | tail -2 | xargs cat; } | wc -l",
       "expect": {
         "kind": "max",
         "value": "1500"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-08-18"
     },
     {
       "id": "handoff-format-retired",
@@ -1587,7 +1587,7 @@
     },
     {
       "id": "hedge-strip-is-positional",
-      "claim": "A leading hedge word (about/around/roughly/approximately/approx/nearly/almost/like/maybe) is stripped by parseIngredientLine() ONLY at token 0 and ONLY when parseQuantityTokens() recognises what follows as a quantity, so 'about 1 cup egg whites' parses unit 'cup' (was unit null, name 'about 1 cup' \u2014 the mapper then spent a `parse` model call recovering it) while 'about time seasoning' keeps its name byte-identical (no number follows). Output is unit(about 1 cup egg whites)|name(about time seasoning). If the first half fails the hedge is back at the quantity slot; if the second half fails the strip has stopped being positional/number-gated and is eating food names.",
+      "claim": "A leading hedge word (about/around/roughly/approximately/approx/nearly/almost/like/maybe) is stripped by parseIngredientLine() ONLY at token 0 and ONLY when parseQuantityTokens() recognises what follows as a quantity, so 'about 1 cup egg whites' parses unit 'cup' (was unit null, name 'about 1 cup' — the mapper then spent a `parse` model call recovering it) while 'about time seasoning' keeps its name byte-identical (no number follows). Output is unit(about 1 cup egg whites)|name(about time seasoning). If the first half fails the hedge is back at the quantity slot; if the second half fails the strip has stopped being positional/number-gated and is eating food names.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md",
       "where": "backend",
       "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {parseIngredientLine:p}=require('./src/lib/parse/ingredient-line');process.stdout.write(String(p('about 1 cup egg whites').unit)+'|'+p('about time seasoning').name)\"",
@@ -1597,6 +1597,42 @@
       },
       "verified": "2026-08-17",
       "timeoutMs": 180000
+    },
+    {
+      "id": "nosave-refuses-ai-serving-writes",
+      "claim": "All four AI-serving writers refuse BEFORE they write when a request suppresses 'aiServing' (/api/nlp/parse?nosave=1): insertFdcAiServing(), the private upsertServing() in ambiguous-unit-backfill.ts, insertAiServing() and backfillWeightServing() each carry an isWriteSuppressed('aiServing') guard, and in each one the guard line precedes that function's own write call. Output is guarded@ordered over the four. THE PLACEMENT IS THE CLAIM: a bare grep -c passes just as happily with a guard sitting AFTER the upsert it is supposed to prevent, which is the one arrangement that reads as protection and is not. 0@0 is the pre-P6 tree; 4@1..4@3 means a guard moved below its write.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const t=[['src/lib/usda/fdc-ai-backfill.ts','insertFdcAiServing','prisma.fdcServing.upsert('],['src/lib/mapping/ambiguous-unit-backfill.ts','upsertServing','prisma.fdcServing.upsert('],['src/lib/mapping/ai-backfill.ts','insertAiServing','prisma.\\$transaction('],['src/lib/mapping/ai-backfill.ts','backfillWeightServing','prisma.aiGeneratedServing.upsert(']];let g=0,o=0;for(const x of t){const L=fs.readFileSync(x[0],'utf8').split(/\\r?\\n/);const s=L.findIndex(l=>l.includes('function '+x[1]+'('));if(s<0)continue;let e=L.length;for(let i=s+1;i<L.length;i++){if(/^\\}/.test(L[i])){e=i;break;}}const b=L.slice(s,e);const gi=b.findIndex(l=>/isWriteSuppressed\\(.aiServing.\\)/.test(l));const wi=b.findIndex(l=>l.includes(x[2]));if(gi>=0)g++;if(gi>=0&&wi>=0&&gi<wi)o++;}process.stdout.write(g+'@'+o)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "4@4"
+      },
+      "verified": "2026-08-18"
+    },
+    {
+      "id": "write-policy-store-is-on-globalthis",
+      "claim": "src/lib/write-policy.ts holds its AsyncLocalStorage on globalThis and constructs exactly ONE of them. Output is globalThis-occurrences@constructor-count. Zero globalThis mentions, or a second constructor, is the fail-open the deployed build makes possible: Next demonstrably emits src/lib/** into more than one server chunk (2026-08-17, logicalSuccesses in both chunks/2130.js and app/api/ok/route.js), so a module-local instance would give the route and the writers different stores — every writer would read no store and WRITE, invisibly to jest.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const s=fs.readFileSync('src/lib/write-policy.ts','utf8');process.stdout.write((s.match(/globalThis/g)||[]).length+'@'+(s.match(/new AsyncLocalStorage/g)||[]).length)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^[1-9][0-9]*@1$"
+      },
+      "verified": "2026-08-18"
+    },
+    {
+      "id": "nosave-refuses-segmentation-cache-writes",
+      "claim": "writeSegmentationCache() carries exactly one isWriteSuppressed('segmentationCache') guard, so nosave=1 refuses the SegmentationCache upsert — and with it the opportunistic TTL deleteMany sweep — at the WRITER, not at the single call site in the route. Before 2026-08-18 only nocache=1 gated this table, and only at the route.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-17_request-scoped-write-suppression-design.md",
+      "where": "backend",
+      "command": "grep -c \"isWriteSuppressed('segmentationCache')\" src/lib/nlp/segmentation-cache.ts",
+      "expect": {
+        "kind": "matches",
+        "value": "^1$"
+      },
+      "verified": "2026-08-18"
     }
   ]
 }

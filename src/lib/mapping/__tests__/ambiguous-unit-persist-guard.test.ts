@@ -117,6 +117,7 @@ import { getOrCreateAmbiguousServing } from '../ambiguous-unit-backfill';
 import { estimateAmbiguousServing } from '../../ai/ambiguous-serving-estimator';
 import { prisma } from '../../db';
 import { logger } from '../../logger';
+import { runWithWritePolicy, currentWriteReceipt } from '../../write-policy';
 
 const mockedEstimate = estimateAmbiguousServing as jest.Mock;
 const mockedAiServingUpsert = prisma.aiGeneratedServing.upsert as jest.Mock;
@@ -354,5 +355,83 @@ describe('guard 4: sibling-borrow carries persisted, it does not assume it', () 
         );
         expect(borrow).toBeUndefined(); // OFF-only guard held
         expect(mockedAiServingUpsert).not.toHaveBeenCalled();
+    });
+});
+
+// ------------------------------------------------------------------
+// Guard 5 — request-scoped write suppression (nosave=1)
+//
+// A FIFTH guard on the same write, and it is not the others: the id HAS a
+// write target and the estimate IS valid; the REQUEST asked for nothing it
+// computed to be persisted. It shares guard 1's return value (`false` =
+// "not persisted", never "failed") precisely so no caller has to learn a new
+// one — the seven call sites are untouched by this PR.
+// ------------------------------------------------------------------
+
+describe('guard 5: a suppressed request persists nothing but still answers', () => {
+    it('writes to no serving table, whichever target the id has', async () => {
+        await runWithWritePolicy({ suppress: ['aiServing'] }, async () => {
+            await getOrCreateAmbiguousServing('clx0000aigenfood01', 'House Chili', 'bowl');
+            await getOrCreateAmbiguousServing('fdc_747997', 'Egg white', 'container');
+            await getOrCreateAmbiguousServing('off_0042400265177', 'Cereal', 'scoop');
+        });
+
+        expect(mockedAiServingUpsert).not.toHaveBeenCalled();
+        expect(mockedFdcServingUpsert).not.toHaveBeenCalled();
+        expect(mockedOffServingUpsert).not.toHaveBeenCalled();
+    });
+
+    it('still returns the estimate — suppression is on persistence, never on the answer', async () => {
+        const r = await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            getOrCreateAmbiguousServing('clx0000aigenfood01', 'House Chili', 'bowl'),
+        );
+
+        expect(r).toEqual({ status: 'success', grams: 30, confidence: 0.8 });
+    });
+
+    it('does not claim "saved"', async () => {
+        await runWithWritePolicy({ suppress: ['aiServing'] }, () =>
+            getOrCreateAmbiguousServing('clx0000aigenfood01', 'House Chili', 'bowl'),
+        );
+
+        expect(msgs(mockedInfo)).not.toContain('ambiguous_backfill.saved');
+    });
+
+    it('names the table it would have written on the receipt', async () => {
+        const receipt = await runWithWritePolicy({ suppress: ['aiServing'] }, async () => {
+            await getOrCreateAmbiguousServing('fdc_747997', 'Egg white', 'container');
+            return currentWriteReceipt();
+        });
+
+        expect(receipt!.refusedTotal).toBe(1);
+        expect(receipt!.refused[0]).toMatchObject({
+            kind: 'aiServing',
+            table: 'FdcServing',
+            key: 'fdc_747997:container',
+        });
+        // consulted > 0 is what makes "one refusal" a measurement rather than a guess.
+        expect(receipt!.consulted).toBeGreaterThanOrEqual(1);
+    });
+
+    it('is narrow: outside the policy the same id still persists and still logs "saved"', async () => {
+        await getOrCreateAmbiguousServing('clx0000aigenfood01', 'House Chili', 'bowl');
+
+        expect(mockedAiServingUpsert).toHaveBeenCalledTimes(1);
+        expect(msgs(mockedInfo)).toContain('ambiguous_backfill.saved');
+    });
+
+    it('an fs_ id under suppression still reports the ORIGINAL no-target reason', async () => {
+        // The two reasons a row does not land must stay distinguishable: the write-target
+        // guard runs first, so an fs_ id is still "no target", not "suppressed".
+        const receipt = await runWithWritePolicy({ suppress: ['aiServing'] }, async () => {
+            await getOrCreateAmbiguousServing('fs_37040', 'Almonds', 'handful');
+            return currentWriteReceipt();
+        });
+
+        expect(mockedWarn).toHaveBeenCalledWith(
+            'ambiguous_backfill.persist_skipped_no_target',
+            expect.objectContaining({ foodId: 'fs_37040' }),
+        );
+        expect(receipt!.refusedTotal).toBe(0);
     });
 });
