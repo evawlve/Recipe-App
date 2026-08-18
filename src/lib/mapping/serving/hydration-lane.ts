@@ -2604,6 +2604,67 @@ export async function buildOffResult(
     const perLabelUnitGrams = hydrated.servingGrams && hydrated.servingGrams > 0
         ? hydrated.servingGrams / labelUnitCount : null;
 
+    // THE RECORD'S OWN LABEL, WHEN THE REQUESTED UNIT IS THE LABEL'S UNIT AND
+    // THAT UNIT IS A VOLUME UNIT (lane V2a, 2026-08-18). Non-null here demotes
+    // the `volume_unit` class constant below so `label_unit_match` can bill it.
+    //
+    // WHY. `volumeToGrams` is a per-CLASS guess — liquid/paste/solid times a
+    // density inferred from the NAME — and `resolveVolumeGrams()` takes only
+    // name strings, so it cannot see the record. This record states the answer
+    // for ITSELF. Until now the constant was tested first and the
+    // `label_unit_match` branch below was UNREACHABLE for every volume unit: a
+    // cereal whose own serving_size reads `1 cup (30 g)` billed 240 x 0.5 =
+    // 120 g, 4x over, on the largest volume tier in the system (`volume_unit`,
+    // 413 events / 7 days, 4.3% of all serving-tier traffic, all of it OFF).
+    // The file already states this principle for PACKAGE_LIKE_UNITS below —
+    // "the product's own label serving IS the thing the user asked for … trust
+    // servingGrams over estimation" — and volume was simply never added to it.
+    // No revision of the branch order carried a comment defending it.
+    //
+    // THE THREE GUARDS, all load-bearing:
+    //
+    // (1) `volumeToGrams[unit]` is RE-TESTED here. So this can only ever
+    //     intercept a bill the `volume_unit` branch would have made, and the
+    //     firing population is a strict subset of that tier. In particular
+    //     `labelUnitWord`'s four other consumers cannot move:
+    //     `usableBareLabelServing()` and the per-piece label branches all
+    //     require NO unit — `isBareUnitlessQty1()` returns false the moment
+    //     `parsed.unit` is set (bare-query-guard.ts:113) and the piece branches
+    //     sit inside `else if (!unit && …)` — while this requires one twice.
+    //
+    // (2) THE DENSITY BAND, the same [VOLUME_SERVING_MIN_DENSITY,
+    //     VOLUME_SERVING_MAX_DENSITY] `findOwnFdcVolumeServing()` puts on an
+    //     FdcServing row, for the same reason and a stronger one: OFF labels
+    //     are crowd-entered, so if USDA's curated rows need the band these need
+    //     it more. A label reading `1 cup` against a 500 g serving implies
+    //     2.08 g/ml — denser than honey, i.e. a package weight filed under a
+    //     cup description. Reused rather than re-derived because it brackets
+    //     every density `resolveVolumeGrams()` can itself produce — [0.36
+    //     (oats), 1.0417 (paste)] — with more than 1.5x of slack on BOTH sides,
+    //     so it can only refuse a label more extreme than the constant it then
+    //     defers to. That bracketing is asserted, not asserted-by-comment, in
+    //     `__tests__/off-label-volume-precedence.test.ts` block 5, which also
+    //     pins these two constants through their other consumer.
+    //
+    // (3) A UNIT WITH NO `VOLUME_UNIT_ML` CELL IS REFUSED, not admitted
+    //     unbanded — `ml`, `dash`, `pinch`. `dash`/`pinch` are ABSOLUTE cells
+    //     (0.6 g / 0.3 g, "a pinch of anything is a pinch"), so a g/ml band is
+    //     meaningless for them; holding `ml` out keeps the deliberate OFF
+    //     flat-ml asymmetry pinned by `volume-unit-spellings.test.ts` block 4
+    //     (`1000 ml flour` = 1000 g) bit-identical rather than quietly making
+    //     it label-dependent. Costs 2 of this tier's 8,200 measured events.
+    const labelVolumeUnitMl = unit ? VOLUME_UNIT_ML[singularizeUnit(unit)] : undefined;
+    const ownLabelVolumeDensity = labelVolumeUnitMl && perLabelUnitGrams
+        ? perLabelUnitGrams / labelVolumeUnitMl : null;
+    const ownLabelBeatsVolumeConstant = !!(
+        unit && labelUnitWord && perLabelUnitGrams
+        && volumeToGrams[unit]
+        && singularizeUnit(unit) === labelUnitWord
+        && ownLabelVolumeDensity != null
+        && ownLabelVolumeDensity >= VOLUME_SERVING_MIN_DENSITY
+        && ownLabelVolumeDensity <= VOLUME_SERVING_MAX_DENSITY
+    );
+
     // Bare-serving defaults (Track 3, Jul 2026): a digitless unitless qty-1
     // line asks for A SERVING. Deterministic resolution order:
     //   (1) the record's own in-band label serving ('bare_label_serving');
@@ -2665,7 +2726,13 @@ export async function buildOffResult(
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
         servingTier = 'weight_unit';
-    } else if (unit && volumeToGrams[unit]) {
+    } else if (unit && volumeToGrams[unit] && !ownLabelBeatsVolumeConstant) {
+        // The per-CLASS density constant. Still the answer for every volume
+        // request this record says nothing specific about — which is most of
+        // them — but no longer the answer when the record's own label is stated
+        // in the very unit that was asked for. See ownLabelBeatsVolumeConstant
+        // above for the three guards on that demotion; when it is false this
+        // branch is byte-for-byte what it has always been.
         grams = qty * volumeToGrams[unit];
         servingDescription = `${qty} ${unit}`;
         servingTier = 'volume_unit';
@@ -2673,6 +2740,11 @@ export async function buildOffResult(
         // Requested unit matches the product's OWN label serving unit — the label
         // is authoritative for THIS product. Use per-unit grams (label grams /
         // label unit-count) so a "2 scoops (46g)" tub yields 23g/scoop, not 46g.
+        // Reached by VOLUME units too since 2026-08-18 (lane V2a) — a `1 cup
+        // (30 g)` label bills 30 g here instead of 120 g above. The body did not
+        // change to admit them: the divide by `labelUnitCount` that makes
+        // "2 scoops (46g)" 23 g is the same one that makes "2 cups (480g)"
+        // 240 g per cup.
         grams = qty * perLabelUnitGrams;
         servingDescription = `${qty} ${unit} (${perLabelUnitGrams.toFixed(1)}g each)`;
         servingTier = 'label_unit_match';
