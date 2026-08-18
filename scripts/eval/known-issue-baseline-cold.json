@@ -1,6 +1,6 @@
 {
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
-  "writtenAt": "2026-08-03T15:58:48.279Z",
+  "writtenAt": "2026-08-18T08:51:36.335Z",
   "cases": {
     "s-typo-08": {
       "foodId": "off_9310653104835",
@@ -134,6 +134,24 @@
       "foodName": "Boneless Skinless Chicken Breast",
       "grams": 112,
       "kcal100": 116,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-prose-01": {
+      "foodId": "fs_33793",
+      "foodName": "Egg White",
+      "grams": 120,
+      "kcal100": 52,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-prose-03": {
+      "foodId": "fs_39764",
+      "foodName": "Fresh Pasta (Cooked)",
+      "grams": 120,
+      "kcal100": 131,
       "abstained": false,
       "errored": false,
       "itemCount": 1
