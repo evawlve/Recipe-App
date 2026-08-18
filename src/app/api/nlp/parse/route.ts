@@ -187,6 +187,18 @@ export async function POST(req: NextRequest) {
     const noSave = isDevBypass &&
       (req.nextUrl.searchParams.get('nosave') === '1' || body.nosave === true);
 
+    // Diagnostic echo for the golden eval (2026-08-17): put `servingTier` and
+    // `cacheHit` on each response item. DEV-BYPASS ONLY, and only when asked —
+    // without the flag the response is byte-identical to before this existed
+    // (pinned by route.debug-echo.test.ts). `servingTier` is a pipeline taxonomy
+    // the client may never read ("it may never say WHY"); the honest client field
+    // is `portionEstimated` below. It is here because the tier is otherwise
+    // written to MappingEventLog only, and scripts/eval/run-eval.ts is
+    // deliberately dependency-free — it sends `debug=1` in --nocache mode and
+    // scores `expectServingTier` off this field.
+    const debugEcho = isDevBypass &&
+      (req.nextUrl.searchParams.get('debug') === '1' || body.debug === true);
+
     let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
     // Segmentation-cache outcome for telemetry: true = split served from
@@ -310,6 +322,10 @@ export async function POST(req: NextRequest) {
       });
       const mapLatencyMs = Date.now() - mapStart;
       const isMapped = !!mapped && !('status' in mapped);
+      // One read of the tier for the telemetry row and the debug echo alike. The
+      // serving-tier census (src/lib/mapping/__tests__/serving-tier-census.test.ts)
+      // knows this exact expression as the route's pass-through.
+      const servingTier: string | null = isMapped ? ((mapped as any).servingTier ?? null) : null;
       if (telemetryEnabled) {
         eventRows.push({
           rawLine: rawText,
@@ -321,7 +337,7 @@ export async function POST(req: NextRequest) {
           brandName: isMapped ? ((mapped as any).brandName ?? null) : null,
           source: isMapped ? (mapped as any).source : null,
           confidence: isMapped ? (mapped as any).confidence : null,
-          servingTier: isMapped ? ((mapped as any).servingTier ?? null) : null,
+          servingTier,
           grams: isMapped ? (mapped as any).grams : null,
           totalKcal: isMapped ? (mapped as any).kcal : null,
           latencyMs: mapLatencyMs,
@@ -368,6 +384,10 @@ export async function POST(req: NextRequest) {
           servingOptions: [],
           funnelStage: telemetry.funnelStage,
           dropReason: telemetry.dropReason,
+          // Debug echo (dev bypass + debug=1 only): null tier, whichever cache
+          // layer answered. Same shape as the mapped branch so a scorer can read
+          // the KEY as "the echo is on".
+          ...(debugEcho ? { servingTier, cacheHit: telemetry.cacheHit ?? null } : {}),
         };
       }
 
@@ -488,6 +508,9 @@ export async function POST(req: NextRequest) {
         // from MappingEventLog. Clients ignore unknown fields.
         funnelStage: telemetry.funnelStage,
         dropReason: telemetry.dropReason,
+        // Debug echo — dev bypass + debug=1 only; absent (not null) otherwise, so
+        // the response is byte-identical for every real client. See `debugEcho`.
+        ...(debugEcho ? { servingTier, cacheHit: telemetry.cacheHit ?? null } : {}),
       };
     }));
 
