@@ -172,6 +172,61 @@ function leadingHedgePrecedesQuantity(mergedTokens: string[]): boolean {
   return parseQuantityTokens(mergedTokens.slice(1)) !== null;
 }
 
+// The partitive "of" in "<portion> of <food>" belongs to the MEASURE, not to
+// the food: once the unit token is consumed the "of" is a leftover that lands
+// at the front of `parsed.name`. That name is the search query
+// (preflightIngredientLine -> normalizeIngredientName -> gatherCandidates) AND
+// the input to canonicalizeCacheKey(), which sorts and singularises with no
+// stopword list — so the stray token survives into the FoodMapping key and
+// forks the cache ("of bacon" -> key "bacon of", a different row from "bacon").
+// It also breaks preflight's zero-calorie fast path, a whole-string
+// ZERO_CALORIE_INGREDIENTS.includes(baseName) test: "1 cup of water" arrives as
+// "of water" and misses it.
+//
+// Two guards, both load-bearing:
+//   - AT MOST ONE. A single non-looping skip, so "1 cup of cream of wheat"
+//     keeps the food's own "of" ("cream of wheat", not "cream wheat").
+//   - ONLY WITH A FOLLOWER. "2 slices of" is a truncated line with no food in
+//     it; skipping there would empty the name and change what the line means.
+//
+// Hoisted because parseIngredientLine() consumes units at several independent
+// sites and only two of them carried this skip inline — the same
+// copy-drift shape as POSSIBLE_UNIT_HINTS above.
+function consumePartitiveOf(tokens: string[], i: number): number {
+  if (i >= tokens.length) return i;
+  if (tokens[i].toLowerCase() !== 'of') return i;
+  if (i + 1 >= tokens.length) return i;   // "2 slices of" — nothing follows
+  return i + 1;
+}
+
+// Indefinite article standing in for the quantity: "a slice of texas toast",
+// "a handful of almonds", "an ounce of cheese". Every arm of
+// parseQuantityTokens() reads tokens[0] and none of them reads a bare article,
+// so the article costs the line its unit exactly as a leading hedge did — the
+// unit is demoted to a unitHint (or left in the name outright) and the name
+// comes back as "a of texas toast".
+//
+// Same POSITIONAL + OWNER-GATED discipline as leadingHedgePrecedesQuantity
+// above: only mergedTokens[0], and only when the unit table (normalizeUnitToken,
+// the owner of what a measure word is) recognises what follows as a real
+// portion. That keeps "a couple of eggs" (couple is not a unit — quantity.ts
+// owns that line and reads it as 2) and every food merely containing the word.
+// Deliberately NOT global: "half a cup of rice" puts the article at [1], and
+// that shape is a separate documented limitation (see leading-hedge-strip.test.ts).
+//
+// Unlike the hedge strip this REMOVES the token rather than advancing `i`: the
+// three decide-once reads below (wholeIsIdentity, eggIsAdjectival,
+// startsWithUnit) all read mergedTokens[0] literally, and the whole point here
+// is that they must see the UNIT. Once they do, startsWithUnit turns true and
+// the partitive skip already living in that branch handles the "of" for free.
+const LEADING_ARTICLES = new Set(['a', 'an']);
+function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
+  if (mergedTokens.length < 2) return false;
+  if (!LEADING_ARTICLES.has(mergedTokens[0].toLowerCase())) return false;
+  const next = normalizeUnitToken(mergedTokens[1]);
+  return next.kind === 'mass' || next.kind === 'volume' || next.kind === 'count';
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
@@ -391,6 +446,12 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   if (mergedTokens.length === 0) return null;
 
+  // Positional leading-article strip (see leadingArticlePrecedesUnit above).
+  // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
+  // remove the token rather than advance `i`, so those reads see the unit.
+  if (leadingArticlePrecedesUnit(mergedTokens)) {
+    mergedTokens.shift();
+  }
 
   let i = 0;
   let qty = 1; // Default quantity
@@ -482,6 +543,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
             if (i + 1 < mergedTokens.length) {
               i++; // Consume the unit
             }
+            i = consumePartitiveOf(mergedTokens, i); // "2 x 200 g of flour"
           }
         }
       }
@@ -505,10 +567,10 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       rawUnit = firstToken;
       i++; // Consume the unit
 
-      // Skip "of" if present (e.g., "pinch of salt")
-      if (i < mergedTokens.length && mergedTokens[i].toLowerCase() === 'of') {
-        i++;
-      }
+      // Skip "of" if present (e.g., "pinch of salt", "a slice of texas toast"
+      // once the leading article is gone). This site already had the skip
+      // inline; consumePartitiveOf is that same code, now shared.
+      i = consumePartitiveOf(mergedTokens, i);
     } else if (firstNormalized.kind === 'multiplier') {
       multiplier *= firstNormalized.factor;
       i++;
@@ -527,6 +589,9 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
           break;
         }
       }
+      // "1 half of onion" (no unit found) and "1 half cup of milk" (unit found)
+      // both leave the partitive at `i`.
+      i = consumePartitiveOf(mergedTokens, i);
     } else if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume') {
       // Only process if we didn't already handle it as a starting unit
       if (!startsWithUnit || i > 0) {
@@ -536,6 +601,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
         if (i + 1 < mergedTokens.length) {
           i++;
         }
+        i = consumePartitiveOf(mergedTokens, i); // "1 cup of milk", "4 oz of chicken breast"
       }
     } else if (firstNormalized.kind === 'count') {
       // For count units like "piece", "slice", "scoop", consume them as units
@@ -550,6 +616,17 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
         // portion. See wholeIsIdentity above: this is the SECOND branch that
         // consumes count units, and it is the one a unit-less line actually
         // reaches once startsWithUnit has been suppressed.
+        //
+        // A hint word can still take a partitive ("2 cloves of garlic" ->
+        // name "of garlic", which canonicalises to the live forked key
+        // "garlic of"). `i` cannot be advanced past the "of" here — the hint
+        // token stays in the name on purpose, because extractUnitHint() is what
+        // pulls it back out. So drop the "of" from the stream instead and leave
+        // the hint word exactly where that owner expects it. Same two guards:
+        // consumePartitiveOf decides, this only acts on its answer.
+        if (consumePartitiveOf(mergedTokens, i + 1) > i + 1) {
+          mergedTokens.splice(i + 1, 1);
+        }
       } else {
         unit = firstNormalized.unit;
         rawUnit = firstToken;
@@ -557,6 +634,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
         if (i + 1 < mergedTokens.length) {
           i++;
         }
+        i = consumePartitiveOf(mergedTokens, i); // "three slices of bacon", "1 sprig of rosemary"
       }
     } else if (firstNormalized.kind === 'unknown') {
       // Unknown tokens are normally left in the name (e.g. "5 romaine leaves" —
@@ -632,6 +710,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
         unit = afterParenNormalized.unit;
         rawUnit = afterParenToken;
         i++; // Consume the unit
+        i = consumePartitiveOf(mergedTokens, i);
       }
     }
   }
