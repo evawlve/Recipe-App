@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { requestAiServing, type ServingGapType, type UnifiedFoodForAi } from '../ai/serving-estimator';
+import { isWriteSuppressed, noteRefusedWrite } from '../write-policy';
 import {
     FATSECRET_CACHE_AI_MAX_DENSITY,
     FATSECRET_CACHE_AI_MIN_DENSITY,
@@ -188,11 +189,40 @@ function adaptCandidateToUnified(candidate: InsertAiServingOptions['candidateDat
     };
 }
 
+/**
+ * Which serving table `insertAiServing()` would write for this id. Reporting only — it
+ * names the table on a write-suppression receipt so "no row landed" says WHERE. Mirrors
+ * the `isFdc`/`isOff` branch inside the transaction below.
+ */
+function servingTableForFoodId(foodId: string): string {
+    if (foodId.startsWith('fdc_')) return 'FdcServing';
+    if (foodId.startsWith('off_')) return 'OffServing';
+    return 'AiGeneratedServing';
+}
+
 export async function insertAiServing(
     foodId: string,
     gapType: ServingGapType,
     options: InsertAiServingOptions = {}
 ): Promise<{ success: boolean; reason?: string }> {
+    // REQUEST-SCOPED WRITE SUPPRESSION (nosave=1), BEFORE the model call — and the
+    // position is the whole argument. This function's return carries NO grams
+    // (`{ success }` only), so every request-path caller re-reads the row it just wrote:
+    // hydration-lane.ts calls `getCachedFoodWithRelations()` again,
+    // map-ingredient-with-fallback.ts re-runs `hydrateAndSelectServing()`. A suppressed
+    // upsert plus `success: true` would send the caller back to the DB, find nothing new,
+    // and log `volume_backfill_success` over unchanged grams — a lie in the log, and the
+    // exact shape a measurement run must not manufacture. `success: false` is what every
+    // one of those callers already handles: they warn and fall through (verified at all
+    // five request-path sites), so the line degrades rather than dropping.
+    //
+    // Refusing before the estimator also spends no model call on a value nothing can
+    // consume. `write_suppressed` is a new, grep-able reason string.
+    if (isWriteSuppressed('aiServing')) {
+        noteRefusedWrite('aiServing', servingTableForFoodId(foodId), `${foodId}:${gapType}`);
+        return { success: false, reason: 'write_suppressed' };
+    }
+
     const isFdc = foodId.startsWith('fdc_');
     const isOff = foodId.startsWith('off_');
     let food: UnifiedFoodForAi | null = null;
@@ -504,6 +534,15 @@ export async function insertAiServing(
 export async function backfillWeightServing(
     foodId: string
 ): Promise<{ success: boolean; reason?: string }> {
+    // Same shape and same reasoning as insertAiServing() above: no grams on the return,
+    // both callers (map-ingredient-with-fallback.ts, beside the insertAiServing sites)
+    // re-hydrate afterwards, so the refusal has to be visible as a failure rather than a
+    // silent no-op that reads as success.
+    if (isWriteSuppressed('aiServing')) {
+        noteRefusedWrite('aiServing', 'AiGeneratedServing', `${foodId}:g`);
+        return { success: false, reason: 'write_suppressed' };
+    }
+
     const food = await prisma.aiGeneratedFood.findUnique({
         where: { id: foodId },
         include: { servings: true },

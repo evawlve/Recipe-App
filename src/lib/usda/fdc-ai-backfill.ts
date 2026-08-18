@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../db';
 import { logger } from '../logger';
 import { requestAiServing, type ServingGapType } from '../ai/serving-estimator';
+import { isWriteSuppressed, noteRefusedWrite } from '../write-policy';
 import {
     FATSECRET_CACHE_AI_MAX_DENSITY,
     FATSECRET_CACHE_AI_MIN_DENSITY,
@@ -269,6 +270,22 @@ export async function insertFdcAiServing(
 
     if (options.dryRun) {
         return { success: true };
+    }
+
+    // REQUEST-SCOPED WRITE SUPPRESSION (nosave=1). Deliberately NOT `dryRun` — read the
+    // two returns next to each other. `dryRun` answers `{ success: true }` with NO grams,
+    // and the only caller (the volume branch of `buildFdcResult()` in
+    // serving/hydration-lane.ts) reads a missing `grams` as failure and silently reroutes
+    // to the hardcoded `volume_unit` density. A measurement run on `dryRun` would
+    // therefore measure a DIFFERENT pipeline from the one a real request takes.
+    //
+    // So the refusal sits AFTER the model has answered and after every validity guard,
+    // and returns exactly what the persisted path returns — same success, same grams,
+    // same label. Only the upsert and its "Inserted" log are skipped. The caller bills
+    // the same number it would have billed; the row simply does not land.
+    if (isWriteSuppressed('aiServing')) {
+        noteRefusedWrite('aiServing', 'FdcServing', `fdc_${fdcId}:${suggestion.servingLabel}`);
+        return { success: true, grams: suggestion.grams, servingLabel: suggestion.servingLabel };
     }
 
     await prisma.fdcServing.upsert({
