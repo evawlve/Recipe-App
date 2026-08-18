@@ -510,6 +510,40 @@ describe('LIVE RECORDS — the row that answers need not be defaultServingId', (
         expect(r!.servingId).toBe('16766061');
     });
 
+    it('CANDIDATE FALLBACK — the un-persisted path the census could not see', async () => {
+        // The second serving source, and the one no census over
+        // `FatSecretServing` can measure: `FATSECRET_PERSIST_RUNNERS_UP` defaults
+        // to 0 and nothing overrides it, so `searchFatSecretLane()` persists no
+        // hit speculatively and `ensureFatSecretParentPersisted()` does not run
+        // until SAVE. Every not-yet-seen FatSecret food therefore arrives here
+        // with `row` null and bills off `candidate.servings`.
+        //
+        // On this branch the OLD gate could not fire AT ALL, two ways over: there
+        // is no `row`, hence no `defaultServingId`; and `toUnifiedCandidate()`
+        // maps servings to {description, grams} only, so `servingId` is null
+        // regardless. `volMatch` cannot pre-empt either — no `volumeMl` is
+        // mapped. So 100% of the declared-volume bills on this path are new.
+        // MUTATION: restore `declaredDefault &&` -> 120 g, unconditionally, for
+        // every un-persisted FatSecret food in existence.
+        mockFatSecretFoodFindUnique.mockResolvedValue(null);
+        const r = await buildFatSecretResult(
+            makeCandidate({
+                id: 'fs_6242', name: 'Cilantro',
+                servings: [{ description: '1 cup', grams: 16 }, { description: '1 sprig', grams: 1.1 }],
+                nutrition: { kcal: 23, protein: 2.13, carbs: 3.67, fat: 0.52, per100g: true },
+            }),
+            parsedLine({ qty: 1, unit: 'cup', name: 'cilantro' }), 0.95, '1 cup cilantro'
+        );
+        expect(r!.servingTier).toBe('fs_label_volume_declared');
+        expect(r!.grams).toBe(16);
+        // The inline mapping carries neither `servingId` nor `nutrients`, so the
+        // row that answered has no panel and the macros fall to the SAME
+        // per-100g rescale they used before. Only GRAMS move on this path — the
+        // widening degrades safely when the source is thin.
+        expect(r!.servingId).toBeNull();
+        expect(r!.kcal).toBeCloseTo(23 * 0.16, 5);
+    });
+
     it('NEGATIVE CONTROL fs_36577 Spinach — 1 cup = 30 g, green on BOTH trees', async () => {
         // Spinach is already right in production, but only by accident of
         // FatSecret having flagged its cup row as the default — so the OLD gate
