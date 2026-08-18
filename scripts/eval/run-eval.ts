@@ -63,6 +63,14 @@ const WRITE_BASELINE = args.includes('--write-baseline');
  *
  * A cold run also sends `nosave=1`, so it cannot rewrite the cache it measures,
  * and it scores against its own `known-issue-baseline-cold.json`.
+ *
+ * A cold run ALSO sends `debug=1` (2026-08-17): the dev-bypass-only echo that puts
+ * `servingTier` and `cacheHit` on each response item. That is the only way the
+ * runner can see which serving rung billed a line — the tier is otherwise written
+ * to MappingEventLog only, and this script is deliberately dependency-free (no
+ * DB read). Real clients never send the flag and never see the fields. Warm runs
+ * do not send it either, so `expectServingTier` is skipped warm (fail-open by
+ * construction — see scoreNlpCase) and scored cold.
  */
 const NO_CACHE = args.includes('--nocache');
 
@@ -96,6 +104,16 @@ interface Observed {
     abstained?: boolean;
     /** No reading at all — transport error, non-array body, zero items. */
     errored?: boolean;
+    /**
+     * Which serving rung billed items[0] — present only when the response carried
+     * the dev-bypass debug echo (--nocache runs). Absent, not null, on a warm run,
+     * so a later reader can tell "not observed" from "producer stamped nothing".
+     */
+    servingTier?: string | null;
+    /** Same echo: which FoodMapping layer served items[0] ('early' | 'normalized' | null). */
+    cacheHit?: string | null;
+    /** Same echo, every item in order — a multi-item prose line's per-line rungs. */
+    itemTiers?: Array<string | null>;
 }
 
 interface CaseResult {
@@ -245,7 +263,10 @@ async function runNlpCase(c: any): Promise<CaseResult> {
         // the pipeline; without this it rewrites the cache as it goes and the
         // "measurement" is also a mutation. Measured 2026-08-02: 20 rows changed,
         // 3 added, over rows that had just been agent-screened.
-        const res = await fetch(`${BASE}/api/nlp/parse${NO_CACHE ? '?nocache=1&nosave=1' : ''}`, {
+        // debug=1 rides with nocache too: it is the servingTier/cacheHit echo (dev
+        // bypass only, see the NO_CACHE note above) and costs nothing on the wire
+        // for anyone else because only this key sees it.
+        const res = await fetch(`${BASE}/api/nlp/parse${NO_CACHE ? '?nocache=1&nosave=1&debug=1' : ''}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
             body: JSON.stringify(body),
@@ -268,10 +289,21 @@ async function runNlpCase(c: any): Promise<CaseResult> {
         const failures = scoreNlpCase(c, items);
 
         const confidence = items[0]?.matchConfidence;
+        // The debug echo is recorded only when the server actually sent it — the
+        // KEY is the signal, so a warm run's Observed carries no tier fields at all.
+        const echoed = items[0] != null && Object.prototype.hasOwnProperty.call(items[0], 'servingTier');
+        const tierFields = echoed
+            ? {
+                servingTier: items[0]?.servingTier ?? null,
+                cacheHit: items[0]?.cacheHit ?? null,
+                itemTiers: items.map(it => it?.servingTier ?? null),
+            }
+            : {};
+        const tierNote = echoed ? ` tier=${items[0]?.servingTier ?? 'null'}` : '';
         return {
             id: c.id, kind: 'nlp', category: c.category, query,
             pass: failures.length === 0, ms,
-            detail: failures.length ? failures.join('; ') : `mapped: "${items[0]?.foodName}" grams=${items[0]?.grams} conf=${confidence?.toFixed(2)}`,
+            detail: failures.length ? failures.join('; ') : `mapped: "${items[0]?.foodName}" grams=${items[0]?.grams} conf=${confidence?.toFixed(2)}${tierNote}`,
             confidence, knownIssue: c.knownIssue,
             observed: {
                 foodId: items[0]?.foodId ?? null,
@@ -283,6 +315,7 @@ async function runNlpCase(c: any): Promise<CaseResult> {
                 confidence: confidence ?? null,
                 itemCount: items.length,
                 abstained: isAbstention(items[0]),
+                ...tierFields,
             },
         };
     } catch (err) {
