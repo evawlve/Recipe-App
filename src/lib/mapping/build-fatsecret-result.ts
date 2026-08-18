@@ -13,8 +13,8 @@
  * Gram-resolution priority:
  *   (a) explicit weight unit  → direct conversion       ('fs_weight_direct')
  *   (b) volume unit           → serving volumeMl match  ('fs_label_volume'),
- *       else the record's own declared serving when its
- *       description names the unit           ('fs_label_volume_declared'),
+ *       else the record's own serving whose description
+ *       names the unit, default or not       ('fs_label_volume_declared'),
  *       else category-density fallback                  ('fs_volume_density')
  *   (c) count/serving request → noun-matched serving    ('fs_label_count'),
  *       else default serving                            ('fs_default_serving')
@@ -458,28 +458,50 @@ export async function buildFatSecretResult(
         const totalMl = qty * VOLUME_UNIT_ML[unit];
         const volServings = usableServings.filter(s => s.volumeMl != null && s.volumeMl > 0);
         const volMatch = volServings.find(s => servingMatchesVolumeUnit(s, unit)) ?? volServings[0];
-        // The record's OWN declared default, when it names the requested unit.
-        // Only reached when no volumeMl-bearing serving exists, so this never
-        // displaces the more precise density path above.
+        // The record's OWN row that NAMES the requested unit — whichever row
+        // that is. Only reached when no volumeMl-bearing serving exists, so this
+        // never displaces the more precise density path above.
         //
-        // Scoped to `defaultServingId` deliberately, and NOT widened to "any
-        // serving whose description matches". 3,677 of the 4,822 cup-named
-        // NULL-volumeMl rows (76.3%) ARE the record's default, so the declared
-        // row carries most of the population anyway — and a record can hold
-        // several cup rows ("1 cup cooked" 158 g vs "1 cup, dry, yields" 570 g
-        // on fs_4501 itself), where picking among them without a declaration is
-        // the positional pick this module already had to fix once at the hydrate
-        // step. An explicit declaration beats an inference and needs no
-        // threshold; widening this is a separate change with its own gate run.
+        // This WAS scoped to `defaultServingId` (b3821f4, 2026-08-03), on the
+        // argument that "a record can hold several cup rows ('1 cup cooked'
+        // 158 g vs '1 cup, dry, yields' 570 g on fs_4501 itself), where picking
+        // among them without a declaration is the positional pick this module
+        // already had to fix once at the hydrate step." That ambiguity is real
+        // and it is still refused — it is the rule immediately below, and it is
+        // what keeps fs_39558 out. But the count was ALREADY global (it filtered
+        // all of `usableServings`, never just the default), and
+        // `declaredVolumeUnitGrams()` refuses /yield/i before anything is
+        // counted, so fs_4501 itself was never ambiguous and the scoping was
+        // not what protected it.
+        //
+        // What the scoping DID refuse was correct answers on records whose
+        // default names no volume unit — either a literal "100 g" panel row that
+        // `isPer100gPanelServing()` has already demoted out of `usableServings`
+        // (so `declaredDefault` resolved to undefined and the record had no
+        // default at all here), or a piece row measuring something else:
+        //   fs_6242  "Cilantro"  default "100 g" panel  → 1 cup 16 g, billed 120
+        //   fs_6249  "Leek"      default "1 leek"       → 1 cup 89 g, billed 120
+        //   fs_36457 "Parsley"   default "100 g" panel  → 1 cup 60 g, billed 120
+        //   fs_17779963 "Shakshuka" default "100 g"     → 1 cup 300 g, billed 120
+        // `defaultServingId` is a claim about which portion to SHOW, not about
+        // which unit a row measures.
+        //
+        // Measured on the box 2026-08-18 (read-only, every (record, unit) pair):
+        // the scoped gate fires on 6,194 pairs, this one on 9,276 — 3,082 newly
+        // admitted, 0 lost, and no pair the old gate answers that this one does
+        // not. Both guards below matter MORE on the newly admitted set, not
+        // less: single-declaration is 86.4% there for cup (90.4% across units)
+        // against 96.7-98.8% on the default set, and /yield/i is 4.42% of
+        // non-default cup rows against 0.12% of defaults — ~37x denser. Neither
+        // may be relaxed to "prefer the default when ambiguous": that would
+        // import the 13.2% ambiguous set wholesale.
         //
         // Re-derive the population (box, read-only):
         //   SELECT count(*) FILTER (WHERE s."volumeMl" IS NULL OR s."volumeMl" <= 0),
         //          count(*) FILTER (WHERE s."volumeMl" > 0)
         //   FROM "FatSecretServing" s
         //   WHERE s.grams IS NOT NULL AND s.description ~* '\ycups?\y';
-        const declaredDefault = row?.defaultServingId
-            ? usableServings.find(s => s.servingId === row.defaultServingId)
-            : undefined;
+        //
         // ...and only when that declaration is UNAMBIGUOUS for this unit.
         //
         // A record can carry several rows naming the same unit, and then the
@@ -497,11 +519,13 @@ export async function buildFatSecretResult(
         // such row, so this gives up 1.3% of the population. Note `fs_4501`
         // "White Rice" stays in: its second cup row is `1 cup, dry, yields`,
         // which the yield rule already removed before this count is taken.
-        const sameUnitDeclarations = declaredDefault
-            ? usableServings.filter(s => declaredVolumeUnitGrams(s, unit) != null).length
-            : 0;
-        const declaredGramsPerUnit = declaredDefault && sameUnitDeclarations === 1
-            ? declaredVolumeUnitGrams(declaredDefault, unit)
+        // Re-measured 2026-08-18 on the set this now also reaches: 86.4% for cup,
+        // so it gives up 13.6% there — and those are the records where the choice
+        // between "1 cup packed" and "1 cup unpacked" genuinely is a claim about
+        // product FORM that no request made.
+        const unitDeclarations = usableServings.filter(s => declaredVolumeUnitGrams(s, unit) != null);
+        const declaredGramsPerUnit = unitDeclarations.length === 1
+            ? declaredVolumeUnitGrams(unitDeclarations[0], unit)
             : null;
 
         if (volMatch) {
@@ -513,7 +537,7 @@ export async function buildFatSecretResult(
             grams = qty * declaredGramsPerUnit;
             servingDescription = `${qty} ${unit}`;
             servingTier = 'fs_label_volume_declared';
-            pickedServing = declaredDefault!;
+            pickedServing = unitDeclarations[0];
         } else {
             // Density fallback, from the ONE owner of this rule
             // (`resolveVolumeGrams()` in `src/lib/units/volume-density.ts`).
