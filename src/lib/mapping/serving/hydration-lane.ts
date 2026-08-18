@@ -1351,11 +1351,25 @@ async function buildFdcResult(
     // paths.
     //
     // The convergence closes THREE differences, not one, and all three are
-    // confined to the `volume_unit` fallback at the bottom of this branch —
-    // which has never billed a live query (all 8,200 `volume_unit` events have
-    // an `openfoodfacts` winner, 0 an FDC one; measured 2026-08-17, re-derive:
+    // confined to the `volume_unit` fallback at the bottom of this branch,
+    // which no user query has ever billed. That tier is `openfoodfacts` traffic
+    // in all but a rounding error — 8,601 events with an `openfoodfacts` winner
+    // against 5 with an `fdc` one, all-time (the query carries no date
+    // predicate), measured 2026-08-18. Re-derive:
     // `SELECT "source", count(*) FROM "MappingEventLog"
-    //    WHERE "servingTier"='volume_unit' GROUP BY 1;`):
+    //    WHERE "servingTier"='volume_unit' GROUP BY 1;`
+    //
+    // The 5 are worth naming rather than rounding away. All 5 are warm
+    // (`noCache = false`) and all 5 carry
+    // `rawLine = 'about 1 cup of egg whites'` — the golden case `n-prose-01`,
+    // which is our own eval traffic and not a user. Re-derive:
+    // `SELECT "noCache", "rawLine", count(*) FROM "MappingEventLog"
+    //    WHERE "servingTier"='volume_unit' AND "source"='fdc' GROUP BY 1,2;`
+    //
+    // The same first query read 8,200 / 0 on 2026-08-17, and this comment
+    // stated that as "has never billed a live query" — an absolute with no date
+    // on it, which stopped being true without anything going red. The figure
+    // carries its measurement date now for that reason:
     //   (1) the paste tier now applies here too;
     //   (2) the dry-granule category override no longer stomps the LIQUID
     //       default. This copy applied it unconditionally, so a food that is
@@ -2049,6 +2063,25 @@ const VOLUME_SERVING_MIN_DENSITY = 0.1;
 const VOLUME_SERVING_MAX_DENSITY = 1.6;
 
 /**
+ * The three cells `buildOffResult()` pins FLAT — the one cell family where this
+ * lane and `volume-density.ts` deliberately disagree (the owner density-scales
+ * ml/floz; this lane bills them at 1 g/ml and 30 g). The full argument, and why
+ * converging is a CONSTANT change rather than a de-duplication, is on the table
+ * that spreads this in `buildOffResult()`.
+ *
+ * Hoisted out of that table 2026-08-18 (lane V2a) so the PRECEDENCE GUARD can
+ * hold out exactly the pinned family instead of hand-copying part of it. It was
+ * `ml` only on the first cut, which left `floz`/`fl oz` label-readable while the
+ * comment claimed the pinned family was kept bit-identical — true of `ml`, not
+ * of the family. Nothing moves either way today (measured 2026-08-17: ml 2
+ * events, floz 0), which is exactly why it should be the consistent rule rather
+ * than the convenient one. The object VALUE is unchanged, so
+ * `volume-density-convergence.test.ts`'s cell-for-cell `offTable()` comparison
+ * is unaffected.
+ */
+const OFF_FLAT_VOLUME_CELLS: Record<string, number> = { 'ml': 1, 'floz': 30, 'fl oz': 30 };
+
+/**
  * The record's OWN volume serving matching the requested unit, per-unit
  * (n-serv-06): the USDA cooked-quinoa "cup"=185g row must beat both a fresh
  * AI estimate and the generic 240ml×density fallback. Genuine (non-AI) rows
@@ -2563,8 +2596,10 @@ export async function buildOffResult(
     // copy that had the paste tier, which is why the owner's cup/tbsp/tsp
     // constants came from here; measured cell-for-cell over 12 foods x 23 unit
     // keys, every cup/tbsp/tsp/dash/pinch value is identical to the copy it
-    // replaces for every volume class, so this lane's 8,200 live `volume_unit`
-    // events do not move.
+    // replaces for every volume class, so this lane's live `volume_unit` events
+    // do not move — 8,601 of them all-time, measured 2026-08-18. (The same
+    // count read 8,200 when this line was first written on 2026-08-17, with no
+    // date attached to say so.)
     const volumeDensity = resolveVolumeGrams(candidate.name);
     const volumeToGrams: Record<string, number> = {
         ...pickVolumeUnits(volumeDensity.perUnit, OFF_VOLUME_UNIT_SPELLINGS),
@@ -2581,7 +2616,7 @@ export async function buildOffResult(
         // 2 events are the only ml/floz traffic in the whole live `volume_unit`
         // population (8,200 events: cup 5,533, tbsp 2,059, tsp 606, ml 2,
         // floz 0 — measured 2026-08-17). The fix is on the classification side.
-        'ml': 1, 'floz': 30, 'fl oz': 30,
+        ...OFF_FLAT_VOLUME_CELLS,
     };
 
     let grams: number | null = null;
@@ -2603,6 +2638,115 @@ export async function buildOffResult(
     const labelUnitWord = extractLabelServingUnit(hydrated.servingDescription);
     const perLabelUnitGrams = hydrated.servingGrams && hydrated.servingGrams > 0
         ? hydrated.servingGrams / labelUnitCount : null;
+
+    // THE RECORD'S OWN LABEL, WHEN THE REQUESTED UNIT IS THE LABEL'S UNIT AND
+    // THAT UNIT IS A VOLUME UNIT (lane V2a, 2026-08-18). Non-null here demotes
+    // the `volume_unit` class constant below so `label_unit_match` can bill it.
+    //
+    // WHY. `volumeToGrams` is a per-CLASS guess — liquid/paste/solid times a
+    // density inferred from the NAME — and `resolveVolumeGrams()` takes only
+    // name strings, so it cannot see the record. This record states the answer
+    // for ITSELF. Until now the constant was tested first and the
+    // `label_unit_match` branch below was UNREACHABLE for every volume unit: a
+    // cereal whose own serving_size reads `1 cup (30 g)` billed 240 x 0.5 =
+    // 120 g, 4x over, on the largest volume tier in the system (`volume_unit`,
+    // 413 events / 7 days, 4.3% of all serving-tier traffic, all of it OFF).
+    // The file already states this principle for PACKAGE_LIKE_UNITS below —
+    // "the product's own label serving IS the thing the user asked for … trust
+    // servingGrams over estimation" — and volume was simply never added to it.
+    // No revision of the branch order carried a comment defending it.
+    //
+    // THE THREE GUARDS, all load-bearing:
+    //
+    // (1) `volumeToGrams[unit]` is RE-TESTED here. So this can only ever
+    //     intercept a bill the `volume_unit` branch would have made, and the
+    //     firing population is a strict subset of that tier. In particular
+    //     `labelUnitWord`'s four other consumers cannot move:
+    //     `usableBareLabelServing()` and the per-piece label branches all
+    //     require NO unit — `isBareUnitlessQty1()` returns false the moment
+    //     `parsed.unit` is set (bare-query-guard.ts:113) and the piece branches
+    //     sit inside `else if (!unit && …)` — while this requires one twice.
+    //
+    // (2) THE DENSITY BAND, the same [VOLUME_SERVING_MIN_DENSITY,
+    //     VOLUME_SERVING_MAX_DENSITY] `findOwnFdcVolumeServing()` puts on an
+    //     FdcServing row, for the same reason and a stronger one: OFF labels
+    //     are crowd-entered, so if USDA's curated rows need the band these need
+    //     it more. A label reading `1 cup` against a 500 g serving implies
+    //     2.08 g/ml — denser than honey, i.e. a package weight filed under a
+    //     cup description.
+    //
+    //     REUSED rather than re-derived, and the reason is a boundary on the
+    //     CHANGE, not a claim about food: the band brackets every density
+    //     `resolveVolumeGrams()` can itself produce ([0.36 oats, 1.0417 paste])
+    //     with >1.5x of slack on both sides, so wherever it refuses a label the
+    //     line lands on a constant that was ALREADY going to be at least that
+    //     far from the label's own number. Refusal therefore cannot make any
+    //     line worse than master billed it. That is all this argument buys —
+    //     and note which HALF of the change it covers.
+    //
+    //     REFUSALS ARE BOUNDED; ADMISSIONS ARE NOT. When the band ADMITS a
+    //     label this branch bills it outright, and nothing here caps how far
+    //     that sits from the class constant. The sharp case is OFF's
+    //     `serving_quantity`, which `parseOffServingSize()` takes as GRAMS: a
+    //     label reading `1 cup (240 ml)` implies exactly 1.0 g/ml, dead centre
+    //     of the band, so a SOLID-classed record now bills 240 g where it
+    //     billed 120 g. For the classifier's known misses — cola, beer, coffee,
+    //     energy drinks, the same gap the flat-ml pin below complains about —
+    //     that is the fix working. For a genuinely dry food whose label states
+    //     ml it is a 2x overbill. This is not NEW trust: `bare_label_serving`,
+    //     `label_serving_default` and `label_serving_package_unit` already
+    //     trust `servingGrams` identically, and the PACKAGE_LIKE_UNITS
+    //     principle below IS that trust. It is written down because the bound
+    //     above is one-directional and a reader should not infer symmetry.
+    //
+    //     WHAT IT DOES NOT BUY, stated plainly because a band that is trusted
+    //     for the wrong reason is worse than none: the band is applied to the
+    //     LABEL's implied density, and labels are a different population from
+    //     the estimator's cells. THE LOW EDGE REFUSES GENUINELY LIGHT FOODS.
+    //     Popcorn at `1 cup (8 g)` is 0.033 g/ml and is REAL, not corrupt; it
+    //     is refused here and billed the flat-solid 120 g, a ~15x overbill.
+    //     Puffed wheat at `1 cup (15 g)` is 0.0625 and ~8x. Both are exactly
+    //     what master bills — this lane neither causes nor fixes them — so it
+    //     is a KNOWN LIMITATION carried forward, not a regression. It is not
+    //     narrowed here because nobody in this session could measure the real
+    //     OFF label-density distribution (the corpus read was written and
+    //     refused by the permission classifier), and moving a threshold on a
+    //     guess is the thing this whole lane argues against. Whoever gets that
+    //     measurement owns the low edge.
+    //
+    //     The bracketing is asserted, not asserted-by-comment, in
+    //     `__tests__/off-label-volume-precedence.test.ts` block 5, which also
+    //     pins these two constants through their other consumer; block 4
+    //     records the popcorn refusal as a limitation rather than as intent.
+    //
+    // (3) A UNIT WITH NO `VOLUME_UNIT_ML` CELL IS REFUSED, not admitted
+    //     unbanded — that is `dash` and `pinch`, ABSOLUTE cells (0.6 g / 0.3 g,
+    //     "a pinch of anything is a pinch"), so a g/ml band is meaningless for
+    //     them. AND every cell in OFF_FLAT_VOLUME_CELLS is held out on top of
+    //     that — `ml`, `floz`, `fl oz` — so the deliberate flat family stays
+    //     bit-identical instead of quietly becoming label-dependent. `floz` has
+    //     a VOLUME_UNIT_ML cell and would otherwise have been admitted while
+    //     `ml` was not, which is a half-applied rule, not a decision.
+    //
+    //     COSTS ZERO EVENTS. The `ml` half of the hold-out is REDUNDANT — this
+    //     lane's private VOLUME_UNIT_ML has no `ml` key, so `ml` was already
+    //     refused by the missing-cell arm above; it is kept because the rule
+    //     should read as one rule, not because it decides anything. `floz` is
+    //     the half that decides, and its measured traffic is 0. (An earlier
+    //     draft said "costs 2", charging the hold-out for `ml`'s 2 events,
+    //     which it does not cause.)
+    const labelVolumeUnitMl = unit && !(singularizeUnit(unit) in OFF_FLAT_VOLUME_CELLS)
+        ? VOLUME_UNIT_ML[singularizeUnit(unit)] : undefined;
+    const ownLabelVolumeDensity = labelVolumeUnitMl && perLabelUnitGrams
+        ? perLabelUnitGrams / labelVolumeUnitMl : null;
+    const ownLabelBeatsVolumeConstant = !!(
+        unit && labelUnitWord && perLabelUnitGrams
+        && volumeToGrams[unit]
+        && singularizeUnit(unit) === labelUnitWord
+        && ownLabelVolumeDensity != null
+        && ownLabelVolumeDensity >= VOLUME_SERVING_MIN_DENSITY
+        && ownLabelVolumeDensity <= VOLUME_SERVING_MAX_DENSITY
+    );
 
     // Bare-serving defaults (Track 3, Jul 2026): a digitless unitless qty-1
     // line asks for A SERVING. Deterministic resolution order:
@@ -2665,7 +2809,13 @@ export async function buildOffResult(
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
         servingTier = 'weight_unit';
-    } else if (unit && volumeToGrams[unit]) {
+    } else if (unit && volumeToGrams[unit] && !ownLabelBeatsVolumeConstant) {
+        // The per-CLASS density constant. Still the answer for every volume
+        // request this record says nothing specific about — which is most of
+        // them — but no longer the answer when the record's own label is stated
+        // in the very unit that was asked for. See ownLabelBeatsVolumeConstant
+        // above for the three guards on that demotion; when it is false this
+        // branch is byte-for-byte what it has always been.
         grams = qty * volumeToGrams[unit];
         servingDescription = `${qty} ${unit}`;
         servingTier = 'volume_unit';
@@ -2673,6 +2823,11 @@ export async function buildOffResult(
         // Requested unit matches the product's OWN label serving unit — the label
         // is authoritative for THIS product. Use per-unit grams (label grams /
         // label unit-count) so a "2 scoops (46g)" tub yields 23g/scoop, not 46g.
+        // Reached by VOLUME units too since 2026-08-18 (lane V2a) — a `1 cup
+        // (30 g)` label bills 30 g here instead of 120 g above. The body did not
+        // change to admit them: the divide by `labelUnitCount` that makes
+        // "2 scoops (46g)" 23 g is the same one that makes "2 cups (480g)"
+        // 240 g per cup.
         grams = qty * perLabelUnitGrams;
         servingDescription = `${qty} ${unit} (${perLabelUnitGrams.toFixed(1)}g each)`;
         servingTier = 'label_unit_match';

@@ -17,9 +17,20 @@ import { inferCategoryFromName, categoryDensity, DRY_GRANULE_DENSITY_CATEGORIES 
  * change deleted, and every assertion here is a diff against them:
  *
  *   - OFF must be cell-for-cell IDENTICAL on every spelling it accepts. Its
- *     8,200 live `volume_unit` events must not move (measured 2026-08-17;
- *     re-derive: `SELECT "source", count(*) FROM "MappingEventLog"
- *     WHERE "servingTier"='volume_unit' GROUP BY 1;` → openfoodfacts 8,200).
+ *     live `volume_unit` events must not move: 8,601 of them have an
+ *     `openfoodfacts` winner and 5 have an `fdc` one, all-time (the query
+ *     carries no date predicate), measured 2026-08-18. Re-derive:
+ *     `SELECT "source", count(*) FROM "MappingEventLog"
+ *     WHERE "servingTier"='volume_unit' GROUP BY 1;`
+ *     That same query read 8,200 / 0 on 2026-08-17, and this paragraph stated
+ *     the 0 as "the FDC arm has never billed a live query". It has. The 5 are
+ *     warm (`noCache = false`) and every one carries
+ *     `rawLine = 'about 1 cup of egg whites'` — the golden case `n-prose-01`,
+ *     i.e. our own eval rather than a user, which is the distinction the
+ *     absolute erased. Re-derive:
+ *     `SELECT "noCache", "rawLine", count(*) FROM "MappingEventLog"
+ *     WHERE "servingTier"='volume_unit' AND "source"='fdc' GROUP BY 1,2;`
+ *     Each figure carries its date because the undated one rotted in silence.
  *   - FDC must move on exactly three named classes and nowhere else.
  *
  * A transcription is normally the wrong instrument — it pins the author's
