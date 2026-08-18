@@ -234,8 +234,22 @@ function servingMatchesVolumeUnit(s: FsServingView, unit: string): boolean {
  * volumeMl NULL, so `1 cup white rice` fell to the category density fallback and
  * billed 240 ml x 0.5 = 120 g.
  *
- * Three things this rule is careful about, each measured over the 3,677
- * cup-named default servings on the box (2026-08-03):
+ * Three things this rule is careful about. The rates in 1 and 2 were measured
+ * over the 3,677 cup-named DEFAULT servings on the box (2026-08-03), because
+ * the default was the only serving the caller could hand this function at the
+ * time. Since 2026-08-18 the caller runs it over EVERY serving in
+ * `usableServings`, default or not, so the numbers below describe one slice of
+ * its input, not all of it. The other slice is dirtier on exactly the axis rule
+ * 2 guards and cleaner on rule 1's, measured the same way on the box
+ * 2026-08-18 over the 1,153 non-default cup-named rows:
+ *
+ *   yield rows                   51 (4.42%)  vs 5 of 4,015 defaults (0.12%)
+ *   non-unit leading quantity    21 (1.9%)   vs 40.1% of defaults
+ *   no parseable leading quantity 0 (0%)     vs 4 of 3,677 defaults
+ *
+ * Every rule below therefore does MORE work than it was written to do, not
+ * less, and none of them was relaxed when the caller widened. Re-derive either
+ * slice from the SELECT at the call site.
  *
  *  1. THE LEADING QUANTITY IS USUALLY NOT 1. 1,474 of them (40.1%) lead with a
  *     fraction ("1/2 cup" x519, "1/4 cup" x382, "2/3 cup" x239) and 91 more are
@@ -245,9 +259,10 @@ function servingMatchesVolumeUnit(s: FsServingView, unit: string): boolean {
  *     integer-only and returns null below 2, i.e. null for every shape above.
  *  2. A YIELD IS NOT A PORTION. "1 cup, dry, yields" states what a cup of the
  *     dry product becomes after cooking (570 g for rice), not what a cup weighs
- *     — billing it would be ~3x wrong. Only 5 of the 3,677 defaults say "yield",
- *     but they are the worst-wrong rows in the set, so they are refused. Plain
- *     "dry" is NOT refused: those 77 rows are ordinary fractional portions
+ *     — billing it would be ~3x wrong. Only 5 of the 3,677 defaults say "yield"
+ *     but 51 of the 1,153 non-default cup rows do, and they are the worst-wrong
+ *     rows in either slice, so they are refused. Plain "dry" is NOT refused:
+ *     those 77 default rows (and 2 non-default) are ordinary fractional portions
  *     ("1/4 cup dry" = 43 g) and are a correct answer to a volume request.
  *  3. IT READS THE DESCRIPTION ONLY, not `measurementDescription`. The
  *     population above was measured on `description`, and the quantity is parsed
@@ -261,7 +276,8 @@ function declaredVolumeUnitGrams(s: FsServingView, unit: string): number | null 
     if (/yield/i.test(description)) return null;
     const parsedQty = parseQuantityTokens(description.trim().split(/\s+/));
     // No leading quantity means the label is not self-describing ("cup, chopped"
-    // with no count); 4 of 3,677 are that shape. Refuse rather than assume 1.
+    // with no count); 4 of the 3,677 defaults are that shape, and none of the
+    // 1,153 non-default cup rows. Refuse rather than assume 1.
     if (!parsedQty || !(parsedQty.qty > 0)) return null;
     return s.grams / parsedQty.qty;
 }
@@ -538,6 +554,27 @@ export async function buildFatSecretResult(
             servingDescription = `${qty} ${unit}`;
             servingTier = 'fs_label_volume_declared';
             pickedServing = unitDeclarations[0];
+            // WHICH serving source answered. The census that sized this tier's
+            // widening queried `FatSecretServing` — persisted rows only — so it
+            // measured the hydrated branch and none of the candidate-fallback
+            // one, and nothing else in this cascade tells them apart
+            // (`hydrate_failed` above fires on a DB ERROR, not on a miss).
+            //
+            // The fallback branch is not an edge case:
+            // `FATSECRET_PERSIST_RUNNERS_UP` defaults to 0 and nothing overrides
+            // it, so `searchFatSecretLane()` persists no hit speculatively and
+            // `ensureFatSecretParentPersisted()` does not run until save — every
+            // not-yet-seen FatSecret food reaches here with `row` null. On that
+            // branch the OLD gate could not fire at ALL (no `row`, hence no
+            // `defaultServingId`; and `toUnifiedCandidate()` maps only
+            // {description, grams}, so `servingId` is null anyway), and neither
+            // could `volMatch` (no `volumeMl` mapped) — so 100% of these bills
+            // are new, on a population nobody has counted. This log is how that
+            // gets counted, and it is the only instrument that can.
+            logger.info('fs.build_result.declared_volume', {
+                foodId: candidate.id, unit, grams,
+                servingSource: row?.servings?.length ? 'hydrated' : 'candidate_fallback',
+            });
         } else {
             // Density fallback, from the ONE owner of this rule
             // (`resolveVolumeGrams()` in `src/lib/units/volume-density.ts`).

@@ -444,14 +444,33 @@ describe('5. FS lane — buildFatSecretResult scales the record\'s own density t
         expect(r?.grams).toBeCloseTo(ML.pint, 6);
     });
 
-    it('a declared "1 pint" default row (no volumeMl) anchors a pint request through the stem table', async () => {
+    it('a "1 pint" row (no volumeMl) anchors a pint request through the stem table — and it need not be the default', async () => {
+        // RE-FIXTURED 2026-08-18, the same class of silent weakening this PR
+        // caught on the yield test. This case used to override
+        // `defaultServingId: 'svPint'` and its title claimed the DEFAULT was
+        // what anchored the request. Once the declaration stopped being scoped
+        // to `defaultServingId`, that override discriminated nothing: deleting
+        // it left the test green, so it could no longer fail for the reason its
+        // own name gave.
+        //
+        // The default now points at a "1 serving" row that names no volume unit
+        // — the shape the widening exists for — so the case is RED on the
+        // pre-fix tree, and the pint STEM is what carries it: drop `pint` from
+        // VOLUME_UNIT_STEMS and this falls back to 473.176 g.
         mockedFsFindUnique.mockResolvedValue({
-            ...fsMilkRow([{
-                servingId: 'svPint', description: '1 pint', measurementDescription: 'pint',
-                grams: 488, volumeMl: null, numberOfUnits: 1,
-                nutrients: { calories: 298, protein: 15.4, carbohydrate: 23.4, fat: 15.8 },
-            }]),
-            defaultServingId: 'svPint',
+            ...fsMilkRow([
+                {
+                    servingId: 'svPint', description: '1 pint', measurementDescription: 'pint',
+                    grams: 488, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 298, protein: 15.4, carbohydrate: 23.4, fat: 15.8 },
+                },
+                {
+                    servingId: 'svServing', description: '1 serving', measurementDescription: 'serving',
+                    grams: 244, volumeMl: null, numberOfUnits: 1,
+                    nutrients: { calories: 149, protein: 7.7, carbohydrate: 11.7, fat: 7.9 },
+                },
+            ]),
+            defaultServingId: 'svServing',
         });
         const r = await buildFatSecretResult(
             fsCandidate(), parsed({ qty: 1, unit: 'pint', name: 'milk' }), 0.9, '1 pint milk',
