@@ -425,15 +425,15 @@
     },
     {
       "id": "claude-md-doc-pointers-resolve",
-      "claim": "Every sync-docs/ or plans/ markdown path cited in CLAUDE.md exists in this repo — a dead pointer in the read-now tier sends the next reader nowhere",
+      "claim": "Every markdown pointer cited in CLAUDE.md resolves: the sync-docs/ and plans/ forms, and the bare reports/, log/ and bare-filename forms the corpus uses interchangeably, resolved against the repo root, sync-docs/, sync-docs/reports/ and sync-docs/log/. The only pointers exempt are those the citing line's own prose marks as living in the backend repo, which a mobile-context command cannot see. A dead pointer in the read-now tier sends the next reader nowhere",
       "ownerDoc": "mobile:CLAUDE.md#doc-rules",
       "where": "mobile",
-      "command": "grep -oE '`(sync-docs|plans)/[A-Za-z0-9_/.-]+\\.md`' CLAUDE.md | tr -d '`' | sort -u | while read p; do [ -e \"$p\" ] || echo \"$p\"; done | wc -l",
+      "command": "grep -oE '`[A-Za-z0-9_/.-]+\\.md`' CLAUDE.md | tr -d '`' | sort -u | while read -r p; do [ -e \"$p\" ] || [ -e \"sync-docs/$p\" ] || [ -e \"sync-docs/reports/$p\" ] || [ -e \"sync-docs/log/$p\" ] || { grep -F -- \"$p\" CLAUDE.md | sed 's/`[^`]*`//g' | grep -qvi backend && echo \"$p\"; }; done | wc -l",
       "expect": {
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-08-18"
     },
     {
       "id": "read-now-tier-within-budget",
