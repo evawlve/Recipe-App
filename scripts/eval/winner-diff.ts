@@ -79,7 +79,12 @@
  *     prove the cached row is identical.
  * (C) WARM BEHAVIOUR. `skipCache: true` is forced, so this measures COLD resolution
  *     only. A change that looks harmless cold still POISONS the cache the moment
- *     those keys are re-warmed.
+ *     those keys are re-warmed. `scripts/eval/warm-cold-diff.ts` is the instrument
+ *     for that half: it replays one population through the live route BOTH ways and
+ *     reports identity/grams/tier divergence plus, where a golden band exists, which
+ *     side is inside it. Measured 2026-08-19: 66.0% of the 265 nlp golden cases pick
+ *     a different food record warm vs cold (cold self-noise floor 0.8%), and 54.3%
+ *     of a 300-key FoodMapping sample does (floor 0.0%). This blind spot is large.
  * (D) CASES THE CHANGE IS SUPPOSED TO CREATE. --from-events and --from-cache
  *     contain only queries ALREADY ASKED. A change whose whole point is to make a
  *     currently-failing or never-attempted query succeed shows SAME on 100% of
