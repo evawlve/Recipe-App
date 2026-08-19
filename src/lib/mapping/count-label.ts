@@ -114,6 +114,34 @@ export function extractLabelServingUnit(description: string | null): string | nu
 }
 
 /**
+ * The label's own quantity, but ONLY when the label states it as a fraction
+ * ("1/2 breast" → 0.5, "1 1/4 cup" → 1.25). Null for "13 chips", "2 scoops"
+ * and everything else that leads with a plain integer or with no number.
+ *
+ * Both this and `extractLabelServingUnit()` gate on the same
+ * `leadingLabelFraction()`, so "the label named a unit through its fraction"
+ * and "the label stated that fraction" are the same predicate — a consumer
+ * cannot pick up the word without also being able to pick up the count that
+ * goes with it. Note what that does NOT say: a consumer may reach a
+ * fraction-led row by some other route (`servingMatchesNoun` tokenizes the
+ * whole description), so acting on this is not confined to rows the fraction
+ * reading made visible. Its caller documents the population it actually moves.
+ *
+ * Its one caller is `buildFatSecretResult`'s lexicon-free piece fallback, where
+ * the divisor is otherwise `numberOfUnits`. Measured over all 55,004
+ * `FatSecretServing` rows on the box 2026-08-18: 2,394 lead with a fraction,
+ * and `numberOfUnits` DISAGREES with the label on 2,236 of them (it is 1 on a
+ * row reading "1/2 cup"). On the 158 rows where FatSecret does encode the
+ * fraction, this function reproduces `numberOfUnits` EXACTLY — same value, all
+ * 158 — which is the evidence that the label is the better source rather than
+ * merely a different one.
+ */
+export function labelFractionQuantity(description: string | null | undefined): number | null {
+    if (!description) return null;
+    return leadingLabelFraction(description)?.qty ?? null;
+}
+
+/**
  * The leading quantity of a label serving, fractions included — "1/2 cup
  * (110 g)" → 0.5, "1 1/4 cup (40 g)" → 1.25, "18 chips (28 g)" → 18 — or null
  * when the label does not lead with a usable number.

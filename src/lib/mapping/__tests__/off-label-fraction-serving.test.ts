@@ -133,12 +133,14 @@ describe('off_0081312620001 "Cottage cheese" — label "1/2 cup (110 g)"', () =>
         expect(hydrated.servingGrams! / hydrated.servingUnitCount).toBe(220);
     });
 
-    it('CONTROL: a cup request still bills the class constant on this branch', async () => {
-        // `volumeToGrams` is consulted BEFORE `label_unit_match`
-        // (hydration-lane.ts:2668 vs :2672), so reading the label does not by
-        // itself change what `1 cup cottage cheese` bills. Flipping that
-        // precedence is Lane A's change, not this one; this pin exists so the
-        // two lanes cannot silently claim each other's delta.
+    it('END TO END: "1 cup cottage cheese" bills 220 g on label_unit_match', async () => {
+        // This assertion was `volume_unit` / the 120 g class constant until
+        // #354 landed and put the record's own label ahead of the constant.
+        // Now BOTH halves are visible in one number: the unit half supplies
+        // `cup`, the count half supplies 0.5, and 110/0.5 = 220 is billed. A
+        // fix that read the unit and left the count at 1 lands here at 110 —
+        // half the truth, and wrong in the opposite direction from the 120 g
+        // it replaces — so this single number separates a fix from a half-fix.
         mockOffFoodFindUnique.mockResolvedValue(offRow({
             barcode: '0081312620001',
             name: 'Cottage cheese',
@@ -153,7 +155,8 @@ describe('off_0081312620001 "Cottage cheese" — label "1/2 cup (110 g)"', () =>
             0.9,
             '1 cup cottage cheese',
         );
-        expect(r?.servingTier).toBe('volume_unit');
+        expect(r?.servingTier).toBe('label_unit_match');
+        expect(r?.grams).toBeCloseTo(220, 6);
     });
 });
 
