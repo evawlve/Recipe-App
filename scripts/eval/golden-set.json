@@ -6007,10 +6007,10 @@
         ]
       ],
       "grams": [
-        2,
-        3.5
+        4.5,
+        7
       ],
-      "notes": "REGRESSION GUARD for the density fix. 'salt' infers NO density category, so it must keep the flat 0.5 g/ml solid default (2.5g), not regress. Confirms uncategorized spices/salt are untouched. Hard."
+      "notes": "RE-BANDED 2026-08-19: the old [2, 3.5] asserted the guard's own fallback, not the food. The flat 0.5 g/ml solid default applies ONLY where the winning record declares no unit-naming serving row — it is the last resort, not the expected path for `1 tsp salt`. This record's own declared tsp weight is read first, by `fs_label_volume_declared` (cold) and `label_unit_match` (warm), both of which outrank the density fallback. Measured 2026-08-19, two records and two tiers, in agreement: 5.2 g WARM (off_0024600010993 \"Iodized Pink Salt\", `label_unit_match`) and 6.0 g COLD (fs_33908 \"Salt\", `fs_label_volume_declared`). Table salt is ~1.2 g/ml and USDA gives ~6 g/tsp, so 4.93 ml x 0.5 = 2.46 g was never the right answer for this line; [4.5, 7] covers both observed values with margin. Adding `salt` to CATEGORY_DENSITY_GML would be inert here (the declared-volume tiers already win) and would move every other uncategorized spice, so this is an assertion fix, not a pipeline fix. Hard."
     },
     {
       "id": "n-cook-01",
