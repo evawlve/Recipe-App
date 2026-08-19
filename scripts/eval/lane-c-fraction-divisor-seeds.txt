@@ -143,7 +143,9 @@
 # 1 trader joes chicken caesar wrap  fs_2009906   loses to off_0270735108634 (113.4 g)
 # 1 trader joes tri tip wrap         fs_98946     loses to off_0290570016376 (112 g)
 # 1 digiorno deep dish pepperoni pizza fs_1603575 loses to off_0071921050498 (106 g)
-# 1 meijer angel food cake           fs_163435    loses to off_0713733512565 (50 g)
+# 1 meijer angel food cake           fs_163435    admitted but TRUNCATED OUT of the rerank
+#                                                 window (filtered.slice(0,10) over gather order);
+#                                                 off_0713733512565 wins at 50 g.
 # 1 whole foods market chicken caesar wrap fs_4176498  parses unit="whole", so the
 #                                                 count branch derives noun "whole" and the
 #                                                 1/2 wrap row is never matched.
