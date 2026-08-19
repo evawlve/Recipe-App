@@ -14,6 +14,7 @@
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
+import { parseQuantityTokens } from '../parse/quantity';
 
 /** Minimal unit singularizer for label/serving unit words ("scoops" → "scoop"). */
 export function singularizeUnit(w: string): string {
@@ -24,12 +25,140 @@ export function singularizeUnit(w: string): string {
     return s;
 }
 
-/** The unit word of a label serving description ("2 scoops" → "scoop", "1 container" → "container"). */
+/**
+ * A leading label FRACTION: "1/2", or the mixed number "1 1/4".
+ *
+ * THE WHOLE PART IS PINNED TO 1, and that is the load-bearing part of this
+ * pattern. A mixed number on a serving panel states ONE unit and a fraction;
+ * measured over all 1,220 mixed-number `OffFood` labels on the box 2026-08-18,
+ * 1,047 (86%) lead with `1`, and the larger whole parts are a WEIGHT glued in
+ * front of the food noun rather than a count of units:
+ *
+ *     "4 1/4 fillet (113 g)"      -> 26.6 g/unit, i.e. 4.25 OUNCES of one fillet
+ *     "8 1/2 ONZ (241 g)"         -> 28.35 g/unit, the same shape spelled out
+ *     "320 1/2 package (320 g)"   -> 1.00 g/package, the GRAM figure glued on
+ *     "30 1/3 Can (30 g)"         -> 0.99 g/can
+ *
+ * Reading those as counts divides the serving by its own weight. `1 package`
+ * of `0761898375006` would bill 1 g instead of 320 g — and that record is a
+ * REGRESSION rather than merely a new error, because `label_unit_match` sits
+ * ahead of `label_serving_package_unit` in the branch chain, so a unit word
+ * that did not exist before pre-empts a branch that was already correct.
+ * `label_count_derived`'s [0.2, 500] per-piece band does not catch it either:
+ * 1.00 g is inside the band. The count is what is implausible, so the count is
+ * where the guard belongs.
+ *
+ * The numerator and denominator are `[1-9]\d*`, which refuses `0/2` and `1/0`
+ * outright rather than leaving them to the qty guard below. No `\s*` is
+ * allowed around the slash: "1 /3 cup (151 g)" (21 rows) must stay unreadable
+ * to BOTH halves, and a pattern that accepted it would hand
+ * `parseQuantityTokens` the tokens ["1","/","3"], which it cannot parse — it
+ * would fall through to its plain-number path and return 1, so the unit would
+ * say "cup" while the count still said one. Reintroducing that disagreement is
+ * this module's own defect in miniature.
+ *
+ * The `(?![\d./])` lookahead refuses a CONTINUING numeric run — "1/2/3",
+ * "3//4" — so a malformed shape falls back whole rather than half-parsed. It
+ * is not what refuses hyphens: "1-1/4 cup" and "2-3 Tbsp" (405 rows) fail
+ * earlier, because a hyphen is neither a slash nor whitespace, so neither arm
+ * can start.
+ */
+const LABEL_FRACTION_RE = /^\s*(1\s+[1-9]\d*\/[1-9]\d*|[1-9]\d*\/[1-9]\d*)(?![\d./])/;
+
+/** The ORIGINAL unit pattern, unchanged — the fallback both halves share. */
+const LABEL_SERVING_UNIT_RE = /^\s*\d*\.?\d*\s*([a-z]+)/i;
+
+/** The ORIGINAL leading-quantity pattern, unchanged — same fallback. */
+const LABEL_PLAIN_QUANTITY_RE = /^\s*(\d+(?:\.\d+)?)/;
+
+/**
+ * The ONE place a label fraction is recognised, and the reason the unit half
+ * and the count half cannot disagree about where the quantity ends: both call
+ * this, so a fraction is read by BOTH of them or by NEITHER, and "neither" is
+ * byte-for-byte the behaviour that shipped before this function existed.
+ *
+ * The arithmetic is `parseQuantityTokens`'s, reused rather than re-derived —
+ * `declaredVolumeUnitGrams()` in build-fatsecret-result.ts already uses it for
+ * exactly this. Only the SHAPE above is new, which is also what keeps that
+ * parser's recipe-line rules (range averaging, word numbers, "a dozen") away
+ * from a serving panel.
+ */
+function leadingLabelFraction(description: string): { qty: number; length: number } | null {
+    const m = description.match(LABEL_FRACTION_RE);
+    if (!m) return null;
+    const parsed = parseQuantityTokens(m[1].trim().split(/\s+/));
+    if (!parsed || !Number.isFinite(parsed.qty) || parsed.qty <= 0) return null;
+    return { qty: parsed.qty, length: m[0].length };
+}
+
+/**
+ * The unit word of a label serving description ("2 scoops" → "scoop",
+ * "1 container" → "container", "1/2 cup (110 g)" → "cup").
+ *
+ * THE FRACTION IS NOT COSMETIC. This read only the leading token until
+ * 2026-08-18: `\d*` consumed the `1` of "1/2", `/` is not `[a-z]`, and the
+ * whole match failed — so 16,531 OFF records (15,152 of them a cup) and 2,422
+ * FatSecret servings declared no unit at all, and every branch keyed on
+ * `labelUnitWord` stayed off for them. Callers that DIVIDE by the label's
+ * quantity must pair this with `labelLeadingQuantity()`: reading "1/2 cup
+ * (110 g)" as one cup bills 110 g/cup for a 220 g cup.
+ */
 export function extractLabelServingUnit(description: string | null): string | null {
     if (!description) return null;
-    const m = description.match(/^\s*\d*\.?\d*\s*([a-z]+)/i);
+    const frac = leadingLabelFraction(description);
+    const m = frac
+        ? description.slice(frac.length).match(/^\s*([a-z]+)/i)
+        : description.match(LABEL_SERVING_UNIT_RE);
     if (!m) return null;
     return singularizeUnit(m[1]);
+}
+
+/**
+ * The label's own quantity, but ONLY when the label states it as a fraction
+ * ("1/2 breast" → 0.5, "1 1/4 cup" → 1.25). Null for "13 chips", "2 scoops"
+ * and everything else that leads with a plain integer or with no number.
+ *
+ * Both this and `extractLabelServingUnit()` gate on the same
+ * `leadingLabelFraction()`, so "the label named a unit through its fraction"
+ * and "the label stated that fraction" are the same predicate — a consumer
+ * cannot pick up the word without also being able to pick up the count that
+ * goes with it. Note what that does NOT say: a consumer may reach a
+ * fraction-led row by some other route (`servingMatchesNoun` tokenizes the
+ * whole description), so acting on this is not confined to rows the fraction
+ * reading made visible. Its caller documents the population it actually moves.
+ *
+ * Its one caller is `buildFatSecretResult`'s lexicon-free piece fallback, where
+ * the divisor is otherwise `numberOfUnits`. Measured over all 55,004
+ * `FatSecretServing` rows on the box 2026-08-18: 2,394 lead with a fraction,
+ * and `numberOfUnits` DISAGREES with the label on 2,236 of them (it is 1 on a
+ * row reading "1/2 cup"). On the 158 rows where FatSecret does encode the
+ * fraction, this function reproduces `numberOfUnits` EXACTLY — same value, all
+ * 158 — which is the evidence that the label is the better source rather than
+ * merely a different one.
+ */
+export function labelFractionQuantity(description: string | null | undefined): number | null {
+    if (!description) return null;
+    return leadingLabelFraction(description)?.qty ?? null;
+}
+
+/**
+ * The leading quantity of a label serving, fractions included — "1/2 cup
+ * (110 g)" → 0.5, "1 1/4 cup (40 g)" → 1.25, "18 chips (28 g)" → 18 — or null
+ * when the label does not lead with a usable number.
+ *
+ * `labelLeadingCount()` below is NOT this function and could not be reused for
+ * it: it is integer-only and returns null under 2, i.e. null for every shape
+ * this one exists to read (build-fatsecret-result.ts:240-245 records why that
+ * is deliberate, and it stays that way).
+ */
+export function labelLeadingQuantity(description: string | null | undefined): number | null {
+    if (!description) return null;
+    const frac = leadingLabelFraction(description);
+    if (frac) return frac.qty;
+    const m = description.match(LABEL_PLAIN_QUANTITY_RE);
+    if (!m) return null;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 // Packaged-snack nouns whose OFF label serving natively enumerates pieces.
@@ -112,6 +241,48 @@ export function labelLeadingCount(servingSize: string): number | null {
  * True when an OFF label serving string usably enumerates the counted piece:
  * either the noun itself ("14 chips (28g)") or the generic multi-piece counter
  * ("15 pieces (28g)").
+ *
+ * A LABEL THAT STATES A FRACTION IS NOT ENUMERATING PIECES, and this is the
+ * third guard the fraction reader needs — the sibling of the whole-part-pinned-
+ * to-1 and the no-whitespace-in-fraction refusals above, and the same rule they
+ * enforce: the unit half and the count half may not disagree about where the
+ * quantity ends. `labelLeadingCount()` reads `^\s*(\d+(?:\.\d+)?)`, so on
+ * "2/3 spear" it reads the NUMERATOR 2 and calls it a piece count. That was
+ * harmless while `extractLabelServingUnit()` returned null on a fraction-led
+ * label — the word never matched, so the predicate was false for a reason that
+ * had nothing to do with the count. Making the word readable removed that
+ * accident and left the misread count deciding: `fs_22330689` "2/3 spear"
+ * (grams 28, numberOfUnits 1) went from 28 g per spear to 14 g, against a label
+ * that says a whole spear is 42 g. 14 g is the only one of those three numbers
+ * no reading of the label supports.
+ *
+ * Declining here is what lets `labelFractionQuantity()` answer instead, which
+ * is the PR's own rule and reads the SAME 2/3 the word came from. The spear
+ * goes 14 -> 42, i.e. it stops being an adverse row and becomes a corrected
+ * one; it does NOT go back to master's 28, because 28 is the label calling
+ * two-thirds of a spear a whole spear.
+ *
+ * MEASURED, box 2026-08-19. The new reading flips this predicate TRUE on 403
+ * of the 55,004 `FatSecretServing` rows and on 3,381 `OffFood` rows, and FALSE
+ * on none; the refusal returns every one of them, all four callers. Nothing on
+ * the OFF side was ever reachable: its callers pass a `LABEL_COUNT_PIECE_NOUNS`
+ * or generic piece noun and not one of those 3,381 labels carries such a word.
+ * On the fs side 400 of the 403 carry a volume word (cup 396, tbsp 2, oz 1,
+ * tsp 1) and are intercepted by the volume branch; the reachable three are
+ * fs_4655924 / fs_22330689 ("2/3 spear", 28 g) and fs_34355793 ("3/4 serving",
+ * 5 g).
+ *
+ * IT WIDENS THE DIVISOR RULE RATHER THAN NARROWING IT, and that is the honest
+ * accounting: the 401 disagreeing rows this predicate used to pre-empt now
+ * reach `labelFractionQuantity()`, so the rule's population goes 1,835 ->
+ * 2,236 — the whole disagreeing set, no exceptions carved out of it. 397 of
+ * the 401 are `cup` and unreachable behind the volume branch. The alternative
+ * was to leave a class where the unit half and the count half read the same
+ * label differently, which is the defect this module was opened to close.
+ *
+ * `servingLabelHasPieceCount()` below needs no such guard and does not get one:
+ * it is noun-agnostic and demands a recognized PIECE word, so ZERO rows change
+ * its verdict corpus-wide and the Typesense `hasCountServing` index is unmoved.
  */
 export function servingLabelCountsPiece(
     servingSize: string | null | undefined,
@@ -119,6 +290,7 @@ export function servingLabelCountsPiece(
     pieceNoun: string
 ): boolean {
     if (!servingSize || !servingGrams || servingGrams <= 0) return false;
+    if (leadingLabelFraction(servingSize)) return false;
     const count = labelLeadingCount(servingSize);
     if (count == null) return false;
     const labelWord = extractLabelServingUnit(servingSize);
