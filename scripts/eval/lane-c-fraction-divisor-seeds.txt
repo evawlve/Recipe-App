@@ -104,6 +104,32 @@
 1 packet instant oatmeal
 
 # -----------------------------------------------------------------------------
+# ADVERSE — these MOVE, and they move the WRONG WAY. Kept in the population on
+# purpose: the gate exists to report them, not to be kept clean of them.
+#
+# `labelLeadingCount()` reads `^\s*(\d+(?:\.\d+)?)`, so on "2/3 spear" it reads
+# the NUMERATOR 2, calls it an integer piece count >= 2, and `servingLabelCountsPiece`
+# now agrees because the branch can finally read the label word `spear`. That puts
+# a non-null `labelPieceCount` first in the `??` chain and `labelFractionQuantity`
+# is never consulted. Master divided by numberOfUnits (1); the branch divides by 2;
+# the label says 2/3, i.e. divide by 0.667. 14 g is the only one of the three
+# readings the label does not support.
+#
+# Corpus-wide this is 401 disagreeing rows, but 397 of them carry the label word
+# `cup`, so a cup request is intercepted by the volume branch and never reaches
+# the piece fallback. THREE rows are actually reachable: fs_4655924 and
+# fs_22330689 (Vlasic / Great Value kosher dill spears, "2/3 spear" 28 g) and
+# fs_34355793 (Stonyfield organic yogurt, "3/4 serving" 5 g -> 1.7 g).
+#
+# Only ONE of the three is reachable end to end by a query I could construct.
+# `1 vlasic kosher dill spear` and `2 vlasic kosher dill spears` pass Tier 1 and
+# FAIL Tier 2 — fs_4522098 outranks fs_4655924 and answers 100 g on
+# fs_default_serving, unchanged on both trees. They are left out for that reason.
+# -----------------------------------------------------------------------------
+#   -> fs_22330689   28 -> 14   ("2/3 spear" 28 g; the label's own reading is 42)
+1 great value spicy pickle spear
+
+# -----------------------------------------------------------------------------
 # REFUSED — Tier-2 failures. DO NOT re-add these without re-running both tiers;
 # each one looks like a valid seed and silently proves nothing.
 # -----------------------------------------------------------------------------
