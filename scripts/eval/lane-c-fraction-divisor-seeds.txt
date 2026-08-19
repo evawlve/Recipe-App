@@ -33,7 +33,11 @@
 #
 # Verified 2026-08-19 against branch f7aa3d1 and master 9c78c79, both replaying
 # the SAME frozen snapshot. Every figure is a Tier-2 measurement, not an
-# inference.
+# inference. RE-VERIFIED 2026-08-19 after the third guard, master fc1e520 vs
+# branch + guard, one fresh frozen snapshot, three replays (master / branch
+# without the guard / branch with it): 18/18 Tier-1 PASS, the winner identical
+# on all three trees for all 18, all 14 positives unchanged, the negative
+# control unchanged, and the one numerator row 28 -> 14 -> 42.
 
 # -----------------------------------------------------------------------------
 # POSITIVE — the FatSecret fraction divisor (tier fs_label_count).
@@ -104,29 +108,38 @@
 1 packet instant oatmeal
 
 # -----------------------------------------------------------------------------
-# ADVERSE — these MOVE, and they move the WRONG WAY. Kept in the population on
-# purpose: the gate exists to report them, not to be kept clean of them.
+# THE NUMERATOR ROW — the one regression this population caught, and the guard
+# that closed it. Kept in the seed set permanently: it is the only end-to-end
+# query anyone has constructed that reaches the numerator class at all.
 #
 # `labelLeadingCount()` reads `^\s*(\d+(?:\.\d+)?)`, so on "2/3 spear" it reads
-# the NUMERATOR 2, calls it an integer piece count >= 2, and `servingLabelCountsPiece`
-# now agrees because the branch can finally read the label word `spear`. That puts
-# a non-null `labelPieceCount` first in the `??` chain and `labelFractionQuantity`
-# is never consulted. Master divided by numberOfUnits (1); the branch divides by 2;
-# the label says 2/3, i.e. divide by 0.667. 14 g is the only one of the three
-# readings the label does not support.
+# the NUMERATOR 2 and calls it an integer piece count >= 2. That was inert while
+# `extractLabelServingUnit()` returned null on a fraction-led label — the
+# predicate was false because the WORD never matched, not because the count was
+# sound. Teaching the reader fractions removed the accident and left the misread
+# count deciding: a non-null `labelPieceCount` went first in the `??` chain and
+# `labelFractionQuantity` was never consulted. Master divided by numberOfUnits
+# (1) -> 28 g; the branch divided by 2 -> 14 g; the label says 2/3, i.e. 42 g.
+# 14 g is the only one of the three no reading of the label supports.
 #
-# Corpus-wide this is 401 disagreeing rows, but 397 of them carry the label word
-# `cup`, so a cup request is intercepted by the volume branch and never reaches
-# the piece fallback. THREE rows are actually reachable: fs_4655924 and
-# fs_22330689 (Vlasic / Great Value kosher dill spears, "2/3 spear" 28 g) and
-# fs_34355793 (Stonyfield organic yogurt, "3/4 serving" 5 g -> 1.7 g).
+# FIXED IN THIS PR by the third guard: `servingLabelCountsPiece()` declines any
+# label `leadingLabelFraction()` recognises, so the fraction divisor answers and
+# the row bills the label's own 42 g. It does NOT revert to master's 28 — 28 is
+# the label calling two-thirds of a spear a whole spear.
+#
+# Corpus, box 2026-08-19, all 55,004 FatSecretServing rows: the new reading
+# flipped `servingLabelCountsPiece` TRUE on 403 rows and false on 0; the guard
+# returns all 403. 400 carry a volume word (cup 396, tbsp 2, oz 1, tsp 1) and a
+# volume request is intercepted before the piece fallback. THREE reach it:
+# fs_4655924 and fs_22330689 (Vlasic / Great Value dill spears, "2/3 spear"
+# 28 g) and fs_34355793 (Stonyfield organic yogurt, "3/4 serving" 5 g).
 #
 # Only ONE of the three is reachable end to end by a query I could construct.
 # `1 vlasic kosher dill spear` and `2 vlasic kosher dill spears` pass Tier 1 and
 # FAIL Tier 2 — fs_4522098 outranks fs_4655924 and answers 100 g on
 # fs_default_serving, unchanged on both trees. They are left out for that reason.
 # -----------------------------------------------------------------------------
-#   -> fs_22330689   28 -> 14   ("2/3 spear" 28 g; the label's own reading is 42)
+#   -> fs_22330689   28 -> 42   ("2/3 spear" 28 g; 14 g without the third guard)
 1 great value spicy pickle spear
 
 # -----------------------------------------------------------------------------

@@ -241,6 +241,48 @@ export function labelLeadingCount(servingSize: string): number | null {
  * True when an OFF label serving string usably enumerates the counted piece:
  * either the noun itself ("14 chips (28g)") or the generic multi-piece counter
  * ("15 pieces (28g)").
+ *
+ * A LABEL THAT STATES A FRACTION IS NOT ENUMERATING PIECES, and this is the
+ * third guard the fraction reader needs — the sibling of the whole-part-pinned-
+ * to-1 and the no-whitespace-in-fraction refusals above, and the same rule they
+ * enforce: the unit half and the count half may not disagree about where the
+ * quantity ends. `labelLeadingCount()` reads `^\s*(\d+(?:\.\d+)?)`, so on
+ * "2/3 spear" it reads the NUMERATOR 2 and calls it a piece count. That was
+ * harmless while `extractLabelServingUnit()` returned null on a fraction-led
+ * label — the word never matched, so the predicate was false for a reason that
+ * had nothing to do with the count. Making the word readable removed that
+ * accident and left the misread count deciding: `fs_22330689` "2/3 spear"
+ * (grams 28, numberOfUnits 1) went from 28 g per spear to 14 g, against a label
+ * that says a whole spear is 42 g. 14 g is the only one of those three numbers
+ * no reading of the label supports.
+ *
+ * Declining here is what lets `labelFractionQuantity()` answer instead, which
+ * is the PR's own rule and reads the SAME 2/3 the word came from. The spear
+ * goes 14 -> 42, i.e. it stops being an adverse row and becomes a corrected
+ * one; it does NOT go back to master's 28, because 28 is the label calling
+ * two-thirds of a spear a whole spear.
+ *
+ * MEASURED, box 2026-08-19. The new reading flips this predicate TRUE on 403
+ * of the 55,004 `FatSecretServing` rows and on 3,381 `OffFood` rows, and FALSE
+ * on none; the refusal returns every one of them, all four callers. Nothing on
+ * the OFF side was ever reachable: its callers pass a `LABEL_COUNT_PIECE_NOUNS`
+ * or generic piece noun and not one of those 3,381 labels carries such a word.
+ * On the fs side 400 of the 403 carry a volume word (cup 396, tbsp 2, oz 1,
+ * tsp 1) and are intercepted by the volume branch; the reachable three are
+ * fs_4655924 / fs_22330689 ("2/3 spear", 28 g) and fs_34355793 ("3/4 serving",
+ * 5 g).
+ *
+ * IT WIDENS THE DIVISOR RULE RATHER THAN NARROWING IT, and that is the honest
+ * accounting: the 401 disagreeing rows this predicate used to pre-empt now
+ * reach `labelFractionQuantity()`, so the rule's population goes 1,835 ->
+ * 2,236 — the whole disagreeing set, no exceptions carved out of it. 397 of
+ * the 401 are `cup` and unreachable behind the volume branch. The alternative
+ * was to leave a class where the unit half and the count half read the same
+ * label differently, which is the defect this module was opened to close.
+ *
+ * `servingLabelHasPieceCount()` below needs no such guard and does not get one:
+ * it is noun-agnostic and demands a recognized PIECE word, so ZERO rows change
+ * its verdict corpus-wide and the Typesense `hasCountServing` index is unmoved.
  */
 export function servingLabelCountsPiece(
     servingSize: string | null | undefined,
@@ -248,6 +290,7 @@ export function servingLabelCountsPiece(
     pieceNoun: string
 ): boolean {
     if (!servingSize || !servingGrams || servingGrams <= 0) return false;
+    if (leadingLabelFraction(servingSize)) return false;
     const count = labelLeadingCount(servingSize);
     if (count == null) return false;
     const labelWord = extractLabelServingUnit(servingSize);

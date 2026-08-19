@@ -37,7 +37,7 @@ jest.mock('../../db', () => ({
 }));
 
 import { buildFatSecretResult } from '../build-fatsecret-result';
-import { labelFractionQuantity } from '../count-label';
+import { labelFractionQuantity, labelLeadingCount, servingLabelCountsPiece } from '../count-label';
 import type { ParsedIngredient } from '../../parse/ingredient-line';
 
 function serving(servingId: string, description: string, grams: number, numberOfUnits: number | null) {
@@ -104,7 +104,66 @@ describe('the label states the fraction; numberOfUnits does not', () => {
         );
         expect(r!.grams).toBeCloseTo(636, 6);
     });
+});
 
+describe('a label that states a fraction is not a piece count (the third guard)', () => {
+    it('"1 great value spicy pickle spear" bills the label\'s 42 g, never the numerator\'s 14 g', async () => {
+        // THE ONE ROW THIS PR REGRESSED, and the reason the refusal is in it
+        // rather than behind it. `labelLeadingCount()` reads
+        // `^\s*(\d+(?:\.\d+)?)`, so on "2/3 spear" it reads the NUMERATOR 2
+        // and calls it a piece count. That was inert while the reader returned
+        // null on a fraction-led label — `servingLabelCountsPiece` was false
+        // because the WORD never matched, not because the count was sound.
+        // Teaching the reader fractions removed the accident and left the
+        // misread count deciding, putting a non-null `labelPieceCount` first in
+        // the `??` chain so `labelFractionQuantity` was never consulted:
+        // 28 g on master, 14 g here, against a label that says 2/3 of a spear
+        // weighs 28 g and therefore one spear weighs 42.
+        //
+        // MUTATION: drop `leadingLabelFraction(servingSize)` from
+        // servingLabelCountsPiece and this returns 14 — the only one of the
+        // three numbers no reading of the label supports.
+        mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
+            fsId: '22330689', name: 'Spicy Pickle Spears', brandName: 'Great Value',
+            servings: [
+                serving('svSpear', '2/3 spear', 28, 1),
+                { ...serving('svPanel', '100 g', 100, 100) },
+            ],
+        }));
+        const r = await buildFatSecretResult(
+            { id: 'fs_22330689', source: 'fatsecret', name: 'Spicy Pickle Spears',
+              brandName: 'Great Value', score: 1, foodType: 'Brand', rawData: {} } as never,
+            parsedLine({ qty: 1, name: 'great value spicy pickle spear' }), 0.9,
+            '1 great value spicy pickle spear',
+        );
+        expect(r!.grams).toBeCloseTo(42, 6);   // 28 / (2/3)
+        expect(r!.servingTier).toBe('fs_label_count');
+    });
+
+    it('the refusal is structural, not a spear rule: the predicate declines every fraction-led label', () => {
+        // Corpus, box 2026-08-19, all 55,004 FatSecretServing rows: the new
+        // reading flipped `servingLabelCountsPiece` TRUE on 403 of them and
+        // false on 0. This refusal returns all 403. 400 carry a volume word
+        // (cup 396, tbsp 2, oz 1, tsp 1) and are intercepted by the volume
+        // branch; the 3 that reach the piece fallback are fs_4655924 and
+        // fs_22330689 ("2/3 spear", 28 g) and fs_34355793 ("3/4 serving", 5 g).
+        expect(servingLabelCountsPiece('2/3 spear', 28, 'spear')).toBe(false);
+        expect(servingLabelCountsPiece('3/4 serving', 5, 'serving')).toBe(false);
+        expect(servingLabelCountsPiece('2/3 cup (100 g)', 100, 'cup')).toBe(false);
+        expect(servingLabelCountsPiece('1 1/3 cookie (28 g)', 28, 'cookie')).toBe(false);
+        // And it cannot cost the fraction divisor a row: every row that rule
+        // moves leads with numerator 1, where labelLeadingCount was already
+        // null. The two populations are disjoint by construction.
+        expect(labelLeadingCount('1/2 naan')).toBeNull();
+        expect(labelFractionQuantity('1/2 naan')).toBe(0.5);
+        // Plain-integer piece labels are untouched — this is the class the
+        // predicate exists for.
+        expect(servingLabelCountsPiece('14 chips (28 g)', 28, 'chip')).toBe(true);
+        expect(servingLabelCountsPiece('15 pieces (28 g)', 28, 'pretzel')).toBe(true);
+    });
+});
+
+describe('scope of the divisor rule', () => {
     it('CONTROL: a plain-integer label keeps numberOfUnits untouched', () => {
         // The scope of the rule, at its own level: everything that does not
         // state a fraction returns null here, so no row outside the population

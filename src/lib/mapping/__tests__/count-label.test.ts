@@ -231,22 +231,45 @@ describe('labelLeadingCount is NOT the fraction reader (and stays integer-only)'
     it('still returns null for every fractional shape', () => {
         // build-fatsecret-result.ts:240-245 records why it cannot be reused:
         // integer-only, and null below 2. That is load-bearing for
-        // servingLabelCountsPiece / servingLabelHasPieceCount. With the
-        // whole-part-1 guard, NOT ONE OffFood or FatSecretServing row
-        // corpus-wide changes its piece-count verdict under this PR
-        // (0850057175004, "2 1/2 Cookie (114 g)", was the only candidate and
-        // the guard refuses it).
+        // servingLabelCountsPiece / servingLabelHasPieceCount, and it is ALSO
+        // where this PR's one regression came from — see the third guard below.
         expect(labelLeadingCount('1/2 cup (110 g)')).toBeNull();
         expect(labelLeadingCount('1 1/3 cookie (28 g)')).toBeNull();   // leading int is 1, < 2
         expect(labelLeadingCount('1 container')).toBeNull();
         expect(labelLeadingCount('15 pieces (28 g)')).toBe(15);
         expect(labelLeadingCount('2 1/2 Cookie (114 g)')).toBe(2);
+        // A NUMERATOR IS NOT A COUNT. Integer-only does not save a label whose
+        // fraction LEADS with an integer >= 2, and this is the one shape where
+        // the two halves could still disagree about where the quantity ends.
+        expect(labelLeadingCount('2/3 spear')).toBe(2);
+        expect(labelLeadingCount('3/4 cup (54 g)')).toBe(3);
     });
 
-    it('the piece-count predicates are unmoved for fraction-led labels', () => {
+    it('the RETRIEVAL flag is unmoved corpus-wide; the NOUN predicate was not, and is refused', () => {
+        // Two predicates, two different answers, and conflating them is what
+        // hid the regression. `servingLabelHasPieceCount` is noun-agnostic and
+        // demands the label word be a recognized PIECE word, so a fraction-led
+        // label can only reach it as "2/3 cookie"-shaped — measured over all
+        // 1,085,526 OffFood and all 55,004 FatSecretServing rows, ZERO rows
+        // change its verdict under this PR, so the Typesense `hasCountServing`
+        // index needs no rebuild.
         expect(servingLabelHasPieceCount('1/4 pretzel (59 g)', 59)).toBe(false);
         expect(servingLabelHasPieceCount('1 1/3 cookie (28 g)', 28)).toBe(false);
-        expect(servingLabelCountsPiece('1/4 pretzel (59 g)', 59, 'pretzel')).toBe(false);
         expect(servingLabelHasPieceCount('2 1/2 Cookie (114 g)', 114)).toBe(false);
+        // `servingLabelCountsPiece` takes the noun from the REQUEST, so any
+        // label word can match it, and there the new reading DID move rows:
+        // 403 FatSecretServing rows and 3,381 OffFood rows flipped true, 0
+        // flipped the other way (box, 2026-08-19). The third guard returns
+        // every one of them. `1/4 pretzel` was already false — numerator 1 —
+        // which is exactly why the numerator-2 shapes went unnoticed.
+        expect(servingLabelCountsPiece('1/4 pretzel (59 g)', 59, 'pretzel')).toBe(false);
+        expect(servingLabelCountsPiece('2/3 spear', 28, 'spear')).toBe(false);
+        expect(servingLabelCountsPiece('3/4 serving', 5, 'serving')).toBe(false);
+        expect(servingLabelCountsPiece('2/3 cup (100 g)', 100, 'cup')).toBe(false);
+        // MUTATION: drop the `leadingLabelFraction` refusal and the three above
+        // return true, billing 28/2 = 14 g for a spear the label calls 42 g.
+        // The plain-integer class the predicate exists for is untouched.
+        expect(servingLabelCountsPiece('14 chips (28 g)', 28, 'chip')).toBe(true);
+        expect(servingLabelCountsPiece('15 pieces (28 g)', 28, 'pretzel')).toBe(true);
     });
 });
