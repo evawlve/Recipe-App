@@ -1,9 +1,24 @@
 # Partitive-`of` forked `FoodMapping` keys — eviction plan
 
-**Status: PLAN ONLY. Nothing here has been executed. No row was written, repointed or
-evicted while producing it.** Every figure below came from read-only `SELECT`s
-(reproduced verbatim under [Method](#method)). Executing the plan needs its own
-authorization and its own PR.
+**Status: EXECUTED 2026-08-19 ~18:15Z, authorized by Diego.** The 19 section-A/B/D/S-excluded
+keys in `evict-partitive-2026-08-19.json` were evicted under the five-step guarded procedure:
+screen anchor `FoodMapping-screen-2026-08-19.json` (4,758 rows, 16:40:34Z) → dry run
+(`live 4758 = snapshot 4758`, `identity: all 19 key(s) verified unchanged`) → fresh Role-B restore
+anchor → `--execute`. **`DELETED 19 row(s). FoodMapping now 4739 rows.`** No repoint, no `usedCount`
+fold, and `garlic of` / `firm of tofu` were held out as [section S](#s-not-orphaned--live-output-of-the-free-text-path-do-not-evict-2-rows)
+says. Seven natural-language lines behind the evicted keys were re-probed after the run and all
+resolve without a fork: `1 cup of rice` 164 g `fdc_label_volume` · `a cup of brown rice` 195 g ·
+`1 cup of rolled oats` 86.4 g · `2 slices of pepperoni pizza` 200 g · `a can of coke` 360 g ·
+`1 cup of whole milk` 240 g `label_unit_match` · `2 cups of spinach` 60 g.
+
+Every figure in the body below came from read-only `SELECT`s (reproduced verbatim under
+[Method](#method)) and was taken BEFORE the eviction — read them as the at-screen-time state, which
+is what the guard anchored to.
+
+> **Concurrency hazard, recorded because it nearly voided a guard.** A sibling lane evicted the
+> `spinach` key and re-cached it mid-run. `FoodMapping` happened to return to 4,758, so this doc's
+> dry-run count guard passed — by coincidence, not by property. The identity check is what actually
+> held. **Two lanes must not touch `FoodMapping` against one screen anchor.**
 
 Companion to `fix/partitive-of-and-leading-article`
 (`src/lib/parse/ingredient-line.ts`, `src/lib/parse/__tests__/partitive-of-in-name.test.ts`).
