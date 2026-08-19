@@ -1,0 +1,164 @@
+# LANE C — arming population for PR #356 ("the label reader can read a fraction")
+# =============================================================================
+# WHY THIS FILE EXISTS. #356's first winner-gate ran 325 rows (75 cold seeds +
+# 250 sampled from 30 days of MappingEventLog) and the FatSecret hunk — the
+# fraction-aware divisor in buildFatSecretResult's piece fallback,
+# `labelPieceCount ?? labelFractionQuantity(match.description) ?? numberOfUnits`
+# — was reached on ZERO of them. Of 219 distinct winners, 105 were FatSecret,
+# and exactly one carried a disagreeing fraction-led serving (fs_1727595
+# "1/4 cup"), whose queries all name an explicit volume unit and therefore
+# resolve in the volume branch, never reaching the count/serving branch.
+# Playbook §2: a gate's population must contain the cases the change is
+# supposed to CREATE. This file is that population.
+#
+# It is a `winner-diff.ts --from-file` list. parseQueryFile() drops blank lines
+# and lines that START with `#` — it does NOT strip a trailing comment, so every
+# annotation here sits on its own line above the query it describes.
+#
+# HOW EVERY LINE BELOW WAS VERIFIED (two tiers; Tier 1 alone is NOT sufficient):
+#   RUN='npx ts-node --project tsconfig.scripts.json --transpile-only \
+#        -r tsconfig-paths/register scripts/eval/winner-diff.ts'
+#   Tier 1  $RUN snapshot --from-file scripts/eval/lane-c-fraction-divisor-seeds.txt \
+#                         --out /tmp/probe-snap.json
+#           assert the intended fs_<id> appears in entries[].candidates[].
+#           Catches a "never retrieved" miss.
+#   Tier 2  $RUN replay --snapshot /tmp/probe-snap.json --out /tmp/wd-B.json \
+#                       --label BRANCH --with-serving
+#           assert the intended record actually WINS and that serving.grams /
+#           serving.servingTier are the fraction-divided pair below.
+#           Catches an "admitted but outranked" miss.
+# Tier 1 passing is necessary and not sufficient: `1 french baguette` /
+# fs_245852 IS in the pool and in the rerank window and still loses to an OFF
+# record (see the REFUSED block at the bottom).
+#
+# Verified 2026-08-19 against branch f7aa3d1 and master 9c78c79, both replaying
+# the SAME frozen snapshot. Every figure is a Tier-2 measurement, not an
+# inference. RE-VERIFIED 2026-08-19 after the third guard, master fc1e520 vs
+# branch + guard, one fresh frozen snapshot, three replays (master / branch
+# without the guard / branch with it): 18/18 Tier-1 PASS, the winner identical
+# on all three trees for all 18, all 14 positives unchanged, the negative
+# control unchanged, and the one numerator row 28 -> 14 -> 42.
+
+# -----------------------------------------------------------------------------
+# POSITIVE — the FatSecret fraction divisor (tier fs_label_count).
+# Drawn from the 398-row `word3_nonVolumeWord` bucket: FatSecretServing rows
+# whose label leads with a fraction, whose numberOfUnits DISAGREES with it, and
+# whose label word is NOT a volume unit — so the request cannot be intercepted
+# by the weight or volume branch before the piece fallback. Re-derive:
+#   SELECT s."fsId", s.description, s.grams, s."numberOfUnits"
+#   FROM "FatSecretServing" s;   -- then apply labelFractionQuantity() +
+#                                -- extractLabelServingUnit() and drop volume words
+# Each query is preceded by its verified result:
+#   -> fs_<id>   base grams -> branch grams   (label read / base tier when it differs)
+# -----------------------------------------------------------------------------
+#   -> fs_2384037    42  -> 126   (1/3 naan)
+1 stonefire original tandoori naan
+#   -> fs_2374955    63  -> 126   (1/2 naan)
+1 stonefire garlic tandoori naan
+#   -> fs_6890971    63  -> 126   (1/2 naan; base tier fs_default_serving)
+1 stonefire naan bread
+#   -> fs_62412      63  -> 126   (1/2 naan; base tier fs_default_serving)
+1 archer farms garlic naan bread
+#   -> fs_5589994    142 -> 284   (1/2 wrap)
+1 trader joes falafel wrap
+#   -> fs_3604838    43  -> 86    (1/2 bar)
+1 bobos peanut butter oat bar
+#   -> fs_9353183    138 -> 552   (1/4 pizza)
+1 daiya supreme pizza
+#   -> fs_2722414    123 -> 492   (1/4 pizza)
+1 digiorno hand tossed pepperoni pizza
+#   -> fs_2811648    128 -> 1024  (1/8 pie)
+1 marie callenders pumpkin pie
+#   -> fs_111557752  120 -> 960   (1/8 pie)
+1 belmont pumpkin pie
+#   -> fs_75620      53  -> 424   (1/8 cake)
+1 publix angel food cake
+#   -> fs_835424     60  -> 300   (1/5 cake)
+1 hostess angel food cake
+#   -> fs_54101      85  -> 170   (1/2 container)
+1 container trader joes egg white salad with chives
+#   -> fs_75769      54  -> 432   (1/8 loaf; base tier fs_default_serving)
+1 loaf sams club french bread
+
+# The last three of those (fs_6890971, fs_62412, fs_75769) also exercise the
+# READER half: on master extractLabelServingUnit("1/2 naan") returns null, so
+# the lexicon-free labelPieceMatchesItem scan cannot see the label word at all
+# and resolution falls to fs_default_serving. On the branch the word is
+# readable, the scan matches, and the same row is then divided by the fraction.
+# Both halves of the PR fire on one line.
+
+# -----------------------------------------------------------------------------
+# POSITIVE — the OFF half (tier label_unit_match), the flagship.
+# `off_0081312620001` "Cottage cheese" reads "1/2 cup (110 g)" -> 220 g/cup
+# (USDA's cup is 226 g). #354 put the label ahead of the class constant, so
+# this is now an end-to-end bill change, not a latent one.
+# -----------------------------------------------------------------------------
+#   -> off_0081312620001  120 -> 220  (base tier volume_unit)
+1 cup cottage cheese
+#   -> off_0081312620001  60  -> 110  (base tier volume_unit)
+0.5 cup cottage cheese
+
+# -----------------------------------------------------------------------------
+# NEGATIVE CONTROL — must NOT move.
+# 366 live events in 90 days. The SKU's label word is `cup`; the request unit is
+# `packet`, so label_serving_package_unit answers it and the fraction reader
+# changes nothing. Verified 32 g / label_serving_package_unit on BOTH trees.
+# -----------------------------------------------------------------------------
+#   -> off_0039978031600  32 -> 32  (label_serving_package_unit, unchanged)
+1 packet instant oatmeal
+
+# -----------------------------------------------------------------------------
+# THE NUMERATOR ROW — the one regression this population caught, and the guard
+# that closed it. Kept in the seed set permanently: it is the only end-to-end
+# query anyone has constructed that reaches the numerator class at all.
+#
+# `labelLeadingCount()` reads `^\s*(\d+(?:\.\d+)?)`, so on "2/3 spear" it reads
+# the NUMERATOR 2 and calls it an integer piece count >= 2. That was inert while
+# `extractLabelServingUnit()` returned null on a fraction-led label — the
+# predicate was false because the WORD never matched, not because the count was
+# sound. Teaching the reader fractions removed the accident and left the misread
+# count deciding: a non-null `labelPieceCount` went first in the `??` chain and
+# `labelFractionQuantity` was never consulted. Master divided by numberOfUnits
+# (1) -> 28 g; the branch divided by 2 -> 14 g; the label says 2/3, i.e. 42 g.
+# 14 g is the only one of the three no reading of the label supports.
+#
+# FIXED IN THIS PR by the third guard: `servingLabelCountsPiece()` declines any
+# label `leadingLabelFraction()` recognises, so the fraction divisor answers and
+# the row bills the label's own 42 g. It does NOT revert to master's 28 — 28 is
+# the label calling two-thirds of a spear a whole spear.
+#
+# Corpus, box 2026-08-19, all 55,004 FatSecretServing rows: the new reading
+# flipped `servingLabelCountsPiece` TRUE on 403 rows and false on 0; the guard
+# returns all 403. 400 carry a volume word (cup 396, tbsp 2, oz 1, tsp 1) and a
+# volume request is intercepted before the piece fallback. THREE reach it:
+# fs_4655924 and fs_22330689 (Vlasic / Great Value dill spears, "2/3 spear"
+# 28 g) and fs_34355793 (Stonyfield organic yogurt, "3/4 serving" 5 g).
+#
+# Only ONE of the three is reachable end to end by a query I could construct.
+# `1 vlasic kosher dill spear` and `2 vlasic kosher dill spears` pass Tier 1 and
+# FAIL Tier 2 — fs_4522098 outranks fs_4655924 and answers 100 g on
+# fs_default_serving, unchanged on both trees. They are left out for that reason.
+# -----------------------------------------------------------------------------
+#   -> fs_22330689   28 -> 42   ("2/3 spear" 28 g; 14 g without the third guard)
+1 great value spicy pickle spear
+
+# -----------------------------------------------------------------------------
+# REFUSED — Tier-2 failures. DO NOT re-add these without re-running both tiers;
+# each one looks like a valid seed and silently proves nothing.
+# -----------------------------------------------------------------------------
+# 1 falafel wrap                     fs_841344    TIER 1 MISS  — not retrieved at all;
+#                                                 fs_6117439 wins the pool instead.
+# 1 french baguette                  fs_245852    TIER 1 PASS / TIER 2 FAIL — in the pool
+#                                                 AND in the rerank window, still loses to
+#                                                 off_0852636000080 (57 g, label_serving_default).
+#                                                 This is the case that proves Tier 1 is not
+#                                                 sufficient on its own.
+# 1 trader joes chicken caesar wrap  fs_2009906   loses to off_0270735108634 (113.4 g)
+# 1 trader joes tri tip wrap         fs_98946     loses to off_0290570016376 (112 g)
+# 1 digiorno deep dish pepperoni pizza fs_1603575 loses to off_0071921050498 (106 g)
+# 1 meijer angel food cake           fs_163435    admitted but TRUNCATED OUT of the rerank
+#                                                 window (filtered.slice(0,10) over gather order);
+#                                                 off_0713733512565 wins at 50 g.
+# 1 whole foods market chicken caesar wrap fs_4176498  parses unit="whole", so the
+#                                                 count branch derives noun "whole" and the
+#                                                 1/2 wrap row is never matched.

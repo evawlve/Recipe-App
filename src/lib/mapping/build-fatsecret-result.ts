@@ -32,7 +32,7 @@ import { logger } from '../logger';
 import { FATSECRET_REFRESH_DAYS } from './config';
 import {
     singularizeUnit, inferDiscreteUnit, extractLabelServingUnit,
-    servingLabelCountsPiece, labelLeadingCount, labelPieceMatchesItem,
+    servingLabelCountsPiece, labelLeadingCount, labelPieceMatchesItem, labelFractionQuantity,
 } from './count-label';
 import {
     num,
@@ -749,11 +749,57 @@ export async function buildFatSecretResult(
                 // Guarded, not substituted: `servingLabelCountsPiece` requires a
                 // count >= 2 naming this noun (or a generic piece word) and a
                 // sane per-piece weight, so `1 thin slice` and `1 serving (123 g)`
-                // still fall through to numberOfUnits untouched.
+                // still fall through to numberOfUnits untouched. It ALSO now
+                // declines any label that states a fraction, because
+                // `labelLeadingCount` reads `2/3 spear` as the integer 2 and
+                // this `??` chain would then never consult the fraction below —
+                // fs_22330689 billing 28/2 = 14 g for a spear the label calls
+                // 42 g. count-label.ts owns that refusal and the measurement.
                 const labelPieceCount = servingLabelCountsPiece(match.description, match.grams, noun)
                     ? labelLeadingCount(match.description)
                     : null;
+                // AND A LABEL THAT STATES ITS OWN FRACTION OUTRANKS numberOfUnits.
+                // `labelLeadingCount` is integer-only and null below 2, so it
+                // cannot see "1/6 baguette" (fs_245852, grams 50,
+                // numberOfUnits 1). That row falls to numberOfUnits, so ONE
+                // baguette bills 50 g when the label says a whole one is 300.
+                //
+                // THIS DEFECT IS PRE-EXISTING, NOT INHERITED FROM THE FRACTION
+                // READER, and the measurement is what settles it. All 2,236
+                // rows this rule moves carry a >=3-character word in
+                // `description`/`measurementDescription`, so `servingMatchesNoun`
+                // — which tokenizes that text and never consulted
+                // `extractLabelServingUnit` — could already match every one of
+                // them: measured `masterReachable 2236, onlyNew 0` on the box
+                // 2026-08-19 (1,835 / 0 before the fraction-label refusal in
+                // `servingLabelCountsPiece` handed back the 401 rows it had
+                // been pre-empting). That is also why the alternative fix, hiding a
+                // fraction-led word from this consumer, was rejected: it would
+                // have repaired ZERO of the 1,835, because none of them needs
+                // the word to be matched in the first place. Teaching the
+                // reader fractions widened WHICH REQUESTS reach the branch (the
+                // labelPieceMatchesItem scan above); it did not create the
+                // mis-division, and it cannot be contained by narrowing itself.
+                //
+                // The evidence that the label beats numberOfUnits rather than
+                // merely differing from it: of the 2,394 fraction-led
+                // FatSecretServing rows, numberOfUnits disagrees with the label
+                // on 2,236 — it is 1 on a row that says "1/2 cup" — and on the
+                // 158 where FatSecret DOES encode the fraction,
+                // `labelFractionQuantity` reproduces it EXACTLY, all 158. Where
+                // the source is populated the two agree; where they differ the
+                // source is simply unset. 2,136 of the 2,236 moves lower the
+                // divisor, i.e. bill MORE per unit: the under-bill corrected.
+                //
+                // Bounded to labels that STATE a fraction: `labelFractionQuantity`
+                // gates on the same `leadingLabelFraction()` that lets
+                // `extractLabelServingUnit` read the word, so "13 chips",
+                // "2 scoops" and "1 serving (123 g)" return null here and keep
+                // numberOfUnits untouched. `1/2 breast, bone and skin removed`
+                // (fs_4881229, numberOfUnits 0.5, golden n-mq-47) is in the
+                // agreement class and does not move.
                 const unitsPerServing = labelPieceCount
+                    ?? labelFractionQuantity(match.description)
                     ?? (match.numberOfUnits && match.numberOfUnits > 0 ? match.numberOfUnits : 1);
                 const perUnitGrams = match.grams! / unitsPerServing;
                 if (bareSingular && perUnitGrams < BARE_MIN_PIECE_SERVING_GRAMS) {
