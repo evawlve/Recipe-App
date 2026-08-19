@@ -34,7 +34,10 @@
  * NO DATABASE. NO LIVE BOX. The only network is a loopback stub this file starts.
  */
 
+import * as fs from 'fs';
 import * as http from 'http';
+import * as os from 'os';
+import * as path from 'path';
 import type { AddressInfo } from 'net';
 
 import {
@@ -47,16 +50,21 @@ import {
     cachePopulation,
     classifyRow,
     decompose,
+    emptyNoiseLedger,
     filePopulation,
     goldenPopulation,
     inBand,
+    noiseReceiptPath,
+    pct,
     populationFingerprint,
     probe,
     runNoiseFloor,
+    runReport,
     runWarmCold,
     selfDiff,
     summarize,
     warmColdExitCode,
+    writeReceiptSummary,
     type PopLine,
     type ProbeConfig,
     type Row,
@@ -359,6 +367,26 @@ describe('summarize counts only what was actually compared', () => {
     it('a warm echo of cacheHit:null counts as a MISS, not a hit', () => {
         const c = summarize([{ line: line(), warm: obs({ cacheHit: null }), cold: obs() }], [], 1);
         expect(c.warmCacheHits).toBe(0);
+    });
+
+    it('a probe with NO X-Write-Receipt is counted, because nosave was not in force on it', () => {
+        const s = writeReceiptSummary([
+            { line: line(), warm: obs({ writeReceipt: { suppress: ['aiServing', 'segmentationCache'], refusedTotal: 0 } }), cold: obs() },
+        ]);
+        expect(s.probes).toBe(2);
+        expect(s.withReceipt).toBe(1);
+        expect(s.withoutReceipt).toBe(1);
+        expect(s.suppressSets).toEqual(['aiServing+segmentationCache']);
+    });
+
+    it('refusedTotal is summed across probes, and an errored probe is not a probe', () => {
+        const s = writeReceiptSummary([
+            { line: line(), warm: obs({ writeReceipt: { suppress: ['aiServing'], refusedTotal: 3 } }), cold: errObs('x') },
+            { line: line(), warm: obs({ writeReceipt: { suppress: ['aiServing'], refusedTotal: 4 } }), cold: obs({ writeReceipt: { suppress: [], refusedTotal: 0 } }) },
+        ]);
+        expect(s.probes).toBe(3);
+        expect(s.refusedTotal).toBe(7);
+        expect(s.suppressSets).toEqual(['(none)', 'aiServing']);
     });
 
     it('POSITIVE CONTROL — the 3-of-29 shape from the 2026-08-19 hand measurement', () => {
@@ -761,5 +789,129 @@ describe('population builders account for every line they were given', () => {
         const p = cachePopulation([{ normalizedForm: '', usedCount: 1 }], 'used');
         expect(p.lines).toHaveLength(0);
         expect(p.skips[0].reason).toContain('empty FoodMapping.normalizedForm');
+    });
+});
+
+// ===========================================================================
+// 9. THE IN-RUN NOISE CONTROL — a warm MISS is a same-side-twice draw
+// ===========================================================================
+
+describe('the warm-MISS control measures the instrument against itself', () => {
+    it('a warm MISS that diverges is counted as noise, not as cache disagreement', () => {
+        const c = summarize([
+            // warm HIT + divergence: real cache disagreement
+            row({ warm: { foodId: 'a', cacheHit: 'early' }, cold: { foodId: 'b' } }),
+            // warm MISS + divergence: the warm probe ran the same pipeline, so this is noise
+            row({ warm: { foodId: 'a', cacheHit: null }, cold: { foodId: 'b' } }),
+            // warm MISS + agreement
+            row({ warm: { foodId: 'a', cacheHit: null }, cold: { foodId: 'a' } }),
+        ], [], 3);
+        expect(c.warmCacheHits).toBe(1);
+        expect(c.warmMisses).toBe(2);
+        expect(c.warmMissDiverged).toBe(1);
+        // it does NOT stop the row also counting as an identity divergence: the control
+        // is a denominator to judge the headline against, not a filter on it.
+        expect(c.identityDiverged).toBe(2);
+    });
+
+    it('an ABSENT echo is not a miss — absence of the observable is not an observation', () => {
+        const noEcho = obs(); delete (noEcho as any).cacheHit; delete (noEcho as any).servingTier;
+        const c = summarize([{ line: line(), warm: noEcho, cold: obs({ foodId: 'other' }) }], [], 1);
+        expect(c.warmMisses).toBe(0);
+        expect(c.warmMissDiverged).toBe(0);
+    });
+
+    it('POSITIVE CONTROL — an all-hit population has no control sample and says 0 of 0', () => {
+        const c = summarize([row(), row()], [], 2);
+        expect(c.warmMisses).toBe(0);
+        expect(c.warmCacheHits).toBe(2);
+        // and the printer must not divide by zero
+        expect(pct(c.warmMissDiverged, c.warmMisses)).toBe('  n/a');
+    });
+});
+
+// ===========================================================================
+// 10. THE RE-RENDER — a stored verdict must not survive a re-read
+// ===========================================================================
+
+describe('report re-renders a stored run without trusting anything stored in it', () => {
+    const TMP = path.join(os.tmpdir(), `wc-report-${process.pid}`);
+    beforeAll(() => fs.mkdirSync(TMP, { recursive: true }));
+    afterAll(() => fs.rmSync(TMP, { recursive: true, force: true }));
+
+    /** A receipt whose stored exit says 0 but whose rows say the cold side was dark. */
+    function writeReceiptFile(name: string, rows: any[], extra: Record<string, unknown> = {}) {
+        const p = path.join(TMP, name);
+        fs.writeFileSync(p, JSON.stringify({
+            kind: 'warm-cold-diff/run', version: 1, ranAt: '2026-08-19T00:00:00.000Z',
+            base: 'http://box:3000', population: 'stored', exit: 0, exitReason: null,
+            rows, skips: [], ...extra,
+        }));
+        return p;
+    }
+
+    it('a receipt that CLAIMS exit 0 over a dark cold side is re-verdicted VOID', () => {
+        const p = writeReceiptFile('dark.json', [
+            { id: 'a', query: 'q', shape: 'item', category: 'c', band: null, warm: obs(), cold: errObs('HTTP 500') },
+        ]);
+        const { code, lines } = runReport(p, QUIET);
+        expect(code).toBe(WC_VOID_EXIT);
+        expect(lines.join('\n')).toContain('COLD side is entirely dark');
+    });
+
+    it('POSITIVE CONTROL — a healthy receipt re-renders to exit 0 with the same counts', () => {
+        const p = writeReceiptFile('ok.json', [
+            { id: 'a', query: 'q1', shape: 'item', category: 'c', band: [40, 100], warm: obs({ grams: 240, foodId: 'x' }), cold: obs({ grams: 60, foodId: 'y' }) },
+            { id: 'b', query: 'q2', shape: 'item', category: 'c', band: null, warm: obs(), cold: obs() },
+        ]);
+        const { code, lines } = runReport(p, QUIET);
+        expect(code).toBe(0);
+        const text = lines.join('\n');
+        expect(text).toContain('IDENTITY-DIVERGED            1');
+        expect(text).toContain('cold inside only           1');
+    });
+
+    it('a floor receipt written later is picked up by the re-render', () => {
+        const rows = [
+            { id: 'a', query: 'q1', shape: 'item', category: 'c', band: null, warm: obs(), cold: obs() },
+        ];
+        const p = writeReceiptFile('floor.json', rows);
+        // before: no ledger at all
+        expect(runReport(p, QUIET).lines.join('\n')).toContain('UNMEASURED');
+        // after: a matching floor receipt exists
+        const fingerprint = populationFingerprint([{ id: 'a', query: 'q1', shape: 'item', category: 'c', band: null }]);
+        fs.writeFileSync(noiseReceiptPath(p), JSON.stringify({
+            ...emptyNoiseLedger(),
+            receipts: [{
+                kind: 'warm-cold-diff/noise-floor', version: 1, ranAt: '2026-08-19T01:00:00.000Z',
+                side: 'cold', population: 'stored', populationFingerprint: fingerprint,
+                rows: 1, comparable: 1, idDiffs: 0, gramsDiffs: 0, itemCountDiffs: 0, tierDiffs: 0,
+            }],
+        }));
+        const after = runReport(p, QUIET).lines.join('\n');
+        expect(after).not.toContain('UNMEASURED');
+        expect(after).toContain('cold self-noise floor');
+    });
+
+    it('a floor receipt for a DIFFERENT population is not applied', () => {
+        const p = writeReceiptFile('mismatch.json', [
+            { id: 'a', query: 'q1', shape: 'item', category: 'c', band: null, warm: obs(), cold: obs() },
+        ]);
+        fs.writeFileSync(noiseReceiptPath(p), JSON.stringify({
+            ...emptyNoiseLedger(),
+            receipts: [{
+                kind: 'warm-cold-diff/noise-floor', version: 1, ranAt: '2026-08-19T01:00:00.000Z',
+                side: 'cold', population: 'somewhere else', populationFingerprint: 'deadbeefdeadbeef',
+                rows: 999, comparable: 999, idDiffs: 0, gramsDiffs: 0, itemCountDiffs: 0, tierDiffs: 0,
+            }],
+        }));
+        expect(runReport(p, QUIET).lines.join('\n')).toContain('UNMEASURED');
+    });
+
+    it('an edited row set is flagged against the stored fingerprint', () => {
+        const p = writeReceiptFile('edited.json', [
+            { id: 'a', query: 'q1', shape: 'item', category: 'c', band: null, warm: obs(), cold: obs() },
+        ], { populationFingerprint: 'notthehashatall' });
+        expect(runReport(p, QUIET).lines.join('\n')).toContain('DOES NOT MATCH the stored');
     });
 });

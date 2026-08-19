@@ -343,6 +343,18 @@ export interface WcCounts {
     coldOnlyIn: number;
     /** rows whose warm probe reported a non-null `cacheHit`: proof the warm side was warm */
     warmCacheHits: number;
+    /**
+     * INTERNAL NOISE CONTROL. Comparable rows whose WARM probe MISSED the cache.
+     * On those rows the warm side ran the same pipeline the cold side ran, so the two
+     * observations are two draws from one distribution and any divergence between them
+     * is noise, not cache disagreement. `warmMissDiverged / warmMisses` is therefore a
+     * floor estimate the run computes about ITSELF, for free, with no second pass — and
+     * it is the number to check the divergence rate against when no `noise-floor`
+     * receipt exists. It is a small sample by construction (a good warm population has
+     * few misses) and it is NOT a substitute for the real floor.
+     */
+    warmMisses: number;
+    warmMissDiverged: number;
     /** rows where the server sent no debug echo at all (tier + cacheHit unobservable) */
     echoMissing: number;
     /** `text`-shaped lines sent — the ones that can reach the LLM segmenter and ai-normalize */
@@ -432,7 +444,7 @@ export function summarize(rows: Row[], skips: Skip[], population: number): WcCou
         warmErrors: 0, coldErrors: 0, bothErrors: 0, comparable: 0,
         same: 0, identityDiverged: 0, segmentationDiverged: 0, gramsDiverged: 0, tierDiverged: 0,
         banded: 0, bandCrossed: 0, bandBothIn: 0, bandBothOut: 0, warmOnlyIn: 0, coldOnlyIn: 0,
-        warmCacheHits: 0, echoMissing: 0, textLinesSent: 0,
+        warmCacheHits: 0, warmMisses: 0, warmMissDiverged: 0, echoMissing: 0, textLinesSent: 0,
     };
     for (const r of rows) {
         if (r.line.shape === 'text') c.textLinesSent++;
@@ -442,7 +454,15 @@ export function summarize(rows: Row[], skips: Skip[], population: number): WcCou
         if (!r.warm.ok || !r.cold.ok) continue;
         c.comparable++;
         if (r.warm.servingTier === undefined || r.cold.servingTier === undefined) c.echoMissing++;
-        if (typeof r.warm.cacheHit === 'string' && r.warm.cacheHit) c.warmCacheHits++;
+        const warmHit = typeof r.warm.cacheHit === 'string' && !!r.warm.cacheHit;
+        if (warmHit) c.warmCacheHits++;
+        // A warm MISS ran the pipeline exactly as the cold probe did, so the pair is a
+        // same-side-twice draw and any difference is this instrument's own noise. Only
+        // counted when the echo was actually present: an ABSENT echo is not a miss.
+        else if (r.warm.cacheHit === null) {
+            c.warmMisses++;
+            if (classifyRow(r) !== 'SAME') c.warmMissDiverged++;
+        }
         switch (classifyRow(r)) {
             case 'SAME': c.same++; break;
             case 'IDENTITY-DIVERGED': c.identityDiverged++; break;
@@ -518,6 +538,44 @@ export function decompose(rows: Row[], keyFn: (r: Row) => string): Subset[] {
 export function pct(num: number, den: number): string {
     if (den === 0) return '  n/a';
     return `${((num / den) * 100).toFixed(1).padStart(5)}%`;
+}
+
+/**
+ * What the server said it suppressed, folded across every probe.
+ *
+ * The header of this file CLAIMS which writes `nosave=1` stops. `X-Write-Receipt`
+ * is the server's own statement of what it actually stopped, and a claim with an
+ * available receipt that nobody reads is not a disclosure. A probe that came back
+ * with NO receipt is counted separately: it means the request was not treated as
+ * dev-bypass+nosave, so nothing was suppressed on it at all.
+ */
+export interface WriteReceiptSummary {
+    probes: number;
+    withReceipt: number;
+    /** probes the server answered WITHOUT a receipt — those ran with no suppression */
+    withoutReceipt: number;
+    /** every distinct `suppress` set seen, as a sorted joined string */
+    suppressSets: string[];
+    refusedTotal: number;
+}
+
+export function writeReceiptSummary(rows: Row[]): WriteReceiptSummary {
+    const sets = new Set<string>();
+    let probes = 0, withReceipt = 0, refusedTotal = 0;
+    for (const r of rows) {
+        for (const o of [r.warm, r.cold]) {
+            if (!o.ok) continue;
+            probes++;
+            if (!o.writeReceipt) continue;
+            withReceipt++;
+            sets.add((o.writeReceipt.suppress ?? []).slice().sort().join('+') || '(none)');
+            refusedTotal += o.writeReceipt.refusedTotal ?? 0;
+        }
+    }
+    return {
+        probes, withReceipt, withoutReceipt: probes - withReceipt,
+        suppressSets: Array.from(sets).sort(), refusedTotal,
+    };
 }
 
 // ============================================================
@@ -755,7 +813,7 @@ export async function runWarmCold(opts: RunOptions): Promise<RunResult> {
     const floorCold = findNoiseReceipt(ledger, 'cold', fingerprint);
     const floorWarm = findNoiseReceipt(ledger, 'warm', fingerprint);
 
-    printReport(say, rows, counts, verdict, { cold: floorCold, warm: floorWarm }, opts);
+    printReport(say, rows, counts, verdict, { cold: floorCold, warm: floorWarm });
 
     if (opts.outPath) {
         writeJsonAtomic(opts.outPath, {
@@ -778,6 +836,7 @@ export async function runWarmCold(opts: RunOptions): Promise<RunResult> {
                 byShape: decompose(rows, r => r.line.shape),
                 byCategory: decompose(rows, r => r.line.category),
             },
+            writeReceipts: writeReceiptSummary(rows),
             skips: opts.skips,
             rows: rows.map(r => ({
                 id: r.line.id, query: r.line.query, shape: r.line.shape, category: r.line.category,
@@ -833,7 +892,6 @@ function printReport(
     c: WcCounts,
     verdict: { code: 0 | 1 | 2; reason: string | null },
     floor: { cold: WcNoiseReceipt | null; warm: WcNoiseReceipt | null },
-    opts: RunOptions,
 ) {
     const comparable = c.comparable;
     say('');
@@ -849,6 +907,19 @@ function printReport(
     say(`  warm cache HITS         ${String(c.warmCacheHits).padStart(6)}   ${pct(c.warmCacheHits, comparable)} — proof the warm side was warm`);
     say(`  debug echo missing      ${String(c.echoMissing).padStart(6)}   (tier unobservable on those rows)`);
 
+    // The server's own statement of what nosave=1 actually stopped. The header of
+    // this file CLAIMS a suppression list; this is the evidence, and a disclosure
+    // nobody prints is not a disclosure.
+    const wr = writeReceiptSummary(rows);
+    say('');
+    say(`  X-Write-Receipt         ${String(wr.withReceipt).padStart(6)} of ${wr.probes} answered probes carried one`);
+    say(`    suppress sets seen    ${wr.suppressSets.join(' | ') || '(none)'}`);
+    say(`    refusedTotal (sum)    ${wr.refusedTotal}`);
+    if (wr.withoutReceipt > 0) {
+        say(`    !! ${wr.withoutReceipt} probes came back WITH NO RECEIPT — nosave was not in force on those,`);
+        say('       so nothing was suppressed for them. Check the api key is the dev-bypass one.');
+    }
+
     say('');
     say('--------------------------------------------------------------------------------');
     say('DIVERGENCE');
@@ -858,6 +929,10 @@ function printReport(
     say(`  SEGMENTATION-DIVERGED   ${String(c.segmentationDiverged).padStart(6)}   ${pct(c.segmentationDiverged, comparable)}  different item COUNT`);
     say(`  GRAMS-DIVERGED          ${String(c.gramsDiverged).padStart(6)}   ${pct(c.gramsDiverged, comparable)}  same record, different grams`);
     say(`  TIER-DIVERGED           ${String(c.tierDiverged).padStart(6)}   ${pct(c.tierDiverged, comparable)}  same record+grams, different rung`);
+    say(`  warm-MISS control       ${String(c.warmMissDiverged).padStart(6)}   ${pct(c.warmMissDiverged, c.warmMisses)} of ${c.warmMisses} rows where the warm probe MISSED`);
+    say('                                   the cache and therefore ran the SAME pipeline as cold. Any');
+    say('                                   difference there is this instrument\'s own noise, measured');
+    say('                                   in-run and for free. Small sample; not a substitute for the floor.');
     const floorLine = floor.cold
         ? `  cold self-noise floor   ${String(floor.cold.idDiffs).padStart(6)}   ${pct(floor.cold.idDiffs, floor.cold.comparable)} of ${floor.cold.comparable} (receipt ${floor.cold.ranAt})`
         : '  cold self-noise floor   UNMEASURED for this population — see the banner below';
@@ -918,7 +993,6 @@ function printReport(
         say('  WARM SIDE WAS COLD — the receipt is stamped warmSideWasCold:true.');
     }
     say('--------------------------------------------------------------------------------');
-    void opts;
 }
 
 function printSubsets(say: (s?: string) => void, title: string, subsets: Subset[]) {
@@ -935,6 +1009,65 @@ function printSubsets(say: (s?: string) => void, title: string, subsets: Subset[
 
 function fmtG(g: number | null): string {
     return (g == null ? 'null' : g.toFixed(1)).padStart(7) + 'g';
+}
+
+/**
+ * Re-render a run receipt that is already on disk, against whatever noise-floor
+ * receipts exist NOW.
+ *
+ * This mode exists because of an ordering trap that is otherwise unavoidable. A run
+ * must be taken against the cache AS FOUND, so it goes first; the floor costs a
+ * second full pass, so it goes second. That leaves the expensive run permanently
+ * printing "UNMEASURED FLOOR" even after the floor has been measured, and re-running
+ * it to fix the banner would both cost another population pass AND change the
+ * numbers. `report` re-prints the same rows against the now-known floor, for free.
+ *
+ * It RECOMPUTES the counts and the exit verdict from the stored rows rather than
+ * echoing the stored ones, so a receipt cannot carry a stale or hand-edited verdict
+ * past this mode.
+ */
+export function parseRunReceipt(j: any): { rows: Row[]; skips: Skip[]; populationDesc: string; base: string } {
+    const rows: Row[] = (j?.rows ?? []).map((r: any) => ({
+        line: {
+            id: r.id, query: r.query, shape: r.shape, category: r.category,
+            band: r.band ?? null, knownIssue: !!r.knownIssue,
+        },
+        warm: r.warm, cold: r.cold,
+    }));
+    return {
+        rows,
+        skips: j?.skips ?? [],
+        populationDesc: j?.population ?? '(unrecorded)',
+        base: j?.base ?? '(unrecorded)',
+    };
+}
+
+export function runReport(receiptPath: string, log?: (s: string) => void): { code: 0 | 1 | 2; lines: string[] } {
+    const out: string[] = [];
+    const say = (s = '') => { out.push(s); (log ?? console.log)(s); };
+    const j = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    const { rows, skips, populationDesc, base } = parseRunReceipt(j);
+    const lines = rows.map(r => r.line);
+    const fingerprint = populationFingerprint(lines);
+    const counts = summarize(rows, skips, lines.length);
+    const verdict = warmColdExitCode(counts, { allowUnwarmed: !!j?.allowUnwarmed });
+    const ledger = readNoiseLedger(noiseReceiptPath(receiptPath));
+
+    say('');
+    say('================================================================================');
+    say('WARM/COLD DIFF — RE-RENDER of a stored run (no probe was sent)');
+    say('================================================================================');
+    say(`receipt        ${receiptPath}`);
+    say(`ran at         ${j?.ranAt ?? '(unrecorded)'}   base ${base}`);
+    say(`population     ${populationDesc}`);
+    say(`fingerprint    ${fingerprint}${j?.populationFingerprint && j.populationFingerprint !== fingerprint
+        ? `   !! DOES NOT MATCH the stored ${j.populationFingerprint} — the receipt's rows were edited` : ''}`);
+
+    printReport(say, rows, counts, verdict, {
+        cold: findNoiseReceipt(ledger, 'cold', fingerprint),
+        warm: findNoiseReceipt(ledger, 'warm', fingerprint),
+    });
+    return { code: verdict.code, lines: out };
 }
 
 // ============================================================
@@ -1141,6 +1274,9 @@ MODES
                 is inside it
   noise-floor   probe ONE side TWICE and measure how much it disagrees with itself.
                 Required before any divergence number from \`run\` can be quoted.
+  report        re-render a stored run receipt (--run <file>) against whatever floor
+                receipts exist now. Sends nothing; recomputes counts and the verdict
+                from the stored rows rather than trusting the stored ones.
   help
 
 POPULATION (exactly one)
@@ -1221,6 +1357,11 @@ async function buildPopulationFromArgs(argv: string[]): Promise<BuiltPopulation>
 export async function cli(argv: string[]): Promise<number> {
     const mode = argv[0];
     if (!mode || mode === 'help' || has(argv, 'help')) { console.log(HELP); return mode ? 0 : WC_VOID_EXIT; }
+    if (mode === 'report') {
+        const rp = argStr(argv, 'run');
+        if (!rp) { console.error('VOID: report needs --run <receipt.json>'); return WC_VOID_EXIT; }
+        return runReport(rp).code;
+    }
     if (mode !== 'run' && mode !== 'noise-floor') {
         console.error(`unknown mode "${mode}"\n${HELP}`);
         return WC_VOID_EXIT;
