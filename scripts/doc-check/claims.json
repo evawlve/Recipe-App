@@ -110,16 +110,16 @@
       "verified": "2026-07-30"
     },
     {
-      "id": "dev-bypass-emails-still-present",
-      "claim": "Item #23 second trap still open: emails containing test/dev get the parse-route bypass",
+      "id": "dev-bypass-email-substring-removed",
+      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the exact allowlist (google_test_user@kindahealthy.com, endsWith @google.com, diego@example.com). This claim pins the substring checks ABSENT.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
-      "command": "grep -c \"includes('test')\" src/app/api/nlp/parse/route.ts",
+      "command": "grep -rlE \"includes\\('(test|dev)'\\)\" src/app/api/nlp/parse --include=route.ts | wc -l",
       "expect": {
-        "kind": "min",
-        "value": "1"
+        "kind": "count",
+        "value": "0"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-08-20"
     },
     {
       "id": "hardcoded-fallback-key-still-present",
