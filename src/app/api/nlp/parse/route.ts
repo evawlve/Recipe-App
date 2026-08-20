@@ -56,13 +56,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key first (Dev bypass)
+  // Check API Key first (Dev bypass — fails closed: unset/empty DEV_API_KEY authorizes nothing)
   const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
+  const expectedApiKey = process.env.DEV_API_KEY;
   
   let isDevBypass = false;
 
-  if (apiKey && apiKey === expectedApiKey) {
+  if (expectedApiKey && apiKey && apiKey === expectedApiKey) {
     isDevBypass = true;
   }
 
@@ -85,12 +85,12 @@ export async function POST(req: NextRequest) {
       userId = user.id;
       userEmail = user.email || null;
 
-      // Check if user email qualifies for dev/test bypass (e.g. google_test_user@kindahealthy.com)
+      // Check if user email qualifies for the dev/test bypass. Exact matches and the review
+      // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
+      // user whose address contained either substring skipped rate limiting.
       if (userEmail && (
         userEmail === 'google_test_user@kindahealthy.com' ||
         userEmail.endsWith('@google.com') ||
-        userEmail.includes('test') ||
-        userEmail.includes('dev') ||
         userEmail === 'diego@example.com'
       )) {
         isDevBypass = true;

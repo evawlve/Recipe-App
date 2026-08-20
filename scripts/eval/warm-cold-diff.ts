@@ -1369,7 +1369,7 @@ export async function cli(argv: string[]): Promise<number> {
 
     const cfg: ProbeConfig = {
         base: argStr(argv, 'base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000',
-        apiKey: process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass',
+        apiKey: process.env.EVAL_API_KEY ?? process.env.DEV_API_KEY ?? '',
         timeoutMs: argInt(argv, 'timeout') ?? 30000,
     };
     const concurrency = argInt(argv, 'concurrency') ?? 4;

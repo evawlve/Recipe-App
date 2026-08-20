@@ -20,6 +20,7 @@
  * fixtures are the real rows for `FatSecretFood.fsId` 95103 and 4041569.
  */
 
+// The route fails closed (2026-08-20): authorization needs DEV_API_KEY set in the env.
 process.env.DEV_API_KEY = 'test-barcode-key';
 
 import { NextRequest } from 'next/server';
@@ -294,5 +295,30 @@ describe('/api/foods/barcode FatSecret branch', () => {
     const body = await response.json();
     expect(body.error).toBe('Food not found for barcode');
     expect(body.name).toBeUndefined();
+  });
+});
+
+describe('/api/foods/barcode auth fails closed', () => {
+  // The env-set-key => authorized leg is every 200 in the suite above.
+  test('a wrong key is refused', async () => {
+    const response = await GET(
+      new NextRequest('http://localhost:3000/api/foods/barcode?code=038000138416&api_key=not-the-key'),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test('with DEV_API_KEY unset, the retired fallback literal is refused', async () => {
+    const saved = process.env.DEV_API_KEY;
+    try {
+      delete process.env.DEV_API_KEY;
+      const response = await GET(
+        new NextRequest(
+          'http://localhost:3000/api/foods/barcode?code=038000138416&api_key=adminAPI_dev_key_bypass',
+        ),
+      );
+      expect(response.status).toBe(401);
+    } finally {
+      process.env.DEV_API_KEY = saved as string;
+    }
   });
 });

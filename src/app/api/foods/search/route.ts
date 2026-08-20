@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key
+  // Check API Key (fails closed: unset/empty DEV_API_KEY refuses every request)
   const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
-  if (!apiKey || apiKey !== expectedApiKey) {
+  const expectedApiKey = process.env.DEV_API_KEY;
+  if (!expectedApiKey || !apiKey || apiKey !== expectedApiKey) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
