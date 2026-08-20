@@ -34,6 +34,7 @@
 import { canonicalizeCacheKey } from './normalization-rules';
 import { hasDecisiveBrandContext } from './simple-rerank';
 import { deriveCacheKeyName, collapseAdjacentDuplicateTokens } from './cache-key-core';
+import { stripPartitiveOfResidue } from './partitive-residue';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
 /**
@@ -45,6 +46,15 @@ import type { ParsedIngredient } from '../parse/ingredient-line';
  * stays the one public surface for cache keys.
  */
 export { deriveCacheKeyName, collapseAdjacentDuplicateTokens, IDENTITY_UNIT_HINTS } from './cache-key-core';
+
+/**
+ * Step 0's partitive-residue strip (LANE S). Lives in ./partitive-residue —
+ * import-leaf by contract, ZERO imports — so read-only eval tooling can load
+ * it without transitively warming config.ts (the same leaf-safety rule as
+ * cache-key-core above). Re-exported here so this module stays the one public
+ * surface for cache keys.
+ */
+export { stripPartitiveOfResidue } from './partitive-residue';
 
 /**
  * Brand-detection shape consumed by deriveMappingCacheKey. Matches the
@@ -80,6 +90,14 @@ export function isMalformedCacheKey(key: string): boolean {
  * brandDetection, rawLine); no I/O, no side effects.
  *
  * Steps:
+ *   0. stripPartitiveOfResidue — drop a single partitive-`of` residue from the
+ *      NAME's edge (never mid-string; scope decision documented in
+ *      ./partitive-residue). The key-site half of the parser's #350 skip: the
+ *      ai-normalize replacement path re-introduces the residue AFTER the
+ *      parser consumed it ("1 cup of rolled oats" -> normalizedForm
+ *      "of rolled rolled oats" -> key "oat of rolled" instead of
+ *      "oat rolled"). Deliberately NOT behind CACHE_KEY_DISCRIMINATORS — that
+ *      kill-switch owns identity discriminators only.
  *   1. deriveCacheKeyName — canonicalize + identity discriminators (above).
  *   2. Brand prefix — when the query DECISIVELY names a brand, prepend it so
  *      branded picks don't collide with generic cache rows ("met rx protein
@@ -108,9 +126,17 @@ export function isMalformedCacheKey(key: string): boolean {
  *      same token twice — regardless of what AI normalize handed us as
  *      normalizedName ("canned canned kidney beans" class).
  *
- * Idempotent: feeding a derived key back in as normalizedName (with the same
- * brandDetection/rawLine) returns the identical key — required so a row
- * saved under key K is found by any later query that derives K.
+ * Idempotence holds in NAME space: re-deriving from the same ingredient NAME
+ * (same brandDetection/rawLine) returns the identical key, so a row saved
+ * under key K is found by any later query that derives K. Feeding a derived
+ * KEY back in as normalizedName is no longer always a fixed point:
+ * canonicalizeCacheKey token-sorts with no stopword list, so a mid-`of` name
+ * can sort its `of` to an edge ("leg of lamb" -> key "lamb leg of"), and
+ * step 0 would strip that edge `of` if the KEY re-entered as a name
+ * ("lamb leg"). No pipeline path feeds a derived key back in as a name — keys
+ * re-enter only via canonicalizeCacheKey/isMalformedCacheKey (the legacy-key
+ * read fallback and the malformed-key predicate), both untouched by step 0 —
+ * and __tests__/partitive-residue.test.ts pins the exception.
  */
 export function deriveMappingCacheKey(
   normalizedName: string,
@@ -118,13 +144,15 @@ export function deriveMappingCacheKey(
   brandDetection?: BrandKeyInput | null,
   rawLine?: string
 ): string {
-  const base = deriveCacheKeyName(normalizedName, parsed);
+  // Step 0 (LANE S): partitive-residue strip — see the doc block above.
+  const cleaned = stripPartitiveOfResidue(normalizedName);
+  const base = deriveCacheKeyName(cleaned, parsed);
 
   let composed = base;
   const brand = brandDetection?.isBranded
     ? brandDetection.matchedBrand?.trim().toLowerCase()
     : undefined;
-  if (brand && hasDecisiveBrandContext(rawLine ?? normalizedName, brand)) {
+  if (brand && hasDecisiveBrandContext(rawLine ?? cleaned, brand)) {
     const keyTokens = new Set(base.split(/\s+/).filter(t => t.length > 0));
     const brandTokens = canonicalizeCacheKey(brand)
       .split(/\s+/)

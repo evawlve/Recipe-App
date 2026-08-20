@@ -62,7 +62,7 @@ import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-t
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
-import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
+import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, stripPartitiveOfResidue, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
 import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers } from './llm-output-guards';
 import { isBarePluralRequest } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
@@ -638,7 +638,14 @@ async function preflightIngredientLine(
     // NOTE: Cache lookup now only happens after normalization (see "EARLY CACHE CHECK" below)
     // This eliminates "selection drift" where raw line variations would get different mappings
     let parsed = parseIngredientLine(preProcessLine);
-    let baseName = options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine;
+    // LANE S: strip a partitive-`of` residue off ALL three branches, so the
+    // parser path and the free-text/LLM paths (normalizedForm / preProcessLine,
+    // which never pass through the parser's #350 skip) converge on the same
+    // baseName. baseName is the retrieval query AND the deriveMappingCacheKey
+    // input, so query and key move together (playbook §11 class-D defense),
+    // and lookupValidatedMappingWithLegacyFallback's legacy-key fallback stops
+    // resurrecting `garlic of`-class fork rows on the main path.
+    let baseName = stripPartitiveOfResidue((options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine).trim());
 
     // IDENTITY HINT RESTORATION — the discriminator survives into the cache KEY
     // and was being lost from the search QUERY.
