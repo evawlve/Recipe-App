@@ -38,6 +38,7 @@
         "eval": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register eval/run.ts",
         "eval:golden": "ts-node --project tsconfig.scripts.json --transpile-only scripts/eval/run-eval.ts",
         "eval:diff": "ts-node --project tsconfig.scripts.json --transpile-only scripts/eval/diff-eval-runs.ts",
+        "eval:cold-set": "ts-node --project tsconfig.scripts.json --transpile-only scripts/eval/check-stable-cold-failures.ts",
         "eval:analyze": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register eval/analyze.ts",
         "flywheel:sweep": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/eval/flywheel-sweep.ts",
         "seg:replay-diff": "ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register scripts/seg-replay-diff.ts",

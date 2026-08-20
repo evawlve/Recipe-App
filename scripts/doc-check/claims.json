@@ -665,6 +665,18 @@
       "verified": "2026-07-31"
     },
     {
+      "id": "stable-cold-failure-set-is-data",
+      "claim": "The stable cold-failure set is DATA, not prose: scripts/eval/stable-cold-failures.json names exactly the nine HARD (non-knownIssue) golden cases that fail EVERY cold run — n-cook-03 n-mod-02 n-mq-30 n-mq-41 n-prod-01 n-prot-02 n-serv-39 n-serv-45 n-serv-55 — measured as the exact intersection of three restarted cold runs on build i1BDbnq_b8pC7Hm3gD_bM (2026-08-19; 10/11/10 real failures per run, the extra slots filled only by the documented rotators n-brand-02 / n-serv-26 / n-svd-03). The command also re-derives the DISJOINTNESS that makes this a separate instrument: no member may be flagged knownIssue in golden-set.json or pinned in known-issue-baseline.json, and it prints NOT_DISJOINT if one ever is. This claim goes red if the artifact is deleted, if membership changes without the artifact being updated, or if a member is silently reclassified into the excused population — which is the entire point, because before the artifact existed the set was adjudicated by reading three documents that disagreed, and a ten became a nine unnoticed on 2026-08-19 when PR #357 re-banded n-dens-07 out. NOT the nightly's 'known issues still failing: N', which is a WARM count over the disjoint knownIssue population; see check-stable-cold-failures.ts.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-18_plan-4-three-arms-and-two-deploys.md",
+      "where": "backend",
+      "command": "node -e \"const s=require('./scripts/eval/stable-cold-failures.json'),g=require('./scripts/eval/golden-set.json'),b=require('./scripts/eval/known-issue-baseline.json');const ids=s.members.map(m=>m.id).sort();const ki=new Set([...g.search,...g.nlp].filter(c=>c.knownIssue).map(c=>c.id));const pin=new Set(Object.keys(b.cases||{}));const bad=ids.filter(i=>ki.has(i)||pin.has(i));process.stdout.write(bad.length?'NOT_DISJOINT:'+bad.join(','):ids.join(' '))\"",
+      "expect": {
+        "kind": "equals",
+        "value": "n-cook-03 n-mod-02 n-mq-30 n-mq-41 n-prod-01 n-prot-02 n-serv-39 n-serv-45 n-serv-55"
+      },
+      "verified": "2026-08-19"
+    },
+    {
       "id": "flywheel-sweep-timer-re-enabled-for-item-17",
       "claim": "flywheel-sweep.timer is RE-ENABLED (2026-08-08, item-17 warm campaign resume): is-active=active AND is-enabled=enabled. Its D3 re-enable condition was met and executed — the 2026-08-03 service failure was diagnosed (eval-gate red on n-prod-01, not infra) and repaired cache-side (apple key repointed to FDC 171688 as a human-triage pin), plus a second warm red found on the proof run (n-mq-41 brand_guard escape bypassing the correct fs_81276 row; promoted to human-triage). This claim goes red if the timer is stopped or disabled again, which is the prompt to rewrite the plan section 'Running under all of this' rather than let the state outlive the decision.",
       "ownerDoc": "mobile:sync-docs/pipeline_hardening_plan.md",

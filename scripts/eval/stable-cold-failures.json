@@ -1,0 +1,125 @@
+{
+  "_readme": "STABLE COLD FAILURES — the roster of golden-set cases that are HARD assertions (NOT knownIssue, NOT excused by anything) and that fail on EVERY COLD run of run-eval.ts (`--nocache`, which also sends nosave=1 and debug=1). The set is measured as the exact INTERSECTION over three restarted cold runs on one build, never from a single run's total — that is what makes a documented rotator distinguishable from a new member. This file exists so that 'is this a NEW cold failure?' is a diff instead of a reading exercise: the set previously lived only in prose across three documents, they disagreed about its size, and a ten quietly became a nine with nothing in the repo noticing. Check a cold run against it with: npm run eval:cold-set. Members here are STANDING DEBT, not absolution — every one still reds a cold run, exactly as it should.",
+  "_notTheSameAs": "known-issue-baseline.json / known-issue-baseline-cold.json are the OPPOSITE population and answer a different question. Those pin the per-case OBSERVED VALUES (foodId, foodName, grams, kcal100, abstained, errored, itemCount) of cases flagged `knownIssue` in golden-set.json — cases that are already EXCUSED, whose failure run-eval deliberately does not count (evalExitCode ignores them), and whose only remaining signal is DRIFT: 'still failing, but failing DIFFERENTLY', reported explicitly NON-GATING at run-eval.ts:427. This file pins MEMBERSHIP, not values, for cases that are NOT excused: they are real red and they fail the suite. The two sets are provably disjoint — no id below appears among the 21 knownIssue ids in golden-set.json, nor among the 20 ids pinned in known-issue-baseline.json (verified 2026-08-19). A knownIssue case can therefore never be a member here, and the checker enforces that.",
+  "_naming": "The nightly WARM sweep prints a bare count for its own, different set: `known issues still failing: N` (10 of 21 on 2026-08-19, with 11 now passing). This set's size is also nine-or-ten-ish, is measured on a different instrument (COLD, not warm), over a different population (HARD, not excused), and means the opposite thing. Two bare numbers of similar magnitude on one page is exactly how the ten-that-became-a-nine survived. So this set is never 'the failures' and never a bare N: it is `stable cold failures`, and check-stable-cold-failures.ts stamps that label on every line it prints.",
+  "_notAnAllowlist": "This file is a DETECTOR for the cold session gate, never an excuse list. It is not read by flywheel-sweep.ts, it is not wired to --allow-fail (which defaults EMPTY by design and is pinned by the doc-check claim `flywheel-allow-fail-defaults-empty`), and it cannot turn a red nightly green. The nightly goes green when real failures get FIXED. Membership here is the standing bill; the way a member leaves is check-stable-cold-failures.ts reporting LEFT THE SET after someone fixed it, confirmed over 2-3 cold runs, and then removed it from this file.",
+  "_rotatorsNote": "All three rotators are AI serving-gram draws (count_unit_ai / AiGeneratedServing). That is the single mechanism this set flaps on, and it is separately unowned. If a NEW rotator is proposed, check whether it is the same mechanism before adding it here rather than fixing it.",
+  "instrument": "stable-cold-failures",
+  "displayName": "stable cold failures",
+  "measuredOn": "COLD (run-eval.ts --nocache)",
+  "ownerDoc": "mobile:sync-docs/reports/2026-08-18_plan-4-three-arms-and-two-deploys.md",
+  "writtenAt": "2026-08-19T21:20:00.000Z",
+  "confirmedAgainst": {
+    "buildId": "i1BDbnq_b8pC7Hm3gD_bM",
+    "date": "2026-08-19",
+    "coldRuns": 3,
+    "realFailuresPerRun": [
+      10,
+      11,
+      10
+    ],
+    "intersectionSize": 9,
+    "resultsFiles": [
+      "scripts/eval/results/eval-2026-08-19T20-25-23-049Z.json",
+      "scripts/eval/results/eval-2026-08-19T20-28-32-417Z.json",
+      "scripts/eval/results/eval-2026-08-19T20-32-13-013Z.json"
+    ],
+    "note": "Three cold runs, same build, minutes apart, box restarted between each. Per-run real-failure counts were 10/11/10; the INTERSECTION was exactly the nine members below and the extra slots were filled only by the three rotators (n-svd-03 twice, n-serv-26 and n-brand-02 once each). SCREEN BEFORE DIFFING: a cold run reporting LIST TOO SHORT or any `s-` failure is degraded retrieval (Typesense -> Postgres fallback), not a result — discard it and re-run."
+  },
+  "causeLegend": {
+    "PANEL": "the winning record's own nutrition panel is wrong (usually an uncaught corrupt OFF row, corruptReason NULL)",
+    "SERVING": "the right record is picked but the wrong serving rung bills it",
+    "PICK": "retrieval or ranking selects the wrong record",
+    "IDENTITY": "the record is a brandless stub carrying a different food's values — repairing its panel would still miss the band"
+  },
+  "members": [
+    {
+      "id": "n-mod-02",
+      "category": "modifiers",
+      "cause": "PANEL",
+      "reason": "off_9348470000900 'Unsweetened Almond Milk' carries kcal100=60 against a [10, 45] band (real ~13-17). Its panel is Atwater-coherent but physically impossible (fiber 4.8 g vs fat 3.5 g per 100 ml), so the calories were computed from wrong macros; corruptReason is NULL, so no detector reaches it. Explicitly NOT a modifier-drop case — the query already resolves to a record NAMED 'Unsweetened Almond Milk'."
+    },
+    {
+      "id": "n-prod-01",
+      "category": "foundation_produce",
+      "cause": "PANEL",
+      "reason": "Bare 'apple' cold-resolves to off_9333022029263 at kcal100=23.9 against a [35, 75] band (real ~52). The panel is Atwater-INcoherent on its own macros, corruptReason is NULL, and the 1-token name puts it squarely in the ~61% detector-unreachable population. Warm is green only because the key was repointed to FDC 171688 as a human-triage pin on 2026-08-03; cold retrieval has never selected that record unaided."
+    },
+    {
+      "id": "n-serv-39",
+      "category": "serving_unit",
+      "cause": "PANEL",
+      "reason": "Bare 'mayonnaise' bills fs_34194 at 14.7 g — grams INSIDE the intended band — but the record is a LIGHT-mayo panel (390 kcal/100g) sitting under the bare generic name, so total.calories=57.0 falls under the [60, 180] band. Warm is masked by a human-triage FoodMapping row; the failure is the panel, not the rung."
+    },
+    {
+      "id": "n-serv-45",
+      "category": "serving_unit",
+      "cause": "SERVING",
+      "reason": "Bare 'bacon' bills 5 g against a [10, 40] band. That 5 g is FatSecret's own default label on fs_1517, '1 thin slice (yield after cooking)'; in-band 8/12/28 g labels exist on the SAME record and are never picked, because fs_default_serving is deliberately not in the serving guard's REPLACE_TIERS. The PR D pt3 cured/breakfast-meat lexicon default (~28 g) therefore never fires here."
+    },
+    {
+      "id": "n-serv-55",
+      "category": "serving_unit",
+      "cause": "SERVING",
+      "reason": "Bare 'pepper jack' bills 2.5 g against an [18, 40] band. The winner off_0858815007307's ONLY serving label is the degenerate '100 g (100 g)' placeholder, which is billed and then CAPPED 100 -> 2.5 g by the spice lexicon matching the contained 'pepper' token: label_serving_default sits in plain CAP_TIERS, while the head-gate fix protects only bare_label_serving. NOTE: the golden-set note's premise of a 'genuine 28 g slice label' is FALSE for this particular winner."
+    },
+    {
+      "id": "n-mq-30",
+      "category": "match_quality",
+      "cause": "PICK",
+      "reason": "The 'bell pepper' -> 'capsicum' synonym rewrite sends retrieval after a token the correct produce records do not carry; cold lands on off_9300462101729 'Diced capsicum' (and on other builds a Delisio pesto under_gate at 0.7010). The human-triage repoints on both keys mask it warm — the documented warm-green / cold-red pattern."
+    },
+    {
+      "id": "n-mq-41",
+      "category": "match_quality",
+      "cause": "PICK",
+      "reason": "The documented #18 brand-bearing chain regression: 'noodles and company pad thai' bills a brandless retail dry-noodle record (off_4099100064773, 127.5 g via bare_name_sibling_serving) instead of fs_81276 [Noodles & Company]. fs_81276 now carries NULL per-100g calories and a gramless serving, which plausibly handicaps it at admission/scoring. The 2026-07-25 warm recovery was a pure cache eviction, not a retrieval fix, which is exactly why the case is still red cold."
+    },
+    {
+      "id": "n-cook-03",
+      "category": "match_quality",
+      "cause": "PICK",
+      "reason": "DELIBERATE RED per its golden-set note. PR #235 (2026-08-04) added a total.calories band precisely so the ~30% over-bill would stop being invisible: cold maps '1 cup cooked black beans' to a saucy OFF composite (off_0039400019442) at 240 g / 295 kcal against the USDA reference 172 g / 227 kcal. It was green for months on scale-free kcal100/carbs100 bands that cannot see grams. Expected red until the source-score asymmetry is fixed."
+    },
+    {
+      "id": "n-prot-02",
+      "category": "foundation_protein",
+      "cause": "IDENTITY",
+      "reason": "Bare 'tofu' resolves to off_3070451041461 'Tofu' at kcal100=13.3, so protein100=0.9 misses its [5, 22] band. Originally filed as PANEL; ADJUDICATED AND REVERSED 2026-08-13 to IDENTITY — the record is a brandless stub carrying House Foods Tofu Shirataki values, so repairing its panel would still miss the band. Not a rotator: 19 consecutive cold failures spanning seven build ids as of 2026-08-14."
+    }
+  ],
+  "rotators": [
+    {
+      "id": "n-brand-02",
+      "category": "match_quality",
+      "expectedToFlap": true,
+      "reason": "AI serving-gram draw on the AiGeneratedServing path: the SAME record (fs_79482119) returned 40 / 50 / 45 / 60 g across four runs, crossing the band. A second flap mechanism sits upstream — 'one bar' is consumed as quantity+unit so the ONE brand token never reaches retrieval, and exact_match then tie-breaks five identically-scored 'Birthday Cake' records in gather order. Failed 1 of the 3 confirming runs (92 of 158 cold runs on record). Presence is NOT a new member."
+    },
+    {
+      "id": "n-serv-26",
+      "category": "serving_unit",
+      "expectedToFlap": true,
+      "reason": "count_unit_ai draw variance on a fixed record: the same fs_4578 row every run, with grams drawing 45 / 240 / 30 across three runs. The 25 g floor holds and there is no ceiling, so the high draws blow the band. Failed 1 of the 3 confirming runs (15 of 158 cold runs on record)."
+    },
+    {
+      "id": "n-svd-03",
+      "category": "serving_dynamic",
+      "expectedToFlap": true,
+      "reason": "'1 glug of olive oil' -> fs_34212 'Olive Oil', tier count_unit_ai, with grams walking 5 -> 10 -> 15 (44.2 / 88.4 / 132.6 kcal) against a [7, 40] band, so run 1 fails and runs 2-3 pass. Classified as pure noise (rotating seat) since its first measurement. Failed 2 of the 3 confirming runs (28 of 158 cold runs on record)."
+    }
+  ],
+  "departed": [
+    {
+      "id": "n-dens-07",
+      "joined": "2026-08-18",
+      "left": "2026-08-19",
+      "reason": "THE TEN THAT BECAME A NINE, and the reason this file exists. '1 tsp salt' joined the set on 2026-08-18 by an explicit decision to leave it red, and left on 2026-08-19 when PR #357 re-banded it from [2, 3.5] to [4.5, 7] (merged fc1e520). The old band asserted the density guard's own 0.5 g/ml fallback rather than the food: the record's declared tsp weight is read first (6.0 g cold via fs_label_volume_declared, 5.2 g warm via label_unit_match), and table salt is ~6 g/tsp. Measured on disk: it failed all six cold runs from 2026-08-18T23:20Z to 2026-08-19T00:09Z (builds 6X4EdJlSKyX9V-6MWf4ZU and 4dfpiS1YnzVhEjX7u64lZ) and was absent from all three runs on i1BDbnq_b8pC7Hm3gD_bM. Nothing in the repo recorded either the entry or the exit; two documents still said ten. check-stable-cold-failures.ts would have printed NEW MEMBER on 2026-08-18T23:20Z and LEFT THE SET on 2026-08-19T20:25Z."
+    },
+    {
+      "id": "n-serv-21",
+      "joined": "before 2026-08-02",
+      "left": "2026-08-15",
+      "reason": "The PREVIOUS silent transition, and the precedent: '12 m&ms' left the set around 2026-08-15 and was initially recorded as UNATTRIBUTABLE — 'left the cold-gate stable set and I cannot attribute it'. It was attributed only later, to PR #320 bumping RULES_VERSION 2 -> 3 and invalidating every v2 mapping. A detector that names the exit on the run it happens turns that from an archaeology problem into a line of output."
+    }
+  ]
+}
