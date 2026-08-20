@@ -1645,6 +1645,18 @@
         "value": "^1$"
       },
       "verified": "2026-08-18"
+    },
+    {
+      "id": "known-issue-pins-equal-flags",
+      "claim": "known-issue-baseline.json pins exactly the knownIssue-flagged golden-set cases (pins == flags). The baseline decayed silently once (20 pins vs 21 flags, found 2026-08-19) because drift is non-gating; this claim makes the next drift report itself. Reconciled 2026-08-20 (plan 8 PR-B).",
+      "command": "python3 -c \"import json;g=json.load(open('scripts/eval/golden-set.json'));k=json.load(open('scripts/eval/known-issue-baseline.json'));f=sorted(c['id'] for s in ('search','nlp') for c in g[s] if c.get('knownIssue'));p=sorted(k['cases']);print(0 if f==p else 1)\"",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "where": "backend",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-20_ultracode-execution-plan-8.md",
+      "verified": "2026-08-20"
     }
   ]
 }

@@ -2,96 +2,6 @@
   "_readme": "Recorded state of each knownIssue case. run-eval compares against this and reports 🟠 DRIFT when a pinned case keeps failing but fails DIFFERENTLY — the signal a pass/fail boolean cannot carry. Refresh with --write-baseline once the new values are understood to be the intended state. Writes MERGE: a filtered (--only/--grep) run refreshes only the pins it ran and leaves the rest intact.",
   "writtenAt": "2026-08-18T07:30:11.354Z",
   "cases": {
-    "s-typo-08": {
-      "foodId": "off_9310653104835",
-      "foodName": "banna yoghurt",
-      "grams": null,
-      "kcal100": 73.69999694824219,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 21
-    },
-    "s-typo-14": {
-      "foodId": "off_5060929632145",
-      "foodName": "Banan",
-      "grams": null,
-      "kcal100": 80,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 27
-    },
-    "n-supp-06": {
-      "foodId": "off_0851770007795",
-      "foodName": "Orgain Organic Protein + Oatmilk Protein Powder",
-      "grams": 45,
-      "kcal100": 358.974365234375,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-supp-12": {
-      "foodId": "off_0810169607039",
-      "foodName": "Ghost Clear Whey Blue Raspberry",
-      "grams": 21.5,
-      "kcal100": 312.5,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-serv-24": {
-      "foodId": "fs_8148992",
-      "foodName": "Fruit Punch",
-      "grams": 177,
-      "kcal100": 28.25,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-serv-51": {
-      "foodId": "fdc_169557",
-      "foodName": "Beef, rib eye, small end (ribs 10-12), separable lean and fat, trimmed to 0\" fat, all grades, cooked, broiled",
-      "grams": 170,
-      "kcal100": 249,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-27": {
-      "foodId": "fs_5268",
-      "foodName": "Lemon",
-      "grams": 58,
-      "kcal100": 29,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-34": {
-      "foodId": "off_0853655005056",
-      "foodName": "Whole milk",
-      "grams": 240,
-      "kcal100": 58,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-36": {
-      "foodId": "off_9348219004831",
-      "foodName": "Rolled Oats",
-      "grams": 40,
-      "kcal100": 400,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-cook-06": {
-      "foodId": "fs_112745332",
-      "foodName": "Steel Cut Oats (Cooked)",
-      "grams": 240,
-      "kcal100": 73,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-brand-05": {
       "foodId": "off_0639001461536",
       "foodName": "Fruit punch",
@@ -106,6 +16,15 @@
       "foodName": "Bang Energy Drink",
       "grams": 454.54545454545456,
       "kcal100": 0,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-36": {
+      "foodId": "off_9348219004831",
+      "foodName": "Rolled Oats",
+      "grams": 40,
+      "kcal100": 400,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -137,24 +56,6 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-mq-47": {
-      "foodId": "off_0296763206050",
-      "foodName": "Boneless Skinless Chicken Breast",
-      "grams": 112,
-      "kcal100": 116,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-seg-18": {
-      "foodId": "off_9340955111613",
-      "foodName": "Greek yogurt",
-      "grams": 170,
-      "kcal100": 120,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 4
-    },
     "n-mq-48": {
       "foodId": "off_0843167089620",
       "foodName": "Egg noodles",
@@ -181,6 +82,60 @@
       "abstained": false,
       "errored": false,
       "itemCount": 1
+    },
+    "n-prose-04": {
+      "foodId": "off_0074175016838",
+      "foodName": "Texas Toast",
+      "grams": 40,
+      "kcal100": 400.0,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-serv-24": {
+      "foodId": "fs_8148992",
+      "foodName": "Fruit Punch",
+      "grams": 177,
+      "kcal100": 28.25,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-serv-51": {
+      "foodId": "fdc_169557",
+      "foodName": "Beef, rib eye, small end (ribs 10-12), separable lean and fat, trimmed to 0\" fat, all grades, cooked, broiled",
+      "grams": 170,
+      "kcal100": 249,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-supp-12": {
+      "foodId": "off_0810169607039",
+      "foodName": "Ghost Clear Whey Blue Raspberry",
+      "grams": 21.5,
+      "kcal100": 312.5,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "s-typo-08": {
+      "foodId": "off_9310653104835",
+      "foodName": "banna yoghurt",
+      "grams": null,
+      "kcal100": 73.69999694824219,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 21
+    },
+    "s-typo-14": {
+      "foodId": "off_5060929632145",
+      "foodName": "Banan",
+      "grams": null,
+      "kcal100": 80,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 27
     }
   }
 }

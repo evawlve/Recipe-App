@@ -1,5 +1,5 @@
 {
-  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Both figures are a 2026-07-26 SNAPSHOT of that PR's delta and are deliberately frozen so it stays legible \u2014 they are NOT the current corpus. Cases added since have moved them (38 / 113 / 150 at 2026-08-15), and the live counts are pinned, with a dated note per movement, in scripts/eval/__tests__/winner-diff.test.ts, which is their owner; re-derive there, not here. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test. NEW ASSERTION (2026-08-17): `expectServingTier` (a tier name, a `prefix*` glob such as `bare_*`, or a list of alternatives) bands the serving rung that billed items[0] — `servingTier` as the pipeline stamps it (names owned by src/lib/mapping/serving-ai-tiers.ts and the census in src/lib/mapping/__tests__/serving-tier-census.test.ts). It is SCORED ONLY WHEN THE RESPONSE ITEM CARRIES `servingTier`, which /api/nlp/parse sends only to the dev bypass with `debug=1` — run-eval sends that in --nocache mode, so the band is judged cold and SKIPPED (fail-open, never a failure) warm; with the key present a null tier is a mismatch. The `prose` category (n-prose-01..16, 2026-08-17) is the first user of it: full-sentence lines with hedges (about/roughly/around/like/maybe/nearly), partitives (some/a bit of/a handful of/a slice of) and filler. Its one-item lines carry TRUTH bands (the published weight, not the pipeline's current bill — the egg-white case is banded to USDA's 243 g cup and stays knownIssue until the sibling-borrow lands); its multi-item lines assert expectItems + identities only, per the rule above.",
+  "_readme": "Golden evaluation set for the food mapping system. 'search' cases hit GET /api/foods/search (manual search); 'nlp' cases hit POST /api/nlp/parse (magic log; items[] bypasses AI segmentation unless 'text' is used). PASS RULE (search): a result within the top `rank` has ALL substrings of at least one alternative in `match` present in its lowercased 'name + brandName'. PASS RULE (nlp): expectName (any item matches), optional expectItems (min count), optional macros (per-100g band on items[0].nutritionPer100g), optional grams (band on items[0].grams — the RESOLVED serving weight), optional total (band on items[0].nutrition — the BILLED totals for the requested quantity; keys calories/protein/carbs/fat/fiber/sugar/sodium). INVARIANT (search): every top-`rank` hit must carry at least one finite macro (verifies the OFF null-nutrition filter); opt out with requireNutrition:false. FLAG knownIssue:true marks a documented-but-unfixed defect — its failure is EXPECTED, reported as 🟡, and does NOT fail the suite (used to catalog serving-estimation gaps as regression targets). Macro/gram bands are deliberately loose: they catch wrong-food and wrong-portion mappings, not data noise. NEW ASSERTIONS (2026-07-25): `forbidName` (same shape as expectName) fails if ANY returned item matches — pins a wrong-record class without having to name the right answer. `expectAbstain: true` requires the mapper to return NO confident pick, for queries whose honest answer is 'not in the corpus' (billing a component at 0.95 is worse than abstaining). `maxConfidence: <n>` is the weak form — it may guess but must not look cacheable. IMPORTANT: an abstention can no longer satisfy `expectName`. The no-pick branch echoes the QUERY TEXT back as foodName, so `expectName:[['burrito']]` used to be satisfied by a total abstention on 'chipotle chicken burrito' — 47 of the nlp cases assert a name and no numeric band, so 47 cases could pass on nothing at all. CALORIE-BLINDNESS CLASS (2026-07-26): a case that asserts only expectName + grams is blind to a wrong PANEL on a right-named record — n-supp-23 passed for months while billing 952.2 kcal for a 414 g bottle containing 230, because off_9568310020398 stores the whole-bottle panel in nutrientsPer100g. Measured BEFORE this change (2026-07-26): 47 of 243 nlp cases carried NO numeric band, and a further 119 carried `grams` with no `macros`/`total` — 166 of 243 could not see a 4x over-bill. AFTER this change: 37 / 112 / 149. Both figures are a 2026-07-26 SNAPSHOT of that PR's delta and are deliberately frozen so it stays legible — they are NOT the current corpus. Cases added since have moved them (38 / 113 / 150 at 2026-08-15), and the live counts are pinned, with a dated note per movement, in scripts/eval/__tests__/winner-diff.test.ts, which is their owner; re-derive there, not here. STANDING RULE: any nlp case that pins ONE food (single `item`, or `text` with expectItems 1) SHOULD carry `total.calories`; add `macros.kcal100` as well whenever the per-100g figure is the discriminator (RTD drink vs powder, raw vs oil, cooked vs dry). Bands are set from the product's published figure with roughly +/-35% width, NOT from the currently-observed value, so a repoint to a correct sibling still passes. Segmentation cases with expectItems >= 2 are deliberately left unbanded: the bands only inspect items[0], and which record lands at index 0 is a segmentation artifact rather than the thing under test. NEW ASSERTION (2026-08-17): `expectServingTier` (a tier name, a `prefix*` glob such as `bare_*`, or a list of alternatives) bands the serving rung that billed items[0] — `servingTier` as the pipeline stamps it (names owned by src/lib/mapping/serving-ai-tiers.ts and the census in src/lib/mapping/__tests__/serving-tier-census.test.ts). It is SCORED ONLY WHEN THE RESPONSE ITEM CARRIES `servingTier`, which /api/nlp/parse sends only to the dev bypass with `debug=1` — run-eval sends that in --nocache mode, so the band is judged cold and SKIPPED (fail-open, never a failure) warm; with the key present a null tier is a mismatch. The `prose` category (n-prose-01..16, 2026-08-17) is the first user of it: full-sentence lines with hedges (about/roughly/around/like/maybe/nearly), partitives (some/a bit of/a handful of/a slice of) and filler. Its one-item lines carry TRUTH bands (the published weight, not the pipeline's current bill — the egg-white case is banded to USDA's 243 g cup and stays knownIssue until the sibling-borrow lands); its multi-item lines assert expectItems + identities only, per the rule above.",
   "search": [
     {
       "id": "s-gen-01",
@@ -1389,18 +1389,36 @@
       "category": "chain_restaurant",
       "query": "burger king whopper jr",
       "rank": 3,
-      "match": [["whopper jr"]],
-      "requireEnergy": [["whopper jr"]],
+      "match": [
+        [
+          "whopper jr"
+        ]
+      ],
+      "requireEnergy": [
+        [
+          "whopper jr"
+        ]
+      ],
       "minItems": 12,
-      "notes": "Observed 2026-08-14: n=16, first match rank 0, 7 of 8 'whopper jr' hits at kcal100 0 (fs_68444899 'Whopper Jr.' and siblings). Chain-record energy class, added 2026-08-14. FatSecret's generic \"1 serving\" restaurant records carry per-serving macros but no gram weight and no per-100g panel, so derivePer100gFromServings() refuses them and runLocalSearch() shipped them as kcal100 0 / protein100 0 / carbs100 0 / fat100 0 with a fabricated '100 g' portion. 3,394 of 24,124 FatSecretFood rows are that shape (measured on the box 2026-08-14). requireEnergy is deliberately per-case rather than a global all-zero invariant: 0/0/0/0 is a correct panel for water and diet soda, and a global rule reds s-edge-03 and s-sem-04 forever \u2014 see SearchCaseSpec.requireEnergy in scripts/eval/assertions.ts. rank/minItems MEASURED at cut time against the box (szIZeR6Ah_JBjJL3xHs5K), three consecutive runs, list length and first-match rank identical in all three; minItems set ~25%% below the observed length so a fail-open FatSecret lane reds the case but ordinary corpus churn does not. Re-derive: run-eval.ts --only search --grep s-chain."
+      "notes": "Observed 2026-08-14: n=16, first match rank 0, 7 of 8 'whopper jr' hits at kcal100 0 (fs_68444899 'Whopper Jr.' and siblings). Chain-record energy class, added 2026-08-14. FatSecret's generic \"1 serving\" restaurant records carry per-serving macros but no gram weight and no per-100g panel, so derivePer100gFromServings() refuses them and runLocalSearch() shipped them as kcal100 0 / protein100 0 / carbs100 0 / fat100 0 with a fabricated '100 g' portion. 3,394 of 24,124 FatSecretFood rows are that shape (measured on the box 2026-08-14). requireEnergy is deliberately per-case rather than a global all-zero invariant: 0/0/0/0 is a correct panel for water and diet soda, and a global rule reds s-edge-03 and s-sem-04 forever — see SearchCaseSpec.requireEnergy in scripts/eval/assertions.ts. rank/minItems MEASURED at cut time against the box (szIZeR6Ah_JBjJL3xHs5K), three consecutive runs, list length and first-match rank identical in all three; minItems set ~25%% below the observed length so a fail-open FatSecret lane reds the case but ordinary corpus churn does not. Re-derive: run-eval.ts --only search --grep s-chain."
     },
     {
       "id": "s-chain-02",
       "category": "chain_restaurant",
       "query": "panera mac and cheese",
       "rank": 3,
-      "match": [["mac", "cheese"]],
-      "requireEnergy": [["mac", "cheese"]],
+      "match": [
+        [
+          "mac",
+          "cheese"
+        ]
+      ],
+      "requireEnergy": [
+        [
+          "mac",
+          "cheese"
+        ]
+      ],
       "minItems": 15,
       "notes": "Observed 2026-08-14: n=20, first match rank 0, 8 of 15 'mac cheese' hits at kcal100 0 (fs_84357270 'Mac & Cheese - Cup' and siblings)."
     },
@@ -1409,8 +1427,18 @@
       "category": "chain_restaurant",
       "query": "dunkin iced latte with oatmilk",
       "rank": 3,
-      "match": [["latte", "oatmilk"]],
-      "requireEnergy": [["latte", "oatmilk"]],
+      "match": [
+        [
+          "latte",
+          "oatmilk"
+        ]
+      ],
+      "requireEnergy": [
+        [
+          "latte",
+          "oatmilk"
+        ]
+      ],
       "minItems": 17,
       "notes": "Observed 2026-08-14: n=23, first match rank 1, 6 of 9 'latte oatmilk' hits at kcal100 0 (fs_68757780 'Iced Latte with Oatmilk - Medium' and siblings)."
     },
@@ -1419,8 +1447,16 @@
       "category": "chain_restaurant",
       "query": "chipotle steak bowl",
       "rank": 3,
-      "match": [["steak bowl"]],
-      "requireEnergy": [["bowl"]],
+      "match": [
+        [
+          "steak bowl"
+        ]
+      ],
+      "requireEnergy": [
+        [
+          "bowl"
+        ]
+      ],
       "minItems": 18,
       "notes": "Observed 2026-08-14: n=24, first match rank 0, 3 of 14 'bowl' hits at kcal100 0 (fs_77419819 'Steak Bowl', 'Amelaine Bowl', 'Wholesome Bowl'). requireEnergy is the broad ['bowl'] rather than ['steak bowl'] because it catches 3 defect rows instead of 1."
     }
@@ -2979,7 +3015,6 @@
           "honey"
         ]
       ],
-      "knownIssue": true,
       "notes": "Composite collapse family. Was knownIssue (nondeterministic: some runs collapsed to ONE Greek-yogurt-honey-granola item at 12g); PROMOTED to hard 2026-07-21 after 3 consecutive stable runs post PR #112/#116. DEMOTED back to knownIssue 2026-08-07 per this note's own prescription, after a third documented flap: cold run eval-2026-08-07T05-07-13-126Z (build iOjeeUZoaUFpuJkD1eTbO) collapsed to ONE item ('expected >=3 items, got 1', winner off_4088700149973) while the two sibling runs on the SAME build (05-01, 05-04) segmented 4 items and passed — the ~1-in-3 parse-stage segmentation collapse also seen as this case's rotator seat in the stage-1b cold gate (2026-08-06). DELIBERATELY UNPINNED in known-issue-baseline-cold.json (2026-08-06): driftedKnownIssues() skips unpinned cases, and that is the intended state here — the itemCount 4-vs-1 flap would register as drift every ~third run and pollute the drift list; drift tracking is knowingly waived for this case until re-promotion. Re-promote with a dated note after 3 consecutive stable cold runs."
     },
     {
@@ -5620,7 +5655,6 @@
           40
         ]
       },
-      "knownIssue": true,
       "notes": "PR D pt3 class (b) — kJ-as-kcal corruption (warm-2026-07-20: lemon billed 383 kcal/100g = kJ value in the kcal field). Denylist works (0840609112113 no longer wins) but the corpus has NO plausible raw-lemon record at all — 2026-07-21 deploy probe: retrieval top-8 = lemon-pepper turkey, danish pastry, Fanta Lemon, Ritz Lemon crackers; winner off_0651544502002 at 108.7 kcal/100g. Ingest/ranking-gap class (with salt/cinnamon/oatmeal). Flip back to hard once a raw-lemon record is ingested."
     },
     {
@@ -5780,7 +5814,6 @@
           160
         ]
       },
-      "knownIssue": true,
       "notes": "PR D pt3 class (c) KNOWN ISSUE — identity qualifier stripped (2026-07-20 triage: 'whole milk' collapsed to the bare 'milk' key and could serve skim/low-fat macros). 'whole' joins IDENTITY_QUALIFIERS in the cache key (+ PROTECTED_PRODUCT_PHRASES keeps it through the segmenter); whole milk >=3.25g fat/100g (upper 10 = one-sided '>=3'). total.calories [130,160] added 2026-08-07, derived from three recorded observations: warm fs_794 146.0 kcal (recorded 2026-08-05), cold fs_794 146.0 kcal (2026-08-07 x3 byte-identical on build iOjeeUZoaUFpuJkD1eTbO, files eval-2026-08-07T05-0*Z), and the older cold arm off_0853655005056 at 139.2 kcal. knownIssue KEPT 2026-08-07: the most recent warm results file on disk (eval-2026-08-03T11-34-35-909Z.json, localhost) still records the collapse (off_9335390000028 'Milk', fat100=1.3, kcal 108.5, RED), so 'green on both arms' is not established — un-flag after the next box-served warm run is green on this case."
     },
     {
@@ -6130,7 +6163,6 @@
           95
         ]
       },
-      "knownIssue": true,
       "notes": "NOW PASSING 2026-08-03, still flagged knownIssue — promote after 2 more stable cold runs. The 'CORPUS-BLOCKED / needs ingest' reading was FALSE here too: restoring IDENTITY_QUALIFIERS into the retrieval query moved this from dry 'Rolled Oats' (361 kcal/100g) to FatSecret 'Steel Cut Oats (Cooked)' with no ingest. Note the sibling n-mq-36 'oatmeal' is a DIFFERENT case — it carries no 'cooked' token, so no qualifier can be restored and it still returns dry oats."
     },
     {
@@ -6574,7 +6606,6 @@
           260
         ]
       },
-      "knownIssue": true,
       "notes": "OVER-ADMISSION TRIPWIRE for n-mq-43..46, and a separately-found defect. Measured 2026-07-25 on the deployed corpus by resolving the seed COLD (skipCache) in two isolated, write-guarded trees that differed only in the PR #160 patch. This seed is UNCHANGED by #160 — off_0208065711897 'Skinless Chicken Breast' [Mary's Chicken] 112 g / 130 kcal, pool 10 both before and after — which is the point: opening the Trader Joe's pool must not reorder a query that already had one. It is marked knownIssue because the answer is WRONG IN A DIFFERENT WAY: the brand is Mary's Chicken, not Trader Joe's, even though off_0274038708522 (\"Trader Joe's Boneless Skinless Chicken Breast\") exists and was the record hijacking 'trader joes gone bananas' before #160. Same food, wrong brand, right macros — so the numeric bands pass and only the brand is wrong, which is why this class survived every gate. Do not 'fix' this by tightening the brand requirement without measuring n-mq-43..46 again; the two pull in opposite directions. ASSERTION CORRECTED TWICE, and the second correction is the instructive one. Round 1 added forbidName [\"mary's\"] after the case reported 'NOW PASSING' on the wrong-brand record. Round 2 (2026-07-26, post-#160 deploy) it reported 'NOW PASSING' AGAIN — because the winner had moved to a THIRD brand, off 'Skinless Chicken Breast' [Great Value] 112 g / 140 kcal. Neither Mary's nor Trader Joe's. Enumerating forbidden brands is the wrong SHAPE of assertion: it can only ever exclude the wrong answers you have already seen, and a retrieval change just walks to the next one. Replaced with a POSITIVE brand requirement — expectName [[\"chicken breast\",\"trader joe\"]], inner-AND against name+brand — which is satisfied by exactly one thing, the correct record, and is robust to every wrong brand including ones not yet observed. Still knownIssue: off_0274038708522 (\"Trader Joe's Boneless Skinless Chicken Breast\") exists and is not being retrieved. This tightening changes NO pipeline behaviour and therefore cannot affect n-mq-43..46 — the warning above about the two pulling in opposite directions applies to changing the brand requirement in the MAPPER, not in this assertion."
     },
     {
@@ -7115,7 +7146,6 @@
           "toast"
         ]
       ],
-      "knownIssue": true,
       "notes": "PROSE SET (2026-08-17) — the sitting's log VERBATIM; owner: sync-docs/reports/2026-08-17_the-prose-log-is-clean-at-the-split-and-lost-at-the-portion.md (mobile). The AI split was clean (seven items, seg-v2 SegmentationCache row: egg whites / chopped bell peppers / onions / mushrooms / spinach / avocado oil / texas toast; filler dropped, nothing invented) but not deterministic in rawText — a nocache re-run emitted 'scrambled with a bit of chopped bell peppers' as a rawText with identity unchanged. The COUNT and the identities are the assertion; grams/total are deliberately absent because bands read items[0] and which line lands at index 0 is a segmentation artefact (_readme). Its single-line halves are banded on their own: n-prose-01 (egg whites), n-prose-07 (avocado oil), n-prose-04 (texas toast). Costs a segmenter call on every cold run. | MEASURED 2026-08-18 (three cold runs, one build B4HEbh1SKj7NmLZEFdWh_): itemCount 7 / 3 / 7, pass True / False / True. The failing draw emitted ONE composite item for the whole 'with' clause, so this is a COUNT COLLAPSE, not only the rawText drift recorded above. Left HARD deliberately - the 7-item split is the assertion this case exists for and a collapse is a real defect, not noise. Its cost is that this case alone keeps evalExitCode() non-zero on roughly 1 run in 3; read the non-prose stable set, not the exit code. Decision for Diego in the write-off: pin it for drift like n-prose-04, or leave it red. | PINNED 2026-08-18: the 'Left HARD deliberately' decision above is superseded by Diego's call in the write-off - pin it, with a measurable unpin condition. Measured: three cold runs on ONE build (B4HEbh1SKj7NmLZEFdWh_; results eval-2026-08-18T07-20-41 / 07-24-51 / 07-28-15, minutes apart, noCache) read itemCount 7 / 3 / 7, pass True / False / True. The failing draw emitted ONE composite item for the whole 'with' clause - 'Scrambled Egg Whites with Bell Peppers, Onions, Mushrooms, and Spinach' (ai_estimated, 240 g, kcal100 77) - collapsing five of the seven expected items into one, 7 -> 3. So this is a COUNT COLLAPSE, not the rawText drift recorded at the top of this note; do not conflate them. Pinned, knownIssueDrift reports 'itemCount 7 -> 3' instead of a pass/fail boolean (assertions.ts describeDrift, via numberDrifted's 10% band - 7 -> 3 is 57% and always reports), and since the count IS the assertion here, drift carries the whole finding rather than a subset of it. UNPIN WHEN THREE COLD RUNS ON ONE BUILD ALL READ itemCount 7 - that is the entire condition, and nothing else promotes this case. The tension is deliberate: the paragraph above argues against pinning, because the 7-item split is the assertion this case exists for and a collapse is a real defect, not noise. That argument still stands. It is pinned anyway because a HARD coin at ~1 run in 3 makes evalExitCode() unreadable for the other 373 cases, and the measurable unpin keeps the defect an INSTRUMENT instead of hiding it: pinned, it is read on every cold run and its drift is recorded; red, it was a flap nobody could act on. Read the itemCount line, NOT the record line: items[0] is unstable even between the two PASSING runs ('of scrambled', foodId null, 0 g vs 'Egg Whites', off_0038057100398, 120 g), because which line lands at index 0 is the segmentation artefact this note already flags - so the foodId/grams/kcal100 the cold baseline records here will drift with nothing wrong. The 7-way tail is stable in shape across both passes; only the head varies. No cold-baseline entry yet (that file holds 17 pins, this is not one); non-gating, lands on the next authorized --write-baseline run. Until then expect NOW PASSING on ~1 run in 3 - that is the coin, not a promotion signal. HYPOTHESIS, NOT MEASURED: the collapse looks like the seg-v2 segmenter drawing a composite 'dish' reading of the 'with' clause rather than the mapper merging seven split items, and the composite's cuid foodId (cmsyc7s4r008kw3wwcaerhe7b, ai_estimated) is consistent with an AI-estimated row resolved for the whole clause - but which layer produces the composite was not instrumented, and neither was why the draw varies on one build. Do not quote it until measured."
     },
     {
