@@ -43,9 +43,11 @@ function readBuildId(): string | null {
  *    that a zeroed instrument reading as a measurement is this repo's most repeated defect.
  *
  * 3. It reuses the EXISTING `DEV_API_KEY` check (the same one `admin/food-stats` and the five
- *    key-only routes use), hardcoded fallback included. A new env var would be a var the box does
- *    not have — which is exactly how 0.5(a)'s instrument went silent — and would make this counter
- *    structurally unreadable on the box on day one.
+ *    key-only routes use). Since 2026-08-20 that check FAILS CLOSED: no fallback literal, so an
+ *    unset/empty `DEV_API_KEY` reads `authorized: false` rather than authorizing a committed
+ *    string. A new env var would still be a var the box does not have — which is exactly how
+ *    0.5(a)'s instrument went silent — and would make this counter structurally unreadable on the
+ *    box on day one.
  *
  * Counters and `buildId` come back in ONE response, so a counter can never be attributed to the
  * wrong build. Same reason #232 exists.
@@ -60,7 +62,8 @@ function readBuildId(): string | null {
  */
 export async function GET(req: NextRequest) {
   const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const authorized = apiKey === (process.env.DEV_API_KEY || 'dev-key-123');
+  const devApiKey = process.env.DEV_API_KEY;
+  const authorized = !!devApiKey && apiKey === devApiKey;
   return NextResponse.json({
     ok: true,
     ts: Date.now(),

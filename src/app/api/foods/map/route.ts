@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-    const expectedApiKey = process.env.DEV_API_KEY || 'adminAPI_dev_key_bypass';
-    const isApiKeyAuth = apiKey === expectedApiKey;
+    const expectedApiKey = process.env.DEV_API_KEY;
+    const isApiKeyAuth = !!expectedApiKey && apiKey === expectedApiKey;
 
     let user = null;
     if (!isApiKeyAuth) {

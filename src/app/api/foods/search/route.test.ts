@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 import { GET } from './route';
 
+// The route fails closed (2026-08-20): the dev key must come from the env - there is no
+// fallback literal behind the `api_key` the requests below carry.
+process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass';
+
 // Mock Prisma
 jest.mock('@/lib/db', () => ({
   prisma: {

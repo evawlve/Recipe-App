@@ -22,10 +22,10 @@ export async function GET(req: NextRequest) {
 
     // Check for API key in headers or query params
     const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-    const devApiKey = process.env.DEV_API_KEY || 'dev-key-123';
+    const devApiKey = process.env.DEV_API_KEY;
     
-    // Allow API key bypass for development
-    if (apiKey === devApiKey) {
+    // Allow API key bypass for development (fails closed: unset/empty DEV_API_KEY grants nothing)
+    if (devApiKey && apiKey === devApiKey) {
       console.log('Admin access granted via API key');
     } else {
       // Fallback to user authentication

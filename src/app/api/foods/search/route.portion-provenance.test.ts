@@ -16,6 +16,8 @@
 import { NextRequest } from 'next/server';
 import { GET } from './route';
 
+process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass'; // fail-closed route (2026-08-20): the key must come from the env
+
 jest.mock('@/lib/db', () => ({
   prisma: { food: { findMany: jest.fn().mockResolvedValue([]) } },
 }));

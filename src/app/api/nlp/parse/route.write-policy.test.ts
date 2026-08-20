@@ -126,7 +126,9 @@ describe('/api/nlp/parse nosave=1 refuses AI-serving writes', () => {
 
   beforeAll(() => {
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/test';
-    delete process.env.DEV_API_KEY;
+    // Fail-closed route (2026-08-20): the bypass key must come from the env — there is no
+    // fallback literal to fall back onto — so pin the exact key the requests below send.
+    process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass';
     delete process.env.MAPPING_EVENT_LOG_ENABLED;
   });
 
@@ -234,5 +236,35 @@ describe('/api/nlp/parse nosave=1 refuses AI-serving writes', () => {
     const res = await POST(devRequest({ items: ['1 cup egg whites'] }));
 
     expect(res.headers.get('X-Write-Receipt')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth fails closed (2026-08-20). The two 401 legs live here because this file
+// already owns the dev-key request helper; the third leg — env-set key =>
+// authorized — is every 200 in the suite above. Neither test reaches the DB or
+// the mapper: the route refuses before either is touched.
+// ---------------------------------------------------------------------------
+describe('/api/nlp/parse dev-key auth fails closed', () => {
+  test('with DEV_API_KEY unset, the retired fallback literal is refused', async () => {
+    const saved = process.env.DEV_API_KEY;
+    try {
+      delete process.env.DEV_API_KEY;
+      const res = await POST(devRequest({ items: ['1 cup egg whites'] }));
+      expect(res.status).toBe(401);
+    } finally {
+      process.env.DEV_API_KEY = saved as string;
+    }
+  });
+
+  test('a wrong key without a bearer token is refused', async () => {
+    const res = await POST(
+      new NextRequest('http://localhost:3000/api/nlp/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': 'not-the-key' },
+        body: JSON.stringify({ items: ['1 cup egg whites'] }),
+      }),
+    );
+    expect(res.status).toBe(401);
   });
 });
