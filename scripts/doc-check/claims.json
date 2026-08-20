@@ -303,28 +303,28 @@
       "verified": "2026-07-30"
     },
     {
-      "id": "sprint-s4-struck",
-      "claim": "Sprint plan §4 struck items: 7 (struck §4 items are 'N. ~~' list lines, NOT '| ~~' table rows — that pattern only fits §5). Went 6 -> 7 on 2026-08-14 when decision 54 (port the OFF ingest crons to the OptiPlex) was struck: both off-delta.timer and off-parquet-refresh.timer are now installed and armed on the box and off-delta-state.json reads lastRunAt 2026-08-10, so the recommendation the entry carried is actioned and the OFF corpus is not frozen.",
+      "id": "sprint-s4-closed",
+      "claim": "Sprint plan §4 closed items: 7. §4's closed items are 'N. **CLOSED' LIST LINES, not '| **CLOSED' table rows — that pattern only fits §5. The marker changed on 2026-08-19: the doc used `~~struck~~` until the rule-5 compliance pass replaced every marker with a **CLOSED prefix and rewrote each entry as its resolution. Count is unchanged at 7 across that change.",
       "ownerDoc": "mobile:sync-docs/sprint_plan_2026-07-28_queue_execution.md",
       "where": "mobile",
-      "command": "awk '/^## 4\\. Open/,/^## 5\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^[0-9]+\\. ~~'",
+      "command": "awk '/^## 4\\. Open/,/^## 5\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^[0-9]+\\. \\*\\*CLOSED'",
       "expect": {
         "kind": "count",
         "value": "7"
       },
-      "verified": "2026-08-14"
+      "verified": "2026-08-19"
     },
     {
-      "id": "sprint-s5-struck",
-      "claim": "Sprint plan §5 struck rows: 11",
+      "id": "sprint-s5-closed",
+      "claim": "Sprint plan §5 closed rows: 11. Marker changed from `~~` to a **CLOSED prefix in the Action cell on 2026-08-19 (rule-5 compliance pass); count unchanged at 11.",
       "ownerDoc": "mobile:sync-docs/sprint_plan_2026-07-28_queue_execution.md",
       "where": "mobile",
-      "command": "awk '/^## 5\\./,/^## 6\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^\\| ~~'",
+      "command": "awk '/^## 5\\./,/^## 6\\./' sync-docs/sprint_plan_2026-07-28_queue_execution.md | grep -cE '^\\|.*\\| \\*\\*CLOSED'",
       "expect": {
         "kind": "count",
         "value": "11"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-08-19"
     },
     {
       "id": "citations-zero-normative-docs",
