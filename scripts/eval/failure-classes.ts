@@ -82,6 +82,7 @@ import { normalizeClassId, type FunnelStage } from '../../src/lib/mapping/funnel
 // import here would turn a SELECT-only run into one that spends FatSecret quota and
 // upserts FatSecretFood rows. The core module is the same code, leaf-imported.
 import { deriveCacheKeyName, collapseAdjacentDuplicateTokens } from '../../src/lib/mapping/cache-key-core';
+import { stripPartitiveOfResidue } from '../../src/lib/mapping/partitive-residue';
 import { parseIngredientLine, type ParsedIngredient } from '../../src/lib/parse/ingredient-line';
 
 // ---------------------------------------------------------------------------
@@ -432,7 +433,8 @@ function isPureWaterQuery(rawLine: string): boolean {
  *   step 2  brand prefix            — NOT reproducible (see below)             ❌
  *   step 3  collapseAdjacentDuplicateTokens                                    ✅
  *
- * Verified 2026-07-25 against the real deriveMappingCacheKey over 17 lines: this
+ * Verified 2026-07-25 against the real deriveMappingCacheKey over 17 lines (and re-aligned
+ * 2026-08-20 when step 0, the edge-`of` strip, was added to both): this
  * equals `deriveMappingCacheKey(name, parseIngredientLine(rawLine), null, rawLine)`
  * on all 17, and equals the FULL brand-aware key on 15 — the two misses are exactly
  * the brand-decisive prefixes ("quest protein bar" writes "bar protein quest", this
@@ -461,7 +463,9 @@ function isPureWaterQuery(rawLine: string): boolean {
  * have detected this itself).
  */
 export function deriveFunnelCacheKey(rawLine: string, normalizedForm: string | null): string {
-    const name = normalizedForm ?? rawLine;
+    // step 0 (2026-08-20, LANE S): mirror deriveMappingCacheKey's edge-`of` strip, or
+    // residue rows (the exact population LANE S exists for) misjoin hadIncumbent.
+    const name = stripPartitiveOfResidue(normalizedForm ?? rawLine);
     let parsed: ParsedIngredient | null = null;
     try {
         parsed = parseIngredientLine(rawLine);

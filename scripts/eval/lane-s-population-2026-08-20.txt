@@ -1,0 +1,127 @@
+# LANE S gate population — 2026-08-20
+# One raw ingredient line per line. '#' = comment/section. Blank lines ignored.
+# Format: filePopulation() in scripts/eval/warm-cold-diff.ts; also feeds winner-gate.sh --cold-seeds.
+# Sources: sync-docs/reports/2026-08-18_plan-3-the-two-builds-and-the-partitive-corpus.md (mobile),
+#          scripts/eval/partitive-forked-keys.md (backend), n-prose-08 verbatim, template grid.
+
+# --- 1. Hand-corpus movers (28; plan-3 "Every line that moved") ---
+1 cup of milk
+4 oz of chicken breast
+100 g of chicken breast
+1 slice of swiss cheese
+1 bag of chips
+3 packets of sugar
+1 cup of rice
+1 cup of cooked white rice
+1 slice of pizza
+1 cup of cheerios
+1 piece of gum
+1 can of coke
+4 oz of firm tofu
+2 cloves of garlic
+2 stalks of celery
+a slice of texas toast
+a handful of almonds
+a can of soup
+an ounce of cheese
+a cup of coffee
+a bunch of kale
+a stick of butter
+a piece of chicken
+a cup of brown rice
+1 cup of water
+1 half of onion
+2 x 200 g of flour
+chicken of the sea
+
+# --- 2. Hand-corpus controls (12 more; of-in-name / edge cases — must NOT move) ---
+1 cup of cream of wheat
+1 knob of butter
+2 slices of
+a couple of eggs
+campbells cream of mushroom soup
+cream of wheat
+half a cup of rice
+hearts of palm
+honey bunches of oats
+leg of lamb
+pinch of salt
+wheat thins hint of salt
+
+# --- 3. Forked-key producers (partitive-forked-keys.md; incl. section-S free-text lines and the ai-normalize re-introduction path) ---
+3 cups of spinach
+2 cups of spinach
+1 cup of rolled oats
+2 slices of pepperoni pizza
+1 cup of whole milk
+100g garlic of
+100g firm of tofu
+amy's organic cream of tomato soup
+post honey bunches of oats rolled
+honey bunches of oats almond
+snyders of hanover pretzels
+tostitos hint of lime
+wendys son of baconator
+
+# --- 4. n-prose-08 verbatim (hedge residue observed, deliberately NOT stripped by this lane) ---
+approximately 2 cups of spinach
+
+# --- 5. Template grid: 6 partitive templates x 10 cache-resident section-A/B target foods ---
+1 cup of bacon
+1 cup of spinach
+1 cup of pizza
+1 cup of salmon
+1 cup of cinnamon
+1 cup of sugar
+1 cup of coke
+1 cup of brown rice
+2 slices of bacon
+2 slices of spinach
+2 slices of milk
+2 slices of pizza
+2 slices of salmon
+2 slices of cheerios
+2 slices of cinnamon
+2 slices of sugar
+2 slices of coke
+2 slices of brown rice
+a can of bacon
+a can of spinach
+a can of milk
+a can of pizza
+a can of salmon
+a can of cheerios
+a can of cinnamon
+a can of sugar
+a can of coke
+a can of brown rice
+an ounce of bacon
+an ounce of spinach
+an ounce of milk
+an ounce of pizza
+an ounce of salmon
+an ounce of cheerios
+an ounce of cinnamon
+an ounce of sugar
+an ounce of coke
+an ounce of brown rice
+a handful of bacon
+a handful of spinach
+a handful of milk
+a handful of pizza
+a handful of salmon
+a handful of cheerios
+a handful of cinnamon
+a handful of sugar
+a handful of coke
+a handful of brown rice
+100 g of bacon
+100 g of spinach
+100 g of milk
+100 g of pizza
+100 g of salmon
+100 g of cheerios
+100 g of cinnamon
+100 g of sugar
+100 g of coke
+100 g of brown rice

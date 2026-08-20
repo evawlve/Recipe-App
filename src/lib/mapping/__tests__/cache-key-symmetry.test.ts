@@ -256,7 +256,12 @@ describe('deriveMappingCacheKey — read/write symmetry', () => {
             // A later query whose normalized name equals the stored key (e.g.
             // the row's own normalizedForm fed back through the pipeline) must
             // derive the identical key — this is what makes saved rows
-            // permanently reachable.
+            // permanently reachable. SCOPE (2026-08-20, LANE S): this holds for
+            // every fixture here, but is no longer universal — a canonical key
+            // whose mid-`of` sorted to an EDGE (`leg of lamb` -> `lamb leg of`)
+            // would move under stripPartitiveOfResidue if fed back as a name.
+            // No pipeline path does that (verified in partitive-residue.test.ts,
+            // which pins the exception); see the amended doc block in cache-key.ts.
             const savedKey = deriveMappingCacheKey(c.normalizedName, c.parsed, c.brand, c.rawLine);
             expect(deriveMappingCacheKey(savedKey, null, c.brand, c.rawLine)).toBe(savedKey);
             // And stability under repeated derivation with the original parse:
