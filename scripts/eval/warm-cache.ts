@@ -238,7 +238,7 @@ async function warmOne(seed: string, base: string, apiKey: string, timeoutMs: nu
 }
 
 export async function runWarm(seeds: string[], opts: WarmOptions): Promise<WarmRunReport> {
-    const apiKey = opts.apiKey ?? process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
+    const apiKey = opts.apiKey ?? process.env.EVAL_API_KEY ?? process.env.DEV_API_KEY ?? '';
     // Sanitised, not trusted: Number('abc') is NaN and Array.from({length: NaN})
     // builds ZERO workers — the whole corpus is silently skipped and the run
     // reports "0 ok, 0 errors" as if it were clean. Class-B shape; floor at 1.

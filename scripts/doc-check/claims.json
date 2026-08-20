@@ -1476,16 +1476,16 @@
       "verified": "2026-08-12"
     },
     {
-      "id": "dev-api-key-fallback-sites-seven",
-      "claim": "Seven production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`, so an UNSET DEV_API_KEY fails OPEN onto a committed literal rather than refusing the request. This is the ROTATION surface for item #23 and it is deliberately a DIFFERENT count from the 5 that CLAUDE.md also carries: that 5 is 'key-only routes with zero bearer references' and is still correct. The extra two here are nlp/parse (which does have a bearer path) and ok. Two distinct literals are in play — dev-key-123 on admin/food-stats and ok, adminAPI_dev_key_bypass on the other five — so a rotation that assumes one literal or five sites leaves a committed key live. If this claim FAILS the surface moved and #23 must be re-sized before anything is rotated.",
+      "id": "dev-api-key-no-fallback-sites",
+      "claim": "Zero production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`: the fallback literals (dev-key-123 on admin/food-stats + ok, adminAPI_dev_key_bypass on the other five) were removed 2026-08-20, so an UNSET or EMPTY DEV_API_KEY fails CLOSED — the request is refused rather than authorized by a committed string. The 5-vs-7 split this entry used to carry is retired with the fallbacks; the 5 'key-only routes with zero bearer references' count in CLAUDE.md is a separate fact and still correct. If this claim FAILS a fallback literal came back and the #23 rotation surface must be re-sized before anything is rotated.",
       "ownerDoc": "mobile:CLAUDE.md#state-digest",
       "where": "backend",
       "command": "grep -rl 'process.env.DEV_API_KEY ||' src/app/api --include=route.ts | wc -l",
       "expect": {
         "kind": "count",
-        "value": "7"
+        "value": "0"
       },
-      "verified": "2026-08-14"
+      "verified": "2026-08-20"
     },
     {
       "id": "off-delta-timer-armed-on-box",

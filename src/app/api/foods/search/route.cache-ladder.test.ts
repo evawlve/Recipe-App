@@ -15,6 +15,7 @@
  * must be set before anything imports it — hence this separate file.
  */
 process.env.FATSECRET_CACHE_MODE = 'primary';
+process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass'; // fail-closed route (2026-08-20): the key must come from the env
 
 import { NextRequest } from 'next/server';
 import { GET } from './route';

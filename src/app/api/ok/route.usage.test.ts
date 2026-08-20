@@ -17,7 +17,11 @@ import {
 } from '@/lib/ai/llm-usage-metrics';
 import { STRUCTURED_LLM_PURPOSES } from '@/lib/ai/llm-purposes';
 
-const KEY = process.env.DEV_API_KEY || 'dev-key-123';
+// The route fails closed (2026-08-20): authorization needs DEV_API_KEY set in the env. The
+// route reads it per-request, so this assignment governs every call below — including over
+// whatever a transitive `dotenv/config` import may have loaded from a dev `.env`.
+process.env.DEV_API_KEY = 'test-ok-key';
+const KEY = 'test-ok-key';
 
 function req(headers: Record<string, string> = {}, url = 'http://localhost:3000/api/ok') {
     return new NextRequest(url, { method: 'GET', headers });
@@ -86,6 +90,23 @@ describe('GET /api/ok', () => {
         const body = await res.json();
         expect(body.ok).toBe(true);
         expect(body.llm).toEqual({ authorized: false });
+    });
+
+    it('with DEV_API_KEY unset or empty nothing authorizes — the retired fallback literal included', async () => {
+        const saved = process.env.DEV_API_KEY;
+        try {
+            // Unset: the string that used to be the fallback must no longer authorize.
+            delete process.env.DEV_API_KEY;
+            let body = await (await GET(req({ 'x-api-key': 'dev-key-123' }))).json();
+            expect(body.llm).toEqual({ authorized: false });
+
+            // Empty: an empty env value must not meet an empty caller key.
+            process.env.DEV_API_KEY = '';
+            body = await (await GET(req({}, 'http://localhost:3000/api/ok?api_key='))).json();
+            expect(body.llm).toEqual({ authorized: false });
+        } finally {
+            process.env.DEV_API_KEY = saved as string;
+        }
     });
 
     it('reports counters that were recorded, alongside the buildId that produced them', async () => {

@@ -106,7 +106,9 @@ async function parseOne(text: string) {
 describe('/api/nlp/parse portionProvenance', () => {
   beforeAll(() => {
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/test';
-    delete process.env.DEV_API_KEY;
+    // Fail-closed route (2026-08-20): the bypass key must come from the env — there is no
+    // fallback literal to fall back onto — so pin the exact key the requests below send.
+    process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass';
     // Telemetry off: this file is about the wire, and the mocked createMany
     // would accept anything anyway.
     process.env.MAPPING_EVENT_LOG_ENABLED = 'false';

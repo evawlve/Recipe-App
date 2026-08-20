@@ -38,7 +38,7 @@ function argValue(flag: string): string | undefined {
 }
 
 const BASE = argValue('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
-const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
+const API_KEY = process.env.EVAL_API_KEY ?? process.env.DEV_API_KEY ?? '';
 const ONLY = argValue('--only');
 const GREP = argValue('--grep');
 /** Re-record the knownIssue baseline from this run instead of comparing against it. */

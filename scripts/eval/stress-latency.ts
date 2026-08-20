@@ -27,7 +27,7 @@ const flag = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i 
 const has = (f: string) => argv.includes(f);
 
 const BASE = flag('--base') ?? process.env.EVAL_API_BASE ?? 'http://192.168.1.133:3000';
-const API_KEY = process.env.EVAL_API_KEY ?? 'adminAPI_dev_key_bypass';
+const API_KEY = process.env.EVAL_API_KEY ?? process.env.DEV_API_KEY ?? '';
 const REPEAT = parseInt(flag('--n') ?? '1', 10);
 const CONCURRENCY = parseInt(flag('--concurrency') ?? '1', 10);
 const TIMEOUT = parseInt(flag('--timeout') ?? '15000', 10);
