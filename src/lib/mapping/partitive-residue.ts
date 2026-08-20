@@ -18,6 +18,12 @@
  *   unchanged. Mid-`of` is deliberately OUT of scope: no lexicon separates "firm of tofu"
  *   from "cream of wheat", and the parser keeps both.
  *
+ * TWO-SITE COMPOSITION: the pipeline applies this once at preflight (baseName) and once
+ * inside deriveMappingCacheKey (step 0), so a double-edge input like "of of salt" yields
+ * query "of salt" but key "salt" — a query/key divergence confined to a class with ZERO
+ * observed forms in 148,643 MappingEventLog rows (measured 2026-08-20). Each single call
+ * still drops AT MOST ONE token.
+ *
  * IMPORT-LEAF CONTRACT: this file imports NOTHING. Read-only eval tooling imports it directly;
  * importing cache-key.ts instead would transitively load config.ts (env snapshot + ONNX warm).
  */
