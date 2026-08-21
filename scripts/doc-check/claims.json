@@ -98,18 +98,6 @@
       "verified": "2026-07-30"
     },
     {
-      "id": "search-route-key-only",
-      "claim": "/api/foods/search has no bearer-token path — key-only auth (part of why item #23 is not a one-liner)",
-      "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
-      "where": "backend",
-      "command": "grep -cE 'Authorization|Bearer' src/app/api/foods/search/route.ts",
-      "expect": {
-        "kind": "count",
-        "value": "0"
-      },
-      "verified": "2026-07-30"
-    },
-    {
       "id": "dev-bypass-email-substring-removed",
       "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the exact allowlist (google_test_user@kindahealthy.com, endsWith @google.com, diego@example.com). This claim pins the substring checks ABSENT.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
@@ -1655,6 +1643,54 @@
       "expect": {
         "kind": "equals",
         "value": "enabled"
+      },
+      "verified": "2026-08-21"
+    },
+    {
+      "id": "search-route-accepts-key-or-bearer",
+      "claim": "/api/foods/search authenticates through the shared authenticateRequest() chokepoint accepting the dev key OR a Supabase bearer (Program Plan 9 H1, backend PR #371, deployed 2026-08-21 as WJMIDfm60hb3sMF4gjG35). Replaces the retired `search-route-key-only` (grep for Authorization|Bearer = 0), whose premise — key-only, no bearer path — was the #23 trap this PR closed. The alpha client is keyless and relies on this path; if it FAILS, every signed-in mobile search 401s.",
+      "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
+      "where": "backend",
+      "command": "grep -c \"accept: \\['key', 'bearer'\\]\" src/app/api/foods/search/route.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-08-21"
+    },
+    {
+      "id": "foods-id-get-authenticated",
+      "claim": "GET /api/foods/[id] is no longer public: it goes through authenticateRequest() (key, bearer or the web session cookie). It was open to everyone until 2026-08-21 (#371). The Funnel spec's ordering rule depends on this: /api/foods may be exposed only while this holds.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-21_tailscale-funnel-spec.md",
+      "where": "backend",
+      "command": "grep -c 'authenticateRequest' 'src/app/api/foods/[id]/route.ts'",
+      "expect": {
+        "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-08-21"
+    },
+    {
+      "id": "parse-cache-hit-not-charged",
+      "claim": "/api/nlp/parse charges a bearer caller's rate-limit allowance only for requests that did paid work: the NlpRequestLog row is written at the end of runParse() behind isFreeParseRequest() (every line cache_hit/fast_path AND no AI segmentation call), never in the preamble. A user re-logging yesterday's breakfast spends nothing (#371).",
+      "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
+      "where": "backend",
+      "command": "grep -c 'isFreeParseRequest' src/app/api/nlp/parse/route.ts",
+      "expect": {
+        "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-08-21"
+    },
+    {
+      "id": "parse-limits-documented",
+      "claim": "The parse rate limits are env-tunable (NLP_PARSE_LIMIT_PER_MINUTE / NLP_PARSE_LIMIT_PER_DAY, read per request, fail closed to 10/100 on anything that is not a positive integer) and both are documented in .env.example, so a box retune is edit + restart with no rebuild (#371). The hardcoded 3/20 that sprint_execution_progress.md §3 named is gone.",
+      "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
+      "where": "backend",
+      "command": "grep -cE '^NLP_PARSE_LIMIT_PER_(MINUTE|DAY)=' .env.example",
+      "expect": {
+        "kind": "count",
+        "value": "2"
       },
       "verified": "2026-08-21"
     }
