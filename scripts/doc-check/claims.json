@@ -122,18 +122,6 @@
       "verified": "2026-08-20"
     },
     {
-      "id": "hardcoded-fallback-key-still-present",
-      "claim": "Item #23 still open: the hardcoded dev key fallback exists in backend src",
-      "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
-      "where": "backend",
-      "command": "grep -rn 'adminAPI_dev_key_bypass' src | wc -l",
-      "expect": {
-        "kind": "min",
-        "value": "1"
-      },
-      "verified": "2026-07-30"
-    },
-    {
       "id": "split-ingredients-persisted",
       "claim": "splitIngredients is a persisted column on AiNormalizeCache (PR #187)",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
