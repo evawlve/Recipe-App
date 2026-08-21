@@ -460,6 +460,16 @@ export function evalExitCode(results: Array<{ pass: boolean; knownIssue?: boolea
     return results.some(r => !r.pass && !r.knownIssue) ? 1 : 0;
 }
 
+/**
+ * True when EVERY result was refused at the door (HTTP 401/403): the credential is
+ * empty or wrong, and the run measured the auth layer, not the pipeline. run-eval exits
+ * 2 on it before writing anything. A transport error with no status (`httpStatus`
+ * undefined) is NOT a refusal — it must keep reading as the failure it is.
+ */
+export function allRequestsRefused(results: Array<{ httpStatus?: number }>): boolean {
+    return results.length > 0 && results.every(r => r.httpStatus === 401 || r.httpStatus === 403);
+}
+
 /** The minimum a result must carry for the drift check to be able to see it. */
 export interface DriftableResult {
     id: string;
