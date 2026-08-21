@@ -17,11 +17,22 @@ import {
 } from '@/lib/ai/llm-usage-metrics';
 import { STRUCTURED_LLM_PURPOSES } from '@/lib/ai/llm-purposes';
 
+// The bearer path goes through the lazily built Supabase client; mock the SDK so a
+// token is judged by `mockGetUser` and nothing dials GoTrue. Thunked: `jest.mock` is
+// hoisted above this const.
+const mockGetUser = jest.fn();
+jest.mock('@supabase/supabase-js', () => ({
+    createClient: jest.fn(() => ({ auth: { getUser: (...a: unknown[]) => mockGetUser(...a) } })),
+}));
+
 // The route fails closed (2026-08-20): authorization needs DEV_API_KEY set in the env. The
 // route reads it per-request, so this assignment governs every call below — including over
 // whatever a transitive `dotenv/config` import may have loaded from a dev `.env`.
 process.env.DEV_API_KEY = 'test-ok-key';
 const KEY = 'test-ok-key';
+// The lazy client needs SOME Supabase env or every bearer reads `auth_unavailable`.
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://unit.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-role-test';
 
 function req(headers: Record<string, string> = {}, url = 'http://localhost:3000/api/ok') {
     return new NextRequest(url, { method: 'GET', headers });
@@ -29,6 +40,8 @@ function req(headers: Record<string, string> = {}, url = 'http://localhost:3000/
 
 beforeEach(() => {
     resetLlmUsageMetrics();
+    mockGetUser.mockReset();
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'someone@example.org' } }, error: null });
 });
 
 describe('GET /api/ok', () => {
@@ -126,5 +139,48 @@ describe('GET /api/ok', () => {
         });
         expect(body.llm.byModel['openai/gpt-4o-mini'].responses).toBe(1);
         expect('buildId' in body).toBe(true);
+    });
+});
+
+/**
+ * `auth` — the additive field that says HOW the caller authenticated. Always present,
+ * never a 401: this is the post-deploy check for the bearer path ("did my token
+ * authenticate?") without guessing from a 200. A bearer is reported, never trusted with
+ * the counters — only the key unlocks `llm`.
+ */
+describe('GET /api/ok auth field', () => {
+    it('no credentials → { via: null, reason: missing_credentials }, still a 200', async () => {
+        const res = await GET(req());
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.auth).toEqual({ via: null, reason: 'missing_credentials' });
+        expect(body.ok).toBe(true);
+    });
+
+    it('the dev key → { via: key }', async () => {
+        const body = await (await GET(req({ 'x-api-key': KEY }))).json();
+        expect(body.auth).toEqual({ via: 'key' });
+        expect(body.llm.authorized).toBe(true);
+        expect(mockGetUser).not.toHaveBeenCalled();
+    });
+
+    it('a valid bearer → { via: bearer } and the counters stay LOCKED', async () => {
+        const body = await (await GET(req({ Authorization: 'Bearer good-token' }))).json();
+        expect(body.auth).toEqual({ via: 'bearer' });
+        expect(body.llm).toEqual({ authorized: false });
+        expect(mockGetUser).toHaveBeenCalledWith('good-token');
+        // No identity on the wire.
+        const raw = JSON.stringify(body);
+        expect(raw).not.toContain('user-1');
+        expect(raw).not.toContain('someone@example.org');
+    });
+
+    it('a bad bearer → 200 with { via: null, reason: invalid_bearer }', async () => {
+        mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'invalid JWT' } });
+        const res = await GET(req({ Authorization: 'Bearer bad' }));
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.auth).toEqual({ via: null, reason: 'invalid_bearer' });
+        expect(body.llm).toEqual({ authorized: false });
     });
 });

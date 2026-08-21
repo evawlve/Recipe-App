@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/db';
-// Statically imported, unlike everything else this handler uses: write-policy.ts imports
-// only `node:async_hooks`, so it costs nothing at module load and the route must be able
-// to open the scope before the first dynamic import inside the handler.
+// Statically imported, unlike almost everything else this handler uses: write-policy.ts
+// imports only `node:async_hooks`, so it costs nothing at module load and the route must
+// be able to open the scope before the first dynamic import inside the handler.
 import { runWithWritePolicy, currentWriteReceipt } from '@/lib/write-policy';
+// The other static import. It replaces the module-scope `createClient(url || '', key || '')`
+// this route used to build at import time — which threw in any process without the
+// Supabase env. The client is now built lazily, on the first bearer, in
+// src/lib/supabase/admin.ts; the dev-key path never builds it at all.
+import { authenticateRequest } from '@/lib/auth/request-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 type ParsedInputItem = {
   rawText: string;
@@ -56,48 +56,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key first (Dev bypass — fails closed: unset/empty DEV_API_KEY authorizes nothing)
-  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const expectedApiKey = process.env.DEV_API_KEY;
-  
-  let isDevBypass = false;
-
-  if (expectedApiKey && apiKey && apiKey === expectedApiKey) {
-    isDevBypass = true;
+  // Who is calling — the dev key (bypass; fails closed on an unset/empty DEV_API_KEY) or
+  // a Supabase JWT bearer, through the shared chokepoint. The three 401 bodies below are
+  // the ones this route has always sent, keyed on the helper's failure reason, so no
+  // client sees a new string.
+  const auth = await authenticateRequest(req, { accept: ['key', 'bearer'] });
+  if (auth.via === null) {
+    const message =
+      auth.reason === 'invalid_bearer' ? 'Unauthorized: Invalid authentication session'
+      : auth.reason === 'auth_unavailable' ? 'Unauthorized: Auth service validation failed'
+      : 'Unauthorized: Missing or invalid token';
+    return NextResponse.json({ error: message }, { status: 401 });
   }
 
-  let userId: string | null = null;
-  let userEmail: string | null = null;
+  let isDevBypass = auth.via === 'key';
+  const userId = auth.userId;
+  const userEmail = auth.email;
 
-  if (!isDevBypass) {
-    // If not local dev bypass, we authenticate using Supabase JWT Bearer token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
-    }
-    const token = authHeader.substring(7);
-
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized: Invalid authentication session' }, { status: 401 });
-      }
-      userId = user.id;
-      userEmail = user.email || null;
-
-      // Check if user email qualifies for the dev/test bypass. Exact matches and the review
-      // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
-      // user whose address contained either substring skipped rate limiting.
-      if (userEmail && (
-        userEmail === 'google_test_user@kindahealthy.com' ||
-        userEmail.endsWith('@google.com') ||
-        userEmail === 'diego@example.com'
-      )) {
-        isDevBypass = true;
-      }
-    } catch (err) {
-      return NextResponse.json({ error: 'Unauthorized: Auth service validation failed' }, { status: 401 });
-    }
+  // Check if user email qualifies for the dev/test bypass. Exact matches and the review
+  // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
+  // user whose address contained either substring skipped rate limiting. Deliberately
+  // INLINE in this route, not in the helper: doc-check claim
+  // `dev-bypass-email-substring-removed` greps THIS file for substring checks and would
+  // pass vacuously if the allowlist lived anywhere else.
+  if (userEmail && (
+    userEmail === 'google_test_user@kindahealthy.com' ||
+    userEmail.endsWith('@google.com') ||
+    userEmail === 'diego@example.com'
+  )) {
+    isDevBypass = true;
   }
 
   // Rate Limiting Enforcement (skipped for dev/test bypass users)
