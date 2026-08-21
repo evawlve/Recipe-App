@@ -29,6 +29,7 @@ import {
     scoreNlpCase,
     scoreSearchCase,
     type BaselineEntry,
+    allRequestsRefused,
 } from './assertions';
 
 const args = process.argv.slice(2);
@@ -128,6 +129,12 @@ interface CaseResult {
     /** Documented-but-unfixed defect: failure is expected and does NOT fail the suite. */
     knownIssue?: boolean;
     observed?: Observed;
+    /**
+     * HTTP status of the response, when one arrived. Top-level on purpose — NOT inside
+     * `observed`, which the knownIssue drift check diffs against the baseline; a new
+     * field there would read as DRIFT on every pin. Consumed by allRequestsRefused().
+     */
+    httpStatus?: number;
 }
 
 const results: CaseResult[] = [];
@@ -233,6 +240,7 @@ async function runSearchCase(c: any): Promise<CaseResult> {
         return {
             id: c.id, kind: 'search', category: c.category, query: c.query, pass, ms, detail, confidence,
             knownIssue: c.knownIssue,
+            httpStatus: res.status,
             observed: {
                 foodId: hits[0]?.id ?? hits[0]?.foodId ?? null,
                 foodName: hits[0]?.name ?? null,
@@ -282,6 +290,7 @@ async function runNlpCase(c: any): Promise<CaseResult> {
                 id: c.id, kind: 'nlp', category: c.category, query, pass: false, ms,
                 detail: `TRANSPORT: no items returned (HTTP ${res.status})`,
                 knownIssue: c.knownIssue,
+                httpStatus: res.status,
                 observed: { itemCount: 0, errored: true },
             };
         }
@@ -305,6 +314,7 @@ async function runNlpCase(c: any): Promise<CaseResult> {
             pass: failures.length === 0, ms,
             detail: failures.length ? failures.join('; ') : `mapped: "${items[0]?.foodName}" grams=${items[0]?.grams} conf=${confidence?.toFixed(2)}${tierNote}`,
             confidence, knownIssue: c.knownIssue,
+            httpStatus: res.status,
             observed: {
                 foodId: items[0]?.foodId ?? null,
                 foodName: items[0]?.foodName ?? null,
@@ -342,6 +352,16 @@ async function main() {
         .catch(() => null);
 
     console.log(`Eval against ${BASE} — ${searchCases.length} search + ${nlpCases.length} nlp cases`);
+
+    // Fail closed on the credential BEFORE any request. Since #362 every route this
+    // script calls refuses an empty key with 401, and this script loads no dotenv, so a
+    // bare `npm run eval:golden` read as "359 real failures" in 11 s on 2026-08-21 — a
+    // transport failure wearing a result's clothes. Exit 2 = "not a result", same as the
+    // zero-case path.
+    if (!API_KEY) {
+        console.error('❌ AUTH: EVAL_API_KEY/DEV_API_KEY is empty in this shell — every fail-closed route answers 401 and the run would read as hundreds of "real failures". Not an eval result. Export the key first (`set -a; . ./.env; set +a`). Exit 2.');
+        process.exit(2);
+    }
     console.log(`build: ${buildId ?? 'UNKNOWN (API does not report one — record it by hand)'}\n`);
 
     // Warm the API (dev-mode compile, embedding model) so case 1 isn't penalized.
@@ -387,6 +407,14 @@ async function main() {
         summary.categories[key] = summary.categories[key] ?? { pass: 0, total: 0 };
         summary.categories[key].total++;
         if (r.pass) summary.categories[key].pass++;
+    }
+
+    // Every request refused at the door is an AUTH failure, not a measurement: exit 2
+    // before the results file or the knownIssue baseline can be written from it (an
+    // all-401 results file makes `eval:cold-set` read "347 NEW MEMBERS").
+    if (allRequestsRefused(results)) {
+        console.error(`❌ AUTH: all ${results.length} requests were refused (HTTP 401/403) — wrong or empty EVAL_API_KEY/DEV_API_KEY. Not an eval result; nothing written. Exit 2.`);
+        process.exit(2);
     }
 
     const realFails = results.filter(r => !r.pass && !r.knownIssue);

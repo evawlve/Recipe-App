@@ -1645,6 +1645,18 @@
       "where": "backend",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-20_ultracode-execution-plan-8.md",
       "verified": "2026-08-20"
+    },
+    {
+      "id": "supabase-keepalive-timer-armed-on-box",
+      "claim": "The daily Supabase keep-alive timer is installed and enabled on the box (06:10 box-local, one RLS-scoped REST read of user_preferences with the anon key), so the free-tier project cannot pause for the ~7-day inactivity rule and take auth down for every user. Installed 2026-08-21 (Lane A, plan 10) after the 2026-08-13 NXDOMAIN finding. If this FAILS the project is one idle week from pausing; re-enable with systemctl --user enable --now supabase-keepalive.timer and test-fire the service (journal must read HTTP 200).",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-13_supabase-is-bypassed-not-insecure.md",
+      "where": "box",
+      "command": "systemctl --user is-enabled supabase-keepalive.timer 2>/dev/null",
+      "expect": {
+        "kind": "equals",
+        "value": "enabled"
+      },
+      "verified": "2026-08-21"
     }
   ]
 }
