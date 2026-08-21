@@ -12,8 +12,13 @@
  * or the app ever ran a findMany/findFirst/count/aggregate/groupBy against it,
  * in Prisma or in raw SQL (re-derive:
  * `grep -rin mappingvalidationverdict src scripts prisma --include='*.ts'`).
- * `reviewedAt` is declared in the schema and has never been written by anything:
- * it is NULL on every row.
+ * `reviewedAt` was declared in the schema and, until 2026-08-21, never written by
+ * anything: NULL on every row. Since Program Plan 9 / A3 (2026-08-21) it IS
+ * written — by exactly one script, `stamp-validator-reviewed.ts` next to this
+ * one, under a per-batch Diego grant — and THIS reader consumes it: a pair whose
+ * verdicts all carry a stamp is reported as REVIEWED with its disposition, and
+ * fresh verdicts arriving after the stamp re-open it. That pair of scripts is
+ * "validator-triage operating loop v1": read → decide → stamp → drained.
  *
  * So "SUSPECT feeds a repair queue" was a HUMAN CONVENTION, not code, and it
  * failed the way conventions do. `avocado bowl cava harissa` — 7 of 7 verdicts
@@ -31,6 +36,27 @@
  *   - identical `billedGrams` across all n.
  * Specified by mobile `sync-docs/reports/2026-08-14_validator-backlog-screen-
  * assessment.md` §5(2), which owns the rule and its costing.
+ *
+ * ---------------------------------------------------------------------------
+ * THE MAJORITY VIEW — HUMAN-REVIEW ONLY, NEVER AN AUTO-BAR (D-A3, 2026-08-21)
+ * ---------------------------------------------------------------------------
+ * Unanimity is the right AUTO bar and the wrong READING aid. The cost of it was
+ * measured on the live table: `core fairlife power` reached 5/6 SUSPECT on
+ * 2026-08-20 and 9/10 on 2026-08-21 — nine serving verdicts at the same 250 g
+ * bill over ten nights, hidden by ONE `OK` — while the rule above reported
+ * "no candidates". That is disagreement of exactly the kind §3 of the assessment
+ * measured (a judge that misreads a row is not independent night to night), and
+ * a human reading the queue wants to see it, not have it averaged away.
+ *
+ * So the report carries a second section: every repeated pair with n >= MIN_N
+ * verdicts and a STRICT majority SUSPECT (2k > n) that the unanimity rule does
+ * NOT emit. It is a VIEW: nothing downstream may treat a majority row as a
+ * candidate, no script reads it as a queue, and `billedGrams` is NOT required to
+ * agree (a moved bill is shown, because "the bill moved" is the finding for a
+ * human). Rows are ordered by SUSPECT share, then n, then `serves` — where
+ * `serves` is FoodMapping.usedCount, carried as an ORDERING AID and nothing else:
+ * it is our own gate traffic (owner: mobile reports/2026-08-10_the-serve-weights-
+ * are-our-own-traffic.md) and prices nothing.
  *
  * The repeats are FREE. The 04:30 nightly flywheel sweep re-saves the same mined
  * hot-head key set, so a key that stays wrong is re-judged every night out of the
@@ -86,6 +112,7 @@
  *     -r tsconfig-paths/register scripts/eval/validator-triage-queue.ts
  *
  *   # show the comparator the rule is defended against, and every near miss
+ *   # (the majority view is ALWAYS printed — it is the human's section)
  *   ... scripts/eval/validator-triage-queue.ts --all
  *   # sensitivity: what a different threshold would have emitted
  *   ... scripts/eval/validator-triage-queue.ts --min-n 2
@@ -128,6 +155,10 @@ export interface VerdictRecord {
     billedKcal: number;
     servingTier: string | null;
     createdAt: Date;
+    /** Set ONLY by stamp-validator-reviewed.ts (granted write). null = nobody has looked. */
+    reviewedAt: Date | null;
+    /** `<who>:<disposition>` as written by the stamp script; see parseReviewedBy(). */
+    reviewedBy: string | null;
 }
 
 /**
@@ -145,6 +176,11 @@ export interface MappingPointer {
     brandName: string | null;
     validatedBy: string;
     validatedAt: Date;
+    /**
+     * OUR OWN TRAFFIC — gate scripts, sittings, nightlies (owner: the serve-weights
+     * report). Carried as an ordering aid in the majority view and never as a price.
+     */
+    usedCount: number;
 }
 
 /**
@@ -204,6 +240,61 @@ export interface PairGroup {
     lastSeen: Date;
     /** Distinct UTC calendar days the verdicts span — the sweep runs once a night. */
     nights: number;
+    /** Review state, derived from the stamp columns — see ReviewState. */
+    review: ReviewState;
+}
+
+/**
+ * What the stamp script has said about a pair, read back.
+ *
+ * A pair is OPEN when at least one of its verdicts carries no `reviewedAt`. The
+ * sweep keeps re-validating the hot head nightly, so a stamped pair that keeps
+ * drawing SUSPECT re-opens by itself — `newSinceReview` is how many verdicts
+ * arrived after the latest stamp. That is deliberate: a disposition is a claim
+ * about the evidence that existed when it was written, not a permanent mute.
+ */
+export interface ReviewState {
+    /** True when every verdict on the pair is stamped. */
+    reviewed: boolean;
+    /** Latest stamp on the pair, or null when nothing is stamped. */
+    latest: { at: Date; by: string | null; who: string | null; disposition: string | null } | null;
+    /** Verdicts with no stamp — on a reviewed pair this is 0, on a never-reviewed pair it is n. */
+    unreviewedCount: number;
+    /** Verdicts created AFTER the latest stamp (fresh evidence since the human looked). */
+    newSinceReview: number;
+}
+
+/**
+ * `reviewedBy` is written as `<who>:<disposition>` by stamp-validator-reviewed.ts.
+ * Anything else (a bare name, an empty string) reads back as who-only with no
+ * disposition — never a throw, because a hand-written value must not break the
+ * report that exists to show it.
+ */
+export function parseReviewedBy(raw: string | null | undefined): { who: string | null; disposition: string | null } {
+    if (raw == null) return { who: null, disposition: null };
+    const trimmed = raw.trim();
+    if (!trimmed) return { who: null, disposition: null };
+    const i = trimmed.indexOf(':');
+    if (i < 0) return { who: trimmed, disposition: null };
+    const who = trimmed.slice(0, i).trim() || null;
+    const disposition = trimmed.slice(i + 1).trim() || null;
+    return { who, disposition };
+}
+
+/** Derive ReviewState from a pair's verdicts (any order). PURE. */
+export function reviewStateOf(verdicts: ReadonlyArray<Pick<VerdictRecord, 'createdAt' | 'reviewedAt' | 'reviewedBy'>>): ReviewState {
+    let latest: ReviewState['latest'] = null;
+    let unreviewedCount = 0;
+    for (const v of verdicts) {
+        if (!v.reviewedAt) { unreviewedCount++; continue; }
+        if (!latest || v.reviewedAt.getTime() > latest.at.getTime()) {
+            latest = { at: v.reviewedAt, by: v.reviewedBy ?? null, ...parseReviewedBy(v.reviewedBy) };
+        }
+    }
+    const newSinceReview = latest
+        ? verdicts.filter(v => v.createdAt.getTime() > latest!.at.getTime()).length
+        : 0;
+    return { reviewed: unreviewedCount === 0 && verdicts.length > 0, latest, unreviewedCount, newSinceReview };
 }
 
 /** Group verdicts by `(normalizedForm, foodId)`, preserving first-seen order. */
@@ -249,6 +340,7 @@ export function groupByPair(verdicts: VerdictRecord[]): PairGroup[] {
             firstSeen: sorted[0].createdAt,
             lastSeen: sorted[sorted.length - 1].createdAt,
             nights: days.size,
+            review: reviewStateOf(sorted),
         });
     }
     return groups;
@@ -293,6 +385,21 @@ export function naiveAnySuspect(group: PairGroup): boolean {
     return group.n > 1 && group.suspectCount > 0;
 }
 
+/**
+ * The majority VIEW's predicate: n >= minN and a STRICT majority SUSPECT
+ * (2k > n), on a pair the unanimity rule does NOT emit. PURE.
+ *
+ * No billedGrams clause, on purpose — see the header. A 4/4 pair whose bill
+ * moved between nights fails the RULE (the judgements are not about one claim)
+ * and lands HERE, with both bills shown, because that is what a human needs to
+ * see. This is a view for eyes, never an input to anything automatic (D-A3).
+ */
+export function majorityPair(group: PairGroup, minN: number = TRIAGE_MIN_N): boolean {
+    if (group.n < minN) return false;
+    if (2 * group.suspectCount <= group.n) return false;
+    return !screenPair(group, minN).qualifies;
+}
+
 // ---------------------------------------------------------------------------
 // The queue
 // ---------------------------------------------------------------------------
@@ -324,6 +431,47 @@ export interface TriageCandidate {
     currentValidatedAt: string | null;
     /** Plain-language statement of what the pointerStatus means for acting on this row. */
     note: string;
+    /** Stamp state, so a reviewed candidate reads as reviewed instead of re-appearing as open. */
+    review: ReviewSummary;
+}
+
+/** ReviewState with the Date rendered as ISO — the JSON-facing twin. */
+export interface ReviewSummary {
+    reviewed: boolean;
+    reviewedAt: string | null;
+    who: string | null;
+    disposition: string | null;
+    unreviewedCount: number;
+    newSinceReview: number;
+}
+
+/** One row of the majority view. A VIEW row, never a candidate. */
+export interface MajorityRow {
+    normalizedForm: string;
+    foodId: string;
+    n: number;
+    suspectCount: number;
+    /** suspectCount / n, 0..1. */
+    share: number;
+    distinctBilledGrams: number[];
+    axisCounts: Record<string, number>;
+    servingTiers: (string | null)[];
+    phrases: string[];
+    /** The latest SUSPECT verdict's reason — the judge's most recent words. */
+    latestSuspectReason: string | null;
+    firstSeen: string;
+    lastSeen: string;
+    nights: number;
+    pointerStatus: PointerStatus;
+    currentFoodId: string | null;
+    currentFoodName: string | null;
+    currentBrandName: string | null;
+    currentValidatedBy: string | null;
+    /** FoodMapping.usedCount — OUR OWN TRAFFIC, an ordering aid only. null when the row is gone. */
+    serves: number | null;
+    /** Why the unanimity rule did not emit it — the same clause strings the near-miss table shows. */
+    notEmittedBecause: string[];
+    review: ReviewSummary;
 }
 
 export interface NearMiss {
@@ -346,14 +494,24 @@ export interface TriageQueueReport {
     suspectVerdictCount: number;
     distinctPairCount: number;
     repeatedPairCount: number;
-    /** How many rows carry a reviewedAt — expected 0; nothing in either repo writes it. */
+    /**
+     * Rows carrying a reviewedAt — the program's repair-intake metric (Program Plan 9
+     * §Verification: "reviewedAt 0 → >0 at A3 and growing"). Written only by
+     * stamp-validator-reviewed.ts under a grant.
+     */
     reviewedCount: number;
     /** Pairs the rule emits. */
     candidates: TriageCandidate[];
     /** Of those, the ones still pointing at the judged record. */
     actionableCount: number;
     staleCount: number;
+    /** Candidates with no unstamped verdict — dispositions on file, nothing new since. */
+    reviewedCandidateCount: number;
+    /** Candidates with at least one unstamped verdict — what a human still has to look at. */
+    openCandidateCount: number;
     byPointerStatus: Record<PointerStatus, number>;
+    /** The human-review-only majority view — see the header. Ordered by share, n, serves. */
+    majority: MajorityRow[];
     /** Pairs the naive comparator would emit — the receipt for the rule's strictness. */
     naiveCandidateCount: number;
     nearMisses: NearMiss[];
@@ -363,6 +521,17 @@ export interface TriageQueueReport {
 
 function iso(d: Date): string {
     return d.toISOString();
+}
+
+function reviewSummaryOf(r: ReviewState): ReviewSummary {
+    return {
+        reviewed: r.reviewed,
+        reviewedAt: r.latest ? iso(r.latest.at) : null,
+        who: r.latest?.who ?? null,
+        disposition: r.latest?.disposition ?? null,
+        unreviewedCount: r.unreviewedCount,
+        newSinceReview: r.newSinceReview,
+    };
 }
 
 function noteFor(status: PointerStatus, judged: string, current: string | null, validatedBy: string | null): string {
@@ -408,6 +577,7 @@ export function buildTriageQueue(
     const groups = groupByPair(verdicts);
     const candidates: TriageCandidate[] = [];
     const nearMisses: NearMiss[] = [];
+    const majority: MajorityRow[] = [];
     const byPointerStatus: Record<PointerStatus, number> = { live: 0, repointed: 0, missing: 0, unresolvable: 0 };
     let naiveCandidateCount = 0;
     let repeatedPairCount = 0;
@@ -419,6 +589,34 @@ export function buildTriageQueue(
 
         const screen = screenPair(g, minN);
         if (!screen.qualifies) {
+            if (majorityPair(g, minN)) {
+                const mapping = byForm.get(g.normalizedForm) ?? null;
+                const status = pointerStatusOf(g.foodId, mapping);
+                const suspects = g.verdicts.filter(v => v.verdict === 'SUSPECT');
+                majority.push({
+                    normalizedForm: g.normalizedForm,
+                    foodId: g.foodId,
+                    n: g.n,
+                    suspectCount: g.suspectCount,
+                    share: g.suspectCount / g.n,
+                    distinctBilledGrams: g.distinctBilledGrams,
+                    axisCounts: g.axisCounts,
+                    servingTiers: Array.from(new Set(g.verdicts.map(v => v.servingTier))),
+                    phrases: g.phrases,
+                    latestSuspectReason: suspects.length ? suspects[suspects.length - 1].reason : null,
+                    firstSeen: iso(g.firstSeen),
+                    lastSeen: iso(g.lastSeen),
+                    nights: g.nights,
+                    pointerStatus: status,
+                    currentFoodId: mapping ? mappingTargetId(mapping) : null,
+                    currentFoodName: mapping?.foodName ?? null,
+                    currentBrandName: mapping?.brandName ?? null,
+                    currentValidatedBy: mapping?.validatedBy ?? null,
+                    serves: mapping ? mapping.usedCount : null,
+                    notEmittedBecause: screen.failReasons,
+                    review: reviewSummaryOf(g.review),
+                });
+            }
             // Only pairs with SUSPECT evidence are worth showing as near misses; an
             // all-OK pair is not a miss, it is a pass.
             if (g.suspectCount > 0) {
@@ -461,15 +659,21 @@ export function buildTriageQueue(
             currentValidatedBy: mapping?.validatedBy ?? null,
             currentValidatedAt: mapping ? iso(mapping.validatedAt) : null,
             note: noteFor(status, g.foodId, current, mapping?.validatedBy ?? null),
+            review: reviewSummaryOf(g.review),
         });
     }
 
     // Worst first: most verdicts, then most recent.
     candidates.sort((a, b) => b.n - a.n || b.lastSeen.localeCompare(a.lastSeen) || a.normalizedForm.localeCompare(b.normalizedForm));
     nearMisses.sort((a, b) => b.suspectCount - a.suspectCount || b.n - a.n || a.normalizedForm.localeCompare(b.normalizedForm));
+    // Share, then n, then serves (ordering aid only — see the header), then key.
+    majority.sort((a, b) => b.share - a.share || b.n - a.n || (b.serves ?? -1) - (a.serves ?? -1)
+        || a.normalizedForm.localeCompare(b.normalizedForm));
 
     const actionableCount = byPointerStatus.live;
     const staleCount = candidates.length - actionableCount;
+    const reviewedCandidateCount = candidates.filter(c => c.review.reviewed).length;
+    const openCandidateCount = candidates.length - reviewedCandidateCount;
 
     const caveats: string[] = [
         `RULE: n >= ${minN} verdicts on a (normalizedForm, foodId) pair, ALL SUSPECT, with identical `
@@ -482,12 +686,21 @@ export function buildTriageQueue(
         + 'fleet tranche, not this script.',
         'ZERO CANDIDATES IS NOT "THE CACHE IS CLEAN". It means no pair reached unanimity at this threshold in '
         + 'the verdicts written so far — a statement about ~1 row/day of evidence, not about the cache.',
-        'reviewedAt IS NOT WRITTEN by this script (it is read-only), so a candidate RE-APPEARS on every run '
-        + 'until a human acts. This is a standing report, not a self-draining queue.',
+        'reviewedAt IS NOT WRITTEN by this script (it is read-only). It is written by '
+        + 'stamp-validator-reviewed.ts under a per-batch grant, and only that drains a candidate here; an '
+        + 'unstamped candidate RE-APPEARS on every run. This is a standing report until someone stamps.',
         'The verdict table has NO foreign key and is point-in-time. A candidate whose pointerStatus is not '
         + '`live` is stale evidence about a record the cache no longer serves — reported, never dropped.',
         'PROBE THE PHRASE VERBATIM. `phrases` carries the exact text each verdict judged; it is the '
         + 'measured-to-reach string, and re-typing it from the normalizedForm key mis-routes.',
+        'THE MAJORITY VIEW IS FOR EYES ONLY (D-A3, 2026-08-21): a pair with n >= minN and a strict '
+        + 'majority SUSPECT that the unanimity rule did not emit. Nothing may treat a majority row as a '
+        + 'candidate or feed it to an automatic bar; the unanimity auto-bar stays. `serves` is '
+        + 'FoodMapping.usedCount — our own gate traffic — an ordering aid, never a price.',
+        'A REVIEWED pair is one whose every verdict carries a reviewedAt (written only by '
+        + 'stamp-validator-reviewed.ts under a grant). The sweep keeps re-validating the hot head, so a '
+        + 'stamped pair that draws a new verdict RE-OPENS (newSinceReview > 0) — a disposition is a claim '
+        + 'about the evidence that existed when it was written, not a permanent mute.',
     ];
 
     const log: string[] = [
@@ -496,6 +709,10 @@ export function buildTriageQueue(
         `rule (n >= ${minN}, unanimous SUSPECT, identical billedGrams) emits ${candidates.length} candidate(s): `
         + `${actionableCount} actionable (pointer still live), ${staleCount} stale.`,
         `comparator: the naive "any SUSPECT on a repeated pair" screen would emit ${naiveCandidateCount}.`,
+        `majority view (human-review only): ${majority.length} pair(s) with n >= ${minN} and a strict majority `
+        + 'SUSPECT that the rule did not emit.',
+        `review state: ${opts.reviewedCount ?? 0} verdict row(s) stamped; candidates ${openCandidateCount} open / `
+        + `${reviewedCandidateCount} reviewed.`,
     ];
     if (candidates.length === 0) {
         log.push('NOTE: zero candidates. See the caveat above — this is the expected steady state for a '
@@ -513,7 +730,10 @@ export function buildTriageQueue(
         candidates,
         actionableCount,
         staleCount,
+        reviewedCandidateCount,
+        openCandidateCount,
         byPointerStatus,
+        majority,
         naiveCandidateCount,
         nearMisses,
         caveats,
@@ -525,6 +745,11 @@ export function buildTriageQueue(
 // Rendering
 // ---------------------------------------------------------------------------
 
+function fmtReview(r: ReviewSummary): string {
+    const stamp = `reviewed ${r.reviewedAt ?? '?'} by ${r.who ?? '?'} → ${r.disposition ?? '(no disposition)'}`;
+    return r.newSinceReview > 0 ? `${stamp}; RE-OPENED: ${r.newSinceReview} verdict(s) since` : stamp;
+}
+
 function fmtAxis(counts: Record<string, number>): string {
     const entries = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     return entries.length ? entries.map(([k, v]) => `${k} ${v}`).join(', ') : '—';
@@ -535,10 +760,6 @@ export function renderConsole(report: TriageQueueReport, opts: { all: boolean })
     console.log('MappingValidationVerdict — triage candidates');
     console.log('='.repeat(78));
     for (const line of report.log) console.log(`  ${line}`);
-    if (report.reviewedCount > 0) {
-        console.log(`  NOTE: ${report.reviewedCount} row(s) carry a reviewedAt. Nothing in either repo writes that `
-            + 'column, so something outside the tracked code is now setting it.');
-    }
     console.log('');
 
     if (report.candidates.length === 0) {
@@ -546,7 +767,8 @@ export function renderConsole(report: TriageQueueReport, opts: { all: boolean })
     }
     for (const c of report.candidates) {
         const tag = c.pointerStatus === 'live' ? 'ACTIONABLE' : `STALE/${c.pointerStatus}`;
-        console.log(`  [${tag}] ${c.normalizedForm}`);
+        console.log(`  [${tag}]${c.review.reviewed ? ' [REVIEWED]' : ''} ${c.normalizedForm}`);
+        if (c.review.reviewedAt) console.log(`      ${fmtReview(c.review)}`);
         console.log(`      judged ${c.foodId} · ${c.n}/${c.n} SUSPECT over ${c.nights} night(s) · axis ${fmtAxis(c.axisCounts)}`);
         console.log(`      billed ${c.billedGrams} g / ${c.billedKcal.join(', ')} kcal · tier ${c.servingTiers.map(t => t ?? 'null').join(', ')}`);
         console.log(`      phrase (probe VERBATIM): ${c.phrases.map(p => JSON.stringify(p)).join(' | ')}`);
@@ -559,6 +781,21 @@ export function renderConsole(report: TriageQueueReport, opts: { all: boolean })
         console.log(`      judge: ${c.reasons[0]}`);
         console.log('');
     }
+
+    console.log(`  Majority view (${report.majority.length}) — HUMAN REVIEW ONLY, never an auto-bar (D-A3):`);
+    if (report.majority.length === 0) console.log('    (none)');
+    for (const m of report.majority) {
+        const tag = m.pointerStatus === 'live' ? 'live' : `STALE/${m.pointerStatus}`;
+        console.log(`    [${tag}]${m.review.reviewed ? ' [REVIEWED]' : ''} ${m.normalizedForm} → ${m.foodId}`
+            + ` · ${m.suspectCount}/${m.n} SUSPECT (${Math.round(m.share * 100)}%) over ${m.nights} night(s)`
+            + ` · axis ${fmtAxis(m.axisCounts)} · serves ${m.serves ?? 'n/a'}`);
+        console.log(`      billed ${m.distinctBilledGrams.join(' | ')} g · tier ${m.servingTiers.map(t => t ?? 'null').join(', ')}`
+            + ` · phrase ${m.phrases.map(p => JSON.stringify(p)).join(' | ')}`);
+        if (m.review.reviewedAt) console.log(`      ${fmtReview(m.review)}`);
+        for (const r of m.notEmittedBecause) console.log(`      · not emitted: ${r}`);
+        if (m.latestSuspectReason) console.log(`      judge (latest): ${m.latestSuspectReason}`);
+    }
+    console.log('');
 
     if (opts.all) {
         console.log(`  Near misses (${report.nearMisses.length}) — pairs with SUSPECT evidence the rule does NOT emit:`);
@@ -593,10 +830,11 @@ export function renderMarkdown(report: TriageQueueReport): string {
     if (report.candidates.length === 0) {
         L.push('_None at this threshold. See the caveats — this is the expected steady state, not a clean bill of health._');
     } else {
-        L.push('| status | normalizedForm | judged foodId | n | billed g | axis | nights | now points at |');
-        L.push('|---|---|---|---:|---:|---|---:|---|');
+        L.push('| status | review | normalizedForm | judged foodId | n | billed g | axis | nights | now points at |');
+        L.push('|---|---|---|---|---:|---:|---|---:|---|');
         for (const c of report.candidates) {
-            L.push(`| ${c.pointerStatus} | \`${c.normalizedForm}\` | \`${c.foodId}\` | ${c.n} | ${c.billedGrams} `
+            L.push(`| ${c.pointerStatus} | ${c.review.reviewed ? `reviewed → ${c.review.disposition ?? '?'}` : 'open'} `
+                + `| \`${c.normalizedForm}\` | \`${c.foodId}\` | ${c.n} | ${c.billedGrams} `
                 + `| ${fmtAxis(c.axisCounts)} | ${c.nights} | ${c.pointerStatus === 'live' ? '(unchanged)' : `\`${c.currentFoodId ?? 'none'}\``} |`);
         }
         L.push('');
@@ -604,6 +842,7 @@ export function renderMarkdown(report: TriageQueueReport): string {
             L.push(`### \`${c.normalizedForm}\` → \`${c.foodId}\``);
             L.push('');
             L.push(`- **${c.pointerStatus}** — ${c.note}`);
+            if (c.review.reviewedAt) L.push(`- **${fmtReview(c.review)}**`);
             L.push(`- ${c.n}/${c.n} SUSPECT over ${c.nights} night(s), ${c.firstSeen} → ${c.lastSeen}`);
             L.push(`- billed **${c.billedGrams} g / ${c.billedKcal.join(', ')} kcal**, tier ${c.servingTiers.map(t => t ?? 'null').join(', ')}`);
             L.push(`- axis: ${fmtAxis(c.axisCounts)}`);
@@ -611,6 +850,34 @@ export function renderMarkdown(report: TriageQueueReport): string {
             L.push(`- judged by: ${c.models.join(', ')}`);
             L.push('- judge reasons:');
             for (const r of c.reasons) L.push(`  - ${r}`);
+            L.push('');
+        }
+    }
+    L.push('## Majority view — HUMAN REVIEW ONLY');
+    L.push('');
+    L.push(`Pairs with n >= ${report.minN} and a strict majority SUSPECT that the unanimity rule did not emit. `
+        + 'A view for eyes, never an auto-bar and never a queue: nothing may treat a row here as a candidate (D-A3, 2026-08-21). '
+        + '`serves` is FoodMapping.usedCount — our own gate traffic — an ordering aid, not a price.');
+    L.push('');
+    if (report.majority.length === 0) {
+        L.push('_None._');
+    } else {
+        L.push('| status | review | normalizedForm | judged foodId | k/n | billed g | axis | tier | serves | nights | not emitted because |');
+        L.push('|---|---|---|---|---:|---|---|---|---:|---:|---|');
+        for (const m of report.majority) {
+            L.push(`| ${m.pointerStatus} | ${m.review.reviewed ? `reviewed → ${m.review.disposition ?? '?'}` : 'open'} `
+                + `| \`${m.normalizedForm}\` | \`${m.foodId}\` | ${m.suspectCount}/${m.n} | ${m.distinctBilledGrams.join(' \\| ')} `
+                + `| ${fmtAxis(m.axisCounts)} | ${m.servingTiers.map(t => t ?? 'null').join(', ')} | ${m.serves ?? 'n/a'} | ${m.nights} `
+                + `| ${m.notEmittedBecause.join('; ')} |`);
+        }
+        L.push('');
+        for (const m of report.majority) {
+            L.push(`### majority: \`${m.normalizedForm}\` → \`${m.foodId}\``);
+            L.push('');
+            if (m.review.reviewedAt) L.push(`- **${fmtReview(m.review)}**`);
+            L.push(`- phrase (probe VERBATIM): ${m.phrases.map(p => `\`${p}\``).join(' | ')}`);
+            if (m.pointerStatus !== 'live') L.push(`- now points at: \`${m.currentFoodId ?? 'none'}\`${m.currentFoodName ? ` "${m.currentFoodName}"` : ''}`);
+            if (m.latestSuspectReason) L.push(`- judge (latest SUSPECT): ${m.latestSuspectReason}`);
             L.push('');
         }
     }
@@ -666,7 +933,7 @@ export async function readVerdicts(prisma: PrismaLike): Promise<VerdictRecord[]>
         select: {
             normalizedForm: true, foodId: true, phrase: true, verdict: true, axis: true,
             reason: true, model: true, billedGrams: true, billedKcal: true, servingTier: true,
-            createdAt: true,
+            createdAt: true, reviewedAt: true, reviewedBy: true,
         },
     });
 }
@@ -684,7 +951,7 @@ export async function readMappings(
             where: { normalizedForm: { in: chunk } },
             select: {
                 normalizedForm: true, source: true, offBarcode: true, fdcId: true, fsId: true,
-                foodName: true, brandName: true, validatedBy: true, validatedAt: true,
+                foodName: true, brandName: true, validatedBy: true, validatedAt: true, usedCount: true,
             },
         });
         out.push(...rows);
@@ -743,8 +1010,8 @@ async function main(): Promise<void> {
         console.log('  --dry       print the report, write no files.');
         console.log('  --out P     write to P.json / P.md instead of scripts/eval/results/.');
         console.log('');
-        console.log('  Writes nothing to the database. reviewedAt is never set, so candidates re-appear');
-        console.log('  on every run until a human acts on them.');
+        console.log('  Writes nothing to the database. reviewedAt is set only by stamp-validator-reviewed.ts');
+        console.log('  (granted write); an unstamped candidate re-appears on every run until then.');
         return;
     }
 
