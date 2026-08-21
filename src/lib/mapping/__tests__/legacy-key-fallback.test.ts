@@ -289,3 +289,62 @@ describe('zombie-row guard: malformed legacy keys are never looked up', () => {
         expect(keys.every(k => k !== 'oat rolled rolled')).toBe(true);
     });
 });
+
+describe('LANE S after the introduced-token guard (plan 10, 2026-08-21)', () => {
+    it('re-strips after stripIntroducedFoodTokens(): `extract of garlic` → `garlic`, not `of garlic`', async () => {
+        // The introduced-token guard removes `extract` (the user never typed it) and can leave a
+        // partitive `of` at the new edge. The key site's step 0 would catch the KEY, but the name
+        // is also the retrieval query — so the residue must not reach gatherCandidates() either.
+        // Bites: with the re-strip removed, gatherCandidates() receives `of garlic` (verified
+        // while writing this test).
+        (aiNormalizeIngredient as jest.Mock).mockResolvedValue({
+            status: 'success',
+            normalizedName: 'extract of garlic',
+            synonyms: [],
+            isBranded: false,
+        });
+
+        await mapIngredientWithFallback('1 cup garlic', {
+            minConfidence: 0,
+            skipFdc: true,
+        });
+
+        const gatherNames = (gatherCandidates as jest.Mock).mock.calls.map(c => c[2]);
+        expect(gatherNames.length).toBeGreaterThan(0);
+        expect(gatherNames).not.toContain('of garlic');
+        expect(gatherNames).not.toContain('extract of garlic');
+        expect(gatherNames.every(n => n === 'garlic')).toBe(true);
+
+        const keys = lookupKeys();
+        expect(keys).not.toContain('of garlic');
+    });
+
+    it('sentinel: a mid-`of` name is untouched on every leg — `cream of wheat` keys as itself', async () => {
+        await mapIngredientWithFallback('1 cup cream of wheat', {
+            minConfidence: 0,
+            skipFdc: true,
+        });
+
+        const keys = lookupKeys();
+        expect(keys[0]).toBe('cream of wheat');
+        expect(keys.every(k => k.includes('of'))).toBe(true);
+    });
+
+    it('the legacy read leg never sees an edge-`of` name — the preflight strip reaches it first', async () => {
+        // Pinned as a FACT, not a guard: `100g garlic of` parses to the name `garlic of`, and the
+        // segmenter can hand the same form in via options.normalizedForm; both are stripped at
+        // preflight (baseName), so every FoodMapping read is on `garlic`. A legacy-leg strip was
+        // drafted on 2026-08-21 against PR #364's post-deploy reading and dropped when this
+        // showed the leg is unreachable with an unstripped name — the live `garlic of` hit was a
+        // stale box BUILD (compiled before Syncthing delivered #364), not a code path.
+        await mapIngredientWithFallback('100g garlic of', {
+            minConfidence: 0,
+            skipFdc: true,
+            normalizedForm: 'garlic of',
+        });
+
+        const keys = lookupKeys();
+        expect(keys.length).toBeGreaterThan(0);
+        expect(keys.every(k => k === 'garlic')).toBe(true);
+    });
+});
