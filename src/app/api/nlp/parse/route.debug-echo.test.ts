@@ -182,13 +182,18 @@ describe('/api/nlp/parse debug echo (servingTier + cacheHit)', () => {
       data: { user: { id: 'user-1', email: 'someone@example.org' } },
       error: null,
     });
+    // A fresh save, i.e. paid work — so this request is one the limiter charges.
+    mapIngredientWithFallback.mockImplementation(async (_line: string, opts: { telemetry?: { cacheHit?: string; funnelStage?: string } }) => {
+      if (opts?.telemetry) { opts.telemetry.cacheHit = 'early'; opts.telemetry.funnelStage = 'saved'; }
+      return { ...MAPPED };
+    });
     const res = await POST(jwtRequest({ items: ['some cereal'], debug: true }, '?debug=1'));
     expect(res.status).toBe(200);
     const [item] = await res.json();
     expect(item.foodId).toBe('off_0042400265177');   // it did map — this is not a 401
     expect(item).not.toHaveProperty('servingTier');
     expect(item).not.toHaveProperty('cacheHit');
-    // and the request was rate-limit-tracked like any real request
+    // and, having done paid work, the request was charged one NlpRequestLog row
     expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
   });
 

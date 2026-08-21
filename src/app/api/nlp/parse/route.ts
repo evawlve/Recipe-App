@@ -9,6 +9,9 @@ import { runWithWritePolicy, currentWriteReceipt } from '@/lib/write-policy';
 // Supabase env. The client is now built lazily, on the first bearer, in
 // src/lib/supabase/admin.ts; the dev-key path never builds it at all.
 import { authenticateRequest } from '@/lib/auth/request-auth';
+// Pure (its only import is a type), so static is free. Owns the limit defaults, the
+// per-request env read and the "did this request do paid work?" predicate.
+import { readParseLimits, isFreeParseRequest } from '@/lib/nlp/parse-rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -87,9 +90,13 @@ export async function POST(req: NextRequest) {
     isDevBypass = true;
   }
 
-  // Rate Limiting Enforcement (skipped for dev/test bypass users)
+  // Rate limiting — the COUNT half (skipped for dev/test bypass users). Limits come from
+  // the env on every request (edit + restart, no rebuild) and fail closed to 10/min ·
+  // 100/day. The CHARGE half is at the end of runParse(): a request is billed only once
+  // it has done paid work — see isFreeParseRequest() in src/lib/nlp/parse-rate-limit.ts.
   if (!isDevBypass && userId) {
     try {
+      const { perMinute, perDay } = readParseLimits();
       const now = new Date();
       const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -110,24 +117,17 @@ export async function POST(req: NextRequest) {
         })
       ]);
 
-      if (recentRequests >= 3) {
+      if (recentRequests >= perMinute) {
         return NextResponse.json({
           error: 'Too many requests. Please wait a minute before making another food log attempt.'
         }, { status: 429 });
       }
 
-      if (dailyRequests >= 20) {
+      if (dailyRequests >= perDay) {
         return NextResponse.json({
-          error: 'Daily NLP log limit reached (20 logs). Please try again tomorrow!'
+          error: `Daily NLP log limit reached (${perDay} logs). Please try again tomorrow!`
         }, { status: 429 });
       }
-
-      // Log this request
-      await prisma.nlpRequestLog.create({
-        data: {
-          userId
-        }
-      });
     } catch (dbErr) {
       console.error('NLP Parse Rate Limiter DB Error:', dbErr);
       // Fail open in case of DB tracking error to avoid blocking active users
@@ -219,7 +219,10 @@ export async function POST(req: NextRequest) {
     // changed.
     //
     // The outer try/catch stays OUTSIDE this wrap: a throw must still be caught by the
-    // handler's own 500 branch, and the policy must be off by the time it is.
+    // handler's own 500 branch, and the policy must be off by the time it is. That needs
+    // the `return await` below — a bare `return promise` inside a try block hands the
+    // rejection straight past the catch, and did until 2026-08-21 (pinned by
+    // route.rate-limit.test.ts: a mapper throw is a 500 and is never charged).
     async function runParse(): Promise<NextResponse> {
       let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
@@ -578,6 +581,22 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Rate limiting — the CHARGE half (the COUNT half is in the preamble). A bearer
+      // caller is billed one NlpRequestLog row per request that did PAID work: unless every
+      // line was served from FoodMapping or the zero-calorie fast path AND the split needed
+      // no AI segmentation call. A cache hit costs nothing and is not charged, so re-logging
+      // yesterday's breakfast does not spend today's allowance. Charged HERE, after the
+      // mapper, so a 400/500 is never billed. Fail open: a failed write must not fail a
+      // request that already succeeded.
+      if (!isDevBypass && userId &&
+          !isFreeParseRequest({ funnelStages: parsedItems.map(p => p.funnelStage), segCacheHit })) {
+        try {
+          await prisma.nlpRequestLog.create({ data: { userId } });
+        } catch (dbErr) {
+          console.error('NLP Parse Rate Limiter DB Error:', dbErr);
+        }
+      }
+
       // The receipt is read ONCE, here, after Promise.all: every per-item scope shares
       // this request's counters and refusal list by reference, so this single read sees
       // everything every line did. It rides on a HEADER, never in the body — the body is
@@ -595,7 +614,7 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    return runWithWritePolicy(
+    return await runWithWritePolicy(
       { suppress: noSave ? ['aiServing', 'segmentationCache'] : [] },
       runParse,
     );
