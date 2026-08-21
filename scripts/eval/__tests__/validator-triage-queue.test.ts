@@ -28,6 +28,9 @@ import {
     resolveOutBase,
     screenPair,
     FlagError,
+    majorityPair,
+    parseReviewedBy,
+    reviewStateOf,
     type MappingPointer,
     type VerdictRecord,
 } from '../validator-triage-queue';
@@ -53,6 +56,8 @@ function verdict(over: Partial<VerdictRecord> = {}): VerdictRecord {
         servingTier: 'bare_sibling_serving',
         // Distinct, increasing, and on distinct days so `nights` is meaningful.
         createdAt: new Date(Date.UTC(2026, 7, 10 + seq, 11, 35)),
+        reviewedAt: null,
+        reviewedBy: null,
         ...over,
     };
 }
@@ -68,6 +73,7 @@ function mapping(over: Partial<MappingPointer> = {}): MappingPointer {
         brandName: 'Fairlife',
         validatedBy: 'ai',
         validatedAt: new Date('2026-07-19T00:55:28.952Z'),
+        usedCount: 448,
         ...over,
     };
 }
@@ -378,5 +384,129 @@ describe('rendering and flags', () => {
         expect(resolveOutBase('/tmp/q.md', new Date())).toBe('/tmp/q');
         expect(resolveOutBase(undefined, new Date('2026-08-15T01:02:03.400Z')))
             .toMatch(/validator-triage-queue-2026-08-15T01-02-03-400Z$/);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 5. The majority view (human-review only — D-A3) and the review stamp
+// ---------------------------------------------------------------------------
+
+describe('majorityPair — the view predicate', () => {
+    it('is true for the live fairlife shape: 9/10 SUSPECT, one OK hiding it from the rule', () => {
+        const vs = [...Array.from({ length: 9 }, () => verdict()), verdict({ verdict: 'OK', axis: 'none' })];
+        const [g] = groupByPair(vs);
+        expect(screenPair(g).qualifies).toBe(false);
+        expect(majorityPair(g)).toBe(true);
+    });
+
+    it('is false for a unanimous pair — that is a candidate, not a view row', () => {
+        const [g] = groupByPair([verdict(), verdict(), verdict()]);
+        expect(screenPair(g).qualifies).toBe(true);
+        expect(majorityPair(g)).toBe(false);
+    });
+
+    it('requires a STRICT majority — 2/4 is a tie, not a majority', () => {
+        const [g] = groupByPair([verdict(), verdict(), verdict({ verdict: 'OK', axis: 'none' }), verdict({ verdict: 'OK', axis: 'none' })]);
+        expect(majorityPair(g)).toBe(false);
+    });
+
+    it('respects minN — 2/2 is unanimous but under the threshold, and is neither', () => {
+        const [g] = groupByPair([verdict(), verdict()]);
+        expect(majorityPair(g)).toBe(false);
+        expect(screenPair(g).qualifies).toBe(false);
+    });
+
+    it('includes a unanimous pair whose bill MOVED — the rule refuses it, the human should see it', () => {
+        const [g] = groupByPair([verdict(), verdict(), verdict(), verdict({ billedGrams: 414 })]);
+        expect(screenPair(g).qualifies).toBe(false);
+        expect(majorityPair(g)).toBe(true);
+    });
+});
+
+describe('parseReviewedBy / reviewStateOf — reading the stamp back', () => {
+    it('splits <who>:<disposition> on the first colon only', () => {
+        expect(parseReviewedBy('lane-a-2026-08-21:cascade')).toEqual({ who: 'lane-a-2026-08-21', disposition: 'cascade' });
+        expect(parseReviewedBy('bare-name')).toEqual({ who: 'bare-name', disposition: null });
+        expect(parseReviewedBy('')).toEqual({ who: null, disposition: null });
+        expect(parseReviewedBy(null)).toEqual({ who: null, disposition: null });
+    });
+
+    it('a pair is reviewed only when EVERY verdict is stamped', () => {
+        const at = new Date('2026-08-22T00:00:00Z');
+        const all = [verdict({ reviewedAt: at, reviewedBy: 'a:dismiss' }), verdict({ reviewedAt: at, reviewedBy: 'a:dismiss' })];
+        expect(reviewStateOf(all)).toMatchObject({ reviewed: true, unreviewedCount: 0, newSinceReview: 0 });
+        expect(reviewStateOf(all).latest).toMatchObject({ who: 'a', disposition: 'dismiss' });
+
+        const partial = [verdict({ reviewedAt: at, reviewedBy: 'a:dismiss' }), verdict()];
+        expect(reviewStateOf(partial)).toMatchObject({ reviewed: false, unreviewedCount: 1 });
+    });
+
+    it('re-opens a stamped pair when a verdict arrives AFTER the stamp', () => {
+        const at = new Date(Date.UTC(2026, 7, 12, 0, 0));
+        // seq 1,2 → 08-11, 08-12 11:35 (after 00:00 on 08-12 → one is "new since")
+        const vs = [verdict({ reviewedAt: at, reviewedBy: 'a:watch' }), verdict({ reviewedAt: at, reviewedBy: 'a:watch' }), verdict()];
+        const r = reviewStateOf(vs);
+        expect(r.reviewed).toBe(false);
+        expect(r.unreviewedCount).toBe(1);
+        expect(r.newSinceReview).toBeGreaterThanOrEqual(1);
+    });
+
+    it('an empty pair is not reviewed', () => {
+        expect(reviewStateOf([]).reviewed).toBe(false);
+    });
+});
+
+describe('buildTriageQueue — majority section and review state', () => {
+    it('lists the hidden 9/10 pair in the majority view with serves, and NOT as a candidate', () => {
+        const vs = [...Array.from({ length: 9 }, () => verdict()), verdict({ verdict: 'OK', axis: 'none' })];
+        const r = buildTriageQueue(vs, [mapping()]);
+        expect(r.candidates).toHaveLength(0);
+        expect(r.majority).toHaveLength(1);
+        expect(r.majority[0]).toMatchObject({
+            normalizedForm: 'core fairlife power', suspectCount: 9, n: 10, share: 0.9,
+            pointerStatus: 'live', serves: 448, review: { reviewed: false },
+        });
+        expect(r.majority[0].notEmittedBecause.join(' ')).toMatch(/not unanimous/);
+        expect(r.majority[0].latestSuspectReason).toBe('a 250 g bill for a 414 ml bottle');
+    });
+
+    it('orders the majority view by share, then n, then serves', () => {
+        const a = [...Array.from({ length: 3 }, () => verdict({ normalizedForm: 'aaa' })), verdict({ normalizedForm: 'aaa', verdict: 'OK', axis: 'none' })]; // 3/4
+        const b = [...Array.from({ length: 9 }, () => verdict({ normalizedForm: 'bbb' })), verdict({ normalizedForm: 'bbb', verdict: 'OK', axis: 'none' })]; // 9/10
+        const c = [...Array.from({ length: 3 }, () => verdict({ normalizedForm: 'ccc' })), verdict({ normalizedForm: 'ccc', verdict: 'OK', axis: 'none' })]; // 3/4, more serves
+        const r = buildTriageQueue([...a, ...b, ...c], [
+            mapping({ normalizedForm: 'aaa', usedCount: 5 }),
+            mapping({ normalizedForm: 'bbb', usedCount: 1 }),
+            mapping({ normalizedForm: 'ccc', usedCount: 50 }),
+        ]);
+        expect(r.majority.map(m => m.normalizedForm)).toEqual(['bbb', 'ccc', 'aaa']);
+    });
+
+    it('counts a fully stamped candidate as reviewed, and an unstamped one as open', () => {
+        const at = new Date('2026-08-22T00:00:00Z');
+        const reviewed = Array.from({ length: 3 }, () => verdict({ normalizedForm: 'done', reviewedAt: at, reviewedBy: 'lane-a:repaired' }));
+        const open = Array.from({ length: 3 }, () => verdict({ normalizedForm: 'todo' }));
+        const r = buildTriageQueue([...reviewed, ...open], [mapping({ normalizedForm: 'done' }), mapping({ normalizedForm: 'todo' })], { reviewedCount: 3 });
+        expect(r.candidates).toHaveLength(2);
+        expect(r.reviewedCandidateCount).toBe(1);
+        expect(r.openCandidateCount).toBe(1);
+        const done = r.candidates.find(c => c.normalizedForm === 'done')!;
+        expect(done.review).toMatchObject({ reviewed: true, who: 'lane-a', disposition: 'repaired', newSinceReview: 0 });
+        expect(r.log.join(' ')).toMatch(/1 open \/ 1 reviewed/);
+    });
+
+    it('renders the majority section and the D-A3 caveat in markdown', () => {
+        const vs = [...Array.from({ length: 9 }, () => verdict()), verdict({ verdict: 'OK', axis: 'none' })];
+        const md = renderMarkdown(buildTriageQueue(vs, [mapping()]));
+        expect(md).toMatch(/## Majority view — HUMAN REVIEW ONLY/);
+        expect(md).toMatch(/`core fairlife power`.*9\/10/);
+        expect(md).toMatch(/never an auto-bar/);
+        expect(md).toMatch(/ordering aid, not a price/);
+    });
+
+    it('keeps the majority view EMPTY when the only repeated pair is unanimous — no double listing', () => {
+        const r = buildTriageQueue([verdict(), verdict(), verdict()], [mapping()]);
+        expect(r.candidates).toHaveLength(1);
+        expect(r.majority).toHaveLength(0);
     });
 });
