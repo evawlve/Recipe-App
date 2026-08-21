@@ -5,10 +5,11 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 import { deriveServingOptions } from '@/lib/units/servings';
 import { toClientSource } from '@/lib/attribution';
+import { authenticateRequest } from '@/lib/auth/request-auth';
 
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Skip execution during build time
@@ -17,9 +18,17 @@ export async function GET(
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
+  // Who is calling. Cookie is accepted here, unlike /api/foods/search, because the
+  // web app's src/components/recipe/IngredientMappingModal.tsx fetches this route with
+  // nothing but its Supabase session cookie; key (dev/eval) and bearer (mobile) are the
+  // other two. Before this the GET was public. DELETE below keeps its own cookie check.
+  const auth = await authenticateRequest(req, { accept: ['key', 'bearer', 'cookie'] });
+  if (!auth.via) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   // Import only when not in build mode
   const { prisma } = await import("@/lib/db");
-  const { getCurrentUser } = await import("@/lib/auth");
   const { FATSECRET_CACHE_MODE } = await import('@/lib/mapping/config');
   const { getCachedFoodWithRelations, buildCacheFoodResponse } = await import('@/lib/mapping/cache-search');
 
