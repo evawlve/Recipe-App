@@ -89,7 +89,6 @@ export async function POST(req: NextRequest) {
       // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
       // user whose address contained either substring skipped rate limiting.
       if (userEmail && (
-        userEmail === 'google_test_user@kindahealthy.com' ||
         userEmail.endsWith('@google.com') ||
         userEmail === 'diego@example.com'
       )) {
