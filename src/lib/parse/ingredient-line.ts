@@ -455,6 +455,13 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   let i = 0;
   let qty = 1; // Default quantity
+  // True only when parseQuantityTokens actually consumed a quantity token —
+  // NOT when qty merely holds its default of 1. The unknown-unit partitive
+  // inference below is gated on this: "<qty> <unknown> of <food>" is a measure
+  // signal, but on a quantity-less line the leading token is the food's own
+  // first word ("chicken of the sea" -> name "the sea", "cream of mushroom
+  // soup" -> name "mushroom soup") and consuming it destroys identity.
+  let hadExplicitQty = false;
 
   // Positional leading-hedge strip (see leadingHedgePrecedesQuantity above):
   // advance past "about"/"roughly"/... when a quantity follows, so the line
@@ -511,6 +518,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     if (qtyResult) {
       qty = qtyResult.qty;
       i += qtyResult.consumed;
+      hadExplicitQty = true;
     }
     // If no quantity found, default to qty=1 and continue parsing
     // This handles cases like "egg" or "butter" from FatSecret API
@@ -640,11 +648,18 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       // Unknown tokens are normally left in the name (e.g. "5 romaine leaves" —
       // "romaine" is not a unit). BUT a partitive "of" is a reliable signal that
       // the unknown token IS a measure word: "1 knob of butter", "3 rashers of
-      // bacon", "a glug of olive oil". In that case consume it as the (unknown)
-      // unit so serving resolution routes it to AI estimation (isAmbiguousUnit
-      // now covers unrecognised units) instead of swallowing the portion into
-      // the name. Without a following "of" we keep the old name-token behavior.
-      const nextIsOf = i + 1 < mergedTokens.length && mergedTokens[i + 1].toLowerCase() === 'of';
+      // bacon". In that case consume it as the (unknown) unit so serving
+      // resolution routes it to AI estimation (isAmbiguousUnit now covers
+      // unrecognised units) instead of swallowing the portion into the name.
+      // Without a following "of" we keep the old name-token behavior.
+      //
+      // ONLY when an explicit quantity preceded (hadExplicitQty). The signal is
+      // "<qty> <token> of" as a whole; on a quantity-less line "<token> of" is
+      // just a food name that contains "of", and consuming the token eats the
+      // food's identity: "chicken of the sea" parsed to name "the sea" and
+      // "cream of mushroom soup" to name "mushroom soup" until this guard.
+      const nextIsOf = hadExplicitQty
+        && i + 1 < mergedTokens.length && mergedTokens[i + 1].toLowerCase() === 'of';
       if (nextIsOf) {
         unit = firstNormalized.raw;
         rawUnit = firstToken;
