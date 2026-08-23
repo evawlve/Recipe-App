@@ -596,6 +596,13 @@ export interface WcNoiseReceipt {
     gramsDiffs: number;
     itemCountDiffs: number;
     tierDiffs: number;
+    /**
+     * Serving-process identity bracketing the floor run (absent on receipts
+     * written before the stamp existed — absent means UNSTAMPED, not unchanged).
+     * A floor and a run compared across different buildIds measure different
+     * programs.
+     */
+    server?: { before: ServerStamp | null; after: ServerStamp | null; changedMidRun: boolean | null };
 }
 
 export interface WcNoiseLedger {
@@ -619,7 +626,12 @@ export function populationFingerprint(lines: PopLine[]): string {
     // require() rather than a top-level import so this module stays importable from
     // a browser-less test env with no crypto polyfill assumptions.
     const { createHash } = require('crypto') as typeof import('crypto');
-    const sorted = lines.map(l => `${l.shape} ${l.query}`).sort();
+    // NUL as the split-invariant separator (a query can contain any printable
+    // character). Written as the \u0000 ESCAPE, never a literal NUL byte: the
+    // byte form makes grep classify this whole file as binary, which cost a
+    // session its searches before anyone found it. Same runtime string either
+    // way, so fingerprints (and every ledger receipt keyed on them) are stable.
+    const sorted = lines.map(l => `${l.shape}\u0000${l.query}`).sort();
     return createHash('sha256').update(sorted.join('\n')).digest('hex').slice(0, 16);
 }
 
@@ -674,6 +686,59 @@ export function bodyFor(line: PopLine): Record<string, unknown> {
     // carry quantity/unit/name the route's deterministic parser would otherwise have
     // to re-derive), else a bare rawText.
     return { items: [line.item ?? { rawText: line.query, mealType: 'snacks' }] };
+}
+
+/**
+ * The serving process's identity, read from /api/ok. `buildId` is public;
+ * `pid`/`since` ride the keyed `llm` block, so an unauthorized key stamps them
+ * null (which is "unmeasured", never "unchanged"). The /api/ok delta rule owns
+ * the semantics: two reads describe the SAME process only if buildId, pid AND
+ * since all match — a restart resets counters silently, and a mid-run deploy
+ * means the two arms measured two different programs.
+ */
+export interface ServerStamp {
+    buildId: string | null;
+    pid: number | null;
+    since: string | null;
+}
+
+export async function fetchServerStamp(cfg: ProbeConfig): Promise<ServerStamp | null> {
+    const doFetch = cfg.fetchImpl ?? fetch;
+    try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), cfg.timeoutMs);
+        let res: Response;
+        try {
+            res = await doFetch(`${cfg.base}/api/ok`, {
+                headers: { 'x-api-key': cfg.apiKey },
+                signal: ctrl.signal,
+            });
+        } finally {
+            clearTimeout(to);
+        }
+        if (!res.ok) return null;
+        const j = await res.json() as Record<string, any>;
+        return {
+            buildId: typeof j?.buildId === 'string' ? j.buildId : null,
+            pid: typeof j?.llm?.pid === 'number' ? j.llm.pid : null,
+            since: typeof j?.llm?.since === 'string' ? j.llm.since : null,
+        };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * true  = the server affirmatively changed between the two reads
+ * false = both reads exist and every identity field matches
+ * null  = at least one read is missing — UNMEASURED, which must never be
+ *         rendered as "unchanged" (the same fail-closed rule as the noise floor).
+ */
+export function serverChanged(before: ServerStamp | null, after: ServerStamp | null): boolean | null {
+    if (!before || !after) return null;
+    return before.buildId !== after.buildId
+        || before.pid !== after.pid
+        || before.since !== after.since;
 }
 
 export async function probe(line: PopLine, side: Side, cfg: ProbeConfig): Promise<SideObs> {
@@ -797,6 +862,20 @@ export async function runWarmCold(opts: RunOptions): Promise<RunResult> {
         return { code: 0, reason: null, counts, rows: [], skips: opts.skips, noiseFloor: null, lines: out };
     }
 
+    // Bracket the whole probe pass with /api/ok reads. A results file that
+    // records `base` but not the BUILD lets a reader diff two runs across a
+    // deploy and call the difference noise (the documented cold-gate trap, now
+    // closed for this instrument); and a restart mid-run clears in-process
+    // caches (servingCache) under our feet.
+    // (An empty population sends NOTHING — including these reads; the VOID
+    // verdict below covers it and an unstamped void run is not a diff trap.)
+    const serverBefore = opts.lines.length > 0 ? await fetchServerStamp(opts.cfg) : null;
+    if (serverBefore) {
+        say(`server         buildId ${serverBefore.buildId ?? '(unstamped)'}   pid ${serverBefore.pid ?? '?'}   since ${serverBefore.since ?? '?'}`);
+    } else if (opts.lines.length > 0) {
+        say('server         !! /api/ok UNREADABLE — this run is UNSTAMPED; do not diff its receipt against another run');
+    }
+
     // WARM first, then COLD, for each line. Sequential per line on purpose: the warm
     // read is the state as found, and probing cold first would leave the ai-normalize
     // cache freshly populated for the warm probe to read.
@@ -805,6 +884,19 @@ export async function runWarmCold(opts: RunOptions): Promise<RunResult> {
         const cold = await probe(line, 'cold', opts.cfg);
         return { line, warm, cold };
     });
+
+    const serverAfter = opts.lines.length > 0 ? await fetchServerStamp(opts.cfg) : null;
+    const serverChangedMidRun = serverChanged(serverBefore, serverAfter);
+    if (serverChangedMidRun === true) {
+        say('');
+        say(`!! SERVER CHANGED MID-RUN: ${serverBefore!.buildId}/${serverBefore!.pid} -> ${serverAfter!.buildId}/${serverAfter!.pid}`);
+        say('   The two sides of some lines were answered by different processes (or builds).');
+        say('   The receipt is stamped serverChangedMidRun:true — do not quote this run.');
+    } else if (serverChangedMidRun === null && opts.lines.length > 0) {
+        say('');
+        say('!! SERVER STAMP INCOMPLETE — /api/ok was unreadable on at least one side of the run;');
+        say('   "unchanged" is NOT established. The receipt carries whatever was read.');
+    }
 
     const counts = summarize(rows, opts.skips, opts.lines.length);
     const verdict = warmColdExitCode(counts, { allowUnwarmed: opts.allowUnwarmed });
@@ -821,6 +913,8 @@ export async function runWarmCold(opts: RunOptions): Promise<RunResult> {
             version: 1,
             ranAt: new Date().toISOString(),
             base: opts.cfg.base,
+            /** the serving process's identity, bracketing the probe pass — see ServerStamp */
+            server: { before: serverBefore, after: serverAfter, changedMidRun: serverChangedMidRun },
             population: opts.populationDesc,
             populationFingerprint: fingerprint,
             warmQuery: WARM_QS,
@@ -1093,11 +1187,24 @@ export async function runNoiseFloor(opts: NoiseOptions): Promise<{ code: 0 | 1 |
     say('  This floor is EXPECTED to be non-zero on the cold side and ~0 on the warm side.');
     say('  It is not a bug: cold runs live retrieval and, for text input, a live LLM segmenter.');
 
+    const serverBefore = opts.lines.length > 0 ? await fetchServerStamp(opts.cfg) : null;
+    if (opts.lines.length > 0) {
+        say(serverBefore
+            ? `  server buildId ${serverBefore.buildId ?? '(unstamped)'}   pid ${serverBefore.pid ?? '?'}`
+            : '  server !! /api/ok UNREADABLE — this floor is UNSTAMPED');
+    }
+
     const pairs = await mapLimit(opts.lines, opts.concurrency, async (line) => {
         const a = await probe(line, opts.side, opts.cfg);
         const b = await probe(line, opts.side, opts.cfg);
         return { line, a, b };
     });
+
+    const serverAfter = opts.lines.length > 0 ? await fetchServerStamp(opts.cfg) : null;
+    const floorServerChanged = serverChanged(serverBefore, serverAfter);
+    if (floorServerChanged === true) {
+        say(`  !! SERVER CHANGED MID-RUN (${serverBefore!.buildId}/${serverBefore!.pid} -> ${serverAfter!.buildId}/${serverAfter!.pid}) — do not quote this floor.`);
+    }
 
     let comparable = 0, idDiffs = 0, gramsDiffs = 0, itemCountDiffs = 0, tierDiffs = 0;
     const offenders: string[] = [];
@@ -1118,6 +1225,7 @@ export async function runNoiseFloor(opts: NoiseOptions): Promise<{ code: 0 | 1 |
         population: opts.populationDesc,
         populationFingerprint: fingerprint,
         rows: pairs.length, comparable, idDiffs, gramsDiffs, itemCountDiffs, tierDiffs,
+        server: { before: serverBefore, after: serverAfter, changedMidRun: floorServerChanged },
     };
 
     say('');
