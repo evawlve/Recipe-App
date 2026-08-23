@@ -1684,15 +1684,15 @@
     },
     {
       "id": "parse-limits-documented",
-      "claim": "The parse rate limits are env-tunable (NLP_PARSE_LIMIT_PER_MINUTE / NLP_PARSE_LIMIT_PER_DAY, read per request, fail closed to 10/100 on anything that is not a positive integer) and both are documented in .env.example, so a box retune is edit + restart with no rebuild (#371). The hardcoded 3/20 that sprint_execution_progress.md §3 named is gone.",
+      "claim": "The parse rate limits are env-tunable and fail closed: readParseLimits() in src/lib/nlp/parse-rate-limit.ts reads NLP_PARSE_LIMIT_PER_MINUTE and NLP_PARSE_LIMIT_PER_DAY per request (never cached at module scope) and parseLimitEnv() falls back to the 10/100 defaults on anything that is not a positive integer, so a box retune is edit + restart with no rebuild (#371). The hardcoded 3/20 that sprint_execution_progress.md §3 named is gone. The .env.example half is deliberately NOT checked here: .env* is Syncthing-ignored, so the box copy is frozen and a grep of it reds every nightly while reading green on the Mac; CI's check job already enforces .env.example parity for every literal process.env read under src/**, which is why the module header spells both reads as literal dotted members.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
-      "command": "grep -cE '^NLP_PARSE_LIMIT_PER_(MINUTE|DAY)=' .env.example",
+      "command": "printf '%s@%s@%s' \"$(grep -cE 'process[.]env[.]NLP_PARSE_LIMIT_PER_(MINUTE|DAY)' src/lib/nlp/parse-rate-limit.ts)\" \"$(grep -oE 'NLP_PARSE_LIMIT_PER_MINUTE_DEFAULT = [0-9]+' src/lib/nlp/parse-rate-limit.ts | grep -oE '[0-9]+$')\" \"$(grep -oE 'NLP_PARSE_LIMIT_PER_DAY_DEFAULT = [0-9]+' src/lib/nlp/parse-rate-limit.ts | grep -oE '[0-9]+$')\"",
       "expect": {
-        "kind": "count",
-        "value": "2"
+        "kind": "equals",
+        "value": "2@10@100"
       },
-      "verified": "2026-08-21"
+      "verified": "2026-08-22"
     }
   ]
 }
