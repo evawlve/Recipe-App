@@ -115,15 +115,17 @@ describe('negative controls — byte-identical to the pre-fix tree', () => {
     expect(parsed('honey bunches of oats')).toEqual({ qty: 1, unit: null, name: 'honey bunches of oats' });
   });
 
-  test('food names built on "of" are NOT made worse (they are already mangled — see below)', () => {
-    // PRE-EXISTING, NOT OWNED HERE. The unknown-token partitive branch shipped
-    // with partitive-unit.test.ts ("1 knob of butter") reads "<unknown> of
-    // <food>" as a measure word, so these four are already wrong on master.
-    // Pinned at their master values so this change is provably a no-op for them.
-    expect(parsed('cream of wheat')).toEqual({ qty: 1, unit: 'cream', name: 'wheat' });
-    expect(parsed('leg of lamb')).toEqual({ qty: 1, unit: 'leg', name: 'lamb' });
-    expect(parsed('chicken of the sea')).toEqual({ qty: 1, unit: 'chicken', name: 'the sea' });
-    expect(parsed('hearts of palm')).toEqual({ qty: 1, unit: 'hearts', name: 'palm' });
+  test('food names built on "of" keep their identity on quantity-less lines', () => {
+    // These four were mangled while the unknown-token partitive branch fired
+    // without an explicit quantity (this block used to pin the mangled values
+    // as "already wrong on master"). The hadExplicitQty guard in
+    // parseIngredientLine now keeps a quantity-less "<token> of <food>" line
+    // intact; the quantity-bearing shapes above ("1 knob of butter") still
+    // consume the measure word.
+    expect(parsed('cream of wheat')).toEqual({ qty: 1, unit: null, name: 'cream of wheat' });
+    expect(parsed('leg of lamb')).toEqual({ qty: 1, unit: null, name: 'leg of lamb' });
+    expect(parsed('chicken of the sea')).toEqual({ qty: 1, unit: null, name: 'chicken of the sea' });
+    expect(parsed('hearts of palm')).toEqual({ qty: 1, unit: null, name: 'hearts of palm' });
   });
 
   test('"half a cup of rice": article at [1], not [0] — documented limitation, untouched', () => {

@@ -54,4 +54,28 @@ describe('partitive "of" unknown-unit consumption', () => {
     expect(p!.unit).not.toBe('romaine');
     expect(p!.name).toContain('romaine');
   });
+
+  // Negative cases: on a quantity-LESS line, "<token> of" is a food name that
+  // contains "of", not a measure signal. The inference must not fire — it was
+  // eating the food's identity ("chicken of the sea" → name "the sea").
+  test('"chicken of the sea" → whole line stays the name, no unit', () => {
+    const p = parseIngredientLine('chicken of the sea');
+    expect(p).not.toBeNull();
+    expect(p!.unit).not.toBe('chicken');
+    expect(p!.name).toBe('chicken of the sea');
+  });
+
+  test('"cream of mushroom soup" → whole line stays the name, no unit', () => {
+    const p = parseIngredientLine('cream of mushroom soup');
+    expect(p).not.toBeNull();
+    expect(p!.unit).not.toBe('cream');
+    expect(p!.name).toBe('cream of mushroom soup');
+  });
+
+  test('"1 can of chicken of the sea" → real unit still consumed, one "of" skip only', () => {
+    const p = parseIngredientLine('1 can of chicken of the sea');
+    expect(p).not.toBeNull();
+    expect(p!.unit).toBe('can');
+    expect(p!.name).toBe('chicken of the sea');
+  });
 });
