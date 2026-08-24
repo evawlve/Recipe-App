@@ -99,7 +99,7 @@
     },
     {
       "id": "dev-bypass-email-substring-removed",
-      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the exact allowlist (google_test_user@kindahealthy.com, endsWith @google.com, diego@example.com). This claim pins the substring checks ABSENT.",
+      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the exact allowlist (endsWith @google.com, diego@example.com; the shared google_test_user@kindahealthy.com account LEFT it in #369, H3, 2026-08-23 — it is a normal rate-limited user whose nosave=1 rides NOSAVE_TESTER_EMAILS instead). This claim pins the substring checks ABSENT.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
       "command": "grep -rlE \"includes\\('(test|dev)'\\)\" src/app/api/nlp/parse --include=route.ts | wc -l",
@@ -107,7 +107,19 @@
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-20"
+      "verified": "2026-08-23"
+    },
+    {
+      "id": "nosave-tester-allowlist-wired",
+      "claim": "nosave=1 on /api/nlp/parse is honoured for isDevBypass callers OR a bearer account listed in NOSAVE_TESTER_EMAILS (exact, case-insensitive, fail-closed when unset) — and for nothing else: the tester gets the request-scoped write policy only, never the rate-limit bypass, noCache or the debug echo. Shipped 2026-08-23 (plan 11 §4, after H3 #369 made the shared sitting account a normal user). If this reads 0 the allowlist is unwired and every device sitting under EXPO_PUBLIC_SUPPRESS_MAPPING_WRITES=1 warms the production cache.",
+      "ownerDoc": "mobile:plans/v1/api-contract.md",
+      "where": "backend",
+      "command": "grep -c 'isNoSaveTester(userEmail)' src/app/api/nlp/parse/route.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-08-23"
     },
     {
       "id": "split-ingredients-persisted",
