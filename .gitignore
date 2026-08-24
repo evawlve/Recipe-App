@@ -158,3 +158,7 @@ scripts/eval/results/
 # Carried by Syncthing; the canonical copies live in the mobile repo at
 # sync-docs/cache-snapshots/. Never commit these to history.
 snapshots/
+
+# Syncthing simple-versioning store (keep=5, since 2026-08-13): local history of replaced files,
+# never content — it surfaced as an untracked dir in the main checkout on 2026-08-23.
+.stversions/
