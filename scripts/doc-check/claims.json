@@ -122,6 +122,30 @@
       "verified": "2026-08-23"
     },
     {
+      "id": "coverage-read-grades-by-mapper-key",
+      "claim": "The corpus-coverage read keys each seed with deriveStaticCoverageKey() — normalizeIngredientName().cleaned, then canonicalizeCacheKey + collapseAdjacentDuplicateTokens, the same tail the mapper writes keys with — not with canonicalizeCacheKey on the raw seed. The 2026-08-08 decision (grade by mapper key, one metric change, once), executed 2026-08-24 under plan 11 D4. If this reads 0 the sweep is back on the raw-key predicate and every coverage figure quoted since 2026-08-24 is on a different instrument from the one that produced it.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_coverage-by-mapper-key-and-the-warm-line-closes.md",
+      "where": "backend",
+      "command": "grep -c 'key: deriveStaticCoverageKey(seed)' src/lib/ops/cache-coverage.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-08-24"
+    },
+    {
+      "id": "coverage-sweep-default-corpus-is-0808",
+      "claim": "flywheel-sweep.ts reads coverage-corpus-2026-08-08.tsv (4,102 seeds) by default — the sweep repoint that rode the predicate change on 2026-08-24. The 07-24 and 08-02 cuts stay committed for their own histories; a delta across corpora is not a trend and computeCoverageTrend() returns null across them. If this reads 0 the nightly is back on the 08-02 denominator and its number is not comparable with anything logged after 2026-08-24.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_coverage-by-mapper-key-and-the-warm-line-closes.md",
+      "where": "backend",
+      "command": "grep -c \"path.join(__dirname, 'coverage-corpus-2026-08-08.tsv')\" scripts/eval/flywheel-sweep.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-08-24"
+    },
+    {
       "id": "split-ingredients-persisted",
       "claim": "splitIngredients is a persisted column on AiNormalizeCache (PR #187)",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",

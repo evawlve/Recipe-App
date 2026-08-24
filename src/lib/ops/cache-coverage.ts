@@ -8,10 +8,45 @@
  * at 8.4%, because every prior warm wave had been produce-and-pantry shaped.
  * This step turns that one-off finding into a tracked number.
  *
- * Method: canonicalize each corpus seed with the SAME `canonicalizeCacheKey`
- * the mapper writes keys with, then intersect against the live `FoodMapping`
- * key set. Raw-string matching would silently under-count — stored keys are
- * token-SORTED ("0 fage greek plain total yogurt").
+ * Method: key each corpus seed with `deriveStaticCoverageKey()` — the mapper's
+ * own normalizer (`normalizeIngredientName().cleaned`), then the SAME
+ * `canonicalizeCacheKey` + `collapseAdjacentDuplicateTokens` the mapper writes
+ * keys with — and intersect against the live `FoodMapping` key set. Raw-string
+ * matching would silently under-count — stored keys are token-SORTED
+ * ("0 fage greek plain total yogurt").
+ *
+ * PREDICATE CHANGED 2026-08-24 (the decision of 2026-08-08, Diego: "grade by
+ * mapper key, executed at the >70% re-scope point together with the sweep
+ * repoint to the 08-08 corpus — one metric change, once"). Until then the seed
+ * was keyed by `canonicalizeCacheKey(seed)` on the RAW string, which read a
+ * cached seed as uncached whenever the mapper's normalizer rewrites it before
+ * the key is built (`instant oatmeal` → `instant oat rolled`; `chopped onions`
+ * → `onion`). Measured 2026-08-24 on one FoodMapping dump of 4,741 keys: the
+ * raw predicate read 2548/3754 = 67.9% on the 08-02 corpus and 2806/4102 =
+ * 68.4% on the 08-08 corpus; this predicate reads 2666 = 71.0% and 2931 =
+ * 71.5% (+3.1 / +3.0 pt; the live `--coverage-only` run the same hour read the
+ * identical 2931/4102). The move is two-directional: 147 seeds flip to cached
+ * and 29 flip to uncached on 08-02 (157 / 32 on 08-08). The reverse flips are
+ * rows written under a form the normalizer no longer produces — `vanilla latte`
+ * → `extract latte vanilla`, `hamburger buns` → `15% 85% beef bun fat lean`,
+ * `steel cut oats` → `cut oat rolled steel` — which the mapper's own early
+ * lookup misses today (0 of 28 served `early` in MappingEventLog), so reading
+ * them as uncached is the honest read; each is also a live normalizer defect on
+ * the identity axis, owned by the flavour-word / normalization reports, not here.
+ * `collapseAdjacentDuplicateTokens` is load-bearing: repeated tokens come from
+ * the seeds themselves (`half and half`, `taco bell crunchy taco`) and from the
+ * normalizer (`rolled oats` → `rolled rolled oats`), and the mapper collapses
+ * them after sorting; without it 45 seeds of the 08-08 corpus mis-key (`and half
+ * half`, `bell crunchy taco taco`). STILL A FLOOR, in both directions: this key omits the decisive-brand
+ * prefix, the parser's quantity/unit strip, LearnedSynonym and the AI-normalize
+ * fallback (the live mapper's `deriveMappingCacheKey()` in
+ * `mapping/cache-key.ts` cannot be imported by read-only tooling — its import
+ * chain reaches `gather-candidates`' module-scope `warmupEmbedder()` and the
+ * db client). A leaf replica of the full early-lookup chain (parser, partitive
+ * strip, identity restoration) read 3028/4102 = 73.8% on the 08-08 corpus the
+ * same day, so the true served share sits above this number.
+ * Owner of the measurement: the mobile repo's
+ * `sync-docs/reports/2026-08-24_coverage-by-mapper-key-and-the-warm-line-closes.md`.
  *
  * TWO NUMBERS, deliberately distinct, because conflating them is the trap:
  *
@@ -31,16 +66,23 @@
  * instead, and restate the baseline. `scripts/eval/_cut_coverage_corpus.ts` does
  * exactly that and refuses to overwrite an existing cut.
  *
- * Cuts so far: `coverage-corpus.tsv` (2026-07-24, 3,307 seeds, baseline 28.8%)
- * and `coverage-corpus-2026-08-02.tsv` (3,754 seeds, restated baseline 52.1%),
- * which is what the sweep reads by default now. Both stay committed. Note that
+ * Cuts so far: `coverage-corpus.tsv` (2026-07-24, 3,307 seeds, baseline 28.8%),
+ * `coverage-corpus-2026-08-02.tsv` (3,754 seeds, restated baseline 52.1%; the
+ * sweep's default 2026-08-02 → 2026-08-24, last raw-key read 67.9%) and
+ * `coverage-corpus-2026-08-08.tsv` (4,102 seeds, baseline 56.7% at cut by the
+ * raw key), which is what the sweep reads by default since 2026-08-24. All
+ * stay committed. The 08-08 file's `baseline` column was graded by the RAW key
+ * at cut, so under this predicate `growth` does NOT restart at 0: the first
+ * read is 645/1778 = 36.3% (measured 2026-08-24, static and live). Note that
  * `computeCoverageTrend()` returns null across different corpora — subtracting
- * two fractions with different denominators is not a trend.
+ * two fractions with different denominators is not a trend — so the first
+ * nightly on the new default prints no delta, by design.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { canonicalizeCacheKey } from '../mapping/normalization-rules';
+import { collapseAdjacentDuplicateTokens } from '../mapping/cache-key-core';
+import { canonicalizeCacheKey, normalizeIngredientName } from '../mapping/normalization-rules';
 
 /** Coverage on a fresh representative batch at which warming can stop. */
 export const COVERAGE_STOP_SIGNAL_PCT = 70;
@@ -95,6 +137,18 @@ function pct(n: number, d: number): number {
     return d > 0 ? Math.round((1000 * n) / d) / 10 : 0;
 }
 
+/**
+ * The coverage key for one corpus seed: the mapper's normalizer, then the same
+ * canonicalize + adjacent-duplicate collapse `deriveMappingCacheKey()` ends in.
+ * Falls back to the raw seed if the normalizer returns an empty string (it did
+ * not on any seed of either committed corpus, measured 2026-08-24). Static — no
+ * DB, no LLM, no parser — see the header for what that omits.
+ */
+export function deriveStaticCoverageKey(seed: string): string {
+    const cleaned = normalizeIngredientName(seed).cleaned;
+    return collapseAdjacentDuplicateTokens(canonicalizeCacheKey(cleaned || seed));
+}
+
 /** Parse the committed corpus TSV: `domain \t baseline \t seed`. */
 export function loadCoverageCorpus(corpusPath: string): CoverageSeed[] {
     const raw = fs.readFileSync(corpusPath, 'utf8');
@@ -109,7 +163,7 @@ export function loadCoverageCorpus(corpusPath: string): CoverageSeed[] {
             domain: domain || 'unlabeled',
             baseline: baseline === 'cached' ? 'cached' : 'new',
             seed,
-            key: canonicalizeCacheKey(seed),
+            key: deriveStaticCoverageKey(seed),
         });
     }
     return out;

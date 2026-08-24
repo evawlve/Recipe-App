@@ -37,12 +37,16 @@
  *      gating. Logic: src/lib/ops/seg-replay.ts. Cost ~N LLM calls (default
  *      20, --seg-replay-top).
  *      4c. CORPUS COVERAGE (REPORT-ONLY) — share of a FIXED representative
- *      seed corpus (scripts/eval/coverage-corpus.tsv, 3,307 seeds) whose
- *      canonical key already exists in FoodMapping, overall and per domain,
- *      trended against the previous sweep. Answers "is the cache big enough
- *      yet?" (baseline 28.8% on 2026-07-24, stop signal >70-80%) as opposed to
- *      the warm run's cache_hit, which answers "did it hold?". Read-only and
- *      never gates. Logic: src/lib/ops/cache-coverage.ts.
+ *      seed corpus (scripts/eval/coverage-corpus-2026-08-08.tsv, 4,102 seeds,
+ *      the default since 2026-08-24; the 07-24 and 08-02 cuts stay committed)
+ *      whose MAPPER-NORMALIZED key (deriveStaticCoverageKey(): normalizer →
+ *      canonicalize → duplicate-collapse, the predicate since 2026-08-24)
+ *      already exists in FoodMapping, overall and per domain, trended against
+ *      the previous sweep on the SAME corpus. Answers "is the cache big enough
+ *      yet?" (first read on this instrument 2931/4102 = 71.5%, 2026-08-24;
+ *      stop signal >70-80%) as opposed to the warm run's cache_hit, which
+ *      answers "did it hold?". Read-only and never gates. Logic:
+ *      src/lib/ops/cache-coverage.ts (its header owns the predicate change).
  *   5. REPORT     — results/flywheel-<ts>.{json,md}; --publish-dir copies the
  *      markdown (dated + flywheel-latest.md) somewhere Syncthing carries it
  *      (e.g. sync-docs/) so every machine sees the nightly report.
@@ -119,14 +123,18 @@ const COVERAGE_ONLY = args.includes('--coverage-only');
 
 const RESULTS_DIR = path.join(__dirname, 'results');
 const REPO_ROOT = path.join(__dirname, '..', '..');
-// Cut 2026-08-02 by scripts/eval/_cut_coverage_corpus.ts: the 2026-07-24 corpus
-// (3,307 seeds) plus 447 branded-CPG seeds from warm batches 17-24 that were not
-// already in it by cache key. `coverage-corpus.tsv` stays COMMITTED and unchanged
-// so every reading logged before this date stays readable against its own
-// denominator — that is why this is a new file rather than an append.
-// Restated baseline at the cut: 1954/3754 = 52.1% cached, growth 0% by construction.
+// Default REPOINTED 2026-08-24 (the 2026-08-08 decision, executed with the
+// predicate change in src/lib/ops/cache-coverage.ts — one metric change, once):
+// coverage-corpus-2026-08-08.tsv, cut 2026-08-08 by _cut_coverage_corpus.ts
+// (PR #270) = the 08-02 corpus plus the staples-expansion seeds, 4,102 seeds,
+// baseline 56.7% by the raw key at cut. The 2026-07-24 (3,307 seeds, 28.8%) and
+// 2026-08-02 (3,754 seeds, restated 52.1%; last raw-key read 67.9% on
+// 2026-08-24) cuts stay COMMITTED and unchanged so every reading logged before
+// this date stays readable against its own denominator — a new default, never
+// an append. The trend line is null across corpora, so the first nightly on
+// this file prints no delta by design. --coverage-corpus <path> still reads any cut.
 const COVERAGE_CORPUS = argValue('--coverage-corpus')
-    ?? path.join(__dirname, 'coverage-corpus-2026-08-02.tsv');
+    ?? path.join(__dirname, 'coverage-corpus-2026-08-08.tsv');
 
 // ---------------------------------------------------------------------------
 // 1. Telemetry

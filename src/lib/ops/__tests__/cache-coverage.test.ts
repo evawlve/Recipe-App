@@ -16,7 +16,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-    collectCacheCoverage, computeCoverageTrend, findPreviousCoverage,
+    collectCacheCoverage, computeCoverageTrend, deriveStaticCoverageKey, findPreviousCoverage,
     formatCoverageSection, loadCoverageCorpus, CoverageDbClient,
 } from '../cache-coverage';
 
@@ -36,16 +36,48 @@ function db(keys: string[]): CoverageDbClient {
 
 const RAN_AT = '2026-07-25T00:00:00.000Z';
 
+/**
+ * THE PREDICATE (changed 2026-08-24). Before, the seed was keyed by
+ * `canonicalizeCacheKey(seed)` on the raw string, so any seed the mapper's
+ * normalizer rewrites before writing its key read as a permanent miss. These
+ * cases pin the three halves of the new key and the one thing that must NOT
+ * have moved. `instant oatmeal` rides the tracked
+ * data/fatsecret/normalization-rules.json (its `oatmeal` rewrite); if that rule
+ * changes, this case changes with it — that is the point, not a flake.
+ */
+describe('deriveStaticCoverageKey', () => {
+    it('runs the seed through the normalizer before keying it (the 2026-08-08 decision)', () => {
+        expect(deriveStaticCoverageKey('chopped onions')).toBe('onion');   // prep phrase stripped
+        expect(deriveStaticCoverageKey('instant oatmeal')).toBe('instant oat rolled');
+    });
+
+    it('collapses the repeated tokens the normalizer can emit, as the mapper key does', () => {
+        // Without collapseAdjacentDuplicateTokens 45 seeds of the 08-08 corpus mis-keyed
+        // (`half and half` → "and half half", `canned kidney beans` → "bean canned canned
+        // canned kidney"; measured 2026-08-24) — the duplicates come from the seeds
+        // themselves as well as from the normalizer, and the mapper collapses both.
+        expect(deriveStaticCoverageKey('beans beans')).toBe('bean');
+        expect(deriveStaticCoverageKey('canned kidney beans')).toBe('bean canned kidney');
+    });
+
+    it('is the old key on a seed the normalizer leaves alone — lowercased, singularized, sorted', () => {
+        expect(deriveStaticCoverageKey('Red Bell Peppers')).toBe('bell pepper red');
+        expect(deriveStaticCoverageKey('plain greek yogurt')).toBe('greek plain yogurt');
+    });
+});
+
 describe('loadCoverageCorpus', () => {
-    it('parses rows and canonicalizes the key, skipping the header', () => {
+    it('parses rows and keys them with deriveStaticCoverageKey, skipping the header', () => {
         const dir = tmpdir();
-        const p = writeCorpus(dir, ['produce\tnew\tred bell peppers', 'chains\tcached\tbig mac']);
+        const p = writeCorpus(dir, ['produce\tnew\tred bell peppers', 'chains\tcached\tbig mac', 'produce\tnew\tchopped onions']);
         const seeds = loadCoverageCorpus(p);
-        expect(seeds).toHaveLength(2);
+        expect(seeds).toHaveLength(3);
         expect(seeds[0]).toMatchObject({ domain: 'produce', baseline: 'new', seed: 'red bell peppers' });
         // lowercased, singularized, token-sorted
         expect(seeds[0].key).toBe('bell pepper red');
         expect(seeds[1].baseline).toBe('cached');
+        // normalized before keying — the raw key would have been 'chopped onion'
+        expect(seeds[2].key).toBe('onion');
     });
 });
 
@@ -57,6 +89,16 @@ describe('collectCacheCoverage', () => {
         const report = await collectCacheCoverage(db(['greek plain yogurt']), p, RAN_AT);
         expect(report.ok).toBe(true);
         expect(report.cached).toBe(1);
+        expect(report.pct).toBe(100);
+    });
+
+    it('counts a seed cached when its NORMALIZED key is stored — the raw-key predicate missed these', async () => {
+        const dir = tmpdir();
+        const p = writeCorpus(dir, ['breakfast\tnew\tinstant oatmeal', 'produce\tnew\tchopped onions']);
+        // The mapper wrote both under the normalizer's form; the 2026-08-02 → 08-24
+        // sweep read both as uncached ("instant oatmeal" / "chopped onion").
+        const report = await collectCacheCoverage(db(['instant oat rolled', 'onion']), p, RAN_AT);
+        expect(report.cached).toBe(2);
         expect(report.pct).toBe(100);
     });
 

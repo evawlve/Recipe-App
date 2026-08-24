@@ -13,10 +13,15 @@
  * done from this cut forward. The old file keeps its own baseline and its own
  * history stays readable.
  *
- * Additions are deduped by CACHE KEY against the base corpus, not by raw string:
- * "fage total 0 plain" and "Fage Total 0% plain" are one seed to the coverage
- * reader, and admitting both would inflate the denominator with a row that can
- * never be independently cached. Rows already in the base are dropped, and the
+ * Additions are deduped by COVERAGE KEY against the base corpus, not by raw
+ * string — `deriveStaticCoverageKey()`, the same predicate the sweep grades
+ * with (since 2026-08-24: normalizer → canonicalize → duplicate-collapse; before
+ * that, `canonicalizeCacheKey` on the raw seed). "fage total 0 plain" and
+ * "Fage Total 0% plain" are one seed to the coverage reader, and admitting both
+ * would inflate the denominator with a row that can never be independently
+ * cached. `baseline` is graded by the same key, so a corpus cut from here on
+ * starts growth at 0% under the predicate the sweep actually reads with — the
+ * 08-08 cut was graded by the raw key, which is why its growth did not. Rows already in the base are dropped, and the
  * base itself is copied through untouched (deduping it would change the
  * denominator this script exists to preserve).
  *
@@ -29,7 +34,7 @@
  */
 import * as fs from 'fs';
 import { PrismaClient } from '@prisma/client';
-import { canonicalizeCacheKey } from '../../src/lib/mapping/normalization-rules';
+import { deriveStaticCoverageKey } from '../../src/lib/ops/cache-coverage';
 
 const args = process.argv.slice(2);
 const argValue = (f: string) => {
@@ -84,12 +89,12 @@ async function main() {
     const base = readBase(BASE!);
     const additions = ADD ? readAdditions(ADD) : [];
 
-    const baseKeys = new Set(base.map(r => canonicalizeCacheKey(r.seed)));
+    const baseKeys = new Set(base.map(r => deriveStaticCoverageKey(r.seed)));
     const seenAdd = new Set<string>();
     const kept: Row[] = [];
     let dupBase = 0, dupAdd = 0;
     for (const r of additions) {
-        const k = canonicalizeCacheKey(r.seed);
+        const k = deriveStaticCoverageKey(r.seed);
         if (baseKeys.has(k)) { dupBase++; continue; }
         if (seenAdd.has(k)) { dupAdd++; continue; }
         seenAdd.add(k);
@@ -110,7 +115,7 @@ async function main() {
     let cached = 0;
     const lines = ['domain\tbaseline\tseed'];
     for (const r of all) {
-        const isCached = cachedKeys.has(canonicalizeCacheKey(r.seed));
+        const isCached = cachedKeys.has(deriveStaticCoverageKey(r.seed));
         if (isCached) cached++;
         lines.push(`${r.domain}\t${isCached ? 'cached' : 'new'}\t${r.seed}`);
     }
