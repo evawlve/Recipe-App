@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSpan } from '@/lib/obs/withSpan';
 import { capture } from '@/lib/obs/capture';
 import { toClientSource, toWireSource } from '@/lib/attribution';
+import { authenticateRequest } from '@/lib/auth/request-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,16 +27,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key (fails closed: unset/empty DEV_API_KEY refuses every request)
-  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const expectedApiKey = process.env.DEV_API_KEY;
-  if (!expectedApiKey || !apiKey || apiKey !== expectedApiKey) {
+  // Who is calling: the dev key (x-api-key / ?api_key — fails closed on an unset or
+  // empty DEV_API_KEY) or a Supabase session sent as `Authorization: Bearer <jwt>`,
+  // the mobile client's path. One chokepoint for both: src/lib/auth/request-auth.ts.
+  const auth = await authenticateRequest(req, { accept: ['key', 'bearer'] });
+  if (!auth.via) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Import only when not in build mode
   const { prisma } = await import("@/lib/db");
-  const { getCurrentUser } = await import("@/lib/auth");
   const { deriveServingOptions } = await import("@/lib/units/servings");
   const { logger } = await import("@/lib/logger");
   const { rankCandidates } = await import("@/lib/foods/rank");

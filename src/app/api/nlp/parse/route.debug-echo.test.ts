@@ -19,8 +19,8 @@ import { NextRequest } from 'next/server';
 import { POST } from './route';
 
 // `mock`-prefixed so the factory may close over it; called through a thunk
-// because the route builds its Supabase client at import time, before this
-// const is initialised. The JWT test uses it to decide who the caller is.
+// because `jest.mock` is hoisted above this const. The JWT test uses it to
+// decide who the caller is.
 const mockGetUser = jest.fn();
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({ auth: { getUser: (...a: unknown[]) => mockGetUser(...a) } })),
@@ -107,6 +107,10 @@ describe('/api/nlp/parse debug echo (servingTier + cacheHit)', () => {
     // Fail-closed route (2026-08-20): the bypass key must come from the env — there is no
     // fallback literal to fall back onto — so pin the exact key the requests below send.
     process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass';
+    // The bearer path builds its Supabase client lazily from the env; without these
+    // the JWT case would read `auth_unavailable` (a 401) instead of reaching the mock.
+    process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://unit.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-role-test';
     delete process.env.MAPPING_EVENT_LOG_ENABLED;
   });
 
@@ -178,13 +182,18 @@ describe('/api/nlp/parse debug echo (servingTier + cacheHit)', () => {
       data: { user: { id: 'user-1', email: 'someone@example.org' } },
       error: null,
     });
+    // A fresh save, i.e. paid work — so this request is one the limiter charges.
+    mapIngredientWithFallback.mockImplementation(async (_line: string, opts: { telemetry?: { cacheHit?: string; funnelStage?: string } }) => {
+      if (opts?.telemetry) { opts.telemetry.cacheHit = 'early'; opts.telemetry.funnelStage = 'saved'; }
+      return { ...MAPPED };
+    });
     const res = await POST(jwtRequest({ items: ['some cereal'], debug: true }, '?debug=1'));
     expect(res.status).toBe(200);
     const [item] = await res.json();
     expect(item.foodId).toBe('off_0042400265177');   // it did map — this is not a 401
     expect(item).not.toHaveProperty('servingTier');
     expect(item).not.toHaveProperty('cacheHit');
-    // and the request was rate-limit-tracked like any real request
+    // and, having done paid work, the request was charged one NlpRequestLog row
     expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
   });
 

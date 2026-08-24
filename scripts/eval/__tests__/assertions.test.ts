@@ -1,4 +1,4 @@
-import { textOf, matchesAlt, isAbstention, numberDrifted, describeDrift } from '../assertions';
+import { textOf, matchesAlt, isAbstention, numberDrifted, describeDrift, allRequestsRefused } from '../assertions';
 
 /**
  * The exact wire shape the no-pick branch returns
@@ -196,5 +196,20 @@ describe('describeDrift', () => {
         const was = { foodId: 'off_1', foodName: 'Chipotle, Chicken', grams: 118, kcal100: 141, abstained: false };
         const now = { foodId: null, foodName: 'chipotle chicken burrito', grams: 0, kcal100: 0, abstained: true };
         expect(describeDrift(was, now).join(' ')).toContain('abstained false -> true');
+    });
+});
+
+describe('allRequestsRefused — an all-401 run is an auth failure, not a result', () => {
+    it('is true when every result carries 401 (or 403)', () => {
+        expect(allRequestsRefused([{ httpStatus: 401 }, { httpStatus: 401 }, { httpStatus: 403 }])).toBe(true);
+    });
+    it('is false when even one request got through', () => {
+        expect(allRequestsRefused([{ httpStatus: 401 }, { httpStatus: 200 }])).toBe(false);
+    });
+    it('is false on an empty run (that is the zero-case path, already exit 2)', () => {
+        expect(allRequestsRefused([])).toBe(false);
+    });
+    it('does not treat status-less transport errors as refusals', () => {
+        expect(allRequestsRefused([{}, { httpStatus: 401 }])).toBe(false);
     });
 });

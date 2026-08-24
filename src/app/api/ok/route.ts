@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getLlmUsageSnapshot } from '@/lib/ai/llm-usage-metrics';
+import { authenticateRequest } from '@/lib/auth/request-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,12 +43,19 @@ function readBuildId(): string | null {
  *    the key was wrong. Neither is confusable with "zero calls" — which is the whole point, given
  *    that a zeroed instrument reading as a measurement is this repo's most repeated defect.
  *
- * 3. It reuses the EXISTING `DEV_API_KEY` check (the same one `admin/food-stats` and the five
- *    key-only routes use). Since 2026-08-20 that check FAILS CLOSED: no fallback literal, so an
- *    unset/empty `DEV_API_KEY` reads `authorized: false` rather than authorizing a committed
- *    string. A new env var would still be a var the box does not have — which is exactly how
- *    0.5(a)'s instrument went silent — and would make this counter structurally unreadable on the
- *    box on day one.
+ * 3. It reuses the EXISTING `DEV_API_KEY` check — now through the shared
+ *    `authenticateRequest()` chokepoint, the same one the key-only routes use. Since 2026-08-20
+ *    that check FAILS CLOSED: no fallback literal, so an unset/empty `DEV_API_KEY` reads
+ *    `authorized: false` rather than authorizing a committed string. A new env var would still
+ *    be a var the box does not have — which is exactly how 0.5(a)'s instrument went silent — and
+ *    would make this counter structurally unreadable on the box on day one.
+ *
+ * 4. `auth` is ALWAYS PRESENT and ADDITIVE: `{ via: 'key' | 'bearer' }` or
+ *    `{ via: null, reason }`. It answers "did my credential authenticate, and as what" without
+ *    a 401 — the post-deploy check for the bearer path is this field, not a guess from a 200.
+ *    Only `via: 'key'` unlocks `llm`; a bearer is reported, never trusted with the counters.
+ *    No userId or email goes on the wire. COST: a probe that carries a bearer now pays one
+ *    GoTrue round trip; the unauthenticated and key-only probes pay nothing, as before.
  *
  * Counters and `buildId` come back in ONE response, so a counter can never be attributed to the
  * wrong build. Same reason #232 exists.
@@ -61,13 +69,13 @@ function readBuildId(): string | null {
  * the counter works. This route is the only correct read.
  */
 export async function GET(req: NextRequest) {
-  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const devApiKey = process.env.DEV_API_KEY;
-  const authorized = !!devApiKey && apiKey === devApiKey;
+  const auth = await authenticateRequest(req, { accept: ['key', 'bearer'] });
+  const authorized = auth.via === 'key';
   return NextResponse.json({
     ok: true,
     ts: Date.now(),
     buildId: readBuildId(),
     llm: authorized ? { authorized: true, ...getLlmUsageSnapshot() } : { authorized: false },
+    auth: auth.via ? { via: auth.via } : { via: null, reason: auth.reason },
   });
 }

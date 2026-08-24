@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/db';
-// Statically imported, unlike everything else this handler uses: write-policy.ts imports
-// only `node:async_hooks`, so it costs nothing at module load and the route must be able
-// to open the scope before the first dynamic import inside the handler.
+// Statically imported, unlike almost everything else this handler uses: write-policy.ts
+// imports only `node:async_hooks`, so it costs nothing at module load and the route must
+// be able to open the scope before the first dynamic import inside the handler.
 import { runWithWritePolicy, currentWriteReceipt } from '@/lib/write-policy';
+// The other static import. It replaces the module-scope `createClient(url || '', key || '')`
+// this route used to build at import time — which threw in any process without the
+// Supabase env. The client is now built lazily, on the first bearer, in
+// src/lib/supabase/admin.ts; the dev-key path never builds it at all.
+import { authenticateRequest } from '@/lib/auth/request-auth';
+// Pure (its only import is a type), so static is free. Owns the limit defaults, the
+// per-request env read and the "did this request do paid work?" predicate.
+import { readParseLimits, isFreeParseRequest } from '@/lib/nlp/parse-rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 type ParsedInputItem = {
   rawText: string;
@@ -56,52 +59,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available during build" }, { status: 503 });
   }
 
-  // Check API Key first (Dev bypass — fails closed: unset/empty DEV_API_KEY authorizes nothing)
-  const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-  const expectedApiKey = process.env.DEV_API_KEY;
-  
-  let isDevBypass = false;
+  // Who is calling — the dev key (bypass; fails closed on an unset/empty DEV_API_KEY) or
+  // a Supabase JWT bearer, through the shared chokepoint. The three 401 bodies below are
+  // the ones this route has always sent, keyed on the helper's failure reason, so no
+  // client sees a new string.
+  const auth = await authenticateRequest(req, { accept: ['key', 'bearer'] });
+  if (auth.via === null) {
+    const message =
+      auth.reason === 'invalid_bearer' ? 'Unauthorized: Invalid authentication session'
+      : auth.reason === 'auth_unavailable' ? 'Unauthorized: Auth service validation failed'
+      : 'Unauthorized: Missing or invalid token';
+    return NextResponse.json({ error: message }, { status: 401 });
+  }
 
-  if (expectedApiKey && apiKey && apiKey === expectedApiKey) {
+  let isDevBypass = auth.via === 'key';
+  const userId = auth.userId;
+  const userEmail = auth.email;
+
+  // Check if user email qualifies for the dev/test bypass. Exact matches and the review
+  // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
+  // user whose address contained either substring skipped rate limiting. Deliberately
+  // INLINE in this route, not in the helper: doc-check claim
+  // `dev-bypass-email-substring-removed` greps THIS file for substring checks and would
+  // pass vacuously if the allowlist lived anywhere else.
+  if (userEmail && (
+    userEmail.endsWith('@google.com') ||
+    userEmail === 'diego@example.com'
+  )) {
     isDevBypass = true;
   }
 
-  let userId: string | null = null;
-  let userEmail: string | null = null;
-
-  if (!isDevBypass) {
-    // If not local dev bypass, we authenticate using Supabase JWT Bearer token
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
-    }
-    const token = authHeader.substring(7);
-
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized: Invalid authentication session' }, { status: 401 });
-      }
-      userId = user.id;
-      userEmail = user.email || null;
-
-      // Check if user email qualifies for the dev/test bypass. Exact matches and the review
-      // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
-      // user whose address contained either substring skipped rate limiting.
-      if (userEmail && (
-        userEmail.endsWith('@google.com') ||
-        userEmail === 'diego@example.com'
-      )) {
-        isDevBypass = true;
-      }
-    } catch (err) {
-      return NextResponse.json({ error: 'Unauthorized: Auth service validation failed' }, { status: 401 });
-    }
-  }
-
-  // Rate Limiting Enforcement (skipped for dev/test bypass users)
+  // Rate limiting — the COUNT half (skipped for dev/test bypass users). Limits come from
+  // the env on every request (edit + restart, no rebuild) and fail closed to 10/min ·
+  // 100/day. The CHARGE half is at the end of runParse(): a request is billed only once
+  // it has done paid work — see isFreeParseRequest() in src/lib/nlp/parse-rate-limit.ts.
   if (!isDevBypass && userId) {
     try {
+      const { perMinute, perDay } = readParseLimits();
       const now = new Date();
       const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -122,24 +116,17 @@ export async function POST(req: NextRequest) {
         })
       ]);
 
-      if (recentRequests >= 3) {
+      if (recentRequests >= perMinute) {
         return NextResponse.json({
           error: 'Too many requests. Please wait a minute before making another food log attempt.'
         }, { status: 429 });
       }
 
-      if (dailyRequests >= 20) {
+      if (dailyRequests >= perDay) {
         return NextResponse.json({
-          error: 'Daily NLP log limit reached (20 logs). Please try again tomorrow!'
+          error: `Daily NLP log limit reached (${perDay} logs). Please try again tomorrow!`
         }, { status: 429 });
       }
-
-      // Log this request
-      await prisma.nlpRequestLog.create({
-        data: {
-          userId
-        }
-      });
     } catch (dbErr) {
       console.error('NLP Parse Rate Limiter DB Error:', dbErr);
       // Fail open in case of DB tracking error to avoid blocking active users
@@ -231,7 +218,10 @@ export async function POST(req: NextRequest) {
     // changed.
     //
     // The outer try/catch stays OUTSIDE this wrap: a throw must still be caught by the
-    // handler's own 500 branch, and the policy must be off by the time it is.
+    // handler's own 500 branch, and the policy must be off by the time it is. That needs
+    // the `return await` below — a bare `return promise` inside a try block hands the
+    // rejection straight past the catch, and did until 2026-08-21 (pinned by
+    // route.rate-limit.test.ts: a mapper throw is a 500 and is never charged).
     async function runParse(): Promise<NextResponse> {
       let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
@@ -590,6 +580,22 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Rate limiting — the CHARGE half (the COUNT half is in the preamble). A bearer
+      // caller is billed one NlpRequestLog row per request that did PAID work: unless every
+      // line was served from FoodMapping or the zero-calorie fast path AND the split needed
+      // no AI segmentation call. A cache hit costs nothing and is not charged, so re-logging
+      // yesterday's breakfast does not spend today's allowance. Charged HERE, after the
+      // mapper, so a 400/500 is never billed. Fail open: a failed write must not fail a
+      // request that already succeeded.
+      if (!isDevBypass && userId &&
+          !isFreeParseRequest({ funnelStages: parsedItems.map(p => p.funnelStage), segCacheHit })) {
+        try {
+          await prisma.nlpRequestLog.create({ data: { userId } });
+        } catch (dbErr) {
+          console.error('NLP Parse Rate Limiter DB Error:', dbErr);
+        }
+      }
+
       // The receipt is read ONCE, here, after Promise.all: every per-item scope shares
       // this request's counters and refusal list by reference, so this single read sees
       // everything every line did. It rides on a HEADER, never in the body — the body is
@@ -607,7 +613,7 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    return runWithWritePolicy(
+    return await runWithWritePolicy(
       { suppress: noSave ? ['aiServing', 'segmentationCache'] : [] },
       runParse,
     );

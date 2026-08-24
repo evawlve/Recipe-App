@@ -1557,7 +1557,12 @@ export async function mapIngredientWithFallback(
                                 removed: repaired.removed,
                             });
                         }
-                        normalizedName = repaired.cleaned;
+                        // Re-strip after the guard: removing an introduced food token can leave
+                        // a partitive `of` at an edge (`clove of garlic` minus `clove` -> `of
+                        // garlic`). The key site's step 0 would catch the KEY, but this name is
+                        // also the retrieval query and the telemetry `normalizedForm`, so the
+                        // residue must not reach either (plan 10, 2026-08-21).
+                        normalizedName = stripPartitiveOfResidue(repaired.cleaned);
                     }
                     // canonicalBase carries the same pollution and becomes the
                     // rerank query verbatim, so it needs the same repair.
