@@ -51,6 +51,7 @@ import {
     classifyRow,
     decompose,
     emptyNoiseLedger,
+    fetchServerStamp,
     filePopulation,
     goldenPopulation,
     inBand,
@@ -62,6 +63,7 @@ import {
     runReport,
     runWarmCold,
     selfDiff,
+    serverChanged,
     summarize,
     warmColdExitCode,
     writeReceiptSummary,
@@ -579,10 +581,15 @@ describe('FAIL INJECTION: the instrument goes red against a broken box', () => {
                 lines: LINES, populationDesc: 'positive control', skips: [],
                 cfg: cfgFor(stub.base), concurrency: 1, log: QUIET,
             });
-            expect(stub.hits).toHaveLength(6);
-            expect(stub.hits.filter(h => h.side === 'warm')).toHaveLength(3);
-            expect(stub.hits.filter(h => h.side === 'cold')).toHaveLength(3);
-            for (const h of stub.hits) {
+            // Two probe requests per line, plus the /api/ok server-stamp
+            // bracket (one read before the pass, one after — qs-less GETs).
+            const probes = stub.hits.filter(h => h.qs !== '');
+            const stamps = stub.hits.filter(h => h.qs === '');
+            expect(probes).toHaveLength(6);
+            expect(stamps).toHaveLength(2);
+            expect(probes.filter(h => h.side === 'warm')).toHaveLength(3);
+            expect(probes.filter(h => h.side === 'cold')).toHaveLength(3);
+            for (const h of probes) {
                 expect(h.qs).toContain('nosave=1');
                 expect(h.qs).toContain('debug=1');
             }
@@ -913,5 +920,53 @@ describe('report re-renders a stored run without trusting anything stored in it'
             { id: 'a', query: 'q1', shape: 'item', category: 'c', band: null, warm: obs(), cold: obs() },
         ], { populationFingerprint: 'notthehashatall' });
         expect(runReport(p, QUIET).lines.join('\n')).toContain('DOES NOT MATCH the stored');
+    });
+});
+
+// ===========================================================================
+// 9. SERVER STAMP — a receipt without a build is a diff trap
+// ===========================================================================
+
+function stampFetch(body: unknown, status = 200): typeof fetch {
+    return (async () => ({
+        ok: status >= 200 && status < 300,
+        status,
+        json: async () => body,
+        headers: { get: () => null },
+    })) as unknown as typeof fetch;
+}
+
+describe('the server stamp reads /api/ok and refuses to invent identity', () => {
+    const cfg = (fetchImpl: typeof fetch): ProbeConfig =>
+        ({ base: 'http://box', apiKey: 'k', timeoutMs: 1000, fetchImpl });
+
+    it('a keyed read carries buildId, pid and since', async () => {
+        const s = await fetchServerStamp(cfg(stampFetch({
+            ok: true, buildId: 'B1', llm: { authorized: true, pid: 42, since: '2026-08-23T00:00:00.000Z' },
+        })));
+        expect(s).toEqual({ buildId: 'B1', pid: 42, since: '2026-08-23T00:00:00.000Z' });
+    });
+
+    it('an unauthorized read still stamps the public buildId, with pid/since null', async () => {
+        const s = await fetchServerStamp(cfg(stampFetch({
+            ok: true, buildId: 'B1', llm: { authorized: false },
+        })));
+        expect(s).toEqual({ buildId: 'B1', pid: null, since: null });
+    });
+
+    it('a non-2xx or a network error is null (UNSTAMPED), never a fabricated stamp', async () => {
+        expect(await fetchServerStamp(cfg(stampFetch({}, 500)))).toBeNull();
+        const throwing = (async () => { throw new Error('ECONNREFUSED'); }) as unknown as typeof fetch;
+        expect(await fetchServerStamp(cfg(throwing))).toBeNull();
+    });
+
+    it('serverChanged: any identity field moving is a change; a missing read is null, not false', () => {
+        const a = { buildId: 'B1', pid: 42, since: 's' };
+        expect(serverChanged(a, { ...a })).toBe(false);
+        expect(serverChanged(a, { ...a, buildId: 'B2' })).toBe(true);  // deploy
+        expect(serverChanged(a, { ...a, pid: 43 })).toBe(true);        // restart
+        expect(serverChanged(a, { ...a, since: 's2' })).toBe(true);    // counter reset
+        expect(serverChanged(null, a)).toBeNull();
+        expect(serverChanged(a, null)).toBeNull();
     });
 });
