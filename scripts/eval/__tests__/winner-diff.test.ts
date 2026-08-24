@@ -1137,6 +1137,87 @@ describe('winner-gate.sh FROZEN_INPUT_PATHS — what the frozen-pool diff must r
 });
 
 // ============================================================================
+// winner-gate.sh's RETRIEVAL_PATHS — the gather the replay freezes
+// ============================================================================
+/**
+ * THE FIRST ABORT, PINNED LAST (2026-08-24). The frozen and unobserved lists below
+ * were asserted in both directions from the day they shipped; this one was only ever
+ * described in comments, and a real hole sat in it: `src/lib/openfoodfacts/search.ts`
+ * is the OFF gather — `searchOffSimple()`/`searchOffSemantic()` are imported by
+ * gather-candidates.ts and by nothing else the replay reaches, and `computeOffScore()`
+ * there sets the OFF lane's order into buildRerankPool() — yet it matched none of the
+ * three patterns. A change to it ran the diff on a pool the changed tree would never
+ * have produced and printed the result as signal. Found by the A7 tie-arbitration code
+ * census (plan 11 §6), which needed exactly that file to be gateable-or-refused.
+ *
+ * DELETE `src/lib/openfoodfacts/search\.ts` FROM RETRIEVAL_PATHS AND THE FIRST CASE
+ * BELOW FAILS.
+ *
+ * The negative cases matter as much. `openfoodfacts/hydrate.ts` lives in the SAME
+ * directory and IS executed by the replay (serving/hydration-lane.ts imports it), so
+ * the membership names the file, never the directory — a directory pattern would be a
+ * false abort on a file the diff genuinely observes, the #311 shape again. And the
+ * pick-layer files A7 designs against must stay silent here: they are what a
+ * frozen-pool diff is FOR.
+ *
+ * No `missingPathsIn` case for this list: four of its alternatives (`query-builder`,
+ * `typesense`, `fatsecret-lane`, `embedding`) are deliberate substrings, not paths, so
+ * that check would red on the shipped membership by design. The path-shaped
+ * alternatives are checked to exist individually instead.
+ */
+describe('winner-gate.sh RETRIEVAL_PATHS — the gather the replay freezes', () => {
+    const gateAborts = (changed: string[]) => gateAbortsOn('RETRIEVAL_PATHS', changed);
+
+    it('ABORTS on src/lib/openfoodfacts/search.ts — the OFF gather, unlisted until 2026-08-24', () => {
+        expect(gateAborts(['src/lib/openfoodfacts/search.ts'])).toBe(true);
+    });
+
+    it('the path-shaped alternatives name files that EXIST — a typo is a silent hole, not a red', () => {
+        for (const rel of ['src/lib/openfoodfacts/search.ts', 'src/lib/mapping/gather-candidates.ts', 'src/lib/search']) {
+            expect(fs.existsSync(path.join(REPO_ROOT, rel))).toBe(true);
+        }
+    });
+
+    it.each([
+        ['src/lib/mapping/gather-candidates.ts', 'the gather itself'],
+        ['src/lib/mapping/fatsecret-lane.ts', 'the FS lane'],
+        // src/lib/search/ is listed as a DIRECTORY, so this file aborts by path even though
+        // the mapper never calls it today. A design that wants isBetterRepresentative()
+        // must reuse it by import or move it; editing it in place voids the diff.
+        ['src/lib/search/dedupe-candidates.ts', 'the whole src/lib/search/ directory'],
+    ])('ABORTS on %s (%s)', (changed) => {
+        expect(gateAborts([changed])).toBe(true);
+    });
+
+    it.each([
+        // same directory as the listed file, and the replay RUNS it
+        'src/lib/openfoodfacts/hydrate.ts',
+        // the pick layer — what a frozen-pool diff measures
+        'src/lib/mapping/simple-rerank.ts',
+        'src/lib/mapping/rerank-pool.ts',
+        'src/lib/mapping/filter-candidates.ts',
+        'src/lib/mapping/map-ingredient-with-fallback.ts',
+        // the harness itself
+        'scripts/eval/winner-gate.sh',
+        'scripts/eval/winner-diff.ts',
+    ])('does NOT abort on %s', (changed) => {
+        expect(gateAborts([changed])).toBe(false);
+    });
+
+    it('does NOT abort on a test-only edit to the OFF gather (the #311 false abort)', () => {
+        expect(gateAborts(['src/lib/openfoodfacts/__tests__/search.test.ts'])).toBe(false);
+        expect(gateAborts(['src/lib/openfoodfacts/search.test.ts'])).toBe(false);
+    });
+
+    it('aborts on a mixed change set — the OFF gather among files the replay does observe', () => {
+        expect(gateAborts([
+            'src/lib/mapping/simple-rerank.ts',
+            'src/lib/openfoodfacts/search.ts',
+        ])).toBe(true);
+    });
+});
+
+// ============================================================================
 // winner-gate.sh's UNOBSERVED_SURFACE_PATHS — the code the replay never runs
 // ============================================================================
 /**
