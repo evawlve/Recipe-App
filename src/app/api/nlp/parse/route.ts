@@ -12,6 +12,7 @@ import { authenticateRequest } from '@/lib/auth/request-auth';
 // Pure (its only import is a type), so static is free. Owns the limit defaults, the
 // per-request env read and the "did this request do paid work?" predicate.
 import { readParseLimits, isFreeParseRequest } from '@/lib/nlp/parse-rate-limit';
+import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -190,7 +191,12 @@ export async function POST(req: NextRequest) {
     // itself), the FoodMapping usedCount/lastUsedAt bumps on a warm READ, and the
     // upstream mirrors (FatSecretFood, OffFood, AiGeneratedFood, LearnedSynonym) —
     // caches of other people's data, not rows this request computed.
-    const noSave = isDevBypass &&
+    // TESTER ALLOWLIST (2026-08-23, plan 11 §4, after H3 #369): a bearer account listed in
+    // NOSAVE_TESTER_EMAILS may ask for the write policy too — device sittings must not warm
+    // the production cache — and gets NOTHING else: not the rate-limit bypass, not noCache,
+    // not the debug echo. Shape + fail-closed rule: src/lib/nlp/nosave-testers.ts.
+    const noSaveAllowed = isDevBypass || isNoSaveTester(userEmail);
+    const noSave = noSaveAllowed &&
       (req.nextUrl.searchParams.get('nosave') === '1' || body.nosave === true);
 
     // Diagnostic echo for the golden eval (2026-08-17): put `servingTier` and
