@@ -83,7 +83,6 @@ export async function POST(req: NextRequest) {
   // `dev-bypass-email-substring-removed` greps THIS file for substring checks and would
   // pass vacuously if the allowlist lived anywhere else.
   if (userEmail && (
-    userEmail === 'google_test_user@kindahealthy.com' ||
     userEmail.endsWith('@google.com') ||
     userEmail === 'diego@example.com'
   )) {
