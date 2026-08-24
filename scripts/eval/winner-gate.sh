@@ -167,7 +167,19 @@ changed_paths() {
     } | grep -vE "$NON_REPLAY_PATHS" | sort -u
 }
 
-RETRIEVAL_PATHS='src/lib/mapping/gather-candidates.ts|src/lib/search/|query-builder|typesense|fatsecret-lane|embedding'
+# `src/lib/openfoodfacts/search.ts` ADDED 2026-08-24. It is the OFF gather itself:
+# `searchOffSimple()`/`searchOffSemantic()` are imported by gather-candidates.ts and by
+# nothing else the replay reaches, and `computeOffScore()` there decides the OFF lane's
+# order into buildRerankPool(). Until today a change to it matched NONE of the three
+# lists, so the diff ran both sides on a frozen pool the changed tree would never have
+# produced and printed the result as signal. The FILE is listed, not the directory:
+# `openfoodfacts/hydrate.ts` sits beside it and IS executed by the replay (through
+# serving/hydration-lane.ts), so a directory pattern would be a false abort on a file
+# the diff genuinely observes — the #311 shape. (re-derive: `grep -rl
+# "openfoodfacts/search'" src --include='*.ts' | grep -v test` -> gather-candidates.ts
+# only; `grep -rl "openfoodfacts/hydrate'" src/lib` -> serving/hydration-lane.ts only;
+# measured 2026-08-24.) Pinned in both directions by winner-diff.test.ts.
+RETRIEVAL_PATHS='src/lib/mapping/gather-candidates.ts|src/lib/openfoodfacts/search\.ts|src/lib/search/|query-builder|typesense|fatsecret-lane|embedding'
 if changed_paths | grep -qE "$RETRIEVAL_PATHS"; then
     echo "ABORT: this branch touches RETRIEVAL:" >&2
     changed_paths | grep -E "$RETRIEVAL_PATHS" | sed 's/^/  /' >&2
