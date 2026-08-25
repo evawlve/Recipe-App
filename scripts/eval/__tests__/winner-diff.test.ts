@@ -489,16 +489,23 @@ describe('parseGoldenSet', () => {
         // until P3; n-prose-03 pasta, a measured nondeterministic rung). Five carry
         // `expectServingTier`, which this parser does not read (the replay screen
         // cannot see a tier; the live eval scores it under the debug echo only).
-        expect(all.length).toBe(265);
+        // 271 since 2026-08-24: the SYNONYM-DIRECTION SET, n-syn-01..06 (category
+        // `synonym_direction`, D-A9 / PR #381) — six bare `text` lines (ham, ground
+        // beef, baking soda, light corn syrup, hamburger bun, and gammon as the
+        // UK->US control) asserting expectName + macros.kcal100 only: no grams, no
+        // total, no expectItems, none knownIssue. Serving is a draw there and is
+        // deliberately unasserted.
+        expect(all.length).toBe(271);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(265);
+        expect(n(c => c.expectName.length > 0)).toBe(271);
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
         expect(n(c => !!c.grams)).toBe(162);              // the majority assertion
         // 66 since 2026-08-15 (n-micro-01's sodium100 band); 69 since 2026-08-17
         // (n-prose-01 protein100/fat100, n-prose-03 and n-prose-10 kcal100 as the
         // cooked-vs-dry discriminator the _readme's STANDING RULE asks for)
-        expect(n(c => !!c.macros)).toBe(69);
+        // 75 since 2026-08-24: the six synonym-direction kcal100 bands.
+        expect(n(c => !!c.macros)).toBe(75);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
         expect(n(c => typeof c.expectItems === 'number')).toBe(63);
@@ -546,7 +553,9 @@ describe('parseGoldenSet', () => {
         // the point of the set is the route's prose path (single-item fast path
         // or the segmenter), so none is item-shaped and the item counts below are
         // untouched by it.
-        expect([item.length, text.length]).toEqual([166, 99]);
+        // [166, 105] since 2026-08-24: n-syn-01..06 are ALL `text` (bare lines are
+        // the only shape Step 0a's canonicalizer ever rewrote); item counts untouched.
+        expect([item.length, text.length]).toEqual([166, 105]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
@@ -780,16 +789,18 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // deterministicSingleItem `text` (the route's fast path) but grams/total
         // are replay-blind by construction, and the four sentences are
         // segmenter-bound. Their `expectServingTier` is not even parsed here.
-        expect(cov.cases).toBe(265);
+        // 271 since 2026-08-24: n-syn-01..06 add six expectName + macros cases and
+        // move no grams/total/expectItems count.
+        expect(cov.cases).toBe(271);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 162, blind: 162 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
         expect(kind('total')).toEqual({ kind: 'total', asserted: 53, blind: 53 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(265);
+        expect(en.asserted).toBe(271);
         expect(en.blind).toBeGreaterThan(0);
-        expect(en.blind).toBeLessThan(265);
+        expect(en.blind).toBeLessThan(271);
         // every grams band in the corpus is unjudgeable here...
         expect(cov.gramsCases).toBe(162);
         // ...and only a handful would be record-INdependent even with a resolver,
