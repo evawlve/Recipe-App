@@ -10,6 +10,7 @@ import { extractModifierConstraints, applyModifierConstraints, type ModifierCons
 import { detectGrainCookingContext } from './filter-candidates';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
+import { normalizeNameKey } from '../search/dedupe-candidates';
 
 export interface RerankCandidate {
     id: string;
@@ -1712,6 +1713,98 @@ function isStrongBrandedExactMatch(
  * @param aiNutritionEstimate - Optional AI-estimated nutrition for scoring
  * @param rawLine - Optional raw ingredient line for modifier constraint extraction
  */
+// ---- A7 / K4 (2026-08-24): a brand-gapped OFF twin ranks behind its carrier inside T2 ----
+// OFF is a barcode corpus, so an OFF row with no brandName is not a generic food. When a
+// brandless OFF row has a same-name sibling under the same GS1 company prefix that DOES
+// carry the brand, the two are one listing with a data gap on one side — and the
+// generic-preferred tie step below was reading the gapped row as the generic seat (25 of
+// the 42 A4(ii) YES ties settled there; owner:
+// sync-docs/reports/2026-08-24_a7-tie-arbitration-design.md, mobile repo).
+//
+// How the tie arises (measured on the YES pools, 2026-08-24): the brandless stub earns
+// NO_BRAND (+0.05) and the carrier earns SERVING_LABEL_BOOST (+0.05) for the label serving
+// the stub lacks, so the two land byte-equal on score and the pick falls to this step.
+// Fires only inside a score tie, only OFF<->OFF, only within one 7-digit prefix, and only
+// when both twins' per-100 g kcal agree within OFF_TWIN_KCAL_TOLERANCE — the graft that
+// keeps `bubble tea` (same prefix, same name, 41% apart: a sibling SKU, not a twin) out.
+// Roles are per-candidate integers computed ONCE over the whole scored set, so the
+// comparator stays a transitive lexicographic key; a future subset sort must recompute
+// them. Outside that intersection brandTieRank() reduces to the old `brandName ? 1 : 0`
+// order (0 < 2), and the gapped twin's rank 1 keeps it AHEAD of every cross-lane branded
+// row, so a lane can never be preferred by this (the serving-class-keys refutation).
+const OFF_GS1_PREFIX_DIGITS = 7;
+export const OFF_TWIN_KCAL_TOLERANCE = 0.10;
+
+function offGs1Prefix(id: string): string | null {
+    if (!id.startsWith('off_')) return null;
+    const code = id.slice(4);
+    return /^\d{8,}$/.test(code) ? code.slice(0, OFF_GS1_PREFIX_DIGITS) : null;
+}
+
+/**
+ * Restates the non-exported hasRealBrand() in src/lib/search/dedupe-candidates.ts.
+ * That directory is winner-gate RETRIEVAL_PATHS — an edit there voids the frozen-pool
+ * gate — so the predicate is repeated here rather than exported; keep the two identical.
+ * (normalizeNameKey IS exported there and is imported, one owner.)
+ */
+function hasRealBrandName(brandName: string | undefined): boolean {
+    const b = (brandName ?? '').trim().toLowerCase();
+    return b.length > 1 && b !== 'unknown' && b !== 'n/a' && b !== 'none';
+}
+
+/** Both rows carry a positive per-100 g kcal and agree within the tolerance. */
+function twinKcalWithinTolerance(a: RerankCandidate, b: RerankCandidate): boolean {
+    const ak = a.nutrition?.kcal;
+    const bk = b.nutrition?.kcal;
+    if (!(typeof ak === 'number' && ak > 0) || !(typeof bk === 'number' && bk > 0)) return false;
+    if (a.nutrition?.per100g === false || b.nutrition?.per100g === false) return false;
+    return Math.abs(ak - bk) / Math.max(ak, bk) <= OFF_TWIN_KCAL_TOLERANCE;
+}
+
+export type OffTwinRole = 'carrier' | 'gapped';
+
+/**
+ * Twin roles over the whole scored set: `carrier` = a brand-carrying OFF row that has a
+ * brandless same-name, same-prefix, kcal-agreeing twin; `gapped` = that brandless twin.
+ * A group with no carrier, no gapped row, or no kcal-agreeing pair assigns nothing.
+ */
+export function computeOffTwinRoles(cands: RerankCandidate[]): Map<string, OffTwinRole> {
+    const groups = new Map<string, RerankCandidate[]>();
+    for (const c of cands) {
+        if (c.source !== 'openfoodfacts') continue;
+        const prefix = offGs1Prefix(c.id);
+        if (!prefix) continue;
+        const key = `${prefix}|${normalizeNameKey(c.name)}`;
+        const g = groups.get(key);
+        if (g) g.push(c); else groups.set(key, [c]);
+    }
+    const roles = new Map<string, OffTwinRole>();
+    for (const g of groups.values()) {
+        const carriers = g.filter(c => hasRealBrandName(c.brandName));
+        const gapped = g.filter(c => !hasRealBrandName(c.brandName));
+        if (carriers.length === 0 || gapped.length === 0) continue;
+        for (const s of gapped) {
+            for (const c of carriers) {
+                if (!twinKcalWithinTolerance(s, c)) continue;
+                roles.set(s.id, 'gapped');
+                roles.set(c.id, 'carrier');
+            }
+        }
+    }
+    return roles;
+}
+
+/**
+ * Generic-preferred tie rank. 0 = brandless row (today's generic seat) OR the brand-carrying
+ * twin of a brandless row; 1 = the brand-gapped OFF twin; 2 = every other branded row.
+ */
+export function brandTieRank(c: RerankCandidate, roles: Map<string, OffTwinRole>): number {
+    const role = roles.get(c.id);
+    if (role === 'carrier') return 0;
+    if (role === 'gapped') return 1;
+    return c.brandName ? 2 : 0;
+}
+
 export function simpleRerank(
     query: string,
     candidates: RerankCandidate[],
@@ -2012,6 +2105,7 @@ export function simpleRerank(
 
     // Sort by score descending, with deterministic tiebreaker (ID) to ensure stable results
     // This prevents non-determinism when candidates have equal scores
+    const offTwinRole = computeOffTwinRoles(scored.map(s => s.candidate));
     scored.sort((a, b) => {
         // Decisive brand partition: when the gate is active, gated same-brand
         // candidates always rank above cross-brand ones — a hijacker's exact
@@ -2070,9 +2164,12 @@ export function simpleRerank(
                 && b.candidate.brandName.toLowerCase().includes(namedBrand) ? 1 : 0;
             if (aMatchesBrand !== bMatchesBrand) return bMatchesBrand - aMatchesBrand;
         } else {
-            const aHasBrand = a.candidate.brandName ? 1 : 0;
-            const bHasBrand = b.candidate.brandName ? 1 : 0;
-            if (aHasBrand !== bHasBrand) return aHasBrand - bHasBrand;
+            // A7 / K4: generic first; a brand-carrying OFF twin sits in its brandless
+            // twin's seat, the gapped twin behind it, every other brand after (roles
+            // computed once above, before the sort).
+            const aRank = brandTieRank(a.candidate, offTwinRole);
+            const bRank = brandTieRank(b.candidate, offTwinRole);
+            if (aRank !== bRank) return aRank - bRank;
         }
 
         // Tiebreaker 3: nutrition closeness — prefer candidate whose per-100g

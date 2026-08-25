@@ -768,16 +768,17 @@ describe('population builders account for every line they were given', () => {
         expect(p.skips.some(s => s.reason.includes('knownIssue'))).toBe(true);
     });
 
-    it('the REAL golden set yields the pinned 271 nlp cases with nothing unaccounted for', () => {
+    it('the REAL golden set yields the pinned 274 nlp cases with nothing unaccounted for', () => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const real = require('../golden-set.json');
         const p = goldenPopulation(real);
         expect(p.lines.length + p.skips.length).toBe(real.nlp.length);
         // 271 / 105 since 2026-08-24: n-syn-01..06, six bare `text` lines with a
         // kcal100 band and no grams band (D-A9 / PR #381).
-        expect(p.lines).toHaveLength(271);
-        expect(p.lines.filter(l => l.band).length).toBe(162);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(105);
+        // 274 / 165 / 108 since 2026-08-24 (same day): n-dup-01..03 (A7/K4, PR #382), grams + kcal100 bands.
+        expect(p.lines).toHaveLength(274);
+        expect(p.lines.filter(l => l.band).length).toBe(165);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(108);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 
