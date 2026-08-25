@@ -1781,6 +1781,32 @@
       },
       "verified": "2026-08-24",
       "timeoutMs": 60000
+    },
+    {
+      "id": "ground-meat-default-is-beef-turkey-and-cache-bumped",
+      "claim": "The ground-meat leanness default in normalizeIngredientName() (`ground X` -> `85% lean 15% fat X`, `lean ground X` -> 90/10) fires for beef|turkey ONLY, and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES, with RULES_VERSION bumped past 3 so AiNormalizeCache cannot replay the old form. Until 2026-08-24 the list was beef|turkey|chicken|pork|meat: bare `ground chicken` was searched as `85% lean 15% fat chicken` (0 chicken records in OffFood/FatSecretFood/FdcFood carry that phrasing; census in the owner report) and fell to the AI-stub lane, and `ground lamb` prep-stripped to key `lamb`, a human-triage NZ shoulder row. Output is protected-phrase count @ occurrences of the narrowed alternation @ occurrences of the old alternation @ RULES_VERSION.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md",
+      "where": "backend",
+      "command": "node -e \"const fs=require('fs');const s=fs.readFileSync('src/lib/mapping/normalization-rules.ts','utf8');const v=(fs.readFileSync('src/lib/mapping/validated-mapping-helpers.ts','utf8').match(/export const RULES_VERSION = (\\d+)/)||[])[1];const q=String.fromCharCode(39);const ph=['ground chicken','ground pork','ground lamb','ground bison','ground veal','ground venison','ground meat'].filter(p=>s.includes(q+p+q+',')).length;const d=s.split('(beef|turkey)(?:').length-1;const old=s.split('(beef|turkey|chicken|pork|meat)').length-1;process.stdout.write(ph+'@'+d+'@'+old+'@'+v)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^7@2@0@([4-9]|[1-9][0-9]+)$"
+      },
+      "verified": "2026-08-24",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "ground-chicken-normalizes-to-itself",
+      "claim": "Through the shipped normalizer, reading the on-disk rules JSON like production: `ground chicken` and `ground lamb` normalize to themselves (identity kept for retrieval AND the cache key) while `ground beef` still takes the 85/15 default. Output is normalize(ground chicken)|normalize(ground lamb)|normalize(ground beef)|normalize(ground cinnamon). Before 2026-08-24 this read `85% lean 15% fat chicken|lamb|85% lean 15% fat beef|cinnamon`.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md",
+      "where": "backend",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');process.stdout.write(['ground chicken','ground lamb','ground beef','ground cinnamon'].map(l=>n(l).cleaned).join('|'))\"",
+      "expect": {
+        "kind": "equals",
+        "value": "ground chicken|ground lamb|85% lean 15% fat beef|cinnamon"
+      },
+      "verified": "2026-08-24",
+      "timeoutMs": 180000
     }
   ]
 }
