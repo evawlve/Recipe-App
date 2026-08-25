@@ -588,6 +588,39 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // the caller. Still 'gate-backstop': the gate's relation to Step 4 is
     // untouched.
     '4d990223908a0828': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes. A8 row 1 (2026-08-25). ONE added
+    // statement inside the block, and it is a CAPTURE, not a decision:
+    //
+    //   rerankSortedIds = rerankResult.sortedCandidates.map(c => c.id);
+    //
+    // It records the reranker's ordering into a variable declared OUTSIDE this
+    // block, so that `attemptServingFailureFallback()` — which used to take the
+    // first three of `filtered`, i.e. GATHER order — can honour it. Nothing in
+    // this block reads it, and the assignment cannot change which record the
+    // block selects.
+    //
+    // PROVEN, not asserted, the way 3fc2ca07's re-pin requires (comments and
+    // blank lines stripped from the WHOLE file, both sides, then diffed —
+    // never a windowed diff, which reports phantom hunks when comments move):
+    //
+    //   code lines 2,593 -> 2,623; nine hunks; exactly ONE of them inside
+    //   lines 1804-2431, and it is the assignment quoted above. The other
+    //   eight are the import, the `let` declaration, the call-site argument,
+    //   the params, and the fallback body — all outside the block.
+    //
+    // Helpers hash UNCHANGED at 8c1e518d30331976, so the file was not re-encoded.
+    //
+    // WHY THE VARIANT DOES NOT MOVE. `SelectionVariant` models what the
+    // confidence GATE does relative to Step 4, which is untouched. And the
+    // consumer of the captured order is unreachable from the harness by
+    // construction: `replaySelection()` models selection only, and the optional
+    // --with-serving stage calls `hydrateAndSelectServing()` on the WINNER
+    // (resolveServings(), section 9) — it never runs the mapper's serving
+    // fallback. So the reordering this capture feeds is invisible to this
+    // instrument in both directions; it is gated by unit pins and live probes
+    // instead, and the PR says so rather than letting a green diff imply
+    // otherwise.
+    '27e15daa0d31d518': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -632,7 +665,14 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
  * (that shape is genuinely known, and naming it is more useful than "unrecognised"),
  * but it can no longer claim the replay mirrors it.
  */
-const TRANSCRIBED_CALLER = '4d990223908a0828';
+// MOVED 2026-08-25 (A8 row 1) from 4d990223908a0828. The transcription in section 9
+// is UNCHANGED and did not need to change: the only delta in the caller block is the
+// `rerankSortedIds` capture, whose sole consumer is the mapper's serving fallback,
+// which replaySelection() does not model. Moving the pointer is what keeps
+// announceVariantFit() honest — leaving it on 4d990223 would print "SUPERSEDED SHAPE"
+// for a tree the transcription does mirror, and teaching people to ignore that banner
+// is exactly how the 6271792 drift went unfixed for a fortnight.
+const TRANSCRIBED_CALLER = '27e15daa0d31d518';
 
 interface DriftResult {
     caller: string;

@@ -249,14 +249,44 @@ function toUnifiedCandidate(
 ): UnifiedCandidate {
     const per100 = derivePer100gFromServings(hit.servings, hit.name);
 
+    // THE LIVE PATH USED TO LOSE EXACTLY THE DATA THE BUILDER NEEDS (A8 row 1).
+    //
+    // Two lossy steps sat here, and together they made a first-sighting
+    // restaurant record unbillable. (1) The map dropped every macro field, so a
+    // serving reached `buildFatSecretResult()` with `nutrients` undefined; the
+    // builder's raw-array last resort reads `s['nutrients']`, a key the RAW api
+    // serving does not have (its macros are flat: `calories`, `carbohydrate`,
+    // `protein`, `fat` — exactly what `servingMacros()` reads). (2) The filter
+    // then deleted any serving with no gram weight, which for a chain record is
+    // the ONLY serving it has: `fs_124375163` "Nachos Bellgrande - Beef" ships
+    // one serving, `1 serving` = 730 kcal, `metricServingAmount` null,
+    // `servingWeightGrams` null.
+    //
+    // So `anyServingHasMacros` read false on BOTH paths, the builder logged
+    // `fs.build_result.no_nutrition` and returned null, and the mapper's serving
+    // fallback billed an OFF sibling instead. Measured on the box 2026-08-25:
+    // 1,432 such events over 413 distinct records, 246 of which are not in
+    // `FatSecretFood` at all — a failed build never reaches the winner-persist
+    // path, so the record stays first-sighting and fails again on every request.
+    // The PERSISTED analogue of the same shape bills fine (3,472 Brand foods,
+    // 14.4%): the DB path keeps `nutrients`. Only the live path lost them.
+    //
+    // Carrying the macros and keeping a gram-less serving that HAS macros hands
+    // the builder's existing macro-only branch the data it was written for — its
+    // own comment names the Impossible Whopper — and nothing new is written to
+    // `FatSecretServing` (DNB-1/DNB-2 untouched); the winner then persists
+    // through the path every winner already uses.
+    //
+    // A gram-less serving with NO macros is still dropped: it states neither a
+    // weight nor a bill, so it is not data. Owner:
+    // `sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md` §4 K3.
     const servings = (hit.servings ?? [])
         .map(s => ({
             description: (s.description ?? s.measurementDescription ?? '').trim(),
             grams: servingGramsOf(s, hit.name),
+            nutrients: rawServingNutrients(s),
         }))
-        .filter((s): s is { description: string; grams: number } =>
-            Boolean(s.description) && s.grams != null
-        );
+        .filter(s => Boolean(s.description) && (s.grams != null || s.nutrients != null));
 
     return {
         id: `fs_${hit.id}`,

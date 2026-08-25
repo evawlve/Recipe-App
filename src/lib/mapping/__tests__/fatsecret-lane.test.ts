@@ -287,24 +287,70 @@ describe('per-100g derivation', () => {
         expect(candidate).toBeDefined();
         expect(candidate.id).toBe('fs_12345');
         expect(candidate.nutrition).toBeUndefined();
-        expect(candidate.servings).toBeUndefined(); // no gram-bearing servings
+        // RE-ADJUDICATED 2026-08-25 (A8 row 1), not silently updated. This
+        // assertion used to read `toBeUndefined()` on the reasoning "no
+        // gram-bearing servings" — true, and the wrong test: the serving states
+        // no WEIGHT but it does state a BILL (100 kcal), and dropping it is what
+        // made `buildFatSecretResult()` log `no_nutrition` and discard the record
+        // on the live path while the identical persisted record billed fine.
+        // The zero-guard's real subject — `nutrition` (the per-100g derivation)
+        // stays undefined because 0 g yields no density — is unchanged above.
+        expect(candidate.servings).toEqual([
+            { description: '1 unit', grams: null, nutrients: { calories: 100 } },
+        ]);
     });
 
-    it('exposes gram-bearing servings as {description, grams}', async () => {
+    it('exposes servings as {description, grams, nutrients}, dropping only the ones that state neither', async () => {
         const hit = summary({
             servings: [
                 serving({ id: 'a', description: '1 bar', metricServingAmount: 50, metricServingUnit: 'g', calories: 200 }),
                 serving({ id: 'b', description: null, measurementDescription: 'cup', servingWeightGrams: 240, calories: 150 }),
-                serving({ id: 'c', description: '1 mystery' }), // no grams → dropped
+                serving({ id: 'c', description: '1 mystery' }), // no grams AND no macros → dropped
             ],
         });
         const client = makeClient([hit]);
 
         const [candidate] = await lane.searchFatSecretLane('protein bar', 8, client);
 
+        // The macros ride along (A8 row 1): the builder's macro-only branch reads
+        // them through `servingMacros()`, which wants exactly these API field
+        // names. Serving `c` is still dropped — no weight and no bill is not data.
         expect(candidate.servings).toEqual([
-            { description: '1 bar', grams: 50 },
-            { description: 'cup', grams: 240 }, // measurementDescription fallback
+            { description: '1 bar', grams: 50, nutrients: { calories: 200 } },
+            { description: 'cup', grams: 240, nutrients: { calories: 150 } }, // measurementDescription fallback
+        ]);
+    });
+
+    it('keeps a gram-less serving that carries macros — the chain-restaurant shape', async () => {
+        // `fs_124375163` "Nachos Bellgrande - Beef", measured off the live
+        // foods.search.v4 payload 2026-08-25: ONE serving, `1 serving`, 730 kcal,
+        // `metricServingAmount` null, `servingWeightGrams` null. Before A8 row 1
+        // the lane deleted it, the builder found no macros on either path and
+        // logged `fs.build_result.no_nutrition` (1,432 events over 413 records on
+        // the box), and the mapper billed an OFF sibling instead.
+        const hit = summary({
+            servings: [
+                serving({
+                    id: 'only',
+                    description: '1 serving',
+                    calories: 730,
+                    carbohydrate: 81,
+                    protein: 17,
+                    fat: 38,
+                }),
+            ],
+        });
+        const client = makeClient([hit]);
+
+        const [candidate] = await lane.searchFatSecretLane('nachos bellgrande', 8, client);
+
+        expect(candidate.nutrition).toBeUndefined(); // no weight → no per-100g panel
+        expect(candidate.servings).toEqual([
+            {
+                description: '1 serving',
+                grams: null,
+                nutrients: { calories: 730, carbohydrate: 81, protein: 17, fat: 38 },
+            },
         ]);
     });
 

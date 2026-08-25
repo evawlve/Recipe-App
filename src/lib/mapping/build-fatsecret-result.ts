@@ -971,12 +971,27 @@ export async function buildFatSecretResult(
         // the serving so the per-serving macro scaling below bills exactly
         // `qty x` this serving's authoritative macros.
         if (grams == null) {
+            // THE SYNTHETIC `100 g` PANEL ROW IS DEMOTED HERE TOO, for the same
+            // reason `usableServings` above demotes it: it is a per-100g panel,
+            // not a portion anyone eats. Before A8 row 1 this branch could never
+            // see it — the lane dropped serving macros wholesale, so on the live
+            // path nothing here carried `nutrients` at all. Now that it does, a
+            // record shipping BOTH a `100 g` row and a real gram-less `1 serving`
+            // would otherwise bill the panel row as if it were the serving, which
+            // is the flat-100g class the comment on `isPer100gPanelServing`
+            // describes and this builder already refuses one branch up. Demote,
+            // never drop: when the panel row is the ONLY thing carrying macros it
+            // is still the record's whole nutrition and billing it beats
+            // returning nothing.
+            const macroServings = servings.filter(s => servingMacros(s.nutrients) != null);
+            const nonPanelMacroServings = macroServings.filter(
+                s => !(panelIsInvertible && isPer100gPanelServing(s)));
+            const macroPool = nonPanelMacroServings.length > 0 ? nonPanelMacroServings : macroServings;
             const macroServing =
                 (row?.defaultServingId
-                    ? servings.find(s => s.servingId === row!.defaultServingId
-                        && servingMacros(s.nutrients) != null)
+                    ? macroPool.find(s => s.servingId === row!.defaultServingId)
                     : undefined)
-                ?? servings.find(s => servingMacros(s.nutrients) != null);
+                ?? macroPool[0];
             if (macroServing) {
                 const m = servingMacros(macroServing.nutrients)!;
                 // Invert the record's own per-100g panel when it has one: that

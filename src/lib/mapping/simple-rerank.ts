@@ -1511,8 +1511,15 @@ export function candidateMatchesTargetBrand(brandName: string | undefined, candi
  * like the product the user described: its NAME (not brand) must cover at
  * least one non-brand query token. Keeps "Ghost Energy Drink" from hijacking
  * "ghost protein cinnamon roll" just for sharing the brand.
+ *
+ * EXPORTED 2026-08-25 for a second caller with the same question:
+ * `attemptServingFailureFallback()` in map-ingredient-with-fallback.ts, which
+ * accepts a substitute record when the winner cannot hydrate and until now
+ * asked only `hasCoreTokenMismatch()`. Exported rather than restated because a
+ * restated copy is free to drift, and the mapper already imports from this
+ * module — this adds no coupling that was not there.
  */
-function coversNonBrandQueryToken(candidateName: string, query: string, targetBrand: string): boolean {
+export function coversNonBrandQueryToken(candidateName: string, query: string, targetBrand: string): boolean {
     const brandTokens = new Set(targetBrand.toLowerCase().trim().split(/\s+/).filter(Boolean));
     const queryTokens = query.toLowerCase().split(/[\s,()[\]{}]+/)
         .filter(t => t.length > 2 && !brandTokens.has(t));

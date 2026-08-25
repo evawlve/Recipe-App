@@ -298,6 +298,80 @@ describe('buildFatSecretResult — gram resolution cascade', () => {
         expect(result!.servingDescription).toBe('1 serving');
     });
 
+    it('bills a FIRST-SIGHTING macro-only record — no DB row, macros only on the candidate (K3)', async () => {
+        // THE LIVE HALF of the Impossible Whopper case above, and until A8 row 1
+        // it was the half that did not work. That test mocks a PERSISTED row, so
+        // it exercises `row.servings` — which has always carried `nutrients`. A
+        // record nobody has logged before has no row at all, and the lane used to
+        // hand the builder `{description, grams}` with the macros stripped and
+        // every gram-less serving deleted. `anyServingHasMacros` read false on
+        // both paths and this returned null: `fs.build_result.no_nutrition`,
+        // 1,432 events over 413 distinct records on the box (2026-08-25), 246 of
+        // which are not in `FatSecretFood` at all — because a failed build never
+        // reaches the winner-persist path, so the record never becomes a row and
+        // fails again on every single request.
+        //
+        // Shape measured off the live foods.search.v4 payload for `fs_124375163`
+        // "Nachos Bellgrande - Beef": ONE serving, gram-less, 730 kcal.
+        mockFatSecretFoodFindUnique.mockResolvedValue(null);
+
+        const result = await buildFatSecretResult(
+            makeCandidate({
+                id: 'fs_124375163',
+                name: 'Nachos Bellgrande - Beef',
+                brandName: 'Taco Bell',
+                nutrition: undefined,
+                servings: [{
+                    description: '1 serving',
+                    grams: null,
+                    nutrients: { calories: 730, carbohydrate: 81, protein: 17, fat: 38 },
+                }],
+                rawData: {},
+            }),
+            parsedLine({ qty: 1, name: 'nachos bellgrande' }),
+            0.95, 'taco bell nachos bellgrande'
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.servingTier).toBe('fs_serving_macros_only_est');
+        expect(result!.kcal).toBe(730);
+        expect(result!.protein).toBe(17);
+        expect(result!.carbs).toBe(81);
+        expect(result!.fat).toBe(38);
+        expect(result!.servingDescription).toBe('1 serving');
+    });
+
+    it('prefers the real serving over a synthetic "100 g" panel row on the macro-only branch', async () => {
+        // The two-serving chain shape the `isPer100gPanelServing` comment
+        // describes: a synthetic `100 g` row plus the real gram-less `1 serving`.
+        // The gram-anchored path already demotes the panel row; before A8 row 1
+        // the macro-only branch below it could not see EITHER serving on the live
+        // path, and once the macros started arriving it would have taken the
+        // panel row simply because it comes first. Demote there too — the panel
+        // is nutrition, not a portion.
+        mockFatSecretFoodFindUnique.mockResolvedValue(null);
+
+        const result = await buildFatSecretResult(
+            makeCandidate({
+                id: 'fs_99999',
+                name: 'Bacon King',
+                brandName: 'Burger King',
+                nutrition: { kcal: 260, protein: 14, carbs: 12, fat: 18, per100g: true },
+                servings: [
+                    { description: '100 g', grams: 100, nutrients: { calories: 260, protein: 14, carbohydrate: 12, fat: 18 } },
+                    { description: '1 sandwich', grams: null, nutrients: { calories: 1150, protein: 61, carbohydrate: 49, fat: 79 } },
+                ],
+                rawData: {},
+            }),
+            parsedLine({ qty: 1, name: 'bacon king' }),
+            0.95, 'burger king bacon king'
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.servingDescription).toBe('1 sandwich');
+        expect(result!.kcal).toBe(1150);
+    });
+
     it('macro-only path scales macros by qty (2 servings = 2x panel)', async () => {
         mockFatSecretFoodFindUnique.mockResolvedValue(makeRow({
             fsId: '103243799',

@@ -420,13 +420,27 @@ export async function GET(req: NextRequest) {
         // term that keeps `kcal100 x grams / 100 === the record's own billed kcal`, and
         // only alongside `portionEstimated`. The two ship as a pair or not at all — see
         // recoverMacroOnlyServing()'s header, which owns the reasoning and the numbers.
-        let servingOptions = (c.servings || []).map(s => ({
-          label: s.description,
-          grams: s.grams ?? 100
-        }));
+        // THE `s.grams != null` FILTER IS THE INVARIANT THIS BRANCH RESTS ON, and
+        // it moved out of the lane and into here on 2026-08-25 (A8 row 1). The lane
+        // used to guarantee it by DELETING gram-less servings, which is also how it
+        // deleted the macros the mapper's builder needed — so the deletion moved to
+        // the one consumer that actually requires a weight, and this route now
+        // states the requirement itself instead of inheriting it.
+        //
+        // Provably inert for the other sources: FDC servings come from
+        // `FdcServing.grams`, a non-null Float column, and OFF candidates carry no
+        // `servings` array at all (they arrive through `raw.servingSize` /
+        // `raw.servingGrams` in the fallback below). Only fatsecret candidates can
+        // now carry a gram-less serving, and for those the whole point is that
+        // `recoverMacroOnlyServing` — not a fabricated `100 g` — answers.
+        let servingOptions = (c.servings || [])
+          .filter(s => s.grams != null)
+          .map(s => ({
+            label: s.description,
+            grams: s.grams ?? 100
+          }));
 
-        // `c.servings` is already filtered to servings with a usable weight, so an
-        // EMPTY list is the precise statement "this record weighs nothing we can
+        // An EMPTY list is the precise statement "this record weighs nothing we can
         // read" — the same condition build-fatsecret-result.ts's macro-only branch
         // reaches. Requiring it keeps the recovered figures self-consistent: scaling
         // one serving's macros while displaying another serving's grams would make
