@@ -7,7 +7,7 @@
 
 import { logger } from '../logger';
 import { extractModifierConstraints, applyModifierConstraints, type ModifierConstraints, type ConstraintResult } from './modifier-constraints';
-import { detectGrainCookingContext } from './filter-candidates';
+import { detectGrainCookingContext, queryTargetsCandidateBrand } from './filter-candidates';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
@@ -1100,7 +1100,26 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
     // 2c-2. Category-changing token penalty (Jan 2026)
     // Heavy penalty when candidate has parasitic tokens that completely change the food category
     // e.g., "spinach" → "Spinach Noodles" (noodles is category-changing)
-    const categoryChangePenalty = getCategoryChangePenalty(query, candidate.name);
+    //
+    // K5g (A8 row 2, 2026-08-25). This is a RAW-INGREDIENT guard — it exists so a
+    // generic `spinach` cannot grab "Spinach Noodles" — and on a brand-led line it
+    // fires on the menu item's OWN FORM WORD instead. `burger king bacon king`
+    // penalises "Bacon King Sandwich" the full -0.50 (the largest single term in
+    // this function) for carrying `sandwich`, and the sibling "Bacon Double
+    // Cheeseburger" wins on -0.15 for `double`. Same for "Crazy Bread", "Cheese
+    // Sticks", "Biggie Fries".
+    //
+    // The waiver is the one `filterCandidatesByTokens()` already applies to
+    // `isMealProductMismatch()`, with the same predicate and for the reason
+    // `queryTargetsCandidateBrand()`'s own header states: these guards "must NOT
+    // fire when the query itself asked for that brand". Requiring the brand to
+    // appear in the QUERY TEXT — not merely that the query was brand-detected —
+    // is what keeps it narrow, and `GENERIC_BRAND_WORDS` keeps a bare "original"
+    // from arming it.
+    const brandWaivesCategoryChange = queryTargetsCandidateBrand(query, candidate.brandName);
+    const categoryChangePenalty = brandWaivesCategoryChange
+        ? 0
+        : getCategoryChangePenalty(query, candidate.name);
     score -= categoryChangePenalty;
 
     // 2d. Exact phrase boost (Jan 2026)
@@ -1186,15 +1205,35 @@ function computeSimpleScore(candidate: RerankCandidate, query: string, isBranded
         // e.g. query "egg beaters" matches brand "egg beaters"
         const queryContainsBrand = queryLower.includes(brandLower) || brandLower.includes(queryLower);
 
-        if (queryContainsBrand) {
+        // K5a (A8 row 2, 2026-08-25). WHOLE-STRING containment cannot see a brand
+        // string that carries a suffix, and chain records are full of them. The
+        // query `qdoba chicken burrito` neither contains nor is contained by
+        // `Qdoba Mexican Grill`, so the record branded that way scored 0 here while
+        // the OFF row branded plainly `Qdoba` took +0.25 — and the FS right record
+        // lost by exactly that margin (0.631 vs 0.481). The brand is the same brand;
+        // only the string is longer.
+        //
+        // `candidateMatchesTargetBrand()` is the folded token-phrase predicate the
+        // decisive path and the consensus check already use, so this is the three
+        // consumers agreeing rather than a fourth rule. It is deliberately given an
+        // EMPTY candidate name: that predicate reads `name + brandName`, and reading
+        // the name here would hand the bonus to any OFF row that merely spells the
+        // brand inside its title — which is the K5b asymmetry this block should not
+        // be amplifying.
+        const brandStringMatchesTarget = !!targetBrand
+            && candidateMatchesTargetBrand(candidate.brandName, '', targetBrand);
+
+        if (queryContainsBrand || brandStringMatchesTarget) {
             // User asked for this brand - give a positive bonus (not just zero penalty).
             // This is the key fix for ties like "Tomato Ketchup (Heinz)" vs "TOMATO KETCHUP (WEIS)"
             // when the query is "Heinz Tomato Ketchup".
             if (isBranded) {
                 // Strong bonus: query explicitly names this brand AND we know it's a branded query.
                 score += 0.25;
-            } else if (targetBrand && brandLower === targetBrand.toLowerCase()) {
-                // Static brand detector matched this exact brand — moderate bonus
+            } else if (targetBrand && (brandLower === targetBrand.toLowerCase() || brandStringMatchesTarget)) {
+                // Static brand detector matched this brand — moderate bonus. The second
+                // clause is K5a: an exact brand-STRING equality misses `Qdoba Mexican
+                // Grill` for the same reason the containment test above does.
                 score += 0.15;
             }
             // If neither isBranded nor targetBrand: no penalty but no bonus either
