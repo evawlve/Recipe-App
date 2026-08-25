@@ -7201,6 +7201,72 @@
         ]
       ],
       "notes": "PROSE SET (2026-08-17). Partitive + filler-hedge-before-volume + 'then' as a separator + article-partitive. Three items; the 'then' must split, not become a food. Unbanded; the single-line shapes are n-prose-06 (handful), n-prose-02 (hedge + tbsp) and n-prose-04 (a slice of)."
+    },
+    {
+      "id": "n-dup-01",
+      "category": "off_twin_tie",
+      "text": "cheez it original",
+      "expectName": [
+        [
+          "cheez"
+        ]
+      ],
+      "grams": [
+        27,
+        33
+      ],
+      "macros": {
+        "kcal100": [
+          480,
+          530
+        ]
+      },
+      "notes": "A7 / K4 (2026-08-24): an OFF row with null brandName is a data gap on a barcode-bearing SKU, not a generic food; T2 generic-preferred read the brandless twin as the generic seat and the 100 g floor won over the carrier's label serving. Asserted by BAND, not winner id: two rank-0 carriers can share a name key and their id order is not worth pinning. Owner: sync-docs/reports/2026-08-24_a7-tie-arbitration-design.md. Frozen-pool replay: off_0024100118731 (brandless, 100 g floor 524 kcal) -> off_0024100226429 [Sunshine] 30 g / 150 kcal bare_label_serving. Bands from the labels in snap-yes.json; the 28 g pouch off_0024100123131 is a second carrier inside the band."
+    },
+    {
+      "id": "n-dup-02",
+      "category": "off_twin_tie",
+      "text": "gold peak sweet tea",
+      "expectName": [
+        [
+          "gold peak"
+        ],
+        [
+          "sweet tea"
+        ]
+      ],
+      "grams": [
+        340,
+        380
+      ],
+      "macros": {
+        "kcal100": [
+          30,
+          38
+        ]
+      },
+      "notes": "A7 / K4 (2026-08-24): an OFF row with null brandName is a data gap on a barcode-bearing SKU, not a generic food; T2 generic-preferred read the brandless twin as the generic seat and the 100 g floor won over the carrier's label serving. Asserted by BAND, not winner id: two rank-0 carriers can share a name key and their id order is not worth pinning. Owner: sync-docs/reports/2026-08-24_a7-tie-arbitration-design.md. Frozen-pool replay: off_0049000547634 (brandless, 30 g sibling 11 kcal) -> off_0049000074154 [Coca-Cola Company] 360 g / 120 kcal."
+    },
+    {
+      "id": "n-dup-03",
+      "category": "off_twin_tie",
+      "text": "pixy stix",
+      "expectName": [
+        [
+          "pixy"
+        ]
+      ],
+      "grams": [
+        14,
+        18
+      ],
+      "macros": {
+        "kcal100": [
+          360,
+          390
+        ]
+      },
+      "notes": "A7 / K4 (2026-08-24): an OFF row with null brandName is a data gap on a barcode-bearing SKU, not a generic food; T2 generic-preferred read the brandless twin as the generic seat and the 100 g floor won over the carrier's label serving. Asserted by BAND, not winner id: two rank-0 carriers can share a name key and their id order is not worth pinning. Owner: sync-docs/reports/2026-08-24_a7-tie-arbitration-design.md. Frozen-pool replay: off_0079200829056 (brandless, 100 g floor 375 kcal) -> off_0079200183172 [Nestle] 16 g / 60 kcal."
     }
   ]
 }
