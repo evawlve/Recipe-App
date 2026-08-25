@@ -3,7 +3,10 @@ import { prisma } from '@/lib/db';
 // Statically imported, unlike almost everything else this handler uses: write-policy.ts
 // imports only `node:async_hooks`, so it costs nothing at module load and the route must
 // be able to open the scope before the first dynamic import inside the handler.
-import { runWithWritePolicy, currentWriteReceipt } from '@/lib/write-policy';
+import { runWithWritePolicy, currentWriteReceipt, type WritePolicyOptions } from '@/lib/write-policy';
+// The `?stream=1` frame contract (types, SSE encoder, headers). Pure — its only import
+// is a type — so static is free, like write-policy above.
+import { encodeSseFrame, PARSE_STREAM_HEADERS, type ParseStreamSink } from '@/lib/nlp/parse-stream';
 // The other static import. It replaces the module-scope `createClient(url || '', key || '')`
 // this route used to build at import time — which threw in any process without the
 // Supabase env. The client is now built lazily, on the first bearer, in
@@ -211,6 +214,12 @@ export async function POST(req: NextRequest) {
     const debugEcho = isDevBypass &&
       (req.nextUrl.searchParams.get('debug') === '1' || body.debug === true);
 
+    // Streamed response (`?stream=1` or `body.stream === true`) — any caller, no bypass
+    // needed: it changes WHEN bytes leave, never what is computed or persisted. Frame
+    // contract and rationale: src/lib/nlp/parse-stream.ts.
+    const wantStream =
+      req.nextUrl.searchParams.get('stream') === '1' || body.stream === true;
+
     // ============================================================
     // REQUEST-SCOPED WRITE POLICY (nosave=1)
     // ============================================================
@@ -228,7 +237,13 @@ export async function POST(req: NextRequest) {
     // the `return await` below — a bare `return promise` inside a try block hands the
     // rejection straight past the catch, and did until 2026-08-21 (pinned by
     // route.rate-limit.test.ts: a mapper throw is a 500 and is never charged).
-    async function runParse(): Promise<NextResponse> {
+    // `emit` is the stream sink (null on the one-shot path). It receives `segments` once
+    // the split is known and one `item` per line as it resolves; `done`/`error` are the
+    // caller's, because only the caller knows whether the run completed.
+    async function runParse(emit: ParseStreamSink | null): Promise<{
+      parsedItems: unknown[];
+      receipt: ReturnType<typeof currentWriteReceipt>;
+    }> {
       let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
       // Segmentation-cache outcome for telemetry: true = split served from
@@ -298,6 +313,14 @@ export async function POST(req: NextRequest) {
       }
       // Per-line telemetry rows (MappingEventLog), written in one createMany
       // after mapping. Fail-open: telemetry must never break a user request.
+      // STREAM frame 1 — the split is known. Emitted here and nowhere earlier: the
+      // count is unknown until segmentation returns, and the client deals in exactly
+      // this many skeleton cards, titled with the user's own words.
+      emit?.({
+        type: 'segments',
+        items: items.map((it, index) => ({ index, rawText: it.rawText, mealType: it.mealType })),
+      });
+
       type EventRow = {
         rawLine: string; normalizedForm: string | null; cacheHit: string | null;
         cacheEscape: string | null; foodId: string | null; foodName: string | null;
@@ -329,7 +352,9 @@ export async function POST(req: NextRequest) {
 
       // Map all items concurrently — each mapping is independent, and identical
       // items are deduplicated by the pipeline's in-flight lock.
-      const parsedItems = await Promise.all(items.map(async (item) => {
+      // The per-line builder is named so the stream can wrap it without touching it:
+      // `buildParsedItem()` is byte-for-byte the callback the one-shot path always ran.
+      async function buildParsedItem(item: (typeof items)[number]) {
         const rawText = item.rawText;
         const mealType = item.mealType;
         const brand = item.brand;
@@ -574,6 +599,14 @@ export async function POST(req: NextRequest) {
           // the response is byte-identical for every real client. See `debugEcho`.
           ...(debugEcho ? { servingTier, cacheHit: telemetry.cacheHit ?? null } : {}),
         };
+      }
+
+      const parsedItems = await Promise.all(items.map(async (item, itemIndex) => {
+        const built = await buildParsedItem(item);
+        // STREAM frames 2..N+1 — one per line, in RESOLUTION order (a cache hit lands
+        // before an AI serving estimate); `index` is what the client keys on.
+        emit?.({ type: 'item', index: itemIndex, item: built });
+        return built;
       }));
 
       // One round trip for all lines; awaited so serverless runtimes can't kill
@@ -613,16 +646,53 @@ export async function POST(req: NextRequest) {
       // was refused" — it means no writer ever saw the policy, which is the fail-open the
       // globalThis instance in write-policy.ts exists to prevent. Zero consultations next
       // to an AI serving tier on the same response is a structural RED.
-      const response = NextResponse.json(parsedItems);
       const receipt = noSave ? currentWriteReceipt() : null;
-      if (receipt) response.headers.set('X-Write-Receipt', JSON.stringify(receipt));
-      return response;
+      return { parsedItems, receipt };
     }
 
-    return await runWithWritePolicy(
-      { suppress: noSave ? ['aiServing', 'segmentationCache'] : [] },
-      runParse,
-    );
+    const policy: WritePolicyOptions = { suppress: noSave ? ['aiServing', 'segmentationCache'] : [] };
+
+    if (!wantStream) {
+      return await runWithWritePolicy(policy, async () => {
+        const { parsedItems, receipt } = await runParse(null);
+        const response = NextResponse.json(parsedItems);
+        if (receipt) response.headers.set('X-Write-Receipt', JSON.stringify(receipt));
+        return response;
+      });
+    }
+
+    // ============================================================
+    // STREAMED RESPONSE (?stream=1)
+    // ============================================================
+    // The producer is started INSIDE the write-policy scope: `runWithWritePolicy()` is
+    // `AsyncLocalStorage.run()`, and a store follows every continuation of a promise
+    // created under it, so the scope stays open for the whole life of the stream even
+    // though this handler has long since returned the Response. That is why the
+    // `nosave` receipt can still be read after the last item and ride in `done`.
+    //
+    // Errors: everything BEFORE this point (auth, limits, the 400s) still answers with
+    // its status. Once the first byte has left, the status is 200 for good, so a throw
+    // inside `runParse()` becomes an `error` frame — the one-shot path's 500 — and the
+    // stream closes without `done`. `send()` swallows a closed controller (the client
+    // went away); the pipeline finishes anyway, exactly as it would have.
+    return await runWithWritePolicy(policy, async () => {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const send: ParseStreamSink = (frame) => {
+            try { controller.enqueue(encoder.encode(encodeSseFrame(frame))); } catch { /* client gone */ }
+          };
+          runParse(send)
+            .then(({ parsedItems, receipt }) => send({ type: 'done', count: parsedItems.length, receipt }))
+            .catch((error: unknown) => {
+              console.error('NLP Parse stream error:', error);
+              send({ type: 'error', message: 'Internal server error' });
+            })
+            .finally(() => { try { controller.close(); } catch { /* already closed */ } });
+        },
+      });
+      return new Response(stream, { status: 200, headers: PARSE_STREAM_HEADERS });
+    });
   } catch (error) {
     console.error('NLP Parse error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
