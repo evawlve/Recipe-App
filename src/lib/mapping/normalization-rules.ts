@@ -5,10 +5,24 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger';
 
+export type SynonymRewrite = {
+  from: string;
+  to: string;
+  /**
+   * Whole words that, when one of them immediately follows `from`, veto the
+   * rewrite. `hamburger -> ground beef` must not fire on `hamburger bun`: the
+   * rewritten query `ground beef bun` matched no bun and resolved to a
+   * gpt-4o-mini stub "85% Lean 15% Fat Beef Bun" at 150 g / 270 kcal (measured
+   * live on 3JD249AyleJUI2qu0ZERF, 2026-08-24). Case-insensitive like `from`;
+   * absent or empty means the rule is unguarded, byte-identical to before.
+   */
+  unlessFollowedBy?: string[];
+};
+
 type NormalizationRules = {
   prep_phrases: string[];
   size_phrases: string[];
-  synonym_rewrites: { from: string; to: string }[];
+  synonym_rewrites: SynonymRewrite[];
 };
 
 const DEFAULT_RULES: NormalizationRules = {
@@ -208,7 +222,8 @@ const DEFAULT_RULES: NormalizationRules = {
     { from: 'ground thyme', to: 'dried thyme powder' },
     { from: 'spice blend mustard', to: 'mustard powder' },
     { from: 'lean hamburger', to: 'lean ground beef' },
-    { from: 'hamburger', to: 'ground beef' },
+    // Scoped 2026-08-24 (D-A9 rider): a hamburger BUN is bread, not beef.
+    { from: 'hamburger', to: 'ground beef', unlessFollowedBy: ['bun', 'buns'] },
     { from: 'mixed herbs', to: 'italian seasoning' },
     { from: 'celtic salt', to: 'sea salt' },
     { from: 'stroganoff mix', to: 'beef stroganoff seasoning mix' },
@@ -438,7 +453,7 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
 
   // Apply synonym rewrites to stabilize wording
   for (const rewrite of rules.synonym_rewrites) {
-    const re = new RegExp(`\\b${escapeRegex(rewrite.from)}\\b`, 'i');
+    const re = new RegExp(`\\b${escapeRegex(rewrite.from)}\\b${followedByGuard(rewrite)}`, 'i');
     if (re.test(working)) {
       working = working.replace(re, rewrite.to);
     }
@@ -667,6 +682,13 @@ function collapseSpaces(value: string): string {
     .replace(/[^\w\s'%\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Negative lookahead for a rule's `unlessFollowedBy`; empty (no guard) when it has none. */
+function followedByGuard(rewrite: SynonymRewrite): string {
+  const words = (rewrite.unlessFollowedBy ?? []).map((w) => String(w).trim()).filter(Boolean);
+  if (words.length === 0) return '';
+  return `(?!\\s+(?:${words.map(escapeRegex).join('|')})\\b)`;
 }
 
 function escapeRegex(value: string): string {
