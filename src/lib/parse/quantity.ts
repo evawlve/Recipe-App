@@ -162,8 +162,31 @@ function parseRange(tokens: string[], startIdx: number): { qty: number; consumed
   return null;
 }
 
+/**
+ * A percentage or a leanness ratio is a MODIFIER, never a count.
+ *
+ * `parseFloat('93%')` is 93 and `'85/15'` reads as the fraction 85/15, so until
+ * 2026-08-24 `2% milk` parsed as qty 2 -- every one of the 90 MappingEventLog
+ * events for that line billed 500 g / 226 kcal, two label servings -- and
+ * `93% lean ground turkey` as qty 93 (10,416 g). Neither is a count; the token
+ * belongs to the food's name and stays there. Downstream that is already
+ * handled: normalizeIngredientName() strips 50-100% unless `lean` follows, so
+ * `100% whole wheat bread` still keys as `whole wheat bread`, while `2% milk`
+ * keeps its fat-percent identity (the live FoodMapping keys `2% fairlife milk`,
+ * `2% dairy milk pure` show that shape). A leanness ratio is two integers that
+ * sum to 100 (85/15, 80/20, 93/7); a real fraction (`1/2`, `3/4`) never does.
+ * Owner (mobile repo): sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md §5.
+ */
+export function isPercentOrLeannessRatioToken(token: string): boolean {
+  if (/^\d+(?:\.\d+)?%$/.test(token)) return true;
+  const m = /^(\d{1,3})\/(\d{1,3})$/.exec(token);
+  return !!m && Number(m[1]) + Number(m[2]) === 100;
+}
+
 export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: number } | null {
   if (tokens.length === 0) return null;
+  // A leading `2%` / `93%` / `85/15` is a modifier on the food, not a quantity (see above).
+  if (isPercentOrLeannessRatioToken(tokens[0])) return null;
 
   let qty = 0;
   let consumed = 0;

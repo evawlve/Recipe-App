@@ -7522,6 +7522,87 @@
         ]
       },
       "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. CONTROL -- the default path that STAYS: turkey keeps `ground turkey -> 85% lean 15% fat turkey` (OFF 11 / FS 1 / FDC 3 records carry that phrasing). Frozen-pool replay: BASE = LANE off_0072322534525 \"85% lean ground turkey\" 112 g / 240 kcal, SAME in the arm; cold on qwm6HGP465bEqu0Upz5_l the same record. Guards that narrowing the list did not take turkey with it. Band spans 99% lean (112) to 85% lean (214-240)."
+    },
+    {
+      "id": "n-pct-01",
+      "category": "percent_modifier",
+      "text": "2% milk",
+      "expectName": [
+        [
+          "milk"
+        ]
+      ],
+      "grams": [
+        90,
+        260
+      ],
+      "macros": {
+        "kcal100": [
+          40,
+          65
+        ]
+      },
+      "notes": "Percent-is-not-a-quantity (2026-08-24, Lane A): parseQuantityTokens() ended in parseFloat(tokens[0]), and parseFloat('2%') is 2, so a leading percentage (or a leanness ratio like 85/15, read as a fraction) was consumed as the COUNT and dropped from the name. Fixed by isPercentOrLeannessRatioToken() in src/lib/parse/quantity.ts: the token stays in the name, qty defaults to 1. Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md §5. THE hot line: 90 MappingEventLog events on master, every one billed 500 g / 226 kcal (qty 2 x a2 \"Milk\"'s 250 g label serving). Frozen-pool replay: BASE fs_793 \"Milk\" 488 g / 244 kcal -> LANE off_0070924005528 \"2% Milk\" 55 kcal/100 g at the 100 g floor (the OFF row carries no serving; the floor is badged `portion-unverified`). The grams band is deliberately WIDE -- a bare line's serving is a draw between the 100 g floor and a 244 g cup -- because the defect it guards is the x2, which lands at 488-500 g. The name asserts only `milk`: a generic \"Milk\" is an acceptable identity, the fat-percent twin is better."
+    },
+    {
+      "id": "n-pct-02",
+      "category": "percent_modifier",
+      "text": "93% lean ground turkey",
+      "expectName": [
+        [
+          "turkey"
+        ]
+      ],
+      "grams": [
+        20,
+        260
+      ],
+      "macros": {
+        "kcal100": [
+          120,
+          180
+        ]
+      },
+      "notes": "Percent-is-not-a-quantity (2026-08-24, Lane A): parseQuantityTokens() ended in parseFloat(tokens[0]), and parseFloat('2%') is 2, so a leading percentage (or a leanness ratio like 85/15, read as a fraction) was consumed as the COUNT and dropped from the name. Fixed by isPercentOrLeannessRatioToken() in src/lib/parse/quantity.ts: the token stays in the name, qty defaults to 1. Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md §5. Master: qty 93 -> 5,859 g / 9,939 kcal (package_count_sibling) on Shady Brook 90/10; the name lost `93%` so the leanness was invisible to retrieval. Frozen-pool replay: LANE off_0642205003938 \"93% lean ground turkey\" 112 g / 160 kcal, 143 kcal/100 g. Grams band wide for the bare-line draw (FS default 28 g vs a 112 g label); it guards the x93. Band excludes 85/15 turkey (214)."
+    },
+    {
+      "id": "n-pct-03",
+      "category": "percent_modifier",
+      "text": "80/20 ground beef",
+      "expectName": [
+        [
+          "80",
+          "beef"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          230,
+          290
+        ]
+      },
+      "notes": "Percent-is-not-a-quantity (2026-08-24, Lane A): parseQuantityTokens() ended in parseFloat(tokens[0]), and parseFloat('2%') is 2, so a leading percentage (or a leanness ratio like 85/15, read as a fraction) was consumed as the COUNT and dropped from the name. Fixed by isPercentOrLeannessRatioToken() in src/lib/parse/quantity.ts: the token stays in the name, qty defaults to 1. Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md §5. A leanness RATIO: master read `80/20` as the fraction 4 (qty 4, name `ground beef`) and billed 4 x 28 g of the 85/15 record fs_40401 (215 kcal/100 g, fails this band). Frozen-pool replay: LANE fs_40406 \"Ground Beef (80% Lean / 20% Fat)\" 254 kcal/100 g. Serving unasserted (FS default draw)."
+    },
+    {
+      "id": "n-pct-04",
+      "category": "percent_modifier",
+      "text": "2 cups 2% milk",
+      "expectName": [
+        [
+          "milk"
+        ]
+      ],
+      "grams": [
+        470,
+        500
+      ],
+      "macros": {
+        "kcal100": [
+          40,
+          65
+        ]
+      },
+      "notes": "Percent-is-not-a-quantity (2026-08-24, Lane A): parseQuantityTokens() ended in parseFloat(tokens[0]), and parseFloat('2%') is 2, so a leading percentage (or a leanness ratio like 85/15, read as a fraction) was consumed as the COUNT and dropped from the name. Fixed by isPercentOrLeannessRatioToken() in src/lib/parse/quantity.ts: the token stays in the name, qty defaults to 1. Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md §5. CONTROL -- a real quantity ahead of the percentage was never affected (qty 2, unit cup, name `2% milk` on both trees); guards that the token predicate does not reach a `2%` that is not in the quantity seat. Frozen-pool replay: 480 g / 260-264 kcal on both sides (\"2% milk\" / \"2% Milk\", same-name OFF twins)."
     }
   ]
 }
