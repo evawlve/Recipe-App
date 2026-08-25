@@ -906,6 +906,10 @@ async function main(): Promise<number> {
 
     const outPath = path.join('scripts', 'eval', 'results',
         `hand-corrupt-mark-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    // The results dir is gitignored, so a fresh worktree does not have it — and
+    // this write runs AFTER the UPDATE, so an ENOENT here left the mark applied
+    // with no receipt on disk (2026-08-14 plan §7 item 1; again 2026-08-25).
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, JSON.stringify({
         at: new Date().toISOString(),
         mode: args.plan ? 'plan' : 'replay',
