@@ -7203,6 +7203,126 @@
       "notes": "PROSE SET (2026-08-17). Partitive + filler-hedge-before-volume + 'then' as a separator + article-partitive. Three items; the 'then' must split, not become a food. Unbanded; the single-line shapes are n-prose-06 (handful), n-prose-02 (hedge + tbsp) and n-prose-04 (a slice of)."
     },
     {
+      "id": "n-syn-01",
+      "category": "synonym_direction",
+      "text": "ham",
+      "expectName": [
+        [
+          "ham"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          90,
+          170
+        ]
+      },
+      "notes": "D-A9 (2026-08-24): Step 0a findCanonicalName() ran the UK<->US synonym map in BOTH directions on a bare line, so this US staple was searched, keyed and billed as its UK counterpart. Fixed in the synonym-canonical-direction PR (British -> American only; saveSynonyms() orients every row). Owner: sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md. Pre-fix cold on 3JD249AyleJUI2qu0ZERF: Gammon [Morrison's] off_5010525233284, 68 g / 78.9 kcal (name has no 'ham' substring, so the name assertion alone catches it). Branch draw: Ham off_0225622010972, 56 g, kcal100 107.1. Band is generic ham 90-170 kcal/100 g; serving is a draw and deliberately unasserted."
+    },
+    {
+      "id": "n-syn-02",
+      "category": "synonym_direction",
+      "text": "ground beef",
+      "expectName": [
+        [
+          "ground",
+          "beef"
+        ],
+        [
+          "beef",
+          "lean"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          140,
+          300
+        ]
+      },
+      "notes": "D-A9 (2026-08-24): Step 0a findCanonicalName() ran the UK<->US synonym map in BOTH directions on a bare line, so this US staple was searched, keyed and billed as its UK counterpart. Fixed in the synonym-canonical-direction PR (British -> American only; saveSynonyms() orients every row). Owner: sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md. Pre-fix: rewritten to 'minced beef', prep-stripped to key 'beef' (the #211/#242 collision class), served generic Beef [Canadian Beef] off_0220497418373 at 100 g / 230 kcal - passes any kcal band, fails only the name. Branch draw: Ground Beef (85% Lean / 15% Fat) fs_40401, kcal100 215. Band spans 93/7 (152) to 80/20 (254) raw."
+    },
+    {
+      "id": "n-syn-03",
+      "category": "synonym_direction",
+      "text": "baking soda",
+      "expectName": [
+        [
+          "baking soda"
+        ],
+        [
+          "bicarbonate"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          0,
+          5
+        ]
+      },
+      "notes": "D-A9 (2026-08-24): Step 0a findCanonicalName() ran the UK<->US synonym map in BOTH directions on a bare line, so this US staple was searched, keyed and billed as its UK counterpart. Fixed in the synonym-canonical-direction PR (British -> American only; saveSynonyms() orients every row). Owner: sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md. Pre-fix: 'bicarbonate of soda' -> partitive path -> key 'soda', served Soda fs_387673 at 369 g / 140 kcal (a soft drink). Branch draw: Baking Soda fs_39075, 4.6 g, kcal100 0."
+    },
+    {
+      "id": "n-syn-04",
+      "category": "synonym_direction",
+      "text": "light corn syrup",
+      "expectName": [
+        [
+          "corn syrup"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          240,
+          330
+        ]
+      },
+      "notes": "D-A9 (2026-08-24): Step 0a findCanonicalName() ran the UK<->US synonym map in BOTH directions on a bare line, so this US staple was searched, keyed and billed as its UK counterpart. Fixed in the synonym-canonical-direction PR (British -> American only; saveSynonyms() orients every row). Owner: sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md. Pre-fix: the LearnedSynonym row 'light corn syrup -> golden syrup' (written 2026-08-08 by a resolution onto a record named Golden syrup) served Golden syrup off_26295244 at 14 g / 48 kcal (kcal100 343, a different product). Branch draw: Light Corn Syrup fs_39566, 22 g, kcal100 283."
+    },
+    {
+      "id": "n-syn-05",
+      "category": "synonym_direction",
+      "text": "hamburger bun",
+      "expectName": [
+        [
+          "hamburger",
+          "bun"
+        ],
+        [
+          "burger bun"
+        ],
+        [
+          "burger buns"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          220,
+          330
+        ]
+      },
+      "notes": "D-A9 rider (2026-08-24): the synonym_rewrites rule 'hamburger -> ground beef' fired inside 'hamburger bun', the query became '85% lean 15% fat beef bun', and the line resolved to a gpt-4o-mini stub '85% Lean 15% Fat Beef Bun' (cmsl644qw008fxxveys5oljql) at 150 g / 270 kcal, kcal100 180. Fixed by the rule's unlessFollowedBy: ['bun','buns'] in BOTH normalization-rules.ts DEFAULT_RULES and data/fatsecret/normalization-rules.json - the box reads the JSON (data/ never syncs; delivered by scp, claim box-rules-file-hamburger-rule-is-scoped). Branch draw: Hamburger bun off_0056573104232, 100 g count_unresolved_floor, kcal100 245.9. The stub's name contains 'bun', so the name alternatives require 'hamburger' or 'burger bun'; the kcal band excludes it independently."
+    },
+    {
+      "id": "n-syn-06",
+      "category": "synonym_direction",
+      "text": "gammon",
+      "expectName": [
+        [
+          "ham"
+        ],
+        [
+          "gammon"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          90,
+          200
+        ]
+      },
+      "notes": "D-A9 control (2026-08-24): the direction that STAYS. A bare British term is still canonicalized to the American one (gammon -> ham) by the static map; this pins that the fix removed one direction, not the mechanism. Branch draw: Ham off_0225622010972, 56 g, kcal100 107.1 - identical to bare 'ham'."
+    },
+    {
       "id": "n-dup-01",
       "category": "off_twin_tie",
       "text": "cheez it original",
