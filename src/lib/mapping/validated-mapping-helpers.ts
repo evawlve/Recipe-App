@@ -1388,7 +1388,16 @@ function classifyFailureType(
 // purpose:'normalize' call per row that is actually read again. Most never are:
 // 75.8% of AiNormalizeCache rows are used exactly once, and the reuse that does
 // occur is 82.5% golden-set traffic, i.e. the eval hitting itself.
-export const RULES_VERSION = 3;
+//
+// 4 (2026-08-24): the ground-meat leanness default narrowed to beef|turkey and
+// `ground <chicken|pork|lamb|bison|veal|venison|meat>` became protected identity
+// phrases (normalization-rules.ts), so a v3 row for `ground chicken` carries
+// normalizedName `85% lean 15% fat chicken` and one for `ground lamb` carries
+// `lamb` -- both the old collapse, both outvoting the rules change if replayed.
+// Same mechanism and cost shape as the 2 and 3 bumps; rows at v3 on the box the
+// day of the bump are counted in the owner report (mobile repo,
+// sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md).
+export const RULES_VERSION = 4;
 
 /**
  * Compute a normalized cache key from a raw ingredient line, optionally inside a namespace.

@@ -387,6 +387,24 @@ export const PROTECTED_PRODUCT_PHRASES = [
   'whole milk',
   'whole wheat',
   'whole grain',
+  // "ground" as identity (not prep) before a meat noun: ground chicken is a
+  // different product from chicken (a cut, a whole bird), and stripping it
+  // collapsed the two onto one cache key -- `ground lamb` derived key `lamb`
+  // and was served the `lamb` row, a human-triage NZ SHOULDER cut (usedCount
+  // 96, measured 2026-08-24). Only the meats the 85/15 leanness default below
+  // does NOT cover are listed: beef and turkey take the default path, where
+  // `ground` is deliberately consumed and the percentages carry the identity.
+  // Deliberately NOT listed: "ground cinnamon"/"ground flaxseed"/"ground
+  // coffee" (`ground` is prep there and the bare noun is the right key).
+  // Substring match like the rest of this list, so `ground chicken breast`
+  // and `lean ground pork` are covered by the two-word entries.
+  'ground chicken',
+  'ground pork',
+  'ground lamb',
+  'ground bison',
+  'ground veal',
+  'ground venison',
+  'ground meat',
 ];
 
 /**
@@ -497,16 +515,33 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   // "chicken breast" → "skinless chicken breast" (prevents branded seasoned products)
   // 'raw' gets stripped by prep_phrases, so we use 'skinless' which is preserved
   // But NOT: fried chicken breast, grilled chicken breast, skinless chicken breast, etc.
-  if (/\bchicken\s+breast\b/i.test(working) && !/\b(skinless|fried|grilled|baked|roasted|breaded|bbq|smoked)\s+chicken\s+breast/i.test(working)) {
+  // `ground` joined the exclusions 2026-08-24: `ground chicken breast` used to become
+  // `ground skinless chicken breast`, which is not a protected phrase, so `ground` was
+  // then prep-stripped and the line keyed as `skinless chicken breast` -- a breast.
+  if (/\bchicken\s+breast\b/i.test(working) && !/\b(skinless|fried|grilled|baked|roasted|breaded|bbq|smoked|ground)\s+chicken\s+breast/i.test(working)) {
     working = working.replace(/\bchicken\s+breast\b/i, 'skinless chicken breast');
   }
 
   // Standardize ground meat leanness to deterministic default percentages if not explicitly specified.
   // We use both lean and fat percentages ("90% lean 10% fat") as FatSecret/FDC indexing often relies on the explicit full profile.
-  if (/(?:^|\s)lean ground\s+(beef|turkey|chicken|pork|meat)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working)) {
+  //
+  // BEEF AND TURKEY ONLY (2026-08-24). The default is a PHRASING injection: it only
+  // helps where records are actually named "85% lean 15% fat <meat>". Census of the
+  // three persisted corpora that day (name ~* '85\s*%\s*lean'): beef OFF 230 / FS 10 /
+  // FDC 6 rows; turkey OFF 11 / FS 1 / FDC 3; pork OFF 1 / FS 0 / FDC 0 (FDC pork is
+  // labelled 72/84/96); chicken 0 / 0 / 0. Until then the list was
+  // `beef|turkey|chicken|pork|meat`, so bare `ground chicken` was searched as
+  // `85% lean 15% fat chicken`, gathered 21-31 beef/turkey rows, admitted none, and
+  // fell to the AI-stub lane (100 g / 165 kcal, `ai_estimated`) while the generic
+  // "Ground Chicken" fs_1737, FDC 171116 "Chicken, ground, raw" and 219 OFF rows sat
+  // unreached. The meats that leave this list keep `ground` as identity instead --
+  // see the `ground <meat>` block in PROTECTED_PRODUCT_PHRASES. Re-derive the census:
+  //   SELECT count(*) FROM "OffFood" WHERE name ~* '\mchicken\M' AND name ~* '85\s*%\s*lean'
+  // Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md (mobile repo).
+  if (/(?:^|\s)lean ground\s+(beef|turkey)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working)) {
     // "lean ground X" -> default to 90% lean 10% fat
     working = working.replace(/\blean ground\b/gi, '90% lean 10% fat ground');
-  } else if (/(?:^|\s)ground\s+(beef|turkey|chicken|pork|meat)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working) && !/\blean\b/i.test(working)) {
+  } else if (/(?:^|\s)ground\s+(beef|turkey)(?:\s|$)/i.test(working) && !/\b\d{2}%?\s*(?:lean|fat)/i.test(working) && !/\blean\b/i.test(working)) {
     // "ground X" (not lean) -> default to 85% lean 15% fat
     working = working.replace(/\bground\b/gi, '85% lean 15% fat ground');
   }

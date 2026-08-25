@@ -497,17 +497,22 @@ describe('parseGoldenSet', () => {
         // deliberately unasserted.
         // 274 / 165 / 78 / 108 since 2026-08-24 (same day): n-dup-01..03, the A7/K4 OFF-twin
         // cold seeds (PR #382) — three bare `text` lines with grams + kcal100 bands.
-        expect(all.length).toBe(274);
+        // 281 / 166 / 115 since 2026-08-24 (same day, third set): n-grd-01..07, the ground-meat
+        // identity set — seven bare/quantity `text` lines asserting expectName + macros.kcal100;
+        // ONE grams band (n-grd-06 `4 oz ground chicken`, deterministic at 113.4 g), no total,
+        // no expectItems, none knownIssue; n-grd-07 `ground turkey` is the control that stays.
+        expect(all.length).toBe(281);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(274);
+        expect(n(c => c.expectName.length > 0)).toBe(281);
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
-        expect(n(c => !!c.grams)).toBe(165);              // the majority assertion
+        expect(n(c => !!c.grams)).toBe(166);              // the majority assertion
         // 66 since 2026-08-15 (n-micro-01's sodium100 band); 69 since 2026-08-17
         // (n-prose-01 protein100/fat100, n-prose-03 and n-prose-10 kcal100 as the
         // cooked-vs-dry discriminator the _readme's STANDING RULE asks for)
         // 75 since 2026-08-24: the six synonym-direction kcal100 bands.
-        expect(n(c => !!c.macros)).toBe(78);
+        // 85 since 2026-08-24 (n-grd-01..07, every one carries a kcal100 band)
+        expect(n(c => !!c.macros)).toBe(85);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
         expect(n(c => typeof c.expectItems === 'number')).toBe(63);
@@ -557,14 +562,15 @@ describe('parseGoldenSet', () => {
         // untouched by it.
         // [166, 105] since 2026-08-24: n-syn-01..06 are ALL `text` (bare lines are
         // the only shape Step 0a's canonicalizer ever rewrote); item counts untouched.
-        expect([item.length, text.length]).toEqual([166, 108]);
+        expect([item.length, text.length]).toEqual([166, 115]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
         // 21 since 2026-08-15: n-chain-01..03 + n-micro-01.
         expect(item.filter(c => c.total).length).toBe(21);
         // 31 -> 43 and 47 -> 63 on 2026-08-17 (prose set; see the count pin above)
-        expect(text.filter(c => c.grams).length).toBe(46);
+        // 47 since 2026-08-24: n-grd-06 `4 oz ground chicken` is text-shaped with a grams band.
+        expect(text.filter(c => c.grams).length).toBe(47);
         expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(63);
 
         // and the individual bands survive the round-trip
@@ -793,18 +799,19 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // segmenter-bound. Their `expectServingTier` is not even parsed here.
         // 271 since 2026-08-24: n-syn-01..06 add six expectName + macros cases and
         // move no grams/total/expectItems count.
-        expect(cov.cases).toBe(274);
-        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 165, blind: 165 });
+        // 281 / 166 since 2026-08-24 (n-grd-01..07): one more grams band, n-grd-06.
+        expect(cov.cases).toBe(281);
+        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 166, blind: 166 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
         expect(kind('total')).toEqual({ kind: 'total', asserted: 53, blind: 53 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(274);
+        expect(en.asserted).toBe(281);
         expect(en.blind).toBeGreaterThan(0);
         expect(en.blind).toBeLessThan(274);
         // every grams band in the corpus is unjudgeable here...
-        expect(cov.gramsCases).toBe(165);
+        expect(cov.gramsCases).toBe(166);
         // ...and only a handful would be record-INdependent even with a resolver,
         // i.e. the blindness sits exactly where a winner change moves the answer.
         expect(cov.gramsRecordIndependent).toBeLessThanOrEqual(5);

@@ -7387,6 +7387,141 @@
         ]
       },
       "notes": "A7 / K4 (2026-08-24): an OFF row with null brandName is a data gap on a barcode-bearing SKU, not a generic food; T2 generic-preferred read the brandless twin as the generic seat and the 100 g floor won over the carrier's label serving. Asserted by BAND, not winner id: two rank-0 carriers can share a name key and their id order is not worth pinning. Owner: sync-docs/reports/2026-08-24_a7-tie-arbitration-design.md. Frozen-pool replay: off_0079200829056 (brandless, 100 g floor 375 kcal) -> off_0079200183172 [Nestle] 16 g / 60 kcal."
+    },
+    {
+      "id": "n-grd-01",
+      "category": "ground_meat_identity",
+      "text": "ground chicken",
+      "expectName": [
+        [
+          "ground",
+          "chicken"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          95,
+          200
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. Pre-fix cold on qwm6HGP465bEqu0Upz5_l: searched as `85% lean 15% fat chicken`, gathered beef/turkey rows, admitted none, fell to the AI-stub lane -- \"85% Lean Chicken\" 100 g / 165 kcal, source ai_estimated, no record (fails the name; 0 chicken records in OffFood/FatSecretFood/FdcFood are labelled 85% lean). Frozen-pool replay: BASE no winner -> LANE fdc_171116 \"Chicken, ground, raw\" 143 kcal/100 g. Band spans extra-lean (98) to cooked crumbles (189). Serving is a draw on a bare line (the replay drew 450 g fdc_size_estimate) and is deliberately unasserted."
+    },
+    {
+      "id": "n-grd-02",
+      "category": "ground_meat_identity",
+      "text": "ground lamb",
+      "expectName": [
+        [
+          "ground",
+          "lamb"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          180,
+          300
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. Pre-fix: not in the default's list, so `ground` was prep-stripped and the line derived key `lamb` -- the SAME key as bare `lamb`, whose FoodMapping row is a human-triage NZ square-cut SHOULDER (fdc 175264, usedCount 96), so a warm `ground lamb` billed a shoulder; cold picked FS \"Ground Lamb\" fs_38643, which is why no cold gate could see it. Frozen-pool replay: BASE fs_38643 \"Ground Lamb\" -> LANE fdc_174370 \"Lamb, ground, raw\", both 282 kcal/100 g (same food). Band spans NZ ground lamb raw (193) to US raw/broiled (282-283)."
+    },
+    {
+      "id": "n-grd-03",
+      "category": "ground_meat_identity",
+      "text": "ground pork",
+      "expectName": [
+        [
+          "ground",
+          "pork"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          110,
+          300
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. Pre-fix: searched as `85% lean 15% fat pork`, which matches exactly ONE record in the three corpora (Tyson off_0027182546751, 212 kcal/100 g; FDC pork is labelled 72/84/96, never 85) -- a one-row dependency that would have sent the line to the stub lane the day that row was marked. Frozen-pool replay: BASE the Tyson row -> LANE fs_36208 \"Ground Pork\" 263 kcal/100 g (USDA fresh raw is 263). Band spans 96% lean raw (121) to fresh cooked (297). Serving is a draw on a bare line (FS default 28.35 g vs an OFF 112 g label) and is deliberately unasserted."
+    },
+    {
+      "id": "n-grd-04",
+      "category": "ground_meat_identity",
+      "text": "ground chicken breast",
+      "expectName": [
+        [
+          "ground",
+          "chicken",
+          "breast"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          90,
+          170
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. Pre-fix: the `chicken breast -> skinless chicken breast` rule ran first and produced `ground skinless chicken breast`, which is not a protected phrase, so `ground` was then stripped and the line keyed as `breast chicken skinless` -- bare `chicken breast`'s key -- and resolved to \"Skinless Chicken Breast\" [Mary's Chicken] off_0208065711897 (a breast, 116 kcal). `ground` joined that rule's exclusions. Frozen-pool replay: LANE off_0842535126516 \"Ground Chicken Breast\" 125 kcal/100 g."
+    },
+    {
+      "id": "n-grd-05",
+      "category": "ground_meat_identity",
+      "text": "organic ground chicken",
+      "expectName": [
+        [
+          "ground",
+          "chicken"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          95,
+          200
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. Pre-fix: `organic 85% lean 15% fat chicken` resolved to \"Organic Chicken\" off_0650374534511 at 205 kcal/100 g -- a whole bird, failing both the name and the band. Frozen-pool replay: LANE fs_43104473 \"Organic Ground Chicken\" [Trader Joe's] 134 kcal/100 g."
+    },
+    {
+      "id": "n-grd-06",
+      "category": "ground_meat_identity",
+      "text": "4 oz ground chicken",
+      "expectName": [
+        [
+          "ground",
+          "chicken"
+        ]
+      ],
+      "grams": [
+        112,
+        115
+      ],
+      "macros": {
+        "kcal100": [
+          95,
+          200
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. The quantity-bearing form, which the D-A9 report §6a measured billing whole \"Chicken\" fs_1623 on master (113.4 g / 269 kcal = 237 kcal/100 g, fails the band and the name) because the honest query admitted nothing and the fallback lane answered. Frozen-pool replay: BASE no winner -> LANE fdc_171116 \"Chicken, ground, raw\" 113.4 g / 162 kcal weight_unit. Grams are deterministic here (4 oz = 113.4 g), so the band is asserted."
+    },
+    {
+      "id": "n-grd-07",
+      "category": "ground_meat_identity",
+      "text": "ground turkey",
+      "expectName": [
+        [
+          "ground",
+          "turkey"
+        ],
+        [
+          "lean",
+          "turkey"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          100,
+          260
+        ]
+      },
+      "notes": "Ground-meat identity (2026-08-24, Lane A ride-along off the D-A9 gate): normalizeIngredientName()'s leanness default (`ground X` -> `85% lean 15% fat X`) fired on meats whose corpora never carry that phrasing, and `ground` was a prep phrase everywhere, so `ground <meat>` collapsed onto the bare noun's cache key. Fixed in the ground-meat-identity PR: the default keeps beef|turkey only and `ground <chicken|pork|lamb|bison|veal|venison|meat>` are PROTECTED_PRODUCT_PHRASES (RULES_VERSION 3 -> 4). Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md. CONTROL -- the default path that STAYS: turkey keeps `ground turkey -> 85% lean 15% fat turkey` (OFF 11 / FS 1 / FDC 3 records carry that phrasing). Frozen-pool replay: BASE = LANE off_0072322534525 \"85% lean ground turkey\" 112 g / 240 kcal, SAME in the arm; cold on qwm6HGP465bEqu0Upz5_l the same record. Guards that narrowing the list did not take turkey with it. Band spans 99% lean (112) to 85% lean (214-240)."
     }
   ]
 }
