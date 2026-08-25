@@ -48,6 +48,20 @@ export interface UnifiedCandidate {
         description: string;
         grams: number | null;
         isDefault?: boolean;
+        /**
+         * The serving's OWN macros, in the client's normalized field names
+         * (`calories`/`protein`/`carbohydrate`/`fat`) — i.e. the shape
+         * `servingMacros()` in fs-serving-macros.ts reads, and the same shape
+         * `FatSecretServing.nutrients` persists. Set by the fatsecret lane only;
+         * FDC and OFF candidates leave it undefined.
+         *
+         * It exists because a serving can state a BILL without stating a WEIGHT
+         * — FatSecret's chain-restaurant records are exactly that shape — and
+         * before this field the live lane dropped the macros while the DB path
+         * kept them, so the same record billed differently depending on whether
+         * it had been seen before. See toUnifiedCandidate() in fatsecret-lane.ts.
+         */
+        nutrients?: Record<string, number> | null;
     }>;
     rawData: any;
 }

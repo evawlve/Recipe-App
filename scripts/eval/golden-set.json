@@ -7603,6 +7603,60 @@
         ]
       },
       "notes": "Percent-is-not-a-quantity (2026-08-24, Lane A): parseQuantityTokens() ended in parseFloat(tokens[0]), and parseFloat('2%') is 2, so a leading percentage (or a leanness ratio like 85/15, read as a fraction) was consumed as the COUNT and dropped from the name. Fixed by isPercentOrLeannessRatioToken() in src/lib/parse/quantity.ts: the token stays in the name, qty defaults to 1. Owner: sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md §5. CONTROL -- a real quantity ahead of the percentage was never affected (qty 2, unit cup, name `2% milk` on both trees); guards that the token predicate does not reach a `2%` that is not in the quantity seat. Frozen-pool replay: 480 g / 260-264 kcal on both sides (\"2% milk\" / \"2% Milk\", same-name OFF twins)."
+    },
+    {
+      "id": "n-k3-01",
+      "category": "fs_macro_only_serving",
+      "text": "taco bell nachos bellgrande",
+      "expectName": [
+        [
+          "bellgrande"
+        ]
+      ],
+      "total": {
+        "calories": [
+          474,
+          986
+        ]
+      },
+      "notes": "K3 — the lane/builder seam (2026-08-25, Lane A, A8 build order row 1). toUnifiedCandidate() in fatsecret-lane.ts mapped every live serving to {description, grams}, dropping the macros, then filtered out any serving with no gram weight — which for a chain-restaurant record is its ONLY serving (`1 serving`, macros, metricServingAmount null). buildFatSecretResult() therefore found no macros on either path, logged fs.build_result.no_nutrition (1,432 events over 413 distinct records on the box, 246 of them never persisted) and returned null, and attemptServingFailureFallback() billed an OFF sibling picked in GATHER order. The WINNER never changed — the reranker already had the right record — so this case pins the BILL, not the ranking. Fixed by carrying the macros through the lane and keeping gram-less macro-bearing servings, with the fallback moved into rerank order. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md §4 K3. The band is the record's own published serving ±35% per the _readme rule; kcal100 is deliberately unasserted because on this tier it is a flat 200 by construction (estimateServingGrams = kcal / 2.0) and would assert nothing. Pre-fix cold on modTvpChRBqrlz0w3x-qw: Taco Bell, Nachos Supreme off_139524673240975279196, 100 g / 443 kcal. Frozen-pool replay on the branch: fs_124375163 \"Nachos Bellgrande - Beef\", 1 serving 730 kcal."
+    },
+    {
+      "id": "n-k3-02",
+      "category": "fs_macro_only_serving",
+      "text": "first watch million dollar bacon",
+      "expectName": [
+        [
+          "million",
+          "dollar",
+          "bacon"
+        ]
+      ],
+      "total": {
+        "calories": [
+          162,
+          338
+        ]
+      },
+      "notes": "K3 — the lane/builder seam (2026-08-25, Lane A, A8 build order row 1). toUnifiedCandidate() in fatsecret-lane.ts mapped every live serving to {description, grams}, dropping the macros, then filtered out any serving with no gram weight — which for a chain-restaurant record is its ONLY serving (`1 serving`, macros, metricServingAmount null). buildFatSecretResult() therefore found no macros on either path, logged fs.build_result.no_nutrition (1,432 events over 413 distinct records on the box, 246 of them never persisted) and returned null, and attemptServingFailureFallback() billed an OFF sibling picked in GATHER order. The WINNER never changed — the reranker already had the right record — so this case pins the BILL, not the ranking. Fixed by carrying the macros through the lane and keeping gram-less macro-bearing servings, with the fallback moved into rerank order. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md §4 K3. The band is the record's own published serving ±35% per the _readme rule; kcal100 is deliberately unasserted because on this tier it is a flat 200 by construction (estimateServingGrams = kcal / 2.0) and would assert nothing. Pre-fix cold on modTvpChRBqrlz0w3x-qw: Granola [First Watch] off_0850035371022, 55 g / 240 kcal — a granola for a bacon query, which hasCoreTokenMismatch() waved through because CORE_FOOD_TOKENS has no `bacon`. Frozen-pool replay on the branch: fs_25750174 \"Million Dollar Bacon\", 1 serving 250 kcal."
+    },
+    {
+      "id": "n-k3-03",
+      "category": "fs_macro_only_serving",
+      "text": "yard house poke nachos",
+      "expectName": [
+        [
+          "poke",
+          "nachos"
+        ]
+      ],
+      "total": {
+        "calories": [
+          572,
+          1188
+        ]
+      },
+      "notes": "K3 — the lane/builder seam (2026-08-25, Lane A, A8 build order row 1). toUnifiedCandidate() in fatsecret-lane.ts mapped every live serving to {description, grams}, dropping the macros, then filtered out any serving with no gram weight — which for a chain-restaurant record is its ONLY serving (`1 serving`, macros, metricServingAmount null). buildFatSecretResult() therefore found no macros on either path, logged fs.build_result.no_nutrition (1,432 events over 413 distinct records on the box, 246 of them never persisted) and returned null, and attemptServingFailureFallback() billed an OFF sibling picked in GATHER order. The WINNER never changed — the reranker already had the right record — so this case pins the BILL, not the ranking. Fixed by carrying the macros through the lane and keeping gram-less macro-bearing servings, with the fallback moved into rerank order. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md §4 K3. The band is the record's own published serving ±35% per the _readme rule; kcal100 is deliberately unasserted because on this tier it is a flat 200 by construction (estimateServingGrams = kcal / 2.0) and would assert nothing. Pre-fix cold on modTvpChRBqrlz0w3x-qw: Yard House, Poke Stack off_543440294187988525742, 100 g / 661 kcal. Frozen-pool replay on the branch: fs_26898301 \"Poke Nachos\", 1 serving 880 kcal."
     }
   ]
 }

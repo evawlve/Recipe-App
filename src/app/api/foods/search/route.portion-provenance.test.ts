@@ -39,10 +39,14 @@ jest.mock('@/lib/mapping/cache-search', () => ({
 const { gatherCandidates } = require('@/lib/mapping/gather-candidates');
 
 /**
- * A FatSecret "1 serving" restaurant record in `gatherCandidates` shape: the lane
- * refused to derive per-100g (`nutrition` undefined) and filtered every serving
- * for lack of a weight (`servings: []`), but the macros sit on `rawData.servings`.
- * The API spelling: `calories`/`carbohydrate`, sodium in mg.
+ * A FatSecret "1 serving" restaurant record in the lane's PRE-A8-row-1 shape:
+ * `nutrition` undefined (no weight, so no per-100g derivation) and every serving
+ * filtered out for lack of one (`servings: []`), with the macros surviving only
+ * on `rawData.servings`. The API spelling: `calories`/`carbohydrate`, sodium in mg.
+ *
+ * KEPT DELIBERATELY. The lane no longer emits this shape — see `macroOnlyHitLive`
+ * below — but a cached or replayed candidate can still carry it, and it is the
+ * shape every one of this route's recovery assertions was written against.
  */
 const macroOnlyHit = {
   id: 'fs_68444899',
@@ -73,6 +77,25 @@ const honestHit = {
   rawData: { nutrientsPer100g: { fiber: 2, sugars: 3, sodium: 0.5 } },
 };
 
+/**
+ * The SAME record in the lane's shape since A8 row 1 (2026-08-25): the gram-less
+ * serving is no longer deleted, and it carries its own macros. The route must
+ * still reach `recoverMacroOnlyServing()` — which it does because the grams
+ * filter moved from the lane into the route, where the requirement actually
+ * lives. Without that move `servingOptions` would be `[{ '1 serving', 100 }]`, a
+ * fabricated weight, the recovery would never fire, and "Whopper Jr." would ship
+ * to the browse list at 0 kcal again — the exact regression this route's comment
+ * block describes.
+ */
+const macroOnlyHitLive = {
+  ...macroOnlyHit,
+  servings: [{
+    description: '1 serving',
+    grams: null,
+    nutrients: { calories: 340, protein: 15, carbohydrate: 30, fat: 18, fiber: 2, sugar: 7, sodium: 560 },
+  }],
+};
+
 const call = (query: string) =>
   GET(
     new NextRequest(
@@ -98,6 +121,20 @@ describe('/api/foods/search portionProvenance', () => {
     expect(item.portionProvenance).toBe('borrowed');
     // And the recovery itself still did its job (the macros were never missing).
     expect(item.kcal100).toBe(200);
+  });
+
+  test("the lane's post-A8 shape recovers identically — a gram-less serving is not a 100 g portion", async () => {
+    gatherCandidates.mockResolvedValue([macroOnlyHitLive]);
+
+    const response = await call('whopper jr');
+    expect(response.status).toBe(200);
+    const item = (await response.json()).data[0];
+
+    expect(item.portionEstimated).toBe(true);
+    expect(item.portionProvenance).toBe('borrowed');
+    expect(item.kcal100).toBe(200);
+    // The record's OWN serving, not a fabricated `100 g`: 340 kcal / 2.0.
+    expect(item.servingOptions).toEqual([{ label: '1 serving', grams: 170 }]);
   });
 
   test('an honest row ships neither key — control', async () => {

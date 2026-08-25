@@ -29,6 +29,7 @@ import {
     stripPrepModifiers,
     hasDecisiveBrandContext,
     candidateMatchesTargetBrand,
+    coversNonBrandQueryToken,
 } from './simple-rerank';
 import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
 import { servingAiCallForTier } from './serving-ai-tiers';
@@ -1747,6 +1748,16 @@ export async function mapIngredientWithFallback(
         let confidence = 0;
         let selectionReason = '';
         let filtered: UnifiedCandidate[] = [];
+        /**
+         * The reranker's own ordering of the pool, by candidate id, captured when
+         * it runs so the SERVING FALLBACK can honour it. `filtered` is in GATHER
+         * order — `gatherCandidates()` pushes FDC, then OFF, then the FatSecret
+         * lane — so a fallback taken off the front of `filtered` is "the OFF
+         * lane's top retrieval hits", whatever the reranker thought of them.
+         * Null when the reranker never ran (a cache hit, or a pool too small to
+         * rerank), which the fallback reads as "no order to honour".
+         */
+        let rerankSortedIds: string[] | null = null;
 
         // Step 1c: Check validated cache for normalized name (User Optimization)
         // "1 cup chopped onion" -> normalized "onion" -> checks cache for "onion"
@@ -2207,6 +2218,7 @@ export async function mapIngredientWithFallback(
                     // The raw line (trimmed) is still passed for modifier constraint extraction.
                     const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
                     const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNoun != null);
+                    rerankSortedIds = rerankResult.sortedCandidates.map(c => c.id);
 
                     if (rerankResult && rerankResult.winner) {
                         const selected = filtered.find(c => c.id === rerankResult.winner!.id);
@@ -2644,6 +2656,7 @@ export async function mapIngredientWithFallback(
             const servingFallback = await attemptServingFailureFallback({
                 winner, filtered, parsed, confidence, rawLine, trimmed, normalizedName,
                 aiHydrationBudget, isWeightUnit, isVolumeUnit, prepModifier,
+                rerankSortedIds, targetBrand: brandDetection.matchedBrand ?? undefined,
             });
             if (servingFallback) {
                 result = servingFallback.result;
@@ -3364,6 +3377,37 @@ async function hydrateWinnerWithBackfills(params: {
     return { result, selectionReason };
 }
 
+/**
+ * The serving fallback's candidate order.
+ *
+ * EXPORTED because it is otherwise untestable and UNGATEABLE. winner-diff's
+ * --with-serving stage hydrates the WINNER and only the winner (resolveServings(),
+ * section 9) and never runs the mapper's fallback at all, so a frozen-pool receipt
+ * is silent about this ordering in both directions. A unit pin is the only
+ * instrument that sees it.
+ *
+ * (The hydration entry point is named without its parens just above, on purpose:
+ * the hydration-pool migration guard balanced-paren-scans BOTH mapper source
+ * files for `<name>(` and reads a mention inside a comment as one more call site
+ * passing no budget — the "the anchor matched a comment" trap that file warns
+ * about, reproduced here at a cost of one red suite.)
+ *
+ * Stable by construction: `Array.prototype.sort` is stable in every runtime this
+ * ships on, and candidates absent from the rerank order share one rank key, so
+ * they keep their gather order behind the ranked ones rather than shuffling.
+ * A null order (the reranker never ran — a cache hit, or a pool too small)
+ * returns the input untouched.
+ */
+export function orderFallbacksByRerank<T extends { id: string }>(
+    eligible: readonly T[],
+    rerankSortedIds: string[] | null,
+): T[] {
+    if (!rerankSortedIds) return [...eligible];
+    const rank = new Map(rerankSortedIds.map((id, i) => [id, i]));
+    return [...eligible].sort((a, b) =>
+        (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER));
+}
+
 async function attemptServingFailureFallback(params: {
     winner: UnifiedCandidate;
     filtered: UnifiedCandidate[];
@@ -3376,10 +3420,15 @@ async function attemptServingFailureFallback(params: {
     isWeightUnit: boolean | '' | null | undefined;
     isVolumeUnit: boolean | '' | null | undefined;
     prepModifier: string | undefined;
+    /** The reranker's ordering of the pool, by id; null when it never ran. */
+    rerankSortedIds: string[] | null;
+    /** The detected brand, when the line is brand-led. Arms the coverage guard. */
+    targetBrand: string | undefined;
 }): Promise<{ result: FatsecretMappedIngredient; selectionReason: string } | null> {
     const {
         winner, filtered, parsed, confidence, rawLine, trimmed, normalizedName,
         aiHydrationBudget, isWeightUnit, isVolumeUnit, prepModifier,
+        rerankSortedIds, targetBrand,
     } = params;
     let result: FatsecretMappedIngredient | null = null;
     let selectionReason = '';
@@ -3390,10 +3439,41 @@ async function attemptServingFailureFallback(params: {
         remainingCandidates: filtered.length - 1
     });
 
-    // Try next 3 candidates as fallbacks
-    const fallbackCandidates = filtered
-        .filter(c => c.id !== winner.id)
-        .slice(0, 3);
+    // TRY THE NEXT 3 IN RERANK ORDER, NOT GATHER ORDER (A8 row 1, 2026-08-25).
+    //
+    // `filtered` is in GATHER order: gatherCandidates() pushes searchFdcLocal,
+    // then OFF, then the FatSecret lane. So `filtered.slice(0, 3)` was "the OFF
+    // lane's top three retrieval hits", chosen with no reference to what the
+    // reranker made of them — and this function runs precisely when a FatSecret
+    // winner failed to hydrate, i.e. on the lines where the FS lane is last in
+    // the list and the reranker's opinion is the only thing that distinguishes
+    // the substitutes. Measured on the A8 within-brand census: 9 of the 12
+    // logged fallback winners were `off_` rows, and on 5 of those the offline
+    // reranker's own winner was the RIGHT record, sitting further down
+    // `filtered` than the slice reached.
+    //
+    // `attemptCacheFailureResearch()` below already does exactly this — it maps
+    // `rerankResult.sortedCandidates` back onto its filtered set — so this is
+    // the two serving-failure paths agreeing rather than a new policy.
+    //
+    // Falls back to gather order when the reranker never ran (a cache hit, a
+    // pool of one): there is then no order to honour, and refusing to try
+    // anything would trade a wrong record for no record.
+    const eligible = filtered.filter(c => c.id !== winner.id);
+    const ordered = orderFallbacksByRerank(eligible, rerankSortedIds);
+    const fallbackCandidates = ordered.slice(0, 3);
+    // `audit`, not `info`: the box runs at LOG_LEVEL=warn, so an info line does not
+    // survive to `next-start.log` and this change's firing population would be
+    // unmeasurable in production — the same channel `mapping.recovery_path` already
+    // uses, which is why `serving_failure_fallback` reads 357 there and
+    // `mapping.fallback_success` reads 2.
+    if (rerankSortedIds && fallbackCandidates.some((c, i) => c.id !== eligible[i]?.id)) {
+        logger.audit('mapping.fallback_reordered_by_rerank', {
+            failedId: winner.id,
+            gatherOrder: eligible.slice(0, 3).map(c => c.id),
+            rerankOrder: fallbackCandidates.map(c => c.id),
+        });
+    }
 
     const failedWinnerId = winner.id;
     const tryFallbackCandidate = async (fallback: UnifiedCandidate): Promise<boolean> => {
@@ -3474,6 +3554,34 @@ async function attemptServingFailureFallback(params: {
                 fallbackBrand: fallback.brandName,
             });
             continue; // Skip this fallback, try next one
+        }
+        // ON A BRAND-LED LINE THE SUBSTITUTE MUST STILL BE THE ITEM ASKED FOR.
+        //
+        // `hasCoreTokenMismatch()` is the only identity guard this path has had,
+        // and it checks membership of CORE_FOOD_TOKENS — a list carrying no
+        // `bacon`, `burger`, `fries`, `wings`, `nachos`, `sandwich` or `biscuit`,
+        // so it declines to guard eight of the eleven venue rows the A8 census
+        // measured. `first watch million dollar bacon` fell to a granola and
+        // `yard house poke nachos` to a stack, both silently.
+        //
+        // The rule is the reranker's own: a candidate that shares the brand but
+        // covers no non-brand token of the query is the wrong item under the
+        // right sign. Same predicate, imported not restated — it is what
+        // `DECISIVE_BRAND_BOOST` already requires before it will prefer a
+        // same-brand record.
+        //
+        // The honest consequence, and it is intended: when nothing in the pool
+        // covers a food token, this line now falls through to the AI-stub lane
+        // (`ai_estimated`, no badge) instead of billing a wrong same-brand
+        // record. "We estimated this" beats a confident wrong panel.
+        if (targetBrand && !coversNonBrandQueryToken(fallback.name, normalizedName, targetBrand)) {
+            logger.audit('mapping.fallback_rejected_no_food_token', {
+                query: normalizedName,
+                targetBrand,
+                fallbackName: fallback.name,
+                fallbackId: fallback.id,
+            });
+            continue;
         }
         if (isRankPlausibilityPartitionEnabled() && isDenylistedOffRecord(fallback.id)) {
             logger.warn('mapping.denylisted_candidate_dropped', {
