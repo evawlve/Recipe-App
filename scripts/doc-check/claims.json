@@ -1729,6 +1729,58 @@
         "value": "2@10@100"
       },
       "verified": "2026-08-22"
+    },
+    {
+      "id": "synonym-canonicalizer-is-british-to-american-only",
+      "claim": "Step 0a findCanonicalName() (map-ingredient-with-fallback.ts) rewrites a bare line British -> American ONLY, and saveSynonyms() orients every LearnedSynonym row the same way. Until 2026-08-24 both ran the static map in BOTH directions and followed any DB row, so bare `ham` was searched, keyed and billed as Morrison's Gammon, `ground beef` as generic \"Beef\" (via `minced beef` -> prep-strip -> key `beef`), `baking soda` as a soft drink (measured live on 3JD249AyleJUI2qu0ZERF; 18 distinct bare lines in MappingEventLog). Output is findCanonicalName's canonicalizeBritishTerm() calls @ its getKnownSynonyms() calls @ saveSynonyms' isCanonicalDirection() calls @ canonicalizeBritishTerm's BRITISH_TO_AMERICAN reads @ its AMERICAN_TO_BRITISH reads; master read 0@1@0@0@0 before the fix. Re-adding getKnownSynonyms() to the query path, or a reverse-map read to the static fallback, is the defect coming back.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md",
+      "where": "backend",
+      "command": "node -e \"const s=require('fs').readFileSync('src/lib/mapping/ai-synonym-generator.ts','utf8');const fn=(n)=>{const i=s.indexOf('export '+n);if(i<0)return '';const j=s.indexOf('\\nexport ',i+8);return s.slice(i,j<0?undefined:j)};const f=fn('async function findCanonicalName'),sv=fn('async function saveSynonyms'),c=fn('function canonicalizeBritishTerm');process.stdout.write([(f.match(/canonicalizeBritishTerm\\(/g)||[]).length,(f.match(/getKnownSynonyms\\(/g)||[]).length,(sv.match(/isCanonicalDirection\\(/g)||[]).length,(c.match(/BRITISH_TO_AMERICAN\\[/g)||[]).length,(c.match(/AMERICAN_TO_BRITISH/g)||[]).length].join('@'))\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@0@1@1@0"
+      },
+      "verified": "2026-08-24",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "hamburger-rule-is-scoped-before-bun",
+      "claim": "The synonym_rewrites rule `hamburger -> ground beef` carries unlessFollowedBy ['bun','buns'] and the engine honours it: `hamburger bun` normalizes to itself while `hamburger patty` still takes the beef chain. Before 2026-08-24 the bare line normalized to `85% lean 15% fat beef bun` and resolved to a gpt-4o-mini stub (150 g / 270 kcal). Reads the on-disk JSON through readRulesFile() like production; the box copy is guarded separately by box-rules-file-hamburger-rule-is-scoped because data/ never syncs. Output is normalize(hamburger bun)|normalize(hamburger patty).",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md",
+      "where": "backend",
+      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {normalizeIngredientName:n}=require('./src/lib/mapping/normalization-rules');process.stdout.write(n('hamburger bun').cleaned+'|'+n('hamburger patty').cleaned)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "hamburger bun|85% lean 15% fat beef patty"
+      },
+      "verified": "2026-08-24",
+      "timeoutMs": 180000
+    },
+    {
+      "id": "box-rules-file-hamburger-rule-is-scoped",
+      "claim": "THE DELIVERED HALF of the hamburger-rule scope (D-A9 rider). data/ is in the box's .stignore, so the JSON reaches /home/owner/Recipe-App only by scp, and readRulesFile() prefers that on-disk copy over DEFAULT_RULES: a stale box file keeps `hamburger bun` -> beef stub LIVE while every Mac-side gate (incl. hamburger-rule-is-scoped-before-bun) stays green - the PR #211 / vanilla shape. Output is scopedHamburgerRuleCount@synonymRewriteCount; a missing or unparseable file emits nothing and FAILS.",
+      "ownerDoc": "mobile:CLAUDE.md#deploying-the-backend",
+      "where": "box",
+      "command": "node -e \"const p='/home/owner/Recipe-App/data/fatsecret/normalization-rules.json';const r=JSON.parse(require('fs').readFileSync(p,'utf8'));const h=(r.synonym_rewrites||[]).filter(a=>String(a.from||'').trim().toLowerCase()==='hamburger'&&Array.isArray(a.unlessFollowedBy)&&a.unlessFollowedBy.map(x=>String(x).toLowerCase()).includes('bun'));process.stdout.write(h.length+'@'+(r.synonym_rewrites||[]).length)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^1@[1-9][0-9]*$"
+      },
+      "verified": "2026-08-24",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "learned-synonym-has-no-british-canonical",
+      "claim": "No LearnedSynonym row points a query AT a British term. 12 of 25 rows did on 2026-08-24 (`shrimp -> prawns` 317 uses, `ham -> gammon` 126, `all-purpose flour -> plain flour` 100, ...), all written by the pre-fix saveSynonyms() from records NAMED with the British word; they were deleted under the D-A9 grant and the fixed writer cannot recreate them. The list is the British key set of BRITISH_TO_AMERICAN as of the fix; a new key added to the map is not covered until it is added here. Output is the count of such rows.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc \"SELECT count(*) FROM \\\"LearnedSynonym\\\" WHERE lower(\\\"targetTerm\\\") IN ('aubergine','aubergines','courgette','courgettes','rocket','coriander','fresh coriander','spring onion','spring onions','beetroot','swede','mangetout','mange tout','capsicum','chilli','chillies','red chilli','green chilli','sweetcorn','bicarbonate of soda','bicarb','caster sugar','castor sugar','icing sugar','plain flour','self-raising flour','cornflour','golden syrup','treacle','desiccated coconut','double cream','single cream','clotted cream','minced beef','beef mince','minced pork','pork mince','minced lamb','lamb mince','minced chicken','chicken mince','prawns','king prawns','gammon','bacon rashers')\" | tr -d ' '",
+      "expect": {
+        "kind": "equals",
+        "value": "0"
+      },
+      "verified": "2026-08-24",
+      "timeoutMs": 60000
     }
   ]
 }

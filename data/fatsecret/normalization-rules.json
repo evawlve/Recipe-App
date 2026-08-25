@@ -71,7 +71,8 @@
     },
     {
       "from": "hamburger",
-      "to": "ground beef"
+      "to": "ground beef",
+      "unlessFollowedBy": ["bun", "buns"]
     },
     {
       "from": "pie spice",

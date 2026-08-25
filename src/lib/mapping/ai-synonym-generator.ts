@@ -10,6 +10,16 @@
  * - AI is only used for British ↔ American conversion, not general synonyms
  * 
  * Synonyms are saved to LearnedSynonym table for fast lookup.
+ *
+ * DIRECTION (2026-08-24, D-A9): the canonical is ALWAYS the American term.
+ * `findCanonicalName()` rewrites British -> American only, and `saveSynonyms()`
+ * orients every pair the same way whichever side the record was named in.
+ * Until then both ran the map in BOTH directions: a record named "Gammon" wrote
+ * `ham -> gammon`, and a bare `ham` was searched, keyed and billed as a UK gammon
+ * joint (`ground beef` -> `minced beef` -> prep-strip -> key `beef`; `baking soda`
+ * -> `bicarbonate of soda` -> a soft drink). Exact bare lines only: Step 0a in
+ * preflightIngredientLine() is the sole query-path reader. Owner:
+ * sync-docs/reports/2026-08-24_the-canonicalizer-rewrites-us-staples-into-uk-vocabulary.md
  */
 
 import { prisma } from '../db';
@@ -110,6 +120,37 @@ for (const [british, americans] of Object.entries(BRITISH_TO_AMERICAN)) {
 }
 
 // ============================================================
+// Direction
+// ============================================================
+
+/** True when `term` is a key of BRITISH_TO_AMERICAN — a term the canonicalizer rewrites AWAY from. */
+export function isBritishKey(term: string): boolean {
+    return Object.prototype.hasOwnProperty.call(BRITISH_TO_AMERICAN, term.toLowerCase().trim());
+}
+
+/**
+ * The American canonical for a British term, or null. This is the ONLY direction the
+ * query path rewrites: `gammon` -> `ham`, never `ham` -> `gammon`. An American term
+ * returns null even though AMERICAN_TO_BRITISH knows its British spelling — that map
+ * exists for the writer (getKnownSynonyms), not for the query.
+ */
+export function canonicalizeBritishTerm(term: string): string | null {
+    const americans = BRITISH_TO_AMERICAN[term.toLowerCase().trim()];
+    return americans && americans.length > 0 ? americans[0] : null;
+}
+
+/**
+ * May a LearnedSynonym row `sourceTerm -> targetTerm` be followed or stored? Only when
+ * its target is not itself a British key. 12 of the 25 live rows (2026-08-24) pointed
+ * the other way (`shrimp -> prawns`, `ham -> gammon`, ...), written by the pre-fix
+ * saveSynonyms() from records NAMED with the British term; a reader that trusted them
+ * re-created the defect with the static map switched off.
+ */
+export function isCanonicalDirection(_sourceTerm: string, targetTerm: string): boolean {
+    return !isBritishKey(targetTerm);
+}
+
+// ============================================================
 // Schema & Prompts (Very Conservative)
 // ============================================================
 
@@ -182,7 +223,9 @@ function isValidForSynonyms(term: string): boolean {
 // ============================================================
 
 /**
- * Get known synonyms without AI call.
+ * Get known synonyms without AI call — BOTH directions (a record named either way
+ * needs its counterpart). This is the WRITER's input; the query path must never call
+ * it, because its American -> British half is exactly the rewrite D-A9 removed.
  * Returns null if no known synonyms found.
  */
 export function getKnownSynonyms(term: string): string[] | null {
@@ -299,7 +342,10 @@ Only provide real regional terminology differences like:
 
 /**
  * Save synonyms to LearnedSynonym table.
- * Maps synonym → originalTerm (so searching for synonym finds original)
+ * Stores `sourceTerm -> targetTerm` with the AMERICAN term as targetTerm, whichever
+ * side `canonicalName` was on: a record named "Gammon" (canonical=gammon, synonym=ham)
+ * is stored as `gammon -> ham`, a record named "Ground Beef" as `minced beef -> ground beef`.
+ * A pair with no American side (two British spellings) is not stored at all.
  */
 export async function saveSynonyms(
     canonicalName: string,
@@ -322,17 +368,27 @@ export async function saveSynonyms(
             continue;
         }
 
+        // Orient the pair: targetTerm is the American term (see the header).
+        let sourceTerm = synonymLower;
+        let targetTerm = canonicalLower;
+        if (isBritishKey(targetTerm) && !isBritishKey(sourceTerm)) {
+            [sourceTerm, targetTerm] = [targetTerm, sourceTerm];
+        }
+        if (!isCanonicalDirection(sourceTerm, targetTerm)) {
+            continue;
+        }
+
         try {
             await prisma.learnedSynonym.upsert({
                 where: {
                     sourceTerm_targetTerm: {
-                        sourceTerm: synonymLower,
-                        targetTerm: canonicalLower,
+                        sourceTerm,
+                        targetTerm,
                     }
                 },
                 create: {
-                    sourceTerm: synonymLower,
-                    targetTerm: canonicalLower,
+                    sourceTerm,
+                    targetTerm,
                     source,
                     confidence: source === 'known' ? 1.0 : 0.8,
                 },
@@ -413,17 +469,20 @@ export async function generateAndSaveSynonyms(
 // ============================================================
 
 /**
- * Find canonical name for a synonym.
- * Returns the target term if synonym exists, null otherwise.
+ * Find the canonical (American) name for a British synonym.
+ * Returns the target term if one exists, null otherwise — and null for every
+ * American term, which is what makes `ham` stay `ham`.
  */
 export async function findCanonicalName(query: string): Promise<string | null> {
     const normalized = query.toLowerCase().trim();
 
-    // Check database first
-    const synonym = await prisma.learnedSynonym.findFirst({
+    // Check database first — but follow only a row that points AT a canonical. A row
+    // whose target is a British key is skipped, never followed (isCanonicalDirection).
+    const rows = await prisma.learnedSynonym.findMany({
         where: { sourceTerm: normalized },
         orderBy: { useCount: 'desc' },
     });
+    const synonym = rows.find((row) => isCanonicalDirection(row.sourceTerm, row.targetTerm));
 
     if (synonym) {
         // Increment use count
@@ -438,11 +497,7 @@ export async function findCanonicalName(query: string): Promise<string | null> {
         return synonym.targetTerm;
     }
 
-    // Check known mappings without database
-    const knownSynonyms = getKnownSynonyms(normalized);
-    if (knownSynonyms && knownSynonyms.length > 0) {
-        return knownSynonyms[0];  // Return first known synonym
-    }
-
-    return null;
+    // Static fallback: British -> American ONLY. The two-direction reader
+    // (getKnownSynonyms) stays out of the query path — it is the writer's input.
+    return canonicalizeBritishTerm(normalized);
 }
