@@ -778,9 +778,14 @@ describe('population builders account for every line they were given', () => {
         // 274 / 165 / 108 since 2026-08-24 (same day): n-dup-01..03 (A7/K4, PR #382), grams + kcal100 bands.
         // 281 / 166 / 115 since 2026-08-24 (same day, third set): n-grd-01..07 (ground-meat identity), kcal100 bands + one grams band.
         // 285 / 169 / 119 since 2026-08-24 (fourth set): n-pct-01..04 (percent modifier, PR #385), three grams bands.
-        expect(p.lines).toHaveLength(285);
+        // 288 / 169 / 122 since 2026-08-25: n-k3-01..03 (the FatSecret lane/builder seam, A8 row 1).
+        // Three `text` lines and NO grams band — deliberately: on this tier grams is
+        // `estimateServingGrams` (kcal / 2.0), so banding it would band the estimator,
+        // not the record. They assert `total.calories` instead, which is the record's
+        // own published serving and the number the user is billed.
+        expect(p.lines).toHaveLength(288);
         expect(p.lines.filter(l => l.band).length).toBe(169);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(119);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(122);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 
