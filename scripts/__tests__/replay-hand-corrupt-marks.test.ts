@@ -520,7 +520,7 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         expect(parsed.ok).toBe(true);
     });
 
-    it('is the 2026-08-12 + 2026-08-14 + 2026-08-15 batches: 24 entries over 32 barcodes', () => {
+    it('is the 2026-08-12 + 2026-08-14 + 2026-08-15 + 2026-08-25 batches: 25 entries over 33 barcodes', () => {
         // Narrowed from 17/22 on 2026-08-12 after the pre-apply review. Two
         // entries were withdrawn because the mark does not buy a better answer,
         // which is the same criterion that deferred maple and callaloo:
@@ -546,9 +546,21 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         // group the tool's own classifyGroupCandidates() cannot fully compute:
         // two members sit under different names, so the name-scoped gate is
         // blind to them and they are hand-declared.
+        //
+        // 2026-08-25 added ONE entry with no group (D-A10, Diego's in-session
+        // grant): a brandless "1% milk" row carrying a milk-POWDER panel, 8.6x
+        // its 34-row exact-name group median. It is the first mark of a class
+        // NEITHER detector generation models — a wrong-PRODUCT panel, not a
+        // per-serving-as-per-100g scale error: Tier 1 flags an inflated panel
+        // only when the serving rescale lands ON the sibling median, and here
+        // the row has no serving and the sibling-serving fallback rescales 388
+        // to 162, so the rule declines it correctly. Group is the one barcode:
+        // duplicateOfBarcode NULL, no members, and no byte-identical panel
+        // under any other name (measured 2026-08-25). Owner: the Lane A
+        // session-13 write-off (mobile sync-docs/log/2026-08-25_*_a_*.md).
         if (!parsed.ok) throw new Error('unparseable');
-        expect(parsed.entries.length).toBe(24);
-        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(32);
+        expect(parsed.entries.length).toBe(25);
+        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(33);
     });
 
     it('carries the duplicate-group members that make a barcode-scoped mark self-reverting', () => {
@@ -590,10 +602,11 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         if (!parsed.ok) throw new Error('unparseable');
         const byGen = new Map<string, number>();
         for (const e of parsed.entries) byGen.set(e.authoredAt, (byGen.get(e.authoredAt) ?? 0) + 1);
-        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14', '2026-08-15']);
+        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14', '2026-08-15', '2026-08-25']);
         expect(byGen.get('2026-08-12')).toBe(15);
         expect(byGen.get('2026-08-14')).toBe(8);
         expect(byGen.get('2026-08-15')).toBe(1);
+        expect(byGen.get('2026-08-25')).toBe(1);
     });
 
     it('records a stated reason for every declined group member', () => {

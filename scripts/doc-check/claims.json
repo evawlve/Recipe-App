@@ -713,6 +713,18 @@
       "verified": "2026-07-31"
     },
     {
+      "id": "one-percent-milk-powder-row-is-hand-marked",
+      "ownerDoc": "sync-docs/log/2026-08-25_*_a_*.md (mobile) — D-A10; entry 0850019064209 in src/lib/mapping/corrupt-off-handmarks.json",
+      "claim": "The brandless OffFood row 0850019064209 (\"1% milk\", a milk-powder panel at 388 kcal/100 g) carries the hand-authored mark hand-triage-2026-08-25:panel, so bare `1% milk` cannot resolve to it. A NULL here after an OFF refresh means replay-hand-corrupt-marks.ts --apply --replay was not run (the mark is hand-authored: no detector re-derives it).",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc 'SELECT COALESCE(\"corruptReason\", $$NULL$$) FROM \"OffFood\" WHERE barcode = $$0850019064209$$;'",
+      "expect": {
+        "kind": "equals",
+        "value": "hand-triage-2026-08-25:panel"
+      },
+      "verified": "2026-08-25"
+    },
+    {
       "id": "off-duplicate-marks-restored",
       "claim": "OffFood.duplicateOfBarcode is populated: 93,608 rows marked 2026-07-31 by dedupe-off-mark.ts, which recomputes from scratch every run.",
       "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
