@@ -312,11 +312,23 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
     it('loadRoster reads the REAL shipped roster and it satisfies the verdict', () => {
         const real = loadRoster();
         expect(real).not.toBeNull();
-        expect(real!.members.length).toBeGreaterThan(0);
-        const v = judgeColdFailureSet(coldEvidence(), real);
+        // The REAL membership, pinned on purpose: editing stable-cold-failures.json
+        // means editing this line with the receipt. NINE minus n-mq-30, which LEFT
+        // THE SET on 2026-08-24 — PASSED 3/3 restarted cold runs on
+        // qwm6HGP465bEqu0Upz5_l after backend #381 (D-A9) stopped rewriting
+        // `bell pepper` into `capsicum`; the departure is recorded under
+        // `departed` in the roster file.
+        const REAL_MEMBERS = NINE.filter(id => id !== 'n-mq-30');
+        expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());
+        const results = [
+            ...REAL_MEMBERS.map(failCase),
+            failCase('n-svd-03'),
+            passCase('n-gen-01'), passCase('n-mq-30'), passCase('n-brand-02'), passCase('n-serv-26'),
+        ];
+        const v = judgeColdFailureSet(coldEvidence({}, results), real);
         expect(v.error).toBeUndefined();
         expect(v.ok).toBe(true);
-        expect(v.confirmed.sort()).toEqual([...NINE].sort());
+        expect(v.confirmed.sort()).toEqual([...REAL_MEMBERS].sort());
     });
 
     it('readColdRunEvidence reports no file rather than throwing when results/ is absent or empty', () => {
