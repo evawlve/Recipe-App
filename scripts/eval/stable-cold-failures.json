@@ -10,21 +10,21 @@
   "ownerDoc": "mobile:sync-docs/reports/2026-08-18_plan-4-three-arms-and-two-deploys.md",
   "writtenAt": "2026-08-19T21:20:00.000Z",
   "confirmedAgainst": {
-    "buildId": "i1BDbnq_b8pC7Hm3gD_bM",
-    "date": "2026-08-19",
+    "buildId": "qwm6HGP465bEqu0Upz5_l",
+    "date": "2026-08-24",
     "coldRuns": 3,
     "realFailuresPerRun": [
+      8,
       10,
-      11,
-      10
+      9
     ],
-    "intersectionSize": 9,
+    "intersectionSize": 8,
     "resultsFiles": [
-      "scripts/eval/results/eval-2026-08-19T20-25-23-049Z.json",
-      "scripts/eval/results/eval-2026-08-19T20-28-32-417Z.json",
-      "scripts/eval/results/eval-2026-08-19T20-32-13-013Z.json"
+      "scripts/eval/results/eval-2026-08-25T01-00-19-780Z.json",
+      "scripts/eval/results/eval-2026-08-25T01-04-01-644Z.json",
+      "scripts/eval/results/eval-2026-08-25T01-07-30-766Z.json"
     ],
-    "note": "Three cold runs, same build, minutes apart, box restarted between each. Per-run real-failure counts were 10/11/10; the INTERSECTION was exactly the nine members below and the extra slots were filled only by the three rotators (n-svd-03 twice, n-serv-26 and n-brand-02 once each). SCREEN BEFORE DIFFING: a cold run reporting LIST TOO SHORT or any `s-` failure is degraded retrieval (Typesense -> Postgres fallback), not a result — discard it and re-run."
+    "note": "Three cold runs, same build, minutes apart, box restarted between each, taken AFTER the D-A9 LearnedSynonym delete and the K4 evict (the final state). Per-run real-failure counts 8/10/9; the INTERSECTION was exactly the eight members below and the extra slots were filled only by the documented rotators (n-brand-02 once, n-serv-26 twice). n-mq-30 PASSED in all three and LEFT THE SET — see `departed`. The nine new golden cases (n-syn-01..06, n-dup-01..03) passed cold in all three runs. Previous confirmation: i1BDbnq_b8pC7Hm3gD_bM, 2026-08-19, 10/11/10, intersection 9."
   },
   "causeLegend": {
     "PANEL": "the winning record's own nutrition panel is wrong (usually an uncaught corrupt OFF row, corruptReason NULL)",
@@ -62,12 +62,6 @@
       "category": "serving_unit",
       "cause": "SERVING",
       "reason": "Bare 'pepper jack' bills 2.5 g against an [18, 40] band. The winner off_0858815007307's ONLY serving label is the degenerate '100 g (100 g)' placeholder, which is billed and then CAPPED 100 -> 2.5 g by the spice lexicon matching the contained 'pepper' token: label_serving_default sits in plain CAP_TIERS, while the head-gate fix protects only bare_label_serving. NOTE: the golden-set note's premise of a 'genuine 28 g slice label' is FALSE for this particular winner."
-    },
-    {
-      "id": "n-mq-30",
-      "category": "match_quality",
-      "cause": "PICK",
-      "reason": "The 'bell pepper' -> 'capsicum' synonym rewrite sends retrieval after a token the correct produce records do not carry; cold lands on off_9300462101729 'Diced capsicum' (and on other builds a Delisio pesto under_gate at 0.7010). The human-triage repoints on both keys mask it warm — the documented warm-green / cold-red pattern."
     },
     {
       "id": "n-mq-41",
@@ -120,6 +114,15 @@
       "joined": "before 2026-08-02",
       "left": "2026-08-15",
       "reason": "The PREVIOUS silent transition, and the precedent: '12 m&ms' left the set around 2026-08-15 and was initially recorded as UNATTRIBUTABLE — 'left the cold-gate stable set and I cannot attribute it'. It was attributed only later, to PR #320 bumping RULES_VERSION 2 -> 3 and invalidating every v2 mapping. A detector that names the exit on the run it happens turns that from an archaeology problem into a line of output."
+    },
+    {
+      "id": "n-mq-30",
+      "category": "match_quality",
+      "cause": "PICK",
+      "leftOn": "2026-08-24",
+      "fixedBy": "backend #381 (D-A9): findCanonicalName() no longer rewrites American terms into British ones, so `bell pepper` is never searched as `capsicum`",
+      "confirmedBy": "PASSED 3/3 restarted cold runs on qwm6HGP465bEqu0Upz5_l (results below): Bell Peppers fs_285829, 75 g, kcal100 26",
+      "previousReason": "The 'bell pepper' -> 'capsicum' synonym rewrite sends retrieval after a token the correct produce records do not carry; cold lands on off_9300462101729 'Diced capsicum' (and on other builds a Delisio pesto under_gate at 0.7010). The human-triage repoints on both keys mask it warm — the documented warm-green / cold-red pattern."
     }
   ]
 }
