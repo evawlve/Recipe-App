@@ -787,9 +787,13 @@ describe('population builders account for every line they were given', () => {
         // N1). Three `text` lines and NO new band -- this population's `band` is the GRAMS
         // band, and none of the three carries one: what N1 moves is which record wins, not
         // which rung serves it, so a grams band would pin the cascade rather than the fix.
-        expect(p.lines).toHaveLength(291);
+        // 294 / 169 / 128 since 2026-08-26: n-k2-01..03 (brand-led admission, A8 row 3
+        // K2). Three `text` lines and NO new grams band -- what K2 moves is which record
+        // is ADMITTED, not which rung serves it, and n-k2-01's winner sits on K3's
+        // macro-only tier where grams is kcal/2.0 by construction.
+        expect(p.lines).toHaveLength(294);
         expect(p.lines.filter(l => l.band).length).toBe(169);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(125);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(128);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 
