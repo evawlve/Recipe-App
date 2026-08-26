@@ -2564,9 +2564,24 @@ export function filterCandidatesByTokens(
     // Extract must-have tokens
     let mustHaveTokens = deriveMustHaveTokens(normalizedName);
     
-    // In relaxed mode, only require the very last non-modifier token (the primary noun)
+    // In relaxed mode, only require the very last non-modifier token (the primary noun).
+    //
+    // EXCEPT on a brand-led line, where the last token is now the HEAD NOUN (K2) and the first
+    // is the brand. Keeping the head there is what turns an emptied pool into a FOREIGN-BRAND
+    // answer: `culvers butter burger` deleted all 3 candidates on the head requirement, relaxed
+    // to `['burger']`, and won `Butter Burger buns [Kowalskis]` — a different company's product
+    // billed under the brand the user named. Measured 2026-08-25 (K2 cold gate, owner
+    // KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-fixes-its-flagships-and-empties-two-pools.md).
+    // Relaxing to the BRAND instead is the pre-K2 admission for that line, which is wide but
+    // never wrong about who made the food.
     if (relaxed && mustHaveTokens.length > 1) {
-        mustHaveTokens = [mustHaveTokens[mustHaveTokens.length - 1]];
+        const relaxDetection = detectBrandInQuery(normalizedName);
+        const relaxBrandTokens = relaxDetection.isBranded && relaxDetection.matchedBrand
+            ? new Set(foldApostrophes(relaxDetection.matchedBrand.toLowerCase()).split(/[^\w]+/).filter(Boolean))
+            : new Set<string>();
+        const brandToken = mustHaveTokens.find(t =>
+            relaxBrandTokens.has(t) || relaxBrandTokens.has(foldApostrophes(t)));
+        mustHaveTokens = [brandToken ?? mustHaveTokens[mustHaveTokens.length - 1]];
     }
 
     if (mustHaveTokens.length === 0) {
@@ -2709,9 +2724,32 @@ export function filterCandidatesByTokens(
             // Try synonym matches (for British → American translations)
             const synonyms = TOKEN_SYNONYMS[token];
             if (synonyms) {
-                return synonyms.some(syn =>
+                if (synonyms.some(syn =>
                     candidateTokens.has(syn) || matchesName(new RegExp(`\\b${syn}\\b`, 'i'))
-                );
+                )) {
+                    return true;
+                }
+            }
+
+            // LAST RESORT, and only for the HEAD NOUN — the final must-have token, which since K2
+            // is the dish on a brand-led line. Requiring it word-bounded-exact deletes the right
+            // record whenever the menu spells it differently, and that deletion happens BEFORE
+            // buildRerankPool(), so no ranking change can recover it:
+            //
+            //   zaxby's chicken fingers  vs  "Chicken Fingerz"   (a near-spelling)
+            //   pizza hut cheese sticks  vs  "Breadsticks"       (a compound ending in the head)
+            //
+            // Two shapes, both deliberately narrow. A candidate token may END WITH the head
+            // (compound), or share a >=5-character prefix with it AND be within 2 characters of
+            // its length (near-spelling). The length guards are what stop this becoming
+            // substring matching: `bar` may not find `barbecue`, and `wings` may not find
+            // `wingstop` (prefix 5 but 3 characters longer, i.e. a different word).
+            if (token === mustHaveTokens[mustHaveTokens.length - 1] && token.length >= 5) {
+                for (const cand of candidateTokens) {
+                    if (cand.length > token.length && cand.endsWith(token)) return true;
+                    if (Math.abs(cand.length - token.length) <= 2
+                        && cand.slice(0, 5) === token.slice(0, 5)) return true;
+                }
             }
             return false;
         });
