@@ -7657,6 +7657,76 @@
         ]
       },
       "notes": "K3 — the lane/builder seam (2026-08-25, Lane A, A8 build order row 1). toUnifiedCandidate() in fatsecret-lane.ts mapped every live serving to {description, grams}, dropping the macros, then filtered out any serving with no gram weight — which for a chain-restaurant record is its ONLY serving (`1 serving`, macros, metricServingAmount null). buildFatSecretResult() therefore found no macros on either path, logged fs.build_result.no_nutrition (1,432 events over 413 distinct records on the box, 246 of them never persisted) and returned null, and attemptServingFailureFallback() billed an OFF sibling picked in GATHER order. The WINNER never changed — the reranker already had the right record — so this case pins the BILL, not the ranking. Fixed by carrying the macros through the lane and keeping gram-less macro-bearing servings, with the fallback moved into rerank order. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md §4 K3. The band is the record's own published serving ±35% per the _readme rule; kcal100 is deliberately unasserted because on this tier it is a flat 200 by construction (estimateServingGrams = kcal / 2.0) and would assert nothing. Pre-fix cold on modTvpChRBqrlz0w3x-qw: Yard House, Poke Stack off_543440294187988525742, 100 g / 661 kcal. Frozen-pool replay on the branch: fs_26898301 \"Poke Nachos\", 1 serving 880 kcal."
+    },
+    {
+      "id": "n-n1-01",
+      "category": "brand_led_product_name",
+      "text": "mcdonalds hamburger",
+      "expectName": [
+        [
+          "hamburger"
+        ]
+      ],
+      "forbidName": [
+        [
+          "lean"
+        ],
+        [
+          "ground beef"
+        ]
+      ],
+      "total": {
+        "calories": [
+          163,
+          338
+        ]
+      },
+      "notes": "N1 (2026-08-25, Lane A, A8 build order row 3, first half). normalizeIngredientName() applied recipe-ingredient vocabulary to brand-led PRODUCT NAMES: a bare `pepper` became `black pepper`, `vanilla` became `vanilla extract`, `chicken breast` became `skinless chicken breast`, `oats`/`oatmeal` became `rolled oats`, the prep/size strip removed `whole`/`extra`/`mashed`/`sticks`, and the repeated-word dedupe collapsed `bang bang shrimp`. The rewritten string is what RETRIEVAL is given, so the shopper's product name never reaches the corpus. Fixed by yielding to the product-name reading whenever the line is brand-detected — only the accent fold and whitespace/punctuation collapse still run — the same shape as guardedRocketToArugula(). Ships with RULES_VERSION 4 -> 5 because AiNormalizeCache would otherwise replay the old normalizedName. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md. This line went `mcdonalds hamburger` -> `mcdonalds 85% lean 15% fat beef`: the synonym rewrite turned `hamburger` into ground beef and the leanness default then phrased it, so the query asked the corpus for mince. Pre-fix cold on the local master build Gp4AsbVJN027dnQaPgn6C: fs_40401 \"Ground Beef (85% Lean / 15% Fat)\", 28 g / 60 kcal. On the branch build oyB3mkJzuYUprkbjLV6qt: off_2793292469576815281 \"McDonald's, Hamburger\", 100 g / 248 kcal. Band is McDonald's published 250 kcal +/-35% per the _readme rule, not the observed value."
+    },
+    {
+      "id": "n-n1-02",
+      "category": "brand_led_product_name",
+      "text": "popeyes mashed potatoes with cajun gravy",
+      "expectName": [
+        [
+          "mashed",
+          "potatoes"
+        ]
+      ],
+      "forbidName": [
+        [
+          "pie"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          135,
+          280
+        ]
+      },
+      "notes": "N1 (2026-08-25, Lane A, A8 build order row 3, first half). normalizeIngredientName() applied recipe-ingredient vocabulary to brand-led PRODUCT NAMES: a bare `pepper` became `black pepper`, `vanilla` became `vanilla extract`, `chicken breast` became `skinless chicken breast`, `oats`/`oatmeal` became `rolled oats`, the prep/size strip removed `whole`/`extra`/`mashed`/`sticks`, and the repeated-word dedupe collapsed `bang bang shrimp`. The rewritten string is what RETRIEVAL is given, so the shopper's product name never reaches the corpus. Fixed by yielding to the product-name reading whenever the line is brand-detected — only the accent fold and whitespace/punctuation collapse still run — the same shape as guardedRocketToArugula(). Ships with RULES_VERSION 4 -> 5 because AiNormalizeCache would otherwise replay the old normalizedName. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md. `mashed` is a prep phrase, so the line retrieved `popeyes potatoes with cajun gravy` and landed on a dessert. Pre-fix cold on Gp4AsbVJN027dnQaPgn6C: off_57578846365005523 \"Popeyes, Sweet Potato Pie\", 100 g / 351 kcal. On oyB3mkJzuYUprkbjLV6qt: fs_86131624 \"Mashed Potatoes with Cajun Gravy - Large\", 165 g / 330 kcal. Banded on kcal100 rather than total DELIBERATELY: Popeyes publishes this side at 130 kcal (regular) and 340 (large), so a total band wide enough to hold both asserts nothing, while the per-100g figure (207 for the large, +/-35%) separates a potato side from a pie at 351."
+    },
+    {
+      "id": "n-n1-03",
+      "category": "brand_led_product_name",
+      "text": "lindt dark chocolate 70%",
+      "expectName": [
+        [
+          "70"
+        ]
+      ],
+      "forbidName": [
+        [
+          "85"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          368,
+          764
+        ]
+      },
+      "notes": "N1 (2026-08-25, Lane A, A8 build order row 3, first half). normalizeIngredientName() applied recipe-ingredient vocabulary to brand-led PRODUCT NAMES: a bare `pepper` became `black pepper`, `vanilla` became `vanilla extract`, `chicken breast` became `skinless chicken breast`, `oats`/`oatmeal` became `rolled oats`, the prep/size strip removed `whole`/`extra`/`mashed`/`sticks`, and the repeated-word dedupe collapsed `bang bang shrimp`. The rewritten string is what RETRIEVAL is given, so the shopper's product name never reaches the corpus. Fixed by yielding to the product-name reading whenever the line is brand-detected — only the accent fold and whitespace/punctuation collapse still run — the same shape as guardedRocketToArugula(). Ships with RULES_VERSION 4 -> 5 because AiNormalizeCache would otherwise replay the old normalizedName. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md. The >=50% percentage strip removed the cocoa percentage, which on this product IS the identity: the line retrieved `lindt dark chocolate` and won the 85% bar. Pre-fix cold on Gp4AsbVJN027dnQaPgn6C: fs_16311650 \"85% Dark Chocolate\" [Lindt], 20 g / 115 kcal. On oyB3mkJzuYUprkbjLV6qt: off_0743434016840 \"Mild 70% Dark Chocolate\" [Lindt], 40 g / 250 kcal. expectName/forbidName is the discriminator, NOT the band: 70% and 85% bars are 566 and 592 kcal/100 g, so kcal100 cannot separate them and is carried only as a wrong-panel floor (566 +/-35%)."
     }
   ]
 }
