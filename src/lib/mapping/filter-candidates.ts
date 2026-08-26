@@ -3138,11 +3138,46 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
 
     const isBrandToken = (t: string): boolean => brandTokens.has(t) || brandTokens.has(foldApostrophes(t));
 
-    // Already requires something that is not the brand — leave it exactly as it was.
-    if (selected.some(t => !isBrandToken(t))) return selected;
+    // K2 (2026-08-25): the food slot is the HEAD NOUN — the LAST non-brand core token — and it
+    // is spent on EVERY brand-detected line, not only on one whose slots are all brand tokens.
+    //
+    // The pre-K2 rule took the first two core tokens in order, so on a brand-led line the food
+    // slot went to whatever word happened to follow the brand — which in a menu item is the
+    // MODIFIER, never the dish:
+    //
+    //   dairy queen chicken strip basket -> ['queen','chicken']  admits every chicken item and
+    //                                       deletes the four `Chicken Strip Basket` rows
+    //   wendys biggie fries              -> ['wendys','biggie']  deletes every fries row
+    //   papa johns chicken wings         -> ['papa','chicken']   deletes `Garlic Parmesan Wings`
+    //   el pollo loco chicken burrito    -> ['pollo','chicken']  admits every chicken item
+    //
+    // Requiring the head noun instead is the only PRE-WINDOW lever that puts the basket/wings/
+    // fries rows inside the rerank window at all: the window is 10 per lane and preserves gather
+    // order, so a record the modifier-shaped filter admits late is never scored
+    // (`reports/2026-08-05_the-rerank-window-crowds-out-generics.md`).
+    //
+    // Two false-positive classes are known and accepted, both measured 2026-08-25:
+    //   (a) a head noun the record spells differently — `pizza hut cheese sticks` against FS
+    //       `Breadsticks`, `red robin tavern double burger` against OFF `Reds Tavern Double`.
+    //       The match is word-bounded, so `sticks` does not find `breadsticks`; the relax pass
+    //       re-requires the same head, and the line falls to the AI-stub lane.
+    //   (b) a trailing flavour/size word that survived MODIFIER_TOKENS — `gatorade cool blue`
+    //       -> `blue`. Mostly harmless: it admits the flavour SKU, which is what was asked for.
+    // Owner, with the firing population and the winner-diff receipt:
+    // KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md
+    //
+    // ORDERING. This rule must not ship before N1: pre-N1, `normalizeIngredientName()` INJECTED
+    // the token this rule then requires — `chobani vanilla` normalized to `chobani vanilla
+    // extract`, so the head noun was `extract`, a word the shopper never typed (33 corpus lines).
+    const head = [...allCore].reverse().find(t => !isBrandToken(t));
+    if (!head) return selected;  // a bare brand query ("kirkland signature"); nothing to add
 
-    const foodToken = allCore.find(t => !isBrandToken(t));
-    if (!foodToken) return selected;  // a bare brand query ("kirkland signature"); nothing to add
-
-    return [selected[0], foodToken];
+    // The two slots are THE BRAND TOKEN and THE HEAD NOUN. Taking `selected[0]` verbatim (which
+    // is how this rule was first written) LOOSENS admission whenever slot 0 is already the head:
+    // `cinnamon chex` selected ['cinnamon','chex'] with head `cinnamon` collapsed to
+    // ['cinnamon'], dropping the brand and admitting every cinnamon product. This rule must only
+    // ever re-aim the second slot, never shrink the requirement.
+    const brandSlot = selected.find(isBrandToken) ?? selected[0];
+    if (brandSlot === head) return [head];
+    return [brandSlot, head];
 }
