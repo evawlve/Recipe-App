@@ -4,6 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../logger';
+import { detectBrandInQuery } from './brand-detector';
 
 export type SynonymRewrite = {
   from: string;
@@ -435,19 +436,73 @@ export function isIdentityWholePhrase(line: string): boolean {
   );
 }
 
+/**
+ * Is this name a BRAND-LED PRODUCT NAME rather than a recipe ingredient?
+ *
+ * Everything below this line in `normalizeIngredientName()` is recipe-ingredient
+ * vocabulary: a cook writing `pepper` means black pepper, `vanilla` means the
+ * extract, `whole` is a portion word and `extra`/`mashed`/`sticks` are prep. On a
+ * product name none of that is true — every token is identity, and the rewrites
+ * retrieve a string the shopper never typed:
+ *
+ *   dr pepper                 -> dr black pepper
+ *   chobani vanilla           -> chobani vanilla extract
+ *   fairlife whole milk       -> fairlife milk       (the #242 protection is the
+ *                                                     substring `whole milk`, and a
+ *                                                     brand sits between the two)
+ *   corona extra              -> corona
+ *   pizza hut cinnamon sticks -> pizza hut cinnamon
+ *   bang bang shrimp          -> bang shrimp         (the repeated-word dedupe)
+ *
+ * 117 of the 1,770 brand-detected lines in the 4,102-seed coverage corpus (6.6%)
+ * retrieve a different string than they parsed for one of those reasons (measured
+ * 2026-08-25; owner
+ * `sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md`
+ * §N1, mobile repo).
+ *
+ * The precedent for the shape is `guardedRocketToArugula()` in
+ * `src/lib/parse/ingredient-line.ts`: a produce synonym that yields to the product-name
+ * reading whenever the line names a brand. This is the same rule applied to the rest of
+ * the ingredient vocabulary.
+ *
+ * Detection runs on the ACCENT-STRIPPED text, not the raw string, because the lexicon
+ * is ASCII: `Häagen-Dazs` only matches after step 0 has folded it.
+ */
+export function isBrandLedProductName(accentStripped: string): boolean {
+  return detectBrandInQuery(accentStripped).isBranded;
+}
+
 export function normalizeIngredientName(raw: string): NormalizationResult {
-  const rules = readRulesFile();
   const stripped: string[] = [];
   let working = raw;
-
-  // ============================================================
-  // PRE-PROCESSING: Clean up common input issues
-  // ============================================================
 
   // Step 0: Strip accent characters (Unicode normalization)
   // e.g., "Jalapeño" → "Jalapeno", "crème" → "creme", "café" → "cafe"
   // This ensures consistent API search results regardless of accent usage
   working = working.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // N1 (2026-08-25): a brand-led line is a PRODUCT NAME. Apply only the two steps that
+  // cannot change identity — the accent fold above and whitespace/punctuation collapse —
+  // and skip every rewrite, default and strip below. See isBrandLedProductName().
+  //
+  // This MOVES CACHE KEYS for the affected lines (`deriveMappingCacheKey()` reads this
+  // function's `cleaned`), which is why it ships with a RULES_VERSION bump: without one,
+  // AiNormalizeCache replays the pre-N1 normalizedName and the fix is inert on every
+  // cached line (memory `control-moved-in-arm-check-ainormalizecache`).
+  //
+  // `nounOnly` is the cleaned string verbatim here: its STOP_WORDS drop `extra`,
+  // `boneless`, `skinless` and `sliced`, all of which are identity on a product name
+  // (`corona extra`, `zaxbys boneless wings`). `stripped` stays empty because nothing was.
+  if (isBrandLedProductName(working)) {
+    const brandLedCleaned = collapseSpaces(working);
+    return { cleaned: brandLedCleaned, nounOnly: brandLedCleaned, stripped };
+  }
+
+  const rules = readRulesFile();
+
+  // ============================================================
+  // PRE-PROCESSING: Clean up common input issues
+  // ============================================================
 
   // Step 1: Strip percentage patterns >= 50% (e.g., "100% liquid" → "liquid")
   // BUT preserve low percentages like "2% milk" which are nutritionally significant

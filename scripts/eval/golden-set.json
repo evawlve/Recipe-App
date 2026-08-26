@@ -7657,6 +7657,142 @@
         ]
       },
       "notes": "K3 — the lane/builder seam (2026-08-25, Lane A, A8 build order row 1). toUnifiedCandidate() in fatsecret-lane.ts mapped every live serving to {description, grams}, dropping the macros, then filtered out any serving with no gram weight — which for a chain-restaurant record is its ONLY serving (`1 serving`, macros, metricServingAmount null). buildFatSecretResult() therefore found no macros on either path, logged fs.build_result.no_nutrition (1,432 events over 413 distinct records on the box, 246 of them never persisted) and returned null, and attemptServingFailureFallback() billed an OFF sibling picked in GATHER order. The WINNER never changed — the reranker already had the right record — so this case pins the BILL, not the ranking. Fixed by carrying the macros through the lane and keeping gram-less macro-bearing servings, with the fallback moved into rerank order. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_a8-the-catalogue-holds-13-of-31-and-the-within-brand-block.md §4 K3. The band is the record's own published serving ±35% per the _readme rule; kcal100 is deliberately unasserted because on this tier it is a flat 200 by construction (estimateServingGrams = kcal / 2.0) and would assert nothing. Pre-fix cold on modTvpChRBqrlz0w3x-qw: Yard House, Poke Stack off_543440294187988525742, 100 g / 661 kcal. Frozen-pool replay on the branch: fs_26898301 \"Poke Nachos\", 1 serving 880 kcal."
+    },
+    {
+      "id": "n-n1-01",
+      "category": "brand_led_product_name",
+      "text": "mcdonalds hamburger",
+      "expectName": [
+        [
+          "hamburger"
+        ]
+      ],
+      "forbidName": [
+        [
+          "lean"
+        ],
+        [
+          "ground beef"
+        ]
+      ],
+      "total": {
+        "calories": [
+          163,
+          338
+        ]
+      },
+      "notes": "N1 (2026-08-25, Lane A, A8 build order row 3, first half). normalizeIngredientName() applied recipe-ingredient vocabulary to brand-led PRODUCT NAMES: a bare `pepper` became `black pepper`, `vanilla` became `vanilla extract`, `chicken breast` became `skinless chicken breast`, `oats`/`oatmeal` became `rolled oats`, the prep/size strip removed `whole`/`extra`/`mashed`/`sticks`, and the repeated-word dedupe collapsed `bang bang shrimp`. The rewritten string is what RETRIEVAL is given, so the shopper's product name never reaches the corpus. Fixed by yielding to the product-name reading whenever the line is brand-detected — only the accent fold and whitespace/punctuation collapse still run — the same shape as guardedRocketToArugula(). Ships with RULES_VERSION 4 -> 5 because AiNormalizeCache would otherwise replay the old normalizedName. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md. This line went `mcdonalds hamburger` -> `mcdonalds 85% lean 15% fat beef`: the synonym rewrite turned `hamburger` into ground beef and the leanness default then phrased it, so the query asked the corpus for mince. Pre-fix cold on the local master build Gp4AsbVJN027dnQaPgn6C: fs_40401 \"Ground Beef (85% Lean / 15% Fat)\", 28 g / 60 kcal. On the branch build oyB3mkJzuYUprkbjLV6qt: off_2793292469576815281 \"McDonald's, Hamburger\", 100 g / 248 kcal. Band is McDonald's published 250 kcal +/-35% per the _readme rule, not the observed value."
+    },
+    {
+      "id": "n-n1-02",
+      "category": "brand_led_product_name",
+      "text": "popeyes mashed potatoes with cajun gravy",
+      "expectName": [
+        [
+          "mashed",
+          "potatoes"
+        ]
+      ],
+      "forbidName": [
+        [
+          "pie"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          135,
+          280
+        ]
+      },
+      "notes": "N1 (2026-08-25, Lane A, A8 build order row 3, first half). normalizeIngredientName() applied recipe-ingredient vocabulary to brand-led PRODUCT NAMES: a bare `pepper` became `black pepper`, `vanilla` became `vanilla extract`, `chicken breast` became `skinless chicken breast`, `oats`/`oatmeal` became `rolled oats`, the prep/size strip removed `whole`/`extra`/`mashed`/`sticks`, and the repeated-word dedupe collapsed `bang bang shrimp`. The rewritten string is what RETRIEVAL is given, so the shopper's product name never reaches the corpus. Fixed by yielding to the product-name reading whenever the line is brand-detected — only the accent fold and whitespace/punctuation collapse still run — the same shape as guardedRocketToArugula(). Ships with RULES_VERSION 4 -> 5 because AiNormalizeCache would otherwise replay the old normalizedName. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md. `mashed` is a prep phrase, so the line retrieved `popeyes potatoes with cajun gravy` and landed on a dessert. Pre-fix cold on Gp4AsbVJN027dnQaPgn6C: off_57578846365005523 \"Popeyes, Sweet Potato Pie\", 100 g / 351 kcal. On oyB3mkJzuYUprkbjLV6qt: fs_86131624 \"Mashed Potatoes with Cajun Gravy - Large\", 165 g / 330 kcal. Banded on kcal100 rather than total DELIBERATELY: Popeyes publishes this side at 130 kcal (regular) and 340 (large), so a total band wide enough to hold both asserts nothing, while the per-100g figure (207 for the large, +/-35%) separates a potato side from a pie at 351."
+    },
+    {
+      "id": "n-n1-03",
+      "category": "brand_led_product_name",
+      "text": "lindt dark chocolate 70%",
+      "expectName": [
+        [
+          "70"
+        ]
+      ],
+      "forbidName": [
+        [
+          "85"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          368,
+          764
+        ]
+      },
+      "notes": "N1 (2026-08-25, Lane A, A8 build order row 3, first half). normalizeIngredientName() applied recipe-ingredient vocabulary to brand-led PRODUCT NAMES: a bare `pepper` became `black pepper`, `vanilla` became `vanilla extract`, `chicken breast` became `skinless chicken breast`, `oats`/`oatmeal` became `rolled oats`, the prep/size strip removed `whole`/`extra`/`mashed`/`sticks`, and the repeated-word dedupe collapsed `bang bang shrimp`. The rewritten string is what RETRIEVAL is given, so the shopper's product name never reaches the corpus. Fixed by yielding to the product-name reading whenever the line is brand-detected — only the accent fold and whitespace/punctuation collapse still run — the same shape as guardedRocketToArugula(). Ships with RULES_VERSION 4 -> 5 because AiNormalizeCache would otherwise replay the old normalizedName. Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md. The >=50% percentage strip removed the cocoa percentage, which on this product IS the identity: the line retrieved `lindt dark chocolate` and won the 85% bar. Pre-fix cold on Gp4AsbVJN027dnQaPgn6C: fs_16311650 \"85% Dark Chocolate\" [Lindt], 20 g / 115 kcal. On oyB3mkJzuYUprkbjLV6qt: off_0743434016840 \"Mild 70% Dark Chocolate\" [Lindt], 40 g / 250 kcal. expectName/forbidName is the discriminator, NOT the band: 70% and 85% bars are 566 and 592 kcal/100 g, so kcal100 cannot separate them and is carried only as a wrong-panel floor (566 +/-35%)."
+    },
+    {
+      "id": "n-k2-01",
+      "category": "brand_led_admission",
+      "text": "papa johns chicken wings",
+      "expectName": [
+        [
+          "wings"
+        ]
+      ],
+      "forbidName": [
+        [
+          "crust"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          130,
+          270
+        ]
+      },
+      "notes": "K2 (2026-08-25, Lane A, A8 build order row 3, second half). deriveMustHaveTokens() spent the food slot on the first core token in order, which on a menu item is the modifier, never the dish. K2 spends that slot on the HEAD NOUN, with two guards its own first gate proved it needed: the two slots are the brand token and the head noun (never slot 0, which can BE the head and would collapse the requirement to one token), and the head token tolerantly matches a candidate token ending with it or sharing a >=5-char prefix within 2 chars of its length (Chicken Fingerz), while a relax pass on an emptied pool keeps the BRAND token, never the head alone (the Kowalskis butter-burger-buns lesson). Ships PAIRED with N1, N1 first (D-N1, Diego 2026-08-25). Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-and-the-two-guards-it-needed.md. This line required ['papa','chicken'], which a pizza TOPPING satisfies: pre-fix cold on the local master build Gp4AsbVJN027dnQaPgn6C it billed off_7468831408976473 \"Papa John's, Chicken, For Original Crust Small\", 100 g / 12 kcal at conf 0.95. On the branch build g0Wf3qBUpQkLOSTV2me4G: fs_72417026 \"Unsauced Boneless Wings - 10 Wings\", 295 g / 590 kcal (fs_serving_macros_only_est -- K3's tier, so the grams are kcal/2.0 by construction and must not be banded). Banded kcal100 rather than total DELIBERATELY: Papa John's sells wings in 6/10/16-piece counts, so a total band wide enough to hold every count asserts nothing, while per-100g (200 on the observed record, +/-35%) separates any real wings record from the 12 kcal/100 g topping by an order of magnitude."
+    },
+    {
+      "id": "n-k2-02",
+      "category": "brand_led_admission",
+      "text": "wingstop lemon pepper wings",
+      "expectName": [
+        [
+          "wings"
+        ]
+      ],
+      "forbidName": [
+        [
+          "tender"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          136,
+          282
+        ]
+      },
+      "notes": "K2 (2026-08-25, Lane A, A8 build order row 3, second half). deriveMustHaveTokens() spent the food slot on the first core token in order, which on a menu item is the modifier, never the dish. K2 spends that slot on the HEAD NOUN, with two guards its own first gate proved it needed: the two slots are the brand token and the head noun (never slot 0, which can BE the head and would collapse the requirement to one token), and the head token tolerantly matches a candidate token ending with it or sharing a >=5-char prefix within 2 chars of its length (Chicken Fingerz), while a relax pass on an emptied pool keeps the BRAND token, never the head alone (the Kowalskis butter-burger-buns lesson). Ships PAIRED with N1, N1 first (D-N1, Diego 2026-08-25). Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-and-the-two-guards-it-needed.md. Pre-fix the food slot went to 'lemon' and admission kept the Tenders: cold on Gp4AsbVJN027dnQaPgn6C it billed fs_113253958 \"Lemon Pepper Chicken Tenders\" [Wingstop], 65 g / 200 kcal at conf 0.95. On g0Wf3qBUpQkLOSTV2me4G: off_77446674085388115 \"Wingstop, 2 Boneless Wings, Lemon Pepper\", 100 g / 209 kcal, arriving at idx=0 instead of idx=6. forbidName 'tender' is raw substring containment (the n-supp-20 lesson, used FOR us here) so it catches Tenders in any casing. Band is the observed record's 209 kcal/100 g +/-35%; the Tenders record reads 308 kcal/100 g, outside it, but the NAME is the discriminator -- the band is carried as a wrong-panel floor per the n-n1-03 precedent."
+    },
+    {
+      "id": "n-k2-03",
+      "category": "brand_led_admission",
+      "text": "wendys biggie fries",
+      "expectName": [
+        [
+          "fries"
+        ]
+      ],
+      "forbidName": [
+        [
+          "bites"
+        ]
+      ],
+      "total": {
+        "calories": [
+          293,
+          608
+        ]
+      },
+      "notes": "K2 (2026-08-25, Lane A, A8 build order row 3, second half). deriveMustHaveTokens() spent the food slot on the first core token in order, which on a menu item is the modifier, never the dish. K2 spends that slot on the HEAD NOUN, with two guards its own first gate proved it needed: the two slots are the brand token and the head noun (never slot 0, which can BE the head and would collapse the requirement to one token), and the head token tolerantly matches a candidate token ending with it or sharing a >=5-char prefix within 2 chars of its length (Chicken Fingerz), while a relax pass on an emptied pool keeps the BRAND token, never the head alone (the Kowalskis butter-burger-buns lesson). Ships PAIRED with N1, N1 first (D-N1, Diego 2026-08-25). Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-and-the-two-guards-it-needed.md. Pre-fix the food slot went to 'biggie' and the pick landed on fs_123911781 \"Biggie Bites\" [Wendy's], 135 g / 270 kcal (cold on Gp4AsbVJN027dnQaPgn6C). On g0Wf3qBUpQkLOSTV2me4G: fs_10015914 \"Baconator Fries\", 225 g / 450 kcal -- not the Natural-Cut Fries the census wanted, but it is fries. Banded total rather than kcal100 DELIBERATELY: Biggie Bites and Baconator Fries are both exactly 200 kcal/100 g (270/135 and 450/225), so per-100g cannot separate the dish from the bites at all; the billed total can, and [293,608] is the observed record's own serving +/-35% per the STANDING RULE. If a future draw lands a smaller real fries record (a small Natural-Cut is ~270 kcal) the band reds -- that is a re-adjudication trigger for THIS band, not noise; re-band on the record that actually wins."
     }
   ]
 }

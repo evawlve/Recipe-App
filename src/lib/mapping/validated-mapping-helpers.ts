@@ -1397,7 +1397,17 @@ function classifyFailureType(
 // Same mechanism and cost shape as the 2 and 3 bumps; rows at v3 on the box the
 // day of the bump are counted in the owner report (mobile repo,
 // sync-docs/reports/2026-08-24_the-leanness-default-fires-on-meats-the-corpus-never-labels.md).
-export const RULES_VERSION = 4;
+//
+// 5 (2026-08-25): N1 -- normalizeIngredientName() now applies only the accent fold and
+// whitespace/punctuation collapse when the line is brand-detected, so a v4 row replays the
+// recipe-ingredient rewrite (`chobani vanilla` -> `chobani vanilla extract`, `dr pepper` ->
+// `dr black pepper`, `mcdonalds hamburger` -> `mcdonalds 85% lean 15% fat beef`) and
+// outvotes the rules change. Same mechanism and cost shape as the 2, 3 and 4 bumps.
+// Measured on the box the day of the bump: AiNormalizeCache holds 81 rows at v4 (1,106 at
+// v2 and 342 at v3 are already unreadable), so the bump costs at most 81 re-derivations,
+// one purpose:'normalize' call each, lazily, only for rows actually read again.
+// Owner: sync-docs/reports/2026-08-25_n1-the-product-name-survives-normalization.md (mobile).
+export const RULES_VERSION = 5;
 
 /**
  * Compute a normalized cache key from a raw ingredient line, optionally inside a namespace.

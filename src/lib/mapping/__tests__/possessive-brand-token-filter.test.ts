@@ -50,7 +50,14 @@ describe('the mechanism', () => {
         // 'trader' only matches a "Trader Joe's" candidate because the fold puts
         // {trader, joes} into the candidate token set. The behavioural assertions
         // below are unchanged and still pass.
-        expect(deriveMustHaveTokens('trader joes scandinavian swimmers')).toEqual(['trader', 'scandinavian']);
+        //
+        // RE-ADJUDICATED AGAIN 2026-08-25 (K2), deliberately, not silently:
+        // ['trader','scandinavian'] -> ['trader','swimmers']. The 2026-08-14 reading above
+        // was right that a food token must be required and wrong about WHICH one. Taking the
+        // first food token spends the slot on the modifier, so this admitted any Trader Joe's
+        // "Scandinavian" anything; the product is `Scandinavian Swimmers`, and its head noun
+        // is what identifies it. Same correction, one word further along the line.
+        expect(deriveMustHaveTokens('trader joes scandinavian swimmers')).toEqual(['trader', 'swimmers']);
     });
 
     it('leaves a query that already required a food token exactly as it was', () => {
@@ -64,13 +71,18 @@ describe('the mechanism', () => {
         expect(deriveMustHaveTokens('kirkland signature')).toEqual(['kirkland', 'signature']);
     });
 
-    it('KNOWN LIMIT: a two-brand query is still not repaired', () => {
-        // `sams club members mark chicken` detects `members mark`, so ['sams','club']
-        // read as non-brand tokens against that entry and the guard declines. The
-        // result is still brand-only. Repairing it needs multi-brand detection inside
-        // detectBrandInQuery() — a brand-detector change the frozen-pool winner-diff
-        // structurally cannot observe. Pinned so the gap is visible, not forgotten.
-        expect(deriveMustHaveTokens('sams club members mark chicken')).toEqual(['sams', 'club']);
+    it('KNOWN LIMIT: a two-brand query is still only HALF repaired', () => {
+        // `sams club members mark chicken` detects `members mark`, so ['sams','club'] read as
+        // non-brand tokens against that entry.
+        //
+        // RE-ADJUDICATED 2026-08-25 (K2): ['sams','club'] -> ['sams','chicken']. The half of
+        // this limit that was about admitting ANY product is CLOSED — the head-noun rule spends
+        // the second slot on the food whether or not slot 0 is a brand token, so a food token is
+        // now required here too. The half that is NOT closed is the one this test was named for:
+        // the brand constraint is still `sams`, a token of the WRONG lexicon entry, because
+        // detectBrandInQuery() returns one brand per line. Multi-brand detection is still absent
+        // and is still a brand-detector change the frozen-pool winner-diff cannot observe.
+        expect(deriveMustHaveTokens('sams club members mark chicken')).toEqual(['sams', 'chicken']);
     });
 });
 
@@ -174,6 +186,23 @@ describe('the fold is additive — nothing that passes today may fail now', () =
 
     it.each(survivors)('keeps %s', (query, candidate) => {
         expect(filterCandidatesByTokens([candidate], query).filtered).toHaveLength(1);
+    });
+
+    it('the tolerant head-noun match is scoped to brand-detected lines', () => {
+        // The K2 tolerance (endsWith / >=5-char-prefix-within-2) exists for a re-aimed head
+        // noun, and keepAFoodToken() only re-aims on a brand-detected line. Ungated it also
+        // fired on generic lines, where the final must-have token is just the second core
+        // token: `tzatziki chips` admitted `Chipsy tzatziki` (prefix `chips`, 1 char apart),
+        // which the pre-K2 filter deleted — and it won the line, stably, 3/3 cold (2026-08-26).
+        expect(
+            filterCandidatesByTokens([cand('Chipsy tzatziki', null as unknown as string)], 'tzatziki chips').filtered,
+        ).toHaveLength(0);
+        // The brand-led compound shape the tolerance exists FOR still matches: `sticks`
+        // finds `Breadsticks` because `pizza hut …` is brand-detected. (The Fingerz
+        // near-spelling pin is in the survivors table above.)
+        expect(
+            filterCandidatesByTokens([cand('Breadsticks', 'Pizza Hut')], 'pizza hut cheese sticks').filtered,
+        ).toHaveLength(1);
     });
 
     it('admits the apostrophe-free query for a possessive candidate', () => {

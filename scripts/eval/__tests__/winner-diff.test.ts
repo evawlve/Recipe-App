@@ -508,10 +508,22 @@ describe('parseGoldenSet', () => {
         // set here that bands `total` and not `grams`, because on this tier grams is
         // `estimateServingGrams` (kcal / 2.0) and banding it would band the estimator. No
         // kcal100 either, for the same reason: it is a flat 200 by construction.
-        expect(all.length).toBe(288);
+        // 291 since 2026-08-25 (sixth set): n-n1-01..03, the brand-led product-name set
+        // (A8 row 3, N1) — three bare `text` lines, every one carrying `forbidName`, which is
+        // the discriminator here: on n-n1-03 the two records the case separates are 566 and
+        // 592 kcal/100 g, so no band can tell them apart. One `total` (n-n1-01) and two
+        // `macros.kcal100` (n-n1-02/03); no grams band, because what N1 moves is the record,
+        // not the rung.
+        // 294 since 2026-08-26 (seventh set): n-k2-01..03, the brand-led admission set
+        // (A8 row 3, K2) -- three bare `text` lines, every one carrying `forbidName` as the
+        // discriminator (crust/tender/bites), because on n-k2-03 the two records the case
+        // separates are both exactly 200 kcal/100 g, so no density band can. Two kcal100
+        // bands (n-k2-01/02) and one `total` (n-k2-03); no grams band -- n-k2-01's winner
+        // sits on K3's macro-only tier where grams is kcal/2.0 by construction.
+        expect(all.length).toBe(294);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(288);
+        expect(n(c => c.expectName.length > 0)).toBe(294);
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
         expect(n(c => !!c.grams)).toBe(169);              // the majority assertion
         // 66 since 2026-08-15 (n-micro-01's sodium100 band); 69 since 2026-08-17
@@ -519,7 +531,10 @@ describe('parseGoldenSet', () => {
         // cooked-vs-dry discriminator the _readme's STANDING RULE asks for)
         // 75 since 2026-08-24: the six synonym-direction kcal100 bands.
         // 85 since 2026-08-24 (n-grd-01..07, every one carries a kcal100 band)
-        expect(n(c => !!c.macros)).toBe(89);
+        // 91 since 2026-08-25 (n-n1-02/03 kcal100; n-n1-01 bands `total` instead)
+        // 93 since 2026-08-26 (n-k2-01/02 kcal100; n-k2-03 bands `total` instead --
+        // its two candidate records are density-identical, see the case note)
+        expect(n(c => !!c.macros)).toBe(93);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
         expect(n(c => typeof c.expectItems === 'number')).toBe(63);
@@ -540,10 +555,22 @@ describe('parseGoldenSet', () => {
         // 56 since 2026-08-25: n-k3-01..03 (A8 row 1) each band total.calories at the
         // record's own published serving +-35% — the same STANDING RULE, and on that
         // tier the only band that says anything (grams is kcal / 2.0, kcal100 a flat 200).
-        expect(n(c => !!c.total)).toBe(56);
-        // documented in _readme, no live case uses them — parsed anyway so the screen
-        // does not go blind the moment one is added back
-        expect(n(c => !!c.forbidName)).toBe(0);
+        // 57 since 2026-08-25: n-n1-01 `mcdonalds hamburger`, banded on McDonald's published
+        // 250 kcal +-35%. n-n1-02/03 band kcal100 instead — see the count pin above.
+        // 58 since 2026-08-26: n-k2-03 `wendys biggie fries`, banded on the observed
+        // record's own 450 kcal serving +-35% because Biggie Bites and Baconator Fries
+        // are both exactly 200 kcal/100 g and only the billed total separates them.
+        expect(n(c => !!c.total)).toBe(58);
+        // 3 since 2026-08-25 (n-n1-01..03, A8 row 3 N1) — the FIRST live users of
+        // `forbidName` in the nlp corpus. It was documented in _readme on 2026-07-25 and
+        // implemented in run-eval, and this pin read 0 for a month: the parser was carrying
+        // it so the screen would not go blind the moment a case used it, and now one does.
+        // On all three it is the DISCRIMINATOR, not decoration — n-n1-03 separates a 70%
+        // from an 85% bar, which are 566 and 592 kcal/100 g, so no band can.
+        // 6 since 2026-08-26 (n-k2-01..03, A8 row 3 K2) -- again the discriminator on
+        // all three: crust/tender/bites name the WRONG record, which shares the brand
+        // and (on n-k2-03) the exact density of the right one.
+        expect(n(c => !!c.forbidName)).toBe(6);
         expect(n(c => c.expectAbstain === true)).toBe(0);
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
@@ -574,7 +601,12 @@ describe('parseGoldenSet', () => {
         // the only shape Step 0a's canonicalizer ever rewrote); item counts untouched.
         // [166, 122] since 2026-08-25: n-k3-01..03 are all `text` (bare brand-led lines);
         // item counts untouched, and their `total` bands land in the text column below.
-        expect([item.length, text.length]).toEqual([166, 122]);
+        // [166, 125] since 2026-08-25: n-n1-01..03 are all `text` (bare brand-led product
+        // names — the only shape the normalizer's brand gate can be exercised on); item
+        // counts untouched, and their bands land in the text columns below.
+        // [166, 128] since 2026-08-26: n-k2-01..03 are all `text` (bare brand-led menu
+        // lines -- the shape deriveMustHaveTokens() fires on); item counts untouched.
+        expect([item.length, text.length]).toEqual([166, 128]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
@@ -584,7 +616,9 @@ describe('parseGoldenSet', () => {
         // 47 since 2026-08-24: n-grd-06 `4 oz ground chicken` is text-shaped with a grams band.
         expect(text.filter(c => c.grams).length).toBe(50);
         // 35 since 2026-08-25: n-k3-01..03 band total.calories and nothing else.
-        expect(text.filter(c => c.total).length).toBe(35);
+        // 36 since 2026-08-25 (N1): n-n1-01 adds one; n-n1-02/03 band kcal100 instead.
+        // 37 since 2026-08-26 (K2): n-k2-03 adds one; n-k2-01/02 band kcal100 instead.
+        expect(text.filter(c => c.total).length).toBe(37);
         expect(text.filter(c => typeof c.expectItems === 'number').length).toBe(63);
 
         // and the individual bands survive the round-trip
@@ -820,14 +854,26 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // SERVING failure, so the selection replay is structurally blind to them and
         // they were gated by the live cold eval on a locally-served build instead
         // (3/3 red on master, 3/3 green on the branch, same host and same DB).
-        expect(cov.cases).toBe(288);
+        // 291 / 57 since 2026-08-25 (n-n1-01..03, A8 row 3 N1): one more `total` band
+        // (n-n1-01) and no grams band. These are gateable by the selection replay in
+        // principle — N1 moves the WINNER, not the serving — but not by THIS harness:
+        // normalization-rules.ts is a FROZEN_INPUT path, so replaySelection() reads the
+        // pre-change normalizedName off the snapshot. They were gated on a locally-served
+        // build instead (3/3 red on master Gp4AsbVJN027dnQaPgn6C, 3/3 green on the branch
+        // oyB3mkJzuYUprkbjLV6qt, same host and same DB).
+        // 294 / 58 since 2026-08-26 (n-k2-01..03, A8 row 3 K2): one more `total` band
+        // (n-k2-03) and no grams band. Same FROZEN_INPUT story as N1 -- they ship
+        // together, and both were gated on locally-served builds (K2's frozen-pool gate
+        // is in the k2-gate-2026-08-25 artifacts; the live pair is 3/3 red on
+        // Gp4AsbVJN027dnQaPgn6C, 3/3 green on g0Wf3qBUpQkLOSTV2me4G).
+        expect(cov.cases).toBe(294);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 169, blind: 169 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
-        expect(kind('total')).toEqual({ kind: 'total', asserted: 56, blind: 56 });
+        expect(kind('total')).toEqual({ kind: 'total', asserted: 58, blind: 58 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(288);
+        expect(en.asserted).toBe(294);
         expect(en.blind).toBeGreaterThan(0);
         expect(en.blind).toBeLessThan(274);
         // every grams band in the corpus is unjudgeable here...
