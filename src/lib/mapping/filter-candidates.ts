@@ -2571,7 +2571,7 @@ export function filterCandidatesByTokens(
     // answer: `culvers butter burger` deleted all 3 candidates on the head requirement, relaxed
     // to `['burger']`, and won `Butter Burger buns [Kowalskis]` — a different company's product
     // billed under the brand the user named. Measured 2026-08-25 (K2 cold gate, owner
-    // KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-fixes-its-flagships-and-empties-two-pools.md).
+    // KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-and-the-two-guards-it-needed.md).
     // Relaxing to the BRAND instead is the pre-K2 admission for that line, which is wide but
     // never wrong about who made the food.
     if (relaxed && mustHaveTokens.length > 1) {
