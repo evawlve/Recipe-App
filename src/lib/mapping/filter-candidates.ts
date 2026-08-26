@@ -2563,6 +2563,18 @@ export function filterCandidatesByTokens(
 
     // Extract must-have tokens
     let mustHaveTokens = deriveMustHaveTokens(normalizedName);
+
+    // Is this a line whose final must-have slot keepAFoodToken() may have RE-AIMED onto a
+    // head noun (K2)? The tolerant head-noun match in the loop below exists ONLY for that
+    // situation — a dish the menu spells differently (`Chicken Fingerz`, `Breadsticks`) —
+    // and keepAFoodToken() itself acts only on a brand-detected line, so the tolerance
+    // must be scoped the same way. Ungated, it fired on the last must-have token of EVERY
+    // line, where that token is just the second core token: `5 tzatziki chips` admitted
+    // `Chipsy tzatziki` (`chips`/`chipsy`: 5-char shared prefix, 1 char apart) — a record
+    // the pre-K2 filter deleted — and it WON, stably (3/3 cold on g0Wf3qBUpQkLOSTV2me4G
+    // vs 3/3 `Tzatziki Hummus Chips` on the master arm, 2026-08-26). Same predicate and
+    // same input as keepAFoodToken() so the two sites cannot disagree.
+    const headNounReAimable = detectBrandInQuery(normalizedName).isBranded;
     
     // In relaxed mode, only require the very last non-modifier token (the primary noun).
     //
@@ -2731,10 +2743,11 @@ export function filterCandidatesByTokens(
                 }
             }
 
-            // LAST RESORT, and only for the HEAD NOUN — the final must-have token, which since K2
-            // is the dish on a brand-led line. Requiring it word-bounded-exact deletes the right
-            // record whenever the menu spells it differently, and that deletion happens BEFORE
-            // buildRerankPool(), so no ranking change can recover it:
+            // LAST RESORT, and only for the HEAD NOUN on a BRAND-DETECTED line — the final
+            // must-have token, which since K2 is the dish there (`headNounReAimable` above owns
+            // the scope and the tzatziki receipt). Requiring it word-bounded-exact deletes the
+            // right record whenever the menu spells it differently, and that deletion happens
+            // BEFORE buildRerankPool(), so no ranking change can recover it:
             //
             //   zaxby's chicken fingers  vs  "Chicken Fingerz"   (a near-spelling)
             //   pizza hut cheese sticks  vs  "Breadsticks"       (a compound ending in the head)
@@ -2744,7 +2757,7 @@ export function filterCandidatesByTokens(
             // its length (near-spelling). The length guards are what stop this becoming
             // substring matching: `bar` may not find `barbecue`, and `wings` may not find
             // `wingstop` (prefix 5 but 3 characters longer, i.e. a different word).
-            if (token === mustHaveTokens[mustHaveTokens.length - 1] && token.length >= 5) {
+            if (headNounReAimable && token === mustHaveTokens[mustHaveTokens.length - 1] && token.length >= 5) {
                 for (const cand of candidateTokens) {
                     if (cand.length > token.length && cand.endsWith(token)) return true;
                     if (Math.abs(cand.length - token.length) <= 2

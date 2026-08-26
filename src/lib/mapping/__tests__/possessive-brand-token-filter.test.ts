@@ -188,6 +188,23 @@ describe('the fold is additive — nothing that passes today may fail now', () =
         expect(filterCandidatesByTokens([candidate], query).filtered).toHaveLength(1);
     });
 
+    it('the tolerant head-noun match is scoped to brand-detected lines', () => {
+        // The K2 tolerance (endsWith / >=5-char-prefix-within-2) exists for a re-aimed head
+        // noun, and keepAFoodToken() only re-aims on a brand-detected line. Ungated it also
+        // fired on generic lines, where the final must-have token is just the second core
+        // token: `tzatziki chips` admitted `Chipsy tzatziki` (prefix `chips`, 1 char apart),
+        // which the pre-K2 filter deleted — and it won the line, stably, 3/3 cold (2026-08-26).
+        expect(
+            filterCandidatesByTokens([cand('Chipsy tzatziki', null as unknown as string)], 'tzatziki chips').filtered,
+        ).toHaveLength(0);
+        // The brand-led compound shape the tolerance exists FOR still matches: `sticks`
+        // finds `Breadsticks` because `pizza hut …` is brand-detected. (The Fingerz
+        // near-spelling pin is in the survivors table above.)
+        expect(
+            filterCandidatesByTokens([cand('Breadsticks', 'Pizza Hut')], 'pizza hut cheese sticks').filtered,
+        ).toHaveLength(1);
+    });
+
     it('admits the apostrophe-free query for a possessive candidate', () => {
         // Moved out of the survivor list above: this one FAILS before the fix,
         // so it is a fix assertion, not a control, and leaving it in a block
