@@ -9,6 +9,37 @@ export type NormalizedUnit =
   | { kind: 'multiplier'; factor: number }
   | { kind: 'unknown'; raw: string };
 
+/**
+ * COUNT NOUNS: a food that is also its own unit.
+ *
+ * DELIBERATELY NOT MEMBERS OF THE UNIT MAP BELOW. They were added to it once,
+ * on 2026-08-26, on the theory that `3 chicken wings` needed unit=wing to reach
+ * a count rung. Measured, that theory is wrong twice over: the wings fix comes
+ * entirely from getDefaultCountServing()'s singular fallback (32 of the 33
+ * count-default changes on the 4,102-line corpus, all `<x> wings` -> 34 g), and
+ * membership bought ZERO winner improvements while causing regressions in two
+ * separate arms — 8 corpus lines (`tortilla soup` -> unit=tortilla name=`soup`
+ * at 45 g; `biscuits and gravy` -> `and gravy`) and, once a positional guard
+ * had covered those, golden `n-serv-35`/`n-tot-05` (`13 tortilla chips` -> 13
+ * tortillas of "Chips", 195 g / 1,131 kcal against a 28-70 g band, because
+ * there the quantity IS explicit and the guard could not fire).
+ *
+ * The list survives because it scopes the singular fallback in
+ * servings/default-count-grams.ts, which is the change that actually works.
+ */
+export const COUNT_NOUN_SINGULAR: Record<string, string> = {
+  wing: 'wing', wings: 'wing',
+  nugget: 'nugget', nuggets: 'nugget',
+  tortilla: 'tortilla', tortillas: 'tortilla',
+  patty: 'patty', patties: 'patty',
+  fillet: 'fillet', fillets: 'fillet',
+  biscuit: 'biscuit', biscuits: 'biscuit',
+  roll: 'roll', rolls: 'roll',
+  pc: 'piece', pcs: 'piece',
+};
+
+export const COUNT_NOUN_UNITS = new Set(Object.keys(COUNT_NOUN_SINGULAR));
+
 export function normalizeUnitToken(tok: string): NormalizedUnit {
   const token = tok.toLowerCase().trim();
 

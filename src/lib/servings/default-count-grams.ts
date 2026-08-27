@@ -11,6 +11,9 @@
  * - FatSecret cached serving data analysis
  */
 
+import { singularizeUnit } from '../mapping/count-label';
+import { COUNT_NOUN_UNITS } from '../parse/unit';
+
 // ============================================================
 // Types
 // ============================================================
@@ -301,6 +304,51 @@ export function getDefaultCountServing(
         if (!canonicalKey) {
             const lastWord = words[words.length - 1];
             canonicalKey = ALIAS_MAP.get(lastWord);
+
+            // ...and its singular. The comment above ("would match 'tomatoes'
+            // → 'tomato'") describes what this lookup was believed to do; it
+            // does not do it. ALIAS_MAP holds only the plural forms a seed
+            // happened to enumerate by hand, so every seed whose plural was
+            // not written out is unreachable by last-word match. Measured
+            // 2026-08-26: `chicken wings` resolves (an enumerated alias) while
+            // `buffalo wings`, `hot wings`, `boneless wings` and bare `wings`
+            // all returned null, because the `chicken wing` seed lists `wing`
+            // but not `wings`. That null is what left the wings class on the
+            // 100 g-per-piece default.
+            //
+            // singularizeUnit() is the shipped count-noun singularizer
+            // (mapping/count-label.ts) — reused rather than restated, because
+            // this codebase already carries several forks of that rule.
+            //
+            // SCOPED to COUNT_NOUN_UNITS, and that scope is load-bearing.
+            // Measured 2026-08-26 over the 4,102-line corpus: unscoped, the
+            // fallback answered 46 lines that previously returned null — 36
+            // correctly (every chicken-wings row across 8 chains, walnuts,
+            // pecans, prawns) and 10 by CROSS-FOOD COLLISION, because a bare
+            // plural singularizes onto a seed that names a different food:
+            // `tgi fridays potato skins` and `fried pork skins` -> `skin` ->
+            // the `chicken skin` seed at 15 g, and six candy-mint lines
+            // (`tic tac mints`, `junior mints`, `thin mints`...) -> `mint` ->
+            // the HERB seed at 30 g. Those are billing errors where there had
+            // been an honest null, so the fallback is limited to the count-noun
+            // vocabulary this change is about.
+            //
+            // Cost of the scope, stated rather than hidden: `walnuts`,
+            // `pecans`, `prawns`, `candied pecans` and `mcdonalds hotcakes`
+            // would all resolve correctly under the unscoped form and do not
+            // resolve here. A general singularizer for the whole seed table is
+            // a real and separate change — it needs the collision classes above
+            // fixed first (the `skin` and `mint` aliases claim bare generic
+            // nouns for specific foods), and its own diff.
+            //
+            // One known miss inside the scope: `turkey wings` -> 34 g, a
+            // chicken wing's weight. Structurally indistinguishable from
+            // `buffalo wings` (both are `<modifier> wings`) without a lexicon
+            // that knows one modifier is a species and the other a flavour.
+            if (!canonicalKey && COUNT_NOUN_UNITS.has(lastWord)) {
+                const singular = singularizeUnit(lastWord);
+                if (singular !== lastWord) canonicalKey = ALIAS_MAP.get(singular);
+            }
         }
     }
 

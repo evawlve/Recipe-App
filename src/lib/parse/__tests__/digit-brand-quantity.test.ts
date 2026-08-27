@@ -184,16 +184,21 @@ describe('digit-leading brand tokens are not quantities', () => {
       expect(parseIngredientLine('7 eleven taquito')!.qty).toBe(1);
     });
 
-    test('the 3-gram covers "365 whole foods market" without raising MAX_PHRASE_LEN', () => {
+    test('the 3-gram covers "365 whole foods market", and the brand keeps `whole`', () => {
       const r = parseIngredientLine('365 whole foods market almond butter');
       expect(r!.qty).toBe(1);
-      // PARTIAL, and deliberately pinned as such: the digits are protected, but
-      // `whole` is still eaten as a count unit further down, so the name reads
-      // "365 foods market almond butter". That is the separately-documented
-      // IDENTITY_QUALIFIERS/`whole` defect (CLAUDE.md: `whole milk` collides with
-      // `milk` on unit-less lines) and is byte-identical on master — verified, not
-      // assumed. Fixing it here would mean claiming a token this file does not own.
-      expect(r!.name).toBe('365 foods market almond butter');
+      // RE-ADJUDICATED 2026-08-26 (A8 row 5), not silently updated. This pin
+      // used to assert "365 foods market almond butter" and said so on
+      // purpose: the digits were protected but `whole` was still stripped, and
+      // the note recorded that fixing it "would mean claiming a token this file
+      // does not own".
+      //
+      // The brand-led gate in parseIngredientLine() now owns it. `365 whole
+      // foods market` is a detected brand, so the qualifier strip is suppressed
+      // for the whole line and the retrieval string is the real product name.
+      // The prior expectation was never right about the FOOD — it was right
+      // about which change was entitled to fix it.
+      expect(r!.name).toBe('365 whole foods market almond butter');
     });
 
     test('genuine counts are untouched — the declines in the lexicon comment', () => {
