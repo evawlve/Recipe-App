@@ -122,36 +122,21 @@ describe('the same-unit fractional connector', () => {
   });
 });
 
-describe('count nouns reach a count rung, but only behind a count', () => {
-  test('an explicit quantity makes the count noun a unit', () => {
-    expect(parseIngredientLine('3 tortillas')!.unit).toBe('tortilla');
-    expect(parseIngredientLine('6 nuggets')!.unit).toBe('nugget');
-    expect(parseIngredientLine('3 wings')!.unit).toBe('wing');
-  });
-
-  test('a count noun BEHIND a modifier stays in the name — and that is fine', () => {
-    // "3 chicken wings" keeps unit null because `chicken` sits at the unit
-    // position. The billing fix for this shape is not here: it is
-    // getDefaultCountServing()'s singular fallback, which now resolves
-    // `<anything> wings` to 34 g/wing instead of null. Pinned so nobody
-    // "fixes" the parser to consume a trailing noun out of the food's name.
-    expect(parseIngredientLine('3 chicken wings')!.unit).toBeNull();
+describe('count nouns and the serving seeds', () => {
+  test('a count noun is NOT a parser unit — measured, not assumed', () => {
+    // Making them units bought zero winner improvements and regressed two arms;
+    // see the COUNT_NOUN_UNITS comment in ../unit.ts. `3 tortillas` still bills
+    // correctly without it, through the `tortilla` seed on the NAME.
+    expect(parseIngredientLine('3 tortillas')!.unit).toBeNull();
+    expect(parseIngredientLine('13 tortilla chips')!.name).toBe('tortilla chips');
     expect(parseIngredientLine('3 chicken wings')!.name).toBe('chicken wings');
+    expect(parseIngredientLine('biscuits and gravy')!.name).toBe('biscuits and gravy');
   });
 
-  test('at the head of a name it is the food, not a measure (8 corpus lines)', () => {
-    // Without this guard `tortilla chips` billed as one tortilla's worth of
-    // "chips" and flipped its count seed from tortilla chip to potato chip.
-    for (const line of ['tortilla chips', 'tortilla soup', 'tortilla wrap',
-      'biscuits and gravy', 'roll ups']) {
-      expect(parseIngredientLine(line)!.unit).toBeNull();
-      expect(parseIngredientLine(line)!.name).toBe(line);
-    }
-  });
-
-  test('COUNT_NOUN_UNITS is the single shared vocabulary', () => {
-    // getDefaultCountServing()'s singular fallback is scoped to this same set;
-    // a member added in one place must not be a surprise in the other.
+  test('COUNT_NOUN_UNITS scopes the serving singular-fallback, nothing else', () => {
+    // getDefaultCountServing() singularizes a last word only inside this set,
+    // because unscoped it collided across foods (`skins` -> the chicken-skin
+    // seed, `mints` -> the mint HERB seed at 30 g).
     expect(COUNT_NOUN_UNITS.has('wings')).toBe(true);
     expect(COUNT_NOUN_UNITS.has('skins')).toBe(false);
     expect(COUNT_NOUN_UNITS.has('mints')).toBe(false);

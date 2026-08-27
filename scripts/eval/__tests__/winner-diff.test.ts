@@ -520,12 +520,22 @@ describe('parseGoldenSet', () => {
         // separates are both exactly 200 kcal/100 g, so no density band can. Two kcal100
         // bands (n-k2-01/02) and one `total` (n-k2-03); no grams band -- n-k2-01's winner
         // sits on K3's macro-only tier where grams is kcal/2.0 by construction.
-        expect(all.length).toBe(294);
+        // 300 / 171 / 134 since 2026-08-26: n-p1-01..03, n-p2-01..02, n-cn-01 (A8 row 5 —
+        // a brand-led line is a product name). Six `text` lines; TWO new grams bands, and
+        // which two is the point. The P1 cases are identity-only because the records they
+        // separate are close on density (Breakfast Jack 202 vs Jumbo Jack 104 kcal/100 g is
+        // the exception that still cannot be banded, since a band holding one holds the
+        // other). n-p2-02 and n-cn-01 DO carry grams, because on those two the identity was
+        // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
+        // 12 wings at the 100 g no-serving default vs at the 34 g seed.
+        expect(all.length).toBe(300);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(294);
+        expect(n(c => c.expectName.length > 0)).toBe(300);
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
-        expect(n(c => !!c.grams)).toBe(169);              // the majority assertion
+        // 171 since 2026-08-26: n-p2-02 and n-cn-01 (A8 row 5) — the two of six new cases
+        // where identity held on both arms and only the count moved.
+        expect(n(c => !!c.grams)).toBe(171);              // the majority assertion
         // 66 since 2026-08-15 (n-micro-01's sodium100 band); 69 since 2026-08-17
         // (n-prose-01 protein100/fat100, n-prose-03 and n-prose-10 kcal100 as the
         // cooked-vs-dry discriminator the _readme's STANDING RULE asks for)
@@ -534,7 +544,10 @@ describe('parseGoldenSet', () => {
         // 91 since 2026-08-25 (n-n1-02/03 kcal100; n-n1-01 bands `total` instead)
         // 93 since 2026-08-26 (n-k2-01/02 kcal100; n-k2-03 bands `total` instead --
         // its two candidate records are density-identical, see the case note)
-        expect(n(c => !!c.macros)).toBe(93);
+        // 94 since 2026-08-26: n-p1-01 (A8 row 5) — kcal100 rather than a total band,
+        // because what was 5.8x wrong on that line is the SERVING (725 g of a combo
+        // platter vs 126 g of 5 boneless wings), not the density.
+        expect(n(c => !!c.macros)).toBe(94);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
         expect(n(c => typeof c.expectItems === 'number')).toBe(63);
@@ -570,7 +583,14 @@ describe('parseGoldenSet', () => {
         // 6 since 2026-08-26 (n-k2-01..03, A8 row 3 K2) -- again the discriminator on
         // all three: crust/tender/bites name the WRONG record, which shares the brand
         // and (on n-k2-03) the exact density of the right one.
-        expect(n(c => !!c.forbidName)).toBe(6);
+        // 10 since 2026-08-26 (n-p1-01..03 + n-p2-01, A8 row 5) -- the discriminator on
+        // all four, and on three of them the forbidden record is the one the PARSER's
+        // own strip produced: `things` (Boneless Wings & Things, once `boneless` was
+        // gone), `breakfast` (Breakfast Jack, once `jumbo` was gone), `jersey` (a
+        // sandwich chain's fountain listing, once `leaf` was gone) and `fries` (Fries,
+        // Little, once `five` had been read as a count). n-p2-02 and n-cn-01 carry
+        // grams bands instead, because there the identity never moved.
+        expect(n(c => !!c.forbidName)).toBe(10);
         expect(n(c => c.expectAbstain === true)).toBe(0);
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
@@ -585,7 +605,12 @@ describe('parseGoldenSet', () => {
         // 42 since 2026-08-17: the four multi-item prose sentences (n-prose-13..16)
         // are identity + expectItems only, by the _readme's own rule — bands read
         // items[0], and index 0 of a seven-item sentence is a segmentation artefact.
-        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(42);
+        // 45 since 2026-08-26: n-p1-02/03 and n-p2-01 (A8 row 5) are identity-only on
+        // purpose. On each the two records a band would have to separate are close or
+        // inverted on density -- Breakfast Jack 202 vs Jumbo Jack 104 kcal/100 g, two
+        // Pure Leaf teas at ~29 and ~31 -- so forbidName is the only honest
+        // discriminator, and on n-p2-01 the serving residue is still wrong post-fix.
+        expect(n(c => !c.grams && !c.total && !c.macros)).toBe(45);
 
         // split by shape: `--golden` replays item-shaped cases unless --include-multi-item
         const item = all.filter(c => c.shape === 'item');
@@ -606,7 +631,10 @@ describe('parseGoldenSet', () => {
         // counts untouched, and their bands land in the text columns below.
         // [166, 128] since 2026-08-26: n-k2-01..03 are all `text` (bare brand-led menu
         // lines -- the shape deriveMustHaveTokens() fires on); item counts untouched.
-        expect([item.length, text.length]).toEqual([166, 128]);
+        // text 134 since 2026-08-26: all six A8 row 5 cases are `text`, because the
+        // defect is in the PARSER and an item-shaped case supplies name/qty/unit
+        // directly — it would bypass the very code under test.
+        expect([item.length, text.length]).toEqual([166, 134]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
@@ -614,7 +642,9 @@ describe('parseGoldenSet', () => {
         expect(item.filter(c => c.total).length).toBe(21);
         // 31 -> 43 and 47 -> 63 on 2026-08-17 (prose set; see the count pin above)
         // 47 since 2026-08-24: n-grd-06 `4 oz ground chicken` is text-shaped with a grams band.
-        expect(text.filter(c => c.grams).length).toBe(50);
+        // 52 since 2026-08-26: n-p2-02 and n-cn-01 (A8 row 5) — the two text-shaped
+        // cases whose identity held on both arms, so grams is the discriminator.
+        expect(text.filter(c => c.grams).length).toBe(52);
         // 35 since 2026-08-25: n-k3-01..03 band total.calories and nothing else.
         // 36 since 2026-08-25 (N1): n-n1-01 adds one; n-n1-02/03 band kcal100 instead.
         // 37 since 2026-08-26 (K2): n-k2-03 adds one; n-k2-01/02 band kcal100 instead.
@@ -866,18 +896,18 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // together, and both were gated on locally-served builds (K2's frozen-pool gate
         // is in the k2-gate-2026-08-25 artifacts; the live pair is 3/3 red on
         // Gp4AsbVJN027dnQaPgn6C, 3/3 green on g0Wf3qBUpQkLOSTV2me4G).
-        expect(cov.cases).toBe(294);
-        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 169, blind: 169 });
+        expect(cov.cases).toBe(300);
+        expect(kind('grams')).toEqual({ kind: 'grams', asserted: 171, blind: 171 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
         expect(kind('total')).toEqual({ kind: 'total', asserted: 58, blind: 58 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(294);
+        expect(en.asserted).toBe(300);
         expect(en.blind).toBeGreaterThan(0);
         expect(en.blind).toBeLessThan(274);
         // every grams band in the corpus is unjudgeable here...
-        expect(cov.gramsCases).toBe(169);
+        expect(cov.gramsCases).toBe(171);
         // ...and only a handful would be record-INdependent even with a resolver,
         // i.e. the blindness sits exactly where a winner change moves the answer.
         expect(cov.gramsRecordIndependent).toBeLessThanOrEqual(5);
