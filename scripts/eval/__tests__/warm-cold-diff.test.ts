@@ -791,9 +791,17 @@ describe('population builders account for every line they were given', () => {
         // K2). Three `text` lines and NO new grams band -- what K2 moves is which record
         // is ADMITTED, not which rung serves it, and n-k2-01's winner sits on K3's
         // macro-only tier where grams is kcal/2.0 by construction.
-        expect(p.lines).toHaveLength(294);
-        expect(p.lines.filter(l => l.band).length).toBe(169);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(128);
+        // 300 / 171 / 134 since 2026-08-26: n-p1-01..03, n-p2-01..02, n-cn-01 (A8 row 5 —
+        // a brand-led line is a product name). Six `text` lines; TWO new grams bands, and
+        // which two is the point. The P1 cases are identity-only because the records they
+        // separate are close on density (Breakfast Jack 202 vs Jumbo Jack 104 kcal/100 g is
+        // the exception that still cannot be banded, since a band holding one holds the
+        // other). n-p2-02 and n-cn-01 DO carry grams, because on those two the identity was
+        // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
+        // 12 wings at the 100 g no-serving default vs at the 34 g seed.
+        expect(p.lines).toHaveLength(300);
+        expect(p.lines.filter(l => l.band).length).toBe(171);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(134);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 

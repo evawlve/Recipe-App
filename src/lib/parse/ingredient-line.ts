@@ -219,6 +219,63 @@ function consumePartitiveOf(tokens: string[], i: number): number {
 // startsWithUnit) all read mergedTokens[0] literally, and the whole point here
 // is that they must see the UNIT. Once they do, startsWithUnit turns true and
 // the partitive skip already living in that branch handles the "of" for free.
+/**
+ * The number words `parseQuantityTokens()` reads as quantities. Restated here
+ * rather than exported from quantity.ts on purpose: this guard must fire on
+ * exactly the tokens that function would consume, so the two lists being
+ * separate is the bug, not the design. Kept in sync by
+ * `word-number-brand.test.ts`, which asserts the intersection directly.
+ */
+const QUANTITY_WORD_NUMBERS = new Set([
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'dozen', 'couple',
+]);
+
+/**
+ * Returns how many tokens starting at `startIdx` form a detected MULTI-token
+ * brand whose first token is a quantity word (0 when none do) — the "five
+ * guys" / "two good" / "six star" class.
+ *
+ * `detectedBrand` is the line-level detection, passed in rather than re-run:
+ * the lexicon already knows these brands, so the only question here is whether
+ * the brand it found actually STARTS at `startIdx` and opens with the number
+ * word. A single-token brand can never qualify, which is what leaves the
+ * genuine count in `one bar birthday cake` alone.
+ */
+function matchWordNumberBrandTokens(
+  tokens: string[],
+  startIdx: number,
+  detectedBrand: string | null
+): number {
+  if (!detectedBrand || startIdx >= tokens.length) return 0;
+  const brandTokens = detectedBrand.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (brandTokens.length < 2) return 0;
+  if (!QUANTITY_WORD_NUMBERS.has(brandTokens[0])) return 0;
+  if (startIdx + brandTokens.length > tokens.length) return 0;
+  for (let k = 0; k < brandTokens.length; k++) {
+    if (tokens[startIdx + k].toLowerCase() !== brandTokens[k]) return 0;
+  }
+  return brandTokens.length;
+}
+
+/**
+ * The unit-map members that name a PART of a plant or animal rather than a
+ * container or a portion. Every one of them is an ordinary noun that can open
+ * a product name — `crown royal`, `breast`, `strip steak` — which containers
+ * (`can`, `bottle`, `scoop`, `bar`) are not: nobody sells a product called
+ * "Scoop Something".
+ *
+ * That asymmetry is why P1(c) below is scoped to this list. A leading `scoop`
+ * on a brand-led line ("scoop optimum nutrition whey") really is a measure and
+ * must keep parsing as one; a leading `crown` ("crown royal") is the whisky.
+ */
+const PRODUCE_ANATOMY_UNITS = new Set([
+  'bunch', 'bunches', 'head', 'heads', 'stalk', 'stalks', 'sprig', 'sprigs',
+  'clove', 'cloves', 'leaf', 'leaves', 'ear', 'ears', 'rib', 'ribs',
+  'bulb', 'bulbs', 'crown', 'crowns', 'floret', 'florets', 'strip', 'strips',
+  'breast', 'breasts', 'thigh', 'thighs',
+]);
+
 const LEADING_ARTICLES = new Set(['a', 'an']);
 function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
   if (mergedTokens.length < 2) return false;
@@ -487,6 +544,34 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // fires here, because it is gated on `!unit` and therefore reached precisely
   // when the first two decline. Measured while building this: guarding only the
   // first two left `whole milk` completely unchanged.
+  // ---------------------------------------------------------------------------
+  // A BRAND-LED LINE IS A PRODUCT NAME, NOT A RECIPE INGREDIENT.
+  //
+  // Every heuristic in this file was written for recipe prose, where a leading
+  // word-number is a count and a word like `boneless`/`fresh`/`chunk` says how
+  // the cook prepared the food. On a product name none of that holds: the
+  // tokens ARE the identity. `zaxbys boneless wings` is a menu item, not wings
+  // that happen to be boneless, and stripping the word deletes the only thing
+  // separating it from `zaxbys traditional wings`.
+  //
+  // Decided ONCE here, on the same contract as wholeIsIdentity/eggIsAdjectival
+  // below, and honoured at every recipe-ingredient site further down. Measured
+  // 2026-08-26 on the 4,102-line coverage corpus: 1,770 lines are brand-led,
+  // 46 of them lose an identity token today (44 to the qualifier/hint strips,
+  // 2 to a count-unit consumption) and 11 lose their brand's own first token
+  // to the word-number quantity parse.
+  //
+  // Deliberately gated on DETECTION, not on hasDecisiveBrandContext(): 21 of
+  // the 44 are single-token brands and therefore never decisive, and they
+  // include most of the chain rows this exists to fix (zaxbys, wingstop,
+  // mcdonalds, hooters, dominos). Measured cost of the looser gate on a
+  // 30-line genuine-recipe control set: 2 fire (`jumbo shrimp`, `fresh
+  // sprouts`), both on a single-token junk lexicon entry, and both outcomes
+  // are benign — the kept word is true of the food. Lexicon precision is
+  // brand-detector work, not a reason to narrow this gate past its own rows.
+  const brandDetection = detectBrandInQuery(normalizedLine);
+  const brandLed = !!brandDetection.matchedBrand;
+
   const wholeIsIdentity =
     mergedTokens.length > 0 &&
     mergedTokens[0].toLowerCase() === 'whole' &&
@@ -495,8 +580,21 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // for a leading adjectival `egg`/`eggs` (see leadingEggIsAdjectival above).
   const eggIsAdjectival = leadingEggIsAdjectival(mergedTokens);
 
+  // P1(c). A leading produce-anatomy word on a brand-led line is the product's
+  // first token, not a measure: `crown royal` parsed to unit=crown / name=royal
+  // and billed a crown of broccoli's weight against the whisky. The partitive
+  // `of` is the exemption, because it marks a genuine measure explicitly
+  // ("crown of broccoli", "leaf of basil") — and the scope is deliberately the
+  // anatomy list only, so containers keep measuring. Fires on 2 of the 4,102
+  // corpus lines (`crown royal`, `crown royal peach`), measured 2026-08-26.
+  const leadingIsBrandedAnatomy =
+    brandLed &&
+    mergedTokens.length > 1 &&
+    PRODUCE_ANATOMY_UNITS.has(mergedTokens[0].toLowerCase()) &&
+    mergedTokens[1].toLowerCase() !== 'of';
+
   let startsWithUnit = false;
-  if (mergedTokens.length > 0 && !wholeIsIdentity && !eggIsAdjectival) {
+  if (mergedTokens.length > 0 && !wholeIsIdentity && !eggIsAdjectival && !leadingIsBrandedAnatomy) {
     const firstToken = mergedTokens[0];
     const firstNormalized = normalizeUnitToken(firstToken);
     if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count') {
@@ -512,8 +610,26 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // no longer sits at the quantity position.
   const startsWithDigitBrand = matchDigitBrandTokens(mergedTokens, i) > 0;
 
-  // Parse quantity (if not starting with unit or a digit-leading brand)
-  if (!startsWithUnit && !startsWithDigitBrand) {
+  // Word-number-leading brand guard ("five guys", "two good", "six star"): the
+  // same defect as the digit guard above, one spelling over. WORD_NUMBERS in
+  // parseQuantityTokens() reads `five guys little cheeseburger` as 5 of
+  // `guys little cheeseburger`, which then bills 5x the wrong record (1,135 g
+  // / 1,169 kcal of Fries, Little, measured 2026-08-25).
+  //
+  // Only a MULTI-token brand qualifies, and that is what keeps the genuine
+  // counts parsing: `one bar birthday cake` (n-brand-02) matches the
+  // single-token lexicon entry `one` and is excluded by construction, while
+  // `two eggs` / `three slices of bacon` match no brand at all. Fires on
+  // exactly 11 of the 4,102 corpus lines (five guys x7, two good x3, six star
+  // x1), measured 2026-08-26 — each one a brand whose first token IS the
+  // number word. Not a digit-brands.ts list addition: the lexicon already
+  // knows all three, and the defect is that the quantity parse runs first.
+  const startsWithWordNumberBrand =
+    matchWordNumberBrandTokens(mergedTokens, i, brandDetection.matchedBrand) > 0;
+
+  // Parse quantity (if not starting with a unit, or with a brand whose own
+  // first token looks like a quantity)
+  if (!startsWithUnit && !startsWithDigitBrand && !startsWithWordNumberBrand) {
     const qtyResult = parseQuantityTokens(mergedTokens.slice(i));
     if (qtyResult) {
       qty = qtyResult.qty;
@@ -618,7 +734,8 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       const lowerToken = firstToken.toLowerCase();
       if (POSSIBLE_UNIT_HINTS.includes(lowerToken)
           || (lowerToken === 'whole' && wholeIsIdentity)
-          || ((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)) {
+          || ((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)
+          || (i === 0 && leadingIsBrandedAnatomy)) {
         // Don't consume - it's a unit hint, `whole` acting as identity
         // ("whole milk"), or an adjectival `egg` ("egg noodles") — not a
         // portion. See wholeIsIdentity above: this is the SECOND branch that
@@ -673,6 +790,35 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (unit && i < mergedTokens.length) {
     const connector = mergedTokens[i].toLowerCase();
     if (connector === '&' || connector === '+' || connector === 'and' || connector === 'plus') {
+      // SAME-UNIT FRACTIONAL CONTINUATION: "a scoop and a half of whey".
+      //
+      // The compound branch below handles "<qty> <unit> and <qty> <OTHER unit>"
+      // — it requires a mass/volume unit after the second quantity, and calls
+      // parseQuantityTokens() on tokens that here begin with an article it
+      // never reads. So BOTH of its preconditions fail on this phrasing, and
+      // the connector tokens then fell through into the NAME: measured on
+      // 2026-08-26, `a scoop and a half of whey protein` parsed to qty 1,
+      // unit scoop, name `and a half of whey protein` — under-billing by a
+      // third AND corrupting the retrieval string. Diego reported it from the
+      // device as "a scoop and a half bills one scoop".
+      //
+      // "and a half" / "and a quarter" after a unit continues the SAME unit, so
+      // there is no conversion to do: add the fraction and consume. Anchored on
+      // the optional article + an explicit fraction word so it cannot swallow a
+      // genuine second ingredient ("rice and a banana" — `banana` is not a
+      // fraction word, so this declines and the branch below runs unchanged).
+      const fracIdx = mergedTokens[i + 1]?.toLowerCase() === 'a' ? i + 2 : i + 1;
+      const SAME_UNIT_FRACTIONS: Record<string, number> = {
+        half: 0.5, quarter: 0.25, third: 1 / 3,
+      };
+      const sameUnitFraction = SAME_UNIT_FRACTIONS[mergedTokens[fracIdx]?.toLowerCase() ?? ''];
+      if (sameUnitFraction !== undefined) {
+        qty += sameUnitFraction;
+        i = fracIdx + 1;
+        // "of" after the fraction is partitive ("and a half OF whey"), not a name token.
+        if (mergedTokens[i]?.toLowerCase() === 'of') i++;
+      } else {
+
       // Look ahead for another quantity and unit
       const lookaheadTokens = mergedTokens.slice(i + 1);
       const nextQtyResult = parseQuantityTokens(lookaheadTokens);
@@ -700,6 +846,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
           }
         }
       }
+      }
     }
   }
 
@@ -719,9 +866,14 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       // THIRD count-unit consumption site. It is guarded on `!unit`, so it is
       // reached precisely when the two branches above declined — which makes it
       // the one that actually fires for a unit-less identity line.
+      // leadingIsBrandedAnatomy is honoured HERE as well as at startsWithUnit,
+      // for the reason the wholeIsIdentity comment above records: this site is
+      // gated on `!unit`, so it fires precisely when the first branch declined
+      // — guarding only the first leaves the defect fully intact.
       if (!POSSIBLE_UNIT_HINTS.includes(lowerToken)
           && !(lowerToken === 'whole' && wholeIsIdentity)
-          && !((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)) {
+          && !((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)
+          && !(i === 0 && leadingIsBrandedAnatomy)) {
         unit = afterParenNormalized.unit;
         rawUnit = afterParenToken;
         i++; // Consume the unit
@@ -777,17 +929,35 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   }
 
   // Extract qualifiers from the core name part tokens
+  // P1(a). On a brand-led line the qualifier strip is suppressed: `boneless`,
+  // `fresh`, `frozen`, `shredded`, `large`, `short`, `jumbo` are the product's
+  // own words there, and removing them is what turns `zaxbys boneless wings`
+  // into `zaxbys wings` and `pure leaf iced tea` into `pure iced tea` — the
+  // second deleting half the BRAND. See the brandLed read above for the
+  // measured population and the false-positive cost.
+  //
+  // Scope note: the parenthetical and comma-part qualifier paths above are
+  // deliberately NOT gated. A writer who set a word aside in `(...)` or after
+  // a comma marked it as an aside themselves, and neither path appears in the
+  // 46-line measured population.
   const coreTokens = coreNamePart.split(/\s+/).filter(t => t.length > 0);
-  const { qualifiers: extractedQualifiers, remainingTokens } = extractQualifiers(coreTokens);
+  const { qualifiers: extractedQualifiers, remainingTokens } = brandLed
+    ? { qualifiers: [] as string[], remainingTokens: coreTokens }
+    : extractQualifiers(coreTokens);
 
   // Extract unit hint (e.g., "egg yolks" -> unitHint: "yolk", name: "egg")
   // This should happen after qualifier extraction
   // Pass the parsed unit as context: in "3 egg whites", "egg" was consumed as
   // a count unit above, so the egg-scoped 'white' gate needs it as context.
-  const hintResult = extractUnitHint(
-    remainingTokens,
-    [unit, rawUnit].filter((t): t is string => typeof t === 'string' && t.length > 0)
-  );
+  // P1(b). Same reasoning as the qualifier strip: `chunk`, `piece`, `leaf`
+  // and `stalk` are identity on a product name (`bumble bee chunk light
+  // tuna`, `mcdonalds 10 piece chicken mcnuggets`, `pure leaf sweet tea`).
+  const hintResult = brandLed
+    ? { unitHint: null, coreName: remainingTokens.join(' ') }
+    : extractUnitHint(
+      remainingTokens,
+      [unit, rawUnit].filter((t): t is string => typeof t === 'string' && t.length > 0)
+    );
   const unitHint = hintResult.unitHint;
   let finalRemainingTokens = hintResult.coreName.split(/\s+/).filter(t => t.length > 0);
 
