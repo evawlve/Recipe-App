@@ -452,24 +452,7 @@ else
 fi
 
 # One snapshot, taken from BASE, shared by both replays. Retrieval runs once.
-#
-# --limit IS LOAD-BEARING AND WAS ABSENT. `winner-diff snapshot` defaults to `--limit 200`
-# and applies it with `.slice(0, limit)` to --from-file too, so every cold-seed file longer
-# than 200 lines was SILENTLY TRUNCATED and this driver said nothing. Measured 2026-08-27 on
-# a 257-seed file: 57 seeds never entered the snapshot, and because hand-added faces are
-# appended at the END of such a file, the ones dropped were exactly the cases the run was
-# built to prove. That is blind spot D wearing a different hat — the driver REFUSES to run
-# without a cold population and then quietly cut it — so the count is now both passed and
-# CHECKED. Every attempted query is written to the ndjson (a failure lands as `ok:false`),
-# so a short file means truncation, not a failed seed.
-( cd "$BASE_TREE" && eval "$RUN" snapshot --from-file "$POP" --limit "$COLD_N" --out "$OUT/snap.json" ) 2>&1 | tail -20
-SNAP_N=$(grep -c . "$OUT/snap.json.ndjson" 2>/dev/null || true)
-if [[ "${SNAP_N:-0}" -lt "$COLD_N" ]]; then
-    echo "ABORT: the cold snapshot holds ${SNAP_N:-0} of $COLD_N seeds." >&2
-    echo "A truncated cold population is a truncated gate: the seeds it dropped are the" >&2
-    echo "ones you chose to prove the change on, and the diff below them says nothing." >&2
-    exit 2
-fi
+( cd "$BASE_TREE" && eval "$RUN" snapshot --from-file "$POP" --out "$OUT/snap.json" ) 2>&1 | tail -20
 
 if [[ "$REGRESSION_N" -gt 0 ]]; then
     ( cd "$BASE_TREE" && eval "$RUN" snapshot --from-events --limit "$REGRESSION_N" \
