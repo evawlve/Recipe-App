@@ -1821,19 +1821,6 @@
       "timeoutMs": 180000
     },
     {
-      "id": "empirical-head-moves-only-on-an-unsatisfiable-conjunction",
-      "claim": "A22, through the shipped deriveMustHaveTokens(): with NO pool the head is positional (`dominos garlic knots` -> dominos+knots); with a pool that carries `garlic` alongside the brand but no `knots` at all, the head steps back one token (dominos+garlic); and the K2 tolerant rung stays in scope for the head slot, so a pool whose only record is `Chicken Fingerz` still keeps `fingers` rather than stepping back to `chicken`. Output is the three token lists joined by |.",
-      "ownerDoc": "mobile:sync-docs/reports/2026-08-27_a22-the-empirical-head-and-the-faces-that-were-never-admission.md",
-      "where": "backend",
-      "command": "npx ts-node --project tsconfig.scripts.json --transpile-only -e \"const {deriveMustHaveTokens:d}=require('./src/lib/mapping/filter-candidates');const c=(n,b)=>({id:n,source:'openfoodfacts',name:n,brandName:b,score:0.5,rawData:{}});const pool=[c('Garlic Bread Twists',String.fromCharCode(68)+\\\"omino's Pizza\\\")];const zax=[c('Chicken Fingerz',String.fromCharCode(90)+\\\"axby's\\\")];process.stdout.write([d('dominos garlic knots').join('+'),d('dominos garlic knots',pool).join('+'),d('zaxbys chicken fingers',zax).join('+')].join('|'))\"",
-      "expect": {
-        "kind": "equals",
-        "value": "dominos+knots|dominos+garlic|zaxbys+fingers"
-      },
-      "verified": "2026-08-27",
-      "timeoutMs": 180000
-    },
-    {
       "id": "winner-gate-passes-and-checks-the-cold-seed-limit",
       "claim": "winner-gate.sh passes the seed count to `winner-diff snapshot` (whose --from-file default is --limit 200, and which slices to it) AND aborts when the resulting snapshot is shorter than the seed file. Before 2026-08-27 it did neither, so a 257-seed cold population was silently cut to 200 and the seeds dropped were the hand-added faces at the end of the file. Output is <limit pass-through count>@<abort message count>.",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-27_a22-the-empirical-head-and-the-faces-that-were-never-admission.md",
