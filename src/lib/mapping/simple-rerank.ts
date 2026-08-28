@@ -393,7 +393,7 @@ const CATEGORY_CHANGING_TOKENS = new Set([
  * 
  * Returns the penalty amount (0 to CATEGORY_CHANGE_PENALTY)
  */
-function getCategoryChangePenalty(query: string, candidateName: string): number {
+export function getCategoryChangePenalty(query: string, candidateName: string): number {
     const queryLower = query.toLowerCase();
     const candLower = candidateName.toLowerCase();
 
@@ -417,20 +417,49 @@ function getCategoryChangePenalty(query: string, candidateName: string): number 
         .split(/\s+/)
         .filter(w => w.length > 2);
 
-    // Check each candidate word against category-changing tokens
+    // Count the candidate's category-changing tokens, split by whether the query
+    // (or a declared synonym) spells them.
+    //
+    // A25 (Aug 2026): this used to return the FLAT penalty on the FIRST unmatched
+    // in-set token, which INVERTS on a query that names its own category. Measured
+    // on `kirkland protein bar chocolate chip`: every real Kirkland protein bar is
+    // named "... Chocolate Chip Cookie Dough" and paid 0.50 for `cookie` — its own
+    // flavour — while "Chocolate Chip Chewy Granola Bar" paid NOTHING, because
+    // `granola` is not in the set and its other in-set tokens (chocolate/chip/bar)
+    // were all exempt for being in the query. The guard charged the five correct
+    // products 0.50 each and let through the one product that had genuinely changed
+    // category, by a margin of 0.008.
+    //
+    // So the charge is the UNMATCHED SHARE of the candidate's in-set tokens.
+    //
+    // INVARIANT — when the candidate shares NO in-set token with the query
+    // (matchedInSet === 0) the ratio is 1 and this returns the full flat penalty,
+    // byte-identical to the old behaviour. That is the ENTIRE population the penalty
+    // was designed for ("spinach" -> Spinach Noodles, "tomato" -> Tomato powder,
+    // "quinoa" -> Lentil Quinoa Rice Mix, "lemons" -> Lemon Peel). The charge softens
+    // ONLY where the candidate also carries in-set tokens the query DID ask for —
+    // exactly the case a flat first-hit charge cannot tell apart from a real category
+    // change. Pinned in both directions by simple-rerank.test.ts.
+    //
+    // Sizing (frozen-pool, noise floor 0 both trees, 2026-08-28): the charge moves on
+    // 15/75 cold grocery rows and 40/179 event-log rows, 117 candidates in all, ALL
+    // downward, and decides exactly ONE winner across 328 rows — the case above. Owner:
+    // sync-docs/reports/2026-08-28_a25-design-the-charge-becomes-the-unmatched-share.md
+    // (mobile repo).
+    const seenInSet = new Set<string>();
+    let unmatchedInSet = 0;
+    let matchedInSet = 0;
     for (const word of candidateWords) {
-        if (CATEGORY_CHANGING_TOKENS.has(word)) {
-            // Is this category-changing token in the query (or covered by a synonym)?
-            // If so, it's intentional (e.g., "spinach pasta" query, or "lemon zest" → peel)
-            if (!expandedQueryTokens.has(word)) {
-                // Query doesn't have this token or any synonym for it — parasitic!
-                // Return heavy penalty
-                return WEIGHTS.CATEGORY_CHANGE_PENALTY;
-            }
-        }
+        if (!CATEGORY_CHANGING_TOKENS.has(word)) continue;
+        if (seenInSet.has(word)) continue;   // distinct tokens: "chip ... chips" must not double-count
+        seenInSet.add(word);
+        if (expandedQueryTokens.has(word)) matchedInSet++;
+        else unmatchedInSet++;
     }
 
-    return 0; // No category-changing tokens found
+    if (unmatchedInSet === 0) return 0; // No parasitic category-changing tokens
+
+    return WEIGHTS.CATEGORY_CHANGE_PENALTY * (unmatchedInSet / (unmatchedInSet + matchedInSet));
 }
 
 // ============================================================

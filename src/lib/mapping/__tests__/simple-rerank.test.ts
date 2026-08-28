@@ -6,7 +6,7 @@
  * Also tests the nutrition-based tiebreaker for score-tied candidates.
  */
 
-import { stripPrepModifiers, simpleRerank, type RerankCandidate, type AiNutritionEstimate } from '../simple-rerank';
+import { stripPrepModifiers, simpleRerank, getCategoryChangePenalty, type RerankCandidate, type AiNutritionEstimate } from '../simple-rerank';
 
 describe('stripPrepModifiers', () => {
     // === Prep words that SHOULD be stripped ===
@@ -315,5 +315,75 @@ describe('serving-labeled record preference (PR D pt2)', () => {
         const result = simpleRerank('peanut butter', candidates, undefined, 'peanut butter');
         expect(result.winner).not.toBeNull();
         expect(result.winner!.id).toBe('off_generic');
+    });
+});
+
+describe('getCategoryChangePenalty — the unmatched-share charge (A25, Aug 2026)', () => {
+    const FLAT = 0.50;
+
+    // === THE INVARIANT ===
+    // When the candidate shares NO category-changing token with the query, the charge
+    // is the full flat penalty — byte-identical to the pre-A25 behaviour. This is the
+    // whole population the penalty was built for, and it must never soften.
+    it.each([
+        ['spinach', 'Spinach Noodles'],
+        ['tomato', 'Tomato powder'],
+        ['quinoa', 'Lentil Quinoa Rice Mix'],
+        ['lemons', 'Lemon Peel'],
+        ['fennel', 'Fennel Seed'],
+        ['almond', 'Almond Flour'],
+    ])('charges the FULL penalty when nothing in-set is shared: %s -> %s', (q, name) => {
+        expect(getCategoryChangePenalty(q, name)).toBe(FLAT);
+    });
+
+    // === UNCHANGED: an in-set token the query spells is intentional ===
+    it.each([
+        ['garlic powder', 'Garlic Powder'],
+        ['spinach pasta', 'Spinach Pasta'],
+        ['chocolate chip cookies', 'Chocolate Chip Cookies'],
+    ])('charges nothing when every in-set token is spelled: %s -> %s', (q, name) => {
+        expect(getCategoryChangePenalty(q, name)).toBe(0);
+    });
+
+    // === THE A25 CASE ===
+    // The query names its own category, so `chocolate`/`chip`/`bar` are exempt for
+    // EVERY candidate. Under the old flat charge the five real protein bars paid 0.50
+    // for `cookie` — their own flavour — and the granola bar, which had genuinely
+    // changed category, paid nothing and won by 0.008.
+    it('charges the real product only its unmatched share (1 of 4 in-set tokens)', () => {
+        expect(getCategoryChangePenalty(
+            'kirkland protein bar chocolate chip',
+            'Chocolate chip cookie dough protein bar',
+        )).toBeCloseTo(FLAT * (1 / 4), 10);
+    });
+
+    it('still charges the category-changed rival nothing — `granola` is not in the set', () => {
+        expect(getCategoryChangePenalty(
+            'kirkland protein bar chocolate chip',
+            'Chocolate Chip Chewy Granola Bar',
+        )).toBe(0);
+    });
+
+    // === SHAPE ===
+    it('scales with the unmatched share: 2 of 3 costs more than 1 of 3', () => {
+        // query spells `bar`; candidate adds `cookie` (+`cake`) which it does not.
+        const oneOfTwo = getCategoryChangePenalty('protein bar', 'Cookie Bar');
+        const twoOfThree = getCategoryChangePenalty('protein bar', 'Cookie Cake Bar');
+        expect(oneOfTwo).toBeCloseTo(FLAT * (1 / 2), 10);
+        expect(twoOfThree).toBeCloseTo(FLAT * (2 / 3), 10);
+        expect(twoOfThree).toBeGreaterThan(oneOfTwo);
+    });
+
+    it('counts DISTINCT tokens — a repeated in-set word must not double-count', () => {
+        expect(getCategoryChangePenalty('protein bar', 'Cookie Bar Cookie Bar'))
+            .toBe(getCategoryChangePenalty('protein bar', 'Cookie Bar'));
+    });
+
+    it('never exceeds the flat penalty', () => {
+        for (const name of ['Cookie Cake Brownie Pie Soup', 'Noodles Pasta Rice Bread', 'Plain Food']) {
+            const p = getCategoryChangePenalty('protein bar', name);
+            expect(p).toBeLessThanOrEqual(FLAT);
+            expect(p).toBeGreaterThanOrEqual(0);
+        }
     });
 });
