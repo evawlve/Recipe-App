@@ -127,8 +127,27 @@ jest.mock('@/lib/openfoodfacts/client', () => ({
   getOffProductByBarcode: jest.fn().mockResolvedValue(null),
 }));
 
+/**
+ * `hydrateOffCandidate` returns `Promise<HydratedOffFood>` and never null — this mock used
+ * to resolve `null`, which was invisible while the route threw the value away and became a
+ * 500 the moment it started reading `nutrientsPer100g` off it (the panelless refusal). A
+ * fixture with a shape the real function cannot produce is the trap CLAUDE.md names about
+ * invented test values; the shape below is a real hydrate of the OffFood row mocked above.
+ */
+const hydratedOff = (candidate: { id: string; name: string }) => ({
+  foodId: candidate.id,
+  foodName: candidate.name,
+  brandName: 'Lucerne',
+  nutrientsPer100g: { calories: 53.3, protein: 5.3, carbs: 8, fat: 0, fiber: 0, sugars: 7.3, sodium: 0.05 },
+  servingGrams: 150,
+  servingDescription: '1 container',
+  servingUnitCount: 1,
+  packageQuantity: null,
+  packageQuantityUnit: null,
+});
+
 jest.mock('@/lib/openfoodfacts/hydrate', () => ({
-  hydrateOffCandidate: jest.fn().mockResolvedValue(null),
+  hydrateOffCandidate: jest.fn(),
 }));
 
 const { lookupFatSecretBarcode } = require('@/lib/mapping/barcode');
@@ -158,7 +177,9 @@ describe('/api/foods/barcode FatSecret branch', () => {
     lookupFatSecretBarcode.mockResolvedValue(null);
     ensureFoodCached.mockResolvedValue(null);
     getOffProductByBarcode.mockResolvedValue(null);
-    hydrateOffCandidate.mockResolvedValue(null);
+    hydrateOffCandidate.mockImplementation((candidate: { id: string; name: string }) =>
+      Promise.resolve(hydratedOff(candidate)),
+    );
     mockAiFindUnique.mockResolvedValue(null);
   });
 

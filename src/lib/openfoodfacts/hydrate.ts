@@ -39,6 +39,30 @@ export interface HydratedOffFood {
 // Public API
 // ============================================================
 
+export interface HydrateOffOptions {
+    /**
+     * May a row with NO usable per-100 g panel be persisted?
+     *
+     * DEFAULT TRUE, which is what the mapping lane needs and has always done:
+     * `buildOffResult()` hydrates first and `ai-nutrition-backfill.ts` fills the panel on
+     * first use, so a null panel there is a stage, not a failure. Passing nothing keeps
+     * that path byte-identical.
+     *
+     * `/api/foods/barcode` passes FALSE, and the reason is an invariant rather than a
+     * preference. `CLAUDE.md` §Attribution argues that `buildOffResult()`'s
+     * AI-nutrition-backfill branch — which returns `source: 'openfoodfacts'` with every
+     * macro taken from an LLM, i.e. an ODbL credit beside a generated panel — is
+     * UNREACHABLE, and the load-bearing half of that argument is that 0 of 1,085,526
+     * `OffFood` rows have a null panel (re-derived live 2026-08-27). The barcode route is
+     * the one writer that can create the first one, because it is the one path that reads
+     * a LIVE OFF product rather than the mirror. So it refuses: a scanned product with no
+     * usable panel is a miss, and answering 404 costs a card that would have shown zeros
+     * anyway. Found by Lane A's live-OFF attribution check, 2026-08-27; owner of the
+     * finding: mobile:sync-docs/reports/2026-08-27_b24-the-real-barcode-scanner-design.md §5.
+     */
+    persistPanelless?: boolean;
+}
+
 /**
  * Hydrate an OpenFoodFacts candidate into the local DB cache.
  *
@@ -47,14 +71,20 @@ export interface HydratedOffFood {
  *
  * Idempotent — safe to call multiple times for the same barcode.
  *
+ * ALWAYS RETURNS THE COMPUTED SHAPE, whether or not it was persisted. A caller that
+ * needs to know reads `nutrientsPer100g === null` (no usable panel) or the write receipt
+ * (`nosave=1`); there is deliberately no thrown error for either, because both are
+ * ordinary outcomes rather than failures.
+ *
  * @param candidate - A UnifiedCandidate with source='openfoodfacts'
  *                    and rawData containing the full OFFProduct.
+ * @param options   - See HydrateOffOptions. Omit for the mapping lane's behaviour.
  */
 export async function hydrateOffCandidate(candidate: {
     id: string;       // "off_<barcode>"
     name: string;
     rawData: unknown;
-}): Promise<HydratedOffFood> {
+}, options: HydrateOffOptions = {}): Promise<HydratedOffFood> {
     // ── 1. Assert rawData is present ──────────────────────────────────────
     if (!candidate.rawData) {
         throw new Error(
@@ -136,8 +166,15 @@ export async function hydrateOffCandidate(candidate: {
     // returned in full, but nothing is written, so a LATER `resolveFoodDetails()` — which
     // reads OffFood — finds no row for a barcode this process has never mirrored. That is
     // the barcode route's `nosave_not_persisted` 404, not a lookup failure.
-    const suppressed = isWriteSuppressed('offMirror');
-    if (suppressed) {
+    // A caller that refuses panelless rows is asked FIRST, and its refusal does not consult
+    // the write policy: there is nothing for a policy to suppress when the row was never
+    // going to be written. Keeping the two apart is what stops the `nosave` receipt from
+    // claiming a refusal it did not make.
+    const refusedForPanel = nutrientsPer100g === null && options.persistPanelless === false;
+    const suppressed = !refusedForPanel && isWriteSuppressed('offMirror');
+    if (refusedForPanel) {
+        logger.warn('off.hydrate.panelless_refused', { foodId: candidate.id, barcode });
+    } else if (suppressed) {
         noteRefusedWrite('offMirror', 'OffFood', barcode);
         if (servingGrams && servingDescription) {
             noteRefusedWrite('offMirror', 'OffServing', `${barcode}:${servingDescription}`);
@@ -193,9 +230,10 @@ export async function hydrateOffCandidate(candidate: {
         brandName: primaryBrand,
         hasNutrients: nutrientsPer100g !== null,
         servingGrams,
-        // false ⇒ the row was computed and deliberately not kept. The one field that tells
-        // a box-log reader a hydrate happened without a row appearing.
-        persisted: !suppressed,
+        // false ⇒ the row was computed and deliberately not kept, either because the request
+        // asked for `nosave` or because the caller refuses panelless rows. The one field that
+        // tells a box-log reader a hydrate happened without a row appearing.
+        persisted: !suppressed && !refusedForPanel,
     });
 
     return {
