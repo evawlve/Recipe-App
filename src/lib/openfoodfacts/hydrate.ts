@@ -11,6 +11,7 @@
 
 import { prisma } from '../db';
 import { logger } from '../logger';
+import { isWriteSuppressed, noteRefusedWrite } from '../write-policy';
 import type { OFFProduct, OFFNutriments } from './client';
 import { parseOffServingSize } from './serving-resolver';
 
@@ -124,47 +125,66 @@ export async function hydrateOffCandidate(candidate: {
 
     const primaryBrand = product.brands?.split(',')[0].trim() ?? null;
 
-    // ── 6. Upsert into OffFood ─────────────────────────────────
-    await prisma.offFood.upsert({
-        where:  { barcode },
-        create: {
-            barcode,
-            name:             product.product_name,
-            brandName:        primaryBrand,
-            nutrientsPer100g: nutrientsPer100g ?? undefined,
-            servingSize:      product.serving_size ?? null,
-            servingGrams:     servingGrams ?? null,
-        },
-        update: {
-            name:             product.product_name,
-            brandName:        primaryBrand,
-            nutrientsPer100g: nutrientsPer100g ?? undefined,
-            servingSize:      product.serving_size ?? null,
-            servingGrams:     servingGrams ?? null,
-            updatedAt:        new Date(),
-        },
-    });
-
-    // ── 7. Upsert label-derived serving into OffServing ────
-    if (servingGrams && servingDescription) {
-        await prisma.offServing.upsert({
-            where: {
-                barcode_description: {
-                    barcode,
-                    description: servingDescription,
-                },
-            },
+    // ── 6/7. Persist, unless THIS request asked us not to ─────────────────
+    //
+    // The `offMirror` class of the request-scoped write policy (src/lib/write-policy.ts).
+    // Consulted ONCE, covering both upserts, so a hydrate contributes exactly one
+    // `consulted` to the receipt; outside any policy it is `false` and nothing here
+    // changes, which is every caller except `/api/foods/barcode?nosave=1`.
+    //
+    // Refusing is not free and the caller must know it: the computed shape below is still
+    // returned in full, but nothing is written, so a LATER `resolveFoodDetails()` — which
+    // reads OffFood — finds no row for a barcode this process has never mirrored. That is
+    // the barcode route's `nosave_not_persisted` 404, not a lookup failure.
+    const suppressed = isWriteSuppressed('offMirror');
+    if (suppressed) {
+        noteRefusedWrite('offMirror', 'OffFood', barcode);
+        if (servingGrams && servingDescription) {
+            noteRefusedWrite('offMirror', 'OffServing', `${barcode}:${servingDescription}`);
+        }
+    } else {
+        // ── 6. Upsert into OffFood ─────────────────────────────────
+        await prisma.offFood.upsert({
+            where:  { barcode },
             create: {
                 barcode,
-                description: servingDescription,
-                grams:       servingGrams,
-                source:      'openfoodfacts',
-                isAiEstimated: false,
+                name:             product.product_name,
+                brandName:        primaryBrand,
+                nutrientsPer100g: nutrientsPer100g ?? undefined,
+                servingSize:      product.serving_size ?? null,
+                servingGrams:     servingGrams ?? null,
             },
             update: {
-                grams: servingGrams,
+                name:             product.product_name,
+                brandName:        primaryBrand,
+                nutrientsPer100g: nutrientsPer100g ?? undefined,
+                servingSize:      product.serving_size ?? null,
+                servingGrams:     servingGrams ?? null,
+                updatedAt:        new Date(),
             },
         });
+
+        // ── 7. Upsert label-derived serving into OffServing ────
+        if (servingGrams && servingDescription) {
+            await prisma.offServing.upsert({
+                where: {
+                    barcode_description: {
+                        barcode,
+                        description: servingDescription,
+                    },
+                },
+                create: {
+                    barcode,
+                    description: servingDescription,
+                    grams:       servingGrams,
+                    source:      'openfoodfacts',
+                    isAiEstimated: false,
+                },
+                update: {
+                    grams: servingGrams,
+                },
+            });
+        }
     }
 
     logger.info('off.hydrate.complete', {
@@ -173,6 +193,9 @@ export async function hydrateOffCandidate(candidate: {
         brandName: primaryBrand,
         hasNutrients: nutrientsPer100g !== null,
         servingGrams,
+        // false ⇒ the row was computed and deliberately not kept. The one field that tells
+        // a box-log reader a hydrate happened without a row appearing.
+        persisted: !suppressed,
     });
 
     return {
