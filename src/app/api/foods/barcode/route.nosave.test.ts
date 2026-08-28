@@ -175,6 +175,64 @@ describe('/api/foods/barcode nosave=1', () => {
     expect(getOffProductByBarcode).toHaveBeenCalledWith(BARCODE);
   });
 
+  /**
+   * The panelless refusal — Lane A's live-OFF attribution check, 2026-08-27.
+   *
+   * `extractAndValidateNutrients()` returns null on three guards (all-zero macros,
+   * kcal > 980, a failed Atwater check) and `hydrateOffCandidate()` used to store the row
+   * anyway with a NULL panel, because the mapping lane wants exactly that — its
+   * ai-nutrition-backfill fills it on first use. This route must not, and the reason is an
+   * invariant: `CLAUDE.md` §Attribution's argument that buildOffResult()'s AI-backfill
+   * branch is unreachable rests on 0 of 1,085,526 OffFood rows having a null panel, and
+   * this is the one path reading a LIVE OFF product rather than the mirror.
+   */
+  test('a live product whose panel fails the quality gate is NOT stored, and is a distinct 404', async () => {
+    getOffProductByBarcode.mockResolvedValue({
+      ...liveProduct,
+      // All four macros zero — guard 1. OFF's own gate calls this "no data".
+      nutriments: { 'energy-kcal_100g': 0, 'proteins_100g': 0, 'carbohydrates_100g': 0, 'fat_100g': 0 },
+    });
+
+    const res = await call(`code=${BARCODE}&api_key=test-barcode-key`);
+
+    // The write that would have created the first null-panel row never happens...
+    expect(offUpsert).not.toHaveBeenCalled();
+    expect(offServingUpsert).not.toHaveBeenCalled();
+    // ...and it is refused for EVERY caller, not only one holding nosave.
+    expect(res.headers.get('X-Write-Receipt')).toBeNull();
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.code).toBe('no_usable_panel');
+    expect(body.error).not.toBe('Food not found for barcode');
+  });
+
+  test('an internally inconsistent panel is refused the same way — the Atwater guard', async () => {
+    getOffProductByBarcode.mockResolvedValue({
+      ...liveProduct,
+      // 500 kcal declared against 4×4+4×4+4×9 = 68 kcal of macros.
+      nutriments: { 'energy-kcal_100g': 500, 'proteins_100g': 4, 'carbohydrates_100g': 4, 'fat_100g': 4 },
+    });
+
+    const res = await call(`code=${BARCODE}&api_key=test-barcode-key`);
+    expect(offUpsert).not.toHaveBeenCalled();
+    expect((await res.json()).code).toBe('no_usable_panel');
+  });
+
+  // The control that keeps the mapping lane out of this: hydrateOffCandidate defaults to
+  // persisting a panelless row, which is what buildOffResult() has always relied on.
+  test('the DEFAULT still stores a panelless row — the mapping lane is untouched', async () => {
+    const { hydrateOffCandidate } = require('@/lib/openfoodfacts/hydrate');
+    const hydrated = await hydrateOffCandidate({
+      id: `off_${BARCODE}`,
+      name: 'Greek Nonfat Yogurt (Strawberry)',
+      rawData: { ...liveProduct, nutriments: { 'energy-kcal_100g': 0, 'proteins_100g': 0, 'carbohydrates_100g': 0, 'fat_100g': 0 } },
+    });
+
+    expect(hydrated.nutrientsPer100g).toBeNull();
+    expect(offUpsert).toHaveBeenCalledTimes(1);
+  });
+
   test('a genuine miss keeps its own 404, with no nosave code', async () => {
     getOffProductByBarcode.mockResolvedValue(null);
 

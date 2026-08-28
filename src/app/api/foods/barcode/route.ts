@@ -79,6 +79,9 @@ export async function GET(req: NextRequest) {
       // Did OpenFoodFacts itself answer for this barcode? Read only by the 404 branch, to
       // tell "nobody has this product" from "we have it upstream and declined to keep it".
       let offProductFound = false;
+      // Found upstream, but with no per-100 g panel we are willing to serve or store. A
+      // distinct fact from "nobody has this barcode" and from the nosave refusal below.
+      let offPanelUnusable = false;
 
       // 1. Try FatSecret first
       const fsResult = await lookupFatSecretBarcode(trimmedCode);
@@ -126,15 +129,30 @@ export async function GET(req: NextRequest) {
           // refused inside the writer and the returned shape is computed all the same —
           // but resolveFoodDetails() below reads OffFood, so a barcode we have NEVER
           // mirrored then resolves to nothing. That is the 404 branch's second case.
-          await hydrateOffCandidate({
+          //
+          // `persistPanelless: false` is not a preference, it is an invariant this route
+          // is the only writer able to break. `CLAUDE.md` §Attribution's argument that
+          // buildOffResult()'s AI-nutrition-backfill branch is unreachable rests on 0 of
+          // 1,085,526 OffFood rows having a null panel, and this is the one path that
+          // reads a LIVE OFF product instead of the mirror. So a product whose panel
+          // fails OFF's own quality gate is a MISS here rather than a stored zero — see
+          // HydrateOffOptions, and Lane A's check in the design report's §5.
+          const hydrated = await hydrateOffCandidate({
             id: offId,
             name: offProduct.product_name || 'OpenFoodFacts Product',
             rawData: offProduct,
-          });
-          const resolved = await resolveFoodDetails(offId);
-          if (resolved.name) {
-            foodId = offId;
-            details = resolved;
+          }, { persistPanelless: false });
+
+          if (hydrated.nutrientsPer100g === null) {
+            // Also catches the (currently empty) case of an EXISTING null-panel row:
+            // resolveFoodDetails() would floor its macros to 0 and ship a 0 kcal card.
+            offPanelUnusable = true;
+          } else {
+            const resolved = await resolveFoodDetails(offId);
+            if (resolved.name) {
+              foodId = offId;
+              details = resolved;
+            }
           }
         }
       }
@@ -147,6 +165,20 @@ export async function GET(req: NextRequest) {
         // status stays 404 (the client's behaviour is identical: there is no card either
         // way) and the `code` carries the distinction. Keyed on the receipt, so the
         // message is true because a write was actually refused, not because a flag is set.
+        // Order matters: the panel fact is permanent and true for every caller, the nosave
+        // fact is a property of this one request.
+        if (offPanelUnusable) {
+          return withReceipt(
+            NextResponse.json(
+              {
+                error: 'Barcode found, but this product has no usable nutrition panel',
+                code: 'no_usable_panel',
+              },
+              { status: 404 },
+            ),
+            noSave,
+          );
+        }
         const refusedReceipt = currentWriteReceipt();
         if (noSave && offProductFound && refusedReceipt && refusedReceipt.refusedTotal > 0) {
           return withReceipt(
