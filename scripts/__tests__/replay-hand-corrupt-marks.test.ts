@@ -520,7 +520,7 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         expect(parsed.ok).toBe(true);
     });
 
-    it('is the 2026-08-12 + 2026-08-14 + 2026-08-15 + 2026-08-25 batches: 25 entries over 33 barcodes', () => {
+    it('is the 2026-08-12 + 2026-08-14 + 2026-08-15 + 2026-08-25 + 2026-08-28 batches: 26 entries over 34 barcodes', () => {
         // Narrowed from 17/22 on 2026-08-12 after the pre-apply review. Two
         // entries were withdrawn because the mark does not buy a better answer,
         // which is the same criterion that deferred maple and callaloo:
@@ -558,9 +558,23 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         // duplicateOfBarcode NULL, no members, and no byte-identical panel
         // under any other name (measured 2026-08-25). Owner: the Lane A
         // session-13 write-off (mobile sync-docs/log/2026-08-25_*_a_*.md).
+        //
+        // 2026-08-28 added ONE entry with no group (repair batch 6, D6 + D17):
+        // off_0280996444044 "Quaker Caramel Rice Cakes", whose per-100 g fields
+        // hold the label's 2-cake (26 g) panel at 100 kcal/100 g. servingGrams
+        // is 0.2599999904632568 — the 26 g serving stored as a FRACTION of
+        // 100 g by the same divide-by-100 — so every field x100/26 recovers the
+        // real values, calories on 384.6 against FatSecret's independent 385.
+        // Unreachable by every shipped detector at once: singleton name key
+        // under MIN_GROUP, the 0.26 g serving outside the [2,600] direct gate,
+        // tier 2 emits the inflated direction only, and the barcode is exactly
+        // 13 chars so detect-panel-scale-divided's length > 13 excludes it.
+        // Group is the one barcode: duplicateOfBarcode NULL both ways and a
+        // singleton dedupe groupKey. Owner: the Lane A session-26 write-off
+        // (mobile sync-docs/log/2026-08-28_*_a_*.md).
         if (!parsed.ok) throw new Error('unparseable');
-        expect(parsed.entries.length).toBe(25);
-        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(33);
+        expect(parsed.entries.length).toBe(26);
+        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(34);
     });
 
     it('carries the duplicate-group members that make a barcode-scoped mark self-reverting', () => {
@@ -602,11 +616,12 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         if (!parsed.ok) throw new Error('unparseable');
         const byGen = new Map<string, number>();
         for (const e of parsed.entries) byGen.set(e.authoredAt, (byGen.get(e.authoredAt) ?? 0) + 1);
-        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14', '2026-08-15', '2026-08-25']);
+        expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14', '2026-08-15', '2026-08-25', '2026-08-28']);
         expect(byGen.get('2026-08-12')).toBe(15);
         expect(byGen.get('2026-08-14')).toBe(8);
         expect(byGen.get('2026-08-15')).toBe(1);
         expect(byGen.get('2026-08-25')).toBe(1);
+        expect(byGen.get('2026-08-28')).toBe(1);
     });
 
     it('records a stated reason for every declined group member', () => {

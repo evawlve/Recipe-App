@@ -592,5 +592,23 @@
         },
         "group": [],
         "groupExclusions": []
+    },
+    {
+        "barcode": "0280996444044",
+        "class": "panel",
+        "seed": "Three Quaker caramel rice cakes",
+        "reason": "The label's 2-cake (26 g) panel written into the per-100 g fields: 100 kcal/100 g at 1 g protein / 23 g carbs / 0.5 g fat / 8 g sugars / 1 g fibre. Macros sum to 24.5 g per 100 g, implying ~75% moisture, impossible for a dehydrated puffed-rice cake. The panel is Atwater-coherent (4x1 + 9x0.5 + 4x23 = 100.5 against a stated 100), i.e. a real label stored in the wrong column rather than a garbled one. The mechanism is readable off the row itself: servingGrams is 0.2599999904632568 and servingSize the string \"0.25999999046325684g\" - a 26 g serving stored as a FRACTION of 100 g by the same divide-by-100 that moved the panel. Rescaling every field by x100/26 lands on real rice-cake values (carbs 88.5, protein 3.85, fat 1.92) and calories 384.6; FatSecret's Quaker \"Rice Cakes - Caramel\" (fs_33502108) independently reads 385 with a 13 g \"1 rice cake\" serving, and every other Quaker caramel rice cake in OffFood reads 384.6-429 (0030000169100 384.6, 0034442169100 384.6, 0030000216910 385, 0030000576724 429). Against a 55-row caramel-rice-cake population (name ILIKE '%caramel%' AND '%rice cake%') whose median is 385, this row is the UNIQUE MINIMUM at 3.85x below; the next lowest is 120. NO SHIPPED DETECTOR CAN REACH IT: normalizeNameKey gives the singleton group 'cake caramel quaker rice', so detect-corrupt-panel tier 1 has no sibling median at MIN_GROUP=4 and the 0.26 g serving falls outside its [2,600] direct gate; tier 2 emits the inflated direction only; detect-panel-scale-divided requires length(barcode) > 13 and this barcode is exactly 13; and every detect-corrupt-nutrition rule is an upper bound that 100 kcal/100 g violates none of. GROUP: duplicateOfBarcode is NULL in both directions (0 rows point at it) and the dedupe groupKey is a singleton, so the write unit is this one barcode. The corpus holds exactly three other rows carrying this byte-value panel - 0030000433652 'Caramel Rice Crisps' [Quaker], 00003148 'Apple cinnamon rice crisp' [Quaker] and 0774223514612 'Brownie Mix' [Giant Tiger] - and ALL THREE are already detector-marked under different name keys, so there is no panel-twin to co-mark and no unmarked twin for the re-resolution to land on. This is the last unmarked instance of a value the shipped detector has already condemned three times. LIVE CONSEQUENCE: two organic alpha-user hits on 2026-08-28 (18:36:19Z and 18:45:09Z, noCache=f, funnelStage=cache_hit) billed '2 Quaker caramel rice cakes' at 18 g / 18 kcal against a true ~26 g / ~100 kcal.",
+        "source": "D6 + D17 (Diego, 2026-08-28): repair batch 6, Lane A session 26. Cut by the A24 validator triage (reports/2026-08-28_a24-the-validator-queue-triaged-and-a-third-of-it-is-us.md section 5); aim plus three adversarial lenses run by the batch-6 fleet; pre-write snapshot sync-docs/cache-snapshots/OffFood-batch6-pre-2026-08-28.csv",
+        "authoredAt": "2026-08-28",
+        "observed": {
+            "name": "Quaker Caramel Rice Cakes",
+            "kcal100": 100,
+            "protein": 1,
+            "fat": 0.5,
+            "carbs": 23,
+            "servingGrams": 0.2599999904632568
+        },
+        "group": [],
+        "groupExclusions": []
     }
 ]
