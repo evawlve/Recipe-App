@@ -1832,6 +1832,18 @@
       },
       "verified": "2026-08-27",
       "timeoutMs": 30000
+    },
+    {
+      "id": "quaker-caramel-rice-cake-is-hand-marked",
+      "ownerDoc": "sync-docs/log/2026-08-28_*_a_*.md (mobile) — repair batch 6; entry 0280996444044 in src/lib/mapping/corrupt-off-handmarks.json",
+      "claim": "The OffFood row 0280996444044 (\"Quaker Caramel Rice Cakes\", a 2-cake 26 g label written into the per-100 g fields at 100 kcal/100 g, with servingGrams stored as the fraction 0.26) carries the hand-authored mark hand-triage-2026-08-28:panel, so it cannot win a Quaker caramel rice cake query. A NULL here after an OFF refresh means replay-hand-corrupt-marks.ts --apply --replay was not run: the mark is hand-authored and no detector re-derives it — the name key is a singleton below MIN_GROUP, and the barcode is exactly 13 chars so detect-panel-scale-divided's length(barcode) > 13 restriction excludes it.",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc 'SELECT COALESCE(\"corruptReason\", $$NULL$$) FROM \"OffFood\" WHERE barcode = $$0280996444044$$;'",
+      "expect": {
+        "kind": "equals",
+        "value": "hand-triage-2026-08-28:panel"
+      },
+      "verified": "2026-08-28"
     }
   ]
 }
