@@ -163,6 +163,11 @@ fi
 # hand marks was lost, silently, with the re-derive chain reporting success.
 [ -f "$REPO/scripts/replay-hand-corrupt-marks.ts" ]  || { echo "  ❌ scripts/replay-hand-corrupt-marks.ts missing — the hand-authored corruptReason marks would be permanently lost (no rule re-derives them)"; PREFLIGHT_FAIL=1; }
 [ -f "$REPO/src/lib/mapping/corrupt-off-handmarks.json" ] || { echo "  ❌ src/lib/mapping/corrupt-off-handmarks.json missing — the hand-authored marks have no source of truth to replay from and would be permanently lost"; PREFLIGHT_FAIL=1; }
+# The hand-authored PANEL RESCALES. Same survival profile as the hand marks and
+# the same permanent loss if missing: a refresh rewrites nutrientsPer100g from
+# the dump, and no rule re-derives a basis correction.
+[ -f "$REPO/scripts/replay-hand-panel-repairs.ts" ]  || { echo "  ❌ scripts/replay-hand-panel-repairs.ts missing — the hand-authored panel rescales would be permanently lost (no rule re-derives them)"; PREFLIGHT_FAIL=1; }
+[ -f "$REPO/src/lib/mapping/hand-panel-repairs.json" ] || { echo "  ❌ src/lib/mapping/hand-panel-repairs.json missing — the hand-authored panel rescales have no source of truth to replay from and would be permanently lost"; PREFLIGHT_FAIL=1; }
 # THIRD detector, and the only one this script cannot act on — see its stage
 # below for why it reports rather than repairs.
 [ -f "$REPO/scripts/eval/detect-panel-scale-divided.ts" ] || { echo "  ❌ scripts/eval/detect-panel-scale-divided.ts missing — the divided-panel population would be silently re-corrupted"; PREFLIGHT_FAIL=1; }
@@ -415,6 +420,33 @@ case "$HANDMARK_RC" in
      HANDMARK_FAILED=1 ;;
 esac
 
+# The hand-authored PANEL RESCALES — the other instrument for the same evidence.
+# A hand MARK deletes a row from the corpus; a hand REPAIR fixes the basis its
+# numbers were written on and leaves the row selectable. Both are hand-authored,
+# neither is re-derivable, and this stage sits beside the mark replay for that
+# reason. It runs AFTER it so a barcode can never be marked and repaired in the
+# same run — the authored records are pinned disjoint by a unit test.
+#
+# --replay skips the Typesense upsert on purpose: the full sync-typesense.ts
+# rebuild below reindexes every row from Postgres.
+echo "[$(date -Is)] Replaying hand-authored panel rescales..."
+set +e
+node_modules/.bin/ts-node --project tsconfig.scripts.json --transpile-only \
+  -r tsconfig-paths/register scripts/replay-hand-panel-repairs.ts --apply --replay
+PANELREPAIR_RC=$?
+set -e
+case "$PANELREPAIR_RC" in
+  0) echo "[$(date -Is)] Hand panel rescales fully replayed." ;;
+  3) echo "[$(date -Is)] ⚠️  Hand panel rescales replayed with residue (see the skip list above)."
+     echo "     A skipped row is a RE-AUDIT queue item: the live row or its panel WITNESS moved, so"
+     echo "     the authored evidence no longer describes it. The row is left on the refreshed panel." ;;
+  *) echo "[$(date -Is)] ❌ Hand panel-rescale replay FAILED or REFUSED (rc=$PANELREPAIR_RC) — NOTHING was written."
+     echo "     These repairs are unrecoverable by any re-derivation. Fix and replay by hand:"
+     echo "     scripts/replay-hand-panel-repairs.ts            # dry run, prints every refusal"
+     echo "     scripts/replay-hand-panel-repairs.ts --apply --replay"
+     PANELREPAIR_FAILED=1 ;;
+esac
+
 # THIRD detector: the divided-panel population — chain OFF imports whose stored
 # per-100g panel is the per-serving panel divided by the serving size, so a
 # Jersey Mike's Giant and Regular both bill an identical ~173 kcal.
@@ -458,6 +490,11 @@ if [ "${HANDMARK_FAILED:-0}" -eq 1 ]; then
   echo "     refused or crashed and wrote nothing. Nothing else in this script re-derives them —"
   echo "     that is the whole reason they are replayed. Until you re-run it, those records are"
   echo "     back in the Typesense index and can win picks again."
+fi
+if [ "${PANELREPAIR_FAILED:-0}" -eq 1 ]; then
+  echo "[$(date -Is)] ⚠️  HAND-AUTHORED PANEL RESCALES ARE NOT IN THE CORPUS: the replay above"
+  echo "     refused or crashed and wrote nothing. Those rows are back on OFF's own basis — a"
+  echo "     per-serving panel in the per-100g field — and nothing else here re-derives the fix."
 fi
 if [ "$PANEL_FLAGGED" -gt 0 ] 2>/dev/null; then
   echo "[$(date -Is)] ⚠️  DIVIDED-PANEL REPAIR IS LOST: $PANEL_FLAGGED rows are billing a"

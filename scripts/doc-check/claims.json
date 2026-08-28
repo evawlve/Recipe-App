@@ -1844,6 +1844,30 @@
         "value": "hand-triage-2026-08-28:panel"
       },
       "verified": "2026-08-28"
+    },
+    {
+      "id": "bun-cha-panel-is-rescaled-not-marked",
+      "ownerDoc": "sync-docs/log/2026-08-28_*_a_*.md (mobile) — the batch-6 bun cha hold; entry 0063383036356 in src/lib/mapping/hand-panel-repairs.json",
+      "claim": "The OffFood row 0063383036356 (\"Bun cha\") carries the per-100 g panel it should always have had — 143.3 kcal/100 g, the 300 g whole-bowl numbers divided back onto a 100 g basis — and NO corruptReason. Our own 2026-08-14 hand mark had the diagnosis right and the instrument wrong: it deleted an exact-name record the pipeline selected unaided for 19 days, and every draw after it billed a char siu BAO (off_0844259099886) at a 100 g floor instead. A 430 here means an OFF refresh re-imported the per-serving panel and replay-hand-panel-repairs.ts --apply --replay was not run; a non-NULL corruptReason means the hand-MARK record was not the one edited.",
+      "where": "box",
+      "command": "docker exec mealspire-db psql -U postgres -d mealspire -tAc 'SELECT round((\"nutrientsPer100g\"->>$$calories$$)::numeric) || $$@$$ || COALESCE(\"corruptReason\", $$NULL$$) FROM \"OffFood\" WHERE barcode = $$0063383036356$$;'",
+      "expect": {
+        "kind": "equals",
+        "value": "143@NULL"
+      },
+      "verified": "2026-08-28"
+    },
+    {
+      "id": "hand-panel-rescales-have-a-replay-mechanism",
+      "ownerDoc": "mobile:sync-docs/backend_integration_guide.md",
+      "claim": "The hand-authored PANEL RESCALE population has both halves of its replay mechanism present, and refresh-off-from-parquet.sh preflights and runs it. Same survival profile as the hand MARKS beside it: a refresh rewrites nutrientsPer100g from the upstream dump and no rule re-derives a basis correction, so losing either half is permanent. The two instruments are deliberately disjoint — a barcode may be hand-marked or hand-repaired, never both (pinned by src/lib/mapping/__tests__/hand-panel-repair.test.ts).",
+      "where": "backend",
+      "command": "echo \"$(ls scripts/replay-hand-panel-repairs.ts src/lib/mapping/hand-panel-repairs.json 2>/dev/null | wc -l | tr -d ' ')@$(grep -c 'replay-hand-panel-repairs.ts' scripts/refresh-off-from-parquet.sh)\"",
+      "expect": {
+        "kind": "matches",
+        "value": "^2@[2-9]$"
+      },
+      "verified": "2026-08-28"
     }
   ]
 }

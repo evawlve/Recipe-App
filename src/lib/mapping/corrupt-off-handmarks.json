@@ -373,24 +373,6 @@
         "groupExclusions": []
     },
     {
-        "barcode": "0063383036356",
-        "class": "panel",
-        "seed": "bun cha",
-        "reason": "The 300 g whole-bowl panel written into the per-100g field. All SEVEN nutrient fields are exactly 3.000000x off_0060383068356 'Chicken Bun Cha' [President's Choice], and both rows carry servingGrams 300 - the factor IS the 300 g -> 100 g conversion that was never applied. Corroborated independently: macros sum to 92 g per 100 g, a 92%-dry-solids product, impossible for a wet pork-and-noodle bowl.",
-        "source": "tail-audit-phase1-2026-08-11",
-        "authoredAt": "2026-08-14",
-        "observed": {
-            "name": "Bun cha",
-            "kcal100": 430.0,
-            "protein": 16.0,
-            "fat": 13.0,
-            "carbs": 63.0,
-            "servingGrams": 300.0
-        },
-        "group": [],
-        "groupExclusions": []
-    },
-    {
         "barcode": "9320443000001",
         "class": "panel",
         "seed": "cheese fetta",
