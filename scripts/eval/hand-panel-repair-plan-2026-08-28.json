@@ -1,0 +1,49 @@
+{
+ "planKind": "hand-panel-repair",
+ "planVersion": 1,
+ "at": "2026-08-28T22:49:06.032Z",
+ "authoredSha256": "804efc2e3d4503cb6fcd6747db3cb1f6b8871e9bfff8e3e3d013d3b70de258a7",
+ "entries": [
+  {
+   "barcode": "0063383036356",
+   "seed": "bun cha",
+   "authoredAt": "2026-08-28",
+   "clearsMark": "hand-triage-2026-08-14:panel",
+   "name": "Bun cha",
+   "servingGrams": 300,
+   "before": {
+    "fat": 13,
+    "carbs": 63,
+    "fiber": 2,
+    "sodium": 1.019999980926514,
+    "sugars": 27,
+    "protein": 16,
+    "calories": 430
+   },
+   "after": {
+    "fat": 4.333333333333333,
+    "carbs": 21,
+    "fiber": 0.6666666666666666,
+    "sodium": 0.3399999936421713,
+    "sugars": 9,
+    "protein": 5.333333333333333,
+    "calories": 143.33333333333334
+   },
+   "witnessBarcode": "0060383068356",
+   "witnessPanel": {
+    "fat": 4.333333492279053,
+    "carbs": 21,
+    "fiber": 0.6666666865348816,
+    "sodium": 0.3400000035762787,
+    "sugars": 9,
+    "protein": 5.333333492279053,
+    "calories": 143.3333282470703
+   }
+  }
+ ],
+ "skipped": [],
+ "snapshot": {
+  "pre": "COPY (SELECT barcode, \"corruptReason\", \"nutrientsPer100g\", \"servingGrams\", \"updatedAt\" FROM \"OffFood\" WHERE barcode IN ('0063383036356') ORDER BY barcode) TO STDOUT WITH (FORMAT csv, HEADER)",
+  "post": "COPY (SELECT barcode, \"corruptReason\", \"nutrientsPer100g\", \"servingGrams\", \"updatedAt\" FROM \"OffFood\" WHERE barcode IN ('0063383036356') ORDER BY barcode) TO STDOUT WITH (FORMAT csv, HEADER)"
+ }
+}

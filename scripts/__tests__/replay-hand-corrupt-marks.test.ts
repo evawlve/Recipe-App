@@ -572,9 +572,19 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         // Group is the one barcode: duplicateOfBarcode NULL both ways and a
         // singleton dedupe groupKey. Owner: the Lane A session-26 write-off
         // (mobile sync-docs/log/2026-08-28_*_a_*.md).
+        //
+        // 26 -> 25 on 2026-08-28: barcode 0063383036356 ("Bun cha") LEFT this
+        // file for src/lib/mapping/hand-panel-repairs.json. Its 2026-08-14 mark
+        // had the diagnosis right (a 300 g whole-bowl panel in the per-100g
+        // field, exactly 3.000000x a live witness row) and the instrument
+        // wrong: the factor was determinable, so the row was repairable rather
+        // than junk, and suppressing it handed `bun cha` to a char siu BAO for
+        // 19 days. A barcode must appear in exactly one of the two authored
+        // records — hand-panel-repair.test.ts pins them disjoint — or the
+        // refresh chain would repair a row and then re-mark it in the same run.
         if (!parsed.ok) throw new Error('unparseable');
-        expect(parsed.entries.length).toBe(26);
-        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(34);
+        expect(parsed.entries.length).toBe(25);
+        expect(parsed.entries.reduce((n, e) => n + 1 + e.group.length, 0)).toBe(33);
     });
 
     it('carries the duplicate-group members that make a barcode-scoped mark self-reverting', () => {
@@ -618,7 +628,11 @@ describe('the shipped corrupt-off-handmarks.json', () => {
         for (const e of parsed.entries) byGen.set(e.authoredAt, (byGen.get(e.authoredAt) ?? 0) + 1);
         expect([...byGen.keys()].sort()).toEqual(['2026-08-12', '2026-08-14', '2026-08-15', '2026-08-25', '2026-08-28']);
         expect(byGen.get('2026-08-12')).toBe(15);
-        expect(byGen.get('2026-08-14')).toBe(8);
+        // 8 -> 7 on 2026-08-28: 0063383036356 was re-instrumented as a panel
+        // RESCALE (see the entry-count test above). That NARROWS the 08-14
+        // batch's --clear-prefix rollback unit, which is a deliberate,
+        // reviewed change and is why this number is pinned at all.
+        expect(byGen.get('2026-08-14')).toBe(7);
         expect(byGen.get('2026-08-15')).toBe(1);
         expect(byGen.get('2026-08-25')).toBe(1);
         expect(byGen.get('2026-08-28')).toBe(1);

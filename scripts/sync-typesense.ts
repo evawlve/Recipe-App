@@ -7,7 +7,7 @@ import {
     importTypesenseDocuments,
     isTypesenseAvailable
 } from '../src/lib/search/typesense-client';
-import { servingLabelHasPieceCount } from '../src/lib/mapping/count-label';
+import { buildOffIndexDoc, OffIndexRow } from '../src/lib/ops/off-index-doc';
 
 async function main() {
     console.log('🚀 Starting Typesense database synchronization...');
@@ -143,22 +143,12 @@ async function main() {
         if (batch.length === 0) break;
         lastBarcode = batch[batch.length - 1].barcode;
 
+        // Document construction is shared with the targeted single-row upsert
+        // (scripts/replay-hand-panel-repairs.ts) so the two cannot drift —
+        // see src/lib/ops/off-index-doc.ts.
         const offDocs = batch.map(f => {
-            const doc: Record<string, unknown> = {
-                id: String(f.barcode), // key TS doc by barcode so upserts are idempotent (no duplicates)
-                barcode: String(f.barcode),
-                name: f.name,
-                brandName: f.brandName || '',
-                nutrientsPer100g: JSON.stringify(f.nutrientsPer100g || {}),
-                servingGrams: f.servingGrams != null ? Number(f.servingGrams) : null,
-                servingSize: f.servingSize || '',
-                categories: f.categories || '',
-                hasCountServing: servingLabelHasPieceCount(f.servingSize, f.servingGrams != null ? Number(f.servingGrams) : null)
-            };
-            if (f.embedding) {
-                doc.embedding = JSON.parse(f.embedding) as number[];
-                embedded++;
-            }
+            const doc = buildOffIndexDoc(f as OffIndexRow);
+            if (doc.embedding) embedded++;
             return doc;
         });
 

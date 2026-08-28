@@ -1,0 +1,28 @@
+[
+  {
+    "barcode": "0063383036356",
+    "class": "serving-panel",
+    "seed": "bun cha",
+    "reason": "The 300 g whole-bowl panel was written into the per-100g field. All SEVEN nutrient fields are exactly 3.000000x off_0060383068356 'Chicken Bun Cha' [President's Choice], and BOTH rows carry servingGrams 300 - so the factor is the 300 g -> 100 g conversion that was never applied, and the witness row is what that conversion lands on. Our own 2026-08-14 hand mark (corrupt-off-handmarks.json, entry now removed) reached the SAME diagnosis and chose the wrong instrument: the mark deleted an exact-name record the pipeline had selected unaided for 19 days, and every draw since 2026-08-14 22:12 billed a char siu BAO (off_0844259099886) at a 100 g count_unresolved_floor instead. Repairing the basis restores the pre-mark bill (300 g / 430 kcal) with no sticky stamp. A repoint was rejected instead: bun cha is definitionally grilled PORK, the only repoint target is a chicken variant at 5.33 g protein/100 g, and it would make a Canadian retailer's private label the permanent answer to a generic dish query.",
+    "source": "repair-batch-6-hold-2026-08-28",
+    "authoredAt": "2026-08-28",
+    "clearsMark": "hand-triage-2026-08-14:panel",
+    "observed": {
+      "name": "Bun cha",
+      "servingGrams": 300,
+      "panel": {
+        "fat": 13,
+        "carbs": 63,
+        "fiber": 2,
+        "sodium": 1.019999980926514,
+        "sugars": 27,
+        "protein": 16,
+        "calories": 430
+      }
+    },
+    "witness": {
+      "barcode": "0060383068356",
+      "note": "off_0060383068356 'Chicken Bun Cha' [President's Choice], servingGrams 300, stores fat 4.333333492279053 / carbs 21 / fiber 0.6666666865348816 / sodium 0.3400000035762787 / sugars 9 / protein 5.333333492279053 / calories 143.3333282470703 - byte-equal to this row's panel divided by 3, on every field. A PANEL witness, not an identity claim: the two are different products (pork vs chicken), and what the agreement establishes is the BASIS the numbers are written on."
+    }
+  }
+]
