@@ -1650,7 +1650,7 @@ function isFoodThatMustHaveCalories(candidateName?: string): boolean {
  *   the food belongs to a category that MUST have calories (for the all-zero check)
  */
 export function hasNullOrInvalidMacros(
-    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null,
+    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null; fiber?: number | null } | null,
     candidateName?: string
 ): boolean {
     // If nutrients object doesn't exist, we can't validate - allow through
@@ -1728,10 +1728,33 @@ export function hasNullOrInvalidMacros(
     const protein = nutrients.protein ?? 0;
     const carbs = nutrients.carbs ?? 0;
     const fat = nutrients.fat ?? 0;
+    const fiber = nutrients.fiber ?? 0;
+
+    // FIBRE. A US label reports TOTAL carbohydrate with fibre inside it, and
+    // fibre yields ~0-2 kcal/g rather than 4 — so charging the whole carb figure
+    // at 4 kcal/g systematically OVER-computes exactly the labels that lead with
+    // fibre, and this check then reads them as corrupt. Measured 2026-08-28:
+    // 477 retrieval-eligible OffFood rows fail this check on total carbs, 367 of
+    // them carrying fibre >= 10 g/100 g. The class is every high-fibre product on
+    // the shelf: `off_0856711006509` "Inked Keto Sourdough" (111 kcal, P 14.8,
+    // C 40.7 of which 37 g fibre, F 3.7) computes 255.3 against a 222 ceiling and
+    // is DELETED BEFORE RANKING — filterCandidatesByTokens calls this
+    // unconditionally, so no ranking change can reach it. On net carbs it
+    // computes 107.3 and is admitted. All seven 111-kcal Inked sourdough rows
+    // fail identically.
+    //
+    // The rejection must hold on BOTH readings of the label, so the check is
+    // charged on net carbs — the lower of the two — and stays admit-only.
+    //
+    // NOT relaxed when fibre EXCEEDS carbs. That is physically impossible and a
+    // different defect (10,053 corpus rows, 1.22%, queued separately); granting
+    // it the largest possible relaxation on the strength of an incoherent label
+    // would let this fix quietly adopt a population it was never measured on.
+    const chargeableCarbs = fiber > 0 && fiber <= carbs ? carbs - fiber : carbs;
 
     // Only check if we have at least one macro value
     if (protein > 0 || carbs > 0 || fat > 0) {
-        const computedCalories = (protein * 4) + (carbs * 4) + (fat * 9);
+        const computedCalories = (protein * 4) + (chargeableCarbs * 4) + (fat * 9);
 
         if (calories > 0) {
             // Case 1: If computed is more than 2x reported, macros are clearly wrong
@@ -2913,11 +2936,20 @@ export function filterCandidatesByTokens(
         // Helper to extract nutrients for checks
         let nutrientsToCheck: any = null;
         if (candidate.nutrition && candidate.nutrition.per100g) {
+            // `fiber` is read off rawData rather than candidate.nutrition
+            // because UnifiedCandidate.nutrition carries only kcal/protein/
+            // carbs/fat — it structurally cannot hold it. Widening that shape
+            // means editing gather-candidates.ts, which is RETRIEVAL_PATHS and
+            // voids the frozen-pool gate this change is measured on. Without
+            // this line the fibre rule below is dead on every candidate that
+            // arrives with a per-100g nutrition block.
+            const rawFiber = candidate.rawData?.nutrientsPer100g?.fiber;
             nutrientsToCheck = {
                 calories: candidate.nutrition.kcal,
                 protein: candidate.nutrition.protein,
                 fat: candidate.nutrition.fat,
-                carbs: candidate.nutrition.carbs
+                carbs: candidate.nutrition.carbs,
+                fiber: typeof rawFiber === 'number' && isFinite(rawFiber) ? rawFiber : null,
             };
         } else if (candidate.rawData && candidate.rawData.nutrientsPer100g) {
             nutrientsToCheck = candidate.rawData.nutrientsPer100g;
