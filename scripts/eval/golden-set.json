@@ -7795,6 +7795,28 @@
       "notes": "K2 (2026-08-25, Lane A, A8 build order row 3, second half). deriveMustHaveTokens() spent the food slot on the first core token in order, which on a menu item is the modifier, never the dish. K2 spends that slot on the HEAD NOUN, with two guards its own first gate proved it needed: the two slots are the brand token and the head noun (never slot 0, which can BE the head and would collapse the requirement to one token), and the head token tolerantly matches a candidate token ending with it or sharing a >=5-char prefix within 2 chars of its length (Chicken Fingerz), while a relax pass on an emptied pool keeps the BRAND token, never the head alone (the Kowalskis butter-burger-buns lesson). Ships PAIRED with N1, N1 first (D-N1, Diego 2026-08-25). Owner: KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-and-the-two-guards-it-needed.md. Pre-fix the food slot went to 'biggie' and the pick landed on fs_123911781 \"Biggie Bites\" [Wendy's], 135 g / 270 kcal (cold on Gp4AsbVJN027dnQaPgn6C). On g0Wf3qBUpQkLOSTV2me4G: fs_10015914 \"Baconator Fries\", 225 g / 450 kcal -- not the Natural-Cut Fries the census wanted, but it is fries. Banded total rather than kcal100 DELIBERATELY: Biggie Bites and Baconator Fries are both exactly 200 kcal/100 g (270/135 and 450/225), so per-100g cannot separate the dish from the bites at all; the billed total can, and [293,608] is the observed record's own serving +/-35% per the STANDING RULE. If a future draw lands a smaller real fries record (a small Natural-Cut is ~270 kcal) the band reds -- that is a re-adjudication trigger for THIS band, not noise; re-band on the record that actually wins."
     },
     {
+      "id": "n-eh-01",
+      "category": "brand_led_admission",
+      "text": "martin's potato hot dog buns",
+      "expectName": [
+        [
+          "martin"
+        ]
+      ],
+      "forbidName": [
+        [
+          "farm boy"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          172,
+          356
+        ]
+      },
+      "notes": "A22 (2026-08-27, Lane A). THE EMPIRICAL HEAD. K2 spends the food slot on the LAST non-brand core token; here that is `buns`, and no record in the 29-candidate pool spells it ALONGSIDE the brand, so filterCandidatesByTokens() deleted all 29 and the caller relaxed to ['martin'] -- brand alone -- and won off_0219478804991 \"Potato Hot Dog Buns\" [FARM BOY], a different company's product billed under the brand the user named. That is the Kowalskis butter-burger-buns failure K2's own relax guard was written for, reproduced. A22 steps the head back to the last EARLIER non-brand core token some candidate carries together with the brand slot -- `dog` -- and admission keeps exactly one row, fs_4591163 \"Potato Hot Dog Roll\" [Martin's] at 53 g / 140 kcal on fs_default_serving, which is that product's own label. Frozen-pool winner-diff, 2026-08-27: 255/257 SAME cold, 246/250 SAME regression, noise floor 0/257 both trees; this row is the only WINNER-CHANGED in the cold population. expectName is the BRAND because brand-correctness is the defect; forbidName names the exact foreign-brand record the relax pass admitted. Banded kcal100 rather than total DELIBERATELY: the query is PLURAL and both sides bill one unit (80 g bare_plural_serving vs 53 g fs_default_serving), so a total band would assert on an open question -- how a bare plural should count -- rather than on the fix. The 264 +/-35% band does NOT separate the two records (Farm Boy reads 250) and is carried as a wrong-panel floor per the n-k2-02 precedent; the NAME is the discriminator. Owner: KindaHealthyMobile sync-docs/reports/2026-08-27_a22-the-empirical-head-and-the-faces-that-were-never-admission.md"
+    },
+    {
       "id": "n-p1-01",
       "category": "brand_led_product_name",
       "text": "zaxbys boneless wings",

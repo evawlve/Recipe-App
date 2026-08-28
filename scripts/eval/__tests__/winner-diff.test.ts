@@ -528,10 +528,17 @@ describe('parseGoldenSet', () => {
         // other). n-p2-02 and n-cn-01 DO carry grams, because on those two the identity was
         // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
         // 12 wings at the 100 g no-serving default vs at the 34 g seed.
-        expect(all.length).toBe(300);
+        // 301 / 171 / 135 since 2026-08-27: n-eh-01 (A22, the empirical head). One `text`
+        // line and NO new grams band: the query is PLURAL and both arms bill one unit
+        // (80 g bare_plural_serving vs 53 g fs_default_serving), so a grams or total band
+        // would assert on an open question -- how a bare plural should count -- rather than
+        // on the fix, which is brand identity. It carries kcal100 as a wrong-panel floor
+        // and the discriminator is the NAME (expectName the brand, forbidName the exact
+        // foreign-brand record the relax pass admitted).
+        expect(all.length).toBe(301);
 
         const n = (pred: (c: GoldenCase) => boolean) => all.filter(pred).length;
-        expect(n(c => c.expectName.length > 0)).toBe(300);
+        expect(n(c => c.expectName.length > 0)).toBe(301);
         // 150 since 2026-08-15 (n-micro-01); 162 since 2026-08-17 (the twelve one-item prose lines)
         // 171 since 2026-08-26: n-p2-02 and n-cn-01 (A8 row 5) — the two of six new cases
         // where identity held on both arms and only the count moved.
@@ -547,7 +554,8 @@ describe('parseGoldenSet', () => {
         // 94 since 2026-08-26: n-p1-01 (A8 row 5) — kcal100 rather than a total band,
         // because what was 5.8x wrong on that line is the SERVING (725 g of a combo
         // platter vs 126 g of 5 boneless wings), not the density.
-        expect(n(c => !!c.macros)).toBe(94);
+        // 95 since 2026-08-27: n-eh-01 (A22) -- kcal100, carried as a wrong-panel floor.
+        expect(n(c => !!c.macros)).toBe(95);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
         expect(n(c => typeof c.expectItems === 'number')).toBe(63);
@@ -590,7 +598,11 @@ describe('parseGoldenSet', () => {
         // sandwich chain's fountain listing, once `leaf` was gone) and `fries` (Fries,
         // Little, once `five` had been read as a count). n-p2-02 and n-cn-01 carry
         // grams bands instead, because there the identity never moved.
-        expect(n(c => !!c.forbidName)).toBe(10);
+        // 11 since 2026-08-27: n-eh-01 (A22) forbids `farm boy` -- the exact foreign-brand
+        // record the relax pass admitted for `martin's potato hot dog buns`. Same use as
+        // K2's crust/tender/bites: the discriminator is the NAME, because the two records
+        // this case separates are 250 vs 264 kcal/100 g and no band separates those.
+        expect(n(c => !!c.forbidName)).toBe(11);
         expect(n(c => c.expectAbstain === true)).toBe(0);
         expect(n(c => typeof c.maxConfidence === 'number')).toBe(0);
         // no case asserts nothing at all
@@ -634,7 +646,8 @@ describe('parseGoldenSet', () => {
         // text 134 since 2026-08-26: all six A8 row 5 cases are `text`, because the
         // defect is in the PARSER and an item-shaped case supplies name/qty/unit
         // directly — it would bypass the very code under test.
-        expect([item.length, text.length]).toEqual([166, 134]);
+        // 135 text since 2026-08-27: n-eh-01 (A22), a bare `text` line like the K2 set.
+        expect([item.length, text.length]).toEqual([166, 135]);
         expect(item.filter(c => c.grams).length).toBe(119);
         expect(item.filter(c => c.macros).length).toBe(48);
         // 17 since 2026-08-07: n-mq-34 (item shape) gained a total.calories band.
@@ -896,14 +909,19 @@ describe('structurallyBlindBands / goldenCoverage over the REAL corpus', () => {
         // together, and both were gated on locally-served builds (K2's frozen-pool gate
         // is in the k2-gate-2026-08-25 artifacts; the live pair is 3/3 red on
         // Gp4AsbVJN027dnQaPgn6C, 3/3 green on g0Wf3qBUpQkLOSTV2me4G).
-        expect(cov.cases).toBe(300);
+        // 301 / 58 since 2026-08-27 (n-eh-01, A22 the empirical head): no new `total`
+        // and no new grams band. UNLIKE N1/K2 this one IS gateable by the selection
+        // replay and was gated by it -- filter-candidates.ts is not a FROZEN_INPUT path,
+        // so the frozen-pool winner-diff observes the change directly (255/257 SAME cold,
+        // 246/250 SAME regression, noise floor 0 on both trees).
+        expect(cov.cases).toBe(301);
         expect(kind('grams')).toEqual({ kind: 'grams', asserted: 171, blind: 171 });
         // 37 since 2026-08-07: n-mq-34's total.calories band (see the count pin above).
         expect(kind('total')).toEqual({ kind: 'total', asserted: 58, blind: 58 });
         expect(kind('expectItems')).toEqual({ kind: 'expectItems', asserted: 63, blind: 63 });
         // expectName is judgeable except on the segmenter-bound text lines
         const en = kind('expectName');
-        expect(en.asserted).toBe(300);
+        expect(en.asserted).toBe(301);
         expect(en.blind).toBeGreaterThan(0);
         expect(en.blind).toBeLessThan(274);
         // every grams band in the corpus is unjudgeable here...

@@ -2562,7 +2562,7 @@ export function filterCandidatesByTokens(
     const isSupplementQuery = SUPPLEMENT_QUERY_RE.test(modifierCheckSource);
 
     // Extract must-have tokens
-    let mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    let mustHaveTokens = deriveMustHaveTokens(normalizedName, candidates);
 
     // Is this a line whose final must-have slot keepAFoodToken() may have RE-AIMED onto a
     // head noun (K2)? The tolerant head-noun match in the loop below exists ONLY for that
@@ -2603,28 +2603,11 @@ export function filterCandidatesByTokens(
 
     // Filter candidates
     const filtered = candidates.filter(candidate => {
-        const candidateName = normalizeCandidateName(candidate);
-        // Possessive brands are invisible to the required-token check: "Trader
-        // Joe's" tokenizes to {trader, joe}, so the query token `joes` matches
-        // nothing and the entire Trader Joe's catalogue is filtered out before
-        // rerank ever sees it (warm batch 01: `trader joes scandinavian
-        // swimmers` went 12 candidates → 1, and the 1 survivor was the only
-        // record whose brand string happened to omit the apostrophe).
-        //
-        // The folded spelling is *added* to the token set and tested *alongside*
-        // the raw name, never substituted for it. That makes this change
-        // admit-only by construction rather than by measurement: the token set
-        // is a superset of today's and the regex tests are a disjunction over
-        // today's, so no candidate that survives the check today can fail it
-        // now. Substituting instead (fold in place) would drop `wendy's`-style
-        // pairs, because the query side would then have to fold too.
-        const candidateNameFolded = foldApostrophes(candidateName);
-        const hasApostrophe = candidateNameFolded !== candidateName;
-        const candidateTokens = hasApostrophe
-            ? new Set([...tokenize(candidateName), ...tokenize(candidateNameFolded)])
-            : tokenize(candidateName);
-        const matchesName = (pattern: RegExp): boolean =>
-            pattern.test(candidateName) || (hasApostrophe && pattern.test(candidateNameFolded));
+        // The name index and the strict token matcher live in indexCandidateName() and
+        // spellsTokenExactly() below — lifted out of this loop verbatim, comments and
+        // rung order included, so that A22's head chooser reads the SAME predicate this
+        // loop enforces instead of a copy that is free to drift.
+        const nameIndex = indexCandidateName(candidate);
 
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
@@ -2707,40 +2690,10 @@ export function filterCandidatesByTokens(
         // Basic Token Check (Sanity Check)
         // Ensure at least the core identity is present
         const hasRequiredTokens = mustHaveTokens.every(token => {
-            // Direct match in tokenized set (already word-bounded)
-            if (candidateTokens.has(token)) {
+            // The four STRICT rungs — tokenized set, word-bounded name, singular/plural
+            // variants, British/American synonyms — in their original order.
+            if (spellsTokenExactly(nameIndex, token)) {
                 return true;
-            }
-            // Word boundary match in full name (prevents "ice" matching "rice")
-            // Use regex with word boundaries instead of includes()
-            const wordBoundaryRegex = new RegExp(`\\b${token}\\b`, 'i');
-            if (matchesName(wordBoundaryRegex)) {
-                return true;
-            }
-
-            // Dynamic singular/plural variant check
-            // e.g., "strawberry" should match candidates with "strawberries"
-            const variants = getSingularPluralVariants(token);
-            for (const variant of variants) {
-                if (variant !== token) {
-                    if (candidateTokens.has(variant)) {
-                        return true;
-                    }
-                    const variantRegex = new RegExp(`\\b${variant}\\b`, 'i');
-                    if (matchesName(variantRegex)) {
-                        return true;
-                    }
-                }
-            }
-
-            // Try synonym matches (for British → American translations)
-            const synonyms = TOKEN_SYNONYMS[token];
-            if (synonyms) {
-                if (synonyms.some(syn =>
-                    candidateTokens.has(syn) || matchesName(new RegExp(`\\b${syn}\\b`, 'i'))
-                )) {
-                    return true;
-                }
             }
 
             // LAST RESORT, and only for the HEAD NOUN on a BRAND-DETECTED line — the final
@@ -2757,12 +2710,9 @@ export function filterCandidatesByTokens(
             // its length (near-spelling). The length guards are what stop this becoming
             // substring matching: `bar` may not find `barbecue`, and `wings` may not find
             // `wingstop` (prefix 5 but 3 characters longer, i.e. a different word).
-            if (headNounReAimable && token === mustHaveTokens[mustHaveTokens.length - 1] && token.length >= 5) {
-                for (const cand of candidateTokens) {
-                    if (cand.length > token.length && cand.endsWith(token)) return true;
-                    if (Math.abs(cand.length - token.length) <= 2
-                        && cand.slice(0, 5) === token.slice(0, 5)) return true;
-                }
+            if (headNounReAimable && token === mustHaveTokens[mustHaveTokens.length - 1]
+                && spellsHeadTolerantly(nameIndex, token)) {
+                return true;
             }
             return false;
         });
@@ -2976,7 +2926,7 @@ export function filterCandidatesByTokens(
 // Token Derivation
 // ============================================================
 
-export function deriveMustHaveTokens(normalizedName: string): string[] {
+export function deriveMustHaveTokens(normalizedName: string, candidates?: UnifiedCandidate[]): string[] {
     const tokens = normalizedName
         .toLowerCase()
         .split(/[^\w]+/)
@@ -3097,7 +3047,7 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
     // e.g. "low fat popcorn" → coreTokens=["popcorn"] ("low" is now a MODIFIER) → requires "popcorn"
     // e.g. "almond flour" → coreTokens=["almond","flour"] → requires both to be present
     if (coreTokens.length >= 1) {
-        return keepAFoodToken(coreTokens.slice(0, 2), coreTokens, normalizedName);
+        return keepAFoodToken(coreTokens.slice(0, 2), coreTokens, normalizedName, candidates);
     }
 
     // If ALL tokens are modifiers (rare), just use the first token
@@ -3112,6 +3062,105 @@ function normalizeCandidateName(candidate: UnifiedCandidate): string {
     const parts = [candidate.name];
     if (candidate.brandName) parts.push(candidate.brandName);
     return parts.join(' ').toLowerCase();
+}
+
+/**
+ * The per-candidate strings the required-token check reads, computed once.
+ *
+ * Possessive brands are invisible to that check: "Trader Joe's" tokenizes to
+ * {trader, joe}, so the query token `joes` matches nothing and the entire Trader
+ * Joe's catalogue is filtered out before rerank ever sees it (warm batch 01:
+ * `trader joes scandinavian swimmers` went 12 candidates -> 1, and the 1 survivor
+ * was the only record whose brand string happened to omit the apostrophe).
+ *
+ * The folded spelling is *added* to the token set and tested *alongside* the raw
+ * name, never substituted for it: the token set is a superset of the unfolded one
+ * and the regex tests are a disjunction over it, so no candidate that survives the
+ * check without folding can fail it with folding. Substituting instead (fold in
+ * place) would drop `wendy's`-style pairs, because the query side would then have
+ * to fold too.
+ */
+interface CandidateNameIndex {
+    candidateName: string;
+    candidateNameFolded: string;
+    hasApostrophe: boolean;
+    candidateTokens: Set<string>;
+}
+
+function indexCandidateName(candidate: UnifiedCandidate): CandidateNameIndex {
+    const candidateName = normalizeCandidateName(candidate);
+    const candidateNameFolded = foldApostrophes(candidateName);
+    const hasApostrophe = candidateNameFolded !== candidateName;
+    const candidateTokens = hasApostrophe
+        ? new Set([...tokenize(candidateName), ...tokenize(candidateNameFolded)])
+        : tokenize(candidateName);
+    return { candidateName, candidateNameFolded, hasApostrophe, candidateTokens };
+}
+
+/**
+ * Does this candidate spell `token`, STRICTLY?
+ *
+ * The four rungs the must-have check has always used, in their original order: the
+ * tokenized set, a word-bounded match on the full name (so `ice` cannot find `rice`),
+ * the dynamic singular/plural variants, and the British -> American synonyms.
+ *
+ * Deliberately NOT the tolerant head-noun rung, which is `spellsHeadTolerantly()` below:
+ * the two are separate because only the LAST must-have token, on a brand-detected line,
+ * gets the tolerant one. Both readers — this loop and chooseHead() — compose them the
+ * same way, which is the point of naming them at all.
+ */
+function spellsTokenExactly(index: CandidateNameIndex, token: string): boolean {
+    const { candidateName, candidateNameFolded, hasApostrophe, candidateTokens } = index;
+    const matchesName = (pattern: RegExp): boolean =>
+        pattern.test(candidateName) || (hasApostrophe && pattern.test(candidateNameFolded));
+
+    if (candidateTokens.has(token)) return true;
+    if (matchesName(new RegExp(`\\b${token}\\b`, 'i'))) return true;
+
+    for (const variant of getSingularPluralVariants(token)) {
+        if (variant === token) continue;
+        if (candidateTokens.has(variant)) return true;
+        if (matchesName(new RegExp(`\\b${variant}\\b`, 'i'))) return true;
+    }
+
+    const synonyms = TOKEN_SYNONYMS[token];
+    if (synonyms && synonyms.some(syn =>
+        candidateTokens.has(syn) || matchesName(new RegExp(`\\b${syn}\\b`, 'i'))
+    )) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * The LAST RESORT rung, and only for the HEAD NOUN on a BRAND-DETECTED line — the final
+ * must-have token, which since K2 is the dish there. Requiring it word-bounded-exact
+ * deletes the right record whenever the menu spells it differently, and that deletion
+ * happens BEFORE buildRerankPool(), so no ranking change can recover it:
+ *
+ *   zaxby's chicken fingers  vs  "Chicken Fingerz"   (a near-spelling)
+ *   pizza hut cheese sticks  vs  "Breadsticks"       (a compound ending in the head)
+ *
+ * Two shapes, both deliberately narrow. A candidate token may END WITH the head
+ * (compound), or share a >=5-character prefix with it AND be within 2 characters of its
+ * length (near-spelling). The length guards are what stop this becoming substring
+ * matching: `bar` may not find `barbecue`, and `wings` may not find `wingstop` (prefix 5
+ * but 3 characters longer, i.e. a different word).
+ *
+ * SCOPE lives at the two call sites, not here: the filter loop gates it on
+ * `headNounReAimable` (ungated it fired on every line's second slot and admitted
+ * `Chipsy tzatziki` for `5 tzatziki chips`), and chooseHead() is only ever reached from
+ * inside keepAFoodToken()'s brand-detected branch, which is the same condition.
+ */
+function spellsHeadTolerantly(index: CandidateNameIndex, token: string): boolean {
+    if (token.length < 5) return false;
+    for (const cand of index.candidateTokens) {
+        if (cand.length > token.length && cand.endsWith(token)) return true;
+        if (Math.abs(cand.length - token.length) <= 2
+            && cand.slice(0, 5) === token.slice(0, 5)) return true;
+    }
+    return false;
 }
 
 function tokenize(text: string): Set<string> {
@@ -3137,6 +3186,77 @@ function tokenize(text: string): Set<string> {
  */
 function foldApostrophes(text: string): string {
     return text.replace(/['’`]/g, '');
+}
+
+/**
+ * A22 — THE HEAD IS EMPIRICAL WHEN THE POOL REFUSES THE POSITIONAL ONE.
+ *
+ * K2 spends the food slot on the LAST non-brand core token, and that is positional in
+ * 93.4% of the lines it governs (1,508 of 1,614 two-slot brand-detected corpus lines
+ * are ones where the head IS the raw line's last word; measured 2026-08-27 by calling
+ * the shipped functions over `coverage-corpus-2026-08-08.tsv`). Positional is right far
+ * more often than not — a menu item's dish really is its last word — but when the last
+ * word is a variant/flavour suffix the pool does not carry, requiring it is a HARD
+ * DELETE with no ratio and no coverage threshold, taken BEFORE buildRerankPool(), so no
+ * ranking change downstream can recover the record.
+ *
+ * So: if NO candidate spells the positional head, step back to the last earlier
+ * non-brand core token that some candidate DOES spell. Three properties, each of which
+ * is a guard A21 asked for by name:
+ *
+ *   1. It never drops the requirement. When nothing earlier is spelled either, the head
+ *      stays positional and the line filters exactly as it does today — the same rule
+ *      keepAFoodToken() already enforces for the brand slot.
+ *   2. It only ever moves EARLIER. The scan runs backwards over the same non-brand core
+ *      list, so the head is always a token the user typed, never a widening.
+ *   3. It asks the QUESTION THE LOOP WILL ANSWER — the same predicate, on the same
+ *      candidate, including the tolerant head-noun rung. A21 asked for the strict
+ *      matcher here; measurement corrects that. Testing strictly while the loop admits
+ *      tolerantly moves the head AWAY from a token the loop would have accepted:
+ *      `zaxbys chicken fingers` has no candidate spelling `fingers` exactly (the record
+ *      is `Chicken Fingerz`), so a strict test steps the head back to `chicken` and
+ *      re-opens the pre-K2 defect the tolerance exists to close. The chooser and the
+ *      filter must not be able to disagree.
+ *
+ * THE TEST IS THE CONJUNCTION, NOT THE TOKEN. `filterCandidatesByTokens()` requires
+ * `every()` must-have token of the SAME candidate, so "some candidate in the pool spells
+ * the head" is the wrong question — it is satisfied by a candidate that does not carry
+ * the brand. Measured 2026-08-27: over 250 randomly sampled two-slot brand-detected
+ * corpus lines plus the eight A21 faces, the per-token form fired ZERO times, including
+ * on all seven lines whose filter keeps nothing. So the head is chosen among the tokens
+ * some candidate carries TOGETHER WITH the other required slot, which is exactly the
+ * condition the loop then enforces.
+ *
+ * IT IS A NO-OP WHENEVER THAT CONJUNCTION HOLDS FOR THE POSITIONAL HEAD, which is the
+ * common case, and it is why this is not the widen-MODIFIER_TOKENS lever A21 refuted:
+ * that one re-aimed 155 lines by moving 773, and 313 of the movers were not
+ * brand-detected at all. This one can only fire where the filter keeps nothing, so the
+ * outcome it replaces is the relax pass — and requiring the brand plus an EARLIER typed
+ * token is a strict subset of what relaxing to the brand alone admits.
+ *
+ * ADMISSION BECOMES POOL-DEPENDENT, and that is a real behaviour change: the same query
+ * can filter differently as the index changes. It is the reason this ships behind a
+ * frozen-pool winner-diff rather than an admit-only argument.
+ *
+ * Owner: KindaHealthyMobile sync-docs/reports/2026-08-27_a22-the-empirical-head-and-the-faces-that-were-never-admission.md
+ */
+function chooseHead(nonBrandCore: string[], otherSlot: string, candidates?: UnifiedCandidate[]): string {
+    const positional = nonBrandCore[nonBrandCore.length - 1];
+    if (!candidates || candidates.length === 0 || nonBrandCore.length < 2) return positional;
+
+    const index = candidates.map(indexCandidateName);
+    // The head slot is the LAST must-have token, so the loop tests it with the tolerant
+    // rung as well; the other slot is not, so it is tested strictly. Same predicates,
+    // same order, same candidate.
+    const admits = (head: string): boolean => index.some(i =>
+        (spellsTokenExactly(i, head) || spellsHeadTolerantly(i, head))
+        && spellsTokenExactly(i, otherSlot));
+
+    if (admits(positional)) return positional;
+    for (let i = nonBrandCore.length - 2; i >= 0; i--) {
+        if (admits(nonBrandCore[i])) return nonBrandCore[i];
+    }
+    return positional;
 }
 
 /**
@@ -3176,7 +3296,12 @@ function foldApostrophes(text: string): string {
  * is a brand-detector change — a different blast radius, and one the frozen-pool winner-diff
  * cannot observe at all (it replays `isBrandedQuery`/`targetBrand` frozen). Pinned by a test.
  */
-function keepAFoodToken(selected: string[], allCore: string[], normalizedName: string): string[] {
+function keepAFoodToken(
+    selected: string[],
+    allCore: string[],
+    normalizedName: string,
+    candidates?: UnifiedCandidate[],
+): string[] {
     if (selected.length === 0) return selected;
 
     const detection = detectBrandInQuery(normalizedName);
@@ -3220,15 +3345,20 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
     // ORDERING. This rule must not ship before N1: pre-N1, `normalizeIngredientName()` INJECTED
     // the token this rule then requires — `chobani vanilla` normalized to `chobani vanilla
     // extract`, so the head noun was `extract`, a word the shopper never typed (33 corpus lines).
-    const head = [...allCore].reverse().find(t => !isBrandToken(t));
-    if (!head) return selected;  // a bare brand query ("kirkland signature"); nothing to add
+    const nonBrandCore = allCore.filter(t => !isBrandToken(t));
+    if (nonBrandCore.length === 0) return selected;  // a bare brand query ("kirkland signature")
+
+    // The other required slot is resolved FIRST, because the head is now chosen against
+    // it: admission requires both tokens of the same candidate, so which head the pool
+    // can satisfy depends on what it must be satisfied alongside.
+    const brandSlot = selected.find(isBrandToken) ?? selected[0];
+    const head = chooseHead(nonBrandCore, brandSlot, candidates);
 
     // The two slots are THE BRAND TOKEN and THE HEAD NOUN. Taking `selected[0]` verbatim (which
     // is how this rule was first written) LOOSENS admission whenever slot 0 is already the head:
     // `cinnamon chex` selected ['cinnamon','chex'] with head `cinnamon` collapsed to
     // ['cinnamon'], dropping the brand and admitting every cinnamon product. This rule must only
     // ever re-aim the second slot, never shrink the requirement.
-    const brandSlot = selected.find(isBrandToken) ?? selected[0];
     if (brandSlot === head) return [head];
     return [brandSlot, head];
 }

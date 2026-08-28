@@ -799,9 +799,13 @@ describe('population builders account for every line they were given', () => {
         // other). n-p2-02 and n-cn-01 DO carry grams, because on those two the identity was
         // already right on both arms and only the COUNT moved — 2 cups of yogurt vs 1, and
         // 12 wings at the 100 g no-serving default vs at the 34 g seed.
-        expect(p.lines).toHaveLength(300);
+        // 301 / 171 / 135 since 2026-08-27: n-eh-01 (A22, the empirical head). One `text`
+        // line, no new grams band -- what A22 moves is which record is ADMITTED when the
+        // positional head is unsatisfiable, and the case's query is plural, so a band on
+        // the billed number would assert on the plural question and not on the fix.
+        expect(p.lines).toHaveLength(301);
         expect(p.lines.filter(l => l.band).length).toBe(171);
-        expect(p.lines.filter(l => l.shape === 'text').length).toBe(134);
+        expect(p.lines.filter(l => l.shape === 'text').length).toBe(135);
         expect(p.lines.filter(l => l.category === 'prose').length).toBe(16);
     });
 
