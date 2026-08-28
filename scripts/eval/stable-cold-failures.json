@@ -10,21 +10,21 @@
   "ownerDoc": "mobile:sync-docs/reports/2026-08-18_plan-4-three-arms-and-two-deploys.md",
   "writtenAt": "2026-08-19T21:20:00.000Z",
   "confirmedAgainst": {
-    "buildId": "T_pVsW6iVzKDqE_E9Y8OE",
-    "date": "2026-08-27",
+    "buildId": "sGg_Kx8wKgMGPR53tnEPF",
+    "date": "2026-08-28",
     "coldRuns": 3,
     "realFailuresPerRun": [
       11,
       10,
-      12
+      10
     ],
-    "intersectionSize": 10,
+    "intersectionSize": 9,
     "resultsFiles": [
-      "scripts/eval/results/eval-2026-08-27T23-54-07-268Z.json",
-      "scripts/eval/results/eval-2026-08-27T23-57-55-718Z.json",
-      "scripts/eval/results/eval-2026-08-28T00-01-30-850Z.json"
+      "scripts/eval/results/eval-2026-08-28T16-39-01-743Z.json",
+      "scripts/eval/results/eval-2026-08-28T16-42-56-050Z.json",
+      "scripts/eval/results/eval-2026-08-28T16-46-35-210Z.json"
     ],
-    "note": "Three cold runs, same build, minutes apart, recipe-api restarted before each, taken immediately AFTER the #391 + #392 deploy (A20 window, Diego D1). Per-run real-failure counts 11/10/12; the INTERSECTION was exactly the ten members below. Rotating seats filled the extra slots and nothing else: n-svd-03 (run 1 and run 3) and n-svd-04 (run 3 only). n-svd-04 is NOT added to `rotators` — it failed 1 of 24 recorded runs since 2026-08-24, which is a single flap and not evidence of a rotator; adding it would quiet the detector on one observation. n-serv-21 and n-serv-57 JOINED here on Diego D2: both were already confirmed on three prior builds (Qw2-DAKAAv_KmvvDzrUo3, the 08-26 row-3 local pair, and this one) and both are cold-only. The six new #391 cases (n-p1-01..03, n-p2-01..02, n-cn-01) and n-k3-01..03 passed 3/3. Previous confirmation: qwm6HGP465bEqu0Upz5_l, 2026-08-24, 8/10/9, intersection 8."
+    "note": "Three cold runs, same build, minutes apart, recipe-api restarted before each, taken immediately AFTER the #398 deploy (A25/D9b window). Per-run real-failure counts 11/10/10; the INTERSECTION was exactly the nine members below. n-serv-57 LEFT on all three runs and is moved to `departed`. Rotating seats filled every extra slot and nothing else: n-brand-02 (run 1), n-svd-03 (run 1), n-serv-26 (run 2), n-svd-04 (run 3). n-svd-04 is STILL NOT added to `rotators` — the reasoning of the previous entry stands and this is its second flap in ~27 recorded runs, which is not yet evidence of a rotator. Every one of those four also flapped on the UNCHANGED base tree in the same session's local A/B (BASE w5NtCWvzKYwjMNVVVr2CG read 11/11/11 with n-brand-02 and n-serv-26 rotating), so none is attributable to #398. Previous confirmation: T_pVsW6iVzKDqE_E9Y8OE, 2026-08-27, intersection 10."
   },
   "causeLegend": {
     "PANEL": "the winning record's own nutrition panel is wrong (usually an uncaught corrupt OFF row, corruptReason NULL)",
@@ -86,12 +86,6 @@
       "category": "serving_unit",
       "cause": "PICK",
       "reason": "'12 m&ms' bills grams=264 against a [6, 25] band on fs_72448178 \"M&M'S\" [Cold Stone Creamery] — a mix-in record whose serving rows carry no grams, discarded as no_nutrition until K3 (#390, deployed 2026-08-26) stopped rejecting gram-less FS rows. Cold it now outranks the OFF fun-size row. Conditional on that win the billed grams are a DRAW: 264 on four observed draws, 22 on a fifth (22 g / 110 kcal would PASS the band), tier fs_default_serving — so the 264 is the record's own serving row, not K3's synthetic kcal/2 grams. The resurrection is K3's; the draw is not. COLD-ONLY and unreachable by live traffic: the warm cache row is keyed 'm ms' -> off_00005579 (usedCount 363, untouched) while the cold pipeline keys \"m m's\", the documented apostrophe/plural fork. The K3 gate could not have seen it — a record that stops returning null is a POOL change, and its 48-seed cross-snapshot arm was venue lines plus controls. The real fix is the resurrected-record pick class (same-name cross-source picks where K3 newly admits a gram-less FS record), A8 pick-family work rather than a per-seed hack; this entry documents the debt and excuses nothing."
-    },
-    {
-      "id": "n-serv-57",
-      "category": "serving_unit",
-      "cause": "PICK",
-      "reason": "'kirkland protein bar chocolate chip' bills grams=24 against a [40, 80] band on 'Chocolate Chip Chewy Granola Bar' — a granola bar, not the Kirkland protein bar. The K2 head-noun rule (2026-08-25) spends the food slot on the LAST non-brand core token, so deriveMustHaveTokens() returns ['kirkland','chip'] (verified by calling the shipped function, 2026-08-27); filterCandidatesByTokens() every()-gates that, so protein-bar rows that do not spell 'chip' are deleted BEFORE buildRerankPool() and no ranking change can recover them. This is the K2 §4 trailing-head class — sibling faces 'quaker oats old fashioned' -> ['quaker','fashioned'] and 'gatorade cool blue' -> ['gatorade','blue'] — and the predicate is purely positional: on 1,614 of 4,102 corpus lines the rule requires a head, and the head is the raw line's LAST token on 93.4% of them (measured 2026-08-27). The fix is a head predicate that is not purely positional, which is the A21 design item; roster-add documents the debt and excuses nothing."
     }
   ],
   "rotators": [
@@ -115,6 +109,15 @@
     }
   ],
   "departed": [
+    {
+      "id": "n-serv-57",
+      "category": "serving_unit",
+      "cause": "PICK",
+      "leftOn": "2026-08-28",
+      "fixedBy": "backend #398 (D9b, A25): getCategoryChangePenalty() charges the UNMATCHED SHARE of a candidate's in-set tokens instead of a flat 0.50 on the first unmatched one, so the five real Kirkland protein bars stop paying full price for `cookie` — their own flavour name — while the granola bar pays nothing",
+      "confirmedBy": "PASSED 3/3 restarted cold runs on sGg_Kx8wKgMGPR53tnEPF, byte-identical: off_0096619505128 \"Chocolate chip cookie dough protein bar\" [Kirkland], 60 g, 220.2 kcal, kcal100 367, conf 0.95, tier bare_label_serving. Also 3/3 on the pre-deploy local branch build VLD7WD-FUB2Aepro9-YiW against BASE w5NtCWvzKYwjMNVVVr2CG at 11/11/11 with this as the only STABLE-FIXED member and STABLE-INTRODUCED 0. Results: eval-2026-08-28T16-{39-01-743,42-56-050,46-35-210}Z.json",
+      "previousReason": "'kirkland protein bar chocolate chip' billed grams=24 against a [40, 80] band on 'Chocolate Chip Chewy Granola Bar' — a granola bar, not the Kirkland protein bar. The roster carried this as a K2 head-noun ADMISSION failure; that account is wrong and A22/A25 measured it. The admitted pool is 9 and CONTAINS the correct record: every Kirkland protein bar is named \"... Chocolate chip cookie dough ...\" and therefore does spell `chip`, so the every()-gated must-have tokens never delete it. It was decided at RANKING, by 0.008, inside getCategoryChangePenalty(): `chocolate`, `chip` and `bar` are all in CATEGORY_CHANGING_TOKENS and all exempt because the query spells them, so the flat first-hit charge landed on `cookie` for every real protein bar (-0.50) and on nothing for the granola bar, whose only extra in-set token is absent from the set entirely. Owner: mobile:sync-docs/reports/2026-08-28_a25-the-category-penalty-charges-the-right-product.md and 2026-08-28_a25-design-the-charge-becomes-the-unmatched-share.md"
+    },
     {
       "id": "n-dens-07",
       "joined": "2026-08-18",

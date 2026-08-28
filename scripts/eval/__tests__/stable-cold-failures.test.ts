@@ -320,17 +320,22 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         // backend #381 stopped rewriting `bell pepper` into `capsicum`; recorded
         // under `departed` in the roster file).
         //
-        // n-serv-21 and n-serv-57 JOINED 2026-08-27 (Diego decision D2), confirmed on
-        // T_pVsW6iVzKDqE_E9Y8OE immediately after the #391 + #392 deploy: three
-        // restarted cold runs read 11/10/12 real failures and the INTERSECTION was
-        // exactly these ten, the extra slots filled only by the rotating seats
-        // n-svd-03 (runs 1 and 3) and n-svd-04 (run 3 only, its first failure in 24
-        // recorded runs — a flap, deliberately NOT added to `rotators`). Both
-        // newcomers are COLD-ONLY, each warm-protected by an existing cache row, and
-        // each carries its mechanism in the roster file's own `reason`.
+        // n-serv-21 JOINED 2026-08-27 (Diego decision D2), confirmed on
+        // T_pVsW6iVzKDqE_E9Y8OE immediately after the #391 + #392 deploy. It is
+        // COLD-ONLY, warm-protected by an existing cache row, and carries its
+        // mechanism in the roster file's own `reason`.
+        //
+        // n-serv-57 joined with it and LEFT 2026-08-28, fixed by backend #398 (A25):
+        // getCategoryChangePenalty() now charges the unmatched SHARE of a candidate's
+        // in-set tokens, so the Kirkland protein bars stop paying full price for
+        // `cookie`. Confirmed PASSING 3/3 on restarted cold runs on
+        // sGg_Kx8wKgMGPR53tnEPF at 60 g / 220.2 kcal, and recorded under `departed`
+        // in the roster file. This list moves with that file on purpose: the pin is
+        // the double entry that stops a membership change from being silent, which is
+        // the ten-that-became-a-nine this whole instrument exists to prevent.
         const REAL_MEMBERS = [
             'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-prod-01', 'n-prot-02',
-            'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55', 'n-serv-57',
+            'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55',
         ];
         expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());
         const results = [
