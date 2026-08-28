@@ -11,8 +11,12 @@
  * WHAT IT DOES NOT ANSWER: anything about writes that no writer routed through it. A table
  * this module has never heard of is not protected by it. The closed union below is the
  * complete list of what `nosave` suppresses; `MappingEventLog`, the FoodMapping `usedCount`
- * bumps, and every upstream mirror (`FatSecretFood`, `OffFood`, `AiGeneratedFood`,
- * `LearnedSynonym`) are deliberately outside it — see the owner doc.
+ * bumps, `FatSecretFood`, `AiGeneratedFood` and `LearnedSynonym` are deliberately outside
+ * it — see the owner doc. The OFF mirror was too until 2026-08-27, when `offMirror` brought
+ * `OffFood`/`OffServing` in for the ONE request that asks for them: `/api/foods/barcode`,
+ * whose only two write sites they are. The mapping lane reaches the same writer through
+ * `buildOffResult()` and does NOT ask, so `/api/nlp/parse?nosave=1` mirrors OFF exactly as
+ * it did before.
  *
  * FOUR DESIGN CONSTRAINTS, EACH LOAD-BEARING
  *
@@ -74,8 +78,20 @@ import { AsyncLocalStorage } from 'node:async_hooks';
  * `skipSave` option on `mapIngredientWithFallback()`, that path works and is claimed, and
  * moving it here would buy nothing. A new class is a new member of this union plus a guard at
  * its writer — never a widening of the meaning of an existing one.
+ *
+ * `offMirror` (2026-08-27) is the OffFood + OffServing upsert pair inside
+ * `hydrateOffCandidate()`, added for `/api/foods/barcode?nosave=1` — a device sitting must be
+ * able to scan without leaving rows, and those two upserts are that route's ENTIRE write
+ * surface (measured: its FatSecret branch calls `ensureFoodCached` with no `client`, which
+ * is the only door to `upsertFoodFromDetails()`). Named for the write class and not for the
+ * route, because the same writer serves the mapping lane. Note what refusing it costs, which
+ * is why no other caller asks: `resolveFoodDetails()` reads OffFood, so refusing the mirror
+ * for a barcode we have never seen makes that product unanswerable for the rest of the
+ * request. The OffServing row is the half that would outlive it either way — a label-derived
+ * serving the cascade reads, the class the 2026-08-02 batch-rollback report measured moving
+ * `15 pretzels` from 105 g to 45 g.
  */
-export type SuppressibleWrite = 'aiServing' | 'segmentationCache';
+export type SuppressibleWrite = 'aiServing' | 'segmentationCache' | 'offMirror';
 
 /** One refused write. `line` is present when the refusal happened inside a per-line scope. */
 export interface WriteRefusal {
