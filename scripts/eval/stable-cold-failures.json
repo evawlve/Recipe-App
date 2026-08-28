@@ -10,21 +10,21 @@
   "ownerDoc": "mobile:sync-docs/reports/2026-08-18_plan-4-three-arms-and-two-deploys.md",
   "writtenAt": "2026-08-19T21:20:00.000Z",
   "confirmedAgainst": {
-    "buildId": "qwm6HGP465bEqu0Upz5_l",
-    "date": "2026-08-24",
+    "buildId": "T_pVsW6iVzKDqE_E9Y8OE",
+    "date": "2026-08-27",
     "coldRuns": 3,
     "realFailuresPerRun": [
-      8,
+      11,
       10,
-      9
+      12
     ],
-    "intersectionSize": 8,
+    "intersectionSize": 10,
     "resultsFiles": [
-      "scripts/eval/results/eval-2026-08-25T01-00-19-780Z.json",
-      "scripts/eval/results/eval-2026-08-25T01-04-01-644Z.json",
-      "scripts/eval/results/eval-2026-08-25T01-07-30-766Z.json"
+      "scripts/eval/results/eval-2026-08-27T23-54-07-268Z.json",
+      "scripts/eval/results/eval-2026-08-27T23-57-55-718Z.json",
+      "scripts/eval/results/eval-2026-08-28T00-01-30-850Z.json"
     ],
-    "note": "Three cold runs, same build, minutes apart, box restarted between each, taken AFTER the D-A9 LearnedSynonym delete and the K4 evict (the final state). Per-run real-failure counts 8/10/9; the INTERSECTION was exactly the eight members below and the extra slots were filled only by the documented rotators (n-brand-02 once, n-serv-26 twice). n-mq-30 PASSED in all three and LEFT THE SET — see `departed`. The nine new golden cases (n-syn-01..06, n-dup-01..03) passed cold in all three runs. Previous confirmation: i1BDbnq_b8pC7Hm3gD_bM, 2026-08-19, 10/11/10, intersection 9."
+    "note": "Three cold runs, same build, minutes apart, recipe-api restarted before each, taken immediately AFTER the #391 + #392 deploy (A20 window, Diego D1). Per-run real-failure counts 11/10/12; the INTERSECTION was exactly the ten members below. Rotating seats filled the extra slots and nothing else: n-svd-03 (run 1 and run 3) and n-svd-04 (run 3 only). n-svd-04 is NOT added to `rotators` — it failed 1 of 24 recorded runs since 2026-08-24, which is a single flap and not evidence of a rotator; adding it would quiet the detector on one observation. n-serv-21 and n-serv-57 JOINED here on Diego D2: both were already confirmed on three prior builds (Qw2-DAKAAv_KmvvDzrUo3, the 08-26 row-3 local pair, and this one) and both are cold-only. The six new #391 cases (n-p1-01..03, n-p2-01..02, n-cn-01) and n-k3-01..03 passed 3/3. Previous confirmation: qwm6HGP465bEqu0Upz5_l, 2026-08-24, 8/10/9, intersection 8."
   },
   "causeLegend": {
     "PANEL": "the winning record's own nutrition panel is wrong (usually an uncaught corrupt OFF row, corruptReason NULL)",
@@ -80,6 +80,18 @@
       "category": "foundation_protein",
       "cause": "IDENTITY",
       "reason": "Bare 'tofu' resolves to off_3070451041461 'Tofu' at kcal100=13.3, so protein100=0.9 misses its [5, 22] band. Originally filed as PANEL; ADJUDICATED AND REVERSED 2026-08-13 to IDENTITY — the record is a brandless stub carrying House Foods Tofu Shirataki values, so repairing its panel would still miss the band. Not a rotator: 19 consecutive cold failures spanning seven build ids as of 2026-08-14."
+    },
+    {
+      "id": "n-serv-21",
+      "category": "serving_unit",
+      "cause": "PICK",
+      "reason": "'12 m&ms' bills grams=264 against a [6, 25] band on fs_72448178 \"M&M'S\" [Cold Stone Creamery] — a mix-in record whose serving rows carry no grams, discarded as no_nutrition until K3 (#390, deployed 2026-08-26) stopped rejecting gram-less FS rows. Cold it now outranks the OFF fun-size row. Conditional on that win the billed grams are a DRAW: 264 on four observed draws, 22 on a fifth (22 g / 110 kcal would PASS the band), tier fs_default_serving — so the 264 is the record's own serving row, not K3's synthetic kcal/2 grams. The resurrection is K3's; the draw is not. COLD-ONLY and unreachable by live traffic: the warm cache row is keyed 'm ms' -> off_00005579 (usedCount 363, untouched) while the cold pipeline keys \"m m's\", the documented apostrophe/plural fork. The K3 gate could not have seen it — a record that stops returning null is a POOL change, and its 48-seed cross-snapshot arm was venue lines plus controls. The real fix is the resurrected-record pick class (same-name cross-source picks where K3 newly admits a gram-less FS record), A8 pick-family work rather than a per-seed hack; this entry documents the debt and excuses nothing."
+    },
+    {
+      "id": "n-serv-57",
+      "category": "serving_unit",
+      "cause": "PICK",
+      "reason": "'kirkland protein bar chocolate chip' bills grams=24 against a [40, 80] band on 'Chocolate Chip Chewy Granola Bar' — a granola bar, not the Kirkland protein bar. The K2 head-noun rule (2026-08-25) spends the food slot on the LAST non-brand core token, so deriveMustHaveTokens() returns ['kirkland','chip'] (verified by calling the shipped function, 2026-08-27); filterCandidatesByTokens() every()-gates that, so protein-bar rows that do not spell 'chip' are deleted BEFORE buildRerankPool() and no ranking change can recover them. This is the K2 §4 trailing-head class — sibling faces 'quaker oats old fashioned' -> ['quaker','fashioned'] and 'gatorade cool blue' -> ['gatorade','blue'] — and the predicate is purely positional: on 1,614 of 4,102 corpus lines the rule requires a head, and the head is the raw line's LAST token on 93.4% of them (measured 2026-08-27). The fix is a head predicate that is not purely positional, which is the A21 design item; roster-add documents the debt and excuses nothing."
     }
   ],
   "rotators": [

@@ -313,12 +313,25 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         const real = loadRoster();
         expect(real).not.toBeNull();
         // The REAL membership, pinned on purpose: editing stable-cold-failures.json
-        // means editing this line with the receipt. NINE minus n-mq-30, which LEFT
-        // THE SET on 2026-08-24 — PASSED 3/3 restarted cold runs on
-        // qwm6HGP465bEqu0Upz5_l after backend #381 (D-A9) stopped rewriting
-        // `bell pepper` into `capsicum`; the departure is recorded under
-        // `departed` in the roster file.
-        const REAL_MEMBERS = NINE.filter(id => id !== 'n-mq-30');
+        // means editing this line with the receipt. Stated explicitly rather than
+        // derived from the NINE fixture above — that fixture is synthetic input for
+        // the checker's own logic and still carries n-mq-30, which LEFT THE SET on
+        // 2026-08-24 (PASSED 3/3 restarted cold runs on qwm6HGP465bEqu0Upz5_l after
+        // backend #381 stopped rewriting `bell pepper` into `capsicum`; recorded
+        // under `departed` in the roster file).
+        //
+        // n-serv-21 and n-serv-57 JOINED 2026-08-27 (Diego decision D2), confirmed on
+        // T_pVsW6iVzKDqE_E9Y8OE immediately after the #391 + #392 deploy: three
+        // restarted cold runs read 11/10/12 real failures and the INTERSECTION was
+        // exactly these ten, the extra slots filled only by the rotating seats
+        // n-svd-03 (runs 1 and 3) and n-svd-04 (run 3 only, its first failure in 24
+        // recorded runs — a flap, deliberately NOT added to `rotators`). Both
+        // newcomers are COLD-ONLY, each warm-protected by an existing cache row, and
+        // each carries its mechanism in the roster file's own `reason`.
+        const REAL_MEMBERS = [
+            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-prod-01', 'n-prot-02',
+            'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55', 'n-serv-57',
+        ];
         expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());
         const results = [
             ...REAL_MEMBERS.map(failCase),
