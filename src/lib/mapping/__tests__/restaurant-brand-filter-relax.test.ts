@@ -89,10 +89,45 @@ describe('filterCandidatesByTokens — branded restaurant items survive', () => 
         expect(filtered.length).toBe(1);
     });
 
-    it('still rejects a restaurant product for a bare raw-ingredient query', () => {
-        // "cinnamon sticks" must NOT grab "Cinnamon Sticks (DiGiorno)" — the query
-        // does not name DiGiorno, so the meal/product guard still applies.
-        expect(isMealProductMismatch('cinnamon sticks', 'Cinnamon Sticks', 'DiGiorno')).toBe(true);
+    // ------------------------------------------------------------------
+    // RE-DECIDED 2026-08-28 (D21a). This block used to assert the OPPOSITE of
+    // its first case: "cinnamon sticks" must NOT reach "Cinnamon Sticks
+    // (DiGiorno)" because the query does not name DiGiorno. That behaviour was
+    // isMealProductMismatch's RESTAURANT_BRANDS branch, and it is now deleted.
+    //
+    // The old expectation is REVERSED deliberately, not edited to make a build
+    // pass. The A26(i) census froze the pre-filter pool over 449 queries and
+    // graded 256 fired pairs blind: the branch carried 8% of the guard's firing
+    // volume at 71.4% losses on chain queries [45.4, 88.3], and deleting it
+    // measured 10 FIXED / 4 BROKEN (2.50 : 1) — better than every arm that tried
+    // to narrow it instead. THIS CASE IS ONE OF THE 4 BROKEN, which is why the
+    // pin is kept and inverted rather than dropped. The decisive cell is n=14:
+    // the direction is safe, the magnitude is soft, and no larger sample exists.
+    // Owner: mobile sync-docs/reports/2026-08-28_a26i-the-meal-product-guard-census.md.
+    // ------------------------------------------------------------------
+    it('no longer rejects on the candidate BRAND alone (D21a: branch 2 deleted)', () => {
+        expect(isMealProductMismatch('cinnamon sticks', 'Cinnamon Sticks')).toBe(false);
+    });
+
+    it('takes no brand argument at all, so the branch cannot be re-added quietly', () => {
+        expect(isMealProductMismatch.length).toBe(2);
+    });
+
+    it('still rejects an extraneous MEAL word — branch 1 is untouched', () => {
+        // Branch 1 is 1,193 of the guard's 1,293 fires (92%) at 15.1% losses, and
+        // every relaxation of it the census tested breaks far more than it fixes.
+        expect(isMealProductMismatch('orange zest', 'ORANGE ZEST CHICKEN')).toBe(true);
+        expect(isMealProductMismatch('yellow zucchini', 'Zucchini Lasagna')).toBe(true);
+        expect(isMealProductMismatch('cinnamon sticks', 'Cinnamon Sticks Pizza')).toBe(true);
+        expect(isMealProductMismatch('starbucks pike place roast', 'Beef Tri-Tip Roast')).toBe(true);
+    });
+
+    it('does NOT fix the branch-1 chain losses, which are a different item', () => {
+        // Named in the census's loss list and easy to misattribute to this
+        // change: both are dropped for an extraneous MEAL WORD, not for a brand,
+        // so deleting branch 2 leaves them exactly where they were.
+        expect(isMealProductMismatch('wingstop classic wings', 'Chicken Wings classic')).toBe(true);
+        expect(isMealProductMismatch('popeyes chicken tenders', 'Chicken Patty, Fillet or Tenders')).toBe(true);
     });
 });
 

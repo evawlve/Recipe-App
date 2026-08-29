@@ -1650,7 +1650,7 @@ function isFoodThatMustHaveCalories(candidateName?: string): boolean {
  *   the food belongs to a category that MUST have calories (for the all-zero check)
  */
 export function hasNullOrInvalidMacros(
-    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null } | null,
+    nutrients?: { kcal?: number | null; calories?: number | null; protein?: number | null; carbs?: number | null; fat?: number | null; fiber?: number | null } | null,
     candidateName?: string
 ): boolean {
     // If nutrients object doesn't exist, we can't validate - allow through
@@ -1728,10 +1728,33 @@ export function hasNullOrInvalidMacros(
     const protein = nutrients.protein ?? 0;
     const carbs = nutrients.carbs ?? 0;
     const fat = nutrients.fat ?? 0;
+    const fiber = nutrients.fiber ?? 0;
+
+    // FIBRE. A US label reports TOTAL carbohydrate with fibre inside it, and
+    // fibre yields ~0-2 kcal/g rather than 4 — so charging the whole carb figure
+    // at 4 kcal/g systematically OVER-computes exactly the labels that lead with
+    // fibre, and this check then reads them as corrupt. Measured 2026-08-28:
+    // 477 retrieval-eligible OffFood rows fail this check on total carbs, 367 of
+    // them carrying fibre >= 10 g/100 g. The class is every high-fibre product on
+    // the shelf: `off_0856711006509` "Inked Keto Sourdough" (111 kcal, P 14.8,
+    // C 40.7 of which 37 g fibre, F 3.7) computes 255.3 against a 222 ceiling and
+    // is DELETED BEFORE RANKING — filterCandidatesByTokens calls this
+    // unconditionally, so no ranking change can reach it. On net carbs it
+    // computes 107.3 and is admitted. All seven 111-kcal Inked sourdough rows
+    // fail identically.
+    //
+    // The rejection must hold on BOTH readings of the label, so the check is
+    // charged on net carbs — the lower of the two — and stays admit-only.
+    //
+    // NOT relaxed when fibre EXCEEDS carbs. That is physically impossible and a
+    // different defect (10,053 corpus rows, 1.22%, queued separately); granting
+    // it the largest possible relaxation on the strength of an incoherent label
+    // would let this fix quietly adopt a population it was never measured on.
+    const chargeableCarbs = fiber > 0 && fiber <= carbs ? carbs - fiber : carbs;
 
     // Only check if we have at least one macro value
     if (protein > 0 || carbs > 0 || fat > 0) {
-        const computedCalories = (protein * 4) + (carbs * 4) + (fat * 9);
+        const computedCalories = (protein * 4) + (chargeableCarbs * 4) + (fat * 9);
 
         if (calories > 0) {
             // Case 1: If computed is more than 2x reported, macros are clearly wrong
@@ -2091,15 +2114,13 @@ const MEAL_PRODUCT_WORDS = new Set([
     'icing', 'frosting', 'dipping',
 ]);
 
-// Queries that look like raw ingredients (should NOT match meal products)
-const RAW_INGREDIENT_INDICATORS = new Set([
-    'zest', 'peel', 'rind', 'skin', 'seed', 'seeds',
-    'stick', 'sticks', 'pod', 'pods', 'bark',
-    'leaf', 'leaves', 'sprig', 'sprigs', 'bunch',
-    'clove', 'cloves', 'bulb', 'root',
-    'powder', 'ground', 'whole', 'dried', 'fresh',
-    'raw', 'organic', 'pure',
-]);
+// A RAW_INGREDIENT_INDICATORS set used to sit here — declared, referenced
+// nowhere, and encoding the documented intent of the restaurant-brand rule
+// below ("only reject if the query looks like a raw ingredient"). The A26(i)
+// census IMPLEMENTED it as arm K6 and measured 0.58 : 1 fix:break, so reviving
+// it is refuted rather than free; it is deleted here so the next reader does
+// not rediscover it as an easy win. Owner:
+// mobile sync-docs/reports/2026-08-28_a26i-the-meal-product-guard-census.md §5.
 
 // Known restaurant/fast-food brands that sell prepared products, not raw ingredients
 const RESTAURANT_BRANDS = [
@@ -2198,8 +2219,7 @@ export function queryTargetsCandidateBrand(
 
 export function isMealProductMismatch(
     normalizedName: string,
-    candidateName: string,
-    candidateBrand?: string | null
+    candidateName: string
 ): boolean {
     const queryLower = normalizedName.toLowerCase().trim();
     const candidateLower = candidateName.toLowerCase().trim();
@@ -2227,20 +2247,36 @@ export function isMealProductMismatch(
         return true;
     }
 
-    // Check for known restaurant/fast-food brands
-    // These brands sell prepared products, not raw ingredients.
-    // e.g., "cinnamon sticks" → "Cinnamon Sticks (DiGiorno)" should be rejected
-    if (candidateBrand) {
-        const brandLower = candidateBrand.toLowerCase();
-        const isRestaurantBrand = RESTAURANT_BRANDS.some(b => brandLower.includes(b));
-        if (isRestaurantBrand) {
-            // Only reject if the query looks like a raw ingredient (short, no brand mention)
-            const queryHasBrand = queryLower.includes(brandLower);
-            if (!queryHasBrand) {
-                return true;
-            }
-        }
-    }
+    // A SECOND branch used to reject any candidate whose brand appeared in
+    // RESTAURANT_BRANDS unless the query spelled that brand out. It is DELETED,
+    // and the deletion is the measured change, not a cleanup.
+    //
+    // The A26(i) census froze the pre-filter pool over 449 queries (11,171
+    // candidate pairs, 1,293 fires) and graded 256 fired pairs blind, then
+    // adversarially re-read them. The guard is 80.9% correct refusals overall —
+    // but the two branches are nothing alike. The meal-word branch above is
+    // 1,193 of 1,293 fires (92%) at 15.1% losses, and every relaxation of it
+    // tested breaks far more than it fixes (making the meal word carry the head
+    // noun would break 94 to fix 25). The restaurant-brand branch was 119 fires
+    // (8% of the volume) at 71.4% losses on chain queries [45.4, 88.3]: it
+    // dropped `Chicken Wings classic` for `wingstop classic wings`, a record
+    // literally named "...Patty, Fillet or Tenders" for `popeyes chicken
+    // tenders`, and six genuine DiGiorno pizzas from `digiorno pizza` because
+    // the corpus spells them "frozen baked". Deleting it outright measured
+    // 10 FIXED / 4 BROKEN (2.50 : 1), better than every arm that tried to select
+    // WITHIN it (K2 1.25, K1 0.85, K6 0.58) — those admit from both strata, and
+    // the non-chain half of this branch is only 25% loss.
+    //
+    // TWO LIMITS, stated because they outrank the ratio. The decisive cell is
+    // n=14, so the DIRECTION is safe (Wilson lower bound 45.4%, still a
+    // majority) and the MAGNITUDE is soft — and no larger sample exists, 119
+    // fires being the whole branch-2 population. And the bigger lever on chain
+    // queries is not this rule at all: the caller's `brandTargeted` exemption
+    // waives the guard on 3,153 pairs against the 729 it drops, so spelling the
+    // brand disables it on 52% of the pool. Nothing in this function reaches
+    // that; it is a separate item in filterCandidatesByTokens.
+    //
+    // Owner: mobile sync-docs/reports/2026-08-28_a26i-the-meal-product-guard-census.md.
 
     return false;
 }
@@ -2872,7 +2908,7 @@ export function filterCandidatesByTokens(
             (!!rawLine && queryTargetsCandidateBrand(rawLine, candidate.brandName));
 
         // Meal/product mismatch (e.g., "orange zest" vs "ORANGE ZEST CHICKEN")
-        if (!brandTargeted && isMealProductMismatch(normalizedName, candidate.name, candidate.brandName)) {
+        if (!brandTargeted && isMealProductMismatch(normalizedName, candidate.name)) {
             if (debug) {
                 logger.info('filter.candidates.meal_product_mismatch', {
                     query: normalizedName,
@@ -2900,11 +2936,20 @@ export function filterCandidatesByTokens(
         // Helper to extract nutrients for checks
         let nutrientsToCheck: any = null;
         if (candidate.nutrition && candidate.nutrition.per100g) {
+            // `fiber` is read off rawData rather than candidate.nutrition
+            // because UnifiedCandidate.nutrition carries only kcal/protein/
+            // carbs/fat — it structurally cannot hold it. Widening that shape
+            // means editing gather-candidates.ts, which is RETRIEVAL_PATHS and
+            // voids the frozen-pool gate this change is measured on. Without
+            // this line the fibre rule below is dead on every candidate that
+            // arrives with a per-100g nutrition block.
+            const rawFiber = candidate.rawData?.nutrientsPer100g?.fiber;
             nutrientsToCheck = {
                 calories: candidate.nutrition.kcal,
                 protein: candidate.nutrition.protein,
                 fat: candidate.nutrition.fat,
-                carbs: candidate.nutrition.carbs
+                carbs: candidate.nutrition.carbs,
+                fiber: typeof rawFiber === 'number' && isFinite(rawFiber) ? rawFiber : null,
             };
         } else if (candidate.rawData && candidate.rawData.nutrientsPer100g) {
             nutrientsToCheck = candidate.rawData.nutrientsPer100g;
