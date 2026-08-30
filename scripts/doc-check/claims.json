@@ -1868,6 +1868,18 @@
         "value": "^2@[2-9]$"
       },
       "verified": "2026-08-28"
+    },
+    {
+      "id": "privacy-policy-url-serves-the-policy",
+      "ownerDoc": "mobile:sync-docs/log/2026-08-30_1500_a_the-privacy-page-is-live-and-standard-protection-let-it-through.md — the published page is src/app/privacy/page.tsx (backend), served static by Vercel from master.",
+      "claim": "The public privacy-policy URL that ASC's privacyPolicyUrl points at still returns HTTP 200 AND still names the two HealthKit types the policy discloses (Active Energy Burned). Apple requires a reachable privacy policy for any app using HealthKit, and App Review fetches this URL from outside our network, so a 200 alone is not enough — a Vercel SSO login page also returns 200. A 0 on the left means the URL serves something that is not our policy (deployment protection widened from Standard to All Deployments, a domain change, or the route removed); a non-200 on the right means it is unreachable. Either way the store listing is pointing at a dead or wrong page.",
+      "where": "box",
+      "command": "echo \"$(curl -sL --max-time 25 https://recipe-app-henna-nine.vercel.app/privacy | grep -c 'Active Energy Burned')@$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 25 https://recipe-app-henna-nine.vercel.app/privacy)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@200"
+      },
+      "verified": "2026-08-30"
     }
   ]
 }
