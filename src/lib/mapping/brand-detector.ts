@@ -480,6 +480,22 @@ export function canonicalizeBrandKey(value: string): string {
  * detection, never displace one that fires today.
  */
 const CANON_BRAND_ALIASES = new Map<string, string>();
+/**
+ * When two lexicon spellings share a canonical form (`in n out` and `in-n-out`),
+ * the one we report is NOT arbitrary. `matchedBrand` is consumed by
+ * `candidateMatchesTargetBrand()`, which compares only the FIRST whitespace
+ * token of the brand — so reporting `in n out` asks a record named
+ * "In-N-Out Burger" to contain the bare token `in`, which it never does. The
+ * line is then DECISIVE (the brand is spelled in the query) and UNMATCHABLE at
+ * the same time, and `saveValidatedMapping()` refuses the correct pick with
+ * `save_rejected:brand_mismatch` — turning a detection miss into a save miss.
+ * Measured 2026-08-31: `in n out double double` was the ONLY such case among the
+ * 17 chains, and preferring the fewest-token spelling removes it.
+ */
+const preferForBrandMatch = (a: string, b: string) => {
+    const ta = a.split(' ').length, tb = b.split(' ').length;
+    return ta !== tb ? (ta < tb ? a : b) : (a.length <= b.length ? a : b);
+};
 for (const brand of BRAND_SET) {
     const canon = canonicalizeBrandKey(brand);
     // EVERY brand gets a canonical entry, not only the ones whose spelling
@@ -490,9 +506,9 @@ for (const brand of BRAND_SET) {
     // the same defect as the 3-gram ceiling — a scan that cannot represent the
     // entry. `length >= 3` keeps a degenerate one-or-two-character canonical
     // form from matching punctuation noise.
-    if (canon && canon.length >= 3 && !FOLD_UNSAFE.has(canon)
-        && !CANON_BRAND_ALIASES.has(canon)) {
-        CANON_BRAND_ALIASES.set(canon, brand);
+    if (canon && canon.length >= 3 && !FOLD_UNSAFE.has(canon)) {
+        const held = CANON_BRAND_ALIASES.get(canon);
+        CANON_BRAND_ALIASES.set(canon, held ? preferForBrandMatch(held, brand) : brand);
     }
 }
 

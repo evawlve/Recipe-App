@@ -27,10 +27,10 @@ describe('brand detector — canonical pass', () => {
         ['chilis queso', "chili's"],
         ['jimmy johns turkey sub', "jimmy john's"],
         ['chick fil a chicken sandwich', 'chick-fil-a'],
-        ['in n out double double', 'in n out'],
+        ['in n out double double', 'in-n-out'],
         ['noodles and company mac and cheese', 'noodles & company'],
         ['coca cola classic', 'coca-cola'],
-        ['m and ms peanut', "m&m's"],
+        ['m and ms peanut', 'm&ms'],
     ])('detects %s as %s', (line, brand) => {
         expect(detectBrandInQuery(line)).toEqual({ isBranded: true, matchedBrand: brand });
     });
@@ -59,6 +59,16 @@ describe('brand detector — canonical pass', () => {
         'grilled chicken breast',
     ])('does not flag %s as branded', (line) => {
         expect(detectBrandInQuery(line).isBranded).toBe(false);
+    });
+
+    it('reports the spelling a record can actually be matched against', () => {
+        // `in n out` and `in-n-out` share a canonical form. Reporting the SPACED
+        // one makes the line decisive AND unmatchable at the same time:
+        // candidateMatchesTargetBrand() compares only the FIRST whitespace token,
+        // so a record named "In-N-Out Burger" would be asked to contain the bare
+        // token `in`. saveValidatedMapping() then refuses the CORRECT pick with
+        // save_rejected:brand_mismatch — a detection fix turning into a save bug.
+        expect(detectBrandInQuery('in n out double double').matchedBrand).toBe('in-n-out');
     });
 
     it('canonicalizes possessives, separators and ampersands alike', () => {
