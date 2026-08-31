@@ -226,7 +226,7 @@ function consumePartitiveOf(tokens: string[], i: number): number {
  * separate is the bug, not the design. Kept in sync by
  * `word-number-brand.test.ts`, which asserts the intersection directly.
  */
-const QUANTITY_WORD_NUMBERS = new Set([
+export const QUANTITY_WORD_NUMBERS = new Set([
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
   'ten', 'eleven', 'twelve', 'dozen', 'couple',
 ]);
