@@ -59,6 +59,7 @@ import {
     AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
+import { preserveDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
@@ -734,19 +735,35 @@ async function preflightIngredientLine(
     // (explicit `brand` hint or one detected in rawLine) that the chosen baseName
     // lost, re-derive baseName from the raw line (the mapper is proven robust on
     // the raw line) so the brand token survives into candidate retrieval.
+    // The repair and the one case it must refuse (a count word the lexicon also
+    // sells as a brand — `one`) live in `quantity-word-brand.ts`, which owns the
+    // reasoning and the measurements. Containment is unchanged here.
     if (options.normalizedForm?.trim()) {
         const targetBrand = options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand;
-        if (targetBrand && !baseName.toLowerCase().includes(targetBrand.toLowerCase())) {
-            const rederived = parsed?.name?.trim() || preProcessLine;
-            baseName = rederived.toLowerCase().includes(targetBrand.toLowerCase())
-                ? rederived
-                : `${targetBrand} ${rederived}`.trim();
-            logger.debug('mapping.normalizedform_dropped_brand', {
+        if (targetBrand) {
+            const repair = preserveDroppedBrand({
                 rawLine,
-                normalizedForm: options.normalizedForm,
+                baseName,
                 targetBrand,
-                rederivedBaseName: baseName,
+                rederived: parsed?.name?.trim() || preProcessLine,
+                parsed,
             });
+            if (repair.declined) {
+                logger.debug('mapping.brand_repair_declined', {
+                    rawLine,
+                    normalizedForm: options.normalizedForm,
+                    targetBrand,
+                    reason: repair.declined,
+                });
+            } else if (repair.applied) {
+                baseName = repair.baseName;
+                logger.debug('mapping.normalizedform_dropped_brand', {
+                    rawLine,
+                    normalizedForm: options.normalizedForm,
+                    targetBrand,
+                    rederivedBaseName: baseName,
+                });
+            }
         }
     }
 
