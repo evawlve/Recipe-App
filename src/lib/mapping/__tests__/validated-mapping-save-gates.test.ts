@@ -731,6 +731,29 @@ describe('funnel tagging on the save gates (sprint F1)', () => {
     });
 
     it('tags a bare-category-takeover rejection with its own distinct class', async () => {
+        // The fixture is deliberately BRANDLESS. It used to be `special k red
+        // berries`, which reached this gate by the `specificTokenCount >= 3`
+        // arm because the detector could not see `special k` at all — the
+        // `length > 1` token filter shredded the single-letter `k` before the
+        // n-gram scan. The 2026-08-31 canonical pass fixed that, so that line is
+        // now brand-detected and is caught one gate EARLIER, by brand_mismatch
+        // (the mapping carries no brandName). Both gates reject and nothing is
+        // written either way; only the class differs. Repointed rather than
+        // re-expected, so this test still exercises the gate it is named for.
+        const telemetry: FunnelSink = { funnelStage: 'saved' };
+        await saveValidatedMapping(
+            'red berries breakfast cereal',
+            makeMapping({ foodName: 'Cereal' }),
+            validation,
+            { telemetry },
+        );
+        expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toBe('save_rejected:bare_category_takeover');
+    });
+
+    it('tags the brandless-pick rejection for a query whose brand IS now seen', async () => {
+        // The old fixture above, kept as its own case: `special k` is a real
+        // lexicon entry, so a pick carrying no brand at all is a brand mismatch.
         const telemetry: FunnelSink = { funnelStage: 'saved' };
         await saveValidatedMapping(
             'special k red berries',
@@ -739,7 +762,7 @@ describe('funnel tagging on the save gates (sprint F1)', () => {
             { telemetry },
         );
         expect(mockFoodMappingUpsert).not.toHaveBeenCalled();
-        expect(telemetry.dropReason).toBe('save_rejected:bare_category_takeover');
+        expect(telemetry.dropReason).toBe('save_rejected:brand_mismatch');
     });
 
     it('leaves the line "saved" when no gate blocks the write', async () => {

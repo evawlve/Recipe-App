@@ -8,8 +8,10 @@
  * that never reach aiNormalizeIngredient).
  *
  * Detection strategy:
- *   1. Tokenise the query into 1-, 2- and 3-word n-grams.
- *   2. Check each n-gram against a lowercased brand Set.
+ *   1. Tokenise the query into n-grams, longest first. The ceiling is DERIVED
+ *      from the longest brand in the lists (MAX_BRAND_NGRAM), not hardcoded.
+ *   2. At each size, check the n-gram against the exact brand Set, then against
+ *      a canonical alias map that folds possessives, separators and `&`/`and`.
  *   3. Return true + matched brand name on first hit.
  *
  * Performance: O(tokens) — typically <0.1 ms per call.
@@ -382,7 +384,31 @@ const KNOWN_BRANDS: string[] = [
     'boar\'s head', 'boars head', 'dietz & watson', 'dietz and watson', 'applegate farms', 'foster farms', 'tyson', 'perdue', 'sanderson farms', 'butterball', 'jennie-o', 'honeysuckle white', 'smithfield', 'hormel', 'jimmy dean', 'johnsonville', 'hillshire farm', 'ball park', 'hebrew national', 'nathan\'s', 'nathans', 'oscar mayer', 'bar-s', 'buddig', 'land o frost', 'carl budding', 'schaller & weber', 'volpi', 'columbus', 'fiorucci', 'creminelli', 'olipop', 'poppi',
     'chobani', 'fage', 'oikos', 'siggis', 'stonyfield', 'dannon', 'yoplait', 'brown cow', 'nancy\'s', 'nancys', 'liberte', 'noosa', 'wallaby', 'kite hill', 'forager project', 'silk', 'almond breeze', 'oatly', 'califia farms', 'planet oat', 'chobani oat', 'elmhurst', 'malk', 'three trees', 'ripple', 'notmilk', 'vital farms', 'pete & gerrys', 'pete and gerrys', 'nellies', 'happy egg', 'handsome brook', 'eggland\'s best', 'egglands best',
     'cava', 'sweetgreen', 'roti', 'nando\'s', 'nandos', 'jollibee', 'halal guys', 'torchy\'s', 'torchys', 'velvet taco', 'hopdoddy', 'freebirds', 'waba grill', 'flame broiler', 'the habit', 'habit burger', 'fatburger', 'fuddruckers', 'johnny rockets', 'baja fresh', 'rubio\'s', 'rubios', 'wahoo\'s', 'wahoos', 'church\'s', 'churchs chicken', 'golden chick', 'bush\'s chicken', 'roy rogers', 'arther treachers', 'long john silvers', 'captain d\'s', 'white castle', 'krystal',
-    'ben jerry\'s', 'ben jerrys'
+    'ben jerry\'s', 'ben jerrys',
+
+    // ── Sit-down / fast-casual chains ────────────────────────
+    // Chains are NOT covered by brand-lexicon.json: that file is built from OFF
+    // product counts (>= 50 products), i.e. a packaged-goods corpus. Restaurant
+    // vocabulary lives here, and these were simply missing. Every one is a real
+    // brand in the FatSecret corpus, not a guess: of the 218 FatSecret brands
+    // with >= 20 rows, 36 were absent from BRAND_SET even after canonicalization
+    // (re-derive: the psql GROUP BY in the 2026-08-31 Lane A write-off, P3).
+    // Rows when added, FatSecret / OFF: jersey mike's 94, cheesecake factory 79,
+    // buffalo wild wings 70, texas roadhouse 58, portillo's 38, waffle house 20,
+    // first watch 9/3.
+    'buffalo wild wings', 'cheesecake factory', 'jersey mike\'s',
+    'texas roadhouse', 'waffle house', 'portillo\'s', 'first watch',
+    // Short forms testers actually type. The LONG names are already entries
+    // ('outback steakhouse', 'carrabba\'s italian grill') and an n-gram scan
+    // cannot match a PREFIX of an entry, so the short form needs its own entry.
+    // Deliberately NOT generalised to "first token of any multi-word brand":
+    // that rule would enter 'texas' and 'kind'.
+    'outback', 'carrabba\'s',
+    // A bare `dots` (Dot's Pretzels) was winning over Dippin' Dots on the line
+    // `dippin dots`, because a 1-gram is all the scan had. Entering the 2-token
+    // brand lets longest-first do the arbitration. FS 8 rows / OFF 18 across
+    // four spellings, so this is corpus-backed, not a special case.
+    'dippin\' dots'
 ];
 
 // ============================================================
@@ -404,6 +430,82 @@ const BRAND_SET = new Set<string>([
     ...KNOWN_BRANDS.map(b => b.toLowerCase().trim()),
     ...(brandLexicon as string[]).map(b => b.toLowerCase().trim()),
 ]);
+
+/**
+ * ONE canonicalization, applied to BOTH the lexicon (at module load) and every
+ * query n-gram (at scan time). The symmetry is the point: a one-sided fold lets
+ * the two drift apart.
+ *
+ * Three spelling gaps it closes, measured 2026-08-31 against the chain
+ * spellings testers actually type:
+ *   - POSSESSIVES. The curated list already ships both spellings BY HAND for
+ *     some entries ('nathan\'s', 'nathans'), but 201 of 384 apostrophe entries
+ *     never got their twin, so `dennys` / `applebees` / `chilis` were
+ *     undetectable. This automates a convention the list already endorses.
+ *   - SEPARATORS. `chick-fil-a` and `chick fil a` must reach the same key.
+ *   - `&` vs `and`. 67 entries carry `&` ('noodles & company'), and OFF spells
+ *     the same brands both ways.
+ *
+ * IT DELIBERATELY KEEPS SINGLE-LETTER TOKENS, and that is load-bearing. An
+ * earlier revision reused the scan's `length > 1` filter here and destroyed
+ * brand identity on the lexicon side: `s&w` collapsed to the bare token `and`,
+ * `san-j` to `san`, `sunny d` to `sunny`. Measured on the 4,102-line corpus,
+ * that flagged `shrimp and grits`, `biscuits and gravy` and `half and half` as
+ * branded. Canonical n-grams are therefore built from the UNFILTERED query
+ * tokens (`tokensAll` below) so both sides keep their short tokens.
+ *
+ * FOLD_UNSAFE is a MEASURED exception set, not a guess: a canonical form that
+ * collides with an ordinary food word flags unbranded queries. `green's` folds
+ * to `greens` and fired on `collard greens`, `micro greens` and `power greens
+ * blend`. Re-derive before adding to it by diffing base-vs-branch detection over
+ * `sync-docs/a8i-census-2026-08-23/design-2026-08-25/corpus4102.txt` (mobile repo).
+ */
+const FOLD_UNSAFE = new Set<string>(['greens']);
+
+export function canonicalizeBrandKey(value: string): string {
+    return value
+        .toLowerCase()
+        .replace(/['\u2019`]/g, '')
+        .replace(/&/g, ' and ')
+        .replace(/[-.\/]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * Canonical aliases that are not already exact BRAND_SET members, mapped back to
+ * the lexicon spelling so `matchedBrand` names the real brand rather than the
+ * user's rendering of it. Kept SEPARATE from BRAND_SET so the exact match is
+ * still tried first at every n-gram size: a canonical hit can only ADD a
+ * detection, never displace one that fires today.
+ */
+const CANON_BRAND_ALIASES = new Map<string, string>();
+for (const brand of BRAND_SET) {
+    const canon = canonicalizeBrandKey(brand);
+    // EVERY brand gets a canonical entry, not only the ones whose spelling
+    // changes. A brand can be unreachable by the exact pass while being spelled
+    // exactly right: `in n out` and `special k` are BRAND_SET members that the
+    // `length > 1` filter shreds before the scan sees them. That is the
+    // documented "114 of 2,665 lexicon entries are unreachable" gap, and it is
+    // the same defect as the 3-gram ceiling — a scan that cannot represent the
+    // entry. `length >= 3` keeps a degenerate one-or-two-character canonical
+    // form from matching punctuation noise.
+    if (canon && canon.length >= 3 && !FOLD_UNSAFE.has(canon)
+        && !CANON_BRAND_ALIASES.has(canon)) {
+        CANON_BRAND_ALIASES.set(canon, brand);
+    }
+}
+
+/**
+ * Longest brand in tokens — DERIVED from the lists, never a magic number. The
+ * scan was hardcoded to 3 while 54 entries carry 4-6 tokens, so `jack in the
+ * box` could not be seen at all and the scan fell through to the bare token
+ * `jumbo`, returning a WRONG brand rather than none.
+ */
+const MAX_BRAND_NGRAM = Math.max(
+    3,
+    ...[...BRAND_SET, ...CANON_BRAND_ALIASES.keys()].map(b => b.split(' ').length),
+);
 
 // ============================================================
 // Public API
@@ -454,7 +556,15 @@ export function detectBrandInQuery(rawLine: string): BrandDetectionResult {
         .split(/[\s,()[\]{}]+/)
         .filter(t => t.length > 1);
 
-    if (tokens.length === 0) {
+    // The canonical pass keeps single-letter tokens, because a brand can BE one
+    // ('special k', 'in-n-out', 'chick-fil-a'). The exact pass keeps its long
+    // standing `length > 1` filter so today's matches are byte-identical.
+    const tokensAll = cleaned
+        .toLowerCase()
+        .split(/[\s,()[\]{}]+/)
+        .filter(Boolean);
+
+    if (tokens.length === 0 && tokensAll.length === 0) {
         return { isBranded: false, matchedBrand: null };
     }
 
@@ -462,7 +572,7 @@ export function detectBrandInQuery(rawLine: string): BrandDetectionResult {
     // brand wins over a bare sub-token that is itself a lexicon entry
     // ("alani nu" over "alani", "kettle brand" over "kettle"). A whole-phrase
     // match is what lets hasDecisiveBrandContext treat the hit as decisive.
-    for (let size = 3; size >= 1; size--) {
+    for (let size = MAX_BRAND_NGRAM; size >= 1; size--) {
         for (let i = 0; i <= tokens.length - size; i++) {
             const ngram = tokens.slice(i, i + size).join(' ');
             if (BRAND_SET.has(ngram)) {
@@ -470,6 +580,17 @@ export function detectBrandInQuery(rawLine: string): BrandDetectionResult {
                 const originalTokens = cleaned.split(/[\s,()[\]{}]+/).filter(t => t.length > 1);
                 const matched = originalTokens.slice(i, i + size).join(' ');
                 return { isBranded: true, matchedBrand: matched };
+            }
+        }
+        // Canonical alias pass at the SAME size, so longest-phrase-first still
+        // holds across both lists. Reports the LEXICON spelling: the caller
+        // wants the brand, not the user's rendering of it.
+        for (let i = 0; i <= tokensAll.length - size; i++) {
+            const alias = CANON_BRAND_ALIASES.get(
+                canonicalizeBrandKey(tokensAll.slice(i, i + size).join(' ')),
+            );
+            if (alias) {
+                return { isBranded: true, matchedBrand: alias };
             }
         }
     }
