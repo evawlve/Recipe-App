@@ -8,6 +8,11 @@
  * led with its `100 g` panel row while `FatSecretFood.defaultServingId` named
  * `1 scoop` / 21 g and never reached the response. The fixtures below are that
  * record's shape verbatim (read off the box 2026-08-30).
+ *
+ * The pointer is applied by label AND grams: the options list is deduped by
+ * label alone, so a same-description sibling with different grams could
+ * otherwise catch the default while claiming to be the package serving. When
+ * no option agrees on both, the fallback stays options[0] — honest beats close.
  */
 
 const mockFsFindUnique = jest.fn();
@@ -94,6 +99,31 @@ describe('resolveFoodDetails — unmatched default takes the FS defaultServingId
         expect(details.servingOptions.filter(o => o.isDefault)).toHaveLength(1);
     });
 
+    it('a same-description sibling with different grams cannot catch the default', async () => {
+        // The options list is deduped by label, keeping the FIRST '1 serving'
+        // (50 g). The pointer names the 28 g one. A label-only match would mark
+        // the 50 g option as "the package serving" — wrong grams under a right
+        // label. The grams guard refuses it and the default falls to options[0].
+        // Population this protects (measured 2026-08-30, box read-only): 10
+        // FatSecretFood rows have such a collision.
+        mockFsFindUnique.mockResolvedValue({
+            ...ORGAIN,
+            defaultServingId: 'c',
+            servings: [
+                { servingId: 'a', description: '1 cup', measurementDescription: null, grams: 120, volumeMl: null, numberOfUnits: 1, nutrients: {} },
+                { servingId: 'b', description: '1 serving', measurementDescription: null, grams: 50, volumeMl: null, numberOfUnits: 1, nutrients: {} },
+                { servingId: 'c', description: '1 serving', measurementDescription: null, grams: 28, volumeMl: null, numberOfUnits: 1, nutrients: {} },
+            ],
+        });
+
+        const details = await resolveFoodDetails('fs_74394899');
+
+        expect(details.servingOptions[0].label).toBe('1 cup');
+        expect(details.servingOptions[0].isDefault).toBe(true);
+        expect(details.servingOptions.find(o => o.label === '1 serving')!.isDefault).toBe(false);
+        expect(details.servingOptions.filter(o => o.isDefault)).toHaveLength(1);
+    });
+
     it('a record with NO usable label serving still answers: the macro-only class keeps its fabricated default', async () => {
         // The Whopper Jr. shape: empty panel, one gram-less serving, and a
         // defaultServingId pointing AT that gram-less row. The grams filter
@@ -155,6 +185,23 @@ describe('resolveFoodDetails — the OFF label pointer (servingGrams) marks the 
         expect(details.servingOptions.find(o => o.label === '100 g')!.isDefault).toBe(false);
     });
 
+    it('the agreement is an epsilon, not float equality', async () => {
+        // OffServing.grams and OffFood.servingGrams are parsed independently and
+        // can disagree in the last decimal. 28.005 must still read as "the
+        // 28 g label serving" — an === here silently reverts the whole fix for
+        // any row with float noise, and the appended row (exactly 28) would
+        // catch the default instead.
+        mockOffFindUnique.mockResolvedValue({
+            ...OFF_BASE,
+            servings: [{ description: '15 chips', grams: 28.005 }],
+        });
+
+        const details = await resolveFoodDetails('off_0000000000017');
+
+        expect(details.servingOptions.find(o => o.label === '15 chips')!.isDefault).toBe(true);
+        expect(details.servingOptions.filter(o => o.isDefault)).toHaveLength(1);
+    });
+
     it('the appended servingSize row can be the default when no stored row matches', async () => {
         mockOffFindUnique.mockResolvedValue({
             ...OFF_BASE,
@@ -167,6 +214,24 @@ describe('resolveFoodDetails — the OFF label pointer (servingGrams) marks the 
 
         // The appended unit is grams-identical to servingGrams by construction.
         expect(details.servingOptions.find(o => o.label === '1 portion (15ml)')!.isDefault).toBe(true);
+    });
+
+    it('servingGrams agreeing with NO unit keeps the options[0] fallback', async () => {
+        // A row label containing 'serving' blocks the append, and no stored row
+        // is within the epsilon — the pointer resolves nothing and today's
+        // fallback answers.
+        mockOffFindUnique.mockResolvedValue({
+            ...OFF_BASE,
+            servingSize: '1 serving (28g)',
+            servingGrams: 28,
+            servings: [{ description: '1 serving pack', grams: 50 }],
+        });
+
+        const details = await resolveFoodDetails('off_0000000000017');
+
+        expect(details.servingOptions[0].label).toBe('1 serving pack');
+        expect(details.servingOptions[0].isDefault).toBe(true);
+        expect(details.servingOptions.filter(o => o.isDefault)).toHaveLength(1);
     });
 
     it('no servingGrams: the options[0] fallback is unchanged', async () => {

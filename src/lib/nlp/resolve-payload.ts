@@ -191,7 +191,14 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
   // leave it null, keeping today's `options[0]` fallback. A MATCHED description
   // still wins outright: the mapper resolved a typed line against a specific
   // row, which outranks a claim about which portion the package leads with.
-  let labelServingDescription: string | null = null;
+  // Carried as label + grams, and re-applied against BOTH, because the options
+  // list is deduped by LABEL alone and a record can hold two same-description
+  // rows with different grams — a label-only match can land the default on the
+  // sibling's grams while claiming to be the package serving (measured
+  // 2026-08-30: 10 FS records, 14 OFF barcodes carry such a collision). When
+  // the deduped list no longer holds the pointer's exact (label, grams), the
+  // fallback stays `options[0]` — honest beats close.
+  let labelServing: { label: string; grams: number } | null = null;
 
   if (foodId.startsWith('fdc_')) {
     const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
@@ -265,8 +272,8 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
       // it qualifies when nothing else does; a record whose rows all disagree
       // with `servingGrams` keeps the null and today's `options[0]` fallback.
       if (parseIntServingGrams != null) {
-        labelServingDescription =
-          units.find(u => Math.abs(u.grams - parseIntServingGrams) < 0.01)?.label ?? null;
+        const match = units.find(u => Math.abs(u.grams - parseIntServingGrams) < 0.01);
+        labelServing = match ? { label: match.label, grams: match.grams } : null;
       }
 
       rawServingOptions = deriveServingOptions({
@@ -302,13 +309,7 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         .filter(s => s.grams != null && s.grams > 0)
         .map(s => ({
           label: s.description,
-          grams: s.grams as number,
-          // A real measured g↔ml pair on this food's own label row lets
-          // deriveServingOptions() emit spoon rungs by pure ratio (its branch
-          // 3b). FS is the one store whose `volumeMl` is genuine label data —
-          // OFF's ingest wrote grams ≡ ml (an assumed 1.0 g/ml), so the OFF
-          // branch above deliberately does NOT thread it; see the census.
-          volumeMl: s.volumeMl != null && s.volumeMl > 0 ? s.volumeMl : null,
+          grams: s.grams as number
         }));
 
       // The FS label pointer: `defaultServingId` names the serving the package
@@ -317,10 +318,12 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
       // macro-only restaurant class) resolves nothing here and the fabricated
       // metric set keeps its `options[0]` fallback.
       if (fsFood.defaultServingId) {
-        labelServingDescription =
-          fsFood.servings.find(
-            s => s.servingId === fsFood.defaultServingId && s.grams != null && s.grams > 0,
-          )?.description ?? null;
+        const declared = fsFood.servings.find(
+          s => s.servingId === fsFood.defaultServingId && s.grams != null && s.grams > 0,
+        );
+        labelServing = declared
+          ? { label: declared.description, grams: declared.grams as number }
+          : null;
       }
 
       // MACRO-ONLY RECOVERY — the same repair /api/foods/search made in #324,
@@ -446,10 +449,15 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
   // `defaultServingId` row / OFF's parsed `servingGrams` row), and only when
   // the store names none fall to the first option — index 0 is Prisma's
   // arbitrary row order plus our appended metric set, not a claim by the food.
+  // The pointer must agree on label AND grams: see `labelServing`'s comment.
   if (!hasDefault && servingOptions.length > 0) {
-    const target = labelServingDescription?.toLowerCase().trim();
-    const labelIdx = target
-      ? servingOptions.findIndex(o => o.label.toLowerCase().trim() === target)
+    const pointer = labelServing;
+    const labelIdx = pointer
+      ? servingOptions.findIndex(
+          o =>
+            o.label.toLowerCase().trim() === pointer.label.toLowerCase().trim() &&
+            Math.abs(o.grams - pointer.grams) < 0.01,
+        )
       : -1;
     servingOptions[labelIdx >= 0 ? labelIdx : 0].isDefault = true;
   }
