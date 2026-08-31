@@ -179,6 +179,26 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
   // (/api/nlp/parse) derives the field from `mapped.servingTier` and does not
   // read this. For the callers that do not (/api/foods/barcode) this is it.
   let portionProvenance: PortionProvenance | undefined;
+  // THE RECORD'S OWN LABEL SERVING — the fallback default when nothing matched.
+  // A barcode lookup passes no `matchedServingDescription` (it has no mapper
+  // result and no typed line), so the default used to fall to `options[0]`,
+  // which for an fs_ record is whatever row Prisma returned first: the Orgain
+  // Diego scanned (`fs_74394899`) led with its `100 g` panel row while
+  // `FatSecretFood.defaultServingId` named `1 scoop` / 21 g and never reached
+  // the response. Each branch below sets this from the pointer the store
+  // actually carries — FS: `defaultServingId`; OFF: the parsed label serving
+  // (`servingGrams`/`servingSize`); FDC and AI carry no equivalent pointer and
+  // leave it null, keeping today's `options[0]` fallback. A MATCHED description
+  // still wins outright: the mapper resolved a typed line against a specific
+  // row, which outranks a claim about which portion the package leads with.
+  // Carried as label + grams, and re-applied against BOTH, because the options
+  // list is deduped by LABEL alone and a record can hold two same-description
+  // rows with different grams — a label-only match can land the default on the
+  // sibling's grams while claiming to be the package serving (measured
+  // 2026-08-30: 10 FS records, 14 OFF barcodes carry such a collision). When
+  // the deduped list no longer holds the pointer's exact (label, grams), the
+  // fallback stays `options[0]` — honest beats close.
+  let labelServing: { label: string; grams: number } | null = null;
 
   if (foodId.startsWith('fdc_')) {
     const fdcId = parseInt(foodId.replace('fdc_', ''), 10);
@@ -246,6 +266,16 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         });
       }
 
+      // OFF's label pointer is `servingGrams` (the parsed package serving
+      // weight), not a serving-row id: mark the first unit whose grams agree
+      // with it. The appended row above is grams-identical by construction, so
+      // it qualifies when nothing else does; a record whose rows all disagree
+      // with `servingGrams` keeps the null and today's `options[0]` fallback.
+      if (parseIntServingGrams != null) {
+        const match = units.find(u => Math.abs(u.grams - parseIntServingGrams) < 0.01);
+        labelServing = match ? { label: match.label, grams: match.grams } : null;
+      }
+
       rawServingOptions = deriveServingOptions({
         units,
         densityGml: null,
@@ -281,6 +311,20 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
           label: s.description,
           grams: s.grams as number
         }));
+
+      // The FS label pointer: `defaultServingId` names the serving the package
+      // leads with (`1 scoop`, `15 chips`). Only a row that survived the
+      // grams-filter above can be the default — a gram-less default (the
+      // macro-only restaurant class) resolves nothing here and the fabricated
+      // metric set keeps its `options[0]` fallback.
+      if (fsFood.defaultServingId) {
+        const declared = fsFood.servings.find(
+          s => s.servingId === fsFood.defaultServingId && s.grams != null && s.grams > 0,
+        );
+        labelServing = declared
+          ? { label: declared.description, grams: declared.grams as number }
+          : null;
+      }
 
       // MACRO-ONLY RECOVERY — the same repair /api/foods/search made in #324,
       // reading the same function, so the two lanes cannot bill one record two
@@ -401,9 +445,21 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
     };
   });
 
-  // Fallback to first serving option if no default was matched
+  // No description matched: prefer the record's own label serving (the FS
+  // `defaultServingId` row / OFF's parsed `servingGrams` row), and only when
+  // the store names none fall to the first option — index 0 is Prisma's
+  // arbitrary row order plus our appended metric set, not a claim by the food.
+  // The pointer must agree on label AND grams: see `labelServing`'s comment.
   if (!hasDefault && servingOptions.length > 0) {
-    servingOptions[0].isDefault = true;
+    const pointer = labelServing;
+    const labelIdx = pointer
+      ? servingOptions.findIndex(
+          o =>
+            o.label.toLowerCase().trim() === pointer.label.toLowerCase().trim() &&
+            Math.abs(o.grams - pointer.grams) < 0.01,
+        )
+      : -1;
+    servingOptions[labelIdx >= 0 ? labelIdx : 0].isDefault = true;
   }
 
   return {

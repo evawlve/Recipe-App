@@ -43,6 +43,19 @@ export type ServingOption = { label: string; grams: number };
  *    `resolve-ingredient` pass the food's real `densityGml`/`categoryId`, so
  *    those keep every volume a measurement supports.
  *
+ *    AND A TRAP FOR WHOEVER NEXT REACHES FOR "the food's own g↔ml serving
+ *    pair" AS THE MEASUREMENT (tried and REFUTED 2026-08-30, Lane A session
+ *    29): on the 668 FS foods carrying `volumeMl` + `grams` and no spoon
+ *    option, the persisted `grams` is `servingGramsOf()`'s THIRD leg —
+ *    `ml × categoryDensity(inferCategoryFromName(name))`, default 1.0
+ *    (fatsecret-lane.ts) — so every one of their 668 chosen pair ratios sits
+ *    exactly on the category-density grid (1.000 ×403 · 0.950 ×168 · 1.030
+ *    ×71 · 0.900 ×20 · 1.050 ×3 · 1.100 ×3; zero off-grid). A "pure ratio
+ *    from the pair" is the keyword guess round-tripped through the DB, i.e.
+ *    exactly the `category` tier this rule refuses. Owner:
+ *    sync-docs/reports/2026-08-30_spoon-options-from-ml-census.md (mobile
+ *    repo), §"the pair grams are synthesized".
+ *
  * A category-derived density is still trusted for CONVERSION elsewhere (see
  * `DRY_GRANULE_DENSITY_CATEGORIES` in `./density`, which gates exactly that).
  * This function is a different question — not "how heavy is a cup of this" but
