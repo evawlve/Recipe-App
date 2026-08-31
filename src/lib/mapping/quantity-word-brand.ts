@@ -1,4 +1,5 @@
 import { hasDecisiveBrandContext } from './simple-rerank';
+import { canonicalizeBrandKey } from './brand-detector';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
 /**
@@ -39,27 +40,28 @@ import type { ParsedIngredient } from '../parse/ingredient-line';
  */
 
 /**
- * Token fold used ONLY by the refusal predicate below, to compare a lexicon
- * brand spelling against the raw line and the parser's own field assignments.
+ * THE ONE FOLD. `brand-detector.ts` exports `canonicalizeBrandKey()`, the exact
+ * canonicalization the detector applies to both the lexicon and every query
+ * n-gram, so this module reuses it rather than keeping a second copy — which is
+ * what the previous revision's header asked for the moment such an export
+ * landed. The two folds were byte-identical in behaviour
+ * (lowercase, strip `'`/`\u2019`/backtick, `&` -> ` and `, `[-./]+` -> ` `,
+ * collapse, trim); this is a de-duplication, not a change to the refusal.
  *
- * It is deliberately module-private and is NOT applied to the containment check
- * in `preserveDroppedBrand()`, which stays on this tree's plain
- * `.toLowerCase().includes()` — folding that check is a separate, larger
- * behaviour change (it stops the repair prepending a brand the text already
- * spells differently) that belongs to the brand-detection work, not here.
- * `brand-detector.ts` on this tree exports no canonicalizer to reuse; if one
- * ever lands, collapse this into it rather than keeping two folds.
+ * It is now applied to the CONTAINMENT checks in `preserveDroppedBrand()` too,
+ * which the previous revision deliberately left on a plain `.toLowerCase()
+ * .includes()` and flagged as belonging to the brand-detection work. That work
+ * is this branch. Why it is required rather than merely tidy: the detector now
+ * reports the LEXICON spelling of a brand the user typed differently, so a line
+ * reading `chick fil a spicy sandwich` fails a plain `.includes()` against
+ * `chick-fil-a` and the repair prepends the brand on top of itself. Measured
+ * 2026-08-31, that produced keys like `a chick chick-fil-a fil sandwich spicy`,
+ * `coca coca-cola cola` and `cheese grilled in in-n-out n out`. Folding both
+ * sides removes those without weakening the repair: a line that genuinely LOST
+ * its brand still has no canonical match, so it still fires.
  */
 function foldBrandTokens(value: string): string[] {
-    return value
-        .toLowerCase()
-        .replace(/['\u2019`]/g, '')
-        .replace(/&/g, ' and ')
-        .replace(/[-.\/]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .split(' ')
-        .filter(Boolean);
+    return canonicalizeBrandKey(value).split(' ').filter(Boolean);
 }
 
 /**
@@ -207,16 +209,16 @@ export function preserveDroppedBrand(args: {
     parsed: ParsedIngredient | null | undefined;
 }): BrandPreservationOutcome {
     const { rawLine, baseName, targetBrand, rederived, parsed } = args;
-    const lowerBrand = targetBrand.toLowerCase();
+    const canonBrand = canonicalizeBrandKey(targetBrand);
 
-    if (baseName.toLowerCase().includes(lowerBrand)) {
+    if (canonicalizeBrandKey(baseName).includes(canonBrand)) {
         return { baseName, applied: false, declined: null };
     }
     if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) {
         return { baseName, applied: false, declined: 'brand_consumed_as_quantity' };
     }
     return {
-        baseName: rederived.toLowerCase().includes(lowerBrand)
+        baseName: canonicalizeBrandKey(rederived).includes(canonBrand)
             ? rederived
             : `${targetBrand} ${rederived}`.trim(),
         applied: true,

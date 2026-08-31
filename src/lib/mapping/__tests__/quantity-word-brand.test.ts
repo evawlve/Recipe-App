@@ -213,31 +213,37 @@ describe('a multi-word or chain brand is never fully consumed by the quantity pa
 });
 
 /**
- * PORT NOTE (2026-08-31). The extraction must change NOTHING except the refusal.
- * PR #407 also replaced this repair's two containment checks with a
- * canonical-fold comparison; that change belongs to #407 and is deliberately NOT
- * carried here, so these tests pin the plain `.toLowerCase().includes()` form
- * that this tree ships. If someone later folds the containment check, the first
- * test below goes red — which is the point.
+ * PORT NOTE (2026-08-31, revised). The extraction changed nothing except the
+ * refusal. THIS branch then folded the two containment checks onto
+ * `canonicalizeBrandKey()` — the change the previous revision of this file
+ * deliberately withheld and pinned a tripwire against. The tripwire fired, as
+ * designed, and is replaced below by a test of the folded behaviour. The
+ * equivalence with the pre-extraction expression is retained, restricted to the
+ * lines where the two containment decisions agree, and the disagreeing lines are
+ * enumerated exactly — so this file still refuses a silent drift.
  */
-describe('the extraction is behaviour-preserving apart from the refusal', () => {
-    it('still uses a PLAIN lowercase includes(), not a canonical fold', () => {
-        // A line that already spells the brand differently from the lexicon
-        // spelling fails a plain includes(), so the repair prepends the brand on
-        // top of itself. That is this tree's behaviour, measured 2026-08-31, and
-        // the port preserves it byte for byte. (Fixing it is #407's job.)
-        const cases: Array<[string, string, string]> = [
-            ['chick fil a spicy sandwich', 'spicy sandwich', 'chick-fil-a'],
-            ['coca cola', 'cola', 'Coca-Cola'],
-            ['grilled cheese in n out', 'grilled cheese', 'in-n-out'],
-        ];
-        const keys = cases.map(([rawLine, normalizedForm, brand]) =>
+describe('the extraction is behaviour-preserving apart from the refusal and the fold', () => {
+    /**
+     * The three fold-sensitive spellings. Before the fold, a line that spells the
+     * brand differently from the lexicon failed a plain `.includes()` and the
+     * repair prepended the brand on top of itself, producing the doubled keys in
+     * the second column. That is the defect the fold exists to remove.
+     */
+    const FOLD_SENSITIVE: Array<[string, string, string, string, string]> = [
+        ['chick fil a spicy sandwich', 'spicy sandwich', 'chick-fil-a',
+            'a chick chick-fil-a fil sandwich spicy', 'a chick fil sandwich spicy'],
+        ['coca cola', 'cola', 'Coca-Cola',
+            'coca coca-cola cola', 'coca cola'],
+        ['grilled cheese in n out', 'grilled cheese', 'in-n-out',
+            'cheese grilled in in-n-out n out', 'cheese grilled in n out'],
+    ];
+
+    it('folds the containment check, so a re-spelled brand is not prepended on top of itself', () => {
+        const keys = FOLD_SENSITIVE.map(([rawLine, normalizedForm, brand]) =>
             preflight(rawLine, normalizedForm, brand).key);
-        expect(keys).toEqual([
-            'a chick chick-fil-a fil sandwich spicy',
-            'coca coca-cola cola',
-            'cheese grilled in in-n-out n out',
-        ]);
+        expect(keys).toEqual(FOLD_SENSITIVE.map(row => row[4]));
+        // and none of them is the doubled form this tree used to write.
+        expect(keys).not.toEqual(FOLD_SENSITIVE.map(row => row[3]));
     });
 
     /**
@@ -270,9 +276,11 @@ describe('the extraction is behaviour-preserving apart from the refusal', () => 
         ['noodles and company pad thai', 'pad thai', 'Noodles and Company'],
     ];
 
-    it('agrees with the pre-extraction expression on every line the refusal spares', () => {
+    it('agrees with the pre-extraction expression except on the enumerated fold rows', () => {
+        const foldSensitive = new Set(FOLD_SENSITIVE.map(row => row[0]));
         let fires = 0;
         let refused = 0;
+        let diverged = 0;
         for (const [rawLine, normalizedForm, segmenterBrand] of REPLAY) {
             const parsed = parseIngredientLine(rawLine);
             const baseName = stripPartitiveOfResidue(normalizedForm);
@@ -283,19 +291,30 @@ describe('the extraction is behaviour-preserving apart from the refusal', () => 
             const before = inlineRepairBeforeExtraction(baseName, targetBrand, rederived);
             const after = preserveDroppedBrand({ rawLine, baseName, targetBrand, rederived, parsed });
 
+            if (before.applied) fires++;
+            if (after.declined) { refused++; continue; }
+
+            // Every DISAGREEMENT must be a line we listed. The fold can only turn
+            // an "applied" into a "carries it already", never the reverse: a
+            // canonical form is a superset of the plain one on containment.
+            if (before.applied !== after.applied || after.baseName !== before.baseName) {
+                expect([rawLine, foldSensitive.has(rawLine)]).toEqual([rawLine, true]);
+                expect([rawLine, before.applied]).toEqual([rawLine, true]);
+                diverged++;
+                continue;
+            }
+
             // The containment decision itself must be identical. `before` says
             // "carries the brand" by not applying; `after` says it by neither
             // applying nor declining.
             expect([rawLine, !before.applied])
                 .toEqual([rawLine, !after.applied && after.declined === null]);
-
-            if (before.applied) fires++;
-            if (after.declined) { refused++; continue; }
             expect([rawLine, after.baseName]).toEqual([rawLine, before.baseName]);
         }
         // The fixture must actually exercise the repair, or this test is vacuous.
         expect(fires).toBeGreaterThanOrEqual(10);
         expect(refused).toBe(3);
+        expect(diverged).toBe(FOLD_SENSITIVE.length);
     });
 
     it('differs from the pre-extraction expression ONLY by dropping the prepend', () => {

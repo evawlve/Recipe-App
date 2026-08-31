@@ -735,9 +735,11 @@ async function preflightIngredientLine(
     // (explicit `brand` hint or one detected in rawLine) that the chosen baseName
     // lost, re-derive baseName from the raw line (the mapper is proven robust on
     // the raw line) so the brand token survives into candidate retrieval.
-    // The repair and the one case it must refuse (a count word the lexicon also
-    // sells as a brand — `one`) live in `quantity-word-brand.ts`, which owns the
-    // reasoning and the measurements. Containment is unchanged here.
+    // The repair, the one case it must refuse (a count word the lexicon also
+    // sells as a brand — `one`) and the canonical fold its containment checks run
+    // in all live in `quantity-word-brand.ts`, which owns the reasoning and the
+    // measurements. The fold matters here only because `detectBrandInQuery`
+    // reports the LEXICON spelling, which the raw line need not use.
     if (options.normalizedForm?.trim()) {
         const targetBrand = options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand;
         if (targetBrand) {
