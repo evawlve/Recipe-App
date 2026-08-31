@@ -8,7 +8,7 @@
  * 4. Handles serving selection and backfill
  */
 
-import { parseIngredientLine, QUANTITY_WORD_NUMBERS, type ParsedIngredient } from '../parse/ingredient-line';
+import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
 import { normalizeIngredientName } from './normalization-rules';
 import { gatherCandidates, confidenceGate, assessConfidence, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
@@ -613,63 +613,6 @@ type PreflightOutcome =
     | { done: true; result: FatsecretMappedIngredient | null }
     | { done: false; parsed: ParsedIngredient | null; baseName: string };
 
-/**
- * WORD-NUMBER SEAM — the segmenter spends a word-number the parser already
- * spent, and the leftover lands in the cache KEY.
- *
- * `one slice of Swiss cheese` parses to {qty 1, unit slice, name "Swiss
- * cheese"} — the parser read `one` as the quantity. The AI segmenter's
- * `normalizedForm` for the same item is `one Swiss cheese`: it KEPT the number
- * and DROPPED the unit. That string is the cache-key input, so the key became
- * `cheese one swiss` — token-sorted and orphaned on arrival, because nothing a
- * user types as `swiss cheese` can ever reach it. Two such rows exist
- * (`cheese one swiss`, `banana one`, usedCount 1 each).
- *
- * IT KEYS ON THE DISAGREEMENT, NOT ON THE TOKEN, and that is the whole design.
- * Twelve of the 14 word-number keys in the cache are legitimate — the number is
- * the PRODUCT NAME (`cheese four freschetta pizza`, `panera soup ten
- * vegetable`) or the BRAND (`birthday cake one`, usedCount 242; `milk one`,
- * 203). Both obvious fixes are refuted in writing and break exactly those rows:
- *   (a) a blanket strip of a leading word-number, and
- *   (b) re-running normalizedForm through parseIngredientLine(), which reads a
- *       product-name number as a quantity (`four cheese pizza` -> qty 4;
- *       `one bar birthday cake` -> the ONE brand eaten).
- * Owner: `sync-docs/reports/2026-08-25_the-word-number-key-and-why-both-obvious-fixes-break-it.md`
- * (mobile repo) §3-§4.
- *
- * The conjuncts are what make it narrow. The RAW line must lead with the
- * word-number AND the parser must have spent it as a quantity alongside a UNIT
- * — so `four cheese pizza`, which yields no unit, cannot fire — and the
- * segmenter's name must lead with that SAME number while omitting that unit —
- * so `one slice whole wheat bread`, which keeps `slice`, is not a disagreement
- * at all. Verified against all 15 MappingEventLog pairs carrying the shape: it
- * fires on exactly the 2 that produced orphaned keys.
- *
- * The word list is IMPORTED from the parser rather than restated: that module's
- * own comment calls a second copy "the bug, not the design".
- *
- * @returns the stripped name, or null when this is not a disagreement.
- */
-export function stripSpentWordNumber(
-    rawLine: string,
-    baseName: string,
-    parsed: ParsedIngredient | null | undefined,
-): string | null {
-    if (!parsed) return null;
-    const spentUnit = (parsed.unit ?? parsed.rawUnit ?? '').toString().toLowerCase();
-    if (!spentUnit || !(parsed.qty >= 1)) return null;
-
-    const rawLead = rawLine.trim().toLowerCase().split(/\s+/)[0];
-    if (!QUANTITY_WORD_NUMBERS.has(rawLead)) return null;
-
-    const nameTokens = baseName.split(/\s+/).filter(Boolean);
-    if (nameTokens.length < 2) return null;                       // never strip to empty
-    if (nameTokens[0].toLowerCase() !== rawLead) return null;     // must be the SAME number
-    if (nameTokens.some(t => t.toLowerCase() === spentUnit)) return null;  // unit kept => no disagreement
-
-    return nameTokens.slice(1).join(' ');
-}
-
 async function preflightIngredientLine(
     rawLine: string,
     trimmed: string,
@@ -704,19 +647,6 @@ async function preflightIngredientLine(
     // and lookupValidatedMappingWithLegacyFallback's legacy-key fallback stops
     // resurrecting `garlic of`-class fork rows on the main path.
     let baseName = stripPartitiveOfResidue((options.normalizedForm?.trim() || parsed?.name?.trim() || preProcessLine).trim());
-
-    // WORD-NUMBER SEAM — see stripSpentWordNumber() for the full reasoning.
-    if (options.normalizedForm?.trim()) {
-        const seamStripped = stripSpentWordNumber(trimmed, baseName, parsed);
-        if (seamStripped !== null) {
-            logger.info('mapping.word_number_seam_stripped', {
-                rawLine: trimmed, normalizedForm: options.normalizedForm,
-                qty: parsed?.qty, unit: parsed?.unit ?? parsed?.rawUnit, baseName,
-                stripped: seamStripped,
-            });
-            baseName = seamStripped;
-        }
-    }
 
     // IDENTITY HINT RESTORATION — the discriminator survives into the cache KEY
     // and was being lost from the search QUERY.
