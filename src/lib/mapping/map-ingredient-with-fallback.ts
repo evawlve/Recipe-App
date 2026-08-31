@@ -58,7 +58,8 @@ import {
     AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_MAX_PER_REQUEST,
     AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
-import { detectBrandInQuery, canonicalizeBrandKey } from './brand-detector';
+import { detectBrandInQuery } from './brand-detector';
+import { preserveDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
@@ -734,30 +735,35 @@ async function preflightIngredientLine(
     // (explicit `brand` hint or one detected in rawLine) that the chosen baseName
     // lost, re-derive baseName from the raw line (the mapper is proven robust on
     // the raw line) so the brand token survives into candidate retrieval.
+    // The repair and the one case it must refuse (a count word the lexicon also
+    // sells as a brand — `one`) live in `quantity-word-brand.ts`, which owns the
+    // reasoning and the measurements. Containment is unchanged here.
     if (options.normalizedForm?.trim()) {
         const targetBrand = options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand;
-        // "Already carries the brand" must be asked in the SAME canonical form the
-        // detector matched in, or this repair re-inserts a brand the text already
-        // spells. `detectBrandInQuery` reports the LEXICON spelling, so a line
-        // reading `chick fil a spicy sandwich` fails a plain `.includes()` against
-        // `chick-fil-a` and the brand is prepended on top of itself: measured
-        // 2026-08-31, that produced keys like `a chick chick-fil-a fil sandwich
-        // spicy`, `coca coca-cola cola` and `cheese grilled in in-n-out n out`.
-        // Folding both sides removes those without weakening the repair — a line
-        // that genuinely LOST its brand still has no canonical match.
-        const carriesBrand = !!targetBrand
-            && canonicalizeBrandKey(baseName).includes(canonicalizeBrandKey(targetBrand));
-        if (targetBrand && !carriesBrand) {
-            const rederived = parsed?.name?.trim() || preProcessLine;
-            baseName = canonicalizeBrandKey(rederived).includes(canonicalizeBrandKey(targetBrand))
-                ? rederived
-                : `${targetBrand} ${rederived}`.trim();
-            logger.debug('mapping.normalizedform_dropped_brand', {
+        if (targetBrand) {
+            const repair = preserveDroppedBrand({
                 rawLine,
-                normalizedForm: options.normalizedForm,
+                baseName,
                 targetBrand,
-                rederivedBaseName: baseName,
+                rederived: parsed?.name?.trim() || preProcessLine,
+                parsed,
             });
+            if (repair.declined) {
+                logger.debug('mapping.brand_repair_declined', {
+                    rawLine,
+                    normalizedForm: options.normalizedForm,
+                    targetBrand,
+                    reason: repair.declined,
+                });
+            } else if (repair.applied) {
+                baseName = repair.baseName;
+                logger.debug('mapping.normalizedform_dropped_brand', {
+                    rawLine,
+                    normalizedForm: options.normalizedForm,
+                    targetBrand,
+                    rederivedBaseName: baseName,
+                });
+            }
         }
     }
 

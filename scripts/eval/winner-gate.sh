@@ -264,7 +264,7 @@ fi
 #                          is a producer; but it is the save-gate + lookup file (33
 #                          commits in the same window, second-most-edited in the mapper)
 #                          and the rest of it is entirely invisible to a replay.
-FROZEN_INPUT_PATHS='src/lib/parse/|src/lib/mapping/normalization-rules\.ts|data/fatsecret/normalization-rules\.json|src/lib/mapping/brand-detector\.ts|src/lib/mapping/brand-lexicon\.json|src/lib/mapping/digit-brands\.ts|src/lib/mapping/ai-normalize\.ts|src/lib/mapping/normalize-gate\.ts|src/lib/mapping/llm-output-guards\.ts|src/lib/mapping/ai-parse\.ts|src/lib/mapping/ai-synonym-generator\.ts|src/lib/mapping/modifier-constraints\.ts|src/lib/mapping/cache-key-core\.ts|src/lib/mapping/partitive-residue\.ts'
+FROZEN_INPUT_PATHS='src/lib/parse/|src/lib/mapping/normalization-rules\.ts|data/fatsecret/normalization-rules\.json|src/lib/mapping/brand-detector\.ts|src/lib/mapping/brand-lexicon\.json|src/lib/mapping/digit-brands\.ts|src/lib/mapping/ai-normalize\.ts|src/lib/mapping/normalize-gate\.ts|src/lib/mapping/llm-output-guards\.ts|src/lib/mapping/ai-parse\.ts|src/lib/mapping/ai-synonym-generator\.ts|src/lib/mapping/modifier-constraints\.ts|src/lib/mapping/cache-key-core\.ts|src/lib/mapping/partitive-residue\.ts|src/lib/mapping/quantity-word-brand\.ts'
 if changed_paths | grep -qE "$FROZEN_INPUT_PATHS"; then
     echo "ABORT: this branch touches a FROZEN SNAPSHOT INPUT:" >&2
     changed_paths | grep -E "$FROZEN_INPUT_PATHS" | sed 's/^/  /' >&2

@@ -23,14 +23,46 @@
  * applying either to the other's rows doubles the error.
  *
  * The formula alone is NOT sufficient evidence. "The panel is impossible and
- * rescaling makes it plausible" is true of 162 corpus rows measured 2026-08-28
- * (77 unmarked + 85 already marked, servingGrams > 100) and it is a
+ * rescaling makes it plausible" is true of 145 corpus rows measured 2026-08-31
+ * (4 unmarked + 141 already marked) out of the 302 rows with servingGrams > 100
+ * whose stored panel this module's own guard already refuses, and it is a
  * *consequence* of the arithmetic, not evidence about any one row. So every
  * entry here REQUIRES an independent panel witness: another live row whose
  * stored per-100g panel already equals the repaired panel. That is a
  * measurement no rescale can manufacture, it is re-run against the LIVE witness
  * at replay time, and it is why this module cannot be pointed at the class
  * without new evidence per row.
+ *
+ * Re-derive that 145 with the two predicates exported below, never a SQL
+ * replica of them - the count must not be able to drift from this module's own
+ * definition of "plausible" (from the backend repo root, with .env sourced):
+ *
+ *   npx ts-node --project tsconfig.scripts.json --transpile-only \
+ *     -r tsconfig-paths/register -e '
+ *   import { PrismaClient } from "@prisma/client";
+ *   import { guardRepairedPanel, rescaleServingPanelTo100g } from "./src/lib/mapping/hand-panel-repair";
+ *   (async () => { const p = new PrismaClient(); let imp=0,u=0,m=0;
+ *   for (const r of await p.offFood.findMany({ where: { servingGrams: { gt: 100 } },
+ *       select: { servingGrams: true, nutrientsPer100g: true, corruptReason: true } })) {
+ *     const pn = r.nutrientsPer100g as any; if (!pn) continue;
+ *     const v = guardRepairedPanel(pn);
+ *     if (!v || v === "no_calories" || v === "calories_not_positive") continue; imp++;
+ *     if (guardRepairedPanel(rescaleServingPanelTo100g(pn, r.servingGrams as number))) continue;
+ *     r.corruptReason == null ? u++ : m++; }
+ *   console.log(`impossible=${imp} rescued=${u+m} unmarked=${u} marked=${m}`);
+ *   await p.$disconnect(); })();'
+ *
+ * -> impossible=302 rescued=145 unmarked=4 marked=141 (2026-08-31).
+ * Deliberately NOT a doc-check claim: the honest predicate is a full scan of
+ * the 229,002 rows with servingGrams > 100 through the shipped guard, which is
+ * too heavy for a nightly, and the only cheap alternative is a SQL replica of
+ * guardRepairedPanel() that would silently drift from it.
+ *
+ * The number this replaced - "162 corpus rows (77 unmarked + 85 already
+ * marked)" - is not reproducible by this predicate and its source SQL was not
+ * recorded. The marked half is close and the unmarked half is not: all 141
+ * marked rows carry long-standing *-impossible:direct physics marks, so corpus
+ * drift since 2026-08-28 does not account for 77 -> 4.
  *
  * A witness is a claim about the PANEL, never about identity. The two rows may
  * be different products (bun cha: a pork dish and a chicken variant) — what the
