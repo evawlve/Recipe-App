@@ -1690,13 +1690,44 @@ export function hasNullOrInvalidMacros(
         }
         // ALSO: If protein AND carbs are BOTH ZERO, that's equally suspicious
         // This catches corrupted data like red lentils with P:0, C:0, F:2.86, kcal:314
-        // Real lentils have ~25g protein and ~60g carbs per 100g
+        // Real lentils have ~25g protein and ~60g carbs per 100g.
         //
-        // EXCEPTION: Pure-fat foods (oils, butter, lard, ghee) legitimately have
-        // 0 protein and 0 carbs — they are 100% fat. If fat > 50g/100g, this is
-        // a valid pure-fat food, not corrupted data.
+        // THE TEST IS WHETHER A MACRO IS MISSING, SO ASK THAT — do not proxy it
+        // with a flat fat threshold. The proxy this replaces was `fat <= 50`,
+        // whose stated intent was to exempt "pure-fat foods (oils, butter, lard,
+        // ghee)". That description is a category, and the predicate is a
+        // quantity, so every genuine LOW-fat food with no sugar and no protein
+        // was deleted as corrupted data — the whole zero-sugar / sugar-free
+        // creamer, syrup and dressing class. Measured 2026-08-31 on the live
+        // corpus: the old predicate fires on 2,262 `OffFood` rows, and on 2,242
+        // of them (99.1%) the fat ALONE accounts for the stated calories to
+        // within +/-30%, i.e. nothing is missing and the rejection is wrong. Of
+        // the 20 it catches that fail that test, 12 are olives, seaweed and hot
+        // sauce; only the 8 carrying fat = 0 (spices, herb tea, L-carnitine) are
+        // the shape the comment above describes. Re-derive:
+        //   SELECT count(*) FILTER (WHERE f*9 BETWEEN k*0.7 AND k*1.3), count(*)
+        //     FROM (SELECT ("nutrientsPer100g"->>'calories')::float k,
+        //                  ("nutrientsPer100g"->>'protein')::float p,
+        //                  ("nutrientsPer100g"->>'carbs')::float c,
+        //                  ("nutrientsPer100g"->>'fat')::float f FROM "OffFood"
+        //           WHERE "nutrientsPer100g"->>'calories' IS NOT NULL) n
+        //    WHERE k > 50 AND p = 0 AND c = 0 AND f <= 50;
+        //
+        // The live defect it caused: `2 tbsp coffee mate zero sugar French
+        // vanilla` deleted `off_0050000659302` "French Vanilla Zero Sugar
+        // Creamer" [Coffee mate] (66.7 kcal, P0 C0 F6.67 — a correct label) at
+        // the token filter, leaving the brand-gapped REGULAR product
+        // `off_0050017322756` at 233.3 kcal/100 g to win, and billed a real
+        // alpha user 70 kcal for 20 (ASC AGiI-O, punch #38).
+        //
+        // The replacement keeps every true positive the guard was written for:
+        // red lentils bill 2.86 g fat against 314 kcal, so the fat explains
+        // 8.2% of them and this still fires. A pure-fat oil at 100 g / 900 kcal
+        // explains 100% and is exempt without needing to be named.
         const fatValue = nutrients.fat ?? 0;
-        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0 && fatValue <= 50) {
+        const caloriesExplainedByFat = fatValue * 9;
+        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0
+            && caloriesExplainedByFat < calories * 0.5) {
             return true;
         }
     }
