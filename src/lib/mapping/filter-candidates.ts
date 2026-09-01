@@ -1690,13 +1690,44 @@ export function hasNullOrInvalidMacros(
         }
         // ALSO: If protein AND carbs are BOTH ZERO, that's equally suspicious
         // This catches corrupted data like red lentils with P:0, C:0, F:2.86, kcal:314
-        // Real lentils have ~25g protein and ~60g carbs per 100g
+        // Real lentils have ~25g protein and ~60g carbs per 100g.
         //
-        // EXCEPTION: Pure-fat foods (oils, butter, lard, ghee) legitimately have
-        // 0 protein and 0 carbs — they are 100% fat. If fat > 50g/100g, this is
-        // a valid pure-fat food, not corrupted data.
+        // THE TEST IS WHETHER A MACRO IS MISSING, SO ASK THAT — do not proxy it
+        // with a flat fat threshold. The proxy this replaces was `fat <= 50`,
+        // whose stated intent was to exempt "pure-fat foods (oils, butter, lard,
+        // ghee)". That description is a category, and the predicate is a
+        // quantity, so every genuine LOW-fat food with no sugar and no protein
+        // was deleted as corrupted data — the whole zero-sugar / sugar-free
+        // creamer, syrup and dressing class. Measured 2026-08-31 on the live
+        // corpus: the old predicate fires on 2,262 `OffFood` rows, and on 2,242
+        // of them (99.1%) the fat ALONE accounts for the stated calories to
+        // within +/-30%, i.e. nothing is missing and the rejection is wrong. Of
+        // the 20 it catches that fail that test, 12 are olives, seaweed and hot
+        // sauce; only the 8 carrying fat = 0 (spices, herb tea, L-carnitine) are
+        // the shape the comment above describes. Re-derive:
+        //   SELECT count(*) FILTER (WHERE f*9 BETWEEN k*0.7 AND k*1.3), count(*)
+        //     FROM (SELECT ("nutrientsPer100g"->>'calories')::float k,
+        //                  ("nutrientsPer100g"->>'protein')::float p,
+        //                  ("nutrientsPer100g"->>'carbs')::float c,
+        //                  ("nutrientsPer100g"->>'fat')::float f FROM "OffFood"
+        //           WHERE "nutrientsPer100g"->>'calories' IS NOT NULL) n
+        //    WHERE k > 50 AND p = 0 AND c = 0 AND f <= 50;
+        //
+        // The live defect it caused: `2 tbsp coffee mate zero sugar French
+        // vanilla` deleted `off_0050000659302` "French Vanilla Zero Sugar
+        // Creamer" [Coffee mate] (66.7 kcal, P0 C0 F6.67 — a correct label) at
+        // the token filter, leaving the brand-gapped REGULAR product
+        // `off_0050017322756` at 233.3 kcal/100 g to win, and billed a real
+        // alpha user 70 kcal for 20 (ASC AGiI-O, punch #38).
+        //
+        // The replacement keeps every true positive the guard was written for:
+        // red lentils bill 2.86 g fat against 314 kcal, so the fat explains
+        // 8.2% of them and this still fires. A pure-fat oil at 100 g / 900 kcal
+        // explains 100% and is exempt without needing to be named.
         const fatValue = nutrients.fat ?? 0;
-        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0 && fatValue <= 50) {
+        const caloriesExplainedByFat = fatValue * 9;
+        if ((nutrients.protein ?? 0) === 0 && (nutrients.carbs ?? 0) === 0
+            && caloriesExplainedByFat < calories * 0.5) {
             return true;
         }
     }
@@ -2622,6 +2653,40 @@ export function filterCandidatesByTokens(
     // KindaHealthyMobile sync-docs/reports/2026-08-25_k2-the-head-noun-rule-and-the-two-guards-it-needed.md).
     // Relaxing to the BRAND instead is the pre-K2 admission for that line, which is wide but
     // never wrong about who made the food.
+    //
+    // S3 (2026-09-01): the brand is the FIRST relax key, no longer the ONLY one. On a chain whose
+    // menu item the gather never returns, `[brandToken]` is unsatisfiable, so the pass that exists
+    // to RESTORE an emptied pool restores nothing, `mapping.all_filtered` fires at the caller and
+    // the line resolves to NOTHING — an empty diary row, which is strictly worse than a generic
+    // record of the right food class. K2 gave this pass exactly one alternative token set and no
+    // second try; the head noun is therefore kept here and retried BELOW, after the brand key has
+    // run and come back empty. Measured over PR #407's 229 detection flips (8,102 lines,
+    // cross-snapshot, two independent grading lenses, 2026-08-31): 20 BROKEN, of which 10 are this
+    // mechanism and 6 lose their winner outright — `churchs coleslaw` admitted 16 -> 0 against a
+    // base that bills 41 kcal on fs_36346, `churchs jalapeno cheese bombers` the same shape.
+    // Owner: KindaHealthyMobile
+    // sync-docs/reports/2026-08-31_the-flat-brand-bonus-decides-both-rows.md section 2(b), plus the
+    // session-33 grading comment on PR #407.
+    //
+    // WHAT IT IS A NO-OP ON, BY CONSTRUCTION AND NOT BY MEASUREMENT. The fallback reads the result
+    // of running `[brandToken]` UNCHANGED, and this function is a pure per-candidate predicate with
+    // no module-level mutable state, so it cannot reach any line whose brand relax admits >= 1 —
+    // which is the whole `culvers butter burger` / Kowalskis class K2 was written for (K2's own
+    // receipt has that line landing back on its Culver's record; the corpus carries 46 FatSecret
+    // and 233 OFF `culver` rows). It is likewise byte-identical on: every line the caller does not
+    // retry relaxed, i.e. every line whose STRICT filter admits >= 1; the two call sites that never
+    // pass `relaxed`; and every line that is not brand-detected, where `brandToken` is undefined and
+    // the relax key ALREADY is the head noun.
+    //
+    // THE ONE RESIDUAL, STATED NOT HIDDEN: where the brand relax IS empty, a foreign brand's product
+    // can be admitted — the Kowalskis outcome — but only in the world where the alternative is an
+    // empty diary row. That is the trade, not a gap in the argument.
+    //
+    // On master the trigger is reached in 16 of 190,833 `MappingEventLog` events
+    // (`funnelStage='all_filtered'`), none of them chain lines, so a frozen-pool arm on master is
+    // EXPECTED to report zero winner changes: that is this guard's no-collateral receipt, not a
+    // blind instrument. The recovery evidence has to come from a replay on the #407 tree.
+    let headNounRelaxFallback: string | null = null;
     if (relaxed && mustHaveTokens.length > 1) {
         const relaxDetection = detectBrandInQuery(normalizedName);
         const relaxBrandTokens = relaxDetection.isBranded && relaxDetection.matchedBrand
@@ -2629,7 +2694,9 @@ export function filterCandidatesByTokens(
             : new Set<string>();
         const brandToken = mustHaveTokens.find(t =>
             relaxBrandTokens.has(t) || relaxBrandTokens.has(foldApostrophes(t)));
-        mustHaveTokens = [brandToken ?? mustHaveTokens[mustHaveTokens.length - 1]];
+        const headNoun = mustHaveTokens[mustHaveTokens.length - 1];
+        if (brandToken && brandToken !== headNoun) headNounRelaxFallback = headNoun;
+        mustHaveTokens = [brandToken ?? headNoun];
     }
 
     if (mustHaveTokens.length === 0) {
@@ -2637,8 +2704,10 @@ export function filterCandidatesByTokens(
         return { filtered: candidates, removedCount: 0 };
     }
 
-    // Filter candidates
-    const filtered = candidates.filter(candidate => {
+    // Filter candidates. Named so the S3 fallback below can run the SAME predicate a second time
+    // against a different required-token set; the body is unchanged and `mustHaveTokens` is a
+    // `let` the closure reads on each call.
+    const admit = (): UnifiedCandidate[] => candidates.filter(candidate => {
         const candidateName = normalizeCandidateName(candidate);
         // Possessive brands are invisible to the required-token check: "Trader
         // Joe's" tokenizes to {trader, joe}, so the query token `joes` matches
@@ -2994,6 +3063,28 @@ export function filterCandidatesByTokens(
         return true;
 
     });
+
+    let filtered = admit();
+
+    // The S3 second pass. ORDERED, never merged: it runs only on a pool the brand key emptied, so
+    // it can turn zero candidates into some and can never displace one the brand key admitted.
+    // Note it is slightly WIDER than the pre-K2 head relax it restores, because `headNounReAimable`
+    // is true on exactly these (brand-detected) lines, so K2's compound / near-spelling last resort
+    // applies to this token too (`sticks` finds `Breadsticks`). That is admit-only against an empty
+    // pool: it can add, never subtract.
+    //
+    // Logged at WARN deliberately. It replaces a `logger.warn('mapping.all_filtered')` at the
+    // caller, and the box runs at `warn` — logging the recovery at `info` would make this guard's
+    // firing LESS observable in production than the failure it removes.
+    if (relaxed && filtered.length === 0 && headNounRelaxFallback !== null) {
+        mustHaveTokens = [headNounRelaxFallback];
+        filtered = admit();
+        logger.warn('filter.candidates.head_noun_relax_recovery', {
+            normalizedName,
+            headNoun: headNounRelaxFallback,
+            admitted: filtered.length,
+        });
+    }
 
     const removedCount = candidates.length - filtered.length;
 
