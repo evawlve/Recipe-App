@@ -214,3 +214,51 @@ describe('disqualifier scan ignores the brand name', () => {
         expect(filtered.length).toBe(0);
     });
 });
+
+describe('S3 — the brand relax key falls back to the head noun instead of starving', () => {
+    // K2 re-pointed the relaxed retry from the head noun to the BRAND token, which is right when
+    // the brand is satisfiable (it stops `culvers butter burger` billing a Kowalskis bun) and
+    // catastrophic when it is not: the pool that exists to RESTORE an emptied filter comes back
+    // empty and the line resolves to nothing at all. These pin both halves.
+
+    it('is a NO-OP when the brand relax admits something (the Kowalskis class)', () => {
+        // `culvers butter burger` — the brand IS in the pool, so the fallback must never be
+        // reached and the output must be exactly the brand-key result: the Culver's rows only.
+        const cands = [
+            cand({ name: 'ButterBurger Cheese', brandName: "Culver's" }),
+            cand({ name: 'ButterBurger Deluxe', brandName: "Culver's" }),
+            cand({ name: 'Butter Burger buns', brandName: 'Kowalskis' }),
+        ];
+        const { filtered } = filterCandidatesByTokens(cands, 'culvers butter burger', {
+            rawLine: 'culvers butter burger',
+            relaxed: true,
+        });
+        const brands = filtered.map(c => c.brandName);
+        expect(brands).toEqual(["Culver's", "Culver's"]);
+        expect(brands).not.toContain('Kowalskis');
+    });
+
+    it('recovers the head noun when the brand relax admits NOTHING (churchs coleslaw)', () => {
+        // No candidate carries `churchs`, so the brand key empties the pool. Before S3 this
+        // returned [] and the caller logged mapping.all_filtered — an empty diary row.
+        const cands = [
+            cand({ name: 'Coleslaw', brandName: null }),
+            cand({ name: 'Creamy Coleslaw', brandName: 'Some Deli' }),
+            cand({ name: 'Potato Salad', brandName: null }),
+        ];
+        const { filtered } = filterCandidatesByTokens(cands, 'churchs coleslaw', {
+            rawLine: 'churchs coleslaw',
+            relaxed: true,
+        });
+        expect(filtered.length).toBeGreaterThan(0);
+        expect(filtered.map(c => c.name)).toEqual(['Coleslaw', 'Creamy Coleslaw']);
+    });
+
+    it('does not fire in STRICT mode — an empty strict pool stays empty for the caller to retry', () => {
+        const cands = [cand({ name: 'Coleslaw', brandName: null })];
+        const { filtered } = filterCandidatesByTokens(cands, 'churchs coleslaw', {
+            rawLine: 'churchs coleslaw',
+        });
+        expect(filtered).toEqual([]);
+    });
+});
