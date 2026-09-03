@@ -18,6 +18,7 @@
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 import {
@@ -1477,6 +1478,276 @@ describe('winner-gate.sh UNOBSERVED_SURFACE_PATHS — the surface the replay nev
         const block = GATE_SRC.slice(GATE_SRC.indexOf('UNOBSERVED_SURFACE_PATHS='));
         expect(block).toMatch(/\n\s*exit 5\n/);
         expect(GATE_SRC.match(/\n\s*exit 5\n/g) ?? []).toHaveLength(1);
+    });
+});
+
+// ============================================================================
+// one-hop-guard.sh ONE_HOP_SYMBOLS — the symbols RETRIEVAL reaches one import hop away
+// ============================================================================
+/**
+ * THE FOURTH ABORT (2026-09-02), and why it is a SYMBOL list rather than a path list.
+ *
+ * RETRIEVAL_PATHS names the three files that PRODUCE the frozen pool, and a path list
+ * is blind to what they import: gather-candidates.ts calls detectGrainCookingContext()
+ * from filter-candidates.ts at two gather sites, and filter-candidates.ts is on no list
+ * because the rest of it is the admission layer a frozen-pool diff is FOR. Listing the
+ * file is unusable (10 of the last 20 src/lib/mapping commits edit it, 0 edit a listed
+ * symbol — one-hop-guard.sh carries the re-derive). So the membership is
+ * `<file>:<symbol>` pairs, read out of one-hop-guard.sh the way the path lists are read
+ * out of winner-gate.sh, and the predicate is the SHIPPED bash: the symbol's source
+ * REGION compared between the base ref and the working tree. Every case below runs
+ * those functions through bash; none restates them in TypeScript.
+ *
+ * Both directions, again: a listed file changed OUTSIDE its listed symbol must NOT
+ * abort (filter-candidates.ts carries live admission work), a __tests__ path never
+ * reaches the guard, and the one producer import the replay executes LIVE
+ * (RERANK_DECLINED_CONFIDENCE) is pinned as deliberately ABSENT with its receipt.
+ */
+const GUARD_PATH = path.join(REPO_ROOT, 'scripts', 'eval', 'one-hop-guard.sh');
+const GUARD_SRC = fs.readFileSync(GUARD_PATH, 'utf8');
+
+/** One shipped `NAME='…'` assignment out of one-hop-guard.sh, never restated. */
+function guardVar(name: string): string {
+    const m = GUARD_SRC.match(new RegExp(`^${name}='([^']*)'`, 'm'));
+    if (!m) {
+        throw new Error(
+            `one-hop-guard.sh no longer defines ${name}='…' on a single line. ` +
+            'This test cannot read the shipped membership, which is a FAILURE, not a skip.');
+    }
+    return m[1];
+}
+
+function oneHopEntries(): Array<{ file: string; symbol: string }> {
+    return guardVar('ONE_HOP_SYMBOLS').trim().split(/\s+/).map(e => {
+        const i = e.indexOf(':');
+        if (i <= 0 || i === e.length - 1) throw new Error(`malformed ONE_HOP_SYMBOLS entry: ${e}`);
+        return { file: e.slice(0, i), symbol: e.slice(i + 1) };
+    });
+}
+
+/** Runs the SHIPPED functions through bash, under the gate's own `-u -o pipefail`. */
+function guardShell(script: string, cwd: string, env: Record<string, string> = {}) {
+    const res = spawnSync('bash', ['-c', `set -uo pipefail; source "$GUARD"; ${script}`], {
+        cwd, encoding: 'utf8', env: { ...process.env, ...env, GUARD: GUARD_PATH },
+    });
+    if (res.error) throw res.error;
+    return { status: res.status, stdout: res.stdout, stderr: res.stderr };
+}
+
+function symbolRegion(file: string, symbol: string, cwd: string = REPO_ROOT): string {
+    const r = guardShell('symbol_region "$F" "$S"', cwd, { F: file, S: symbol });
+    if (r.status !== 0) throw new Error(`symbol_region failed (${r.status}): ${r.stderr}`);
+    return r.stdout;
+}
+
+/** The gate's consumer contract: exit 0 = changed, 1 = unchanged. */
+function symbolChangedVsHead(repo: string, file: string, symbol: string): boolean {
+    const r = guardShell('one_hop_symbol_changed HEAD "$F" "$S"', repo, { F: file, S: symbol });
+    if (r.status !== 0 && r.status !== 1) {
+        throw new Error(`one_hop_symbol_changed failed (${r.status}): ${r.stderr}`);
+    }
+    return r.status === 0;
+}
+
+/** Whether a path survives the gate's NON_REPLAY_PATHS filter; the guard sees only survivors. */
+function survivesNonReplayFilter(p: string): boolean {
+    const res = spawnSync('bash', ['-c', 'grep -vE "$SKIP"'], {
+        input: p + '\n', encoding: 'utf8',
+        env: { ...process.env, SKIP: gatePattern('NON_REPLAY_PATHS') },
+    });
+    if (res.error) throw res.error;
+    return res.stdout.trim() === p;
+}
+
+/** A throwaway repo with one commit, isolated from the user's git config. */
+function throwawayRepo(files: Record<string, string>): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-guard-'));
+    const git = (...args: string[]) => {
+        const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], {
+            cwd: dir, encoding: 'utf8',
+            env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+        });
+        if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+    };
+    git('init', '-q');
+    for (const [rel, content] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+        fs.writeFileSync(path.join(dir, rel), content);
+    }
+    git('add', '-A');
+    git('commit', '-qm', 'base');
+    return dir;
+}
+
+/** ONE character added INSIDE `symbol`: a trailing space on the line after its declaration. */
+function editInside(src: string, symbol: string): string {
+    const lines = src.split('\n');
+    const i = lines.findIndex(l => new RegExp(`^(export )?(async )?function ${symbol}[ (<]`).test(l));
+    if (i < 0) throw new Error(`fixture: ${symbol} not found`);
+    lines[i + 1] += ' ';
+    return lines.join('\n');
+}
+
+describe('one-hop-guard.sh ONE_HOP_SYMBOLS — the symbols RETRIEVAL reaches one import hop away', () => {
+    const FILTER_REL = 'src/lib/mapping/filter-candidates.ts';
+    const FILTER_SRC = fs.readFileSync(path.join(REPO_ROOT, FILTER_REL), 'utf8');
+    const tmpDirs: string[] = [];
+    afterAll(() => { for (const d of tmpDirs) fs.rmSync(d, { recursive: true, force: true }); });
+    const repoWith = (files: Record<string, string>) => {
+        const d = throwawayRepo(files);
+        tmpDirs.push(d);
+        return d;
+    };
+
+    it('lists detectGrainCookingContext in filter-candidates.ts — the hole this guard was built for', () => {
+        expect(oneHopEntries()).toContainEqual({ file: FILTER_REL, symbol: 'detectGrainCookingContext' });
+    });
+
+    it.each(oneHopEntries().map(e => [e.file, e.symbol]))(
+        '%s:%s names a real file AND a non-empty region on the current tree (typo guard, both halves)',
+        (file, symbol) => {
+            expect(fs.existsSync(path.join(REPO_ROOT, file))).toBe(true);
+            const region = symbolRegion(file, symbol);
+            expect(region.length).toBeGreaterThan(0);
+            expect(region.split('\n')[0]).toMatch(new RegExp(`^(export )?(async )?(function|const) ${symbol}\\b`));
+        });
+
+    it('every listed symbol is imported by one of ONE_HOP_IMPORTERS — the measured census, kept honest', () => {
+        const importers = guardVar('ONE_HOP_IMPORTERS').trim().split(/\s+/);
+        const importedFrom = new Map<string, Set<string>>();
+        const IMPORT_RE = /^import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'([^']+)'/gm;
+        for (const importer of importers) {
+            const src = fs.readFileSync(path.join(REPO_ROOT, importer), 'utf8');
+            let m: RegExpExecArray | null;
+            while ((m = IMPORT_RE.exec(src)) !== null) {
+                const target = path.posix.normalize(path.posix.join(path.posix.dirname(importer), m[2])) + '.ts';
+                const names = m[1].split(',')
+                    .map(s => s.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0])
+                    .filter(Boolean);
+                const set = importedFrom.get(target) ?? new Set<string>();
+                names.forEach(n => set.add(n));
+                importedFrom.set(target, set);
+            }
+        }
+        for (const e of oneHopEntries()) {
+            expect({ ...e, imported: importedFrom.get(e.file)?.has(e.symbol) ?? false })
+                .toEqual({ ...e, imported: true });
+        }
+    });
+
+    it('every listed file is on NEITHER path list — the premise of the narrow form', () => {
+        for (const e of oneHopEntries()) {
+            expect({ file: e.file, retrieval: gateAbortsOn('RETRIEVAL_PATHS', [e.file]) })
+                .toEqual({ file: e.file, retrieval: false });
+            expect({ file: e.file, frozen: gateAbortsOn('FROZEN_INPUT_PATHS', [e.file]) })
+                .toEqual({ file: e.file, frozen: false });
+        }
+    });
+
+    it('a one-character edit INSIDE detectGrainCookingContext is CHANGED', () => {
+        const repo = repoWith({ [FILTER_REL]: FILTER_SRC });
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'detectGrainCookingContext')).toBe(false);
+        fs.writeFileSync(path.join(repo, FILTER_REL), editInside(FILTER_SRC, 'detectGrainCookingContext'));
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'detectGrainCookingContext')).toBe(true);
+    });
+
+    it('the same edit inside hasCriticalModifierMismatch ONLY is NOT changed — the live ROW 1 shape stays gateable', () => {
+        const repo = repoWith({ [FILTER_REL]: FILTER_SRC });
+        fs.writeFileSync(path.join(repo, FILTER_REL), editInside(FILTER_SRC, 'hasCriticalModifierMismatch'));
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'detectGrainCookingContext')).toBe(false);
+        // the edit landed, and a multi-line signature is captured from its first line
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'hasCriticalModifierMismatch')).toBe(true);
+    });
+
+    it('a file absent on either side counts as CHANGED', () => {
+        const repo = repoWith({ 'keep.ts': 'export const keep = 1;\n' });
+        fs.writeFileSync(path.join(repo, 'new.ts'), 'export function f() {\n  return 1;\n}\n');
+        expect(symbolChangedVsHead(repo, 'new.ts', 'f')).toBe(true);
+        fs.unlinkSync(path.join(repo, 'keep.ts'));
+        expect(symbolChangedVsHead(repo, 'keep.ts', 'keep')).toBe(true);
+    });
+
+    it('a __tests__ or colocated test path never reaches the guard — NON_REPLAY_PATHS strips it first', () => {
+        expect(survivesNonReplayFilter('src/lib/mapping/__tests__/filter-candidates.test.ts')).toBe(false);
+        expect(survivesNonReplayFilter('src/lib/units/density.test.ts')).toBe(false);
+        expect(survivesNonReplayFilter(FILTER_REL)).toBe(true);
+    });
+
+    describe('symbol_region', () => {
+        const FIXTURE = [
+            '// header',
+            'export const X = 0.78;',
+            'export const Y: ReadonlySet<string> = new Set<string>([',
+            "  'a', 'b',",
+            ']);',
+            'const Z = {',
+            '  k: 1,',
+            '};',
+            'export function f(a: string): { ok: boolean } {',
+            '  if (a) {',
+            '    return { ok: true };',
+            '  }',
+            '  return { ok: false };',
+            '}',
+            'export async function g(',
+            '  a: string,',
+            '): Promise<void> {',
+            '  return;',
+            '}',
+            'function h() { return 1; }',
+            '',
+        ].join('\n');
+        let dir: string;
+        let file: string;
+        beforeAll(() => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-region-'));
+            tmpDirs.push(dir);
+            file = path.join(dir, 'fx.ts');
+            fs.writeFileSync(file, FIXTURE);
+        });
+
+        it.each([
+            ['X', ['export const X = 0.78;']],
+            ['Y', ['export const Y: ReadonlySet<string> = new Set<string>([', "  'a', 'b',", ']);']],
+            ['Z', ['const Z = {', '  k: 1,', '};']],
+            ['f', ['export function f(a: string): { ok: boolean } {', '  if (a) {', '    return { ok: true };', '  }', '  return { ok: false };', '}']],
+            ['g', ['export async function g(', '  a: string,', '): Promise<void> {', '  return;', '}']],
+            ['h', ['function h() { return 1; }']],
+        ])('%s -> exactly its own declaration, one-line or bracketed', (sym, expected) => {
+            expect(symbolRegion(file, sym as string, dir).replace(/\n$/, '').split('\n')).toEqual(expected);
+        });
+
+        it('an absent symbol is an EMPTY region — the typo-guard case above turns that into a red', () => {
+            expect(symbolRegion(file, 'nope', dir)).toBe('');
+        });
+
+        it('reads stdin as `-` and strips CR, so a CRLF checkout equals its LF `git show`', () => {
+            const r = spawnSync('bash', ['-c', 'set -uo pipefail; source "$GUARD"; symbol_region - Y'], {
+                input: FIXTURE.replace(/\n/g, '\r\n'), encoding: 'utf8',
+                env: { ...process.env, GUARD: GUARD_PATH },
+            });
+            expect(r.status).toBe(0);
+            expect(r.stdout).toBe(symbolRegion(file, 'Y', dir));
+        });
+    });
+
+    it('does NOT list declined-confidence.ts:RERANK_DECLINED_CONFIDENCE — winner-diff.ts requires it LIVE, so the diff sees it', () => {
+        expect(oneHopEntries().some(e => e.file.endsWith('declined-confidence.ts'))).toBe(false);
+        // The receipt. If either line goes, re-decide the membership; do not just re-green this.
+        const wd = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'eval', 'winner-diff.ts'), 'utf8');
+        expect(wd).toContain("require('../../src/lib/mapping/declined-confidence')");
+        expect(wd).toMatch(/const \{ confidenceGate, assessConfidence \} = gatherMod;/);
+    });
+
+    it('winner-gate.sh sources the helper and aborts AFTER the frozen-input abort, BEFORE the unobserved-surface one, with exit 3', () => {
+        const at = GATE_SRC.indexOf('source scripts/eval/one-hop-guard.sh');
+        expect(at).toBeGreaterThan(GATE_SRC.indexOf("FROZEN_INPUT_PATHS='"));
+        expect(at).toBeLessThan(GATE_SRC.indexOf("UNOBSERVED_SURFACE_PATHS='"));
+        const block = GATE_SRC.slice(at, GATE_SRC.indexOf("UNOBSERVED_SURFACE_PATHS='"));
+        expect(block).toMatch(/one_hop_symbol_changed "\$BASE_REF"/);
+        expect(block).toMatch(/\n\s*exit 3\n/);
+        expect(block).toContain('--cross-snapshot');
+        expect(block).toContain('cold golden');
     });
 });
 

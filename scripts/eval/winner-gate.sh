@@ -18,9 +18,10 @@
 #      population of already-asked queries cannot contain the cases a fix is
 #      supposed to CREATE — that blind spot has invalidated a gate before);
 #   2. ABORTS when the diff it is about to print would not be a measurement of the
-#      change — retrieval (blind spot (A)), a frozen snapshot input, or a surface
-#      the replay never executes at all. See EXIT CODES: those are three different
-#      failures with three different remedies, so they are three different aborts;
+#      change — retrieval (blind spot (A)), a frozen snapshot input, a symbol
+#      retrieval reaches one import hop away, or a surface the replay never executes
+#      at all. See EXIT CODES: those are different failures with different remedies,
+#      so they are four different aborts;
 #   3. builds the BASE tree as a git worktree instead of `git checkout -- <file>`,
 #      which is how uncommitted work gets destroyed;
 #   4. takes ONE snapshot shared by both sides, so retrieval nondeterminism
@@ -63,8 +64,9 @@
 #      it prints at the end)
 #   2  bad invocation, or no --cold-seeds
 #   3  THE DIFF WOULD BE VACUOUS. The run can happen, would report SAME, and that
-#      SAME means nothing: retrieval changed (the pool is one neither tree makes) or
-#      a FROZEN SNAPSHOT INPUT changed (the field is replayed, not recomputed).
+#      SAME means nothing: retrieval changed (the pool is one neither tree makes), a
+#      FROZEN SNAPSHOT INPUT changed (the field is replayed, not recomputed), or a
+#      symbol retrieval reaches ONE IMPORT HOP away changed (one-hop-guard.sh).
 #   4  the noise floor is non-zero, so nothing below it is a result.
 #   5  THE DIFF WOULD BE ABOUT A DIFFERENT PROGRAM. The change is on a surface
 #      winner-diff never executes — see UNOBSERVED_SURFACE_PATHS. Distinct from 3
@@ -286,6 +288,64 @@ Either way, pair it with a cold golden ×3 restarted against the §10x baseline,
 from the host you are actually gating (run-eval.ts is an HTTP client; --base decides
 which build answers, NOT your working tree).
 EOF
+    exit 3
+fi
+
+# ---------------------------------------------------------------- blind spot A3
+# ONE IMPORT HOP. RETRIEVAL_PATHS names the three files that PRODUCE the frozen pool,
+# and a path list is blind to what they IMPORT: gather-candidates.ts calls
+# detectGrainCookingContext() from filter-candidates.ts at two gather sites, and
+# filter-candidates.ts is on none of the four lists because the rest of it is the
+# admission layer — exactly what a frozen-pool diff is FOR. Edit that one function and
+# the pool moves while this driver exits 0 with a clean receipt: the
+# llm-output-guards.ts hole (FROZEN_INPUT, 2026-08-15), one file over.
+#
+# WHY A SYMBOL LIST AND NOT A PATH. The path form is unusable here, measured: 10 of the
+# last 20 commits touching src/lib/mapping edit filter-candidates.ts, and 0 of the 20
+# edit a listed symbol (re-derive: `git log --format=%h -20 -- src/lib/mapping`, then per
+# commit `git diff-tree --no-commit-id --name-only -r <c> -- <the listed files>` for the
+# first count, and `symbol_region` over `git show <c>^:<file>` vs `git show <c>:<file>`
+# for the second; measured 2026-09-02 on d57d832). Listing the FILE would refuse half
+# the mapper's recent work to catch nothing — the #311 false abort at scale. So the
+# membership is `<file>:<symbol>` pairs and the comparison is the symbol's source REGION
+# between $BASE_REF and the working tree, text-level, before any node process exists.
+# The list, its three-clause rule and what is deliberately absent live in
+# scripts/eval/one-hop-guard.sh next to the functions, so they cannot drift apart. A
+# listed file changed OUTSIDE its listed symbols does not abort — that is what keeps
+# filter-candidates.ts gateable. Pinned in both directions by winner-diff.test.ts.
+source scripts/eval/one-hop-guard.sh
+ONE_HOP_CHANGED="$(changed_paths)"
+ONE_HOP_HITS=""
+for one_hop_entry in $ONE_HOP_SYMBOLS; do
+    one_hop_file="${one_hop_entry%%:*}"; one_hop_sym="${one_hop_entry#*:}"
+    # exact whole-line membership in the changed set, without a pipe
+    [[ $'\n'"$ONE_HOP_CHANGED"$'\n' == *$'\n'"$one_hop_file"$'\n'* ]] || continue
+    if one_hop_symbol_changed "$BASE_REF" "$one_hop_file" "$one_hop_sym"; then
+        ONE_HOP_HITS="${ONE_HOP_HITS}  ${one_hop_file} : ${one_hop_sym} (imported by $(one_hop_importer "$one_hop_sym"))"$'\n'
+    fi
+done
+if [[ -n "$ONE_HOP_HITS" ]]; then
+    echo "ABORT: this branch changes a symbol RETRIEVAL reaches ONE IMPORT HOP away:" >&2
+    printf '%s' "$ONE_HOP_HITS" >&2
+    cat >&2 <<'EOF_ONE_HOP'
+
+The file is not on RETRIEVAL_PATHS because the rest of it is admission or serving
+code the replay genuinely observes — but THIS symbol is called by a producer of the
+frozen pool (gatherCandidates / the OFF gather / the FatSecret lane), so the pool the
+branch would produce is not the pool this run replays. Both sides would replay the
+BASE pool and the diff would report SAME about a change it never saw.
+
+Two arms DO measure this:
+  1. --cross-snapshot: re-cut the snapshot per variant, so each side replays the pool
+     its own tree produces. The harness brands the result
+     RETRIEVAL-NOISE-CONTAMINATED and means it; read the diff with that in mind.
+  2. The two-arm cold golden served locally: build both worktrees, serve base and
+     branch on two ports, run --nocache x3 restarted against each, and compare the
+     stable failure SETS by case id, never the counts.
+
+There is no --force, deliberately. If the symbol edit is incidental, SPLIT it onto its
+own branch and gate the admission/ranking half here.
+EOF_ONE_HOP
     exit 3
 fi
 
