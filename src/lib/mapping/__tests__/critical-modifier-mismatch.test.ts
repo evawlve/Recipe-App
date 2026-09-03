@@ -55,6 +55,9 @@ const caffeineFreeCoke = cand('Caffeine Free Coke', null, 'fatsecret', 'fs_64445
 const dietCoke = cand('Diet Coke', 'Coca-Cola', 'fatsecret', 'fs_90946');
 const cocaCola = cand('Coca cola', null, 'openfoodfacts', 'off_0067000011382');
 const mexicanCoke = cand('Mexican Coke', 'Coca-Cola', 'fatsecret', 'fs_63076');
+// fs_700695 'Sprite Zero' [Sprite] — passes the modifier check (trailing zero) and fails ONLY the
+// must-have token `coke`; the fixture that separates the strong restore from the weak one.
+const spriteZero = cand('Sprite Zero', 'Sprite', 'fatsecret', 'fs_700695');
 
 describe('hasCriticalModifierMismatch — the sugar-free / low-calorie branch', () => {
     it('sugar free coke: "Coke Zero" is admitted (trailing zero), "Caffeine Free Coke" rejected, "Diet Coke" admitted', () => {
@@ -111,6 +114,18 @@ describe('hasCriticalModifierMismatch — the sugar-free / low-calorie branch', 
         expect(hasCriticalModifierMismatch('light mayo', 'Mayonnaise', 'fatsecret')).toBe(true);
     });
 
+    it('a bare `no sugar` query fires at the predicate (not only via `no sugar added`)', () => {
+        expect(hasCriticalModifierMismatch('no sugar coke', 'Coca-Cola', 'openfoodfacts')).toBe(true);
+        expect(hasCriticalModifierMismatch('no sugar coke', 'Coke Zero', 'fatsecret')).toBe(false);
+    });
+
+    it('a "Light mayonnaise" candidate satisfies a "low calorie mayonnaise" query — the worked example in filter-candidates.ts', () => {
+        // Dropping light/lite from the candidate satisfiers newly hard-drops 11,242 corpus records
+        // (10,898 OFF + 344 FS, measured 2026-09-01, pm19 ROW 1); this is the behavioural pin.
+        expect(hasCriticalModifierMismatch('low calorie mayonnaise', 'Light mayonnaise', 'openfoodfacts')).toBe(false);
+        expect(hasCriticalModifierMismatch('low calorie mayonnaise', 'Mayonnaise', 'openfoodfacts')).toBe(true);
+    });
+
     it('fat-percentage and nonfat branches are unchanged', () => {
         expect(hasCriticalModifierMismatch('2% milk', 'Whole milk', 'openfoodfacts')).toBe(true);
         expect(hasCriticalModifierMismatch('2% milk', '2% Milk', 'openfoodfacts')).toBe(false);
@@ -162,6 +177,22 @@ describe('filterCandidatesByTokens — the all-drop restore is pool-relative', (
         const r = filterCandidatesByTokens([caffeineFreeCoke, cocaCola], 'sugar free coke', { rawLine: 'sugar free coke' });
         expect(ids(r)).toEqual(['fs_644459']);
         expect(warnSpy).toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.objectContaining({ poolSize: 2 }));
+    });
+
+    it('a pool emptied JOINTLY by the modifier check and the must-have check is NOT restored — the STRONG property', () => {
+        // Caffeine Free Coke fails ONLY the modifier check; Sprite Zero passes it and fails ONLY
+        // the must-have `coke`. The modifier check alone does not empty the pool, so nothing is
+        // restored and the pool is empty. The WEAK property (#395: "restore whenever the strict
+        // pool came back empty") would re-admit Caffeine Free Coke here — the headline defect back.
+        const r = filterCandidatesByTokens([caffeineFreeCoke, spriteZero], 'sugar free coke', { rawLine: 'sugar free coke' });
+        expect(ids(r)).toEqual([]);
+        expect(warnSpy).not.toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.anything());
+    });
+
+    it('the relaxed pass never computes or logs the restore, even on an all-rejecting pool', () => {
+        const r = filterCandidatesByTokens([caffeineFreeCoke, mexicanCoke], 'sugar free coke', { rawLine: 'sugar free coke', relaxed: true });
+        expect(ids(r)).toEqual(['fs_63076', 'fs_644459']);
+        expect(warnSpy).not.toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.anything());
     });
 
     it('unsweetened almond milk: the plain record is dropped when an unsweetened one is in the pool', () => {
