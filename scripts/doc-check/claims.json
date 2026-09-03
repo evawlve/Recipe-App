@@ -1880,6 +1880,18 @@
         "value": "1@200"
       },
       "verified": "2026-08-30"
+    },
+    {
+      "id": "critical-modifier-filter-reads-the-shared-class",
+      "ownerDoc": "mobile:CLAUDE.md",
+      "claim": "hasCriticalModifierMismatch() in filter-candidates.ts reads its sugar-free / low-calorie vocabulary from the import-free leaf modifier-vocabulary.ts, and that leaf's sugar-free class (the copy of gather-candidates' MODIFIER_SYNONYM_GROUPS, one group per line) still carries 'zero sugar'. Left number: the filter imports the leaf. Right number: the line holding 'sugar free' also holds 'zero sugar'. Either reading 0 means retrieval and admission have diverged again — buildQueryVariants() searching for a spelling the filter hard-deletes on arrival (the `sugar free coke` -> Caffeine Free Coke defect, pm19 ROW 1). The leaf-vs-gather deep equality itself is pinned by src/lib/mapping/__tests__/modifier-vocabulary-shared-class.test.ts.",
+      "where": "backend",
+      "command": "echo \"$(grep -c \"from './modifier-vocabulary'\" src/lib/mapping/filter-candidates.ts)@$(grep \"'sugar free'\" src/lib/mapping/modifier-vocabulary.ts | grep -c \"'zero sugar'\")\"",
+      "expect": {
+        "kind": "equals",
+        "value": "1@1"
+      },
+      "verified": "2026-09-02"
     }
   ]
 }

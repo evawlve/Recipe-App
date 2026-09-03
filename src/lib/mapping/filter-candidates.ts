@@ -10,6 +10,10 @@ import { logger } from '../logger';
 // Import direction is safe: brand-detector imports only brand-lexicon.json and
 // digit-brands.ts, neither of which reaches back here, so this adds no cycle.
 import { detectBrandInQuery } from './brand-detector';
+// The shared modifier vocabulary. An import-free leaf (see its header): a VALUE import of
+// MODIFIER_SYNONYM_GROUPS from gather-candidates here would close a require cycle, because
+// gather-candidates imports detectGrainCookingContext() from this file.
+import { queryCarriesLowCalClaim, candidateCarriesLowCalClaim } from './modifier-vocabulary';
 
 // ============================================================
 // Types
@@ -2406,7 +2410,10 @@ function hasUnwantedModifier(normalizedName: string, candidateName: string): boo
 // Fat percentage modifiers that are nutritionally distinct
 const FAT_PERCENTAGE_MODIFIERS = ['2%', '1%', 'skim', 'whole', 'half-and-half', 'half and half'];
 const LOW_FAT_MODIFIERS = ['lowfat', 'low-fat', 'low fat', 'reduced fat', 'reduced-fat', 'lite', 'light', 'nonfat', 'non-fat', 'fat free', 'fat-free', 'skim', 'part-skim', 'part skim'];
-const CALORIE_MODIFIERS = ['low calorie', 'low-calorie', 'diet', 'zero calorie', 'calorie free', 'calorie-free', 'sugar free', 'sugar-free'];
+// The calorie / sugar-free vocabulary used to be a private list here (CALORIE_MODIFIERS, eight
+// spellings) that disagreed with the retrieval side's MODIFIER_SYNONYM_GROUPS: `zero sugar`,
+// `no sugar` and `unsweetened` were searched for by buildQueryVariants() and then hard-deleted
+// on arrival by this check. Both halves now come from modifier-vocabulary.ts — see its header.
 
 /**
  * Check for CRITICAL modifier mismatches only.
@@ -2506,22 +2513,16 @@ export function hasCriticalModifierMismatch(
         }
     }
 
-    // Check calorie modifiers
-    // IMPORTANT: "light", "lite" and "low calorie" are functionally equivalent
-    // A "Light Mayonnaise" candidate DOES satisfy a "low calorie mayonnaise" query
-    // For frozen treats: "no sugar added" and "fat free" are equivalent to "sugar free"
-    const ALL_LOW_CAL_MODIFIERS = [
-        ...CALORIE_MODIFIERS,
-        'light', 'lite',  // These are equivalent to "low calorie" for condiments/dressings
-        'no sugar added', 'no added sugar',  // Equivalent to "sugar free" for frozen treats
-        'fat free', 'fat-free',  // Often used interchangeably with "sugar free" for frozen desserts
-    ];
-    const queryHasLowCal = CALORIE_MODIFIERS.some(m => queryLower.includes(m));
-    const candHasLowCal = ALL_LOW_CAL_MODIFIERS.some(m => candLower.includes(m));
-
-    if (queryHasLowCal && !candHasLowCal) {
-        // Query explicitly asks for low-calorie, candidate doesn't have it
-        // (but "light" and "lite" are acceptable substitutes)
+    // Check calorie / sugar-free modifiers. Both vocabularies live in modifier-vocabulary.ts:
+    // the QUERY triggers are the retrieval synonym group minus `light`/`lite` (those are the
+    // LENIENT_LOW_FAT branch above and must not fire on `light mayo`), plus the explicit calorie
+    // spellings; the CANDIDATE satisfiers are the full group plus `no added sugar`, `fat free`
+    // (frozen desserts use it interchangeably with `sugar free`) and the two bare-`zero` shapes
+    // ("Coke Zero", "ZERO SUGAR") that a plain includes() cannot see.
+    // IMPORTANT: "light", "lite" and "low calorie" are functionally equivalent on the candidate
+    // side — a "Light Mayonnaise" candidate DOES satisfy a "low calorie mayonnaise" query.
+    if (queryCarriesLowCalClaim(queryLower) && !candidateCarriesLowCalClaim(candLower)) {
+        // Query explicitly asks for low-calorie / sugar-free, candidate states no such claim
         return true;
     }
 
@@ -2704,6 +2705,32 @@ export function filterCandidatesByTokens(
         return { filtered: candidates, removedCount: 0 };
     }
 
+    // THE ALL-DROP RESTORE. If the critical-modifier check ALONE would reject every candidate in
+    // the pool, it is not applied in this (strict) pass; every other admission check still runs.
+    // The property is deliberately "the modifier check alone empties the pool", computed over the
+    // full candidate list before admit() runs — never "the pool came back empty", which is the
+    // weaker form PR #395 shipped and was reverted for (an empty pool has many causes, and
+    // restoring on all of them re-admits what the OTHER checks removed). Without this, a modifier
+    // the vocabulary cannot see on the candidate side ("Coke Zero" for `sugar free coke`) empties
+    // the strict pool and the caller's relaxed retry — which SKIPS this check and relaxes the
+    // must-have tokens through the S3 brand-then-head-noun ladder — hands back a pool WIDER than
+    // today's with no sugar constraint in it at all, and an identity error replaces a modifier
+    // error (fs_644459 "Caffeine Free Coke" at 100 kcal, measured live 2026-09-01). The relaxed
+    // pass keeps skipping the modifier check exactly as before.
+    //
+    // Logged at WARN for the same reason head_noun_relax_recovery below is: the box runs at
+    // `warn`, so an `info` line would make the restore invisible in production.
+    const modifierRejectsAll = !relaxed && !!rawLine && candidates.every(candidate =>
+        hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition));
+    if (modifierRejectsAll) {
+        logger.warn('filter.candidates.modifier_check_rejects_all', {
+            normalizedName,
+            rawLine,
+            poolSize: candidates.length,
+            sample: candidates.slice(0, 3).map(c => c.name),
+        });
+    }
+
     // Filter candidates. Named so the S3 fallback below can run the SAME predicate a second time
     // against a different required-token set; the body is unchanged and `mustHaveTokens` is a
     // `let` the closure reads on each call.
@@ -2734,8 +2761,9 @@ export function filterCandidatesByTokens(
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
         // Does NOT block minor preferences like unsweetened, organic (handled by scoring)
-        // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods
-        if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition)) {
+        // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods, and SKIP
+        // when the check alone would empty the pool (modifierRejectsAll above).
+        if (!relaxed && rawLine && !modifierRejectsAll && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition)) {
             if (debug) {
                 logger.info('filter.candidates.critical_modifier_mismatch', {
                     query: rawLine,
