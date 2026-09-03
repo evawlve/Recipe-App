@@ -11,6 +11,21 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 /**
+ * The coverage multiplier positionScore() (src/lib/mapping/fatsecret-lane.ts) has
+ * already folded into a fatsecret candidate's `score`: x1.5 at full query-token
+ * coverage, x1.2 at >= 0.5, x1.0 below. runLocalSearch() divides it back out so the
+ * route charges coverage once. Restated here rather than exported from the lane
+ * because fatsecret-lane.ts is a RETRIEVAL_PATHS file (scripts/eval/winner-gate.sh)
+ * and any edit there voids the frozen-pool diff; keep the three thresholds in step
+ * with positionScore() — re-derive: `grep -n "coverage >=" src/lib/mapping/fatsecret-lane.ts`.
+ */
+function fatsecretCoverageTier(coverage: number): number {
+  if (coverage >= 1) return 1.5;
+  if (coverage >= 0.5) return 1.2;
+  return 1.0;
+}
+
+/**
  * Search foods by name or brand from local database only
  * GET /api/foods/search?s=...
  * 
@@ -306,12 +321,32 @@ export async function GET(req: NextRequest) {
       // engine typo-expansion can surface FDC rows that share no real
       // token with the query (e.g. "ryse" pulling in "rye flour"), and
       // fatsecret's API returns loosely related items deep in its list.
+      //
+      // The fatsecret lane has ALREADY charged this same coverage once: positionScore()
+      // in src/lib/mapping/fatsecret-lane.ts multiplies its position base by a
+      // queryTokenCoverage() tier (1.5 at full coverage, 1.2 at >= 0.5, 1.0 below)
+      // on the identical (query, name, brandName) strings. Multiplying by coverage
+      // again here charged a 0.8-coverage row 0.8 x 0.8 = 0.64 of its position base
+      // (measured 2026-09-01 on the live route: every fatsecret confidence for
+      // "great value light mayo" decoded as 0.64 x (0.95 - 0.02i), 7/7 rows). So
+      // divide the lane's tier back out and charge coverage exactly once, linearly.
+      // Route-scoped on purpose: positionScore() also feeds the mapper's rerank, and
+      // fatsecret-lane.ts is a RETRIEVAL_PATHS file the winner gate refuses to see.
+      // FDC is NOT double-charged by this function — computePositionScore() in
+      // gather-candidates.ts never calls queryTokenCoverage() (its own per-word
+      // miss penalty is a substring x0.85 step, a different predicate), so fdc keeps
+      // the single multiply below. [reasoning from the two functions, 2026-09-02]
       const relevanceById = new Map<string, { coverage: number; relevance: number }>();
       for (const c of fallbackCandidates) {
         const coverage = queryTokenCoverage(q, c.name, c.brandName);
-        let relevance = c.source === 'fdc' || c.source === 'fatsecret'
-          ? Math.min(1, (c.score || 0) / 1.5) * coverage
-          : Math.min(1, Math.max(0, (c.score || 0) / 10));
+        let relevance: number;
+        if (c.source === 'fatsecret') {
+          relevance = Math.min(1, (c.score || 0) / fatsecretCoverageTier(coverage)) * coverage;
+        } else if (c.source === 'fdc') {
+          relevance = Math.min(1, (c.score || 0) / 1.5) * coverage;
+        } else {
+          relevance = Math.min(1, Math.max(0, (c.score || 0) / 10));
+        }
         if (isJunkNamed(c)) relevance *= 0.5;
         relevanceById.set(c.id, { coverage, relevance });
       }

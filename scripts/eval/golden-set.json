@@ -1459,6 +1459,32 @@
       ],
       "minItems": 18,
       "notes": "Observed 2026-08-14: n=24, first match rank 0, 3 of 14 'bowl' hits at kcal100 0 (fs_77419819 'Steak Bowl', 'Amelaine Bowl', 'Wholesome Bowl'). requireEnergy is the broad ['bowl'] rather than ['steak bowl'] because it catches 3 defect rows instead of 1."
+    },
+    {
+      "id": "s-rank-01",
+      "category": "ranking",
+      "query": "great value light mayo",
+      "rank": 1,
+      "match": [
+        [
+          "light mayo"
+        ]
+      ],
+      "minItems": 5,
+      "notes": "Tester witness ASC AF3y8_ (2026-09-01, build 14): 'Great value light mayo' ranked Great Value Mayonnaise (off_0627735284125, 100 kcal/15 g) ABOVE Light Mayo (off_0078742194981, 45 kcal/15 g). Rank 1 on purpose: the 109 older search cases are rank 3/5 (6 at rank 1) and a rank-1-vs-rank-2 defect is invisible to them. Mechanism: computeOffScore() (src/lib/openfoodfacts/search.ts) pays the brand once as the +4 bonus and again as two substring-matched name words, so the regular mayonnaise scores 8.85 vs 5.90 (punch #26). RED on master d57d832, measured 2026-09-02."
+    },
+    {
+      "id": "s-rank-02",
+      "category": "ranking",
+      "query": "light mayo",
+      "rank": 1,
+      "match": [
+        [
+          "light mayo"
+        ]
+      ],
+      "minItems": 5,
+      "notes": "CONTROL for s-rank-01: the same two Great Value rows without the brand words in the query. computeOffScore() gives Light Mayo 6.90 vs Great Value Mayonnaise 0.85 here, so this must stay GREEN while s-rank-01 is red; a fix that flips this one has moved the wrong lever."
     }
   ],
   "nlp": [
