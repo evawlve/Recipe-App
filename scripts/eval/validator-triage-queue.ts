@@ -58,7 +58,16 @@
  * it is our own gate traffic (owner: mobile reports/2026-08-10_the-serve-weights-
  * are-our-own-traffic.md) and prices nothing.
  *
- * The repeats are FREE. The 04:30 nightly flywheel sweep re-saves the same mined
+ * SINCE 2026-09-03 (backend #412) THE REPEATS NO LONGER ARRIVE FOR AN UNCHANGED BILL:
+ * cache-validator.ts suppresses a verdict whose billed tuple + model was already judged,
+ * so the n >= 3 auto-bar, majorityPair() and the newSinceReview re-open below are
+ * history-only for any tuple first judged after that date, and a stamp on an unchanged
+ * tuple is a mute until the bill moves. The one exception is the `watch` disposition,
+ * which keeps re-issuing by design (isWatchDisposition() in cache-validator.ts).
+ * The paragraph below describes the world before that change and is kept for the
+ * numbers it owns.
+ *
+ * The repeats WERE free. The 04:30 nightly flywheel sweep re-saves the same mined
  * hot-head key set, so a key that stays wrong is re-judged every night out of the
  * sweep budget — production is already running the k-of-n experiment. This script
  * only reads the result.

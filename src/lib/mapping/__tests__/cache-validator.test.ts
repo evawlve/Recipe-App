@@ -47,7 +47,7 @@ type PriorRow = { id: string; verdict: string } & Record<string, unknown>;
 function priorRows(rows: PriorRow[]): void {
     mockFindFirst.mockImplementation(async (args: { where: Record<string, unknown> }) => {
         const hit = rows.find((r) => Object.entries(args.where).every(([k, v]) => r[k] === v));
-        return hit ? { id: hit.id, verdict: hit.verdict } : null;
+        return hit ? { id: hit.id, verdict: hit.verdict, reviewedBy: hit.reviewedBy ?? null } : null;
     });
 }
 
@@ -170,6 +170,10 @@ describe('kickCacheValidation', () => {
 
         expect(mockCreate).toHaveBeenCalledTimes(1);
         const data = mockCreate.mock.calls[0][0].data;
+        // the lookup and the write key on the SAME canonical form — this key is
+        // deliberately non-canonical ('Grilled Chicken  Breasts'), so a raw-key
+        // lookup would miss its own row forever (mutation m5)
+        expect(mockFindFirst.mock.calls[0][0].where.normalizedForm).toBe(data.normalizedForm);
         expect(data.verdict).toBe('SUSPECT');
         expect(data.axis).toBe('serving');
         expect(data.foodId).toBe('fs_12345');
@@ -269,16 +273,21 @@ describe('re-issue suppression on the billed tuple (2026-09-02)', () => {
         billedGrams: INPUT.billedGrams,
         billedKcal: INPUT.billedKcal,
         servingTier: INPUT.servingTier,
+        model: MODEL,
+        reviewedBy: null,
     };
     const LLM_OK = {
         status: 'success', provider: 'openrouter', model: MODEL,
         content: { verdict: 'OK', axis: 'none', reason: 'x' },
     };
 
-    it('(a) an identical tuple already judged → no LLM call, no row, tuple_already_judged logged', async () => {
+    // Parametrized over the prior's verdict on purpose: OK series are 296 of the
+    // 339 redundant rows in the 2026-09-02 census (87% of the spend this removes),
+    // and a SUSPECT-only suppression would otherwise stay green (mutation m6).
+    it.each(['OK', 'SUSPECT'] as const)('(a) an identical tuple already judged %s → no LLM call, no row, tuple_already_judged logged', async (verdict) => {
         const { cv, dh, log } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
         const debug = jest.spyOn(log.logger, 'debug').mockImplementation(() => undefined);
-        priorRows([PRIOR]);
+        priorRows([{ ...PRIOR, verdict }]);
         mockCall.mockResolvedValue(LLM_OK);
         mockCreate.mockResolvedValue({});
 
@@ -289,7 +298,7 @@ describe('re-issue suppression on the billed tuple (2026-09-02)', () => {
         expect(mockCreate).not.toHaveBeenCalled();
         expect(debug).toHaveBeenCalledWith('cache_validator.tuple_already_judged', expect.objectContaining({
             phrase: INPUT.phrase,
-            priorVerdict: 'SUSPECT',
+            priorVerdict: verdict,
         }));
         // the key is EXACTLY the billed tuple — nothing less (a bare pair would
         // suppress genuine re-adjudication) and nothing more (no model column)
@@ -300,8 +309,66 @@ describe('re-issue suppression on the billed tuple (2026-09-02)', () => {
             billedGrams: 240,
             billedKcal: 396,
             servingTier: 'count_unit_ai',
+            model: MODEL,
         });
         debug.mockRestore();
+    });
+
+    it('(a2) a null servingTier is looked up as IS NULL, not coerced — a tier-less tuple is suppressed too', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const input = { ...INPUT, servingTier: null };
+        priorRows([{ ...PRIOR, servingTier: null }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(input, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
+        // `?? 'unknown'` (the userPrompt spelling a few lines up) would make this
+        // tuple unsuppressible forever; the where must carry the bare null.
+        expect(mockFindFirst.mock.calls[0][0].where.servingTier).toBeNull();
+    });
+
+    it('(a3) a newest prior stamped …:watch does NOT suppress — the one disposition that asks for repeats still gets them', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{ ...PRIOR, reviewedBy: 'lane-a-2026-08-28:watch' }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('(a3b) any OTHER stamp on an unchanged tuple is a mute (hand-panel, cascade, dismissed …)', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{ ...PRIOR, reviewedBy: 'lane-a-2026-08-31:hand-panel' }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('(a4) the same tuple judged by a DIFFERENT model re-issues once (a tier upgrade re-judges)', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{ ...PRIOR, model: 'openai/gpt-4o-mini' }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockFindFirst.mock.calls[0][0].where.model).toBe(MODEL);
     });
 
     it('(b) same key + foodId but a different billedGrams → a changed bill re-issues (LLM called, row written)', async () => {
@@ -334,7 +401,7 @@ describe('re-issue suppression on the billed tuple (2026-09-02)', () => {
 
     it('(d) a throwing lookup falls through to the LLM call and the write — never blocks, never throws', async () => {
         const { cv, dh, log } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
-        const debug = jest.spyOn(log.logger, 'debug').mockImplementation(() => undefined);
+        const warn = jest.spyOn(log.logger, 'warn').mockImplementation(() => undefined);
         mockFindFirst.mockRejectedValue(new Error('db down'));
         mockCall.mockResolvedValue(LLM_OK);
         mockCreate.mockResolvedValue({});
@@ -344,8 +411,10 @@ describe('re-issue suppression on the billed tuple (2026-09-02)', () => {
 
         expect(mockCall).toHaveBeenCalledTimes(1);
         expect(mockCreate).toHaveBeenCalledTimes(1);
-        expect(debug).toHaveBeenCalledWith('cache_validator.prior_lookup_failed', expect.objectContaining({ error: 'db down' }));
-        debug.mockRestore();
+        // warn, not debug: the box runs at warn, and a persistently failing lookup
+        // silently restores the whole nightly spend — it must be visible there.
+        expect(warn).toHaveBeenCalledWith('cache_validator.prior_lookup_failed', expect.objectContaining({ error: 'db down' }));
+        warn.mockRestore();
     });
 });
 
