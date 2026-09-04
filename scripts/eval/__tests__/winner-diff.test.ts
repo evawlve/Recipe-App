@@ -18,6 +18,7 @@
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 import {
@@ -1477,6 +1478,914 @@ describe('winner-gate.sh UNOBSERVED_SURFACE_PATHS — the surface the replay nev
         const block = GATE_SRC.slice(GATE_SRC.indexOf('UNOBSERVED_SURFACE_PATHS='));
         expect(block).toMatch(/\n\s*exit 5\n/);
         expect(GATE_SRC.match(/\n\s*exit 5\n/g) ?? []).toHaveLength(1);
+    });
+});
+
+// ============================================================================
+// one-hop-guard.sh ONE_HOP_SYMBOLS — the symbols RETRIEVAL reaches one import hop away
+// ============================================================================
+/**
+ * THE FOURTH ABORT (2026-09-02), and why it is a SYMBOL list rather than a path list.
+ *
+ * RETRIEVAL_PATHS names the three files that PRODUCE the frozen pool, and a path list
+ * is blind to what they import: gather-candidates.ts calls detectGrainCookingContext()
+ * from filter-candidates.ts at ONE gather site (gatherCandidates) and one gate site
+ * (confidenceGate, which the replay runs live), and filter-candidates.ts is on no list
+ * because the rest of it is the admission layer a frozen-pool diff is FOR. Listing the
+ * file is unusable (8 of the last 20 commits touching src/lib/mapping, src/lib/units or
+ * src/lib/openfoodfacts edit a listed FILE, 0 edit a listed symbol — one-hop-guard.sh
+ * owns that census and its re-derive). So the membership is `<file>:<symbol>` pairs,
+ * read out of one-hop-guard.sh the way the path lists are read out of winner-gate.sh,
+ * and the predicate is the SHIPPED bash: the symbol's source REGION compared between the
+ * base ref and the working tree. Every case below runs those functions through bash;
+ * none restates them in TypeScript.
+ *
+ * Both directions, again: a listed file changed OUTSIDE its listed symbol must NOT
+ * abort (filter-candidates.ts carries live admission work), a __tests__ path never
+ * reaches the guard, and the one producer import the replay executes LIVE
+ * (RERANK_DECLINED_CONFIDENCE) is pinned as deliberately ABSENT with its receipt.
+ *
+ * WHAT THESE CASES CANNOT SEE, and why the executing describe further down exists: they
+ * call one-hop-guard.sh's functions directly and read winner-gate.sh as text, so none of
+ * them can tell a WIRED gate from an unwired one.
+ */
+const GUARD_PATH = path.join(REPO_ROOT, 'scripts', 'eval', 'one-hop-guard.sh');
+
+/**
+ * READ LAZILY, ON PURPOSE. This was a module-scope `fs.readFileSync(GUARD_PATH)`, so a
+ * deleted or renamed helper threw at import time and jest reported 0 of 168 cases in
+ * this file as executed — a broken one-hop guard took down every unrelated pin here,
+ * including the ones that would have told you what else was wrong. Reading inside the
+ * `it` bodies keeps the blast radius to the one-hop cases. It is memoized because two
+ * dozen cases read it.
+ */
+let guardSrcCache: string | null = null;
+function guardSrc(): string {
+    if (guardSrcCache === null) guardSrcCache = fs.readFileSync(GUARD_PATH, 'utf8');
+    return guardSrcCache;
+}
+
+/** One shipped `NAME='…'` assignment out of one-hop-guard.sh, never restated. */
+function guardVar(name: string): string {
+    const m = guardSrc().match(new RegExp(`^${name}='([^']*)'`, 'm'));
+    if (!m) {
+        throw new Error(
+            `one-hop-guard.sh no longer defines ${name}='…' on a single line. ` +
+            'This test cannot read the shipped membership, which is a FAILURE, not a skip.');
+    }
+    return m[1];
+}
+
+function oneHopEntries(): Array<{ file: string; symbol: string }> {
+    return guardVar('ONE_HOP_SYMBOLS').trim().split(/\s+/).map(e => {
+        const i = e.indexOf(':');
+        if (i <= 0 || i === e.length - 1) throw new Error(`malformed ONE_HOP_SYMBOLS entry: ${e}`);
+        return { file: e.slice(0, i), symbol: e.slice(i + 1) };
+    });
+}
+
+/** Runs the SHIPPED functions through bash, under the gate's own `-u -o pipefail`. */
+function guardShell(script: string, cwd: string, env: Record<string, string> = {}) {
+    const res = spawnSync('bash', ['-c', `set -uo pipefail; source "$GUARD"; ${script}`], {
+        cwd, encoding: 'utf8', env: { ...process.env, ...env, GUARD: GUARD_PATH },
+    });
+    if (res.error) throw res.error;
+    return { status: res.status, stdout: res.stdout, stderr: res.stderr };
+}
+
+function symbolRegion(file: string, symbol: string, cwd: string = REPO_ROOT): string {
+    const r = guardShell('symbol_region "$F" "$S"', cwd, { F: file, S: symbol });
+    if (r.status !== 0) throw new Error(`symbol_region failed (${r.status}): ${r.stderr}`);
+    return r.stdout;
+}
+
+/** The gate's consumer contract: exit 0 = changed, 1 = unchanged. */
+function symbolChangedVsHead(repo: string, file: string, symbol: string): boolean {
+    const r = guardShell('one_hop_symbol_changed HEAD "$F" "$S"', repo, { F: file, S: symbol });
+    if (r.status !== 0 && r.status !== 1) {
+        throw new Error(`one_hop_symbol_changed failed (${r.status}): ${r.stderr}`);
+    }
+    return r.status === 0;
+}
+
+/** Whether a path survives the gate's NON_REPLAY_PATHS filter; the guard sees only survivors. */
+function survivesNonReplayFilter(p: string): boolean {
+    const res = spawnSync('bash', ['-c', 'grep -vE "$SKIP"'], {
+        input: p + '\n', encoding: 'utf8',
+        env: { ...process.env, SKIP: gatePattern('NON_REPLAY_PATHS') },
+    });
+    if (res.error) throw res.error;
+    return res.stdout.trim() === p;
+}
+
+/** A throwaway repo with one commit, isolated from the user's git config. */
+function throwawayRepo(files: Record<string, string>): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-guard-'));
+    const git = (...args: string[]) => {
+        const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], {
+            cwd: dir, encoding: 'utf8',
+            env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+        });
+        if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+    };
+    git('init', '-q');
+    for (const [rel, content] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+        fs.writeFileSync(path.join(dir, rel), content);
+    }
+    git('add', '-A');
+    git('commit', '-qm', 'base');
+    return dir;
+}
+
+const FILTER_FIXTURE_REL = 'src/lib/mapping/filter-candidates.ts';
+
+/**
+ * ONE character added INSIDE `symbol`'s region: a trailing space.
+ *
+ * WHICH LINE MATTERS. symbol_region stops AT the declaration line when that line closes
+ * the statement, so for a one-line `const X = /re/i;` the next line is already outside
+ * the region and an edit there proves nothing. Pick the declaration line in that case
+ * and the line after it otherwise.
+ */
+function editInside(src: string, symbol: string): string {
+    const lines = src.split('\n');
+    const i = lines.findIndex(l => new RegExp(`^(export )?(async )?(function|const) ${symbol}[ (<:=]`).test(l));
+    if (i < 0) throw new Error(`fixture: ${symbol} not found`);
+    const target = /[;}][ \t]*$/.test(lines[i]) ? i : i + 1;
+    lines[target] += ' ';
+    return lines.join('\n');
+}
+
+/** `{specifier} from './x'` names, resolved to repo-relative .ts paths, for one importer. */
+function importedSymbolsByFile(importers: string[]): Map<string, Set<string>> {
+    const importedFrom = new Map<string, Set<string>>();
+    const IMPORT_RE = /^import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'([^']+)'/gm;
+    for (const importer of importers) {
+        const src = fs.readFileSync(path.join(REPO_ROOT, importer), 'utf8');
+        let m: RegExpExecArray | null;
+        while ((m = IMPORT_RE.exec(src)) !== null) {
+            const target = path.posix.normalize(path.posix.join(path.posix.dirname(importer), m[2])) + '.ts';
+            const names = m[1].split(',')
+                .map(s => s.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0])
+                .filter(Boolean);
+            const set = importedFrom.get(target) ?? new Set<string>();
+            names.forEach(n => set.add(n));
+            importedFrom.set(target, set);
+        }
+    }
+    return importedFrom;
+}
+
+/** Repo-relative by default; an absolute path (a fixture in a tmpdir) passes through. */
+function repoPath(file: string): string {
+    return path.isAbsolute(file) ? file : path.join(REPO_ROOT, file);
+}
+
+/**
+ * The top-level declarations of one file, in exactly the two shapes `symbol_region`
+ * parses — i.e. the ones that can be WRITTEN into ONE_HOP_SYMBOLS at all.
+ */
+function expressibleTopLevelDecls(file: string): Set<string> {
+    const out = new Set<string>();
+    for (const line of fs.readFileSync(repoPath(file), 'utf8').split('\n')) {
+        const fn = line.match(/^(?:export )?(?:async )?function ([A-Za-z0-9_$]+)[ (<]/);
+        if (fn) { out.add(fn[1]); continue; }
+        const cn = line.match(/^(?:export )?const ([A-Za-z0-9_$]+)[ :=]/);
+        if (cn) out.add(cn[1]);
+    }
+    return out;
+}
+
+/**
+ * EVERY top-level VALUE declaration of one file, including the shapes `symbol_region`
+ * cannot express: `let`, `var`, `class`, `enum`, and a destructured
+ * `const { a, b } = …` / `const [a] = …`.
+ *
+ * WHY BOTH SCANNERS EXIST (2026-09-03, refuter F3). The closure test below used the
+ * expressible set for both halves of its question, which quietly made the guard's own
+ * blind spot into the closure's blind spot: a `let EXTRA_COOKED_GRAINS = [...]` or an
+ * `enum GrainMode {…}` read inside detectGrainCookingContext was invisible to the
+ * scanner, so the test could not demand it be listed, and a later branch widening that
+ * table reached exit 2 with a clean receipt — BLOCKER 2 reopened one keyword over.
+ * Scanning with the BROAD set and requiring the EXPRESSIBLE set to cover it makes the
+ * gap FAIL CLOSED: an unexpressible reference is a red that names the identifier and
+ * says what to do about it, rather than silence.
+ *
+ * TYPES ARE DELIBERATELY OUT (`type`, `interface`, and a bare `declare`). They are
+ * erased before anything runs, so they cannot move a pool, and a signature that names a
+ * same-file type would otherwise red this test for nothing.
+ */
+function allTopLevelValueDecls(file: string): Set<string> {
+    const out = new Set<string>(expressibleTopLevelDecls(file));
+    for (const line of fs.readFileSync(repoPath(file), 'utf8').split('\n')) {
+        const kw = line.match(/^(?:export )?(?:abstract )?(?:let|var|class|enum|const enum) ([A-Za-z0-9_$]+)[ :=<({]/);
+        if (kw) { out.add(kw[1]); continue; }
+        // destructured const/let/var: every binding name on the left of the `=`
+        const de = line.match(/^(?:export )?(?:const|let|var) ([{[].*?[}\]])\s*(?::[^=]*)?=/);
+        if (de) for (const n of de[1].matchAll(/([A-Za-z0-9_$]+)\s*(?:[,}\]]|$)/g)) out.add(n[1]);
+    }
+    return out;
+}
+
+/** Which of `names` appear as identifiers inside `region` (not as a property access). */
+function referencedIn(region: string, names: Iterable<string>): string[] {
+    const hits: string[] = [];
+    for (const n of names) {
+        if (new RegExp(`(^|[^A-Za-z0-9_$.])${n}([^A-Za-z0-9_$]|$)`, 'm').test(region)) hits.push(n);
+    }
+    return hits;
+}
+
+describe('one-hop-guard.sh ONE_HOP_SYMBOLS — the symbols RETRIEVAL reaches one import hop away', () => {
+    const FILTER_REL = FILTER_FIXTURE_REL;
+    const FILTER_SRC = fs.readFileSync(path.join(REPO_ROOT, FILTER_REL), 'utf8');
+    const tmpDirs: string[] = [];
+    afterAll(() => { for (const d of tmpDirs) fs.rmSync(d, { recursive: true, force: true }); });
+    const repoWith = (files: Record<string, string>) => {
+        const d = throwawayRepo(files);
+        tmpDirs.push(d);
+        return d;
+    };
+
+    it('lists detectGrainCookingContext in filter-candidates.ts — the hole this guard was built for', () => {
+        expect(oneHopEntries()).toContainEqual({ file: FILTER_REL, symbol: 'detectGrainCookingContext' });
+    });
+
+    // NOT `it.each(oneHopEntries())`: that calls the guard reader during COLLECTION, and
+    // a throw there fails the whole file — the blast radius this block just narrowed.
+    it('every entry names a real file AND a non-empty region on the current tree (typo guard, both halves)', () => {
+        for (const { file, symbol } of oneHopEntries()) {
+            expect({ file, exists: fs.existsSync(path.join(REPO_ROOT, file)) })
+                .toEqual({ file, exists: true });
+            const region = symbolRegion(file, symbol);
+            expect({ file, symbol, empty: region.length === 0 })
+                .toEqual({ file, symbol, empty: false });
+            expect(region.split('\n')[0])
+                .toMatch(new RegExp(`^(export )?(async )?(function|const) ${symbol}\\b`));
+        }
+    });
+
+    it('every listed symbol is REACHED: imported by a producer, or read by a listed region of its own file', () => {
+        const importedFrom = importedSymbolsByFile(guardVar('ONE_HOP_IMPORTERS').trim().split(/\s+/));
+        const entries = oneHopEntries();
+        for (const e of entries) {
+            const imported = importedFrom.get(e.file)?.has(e.symbol) ?? false;
+            // clause (4): a module-level table is not imported — it is read by a listed
+            // declaration of the same file. Either justification is enough; NEITHER is a
+            // symbol nothing reaches, i.e. a guard that refuses work for no reason.
+            const readBy = entries
+                .filter(o => o.file === e.file && o.symbol !== e.symbol)
+                .filter(o => referencedIn(symbolRegion(o.file, o.symbol), [e.symbol]).length > 0)
+                .map(o => o.symbol);
+            expect({ ...e, reached: imported || readBy.length > 0 })
+                .toEqual({ ...e, reached: true });
+        }
+    });
+
+    /**
+     * THE CENSUS IN THE OTHER DIRECTION — IMPORT -> LIST (2026-09-03, refuter F4).
+     *
+     * The test above asks "is every LISTED symbol reached?", which is the list -> reach
+     * direction, and `importedSymbolsByFile()` had exactly that one caller. Nothing asked
+     * the converse — "is every REACHED symbol listed?" — so membership clause (1) was
+     * documented in the helper header and pinned by nothing, and four deletions survived
+     * the whole suite: dropping all four count-label.ts entries, dropping
+     * corrupt-mark.ts:isCorruptExclusionEnabled, dropping
+     * density.ts:DRY_GRANULE_DENSITY_CATEGORIES, and adding an escape hatch. The first is
+     * the worst: those entries cover da6d7a5, the ONE commit in the 100-commit census
+     * this guard would have caught — i.e. the guard's entire measured firing population,
+     * deletable with zero tests going red.
+     *
+     * So: re-derive clause (1) from the three producers, and require every named import
+     * that lands on a file NEITHER path list already covers to be LISTED or on the
+     * explicit allowlist below. The allowlist is the helper header's DELIBERATELY NOT
+     * LISTED section restated as data, one entry per symbol, so a new unlisted import is
+     * a red that has to be argued for rather than absorbed.
+     *
+     * MEASURED 2026-09-03 on this tree: 19 named imports land on an existing, non-producer
+     * file that neither path list covers; 6 are listed and 13 are on the allowlist.
+     * Re-derive: `grep -nE "^import|^\} from" $(read ONE_HOP_IMPORTERS)`.
+     *
+     * WHAT IT CANNOT SEE, stated: `import * as ns` and default imports (neither appears in
+     * the three producers today), and the two-hop reach the helper header already names.
+     */
+    it('IMPORT CENSUS: every symbol a producer imports from a non-path-listed file is LISTED or explicitly excluded', () => {
+        // The helper header's DELIBERATELY NOT LISTED section, as data. Each line is the
+        // reason in one clause; the header owns the full argument.
+        const NOT_LISTED: Record<string, string> = {
+            'src/lib/db.ts:prisma': 'transport',
+            'src/lib/logger.ts:logger': 'logging',
+            'src/lib/mapping/client.ts:FatSecretClient': 'the FatSecret HTTP wrapper: a class, which symbol_region does not parse, and what it returns is the remote API answer',
+            'src/lib/mapping/client.ts:FatSecretFoodSummary': 'a TYPE from that wrapper, erased before anything runs',
+            'src/lib/mapping/client.ts:FatSecretServing': 'a TYPE from that wrapper, erased before anything runs',
+            'src/lib/mapping/config.ts:FATSECRET_CLIENT_ID': 'credential, shapes nothing',
+            'src/lib/mapping/config.ts:FATSECRET_CLIENT_SECRET': 'credential, shapes nothing',
+            'src/lib/mapping/config.ts:FATSECRET_LANE_MAX_RESULTS': 'env-value reader; the one whose default is live on the Mac — a one-token widening if re-decided',
+            'src/lib/mapping/config.ts:FATSECRET_LANE_TIMEOUT_MS': 'truncates the lane nondeterministically — already retrieval noise',
+            'src/lib/mapping/config.ts:FATSECRET_PERSIST_RUNNERS_UP': 'storage cap, applied after the hits exist',
+            'src/lib/mapping/config.ts:FATSECRET_RETRIEVAL_ENABLED': 'env-value reader, set in the gating .env',
+            'src/lib/mapping/declined-confidence.ts:RERANK_DECLINED_CONFIDENCE': 'winner-diff.ts requires it LIVE from each tree, so the diff SEES a change to it; listing it would be the #311 false abort',
+            'src/lib/mapping/deferred-hydration.ts:registerBackgroundTask': 'persistence bookkeeping after the hits exist',
+        };
+        const importers = guardVar('ONE_HOP_IMPORTERS').trim().split(/\s+/);
+        const importedFrom = importedSymbolsByFile(importers);
+        const listed = new Set(oneHopEntries().map(e => `${e.file}:${e.symbol}`));
+
+        const unaccounted: string[] = [];
+        const scanned: string[] = [];
+        for (const [file, names] of [...importedFrom].sort()) {
+            // a producer importing another producer is inside RETRIEVAL_PATHS already;
+            // a non-existent resolution is a package or a path alias, not a repo file
+            if (importers.includes(file)) continue;
+            if (!fs.existsSync(path.join(REPO_ROOT, file))) continue;
+            if (gateAbortsOn('RETRIEVAL_PATHS', [file]) || gateAbortsOn('FROZEN_INPUT_PATHS', [file])) continue;
+            for (const name of [...names].sort()) {
+                const key = `${file}:${name}`;
+                scanned.push(key);
+                if (!listed.has(key) && !(key in NOT_LISTED)) unaccounted.push(key);
+            }
+        }
+        expect(unaccounted).toEqual([]);
+        // the census must not go VACUOUS: an importer path typo, a changed import style or
+        // a widened path list could empty it, and an empty census asserts nothing.
+        expect(scanned.length).toBeGreaterThanOrEqual(15);
+        // and the allowlist must not rot: every excluded key is still a real import
+        expect(Object.keys(NOT_LISTED).filter(k => !scanned.includes(k))).toEqual([]);
+        // the entries the guard's own firing population depends on are in the SCANNED set,
+        // so deleting any of them lands in `unaccounted` above rather than passing quietly
+        for (const key of [
+            'src/lib/mapping/count-label.ts:countedPieceNoun',
+            'src/lib/mapping/corrupt-mark.ts:isCorruptExclusionEnabled',
+            'src/lib/units/density.ts:DRY_GRANULE_DENSITY_CATEGORIES',
+            'src/lib/units/density.ts:inferCategoryFromName',
+            'src/lib/units/density.ts:categoryDensity',
+            'src/lib/mapping/filter-candidates.ts:detectGrainCookingContext',
+        ]) {
+            expect({ key, scanned: scanned.includes(key), listed: listed.has(key) })
+                .toEqual({ key, scanned: true, listed: true });
+        }
+    });
+
+    /**
+     * NO ESCAPE HATCH, PINNED (2026-09-03, refuter F4). The PR body says "There is no
+     * --force, deliberately" and the abort text says it to the reader, and an adversarial
+     * pass added a `WINNER_GATE_SKIP_ONE_HOP` env bypass to the block with the whole suite
+     * still green. A prose promise nothing reads is not a property.
+     *
+     * The predicate is an ALLOWLIST OF SHELL VARIABLES the one-hop block may expand. Any
+     * new name — an env bypass by construction has to be one — reds here and has to be
+     * added deliberately. That is stronger than grepping for a keyword: it does not care
+     * what the hatch is called.
+     */
+    it('the one-hop block has NO escape hatch: it expands only its own variables', () => {
+        const from = GATE_SRC.indexOf('source scripts/eval/one-hop-guard.sh');
+        const to = GATE_SRC.indexOf("UNOBSERVED_SURFACE_PATHS='");
+        expect(from).toBeGreaterThan(0);
+        expect(to).toBeGreaterThan(from);
+        const block = GATE_SRC.slice(from, to);
+        const ALLOWED = new Set([
+            'BASE_REF', 'ONE_HOP_CHANGED', 'ONE_HOP_MERGE_BASE', 'ONE_HOP_HITS',
+            'ONE_HOP_BEHIND', 'ONE_HOP_SYMBOLS', 'one_hop_entry', 'one_hop_file', 'one_hop_sym',
+        ]);
+        // EXECUTABLE LINES ONLY: quoted heredocs are text printed to the reader (one of
+        // them says "There is no --force, deliberately", which a naive grep would read as
+        // the hatch), and comments quote shell fragments verbatim on purpose.
+        const codeOnly = block
+            .replace(/<<'(EOF[A-Z_]*)'[\s\S]*?\n\1\n/g, '\n')
+            .split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
+        const used = new Set<string>();
+        for (const m of codeOnly.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)/g)) used.add(m[1]);
+        expect([...used].filter(v => !ALLOWED.has(v)).sort()).toEqual([]);
+        // belt and braces on the spellings a hatch actually took in review
+        expect(codeOnly).not.toMatch(/SKIP_ONE_HOP|WINNER_GATE_SKIP|--force/);
+        expect(GATE_SRC).not.toContain('SKIP_ONE_HOP');
+        // the heredoc really was stripped — otherwise the two assertions above are vacuous
+        expect(codeOnly).not.toContain('There is no --force, deliberately.');
+        // and the promise the abort text makes to the reader is still there
+        expect(block).toContain('There is no --force, deliberately.');
+    });
+
+    /**
+     * THE MEMBERSHIP SEAT (2026-09-03, refuter F1/F2). `git diff --name-only` reports only
+     * the NEW path for a rename, so `git mv filter-candidates.ts candidate-filter.ts` plus
+     * an edit inside detectGrainCookingContext produced a change set the OLD path is not
+     * in: the whole-line membership pre-filter `continue`d and one_hop_symbol_changed's own
+     * fail-closed `[[ -f "$file" ]] || return 0` was never reached — the guard skipped
+     * ENTIRELY on the move that most obviously relocates a pool producer (MEASURED: exit 2
+     * past all four aborts). An ABSENT listed file must therefore bypass the pre-filter.
+     * The executing case below proves the behaviour; this reads the shipped line so a
+     * future edit that drops it is named rather than red somewhere else.
+     */
+    it('the membership pre-filter EXEMPTS an absent listed file, so a rename cannot skip the guard', () => {
+        const from = GATE_SRC.indexOf('source scripts/eval/one-hop-guard.sh');
+        const block = GATE_SRC.slice(from, GATE_SRC.indexOf("UNOBSERVED_SURFACE_PATHS='"));
+        expect(block).toContain('{ [[ ! -f "$one_hop_file" ]] \\');
+        expect(block).not.toMatch(/^\s*\[\[ \$'\\n'"\$ONE_HOP_CHANGED".*\]\] \|\| continue$/m);
+        // the fail-closed check the exemption falls through TO
+        expect(guardSrc()).toContain('[[ -f "$file" ]] || return 0');
+    });
+
+    /**
+     * THE TEST THAT WOULD HAVE CAUGHT THE SIX-ENTRY LIST (blocker 2, 2026-09-03).
+     *
+     * `symbol_region` compares a declaration's OWN text and nothing else, so a listed
+     * function that reads a module-level table of the same file is guarded on half its
+     * behaviour. Measured witness at the time: adding `'bulgur'` to VOLUME_COOKED_GRAINS
+     * flips detectGrainCookingContext('1 cup bulgur','bulgur') from preferDry to
+     * softCooked — the branch that appends the "cooked <name>" FDC search in
+     * gatherCandidates() — while the guard read UNCHANGED and the gate exited 0.
+     *
+     * So: the reference closure over the SHIPPED list, recomputed from the tree, must be
+     * a subset of the shipped list.
+     *
+     * AND IT FAILS CLOSED ON WHAT THE GUARD CANNOT EXPRESS (2026-09-03, refuter F3). The
+     * walk scans with allTopLevelValueDecls() — `let`, `var`, `class`, `enum`,
+     * destructured `const` included — while only the two shapes symbol_region parses can
+     * be written into ONE_HOP_SYMBOLS. A referenced declaration in the wider set and not
+     * the narrower one is therefore a HOLE, not a limitation to note in a comment, and it
+     * reds here with the identifier named. Before this the two halves used the same
+     * narrow scanner, so `let EXTRA_COOKED_GRAINS = [...]` read inside
+     * detectGrainCookingContext was invisible to the test AND to the guard, and widening
+     * it later reached exit 2 with a clean receipt.
+     *
+     * Limits that remain, stated rather than hidden: this walks only SAME-FILE, TOP-LEVEL
+     * declarations, so it says nothing about two-hop reach (see the helper's STILL BLIND
+     * note) and cannot see a table declared inside another function or exported from a
+     * third file.
+     */
+    it('REFERENCE CLOSURE: every same-file top-level declaration a listed region reads is itself listed', () => {
+        const entries = oneHopEntries();
+        const listed = new Set(entries.map(e => `${e.file}:${e.symbol}`));
+        const missing: string[] = [];
+        const inexpressible: string[] = [];
+        // fixpoint, so a newly listed function drags its own tables in too
+        const queue = [...entries];
+        const seen = new Set(listed);
+        while (queue.length > 0) {
+            const e = queue.shift()!;
+            const expressible = expressibleTopLevelDecls(e.file);
+            const others = [...allTopLevelValueDecls(e.file)].filter(d => d !== e.symbol);
+            for (const ref of referencedIn(symbolRegion(e.file, e.symbol), others)) {
+                const key = `${e.file}:${ref}`;
+                if (!expressible.has(ref)) {
+                    // symbol_region parses `function` and `const` only, so this table can
+                    // never be listed as things stand. Widen symbol_region and both
+                    // scanners here, or restructure the declaration into a `const`.
+                    inexpressible.push(`${key}  (read by ${e.symbol}; symbol_region parses function/const only)`);
+                    continue;
+                }
+                if (!listed.has(key)) missing.push(`${key}  (read by ${e.symbol})`);
+                if (!seen.has(key)) { seen.add(key); queue.push({ file: e.file, symbol: ref }); }
+            }
+        }
+        expect({ missing, inexpressible }).toEqual({ missing: [], inexpressible: [] });
+    });
+
+    /**
+     * The fail-closed half of the closure, pinned on a FIXTURE so it does not depend on
+     * the listed files staying free of these shapes. If the two scanners ever collapse
+     * back into one, this is the case that says so.
+     */
+    it('the closure scanner sees the shapes symbol_region CANNOT express — that gap is a red, not a silence', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-decls-'));
+        tmpDirs.push(dir);
+        const fx = path.join(dir, 'fx.ts');
+        fs.writeFileSync(fx, [
+            'export const OK_CONST = 1;',
+            'export function okFn() { return 1; }',
+            'let EXTRA_COOKED_GRAINS = new Set([\'bulgur\']);',
+            'var LEGACY = 2;',
+            'export enum GrainMode { Dry, Cooked }',
+            'export class Helper {}',
+            'const { DESTRUCTURED_A, DESTRUCTURED_B } = someTable;',
+            'export type ErasedType = string;',
+            'export interface ErasedShape { a: number }',
+            '',
+        ].join('\n'));
+        const narrow = expressibleTopLevelDecls(fx);
+        const broad = allTopLevelValueDecls(fx);
+        expect([...narrow].sort()).toEqual(['OK_CONST', 'okFn']);
+        for (const name of ['EXTRA_COOKED_GRAINS', 'LEGACY', 'GrainMode', 'Helper', 'DESTRUCTURED_A', 'DESTRUCTURED_B']) {
+            expect({ name, broad: broad.has(name), narrow: narrow.has(name) })
+                .toEqual({ name, broad: true, narrow: false });
+        }
+        // types are erased before anything runs, so they must NOT red the closure
+        for (const name of ['ErasedType', 'ErasedShape']) {
+            expect({ name, broad: broad.has(name) }).toEqual({ name, broad: false });
+        }
+    });
+
+    it('every listed file is on NEITHER path list — the premise of the narrow form', () => {
+        for (const e of oneHopEntries()) {
+            expect({ file: e.file, retrieval: gateAbortsOn('RETRIEVAL_PATHS', [e.file]) })
+                .toEqual({ file: e.file, retrieval: false });
+            expect({ file: e.file, frozen: gateAbortsOn('FROZEN_INPUT_PATHS', [e.file]) })
+                .toEqual({ file: e.file, frozen: false });
+        }
+    });
+
+    it('a one-character edit INSIDE detectGrainCookingContext is CHANGED', () => {
+        const repo = repoWith({ [FILTER_REL]: FILTER_SRC });
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'detectGrainCookingContext')).toBe(false);
+        fs.writeFileSync(path.join(repo, FILTER_REL), editInside(FILTER_SRC, 'detectGrainCookingContext'));
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'detectGrainCookingContext')).toBe(true);
+    });
+
+    it('the same edit inside hasCriticalModifierMismatch ONLY is NOT changed — the live ROW 1 shape stays gateable', () => {
+        const repo = repoWith({ [FILTER_REL]: FILTER_SRC });
+        fs.writeFileSync(path.join(repo, FILTER_REL), editInside(FILTER_SRC, 'hasCriticalModifierMismatch'));
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'detectGrainCookingContext')).toBe(false);
+        // the edit landed, and a multi-line signature is captured from its first line
+        expect(symbolChangedVsHead(repo, FILTER_REL, 'hasCriticalModifierMismatch')).toBe(true);
+    });
+
+    it('a file absent on either side counts as CHANGED', () => {
+        const repo = repoWith({ 'keep.ts': 'export const keep = 1;\n' });
+        fs.writeFileSync(path.join(repo, 'new.ts'), 'export function f() {\n  return 1;\n}\n');
+        expect(symbolChangedVsHead(repo, 'new.ts', 'f')).toBe(true);
+        fs.unlinkSync(path.join(repo, 'keep.ts'));
+        expect(symbolChangedVsHead(repo, 'keep.ts', 'keep')).toBe(true);
+    });
+
+    it('a __tests__ or colocated test path never reaches the guard — NON_REPLAY_PATHS strips it first', () => {
+        expect(survivesNonReplayFilter('src/lib/mapping/__tests__/filter-candidates.test.ts')).toBe(false);
+        expect(survivesNonReplayFilter('src/lib/units/density.test.ts')).toBe(false);
+        expect(survivesNonReplayFilter(FILTER_REL)).toBe(true);
+    });
+
+    describe('symbol_region', () => {
+        const FIXTURE = [
+            '// header',
+            'export const X = 0.78;',
+            'export const Y: ReadonlySet<string> = new Set<string>([',
+            "  'a', 'b',",
+            ']);',
+            'const Z = {',
+            '  k: 1,',
+            '};',
+            // the clause-(4) table shapes, added 2026-09-03 with the tables themselves
+            'const RE = /\\b(cups?|bowls?)\\b/i;',
+            'const REC: Record<string, number> = {',
+            '  oil: 0.91,',
+            '};',
+            'const GEN: Array<{ category: string; keywords: string[] }> = [',
+            "  { category: 'legume', keywords: ['bean'] },",
+            '];',
+            'export function f(a: string): { ok: boolean } {',
+            '  if (a) {',
+            '    return { ok: true };',
+            '  }',
+            '  return { ok: false };',
+            '}',
+            'export async function g(',
+            '  a: string,',
+            '): Promise<void> {',
+            '  return;',
+            '}',
+            'function h() { return 1; }',
+            '',
+        ].join('\n');
+        let dir: string;
+        let file: string;
+        beforeAll(() => {
+            dir = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-region-'));
+            tmpDirs.push(dir);
+            file = path.join(dir, 'fx.ts');
+            fs.writeFileSync(file, FIXTURE);
+        });
+
+        it.each([
+            ['X', ['export const X = 0.78;']],
+            ['Y', ['export const Y: ReadonlySet<string> = new Set<string>([', "  'a', 'b',", ']);']],
+            ['Z', ['const Z = {', '  k: 1,', '};']],
+            // a RegExp literal closes its own statement, so the region is ONE line — an
+            // edit on the line AFTER it is outside the region, which is why editInside()
+            // targets the declaration line for this shape.
+            ['RE', ['const RE = /\\b(cups?|bowls?)\\b/i;']],
+            ['REC', ['const REC: Record<string, number> = {', '  oil: 0.91,', '};']],
+            // the `;` inside the generic must NOT be read as the end of the statement
+            ['GEN', ['const GEN: Array<{ category: string; keywords: string[] }> = [', "  { category: 'legume', keywords: ['bean'] },", '];']],
+            ['f', ['export function f(a: string): { ok: boolean } {', '  if (a) {', '    return { ok: true };', '  }', '  return { ok: false };', '}']],
+            ['g', ['export async function g(', '  a: string,', '): Promise<void> {', '  return;', '}']],
+            ['h', ['function h() { return 1; }']],
+        ])('%s -> exactly its own declaration, one-line or bracketed', (sym, expected) => {
+            expect(symbolRegion(file, sym as string, dir).replace(/\n$/, '').split('\n')).toEqual(expected);
+        });
+
+        it('an absent symbol is an EMPTY region — the typo-guard case above turns that into a red', () => {
+            expect(symbolRegion(file, 'nope', dir)).toBe('');
+        });
+
+        it('reads stdin as `-` and strips CR, so a CRLF checkout equals its LF `git show`', () => {
+            const r = spawnSync('bash', ['-c', 'set -uo pipefail; source "$GUARD"; symbol_region - Y'], {
+                input: FIXTURE.replace(/\n/g, '\r\n'), encoding: 'utf8',
+                env: { ...process.env, GUARD: GUARD_PATH },
+            });
+            expect(r.status).toBe(0);
+            expect(r.stdout).toBe(symbolRegion(file, 'Y', dir));
+        });
+    });
+
+    it('does NOT list declined-confidence.ts:RERANK_DECLINED_CONFIDENCE — winner-diff.ts requires it LIVE, so the diff sees it', () => {
+        expect(oneHopEntries().some(e => e.file.endsWith('declined-confidence.ts'))).toBe(false);
+        // The receipt. If either line goes, re-decide the membership; do not just re-green this.
+        const wd = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'eval', 'winner-diff.ts'), 'utf8');
+        expect(wd).toContain("require('../../src/lib/mapping/declined-confidence')");
+        expect(wd).toMatch(/const \{ confidenceGate, assessConfidence \} = gatherMod;/);
+    });
+
+    // TEXT-LEVEL, and that is ALL it is. It pins WHERE the block sits and what it says,
+    // never that it is wired: an adversarial pass mutated `-n` to `-z`, emptied the loop
+    // list and emptied ONE_HOP_SYMBOLS after the source line, and all three left this
+    // green while the real gate never aborted. The executing pin below is the one that
+    // kills those; keep both, and never add a wiring claim to this one.
+    it('winner-gate.sh sources the helper and aborts AFTER the frozen-input abort, BEFORE the unobserved-surface one, with exit 3', () => {
+        const at = GATE_SRC.indexOf('source scripts/eval/one-hop-guard.sh');
+        expect(at).toBeGreaterThan(GATE_SRC.indexOf("FROZEN_INPUT_PATHS='"));
+        expect(at).toBeLessThan(GATE_SRC.indexOf("UNOBSERVED_SURFACE_PATHS='"));
+        const block = GATE_SRC.slice(at, GATE_SRC.indexOf("UNOBSERVED_SURFACE_PATHS='"));
+        expect(block).toMatch(/one_hop_symbol_changed "\$BASE_REF"/);
+        expect(block).toMatch(/\n\s*exit 3\n/);
+        expect(block).toContain('--cross-snapshot');
+        expect(block).toContain('cold golden');
+    });
+
+    // The `|| true` that keeps a clean or test-only change set runnable. The BEHAVIOUR is
+    // pinned by the executing block below ('a clean change set …'); this reads the
+    // shipped line so a future edit that drops it is named, not just red somewhere.
+    it('reads changed_paths with `|| true` — grep -v exits 1 on an empty result and errexit would kill the gate', () => {
+        expect(GATE_SRC).toContain('ONE_HOP_CHANGED="$(changed_paths || true)"');
+        expect(GATE_SRC).not.toContain('ONE_HOP_CHANGED="$(changed_paths)"');
+    });
+});
+
+// ============================================================================
+// winner-gate.sh one-hop abort — THE EXECUTING PIN
+// ============================================================================
+/**
+ * WHY A SECOND, HEAVIER PIN EXISTS FOR THE SAME BLOCK.
+ *
+ * Everything above reads winner-gate.sh as TEXT or calls one-hop-guard.sh's functions
+ * directly. Neither form can tell a wired gate from an unwired one, and an adversarial
+ * pass measured exactly that: `-n` -> `-z` on ONE_HOP_HITS, `for one_hop_entry in ""`,
+ * `ONE_HOP_SYMBOLS=""` after the source line, and a `one_hop_symbol_changed` that
+ * ignores its <base-ref> argument ALL left the suite green while the real gate never
+ * aborted — the last of those silently unguarding the COMMITTED edit, which is the
+ * normal state a branch is gated in. Dropping five of the six list entries failed
+ * nothing, and deleting the whole-line membership test failed nothing either.
+ *
+ * So these cases run the SHIPPED script — `bash scripts/eval/winner-gate.sh` — inside a
+ * throwaway git repo holding the real listed files, with a stub `npx` first on PATH.
+ *
+ * HOW THE SENTINEL WORKS. The stub answers `winner-diff hashes` with a resolvable
+ * variant line and every other subcommand with nothing, exit 0. A run that clears all
+ * four aborts therefore reaches the snapshot check and dies there with
+ * `exit 2, "the cold snapshot holds 0 of N seeds"`. So exit 2 means "got past the
+ * one-hop block", exit 3 means one of the aborts fired (the stderr says which), and the
+ * blocker-1 shape — errexit killing the gate at the first top-level `changed_paths` —
+ * shows up as its own distinct exit 1 with EMPTY stderr.
+ *
+ * Cost: each case is a bash run plus a handful of git calls. The three cases that get
+ * past the aborts also make and remove a `/tmp/winner-gate-base-<stamp>` worktree, the
+ * way a real run does; they are serial, and each run's own EXIT trap removes it.
+ */
+describe('winner-gate.sh one-hop abort — executed end to end in a throwaway repo', () => {
+    /** Exit 2 with this text = every abort cleared; the stub has no winner-diff to run. */
+    const PAST_ALL_ABORTS = 2;
+    const PAST_MARKER = 'the cold snapshot holds 0 of';
+
+    let repo = '';
+    let binDir = '';
+    let base0 = '';
+    const artifacts = new Set<string>();
+
+    const git = (...args: string[]) => {
+        const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], {
+            cwd: repo, encoding: 'utf8',
+            env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+        });
+        if (r.status !== 0) throw new Error(`git ${args.join(' ')} failed: ${r.stderr}`);
+        return r.stdout.trim();
+    };
+
+    const write = (rel: string, content: string) => {
+        fs.mkdirSync(path.dirname(path.join(repo, rel)), { recursive: true });
+        fs.writeFileSync(path.join(repo, rel), content);
+    };
+    const read = (rel: string) => fs.readFileSync(path.join(repo, rel), 'utf8');
+
+    function runGate(baseRef: string) {
+        const r = spawnSync('bash', [
+            'scripts/eval/winner-gate.sh',
+            '--cold-seeds', 'seeds.txt', '--base', baseRef, '--regression', '0',
+        ], {
+            cwd: repo, encoding: 'utf8', timeout: 120_000,
+            env: {
+                ...process.env,
+                PATH: `${binDir}:${process.env.PATH}`,
+                GIT_CONFIG_GLOBAL: '/dev/null',
+                GIT_CONFIG_NOSYSTEM: '1',
+            },
+        });
+        if (r.error) throw r.error;
+        for (const m of (r.stdout ?? '').matchAll(/^artifacts:\s+(\/tmp\/\S+)$/gm)) artifacts.add(m[1]);
+        // a run that materialized a BASE worktree removes it in its own trap; prune the
+        // admin entry so a later add to the same path in the same second cannot collide
+        spawnSync('git', ['worktree', 'prune'], { cwd: repo, encoding: 'utf8' });
+        return { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
+    }
+
+    beforeAll(() => {
+        repo = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-gate-'));
+        // The stub lives OUTSIDE the repo on purpose: inside, it would be an untracked
+        // file, changed_paths would never be empty, and the blocker-1 case below could
+        // not exist.
+        binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'one-hop-bin-'));
+        fs.writeFileSync(path.join(binDir, 'npx'), [
+            '#!/usr/bin/env bash',
+            '# stub: resolve the caller variant, run no winner-diff, never fail (pipefail).',
+            'for a in "$@"; do [ "$a" = "hashes" ] && { echo "this tree is: baseline (stub)"; exit 0; }; done',
+            'exit 0',
+            '',
+        ].join('\n'), { mode: 0o755 });
+
+        // the two shipped scripts, the files the guard lists, and the three producers it
+        // names — all read from the tree so the fixture cannot drift from the real one
+        write('scripts/eval/winner-gate.sh', fs.readFileSync(GATE_PATH, 'utf8'));
+        write('scripts/eval/one-hop-guard.sh', guardSrc());
+        write('scripts/eval/winner-diff.ts', '// stub: the gate only checks that this exists\n');
+        const fixtureFiles = new Set<string>([
+            ...oneHopEntries().map(e => e.file),
+            ...guardVar('ONE_HOP_IMPORTERS').trim().split(/\s+/),
+        ]);
+        for (const rel of fixtureFiles) write(rel, fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8'));
+        write('seeds.txt', 'one\ntwo\nthree\n');
+
+        git('init', '-q', '-b', 'feature');
+        git('add', '-A');
+        git('commit', '-qm', 'base');
+        base0 = git('rev-parse', 'HEAD');
+
+        // a simulated base ref that moved a listed symbol AFTER the branch point
+        git('checkout', '-q', '-B', 'basesim', base0);
+        write(FILTER_FIXTURE_REL, editInside(read(FILTER_FIXTURE_REL), 'detectGrainCookingContext'));
+        git('add', '-A');
+        git('commit', '-qm', 'base ref moves a listed symbol');
+        git('checkout', '-q', 'feature');
+    });
+
+    afterAll(() => {
+        for (const d of [repo, binDir]) if (d) fs.rmSync(d, { recursive: true, force: true });
+        for (const a of artifacts) fs.rmSync(a, { recursive: true, force: true });
+    });
+
+    beforeEach(() => {
+        git('checkout', '-q', '-B', 'feature', base0);
+        git('reset', '-q', '--hard', base0);
+        git('clean', '-qfd');
+    });
+
+    it('a — an UNCOMMITTED edit inside a listed symbol aborts 3 and names file, symbol and reach', () => {
+        write(FILTER_FIXTURE_REL, editInside(read(FILTER_FIXTURE_REL), 'detectGrainCookingContext'));
+        const r = runGate(base0);
+        expect({ status: r.status, named: r.stderr.includes(`${FILTER_FIXTURE_REL} : detectGrainCookingContext`) })
+            .toEqual({ status: 3, named: true });
+        expect(r.stderr).toContain('ONE IMPORT HOP');
+        expect(r.stderr).toContain('imported by src/lib/mapping/gather-candidates.ts');
+    });
+
+    it('a2 — the same for a CLAUSE-4 TABLE: the guard was blind to VOLUME_COOKED_GRAINS and is not now', () => {
+        // the measured witness: 'bulgur' here flips detectGrainCookingContext to softCooked
+        // while the function's own region is byte-identical.
+        write(FILTER_FIXTURE_REL, read(FILTER_FIXTURE_REL)
+            .replace("    'oats', 'oatmeal', 'couscous', 'barley', 'farro',",
+                "    'oats', 'oatmeal', 'couscous', 'barley', 'farro', 'bulgur',"));
+        const r = runGate(base0);
+        expect({ status: r.status, named: r.stderr.includes(`${FILTER_FIXTURE_REL} : VOLUME_COOKED_GRAINS`) })
+            .toEqual({ status: 3, named: true });
+        expect(r.stderr).toContain('read by detectGrainCookingContext');
+    });
+
+    it('b — a COMMITTED edit with --base at the pre-edit ref aborts 3 (the normal state a branch is gated in)', () => {
+        write(FILTER_FIXTURE_REL, editInside(read(FILTER_FIXTURE_REL), 'detectGrainCookingContext'));
+        git('add', '-A');
+        git('commit', '-qm', 'branch changes a listed symbol');
+        const r = runGate(base0);
+        expect({ status: r.status, hop: r.stderr.includes('ONE IMPORT HOP') }).toEqual({ status: 3, hop: true });
+    });
+
+    it('c — an edit OUTSIDE every listed region does NOT abort: filter-candidates.ts stays gateable', () => {
+        write(FILTER_FIXTURE_REL, editInside(read(FILTER_FIXTURE_REL), 'hasCriticalModifierMismatch'));
+        const r = runGate(base0);
+        expect({ status: r.status, past: r.stderr.includes(PAST_MARKER) })
+            .toEqual({ status: PAST_ALL_ABORTS, past: true });
+    });
+
+    it('d — a CLEAN and a TEST-ONLY change set both get PAST the one-hop block (the blocker-1 regression)', () => {
+        // Without `|| true`, changed_paths' trailing `grep -vE` exits 1 on an empty result
+        // and errexit kills the gate here: exit 1, no stderr, an exit code that is not in
+        // the table. Both halves are the shape NON_REPLAY_PATHS exists to keep runnable.
+        const clean = runGate(base0);
+        expect({ case: 'clean', status: clean.status, past: clean.stderr.includes(PAST_MARKER) })
+            .toEqual({ case: 'clean', status: PAST_ALL_ABORTS, past: true });
+
+        write('src/lib/mapping/__tests__/one-hop-fixture.test.ts', '// test-only edit\n');
+        const testOnly = runGate(base0);
+        expect({ case: 'test-only', status: testOnly.status, past: testOnly.stderr.includes(PAST_MARKER) })
+            .toEqual({ case: 'test-only', status: PAST_ALL_ABORTS, past: true });
+    });
+
+    it('e — the BASE REF moved a listed symbol and the branch touches a different file: no abort', () => {
+        // the whole-line membership test is what makes this pass. Without it the region
+        // compare reads the base ref's tip, sees ITS edit, and aborts on a branch that
+        // never touched the file.
+        fs.appendFileSync(path.join(repo, 'src/lib/mapping/corrupt-mark.ts'), '\n// branch edit\n');
+        git('add', '-A');
+        git('commit', '-qm', 'branch touches another file');
+        const r = runGate('basesim');
+        expect({ status: r.status, past: r.stderr.includes(PAST_MARKER) })
+            .toEqual({ status: PAST_ALL_ABORTS, past: true });
+    });
+
+    it('f — BEHIND the base ref: the branch touches the listed FILE elsewhere, so it is blamed unless attribution runs', () => {
+        // Membership is scoped to the MERGE BASE and the region compare reads the base
+        // ref's TIP, so this branch sees an edit it does not contain. Still exit 3 (the
+        // two trees do differ in a pool producer) but a DIFFERENT message: the printed
+        // remedy for the other abort — SPLIT the edit off — cannot apply here.
+        write(FILTER_FIXTURE_REL, editInside(read(FILTER_FIXTURE_REL), 'hasCriticalModifierMismatch'));
+        git('add', '-A');
+        git('commit', '-qm', 'branch edits an unlisted region of a listed file');
+        const r = runGate('basesim');
+        expect({ status: r.status, behind: r.stderr.includes('ABORT: BEHIND basesim') })
+            .toEqual({ status: 3, behind: true });
+        expect(r.stderr).toContain('merge and re-run');
+        expect(r.stderr).not.toContain('ABORT: this branch changes a symbol');
+    });
+
+    it('g — RENAMING a listed file while editing its listed symbol still aborts 3 (refuter F1)', () => {
+        // `git diff --name-only` reports only the NEW path for a rename, so before the
+        // membership exemption the OLD path was not in the change set, the pre-filter
+        // `continue`d, and this ran to exit 2 past all four aborts — the guard skipped
+        // entirely on the move that most obviously relocates a pool producer.
+        const moved = 'src/lib/mapping/candidate-filter.ts';
+        git('mv', FILTER_FIXTURE_REL, moved);
+        write(moved, editInside(read(moved), 'detectGrainCookingContext'));
+        git('add', '-A');
+        git('commit', '-qm', 'rename the listed file and edit the listed symbol');
+        const r = runGate(base0);
+        expect({ status: r.status, named: r.stderr.includes(`${FILTER_FIXTURE_REL} : detectGrainCookingContext`) })
+            .toEqual({ status: 3, named: true });
+        expect(r.stderr).toContain('ONE IMPORT HOP');
+    });
+
+    it('g2 — DELETING a listed file aborts 3 and says the file is absent, not "nothing listed"', () => {
+        git('rm', '-q', 'src/lib/mapping/corrupt-mark.ts');
+        git('commit', '-qm', 'delete a listed file');
+        const r = runGate(base0);
+        expect({ status: r.status, named: r.stderr.includes('src/lib/mapping/corrupt-mark.ts : isCorruptExclusionEnabled') })
+            .toEqual({ status: 3, named: true });
+    });
+
+    it('h — a base ref with NO MERGE BASE is refused, not silently reduced to the uncommitted change set (refuter F5)', () => {
+        // `git diff --name-only <base>...HEAD` exits 128 with no output when there is no
+        // merge base, and it sits FIRST in a brace group whose status is the LAST
+        // command's — so the whole COMMITTED change set vanished and this ran on to the
+        // snapshot check with every abort asked about uncommitted work alone. Pre-existing
+        // and it hit RETRIEVAL_PATHS and FROZEN_INPUT_PATHS identically, which is why the
+        // fix is one preflight rather than four.
+        git('checkout', '-q', '--orphan', 'unrelated');
+        git('rm', '-q', '-rf', '.');
+        write('unrelated.txt', 'no shared history\n');
+        git('add', '-A');
+        git('commit', '-qm', 'unrelated root');
+        git('checkout', '-q', '-B', 'feature', base0);
+        write(FILTER_FIXTURE_REL, editInside(read(FILTER_FIXTURE_REL), 'detectGrainCookingContext'));
+        git('add', '-A');
+        git('commit', '-qm', 'branch changes a listed symbol');
+        const r = runGate('unrelated');
+        expect({ status: r.status, refused: r.stderr.includes('NO MERGE BASE') })
+            .toEqual({ status: 2, refused: true });
+        // and it must not have reached the point where it reports on a truncated change set
+        expect(r.stderr).not.toContain(PAST_MARKER);
+    });
+
+    it('h2 — a base ref that names no commit is refused by the same preflight', () => {
+        const r = runGate('refs/heads/does-not-exist');
+        expect({ status: r.status, refused: r.stderr.includes('does not name a commit') })
+            .toEqual({ status: 2, refused: true });
+    });
+
+    it('EVERY listed entry aborts when its own region is edited — dropping any of them fails here', () => {
+        for (const { file, symbol } of oneHopEntries()) {
+            git('checkout', '-q', '-B', 'feature', base0);
+            git('reset', '-q', '--hard', base0);
+            git('clean', '-qfd');
+            write(file, editInside(read(file), symbol));
+            const r = runGate(base0);
+            expect({ file, symbol, status: r.status, named: r.stderr.includes(`${file} : ${symbol}`) })
+                .toEqual({ file, symbol, status: 3, named: true });
+        }
     });
 });
 
