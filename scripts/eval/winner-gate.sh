@@ -66,7 +66,11 @@
 #   3  THE DIFF WOULD BE VACUOUS. The run can happen, would report SAME, and that
 #      SAME means nothing: retrieval changed (the pool is one neither tree makes), a
 #      FROZEN SNAPSHOT INPUT changed (the field is replayed, not recomputed), or a
-#      symbol retrieval reaches ONE IMPORT HOP away changed (one-hop-guard.sh).
+#      symbol retrieval reaches ONE IMPORT HOP away changed (one-hop-guard.sh). That
+#      last one prints ONE OF TWO messages: your branch changed the symbol (SPLIT it),
+#      or your branch is BEHIND the base ref, which changed it (merge and re-run).
+#      Same code, because both make the run vacuous; different remedies, so different
+#      text — and the second cannot be fixed by the first's advice.
 #   4  the noise floor is non-zero, so nothing below it is a result.
 #   5  THE DIFF WOULD BE ABOUT A DIFFERENT PROGRAM. The change is on a surface
 #      winner-diff never executes — see UNOBSERVED_SURFACE_PATHS. Distinct from 3
@@ -91,7 +95,7 @@ while [[ $# -gt 0 ]]; do
         --label)      LABEL="$2";      shift 2 ;;
         --keep)       KEEP=1;          shift ;;
         --no-serving) SERVING="";      shift ;;
-        -h|--help)    sed -n '2,74p' "$0"; exit 0 ;;
+        -h|--help)    sed -n '2,79p' "$0"; exit 0 ;;
         *) echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -294,34 +298,59 @@ fi
 # ---------------------------------------------------------------- blind spot A3
 # ONE IMPORT HOP. RETRIEVAL_PATHS names the three files that PRODUCE the frozen pool,
 # and a path list is blind to what they IMPORT: gather-candidates.ts calls
-# detectGrainCookingContext() from filter-candidates.ts at two gather sites, and
+# detectGrainCookingContext() from filter-candidates.ts at ONE gather site
+# (gatherCandidates) and one gate site (confidenceGate, which the replay runs live), and
 # filter-candidates.ts is on none of the four lists because the rest of it is the
 # admission layer — exactly what a frozen-pool diff is FOR. Edit that one function and
 # the pool moves while this driver exits 0 with a clean receipt: the
 # llm-output-guards.ts hole (FROZEN_INPUT, 2026-08-15), one file over.
 #
-# WHY A SYMBOL LIST AND NOT A PATH. The path form is unusable here, measured: 10 of the
-# last 20 commits touching src/lib/mapping edit filter-candidates.ts, and 0 of the 20
-# edit a listed symbol (re-derive: `git log --format=%h -20 -- src/lib/mapping`, then per
-# commit `git diff-tree --no-commit-id --name-only -r <c> -- <the listed files>` for the
-# first count, and `symbol_region` over `git show <c>^:<file>` vs `git show <c>:<file>`
-# for the second; measured 2026-09-02 on d57d832). Listing the FILE would refuse half
-# the mapper's recent work to catch nothing — the #311 false abort at scale. So the
-# membership is `<file>:<symbol>` pairs and the comparison is the symbol's source REGION
-# between $BASE_REF and the working tree, text-level, before any node process exists.
-# The list, its three-clause rule and what is deliberately absent live in
-# scripts/eval/one-hop-guard.sh next to the functions, so they cannot drift apart. A
-# listed file changed OUTSIDE its listed symbols does not abort — that is what keeps
-# filter-candidates.ts gateable. Pinned in both directions by winner-diff.test.ts.
+# WHY A SYMBOL LIST AND NOT A PATH. The path form is unusable here, measured: 8 of the
+# last 20 commits touching src/lib/mapping, src/lib/units or src/lib/openfoodfacts edit a
+# listed FILE, and 0 of the 20 edit a listed symbol (15 and 1 over the last 100). The
+# re-derive, the widened window and the CRLF trap that made a raw `git show` diff read as
+# a symbol change live in one-hop-guard.sh, which owns that census. Listing the FILE
+# would refuse half the mapper's recent work to catch nothing — the #311 false abort at
+# scale. So the membership is `<file>:<symbol>` pairs and the comparison is the symbol's
+# source REGION between $BASE_REF and the working tree, text-level, before any node
+# process exists. The list, its four-clause rule (clause 4 is the reference closure: a
+# listed function's module-level tables are listed too) and what is deliberately absent
+# live in scripts/eval/one-hop-guard.sh next to the functions, so they cannot drift
+# apart. A listed file changed OUTSIDE its listed symbols does not abort — that is what
+# keeps filter-candidates.ts gateable. Pinned in both directions by winner-diff.test.ts,
+# including an END-TO-END pin that runs THIS script in a throwaway repo, because a
+# text-level assertion about these lines cannot tell wired from unwired.
+#
+# `|| true` ON changed_paths IS LOAD-BEARING. It ends in `grep -vE "$NON_REPLAY_PATHS"`,
+# which exits 1 when everything is filtered out; under `set -e -o pipefail` that killed
+# this gate at exit 1 with no message on a CLEAN or TEST-ONLY change set — the exact
+# shape NON_REPLAY_PATHS exists to keep runnable (the #311 lesson), and an exit code that
+# is not in the table above. Every other use is inside `if … | grep -q`, where errexit is
+# suspended, which is why this was the first top-level assignment to hit it.
 source scripts/eval/one-hop-guard.sh
-ONE_HOP_CHANGED="$(changed_paths)"
+ONE_HOP_CHANGED="$(changed_paths || true)"
+# ATTRIBUTION, and why there are TWO refs. Membership uses changed_paths, i.e.
+# `$BASE_REF...HEAD`, which is scoped to the MERGE BASE; the region compare below reads
+# $BASE_REF's TIP. A branch that is BEHIND $BASE_REF and touches a listed file for an
+# unrelated reason therefore saw master's edit to a listed symbol and blamed itself, with
+# a printed remedy (SPLIT the edit off) that cannot apply to an edit the branch does not
+# contain. So a hit at the tip is re-asked at the merge base: unchanged there means the
+# edit is $BASE_REF's, and that is a different abort with a different remedy. It is still
+# exit 3 — the two trees genuinely differ in a pool producer, so the diff would still be
+# vacuous — but "merge and re-run" is the fix, not "split your branch".
+ONE_HOP_MERGE_BASE="$(git merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
 ONE_HOP_HITS=""
+ONE_HOP_BEHIND=""
 for one_hop_entry in $ONE_HOP_SYMBOLS; do
     one_hop_file="${one_hop_entry%%:*}"; one_hop_sym="${one_hop_entry#*:}"
     # exact whole-line membership in the changed set, without a pipe
     [[ $'\n'"$ONE_HOP_CHANGED"$'\n' == *$'\n'"$one_hop_file"$'\n'* ]] || continue
-    if one_hop_symbol_changed "$BASE_REF" "$one_hop_file" "$one_hop_sym"; then
-        ONE_HOP_HITS="${ONE_HOP_HITS}  ${one_hop_file} : ${one_hop_sym} (imported by $(one_hop_importer "$one_hop_sym"))"$'\n'
+    one_hop_symbol_changed "$BASE_REF" "$one_hop_file" "$one_hop_sym" || continue
+    if [[ -n "$ONE_HOP_MERGE_BASE" ]] \
+        && ! one_hop_symbol_changed "$ONE_HOP_MERGE_BASE" "$one_hop_file" "$one_hop_sym"; then
+        ONE_HOP_BEHIND="${ONE_HOP_BEHIND}  ${one_hop_file} : ${one_hop_sym}"$'\n'
+    else
+        ONE_HOP_HITS="${ONE_HOP_HITS}  ${one_hop_file} : ${one_hop_sym} ($(one_hop_reach "$one_hop_file" "$one_hop_sym"))"$'\n'
     fi
 done
 if [[ -n "$ONE_HOP_HITS" ]]; then
@@ -333,7 +362,14 @@ The file is not on RETRIEVAL_PATHS because the rest of it is admission or servin
 code the replay genuinely observes — but THIS symbol is called by a producer of the
 frozen pool (gatherCandidates / the OFF gather / the FatSecret lane), so the pool the
 branch would produce is not the pool this run replays. Both sides would replay the
-BASE pool and the diff would report SAME about a change it never saw.
+BASE pool and the diff would report SAME about a change it never saw. A "read by" line
+is a module-level table one of those symbols reads: same reach, one declaration up.
+
+THE COMPARISON IS TEXT-LEVEL AND FAIL-CLOSED BY DESIGN. A whitespace-only or
+comment-only edit inside a listed region trips this abort. That is not a false positive
+to tune away: this guard runs before any node process exists and cannot parse
+TypeScript, so "my edit was cosmetic" is a judgement it must never make on your behalf.
+Put the cosmetic edit on its own commit, or take one of the two arms below.
 
 Two arms DO measure this:
   1. --cross-snapshot: re-cut the snapshot per variant, so each side replays the pool
@@ -343,9 +379,35 @@ Two arms DO measure this:
      branch on two ports, run --nocache x3 restarted against each, and compare the
      stable failure SETS by case id, never the counts.
 
+STILL BLIND, so do not read a pass here as "retrieval is covered": TWO hops. The list is
+what the three pool producers import DIRECTLY, plus the same-file tables those symbols
+read. A symbol reached through a THIRD file is unchecked — client.ts's normalizeFoods()
+shapes every FatSecret candidate and is examined by nothing.
+
 There is no --force, deliberately. If the symbol edit is incidental, SPLIT it onto its
 own branch and gate the admission/ranking half here.
 EOF_ONE_HOP
+    exit 3
+fi
+if [[ -n "$ONE_HOP_BEHIND" ]]; then
+    echo "ABORT: BEHIND $BASE_REF on a symbol RETRIEVAL reaches ONE IMPORT HOP away:" >&2
+    printf '%s' "$ONE_HOP_BEHIND" >&2
+    echo >&2
+    echo "Your branch did NOT change these — $BASE_REF did, after your branch point" >&2
+    echo "(they are identical between $ONE_HOP_MERGE_BASE and your working tree)." >&2
+    cat >&2 <<'EOF_ONE_HOP_BEHIND'
+The run would still be vacuous: the BASE tree this driver materializes is that ref's
+TIP, so the two trees genuinely differ in a producer of the frozen pool and both sides
+would replay a pool only one of them makes. But SPLITTING your branch cannot fix an
+edit your branch does not contain.
+
+  merge and re-run: `git merge <base>` (never rebase — force-push is forbidden in this
+  repo), then run this gate again. Your branch then contains the same producer as BASE
+  and the region compare is about your change alone.
+
+If the merge itself moves a listed symbol, that is your change now, and the abort above
+this one is the one you will get.
+EOF_ONE_HOP_BEHIND
     exit 3
 fi
 
