@@ -30,6 +30,13 @@
  *   fs_2322419 "Nonfat Plain Greek Yogurt" [Chobani]; "Whole Milk Greek Yogurt" [Aldi]
  * All read from sync-docs artifacts in the mobile repo (warm-plan runs, cache-snapshots,
  * a26i census) on 2026-09-02 — the box was unreachable that day, so none is a fresh SELECT.
+ *
+ * The four fixtures added 2026-09-03 for the on-topic-pool fix ARE fresh SELECTs, taken from the
+ * box the same day (`docker exec mealspire-db psql -U postgres -d mealspire`):
+ *   fs_48634 "Diet Pepsi" [Pepsi]
+ *   fs_299830 "Cranberry Juice" (no brand)
+ *   off_0031200019042 "Diet Cranberry Cocktail" [Ocean Spray]
+ *   fs_700695 "Sprite Zero" [Sprite] — re-confirmed
  */
 
 import { hasCriticalModifierMismatch, filterCandidatesByTokens } from '../filter-candidates';
@@ -55,9 +62,18 @@ const caffeineFreeCoke = cand('Caffeine Free Coke', null, 'fatsecret', 'fs_64445
 const dietCoke = cand('Diet Coke', 'Coca-Cola', 'fatsecret', 'fs_90946');
 const cocaCola = cand('Coca cola', null, 'openfoodfacts', 'off_0067000011382');
 const mexicanCoke = cand('Mexican Coke', 'Coca-Cola', 'fatsecret', 'fs_63076');
-// fs_700695 'Sprite Zero' [Sprite] — passes the modifier check (trailing zero) and fails ONLY the
-// must-have token `coke`; the fixture that separates the strong restore from the weak one.
+// fs_700695 'Sprite Zero' [Sprite] and fs_48634 'Diet Pepsi' [Pepsi] — both pass the modifier
+// check (trailing zero / `diet`) and both fail the must-have token `coke`. They are the OFF-TOPIC
+// satisfier-carrying candidates `buildQueryVariants()` reliably pulls into a sugar-free gather,
+// and the pair the restore's quantifier must not read.
 const spriteZero = cand('Sprite Zero', 'Sprite', 'fatsecret', 'fs_700695');
+const dietPepsi = cand('Diet Pepsi', 'Pepsi', 'fatsecret', 'fs_48634');
+
+// The strong-vs-weak discriminator, in a family where the corpus actually has one: a candidate
+// that passes the modifier check AND the must-have token, and is deleted by a LATER check (the
+// disqualifier word `cocktail`). See the test that uses them.
+const cranberryJuice = cand('Cranberry Juice', null, 'fatsecret', 'fs_299830');
+const dietCranberryCocktail = cand('Diet Cranberry Cocktail', 'Ocean Spray', 'openfoodfacts', 'off_0031200019042');
 
 describe('hasCriticalModifierMismatch — the sugar-free / low-calorie branch', () => {
     it('sugar free coke: "Coke Zero" is admitted (trailing zero), "Caffeine Free Coke" rejected, "Diet Coke" admitted', () => {
@@ -179,12 +195,51 @@ describe('filterCandidatesByTokens — the all-drop restore is pool-relative', (
         expect(warnSpy).toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.objectContaining({ poolSize: 2 }));
     });
 
-    it('a pool emptied JOINTLY by the modifier check and the must-have check is NOT restored — the STRONG property', () => {
-        // Caffeine Free Coke fails ONLY the modifier check; Sprite Zero passes it and fails ONLY
-        // the must-have `coke`. The modifier check alone does not empty the pool, so nothing is
-        // restored and the pool is empty. The WEAK property (#395: "restore whenever the strict
-        // pool came back empty") would re-admit Caffeine Free Coke here — the headline defect back.
+    it('ONE off-topic candidate carrying a satisfier does NOT suppress the restore — the quantifier is scoped to the on-topic pool', () => {
+        // THE PIN FOR THE 2026-09-03 FIX. Diet Pepsi satisfies the modifier check and fails the
+        // must-have `coke`; before the fix its mere presence made `candidates.every(...)` false,
+        // the restore stayed off, both cokes were hard-deleted by the modifier check, Diet Pepsi
+        // was dropped by the must-have check, and the strict pool came back EMPTY — the outcome
+        // the restore exists to prevent, on a pool shape buildQueryVariants() produces routinely
+        // (it searches the diet/lite/light/zero-sugar variants of every sugar-free line).
+        const r = filterCandidatesByTokens([caffeineFreeCoke, mexicanCoke, dietPepsi], 'sugar free coke', { rawLine: 'sugar free coke' });
+        expect(ids(r)).toEqual(['fs_63076', 'fs_644459']);   // both cokes; Diet Pepsi still excluded
+        expect(warnSpy).toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all',
+            expect.objectContaining({ poolSize: 3, onTopicPoolSize: 2 }));
+    });
+
+    it('the same shape with a single on-topic candidate: Sprite Zero does not suppress the restore either', () => {
+        // The Sprite Zero pool is the Diet Pepsi pool with one coke removed — structurally the
+        // same defect, so it now restores too. THIS EXPECTATION CHANGED on 2026-09-03: it used to
+        // assert EMPTY, and was cited as what separates the strong restore from the weak (#395)
+        // one. It cannot carry that job, because "a pool emptied jointly by the modifier check and
+        // the must-have check" IS the defect the fix repairs, not a property worth preserving. The
+        // strong-vs-weak discriminator is the cranberry test below, which uses a pool emptied by a
+        // check the restore must NOT lift.
         const r = filterCandidatesByTokens([caffeineFreeCoke, spriteZero], 'sugar free coke', { rawLine: 'sugar free coke' });
+        expect(ids(r)).toEqual(['fs_644459']);
+        expect(warnSpy).toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all',
+            expect.objectContaining({ poolSize: 2, onTopicPoolSize: 1 }));
+    });
+
+    it('a pool emptied by a check OTHER than the modifier check is NOT restored — the STRONG property', () => {
+        // fs_299830 "Cranberry Juice" fails ONLY the modifier check. off_0031200019042 "Diet
+        // Cranberry Cocktail" [Ocean Spray] PASSES the modifier check and PASSES the must-have
+        // token `cranberry` — it is on-topic — and is then deleted by the disqualifier-word check
+        // on `cocktail`. So the modifier check does not empty the on-topic pool, nothing is
+        // restored, and the pool is empty. The WEAK property (#395: "restore whenever the strict
+        // pool came back empty, for any reason") would re-admit Cranberry Juice here, re-admitting
+        // what a DIFFERENT check removed. Verified against the shipped function, ts-node,
+        // 2026-09-03; both rows read from the box the same day.
+        const r = filterCandidatesByTokens([cranberryJuice, dietCranberryCocktail], 'sugar free cranberry', { rawLine: 'sugar free cranberry' });
+        expect(ids(r)).toEqual([]);
+        expect(warnSpy).not.toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.anything());
+    });
+
+    it('a pool with NO on-topic candidate at all is not restored and logs nothing (`[].every()` is true)', () => {
+        // Neither candidate carries the must-have `coke`, so the on-topic pool is empty and the
+        // quantifier must not read `true` off it. Guarded by `strictlyAdmissible.length > 0`.
+        const r = filterCandidatesByTokens([spriteZero, dietPepsi], 'sugar free coke', { rawLine: 'sugar free coke' });
         expect(ids(r)).toEqual([]);
         expect(warnSpy).not.toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.anything());
     });

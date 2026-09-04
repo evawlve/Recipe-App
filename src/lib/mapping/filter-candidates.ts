@@ -2607,6 +2607,119 @@ export function isDietaryConstraintViolation(
 // Main Filter Function
 // ============================================================
 
+/**
+ * The two name views every per-candidate check below reads: the normalized "name + brand"
+ * string and its apostrophe-folded twin, exposed as a token set plus a regex tester over both.
+ *
+ * Extracted from the admission closure so the all-drop restore can evaluate the SAME must-have
+ * predicate over the SAME inputs. Two implementations of it could disagree, and the restore's
+ * correctness is exactly that its filter is the one the admission pass applies.
+ */
+type CandidateNameViews = {
+    candidateTokens: Set<string>;
+    matchesName: (pattern: RegExp) => boolean;
+};
+
+function candidateNameViews(candidate: UnifiedCandidate): CandidateNameViews {
+    // Possessive brands are invisible to the required-token check: "Trader
+    // Joe's" tokenizes to {trader, joe}, so the query token `joes` matches
+    // nothing and the entire Trader Joe's catalogue is filtered out before
+    // rerank ever sees it (warm batch 01: `trader joes scandinavian
+    // swimmers` went 12 candidates → 1, and the 1 survivor was the only
+    // record whose brand string happened to omit the apostrophe).
+    //
+    // The folded spelling is *added* to the token set and tested *alongside*
+    // the raw name, never substituted for it. That makes this change
+    // admit-only by construction rather than by measurement: the token set
+    // is a superset of today's and the regex tests are a disjunction over
+    // today's, so no candidate that survives the check today can fail it
+    // now. Substituting instead (fold in place) would drop `wendy's`-style
+    // pairs, because the query side would then have to fold too.
+    const candidateName = normalizeCandidateName(candidate);
+    const candidateNameFolded = foldApostrophes(candidateName);
+    const hasApostrophe = candidateNameFolded !== candidateName;
+    const candidateTokens = hasApostrophe
+        ? new Set([...tokenize(candidateName), ...tokenize(candidateNameFolded)])
+        : tokenize(candidateName);
+    const matchesName = (pattern: RegExp): boolean =>
+        pattern.test(candidateName) || (hasApostrophe && pattern.test(candidateNameFolded));
+    return { candidateTokens, matchesName };
+}
+
+/**
+ * Basic Token Check (Sanity Check) — does this candidate carry the core identity the query
+ * requires? `mustHaveTokens` is a parameter, not a closure read, because it is evaluated
+ * against TWO different token sets: the strict set (the restore below, and the first
+ * admission pass) and the S3-relaxed set.
+ */
+function candidateHasRequiredTokens(
+    views: CandidateNameViews,
+    mustHaveTokens: string[],
+    headNounReAimable: boolean
+): boolean {
+    const { candidateTokens, matchesName } = views;
+    return mustHaveTokens.every(token => {
+        // Direct match in tokenized set (already word-bounded)
+        if (candidateTokens.has(token)) {
+            return true;
+        }
+        // Word boundary match in full name (prevents "ice" matching "rice")
+        // Use regex with word boundaries instead of includes()
+        const wordBoundaryRegex = new RegExp(`\\b${token}\\b`, 'i');
+        if (matchesName(wordBoundaryRegex)) {
+            return true;
+        }
+
+        // Dynamic singular/plural variant check
+        // e.g., "strawberry" should match candidates with "strawberries"
+        const variants = getSingularPluralVariants(token);
+        for (const variant of variants) {
+            if (variant !== token) {
+                if (candidateTokens.has(variant)) {
+                    return true;
+                }
+                const variantRegex = new RegExp(`\\b${variant}\\b`, 'i');
+                if (matchesName(variantRegex)) {
+                    return true;
+                }
+            }
+        }
+
+        // Try synonym matches (for British → American translations)
+        const synonyms = TOKEN_SYNONYMS[token];
+        if (synonyms) {
+            if (synonyms.some(syn =>
+                candidateTokens.has(syn) || matchesName(new RegExp(`\\b${syn}\\b`, 'i'))
+            )) {
+                return true;
+            }
+        }
+
+        // LAST RESORT, and only for the HEAD NOUN on a BRAND-DETECTED line — the final
+        // must-have token, which since K2 is the dish there (`headNounReAimable` in the
+        // caller owns the scope and the tzatziki receipt). Requiring it word-bounded-exact
+        // deletes the right record whenever the menu spells it differently, and that
+        // deletion happens BEFORE buildRerankPool(), so no ranking change can recover it:
+        //
+        //   zaxby's chicken fingers  vs  "Chicken Fingerz"   (a near-spelling)
+        //   pizza hut cheese sticks  vs  "Breadsticks"       (a compound ending in the head)
+        //
+        // Two shapes, both deliberately narrow. A candidate token may END WITH the head
+        // (compound), or share a >=5-character prefix with it AND be within 2 characters of
+        // its length (near-spelling). The length guards are what stop this becoming
+        // substring matching: `bar` may not find `barbecue`, and `wings` may not find
+        // `wingstop` (prefix 5 but 3 characters longer, i.e. a different word).
+        if (headNounReAimable && token === mustHaveTokens[mustHaveTokens.length - 1] && token.length >= 5) {
+            for (const cand of candidateTokens) {
+                if (cand.length > token.length && cand.endsWith(token)) return true;
+                if (Math.abs(cand.length - token.length) <= 2
+                    && cand.slice(0, 5) === token.slice(0, 5)) return true;
+            }
+        }
+        return false;
+    });
+}
+
 export function filterCandidatesByTokens(
     candidates: UnifiedCandidate[],
     normalizedName: string,
@@ -2629,8 +2742,15 @@ export function filterCandidatesByTokens(
     // (strawberry Pop-Tart, spinach wrap) only occur on non-supplement foods.
     const isSupplementQuery = SUPPLEMENT_QUERY_RE.test(modifierCheckSource);
 
-    // Extract must-have tokens
-    let mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    // Extract must-have tokens.
+    //
+    // `strictMustHaveTokens` is captured HERE, before either relax ladder can reassign the
+    // `let` below: the S3 brand-then-head-noun ladder rewrites `mustHaveTokens` in the relaxed
+    // pass, and the head-noun fallback rewrites it again further down. The all-drop restore
+    // needs the STRICT set — the tokens this pass actually requires — to decide which
+    // candidates are on-topic, so it must not read a value either ladder has moved.
+    const strictMustHaveTokens = deriveMustHaveTokens(normalizedName);
+    let mustHaveTokens = strictMustHaveTokens;
 
     // Is this a line whose final must-have slot keepAFoodToken() may have RE-AIMED onto a
     // head noun (K2)? The tolerant head-noun match in the loop below exists ONLY for that
@@ -2718,16 +2838,42 @@ export function filterCandidatesByTokens(
     // error (fs_644459 "Caffeine Free Coke" at 100 kcal, measured live 2026-09-01). The relaxed
     // pass keeps skipping the modifier check exactly as before.
     //
+    // THE POPULATION THE `every()` RUNS OVER IS THE ON-TOPIC ONE, NOT THE WHOLE GATHER — and
+    // that is the whole difference between this firing and not firing on a routine pool.
+    // `buildQueryVariants()` searches the `diet`/`lite`/`light`/`zero sugar` variants of every
+    // sugar-free line, so the gather reliably returns products of OTHER foods that carry a
+    // satisfier word. Over the full list, one such candidate makes `every()` false, the restore
+    // stays off, the on-topic candidates are hard-deleted by the modifier check, the off-topic
+    // one is dropped by the must-have check, and the strict pool ends EMPTY — the exact outcome
+    // this restore exists to prevent. Measured with the shipped function (ts-node, 2026-09-03):
+    // `sugar free coke` over [Caffeine Free Coke, Mexican Coke] restored both, and adding one
+    // `Diet Pepsi` — which satisfies the modifier check and fails the must-have token `coke` —
+    // took the strict pool to EMPTY.
+    //
+    // So the quantifier is scoped to the candidates that pass the STRICT must-have set: the ones
+    // this pass would keep if the modifier check did not exist. `strictlyAdmissible.length > 0`
+    // is load-bearing, not defensive — `[].every()` is `true`, so a pool where nothing is
+    // on-topic would otherwise log and lift the check for a pool the must-have check empties
+    // anyway.
+    //
     // Logged at WARN for the same reason head_noun_relax_recovery below is: the box runs at
     // `warn`, so an `info` line would make the restore invisible in production.
-    const modifierRejectsAll = !relaxed && !!rawLine && candidates.every(candidate =>
-        hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition));
+    const strictlyAdmissible = (!relaxed && rawLine)
+        ? candidates.filter(candidate =>
+            candidateHasRequiredTokens(candidateNameViews(candidate), strictMustHaveTokens, headNounReAimable))
+        : [];
+    const modifierRejectsAll = strictlyAdmissible.length > 0 && strictlyAdmissible.every(candidate =>
+        hasCriticalModifierMismatch(rawLine!, candidate.name, candidate.source, candidate.nutrition));
     if (modifierRejectsAll) {
         logger.warn('filter.candidates.modifier_check_rejects_all', {
             normalizedName,
             rawLine,
             poolSize: candidates.length,
-            sample: candidates.slice(0, 3).map(c => c.name),
+            // The pool the quantifier actually ran over. When it is smaller than poolSize, the
+            // gather returned off-topic satisfier-carrying candidates — the shape that used to
+            // suppress this restore entirely.
+            onTopicPoolSize: strictlyAdmissible.length,
+            sample: strictlyAdmissible.slice(0, 3).map(c => c.name),
         });
     }
 
@@ -2735,28 +2881,9 @@ export function filterCandidatesByTokens(
     // against a different required-token set; the body is unchanged and `mustHaveTokens` is a
     // `let` the closure reads on each call.
     const admit = (): UnifiedCandidate[] => candidates.filter(candidate => {
-        const candidateName = normalizeCandidateName(candidate);
-        // Possessive brands are invisible to the required-token check: "Trader
-        // Joe's" tokenizes to {trader, joe}, so the query token `joes` matches
-        // nothing and the entire Trader Joe's catalogue is filtered out before
-        // rerank ever sees it (warm batch 01: `trader joes scandinavian
-        // swimmers` went 12 candidates → 1, and the 1 survivor was the only
-        // record whose brand string happened to omit the apostrophe).
-        //
-        // The folded spelling is *added* to the token set and tested *alongside*
-        // the raw name, never substituted for it. That makes this change
-        // admit-only by construction rather than by measurement: the token set
-        // is a superset of today's and the regex tests are a disjunction over
-        // today's, so no candidate that survives the check today can fail it
-        // now. Substituting instead (fold in place) would drop `wendy's`-style
-        // pairs, because the query side would then have to fold too.
-        const candidateNameFolded = foldApostrophes(candidateName);
-        const hasApostrophe = candidateNameFolded !== candidateName;
-        const candidateTokens = hasApostrophe
-            ? new Set([...tokenize(candidateName), ...tokenize(candidateNameFolded)])
-            : tokenize(candidateName);
-        const matchesName = (pattern: RegExp): boolean =>
-            pattern.test(candidateName) || (hasApostrophe && pattern.test(candidateNameFolded));
+        // Name views (raw + apostrophe-folded) — see candidateNameViews() above, which the
+        // all-drop restore shares so the two cannot disagree about what the token check sees.
+        const views = candidateNameViews(candidate);
 
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
@@ -2837,70 +2964,10 @@ export function filterCandidatesByTokens(
             return false;
         }
 
-        // Basic Token Check (Sanity Check)
-        // Ensure at least the core identity is present
-        const hasRequiredTokens = mustHaveTokens.every(token => {
-            // Direct match in tokenized set (already word-bounded)
-            if (candidateTokens.has(token)) {
-                return true;
-            }
-            // Word boundary match in full name (prevents "ice" matching "rice")
-            // Use regex with word boundaries instead of includes()
-            const wordBoundaryRegex = new RegExp(`\\b${token}\\b`, 'i');
-            if (matchesName(wordBoundaryRegex)) {
-                return true;
-            }
-
-            // Dynamic singular/plural variant check
-            // e.g., "strawberry" should match candidates with "strawberries"
-            const variants = getSingularPluralVariants(token);
-            for (const variant of variants) {
-                if (variant !== token) {
-                    if (candidateTokens.has(variant)) {
-                        return true;
-                    }
-                    const variantRegex = new RegExp(`\\b${variant}\\b`, 'i');
-                    if (matchesName(variantRegex)) {
-                        return true;
-                    }
-                }
-            }
-
-            // Try synonym matches (for British → American translations)
-            const synonyms = TOKEN_SYNONYMS[token];
-            if (synonyms) {
-                if (synonyms.some(syn =>
-                    candidateTokens.has(syn) || matchesName(new RegExp(`\\b${syn}\\b`, 'i'))
-                )) {
-                    return true;
-                }
-            }
-
-            // LAST RESORT, and only for the HEAD NOUN on a BRAND-DETECTED line — the final
-            // must-have token, which since K2 is the dish there (`headNounReAimable` above owns
-            // the scope and the tzatziki receipt). Requiring it word-bounded-exact deletes the
-            // right record whenever the menu spells it differently, and that deletion happens
-            // BEFORE buildRerankPool(), so no ranking change can recover it:
-            //
-            //   zaxby's chicken fingers  vs  "Chicken Fingerz"   (a near-spelling)
-            //   pizza hut cheese sticks  vs  "Breadsticks"       (a compound ending in the head)
-            //
-            // Two shapes, both deliberately narrow. A candidate token may END WITH the head
-            // (compound), or share a >=5-character prefix with it AND be within 2 characters of
-            // its length (near-spelling). The length guards are what stop this becoming
-            // substring matching: `bar` may not find `barbecue`, and `wings` may not find
-            // `wingstop` (prefix 5 but 3 characters longer, i.e. a different word).
-            if (headNounReAimable && token === mustHaveTokens[mustHaveTokens.length - 1] && token.length >= 5) {
-                for (const cand of candidateTokens) {
-                    if (cand.length > token.length && cand.endsWith(token)) return true;
-                    if (Math.abs(cand.length - token.length) <= 2
-                        && cand.slice(0, 5) === token.slice(0, 5)) return true;
-                }
-            }
-            return false;
-        });
-
-        if (!hasRequiredTokens) return false;
+        // Basic Token Check (Sanity Check) — shared with the all-drop restore above; see
+        // candidateHasRequiredTokens(). `mustHaveTokens` is read here, not the strict set, so
+        // the S3 ladder's relaxed key and the head-noun fallback's second call still work.
+        if (!candidateHasRequiredTokens(views, mustHaveTokens, headNounReAimable)) return false;
 
         // ============================================================
         // Disqualifier Token Check
