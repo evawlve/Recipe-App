@@ -47,38 +47,10 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-mq-27": {
-      "foodId": "fs_5268",
-      "foodName": "Lemon",
-      "grams": 58,
-      "kcal100": 29,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-34": {
-      "_note": "re-pinned by hand 2026-08-07 from three byte-identical cold runs on build iOjeeUZoaUFpuJkD1eTbO (eval-2026-08-07T05-01/05-04/05-07); the previous pin (fs_793 'Milk' 240g/kcal100 50) was stale — the case now cold-resolves to fs_794 'Whole Milk'.",
-      "foodId": "fs_794",
-      "foodName": "Whole Milk",
-      "grams": 244,
-      "kcal100": 60,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-mq-36": {
       "foodId": "off_9415077369829",
       "foodName": "Rolled Oats",
       "grams": 40,
-      "kcal100": 378,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-cook-06": {
-      "foodId": "off_9415077369829",
-      "foodName": "Rolled Oats",
-      "grams": 86.39999999999999,
       "kcal100": 378,
       "abstained": false,
       "errored": false,
@@ -93,47 +65,11 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-brand-06": {
-      "foodId": "fs_2528458",
-      "foodName": "Cotton Candy",
-      "grams": 28,
-      "kcal100": 394,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-mq-38": {
       "foodId": "off_3393977744423733154062300",
       "foodName": "Chipotle, Chicken",
       "grams": 118.294,
       "kcal100": 140,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-39": {
-      "foodId": "off_45994633744286743131",
-      "foodName": "Qdoba, Tequila Lime Chicken",
-      "grams": 50,
-      "kcal100": 448,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-40": {
-      "foodId": "off_0898328002222",
-      "foodName": "Harissa",
-      "grams": 28,
-      "kcal100": 250,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-47": {
-      "foodId": "off_0296763206050",
-      "foodName": "Boneless Skinless Chicken Breast",
-      "grams": 112,
-      "kcal100": 116,
       "abstained": false,
       "errored": false,
       "itemCount": 1
@@ -152,6 +88,26 @@
       "foodName": "Fresh Pasta (Cooked)",
       "grams": 120,
       "kcal100": 131,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-mq-48": {
+      "_note": "UNVERIFIED — hand-pinned 2026-09-02 from the WARM pin values because the box (192.168.1.133) was unreachable from the Mac for the whole session (ping/ssh/pg/api all down), so no cold run could write it; the case notes record the same record cold on its last documented cold draw. Refresh with `npm run eval:golden -- --nocache --write-baseline --only nlp --grep <id>` on the next cold run; the entry is a drift anchor only, never a gate.",
+      "foodId": "off_0843167089620",
+      "foodName": "Egg noodles",
+      "grams": 56,
+      "kcal100": 350.877197265625,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
+    "n-prose-04": {
+      "_note": "UNVERIFIED — hand-pinned 2026-09-02 from the WARM pin values because the box (192.168.1.133) was unreachable from the Mac for the whole session (ping/ssh/pg/api all down), so no cold run could write it; the case notes record the same record cold on its last documented cold draw. Refresh with `npm run eval:golden -- --nocache --write-baseline --only nlp --grep <id>` on the next cold run; the entry is a drift anchor only, never a gate.",
+      "foodId": "off_0074175016838",
+      "foodName": "Texas Toast",
+      "grams": 40,
+      "kcal100": 400.0,
       "abstained": false,
       "errored": false,
       "itemCount": 1
