@@ -123,6 +123,35 @@ EOF
 fi
 [[ -f "$COLD_SEEDS" ]] || { echo "cold-seeds file not found: $COLD_SEEDS" >&2; exit 2; }
 
+# --------------------------------------------------- the base ref must be USABLE
+# changed_paths() opens with `git diff --name-only "$BASE_REF"...HEAD`, and the
+# three-dot form needs a MERGE BASE. Given a ref that has none — an unrelated
+# history, a shallow clone, a ref from a different repo added as a remote — that
+# command exits 128 and prints nothing, and because it sits FIRST inside a brace
+# group whose exit status is the LAST command's, the failure is invisible: the whole
+# COMMITTED change set silently disappears and every path-list abort is asked about
+# uncommitted work alone. It is not caused by the `|| true` (that is on the pipeline,
+# not on this git call) and it hits RETRIEVAL_PATHS and FROZEN_INPUT_PATHS exactly as
+# hard as the one-hop guard, so it is fixed here, once, for all four (2026-09-03).
+# A NONEXISTENT ref dies later at 128 on its own; a real ref with no merge base did
+# not, which is the case this refuses. Exit 2 — bad invocation, not a vacuous diff.
+if ! git rev-parse --verify --quiet "${BASE_REF}^{commit}" >/dev/null; then
+    echo "ABORT: --base '$BASE_REF' does not name a commit." >&2
+    echo "Fetch it first (\`git fetch origin\`), or pass a ref this repo has." >&2
+    exit 2
+fi
+if ! git merge-base "$BASE_REF" HEAD >/dev/null 2>&1; then
+    echo "ABORT: '$BASE_REF' and HEAD have NO MERGE BASE." >&2
+    cat >&2 <<'EOF_NO_MERGE_BASE'
+The change set is computed with `git diff --name-only <base>...HEAD`, which needs
+one. Without it that command fails silently inside a brace group, the committed half
+of your change vanishes, and every abort below would be asked about uncommitted work
+only — a green receipt over a diff nobody checked. Pass a ref that shares history
+with HEAD (usually origin/master), or unshallow the clone.
+EOF_NO_MERGE_BASE
+    exit 2
+fi
+
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 LABEL="${LABEL:-${BRANCH//\//-}}"
 STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
@@ -338,13 +367,37 @@ ONE_HOP_CHANGED="$(changed_paths || true)"
 # edit is $BASE_REF's, and that is a different abort with a different remedy. It is still
 # exit 3 — the two trees genuinely differ in a pool producer, so the diff would still be
 # vacuous — but "merge and re-run" is the fix, not "split your branch".
+#
+# WHAT THIS ATTRIBUTION DOES NOT COVER, stated so nobody reads the BEHIND abort as
+# complete (2026-09-03, refuter F2). The BEHIND abort can only fire on a file the BRANCH
+# changed, because membership is the branch's own diff. A branch that is behind $BASE_REF
+# and does NOT touch a listed file at all gets no abort, even though the BASE tree this
+# driver materializes is $BASE_REF's TIP and therefore carries $BASE_REF's edit to the
+# listed symbol — the same vacuity, silent. Two branches with identical vacuity thus get
+# opposite answers on whether they happened to touch a listed file (executing case `e`
+# pins the silent half). Closing it means dropping the membership pre-filter for PRESENT
+# files too, which makes every behind-branch abort whenever $BASE_REF moved a listed
+# symbol; that is a deliberate open decision, not an oversight, and the cheap mitigation
+# is the one the BEHIND text already prints: merge $BASE_REF before gating.
 ONE_HOP_MERGE_BASE="$(git merge-base "$BASE_REF" HEAD 2>/dev/null || true)"
 ONE_HOP_HITS=""
 ONE_HOP_BEHIND=""
 for one_hop_entry in $ONE_HOP_SYMBOLS; do
     one_hop_file="${one_hop_entry%%:*}"; one_hop_sym="${one_hop_entry#*:}"
-    # exact whole-line membership in the changed set, without a pipe
-    [[ $'\n'"$ONE_HOP_CHANGED"$'\n' == *$'\n'"$one_hop_file"$'\n'* ]] || continue
+    # Exact whole-line membership in the changed set, without a pipe — SKIPPED WHEN THE
+    # LISTED FILE IS ABSENT, and that exemption is the whole point (2026-09-03, refuter
+    # F1). `git diff --name-only` reports only the NEW path for a rename, so a branch that
+    # does `git mv filter-candidates.ts candidate-filter.ts` and edits
+    # detectGrainCookingContext on the way produces a change set the old path is not in:
+    # membership `continue`d and one_hop_symbol_changed's own fail-closed
+    # `[[ -f "$file" ]] || return 0` was never reached, so the guard was skipped ENTIRELY
+    # on the one move that most obviously relocates a pool producer. MEASURED before the
+    # fix: that rename + edit, committed, ran to exit 2 past all four aborts; with this
+    # line it is exit 3 naming the file and symbol. An absent listed file therefore falls
+    # THROUGH to the fail-closed check instead of being pre-filtered away — a delete is
+    # treated the same way, which is correct: the guard cannot see where the code went.
+    { [[ ! -f "$one_hop_file" ]] \
+        || [[ $'\n'"$ONE_HOP_CHANGED"$'\n' == *$'\n'"$one_hop_file"$'\n'* ]]; } || continue
     one_hop_symbol_changed "$BASE_REF" "$one_hop_file" "$one_hop_sym" || continue
     if [[ -n "$ONE_HOP_MERGE_BASE" ]] \
         && ! one_hop_symbol_changed "$ONE_HOP_MERGE_BASE" "$one_hop_file" "$one_hop_sym"; then

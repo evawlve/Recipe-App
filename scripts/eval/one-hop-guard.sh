@@ -90,12 +90,22 @@
 #                          credentials shape nothing. LANE_MAX_RESULTS is the one whose
 #                          default is live — a one-token widening if re-decided, not
 #                          added here on the brief's infrastructure call.
-#   ./client               the FatSecret HTTP wrapper: a `class`, which symbol_region does
-#                          not parse, and what it returns is the remote API's answer.
+#   ./client               FatSecretClient is the FatSecret HTTP wrapper: a `class`, which
+#                          symbol_region does not parse, and what it returns is the remote
+#                          API's answer. FatSecretFoodSummary and FatSecretServing are
+#                          TYPES from the same file, erased before anything runs.
 #   ./deferred-hydration   registerBackgroundTask() is persistence bookkeeping after the
 #                          hits exist.   ../db, ../logger   transport and logging.
 #   ../search/*, *embedding*             already RETRIEVAL_PATHS by path.
 #   ../parse/ingredient-line, ./normalization-rules   already FROZEN_INPUT_PATHS.
+#
+# THAT SECTION IS AN ALLOWLIST, NOT PROSE. winner-diff.test.ts re-derives clause (1) from
+# the three importers and requires every named import landing on a file neither path list
+# covers to be LISTED here or named in that test's NOT_LISTED map — 19 such imports on
+# this tree, 6 listed and 13 excluded (measured 2026-09-03). Before that census existed
+# the list was pinned only in the list -> reach direction, and dropping the four
+# count-label.ts entries — the guard's entire measured firing population, commit da6d7a5 —
+# failed nothing.
 #
 # STILL BLIND, and stated so nobody reads this guard as complete: TWO HOPS. Clause (1)
 # is the symbols the three producers import DIRECTLY. A symbol that a listed file
@@ -187,6 +197,13 @@ one_hop_reach() {
     direct="$(one_hop_importer "$sym")"
     if [[ -n "${direct// /}" ]]; then
         printf 'imported by %s' "${direct% }"
+        return 0
+    fi
+    # An absent file has no regions to read, so the loop below would report "nothing
+    # listed" and send the reader hunting a closure that cannot exist. Name the real
+    # cause instead: this is the rename/delete path the membership seat now lets through.
+    if [[ ! -f "$file" ]]; then
+        printf 'file ABSENT from the working tree — renamed or deleted'
         return 0
     fi
     for e in $ONE_HOP_SYMBOLS; do
