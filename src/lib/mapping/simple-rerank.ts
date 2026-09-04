@@ -2287,7 +2287,27 @@ export function simpleRerank(
             break;
         }
     }
-    const gap = top.score - effectiveRunnerUp.score;
+    // SOLE-SURVIVOR GUARD (Sep 2026). `candidates.length >= 2` is guaranteed
+    // here (0 and 1 both return above), but `applyModifierConstraints()` can
+    // reject every candidate BUT ONE, leaving `scored.length === 1`. The
+    // all-rejected sibling (`scored.length === 0`) has the `fallbackScored`
+    // recovery above; this one had none, so `scored[1]` was `undefined` and the
+    // gap read threw a TypeError -> HTTP 500. Never observed on master traffic
+    // (0 hits for "reading 'score'" in the box's 611 MB next-start.log,
+    // measured 2026-09-04), but the adjacent `simple_rerank.all_rejected` path
+    // has fired 391 times in the same log, and any change that narrows the pool
+    // re-exposes it -- PR #413 did, on `pure leaf unsweetened black tea`.
+    //
+    // gap := 0, NOT `top.score`: when `scored.length >= 2` but every rival
+    // normalizes to the winner's own name, the Fix-50 loop above finds no
+    // distinct runner-up, `effectiveRunnerUp` stays `second`, and the gap is ~0
+    // -- so "no distinct competitor" ALREADY means "no gap bonus" in shipped
+    // behaviour. A sole survivor is that same predicate with the duplicate list
+    // empty, so it gets the same treatment. Billing `gap := top.score` would
+    // instead hand the narrowest possible pool an unconditional +0.1 and
+    // `clear_winner`, inverting what the gap measures.
+    const soleSurvivor = scored.length === 1;
+    const gap = soleSurvivor ? 0 : top.score - effectiveRunnerUp.score;
 
     // Determine confidence based on score and gap
     let confidence = Math.min(0.5 + top.score * 0.5, 0.95);
@@ -2358,6 +2378,26 @@ export function simpleRerank(
         });
     }
 
+    if (soleSurvivor) {
+        // Name the shape so it is countable in `MappingEventLog.selectionReason`
+        // and visible in the box log at LOG_LEVEL=warn, where the `logger.debug`
+        // below never lands. Renames only the un-named defaults -- the same
+        // pattern the branded calibration above uses -- so a stronger reason
+        // (`exact_match`, `cooked_grain_preference`, `branded_exact_match`) and
+        // every confidence adjustment survive untouched.
+        if (reason === 'simple_rerank' || reason === 'close_match') {
+            reason = 'sole_survivor';
+        }
+        logger.warn('simple_rerank.sole_survivor', {
+            query,
+            rawLine,
+            winner: top.candidate.name,
+            candidateCount: candidates.length,
+            confidence: confidence.toFixed(3),
+            reason,
+        });
+    }
+
     logger.debug('simple_rerank.result', {
         query,
         winner: top.candidate.name,
@@ -2365,10 +2405,10 @@ export function simpleRerank(
         winnerBaseScore: top.baseScore.toFixed(3),
         winnerNutritionScore: top.nutritionScore.toFixed(3),
         winnerNutritionReason: top.nutritionReason,
-        runnerUp: second.candidate.name,
-        runnerUpScore: second.score.toFixed(3),
-        effectiveRunnerUp: effectiveRunnerUp.candidate.name,
-        effectiveRunnerUpScore: effectiveRunnerUp.score.toFixed(3),
+        runnerUp: soleSurvivor ? null : second.candidate.name,
+        runnerUpScore: soleSurvivor ? null : second.score.toFixed(3),
+        effectiveRunnerUp: soleSurvivor ? null : effectiveRunnerUp.candidate.name,
+        effectiveRunnerUpScore: soleSurvivor ? null : effectiveRunnerUp.score.toFixed(3),
         gap: gap.toFixed(3),
         confidence: confidence.toFixed(2),
         reason,

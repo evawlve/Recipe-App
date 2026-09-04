@@ -7,6 +7,7 @@
  */
 
 import { stripPrepModifiers, simpleRerank, getCategoryChangePenalty, type RerankCandidate, type AiNutritionEstimate } from '../simple-rerank';
+import { extractModifierConstraints, applyModifierConstraints } from '../modifier-constraints';
 
 describe('stripPrepModifiers', () => {
     // === Prep words that SHOULD be stripped ===
@@ -385,5 +386,75 @@ describe('getCategoryChangePenalty — the unmatched-share charge (A25, Aug 2026
             expect(p).toBeLessThanOrEqual(FLAT);
             expect(p).toBeGreaterThanOrEqual(0);
         }
+    });
+});
+
+/**
+ * SOLE-SURVIVOR GUARD (Sep 2026).
+ *
+ * `simpleRerank` returns early for pools of 0 and 1, so the main path always
+ * starts from `candidates.length >= 2`. `applyModifierConstraints()` can then
+ * reject every candidate BUT ONE. The all-rejected sibling has the
+ * `fallbackScored` recovery; this one had none, so `scored[1]` was `undefined`
+ * and the gap read threw `TypeError: Cannot read properties of undefined
+ * (reading 'score')` -> HTTP 500. Reproduced on master `dae8162` with the
+ * two candidates below and no other change.
+ */
+describe('simpleRerank sole-survivor guard', () => {
+    const QUERY = 'unsweetened almond milk';
+
+    function mk(id: string, name: string): RerankCandidate {
+        return {
+            id,
+            name,
+            brandName: null,
+            score: 1.0,
+            source: 'fatsecret',
+            nutrition: { kcal: 30, protein: 1, carbs: 3, fat: 1, per100g: true },
+        } as unknown as RerankCandidate;
+    }
+
+    // GUARDS THE PIN, not the code: every test below is only meaningful while
+    // the query's constraints reject exactly one of the two candidates. If the
+    // modifier vocabulary ever stops banning "sweetened", the pool no longer
+    // narrows to one and the rest of this block would pass vacuously.
+    it('the fixture really does narrow a 2-candidate pool to exactly 1', () => {
+        const constraints = extractModifierConstraints(QUERY);
+        const verdicts = ['Unsweetened Almond Milk', 'Sweetened Almond Milk'].map(name =>
+            applyModifierConstraints({ name, brandName: null }, constraints).rejected
+        );
+        expect(verdicts).toEqual([false, true]);
+    });
+
+    it('does not throw when a 2-candidate pool scores exactly one', () => {
+        expect(() =>
+            simpleRerank(QUERY, [mk('keep', 'Unsweetened Almond Milk'), mk('drop', 'Sweetened Almond Milk')], undefined, QUERY)
+        ).not.toThrow();
+    });
+
+    // The returned reason is the discriminator between the two designs that were
+    // on the table. `gap := 0` (shipped) leaves the chain at `close_match`, which
+    // is then renamed. `gap := top.score` would have been > 0.15 here and produced
+    // `clear_winner` plus the +0.1 gap bonus.
+    it('names the shape and withholds the gap bonus', () => {
+        const res = simpleRerank(QUERY, [mk('keep', 'Unsweetened Almondmilk'), mk('drop', 'Sweetened Almond Milk')], undefined, QUERY);
+        expect(res.winner).not.toBeNull();
+        expect(res.reason).toBe('sole_survivor');
+        expect(res.reason).not.toBe('clear_winner');
+        // 0.5 + score*0.5 with no +0.1; the bonus would have pushed this over 0.9.
+        expect(res.confidence).toBeLessThan(0.9);
+    });
+
+    it('does not overwrite a stronger reason', () => {
+        const res = simpleRerank(QUERY, [mk('keep', 'Unsweetened Almond Milk'), mk('drop', 'Sweetened Almond Milk')], undefined, QUERY);
+        expect(res.reason).toBe('exact_match');
+    });
+
+    // The guard must be inert wherever a runner-up exists.
+    it('leaves a two-survivor pool untouched', () => {
+        const res = simpleRerank(QUERY, [mk('a', 'Unsweetened Almond Milk'), mk('b', 'Unsweetened Almond Milk Original')], undefined, QUERY);
+        expect(res.winner).not.toBeNull();
+        expect(res.reason).toBe('exact_match');
+        expect(res.reason).not.toBe('sole_survivor');
     });
 });
