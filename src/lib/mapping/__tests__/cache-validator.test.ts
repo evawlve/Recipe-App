@@ -1,10 +1,15 @@
 /**
  * cache-validator tests — flag gating, experiment-parity inputs, fail-closed
- * verdict handling, tier guarding, and the tracked fire-and-forget contract.
+ * verdict handling, tier guarding, the tracked fire-and-forget contract, and
+ * (2026-09-02) re-issue suppression on the billed tuple.
  *
  * callStructuredLlm is stubbed at the single chokepoint (the sanctioned
- * pattern — there is deliberately no env-var bypass) and prisma is mocked, so
- * nothing in this file can dial out or touch a database. Config consts freeze
+ * pattern — there is deliberately no env-var bypass) and prisma is mocked —
+ * `create` as a plain spy, `findFirst` as a spy that beforeEach resets to
+ * resolve null (no prior verdict), with `priorRows()` installing an in-memory
+ * table whose lookup applies the where clause field-by-field so the
+ * suppression tests prove WHICH columns key it — so nothing in this file can
+ * dial out or touch a database. Config consts freeze
  * at import time, so every scenario re-imports the module via
  * jest.resetModules() with the env set first. Env originals are restored in
  * afterAll so this file cannot leak validator flags into later suites in the
@@ -16,6 +21,7 @@ import * as path from 'path';
 
 const mockCall = jest.fn();
 const mockCreate = jest.fn();
+const mockFindFirst = jest.fn();
 
 jest.mock('@/lib/ai/structured-client', () => ({
     callStructuredLlm: (...args: unknown[]) => mockCall(...args),
@@ -24,9 +30,26 @@ jest.mock('@/lib/db', () => ({
     prisma: {
         mappingValidationVerdict: {
             create: (...args: unknown[]) => mockCreate(...args),
+            findFirst: (...args: unknown[]) => mockFindFirst(...args),
         },
     },
 }));
+
+type PriorRow = { id: string; verdict: string } & Record<string, unknown>;
+
+/**
+ * Install an in-memory MappingValidationVerdict table behind findFirst. The
+ * lookup treats every `where` key as a scalar equality — exactly the shape the
+ * module sends — so a row is returned only when EVERY keyed column matches. A
+ * suppression that keyed on fewer columns than the billed tuple would return
+ * the prior row for a changed bill here and fail tests (b)/(c) below.
+ */
+function priorRows(rows: PriorRow[]): void {
+    mockFindFirst.mockImplementation(async (args: { where: Record<string, unknown> }) => {
+        const hit = rows.find((r) => Object.entries(args.where).every(([k, v]) => r[k] === v));
+        return hit ? { id: hit.id, verdict: hit.verdict, reviewedBy: hit.reviewedBy ?? null } : null;
+    });
+}
 
 type ValidatorModule = typeof import('../cache-validator');
 type HydrationModule = typeof import('../deferred-hydration');
@@ -80,6 +103,8 @@ function load(env: Record<string, string | undefined>): { cv: ValidatorModule; d
 beforeEach(() => {
     mockCall.mockReset();
     mockCreate.mockReset();
+    mockFindFirst.mockReset();
+    mockFindFirst.mockResolvedValue(null); // no prior verdict unless a test says so
 });
 
 describe('shouldRunCacheValidator gating', () => {
@@ -129,6 +154,9 @@ describe('kickCacheValidation', () => {
         await dh.drainPendingBackgroundTasks();
 
         expect(mockCall).toHaveBeenCalledTimes(1);
+        // the prior-verdict lookup runs BEFORE the model is paid for
+        expect(mockFindFirst).toHaveBeenCalledTimes(1);
+        expect(mockFindFirst.mock.invocationCallOrder[0]).toBeLessThan(mockCall.mock.invocationCallOrder[0]);
         const opts = mockCall.mock.calls[0][0];
         expect(opts.purpose).toBe('cache_validate');
         expect(opts.maxTokens).toBe(2000);
@@ -142,6 +170,10 @@ describe('kickCacheValidation', () => {
 
         expect(mockCreate).toHaveBeenCalledTimes(1);
         const data = mockCreate.mock.calls[0][0].data;
+        // the lookup and the write key on the SAME canonical form — this key is
+        // deliberately non-canonical ('Grilled Chicken  Breasts'), so a raw-key
+        // lookup would miss its own row forever (mutation m5)
+        expect(mockFindFirst.mock.calls[0][0].where.normalizedForm).toBe(data.normalizedForm);
         expect(data.verdict).toBe('SUSPECT');
         expect(data.axis).toBe('serving');
         expect(data.foodId).toBe('fs_12345');
@@ -225,6 +257,163 @@ describe('kickCacheValidation', () => {
         // Not vacuous: proves the rejection was caught by runCacheValidation's
         // own handler (allSettled in drain would mask an unhandled one).
         expect(warn).toHaveBeenCalledWith('cache_validator.write_failed', expect.objectContaining({ error: 'db down' }));
+        warn.mockRestore();
+    });
+});
+
+describe('re-issue suppression on the billed tuple (2026-09-02)', () => {
+    const { canonicalizeCacheKey } = jest.requireActual('../normalization-rules') as typeof import('../normalization-rules');
+    const RAW_KEY = 'chicken';
+    /** The verdict a previous night wrote for exactly INPUT's bill. */
+    const PRIOR: PriorRow = {
+        id: 'v-prior',
+        verdict: 'SUSPECT',
+        normalizedForm: canonicalizeCacheKey(RAW_KEY),
+        foodId: INPUT.recordId,
+        billedGrams: INPUT.billedGrams,
+        billedKcal: INPUT.billedKcal,
+        servingTier: INPUT.servingTier,
+        model: MODEL,
+        reviewedBy: null,
+    };
+    const LLM_OK = {
+        status: 'success', provider: 'openrouter', model: MODEL,
+        content: { verdict: 'OK', axis: 'none', reason: 'x' },
+    };
+
+    // Parametrized over the prior's verdict on purpose: OK series are 296 of the
+    // 339 redundant rows in the 2026-09-02 census (87% of the spend this removes),
+    // and a SUSPECT-only suppression would otherwise stay green (mutation m6).
+    it.each(['OK', 'SUSPECT'] as const)('(a) an identical tuple already judged %s → no LLM call, no row, tuple_already_judged logged', async (verdict) => {
+        const { cv, dh, log } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const debug = jest.spyOn(log.logger, 'debug').mockImplementation(() => undefined);
+        priorRows([{ ...PRIOR, verdict }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
+        expect(debug).toHaveBeenCalledWith('cache_validator.tuple_already_judged', expect.objectContaining({
+            phrase: INPUT.phrase,
+            priorVerdict: verdict,
+        }));
+        // the key is EXACTLY the billed tuple — nothing less (a bare pair would
+        // suppress genuine re-adjudication) and nothing more (no model column)
+        expect(mockFindFirst).toHaveBeenCalledTimes(1);
+        expect(mockFindFirst.mock.calls[0][0].where).toEqual({
+            normalizedForm: canonicalizeCacheKey(RAW_KEY),
+            foodId: 'fs_12345',
+            billedGrams: 240,
+            billedKcal: 396,
+            servingTier: 'count_unit_ai',
+            model: MODEL,
+        });
+        debug.mockRestore();
+    });
+
+    it('(a2) a null servingTier is looked up as IS NULL, not coerced — a tier-less tuple is suppressed too', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const input = { ...INPUT, servingTier: null };
+        priorRows([{ ...PRIOR, servingTier: null }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(input, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
+        // `?? 'unknown'` (the userPrompt spelling a few lines up) would make this
+        // tuple unsuppressible forever; the where must carry the bare null.
+        expect(mockFindFirst.mock.calls[0][0].where.servingTier).toBeNull();
+    });
+
+    it('(a3) a newest prior stamped …:watch does NOT suppress — the one disposition that asks for repeats still gets them', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{ ...PRIOR, reviewedBy: 'lane-a-2026-08-28:watch' }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('(a3b) any OTHER stamp on an unchanged tuple is a mute (hand-panel, cascade, dismissed …)', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{ ...PRIOR, reviewedBy: 'lane-a-2026-08-31:hand-panel' }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).not.toHaveBeenCalled();
+        expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('(a4) the same tuple judged by a DIFFERENT model re-issues once (a tier upgrade re-judges)', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([{ ...PRIOR, model: 'openai/gpt-4o-mini' }]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockFindFirst.mock.calls[0][0].where.model).toBe(MODEL);
+    });
+
+    it('(b) same key + foodId but a different billedGrams → a changed bill re-issues (LLM called, row written)', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([PRIOR]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation({ ...INPUT, billedGrams: 120 }, RAW_KEY);
+        await dh.drainPendingBackgroundTasks();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockCreate.mock.calls[0][0].data.billedGrams).toBe(120);
+    });
+
+    it('(c) same numbers but a different servingTier → re-issues', async () => {
+        const { cv, dh } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        priorRows([PRIOR]);
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation({ ...INPUT, servingTier: 'label_serving_default' }, RAW_KEY);
+        await dh.drainPendingBackgroundTasks();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockCreate.mock.calls[0][0].data.servingTier).toBe('label_serving_default');
+    });
+
+    it('(d) a throwing lookup falls through to the LLM call and the write — never blocks, never throws', async () => {
+        const { cv, dh, log } = load({ CACHE_VALIDATOR_ENABLED: '1', VALIDATOR_AI_MODEL: MODEL });
+        const warn = jest.spyOn(log.logger, 'warn').mockImplementation(() => undefined);
+        mockFindFirst.mockRejectedValue(new Error('db down'));
+        mockCall.mockResolvedValue(LLM_OK);
+        mockCreate.mockResolvedValue({});
+
+        cv.kickCacheValidation(INPUT, RAW_KEY);
+        await expect(dh.drainPendingBackgroundTasks()).resolves.toBeUndefined();
+
+        expect(mockCall).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        // warn, not debug: the box runs at warn, and a persistently failing lookup
+        // silently restores the whole nightly spend — it must be visible there.
+        expect(warn).toHaveBeenCalledWith('cache_validator.prior_lookup_failed', expect.objectContaining({ error: 'db down' }));
         warn.mockRestore();
     });
 });

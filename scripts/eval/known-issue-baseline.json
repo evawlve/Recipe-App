@@ -11,15 +11,6 @@
       "errored": false,
       "itemCount": 1
     },
-    "n-brand-06": {
-      "foodId": "fs_6409498",
-      "foodName": "Bang Energy Drink",
-      "grams": 454.54545454545456,
-      "kcal100": 0,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
     "n-mq-36": {
       "foodId": "off_9348219004831",
       "foodName": "Rolled Oats",
@@ -34,24 +25,6 @@
       "foodName": "Chipotle, Chicken",
       "grams": 118.294,
       "kcal100": 140,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-39": {
-      "foodId": "off_45994633744286743131",
-      "foodName": "Qdoba, Tequila Lime Chicken",
-      "grams": 50,
-      "kcal100": 448,
-      "abstained": false,
-      "errored": false,
-      "itemCount": 1
-    },
-    "n-mq-40": {
-      "foodId": "off_0898328002222",
-      "foodName": "Harissa",
-      "grams": 28,
-      "kcal100": 250,
       "abstained": false,
       "errored": false,
       "itemCount": 1
