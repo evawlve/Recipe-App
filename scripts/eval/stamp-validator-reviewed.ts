@@ -40,7 +40,11 @@
  * vocabulary (DISPOSITIONS below — anything else is refused, exit 2). A stamp is
  * a claim about the evidence that existed when it was written: the sweep keeps
  * re-validating the hot head nightly, and the reader re-opens a stamped pair the
- * moment a fresh verdict lands (`newSinceReview`). It is not a mute.
+ * moment a fresh verdict lands (`newSinceReview`). It is not a mute — EXCEPT that
+ * since 2026-09-03 (backend #412) a fresh verdict on an UNCHANGED bill is suppressed
+ * at the validator for every disposition but `watch`, so in practice a stamp other
+ * than `watch` re-opens only when the bill moves. `watch` is the disposition that
+ * asks for more verdicts, and it still gets them.
  *
  * It touches NO other table. It never repoints, evicts, or marks — those are
  * apply-repoints.ts, the eviction snapshots, and the corrupt-mark route, each

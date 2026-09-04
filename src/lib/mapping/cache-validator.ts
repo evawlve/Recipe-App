@@ -30,6 +30,68 @@
  * cache-validator-never-awaited-on-the-request-path). Scripts that map
  * ingredients and then disconnect Prisma already await
  * drainPendingBackgroundTasks(), which covers these tasks too.
+ *
+ * RE-ISSUE SUPPRESSION (2026-09-02). The 04:30 nightly flywheel sweep re-saves
+ * the same mined hot-head key set, so until this change the validator judged
+ * the same unchanged bill every night — one capable-tier round trip each — and
+ * every triage session spent a stamp rider re-adjudicating rows it had already
+ * routed. Whole-table census on the box (2026-09-02 20:51Z): OK 391 rows over
+ * 95 distinct billed tuples, SUSPECT 83 rows over 40; the largest series
+ * (`core fairlife power` / off_0711620020636 / 250 g / 138.9999961853027 kcal /
+ * bare_sibling_serving) is 18 byte-identical rows. Re-derive the census:
+ *   SELECT verdict, count(*), count(DISTINCT ("normalizedForm","foodId",
+ *     "billedGrams","billedKcal","servingTier"))
+ *   FROM "MappingValidationVerdict" GROUP BY 1;
+ * and the series (one row per tuple, largest first; "zero tuple variation"
+ * means every (normalizedForm, foodId) pair in the top of this list has
+ * count(DISTINCT tuple) = 1 when grouped by the pair alone):
+ *   SELECT "normalizedForm","foodId","billedGrams","billedKcal","servingTier",
+ *     count(*) FROM "MappingValidationVerdict" GROUP BY 1,2,3,4,5
+ *   ORDER BY 6 DESC LIMIT 10;
+ * Scale, so the trade is decided on the right axis [reasoning over those
+ * numbers]: ~339 redundant rows over ~22 nights is ~15 verdicts a night, about
+ * $0.10 at the triage header's ~$0.007 per verdict — the dollar saving is
+ * trivial. What this buys is triage ergonomics: no stamp rider re-adjudicating
+ * rows already routed, and a queue whose unreviewed count means something.
+ *
+ * runCacheValidation() now looks up a prior verdict on the BILLED TUPLE plus
+ * the judging tier — (normalizedForm, foodId, billedGrams, billedKcal,
+ * servingTier, model) — BEFORE the LLM call and returns when one exists
+ * (findPriorVerdict()). The key is deliberately the whole bill and never
+ * (normalizedForm, foodId): a changed bill is a different claim and MUST
+ * re-issue, which is also what keeps genuine re-adjudication after a cascade
+ * change alive; `model` is in it so a VALIDATOR_AI_MODEL upgrade re-judges each
+ * tuple exactly once. Float equality on billedGrams/billedKcal is intended —
+ * the series are byte-identical because the same computation produced them,
+ * and a rounding change in the producer legitimately re-issues once per tuple.
+ *
+ * WHAT THIS CHANGES FOR THE TRIAGE LOOP, stated whole (the reader is
+ * scripts/eval/validator-triage-queue.ts + stamp-validator-reviewed.ts; both
+ * headers carry a matching note dated 2026-09-03). Every mechanism there that
+ * counted on the sweep's repeats is now history-only for an UNCHANGED tuple:
+ * the n >= 3 unanimity auto-bar, the majority view (majorityPair() needs
+ * n >= TRIAGE_MIN_N), and the documented re-open of a stamped pair when a fresh
+ * verdict lands (newSinceReview). A stamp on an unchanged tuple is therefore a
+ * MUTE until the bill moves — with ONE carve-out: a newest prior stamped
+ * `…:watch` ("re-review after more verdicts") does NOT suppress, so the one
+ * disposition that asks for repeats still gets them (isWatchDisposition()).
+ *
+ * Three accepted limits. (1) An OK → SUSPECT flip on an UNCHANGED tuple under
+ * the SAME model is suppressed; a prompt revision does not re-issue either
+ * (there is no promptVersion to key on) — deliberate and cheap to add later.
+ * (2) The lookup is best-effort, not a
+ * uniqueness guarantee — two saves of one tuple in flight together can both
+ * miss it and both write; the point-in-time table keeps no unique constraint
+ * by design and this module adds none. (3) A lookup failure logs at debug and
+ * FALLS THROUGH to the pre-existing behaviour: the validator must never fail,
+ * slow or alter the request, and a broken DB read must not also silence the
+ * judge.
+ *
+ * Observability: the suppression itself logs at debug (invisible on the box,
+ * which runs at warn) — its receipt is the MappingValidationVerdict row count
+ * and the keyed /api/ok `cache_validate.responses` counter across a sweep, not
+ * a log line. The lookup FAILURE logs at warn, because a persistently failing
+ * lookup silently restores the whole nightly spend.
  */
 
 import { prisma } from '@/lib/db';
@@ -163,7 +225,70 @@ export function kickCacheValidation(input: CacheValidatorInput, rawCacheKey: str
     registerBackgroundTask(task);
 }
 
+/**
+ * The prior-verdict lookup, keyed on the billed tuple (see the header). Returns
+ * null both when no identical verdict exists AND when the read itself fails —
+ * the caller cannot tell the two apart and must not: either way the
+ * pre-existing path runs. Newest first, so the logged `priorVerdict` is the
+ * latest opinion on that exact bill.
+ */
+async function findPriorVerdict(
+    normalizedForm: string,
+    input: CacheValidatorInput,
+): Promise<{ id: string; verdict: string; reviewedBy: string | null } | null> {
+    try {
+        return await prisma.mappingValidationVerdict.findFirst({
+            where: {
+                normalizedForm,
+                foodId: input.recordId,
+                billedGrams: input.billedGrams,
+                billedKcal: input.billedKcal,
+                servingTier: input.servingTier,
+                // The judging tier is part of the claim: a VALIDATOR_AI_MODEL
+                // upgrade re-judges every tuple exactly once instead of never.
+                model: VALIDATOR_AI_MODEL,
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, verdict: true, reviewedBy: true },
+        });
+    } catch (err) {
+        logger.warn('cache_validator.prior_lookup_failed', {
+            phrase: input.phrase,
+            error: (err as Error).message,
+        });
+        return null;
+    }
+}
+
+/**
+ * The ONE stamp that asks for more verdicts on an unchanged bill. The triage
+ * loop's `watch` disposition (scripts/eval/stamp-validator-reviewed.ts) means
+ * "insufficient evidence; re-review after more verdicts", and the sweep's
+ * repeats were what delivered them — so a tuple whose NEWEST prior is stamped
+ * `…:watch` keeps re-issuing. Every other disposition, and an unstamped prior,
+ * suppresses. Suffix-matched because stampers prefix their own lane/date
+ * (`lane-a-2026-08-28:watch`).
+ */
+function isWatchDisposition(reviewedBy: string | null): boolean {
+    return typeof reviewedBy === 'string' && reviewedBy.endsWith(':watch');
+}
+
 async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: string): Promise<void> {
+    const normalizedForm = canonicalizeCacheKey(rawCacheKey);
+
+    // Re-issue suppression on the BILLED TUPLE, checked before the model is
+    // paid for. A lookup failure falls through to the call below.
+    const prior = await findPriorVerdict(normalizedForm, input);
+    if (prior && !isWatchDisposition(prior.reviewedBy)) {
+        logger.debug('cache_validator.tuple_already_judged', {
+            phrase: input.phrase,
+            foodId: input.recordId,
+            priorVerdict: prior.verdict,
+            priorId: prior.id,
+        });
+        return;
+    }
+
     const result = await callStructuredLlm({
         schema: VERDICT_SCHEMA,
         systemPrompt: SYSTEM_PROMPT,
@@ -224,7 +349,7 @@ async function runCacheValidation(input: CacheValidatorInput, rawCacheKey: strin
     try {
         await prisma.mappingValidationVerdict.create({
             data: {
-                normalizedForm: canonicalizeCacheKey(rawCacheKey),
+                normalizedForm,
                 foodId: input.recordId,
                 phrase: input.phrase,
                 verdict,
