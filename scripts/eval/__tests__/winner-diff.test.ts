@@ -1489,19 +1489,25 @@ describe('winner-gate.sh UNOBSERVED_SURFACE_PATHS — the surface the replay nev
  *
  * RETRIEVAL_PATHS names the three files that PRODUCE the frozen pool, and a path list
  * is blind to what they import: gather-candidates.ts calls detectGrainCookingContext()
- * from filter-candidates.ts at two gather sites, and filter-candidates.ts is on no list
+ * from filter-candidates.ts at ONE gather site (gatherCandidates) and one gate site
+ * (confidenceGate, which the replay runs live), and filter-candidates.ts is on no list
  * because the rest of it is the admission layer a frozen-pool diff is FOR. Listing the
- * file is unusable (10 of the last 20 src/lib/mapping commits edit it, 0 edit a listed
- * symbol — one-hop-guard.sh carries the re-derive). So the membership is
- * `<file>:<symbol>` pairs, read out of one-hop-guard.sh the way the path lists are read
- * out of winner-gate.sh, and the predicate is the SHIPPED bash: the symbol's source
- * REGION compared between the base ref and the working tree. Every case below runs
- * those functions through bash; none restates them in TypeScript.
+ * file is unusable (8 of the last 20 commits touching src/lib/mapping, src/lib/units or
+ * src/lib/openfoodfacts edit a listed FILE, 0 edit a listed symbol — one-hop-guard.sh
+ * owns that census and its re-derive). So the membership is `<file>:<symbol>` pairs,
+ * read out of one-hop-guard.sh the way the path lists are read out of winner-gate.sh,
+ * and the predicate is the SHIPPED bash: the symbol's source REGION compared between the
+ * base ref and the working tree. Every case below runs those functions through bash;
+ * none restates them in TypeScript.
  *
  * Both directions, again: a listed file changed OUTSIDE its listed symbol must NOT
  * abort (filter-candidates.ts carries live admission work), a __tests__ path never
  * reaches the guard, and the one producer import the replay executes LIVE
  * (RERANK_DECLINED_CONFIDENCE) is pinned as deliberately ABSENT with its receipt.
+ *
+ * WHAT THESE CASES CANNOT SEE, and why the executing describe further down exists: they
+ * call one-hop-guard.sh's functions directly and read winner-gate.sh as text, so none of
+ * them can tell a WIRED gate from an unwired one.
  */
 const GUARD_PATH = path.join(REPO_ROOT, 'scripts', 'eval', 'one-hop-guard.sh');
 
