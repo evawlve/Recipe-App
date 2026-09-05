@@ -2,7 +2,7 @@ import { parseIngredientLine } from '../../parse/ingredient-line';
 import { detectBrandInQuery } from '../brand-detector';
 import { deriveMappingCacheKey } from '../cache-key';
 import { stripPartitiveOfResidue } from '../partitive-residue';
-import { brandWasConsumedAsQuantity, preserveDroppedBrand } from '../quantity-word-brand';
+import { brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
 
 /**
  * `one` is a lexicon brand (the ONE protein-bar company), so the
@@ -310,5 +310,94 @@ describe('the extraction is behaviour-preserving apart from the refusal', () => 
         expect(after).toEqual({
             baseName: 'banana', applied: false, declined: 'brand_consumed_as_quantity',
         });
+    });
+});
+
+/**
+ * The post-model re-assert's SECOND kind of evidence (2026-09-05). The
+ * measured population these pin is in the predicate's docstring: eight
+ * segmenter-named brands the normalizer dropped and the lexical gate could not
+ * restore, five of them organic MEL lines.
+ */
+describe('brandReassertEvidence — a segmenter-named brand survives the normalizer', () => {
+    const parsedOf = (line: string) => parseIngredientLine(line);
+
+    it('the co-branded Ryse line: lexically NOT decisive, restored on the segmenter\'s word', () => {
+        const line = '.75 scoop Ryse skippy peanut butter';
+        expect(detectBrandInQuery(line).matchedBrand).toBe('Ryse');
+        // The neighbours are `scoop` and `skippy` — neither is a product-form token.
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'Ryse', segmenterBrand: undefined, parsed: parsedOf(line) }))
+            .toBeNull();
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'Ryse', segmenterBrand: 'Ryse', parsed: parsedOf(line) }))
+            .toBe('segmenter_named');
+    });
+
+    it('the trailing `from Quaker` form — the same shape, three of the eight measured losses', () => {
+        const line = 'one caramel rice cake from quaker';
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'Quaker', segmenterBrand: 'Quaker', parsed: parsedOf(line) }))
+            .toBe('segmenter_named');
+    });
+
+    it('lexical decisiveness still opens the gate on its own, with or without a segmenter', () => {
+        const line = '1 scoop ryse protein';
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'ryse', segmenterBrand: undefined, parsed: parsedOf(line) }))
+            .toBe('decisive_context');
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'ryse', segmenterBrand: 'ryse', parsed: parsedOf(line) }))
+            .toBe('decisive_context');
+    });
+
+    it('the refuted `bell pepper` shape stays closed: no segmenter brand, no decisiveness, no re-assert', () => {
+        const line = 'bell pepper';
+        expect(detectBrandInQuery(line).matchedBrand).toBe('bell');
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'bell', segmenterBrand: undefined, parsed: parsedOf(line) }))
+            .toBeNull();
+        // The segmenter naming a DIFFERENT brand lends the detector's hit nothing.
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'bell', segmenterBrand: 'Kind', parsed: parsedOf(line) }))
+            .toBeNull();
+    });
+
+    it('the quantity-word refusal is shared with preserveDroppedBrand: `one` is never re-asserted', () => {
+        const line = 'One serving of kettle cooked potato chips';
+        expect(brandWasConsumedAsQuantity(line, 'One', parsedOf(line))).toBe(true);
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'One', segmenterBrand: 'One', parsed: parsedOf(line) }))
+            .toBeNull();
+    });
+
+    it('a segmenter-only "brand" the lexicon does not know keeps today\'s behaviour (`company`)', () => {
+        const line = 'company zucchini noodles';
+        expect(detectBrandInQuery('company').isBranded).toBe(false);
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'company', segmenterBrand: 'company', parsed: parsedOf(line) }))
+            .toBeNull();
+    });
+
+    it('matches the segmenter brand by folded token, not by string equality', () => {
+        const line = 'a fun size bag of m&ms';
+        expect(detectBrandInQuery('m&ms').isBranded).toBe(true);
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'm&ms', segmenterBrand: "M&M's", parsed: parsedOf(line) }))
+            .toBe('segmenter_named');
+    });
+});
+
+describe('repairDroppedBrand — the segmenter-path repair (refuter L2 shapes, 2026-09-05)', () => {
+    it('prepends a genuinely dropped brand', () => {
+        expect(repairDroppedBrand('skippy peanut butter', 'Ryse')).toBe('Ryse skippy peanut butter');
+        expect(repairDroppedBrand('caramel rice cake', 'Quaker')).toBe('Quaker caramel rice cake');
+    });
+    it('reads a brand the model kept in a folded spelling as KEPT (`m&ms` vs `m m\'s`)', () => {
+        expect(repairDroppedBrand("m m's", 'm&ms')).toBeNull();
+        expect(repairDroppedBrand("m&m's", "M&M's")).toBeNull();
+        expect(repairDroppedBrand('ryse protein', 'Ryse')).toBeNull();
+    });
+    it('does not double the last token of a multi-token brand the model kept (`Ryse Skippy`)', () => {
+        expect(repairDroppedBrand('skippy peanut butter', 'Ryse Skippy')).toBe('Ryse Skippy peanut butter');
+    });
+    it('reads a plural brand the model singularised as KEPT (`Pop-Tarts` vs `pop tart`), hyphens folded', () => {
+        expect(repairDroppedBrand('frosted strawberry pop tart', 'Pop-Tarts')).toBeNull();
+        expect(repairDroppedBrand('chick fil a spicy chicken sandwich', 'Chick-fil-A')).toBeNull();
+    });
+
+    it('returns null on an empty name and never prepends an empty brand fold', () => {
+        expect(repairDroppedBrand(undefined, 'Ryse')).toBeNull();
+        expect(repairDroppedBrand('peanut butter', '&')).toBe('& peanut butter');
     });
 });

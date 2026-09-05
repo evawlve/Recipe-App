@@ -1892,6 +1892,18 @@
         "value": "1@200"
       },
       "verified": "2026-08-30"
+    },
+    {
+      "id": "brand-reassert-takes-segmenter-evidence",
+      "claim": "The post-model brand re-assert in mapIngredientWithFallback() takes the segmenter's brand (options.brand) as a second kind of evidence through brandReassertEvidence(), so a co-branded line whose neighbouring token is the other brand (`.75 scoop Ryse skippy peanut butter`) keeps `ryse` after the normalizer drops it. Guards the call site: if the mapper stops passing options.brand into the predicate, the segmenter path silently falls back to the lexical gate alone (PR #421, 2026-09-05).",
+      "ownerDoc": "backend:src/lib/mapping/quantity-word-brand.ts",
+      "where": "backend",
+      "command": "grep -c 'segmenterBrand: options.brand' src/lib/mapping/map-ingredient-with-fallback.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-09-05"
     }
   ]
 }

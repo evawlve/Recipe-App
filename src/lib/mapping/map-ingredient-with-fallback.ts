@@ -59,7 +59,7 @@ import {
     AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
-import { preserveDroppedBrand } from './quantity-word-brand';
+import { preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
@@ -1628,7 +1628,8 @@ export async function mapIngredientWithFallback(
                     // measured 2026-08-03, the brand is dropped on ~58 of 1,776
                     // brand-bearing lines in AiNormalizeCache.
                     //
-                    // GATED ON DECISIVENESS, and that gate is the design. An
+                    // GATED ON EVIDENCE — lexical decisiveness, or the segmenter
+                    // having named this brand (2026-09-05) — NEVER unconditional. An
                     // UNCONDITIONAL prefix is already refuted: `bell pepper`
                     // matches the lexicon brand `bell` (Bell & Evans), the model
                     // rewrites the food to `capsicum`, and prefixing produced key
@@ -1641,12 +1642,34 @@ export async function mapIngredientWithFallback(
                     //
                     // REPAIRS, never rejects: dropping the model's name would
                     // also discard its typo repair and cooked-state retention.
+                    //
+                    // TWO kinds of evidence open the gate (2026-09-05): the
+                    // lexical decisiveness above, OR the segmenter having named
+                    // this brand (`options.brand`) — the case the lexical test
+                    // cannot see, a co-branded line whose neighbouring token is
+                    // the OTHER brand (`.75 scoop Ryse skippy peanut butter`).
+                    // `brandReassertEvidence()` owns the rule, its refusal and
+                    // the measured population.
                     const targetBrand = brandDetection.matchedBrand?.trim();
-                    if (targetBrand && hasDecisiveBrandContext(trimmed, targetBrand)) {
+                    const reassertEvidence = targetBrand
+                        ? brandReassertEvidence({
+                              rawLine: trimmed,
+                              targetBrand,
+                              segmenterBrand: options.brand,
+                              parsed,
+                          })
+                        : null;
+                    if (targetBrand && reassertEvidence) {
+                        // The decisive path keeps its historical repair byte-for-byte;
+                        // the segmenter path uses repairDroppedBrand(), which folds `&`
+                        // when asking "kept?" and collapses an adjacent duplicate after
+                        // the prepend (the two shapes the first two-arm probe found).
                         const keepBrand = (s: string | undefined) =>
-                            s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
-                                ? `${targetBrand} ${s}`.trim()
-                                : s;
+                            reassertEvidence === 'segmenter_named'
+                                ? (repairDroppedBrand(s, targetBrand) ?? s)
+                                : s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
+                                    ? `${targetBrand} ${s}`.trim()
+                                    : s;
                         const rebranded = keepBrand(normalizedName);
                         if (rebranded !== normalizedName) {
                             logger.info('mapping.llm_dropped_decisive_brand', {
@@ -1654,11 +1677,29 @@ export async function mapIngredientWithFallback(
                                 llmOutput: normalizedName,
                                 repaired: rebranded,
                                 brand: targetBrand,
+                                evidence: reassertEvidence,
+                                site: 'normalized_name',
                             });
                             preBrandNormalizedName = normalizedName;
                         }
                         normalizedName = rebranded ?? normalizedName;
-                        aiCanonicalBase = keepBrand(aiCanonicalBase);
+                        // The rerank query is rebranded on the same evidence, and
+                        // it moves on lines where normalizedName KEPT the brand and
+                        // canonicalBase dropped it (13 of 171 current normalizer rows,
+                        // refuter L3 on #421) — logged under the same event so that
+                        // second population is not silent.
+                        const rebrandedBase = keepBrand(aiCanonicalBase);
+                        if (rebrandedBase !== aiCanonicalBase) {
+                            logger.info('mapping.llm_dropped_decisive_brand', {
+                                rawLine: trimmed,
+                                llmOutput: aiCanonicalBase,
+                                repaired: rebrandedBase,
+                                brand: targetBrand,
+                                evidence: reassertEvidence,
+                                site: 'canonical_base',
+                            });
+                        }
+                        aiCanonicalBase = rebrandedBase;
                     }
                     aiCookingModifier = aiHint.cookingModifier;
                     aiSynonyms = aiHint.synonyms || [];
