@@ -59,7 +59,7 @@ import {
     AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
-import { preserveDroppedBrand, brandReassertEvidence } from './quantity-word-brand';
+import { preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
@@ -1659,10 +1659,16 @@ export async function mapIngredientWithFallback(
                           })
                         : null;
                     if (targetBrand && reassertEvidence) {
+                        // The decisive path keeps its historical repair byte-for-byte;
+                        // the segmenter path uses repairDroppedBrand(), which folds `&`
+                        // when asking "kept?" and collapses an adjacent duplicate after
+                        // the prepend (the two shapes the first two-arm probe found).
                         const keepBrand = (s: string | undefined) =>
-                            s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
-                                ? `${targetBrand} ${s}`.trim()
-                                : s;
+                            reassertEvidence === 'segmenter_named'
+                                ? (repairDroppedBrand(s, targetBrand) ?? s)
+                                : s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
+                                    ? `${targetBrand} ${s}`.trim()
+                                    : s;
                         const rebranded = keepBrand(normalizedName);
                         if (rebranded !== normalizedName) {
                             logger.info('mapping.llm_dropped_decisive_brand', {

@@ -300,3 +300,43 @@ export function brandReassertEvidence(args: {
     if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) return null;
     return 'segmenter_named';
 }
+
+/**
+ * THE REPAIR ITSELF, for the `segmenter_named` evidence (2026-09-05, refuter
+ * L2 on PR #421). The decisive path keeps its historical closure in the mapper
+ * byte-for-byte; this helper is what the segmenter path uses instead, because
+ * the first two-arm probe of the fix showed two shapes that closure gets wrong
+ * and that the segmenter path meets far more often:
+ *
+ *   1. A brand the model KEPT in a folded spelling read as dropped.
+ *      `candidateMatchesTargetBrand()` folds apostrophes but not `&`, so the
+ *      segmenter brand `m&ms` against the model's `m m's` was "dropped" and the
+ *      re-assert produced the retrieval query `m&ms m m's` (branch-arm MEL,
+ *      2026-09-05 20:42Z). Here a brand whose alphanumeric fold is a substring
+ *      of the name's alphanumeric fold counts as KEPT. A false "kept" only
+ *      suppresses a repair — today's behaviour — so this errs the safe way.
+ *   2. A multi-token brand of which the model kept the LAST token. The
+ *      segmenter re-drew `Ryse Skippy` as the brand of `.75 scoop ryse skippy
+ *      peanut butter`, the model returned `skippy peanut butter`, and the whole
+ *      brand was prepended: `ryse skippy skippy peanut butter`. Here the prepend
+ *      is followed by an adjacent-duplicate collapse (case-insensitive), the
+ *      same rule `deriveMappingCacheKey()` already applies to the key.
+ *
+ * Returns null when the brand is judged present (no repair), else the repaired
+ * name. The pure `alnum()` fold is deliberately not exported: it is a
+ * containment heuristic for THIS decision, not a tokenizer.
+ */
+export function repairDroppedBrand(name: string | undefined, targetBrand: string): string | null {
+    if (!name) return null;
+    if (candidateMatchesTargetBrand(undefined, name, targetBrand)) return null;
+    const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const foldedBrand = alnum(targetBrand);
+    if (foldedBrand.length > 0 && alnum(name).includes(foldedBrand)) return null;
+    const tokens = `${targetBrand} ${name}`.trim().split(/\s+/).filter(Boolean);
+    const out: string[] = [];
+    for (const t of tokens) {
+        if (out.length > 0 && out[out.length - 1].toLowerCase() === t.toLowerCase()) continue;
+        out.push(t);
+    }
+    return out.join(' ');
+}

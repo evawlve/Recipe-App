@@ -2,7 +2,7 @@ import { parseIngredientLine } from '../../parse/ingredient-line';
 import { detectBrandInQuery } from '../brand-detector';
 import { deriveMappingCacheKey } from '../cache-key';
 import { stripPartitiveOfResidue } from '../partitive-residue';
-import { brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence } from '../quantity-word-brand';
+import { brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
 
 /**
  * `one` is a lexicon brand (the ONE protein-bar company), so the
@@ -367,5 +367,24 @@ describe('brandReassertEvidence — a segmenter-named brand survives the normali
         const line = "2 tbsp ben and jerry's vanilla";
         expect(brandReassertEvidence({ rawLine: line, targetBrand: "jerry's", segmenterBrand: 'Jerrys', parsed: parsedOf(line) }))
             .toBe('segmenter_named');
+    });
+});
+
+describe('repairDroppedBrand — the segmenter-path repair (refuter L2 shapes, 2026-09-05)', () => {
+    it('prepends a genuinely dropped brand', () => {
+        expect(repairDroppedBrand('skippy peanut butter', 'Ryse')).toBe('Ryse skippy peanut butter');
+        expect(repairDroppedBrand('caramel rice cake', 'Quaker')).toBe('Quaker caramel rice cake');
+    });
+    it('reads a brand the model kept in a folded spelling as KEPT (`m&ms` vs `m m\'s`)', () => {
+        expect(repairDroppedBrand("m m's", 'm&ms')).toBeNull();
+        expect(repairDroppedBrand("m&m's", "M&M's")).toBeNull();
+        expect(repairDroppedBrand('ryse protein', 'Ryse')).toBeNull();
+    });
+    it('does not double the last token of a multi-token brand the model kept (`Ryse Skippy`)', () => {
+        expect(repairDroppedBrand('skippy peanut butter', 'Ryse Skippy')).toBe('Ryse Skippy peanut butter');
+    });
+    it('returns null on an empty name and never prepends an empty brand fold', () => {
+        expect(repairDroppedBrand(undefined, 'Ryse')).toBeNull();
+        expect(repairDroppedBrand('peanut butter', '&')).toBe('& peanut butter');
     });
 });
