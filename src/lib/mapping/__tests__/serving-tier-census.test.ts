@@ -123,7 +123,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     fdc_volume_ai: 'NONDETERMINISTIC',
     ai_generated_serving: 'NONDETERMINISTIC',
 
-    // ============= BORROWED_OR_DEFAULTED — shipped set, 16 members ==============
+    // ============= BORROWED_OR_DEFAULTED — shipped set, 17 members ==============
     // Same deal: mirrors BORROWED_OR_DEFAULTED_SERVING_TIERS, pinned both ways.
     // That file's own comments own WHY each is a member; not restated here.
     bare_sibling_serving: 'BORROWED_OR_DEFAULTED',
@@ -137,6 +137,11 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     bare_query_default: 'BORROWED_OR_DEFAULTED',
     bare_discrete_floor: 'BORROWED_OR_DEFAULTED',
     volume_unit: 'BORROWED_OR_DEFAULTED',
+    // buildOffResult()'s own-label volume read (punch #66). Classified here and
+    // NOT as OWN: it bills `qty x unitMl x (servingGrams / declaredMl)`, and that
+    // ratio is a defaulted 1.0 on 99.78% of the corpus because the ingest wrote
+    // `grams := ml`. Sibling of `volume_unit`, not of `fdc_label_volume`.
+    off_label_volume: 'BORROWED_OR_DEFAULTED',
     fs_volume_density: 'BORROWED_OR_DEFAULTED',
     fdc_sub_piece_default: 'BORROWED_OR_DEFAULTED',
     fdc_unit_heuristic: 'BORROWED_OR_DEFAULTED',
@@ -470,9 +475,13 @@ describe('the census — every live tier is explicitly accounted for', () => {
         expect(dead).toEqual([]);
     });
 
-    it('classifies 53 tiers, one class each', () => {
-        expect(LIVE_TIERS).toHaveLength(53);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(53);
+    it('classifies 54 tiers, one class each', () => {
+        // 53 -> 54 on 2026-09-04: buildOffResult() gained `off_label_volume`
+        // (punch #66). The scan found the new string on its own and this
+        // assertion is what forced it to be classified — which is the whole
+        // reason the census exists.
+        expect(LIVE_TIERS).toHaveLength(54);
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(54);
     });
 });
 

@@ -380,9 +380,13 @@ describe('isBorrowedOrDefaultedTier — weights that are not this food\'s', () =
     // MUTATION: change the array length without deciding about the new member.
     // Sixteen is not a magic number — it is the count that the classification
     // table in the owner report justifies row by row.
-    it('has exactly sixteen members and no duplicates', () => {
-        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(16);
-        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(16);
+    it('has exactly seventeen members and no duplicates', () => {
+        // 16 -> 17 on 2026-09-04: `off_label_volume` (punch #66) joins its
+        // sibling `volume_unit`. Both multiply the requested volume by a
+        // defaulted density — the lexicon's for one, the ingest's `grams := ml`
+        // 1.0 for the other — so neither is this food's own weight.
+        expect(BORROWED_OR_DEFAULTED_SERVING_TIERS.length).toBe(17);
+        expect(new Set(BORROWED_OR_DEFAULTED_SERVING_TIERS).size).toBe(17);
     });
 });
 

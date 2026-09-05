@@ -14,6 +14,7 @@ import { extractLeanPercentage, isGenericGroundMeatQuery } from '../simple-reran
 import {
     singularizeUnit,
     extractLabelServingUnit,
+    labelParenVolumeMl,
     LABEL_COUNT_PIECE_NOUNS,
     GENERIC_PIECE_WORDS,
     pieceNounInName,
@@ -2748,6 +2749,48 @@ export async function buildOffResult(
         && ownLabelVolumeDensity <= VOLUME_SERVING_MAX_DENSITY
     );
 
+    // THE RECORD'S OWN LABEL WHEN IT DECLARES A VOLUME BUT NAMES A DIFFERENT
+    // UNIT WORD (punch #66, 2026-09-04). The sibling flag above needs the label's
+    // unit WORD to equal the requested one; these labels never satisfy that,
+    // because they read `1 portion (30 ml)` / `1 serving (15 ml)` — `portion` is
+    // not `tbsp`, so `label_unit_match` is unreachable and the per-CLASS density
+    // constant bills instead, on a record that has stated its own answer.
+    //
+    // LIVE WITNESS, organic, 2026-09-05 03:40:42Z: Diego typed `2 tbsp light
+    // ranch`. `off_0071406000086` (Hidden Valley "Light ranch") carries
+    // OffServing 4145676 `1 portion (30 ml)` = 30 g, i.e. 1.0 g/ml, and 200
+    // kcal/100 g. `resolveVolumeGrams()` cannot see the record — it takes only
+    // NAME strings — and classified it at 7.5 g/tbsp, so the line billed 15 g /
+    // 30 kcal where the record's own label says ~30 g / 60 kcal. The async
+    // validator independently flagged it SUSPECT on the serving axis as a >=25%
+    // shortfall (stamped `lane-a-2026-09-04:cascade`). Second witness:
+    // `2 tbsp coffee mate zero sugar french vanilla` -> `off_0050000497256`,
+    // `1 portion (15 ml)`, billed 2 x 12.75 = 25.5 g.
+    //
+    // THE DENSITY IS THE RECORD'S, NOT A CONSTANT. `labelParenVolumeMl()` owns
+    // the measurement that makes this safe; the [MIN, MAX] band below is the same
+    // one the sibling flag uses and is what excludes the 83 corpus rows whose
+    // grams and ml disagree (densities 0.004 to 120).
+    //
+    // IT CANNOT DISPLACE A STRONGER READ. It is checked only when
+    // `ownLabelBeatsVolumeConstant` is false, so a label that names the requested
+    // unit outright still routes to `label_unit_match`; and it sits inside the
+    // same `volumeToGrams[unit]` guard, so it fires only where `volume_unit`
+    // would otherwise have billed. `ml`/`floz` are excluded exactly as the
+    // sibling excludes them — those cells are billed flat by this lane and the
+    // disagreement with the density owner is pinned, not this branch's to reopen.
+    const ownLabelMl = labelParenVolumeMl(hydrated.servingDescription);
+    const ownLabelGramsPerMl = ownLabelMl && hydrated.servingGrams && hydrated.servingGrams > 0
+        ? hydrated.servingGrams / ownLabelMl : null;
+    const requestedUnitMl = unit && !(singularizeUnit(unit) in OFF_FLAT_VOLUME_CELLS)
+        ? VOLUME_UNIT_ML[singularizeUnit(unit)] : undefined;
+    const ownLabelVolumeGrams = (
+        requestedUnitMl
+        && ownLabelGramsPerMl != null
+        && ownLabelGramsPerMl >= VOLUME_SERVING_MIN_DENSITY
+        && ownLabelGramsPerMl <= VOLUME_SERVING_MAX_DENSITY
+    ) ? qty * requestedUnitMl * ownLabelGramsPerMl : null;
+
     // Bare-serving defaults (Track 3, Jul 2026): a digitless unitless qty-1
     // line asks for A SERVING. Deterministic resolution order:
     //   (1) the record's own in-band label serving ('bare_label_serving');
@@ -2809,6 +2852,22 @@ export async function buildOffResult(
         grams = qty * weightToGrams[unit];
         servingDescription = `${grams.toFixed(1)}g`;
         servingTier = 'weight_unit';
+    } else if (unit && volumeToGrams[unit] && !ownLabelBeatsVolumeConstant
+        && ownLabelVolumeGrams != null) {
+        // THIS record's own declared volume serving, converted at ITS OWN
+        // density — see ownLabelVolumeGrams above. Sits ahead of the per-CLASS
+        // constant and behind ownLabelBeatsVolumeConstant, so it takes only the
+        // requests the name-inferred lexicon would otherwise have guessed.
+        grams = ownLabelVolumeGrams;
+        servingDescription = `${qty} ${unit}`;
+        servingTier = 'off_label_volume';
+        logger.info('off.build_result.off_label_volume', {
+            foodId: candidate.id,
+            unit,
+            labelMl: ownLabelMl,
+            labelGrams: hydrated.servingGrams,
+            gramsPerMl: ownLabelGramsPerMl,
+        });
     } else if (unit && volumeToGrams[unit] && !ownLabelBeatsVolumeConstant) {
         // The per-CLASS density constant. Still the answer for every volume
         // request this record says nothing specific about — which is most of
@@ -2946,8 +3005,72 @@ export async function buildOffResult(
         // (170g)" label.
         const genericPieceNoun = labelUnitWord && GENERIC_PIECE_WORDS.has(labelUnitWord)
             && labelUnitCount >= 2 ? pieceNounInName(itemNameForCount) : null;
+        // A SINGLE-PIECE LABEL OUTSIDE THE SET IS ALSO A PIECE WEIGHT
+        // (punch #84, 2026-09-04).
+        //
+        // `LABEL_COUNT_PIECE_NOUNS` is eleven packaged-snack nouns and has no
+        // `cake`, so `4 quaker caramel rice cakes` on `off_0030000216910` —
+        // whose OffFood label reads `1 cake (13 g)` — skipped this branch and
+        // fell to (B), billing 9 g/cake off the generic seed table instead of
+        // the 13 g the product states about itself.
+        //
+        // THE SECOND ARM IS GATED ON `labelUnitCount === 1`, AND THAT GATE IS
+        // THE WHOLE DESIGN. The first draft dropped the set requirement and kept
+        // only the word-match, on the argument that the word-match was already
+        // the discriminating half. **That argument is false, and a refuter
+        // measured it**: `singularizeUnit('cookies')` is `cooky`, which is NOT a
+        // set member, while `labelPieceMatchesItem('cooky', 'oreo cookies')` is
+        // TRUE — so for a PLURAL label of a set member the set is the only thing
+        // refusing the row, and the two halves are not redundant at all. Dropping
+        // it flipped 1,581 events over 17 rows, of which `4 oreo cookies` on
+        // `off_0044000085300` (`9 cookies (29 g)`, 283 events) went 45.2 g ->
+        // 12.9 g: a 3.5x UNDER-bill, because the label's own count of 9 is wrong
+        // for a 29 g serving. The [0.2, 500] band does not catch it — 3.22 g is
+        // a perfectly plausible per-piece weight.
+        //
+        // So the admissible new case is exactly the one with NO DIVISION: when
+        // the label states ONE piece, `servingGrams` IS the piece weight and no
+        // unvetted label count can distort it. Set members keep their existing
+        // multi-piece behaviour byte-for-byte (`18 chips (28g)` still divides),
+        // because that population has been vetted by the set for a year.
+        //
+        // The producer comment above defends the gate with "so `13 chips` never
+        // divides by a `1 container (170g)` label". Still refused, now by two
+        // things: `container` is not a token of `... chips`, and it is not a set
+        // member either.
+        //
+        // THE SET IS DELIBERATELY NOT WIDENED, and that is the point of fixing
+        // the gate rather than the lexicon: `LABEL_COUNT_PIECE_NOUNS` also feeds
+        // `pieceNounInName()` -> `countedPieceNoun()` -> the `countedPieceQuery`
+        // side-query in gather-candidates.ts and the Typesense `hasCountServing`
+        // flag, so adding a noun is a RETRIEVAL change the frozen-pool arm cannot
+        // see. Reading it here is serving-side only and moves no pool.
+        //
+        // `labelUnitWord.length >= 3` is the FatSecret sibling's filter, restated
+        // here rather than invented: `labelPieceMatchesItem()` at the FS piece
+        // site is already paired with a length floor. It refuses `k` (29
+        // records), `oz` (12), `en`, `cr`, `bu`, `c`, `z` — label fragments that
+        // are not piece nouns in any language. The `g` shape a refuter found
+        // (`servingSize` "30 g" -> word `g`, and a name like `krave 375g`
+        // tokenizing to match it) is already refused a step earlier, because
+        // that label's `labelUnitCount` reads 30, not 1.
+        //
+        // MEASURED admissible-corpus sizes over `OffFood` with a non-null label,
+        // grams > 0, `corruptReason IS NULL`, in-band per-piece (2026-09-04):
+        // master 8,403 · the refuted first draft 66,737 · this gate 46,230 ·
+        // with the length floor 46,174. ADMISSIBLE IS NOT FIRING: the measured
+        // live firing set is 12 (line, record) pairs / 1,255 events, every one
+        // of which was replayed on both arms. Most of the widened corpus bills
+        // the SAME number either way, because for a single-piece label master's
+        // `label_serving_default` already billed `qty x servingGrams`; the grams
+        // move only where master reached the GENERIC SEED TABLE instead.
+        //
+        // The generic-counter arm keeps its own `count >= 2` gate unchanged, and
+        // the [0.2, 500] per-piece band below is untouched.
         const labelCountsUserPiece = labelUnitWord != null && (
             (LABEL_COUNT_PIECE_NOUNS.has(labelUnitWord) && labelPieceMatchesItem(labelUnitWord, itemNameForCount)) ||
+            (labelUnitCount === 1 && labelUnitWord.length >= 3
+                && labelPieceMatchesItem(labelUnitWord, itemNameForCount)) ||
             genericPieceNoun != null
         );
         if (
