@@ -253,6 +253,21 @@ describe('forceSegmentText: a leading decimal is a quantity, not a bullet (punch
         expect(forceSegmentText('3.5 oz salmon')[0].rawText).toBe('3.5 oz salmon');
     });
 
+    it('keeps a LEADING-ZERO and a TWO-DIGIT decimal', () => {
+        // Both shapes were unpinned in the first draft of this block, and a
+        // refuter found two wrong regexes that passed all 34 tests without
+        // them: `\d+\.(?=\d\d)` re-added to the alternation turns
+        // `0.75 cup olive oil` into `75 cup olive oil`, and a `0\.` arm turns
+        // `0.5 cups rice` into `5 cups rice`. Every decimal above happens to
+        // have exactly ONE digit after the point and no leading zero, which is
+        // what let the mutants through. `0.5` and `.25`/`.75` are the most
+        // common decimals a person types into a food log.
+        expect(forceSegmentText('0.5 cups rice')[0].rawText).toBe('0.5 cups rice');
+        expect(forceSegmentText('0.75 cup olive oil')[0].rawText).toBe('0.75 cup olive oil');
+        expect(forceSegmentText('1.25 cups rice')[0].rawText).toBe('1.25 cups rice');
+        expect(forceSegmentText('10.25 oz salmon')[0].rawText).toBe('10.25 oz salmon');
+    });
+
     it('CONTROL: real list bullets still strip', () => {
         expect(forceSegmentText('1. eggs')[0].rawText).toBe('eggs');
         expect(forceSegmentText('2) toast')[0].rawText).toBe('toast');
