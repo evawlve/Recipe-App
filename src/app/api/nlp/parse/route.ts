@@ -426,12 +426,17 @@ export async function POST(req: NextRequest) {
             quantity: qty,
             unit,
             grams: 0,
+            // THE UNRESOLVED SHAPE. Nothing was found, so no panel declared anything:
+            // fibre is NULL ("no claim"), not a 0 that reads as "0 g". The macros
+            // stay 0 — a 0 kcal / 0 g card at grams 0 is the shape every client
+            // already renders for this branch, and changing them is a separate wire
+            // change. Same `number | null` contract as the mapped branch below.
             nutrition: {
               calories: 0,
               protein: 0,
               carbs: 0,
               fat: 0,
-              fiber: 0,
+              fiber: null,
               sugar: 0,
               sodium: 0,
             },
@@ -440,7 +445,7 @@ export async function POST(req: NextRequest) {
               protein100: 0,
               carbs100: 0,
               fat100: 0,
-              fiber100: 0,
+              fiber100: null,
               sugar100: 0,
               sodium100: 0,
             },
@@ -500,7 +505,17 @@ export async function POST(req: NextRequest) {
           // is the invariant; that it is currently a no-op is an accident, not a
           // guarantee. `sodium100` is GRAMS per 100 g on every branch, so `sodium`
           // here is grams too — see ResolvedNutritionPer100g in resolve-payload.ts.
-          fiber: Number(((nutritionPer100g.fiber100 ?? 0) * scale).toFixed(1)),
+          //
+          // NULL STAYS NULL. `fiber100` is `number | null` (ResolvedNutritionPer100g
+          // owns the rule): null means the record's panel does not DECLARE fibre.
+          // This read was `?? 0`, so every such record billed a fabricated 0 g and
+          // the client's Net carbs subtracted it — 807 of the 3,574 OFF records
+          // behind a FoodMapping row are that shape (measured 2026-09-05; the
+          // re-derive command is on the type). A declared 0 still bills 0. `sugar`
+          // and `sodium` keep the fold: the same shape, deliberately not this change.
+          fiber: nutritionPer100g.fiber100 == null
+            ? null
+            : Number((nutritionPer100g.fiber100 * scale).toFixed(1)),
           sugar: Number(((nutritionPer100g.sugar100 ?? 0) * scale).toFixed(1)),
           sodium: Number(((nutritionPer100g.sodium100 ?? 0) * scale).toFixed(1)),
         };
