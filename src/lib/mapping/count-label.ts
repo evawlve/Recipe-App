@@ -142,6 +142,43 @@ export function labelFractionQuantity(description: string | null | undefined): n
 }
 
 /**
+ * The VOLUME an OFF label serving states about ITSELF, in millilitres:
+ * "1 portion (30 ml)" -> 30, "1 cup (240ml)" -> 240. Null when the label
+ * declares no parenthesised millilitre figure.
+ *
+ * WHY THIS IS A SEPARATE READER. `extractLabelServingUnit()` returns the label's
+ * UNIT WORD, and for these rows that word is `portion` / `serving` / `cup` —
+ * never the requested unit — so every consumer keyed on a unit-word match is
+ * blind to a record that has stated its own volume in plain sight. The
+ * millilitre figure lives in the parenthesis, which nothing read.
+ *
+ * MEASURED on the box 2026-09-04. 51,219 `openfoodfacts` `OffServing` rows carry
+ * a `(N ml)` parenthesis; `grams` EQUALS that `N` on 50,824 of them (99.2%),
+ * because the ingest wrote `grams := ml`. So for almost every row the implied
+ * density is exactly 1.0 g/ml — which is why the caller derives the density from
+ * the row (`servingGrams / ml`) instead of hardcoding the liquid cell: the
+ * arithmetic is identical today and stays honest if the ingest ever learns a
+ * real density. The remaining 83 disagreeing rows span densities 0.004 to 120,
+ * which is what the caller's [VOLUME_SERVING_MIN_DENSITY, MAX] band is for.
+ * Re-derive:
+ *   SELECT count(*) FILTER (WHERE grams = ml), count(*) FROM (
+ *     SELECT grams, ((regexp_match(description,'\(([0-9.]+)\s*ml\)'))[1])::float ml
+ *     FROM "OffServing" WHERE source='openfoodfacts'
+ *       AND description ~* '\([0-9.]+\s*ml\)') v;
+ *
+ * `ml` only, case-insensitively (50,901 + 289 + 27 spellings). `fl oz` (3,166
+ * rows) and a bare `L` (6) are deliberately OUT of scope: `fl oz` needs its own
+ * constant and its own gate, and six rows do not earn an ambiguous single letter.
+ */
+export function labelParenVolumeMl(description: string | null | undefined): number | null {
+    if (!description) return null;
+    const m = description.match(/\((\d+(?:\.\d+)?)\s*ml\)/i);
+    if (!m) return null;
+    const ml = parseFloat(m[1]);
+    return Number.isFinite(ml) && ml > 0 ? ml : null;
+}
+
+/**
  * The leading quantity of a label serving, fractions included — "1/2 cup
  * (110 g)" → 0.5, "1 1/4 cup (40 g)" → 1.25, "18 chips (28 g)" → 18 — or null
  * when the label does not lead with a usable number.
