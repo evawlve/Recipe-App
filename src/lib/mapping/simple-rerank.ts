@@ -2272,7 +2272,11 @@ export function simpleRerank(
     }
 
     const top = scored[0];
-    const second = scored[1];
+    // Nullable ON PURPOSE. tsconfig has `strict` but NOT `noUncheckedIndexedAccess`,
+    // so `scored[1]` types as non-optional and a future `second.foo` would compile
+    // clean and re-introduce the 500 this guard exists to remove. Typing it `| null`
+    // makes that class unrepresentable instead of merely guarded.
+    const second = scored.length > 1 ? scored[1] : null;
 
     // Fix 50 (Feb 2026): Compute gap against the first DISTINCT runner-up.
     // Duplicate API entries (e.g., two "Strawberries" from FatSecret with different IDs)
@@ -2287,27 +2291,36 @@ export function simpleRerank(
             break;
         }
     }
-    // SOLE-SURVIVOR GUARD (Sep 2026). `candidates.length >= 2` is guaranteed
-    // here (0 and 1 both return above), but `applyModifierConstraints()` can
-    // reject every candidate BUT ONE, leaving `scored.length === 1`. The
-    // all-rejected sibling (`scored.length === 0`) has the `fallbackScored`
-    // recovery above; this one had none, so `scored[1]` was `undefined` and the
-    // gap read threw a TypeError -> HTTP 500. Never observed on master traffic
-    // (0 hits for "reading 'score'" in the box's 611 MB next-start.log,
-    // measured 2026-09-04), but the adjacent `simple_rerank.all_rejected` path
-    // has fired 391 times in the same log, and any change that narrows the pool
-    // re-exposes it -- PR #413 did, on `pure leaf unsweetened black tea`.
+    // SOLE-SURVIVOR GUARD (Sep 2026). `candidates.length >= 2` is guaranteed here
+    // (0 and 1 both return above), but `applyModifierConstraints()` can reject every
+    // candidate BUT ONE, leaving `scored.length === 1`. The all-rejected sibling
+    // (`scored.length === 0`) has the `fallbackScored` recovery above; this one had
+    // none, so `scored[1]` was `undefined` and the gap read threw a TypeError ->
+    // HTTP 500. Never observed on master traffic (0 hits for "reading 'score'" in the
+    // box's 611 MB next-start.log, measured 2026-09-04), but the adjacent
+    // `simple_rerank.all_rejected` path has fired 391 times in the same log, and any
+    // change that narrows the pool re-exposes it -- PR #413 did, on
+    // `pure leaf unsweetened black tea`.
     //
-    // gap := 0, NOT `top.score`: when `scored.length >= 2` but every rival
-    // normalizes to the winner's own name, the Fix-50 loop above finds no
-    // distinct runner-up, `effectiveRunnerUp` stays `second`, and the gap is ~0
-    // -- so "no distinct competitor" ALREADY means "no gap bonus" in shipped
-    // behaviour. A sole survivor is that same predicate with the duplicate list
-    // empty, so it gets the same treatment. Billing `gap := top.score` would
-    // instead hand the narrowest possible pool an unconditional +0.1 and
-    // `clear_winner`, inverting what the gap measures.
-    const soleSurvivor = scored.length === 1;
-    const gap = soleSurvivor ? 0 : top.score - effectiveRunnerUp.score;
+    // gap := 0, NOT `top.score`. `top.score` is essentially always > 0.15 for a
+    // surviving candidate, so that choice would hand the NARROWEST POSSIBLE POOL --
+    // one survivor of a constraint massacre -- an unconditional +0.1 and
+    // `clear_winner`. The gap measures separation from a rival THAT EXISTS; with no
+    // rival there is no evidence of separation, so there is no bonus to award.
+    //
+    // NOT justified by the all-duplicates neighbour. An earlier revision of this
+    // comment claimed that when every rival normalizes to the winner's own name the
+    // gap is ~0 and no bonus is granted, so a sole survivor "gets the same
+    // treatment". THAT IS FALSE and was refuted by measurement on this branch: the
+    // Fix-50 loop leaves `effectiveRunnerUp = second`, and that duplicate's score can
+    // differ freely -- a 0.5 spread in retrieval score is a 0.225 gap, over both the
+    // 0.1 bonus threshold and the 0.15 `clear_winner` threshold, measured at
+    // confidence 0.9063 / reason `clear_winner`. The neighbour has no single
+    // behaviour. gap := 0 is therefore STRICTLY MORE CONSERVATIVE than that
+    // neighbour, which is the direction we want, but it stands on the reasoning
+    // above and not on an equivalence that does not hold.
+    const soleSurvivor = effectiveRunnerUp === null;
+    const gap = effectiveRunnerUp === null ? 0 : top.score - effectiveRunnerUp.score;
 
     // Determine confidence based on score and gap
     let confidence = Math.min(0.5 + top.score * 0.5, 0.95);
@@ -2378,24 +2391,14 @@ export function simpleRerank(
         });
     }
 
-    if (soleSurvivor) {
-        // Name the shape so it is countable in `MappingEventLog.selectionReason`
-        // and visible in the box log at LOG_LEVEL=warn, where the `logger.debug`
-        // below never lands. Renames only the un-named defaults -- the same
-        // pattern the branded calibration above uses -- so a stronger reason
-        // (`exact_match`, `cooked_grain_preference`, `branded_exact_match`) and
-        // every confidence adjustment survive untouched.
-        if (reason === 'simple_rerank' || reason === 'close_match') {
-            reason = 'sole_survivor';
-        }
-        logger.warn('simple_rerank.sole_survivor', {
-            query,
-            rawLine,
-            winner: top.candidate.name,
-            candidateCount: candidates.length,
-            confidence: confidence.toFixed(3),
-            reason,
-        });
+    // Name the shape. Renames only the un-named defaults -- the same pattern the
+    // branded calibration above uses -- so a stronger reason (`exact_match`,
+    // `cooked_grain_preference`, `branded_exact_match`) and every confidence
+    // adjustment survive untouched. The `simple_rerank` half is defensive: with
+    // gap = 0 the chain always lands on `close_match` (gap < 0.05) unless a
+    // stronger reason already fired.
+    if (soleSurvivor && (reason === 'simple_rerank' || reason === 'close_match')) {
+        reason = 'sole_survivor';
     }
 
     logger.debug('simple_rerank.result', {
@@ -2405,10 +2408,10 @@ export function simpleRerank(
         winnerBaseScore: top.baseScore.toFixed(3),
         winnerNutritionScore: top.nutritionScore.toFixed(3),
         winnerNutritionReason: top.nutritionReason,
-        runnerUp: soleSurvivor ? null : second.candidate.name,
-        runnerUpScore: soleSurvivor ? null : second.score.toFixed(3),
-        effectiveRunnerUp: soleSurvivor ? null : effectiveRunnerUp.candidate.name,
-        effectiveRunnerUpScore: soleSurvivor ? null : effectiveRunnerUp.score.toFixed(3),
+        runnerUp: second?.candidate.name ?? null,
+        runnerUpScore: second?.score.toFixed(3) ?? null,
+        effectiveRunnerUp: effectiveRunnerUp?.candidate.name ?? null,
+        effectiveRunnerUpScore: effectiveRunnerUp?.score.toFixed(3) ?? null,
         gap: gap.toFixed(3),
         confidence: confidence.toFixed(2),
         reason,
@@ -2423,6 +2426,25 @@ export function simpleRerank(
     //   - "plum tomatoes" ↔ "whole peeled plum tomatoes" (0.741 conf)
     //   - "green peppers cut in strips" ↔ "bell green raw peppers" (0.72 conf)
     const MIN_RERANK_CONFIDENCE = 0.70;
+
+    // Emitted AFTER the gate is known, never before it. An earlier revision logged
+    // this above the gate, so the line reported `reason: sole_survivor` on rows the
+    // function then returned as `confidence_below_threshold` with a null winner --
+    // it over-counted wins and hid the very safety property it was offered as
+    // evidence for. `warn` is deliberate: the box runs LOG_LEVEL=warn, so
+    // `logger.info` would be invisible there, and the adjacent
+    // `simple_rerank.all_rejected` sets the precedent at the same level.
+    if (soleSurvivor) {
+        logger.warn('simple_rerank.sole_survivor', {
+            query,
+            rawLine,
+            winner: top.candidate.name,
+            candidateCount: candidates.length,
+            confidence: confidence.toFixed(3),
+            reason,
+            rejectedByConfidenceGate: confidence < MIN_RERANK_CONFIDENCE,
+        });
+    }
 
     if (confidence < MIN_RERANK_CONFIDENCE) {
         logger.info('simple_rerank.winner_rejected', {

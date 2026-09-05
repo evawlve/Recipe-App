@@ -1369,7 +1369,7 @@ export const FAILURE_CLASSES: FailureClass[] = [
         fixPRs: [139],
         status: 'open',
         discoveredAt: '2026-07-24',
-        dropClasses: ['close_match', 'clear_winner', 'simple_rerank', 'fallback_after_serving_failure', 'single_candidate'],
+        dropClasses: ['close_match', 'clear_winner', 'simple_rerank', 'sole_survivor', 'fallback_after_serving_failure', 'single_candidate'],
         residual: true,
     },
 

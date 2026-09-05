@@ -403,12 +403,12 @@ describe('getCategoryChangePenalty — the unmatched-share charge (A25, Aug 2026
 describe('simpleRerank sole-survivor guard', () => {
     const QUERY = 'unsweetened almond milk';
 
-    function mk(id: string, name: string): RerankCandidate {
+    function mk(id: string, name: string, score = 1.0): RerankCandidate {
         return {
             id,
             name,
             brandName: null,
-            score: 1.0,
+            score,
             source: 'fatsecret',
             nutrition: { kcal: 30, protein: 1, carbs: 3, fat: 1, per100g: true },
         } as unknown as RerankCandidate;
@@ -441,8 +441,11 @@ describe('simpleRerank sole-survivor guard', () => {
         expect(res.winner).not.toBeNull();
         expect(res.reason).toBe('sole_survivor');
         expect(res.reason).not.toBe('clear_winner');
-        // 0.5 + score*0.5 with no +0.1; the bonus would have pushed this over 0.9.
-        expect(res.confidence).toBeLessThan(0.9);
+        // Pin the VALUE, not a threshold: 0.5 + score*0.5 with no +0.1. The earlier
+        // `toBeLessThan(0.9)` sat 0.0063 from the bonused 0.9063, so any future
+        // scoring change that moved the base below 0.80 would have let a
+        // bonus-granting mutation pass silently.
+        expect(res.confidence).toBeCloseTo(0.8063, 3);
     });
 
     it('does not overwrite a stronger reason', () => {
@@ -456,5 +459,24 @@ describe('simpleRerank sole-survivor guard', () => {
         expect(res.winner).not.toBeNull();
         expect(res.reason).toBe('exact_match');
         expect(res.reason).not.toBe('sole_survivor');
+    });
+
+    // THE NO-OP CONTROL THAT ACTUALLY DISCRIMINATES. The exact-match control above
+    // does NOT: `exact_match` is set by isExactMatch() independently of `gap` and
+    // survives the sole-survivor rename, so mutating `soleSurvivor` to a constant
+    // `true` -- which forces gap 0 corpus-wide and abolishes `clear_winner` and the
+    // +0.1 bonus everywhere -- passed all 1,962 tests under src/lib/mapping. This
+    // case has a real gap and a non-exact winner, so that mutation kills it.
+    it('a two-survivor pool with a real gap still earns clear_winner and the bonus', () => {
+        const res = simpleRerank(
+            QUERY,
+            [mk('a', 'Unsweetened Almondmilk', 1.0), mk('b', 'Unsweetened Almondmilk Beverage', 0.0)],
+            undefined,
+            QUERY,
+        );
+        expect(res.winner).not.toBeNull();
+        expect(res.reason).toBe('clear_winner');
+        expect(res.reason).not.toBe('sole_survivor');
+        expect(res.confidence).toBeCloseTo(0.9063, 3);
     });
 });
