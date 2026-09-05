@@ -92,14 +92,27 @@ import {
  * events to, away from the seed table — is in NO set, so the bare-query cap
  * stops applying to every event that moves. The gap PRE-DATES #420
  * (`label_count_derived` was never listed), but a census that pinned these sets
- * would have made the re-pointing name it. It is SIZED, not changed: measured
- * on the box 2026-09-05 (re-derive: the two `MappingEventLog` queries in the PR
- * that added this block), the guard's first gate `isBareUnitlessQty1()` refuses
- * all 868 of the tier's trailing-30-day events (0 digitless rawLines), and of
- * its 17 all-time digitless events (13 line/record pairs, all 2026-07-20 →
- * 07-24, every one a 2–43 g single piece) plain CAP membership would fire on
- * exactly one — `sugar cookie` 43 g → the lexicon's 4 g teaspoon of SUGAR, a
- * contained-token hijack — and correct none. Membership deliberately unchanged.
+ * would have made the re-pointing name it. It is SIZED, not changed. The
+ * durable predicate (measured on the box 2026-09-05, re-checked the same day
+ * after one more event landed): 0 of the tier's trailing-30-day events satisfy
+ * the guard's first gate `isBareUnitlessQty1()` — 868 carry a digit, and the
+ * one digitless line (`two chocolate caramel rice cakes from quaker`) parses
+ * `qty: 2` from the word `two` — so CAP membership would change nothing in
+ * the window. Re-derive the window:
+ *   SELECT count(*), count(DISTINCT "rawLine"),
+ *          count(*) FILTER (WHERE "rawLine" !~ '[0-9]') AS digitless
+ *     FROM "MappingEventLog"
+ *    WHERE "servingTier" = 'label_count_derived'
+ *      AND "createdAt" > now() - interval '30 days';
+ * (`!~ '[0-9]'` OVER-counts bare lines — a word-number is digitless and not
+ * bare — so run the survivors through `parseIngredientLine()` +
+ * `isBareUnitlessQty1()` before reading the digitless count as "bare".) Of the
+ * tier's all-time digitless events (drop the interval; 18 events / 14
+ * line-record pairs, all 2026-07-19 → 07-24 bar the one above, every one a
+ * 2–43 g single piece), plain CAP membership would fire on exactly one —
+ * `sugar cookie` 43 g → the lexicon's 4 g teaspoon of SUGAR, a contained-token
+ * hijack — and correct none; HEAD_GATED would fire on none. Membership
+ * deliberately unchanged.
  */
 
 // ---------------------------------------------------------------------------
