@@ -2,7 +2,7 @@ import { parseIngredientLine } from '../../parse/ingredient-line';
 import { detectBrandInQuery } from '../brand-detector';
 import { deriveMappingCacheKey } from '../cache-key';
 import { stripPartitiveOfResidue } from '../partitive-residue';
-import { brandWasConsumedAsQuantity, preserveDroppedBrand } from '../quantity-word-brand';
+import { brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence } from '../quantity-word-brand';
 
 /**
  * `one` is a lexicon brand (the ONE protein-bar company), so the
@@ -310,5 +310,62 @@ describe('the extraction is behaviour-preserving apart from the refusal', () => 
         expect(after).toEqual({
             baseName: 'banana', applied: false, declined: 'brand_consumed_as_quantity',
         });
+    });
+});
+
+/**
+ * The post-model re-assert's SECOND kind of evidence (2026-09-05). The
+ * measured population these pin is in the predicate's docstring: eight
+ * segmenter-named brands the normalizer dropped and the lexical gate could not
+ * restore, five of them organic MEL lines.
+ */
+describe('brandReassertEvidence — a segmenter-named brand survives the normalizer', () => {
+    const parsedOf = (line: string) => parseIngredientLine(line);
+
+    it('the co-branded Ryse line: lexically NOT decisive, restored on the segmenter\'s word', () => {
+        const line = '.75 scoop Ryse skippy peanut butter';
+        expect(detectBrandInQuery(line).matchedBrand).toBe('Ryse');
+        // The neighbours are `scoop` and `skippy` — neither is a product-form token.
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'Ryse', segmenterBrand: undefined, parsed: parsedOf(line) }))
+            .toBeNull();
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'Ryse', segmenterBrand: 'Ryse', parsed: parsedOf(line) }))
+            .toBe('segmenter_named');
+    });
+
+    it('the trailing `from Quaker` form — the same shape, three of the eight measured losses', () => {
+        const line = 'one caramel rice cake from quaker';
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'Quaker', segmenterBrand: 'Quaker', parsed: parsedOf(line) }))
+            .toBe('segmenter_named');
+    });
+
+    it('lexical decisiveness still opens the gate on its own, with or without a segmenter', () => {
+        const line = '1 scoop ryse protein';
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'ryse', segmenterBrand: undefined, parsed: parsedOf(line) }))
+            .toBe('decisive_context');
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'ryse', segmenterBrand: 'ryse', parsed: parsedOf(line) }))
+            .toBe('decisive_context');
+    });
+
+    it('the refuted `bell pepper` shape stays closed: no segmenter brand, no decisiveness, no re-assert', () => {
+        const line = 'bell pepper';
+        expect(detectBrandInQuery(line).matchedBrand).toBe('bell');
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'bell', segmenterBrand: undefined, parsed: parsedOf(line) }))
+            .toBeNull();
+        // The segmenter naming a DIFFERENT brand lends the detector's hit nothing.
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'bell', segmenterBrand: 'Kind', parsed: parsedOf(line) }))
+            .toBeNull();
+    });
+
+    it('the quantity-word refusal is shared with preserveDroppedBrand: `one` is never re-asserted', () => {
+        const line = 'One serving of kettle cooked potato chips';
+        expect(brandWasConsumedAsQuantity(line, 'One', parsedOf(line))).toBe(true);
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'One', segmenterBrand: 'One', parsed: parsedOf(line) }))
+            .toBeNull();
+    });
+
+    it('matches the segmenter brand by folded token, not by string equality', () => {
+        const line = "2 tbsp ben and jerry's vanilla";
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: "jerry's", segmenterBrand: 'Jerrys', parsed: parsedOf(line) }))
+            .toBe('segmenter_named');
     });
 });

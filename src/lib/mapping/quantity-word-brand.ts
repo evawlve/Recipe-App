@@ -1,4 +1,4 @@
-import { hasDecisiveBrandContext } from './simple-rerank';
+import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
 /**
@@ -222,4 +222,81 @@ export function preserveDroppedBrand(args: {
         applied: true,
         declined: null,
     };
+}
+
+/**
+ * WHY THE POST-MODEL BRAND RE-ASSERT NEEDS A SECOND KIND OF EVIDENCE.
+ *
+ * `mapIngredientWithFallback()` guards a dropped brand TWICE, and until
+ * 2026-09-05 the two guards answered the same question by different rules:
+ *
+ *   1. BEFORE the normalizer — `preserveDroppedBrand()` above restores a brand
+ *      the segmenter named (`options.brand`) or the detector found into the
+ *      retrieval query, refusing only the quantity-word class.
+ *   2. AFTER the normalizer — the re-assert over the model's own output restored
+ *      a dropped brand only under `hasDecisiveBrandContext()`, the LEXICAL test
+ *      (a multi-word brand, or an adjacent product-form token such as
+ *      `protein` / `bar` / `powder`) whose job is to keep a lexicon false
+ *      positive (`bell` in `bell pepper`) out of the cache key.
+ *
+ * So a brand the segmenter had explicitly named, and guard 1 had explicitly
+ * kept, was thrown away by guard 2 whenever its neighbours were not product
+ * words — and on a CO-BRANDED line the neighbour is the OTHER brand:
+ *
+ *   `.75 scoop Ryse skippy peanut butter`   segmenter: brand=Ryse, form=`skippy peanut butter`
+ *     guard 1 → baseName `Ryse skippy peanut butter`
+ *     model   → normalized_name `skippy peanut butter`, is_branded=true
+ *     guard 2 → prev `scoop`, next `skippy`: not decisive → NOT restored
+ *     key `butter peanut skippy` → off_6922877745423 "Skippy Peanut Butter" (the spread, not the powder)
+ *
+ * MEASURED 2026-09-05 (Lane A session 40) over every distinct SegmentationCache
+ * segment joined to its AiNormalizeCache row by `computeNormalizedKey(baseName)`:
+ * 205 segments carry a segmenter brand, 115 join a normalizer row, the model
+ * dropped the brand on 11 of those — `is_branded: true` on every one — and
+ * guard 2 restored 3 (decisive) and lost 8 (non-decisive): the co-brand above,
+ * the trailing `… from Quaker` / `… from Orgain` form (3), `perdue simply smart …`
+ * (a maker before a sub-brand) and `m&ms` (2). Five of the eight are organic
+ * 30-day MEL lines and four of those billed a wrong or brandless record
+ * (`Two chocolate caramel rice cakes from Quaker` → a Tesco row). Re-derive:
+ * dump `SELECT DISTINCT s->>'rawText', s->>'normalizedForm', s->>'brand' FROM
+ * "SegmentationCache", jsonb_array_elements("segmentsJson") s` and
+ * `SELECT "normalizedKey", "normalizedName" FROM "AiNormalizeCache"`, then
+ * replay `preserveDroppedBrand()` → `computeNormalizedKey()` →
+ * `candidateMatchesTargetBrand()` per segment.
+ *
+ * THE RULE: a brand the SEGMENTER named is evidence of the same strength as
+ * lexical decisiveness for the re-assert — a second model read the whole line
+ * and called it a brand, and the mapper already keeps it before the normalizer
+ * — under the SAME refusal guard 1 applies. The segmenter emitted no quantity
+ * word as a brand in that census (0 of 205), so the refusal is principled, not
+ * load-bearing.
+ *
+ * WHAT IT DOES NOT DO: it does not touch `hasDecisiveBrandContext()` itself,
+ * which also decides the cache key's brand PREFIX and whether the model may
+ * downgrade `is_branded` — those keep their lexical rule. The SOLO path (no
+ * segmenter: `winner-diff`, the search route, a bare mapper call) is unchanged
+ * by construction, which is also why `winner-diff` cannot see this change: it
+ * never supplies `options.brand`.
+ */
+export type BrandReassertEvidence = 'decisive_context' | 'segmenter_named' | null;
+
+export function brandReassertEvidence(args: {
+    rawLine: string;
+    targetBrand: string;
+    /** `options.brand` — the segmenter's brand for this segment on the composite path. */
+    segmenterBrand: string | null | undefined;
+    parsed: ParsedIngredient | null | undefined;
+}): BrandReassertEvidence {
+    const { rawLine, targetBrand, segmenterBrand, parsed } = args;
+    if (!targetBrand.trim()) return null;
+    if (hasDecisiveBrandContext(rawLine, targetBrand)) return 'decisive_context';
+    const seg = segmenterBrand?.trim();
+    if (!seg) return null;
+    // On the composite path the segmenter's brand IS the target (the mapper
+    // prefers `options.brand` over the detector), but check by token rather
+    // than assume the call site: a detector hit that is not what the segmenter
+    // named must not borrow the segmenter's authority.
+    if (!candidateMatchesTargetBrand(undefined, seg, targetBrand)) return null;
+    if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) return null;
+    return 'segmenter_named';
 }

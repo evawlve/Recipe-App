@@ -59,7 +59,7 @@ import {
     AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
-import { preserveDroppedBrand } from './quantity-word-brand';
+import { preserveDroppedBrand, brandReassertEvidence } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
@@ -1641,8 +1641,24 @@ export async function mapIngredientWithFallback(
                     //
                     // REPAIRS, never rejects: dropping the model's name would
                     // also discard its typo repair and cooked-state retention.
+                    //
+                    // TWO kinds of evidence open the gate (2026-09-05): the
+                    // lexical decisiveness above, OR the segmenter having named
+                    // this brand (`options.brand`) — the case the lexical test
+                    // cannot see, a co-branded line whose neighbouring token is
+                    // the OTHER brand (`.75 scoop Ryse skippy peanut butter`).
+                    // `brandReassertEvidence()` owns the rule, its refusal and
+                    // the measured population.
                     const targetBrand = brandDetection.matchedBrand?.trim();
-                    if (targetBrand && hasDecisiveBrandContext(trimmed, targetBrand)) {
+                    const reassertEvidence = targetBrand
+                        ? brandReassertEvidence({
+                              rawLine: trimmed,
+                              targetBrand,
+                              segmenterBrand: options.brand,
+                              parsed,
+                          })
+                        : null;
+                    if (targetBrand && reassertEvidence) {
                         const keepBrand = (s: string | undefined) =>
                             s && !candidateMatchesTargetBrand(undefined, s, targetBrand)
                                 ? `${targetBrand} ${s}`.trim()
@@ -1654,6 +1670,7 @@ export async function mapIngredientWithFallback(
                                 llmOutput: normalizedName,
                                 repaired: rebranded,
                                 brand: targetBrand,
+                                evidence: reassertEvidence,
                             });
                             preBrandNormalizedName = normalizedName;
                         }
