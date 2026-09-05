@@ -349,6 +349,42 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         expect(v.confirmed.sort()).toEqual([...REAL_MEMBERS].sort());
     });
 
+    // n-prot-04 IS NOT MEMBER #10, and this pin is why.
+    //
+    // `100g black beans` is a five-way retrieval tie. Census over the 359 full runs
+    // in scripts/eval/results/ (2026-09-04): off_9310175104092 x94, fs_46836 x83,
+    // off_9339337310782 x80 and fs_6673141 x30 all PASS; only off_7896006712398 (x6)
+    // fails, at protein100=4.0 against [5, 25]. 6 of 293 resolved runs = 2.0%.
+    //
+    // The six failures sit in exactly two triplets (2026-08-11T21:3x and
+    // 2026-09-04T01:3x) because the tie re-rolls on a full Typesense REBUILD, not on
+    // a restart -- so within one build it is parked on one side and three restarted
+    // runs read a clean 3/3. That is a blind spot in this instrument's own
+    // membership method, and it has now produced the same wrong proposal twice.
+    // Putting it in `members` would make the detector print LEFT THE SET at the next
+    // rebuild and invite someone to attribute a fix that never happened.
+    it('keeps n-prot-04 in rotators, never in members', () => {
+        const real = loadRoster();
+        expect(real).not.toBeNull();
+        const memberIds = real!.members.map(m => m.id);
+        const rotatorIds = (real!.rotators ?? []).map(r => r.id);
+        expect(memberIds).not.toContain('n-prot-04');
+        expect(rotatorIds).toContain('n-prot-04');
+
+        // and the detector must treat it as expected, not as a new member
+        const results = [
+            ...memberIds.map(failCase),
+            failCase('n-prot-04'),
+            passCase('n-gen-01'),
+        ];
+        const v = judgeColdFailureSet(coldEvidence({}, results), real!);
+        expect(v.error).toBeUndefined();
+        expect(v.newMembers).toEqual([]);
+        expect(v.leftTheSet).toEqual([]);
+        expect(v.rotatorsPresent).toContain('n-prot-04');
+        expect(v.ok).toBe(true);
+    });
+
     it('readColdRunEvidence reports no file rather than throwing when results/ is absent or empty', () => {
         const dir = tmpDir();
         expect(readColdRunEvidence(undefined, path.join(dir, 'missing')).resultsFile).toBeNull();
