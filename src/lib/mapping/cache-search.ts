@@ -217,7 +217,15 @@ export function buildCacheFoodResponse(
     protein100: nutrients.protein ?? 0,
     carbs100: nutrients.carbs ?? 0,
     fat100: nutrients.fat ?? 0,
-    fiber100: nutrients.fiber ?? 0,
+    // NULL when `AiGeneratedFood.fiberPer100g` is null — the same rule as
+    // ResolvedNutritionPer100g.fiber100 in src/lib/nlp/resolve-payload.ts, so the
+    // search route's AI-cache lane cannot fabricate a 0 g fibre the parse lane
+    // refuses. `extractCacheNutrients()` already returns `number | null` here;
+    // `convertServingToFatSecret()` above already ships `fiber: null`. Both of
+    // this value's consumers accept null: the search route's `buildImpact()`
+    // parameter is `fiber100?: number | null`, and /api/foods/[id] passes the
+    // object through. Inert today (0 of 241 rows null, 2026-09-05).
+    fiber100: nutrients.fiber ?? null,
     sugar100: nutrients.sugar ?? 0,
     popularity: 0,
     confidence,
