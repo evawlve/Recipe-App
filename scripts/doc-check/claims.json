@@ -1896,14 +1896,14 @@
     {
       "id": "critical-modifier-filter-reads-the-shared-class",
       "ownerDoc": "mobile:CLAUDE.md",
-      "claim": "hasCriticalModifierMismatch() in filter-candidates.ts reads its sugar-free / low-calorie vocabulary from the import-free leaf modifier-vocabulary.ts, and that leaf's sugar-free class (the copy of gather-candidates' MODIFIER_SYNONYM_GROUPS, one group per line) still carries 'zero sugar'. Left number: the filter imports the leaf. Right number: the line holding 'sugar free' also holds 'zero sugar'. Either reading 0 means retrieval and admission have diverged again — buildQueryVariants() searching for a spelling the filter hard-deletes on arrival (the `sugar free coke` -> Caffeine Free Coke defect, pm19 ROW 1). The leaf-vs-gather deep equality itself is pinned by src/lib/mapping/__tests__/modifier-vocabulary-shared-class.test.ts. The right-hand grep is anchored to the sugar-free ARRAY line (it starts with `['unsweetened'`), not to any line carrying both spellings — a comment quoting both would otherwise read green while the group diverged.",
+      "claim": "hasCriticalModifierMismatch() in filter-candidates.ts reads its sugar-free / low-calorie vocabulary from the import-free leaf modifier-vocabulary.ts, and that leaf's sugar-free class (the copy of gather-candidates' MODIFIER_SYNONYM_GROUPS, one group per line) still carries 'zero sugar'. Left number: the filter imports the leaf. Right number: the line holding 'sugar free' also holds 'zero sugar'. The right-hand grep is anchored to the sugar-free ARRAY line (it starts with `['unsweetened'`), not to any line carrying both spellings -- a comment quoting both would otherwise read green while the group diverged. The leaf-vs-gather deep equality itself is pinned by src/lib/mapping/__tests__/modifier-vocabulary-shared-class.test.ts. SCOPE, NARROWED 2026-09-04 (Diego's admit-only ruling, 2026-09-03): this claim guards the CANDIDATE side only. It says the shared class is reachable from the filter and still spells 'zero sugar', so a candidate whose NAME states that claim is recognised and no longer hard-dropped. It does NOT say retrieval and admission agree -- they still do not. LOW_CAL_QUERY_TRIGGERS is deliberately master's exact eight, so buildQueryVariants() goes on searching for 'unsweetened', 'no sugar', 'no sugar added' and 'zero sugar' while the query side does not read them as claims. That remaining asymmetry is pinned by the two tests in modifier-vocabulary-shared-class.test.ts (the literal eight, and the four spellings that stay out), NOT by this claim; do not read a green here as the divergence being closed. Closing the query side is a hard-gate widening whose own arms turned `pure leaf unsweetened black tea` into an HTTP 500, and it needs the step-3b design that also fixes hasCoreTokenMismatch (punch #65).",
       "where": "backend",
       "command": "echo \"$(grep -c \"from './modifier-vocabulary'\" src/lib/mapping/filter-candidates.ts)@$(grep -E \"^\\s*\\['unsweetened'\" src/lib/mapping/modifier-vocabulary.ts | grep -c \"'zero sugar'\")\"",
       "expect": {
         "kind": "equals",
         "value": "1@1"
       },
-      "verified": "2026-09-03"
+      "verified": "2026-09-04"
     }
   ]
 }

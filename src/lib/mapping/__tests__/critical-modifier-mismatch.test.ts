@@ -41,6 +41,7 @@
 
 import { hasCriticalModifierMismatch, filterCandidatesByTokens } from '../filter-candidates';
 import type { UnifiedCandidate } from '../gather-candidates';
+import { candidateCarriesLowCalClaim } from '../modifier-vocabulary';
 import { logger } from '../../logger';
 
 type Source = UnifiedCandidate['source'];
@@ -84,12 +85,17 @@ describe('hasCriticalModifierMismatch — the sugar-free / low-calorie branch', 
         expect(hasCriticalModifierMismatch('sugar free coke', 'Coca cola', 'openfoodfacts')).toBe(true);
     });
 
-    it('zero sugar coke now FIRES: a plain "Coca-Cola" is rejected, "Coke Zero" admitted', () => {
-        expect(hasCriticalModifierMismatch('zero sugar coke', 'Coca-Cola', 'openfoodfacts')).toBe(true);
+    // ADMIT-ONLY: `zero sugar` is NOT a query trigger (not in master's eight), so this
+    // query does not fire the check at all and NOTHING is hard-dropped by it. That is
+    // the deliberate scope: this PR widens what SATISFIES the check, never what
+    // triggers it. Ranking still decides between these rows.
+    it('zero sugar coke does NOT fire the low-cal gate — nothing is hard-dropped', () => {
+        expect(hasCriticalModifierMismatch('zero sugar coke', 'Coca-Cola', 'openfoodfacts')).toBe(false);
         expect(hasCriticalModifierMismatch('zero sugar coke', 'Coke Zero', 'fatsecret')).toBe(false);
-        expect(hasCriticalModifierMismatch('zero sugar coke', 'ZERO SUGAR', 'openfoodfacts')).toBe(false);
-        // Same class, same answer for the cache-read consumers, which pass source 'cache'.
-        expect(hasCriticalModifierMismatch('zero sugar coke', 'ZERO SUGAR', 'cache')).toBe(false);
+        // ...and the candidate side DOES read the claim, which is what the triggering
+        // `sugar free coke` query above exercises.
+        expect(candidateCarriesLowCalClaim('coke zero')).toBe(true);
+        expect(candidateCarriesLowCalClaim('zero sugar')).toBe(true);
     });
 
     it('zero sugar sprite / trailing-zero and zero+word shapes', () => {
@@ -99,17 +105,27 @@ describe('hasCriticalModifierMismatch — the sugar-free / low-calorie branch', 
         expect(hasCriticalModifierMismatch('zero calorie sweetener', 'Zero Calorie Sweetener', 'openfoodfacts')).toBe(false);
     });
 
-    it('no sugar added: fires, and "no sugar added" / "No Sugar Added" names satisfy it', () => {
-        expect(hasCriticalModifierMismatch('no sugar added applesauce', 'Applesauce Cups', 'openfoodfacts')).toBe(true);
-        expect(hasCriticalModifierMismatch('no sugar added ketchup', 'Ketchup No Sugar Added', 'fatsecret')).toBe(false);
-        expect(hasCriticalModifierMismatch('no sugar added cranberry juice', '100% Juice Cranberry No Sugar Added', 'fatsecret')).toBe(false);
+    // ADMIT-ONLY: `no sugar added` is not a query trigger either. The names that STATE
+    // the claim are still recognised on the candidate side, so a query that DOES
+    // trigger (one of the eight) no longer hard-drops them.
+    it('no sugar added does not fire on the query side, but satisfies on the candidate side', () => {
+        expect(hasCriticalModifierMismatch('no sugar added applesauce', 'Applesauce Cups', 'openfoodfacts')).toBe(false);
+        expect(candidateCarriesLowCalClaim('ketchup no sugar added')).toBe(true);
+        expect(candidateCarriesLowCalClaim('100% juice cranberry no sugar added')).toBe(true);
+        expect(hasCriticalModifierMismatch('sugar free ketchup', 'Ketchup No Sugar Added', 'fatsecret')).toBe(false);
     });
 
-    it('unsweetened almond milk: an "Unsweetened …" name is admitted, a plain "Almond Milk" rejected', () => {
+    // ADMIT-ONLY, AND THIS ONE IS LOAD-BEARING. `unsweetened` as a query trigger is the
+    // mechanism that turned `pure leaf unsweetened black tea` into an HTTP 500 on the
+    // widened branch: it narrowed the pool to a single survivor and simple-rerank read an
+    // undefined runner-up. Keeping it OUT removes the crash rather than masking it. (The
+    // null guard itself ships separately, on its own merits, as PR #417.)
+    it('unsweetened does NOT trigger the gate — the shape that caused the 500', () => {
         expect(hasCriticalModifierMismatch('unsweetened almond milk', 'Unsweetened Almond Milk', 'openfoodfacts')).toBe(false);
-        expect(hasCriticalModifierMismatch('unsweetened almond milk', 'Almond milk unsweetened', 'openfoodfacts')).toBe(false);
-        expect(hasCriticalModifierMismatch('unsweetened almond milk', 'Almond Milk', 'openfoodfacts')).toBe(true);
-        expect(hasCriticalModifierMismatch('unsweetened almond milk', 'Almond milk', 'openfoodfacts')).toBe(true);
+        expect(hasCriticalModifierMismatch('unsweetened almond milk', 'Almond Milk', 'openfoodfacts')).toBe(false);
+        expect(hasCriticalModifierMismatch('pure leaf unsweetened black tea', 'Pure Leaf Black Tea', 'openfoodfacts')).toBe(false);
+        // the claim is still readable on the candidate side
+        expect(candidateCarriesLowCalClaim('unsweetened almond milk')).toBe(true);
     });
 
     it('non-sugar zero claims stay REJECTED for a sugar-free query', () => {
@@ -130,9 +146,10 @@ describe('hasCriticalModifierMismatch — the sugar-free / low-calorie branch', 
         expect(hasCriticalModifierMismatch('light mayo', 'Mayonnaise', 'fatsecret')).toBe(true);
     });
 
-    it('a bare `no sugar` query fires at the predicate (not only via `no sugar added`)', () => {
-        expect(hasCriticalModifierMismatch('no sugar coke', 'Coca-Cola', 'openfoodfacts')).toBe(true);
+    it('a bare `no sugar` query does NOT fire — it is not one of the eight', () => {
+        expect(hasCriticalModifierMismatch('no sugar coke', 'Coca-Cola', 'openfoodfacts')).toBe(false);
         expect(hasCriticalModifierMismatch('no sugar coke', 'Coke Zero', 'fatsecret')).toBe(false);
+        expect(candidateCarriesLowCalClaim('no sugar cola')).toBe(true);
     });
 
     it('a "Light mayonnaise" candidate satisfies a "low calorie mayonnaise" query — the worked example in filter-candidates.ts', () => {
@@ -174,10 +191,12 @@ describe('filterCandidatesByTokens — the all-drop restore is pool-relative', (
         expect(warnSpy).not.toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.anything());
     });
 
-    it('zero sugar coke now fires inside the pool: the plain record is dropped, Coke Zero and Diet Coke kept', () => {
+    // ADMIT-ONLY: the pool is NOT narrowed by the modifier check for `zero sugar`,
+    // because that is not a query trigger. All three survive it; ranking decides.
+    it('zero sugar coke does not narrow the pool — the modifier check never fires', () => {
         const pool = [mexicanCoke, cokeZero, dietCoke];
         const r = filterCandidatesByTokens(pool, 'zero sugar coke', { rawLine: 'zero sugar coke' });
-        expect(ids(r)).toEqual(['fs_43580', 'fs_90946']);
+        expect(ids(r)).toEqual(pool.map(c => c.id).sort());
     });
 
     it('the relaxed pass keeps skipping the modifier check exactly as before', () => {
@@ -250,10 +269,13 @@ describe('filterCandidatesByTokens — the all-drop restore is pool-relative', (
         expect(warnSpy).not.toHaveBeenCalledWith('filter.candidates.modifier_check_rejects_all', expect.anything());
     });
 
-    it('unsweetened almond milk: the plain record is dropped when an unsweetened one is in the pool', () => {
+    // ADMIT-ONLY, and this is the shape that produced the 500 on the widened branch: the
+    // plain record used to be deleted, leaving ONE survivor for simple-rerank. Both are
+    // kept now, so the sole-survivor shape is not manufactured here.
+    it('unsweetened almond milk keeps BOTH records — no sole survivor is manufactured', () => {
         const unsweetened = cand('Unsweetened Almond Milk', 'Woolworths', 'openfoodfacts');
         const plain = cand('Almond Milk', 'Simply Almond', 'openfoodfacts', 'off_0005200120060');
         const r = filterCandidatesByTokens([plain, unsweetened], 'unsweetened almond milk', { rawLine: 'unsweetened almond milk' });
-        expect(ids(r)).toEqual([unsweetened.id]);
+        expect(ids(r)).toEqual([plain.id, unsweetened.id].sort());
     });
 });

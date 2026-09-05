@@ -164,14 +164,6 @@ export const SUGAR_FREE_SYNONYM_GROUP: readonly string[] = (() => {
 })();
 
 /**
- * `light`/`lite` are in the retrieval group but must NOT trigger the low-calorie
- * admission check: they are handled by `LENIENT_LOW_FAT` in
- * hasCriticalModifierMismatch() and would otherwise fire on every `light mayo`-
- * class line (n-syn-04 `light corn syrup` is a golden sentinel on exactly that).
- */
-const NOT_A_QUERY_TRIGGER: ReadonlySet<string> = new Set(['light', 'lite']);
-
-/**
  * Explicit calorie claims the filter has always required (they are not in the
  * retrieval group because `buildQueryVariants()` never needed them).
  */
@@ -180,15 +172,41 @@ const CALORIE_CLAIM_SPELLINGS: readonly string[] = ['zero calorie', 'calorie fre
 /**
  * QUERY side: a line carrying any of these asks for a low-calorie / sugar-free
  * product, and a candidate must then carry a matching claim to be admitted.
- * Matched by `includes()` on the lowercased line, like the surrounding code, so
- * `no sugar` also covers `no sugar added`.
+ * Matched by `includes()` on the lowercased line, like the surrounding code.
  *
- * Re-derive the membership: it is the sugar-free retrieval group minus
- * `light`/`lite`, plus the three calorie spellings — 12 entries on 2026-09-02.
+ * THIS IS MASTER'S EXACT EIGHT, DELIBERATELY. It is the former private
+ * `CALORIE_MODIFIERS` list in filter-candidates.ts, character for character, so
+ * `queryCarriesLowCalClaim()` is a byte-equivalent replacement for the predicate
+ * it replaced and this PR changes NOTHING on the query side.
+ *
+ * WHY IT IS NOT THE RETRIEVAL GROUP. An earlier revision of this branch derived
+ * the set as `SUGAR_FREE_SYNONYM_GROUP` minus `light`/`lite` plus the calorie
+ * spellings — 12 entries, adding `unsweetened`, `no sugar`, `no sugar added` and
+ * `zero sugar`. That is a HARD-GATE widening: a query trigger makes admission
+ * stricter (more hard deletes), which is the BOTTOM of the preference order in
+ * the backend CLAUDE.md (admit-only relaxation -> relative demotion -> confidence
+ * suppression -> absolute gate). Its arms found it turns `pure leaf unsweetened
+ * black tea` into an HTTP 500 (1 of 32 newly-narrowed lines; the trigger
+ * `unsweetened` IS the mechanism), its headline case `sugar free coke` was
+ * byte-identical on both arms because that pool empties one stage later at
+ * `hasCoreTokenMismatch`, and 2 of its 4 winner moves were costs. Diego ruled
+ * admit-only on 2026-09-03.
+ *
+ * The vocabulary DISAGREEMENT that motivated the widening is real and is NOT
+ * fixed here: `buildQueryVariants()` still searches for `zero sugar`, `no sugar`
+ * and `unsweetened`, and this check still does not treat them as claims on the
+ * query side. The admit-only half addresses the other direction only — a
+ * candidate that STATES one of those claims is no longer hard-dropped. Closing
+ * the query side needs the step-3b design that also fixes `hasCoreTokenMismatch`
+ * (punch #65), not a longer list here.
+ *
+ * Re-derive: this list must equal master's `CALORIE_MODIFIERS`; the shared-class
+ * test pins all eight literally.
  */
 export const LOW_CAL_QUERY_TRIGGERS: readonly string[] = [
-    ...SUGAR_FREE_SYNONYM_GROUP.filter(m => !NOT_A_QUERY_TRIGGER.has(m)),
-    ...CALORIE_CLAIM_SPELLINGS,
+    'low calorie', 'low-calorie', 'diet',
+    'zero calorie', 'calorie free', 'calorie-free',
+    'sugar free', 'sugar-free',
 ];
 
 /**

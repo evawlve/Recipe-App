@@ -33,16 +33,32 @@ describe('modifier-vocabulary is the same class gather-candidates reads', () => 
         }
     });
 
-    it('every retrieval spelling of the class except light/lite is a query trigger', () => {
-        for (const spelling of SUGAR_FREE_SYNONYM_GROUP) {
-            if (spelling === 'light' || spelling === 'lite') {
-                expect(LOW_CAL_QUERY_TRIGGERS).not.toContain(spelling);
-            } else {
-                expect(LOW_CAL_QUERY_TRIGGERS).toContain(spelling);
-            }
+    // ADMIT-ONLY (Diego, 2026-09-03). The query side is master's exact eight and
+    // does not move. An earlier revision derived it from the retrieval group (12
+    // entries, adding `unsweetened`, `no sugar`, `no sugar added`, `zero sugar`),
+    // which is a HARD-GATE widening -- the bottom of the preference order -- and
+    // its arms turned `pure leaf unsweetened black tea` into an HTTP 500. This pin
+    // is literal on purpose: it is the thing that must not drift back.
+    it('the query trigger set is exactly master\'s eight CALORIE_MODIFIERS', () => {
+        expect([...LOW_CAL_QUERY_TRIGGERS].sort()).toEqual([
+            'calorie free', 'calorie-free', 'diet', 'low calorie',
+            'low-calorie', 'sugar free', 'sugar-free', 'zero calorie',
+        ]);
+    });
+
+    // The disagreement this branch was opened to fix is REAL and is NOT fixed on
+    // the query side. buildQueryVariants() still searches for these; the admission
+    // check still does not read them as claims on the query side. Only the
+    // CANDIDATE direction is widened (the next test). Closing the query side needs
+    // the step-3b design that also fixes hasCoreTokenMismatch (punch #65).
+    it('the four retrieval spellings the query side still does NOT read stay out', () => {
+        for (const spelling of ['unsweetened', 'no sugar', 'no sugar added', 'zero sugar']) {
+            expect(SUGAR_FREE_SYNONYM_GROUP).toContain(spelling);
+            expect(LOW_CAL_QUERY_TRIGGERS).not.toContain(spelling);
+            // ...but each one DOES satisfy the candidate side. That asymmetry is
+            // the whole of the admit-only half.
+            expect(candidateCarriesLowCalClaim(spelling)).toBe(true);
         }
-        // The three explicit calorie spellings the filter always required.
-        expect(LOW_CAL_QUERY_TRIGGERS).toEqual(expect.arrayContaining(['zero calorie', 'calorie free', 'calorie-free']));
     });
 
     it('every retrieval spelling of the class satisfies the candidate side (light/lite kept)', () => {
