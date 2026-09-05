@@ -11,6 +11,7 @@
 import {
     forceSegmentText,
     segmentTextHeuristically,
+    splitAndClean,
 } from '../heuristic-segmenter';
 
 function expectOk(text: string) {
@@ -284,5 +285,105 @@ describe('forceSegmentText: a leading decimal is a quantity, not a bullet (punch
             'toast',
             'jam',
         ]);
+    });
+});
+
+/**
+ * Punch #105. DELIMITER_SPLIT_RE split on EVERY comma, so a decimal comma or a
+ * thousands comma inside a quantity was read as an item boundary. Measured on
+ * the shipped function 2026-09-05, before the fix:
+ *   forceSegmentText('1,5 kg rice')          -> ['5 kg rice']        (3.3x the food)
+ *   forceSegmentText('1,000 g rice')         -> ['000 g rice']
+ *   forceSegmentText('1,5 kg rice, 2 eggs')  -> ['5 kg rice', '2 eggs']
+ *   segmentTextHeuristically('1,5 kg rice')  -> ambiguous, 'no food word in: "1"'
+ * The rule: a comma between two digits is never a delimiter. It needs a digit
+ * on BOTH sides, so `rice,5 eggs` and `oats 40,milk 200` are still two items.
+ *
+ * Same silent class as punch #94 above: nothing errors, and the mangled line
+ * still parses and bills a plausible number. This fix only lets the intact
+ * line REACH the parser: parseIngredientLine('1,5 kg rice') reads qty 1 with
+ * name "5 kg rice" today (a second seat in src/lib/parse, handed off in the PR).
+ */
+describe('a decimal/thousands comma is not a delimiter (punch #105)', () => {
+    const texts = (fragments: { rawText: string }[]) => fragments.map((f) => f.rawText);
+
+    describe('splitAndClean (the helper both entry points call)', () => {
+        it('keeps a decimal comma and a thousands comma inside ONE fragment', () => {
+            for (const line of [
+                '1,5 kg rice',
+                '1,000 g rice',
+                '1,000,000 g rice',
+                '12,7 ounces real good chicken',
+            ]) {
+                const { fragments, rawFragmentCount } = splitAndClean(line);
+                // rawFragmentCount pins that the comma was never a split point,
+                // not merely that an empty fragment was filtered afterwards.
+                expect(rawFragmentCount).toBe(1);
+                expect(texts(fragments)).toEqual([line]);
+            }
+        });
+
+        it('keeps the first item intact when a real list comma follows it', () => {
+            expect(texts(splitAndClean('1,5 kg rice, 2 eggs').fragments)).toEqual([
+                '1,5 kg rice',
+                '2 eggs',
+            ]);
+            expect(texts(splitAndClean('1,5 kg rice,2 eggs').fragments)).toEqual([
+                '1,5 kg rice',
+                '2 eggs',
+            ]);
+        });
+
+        it('CONTROL: the rule needs a digit on BOTH sides', () => {
+            // letter-comma-digit, digit-comma-letter, and a comma followed by a
+            // space between two numbers: all three are still list commas.
+            expect(texts(splitAndClean('rice,5 eggs').fragments)).toEqual(['rice', '5 eggs']);
+            expect(texts(splitAndClean('oats 40,milk 200').fragments)).toEqual([
+                'oats 40',
+                'milk 200',
+            ]);
+            expect(texts(splitAndClean('2 eggs, 3 toast').fragments)).toEqual([
+                '2 eggs',
+                '3 toast',
+            ]);
+        });
+
+        it('CONTROL: ordinary list commas, with and without a space, are unchanged', () => {
+            expect(texts(splitAndClean('eggs, toast').fragments)).toEqual(['eggs', 'toast']);
+            // `2 eggs,toast` split into two on the shipped code (measured
+            // 2026-09-05) and must keep doing so.
+            expect(texts(splitAndClean('2 eggs,toast').fragments)).toEqual(['2 eggs', 'toast']);
+        });
+    });
+
+    describe('forceSegmentText (the production caller)', () => {
+        it('keeps the decimal / thousands comma', () => {
+            expect(texts(forceSegmentText('1,5 kg rice'))).toEqual(['1,5 kg rice']);
+            expect(texts(forceSegmentText('1,000 g rice'))).toEqual(['1,000 g rice']);
+            expect(texts(forceSegmentText('1,5 kg rice, 2 eggs'))).toEqual([
+                '1,5 kg rice',
+                '2 eggs',
+            ]);
+        });
+
+        it('CONTROL: list commas still split', () => {
+            expect(texts(forceSegmentText('eggs, toast'))).toEqual(['eggs', 'toast']);
+            expect(texts(forceSegmentText('2 eggs,toast'))).toEqual(['2 eggs', 'toast']);
+            expect(texts(forceSegmentText('rice,5 eggs'))).toEqual(['rice', '5 eggs']);
+        });
+    });
+
+    describe('segmentTextHeuristically', () => {
+        it('returns the intact line as ONE item instead of refusing on a bare "1"', () => {
+            expect(texts(expectOk('1,5 kg rice'))).toEqual(['1,5 kg rice']);
+            expect(texts(expectOk('1,000 g rice'))).toEqual(['1,000 g rice']);
+            expect(texts(expectOk('1,5 kg rice, 2 eggs'))).toEqual(['1,5 kg rice', '2 eggs']);
+        });
+
+        it('CONTROL: list commas still split', () => {
+            expect(texts(expectOk('eggs, toast'))).toEqual(['eggs', 'toast']);
+            expect(texts(expectOk('2 eggs,toast'))).toEqual(['2 eggs', 'toast']);
+            expect(texts(expectOk('rice,5 eggs'))).toEqual(['rice', '5 eggs']);
+        });
     });
 });

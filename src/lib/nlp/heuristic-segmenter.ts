@@ -135,8 +135,21 @@ const WITH_QTY_SPLIT_RE = new RegExp(
     'gi'
 );
 
-/** Strong item delimiters: newline, comma, semicolon, &, +, " and ", " plus ". */
-const DELIMITER_SPLIT_RE = /\s*(?:[\r\n;,\u0002]|[&+]|\band\b|\bplus\b)\s*/gi;
+/**
+ * Strong item delimiters: newline, comma, semicolon, &, +, " and ", " plus ".
+ *
+ * A comma BETWEEN TWO DIGITS is never a delimiter: it is a decimal comma
+ * (`1,5 kg rice`, `12,7 ounces`) or a thousands comma (`1,000 g rice`). The
+ * old class `[\r\n;,\u0002]` split on every comma, so `1,5 kg rice` became
+ * `["5 kg rice"]` (3.3x the food) and `1,000 g rice` became `["000 g rice"]`
+ * (punch #105; measured on the shipped function 2026-09-05). The comma is
+ * therefore its own arm, `(?!(?<=\d),\d),`: match a comma unless the character
+ * before it AND the character after it are both digits. Adjacency is the whole
+ * rule: `rice,5 eggs` and `oats 40,milk 200` still split, and a comma followed
+ * by a space (`2 eggs, 3 toast`) is still a list comma. Every other arm is
+ * byte-identical to before.
+ */
+const DELIMITER_SPLIT_RE = /\s*(?:[\r\n;\u0002]|(?!(?<=\d),\d),|[&+]|\band\b|\bplus\b)\s*/gi;
 
 /** Signals the text is hedged/uncertain — only an LLM can untangle it. */
 const VAGUE_RE = /\b(?:or|maybe|probably|possibly|dunno|idk|whatever|something|stuff)\b|not\s+(?:really\s+)?sure|i\s+think|kind\s+of|sort\s+of|some\s+kind/i;
@@ -241,8 +254,12 @@ function classifyWithTail(fragment: string): 'attach' | 'ambiguous' | 'none' {
     return allCondiments ? 'attach' : 'ambiguous';
 }
 
-/** Shared splitting pass: mask, meal-prefix/suffix strip, delimiter split, clean. */
-function splitAndClean(text: string): {
+/**
+ * Shared splitting pass: mask, meal-prefix/suffix strip, delimiter split, clean.
+ * Exported for the punch #105 pins only; production reaches it through
+ * forceSegmentText() and segmentTextHeuristically().
+ */
+export function splitAndClean(text: string): {
     fragments: CleanedFragment[];
     rawFragmentCount: number;
     defaultMeal: MealType;
