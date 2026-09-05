@@ -1245,7 +1245,7 @@ export function hasCoreTokenMismatch(
         return false;
     }
 
-    // Check each core token - at least ONE must be present (or its synonym)
+    // Check each core token - EVERY core token must be present (or its synonym); the first miss is a mismatch
     for (const coreToken of coreTokensInQuery) {
         const synonyms = CORE_TOKEN_SYNONYMS[coreToken] || [];
         const allForms = [coreToken, ...synonyms];
@@ -2407,6 +2407,37 @@ function hasUnwantedModifier(normalizedName: string, candidateName: string): boo
 const FAT_PERCENTAGE_MODIFIERS = ['2%', '1%', 'skim', 'whole', 'half-and-half', 'half and half'];
 const LOW_FAT_MODIFIERS = ['lowfat', 'low-fat', 'low fat', 'reduced fat', 'reduced-fat', 'lite', 'light', 'nonfat', 'non-fat', 'fat free', 'fat-free', 'skim', 'part-skim', 'part skim'];
 const CALORIE_MODIFIERS = ['low calorie', 'low-calorie', 'diet', 'zero calorie', 'calorie free', 'calorie-free', 'sugar free', 'sugar-free'];
+// The candidate-side satisfiers of a CALORIE_MODIFIERS query. Deliberately WIDER than the
+// query-side list: "light"/"lite" are functionally "low calorie" on condiments and dressings,
+// and "no sugar added"/"fat free" are what frozen treats print instead of "sugar free".
+// Hoisted out of hasCriticalModifierMismatch() unchanged (2026-09-05) so the relaxed pass can
+// read the SAME lists through hasCalorieModifierViolation() below.
+const ALL_LOW_CAL_MODIFIERS = [
+    ...CALORIE_MODIFIERS,
+    'light', 'lite',  // These are equivalent to "low calorie" for condiments/dressings
+    'no sugar added', 'no added sugar',  // Equivalent to "sugar free" for frozen treats
+    'fat free', 'fat-free',  // Often used interchangeably with "sugar free" for frozen desserts
+];
+
+/**
+ * The CALORIE-class half of hasCriticalModifierMismatch(), as a pure predicate: true when the
+ * query carries one of CALORIE_MODIFIERS and the candidate name carries none of
+ * ALL_LOW_CAL_MODIFIERS. Substring semantics on both sides, exactly as the strict pass has
+ * always applied them (`queryLower.includes(m)`), so the two call sites cannot disagree.
+ *
+ * It is a separate export because the RELAXED admission pass applies THIS class and only this
+ * class (see the narrowing step in filterCandidatesByTokens()): the fat classes keep the relaxed
+ * pass's leniency, which was written for them. The class boundary is the module's own
+ * CALORIE_MODIFIERS list — `zero sugar`, `unsweetened` and `no sugar added` are NOT on the query
+ * side today, and widening it is a deliberate edit to that list, pinned by
+ * __tests__/relaxed-pass-keeps-calorie-modifiers.test.ts so it is never made by accident.
+ */
+export function hasCalorieModifierViolation(query: string, candidateName: string): boolean {
+    const queryLower = query.toLowerCase();
+    if (!CALORIE_MODIFIERS.some(m => queryLower.includes(m))) return false;
+    const candLower = candidateName.toLowerCase();
+    return !ALL_LOW_CAL_MODIFIERS.some(m => candLower.includes(m));
+}
 
 /**
  * Check for CRITICAL modifier mismatches only.
@@ -2506,22 +2537,12 @@ export function hasCriticalModifierMismatch(
         }
     }
 
-    // Check calorie modifiers
-    // IMPORTANT: "light", "lite" and "low calorie" are functionally equivalent
-    // A "Light Mayonnaise" candidate DOES satisfy a "low calorie mayonnaise" query
-    // For frozen treats: "no sugar added" and "fat free" are equivalent to "sugar free"
-    const ALL_LOW_CAL_MODIFIERS = [
-        ...CALORIE_MODIFIERS,
-        'light', 'lite',  // These are equivalent to "low calorie" for condiments/dressings
-        'no sugar added', 'no added sugar',  // Equivalent to "sugar free" for frozen treats
-        'fat free', 'fat-free',  // Often used interchangeably with "sugar free" for frozen desserts
-    ];
-    const queryHasLowCal = CALORIE_MODIFIERS.some(m => queryLower.includes(m));
-    const candHasLowCal = ALL_LOW_CAL_MODIFIERS.some(m => candLower.includes(m));
-
-    if (queryHasLowCal && !candHasLowCal) {
-        // Query explicitly asks for low-calorie, candidate doesn't have it
-        // (but "light" and "lite" are acceptable substitutes)
+    // Check calorie modifiers. This is the ONE class the RELAXED pass also enforces, so it is
+    // the shared predicate hasCalorieModifierViolation() (CALORIE_MODIFIERS on the query side,
+    // ALL_LOW_CAL_MODIFIERS on the candidate side) rather than a second copy free to drift.
+    // "Light Mayonnaise" still satisfies "low calorie mayonnaise"; a frozen treat's "no sugar
+    // added" still satisfies "sugar free" — those equivalences live in ALL_LOW_CAL_MODIFIERS.
+    if (hasCalorieModifierViolation(queryLower, candLower)) {
         return true;
     }
 
@@ -2734,7 +2755,10 @@ export function filterCandidatesByTokens(
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
         // Does NOT block minor preferences like unsweetened, organic (handled by scoring)
-        // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods
+        // SKIPPED in relaxed mode so "reduced fat"-class variants can match standard foods —
+        // EXCEPT the CALORIE class, which the finished relaxed pool is narrowed by BELOW (the
+        // hasCalorieModifierViolation() step after the S3 block; its comment owns why it is a
+        // post-filter over the pool and not a flag read here).
         if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition)) {
             if (debug) {
                 logger.info('filter.candidates.critical_modifier_mismatch', {
@@ -3084,6 +3108,54 @@ export function filterCandidatesByTokens(
             headNoun: headNounRelaxFallback,
             admitted: filtered.length,
         });
+    }
+
+    // THE RELAXED PASS KEEPS THE CALORIE-CLASS MODIFIER CHECK (2026-09-05).
+    //
+    // The relaxed pass exists to REFILL a pool the strict must-have tokens emptied, and admit()
+    // skips hasCriticalModifierMismatch() wholesale under `relaxed` so a `reduced fat` line can
+    // still land on the standard food when no reduced-fat record exists. That leniency was
+    // written for the FAT classes and silently covered the CALORIE class too. Measured on
+    // `2 tbsp ghugh's sugar free honey mustard` (winner-diff `replay --verbose --debug`, master
+    // 5411f7e, 2026-09-05): the strict pass empties (before:21 after:0 — the must-have `ghugh`
+    // is unsatisfiable, the corpus spells the brand `G hughes`), the relaxed pass re-admits
+    // twelve (before:21 after:12) INCLUDING the nine full-sugar brandless `Honey mustard` rows
+    // at 167–467 kcal/100 g that strict had just rejected for critical_modifier_mismatch, and
+    // one of them wins the rerank at 0.236 against the G Hughes sugar-free record's 0.058. A
+    // `sugar free` line billed as full-sugar honey mustard: the identity error IS the modifier.
+    // Owner: PR "lane-a/relax-pass-keeps-calorie-modifiers" (backend) and its gate receipts.
+    //
+    // WHAT MOVES, AND THE PROPERTY THAT BOUNDS IT. Only candidates violating the CALORIE class
+    // (hasCalorieModifierViolation — the module's own CALORIE_MODIFIERS / ALL_LOW_CAL_MODIFIERS
+    // boundary) leave the relaxed pool; the fat classes keep today's leniency untouched. And if
+    // removing them would leave the relaxed pool EMPTY, the pool is returned UNCHANGED — so no
+    // line that resolves today loses its pool, and the only thing that can change is the CHOICE
+    // among the candidates today's relaxed pass admits. That is the STRONGER of the two empty-pool
+    // properties: "the strict pool is non-empty" (what PR #395 shipped and was reverted for) is
+    // not enough, because the relaxed pass is the pool on exactly these lines; S3 (#411) holds
+    // the stronger one and so does this.
+    //
+    // WHY A POST-FILTER OVER THE FINISHED POOL, not a flag admit() reads. The S3 pass above is
+    // ORDERED — brand key first, head noun only when the brand pass came back empty. A calorie
+    // check applied INSIDE admit() could empty the brand-key pass on a line master never retries
+    // and hand the head-noun retry a wider, foreign-brand pool — a second behaviour change riding
+    // on the first. Narrowing the pool S3 finished with cannot change which S3 pass ran.
+    // [reasoning from the control flow above; pinned by
+    // __tests__/relaxed-pass-keeps-calorie-modifiers.test.ts, incl. the all-violate fallback]
+    if (relaxed && rawLine && filtered.length > 0) {
+        const kept = filtered.filter(c => !hasCalorieModifierViolation(rawLine, c.name));
+        if (kept.length > 0 && kept.length < filtered.length) {
+            if (debug) {
+                logger.info('filter.candidates.relaxed_calorie_modifier_narrowed', {
+                    normalizedName,
+                    rawLine,
+                    before: filtered.length,
+                    after: kept.length,
+                    removed: filtered.filter(c => !kept.includes(c)).slice(0, 3).map(c => c.name),
+                });
+            }
+            filtered = kept;
+        }
     }
 
     const removedCount = candidates.length - filtered.length;
