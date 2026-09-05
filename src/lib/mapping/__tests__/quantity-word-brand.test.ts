@@ -363,9 +363,17 @@ describe('brandReassertEvidence — a segmenter-named brand survives the normali
             .toBeNull();
     });
 
+    it('a segmenter-only "brand" the lexicon does not know keeps today\'s behaviour (`company`)', () => {
+        const line = 'company zucchini noodles';
+        expect(detectBrandInQuery('company').isBranded).toBe(false);
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'company', segmenterBrand: 'company', parsed: parsedOf(line) }))
+            .toBeNull();
+    });
+
     it('matches the segmenter brand by folded token, not by string equality', () => {
-        const line = "2 tbsp ben and jerry's vanilla";
-        expect(brandReassertEvidence({ rawLine: line, targetBrand: "jerry's", segmenterBrand: 'Jerrys', parsed: parsedOf(line) }))
+        const line = 'a fun size bag of m&ms';
+        expect(detectBrandInQuery('m&ms').isBranded).toBe(true);
+        expect(brandReassertEvidence({ rawLine: line, targetBrand: 'm&ms', segmenterBrand: "M&M's", parsed: parsedOf(line) }))
             .toBe('segmenter_named');
     });
 });
@@ -383,6 +391,11 @@ describe('repairDroppedBrand — the segmenter-path repair (refuter L2 shapes, 2
     it('does not double the last token of a multi-token brand the model kept (`Ryse Skippy`)', () => {
         expect(repairDroppedBrand('skippy peanut butter', 'Ryse Skippy')).toBe('Ryse Skippy peanut butter');
     });
+    it('reads a plural brand the model singularised as KEPT (`Pop-Tarts` vs `pop tart`), hyphens folded', () => {
+        expect(repairDroppedBrand('frosted strawberry pop tart', 'Pop-Tarts')).toBeNull();
+        expect(repairDroppedBrand('chick fil a spicy chicken sandwich', 'Chick-fil-A')).toBeNull();
+    });
+
     it('returns null on an empty name and never prepends an empty brand fold', () => {
         expect(repairDroppedBrand(undefined, 'Ryse')).toBeNull();
         expect(repairDroppedBrand('peanut butter', '&')).toBe('& peanut butter');

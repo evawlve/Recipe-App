@@ -1,4 +1,5 @@
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
+import { detectBrandInQuery } from './brand-detector';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
 /**
@@ -297,6 +298,14 @@ export function brandReassertEvidence(args: {
     // than assume the call site: a detector hit that is not what the segmenter
     // named must not borrow the segmenter's authority.
     if (!candidateMatchesTargetBrand(undefined, seg, targetBrand)) return null;
+    // TWO independent signals, not one: the segmenter's brand must ALSO be a
+    // brand the lexicon knows. Refuter L1 on PR #421 found the segmenter
+    // naming an over-split chain fragment as a brand (`company` for `company
+    // zucchini noodles`, from "Noodles and Company", 32 uses) — trusting that
+    // alone would have prefixed a non-brand onto the retrieval query. All five
+    // brands in the measured firing population (Ryse, Quaker, Orgain, Perdue,
+    // m&ms) are lexicon brands; a segmenter-only brand keeps today's behaviour.
+    if (!detectBrandInQuery(seg).isBranded) return null;
     if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) return null;
     return 'segmenter_named';
 }
@@ -331,7 +340,10 @@ export function repairDroppedBrand(name: string | undefined, targetBrand: string
     if (candidateMatchesTargetBrand(undefined, name, targetBrand)) return null;
     const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const foldedBrand = alnum(targetBrand);
-    if (foldedBrand.length > 0 && alnum(name).includes(foldedBrand)) return null;
+    const foldedName = alnum(name);
+    if (foldedBrand.length > 0 && foldedName.includes(foldedBrand)) return null;
+    // A plural brand the model singularised (`Pop-Tarts` → `pop tart`) is kept too.
+    if (foldedBrand.endsWith('s') && foldedBrand.length > 3 && foldedName.includes(foldedBrand.slice(0, -1))) return null;
     const tokens = `${targetBrand} ${name}`.trim().split(/\s+/).filter(Boolean);
     const out: string[] = [];
     for (const t of tokens) {
