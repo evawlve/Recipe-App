@@ -123,7 +123,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     fdc_volume_ai: 'NONDETERMINISTIC',
     ai_generated_serving: 'NONDETERMINISTIC',
 
-    // ============= BORROWED_OR_DEFAULTED — shipped set, 16 members ==============
+    // ============= BORROWED_OR_DEFAULTED — shipped set, 17 members ==============
     // Same deal: mirrors BORROWED_OR_DEFAULTED_SERVING_TIERS, pinned both ways.
     // That file's own comments own WHY each is a member; not restated here.
     bare_sibling_serving: 'BORROWED_OR_DEFAULTED',
@@ -137,6 +137,11 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     bare_query_default: 'BORROWED_OR_DEFAULTED',
     bare_discrete_floor: 'BORROWED_OR_DEFAULTED',
     volume_unit: 'BORROWED_OR_DEFAULTED',
+    // buildOffResult()'s own-label volume read (punch #66). Classified here and
+    // NOT as OWN: it bills `qty x unitMl x (servingGrams / declaredMl)`, and that
+    // ratio is a defaulted 1.0 on 99.78% of the corpus because the ingest wrote
+    // `grams := ml`. Sibling of `volume_unit`, not of `fdc_label_volume`.
+    off_label_volume: 'BORROWED_OR_DEFAULTED',
     fs_volume_density: 'BORROWED_OR_DEFAULTED',
     fdc_sub_piece_default: 'BORROWED_OR_DEFAULTED',
     fdc_unit_heuristic: 'BORROWED_OR_DEFAULTED',
@@ -154,7 +159,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     weight_unit: 'USER',
     fs_weight_direct: 'USER',
 
-    // ============================= OWN — 19 members ============================
+    // ============================= OWN — 18 members ============================
     // `buildOffResult()` in serving/hydration-lane.ts:
     bare_label_serving: 'OWN',
     bare_plural_serving: 'OWN',
@@ -171,13 +176,6 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     // household measure vs an AI-written one that has since been stored. They are
     // OWN here because the read is deterministic and record-specific, which is
     // also why the shipped predicates answer "no" to all five questions for them.
-    // buildOffResult()'s own-label volume read (punch #66): grams from THIS
-    // record's declared `(N ml)` serving at ITS OWN grams/ml. The OFF sibling of
-    // fdc_label_volume / fs_label_volume, and OWN for the same reason — the read
-    // is deterministic and record-specific. Its neighbour `volume_unit` is
-    // BORROWED_OR_DEFAULTED precisely because it reads a NAME-inferred lexicon
-    // instead, which is the fork this tier exists to take.
-    off_label_volume: 'OWN',
     fdc_label_volume: 'OWN',
     fdc_volume_cached: 'OWN',
     fdc_own_size_serving: 'OWN',
@@ -556,8 +554,7 @@ describe('the map agrees with the shipped predicates', () => {
     it('OWN and USER are unknown to all five shipped predicates', () => {
         const unclaimed = LIVE_TIERS.filter((t) =>
             EXPECTED_CLASS[t] === 'OWN' || EXPECTED_CLASS[t] === 'USER');
-        // 20 -> 21 with `off_label_volume` (OWN, punch #66).
-        expect(unclaimed.length).toBe(21);
+        expect(unclaimed.length).toBe(20);
         for (const t of unclaimed) {
             expect(isBorrowedOrDefaultedTier(t)).toBe(false);
             expect(isReplayNondeterministicTier(t)).toBe(false);

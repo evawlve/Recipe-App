@@ -15,6 +15,7 @@ import {
     singularizeUnit,
     extractLabelServingUnit,
     labelParenVolumeMl,
+    LABEL_COUNT_PIECE_NOUNS,
     GENERIC_PIECE_WORDS,
     pieceNounInName,
     labelPieceMatchesItem,
@@ -3004,21 +3005,39 @@ export async function buildOffResult(
         // (170g)" label.
         const genericPieceNoun = labelUnitWord && GENERIC_PIECE_WORDS.has(labelUnitWord)
             && labelUnitCount >= 2 ? pieceNounInName(itemNameForCount) : null;
-        // THE SET WAS THE WRONG HALF OF THE GATE (punch #84, 2026-09-04).
-        // `LABEL_COUNT_PIECE_NOUNS` is eleven packaged-snack nouns and does not
-        // contain `cake`, so `4 quaker caramel rice cakes` on
-        // `off_0030000216910` — whose OffServing 3973949 reads `1 cake (13 g)`,
-        // source openfoodfacts, not AI-estimated — skipped this branch and fell
-        // to (B), billing 9 g/cake off the generic seed table instead of the
-        // 13 g the product states about itself.
+        // A SINGLE-PIECE LABEL OUTSIDE THE SET IS ALSO A PIECE WEIGHT
+        // (punch #84, 2026-09-04).
         //
-        // The word-match was already the discriminating half:
-        // `labelPieceMatchesItem('cake', 'quaker caramel rice cakes')` is
-        // ALREADY true, and the set membership was belt-and-braces on top of it.
-        // The comment above defends the gate with "so `13 chips` never divides by
-        // a `1 container (170g)` label" — and the word-match alone still refuses
-        // that, because `container` is not a token of `... chips`. Nothing about
-        // the tight case relaxes.
+        // `LABEL_COUNT_PIECE_NOUNS` is eleven packaged-snack nouns and has no
+        // `cake`, so `4 quaker caramel rice cakes` on `off_0030000216910` —
+        // whose OffFood label reads `1 cake (13 g)` — skipped this branch and
+        // fell to (B), billing 9 g/cake off the generic seed table instead of
+        // the 13 g the product states about itself.
+        //
+        // THE SECOND ARM IS GATED ON `labelUnitCount === 1`, AND THAT GATE IS
+        // THE WHOLE DESIGN. The first draft dropped the set requirement and kept
+        // only the word-match, on the argument that the word-match was already
+        // the discriminating half. **That argument is false, and a refuter
+        // measured it**: `singularizeUnit('cookies')` is `cooky`, which is NOT a
+        // set member, while `labelPieceMatchesItem('cooky', 'oreo cookies')` is
+        // TRUE — so for a PLURAL label of a set member the set is the only thing
+        // refusing the row, and the two halves are not redundant at all. Dropping
+        // it flipped 1,581 events over 17 rows, of which `4 oreo cookies` on
+        // `off_0044000085300` (`9 cookies (29 g)`, 283 events) went 45.2 g ->
+        // 12.9 g: a 3.5x UNDER-bill, because the label's own count of 9 is wrong
+        // for a 29 g serving. The [0.2, 500] band does not catch it — 3.22 g is
+        // a perfectly plausible per-piece weight.
+        //
+        // So the admissible new case is exactly the one with NO DIVISION: when
+        // the label states ONE piece, `servingGrams` IS the piece weight and no
+        // unvetted label count can distort it. Set members keep their existing
+        // multi-piece behaviour byte-for-byte (`18 chips (28g)` still divides),
+        // because that population has been vetted by the set for a year.
+        //
+        // The producer comment above defends the gate with "so `13 chips` never
+        // divides by a `1 container (170g)` label". Still refused, now by two
+        // things: `container` is not a token of `... chips`, and it is not a set
+        // member either.
         //
         // THE SET IS DELIBERATELY NOT WIDENED, and that is the point of fixing
         // the gate rather than the lexicon: `LABEL_COUNT_PIECE_NOUNS` also feeds
@@ -3027,10 +3046,31 @@ export async function buildOffResult(
         // flag, so adding a noun is a RETRIEVAL change the frozen-pool arm cannot
         // see. Reading it here is serving-side only and moves no pool.
         //
+        // `labelUnitWord.length >= 3` is the FatSecret sibling's filter, restated
+        // here rather than invented: `labelPieceMatchesItem()` at the FS piece
+        // site is already paired with a length floor. It refuses `k` (29
+        // records), `oz` (12), `en`, `cr`, `bu`, `c`, `z` — label fragments that
+        // are not piece nouns in any language. The `g` shape a refuter found
+        // (`servingSize` "30 g" -> word `g`, and a name like `krave 375g`
+        // tokenizing to match it) is already refused a step earlier, because
+        // that label's `labelUnitCount` reads 30, not 1.
+        //
+        // MEASURED admissible-corpus sizes over `OffFood` with a non-null label,
+        // grams > 0, `corruptReason IS NULL`, in-band per-piece (2026-09-04):
+        // master 8,403 · the refuted first draft 66,737 · this gate 46,230 ·
+        // with the length floor 46,174. ADMISSIBLE IS NOT FIRING: the measured
+        // live firing set is 12 (line, record) pairs / 1,255 events, every one
+        // of which was replayed on both arms. Most of the widened corpus bills
+        // the SAME number either way, because for a single-piece label master's
+        // `label_serving_default` already billed `qty x servingGrams`; the grams
+        // move only where master reached the GENERIC SEED TABLE instead.
+        //
         // The generic-counter arm keeps its own `count >= 2` gate unchanged, and
         // the [0.2, 500] per-piece band below is untouched.
         const labelCountsUserPiece = labelUnitWord != null && (
-            labelPieceMatchesItem(labelUnitWord, itemNameForCount) ||
+            (LABEL_COUNT_PIECE_NOUNS.has(labelUnitWord) && labelPieceMatchesItem(labelUnitWord, itemNameForCount)) ||
+            (labelUnitCount === 1 && labelUnitWord.length >= 3
+                && labelPieceMatchesItem(labelUnitWord, itemNameForCount)) ||
             genericPieceNoun != null
         );
         if (

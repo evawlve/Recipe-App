@@ -484,6 +484,17 @@ export const BORROWED_OR_DEFAULTED_SERVING_TIERS: readonly string[] = Object.fre
         // `fs_label_volume_declared`, which is exactly the fork that makes this
         // classification a reading and not a guess.
         'volume_unit',
+        // buildOffResult()'s own-label volume read (punch #66, 2026-09-04). It
+        // multiplies the requested volume by `servingGrams / declaredMl` taken
+        // from THIS record — which sounds like an own-record read, and is not:
+        // the ingest wrote `grams := ml`, so that ratio is exactly 1.0 on 51,107
+        // of 51,219 rows and the number billed is `qty x unitMl x a defaulted
+        // 1.0 g/ml`. The record contributed the FACT THAT IT IS SOLD BY VOLUME,
+        // not a density. By this list's own rule — `volume_unit` is a member
+        // precisely because it multiplies by a defaulted density — this belongs
+        // here beside it, and NOT with `fdc_label_volume`, which reads a genuine
+        // gram weight for the very unit that was requested.
+        'off_label_volume',
         // The FatSecret leg of the identical fallback, calling the same
         // volumeToGrams() owner. Same rule, different cascade, different string.
         'fs_volume_density',

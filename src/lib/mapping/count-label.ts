@@ -142,9 +142,30 @@ export function labelFractionQuantity(description: string | null | undefined): n
 }
 
 /**
+ * A label whose parenthesised millilitres describe something OTHER than the
+ * serving `servingGrams` weighs — a preparation instruction or a panel BASIS.
+ *
+ *   "100 ml   NUTRIENT PER (500 ml)"        grams 100  -> the paren is the BOTTLE
+ *   "48 ml (8 FL OZ (240 ML)   MAKES)"      grams 48   -> the paren is the MADE-UP drink
+ *   "1 POUCH, RECONSTITUTED TO 1 CUP (240 ml)"          -> the paren is the reconstituted volume
+ *
+ * Pairing those two numbers invents a density. `8936020033587` "Aloe vera drink"
+ * reads 100 g / 500 ml = 0.2 g/ml and would bill 48 g for a cup of a ~1.0 g/ml
+ * drink — a 5x under-bill on a row the name lexicon already got right.
+ *
+ * MEASURED on the box 2026-09-04: 283 of the 51,219 ml-bearing `OffFood` labels
+ * carry one of these words, and **270 of them land INSIDE the [0.1, 1.6] density
+ * band**, so the band cannot be the guard. Re-derive:
+ *   SELECT count(*) FILTER (WHERE "servingSize" ~* '\y(per|makes|prepared|reconstituted|dilut)')
+ *   FROM "OffFood" WHERE "servingSize" ~* '\([0-9.]+\s*ml\)' AND "servingGrams" > 0;
+ */
+const LABEL_VOLUME_BASIS_RE = /\b(?:per|makes|prepared|reconstituted|dilut\w*)\b/i;
+
+/**
  * The VOLUME an OFF label serving states about ITSELF, in millilitres:
  * "1 portion (30 ml)" -> 30, "1 cup (240ml)" -> 240. Null when the label
- * declares no parenthesised millilitre figure.
+ * declares no parenthesised millilitre figure, or when it declares one that
+ * describes a different quantity (see LABEL_VOLUME_BASIS_RE above).
  *
  * WHY THIS IS A SEPARATE READER. `extractLabelServingUnit()` returns the label's
  * UNIT WORD, and for these rows that word is `portion` / `serving` / `cup` —
@@ -152,26 +173,39 @@ export function labelFractionQuantity(description: string | null | undefined): n
  * blind to a record that has stated its own volume in plain sight. The
  * millilitre figure lives in the parenthesis, which nothing read.
  *
- * MEASURED on the box 2026-09-04. 51,219 `openfoodfacts` `OffServing` rows carry
- * a `(N ml)` parenthesis; `grams` EQUALS that `N` on 50,824 of them (99.2%),
- * because the ingest wrote `grams := ml`. So for almost every row the implied
- * density is exactly 1.0 g/ml — which is why the caller derives the density from
- * the row (`servingGrams / ml`) instead of hardcoding the liquid cell: the
- * arithmetic is identical today and stays honest if the ingest ever learns a
- * real density. The remaining 83 disagreeing rows span densities 0.004 to 120,
- * which is what the caller's [VOLUME_SERVING_MIN_DENSITY, MAX] band is for.
- * Re-derive:
- *   SELECT count(*) FILTER (WHERE grams = ml), count(*) FROM (
- *     SELECT grams, ((regexp_match(description,'\(([0-9.]+)\s*ml\)'))[1])::float ml
- *     FROM "OffServing" WHERE source='openfoodfacts'
- *       AND description ~* '\([0-9.]+\s*ml\)') v;
+ * WHAT THE RATIO ACTUALLY MEANS, and the caller's tier classification depends on
+ * it: **the ingest wrote `grams := ml`**, so the implied density is exactly 1.0
+ * on 51,107 of 51,219 rows (99.78%). The caller derives it per row rather than
+ * hardcoding the liquid cell — identical arithmetic today, honest if the ingest
+ * ever learns a real density — but it must NOT be described as reading a
+ * published density. OFF published a volume; the 1.0 is ours. That is why the
+ * caller's tier is classified BORROWED_OR_DEFAULTED and not OWN.
  *
- * `ml` only, case-insensitively (50,901 + 289 + 27 spellings). `fl oz` (3,166
- * rows) and a bare `L` (6) are deliberately OUT of scope: `fl oz` needs its own
- * constant and its own gate, and six rows do not earn an ambiguous single letter.
+ * MEASURED on the box 2026-09-04, case-insensitively, on `OffFood` — which is
+ * the column `hydrateOffCandidate()` actually reads (`OffServing` is a different
+ * table on a different rung and has no bearing on `servingDescription`):
+ *   WITH v AS (SELECT "servingGrams" g,
+ *        ((regexp_match("servingSize",'\(([0-9.]+)\s*[mM][lL]\)'))[1])::float ml
+ *        FROM "OffFood" WHERE "servingSize" ~* '\([0-9.]+\s*ml\)' AND "servingGrams" > 0)
+ *   SELECT count(*), count(*) FILTER (WHERE g = ml),
+ *          count(*) FILTER (WHERE g/ml < 0.1 OR g/ml > 1.6) FROM v;
+ *   -- 51219 | 51107 | 34
+ * **The extraction must be case-insensitive or it silently drops 312 rows**
+ * (`mL` 290, `ML` 27 against `ml` 50,902) into the denominator and never the
+ * numerator — which is how an earlier draft of this header reported 99.2% and
+ * "83 disagreeing rows" instead of 99.78% and 112.
+ *
+ * `ml` only. `fl oz` (3,173 rows) and a bare `L` (6) are deliberately OUT of
+ * scope: `fl oz` needs its own constant and its own gate, and six rows do not
+ * earn an ambiguous single letter.
+ *
+ * Safety note worth preferring over any `isAiEstimated` argument: `OffFood`
+ * has no such column, so this read is STRUCTURALLY incapable of picking up an
+ * AI-written serving.
  */
 export function labelParenVolumeMl(description: string | null | undefined): number | null {
     if (!description) return null;
+    if (LABEL_VOLUME_BASIS_RE.test(description)) return null;
     const m = description.match(/\((\d+(?:\.\d+)?)\s*ml\)/i);
     if (!m) return null;
     const ml = parseFloat(m[1]);

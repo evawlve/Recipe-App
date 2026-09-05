@@ -143,6 +143,57 @@ describe('buildOffResult (i): a label piece word matching the item name is read'
         expect(result?.servingTier).not.toBe('label_count_derived');
     });
 
+    it('CONTROL: a MULTI-piece label outside the set is REFUSED (the Oreo regression)', async () => {
+        // `off_0044000085300` "OREO Cookies" declares `9 cookies (29 g)`, and
+        // 29/9 = 3.22 g is nothing like an Oreo (11.3 g). The label's own count
+        // is wrong, and the [0.2, 500] band cannot tell — 3.22 is a plausible
+        // per-piece weight. A refuter measured the first draft of this gate
+        // billing 12.9 g for four Oreos, a 3.5x under-bill, on 283 events.
+        //
+        // The trap underneath it: `singularizeUnit('cookies')` is `cooky`, which
+        // is NOT in LABEL_COUNT_PIECE_NOUNS, while
+        // `labelPieceMatchesItem('cooky','oreo cookies')` IS true. So for a
+        // plural label of a set member the SET is the only thing refusing the
+        // row — the word-match is not redundant with it, which is exactly what
+        // the first draft assumed.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'OREO Cookies',
+            servingGrams: 29,
+            servingDescription: '9 cookies (29 g)',
+            servingUnitCount: 9,
+        }));
+
+        const parsed: ParsedIngredient = {
+            qty: 4, multiplier: 1, unit: null, name: 'oreo cookies',
+        };
+        const result = await buildOffResult(
+            makeCandidate('OREO Cookies'), parsed, 0.9, '4 oreo cookies'
+        );
+
+        expect(result?.servingTier).not.toBe('label_count_derived');
+        expect(result?.grams).not.toBeCloseTo(4 * (29 / 9), 2);
+    });
+
+    it('CONTROL: a multi-piece label INSIDE the set still divides, unchanged', async () => {
+        // The set members keep their vetted multi-piece behaviour byte-for-byte.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Pretzels',
+            servingGrams: 28,
+            servingDescription: '15 pretzels (28 g)',
+            servingUnitCount: 15,
+        }));
+
+        const parsed: ParsedIngredient = {
+            qty: 10, multiplier: 1, unit: null, name: 'pretzels',
+        };
+        const result = await buildOffResult(
+            makeCandidate('Pretzels'), parsed, 0.9, '10 pretzels'
+        );
+
+        expect(result?.servingTier).toBe('label_count_derived');
+        expect(result?.grams).toBeCloseTo(10 * (28 / 15), 5);
+    });
+
     it('CONTROL: the pre-existing label-count case is byte-identical', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
             foodName: 'Tortilla Chips',
@@ -266,6 +317,31 @@ describe('buildOffResult (ii): a record own declared volume serving is read', ()
 
         expect(result?.servingTier).toBe('label_unit_match');
         expect(result?.grams).toBeCloseTo(30, 5);
+    });
+
+    it('CONTROL: a PREPARATION/BASIS label is refused, not paired', async () => {
+        // `8936020033587` "Aloe vera drink": the parenthesised 500 ml is the
+        // BOTTLE and the 100 g is the panel BASIS. Pairing them invents 0.2 g/ml
+        // and bills 48 g for a cup of a ~1.0 g/ml drink — a 5x under-bill on a
+        // row the name lexicon already gets right. 283 corpus labels carry one of
+        // these words and 270 of them land INSIDE the density band, so the band
+        // cannot be the guard.
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Aloe vera drink',
+            servingGrams: 100,
+            servingDescription: '100 ml   NUTRIENT PER (500 ml)',
+            servingUnitCount: 1,
+        }));
+
+        const parsed: ParsedIngredient = {
+            qty: 1, multiplier: 1, unit: 'cup', name: 'aloe vera drink',
+        };
+        const result = await buildOffResult(
+            makeCandidate('Aloe vera drink'), parsed, 0.9, '1 cup aloe vera drink'
+        );
+
+        expect(result?.servingTier).not.toBe('off_label_volume');
+        expect(result?.grams).not.toBeCloseTo(48, 1);
     });
 
     it('CONTROL: a WEIGHT request is unaffected', async () => {
