@@ -112,7 +112,11 @@ export function isMalformedCacheKey(key: string): boolean {
  *         for "bell pepper", and once AI normalize rewrote the name to
  *         "capsicum" an unconditional prefix produced read/write key
  *         "bell capsicum" — orphaning the live human-triage "capsicum" row
- *         (golden n-mq-30). Non-decisive brand hits must never alter the key.
+ *         (golden n-mq-30). Non-decisive brand hits must never alter the key
+ *         via the PREFIX; on the composite path the NAME itself may carry a
+ *         brand the segmenter named and the mapper re-asserted after the
+ *         normalizer (`brandReassertEvidence()`, 2026-09-05) — that is the
+ *         name, not this prefix, and it stays a token of the sorted key.
  *
  *      b. PRESENCE, by CANONICALIZED TOKEN STEMS, not substring includes():
  *         the brand is already represented when any token of the key

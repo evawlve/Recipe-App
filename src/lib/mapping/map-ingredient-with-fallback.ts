@@ -1628,7 +1628,8 @@ export async function mapIngredientWithFallback(
                     // measured 2026-08-03, the brand is dropped on ~58 of 1,776
                     // brand-bearing lines in AiNormalizeCache.
                     //
-                    // GATED ON DECISIVENESS, and that gate is the design. An
+                    // GATED ON EVIDENCE — lexical decisiveness, or the segmenter
+                    // having named this brand (2026-09-05) — NEVER unconditional. An
                     // UNCONDITIONAL prefix is already refuted: `bell pepper`
                     // matches the lexicon brand `bell` (Bell & Evans), the model
                     // rewrites the food to `capsicum`, and prefixing produced key
@@ -1677,11 +1678,28 @@ export async function mapIngredientWithFallback(
                                 repaired: rebranded,
                                 brand: targetBrand,
                                 evidence: reassertEvidence,
+                                site: 'normalized_name',
                             });
                             preBrandNormalizedName = normalizedName;
                         }
                         normalizedName = rebranded ?? normalizedName;
-                        aiCanonicalBase = keepBrand(aiCanonicalBase);
+                        // The rerank query is rebranded on the same evidence, and
+                        // it moves on lines where normalizedName KEPT the brand and
+                        // canonicalBase dropped it (13 of 171 current normalizer rows,
+                        // refuter L3 on #421) — logged under the same event so that
+                        // second population is not silent.
+                        const rebrandedBase = keepBrand(aiCanonicalBase);
+                        if (rebrandedBase !== aiCanonicalBase) {
+                            logger.info('mapping.llm_dropped_decisive_brand', {
+                                rawLine: trimmed,
+                                llmOutput: aiCanonicalBase,
+                                repaired: rebrandedBase,
+                                brand: targetBrand,
+                                evidence: reassertEvidence,
+                                site: 'canonical_base',
+                            });
+                        }
+                        aiCanonicalBase = rebrandedBase;
                     }
                     aiCookingModifier = aiHint.cookingModifier;
                     aiSynonyms = aiHint.synonyms || [];
