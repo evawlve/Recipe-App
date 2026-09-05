@@ -1683,6 +1683,18 @@
       "verified": "2026-08-20"
     },
     {
+      "id": "known-issue-cold-pins-equal-flags",
+      "claim": "known-issue-baseline-cold.json pins exactly the knownIssue-flagged golden-set cases (pins == flags) — the COLD twin of known-issue-pins-equal-flags. The cold file drifted unguarded to 17 pins against 15 flags (n-cook-06/n-mq-27/n-mq-34/n-mq-47 still pinned after #363 un-flagged them; n-mq-48/n-prose-04 flagged but never cold-pinned; found 2026-09-02) because the warm claim reads only the warm file and mergeBaseline() in scripts/eval/assertions.ts never prunes, so un-flagging a case must prune BOTH files by hand. Reconciled 2026-09-02 (session 36, rider R1: n-brand-06/n-mq-39/n-mq-40 promoted, 15 -> 12 flags).",
+      "command": "python3 -c \"import json;g=json.load(open('scripts/eval/golden-set.json'));k=json.load(open('scripts/eval/known-issue-baseline-cold.json'));f=sorted(c['id'] for s in ('search','nlp') for c in g[s] if c.get('knownIssue'));p=sorted(k['cases']);print(0 if f==p else 1)\"",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "where": "backend",
+      "ownerDoc": "mobile:sync-docs/reports/2026-08-02_the-golden-gate-cold.md",
+      "verified": "2026-09-02"
+    },
+    {
       "id": "supabase-keepalive-timer-armed-on-box",
       "claim": "The daily Supabase keep-alive timer is installed and enabled on the box (06:10 box-local, one RLS-scoped REST read of user_preferences with the anon key), so the free-tier project cannot pause for the ~7-day inactivity rule and take auth down for every user. Installed 2026-08-21 (Lane A, plan 10) after the 2026-08-13 NXDOMAIN finding. If this FAILS the project is one idle week from pausing; re-enable with systemctl --user enable --now supabase-keepalive.timer and test-fire the service (journal must read HTTP 200).",
       "ownerDoc": "mobile:sync-docs/reports/2026-08-13_supabase-is-bypassed-not-insecure.md",
