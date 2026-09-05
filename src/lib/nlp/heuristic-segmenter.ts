@@ -141,8 +141,18 @@ const DELIMITER_SPLIT_RE = /\s*(?:[\r\n;,\u0002]|[&+]|\band\b|\bplus\b)\s*/gi;
 /** Signals the text is hedged/uncertain — only an LLM can untangle it. */
 const VAGUE_RE = /\b(?:or|maybe|probably|possibly|dunno|idk|whatever|something|stuff)\b|not\s+(?:really\s+)?sure|i\s+think|kind\s+of|sort\s+of|some\s+kind/i;
 
-/** Leading list bullets / numbering ("- ", "* ", "1.", "2)"). */
-const BULLET_RE = /^(?:[-*•]+|\d+[.)])\s*/;
+/**
+ * Leading list bullets / numbering ("- ", "* ", "1.", "2)").
+ *
+ * The `\d+\.` arm must NOT swallow the integer part of a DECIMAL QUANTITY.
+ * `12.7 ounces of real good chicken` is a quantity, not list item 12 — the old
+ * `\d+[.)]` stripped `12.` and left `7 ounces ...`, a 1.8x under-bill that
+ * reached a real user (punch #94, ASC AB9m7h; the meal billed 198 g). The
+ * negative lookahead keeps `1. eggs` / `1.eggs` stripping while leaving
+ * `12.7 ...` and `1.5 cups rice` alone. `)` carries no such ambiguity, so it
+ * stays unguarded and `2)2 eggs` still strips.
+ */
+const BULLET_RE = /^(?:[-*•]+|\d+\.(?!\d)|\d+\))\s*/;
 
 /** Leading connector filler ("and eggs", "i had eggs", "then coffee"). */
 const LEADING_FILLER_RE = /^(?:and|also|then|plus|i\s+had|i\s+ate|had|ate)\s+/i;

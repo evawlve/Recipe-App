@@ -213,3 +213,76 @@ describe('forceSegmentText (lenient fallback when the LLM errors/times out)', ()
         expect(forceSegmentText('')).toEqual([]);
     });
 });
+
+/**
+ * Punch #94 (ASC AB9m7h). Diego typed `12.7 ounces real good chicken`; the meal
+ * staged as `7 x 1 oz (198 g)`. The LLM segmenter failed or deadlined for that
+ * request (the box has ONE MappingEventLog request of 8 rows with rawLine
+ * `7 ounces real good chicken` and NO SegmentationCache row, and the route caches
+ * only a successful LLM split), so forceSegmentText() ran and BULLET_RE read the
+ * `12.` of `12.7` as list-item numbering.
+ *
+ * The whole class is silent: a decimal quantity loses its integer part and the
+ * line still parses, so nothing errors and no gate goes red. `1.5 cups rice` is
+ * the same defect in the over-billing direction.
+ */
+describe('forceSegmentText: a leading decimal is a quantity, not a bullet (punch #94)', () => {
+    it('keeps the decimal on the verbatim reported meal shape', () => {
+        const items = forceSegmentText(
+            '12.7 ounces real good chicken\n2 eggs\n1 slice of toast'
+        );
+        expect(items.map((i) => i.rawText)).toEqual([
+            '12.7 ounces real good chicken',
+            '2 eggs',
+            '1 slice of toast',
+        ]);
+    });
+
+    it('keeps the decimal with and without the "of"', () => {
+        expect(forceSegmentText('12.7 ounces of real good chicken')[0].rawText).toBe(
+            '12.7 ounces of real good chicken'
+        );
+        expect(forceSegmentText('12.7 ounces real good chicken')[0].rawText).toBe(
+            '12.7 ounces real good chicken'
+        );
+    });
+
+    it('keeps a decimal that would otherwise OVER-bill', () => {
+        // `1.5 cups rice` used to become `5 cups rice` — 3.3x the food.
+        expect(forceSegmentText('1.5 cups rice')[0].rawText).toBe('1.5 cups rice');
+        expect(forceSegmentText('3.5 oz salmon')[0].rawText).toBe('3.5 oz salmon');
+    });
+
+    it('keeps a LEADING-ZERO and a TWO-DIGIT decimal', () => {
+        // Both shapes were unpinned in the first draft of this block, and a
+        // refuter found two wrong regexes that passed all 34 tests without
+        // them: `\d+\.(?=\d\d)` re-added to the alternation turns
+        // `0.75 cup olive oil` into `75 cup olive oil`, and a `0\.` arm turns
+        // `0.5 cups rice` into `5 cups rice`. Every decimal above happens to
+        // have exactly ONE digit after the point and no leading zero, which is
+        // what let the mutants through. `0.5` and `.25`/`.75` are the most
+        // common decimals a person types into a food log.
+        expect(forceSegmentText('0.5 cups rice')[0].rawText).toBe('0.5 cups rice');
+        expect(forceSegmentText('0.75 cup olive oil')[0].rawText).toBe('0.75 cup olive oil');
+        expect(forceSegmentText('1.25 cups rice')[0].rawText).toBe('1.25 cups rice');
+        expect(forceSegmentText('10.25 oz salmon')[0].rawText).toBe('10.25 oz salmon');
+    });
+
+    it('CONTROL: real list bullets still strip', () => {
+        expect(forceSegmentText('1. eggs')[0].rawText).toBe('eggs');
+        expect(forceSegmentText('2) toast')[0].rawText).toBe('toast');
+        expect(forceSegmentText('10. rice')[0].rawText).toBe('rice');
+        expect(forceSegmentText('- milk')[0].rawText).toBe('milk');
+        expect(forceSegmentText('\u2022 milk')[0].rawText).toBe('milk');
+        // no space after the separator, and a digit after `)`, both still bullets
+        expect(forceSegmentText('1.eggs')[0].rawText).toBe('eggs');
+        expect(forceSegmentText('2)2 eggs')[0].rawText).toBe('2 eggs');
+    });
+
+    it('CONTROL: a numbered list of several items still strips every bullet', () => {
+        expect(forceSegmentText('1) toast and 2. jam').map((i) => i.rawText)).toEqual([
+            'toast',
+            'jam',
+        ]);
+    });
+});
