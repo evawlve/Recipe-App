@@ -548,7 +548,11 @@ describe('parseGoldenSet', () => {
         // 94 since 2026-08-26: n-p1-01 (A8 row 5) — kcal100 rather than a total band,
         // because what was 5.8x wrong on that line is the SERVING (725 g of a combo
         // platter vs 126 g of 5 boneless wings), not the density.
-        expect(n(c => !!c.macros)).toBe(94);
+        // 95 since 2026-09-05: n-mq-11 kcal100 [20,110] — the sugar axis. Its graceful-
+        // degrade reading is retired (the "fake brand" is G Hughes and the accepted generic
+        // was the FULL-SUGAR product at 167-467 kcal/100 g); expectName now also names the
+        // brand, and the band is what keeps the case gated whichever G Hughes row wins.
+        expect(n(c => !!c.macros)).toBe(95);
         // 47 -> 63 on 2026-08-17: every prose case declares expectItems (1 on the
         // twelve one-item lines, 7/2/3/3 on the four sentences)
         expect(n(c => typeof c.expectItems === 'number')).toBe(63);

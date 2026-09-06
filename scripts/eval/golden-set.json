@@ -5479,14 +5479,22 @@
       "text": "2 tbsp ghugh's sugar free honey mustard",
       "expectName": [
         [
-          "mustard"
+          "sugar free",
+          "mustard",
+          "hughes"
         ]
       ],
+      "macros": {
+        "kcal100": [
+          20,
+          110
+        ]
+      },
       "grams": [
         20,
         45
       ],
-      "notes": "GRACEFUL-DEGRADE guard. Fake brand stripped -> generic 'Honey Mustard' with sane tbsp density (obs 32g = 2x16g). Note the 'sugar free' qualifier is dropped (generic has 20g carb/100g) -- acceptable fallback, tracked here so a future qualifier-aware match can be measured against it."
+      "notes": "The GRACEFUL-DEGRADE reading is RETIRED 2026-09-05: 'ghugh's' is not a fake brand, it is G Hughes (60 OffFood rows spelled 'G hughes'/'G Hughes'; three of them are its sugar-free honey mustards at 66.7 kcal/100g, e.g. off_0002355000063), and the generic 'Honey Mustard' this case used to accept is the FULL-SUGAR product at 167-467 kcal/100g -- an identity error on the modifier axis, not an acceptable fallback. Mechanism: the must-have token 'ghugh' is unsatisfiable, the strict pass empties, and the RELAXED pass re-admitted the full-sugar rows because it skipped the critical-modifier check; the relaxed pass now keeps the CALORIE class (filter-candidates.ts, PR lane-a/relax-pass-keeps-calorie-modifiers). expectName asserts the brand (textOf() matches name+brand, so 'hughes' is the shipped vocabulary for a brand assertion) and kcal100 pins the sugar axis whichever G Hughes row wins. EXPECTED TO FLIP from passing-by-degradation to gated: red on any box build before that PR is deployed, and that red is the case doing its job, not a knownIssue. grams band unchanged (bare_label_serving 30 g measured 2026-09-05 on the trailing spelling 'Sugar free honey mustard ghugh')."
     },
     {
       "id": "n-mq-20",
