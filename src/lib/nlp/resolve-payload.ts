@@ -46,8 +46,29 @@ export interface ResolvedNutritionPer100g {
   protein100: number;
   carbs100: number;
   fat100: number;
-  /** Grams per 100 g. */
-  fiber100: number;
+  /**
+   * Grams per 100 g, or NULL when the source panel does not DECLARE fibre.
+   *
+   * `null` and `0` are two different facts and both reach the wire as they
+   * are: a declared 0 stays 0, an undeclared value is null, never a
+   * manufactured 0. Every store this function reads can be silent about
+   * fibre — OFF carries the key present-and-null (264,671 of 1,085,527
+   * `OffFood` rows; 807 of the 3,574 behind a `FoodMapping`), FatSecret omits
+   * the key (1,393 rows with a non-empty panel), the FS macro-only recovery
+   * can find no `fiber` on the serving row, and `AiGeneratedFood.fiberPer100g`
+   * is nullable. Folding those to 0 displayed a fabricated "0 g" and, because
+   * the client subtracts fibre from carbs, inflated Net carbs on every such
+   * row. FDC is the one store that always carries a number (0 of 4,133 rows
+   * null or absent), so its `?? null` is inert by measurement. All measured
+   * on the box 2026-09-05; re-derive the OFF figure with
+   *   SELECT count(*) FILTER (WHERE "nutrientsPer100g" ? 'fiber' AND
+   *     "nutrientsPer100g"->>'fiber' IS NULL), count(*) FROM "OffFood";
+   * Arithmetic consumers (`/api/nlp/parse`'s billed `nutrition.fiber`) carry
+   * the null through rather than fold it: the wire says "no claim", never
+   * "zero grams". `sugar100`/`sodium100` keep their 0 fallback — the same
+   * shape, deliberately NOT changed here.
+   */
+  fiber100: number | null;
   /** Grams per 100 g. */
   sugar100: number;
   /** GRAMS per 100 g — never milligrams. See the type doc. */
@@ -57,9 +78,11 @@ export interface ResolvedNutritionPer100g {
 /**
  * True when a resolved per-100g block carries no nutrition at all.
  *
- * resolveFoodDetails starts from an all-zero literal and overwrites it only if
- * the food row is found AND that row has nutrients, so all-zero is how this
+ * resolveFoodDetails starts from a literal whose four macros are zero (its
+ * `fiber100` starts NULL — see the type) and overwrites it only if the food
+ * row is found AND that row has nutrients, so all-zero macros are how this
  * module spells "unknown" — it cannot distinguish that from a genuine zero.
+ * Fibre is not consulted: it is null on an unresolved row by construction.
  */
 export function isDegenerateNutrition(n: ResolvedNutritionPer100g): boolean {
   return n.kcal100 === 0 && n.protein100 === 0 && n.carbs100 === 0 && n.fat100 === 0;
@@ -151,12 +174,18 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
   // (api-contract.md:506) and the only one the food_log_items CHECK accepts
   // (001_mobile_schema.sql:164), so it is the safe floor rather than a claim of AI origin.
   let source = 'ai_estimated';
-  let nutritionPer100g = {
+  // Typed explicitly: an inferred literal type would narrow `fiber100` to `null`
+  // from the initializer and refuse the numbers every branch assigns below.
+  let nutritionPer100g: ResolvedNutritionPer100g = {
     kcal100: 0,
     protein100: 0,
     carbs100: 0,
     fat100: 0,
-    fiber100: 0,
+    // NULL, not 0. An unresolvable id (a stale `fdc_`, a purged `off_`,
+    // `water_default`) declares nothing, and the parse route's degenerate-panel
+    // repair re-derives only the four macros from the billed line, so this
+    // initializer is the fibre value that ships for such a row.
+    fiber100: null,
     sugar100: 0,
     sodium100: 0,
   };
@@ -216,7 +245,10 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         protein100: nutrients.protein ?? 0,
         carbs100: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
         fat100: nutrients.fat ?? nutrients.totalFat ?? 0,
-        fiber100: nutrients.fiber ?? 0,
+        // Inert on this store by measurement (every FdcFood row carries a
+        // number — see the type doc); kept so the rule reads the same on every
+        // branch and survives an ingest that starts writing null.
+        fiber100: nutrients.fiber ?? null,
         sugar100: nutrients.sugar ?? 0,
         // Already grams per 100 g in this store. No conversion.
         sodium100: nutrients.sodium ?? 0,
@@ -248,7 +280,11 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         protein100: nutrients.protein ?? 0,
         carbs100: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
         fat100: nutrients.fat ?? 0,
-        fiber100: nutrients.fiber ?? 0,
+        // THE HEADLINE SITE. OFF stores an undeclared fibre as `"fiber": null`
+        // (off_0850003023175 "Blueberry" is the measured row), and this read
+        // used to fold it to 0 — the largest population behind the wire's
+        // fabricated "0 g fibre". A declared 0 is a number and stays 0.
+        fiber100: nutrients.fiber ?? null,
         sugar100: nutrients.sugar ?? nutrients.sugars ?? 0,
         // Already grams per 100 g in this store (OFF's own column unit). No conversion.
         sodium100: nutrients.sodium ?? 0,
@@ -298,7 +334,9 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         protein100: nutrients.protein ?? 0,
         carbs100: nutrients.carbs ?? nutrients.carbohydrate ?? 0,
         fat100: nutrients.fat ?? 0,
-        fiber100: nutrients.fiber ?? 0,
+        // FatSecret OMITS the key rather than nulling it (fs_113183876 "7Up
+        // Shirley Temple" has a full panel and no `fiber`); same rule, same null.
+        fiber100: nutrients.fiber ?? null,
         sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
         // Already grams per 100 g in this store: fs_3272 "Soy Sauce" holds
         // 5.637, and its own "100 g" serving row holds 5637 mg. No conversion.
@@ -372,10 +410,12 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
             fat100: recovered.per100.fat,
             // Omitted rather than zeroed by the recovery when the serving is
             // silent about a micro — a manufactured zero is the defect being
-            // fixed, so the fallback stays 0 only where there is genuinely
-            // nothing to read. `sugars` is the recovery's key; `sodium` arrives
-            // already converted mg -> g, matching the panel branch above.
-            fiber100: recovered.per100.fiber ?? 0,
+            // fixed. Fibre stays NULL when the serving row is silent (the wire
+            // rule in ResolvedNutritionPer100g); sugar and sodium keep today's 0
+            // fallback, the same shape and deliberately not this change.
+            // `sugars` is the recovery's key; `sodium` arrives already converted
+            // mg -> g, matching the panel branch above.
+            fiber100: recovered.per100.fiber ?? null,
             sugar100: recovered.per100.sugars ?? 0,
             sodium100: recovered.per100.sodium ?? 0,
           };
@@ -405,7 +445,11 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         protein100: aiFood.proteinPer100g,
         carbs100: aiFood.carbsPer100g,
         fat100: aiFood.fatPer100g,
-        fiber100: aiFood.fiberPer100g ?? 0,
+        // `fiberPer100g` is `Float? @default(0)`: 0 of 241 rows are null today
+        // (measured 2026-09-05; re-derive: SELECT count(*) FILTER (WHERE
+        // "fiberPer100g" IS NULL), count(*) FROM "AiGeneratedFood";), so this
+        // is inert until a writer stores null — and then it is the rule.
+        fiber100: aiFood.fiberPer100g ?? null,
         sugar100: aiFood.sugarPer100g ?? 0,
         // THE ONLY BRANCH THAT CONVERTS, because it is the only store holding
         // milligrams — the column name says so and is accurate; the bug was the
