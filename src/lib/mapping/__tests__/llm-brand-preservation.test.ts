@@ -2,7 +2,10 @@ import { detectBrandInQuery } from '../brand-detector';
 import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from '../simple-rerank';
 
 /**
- * The decisiveness gate is the whole design. Without it, re-injecting a
+ * The decisiveness gate is the whole design ON THE SOLO PATH; on the composite
+ * path the segmenter having named the brand is a second kind of evidence
+ * (`brandReassertEvidence()` in quantity-word-brand.ts, 2026-09-05), under the
+ * same quantity-word refusal. Without the gate, re-injecting a
  * detected brand into the AI-rewritten name rebuilds a REFUTED regression:
  * `bell pepper` matches the lexicon brand `bell` (Bell & Evans), the normalizer
  * rewrites the food to `capsicum`, and an unconditional prefix produced read/
