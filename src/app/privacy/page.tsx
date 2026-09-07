@@ -74,12 +74,12 @@ const SECTIONS: Section[] = [
       {
         kind: 'p',
         lead: 'One exception, and it is your own doing.',
-        text: 'If you tap “Use N kcal from Apple Health”, that number is saved as your own entry and stays on your device until you change it. Tapping it is you adopting the figure rather than the app keeping one: from that point the number is treated exactly like one you typed yourself, and the paragraph above no longer applies to it. It is still held on your device only — it is not sent to our servers and not stored in our database.',
+        text: 'If you tap “Use N kcal from Apple Health”, that number is saved as your own entry and stays on your device until you change it. Tapping it is you adopting the figure rather than the app keeping one: from that point the number is treated exactly like one you typed yourself, and the retention paragraph above no longer describes it. It is still held on your device only — it is not sent to our servers and not stored in our database. Because it has become your own entry, turning off Apple Health access does not remove it and does not change the calorie budget it is driving; to clear it, clear the Active Energy field for that day.',
       },
       {
         kind: 'p',
         lead: 'How to turn it off.',
-        text: 'You are in control and you can revoke access at any time, without uninstalling the app: open the Health app, tap your profile picture, then Apps and Services (labelled Sources on older versions of iOS), then Kinda Healthy, and turn off any category you no longer want to share. The app keeps working with the access removed; it simply stops showing measured activity and falls back to the activity level you chose during setup. iOS does not tell an app whether permission was granted or refused, so Kinda Healthy treats "no data" as not measured rather than as zero.',
+        text: 'You are in control and you can revoke access at any time, without uninstalling the app: open the Health app, tap your profile picture, then Apps and Services (labelled Sources on older versions of iOS), then Kinda Healthy, and turn off any category you no longer want to share. The app keeps working with the access removed; it stops showing measured activity, and for any day you have not entered a figure of your own it falls back to the activity level you chose during setup. A figure you adopted or typed yourself is your entry, not a Health reading, so revoking access does not remove it and it keeps driving that day’s budget until you clear the Active Energy field. iOS does not tell an app whether permission was granted or refused, so Kinda Healthy treats "no data" as not measured rather than as zero.',
       },
     ],
   },
