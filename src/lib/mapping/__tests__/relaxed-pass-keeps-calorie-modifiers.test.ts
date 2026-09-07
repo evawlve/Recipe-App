@@ -17,7 +17,9 @@
  *      narrowed to the compliant one.
  *   3. THE STRONGER PROPERTY: a relaxed pool where EVERY candidate violates the calorie
  *      class is returned UNCHANGED — today's pool — so no line that resolves today loses
- *      its pool; only the choice among today's relaxed candidates can change.
+ *      its pool. Owner for the bounding claim: the narrowing block's comment in
+ *      filter-candidates.ts -- it is "the pool cannot empty; everything downstream is measured,
+ *      not bounded", NOT "only the choice can change" (doc rule 3, one owner per fact).
  *   4. The fat classes keep the relaxed pass's leniency (a full-fat record still survives
  *      a `reduced fat` line's relaxed pass, exactly as on master).
  *   5. The strict pass is unchanged (still rejects the full-sugar row on its own).
@@ -164,5 +166,41 @@ describe('filterCandidatesByTokens — the relaxed pass keeps the calorie class'
         expect(deriveMustHaveTokens(norm)).toEqual(['honey', 'mustard']);
         const strict = filterCandidatesByTokens([fullSugar(), sugarFree()], norm, { rawLine: raw });
         expect(strict.filtered.map(c => c.name)).toEqual(['Sugar free honey mustard dipping sauce']);
+    });
+
+    // ---- the query-side word boundary (2026-09-07, punch #121(ii)) ----------------------------
+    //
+    // `diet` is CALORIE_MODIFIERS' only single-token member and a prefix of the deli brand
+    // `Dietz and Watson`, so on master a `dietz` line entered the calorie branch and every
+    // candidate not carrying a low-calorie word was reported as a critical modifier mismatch.
+    // The boundary is QUERY-SIDE ONLY and therefore admit-only; the candidate side deliberately
+    // keeps `includes()`. Both directions are pinned here so neither is changed by accident.
+
+    it('a brand that merely CONTAINS "diet" does not arm the calorie check', () => {
+        // The measured witness (60 days AND all-time, 2026-09-07): the only line in
+        // MappingEventLog matching `diet` as a substring but not as a word. It resolves
+        // correctly today only because the winner's own name repeats the brand — see below.
+        expect(hasCalorieModifierViolation('dietz and watson turkey breast', 'Turkey Breast')).toBe(false);
+        expect(hasCalorieModifierViolation('dietz and watson black forest ham', 'Black Forest Ham Dietz And Watson')).toBe(false);
+    });
+
+    it('a real "diet" query still arms it, and a real diet record still satisfies it', () => {
+        expect(hasCalorieModifierViolation('diet coke', 'Coca-Cola Classic')).toBe(true);
+        expect(hasCalorieModifierViolation('a diet coke', 'Coca-Cola Classic')).toBe(true);
+        expect(hasCalorieModifierViolation('diet coke', 'Diet Coke')).toBe(false);
+    });
+
+    it('the CANDIDATE side keeps substring semantics, deliberately', () => {
+        // A boundary here would make MORE candidates violate — a removal increase, the opposite
+        // direction from the query-side change, and it needs its own measured arm. Pinned so the
+        // asymmetry reads as a decision rather than an oversight.
+        expect(hasCalorieModifierViolation('diet coke', 'Dietz Cola')).toBe(false);
+    });
+
+    it('the multi-word members are unmoved by the boundary', () => {
+        expect(hasCalorieModifierViolation('sugar free honey mustard', 'Honey Mustard')).toBe(true);
+        expect(hasCalorieModifierViolation('sugar-free honey mustard', 'Honey Mustard')).toBe(true);
+        expect(hasCalorieModifierViolation('low calorie ranch', 'Ranch Dressing')).toBe(true);
+        expect(hasCalorieModifierViolation('plain turkey', 'Turkey Breast')).toBe(false);
     });
 });
