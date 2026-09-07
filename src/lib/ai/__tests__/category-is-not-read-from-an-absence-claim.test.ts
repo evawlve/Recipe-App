@@ -14,6 +14,7 @@
  * still milk. Only a word naming an ingredient a package advertises the ABSENCE of can be misread.
  */
 import { getBareQueryDefault, maskAdvertisedAbsence } from '../ambiguous-serving-estimator';
+import { capMayOverrideLabelServing } from '@/lib/servings/bare-query-guard';
 
 const grams = (q: string) => getBareQueryDefault(maskAdvertisedAbsence(q))?.grams ?? null;
 const rawGrams = (q: string) => getBareQueryDefault(q)?.grams ?? null;
@@ -93,7 +94,29 @@ describe('#115 — the rule is NARROW, and this is the block that says so', () =
     });
 });
 
-describe('#115 — the mask is QUERY-side only, and the record name keeps today’s read', () => {
+describe('#115 — THE WIRING, which is where the first revision of this fix broke something', () => {
+    /**
+     * The mask is scoped to ONE lexicon read inside applyOffBareQueryGuard(). An earlier revision
+     * shadowed `queryName` for the WHOLE function, and that regressed `sugar free bbq sauce` on 20
+     * measured events: maskAdvertisedAbsence() BLANKS rather than deletes, but queryTokens() splits
+     * on /[^a-z]+/ and drops the blanks, so the token COUNT fell 4 -> 2 and flipped
+     * capMayOverrideLabelServing() false -> true — capping that line's declared 30/36/39 g label
+     * serving to the 14 g condiment default, a 2.1x-2.8x under-bill. Blanking preserves token
+     * POSITIONS, not token COUNT.
+     *
+     * These two pin the property directly on the predicate the regression ran through, so the
+     * scoping cannot be widened again by accident.
+     */
+    it('a 4-token absence line still counts as a PRODUCT query, so its declared label serving wins', () => {
+        expect(capMayOverrideLabelServing('sugar free bbq sauce', 'label_serving_default')).toBe(false);
+    });
+
+    it('and the masked form would NOT have — this is the regression, pinned', () => {
+        expect(capMayOverrideLabelServing(maskAdvertisedAbsence('sugar free bbq sauce'), 'label_serving_default')).toBe(true);
+    });
+});
+
+describe('#115 — the record name keeps today’s read', () => {
     /**
      * `trident spearmint gum` carries no `sugar` token; its 4 g comes from the matched RECORD's
      * name via applyOffBareQueryGuard()'s `queryDefault ?? getBareQueryDefault(foodName)`. 4 g is

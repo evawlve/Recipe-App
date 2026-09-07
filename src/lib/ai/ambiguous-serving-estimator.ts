@@ -256,8 +256,23 @@ const ABSENCE_FRAMES: ReadonlyArray<(w: string) => RegExp> = [
  * the line falls to the flat 100 g default: ~262 kcal for chewing gum. That is DNB-9's lesson read
  * backwards (`reports/2026-08-05_serving-fix-build-order.md`): the counterfactual for a rule that
  * STOPS firing is not "nothing", it is whatever the rungs below it bill instead. So the record-name
- * fallback keeps today's behaviour, deliberately, and the fix reaches 6 of the 12 measured misread
- * lines rather than 7.
+ * fallback keeps today's behaviour, deliberately.
+ *
+ * WHAT IT ACTUALLY REACHES: 3 of the 12 measured misread lines, 10 of the 46 misread events.
+ * NOT 6 of 12 — an earlier revision of this comment said 6 and was wrong, and the arithmetic that
+ * refutes it is this function's own scoping. `applyOffBareQueryGuard()`'s REPLACE path is
+ * `queryDefault ?? getBareQueryDefault(foodName)`, and on THREE of the six lines the matched
+ * record's own NAME carries the absence phrase, so the unmasked fallback re-supplies the identical
+ * 4 g: `pepsi zero sugar` -> "Pepsi Cola Real Sugar" / "Pepsi max maximum taste no sugar",
+ * `no sugar added applesauce` -> "No Sugar Added Applesauce", `sugar free vanilla latte` ->
+ * "Hot Latte Sugar Free Vanilla - Large". Those three are INERT by construction. The three that
+ * move are the ones whose record name is clean: `sprite zero sugar` -> "Sprite Zero",
+ * `zero sugar pepsi` -> "Pepsi Zero", `sugar free coke` -> "Diet Coke Caffeine Free (Can)".
+ * The gate's SERVING DIFF reports exactly three GRAMS-CHANGED rows, which is the same three.
+ *
+ * That is a real limit, not a rounding: this fix addresses 10 of 46 misread events, and the single
+ * largest misread line in the corpus (`coffee with cream and sugar`, 17 events, all organic) is a
+ * different shape entirely and is untouched.
  *
  * Blanking, not deleting: the frame is replaced with spaces so every other rule still sees the
  * words around it in their original positions. Four of the six fixed lines land on the CORRECT
