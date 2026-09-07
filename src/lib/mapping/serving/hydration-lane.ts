@@ -29,7 +29,7 @@ import { insertAiServing } from '../ai-backfill';
 import { backfillOnDemand, isDiscreteItem } from '../serving-backfill';
 import { classifyUnit } from '../unit-type';
 import { isAmbiguousUnit, getOrCreateAmbiguousServing } from '../ambiguous-unit-backfill';
-import { isEstimableUnknownUnit } from '../../ai/ambiguous-serving-estimator';
+import { isEstimableUnknownUnit, maskAdvertisedAbsence } from '../../ai/ambiguous-serving-estimator';
 import { extractPrepModifier } from '../preemptive-backfill';
 import { requestAiNutrition, createAiNutritionBudget, type AiNutritionBudget } from '../ai-nutrition-backfill';
 import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST } from '../config';
@@ -926,7 +926,8 @@ export async function hydrateAndSelectServing(
             let overrideGrams = 0;
 
             if (parsed.qty === 1) {
-                bareDefault = getBareQueryDefault(parsed.name || candidate.name);
+                // #115: mask the QUERY half only; `candidate.name` is the record and keeps today's read.
+                bareDefault = getBareQueryDefault(maskAdvertisedAbsence(parsed.name) || candidate.name);
                 if (bareDefault) overrideGrams = bareDefault.grams;
             } else if (parsed.qty > 3) {
                 bareDefault = getDiscreteLeafyGreenDefault(parsed.name || candidate.name, parsed.qty);
@@ -1842,7 +1843,8 @@ async function buildFdcResult(
     if (parsed && !parsed.unit && parsed.qty === 1) {
         try {
             const { getBareQueryDefault } = await import('../../ai/ambiguous-serving-estimator');
-            const bareDefault = getBareQueryDefault(parsed.name || candidate.name);
+            // #115: mask the QUERY half only; `candidate.name` is the record and keeps today's read.
+            const bareDefault = getBareQueryDefault(maskAdvertisedAbsence(parsed.name) || candidate.name);
             if (bareDefault && grams > bareDefault.grams * 2) {
                 logger.info('fdc.bare_query_inflation_capped', {
                     foodName: candidate.name,
@@ -2812,7 +2814,8 @@ export async function buildOffResult(
     // the label/package tiers where the category CAP restores the tsp/scoop
     // dose default. Piece/tub foods (yoplait, snickers, pepper jack) are
     // unaffected: their categories are absent or oz/cup/can-based.
-    const doseAnchored = bareRequest && isDoseAnchoredBareQuery(parsed?.name || '');
+    // #115: the dose anchor reads the same masked query the guard does, so the two cannot disagree.
+    const doseAnchored = bareRequest && isDoseAnchoredBareQuery(maskAdvertisedAbsence(parsed?.name || ''));
 
     // Units where the product's own label serving IS the thing the user asked
     // for ("1 container of yogurt" → the container size on the label). For these,

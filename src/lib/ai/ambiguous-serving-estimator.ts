@@ -205,6 +205,79 @@ export function isAmbiguousUnit(unit: string): boolean {
 }
 
 /**
+ * The category words this lexicon reads that name an ingredient a PACKAGE ADVERTISES THE ABSENCE
+ * OF. That property, not "is a modifier", is what makes the misread possible — and getting the
+ * predicate this narrow is the whole point of the fix.
+ *
+ * "sugar free coke" is not sugar; "lactose free milk" IS still milk. Both are a category word
+ * inside a modifier phrase, and only the first is a misread. So the rule *"a category detector
+ * must never take its category from inside a modifier phrase"* is TOO WIDE — applied literally it
+ * suppresses `lactose free milk` (240 g), `gluten free flour` (120 g), `fat free cheese` (28 g),
+ * `caffeine free coke` (355 g), `unsweetened almond milk` (240 g), `low sodium bacon` (28 g) and
+ * `light corn syrup` (14 g), every one of which is CORRECT today and live in traffic (measured
+ * 2026-09-07 by calling this function on each). The defensible rule is the narrow one:
+ *
+ *     a category word that names an ingredient the phrase says is ABSENT is not that query's
+ *     category.
+ *
+ * Membership is therefore a claim about the WORD, not about the phrase, and it is set by whether
+ * the trade sells "<word>-free" versions of things that are not <word>. Measured over the live
+ * lexicon (2026-09-07): `sugar` is the punch's case; `salt` fires the same way (`no salt added`
+ * -> 2.5 g, the spice rule); `oil` and `butter` are constructible (`no oil added` and `butter free
+ * popcorn` both -> 14 g, the condiment rule). Nothing else in the 17 rules has the property.
+ * Adding a word here is a deliberate widening and is pinned by the tests.
+ */
+const ABSENCE_ADVERTISED_CATEGORY_WORDS = ['sugar', 'salt', 'oil', 'butter'] as const;
+
+/**
+ * The absence frames, BOTH DIRECTIONS — because the misread runs both ways and a lookahead alone
+ * catches only one of them. Measured over the 12 misread lines (2026-09-07): the FOLLOWED shape
+ * (`sugar free coke`) is 2 lines and the PRECEDED shape (`pepsi zero sugar`, `no sugar added
+ * applesauce`) is 4, so a lookahead-only fix — the idiom this file already uses for `sugar snap`
+ * and `honey nut` — reaches 3 of 12 lines and 3 of 46 events. Lookbehind is where the mass is.
+ */
+const ABSENCE_FRAMES: ReadonlyArray<(w: string) => RegExp> = [
+    // FOLLOWED: "sugar free", "sugar-free", "sugarfree", "sugar less"
+    w => new RegExp(`\\b${w}[\\s-]?(?:free|less)\\b`, 'gi'),
+    // PRECEDED: "no sugar", "no added sugar", "zero sugar", "without sugar", "less sugar",
+    // "reduced sugar", "low sugar", "0 sugar"
+    w => new RegExp(`\\b(?:no|zero|0|without|less|reduced|low)\\s+(?:added\\s+)?${w}\\b`, 'gi'),
+];
+
+/**
+ * Blank out any ABSENCE_ADVERTISED_CATEGORY_WORDS occurrence that sits inside an absence frame,
+ * so getBareQueryDefault() cannot read a category out of a claim that the ingredient is NOT there.
+ *
+ * QUERY SIDE ONLY, and the asymmetry is measured rather than stylistic. getBareQueryDefault() is
+ * also called on the matched RECORD's name — `applyOffBareQueryGuard()`'s REPLACE path is
+ * `queryDefault ?? getBareQueryDefault(foodName)` — and masking there makes one live line WORSE:
+ * `trident spearmint gum` carries no `sugar` token at all, takes its 4 g from the record name
+ * "Sugar Free Spearmint Gum", and 4 g is ~2 sticks of gum, i.e. very nearly right. Suppress it and
+ * the line falls to the flat 100 g default: ~262 kcal for chewing gum. That is DNB-9's lesson read
+ * backwards (`reports/2026-08-05_serving-fix-build-order.md`): the counterfactual for a rule that
+ * STOPS firing is not "nothing", it is whatever the rungs below it bill instead. So the record-name
+ * fallback keeps today's behaviour, deliberately, and the fix reaches 6 of the 12 measured misread
+ * lines rather than 7.
+ *
+ * Blanking, not deleting: the frame is replaced with spaces so every other rule still sees the
+ * words around it in their original positions. Four of the six fixed lines land on the CORRECT
+ * 355 g for free that way, because rule 4 was only ever pre-empting rule 17 (`sprite zero sugar`
+ * still reaches the soda rule via `sprite`, `sugar free coke` via `coke`).
+ */
+export function maskAdvertisedAbsence(query: string): string {
+    if (!query) return query;
+    const lower = query.toLowerCase();
+    let out = query;
+    for (const w of ABSENCE_ADVERTISED_CATEGORY_WORDS) {
+        if (!lower.includes(w)) continue;
+        for (const frame of ABSENCE_FRAMES) {
+            out = out.replace(frame(w), m => ' '.repeat(m.length));
+        }
+    }
+    return out;
+}
+
+/**
  * Returns a standard serving estimate for bare queries (no unit, qty=1).
  * Prevents "Baking Flour" from defaulting to a 454g package or "Mayonnaise" to a 340g jar.
  */

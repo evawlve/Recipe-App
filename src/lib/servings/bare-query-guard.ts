@@ -42,7 +42,7 @@
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
-import { getBareQueryDefault } from '../ai/ambiguous-serving-estimator';
+import { getBareQueryDefault, maskAdvertisedAbsence } from '../ai/ambiguous-serving-estimator';
 import { discretePieceFloor, singularizeUnit } from '../mapping/count-label';
 
 /**
@@ -346,7 +346,15 @@ export interface BareQueryGuardOverride {
 export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGuardOverride | null {
     if (process.env.OFF_BARE_SERVING_GUARD === '0') return null;
 
-    const { grams, servingTier, parsed, rawLine, queryName, foodName, servingDescription } = input;
+    const { grams, servingTier, parsed, rawLine, foodName, servingDescription } = input;
+
+    // PUNCH #115 — the category must not be read out of a claim that the ingredient is ABSENT.
+    // Masked ONCE here so every query-side consumer below sees the same string: `queryDefault`,
+    // `queryHeadToken()`, `capMayOverrideLabelServing()` and `isDoseAnchoredBareQuery()`. `foodName`
+    // is deliberately NOT masked — the REPLACE fallback reads the matched RECORD's name, where
+    // suppressing the match is measured to make `trident spearmint gum` worse (4 g of gum, which is
+    // ~2 sticks, becomes the flat 100 g default). maskAdvertisedAbsence()'s header owns the reason.
+    const queryName = maskAdvertisedAbsence(input.queryName);
 
     // Eligibility: bare unitless qty-1 request only. The digit gate keeps every
     // explicit count out ("15 pretzels" must retain its count_unresolved_floor
