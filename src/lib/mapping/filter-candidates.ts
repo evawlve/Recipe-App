@@ -2432,12 +2432,28 @@ const MODIFIER_WORD_RE = new Map<string, RegExp>();
  *
  * IT IS QUERY-SIDE ONLY, DELIBERATELY. `ALL_LOW_CAL_MODIFIERS` keeps `includes()` on the CANDIDATE
  * side, and that asymmetry is the point: the query side decides whether the check RUNS, so a
- * boundary there can only make it run less often (admit-only, the safest direction in the backend
- * CLAUDE.md's preference order). The candidate side decides whether a candidate SATISFIES the
- * check, so a boundary there would make more candidates violate — a removal increase, the opposite
- * direction, and it needs its own measured arm. Sizing for whoever takes that on (measured
+ * boundary there can only make it run less often. The candidate side decides whether a candidate
+ * SATISFIES the check, so a boundary there would make more candidates violate — a removal
+ * increase, the opposite direction, and it needs its own measured arm.
+ *
+ * **THE PREDICATE IS MONOTONE; THE PIPELINE IS NOT — do not call this "admit-only".** The relaxed
+ * recovery fires only when the strict pass returns EMPTY, so admitting one more candidate
+ * SUPPRESSES the retry and swaps a superset for a subset. `winner-diff.ts`'s own header names this
+ * as NON-MONOTONE #2 under "admit-only by inspection is not a safety argument — burned this project
+ * three separate times", and the gate measured it here: 2 of 12 cold seeds went `relaxed
+ * true -> false` and LOST pool (11 -> 10 and 14 -> 12) while keeping their winners. Sizing for whoever takes that on (measured
  * 2026-09-07): 3,513 `OffFood` names contain `light` as a substring but not as a word, 514 contain
  * `lite`, and 518 rows over 56 brands carry `diet` that way in `brandName`.
+ *
+ * ONLY HALF THE `diet`-SUBSTRING CLASS IS CLOSED HERE, AND THE OTHER HALF IS LIVE. The same
+ * `lower.includes('diet')` predicate is in `expandWithSynonyms()` in `gather-candidates.ts`, where
+ * `DIETARY_SYNONYMS['diet']` expands a `dietz` line into junk retrieval variants
+ * (`unsweetenedz and watson black forest ham`, `sugar freez and watson …`) that feed
+ * `searchFdcLocal()`. Measured 2026-09-07 by executing the sibling `buildQueryVariants()` on this
+ * tree: 8 variants, 7 junk. `gather-candidates.ts` is in `RETRIEVAL_PATHS`, so `winner-gate.sh`
+ * exits 3 on any edit there and its own blind spot (a) is exactly this — the gate freezes the
+ * gather output, so it can neither cause nor observe the retrieval half. Do not read this comment
+ * as "the class is closed".
  *
  * THE DEFECT IS SELF-CANCELLING ON ITS OWN WITNESS, which is why it has never been seen. Measured
  * 2026-09-07 over 60 days AND all-time in `MappingEventLog`: exactly ONE distinct line matches
@@ -2462,8 +2478,11 @@ function containsModifierWord(text: string, modifier: string): boolean {
 /**
  * The CALORIE-class half of hasCriticalModifierMismatch(), as a pure predicate: true when the
  * query carries one of CALORIE_MODIFIERS and the candidate name carries none of
- * ALL_LOW_CAL_MODIFIERS. Substring semantics on both sides, exactly as the strict pass has
- * always applied them (`queryLower.includes(m)`), so the two call sites cannot disagree.
+ * ALL_LOW_CAL_MODIFIERS. **The two sides use DIFFERENT matching, deliberately (2026-09-07):** the
+ * QUERY side matches whole words via containsModifierWord(), the CANDIDATE side keeps substring
+ * `includes()`. That asymmetry is the fix for `diet` matching inside `Dietz`, and its direction is
+ * the argument for it — see containsModifierWord()'s header. Both call sites still read THIS
+ * function, so they cannot disagree with each other.
  *
  * It is a separate export because the RELAXED admission pass applies THIS class and only this
  * class (see the narrowing step in filterCandidatesByTokens()): the fat classes keep the relaxed

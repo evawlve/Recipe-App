@@ -17,7 +17,9 @@
  *      narrowed to the compliant one.
  *   3. THE STRONGER PROPERTY: a relaxed pool where EVERY candidate violates the calorie
  *      class is returned UNCHANGED — today's pool — so no line that resolves today loses
- *      its pool; only the choice among today's relaxed candidates can change.
+ *      its pool. Owner for the bounding claim: the narrowing block's comment in
+ *      filter-candidates.ts -- it is "the pool cannot empty; everything downstream is measured,
+ *      not bounded", NOT "only the choice can change" (doc rule 3, one owner per fact).
  *   4. The fat classes keep the relaxed pass's leniency (a full-fat record still survives
  *      a `reduced fat` line's relaxed pass, exactly as on master).
  *   5. The strict pass is unchanged (still rejects the full-sugar row on its own).
