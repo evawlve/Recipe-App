@@ -2419,11 +2419,70 @@ const ALL_LOW_CAL_MODIFIERS = [
     'fat free', 'fat-free',  // Often used interchangeably with "sugar free" for frozen desserts
 ];
 
+const MODIFIER_WORD_RE = new Map<string, RegExp>();
+
+/**
+ * Does `text` contain `modifier` as a WHOLE WORD (or whole phrase), rather than as a fragment of
+ * a longer word? `text` and `modifier` must both already be lowercase.
+ *
+ * WHY THIS EXISTS. `CALORIE_MODIFIERS` is matched against the user's query with `includes()`, and
+ * its only single-token member is `diet` — which is a prefix of the real deli brand `Dietz and
+ * Watson`. A `dietz` line therefore enters the calorie branch, and every candidate that does not
+ * itself carry a low-calorie word is then reported as a critical modifier mismatch.
+ *
+ * IT IS QUERY-SIDE ONLY, DELIBERATELY. `ALL_LOW_CAL_MODIFIERS` keeps `includes()` on the CANDIDATE
+ * side, and that asymmetry is the point: the query side decides whether the check RUNS, so a
+ * boundary there can only make it run less often. The candidate side decides whether a candidate
+ * SATISFIES the check, so a boundary there would make more candidates violate — a removal
+ * increase, the opposite direction, and it needs its own measured arm.
+ *
+ * **THE PREDICATE IS MONOTONE; THE PIPELINE IS NOT — do not call this "admit-only".** The relaxed
+ * recovery fires only when the strict pass returns EMPTY, so admitting one more candidate
+ * SUPPRESSES the retry and swaps a superset for a subset. `winner-diff.ts`'s own header names this
+ * as NON-MONOTONE #2 under "admit-only by inspection is not a safety argument — burned this project
+ * three separate times", and the gate measured it here: 2 of 12 cold seeds went `relaxed
+ * true -> false` and LOST pool (11 -> 10 and 14 -> 12) while keeping their winners. Sizing for whoever takes that on (measured
+ * 2026-09-07): 3,513 `OffFood` names contain `light` as a substring but not as a word, 514 contain
+ * `lite`, and 518 rows over 56 brands carry `diet` that way in `brandName`.
+ *
+ * ONLY HALF THE `diet`-SUBSTRING CLASS IS CLOSED HERE, AND THE OTHER HALF IS LIVE. The same
+ * `lower.includes('diet')` predicate is in `expandWithSynonyms()` in `gather-candidates.ts`, where
+ * `DIETARY_SYNONYMS['diet']` expands a `dietz` line into junk retrieval variants
+ * (`unsweetenedz and watson black forest ham`, `sugar freez and watson …`) that feed
+ * `searchFdcLocal()`. Measured 2026-09-07 by executing the sibling `buildQueryVariants()` on this
+ * tree: 8 variants, 7 junk. `gather-candidates.ts` is in `RETRIEVAL_PATHS`, so `winner-gate.sh`
+ * exits 3 on any edit there and its own blind spot (a) is exactly this — the gate freezes the
+ * gather output, so it can neither cause nor observe the retrieval half. Do not read this comment
+ * as "the class is closed".
+ *
+ * THE DEFECT IS SELF-CANCELLING ON ITS OWN WITNESS, which is why it has never been seen. Measured
+ * 2026-09-07 over 60 days AND all-time in `MappingEventLog`: exactly ONE distinct line matches
+ * `diet` as a substring but not as a word — `dietz and watson black forest ham`, 5 events — and it
+ * resolves CORRECTLY, to `off_2096383008540` "Black Forest Ham Dietz And Watson" at 56.699 g. It
+ * survives because the winner's own NAME carries `Dietz`, so the identical substring bug on the
+ * candidate side satisfies `ALL_LOW_CAL_MODIFIERS` and the violation never fires. The exposure is
+ * a `dietz` line whose correct answer does NOT spell the brand; that has zero events on record.
+ * Re-derive:
+ *   SELECT lower("rawLine"), count(*) FROM "MappingEventLog"
+ *   WHERE lower("rawLine") LIKE '%diet%' AND lower("rawLine") !~ '\\mdiet\\M' GROUP BY 1;
+ */
+function containsModifierWord(text: string, modifier: string): boolean {
+    let re = MODIFIER_WORD_RE.get(modifier);
+    if (!re) {
+        re = new RegExp(`\\b${modifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        MODIFIER_WORD_RE.set(modifier, re);
+    }
+    return re.test(text);
+}
+
 /**
  * The CALORIE-class half of hasCriticalModifierMismatch(), as a pure predicate: true when the
  * query carries one of CALORIE_MODIFIERS and the candidate name carries none of
- * ALL_LOW_CAL_MODIFIERS. Substring semantics on both sides, exactly as the strict pass has
- * always applied them (`queryLower.includes(m)`), so the two call sites cannot disagree.
+ * ALL_LOW_CAL_MODIFIERS. **The two sides use DIFFERENT matching, deliberately (2026-09-07):** the
+ * QUERY side matches whole words via containsModifierWord(), the CANDIDATE side keeps substring
+ * `includes()`. That asymmetry is the fix for `diet` matching inside `Dietz`, and its direction is
+ * the argument for it — see containsModifierWord()'s header. Both call sites still read THIS
+ * function, so they cannot disagree with each other.
  *
  * It is a separate export because the RELAXED admission pass applies THIS class and only this
  * class (see the narrowing step in filterCandidatesByTokens()): the fat classes keep the relaxed
@@ -2434,7 +2493,7 @@ const ALL_LOW_CAL_MODIFIERS = [
  */
 export function hasCalorieModifierViolation(query: string, candidateName: string): boolean {
     const queryLower = query.toLowerCase();
-    if (!CALORIE_MODIFIERS.some(m => queryLower.includes(m))) return false;
+    if (!CALORIE_MODIFIERS.some(m => containsModifierWord(queryLower, m))) return false;
     const candLower = candidateName.toLowerCase();
     return !ALL_LOW_CAL_MODIFIERS.some(m => candLower.includes(m));
 }
@@ -3129,8 +3188,12 @@ export function filterCandidatesByTokens(
     // (hasCalorieModifierViolation — the module's own CALORIE_MODIFIERS / ALL_LOW_CAL_MODIFIERS
     // boundary) leave the relaxed pool; the fat classes keep today's leniency untouched. And if
     // removing them would leave the relaxed pool EMPTY, the pool is returned UNCHANGED — so no
-    // line that resolves today loses its pool, and the only thing that can change is the CHOICE
-    // among the candidates today's relaxed pass admits. That is the STRONGER of the two empty-pool
+    // line that resolves today loses its pool: THE POOL CANNOT EMPTY, and everything downstream of
+    // that is MEASURED, NOT BOUNDED. An earlier draft of this line said "the only thing that can
+    // change is the CHOICE", which overstates what the code guarantees — the choice moving is
+    // exactly how a winner, a serving tier and a bill move with it, and none of those are bounded
+    // by anything in this function. What bounds them is the gate receipt, not the control flow.
+    // That is the STRONGER of the two empty-pool
     // properties: "the strict pool is non-empty" (what PR #395 shipped and was reverted for) is
     // not enough, because the relaxed pass is the pool on exactly these lines; S3 (#411) holds
     // the stronger one and so does this.
@@ -3145,15 +3208,19 @@ export function filterCandidatesByTokens(
     if (relaxed && rawLine && filtered.length > 0) {
         const kept = filtered.filter(c => !hasCalorieModifierViolation(rawLine, c.name));
         if (kept.length > 0 && kept.length < filtered.length) {
-            if (debug) {
-                logger.info('filter.candidates.relaxed_calorie_modifier_narrowed', {
-                    normalizedName,
-                    rawLine,
-                    before: filtered.length,
-                    after: kept.length,
-                    removed: filtered.filter(c => !kept.includes(c)).slice(0, 3).map(c => c.name),
-                });
-            }
+            // Logged at WARN and unconditionally, for the same reason the S3 block above says in
+            // its own comment: the box runs at `warn` and `LOG_LEVEL` is absent from its `.env`,
+            // so an `info` line inside `if (debug)` is invisible in production twice over. This
+            // narrowing CHANGES WHICH RECORD WINS on the lines it fires on, and a behaviour
+            // change whose firing cannot be observed on the host that serves it is not
+            // instrumented at all. Cheap: it fires only when the pool actually shrank.
+            logger.warn('filter.candidates.relaxed_calorie_modifier_narrowed', {
+                normalizedName,
+                rawLine,
+                before: filtered.length,
+                after: kept.length,
+                removed: filtered.filter(c => !kept.includes(c)).slice(0, 3).map(c => c.name),
+            });
             filtered = kept;
         }
     }
