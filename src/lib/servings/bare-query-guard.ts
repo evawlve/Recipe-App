@@ -42,7 +42,7 @@
  */
 
 import type { ParsedIngredient } from '../parse/ingredient-line';
-import { getBareQueryDefault } from '../ai/ambiguous-serving-estimator';
+import { getBareQueryDefault, maskAdvertisedAbsence } from '../ai/ambiguous-serving-estimator';
 import { discretePieceFloor, singularizeUnit } from '../mapping/count-label';
 
 /**
@@ -354,7 +354,25 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
     if (!isBareUnitlessQty1(parsed, rawLine)) return null;
     if (!servingTier) return null;
 
-    const queryDefault = getBareQueryDefault(queryName);
+    // PUNCH #115 — the category must not be read out of a claim that the ingredient is ABSENT.
+    // THE MASK IS SCOPED TO THIS ONE LEXICON READ, and the scoping is a measured correction rather
+    // than caution. An earlier revision of this fix shadowed `queryName` for the whole function, so
+    // every consumer saw the masked string. That REGRESSED `sugar free bbq sauce`, 20 events:
+    // `maskAdvertisedAbsence()` BLANKS rather than deletes, but `queryTokens()` splits on
+    // /[^a-z]+/ and drops the blanks, so the token COUNT fell 4 -> 2 and flipped
+    // `capMayOverrideLabelServing()` false -> true. That rule exists to say "three or more words
+    // means the user named a PRODUCT, so the manufacturer's declared serving beats a category
+    // guess about one token inside its name" — and the line's declared 30/36/39 g label serving was
+    // capped to the 14 g condiment default, a 2.1x-2.8x under-bill, on a line whose CATEGORY the
+    // mask did not even change. Blanking preserves token POSITIONS, not token COUNT.
+    //
+    // So: `capMayOverrideLabelServing()`, `queryHeadToken()`, `isDoseAnchoredBareQuery()` and
+    // `discretePieceFloor()` all keep reading the RAW `queryName`. Only the lexicon lookup is
+    // masked, which is the only place the misread can enter. `foodName` is likewise unmasked — the
+    // REPLACE fallback reads the matched RECORD's name, and suppressing the match there is measured
+    // to make `trident spearmint gum` worse (4 g, ~2 sticks, becomes the flat 100 g default).
+    // maskAdvertisedAbsence()'s header owns the rest of the reasoning.
+    const queryDefault = getBareQueryDefault(maskAdvertisedAbsence(queryName));
 
     // A multi-word PRODUCT query keeps its record's DECLARED label serving: the
     // manufacturer's number outranks a category guess made from one token inside
