@@ -11,7 +11,7 @@ export const dynamic = 'force-static';
 // Diego's decision — do not change without his say-so.
 const PRIVACY_CONTACT = 'team.mealspire@gmail.com';
 
-const LAST_UPDATED = '30 August 2026';
+const LAST_UPDATED = '7 September 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Kinda Healthy',
@@ -58,6 +58,23 @@ const SECTIONS: Section[] = [
         kind: 'p',
         lead: 'Retention.',
         text: 'Health figures are held only for as long as the app needs them to draw the current screen. They are not written to our database and are not retained after you close the app; the app reads them again from Apple Health the next time it needs them.',
+      },
+      // A CARVE-OUT FROM THE PARAGRAPH ABOVE, NOT AN ADDITION TO IT. Retention says a Health
+      // figure is not kept once you close the app; that is true of every figure the app READS.
+      // An adopted one is a different thing: the explicit tap stores the number as the user's
+      // own entry, at which point it stops being a Health figure and the sentence above stops
+      // applying to it. Dropping this beside Retention without naming the distinction would
+      // read as a contradiction, which is why it is its own block with its own lead.
+      // TRUE OF SHIPPED BEHAVIOUR, verified in the mobile repo 2026-09-07: the button's
+      // onPress in `src/app/day-summary.tsx` calls `commitActiveKcal`, which writes through
+      // `setActiveKcal` with its default source `'typed'`; `FOOD_LOG_PERSIST_OPTIONS`'
+      // `partialize` in `src/stores/food-log-store.ts` drops every `'health'` entry and keeps
+      // every `'typed'` one, so the adopted number reaches AsyncStorage and survives a
+      // force-quit, while a fed one does not. Punch #55(d) shipped the tap; #58 the persistence.
+      {
+        kind: 'p',
+        lead: 'One exception, and it is your own doing.',
+        text: 'If you tap “Use N kcal from Apple Health”, that number is saved as your own entry and stays on your device until you change it. Tapping it is you adopting the figure rather than the app keeping one: from that point the number is treated exactly like one you typed yourself, and the paragraph above no longer applies to it. It is still held on your device only — it is not sent to our servers and not stored in our database.',
       },
       {
         kind: 'p',
