@@ -204,4 +204,70 @@ describe('the CAP path — what the fix must NOT break', () => {
             foodName: 'Olive Oil',
         })).toBeNull();
     });
+
+    // ---- PUNCH #131 (2026-09-08, Lane A S43) ----
+    //
+    // The 2026-07-27 token rule above only reaches queries of THREE OR MORE tokens,
+    // and grants a fourth to dose-anchored ones. Two shapes slipped through and were
+    // measured live on 2026-09-08 (33 warm nosave=1 probes on ZestuSCJYO2rOQb57bVuz,
+    // plus a 33-seed frozen-pool replay run with and without OFF_BARE_SERVING_GUARD
+    // to read the PRE-guard tier; noise floor 0, winner identity byte-identical):
+    //
+    //   anaheim pepper           label_serving_default    74g -> 2.5g   (2 tokens)
+    //   habanero pepper          label_serving_default     9g -> 2.5g   (2 tokens)
+    //   fresno pepper            label_serving_default    74g -> 2.5g   (2 tokens)
+    //   roasted red pepper       label_serving_default    75g -> 2.5g   (3, tail-anchored)
+    //   graham crackers cinnamon label_serving_default    34g -> 2.5g   (3, tail-anchored)
+    //
+    // The spice category's CAP branch fired 10 times in that replay and was wrong on
+    // all ten; its REPLACE branch was right on 7 of 9. Hence the split.
+
+    it.each([
+        ['anaheim pepper', 74],
+        ['habanero pepper', 9],
+        ['fresno pepper', 74],
+        ['roasted red pepper', 75],
+        ['graham crackers cinnamon', 34],
+    ])('%s keeps its declared %sg serving instead of one teaspoon', (q, g) => {
+        expect(cap(q as string, g as number)).toBeNull();
+    });
+
+    it('a genuine package-scale "serving" is still capped — lmnt citrus salt, 453.592g', () => {
+        expect(cap('lmnt citrus salt', 453.592)).toMatchObject({ grams: 2.5 });
+    });
+
+    it('an exactly-100g placeholder is not a declared serving and is still capped', () => {
+        expect(cap('pepper jack', 100)).toMatchObject({ grams: 2.5 });
+    });
+
+    it.each([
+        ['dr pepper', 164, 'seed_count_default'],
+        ['cubanelle pepper', 164, 'seed_count_default'],
+        ['rxbar chocolate sea salt', 52, 'package_count_sibling'],
+    ])('%s is NOT covered: %sg on %s is not a declared serving', (q, g, tier) => {
+        expect(cap(q as string, g as number, tier as string)).toMatchObject({ grams: 2.5 });
+    });
+
+    // Every category above the 3g label floor is byte-identical: the new predicate
+    // selects exactly the 2.5g spice entry, the only lexicon category under 3g.
+    it.each([
+        ['mayonnaise', 340, 14],
+        ['olive oil', 250, 14],
+        ['baking flour', 454, 120],
+        ['brown sugar', 104, 4],
+        ['cheddar cheese', 200, 28],
+    ])('%s still caps its %sg package to %sg', (q, g, want) => {
+        expect(cap(q as string, g as number)).toMatchObject({ grams: want as number });
+    });
+
+    it('the REPLACE path is untouched — a fabricated 100g still becomes the teaspoon', () => {
+        expect(applyOffBareQueryGuard({
+            grams: 100,
+            servingTier: 'flat_100g_default',
+            parsed: bare('black pepper'),
+            rawLine: 'black pepper',
+            queryName: 'black pepper',
+            foodName: 'Black Pepper',
+        })).toMatchObject({ grams: 2.5 });
+    });
 });

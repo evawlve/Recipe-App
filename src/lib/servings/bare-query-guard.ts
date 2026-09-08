@@ -265,6 +265,63 @@ export function capMayOverrideLabelServing(queryName: string, servingTier?: stri
 }
 
 /**
+ * The one case where a lexicon category may NOT cap a record's DECLARED serving,
+ * whatever the token rule above says.
+ *
+ * The CAP threshold is `categoryDefault x 2`. Every lexicon category clears
+ * BARE_LABEL_MIN_GRAMS except one: the 2.5g spice/extract/seasoning dose, whose
+ * band is FIVE GRAMS — below every real packaged food. CAP_MAX_QUERY_TOKENS's own
+ * header already says this ("A 2x band on a 2.5g anchor is not a band; it clamps
+ * everything") and the 2026-07-27 token rule is the mitigation — but it only
+ * reaches queries of THREE OR MORE tokens. The two-token hijacks were never
+ * covered ("dr pepper", "anaheim pepper"), and neither were the three-token ones
+ * whose lexicon token is the TAIL: "lmnt citrus salt" and "graham crackers
+ * cinnamon" are dose-anchored by the letter of isDoseAnchoredBareQuery, so they
+ * get CAP_MAX_DOSE_ANCHORED_TOKENS and cap anyway.
+ *
+ * Measured 2026-09-08 (Lane A S43) on a 33-seed frozen-pool replay — noise floor
+ * 0, winner identity byte-identical with and without OFF_BARE_SERVING_GUARD:
+ * the spice category's CAP branch fired TEN times and was wrong on ALL TEN, while
+ * its REPLACE branch was right on seven of nine. That asymmetry is the reason this
+ * predicate sits on CAP and not on REPLACE. A genuine ground spice carries no
+ * serving data — nobody declares a serving size on a jar of cumin — so it falls to
+ * the flat-100 placeholder and REPLACE substitutes the teaspoon correctly. A food
+ * that merely CONTAINS a spice token has a real declared serving, and reaches the
+ * CAP with single-serving-scale grams already in hand.
+ *
+ * So the discriminator is the EVIDENCE, not the string, and it cannot be the
+ * string: "black pepper" (2.5g is right) and "dr pepper" (2.5g is absurd) are the
+ * same shape. Head-anchoring does not separate them either — queryHeadToken() is
+ * "pepper" for the whole cultivar cluster, "salt" for "lmnt citrus salt" and
+ * "cinnamon" for "graham crackers cinnamon", so HEAD_GATED_CAP_TIERS' and-clause
+ * is the right idea on the wrong branch for this class.
+ *
+ * Scoped three ways so that nothing else moves:
+ *   - DECLARED_LABEL_TIERS only. Package-scale tiers (package_*, seed_count_default)
+ *     are what the guard is FOR and keep capping; their grams are not a declared
+ *     serving. This is why "dr pepper" is NOT fixed here: its pre-guard 164g is the
+ *     bell-pepper seed_count_default hijack that CAP_TIERS' own comment names — a
+ *     different defect, in the seed table, and not this one.
+ *   - usableBareLabelServing(), the module's OWN test for real single-serving-scale
+ *     data (3–400g, flat-100 placeholders excluded). "lmnt citrus salt"'s 453.592g
+ *     whole-tub "serving" therefore still caps to 2.5g — that is the genuine
+ *     package the CAP exists to catch — and so does a 100g placeholder.
+ *   - a default below BARE_LABEL_MIN_GRAMS, which selects exactly the 2.5g entry:
+ *     it is the only lexicon category under 3g (the rest are 4, 12, 14, 28, 32, 35,
+ *     40, 45, 120, 240, 355, 414). Condiments, sugars, nut butters, cheeses and
+ *     every count/package category are byte-identical.
+ */
+export function declaredServingOutranksSubFloorDefault(
+    categoryDefaultGrams: number,
+    servingTier: string,
+    grams: number,
+): boolean {
+    if (categoryDefaultGrams >= BARE_LABEL_MIN_GRAMS) return false;
+    if (!DECLARED_LABEL_TIERS.has(servingTier)) return false;
+    return usableBareLabelServing(grams, null) != null;
+}
+
+/**
  * Dose-measured lexicon categories: the bare-query default is a tsp/tbsp/scoop
  * DOSE, not a piece or package ("1 tsp" sugar/spices, "1 tbsp" condiments,
  * "2 tbsp" nut butters, "1 scoop" pre-workout / protein powders).
@@ -442,7 +499,15 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         // CAP consults ONLY the query-side lexicon. A foodName fallback here
         // would make any OFF name containing a lexicon token ("Chocolate Chip
         // …", "… Crisps") cap a genuine label serving the user never named.
-        if (capAllowed && queryDefault && grams > queryDefault.grams * 2) {
+        //
+        // PUNCH #131 — and a category default smaller than the module's own
+        // minimum usable label serving may not overwrite a DECLARED one that is
+        // itself single-serving-scale. That is the 2.5g spice dose and nothing
+        // else; declaredServingOutranksSubFloorDefault()'s header owns why.
+        if (capAllowed
+            && queryDefault
+            && grams > queryDefault.grams * 2
+            && !declaredServingOutranksSubFloorDefault(queryDefault.grams, servingTier, grams)) {
             return buildOverride(queryDefault.grams);
         }
         return null;
