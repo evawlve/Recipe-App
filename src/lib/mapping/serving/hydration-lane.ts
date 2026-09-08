@@ -930,7 +930,7 @@ export async function hydrateAndSelectServing(
      * repeat the `discrete_unit_backfill` trap (a tier name no classification set
      * knows).
      */
-    let overrideServingTier: string | undefined;
+    let servingTier: string | undefined;
 
     // Calculate final grams for the result
     let finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
@@ -964,8 +964,14 @@ export async function hydrateAndSelectServing(
                     oldGrams: finalGrams,
                     newGrams: overrideGrams,
                     description: bareDefault.description,
+                    // qty DISCRIMINATES THE TWO RULES. Both branches above emit this same
+                    // line, but only the qty===1 lexicon branch stamps a tier, so without
+                    // qty a later reader counting this log against
+                    // MappingEventLog."servingTier"='bare_query_default' finds an
+                    // unexplained shortfall with no tell on either side.
+                    qty: parsed.qty,
                 });
-                if (parsed.qty === 1) overrideServingTier = 'bare_query_default';
+                if (parsed.qty === 1) servingTier = 'bare_query_default';
                 
                 const gramsRatio = overrideGrams / finalGrams;
                 macros.kcal *= gramsRatio;
@@ -1289,7 +1295,7 @@ export async function hydrateAndSelectServing(
         // and the client's `portion-borrowed` badge starts appearing on them. That is
         // honest — the grams ARE a category default — and it is the one user-visible
         // effect of this change.
-        servingTier: overrideServingTier,
+        servingTier,
     };
 }
 
