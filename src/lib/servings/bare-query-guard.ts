@@ -310,15 +310,37 @@ export function capMayOverrideLabelServing(queryName: string, servingTier?: stri
  *     it is the only lexicon category under 3g (the rest are 4, 12, 14, 28, 32, 35,
  *     40, 45, 120, 240, 355, 414). Condiments, sugars, nut butters, cheeses and
  *     every count/package category are byte-identical.
+ *
+ * FOURTH condition, added after the gate refuted the first three (2026-09-08, same session):
+ * the RECORD must corroborate the category. The cold arm moved `table salt` from 2.5 g to
+ * **103 g / 87 kcal**, because its cold winner is `fs_7702` "Dry Table Wine" — matched on
+ * "table", serving "1 glass (3.5 fl oz)". The identity is wrong on BOTH arms; the 2.5 g cap
+ * was only limiting the damage, and relying on that is not a design. But a 41x worse bill is
+ * not shippable either, so the decline now also requires `getBareQueryDefault(foodName)` to
+ * return the SAME category: the query says "spice" and the matched record must be one.
+ *
+ * NOTE THE DIRECTION, because the CAP branch's own comment warns against the opposite one.
+ * That comment forbids a `foodName` fallback that would ENABLE a cap ("any OFF name containing
+ * a lexicon token would cap a genuine label serving the user never named"). This reads
+ * `foodName` only to REQUIRE corroboration before DECLINING a cap, which is strictly more
+ * conservative than today in every case and can never introduce a cap that does not already
+ * fire.
+ *
+ * Cost of the fourth condition, stated: it drops `roasted red pepper`, whose record is
+ * "Bell Peppers" — excluded by the lexicon's own `(?<!bell\s)` lookbehind, which is the rule
+ * that makes bell peppers produce in the first place. Four fixes remain.
  */
 export function declaredServingOutranksSubFloorDefault(
     categoryDefaultGrams: number,
     servingTier: string,
     grams: number,
+    foodName: string,
 ): boolean {
     if (categoryDefaultGrams >= BARE_LABEL_MIN_GRAMS) return false;
     if (!DECLARED_LABEL_TIERS.has(servingTier)) return false;
-    return usableBareLabelServing(grams, null) != null;
+    if (usableBareLabelServing(grams, null) == null) return false;
+    const recordCategory = getBareQueryDefault(foodName);
+    return recordCategory != null && recordCategory.grams === categoryDefaultGrams;
 }
 
 /**
@@ -507,7 +529,7 @@ export function applyOffBareQueryGuard(input: BareQueryGuardInput): BareQueryGua
         if (capAllowed
             && queryDefault
             && grams > queryDefault.grams * 2
-            && !declaredServingOutranksSubFloorDefault(queryDefault.grams, servingTier, grams)) {
+            && !declaredServingOutranksSubFloorDefault(queryDefault.grams, servingTier, grams, foodName)) {
             return buildOverride(queryDefault.grams);
         }
         return null;

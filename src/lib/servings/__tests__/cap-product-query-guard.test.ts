@@ -35,14 +35,15 @@ const bare = (name: string): ParsedIngredient =>
     ({ qty: 1, unit: null, multiplier: 1, name } as unknown as ParsedIngredient);
 
 /** The CAP path, driven exactly as build-off-result / build-fatsecret-result drive it. */
-function cap(queryName: string, grams: number, servingTier = 'label_serving_default') {
+function cap(queryName: string, grams: number, servingTier = 'label_serving_default',
+             foodName = 'irrelevant to the CAP path') {
     return applyOffBareQueryGuard({
         grams,
         servingTier,
         parsed: bare(queryName),
         rawLine: queryName,
         queryName,
-        foodName: 'irrelevant to the CAP path',
+        foodName,
     });
 }
 
@@ -223,15 +224,32 @@ describe('the CAP path — what the fix must NOT break', () => {
     // all ten; its REPLACE branch was right on 7 of 9. Hence the split.
 
     it.each([
-        ['anaheim pepper', 74],
-        ['habanero pepper', 9],
-        ['fresno pepper', 74],
-        ['roasted red pepper', 75],
-        ['graham crackers cinnamon', 34],
-    ])('%s keeps its declared %sg serving instead of one teaspoon', (q, g) => {
-        expect(cap(q as string, g as number)).toBeNull();
+        ['anaheim pepper', 74, 'Pepper'],
+        ['habanero pepper', 9, 'Habanero Pepper'],
+        ['fresno pepper', 74, 'Pepper'],
+        ['graham crackers cinnamon', 34, 'Cinnamon Graham Crackers'],
+    ])('%s keeps its declared %sg serving instead of one teaspoon', (q, g, rec) => {
+        expect(cap(q as string, g as number, 'label_serving_default', rec as string)).toBeNull();
     });
 
+
+    // THE FOURTH CONDITION, pinned by the row that forced it. The 2026-09-08 cold gate
+    // moved `table salt` 2.5g -> 103g / 87kcal: its cold winner is fs_7702 "Dry Table
+    // Wine", matched on "table", serving "1 glass (3.5 fl oz) (103g)". The identity is
+    // wrong on both arms and the cap was only limiting the damage — but a 41x worse bill
+    // is not shippable, so the decline requires the RECORD to carry the same category.
+    it('a record that does not corroborate the category is still capped — table salt -> Dry Table Wine', () => {
+        expect(cap('table salt', 103, 'label_serving_default', 'Dry Table Wine'))
+            .toMatchObject({ grams: 2.5 });
+    });
+
+    // The cost of that condition, pinned so a future reader sees it was deliberate:
+    // "Bell Peppers" is excluded by the lexicon's own (?<!bell\s) lookbehind — the rule
+    // that makes bell peppers produce — so this row keeps capping.
+    it('roasted red pepper is NOT covered: its record "Bell Peppers" fails the bell lookbehind', () => {
+        expect(cap('roasted red pepper', 75, 'label_serving_default', 'Bell Peppers'))
+            .toMatchObject({ grams: 2.5 });
+    });
     it('a genuine package-scale "serving" is still capped — lmnt citrus salt, 453.592g', () => {
         expect(cap('lmnt citrus salt', 453.592)).toMatchObject({ grams: 2.5 });
     });
