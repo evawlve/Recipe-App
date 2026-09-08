@@ -333,6 +333,15 @@ const KNOWN_INDIRECT_ASSIGNMENTS: Readonly<Record<string, string>> = Object.free
     // hide a producer if a future exit built its own tier inline.
     '{ servingTier } (shorthand)':
         'result-object emission of the cascade local; its literals are counted at each branch',
+    // PUNCH #130(c), 2026-09-08. hydrateAndSelectServing()'s GENERIC lane (what is
+    // left after the fdc_/off_/fs_ builders have been dispatched) capped bare
+    // queries and stamped nothing, so its events reached MappingEventLog with a
+    // NULL tier. It now emits 'bare_query_default' — the same literal
+    // buildFdcResult() stamps for the identical cap, deliberately reused rather
+    // than invented (the `discrete_unit_backfill` trap). The literal is counted at
+    // its assignment inside the guard block, not here.
+    'overrideServingTier':
+        'generic-lane bare-query cap; assigns the existing bare_query_default literal',
 });
 
 interface ScanResult {

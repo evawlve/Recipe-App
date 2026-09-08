@@ -909,6 +909,28 @@ export async function hydrateAndSelectServing(
     }
 
     let overrideServingDescription: string | null = null;
+    /**
+     * PUNCH #130(c) — the generic path's serving tier.
+     *
+     * This function dispatches fdc_ / off_ / fs_ candidates to their own builders
+     * BEFORE reaching here, so what is left is the generic lane: AiGeneratedFood
+     * rows and anything else without a source prefix. It has always capped bare
+     * queries below and stamped NOTHING, so its events reach MappingEventLog with
+     * a NULL servingTier and are invisible to every tier census — while
+     * buildFdcResult()'s identical cap stamps 'bare_query_default'.
+     *
+     * Sized read-only 2026-09-08 (Lane A S43) over 30 days: the generic lane is
+     * 98 events / 43 distinct lines (the raw `other`-id x tier-NULL cell is 439,
+     * but 341 of those are `water_default`, the zero-calorie fast path, which
+     * never reaches this function). Small, and not zero.
+     *
+     * Only the qty===1 lexicon branch is stamped, matching buildFdcResult()'s
+     * condition exactly. The qty>3 leafy-green branch below shares this variable's
+     * `bareDefault` but is a DIFFERENT rule and gets no tier: inventing one would
+     * repeat the `discrete_unit_backfill` trap (a tier name no classification set
+     * knows).
+     */
+    let overrideServingTier: string | undefined;
 
     // Calculate final grams for the result
     let finalGrams = targetGrams || ((unitGrams || gramsForServing(serving, candidate.name) || 100) * qty);
@@ -934,12 +956,16 @@ export async function hydrateAndSelectServing(
             }
 
             if (bareDefault && overrideGrams > 0 && finalGrams > overrideGrams * 2) { // Only override if it's significantly inflating
-                logger.info('hydrate.bare_query_inflation_capped', {
+                // warn, not info: the box runs at LOG_LEVEL=warn (LOG_LEVEL is absent
+                // from its .env), so this line has never been readable in production —
+                // the same reason #428 raised its narrowing literal.
+                logger.warn('hydrate.bare_query_inflation_capped', {
                     foodName: candidate.name,
                     oldGrams: finalGrams,
                     newGrams: overrideGrams,
                     description: bareDefault.description,
                 });
+                if (parsed.qty === 1) overrideServingTier = 'bare_query_default';
                 
                 const gramsRatio = overrideGrams / finalGrams;
                 macros.kcal *= gramsRatio;
@@ -1257,6 +1283,13 @@ export async function hydrateAndSelectServing(
         confidence,
         quality: confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low',
         rawLine,
+        // #130(c). Undefined on every other generic-path outcome, exactly as before;
+        // 'bare_query_default' is a MEMBER of BORROWED_OR_DEFAULTED_SERVING_TIERS, so
+        // portionProvenanceForTier() maps these events to portionProvenance 'borrowed'
+        // and the client's `portion-borrowed` badge starts appearing on them. That is
+        // honest — the grams ARE a category default — and it is the one user-visible
+        // effect of this change.
+        servingTier: overrideServingTier,
     };
 }
 
