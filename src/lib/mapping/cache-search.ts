@@ -226,7 +226,16 @@ export function buildCacheFoodResponse(
     // parameter is `fiber100?: number | null`, and /api/foods/[id] passes the
     // object through. Inert today (0 of 241 rows null, 2026-09-05).
     fiber100: nutrients.fiber ?? null,
-    sugar100: nutrients.sugar ?? 0,
+    // Same rule (#134). `extractCacheNutrients()` already returns `number | null`.
+    //
+    // THERE IS DELIBERATELY NO `sodium100` HERE, and #134 did not add one.
+    // `extractCacheNutrients()` does not read `sodiumMgPer100g` at all, so this
+    // builder has no sodium to ship; the field is ABSENT from the response
+    // rather than folded, and an absent key already says "no claim" to every
+    // consumer. Adding it is a WIRE WIDENING — a new field, a new extraction and
+    // an mg -> g conversion that would have to match resolve-payload's — which is
+    // its own row with its own client half, not a null-fold fix. Filed, not built.
+    sugar100: nutrients.sugar ?? null,
     popularity: 0,
     confidence,
     servingOptions,

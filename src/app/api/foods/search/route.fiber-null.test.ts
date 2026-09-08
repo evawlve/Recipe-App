@@ -80,10 +80,12 @@ describe('/api/foods/search fiber100: null is not 0', () => {
 
     expect(item.fiber100).toBeNull();
     expect(JSON.stringify(item)).toContain('"fiber100":null');
-    // Untouched: the macros, and the sugar/sodium fold (same shape, not this change).
+    // Untouched: the macros. Sugar and sodium took the SAME rule in #134 — this
+    // fixture's panel carries `sugars: null` and `sodium: null`, so both are now
+    // null here too, and this assertion is what flipped when #134 landed.
     expect(item.kcal100).toBe(609);
-    expect(item.sugar100).toBe(0);
-    expect(item.sodium100).toBe(0);
+    expect(item.sugar100).toBeNull();
+    expect(item.sodium100).toBeNull();
   });
 
   test('a DECLARED 0 stays 0 — control', async () => {

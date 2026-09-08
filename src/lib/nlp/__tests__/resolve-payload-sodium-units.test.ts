@@ -130,7 +130,13 @@ describe('sodium100 is grams per 100 g on every branch', () => {
         }
     });
 
-    it('a null AI sodium column still reads 0, not NaN', async () => {
+    it('a null AI sodium column reads NULL — never NaN, and since #134 never 0 either', async () => {
+        // This test was written to catch `null / 1000 === NaN`. #134 changed the
+        // ANSWER but not the question: the branch now decides the null BEFORE the
+        // conversion (`x == null ? null : x / 1000`), so a null cannot reach the
+        // division at all and NaN is structurally unreachable rather than merely
+        // absent. Asserted both ways so a future refactor that reintroduces
+        // `(x ?? 0) / 1000` or `(x as number) / 1000` fails here.
         mockAiFindUnique.mockResolvedValue({
             id: 'cknull', displayName: 'Unknown',
             caloriesPer100g: 100, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 0,
@@ -138,6 +144,23 @@ describe('sodium100 is grams per 100 g on every branch', () => {
             servings: [],
         });
         const d = await resolveFoodDetails('cknull');
+        expect(d.nutritionPer100g.sodium100).toBeNull();
+        expect(Number.isNaN(d.nutritionPer100g.sodium100 as unknown as number)).toBe(false);
+        expect(d.nutritionPer100g.sugar100).toBeNull();
+    });
+
+    it('a DECLARED 0 mg still converts to 0 g — the control #134 must not destroy', async () => {
+        // The whole point of the null rule is that it distinguishes two facts.
+        // A stored 0 is a measurement ("this food contains no sodium") and must
+        // survive as 0 through the mg -> g conversion, not become null.
+        mockAiFindUnique.mockResolvedValue({
+            id: 'ckzero', displayName: 'Water',
+            caloriesPer100g: 0, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 0,
+            fiberPer100g: 0, sugarPer100g: 0, sodiumMgPer100g: 0,
+            servings: [],
+        });
+        const d = await resolveFoodDetails('ckzero');
         expect(d.nutritionPer100g.sodium100).toBe(0);
+        expect(d.nutritionPer100g.sugar100).toBe(0);
     });
 });
