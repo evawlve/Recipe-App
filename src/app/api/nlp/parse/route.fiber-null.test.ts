@@ -154,10 +154,9 @@ describe('/api/nlp/parse fibre: null is not 0', () => {
     expect(item.nutritionPer100g.fiber100).toBe(2.4);
   });
 
-  // Was 'sugar and sodium keep their 0 fold'. #134 gave both the same null rule,
-  // so the fixture's DECLARED zeros are now a control rather than a description of
-  // a fold: they must still bill 0. The undeclared case is pinned in this
-  // directory's route.sugar-sodium-null.test.ts.
+  // The fixture supplies DECLARED zeros, so this is a control on #134's rule
+  // rather than a description of a fold: a declared 0 must still bill 0. The
+  // undeclared case is pinned in this directory's route.sugar-sodium-null.test.ts.
   test('a declared 0 sugar and a declared 0 sodium still bill 0 — control', async () => {
     resolveFoodDetails.mockResolvedValue({
       ...blueberryDetails(null),

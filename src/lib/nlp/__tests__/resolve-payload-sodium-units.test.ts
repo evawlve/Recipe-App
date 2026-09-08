@@ -131,11 +131,10 @@ describe('sodium100 is grams per 100 g on every branch', () => {
     });
 
     it('a null AI sodium column reads NULL — never NaN, and since #134 never 0 either', async () => {
-        // This test was written to catch `null / 1000 === NaN`. #134 changed the
-        // ANSWER but not the question: the branch now decides the null BEFORE the
-        // conversion (`x == null ? null : x / 1000`), so a null cannot reach the
-        // division at all and NaN is structurally unreachable rather than merely
-        // absent. Asserted both ways so a future refactor that reintroduces
+        // The AI branch decides the null BEFORE its mg -> g conversion
+        // (`x == null ? null : x / 1000`), so a null never reaches the division
+        // and `null / 1000 === NaN` is structurally unreachable rather than
+        // merely absent. Both facts are asserted, so a refactor that reintroduces
         // `(x ?? 0) / 1000` or `(x as number) / 1000` fails here.
         mockAiFindUnique.mockResolvedValue({
             id: 'cknull', displayName: 'Unknown',

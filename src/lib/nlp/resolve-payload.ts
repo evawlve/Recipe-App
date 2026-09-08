@@ -274,10 +274,24 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         // number — see the type doc); kept so the rule reads the same on every
         // branch and survives an ingest that starts writing null.
         fiber100: nutrients.fiber ?? null,
+        // Inert on this store: every FdcFood row carries a `sugar` key and none
+        // is null (4,133 of 4,133), the same shape as `fiber` above.
         sugar100: nutrients.sugar ?? null,
-        // Already grams per 100 g in this store. No conversion. NULL when the
-        // row does not declare it (#134) — inert on this store today by the
-        // same measurement that made `fiber100` inert here.
+        // Already grams per 100 g in this store. No conversion.
+        //
+        // THIS ONE IS THE OPPOSITE OF ITS TWO NEIGHBOURS AND IT IS THE LARGEST
+        // BEHAVIOUR CHANGE IN #134. `FdcFood.nutrientsPer100g` carries no
+        // `sodium` key AT ALL — 0 of 4,133 rows — so this seat fires on 100% of
+        // the store, not on a tail: 99 of 4,837 `FoodMapping` rows and 9.3% of
+        // `MappingEventLog` events used to bill a fabricated 0 g here, measured
+        // live before the change on `banana` -> fdc_173944. Do not read the
+        // `fiber`/`sugar` "inert" framing above as covering this line.
+        // Re-derive (box, 2026-09-08):
+        //   SELECT count(*) FILTER (WHERE "nutrientsPer100g" ? 'sodium'),
+        //          count(*) FROM "FdcFood";                  -> 0 | 4133
+        // `scripts/ingest-fdc.ts` DOES read sodium (nutrient 1093) in MILLIGRAMS
+        // and does not write it here; teaching the ingest to carry it is a
+        // separate row and must convert, or it puts a third unit on this field.
         sodium100: nutrients.sodium ?? null,
       };
 
@@ -315,6 +329,14 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         // THE HEADLINE SITE for sugar too, and the same shape as `fiber100`
         // directly above: OFF stores an undeclared value as `"sugars": null`.
         // Both spellings are read because the store carries both keys.
+        //
+        // NOTE THE KEY ORDER, which is `sugar` first HERE and `sugars` first in
+        // the FatSecret branch below and in the search route's corpus lane. That
+        // asymmetry predates #134 and is left alone deliberately: it can only
+        // matter for a row carrying BOTH keys with DIFFERENT values, and
+        // unifying it would move winners on a population nobody has measured.
+        // Flagged here because #134 rewrites both lines and this is the moment a
+        // reader would otherwise assume they agree.
         sugar100: nutrients.sugar ?? nutrients.sugars ?? null,
         // Already grams per 100 g in this store (OFF's own column unit). No conversion.
         sodium100: nutrients.sodium ?? null,
@@ -484,7 +506,18 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         // "fiberPer100g" IS NULL), count(*) FROM "AiGeneratedFood";), so this
         // is inert until a writer stores null — and then it is the rule.
         fiber100: aiFood.fiberPer100g ?? null,
-        // `sugarPer100g` is nullable on the model; same #134 rule as fibre.
+        // Same #134 rule as fibre, and INERT today by measurement, not just by
+        // schema: 0 of 241 `AiGeneratedFood` rows carry a null `sugarPer100g`
+        // or a null `sodiumMgPer100g` (box, 2026-09-08; re-derive with
+        //   SELECT count(*) FILTER (WHERE "sugarPer100g" IS NULL),
+        //          count(*) FILTER (WHERE "sodiumMgPer100g" IS NULL),
+        //          count(*) FROM "AiGeneratedFood";          -> 0 | 0 | 241 ).
+        // It is inert because the WRITER fabricates the zero rather than because
+        // the store is complete — `upsertFoodFromDetails()` in
+        // src/lib/mapping/cache.ts reads `refServing.sugar ?? 0` and never writes
+        // `sodiumMgPer100g` at all — so these two seats are the rule the moment
+        // that writer learns to store a null. Same class as the OFF live-hydrate
+        // writer noted in src/lib/openfoodfacts/hydrate.ts.
         sugar100: aiFood.sugarPer100g ?? null,
         // THE ONLY BRANCH THAT CONVERTS, because it is the only store holding
         // milligrams — the column name says so and is accurate; the bug was the
