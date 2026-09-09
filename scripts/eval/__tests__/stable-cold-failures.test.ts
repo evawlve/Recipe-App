@@ -390,14 +390,16 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
     // The test that settled it is NOT the fixed winner -- a rebuild-axis tie (mechanism 2)
     // also shows a fixed winner inside one build, which is exactly what
     // _membershipMethodBlindSpot warns a fixed-winner argument cannot distinguish. It is the
-    // WITHIN-BUILD pass/fail split: 13 of the 14 build labels carrying a failure of
+    // WITHIN-BUILD pass/fail split: 12 of the 13 NAMED build labels carrying a failure of
     // `1 ramekin of hummus` ALSO carry a PASS of the same case on the same build, and
     // NBpT4HhyVu0IneZT13JoU carries a 30 g fail, a 28 g fail and a 100 g pass. Only a
-    // per-request draw does that.
+    // per-request draw does that. Group by NAMED build: 10 cold rows carry
+    // summary.buildId === null (files predating the field) and one of them is a failure,
+    // so pooling them as one build would read 13-of-14 and overstate it.
     //
     // Cross-build cold census (summary.noCache === true) over scripts/eval/results/, 2026-09-09:
-    // present in 202 cold runs, failed in 18, of which 3 are HTTP-401 TRANSPORT rows on
-    // JVSJtRRqnjbw23d9sIIjF -- so 15 genuine, 7.4%, at 30 g (x13) and 28 g (x2) against a
+    // present in 205 cold runs, failed in 18, of which 3 are HTTP-401 TRANSPORT rows on
+    // JVSJtRRqnjbw23d9sIIjF -- so 15 genuine, 7.3%, at 30 g (x13) and 28 g (x2) against a
     // [40, 200] band. Winner fs_38345 on all 15 failures; identity varies ONCE in 202 cold
     // appearances (off_0850057975017, a 90 g PASS) and never on a failing run.
     //
