@@ -308,7 +308,11 @@ describe('resolveFoodDetails fs_ macro-only serving recovery', () => {
         const details = await resolveFoodDetails('fs_77');
 
         expect(details.nutritionPer100g.kcal100).toBe(0);
-        expect(details.nutritionPer100g.sodium100).toBe(0);
+        // NULL since #134, not 0: this row's panel is `{}` and its one serving
+        // carries no nutrients, so nothing declares a sodium figure. The macros
+        // keep their 0 because `isDegenerateNutrition()` reads them as this
+        // module's spelling of "unknown" — see resolve-payload.ts.
+        expect(details.nutritionPer100g.sodium100).toBeNull();
         expect(details.name).toBe('Empty Everything');
     });
 });

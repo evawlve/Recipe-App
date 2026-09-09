@@ -437,8 +437,13 @@ export async function POST(req: NextRequest) {
               carbs: 0,
               fat: 0,
               fiber: null,
-              sugar: 0,
-              sodium: 0,
+              // NULL, not 0, for the same reason as `fiber` (#134 after #424):
+              // this item resolved to NO RECORD, so it declares nothing. A 0
+              // here is a claim about a food we never found. The four macros
+              // stay 0 because `isDegenerateNutrition()` reads them as this
+              // module's spelling of "unknown" — see resolve-payload.ts.
+              sugar: null,
+              sodium: null,
             },
             nutritionPer100g: {
               kcal100: 0,
@@ -446,8 +451,8 @@ export async function POST(req: NextRequest) {
               carbs100: 0,
               fat100: 0,
               fiber100: null,
-              sugar100: 0,
-              sodium100: 0,
+              sugar100: null,
+              sodium100: null,
             },
             servingOptions: [],
             funnelStage: telemetry.funnelStage,
@@ -511,13 +516,25 @@ export async function POST(req: NextRequest) {
           // This read was `?? 0`, so every such record billed a fabricated 0 g and
           // the client's Net carbs subtracted it — 807 of the 3,574 OFF records
           // behind a FoodMapping row are that shape (measured 2026-09-05; the
-          // re-derive command is on the type). A declared 0 still bills 0. `sugar`
-          // and `sodium` keep the fold: the same shape, deliberately not this change.
+          // re-derive command is on the type). A declared 0 still bills 0.
+          //
+          // ALL THREE MICROS NOW TAKE THE SAME FORM (#134 finished what #424
+          // started). `sugar` and `sodium` read `?? 0` here until this change,
+          // so a record silent about either billed a fabricated 0 g — and the
+          // mobile client (#119, `700b8d1`) already reads a null at every seat,
+          // so the day this deploys the diary stops recording that zero. The
+          // `== null` test is deliberate and must not be shortened to `||`:
+          // `0 || null` is null, which would destroy every DECLARED zero — of
+          // which sugar has many (a diet soda's 0 g is a real measurement).
           fiber: nutritionPer100g.fiber100 == null
             ? null
             : Number((nutritionPer100g.fiber100 * scale).toFixed(1)),
-          sugar: Number(((nutritionPer100g.sugar100 ?? 0) * scale).toFixed(1)),
-          sodium: Number(((nutritionPer100g.sodium100 ?? 0) * scale).toFixed(1)),
+          sugar: nutritionPer100g.sugar100 == null
+            ? null
+            : Number((nutritionPer100g.sugar100 * scale).toFixed(1)),
+          sodium: nutritionPer100g.sodium100 == null
+            ? null
+            : Number((nutritionPer100g.sodium100 * scale).toFixed(1)),
         };
 
         // Provenance is the RESOLVED RECORD's (`details.source`, derived from the foodId prefix

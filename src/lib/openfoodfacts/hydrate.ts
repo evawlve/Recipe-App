@@ -297,6 +297,23 @@ export function extractAndValidateNutrients(
         protein,
         carbs,
         fat,
+        // THESE THREE FABRICATE A ZERO, AND #424 / #134 CANNOT REACH THEM.
+        // Both PRs made an undeclared micro reach the WIRE as null; this is a
+        // WRITER, and it puts a hard 0 into `OffFood` before any of that runs, so
+        // for a product hydrated through this path the null can never originate —
+        // `nutrients.sugar ?? null` downstream sees a number that OFF never
+        // declared. The parquet ingest is honest by contrast
+        // (`scripts/ingest-off.ts` writes `sugars: d.sugar >= 0 ? d.sugar : null`),
+        // which is why 62,169 mirror rows correctly carry a null sugar.
+        //
+        // NOT FIXED HERE, and deliberately: this function's return type is
+        // `Record<string, number> | null`, so a per-field null is not even
+        // representable, and the live-OFF path feeds `/api/foods/barcode` — a
+        // scanned-product surface with its own client half. It is the same class
+        // as the two other writer gaps #134 files rather than builds (the FDC
+        // ingest's unconverted milligram sodium, and `upsertFoodFromDetails()` in
+        // src/lib/mapping/cache.ts). Owner:
+        // mobile:sync-docs/reports/2026-09-08_lane-a-s44-the-wire-stops-fabricating-a-zero.md §P1.
         fiber:   raw['fiber_100g']   ?? 0,
         sugars:  raw['sugars_100g']  ?? 0,
         sodium:  raw['sodium_100g']  ?? 0,
