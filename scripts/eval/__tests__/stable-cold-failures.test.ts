@@ -385,6 +385,61 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         expect(v.ok).toBe(true);
     });
 
+    // n-svd-04 IS A ROTATOR, added 2026-09-09, and this pin is why.
+    //
+    // The test that settled it is NOT the fixed winner -- a rebuild-axis tie (mechanism 2)
+    // also shows a fixed winner inside one build, which is exactly what
+    // _membershipMethodBlindSpot warns a fixed-winner argument cannot distinguish. It is the
+    // WITHIN-BUILD pass/fail split: 12 of the 13 NAMED build labels carrying a failure of
+    // `1 ramekin of hummus` ALSO carry a PASS of the same case on the same build, and
+    // NBpT4HhyVu0IneZT13JoU carries a 30 g fail, a 28 g fail and a 100 g pass. Only a
+    // per-request draw does that. Group by NAMED build: 10 cold rows carry
+    // summary.buildId === null (files predating the field) and one of them is a failure,
+    // so pooling them as one build would read 13-of-14 and overstate it.
+    //
+    // Cross-build cold census (summary.noCache === true) over scripts/eval/results/, 2026-09-09:
+    // present in 205 cold runs, failed in 18, of which 3 are HTTP-401 TRANSPORT rows on
+    // JVSJtRRqnjbw23d9sIIjF -- so 15 genuine, 7.3%, at 30 g (x13) and 28 g (x2) against a
+    // [40, 200] band. Winner fs_38345 on all 15 failures; identity varies ONCE in 202 cold
+    // appearances (off_0850057975017, a 90 g PASS) and never on a failing run.
+    //
+    // Putting it in `members` would make the detector print LEFT THE SET on the ~93% of runs
+    // where the draw lands in band.
+    it('keeps n-svd-04 in rotators, never in members', () => {
+        const real = loadRoster();
+        expect(real).not.toBeNull();
+        const memberIds = real!.members.map(m => m.id);
+        const rotatorIds = (real!.rotators ?? []).map(r => r.id);
+        expect(memberIds).not.toContain('n-svd-04');
+        expect(rotatorIds).toContain('n-svd-04');
+
+        // and the detector must treat it as expected, not as a new member
+        const results = [
+            ...memberIds.map(failCase),
+            failCase('n-svd-04'),
+            passCase('n-gen-01'),
+        ];
+        const v = judgeColdFailureSet(coldEvidence({}, results), real!);
+        expect(v.error).toBeUndefined();
+        expect(v.newMembers).toEqual([]);
+        expect(v.leftTheSet).toEqual([]);
+        expect(v.rotatorsPresent).toContain('n-svd-04');
+        expect(v.ok).toBe(true);
+    });
+
+    // The file must not contradict itself about its own membership -- the
+    // ten-that-became-a-nine failure this artifact exists to prevent. Both prose fields
+    // named n-svd-04 as NOT a rotator before 2026-09-09.
+    it('the roster prose agrees with the roster data about n-svd-04', () => {
+        const real = loadRoster() as unknown as Record<string, unknown>;
+        const rotatorsNote = String((real as { _rotatorsNote?: string })._rotatorsNote ?? '');
+        const confirmedNote = String(
+            ((real as { confirmedAgainst?: { note?: string } }).confirmedAgainst ?? {}).note ?? '',
+        );
+        expect(rotatorsNote).toContain('n-svd-04');
+        expect(confirmedNote).not.toContain('n-svd-04 is STILL NOT added to `rotators`');
+    });
+
     it('readColdRunEvidence reports no file rather than throwing when results/ is absent or empty', () => {
         const dir = tmpDir();
         expect(readColdRunEvidence(undefined, path.join(dir, 'missing')).resultsFile).toBeNull();
