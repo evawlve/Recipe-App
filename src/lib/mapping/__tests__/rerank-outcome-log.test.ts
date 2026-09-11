@@ -33,6 +33,8 @@ describe('rerankOutcome agrees with the value simpleRerank actually returned', (
         expect(result.rerankOutcome.winner).toBe(result.winner?.id ?? null);
         expect(result.rerankOutcome.confidence).toBe(result.confidence);
         expect(result.rerankOutcome.reason).toBe(result.reason);
+        // Always a string, on every path — a census may group by it.
+        expect(typeof result.rerankOutcome.rerankReason).toBe('string');
     }
 
     it('agrees on a clean multi-candidate win', () => {
@@ -62,6 +64,15 @@ describe('rerankOutcome agrees with the value simpleRerank actually returned', (
         expect(result.rerankOutcome.winnerId).not.toBeNull();
         expect(result.rerankOutcome.winnerScore).not.toBeNull();
         expect(result.rerankOutcome.scoredCount).toBeGreaterThan(0);
+
+        // AND THE PRE-GATE REASON SURVIVES. Without `rerankReason` this entry
+        // would record LESS than the logger.debug line it replaces on exactly
+        // these rows: `reason` is the constant 'confidence_below_threshold', so
+        // `clear_winner` / `exact_match` / `sole_survivor` / `branded_exact_match`
+        // — the shapes that explain a near-miss at the 0.70 floor — would all be
+        // unrecoverable.
+        expect(result.rerankOutcome.rerankReason).not.toBe('confidence_below_threshold');
+        expect(result.rerankOutcome.rerankReason).toBe('clear_winner');
     });
 
     it('agrees on the single-candidate short-circuit', () => {
@@ -88,6 +99,9 @@ describe('rerankPool records what the reranker scored, not what retrieval ranked
 
         expect(result.rerankPool).toHaveLength(result.rerankOutcome.scoredCount);
         expect(result.rerankPool.map(p => p.foodId).sort()).toEqual(['a', 'b', 'c']);
+        // The sort partitions on plausibility ABOVE score, so a reader cannot
+        // interpret the ordering without this flag — see RerankOutcome.gap.
+        expect(result.rerankPool.every(p => typeof p.plausibilityFloorHit === 'boolean')).toBe(true);
         // Every id is unique — the pool is keyed by foodId, so a duplicate would
         // make a census join silently double-count.
         expect(new Set(result.rerankPool.map(p => p.foodId)).size).toBe(result.rerankPool.length);

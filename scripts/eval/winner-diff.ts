@@ -627,12 +627,13 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // `rerankSortedIds` one, and here is the receipt rather than the assurance:
     //
     //   $ diff <(caller block @ master) <(caller block @ this branch)
-    //   @@ -418,2 +418,4 @@
+    //   @@ -418,2 +418,8 @@
     //       rerankSortedIds = rerankResult.sortedCandidates.map(c => c.id);
-    //   +   rerankOutcome = rerankResult.rerankOutcome;
-    //   +   rerankPool = rerankResult.rerankPool;
+    //   +   (a 4-line comment explaining the `?? null`)
+    //   +   rerankOutcome = rerankResult.rerankOutcome ?? null;
+    //   +   rerankPool = rerankResult.rerankPool ?? null;
     //
-    // 628 -> 630 lines, nothing else in the window. Both new variables feed exactly
+    // 628 -> 634 lines, nothing else in the window. Both new variables feed exactly
     // one consumer, `logMappingAnalysis()`, and `replaySelection()` models selection
     // and writes no analysis entry at all — so neither can reach it, exactly as the
     // `rerankSortedIds` capture could not. Re-pinned rather than left drifting for
@@ -644,7 +645,7 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // Lane A session 47, 2026-09-11, the rerank-score instrument. The helpers hash
     // was UNCHANGED across this edit (8c1e518d30331976 both sides), which is the
     // independent check that the drift is the caller window and nothing else.
-    'fb5203085fcc27e8': 'gate-backstop',
+    '728af8b72218e566': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -699,7 +700,7 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
 // MOVED 2026-09-11 (Lane A S47) from 27e15daa0d31d518. The transcription in section
 // 9 is UNCHANGED and did not need to change — see the receipt on the new hash in
 // KNOWN_CALLERS. Moving the pointer is what keeps announceVariantFit() honest.
-const TRANSCRIBED_CALLER = 'fb5203085fcc27e8';
+const TRANSCRIBED_CALLER = '728af8b72218e566';
 
 interface DriftResult {
     caller: string;

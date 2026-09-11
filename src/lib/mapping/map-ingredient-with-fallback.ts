@@ -1038,6 +1038,9 @@ export async function mapIngredientWithFallback(
                             ingredient: parsed?.name,
                         },
                         topCandidates: [],
+                        rerankOutcome: null,
+                        rerankPool: null,
+                        rerankStage: null,
                         selectedCandidate: {
                             foodId: cachedAfterLock.foodId,
                             foodName: cachedAfterLock.foodName,
@@ -1464,6 +1467,9 @@ export async function mapIngredientWithFallback(
                                 ingredient: parsed?.name,
                             },
                             topCandidates: [],
+                            rerankOutcome: null,
+                            rerankPool: null,
+                            rerankStage: null,
                             selectedCandidate: {
                                 foodId: earlyCacheHit.foodId,
                                 foodName: earlyCacheHit.foodName,
@@ -2293,8 +2299,12 @@ export async function mapIngredientWithFallback(
                     const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
                     const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNoun != null);
                     rerankSortedIds = rerankResult.sortedCandidates.map(c => c.id);
-                    rerankOutcome = rerankResult.rerankOutcome;
-                    rerankPool = rerankResult.rerankPool;
+                    // `?? null` is deliberate, not defensive noise: the analysis
+                    // entry's whole reading turns on ABSENT (pre-instrument build)
+                    // vs null (this build, no rerank), and an `undefined` here
+                    // would serialize to an ABSENT key and collapse the two.
+                    rerankOutcome = rerankResult.rerankOutcome ?? null;
+                    rerankPool = rerankResult.rerankPool ?? null;
 
                     if (rerankResult && rerankResult.winner) {
                         const selected = filtered.find(c => c.id === rerankResult.winner!.id);
@@ -2649,7 +2659,7 @@ export async function mapIngredientWithFallback(
             return await runAiNutritionBackfillNoWinner({
                 normalizedName, trimmed, rawLine, parsed, aiNutritionBudget,
                 allCandidates, filtered, skippedLlmNormalize, usedGenericFallback,
-                telemetry,
+                telemetry, rerankOutcome, rerankPool, rerankStage,
             });
         }
 
@@ -3210,11 +3220,21 @@ async function runAiNutritionBackfillNoWinner(params: {
     skippedLlmNormalize: boolean;
     usedGenericFallback: boolean;
     telemetry: MappingTelemetry | undefined;
+    /* LOG-ONLY — see the holder in mapIngredientWithFallback(). THIS SEAT IS THE
+     * POINT OF THE INSTRUMENT, not an afterthought: this function is reached from
+     * `if (!winner)`, i.e. exactly when simpleRerank() named a top candidate and
+     * the MIN_RERANK_CONFIDENCE gate refused it and no backstop rescued it. That
+     * is the `under_gate:simple_rerank` class. An earlier cut of this change did
+     * not thread them here, so the one population the instrument exists to expose
+     * was the one population it recorded nothing for. */
+    rerankOutcome: RerankOutcome | null;
+    rerankPool: RerankScoredCandidate[] | null;
+    rerankStage: 'primary' | 'cache_failure_research';
 }): Promise<FatsecretMappedIngredient | null> {
     const {
         normalizedName, trimmed, rawLine, parsed, aiNutritionBudget,
         allCandidates, filtered, skippedLlmNormalize, usedGenericFallback,
-        telemetry,
+        telemetry, rerankOutcome, rerankPool, rerankStage,
     } = params;
 
     // ============================================================
@@ -3269,6 +3289,9 @@ async function runAiNutritionBackfillNoWinner(params: {
                         ingredient: parsed?.name,
                     },
                     topCandidates: [],
+                    rerankOutcome,
+                    rerankPool,
+                    rerankStage: rerankOutcome ? rerankStage : null,
                     selectedCandidate: {
                         foodId: aiResult.foodId,
                         foodName: aiResult.displayName,
@@ -3330,6 +3353,9 @@ async function runAiNutritionBackfillNoWinner(params: {
                 ingredient: parsed?.name,
             },
             topCandidates: [],
+            rerankOutcome,
+            rerankPool,
+            rerankStage: rerankOutcome ? rerankStage : null,
             selectedCandidate: {
                 foodId: '',
                 foodName: '',
@@ -3959,6 +3985,9 @@ async function runBackfillAfterWinner(params: {
                         ingredient: parsed?.name,
                     },
                     topCandidates: [],
+                    rerankOutcome,
+                    rerankPool,
+                    rerankStage: rerankOutcome ? rerankStage : null,
                     selectedCandidate: {
                         foodId: aiResult.foodId,
                         foodName: aiResult.displayName,
@@ -4331,6 +4360,9 @@ async function finalizeAndSaveResult(params: {
                     ingredient: parsed?.name,
                 },
                 topCandidates: [],
+                rerankOutcome,
+                rerankPool,
+                rerankStage: rerankOutcome ? rerankStage : null,
                 selectedCandidate: {
                     foodId: result.foodId,
                     foodName: result.foodName,

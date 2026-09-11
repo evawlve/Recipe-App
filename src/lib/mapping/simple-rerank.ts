@@ -76,10 +76,18 @@ export interface SimpleRerankResult {
  */
 export interface RerankScoredCandidate {
     foodId: string;
-    /** Post-rerank total: baseScore + nutritionScore - penalties + boosts. */
+    /** The post-rerank total that ordered the pool. It is NOT
+     *  `baseScore + nutritionScore`: a constraint penalty and up to four boosts
+     *  (count-label, serving-label, decisive-brand, cooked-grain) and the
+     *  brand-variant adjustment are folded in and are NOT recorded here, so the
+     *  decomposition is not reconstructible from these three numbers. Read
+     *  `score` as the ordering key and the other two as its two largest terms. */
     score: number;
     baseScore: number;
     nutritionScore: number;
+    /** Whether this candidate hit the plausibility floor. Recorded because the
+     *  sort has partitions ABOVE score — see `RerankOutcome.gap`. */
+    plausibilityFloorHit: boolean;
 }
 
 /**
@@ -103,7 +111,14 @@ export interface RerankOutcome {
      *  null-winner path, gate refusal included. */
     winner: string | null;
     /** `scored[0]` — the reranker's first-ranked candidate, present even when
-     *  the gate refused it. Null on the short-circuit paths. */
+     *  the gate refused it. Null on the short-circuit paths.
+     *
+     *  NEVER READ THESE SCORES AT THE ABSTENTION LEGS. Writing a rerank or
+     *  retrieval score where `RERANK_DECLINED_CONFIDENCE` is written today is
+     *  the laundered-confidence defect, refuted 2026-08-05 and fixed in #256 /
+     *  #267 — a decision the reranker REFUSED to make, stored as maximally
+     *  confident. These fields exist to be read out of a log file, not by the
+     *  pipeline. */
     winnerId: string | null;
     winnerScore: number | null;
     winnerBaseScore: number | null;
@@ -117,10 +132,28 @@ export interface RerankOutcome {
     effectiveRunnerUp: string | null;
     effectiveRunnerUpScore: number | null;
     /** `winnerScore - effectiveRunnerUpScore`; null when nothing was scored,
-     *  0 when the winner was the sole survivor of the dedupe. */
+     *  and 0 when `scored.length === 1` so there is no runner-up at all (the
+     *  constraint massacre, not the Fix-50 dedupe — that one can only reassign
+     *  `effectiveRunnerUp`, never null it, so `effectiveRunnerUp === null` is an
+     *  exact test for the sole-survivor case).
+     *
+     *  IT CAN BE NEGATIVE. `scored.sort()` partitions on plausibility/denylist,
+     *  decisive brand and cooked-grain ABOVE score, so a partition winner can
+     *  rank first with a score BELOW its runner-up. A census reading a negative
+     *  gap as corrupt data would be wrong; read `plausibilityFloorHit` on the
+     *  pool entries before concluding anything from the ordering. */
     gap: number | null;
     confidence: number;
+    /** Mirrors what this function RETURNED as `reason`. On a gate refusal that
+     *  is the constant `'confidence_below_threshold'`, which is why the next
+     *  field exists. */
     reason: string;
+    /** The reason the reranker computed BEFORE the confidence gate —
+     *  `exact_match`, `clear_winner`, `close_match`, `sole_survivor`,
+     *  `branded_exact_match`, `cooked_grain_preference`. On a refusal this is
+     *  the only place it survives, and without it the entry records LESS than
+     *  the `logger.debug` line it replaces on exactly the refusal rows. */
+    rerankReason: string;
     /** Candidates handed to this function. */
     candidateCount: number;
     /** Candidates the reranker scored. 0 on the short-circuit paths. */
@@ -1934,6 +1967,9 @@ function shortCircuitOutcome(
         gap: null,
         confidence,
         reason,
+        // Nothing was scored, so there is no pre-gate reason distinct from the
+        // returned one.
+        rerankReason: reason,
         candidateCount,
         scoredCount: 0,
     };
@@ -2535,25 +2571,33 @@ export function simpleRerank(
     // LOG-ONLY (2026-09-11): the scored pool, keyed by foodId. Built once here
     // and handed to both returns below, so the two arrays are identical on a
     // gate refusal and on a win — only `winner` and `reason` differ.
+    // A non-finite score would serialize to `null`, which this log reserves for
+    // "no score exists" — two different facts under one value. Coerce explicitly
+    // so a NaN is visibly a NaN rather than silently a short-circuit.
+    const fin = (n: number): number | null => (Number.isFinite(n) ? n : null);
     const rerankPool: RerankScoredCandidate[] = scored.map(sc => ({
         foodId: sc.candidate.id,
-        score: sc.score,
-        baseScore: sc.baseScore,
-        nutritionScore: sc.nutritionScore,
+        score: fin(sc.score) as number,
+        baseScore: fin(sc.baseScore) as number,
+        nutritionScore: fin(sc.nutritionScore) as number,
+        plausibilityFloorHit: sc.plausibilityFloorHit,
     }));
     const buildOutcome = (returnedWinner: string | null, outcomeReason: string): RerankOutcome => ({
         winner: returnedWinner,
         winnerId: top.candidate.id,
-        winnerScore: top.score,
-        winnerBaseScore: top.baseScore,
-        winnerNutritionScore: top.nutritionScore,
+        winnerScore: fin(top.score),
+        winnerBaseScore: fin(top.baseScore),
+        winnerNutritionScore: fin(top.nutritionScore),
         runnerUp: second?.candidate.id ?? null,
-        runnerUpScore: second?.score ?? null,
+        runnerUpScore: second ? fin(second.score) : null,
         effectiveRunnerUp: effectiveRunnerUp?.candidate.id ?? null,
-        effectiveRunnerUpScore: effectiveRunnerUp?.score ?? null,
-        gap,
+        effectiveRunnerUpScore: effectiveRunnerUp ? fin(effectiveRunnerUp.score) : null,
+        gap: fin(gap),
         confidence,
         reason: outcomeReason,
+        // `reason` is what the function returns; this is what the reranker
+        // decided before the gate. They differ on exactly the refusal rows.
+        rerankReason: reason,
         candidateCount: candidates.length,
         scoredCount: scored.length,
     });
