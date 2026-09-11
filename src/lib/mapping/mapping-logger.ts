@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getAiCallMetrics, getAiCallSummary, resetAiCallMetrics } from '../ai/structured-client';
+import type { RerankOutcome, RerankScoredCandidate } from './simple-rerank';
 
 export interface MappingAnalysisLog {
     timestamp?: string;  // Optional - can be generated automatically if not provided
@@ -38,6 +39,54 @@ export interface MappingAnalysisLog {
             carbs: number;
         };
     }>;
+
+    /* LOG-ONLY (2026-09-11, Lane A S47). What simpleRerank() RETURNED for this
+     * line, and every score it computed.
+     *
+     * THE THREE FIELDS ARE REQUIRED, NOT OPTIONAL, AND THAT IS DELIBERATE. An
+     * earlier cut of this change made them optional; six of the nine
+     * `logMappingAnalysis()` seats then silently omitted them, and an omitted key
+     * and a pre-instrument entry are BYTE-IDENTICAL after `JSON.stringify`. A
+     * census could not tell "this build, the reranker did not run" from "this
+     * build predates the field" on 46.7% of the corpus. Requiring them makes the
+     * compiler name every seat, which is the only forcing function that works
+     * here — no test can see a field a writer forgot.
+     *
+     * So the reading is exact:
+     *   key ABSENT  -> the entry predates this instrument. The box ledger owns
+     *                  which build introduced it. Treat as UNKNOWN.
+     *   value null  -> this build, and the reranker did not run for this line
+     *                  (a cache hit, or no pool).
+     *   `scoredCount: 0` inside a non-null outcome -> the reranker RAN and
+     *                  short-circuited on a single candidate. A different thing.
+     *
+     * `rerankPool` is NOT `topCandidates` with extra columns and the two must
+     * never be joined positionally. `topCandidates` is
+     * `filtered.slice(0, MAPPING_ANALYSIS_TOP_N)` — a depth-capped prefix of
+     * `filtered`, which is in GATHER order, not score order (`rerank-pool.ts`'s
+     * header is the owner of that fact and states it three times; the caller
+     * keeps a separate `sortedFiltered` precisely because `filtered` is not
+     * sorted). `rerankPool` is the pool `buildRerankPool()`'s source×mode
+     * round-robin handed the reranker, in FINAL RANK order after
+     * `scored.sort()`. Join them by `foodId` or not at all — `foodId` is unique
+     * in the pool only because `gatherCandidates()` dedupes through a `byId` map
+     * upstream; `simpleRerank()` itself does not dedupe, and the Fix-50 dedupe
+     * keys on NAME. That guarantee lives two modules away, so a census that
+     * groups by `foodId` is relying on it.
+     *
+     * AND `rerankOutcome.winner` NEED NOT BE `selectedCandidate.foodId`. The
+     * serving-failure fallback can substitute a lower-ranked candidate after the
+     * rerank, and nothing marks that — `rerankStage` only distinguishes the two
+     * rerank CALLS. Reading a mismatch as "the gate refused" mis-classifies every
+     * serving-failure fallback; the refusal test is
+     * `rerankOutcome.winner === null && rerankOutcome.winnerId !== null`. */
+    rerankOutcome: RerankOutcome | null;
+    rerankPool: RerankScoredCandidate[] | null;
+    /** Which reranker produced `rerankOutcome`. `cache_failure_research` is the
+     *  second call, over a freshly-searched pool, on the
+     *  `normalized_cache_hit` + serving-failure path. Null iff `rerankOutcome`
+     *  is null. */
+    rerankStage: 'primary' | 'cache_failure_research' | null;
 
     // Selection decision
     selectedCandidate: {

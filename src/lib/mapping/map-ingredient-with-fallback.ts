@@ -31,6 +31,7 @@ import {
     candidateMatchesTargetBrand,
     coversNonBrandQueryToken,
 } from './simple-rerank';
+import type { RerankOutcome, RerankScoredCandidate } from './simple-rerank';
 import { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } from './rerank-pool';
 import { servingAiCallForTier } from './serving-ai-tiers';
 import { countedPieceNoun, servingLabelCountsPiece } from './count-label';
@@ -1037,6 +1038,9 @@ export async function mapIngredientWithFallback(
                             ingredient: parsed?.name,
                         },
                         topCandidates: [],
+                        rerankOutcome: null,
+                        rerankPool: null,
+                        rerankStage: null,
                         selectedCandidate: {
                             foodId: cachedAfterLock.foodId,
                             foodName: cachedAfterLock.foodName,
@@ -1463,6 +1467,9 @@ export async function mapIngredientWithFallback(
                                 ingredient: parsed?.name,
                             },
                             topCandidates: [],
+                            rerankOutcome: null,
+                            rerankPool: null,
+                            rerankStage: null,
                             selectedCandidate: {
                                 foodId: earlyCacheHit.foodId,
                                 foodName: earlyCacheHit.foodName,
@@ -1816,6 +1823,21 @@ export async function mapIngredientWithFallback(
          * rerank), which the fallback reads as "no order to honour".
          */
         let rerankSortedIds: string[] | null = null;
+
+        /* LOG-ONLY (2026-09-11). What simpleRerank() RETURNED, plus every score
+         * it computed, carried into the mapping-analysis entry. Null means the
+         * reranker never ran for this line (a cache hit, or a pool too small),
+         * which is a DIFFERENT thing from `scoredCount: 0` inside an outcome —
+         * that one means the reranker ran and short-circuited.
+         *
+         * `rerankPool` is deliberately its own array and NOT extra columns on
+         * `topCandidates`: that one is `filtered.slice(0, MAPPING_ANALYSIS_TOP_N)`,
+         * a depth-capped PREFIX of the filtered list, while the scored pool is
+         * `buildRerankPool()`'s source×mode round-robin. No cap value makes the
+         * first reproduce the second. */
+        let rerankOutcome: RerankOutcome | null = null;
+        let rerankPool: RerankScoredCandidate[] | null = null;
+        let rerankStage: 'primary' | 'cache_failure_research' = 'primary';
 
         // Step 1c: Check validated cache for normalized name (User Optimization)
         // "1 cup chopped onion" -> normalized "onion" -> checks cache for "onion"
@@ -2277,6 +2299,12 @@ export async function mapIngredientWithFallback(
                     const rerankQuery = aiCanonicalBase || stripPrepModifiers(searchQuery);
                     const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNoun != null);
                     rerankSortedIds = rerankResult.sortedCandidates.map(c => c.id);
+                    // `?? null` is deliberate, not defensive noise: the analysis
+                    // entry's whole reading turns on ABSENT (pre-instrument build)
+                    // vs null (this build, no rerank), and an `undefined` here
+                    // would serialize to an ABSENT key and collapse the two.
+                    rerankOutcome = rerankResult.rerankOutcome ?? null;
+                    rerankPool = rerankResult.rerankPool ?? null;
 
                     if (rerankResult && rerankResult.winner) {
                         const selected = filtered.find(c => c.id === rerankResult.winner!.id);
@@ -2631,7 +2659,7 @@ export async function mapIngredientWithFallback(
             return await runAiNutritionBackfillNoWinner({
                 normalizedName, trimmed, rawLine, parsed, aiNutritionBudget,
                 allCandidates, filtered, skippedLlmNormalize, usedGenericFallback,
-                telemetry,
+                telemetry, rerankOutcome, rerankPool, rerankStage,
             });
         }
 
@@ -2672,6 +2700,9 @@ export async function mapIngredientWithFallback(
                         source: c.source,
                         semanticSimilarity: c.semanticSimilarity ?? null,
                     })),
+                    rerankOutcome,
+                    rerankPool,
+                    rerankStage: rerankOutcome ? rerankStage : null,
                     selectedCandidate: {
                         foodId: winner.id,
                         foodName: winner.name,
@@ -2733,6 +2764,15 @@ export async function mapIngredientWithFallback(
             if (cacheResearch) {
                 result = cacheResearch.result;
                 selectionReason = cacheResearch.selectionReason;
+                // The record named in `selectedCandidate` below was ordered by
+                // THAT rerank, not the primary one — which on this path never
+                // ran, since the line arrived as a `normalized_cache_hit`. Record
+                // the rerank that actually chose it, and say which one it was.
+                if (cacheResearch.rerankOutcome) {
+                    rerankOutcome = cacheResearch.rerankOutcome;
+                    rerankPool = cacheResearch.rerankPool;
+                    rerankStage = 'cache_failure_research';
+                }
             }
         }
 
@@ -2740,7 +2780,7 @@ export async function mapIngredientWithFallback(
             return await runBackfillAfterWinner({
                 winner, trimmed, parsed, filtered, confidence, selectionReason,
                 allCandidates, normalizedName, aiNutritionBudget, rawLine,
-                skippedLlmNormalize,
+                skippedLlmNormalize, rerankOutcome, rerankPool, rerankStage,
             });
         }
 
@@ -2762,6 +2802,9 @@ export async function mapIngredientWithFallback(
             rawLine,
             telemetry,
             skipSave,
+            rerankOutcome,
+            rerankPool,
+            rerankStage,
         });
     } finally {
         // Release the in-flight lock and resolve waiting threads
@@ -3177,11 +3220,21 @@ async function runAiNutritionBackfillNoWinner(params: {
     skippedLlmNormalize: boolean;
     usedGenericFallback: boolean;
     telemetry: MappingTelemetry | undefined;
+    /* LOG-ONLY — see the holder in mapIngredientWithFallback(). THIS SEAT IS THE
+     * POINT OF THE INSTRUMENT, not an afterthought: this function is reached from
+     * `if (!winner)`, i.e. exactly when simpleRerank() named a top candidate and
+     * the MIN_RERANK_CONFIDENCE gate refused it and no backstop rescued it. That
+     * is the `under_gate:simple_rerank` class. An earlier cut of this change did
+     * not thread them here, so the one population the instrument exists to expose
+     * was the one population it recorded nothing for. */
+    rerankOutcome: RerankOutcome | null;
+    rerankPool: RerankScoredCandidate[] | null;
+    rerankStage: 'primary' | 'cache_failure_research';
 }): Promise<FatsecretMappedIngredient | null> {
     const {
         normalizedName, trimmed, rawLine, parsed, aiNutritionBudget,
         allCandidates, filtered, skippedLlmNormalize, usedGenericFallback,
-        telemetry,
+        telemetry, rerankOutcome, rerankPool, rerankStage,
     } = params;
 
     // ============================================================
@@ -3236,6 +3289,9 @@ async function runAiNutritionBackfillNoWinner(params: {
                         ingredient: parsed?.name,
                     },
                     topCandidates: [],
+                    rerankOutcome,
+                    rerankPool,
+                    rerankStage: rerankOutcome ? rerankStage : null,
                     selectedCandidate: {
                         foodId: aiResult.foodId,
                         foodName: aiResult.displayName,
@@ -3297,6 +3353,9 @@ async function runAiNutritionBackfillNoWinner(params: {
                 ingredient: parsed?.name,
             },
             topCandidates: [],
+            rerankOutcome,
+            rerankPool,
+            rerankStage: rerankOutcome ? rerankStage : null,
             selectedCandidate: {
                 foodId: '',
                 foodName: '',
@@ -3689,7 +3748,16 @@ async function attemptCacheFailureResearch(params: {
     skipCache: boolean;
     skipFdc: boolean;
     debug: boolean;
-}): Promise<{ result: FatsecretMappedIngredient; selectionReason: string } | null> {
+}): Promise<{
+    result: FatsecretMappedIngredient;
+    selectionReason: string;
+    /* LOG-ONLY. This function runs a SECOND simpleRerank() over a freshly
+     * searched pool, and its order is what picks the record returned above — so
+     * the analysis entry must carry THIS outcome, not the primary one (which on
+     * this path never ran). Null when the rerank branch was not reached. */
+    rerankOutcome: RerankOutcome | null;
+    rerankPool: RerankScoredCandidate[] | null;
+} | null> {
     const {
         winner, trimmed, normalizedName, parsed, rawLine, confidence, aiHydrationBudget,
         aiNutritionEstimate, aiCanonicalBase, isBrandedQuery, brandDetection,
@@ -3697,6 +3765,8 @@ async function attemptCacheFailureResearch(params: {
     } = params;
     let result: FatsecretMappedIngredient | null = null;
     let selectionReason = '';
+    let researchRerankOutcome: RerankOutcome | null = null;
+    let researchRerankPool: RerankScoredCandidate[] | null = null;
 
     logger.info('mapping.cache_serving_failed_retrying_search', {
         failedId: winner.id,
@@ -3744,6 +3814,8 @@ async function attemptCacheFailureResearch(params: {
         }));
         const rerankQuery = aiCanonicalBase || stripPrepModifiers(normalizedName);
         const rerankResult = simpleRerank(rerankQuery, rerankCandidates, aiNutritionEstimate, trimmed, isBrandedQuery, brandDetection.matchedBrand ?? undefined, countedNounFB != null);
+        researchRerankOutcome = rerankResult.rerankOutcome;
+        researchRerankPool = rerankResult.rerankPool;
 
         // simpleRerank returns the fully sorted list based on semantic score, nutrition ties, and FDC preferencing
         const sortedFallbackCandidates = rerankResult.sortedCandidates.map(
@@ -3798,7 +3870,9 @@ async function attemptCacheFailureResearch(params: {
         }
     }
 
-    return result ? { result, selectionReason } : null;
+    return result
+        ? { result, selectionReason, rerankOutcome: researchRerankOutcome, rerankPool: researchRerankPool }
+        : null;
 }
 
 async function runBackfillAfterWinner(params: {
@@ -3813,11 +3887,15 @@ async function runBackfillAfterWinner(params: {
     aiNutritionBudget: AiNutritionBudget;
     rawLine: string;
     skippedLlmNormalize: boolean;
+    /** LOG-ONLY — see the holder in mapIngredientWithFallback(). */
+    rerankOutcome: RerankOutcome | null;
+    rerankPool: RerankScoredCandidate[] | null;
+    rerankStage: 'primary' | 'cache_failure_research';
 }): Promise<FatsecretMappedIngredient | null> {
     const {
         winner, trimmed, parsed, filtered, confidence, selectionReason,
         allCandidates, normalizedName, aiNutritionBudget, rawLine,
-        skippedLlmNormalize,
+        skippedLlmNormalize, rerankOutcome, rerankPool, rerankStage,
     } = params;
 
     if (ENABLE_MAPPING_ANALYSIS) {
@@ -3837,6 +3915,9 @@ async function runBackfillAfterWinner(params: {
                 source: c.source,
                 semanticSimilarity: c.semanticSimilarity ?? null,
             })),
+            rerankOutcome,
+            rerankPool,
+            rerankStage: rerankOutcome ? rerankStage : null,
             selectedCandidate: {
                 foodId: winner.id,
                 foodName: winner.name,
@@ -3904,6 +3985,9 @@ async function runBackfillAfterWinner(params: {
                         ingredient: parsed?.name,
                     },
                     topCandidates: [],
+                    rerankOutcome,
+                    rerankPool,
+                    rerankStage: rerankOutcome ? rerankStage : null,
                     selectedCandidate: {
                         foodId: aiResult.foodId,
                         foodName: aiResult.displayName,
@@ -3984,12 +4068,16 @@ async function finalizeAndSaveResult(params: {
     rawLine: string;
     telemetry: MappingTelemetry | undefined;
     skipSave: boolean;
+    /** LOG-ONLY — see the holder in mapIngredientWithFallback(). */
+    rerankOutcome: RerankOutcome | null;
+    rerankPool: RerankScoredCandidate[] | null;
+    rerankStage: 'primary' | 'cache_failure_research';
 }): Promise<FatsecretMappedIngredient | null> {
     const {
         result, confidence, selectionReason, normalizedName, brandDetection,
         aiNutritionEstimate, aiCanonicalBase, aiCookingModifier, readEscapes,
         filtered, skippedLlmNormalize, usedGenericFallback, trimmed, parsed,
-        rawLine, telemetry, skipSave,
+        rawLine, telemetry, skipSave, rerankOutcome, rerankPool, rerankStage,
     } = params;
 
     // Per-100g macros of the pick. Hoisted above the save decision because
@@ -4184,6 +4272,9 @@ async function finalizeAndSaveResult(params: {
                     carbs: c.nutrition.carbs,
                 } : undefined,
             })),
+            rerankOutcome,
+            rerankPool,
+            rerankStage: rerankOutcome ? rerankStage : null,
             selectedCandidate: {
                 foodId: result.foodId,
                 foodName: result.foodName,
@@ -4269,6 +4360,9 @@ async function finalizeAndSaveResult(params: {
                     ingredient: parsed?.name,
                 },
                 topCandidates: [],
+                rerankOutcome,
+                rerankPool,
+                rerankStage: rerankOutcome ? rerankStage : null,
                 selectedCandidate: {
                     foodId: result.foodId,
                     foodName: result.foodName,
