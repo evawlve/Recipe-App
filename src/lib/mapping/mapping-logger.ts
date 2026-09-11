@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getAiCallMetrics, getAiCallSummary, resetAiCallMetrics } from '../ai/structured-client';
+import type { RerankOutcome, RerankScoredCandidate } from './simple-rerank';
 
 export interface MappingAnalysisLog {
     timestamp?: string;  // Optional - can be generated automatically if not provided
@@ -38,6 +39,29 @@ export interface MappingAnalysisLog {
             carbs: number;
         };
     }>;
+
+    /* LOG-ONLY (2026-09-11, Lane A S47). What simpleRerank() RETURNED for this
+     * line, and every score it computed. ABSENT means the reranker never ran —
+     * a cache hit, or a pool too small to rerank — which is a different thing
+     * from an outcome whose `scoredCount` is 0 (the reranker ran and
+     * short-circuited on a single candidate).
+     *
+     * `rerankPool` is NOT `topCandidates` with extra columns and the two must
+     * never be joined positionally: `topCandidates` is
+     * `filtered.slice(0, MAPPING_ANALYSIS_TOP_N)`, a depth-capped prefix of the
+     * filtered list ordered by RETRIEVAL score; `rerankPool` is the
+     * source×mode round-robin `buildRerankPool()` handed the reranker, ordered
+     * as it was scored. Join them by `foodId` or not at all.
+     *
+     * Every entry written before the build that introduced these fields has
+     * them absent — the box ledger owns which build that is. A census over the
+     * corpus must therefore treat absence as "unknown", never as "no rerank". */
+    rerankOutcome?: RerankOutcome | null;
+    rerankPool?: RerankScoredCandidate[] | null;
+    /** Which reranker produced `rerankOutcome`. `cache_failure_research` is the
+     *  second call, over a freshly-searched pool, on the
+     *  `normalized_cache_hit` + serving-failure path. */
+    rerankStage?: 'primary' | 'cache_failure_research' | null;
 
     // Selection decision
     selectedCandidate: {

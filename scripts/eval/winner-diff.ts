@@ -621,6 +621,30 @@ const KNOWN_CALLERS: Record<string, SelectionVariant> = {
     // instead, and the PR says so rather than letting a green diff imply
     // otherwise.
     '27e15daa0d31d518': 'gate-backstop',
+    // CURRENT — the shape section 9 transcribes. Same family as the 2026-08-25
+    // 4d990223 -> 27e15daa move, and re-pinned for the same reason and on the same
+    // evidence. The delta is TWO LOG-ONLY CAPTURES sitting beside the
+    // `rerankSortedIds` one, and here is the receipt rather than the assurance:
+    //
+    //   $ diff <(caller block @ master) <(caller block @ this branch)
+    //   @@ -418,2 +418,4 @@
+    //       rerankSortedIds = rerankResult.sortedCandidates.map(c => c.id);
+    //   +   rerankOutcome = rerankResult.rerankOutcome;
+    //   +   rerankPool = rerankResult.rerankPool;
+    //
+    // 628 -> 630 lines, nothing else in the window. Both new variables feed exactly
+    // one consumer, `logMappingAnalysis()`, and `replaySelection()` models selection
+    // and writes no analysis entry at all — so neither can reach it, exactly as the
+    // `rerankSortedIds` capture could not. Re-pinned rather than left drifting for
+    // the reason spelled out on 3fc2ca07 and 6271792 above: the guard hashes block
+    // TEXT and cannot tell a log capture from a decision, which is the right
+    // conservative default, and leaving it drifted is what made this gate
+    // unrunnable for a fortnight after PR #209.
+    //
+    // Lane A session 47, 2026-09-11, the rerank-score instrument. The helpers hash
+    // was UNCHANGED across this edit (8c1e518d30331976 both sides), which is the
+    // independent check that the drift is the caller window and nothing else.
+    'fb5203085fcc27e8': 'gate-backstop',
 };
 /**
  * Re-pinned 2026-08-01 alongside the `copiedHelperSource()` CRLF fix above.
@@ -672,7 +696,10 @@ const PINNED_HELPERS_HASH = '8c1e518d30331976';
 // announceVariantFit() honest — leaving it on 4d990223 would print "SUPERSEDED SHAPE"
 // for a tree the transcription does mirror, and teaching people to ignore that banner
 // is exactly how the 6271792 drift went unfixed for a fortnight.
-const TRANSCRIBED_CALLER = '27e15daa0d31d518';
+// MOVED 2026-09-11 (Lane A S47) from 27e15daa0d31d518. The transcription in section
+// 9 is UNCHANGED and did not need to change — see the receipt on the new hash in
+// KNOWN_CALLERS. Moving the pointer is what keeps announceVariantFit() honest.
+const TRANSCRIBED_CALLER = 'fb5203085fcc27e8';
 
 interface DriftResult {
     caller: string;

@@ -58,6 +58,75 @@ export interface SimpleRerankResult {
     reason: string;
 }
 
+/**
+ * One candidate the RERANKER actually scored, keyed by foodId.
+ *
+ * This is NOT `topCandidates[].score` in the mapping-analysis file. That is the
+ * raw cross-source RETRIEVAL score, which `simpleRerank()` consumes as
+ * `Math.min(score, 1) * WEIGHTS.ORIGINAL_SCORE` — so an entire band of
+ * above-1.0 retrieval scores clamps to one identical contribution and the
+ * retrieval margin between them is not recoverable from the log (measured
+ * 2026-09-10, Lane A S46: the FatSecret band 1.425 / 1.092 / 1.068 / 1.044 all
+ * clamp to 0.450). `score` here is the post-rerank total that actually ordered
+ * the pool.
+ *
+ * The pool is `buildRerankPool()`'s source×mode round-robin, NOT a prefix of
+ * `filtered`, so no `MAPPING_ANALYSIS_TOP_N` value reproduces it — which is why
+ * it is logged as its own array rather than as extra columns on `topCandidates`.
+ */
+export interface RerankScoredCandidate {
+    foodId: string;
+    /** Post-rerank total: baseScore + nutritionScore - penalties + boosts. */
+    score: number;
+    baseScore: number;
+    nutritionScore: number;
+}
+
+/**
+ * What `simpleRerank()` RETURNED, recorded for the mapping-analysis log.
+ *
+ * READ `winner`, NEVER `winnerId`, to know what won. The distinction is the
+ * whole point: `logger.debug('simple_rerank.result', …)` fires ABOVE the
+ * MIN_RERANK_CONFIDENCE gate, so it names a top candidate on rows this function
+ * then returns as `{ winner: null, reason: 'confidence_below_threshold' }` —
+ * the same trap the adjacent `simple_rerank.sole_survivor` line was moved below
+ * the gate to avoid. `winner === null && winnerId !== null` is exactly the
+ * `under_gate:simple_rerank` class.
+ *
+ * `scoredCount === 0` with `candidateCount > 0` means the reranker
+ * SHORT-CIRCUITED and scored nothing (the single-candidate paths, which judge on
+ * the raw retrieval score) — not that it scored and found nothing. On those
+ * paths every score field is null, because no rerank score exists to report.
+ */
+export interface RerankOutcome {
+    /** The foodId this function returned as the winner; null on every
+     *  null-winner path, gate refusal included. */
+    winner: string | null;
+    /** `scored[0]` — the reranker's first-ranked candidate, present even when
+     *  the gate refused it. Null on the short-circuit paths. */
+    winnerId: string | null;
+    winnerScore: number | null;
+    winnerBaseScore: number | null;
+    winnerNutritionScore: number | null;
+    /** `scored[1]` — positional runner-up. */
+    runnerUp: string | null;
+    runnerUpScore: number | null;
+    /** The runner-up `gap` was actually computed against, after the Fix-50
+     *  same-name dedupe. Differs from `runnerUp` when the positional second is
+     *  a duplicate of the winner. */
+    effectiveRunnerUp: string | null;
+    effectiveRunnerUpScore: number | null;
+    /** `winnerScore - effectiveRunnerUpScore`; null when nothing was scored,
+     *  0 when the winner was the sole survivor of the dedupe. */
+    gap: number | null;
+    confidence: number;
+    reason: string;
+    /** Candidates handed to this function. */
+    candidateCount: number;
+    /** Candidates the reranker scored. 0 on the short-circuit paths. */
+    scoredCount: number;
+}
+
 // ============================================================
 // Scoring Weights
 // ============================================================
@@ -1841,6 +1910,35 @@ export function brandTieRank(c: RerankCandidate, roles: Map<string, OffTwinRole>
     return c.brandName ? 2 : 0;
 }
 
+/**
+ * The outcome shape for the paths that short-circuit before any rerank score
+ * exists. Every score field is null there BY CONSTRUCTION — the single-candidate
+ * arms judge on the raw retrieval score — and `scoredCount: 0` is what says so.
+ */
+function shortCircuitOutcome(
+    winner: string | null,
+    confidence: number,
+    reason: string,
+    candidateCount: number
+): RerankOutcome {
+    return {
+        winner,
+        winnerId: null,
+        winnerScore: null,
+        winnerBaseScore: null,
+        winnerNutritionScore: null,
+        runnerUp: null,
+        runnerUpScore: null,
+        effectiveRunnerUp: null,
+        effectiveRunnerUpScore: null,
+        gap: null,
+        confidence,
+        reason,
+        candidateCount,
+        scoredCount: 0,
+    };
+}
+
 export function simpleRerank(
     query: string,
     candidates: RerankCandidate[],
@@ -1849,13 +1947,25 @@ export function simpleRerank(
     isBranded?: boolean,
     targetBrand?: string,
     preferCountLabeled?: boolean
-): { winner: RerankCandidate | null; confidence: number; reason: string; sortedCandidates: RerankCandidate[] } {
+): {
+    winner: RerankCandidate | null;
+    confidence: number;
+    reason: string;
+    sortedCandidates: RerankCandidate[];
+    /** LOG-ONLY (2026-09-11). Nothing reads these to make a decision; they exist
+     *  because the rerank scores were computed and dropped, which left every
+     *  "why did this record win" question unanswerable from the corpus. */
+    rerankOutcome: RerankOutcome;
+    rerankPool: RerankScoredCandidate[];
+} {
     if (candidates.length === 0) {
         return {
             winner: null,
             confidence: 0,
             reason: 'no_candidates',
-            sortedCandidates: []
+            sortedCandidates: [],
+            rerankOutcome: shortCircuitOutcome(null, 0, 'no_candidates', 0),
+            rerankPool: [],
         };
     }
 
@@ -1878,7 +1988,9 @@ export function simpleRerank(
                 winner: null,
                 confidence: singleConfidence,
                 reason: 'confidence_below_threshold',
-                sortedCandidates: candidates
+                sortedCandidates: candidates,
+                rerankOutcome: shortCircuitOutcome(null, singleConfidence, 'confidence_below_threshold', 1),
+                rerankPool: [],
             };
         }
 
@@ -1886,7 +1998,9 @@ export function simpleRerank(
             winner: candidates[0],
             confidence: singleConfidence,
             reason: 'single_candidate',
-            sortedCandidates: candidates
+            sortedCandidates: candidates,
+            rerankOutcome: shortCircuitOutcome(candidates[0].id, singleConfidence, 'single_candidate', 1),
+            rerankPool: [],
         };
     }
 
@@ -2418,6 +2532,32 @@ export function simpleRerank(
         winnerPlausibilityFloorHit: top.plausibilityFloorHit,
     });
 
+    // LOG-ONLY (2026-09-11): the scored pool, keyed by foodId. Built once here
+    // and handed to both returns below, so the two arrays are identical on a
+    // gate refusal and on a win — only `winner` and `reason` differ.
+    const rerankPool: RerankScoredCandidate[] = scored.map(sc => ({
+        foodId: sc.candidate.id,
+        score: sc.score,
+        baseScore: sc.baseScore,
+        nutritionScore: sc.nutritionScore,
+    }));
+    const buildOutcome = (returnedWinner: string | null, outcomeReason: string): RerankOutcome => ({
+        winner: returnedWinner,
+        winnerId: top.candidate.id,
+        winnerScore: top.score,
+        winnerBaseScore: top.baseScore,
+        winnerNutritionScore: top.nutritionScore,
+        runnerUp: second?.candidate.id ?? null,
+        runnerUpScore: second?.score ?? null,
+        effectiveRunnerUp: effectiveRunnerUp?.candidate.id ?? null,
+        effectiveRunnerUpScore: effectiveRunnerUp?.score ?? null,
+        gap,
+        confidence,
+        reason: outcomeReason,
+        candidateCount: candidates.length,
+        scoredCount: scored.length,
+    });
+
     // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
     // Reject low-confidence winners to trigger fallback recovery.
     // This prevents "burger relish" → "Black Bean Burger" at 0.68 confidence.
@@ -2458,6 +2598,8 @@ export function simpleRerank(
             confidence,
             reason: 'confidence_below_threshold',
             sortedCandidates: scored.map(s => s.candidate),
+            rerankOutcome: buildOutcome(null, 'confidence_below_threshold'),
+            rerankPool,
         };
     }
 
@@ -2466,6 +2608,8 @@ export function simpleRerank(
         confidence,
         reason,
         sortedCandidates: scored.map(s => s.candidate),
+        rerankOutcome: buildOutcome(top.candidate.id, reason),
+        rerankPool,
     };
 }
 
