@@ -183,6 +183,85 @@ export function isPercentOrLeannessRatioToken(token: string): boolean {
   return !!m && Number(m[1]) + Number(m[2]) === 100;
 }
 
+/**
+ * SPANISH NUMERALS AND FRACTION WORDS.
+ *
+ * Measured 2026-09-12 (Lane A S49): the 43-line Spanish corpus
+ * (scripts/eval/spanish/spanish-corpus-2026-09-12.json) parsed ZERO of its
+ * eight Spanish quantity expressions -- the only quantity line that parsed was
+ * the control `100 g de pollo`, which is already English-shaped -- and a
+ * missing numeral HALVES the bill rather than leaving a plausible default:
+ * `dos huevos` billed 50 g / 74 kcal against ~100 g, `dos piezas de pan` 26 g
+ * against ~52-60 g, `dos tamales de pollo` 57 g against ~114 g. Owner (mobile
+ * repo): sync-docs/reports/2026-09-12_spanish-eval-corpus-baseline.md, the
+ * "Spanish NUMERALS fall through" section.
+ *
+ * THIS IS A RETRIEVAL-CHANGING LIST, NOT A VOCABULARY. Every entry CONSUMES a
+ * leading token that would otherwise stay in the food's name, so four tokens
+ * are deliberately absent and each absence is measured, not cautious:
+ *
+ *  - `tres` (3). `tres leches` and `tres leches cake` are ENGLISH-corpus dish
+ *    names carrying organic cached traffic -- 5 MappingEventLog events over 2
+ *    distinct rawLines, `noCache` = false, first seen 2026-07-21. As a numeral
+ *    it bills 3 of `leches`. Re-derive:
+ *      SELECT lower("rawLine"), "noCache", count(*) FROM "MappingEventLog"
+ *       WHERE lower("rawLine") ~ '(^|[[:space:]])tres([[:space:]]|$)'
+ *       GROUP BY 1,2;
+ *    What it needs is a PARSE-layer protected-phrase list: the mapping-layer
+ *    PROTECTED_PRODUCT_PHRASES (mapping/normalization-rules.ts) runs
+ *    downstream of this parse and cannot reach the quantity decision.
+ *  - `siete` (7). An exact BRAND_SET entry (Siete Foods), measured with the
+ *    shipped detector -- detectBrandInQuery('siete tortilla chips') returns
+ *    isBranded with matchedBrand `siete`. It is a SINGLE-token brand, and
+ *    matchWordNumberBrandTokens() in ingredient-line.ts guards only MULTI-token
+ *    ones, so `siete tortilla chips` would parse as 7 tortillas of "chips" --
+ *    the n-serv-35 / n-tot-05 shape that unit.ts's COUNT_NOUN header records.
+ *  - `once` (11). A common English word, and it leads two lexicon brands
+ *    (`once again`, `once upon a farm`). Both are multi-token, so the guard
+ *    above COULD cover them -- but only through QUANTITY_WORD_NUMBERS in
+ *    ingredient-line.ts, which this change deliberately does not touch.
+ *  - `un` / `una` / `uno` (1). Numerically inert -- a bare line already
+ *    defaults to qty 1 -- but it consumes the leading token and so moves the
+ *    retrieval term. On the corpus it fires on exactly the two lines that land
+ *    correctly BY LUCK rather than by parsing (`un vaso de leche` 250 g and
+ *    `una cucharada de aceite de oliva` 15 g both take the record's own label
+ *    serving), so it can only move them off a right answer.
+ *
+ * THE OTHER TWO CONSUMERS OF parseQuantityTokens() ARE STRUCTURALLY EMPTY, and
+ * both were checked rather than assumed: declaredVolumeUnitGrams() in
+ * mapping/build-fatsecret-result.ts reads FatSecretServing.description, where
+ * ZERO of 55,058 rows lead with any token added here (measured 2026-09-12);
+ * and leadingLabelFraction() in mapping/count-label.ts is gated by
+ * LABEL_FRACTION_RE, which is digit-only and can never match a word.
+ *
+ * Container words (`taza`, `vaso`, `cucharada`, `pieza`, `rebanada`) are
+ * deliberately NOT added as units: on the same corpus `una taza de arroz`
+ * already lands about a cup, and its whole 2.6x over-bill is that the record is
+ * DRY rice at 352 kcal/100 g -- parsing the unit bills MORE dry rice and makes
+ * the line worse.
+ */
+export const SPANISH_WORD_NUMBERS: Record<string, number> = {
+  dos: 2, cuatro: 4, cinco: 5, seis: 6, ocho: 8, nueve: 9, diez: 10,
+  doce: 12, docena: 12,
+};
+
+/**
+ * `media` / `medio` are the Spanish `half`, and they are gendered, so both
+ * spellings are needed (`media manzana`, `medio aguacate`). Mirrored into
+ * normalizeUnitToken()'s multiplier table in unit.ts for the same reason
+ * `half` appears in both: the two tables answer different questions about the
+ * same word and a word that is in one and not the other reads as a unit in one
+ * position and a quantity in the other.
+ *
+ * `medio` also fires UPSTREAM of a translation defect the same corpus found --
+ * the normalizer renders `medio aguacate` as `medium avocado`, reading *half*
+ * as *medium* -- so consuming it here MAY also close that line. That is a
+ * prediction, not a measurement; see this change's report.
+ */
+export const SPANISH_WORD_FRACTIONS: Record<string, number> = {
+  media: 0.5, medio: 0.5,
+};
+
 export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: number } | null {
   if (tokens.length === 0) return null;
   // A leading `2%` / `93%` / `85/15` is a modifier on the food, not a quantity (see above).
@@ -205,7 +284,8 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
 
   // Handle word fractions
   const wordFractions: Record<string, number> = {
-    'half': 0.5, 'quarter': 0.25, 'third': 1 / 3
+    'half': 0.5, 'quarter': 0.25, 'third': 1 / 3,
+    ...SPANISH_WORD_FRACTIONS
   };
 
   if (wordFractions[tokens[0]]) {
@@ -237,6 +317,7 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
   const WORD_NUMBERS: Record<string, number> = {
     one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
     nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12, couple: 2,
+    ...SPANISH_WORD_NUMBERS,
   };
   const article = tokens[0].toLowerCase();
   const hasArticle =
