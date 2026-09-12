@@ -56,7 +56,9 @@ const HELD: Row[] = [
 ];
 
 function parsed(line: string) {
-  return parseIngredientLine(line, null);
+  const p = parseIngredientLine(line);
+  if (!p) throw new Error(`parseIngredientLine returned null for ${line}`);
+  return p;
 }
 
 describe('Spanish numerals: the lines that move', () => {

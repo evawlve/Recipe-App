@@ -186,6 +186,16 @@ export function isPercentOrLeannessRatioToken(token: string): boolean {
 /**
  * SPANISH NUMERALS AND FRACTION WORDS.
  *
+ * ####################################################################
+ * # HELD 2026-09-12 (Lane A S49). DO NOT SHIP THIS TABLE AS IT STANDS.
+ * # It was gated by two independent arms and by an adversarial lens,
+ * # and it is NET NEGATIVE on its own measured population. The list of
+ * # refusals below is INCOMPLETE -- the collisions in "WHAT THE GATE
+ * # FOUND" are live in this table right now. Read that block before
+ * # reviving anything here. Owner (mobile repo):
+ * # sync-docs/reports/2026-09-12_lane-a-s49-the-parser-seat-and-four-measured-refusals.md
+ * ####################################################################
+ *
  * Measured 2026-09-12 (Lane A S49): the 43-line Spanish corpus
  * (scripts/eval/spanish/spanish-corpus-2026-09-12.json) parsed ZERO of its
  * eight Spanish quantity expressions -- the only quantity line that parsed was
@@ -233,6 +243,75 @@ export function isPercentOrLeannessRatioToken(token: string): boolean {
  * ZERO of 55,058 rows lead with any token added here (measured 2026-09-12);
  * and leadingLabelFraction() in mapping/count-label.ts is gated by
  * LABEL_FRACTION_RE, which is digit-only and can never match a word.
+ *
+ * WHAT THE GATE FOUND, and why this table is HELD. Three arms on
+ * 2026-09-12: a hand-built `--cross-snapshot` winner-diff, a two-tree
+ * re-probe of the 43-line Spanish corpus at 3 draws per side, and an
+ * adversarial lens over the corpora the first two do not cover.
+ *
+ * (1) ON THE SPANISH CORPUS the net is not shippable. Five rows move:
+ *     `dos tamales de pollo` is a clean fix (same record, same tier,
+ *     57 -> 114 g); `dos huevos` improves but CHANGES RECORD (fs_3092
+ *     "Egg" 50 g -> off_2100002978128 "Huevos" 120 g); `media manzana`
+ *     and `medio aguacate` DEGRADE the serving tier onto a fabricated
+ *     `flat_100g_default` floor; and `dos piezas de pan` turns a silent
+ *     `no_winner_all_filtered` into a confident `off_0866405295867`
+ *     "Pan de pascua" -- a Chilean Christmas cake -- at 116 g / 460 kcal.
+ *     THE MECHANISM: `parsed.name` IS the retrieval term, so consuming a
+ *     leading token shortens the search string and changes which record
+ *     wins and which serving tier resolves. 4 of the 5 changed record.
+ *     Consuming a numeral is not a portion-only edit, and every prior
+ *     brief on this lever assumed it was.
+ *
+ * (2) THE REFUSAL LIST ABOVE IS INCOMPLETE, and `dos` itself belongs on
+ *     it. `dos equis` is a MULTI-token BRAND_SET entry, so
+ *     `parseIngredientLine('dos equis')` reads qty 2 / name "equis"
+ *     while `detectBrandInQuery` still returns brand `dos equis`. The
+ *     `siete` reasoning above INVERTS here and is wrong as stated:
+ *     `matchWordNumberBrandTokens()` guards multi-token brands only
+ *     through QUANTITY_WORD_NUMBERS in ingredient-line.ts, which this
+ *     change does not widen -- so a multi-token brand led by a Spanish
+ *     numeral is NOT guarded either. That is the `five guys little
+ *     cheeseburger` defect, one language over.
+ *
+ * (3) FOUR MORE SHIPPED TOKENS CARRY THE `tres leches` SHAPE, measured
+ *     against OffFood / FatSecretFood rather than MappingEventLog (the
+ *     traffic test cannot see a food nobody has typed yet):
+ *       `cuatro leches`   -> qty 4 of "leches"      (an OFF dish name)
+ *       `doce de leite`   -> qty 12 of "de leite"   (26 OFF rows, every
+ *                            one Portuguese sweet; zero mean *twelve*)
+ *       `cinco jotas ham` -> qty 5 of "jotas ham"   (a Spanish jamon brand)
+ *       `dos de saumon`   -> qty 2 of "de saumon"   (French: `dos` = loin)
+ *       `media crema`     -> qty 0.5 of "crema"     (Nestle table cream,
+ *                            a staple in exactly the household this is for)
+ *       `media noche`     -> qty 0.5 of "noche"     (a Cuban sandwich)
+ *
+ * (4) THIS TABLE WIDENS A DIVERGENCE THE CODEBASE CALLS "THE BUG, NOT
+ *     THE DESIGN". On master WORD_NUMBERS and QUANTITY_WORD_NUMBERS are
+ *     both 14 and identical, divergence 0; with this table it is 23 vs
+ *     14, divergence 9. `brand-led-product-name.test.ts` P2 pins only
+ *     QUANTITY_WORD_NUMBERS is-subset-of parseQuantityTokens, so it is
+ *     blind to exactly this direction. (The QUANTITY_WORD_NUMBERS header
+ *     names a sync test, `word-number-brand.test.ts`, that has NEVER
+ *     existed on any branch -- but P2 does carry the one-directional
+ *     assertion, so the coverage is thin, not absent.)
+ *
+ * (5) `docena` is near-inert as written: `hasArticle` accepts only
+ *     `a`/`an` before `dozen`/`couple`, so the idiomatic `una docena de
+ *     huevos` parses as qty 1 and only a bare-leading `docena ...` fires.
+ *     Shipping `docena` while refusing `una` is self-defeating. Related
+ *     and unowned: the Spanish partitive `de` is never consumed --
+ *     `consumePartitiveOf()` knows only `of` -- so every `<numeral> de
+ *     <food>` line leaves a leading `de` in the retrieval term.
+ *
+ * THE REVIVAL PATH, measured rather than guessed: bare `pan` resolves
+ * correctly on its own (off_04516246 "Pan", 40 g / 150 kcal,
+ * `bare_label_serving`), so `pieza(s)` -> `piece` and `rebanada(s)` ->
+ * `slice` -- aliases onto count units that ALREADY exist in the English
+ * table -- would bill 2 x 40 g of real bread instead of a fruitcake.
+ * `media`/`medio` should probably come out: both their lines land on the
+ * fabricated floor. And QUANTITY_WORD_NUMBERS must widen in the same PR,
+ * with a BOTH-directions intersection test.
  *
  * Container words (`taza`, `vaso`, `cucharada`, `pieza`, `rebanada`) are
  * deliberately NOT added as units: on the same corpus `una taza de arroz`
