@@ -23,3 +23,19 @@ Planner entry: that repo's `reports/2026-09-11_spanish-version-scoping-and-inser
 
 Re-running this rewrites nothing but these files; it does write `MappingEventLog` and the three
 stub tables (`nosave=1` does not suppress those), and `FoodMapping` must stay +0.
+
+## `baseline-mel-2026-09-12.txt`
+
+The 45 `MappingEventLog` rows the probes wrote (`rawLine|normalizedForm|funnelStage`,
+`noCache=true`, 14:42:18–14:44:10Z). A `nosave=1` probe still writes MEL, and this file is the
+receipt for the two findings the response payload could not carry:
+
+- **the under-split is at the SEGMENTER** — a split line writes one event per *segment* with the
+  segment's text in `rawLine` (`2 huevos revueltos`), and every bare composite wrote one event
+  carrying the whole line;
+- **the normalizer already translates, conditionally** — `normalizedForm` is English on
+  quantity-bearing lines (`media manzana` → `apple`, `dos huevos` → `eggs`) and Spanish on bare
+  nouns (`manzana`, `huevos`), so one food gets two cache keys in two languages.
+
+`normalizedForm` here is post-brand-repair: it is the mapper's search term and the cache key's
+input, not a verbatim read of the normalizer's output.
