@@ -1928,6 +1928,18 @@
         "value": "0@0@14"
       },
       "verified": "2026-09-08"
+    },
+    {
+      "id": "spanish-numeral-aliases-exclude-four-measured-collisions",
+      "claim": "SPANISH_WORD_NUMBERS in src/lib/parse/quantity.ts carries exactly the nine numerals dos/cuatro/cinco/seis/ocho/nueve/diez/doce/docena, and `tres`, `siete`, `once` and `un`/`una`/`uno` are DELIBERATELY absent. Each absence is a measured collision, not caution: `tres` bills 3 of `leches` on `tres leches` and `tres leches cake`, which carry organic cached traffic (5 MappingEventLog events over 2 distinct rawLines, noCache=false, since 2026-07-21); `siete` is an exact BRAND_SET entry (Siete Foods) and is SINGLE-token, so matchWordNumberBrandTokens() in ingredient-line.ts -- which guards only MULTI-token brands -- cannot cover it and `siete tortilla chips` would parse as 7 tortillas of \"chips\"; `once` is an English word that also leads `once again` and `once upon a farm`, guardable only through QUANTITY_WORD_NUMBERS, which this change does not touch; `un`/`una`/`uno` are numerically inert but consume the leading token on exactly the corpus lines that already land correctly by taking the record's own label serving. The guard is the ABSENCE -- a later reader who 'completes the list' without reading the SPANISH_WORD_NUMBERS header reverses four measurements at once. Re-derive the traffic half: SELECT lower(\"rawLine\"), \"noCache\", count(*) FROM \"MappingEventLog\" WHERE lower(\"rawLine\") ~ '(^|[[:space:]])tres([[:space:]]|$)' GROUP BY 1,2; and the brand half with the shipped detectBrandInQuery('siete tortilla chips'). Lane A session 49, 2026-09-12.",
+      "ownerDoc": "backend:src/lib/parse/quantity.ts",
+      "where": "backend",
+      "command": "node -e \"const q=require('fs').readFileSync('src/lib/parse/quantity.ts','utf8');const m=q.match(/SPANISH_WORD_NUMBERS: Record<string, number> = \\\\{([^}]*)\\\\}/s);const k=[...m[1].matchAll(/([a-z]+):/g)].map(x=>x[1]).sort();const bad=['tres','siete','once','un','una','uno'].filter(t=>k.includes(t));console.log(k.length+'@'+bad.length)\"",
+      "expect": {
+        "kind": "equals",
+        "value": "9@0"
+      },
+      "verified": "2026-09-12"
     }
   ]
 }
