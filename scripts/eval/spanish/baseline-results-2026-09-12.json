@@ -1,0 +1,1650 @@
+[
+ {
+  "id": "es-stap-01",
+  "category": "bare_staple",
+  "rawText": "huevos",
+  "meansEnglish": "eggs",
+  "expectName": [
+   [
+    "egg"
+   ]
+  ],
+  "macros": {
+   "protein100": [
+    9,
+    16
+   ],
+   "kcal100": [
+    120,
+    180
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_2100002978128",
+    "foodName": "Huevos",
+    "name": null,
+    "brandName": null,
+    "grams": 60,
+    "source": "openfoodfacts",
+    "servingTier": "bare_plural_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 80,
+    "protein": 7,
+    "carbs": 0.4,
+    "fat": 5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-02",
+  "category": "bare_staple",
+  "rawText": "arroz",
+  "meansEnglish": "rice",
+  "expectName": [
+   [
+    "rice"
+   ]
+  ],
+  "macros": {
+   "carbs100": [
+    20,
+    85
+   ]
+  },
+  "note": "cooked vs dry is a real 3x ambiguity; band spans both",
+  "items": [
+   {
+    "foodId": "off_2631834000058",
+    "foodName": "Arroz",
+    "name": null,
+    "brandName": null,
+    "grams": 50,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 87,
+    "protein": 1.5,
+    "carbs": 20,
+    "fat": 0.1
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-03",
+  "category": "bare_staple",
+  "rawText": "pollo",
+  "meansEnglish": "chicken",
+  "expectName": [
+   [
+    "chicken"
+   ]
+  ],
+  "macros": {
+   "protein100": [
+    15,
+    35
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_2272940004648",
+    "foodName": "Pollo",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 98,
+    "protein": 19.9,
+    "carbs": 1,
+    "fat": 1.6
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-04",
+  "category": "bare_staple",
+  "rawText": "frijoles",
+  "meansEnglish": "beans (pinto/black)",
+  "expectName": [
+   [
+    "bean"
+   ],
+   [
+    "frijol"
+   ]
+  ],
+  "macros": {
+   "protein100": [
+    4,
+    25
+   ],
+   "carbs100": [
+    10,
+    65
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_0850022820854",
+    "foodName": "frijoles",
+    "name": null,
+    "brandName": "naturas",
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 122.1,
+    "protein": 5.3,
+    "carbs": 14.5,
+    "fat": 5.3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-05",
+  "category": "bare_staple",
+  "rawText": "tortilla de maiz",
+  "meansEnglish": "corn tortilla",
+  "expectName": [
+   [
+    "tortilla"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    170,
+    380
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_0858261000037",
+    "foodName": "Tortillas de Maiz",
+    "name": null,
+    "brandName": null,
+    "grams": 45,
+    "source": "openfoodfacts",
+    "servingTier": "discrete_unit_backfill",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 101,
+    "protein": 2,
+    "carbs": 21,
+    "fat": 1
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-06",
+  "category": "bare_staple",
+  "rawText": "pan",
+  "meansEnglish": "bread",
+  "expectName": [
+   [
+    "bread"
+   ],
+   [
+    "pan"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    190,
+    340
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_04516246",
+    "foodName": "Pan",
+    "name": null,
+    "brandName": null,
+    "grams": 40,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 150,
+    "protein": 3,
+    "carbs": 28,
+    "fat": 3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-07",
+  "category": "bare_staple",
+  "rawText": "leche",
+  "meansEnglish": "milk",
+  "expectName": [
+   [
+    "milk"
+   ],
+   [
+    "leche"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    25,
+    80
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_15293937",
+    "foodName": "Leche",
+    "name": null,
+    "brandName": null,
+    "grams": 240,
+    "source": "openfoodfacts",
+    "servingTier": "bare_name_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 70,
+    "protein": 4,
+    "carbs": 7,
+    "fat": 2.5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-08",
+  "category": "bare_staple",
+  "rawText": "queso",
+  "meansEnglish": "cheese",
+  "expectName": [
+   [
+    "cheese"
+   ],
+   [
+    "queso"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    180,
+    420
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_9339687266388",
+    "foodName": "Queso",
+    "name": null,
+    "brandName": null,
+    "grams": 30,
+    "source": "openfoodfacts",
+    "servingTier": "bare_name_sibling_serving_tight",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 115.2,
+    "protein": 6.5,
+    "carbs": 1.2,
+    "fat": 10
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-09",
+  "category": "bare_staple",
+  "rawText": "aguacate",
+  "meansEnglish": "avocado",
+  "expectName": [
+   [
+    "avocado"
+   ],
+   [
+    "aguacate"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    120,
+    210
+   ],
+   "fat100": [
+    9,
+    23
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_8402001036965",
+    "foodName": "Aguacate",
+    "name": null,
+    "brandName": "Hacendado",
+    "grams": 81.25,
+    "source": "openfoodfacts",
+    "servingTier": "bare_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 129.2,
+    "protein": 1.3,
+    "carbs": 2.4,
+    "fat": 11.4
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-10",
+  "category": "bare_staple",
+  "rawText": "platano",
+  "meansEnglish": "banana",
+  "expectName": [
+   [
+    "banana"
+   ],
+   [
+    "platano"
+   ],
+   [
+    "plantain"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    65,
+    135
+   ]
+  },
+  "note": "platano=banana in MX; platano macho=plantain — band spans both",
+  "items": [
+   {
+    "foodId": "off_0890199002127",
+    "foodName": "Platano Paleta",
+    "name": null,
+    "brandName": "Paleteria San Marcos",
+    "grams": 113,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 129.9,
+    "protein": 2,
+    "carbs": 20,
+    "fat": 5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-11",
+  "category": "bare_staple",
+  "rawText": "manzana",
+  "meansEnglish": "apple",
+  "expectName": [
+   [
+    "apple"
+   ],
+   [
+    "manzana"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    35,
+    70
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_0051202018324",
+    "foodName": "Manzana",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 66.7,
+    "protein": 0,
+    "carbs": 17.5,
+    "fat": 0
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-stap-12",
+  "category": "bare_staple",
+  "rawText": "avena",
+  "meansEnglish": "oats",
+  "expectName": [
+   [
+    "oat"
+   ],
+   [
+    "avena"
+   ]
+  ],
+  "macros": {
+   "protein100": [
+    1,
+    20
+   ]
+  },
+  "note": "dry 389 vs cooked 71 kcal/100g; only a macro band is meaningful bare",
+  "items": [
+   {
+    "foodId": "off_0708938005103",
+    "foodName": "Avena",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 382.4,
+    "protein": 11.8,
+    "carbs": 67.6,
+    "fat": 5.9
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-01",
+  "category": "quantity",
+  "rawText": "una taza de arroz",
+  "meansEnglish": "1 cup of rice",
+  "expectName": [
+   [
+    "rice"
+   ]
+  ],
+  "macros": {
+   "carbs100": [
+    20,
+    85
+   ]
+  },
+  "note": "grams: a cup of cooked rice is ~158-200 g; 100 g means `una taza` was unparsed",
+  "items": [
+   {
+    "foodId": "off_5099874096689",
+    "foodName": "Rice",
+    "name": null,
+    "brandName": null,
+    "grams": 150,
+    "source": "openfoodfacts",
+    "servingTier": "bare_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 528,
+    "protein": 12.6,
+    "carbs": 115,
+    "fat": 1.5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-02",
+  "category": "quantity",
+  "rawText": "medio aguacate",
+  "meansEnglish": "half an avocado",
+  "expectName": [
+   [
+    "avocado"
+   ],
+   [
+    "aguacate"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    120,
+    210
+   ]
+  },
+  "note": "grams ~68-100; 100 g flat means `medio` was unparsed",
+  "items": [
+   {
+    "foodId": "fs_5387",
+    "foodName": "Avocado",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "fatsecret",
+    "servingTier": "fs_default_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 160,
+    "protein": 2,
+    "carbs": 8.5,
+    "fat": 14.7
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-03",
+  "category": "quantity",
+  "rawText": "dos piezas de pan",
+  "meansEnglish": "two slices of bread",
+  "expectName": [
+   [
+    "bread"
+   ],
+   [
+    "pan"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    190,
+    340
+   ]
+  },
+  "note": "grams ~50-60 for two slices",
+  "items": [
+   {
+    "foodId": "fs_3422",
+    "foodName": "Bread",
+    "name": null,
+    "brandName": null,
+    "grams": 26,
+    "source": "fatsecret",
+    "servingTier": "fs_default_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 69,
+    "protein": 2,
+    "carbs": 13.2,
+    "fat": 0.9
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-04",
+  "category": "quantity",
+  "rawText": "un vaso de leche",
+  "meansEnglish": "a glass of milk",
+  "expectName": [
+   [
+    "milk"
+   ],
+   [
+    "leche"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    25,
+    80
+   ]
+  },
+  "note": "grams ~240",
+  "items": [
+   {
+    "foodId": "off_9335390000028",
+    "foodName": "Milk",
+    "name": null,
+    "brandName": "a2 Milk Company",
+    "grams": 250,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 113,
+    "protein": 7.7,
+    "carbs": 13,
+    "fat": 3.3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-05",
+  "category": "quantity",
+  "rawText": "una cucharada de aceite de oliva",
+  "meansEnglish": "a tablespoon of olive oil",
+  "expectName": [
+   [
+    "oil"
+   ],
+   [
+    "aceite"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    780,
+    920
+   ]
+  },
+  "note": "grams ~13.5",
+  "items": [
+   {
+    "foodId": "off_0725821100608",
+    "foodName": "aceite de oliva",
+    "name": null,
+    "brandName": null,
+    "grams": 15,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 120,
+    "protein": 0,
+    "carbs": 0,
+    "fat": 14
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-06",
+  "category": "quantity",
+  "rawText": "100 g de pollo",
+  "meansEnglish": "100 g of chicken",
+  "expectName": [
+   [
+    "chicken"
+   ]
+  ],
+  "macros": {
+   "protein100": [
+    15,
+    35
+   ]
+  },
+  "note": "the ONE quantity form that is already English-shaped; the control",
+  "items": [
+   {
+    "foodId": "off_8436581967784",
+    "foodName": "Pollo",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "weight_unit",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 100,
+    "protein": 22,
+    "carbs": 0.5,
+    "fat": 1.8
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-07",
+  "category": "quantity",
+  "rawText": "media manzana",
+  "meansEnglish": "half an apple",
+  "expectName": [
+   [
+    "apple"
+   ],
+   [
+    "manzana"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    35,
+    70
+   ]
+  },
+  "note": "grams ~91",
+  "items": [
+   {
+    "foodId": "fs_35718",
+    "foodName": "Apples",
+    "name": null,
+    "brandName": null,
+    "grams": 138,
+    "source": "fatsecret",
+    "servingTier": "fs_default_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 72,
+    "protein": 0.4,
+    "carbs": 19.1,
+    "fat": 0.2
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-08",
+  "category": "quantity",
+  "rawText": "tres rebanadas de pan integral",
+  "meansEnglish": "three slices of whole wheat bread",
+  "expectName": [
+   [
+    "bread"
+   ],
+   [
+    "pan"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    190,
+    340
+   ]
+  },
+  "note": "grams ~84",
+  "items": [
+   {
+    "foodId": "off_0811371132166",
+    "foodName": "Wheat bread pan integral",
+    "name": null,
+    "brandName": null,
+    "grams": 45,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 109.8,
+    "protein": 4,
+    "carbs": 22,
+    "fat": 1
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-qty-09",
+  "category": "quantity",
+  "rawText": "dos huevos",
+  "meansEnglish": "two eggs",
+  "expectName": [
+   [
+    "egg"
+   ]
+  ],
+  "macros": {
+   "protein100": [
+    9,
+    16
+   ]
+  },
+  "note": "grams ~100; bare numeral, no Spanish unit word",
+  "items": [
+   {
+    "foodId": "fs_3092",
+    "foodName": "Egg",
+    "name": null,
+    "brandName": null,
+    "grams": 50,
+    "source": "fatsecret",
+    "servingTier": "fs_default_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 74,
+    "protein": 6.3,
+    "carbs": 0.4,
+    "fat": 5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-01",
+  "category": "composite",
+  "rawText": "arroz con frijoles",
+  "meansEnglish": "rice with beans",
+  "expectName": [
+   [
+    "rice"
+   ],
+   [
+    "bean"
+   ],
+   [
+    "frijol"
+   ]
+  ],
+  "macros": {},
+  "note": "expect TWO items",
+  "items": [
+   {
+    "foodId": "off_0850546006000",
+    "foodName": "Arroz con leche",
+    "name": null,
+    "brandName": null,
+    "grams": 85,
+    "source": "openfoodfacts",
+    "servingTier": "bare_plural_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 142.8,
+    "protein": 3,
+    "carbs": 27,
+    "fat": 3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-02",
+  "category": "composite",
+  "rawText": "huevos con jamon",
+  "meansEnglish": "eggs with ham",
+  "expectName": [
+   [
+    "egg"
+   ],
+   [
+    "ham"
+   ],
+   [
+    "jamon"
+   ]
+  ],
+  "macros": {},
+  "note": "expect TWO items",
+  "items": [
+   {
+    "foodId": "off_8436554810567",
+    "foodName": "Mona de Pascua bañada con huevo sorpresa",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 420,
+    "protein": 7.1,
+    "carbs": 57,
+    "fat": 18
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-03",
+  "category": "composite",
+  "rawText": "cafe con leche",
+  "meansEnglish": "coffee with milk",
+  "expectName": [
+   [
+    "coffee"
+   ],
+   [
+    "cafe"
+   ]
+  ],
+  "macros": {},
+  "note": "ONE food in English usage; the English twin under-splits (2026-08-11 report). Either answer is defensible; record it",
+  "items": [
+   {
+    "foodId": "off_0074471213337",
+    "foodName": "cafe con leche",
+    "name": null,
+    "brandName": null,
+    "grams": 235.5,
+    "source": "openfoodfacts",
+    "servingTier": "bare_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 1108.2,
+    "protein": 13.9,
+    "carbs": 152.4,
+    "fat": 48.5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-04",
+  "category": "composite",
+  "rawText": "pan con mantequilla",
+  "meansEnglish": "bread with butter",
+  "expectName": [
+   [
+    "bread"
+   ],
+   [
+    "butter"
+   ],
+   [
+    "mantequilla"
+   ]
+  ],
+  "macros": {},
+  "note": "expect TWO items; the English twin `toast with peanut butter` splits since seg-v2",
+  "items": [
+   {
+    "foodId": "off_2360036003641",
+    "foodName": "Pan con salvado",
+    "name": null,
+    "brandName": null,
+    "grams": 50,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 79.5,
+    "protein": 2,
+    "carbs": 13.5,
+    "fat": 1.9
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-05",
+  "category": "composite",
+  "rawText": "pollo y arroz",
+  "meansEnglish": "chicken and rice",
+  "expectName": [
+   [
+    "chicken"
+   ],
+   [
+    "rice"
+   ]
+  ],
+  "macros": {},
+  "note": "expect TWO items",
+  "items": [
+   {
+    "foodId": "off_0774756209450",
+    "foodName": "Arroz con pollo",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 120,
+    "protein": 4.3,
+    "carbs": 20,
+    "fat": 2.3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-06",
+  "category": "composite",
+  "rawText": "una manzana y un platano",
+  "meansEnglish": "an apple and a banana",
+  "expectName": [
+   [
+    "apple"
+   ],
+   [
+    "banana"
+   ]
+  ],
+  "macros": {},
+  "note": "expect TWO items",
+  "items": [
+   {
+    "foodId": "off_0051202018324",
+    "foodName": "Manzana",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 66.7,
+    "protein": 0,
+    "carbs": 17.5,
+    "fat": 0
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-comp-07",
+  "category": "composite",
+  "rawText": "leche con chocolate",
+  "meansEnglish": "chocolate milk",
+  "expectName": [
+   [
+    "chocolate milk"
+   ],
+   [
+    "leche"
+   ]
+  ],
+  "macros": {},
+  "note": "ONE food. The scoping report measured this splitting into two — the identity error",
+  "items": [
+   {
+    "foodId": "off_0041900072834",
+    "foodName": "Leche con chocolate",
+    "name": null,
+    "brandName": "Trumoo",
+    "grams": 236,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 180,
+    "protein": 11,
+    "carbs": 28,
+    "fat": 2.5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-pkg-01",
+  "category": "packaged",
+  "rawText": "galletas marias gamesa",
+  "meansEnglish": "Gamesa Marias cookies",
+  "expectName": [
+   [
+    "maria"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    380,
+    470
+   ]
+  },
+  "items": [
+   {
+    "foodId": "fs_71193430",
+    "foodName": "Galletas Marias",
+    "name": null,
+    "brandName": "Gamesa",
+    "grams": 30,
+    "source": "ai_estimated",
+    "servingTier": "fs_default_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 120,
+    "protein": 2.2,
+    "carbs": 23.1,
+    "fat": 2.1
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-pkg-02",
+  "category": "packaged",
+  "rawText": "pan blanco bimbo",
+  "meansEnglish": "Bimbo white bread",
+  "expectName": [
+   [
+    "bimbo"
+   ],
+   [
+    "bread"
+   ],
+   [
+    "pan"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    230,
+    320
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_0074323090949",
+    "foodName": "Pan Blanco",
+    "name": null,
+    "brandName": "Bimbo",
+    "grams": 55,
+    "source": "openfoodfacts",
+    "servingTier": "bare_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 137.5,
+    "protein": 3.9,
+    "carbs": 27.5,
+    "fat": 1
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-pkg-03",
+  "category": "packaged",
+  "rawText": "jugo de mango jumex",
+  "meansEnglish": "Jumex mango juice",
+  "expectName": [
+   [
+    "jumex"
+   ],
+   [
+    "mango"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    35,
+    75
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_0015878209035",
+    "foodName": "Jugo de mango",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 45.7,
+    "protein": 0,
+    "carbs": 11.4,
+    "fat": 0
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-pkg-04",
+  "category": "packaged",
+  "rawText": "sabritas originales",
+  "meansEnglish": "Sabritas original chips",
+  "expectName": [
+   [
+    "sabritas"
+   ],
+   [
+    "potato"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    480,
+    590
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_7500478024827",
+    "foodName": "Original Sabritas",
+    "name": null,
+    "brandName": "Sabritas",
+    "grams": 29.0335,
+    "source": "openfoodfacts",
+    "servingTier": "bare_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 156.8,
+    "protein": 1.5,
+    "carbs": 16.2,
+    "fat": 9.9
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-pkg-05",
+  "category": "packaged",
+  "rawText": "takis fuego",
+  "meansEnglish": "Takis Fuego",
+  "expectName": [
+   [
+    "takis"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    450,
+    570
+   ]
+  },
+  "items": [
+   {
+    "foodId": "off_0757528052911",
+    "foodName": "Takis Fuego",
+    "name": null,
+    "brandName": "Takis",
+    "grams": 80,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 420,
+    "protein": 5,
+    "carbs": 46,
+    "fat": 24
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-pkg-06",
+  "category": "packaged",
+  "rawText": "una coca cola de lata",
+  "meansEnglish": "a can of Coca-Cola",
+  "expectName": [
+   [
+    "coca"
+   ],
+   [
+    "cola"
+   ]
+  ],
+  "macros": {
+   "kcal100": [
+    30,
+    50
+   ]
+  },
+  "note": "grams ~355",
+  "items": [
+   {
+    "foodId": "off_0067000011382",
+    "foodName": "Coca cola",
+    "name": null,
+    "brandName": null,
+    "grams": 355,
+    "source": "openfoodfacts",
+    "servingTier": "bare_category_default",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 140,
+    "protein": 0,
+    "carbs": 39,
+    "fat": 0
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-dish-01",
+  "category": "dish",
+  "rawText": "arroz con pollo",
+  "meansEnglish": "chicken and rice (one dish)",
+  "expectName": [
+   [
+    "arroz con pollo"
+   ],
+   [
+    "chicken"
+   ],
+   [
+    "rice"
+   ]
+  ],
+  "macros": {},
+  "note": "a DISH name that reads as a composite; `con` must NOT split it",
+  "items": [
+   {
+    "foodId": "off_0774756209450",
+    "foodName": "Arroz con pollo",
+    "name": null,
+    "brandName": null,
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "count_unresolved_floor",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "floor",
+    "kcal": 120,
+    "protein": 4.3,
+    "carbs": 20,
+    "fat": 2.3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-dish-02",
+  "category": "dish",
+  "rawText": "chilaquiles verdes",
+  "meansEnglish": "chilaquiles with green salsa",
+  "expectName": [
+   [
+    "chilaquile"
+   ]
+  ],
+  "macros": {},
+  "items": [
+   {
+    "foodId": "off_77673015",
+    "foodName": "Chilaquiles Verdes",
+    "name": null,
+    "brandName": null,
+    "grams": 300,
+    "source": "openfoodfacts",
+    "servingTier": "label_serving_default",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 330,
+    "protein": 6.3,
+    "carbs": 46.8,
+    "fat": 12.9
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-dish-03",
+  "category": "dish",
+  "rawText": "dos tamales de pollo",
+  "meansEnglish": "two chicken tamales",
+  "expectName": [
+   [
+    "tamal"
+   ]
+  ],
+  "macros": {},
+  "items": [
+   {
+    "foodId": "fs_32829601",
+    "foodName": "Tamales De Pollo",
+    "name": null,
+    "brandName": "Mi Tienda",
+    "grams": 57,
+    "source": "ai_estimated",
+    "servingTier": "fs_label_count",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 115,
+    "protein": 4,
+    "carbs": 9.5,
+    "fat": 6.5
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-dish-04",
+  "category": "dish",
+  "rawText": "enchiladas de queso",
+  "meansEnglish": "cheese enchiladas",
+  "expectName": [
+   [
+    "enchilada"
+   ]
+  ],
+  "macros": {},
+  "items": [
+   {
+    "foodId": "off_0024812500053",
+    "foodName": "Tres queso street enchiladas",
+    "name": null,
+    "brandName": null,
+    "grams": 354,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 580.6,
+    "protein": 20,
+    "carbs": 63,
+    "fat": 28
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-dish-05",
+  "category": "dish",
+  "rawText": "pozole rojo",
+  "meansEnglish": "red pozole",
+  "expectName": [
+   [
+    "pozole"
+   ]
+  ],
+  "macros": {},
+  "items": [
+   {
+    "foodId": "off_7501017003648",
+    "foodName": "Pozole Rojo",
+    "name": null,
+    "brandName": "La Costeña",
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "bare_label_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 87,
+    "protein": 7,
+    "carbs": 7,
+    "fat": 3
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-dish-06",
+  "category": "dish",
+  "rawText": "huevos rancheros",
+  "meansEnglish": "huevos rancheros",
+  "expectName": [
+   [
+    "huevos rancheros"
+   ],
+   [
+    "egg"
+   ]
+  ],
+  "macros": {},
+  "note": "a DISH; must not split into eggs + salsa",
+  "items": [
+   {
+    "foodId": "fs_3136",
+    "foodName": "Huevos Rancheros",
+    "name": null,
+    "brandName": null,
+    "grams": 118,
+    "source": "fatsecret",
+    "servingTier": "fs_default_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 140,
+    "protein": 8.1,
+    "carbs": 10.1,
+    "fat": 7.9
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-re-01",
+  "category": "reprobe",
+  "rawText": "2 huevos revueltos con una tortilla de maiz",
+  "meansEnglish": "2 scrambled eggs with a corn tortilla",
+  "expectName": [
+   [
+    "egg"
+   ],
+   [
+    "tortilla"
+   ]
+  ],
+  "macros": {},
+  "note": "scoping: eggs MISSED FDC 172187 and made an AI stub; tortilla right",
+  "items": [
+   {
+    "foodId": "cmtw4vmqz00u8d4dq1bi0wqpg",
+    "foodName": "Huevos Revueltos",
+    "name": null,
+    "brandName": null,
+    "grams": 200,
+    "source": "ai_estimated",
+    "servingTier": null,
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 304,
+    "protein": 18.4,
+    "carbs": 6.2,
+    "fat": 22.6
+   },
+   {
+    "foodId": "off_0858261000037",
+    "foodName": "Tortillas de Maiz",
+    "name": null,
+    "brandName": null,
+    "grams": 45,
+    "source": "openfoodfacts",
+    "servingTier": "discrete_unit_backfill",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 101,
+    "protein": 2,
+    "carbs": 21,
+    "fat": 1
+   }
+  ],
+  "nItems": 2
+ },
+ {
+  "id": "es-re-02",
+  "category": "reprobe",
+  "rawText": "una taza de arroz con pollo",
+  "meansEnglish": "a cup of arroz con pollo",
+  "expectName": [
+   [
+    "arroz con pollo"
+   ],
+   [
+    "chicken"
+   ],
+   [
+    "rice"
+   ]
+  ],
+  "macros": {},
+  "note": "scoping: identity right, `una taza` unparsed -> 100 g floor",
+  "items": [
+   {
+    "foodId": "off_0753141506732",
+    "foodName": "Arroz Con Pollo",
+    "name": null,
+    "brandName": "Zomera",
+    "grams": 100,
+    "source": "openfoodfacts",
+    "servingTier": "label_serving_default",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 185,
+    "protein": 8,
+    "carbs": 23,
+    "fat": 6
+   }
+  ],
+  "nItems": 1
+ },
+ {
+  "id": "es-re-03",
+  "category": "reprobe",
+  "rawText": "un vaso de leche con chocolate y 3 galletas marias",
+  "meansEnglish": "a glass of chocolate milk and 3 Marias cookies",
+  "expectName": [
+   [
+    "chocolate"
+   ],
+   [
+    "maria"
+   ]
+  ],
+  "macros": {},
+  "note": "scoping: `con` split `leche con chocolate` into two foods",
+  "items": [
+   {
+    "foodId": "off_4806530910231",
+    "foodName": "Chocolate con Leche",
+    "name": null,
+    "brandName": null,
+    "grams": 32.35,
+    "source": "openfoodfacts",
+    "servingTier": "bare_sibling_serving",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": "borrowed",
+    "kcal": 140.2,
+    "protein": 2.2,
+    "carbs": 23.7,
+    "fat": 3.8
+   },
+   {
+    "foodId": "fs_71193430",
+    "foodName": "Galletas Marias",
+    "name": null,
+    "brandName": "Gamesa",
+    "grams": 18,
+    "source": "ai_estimated",
+    "servingTier": "fs_label_count",
+    "cacheHit": null,
+    "confidence": null,
+    "portionProvenance": null,
+    "kcal": 72,
+    "protein": 1.3,
+    "carbs": 13.9,
+    "fat": 1.3
+   }
+  ],
+  "nItems": 2
+ }
+]

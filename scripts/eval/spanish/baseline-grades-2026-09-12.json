@@ -1,0 +1,217 @@
+{
+ "es-stap-01": {
+  "material": 0,
+  "axis": "-",
+  "note": "Huevos 133 kcal/100g"
+ },
+ "es-stap-02": {
+  "material": 0,
+  "axis": "-",
+  "note": "Arroz 174 kcal/100g"
+ },
+ "es-stap-03": {
+  "material": 0,
+  "axis": "-",
+  "note": "Pollo 98 kcal/100g"
+ },
+ "es-stap-04": {
+  "material": 0,
+  "axis": "-",
+  "note": "frijoles [naturas] 122 kcal/100g"
+ },
+ "es-stap-05": {
+  "material": 0,
+  "axis": "-",
+  "note": "Tortillas de Maiz 224 kcal/100g"
+ },
+ "es-stap-06": {
+  "material": 0,
+  "axis": "panel",
+  "note": "Pan 375 kcal/100g vs bread ~265 — 1.4x, band miss not material"
+ },
+ "es-stap-07": {
+  "material": 0,
+  "axis": "-",
+  "note": "Leche 29 kcal/100g (skim-ish)"
+ },
+ "es-stap-08": {
+  "material": 0,
+  "axis": "-",
+  "note": "Queso 384 kcal/100g"
+ },
+ "es-stap-09": {
+  "material": 0,
+  "axis": "-",
+  "note": "Aguacate 159 kcal/100g"
+ },
+ "es-stap-10": {
+  "material": 1,
+  "axis": "identity",
+  "note": "'Platano Paleta' [Paleteria San Marcos] is a BANANA ICE POP. Band passes at 115 by luck"
+ },
+ "es-stap-11": {
+  "material": 0,
+  "axis": "-",
+  "note": "Manzana 66.7 kcal/100g"
+ },
+ "es-stap-12": {
+  "material": 0,
+  "axis": "-",
+  "note": "Avena 382 kcal/100g (dry)"
+ },
+ "es-qty-01": {
+  "material": 1,
+  "axis": "portion+identity",
+  "note": "'Rice' at 352 kcal/100g is DRY; 150 g bills 528 kcal vs ~205 for a cup cooked — 2.6x"
+ },
+ "es-qty-02": {
+  "material": 0,
+  "axis": "portion",
+  "note": "`medio` unparsed -> fs_default_serving 100 g; lands plausibly for a large half. SOFT"
+ },
+ "es-qty-03": {
+  "material": 1,
+  "axis": "portion",
+  "note": "`dos` unparsed -> 26 g = ONE slice; two slices ~52-60 g. HALF the bill"
+ },
+ "es-qty-04": {
+  "material": 0,
+  "axis": "-",
+  "note": "250 g glass, via the record's own label not the parser"
+ },
+ "es-qty-05": {
+  "material": 0,
+  "axis": "-",
+  "note": "15 g tbsp, via the record's own label not the parser"
+ },
+ "es-qty-06": {
+  "material": 0,
+  "axis": "-",
+  "note": "CONTROL: `100 g de` parses, weight_unit, 100 g"
+ },
+ "es-qty-07": {
+  "material": 1,
+  "axis": "portion",
+  "note": "`media` unparsed -> 138 g = a WHOLE large apple; half ~91 g"
+ },
+ "es-qty-08": {
+  "material": 1,
+  "axis": "portion",
+  "note": "`tres` unparsed -> 45 g ~ 1.5 slices; three ~84 g"
+ },
+ "es-qty-09": {
+  "material": 1,
+  "axis": "portion",
+  "note": "`dos` unparsed -> 50 g = ONE egg; two ~100 g. HALF the bill"
+ },
+ "es-comp-01": {
+  "material": 1,
+  "axis": "segmentation+identity",
+  "note": "ONE item, and it is 'Arroz con leche' — RICE PUDDING. `frijoles` became `leche`"
+ },
+ "es-comp-02": {
+  "material": 1,
+  "axis": "segmentation+identity",
+  "note": "ONE item: 'Mona de Pascua banada con huevo sorpresa' — an EASTER CAKE, 420 kcal/100g"
+ },
+ "es-comp-03": {
+  "material": 1,
+  "axis": "panel",
+  "note": "identity right ('cafe con leche') but 470 kcal/100g bills 1108 kcal for a coffee — ~10x"
+ },
+ "es-comp-04": {
+  "material": 1,
+  "axis": "segmentation+identity",
+  "note": "ONE item: 'Pan con salvado' — bread with BRAN. `mantequilla` became `salvado`"
+ },
+ "es-comp-05": {
+  "material": 1,
+  "axis": "segmentation",
+  "note": "ONE item: two foods collapsed into the dish record 'Arroz con pollo'"
+ },
+ "es-comp-06": {
+  "material": 1,
+  "axis": "segmentation",
+  "note": "ONE item: the BANANA VANISHED with no marker. Bills only the apple"
+ },
+ "es-comp-07": {
+  "material": 0,
+  "axis": "-",
+  "note": "ONE item, correct: 'Leche con chocolate' [Trumoo] 236 g / 180 kcal. One food, kept as one"
+ },
+ "es-pkg-01": {
+  "material": 0,
+  "axis": "-",
+  "note": "Galletas Marias [Gamesa]"
+ },
+ "es-pkg-02": {
+  "material": 0,
+  "axis": "-",
+  "note": "Pan Blanco [Bimbo]"
+ },
+ "es-pkg-03": {
+  "material": 0,
+  "axis": "brand",
+  "note": "'Jugo de mango' brandless — Jumex not matched, but the food is right"
+ },
+ "es-pkg-04": {
+  "material": 0,
+  "axis": "-",
+  "note": "Original Sabritas [Sabritas] 540 kcal/100g"
+ },
+ "es-pkg-05": {
+  "material": 0,
+  "axis": "-",
+  "note": "Takis Fuego [Takis] 525 kcal/100g"
+ },
+ "es-pkg-06": {
+  "material": 0,
+  "axis": "-",
+  "note": "Coca cola 355 g = a can, 39.4 kcal/100g"
+ },
+ "es-dish-01": {
+  "material": 0,
+  "axis": "-",
+  "note": "'Arroz con pollo' ONE item — `con` did NOT split the dish name"
+ },
+ "es-dish-02": {
+  "material": 0,
+  "axis": "-",
+  "note": "Chilaquiles Verdes 300 g / 330 kcal"
+ },
+ "es-dish-03": {
+  "material": 1,
+  "axis": "portion",
+  "note": "`dos` unparsed -> 57 g = ONE tamal; two ~114 g"
+ },
+ "es-dish-04": {
+  "material": 0,
+  "axis": "-",
+  "note": "'Tres queso street enchiladas' 354 g"
+ },
+ "es-dish-05": {
+  "material": 1,
+  "axis": "portion",
+  "note": "count_unresolved_floor 100 g; a bowl of pozole is ~400 g — a QUARTER of the bill"
+ },
+ "es-dish-06": {
+  "material": 0,
+  "axis": "-",
+  "note": "'Huevos Rancheros' ONE item — not split"
+ },
+ "es-re-01": {
+  "material": 0,
+  "axis": "identity",
+  "note": "reproduces scoping: eggs -> the PRE-EXISTING AI stub; tortilla right. NEW: the stub's grams are a DRAW — 200 g today vs 300 g on 09-11"
+ },
+ "es-re-02": {
+  "material": 0,
+  "axis": "portion",
+  "note": "reproduces scoping exactly: identity right, `una taza` unparsed -> 100 g floor"
+ },
+ "es-re-03": {
+  "material": 0,
+  "axis": "segmentation",
+  "note": "reproduces the SPLIT but with TWO items today vs THREE on 09-11 — a segmentation DRAW"
+ }
+}
