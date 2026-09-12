@@ -1,0 +1,45 @@
+huevos|huevos|saved
+arroz|arroz|saved
+pollo|pollo|saved
+frijoles|frijoles|saved
+tortilla de maiz|tortilla de maiz|saved
+pan|pan|saved
+leche|leche|saved
+queso|queso|saved
+aguacate|aguacate|saved
+platano|platano|saved
+manzana|manzana|saved
+avena|avena|saved
+una taza de arroz|Rice|saved
+medio aguacate|medium avocado|saved
+dos piezas de pan|Bread|saved
+un vaso de leche|milk|saved
+una cucharada de aceite de oliva|aceite de oliva|saved
+100 g de pollo|de pollo|saved
+media manzana|apple|saved
+tres rebanadas de pan integral|integral bread|under_gate
+dos huevos|eggs|saved
+arroz con frijoles|arroz con frijoles|saved
+huevos con jamon|eggs with ham|under_gate
+cafe con leche|cafe con leche|saved
+pan con mantequilla|pan con mantequilla|saved
+pollo y arroz|pollo y arroz|saved
+una manzana y un platano|manzana|saved
+leche con chocolate|leche con chocolate|saved
+galletas marias gamesa|galletas marias|saved
+pan blanco bimbo|pan blanco bimbo|saved
+jugo de mango jumex|jugo de mango jumex|saved
+sabritas originales|sabritas originales|saved
+takis fuego|takis fuego|saved
+una coca cola de lata|una coca cola de lata|saved
+arroz con pollo|arroz con pollo|saved
+chilaquiles verdes|chilaquiles verdes|saved
+dos tamales de pollo|dos tamales de pollo|saved
+enchiladas de queso|enchiladas de queso|saved
+pozole rojo|pozole rojo|saved
+huevos rancheros|huevos rancheros|saved
+una tortilla de maiz|tortilla de maiz|saved
+2 huevos revueltos|huevos revueltos|
+una taza de arroz con pollo|arroz con pollo|saved
+3 galletas marias|galletas marias|saved
+un vaso de leche con chocolate|leche con chocolate|saved

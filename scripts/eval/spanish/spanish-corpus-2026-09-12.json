@@ -1,0 +1,820 @@
+{
+  "_readme": [
+    "Spanish eval corpus and cold baseline — Lane A session 47, 2026-09-12.",
+    "REPORT-ONLY. These cases NEVER enter scripts/eval/golden-set.json and are never run by the",
+    "nightly sweep. They are a baseline every later Spanish row (parser aliases, translate-at-gate,",
+    "segmenter examples) gates against.",
+    "Owner: KindaHealthyMobile sync-docs/reports/2026-09-12_spanish-eval-corpus-baseline.md",
+    "Planner entry: sync-docs/reports/2026-09-11_spanish-version-scoping-and-insertion.md (punch #170).",
+    "",
+    "rawText is UNACCENTED on purpose: it is what a phone keyboard produces without long-press, and",
+    "it is the harder input. Accented spellings are a separate axis and are not measured here.",
+    "",
+    "Bands are scale-free per-100g, derived the way golden-set.json cases are, so the IDENTITY axis",
+    "and the PORTION axis separate: a band failure is a wrong record, a grams surprise is a wrong",
+    "portion. An empty `macros` means the line is graded on segmentation/identity only.",
+    "",
+    "`meansEnglish` is what the user MEANT, for grading. It is not a translation the pipeline does."
+  ],
+  "cases": [
+    {
+      "id": "es-stap-01",
+      "category": "bare_staple",
+      "rawText": "huevos",
+      "meansEnglish": "eggs",
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          9,
+          16
+        ],
+        "kcal100": [
+          120,
+          180
+        ]
+      }
+    },
+    {
+      "id": "es-stap-02",
+      "category": "bare_staple",
+      "rawText": "arroz",
+      "meansEnglish": "rice",
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "macros": {
+        "carbs100": [
+          20,
+          85
+        ]
+      },
+      "note": "cooked vs dry is a real 3x ambiguity; band spans both"
+    },
+    {
+      "id": "es-stap-03",
+      "category": "bare_staple",
+      "rawText": "pollo",
+      "meansEnglish": "chicken",
+      "expectName": [
+        [
+          "chicken"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          15,
+          35
+        ]
+      }
+    },
+    {
+      "id": "es-stap-04",
+      "category": "bare_staple",
+      "rawText": "frijoles",
+      "meansEnglish": "beans (pinto/black)",
+      "expectName": [
+        [
+          "bean"
+        ],
+        [
+          "frijol"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          4,
+          25
+        ],
+        "carbs100": [
+          10,
+          65
+        ]
+      }
+    },
+    {
+      "id": "es-stap-05",
+      "category": "bare_staple",
+      "rawText": "tortilla de maiz",
+      "meansEnglish": "corn tortilla",
+      "expectName": [
+        [
+          "tortilla"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          170,
+          380
+        ]
+      }
+    },
+    {
+      "id": "es-stap-06",
+      "category": "bare_staple",
+      "rawText": "pan",
+      "meansEnglish": "bread",
+      "expectName": [
+        [
+          "bread"
+        ],
+        [
+          "pan"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          190,
+          340
+        ]
+      }
+    },
+    {
+      "id": "es-stap-07",
+      "category": "bare_staple",
+      "rawText": "leche",
+      "meansEnglish": "milk",
+      "expectName": [
+        [
+          "milk"
+        ],
+        [
+          "leche"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          25,
+          80
+        ]
+      }
+    },
+    {
+      "id": "es-stap-08",
+      "category": "bare_staple",
+      "rawText": "queso",
+      "meansEnglish": "cheese",
+      "expectName": [
+        [
+          "cheese"
+        ],
+        [
+          "queso"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          180,
+          420
+        ]
+      }
+    },
+    {
+      "id": "es-stap-09",
+      "category": "bare_staple",
+      "rawText": "aguacate",
+      "meansEnglish": "avocado",
+      "expectName": [
+        [
+          "avocado"
+        ],
+        [
+          "aguacate"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          120,
+          210
+        ],
+        "fat100": [
+          9,
+          23
+        ]
+      }
+    },
+    {
+      "id": "es-stap-10",
+      "category": "bare_staple",
+      "rawText": "platano",
+      "meansEnglish": "banana",
+      "expectName": [
+        [
+          "banana"
+        ],
+        [
+          "platano"
+        ],
+        [
+          "plantain"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          65,
+          135
+        ]
+      },
+      "note": "platano=banana in MX; platano macho=plantain — band spans both"
+    },
+    {
+      "id": "es-stap-11",
+      "category": "bare_staple",
+      "rawText": "manzana",
+      "meansEnglish": "apple",
+      "expectName": [
+        [
+          "apple"
+        ],
+        [
+          "manzana"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          35,
+          70
+        ]
+      }
+    },
+    {
+      "id": "es-stap-12",
+      "category": "bare_staple",
+      "rawText": "avena",
+      "meansEnglish": "oats",
+      "expectName": [
+        [
+          "oat"
+        ],
+        [
+          "avena"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          1,
+          20
+        ]
+      },
+      "note": "dry 389 vs cooked 71 kcal/100g; only a macro band is meaningful bare"
+    },
+    {
+      "id": "es-qty-01",
+      "category": "quantity",
+      "rawText": "una taza de arroz",
+      "meansEnglish": "1 cup of rice",
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "macros": {
+        "carbs100": [
+          20,
+          85
+        ]
+      },
+      "note": "grams: a cup of cooked rice is ~158-200 g; 100 g means `una taza` was unparsed"
+    },
+    {
+      "id": "es-qty-02",
+      "category": "quantity",
+      "rawText": "medio aguacate",
+      "meansEnglish": "half an avocado",
+      "expectName": [
+        [
+          "avocado"
+        ],
+        [
+          "aguacate"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          120,
+          210
+        ]
+      },
+      "note": "grams ~68-100; 100 g flat means `medio` was unparsed"
+    },
+    {
+      "id": "es-qty-03",
+      "category": "quantity",
+      "rawText": "dos piezas de pan",
+      "meansEnglish": "two slices of bread",
+      "expectName": [
+        [
+          "bread"
+        ],
+        [
+          "pan"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          190,
+          340
+        ]
+      },
+      "note": "grams ~50-60 for two slices"
+    },
+    {
+      "id": "es-qty-04",
+      "category": "quantity",
+      "rawText": "un vaso de leche",
+      "meansEnglish": "a glass of milk",
+      "expectName": [
+        [
+          "milk"
+        ],
+        [
+          "leche"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          25,
+          80
+        ]
+      },
+      "note": "grams ~240"
+    },
+    {
+      "id": "es-qty-05",
+      "category": "quantity",
+      "rawText": "una cucharada de aceite de oliva",
+      "meansEnglish": "a tablespoon of olive oil",
+      "expectName": [
+        [
+          "oil"
+        ],
+        [
+          "aceite"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          780,
+          920
+        ]
+      },
+      "note": "grams ~13.5"
+    },
+    {
+      "id": "es-qty-06",
+      "category": "quantity",
+      "rawText": "100 g de pollo",
+      "meansEnglish": "100 g of chicken",
+      "expectName": [
+        [
+          "chicken"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          15,
+          35
+        ]
+      },
+      "note": "the ONE quantity form that is already English-shaped; the control"
+    },
+    {
+      "id": "es-qty-07",
+      "category": "quantity",
+      "rawText": "media manzana",
+      "meansEnglish": "half an apple",
+      "expectName": [
+        [
+          "apple"
+        ],
+        [
+          "manzana"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          35,
+          70
+        ]
+      },
+      "note": "grams ~91"
+    },
+    {
+      "id": "es-qty-08",
+      "category": "quantity",
+      "rawText": "tres rebanadas de pan integral",
+      "meansEnglish": "three slices of whole wheat bread",
+      "expectName": [
+        [
+          "bread"
+        ],
+        [
+          "pan"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          190,
+          340
+        ]
+      },
+      "note": "grams ~84"
+    },
+    {
+      "id": "es-qty-09",
+      "category": "quantity",
+      "rawText": "dos huevos",
+      "meansEnglish": "two eggs",
+      "expectName": [
+        [
+          "egg"
+        ]
+      ],
+      "macros": {
+        "protein100": [
+          9,
+          16
+        ]
+      },
+      "note": "grams ~100; bare numeral, no Spanish unit word"
+    },
+    {
+      "id": "es-comp-01",
+      "category": "composite",
+      "rawText": "arroz con frijoles",
+      "meansEnglish": "rice with beans",
+      "expectName": [
+        [
+          "rice"
+        ],
+        [
+          "bean"
+        ],
+        [
+          "frijol"
+        ]
+      ],
+      "macros": {},
+      "note": "expect TWO items"
+    },
+    {
+      "id": "es-comp-02",
+      "category": "composite",
+      "rawText": "huevos con jamon",
+      "meansEnglish": "eggs with ham",
+      "expectName": [
+        [
+          "egg"
+        ],
+        [
+          "ham"
+        ],
+        [
+          "jamon"
+        ]
+      ],
+      "macros": {},
+      "note": "expect TWO items"
+    },
+    {
+      "id": "es-comp-03",
+      "category": "composite",
+      "rawText": "cafe con leche",
+      "meansEnglish": "coffee with milk",
+      "expectName": [
+        [
+          "coffee"
+        ],
+        [
+          "cafe"
+        ]
+      ],
+      "macros": {},
+      "note": "ONE food in English usage; the English twin under-splits (2026-08-11 report). Either answer is defensible; record it"
+    },
+    {
+      "id": "es-comp-04",
+      "category": "composite",
+      "rawText": "pan con mantequilla",
+      "meansEnglish": "bread with butter",
+      "expectName": [
+        [
+          "bread"
+        ],
+        [
+          "butter"
+        ],
+        [
+          "mantequilla"
+        ]
+      ],
+      "macros": {},
+      "note": "expect TWO items; the English twin `toast with peanut butter` splits since seg-v2"
+    },
+    {
+      "id": "es-comp-05",
+      "category": "composite",
+      "rawText": "pollo y arroz",
+      "meansEnglish": "chicken and rice",
+      "expectName": [
+        [
+          "chicken"
+        ],
+        [
+          "rice"
+        ]
+      ],
+      "macros": {},
+      "note": "expect TWO items"
+    },
+    {
+      "id": "es-comp-06",
+      "category": "composite",
+      "rawText": "una manzana y un platano",
+      "meansEnglish": "an apple and a banana",
+      "expectName": [
+        [
+          "apple"
+        ],
+        [
+          "banana"
+        ]
+      ],
+      "macros": {},
+      "note": "expect TWO items"
+    },
+    {
+      "id": "es-comp-07",
+      "category": "composite",
+      "rawText": "leche con chocolate",
+      "meansEnglish": "chocolate milk",
+      "expectName": [
+        [
+          "chocolate milk"
+        ],
+        [
+          "leche"
+        ]
+      ],
+      "macros": {},
+      "note": "ONE food. The scoping report measured this splitting into two — the identity error"
+    },
+    {
+      "id": "es-pkg-01",
+      "category": "packaged",
+      "rawText": "galletas marias gamesa",
+      "meansEnglish": "Gamesa Marias cookies",
+      "expectName": [
+        [
+          "maria"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          380,
+          470
+        ]
+      }
+    },
+    {
+      "id": "es-pkg-02",
+      "category": "packaged",
+      "rawText": "pan blanco bimbo",
+      "meansEnglish": "Bimbo white bread",
+      "expectName": [
+        [
+          "bimbo"
+        ],
+        [
+          "bread"
+        ],
+        [
+          "pan"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          230,
+          320
+        ]
+      }
+    },
+    {
+      "id": "es-pkg-03",
+      "category": "packaged",
+      "rawText": "jugo de mango jumex",
+      "meansEnglish": "Jumex mango juice",
+      "expectName": [
+        [
+          "jumex"
+        ],
+        [
+          "mango"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          35,
+          75
+        ]
+      }
+    },
+    {
+      "id": "es-pkg-04",
+      "category": "packaged",
+      "rawText": "sabritas originales",
+      "meansEnglish": "Sabritas original chips",
+      "expectName": [
+        [
+          "sabritas"
+        ],
+        [
+          "potato"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          480,
+          590
+        ]
+      }
+    },
+    {
+      "id": "es-pkg-05",
+      "category": "packaged",
+      "rawText": "takis fuego",
+      "meansEnglish": "Takis Fuego",
+      "expectName": [
+        [
+          "takis"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          450,
+          570
+        ]
+      }
+    },
+    {
+      "id": "es-pkg-06",
+      "category": "packaged",
+      "rawText": "una coca cola de lata",
+      "meansEnglish": "a can of Coca-Cola",
+      "expectName": [
+        [
+          "coca"
+        ],
+        [
+          "cola"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          30,
+          50
+        ]
+      },
+      "note": "grams ~355"
+    },
+    {
+      "id": "es-dish-01",
+      "category": "dish",
+      "rawText": "arroz con pollo",
+      "meansEnglish": "chicken and rice (one dish)",
+      "expectName": [
+        [
+          "arroz con pollo"
+        ],
+        [
+          "chicken"
+        ],
+        [
+          "rice"
+        ]
+      ],
+      "macros": {},
+      "note": "a DISH name that reads as a composite; `con` must NOT split it"
+    },
+    {
+      "id": "es-dish-02",
+      "category": "dish",
+      "rawText": "chilaquiles verdes",
+      "meansEnglish": "chilaquiles with green salsa",
+      "expectName": [
+        [
+          "chilaquile"
+        ]
+      ],
+      "macros": {}
+    },
+    {
+      "id": "es-dish-03",
+      "category": "dish",
+      "rawText": "dos tamales de pollo",
+      "meansEnglish": "two chicken tamales",
+      "expectName": [
+        [
+          "tamal"
+        ]
+      ],
+      "macros": {}
+    },
+    {
+      "id": "es-dish-04",
+      "category": "dish",
+      "rawText": "enchiladas de queso",
+      "meansEnglish": "cheese enchiladas",
+      "expectName": [
+        [
+          "enchilada"
+        ]
+      ],
+      "macros": {}
+    },
+    {
+      "id": "es-dish-05",
+      "category": "dish",
+      "rawText": "pozole rojo",
+      "meansEnglish": "red pozole",
+      "expectName": [
+        [
+          "pozole"
+        ]
+      ],
+      "macros": {}
+    },
+    {
+      "id": "es-dish-06",
+      "category": "dish",
+      "rawText": "huevos rancheros",
+      "meansEnglish": "huevos rancheros",
+      "expectName": [
+        [
+          "huevos rancheros"
+        ],
+        [
+          "egg"
+        ]
+      ],
+      "macros": {},
+      "note": "a DISH; must not split into eggs + salsa"
+    },
+    {
+      "id": "es-re-01",
+      "category": "reprobe",
+      "rawText": "2 huevos revueltos con una tortilla de maiz",
+      "meansEnglish": "2 scrambled eggs with a corn tortilla",
+      "expectName": [
+        [
+          "egg"
+        ],
+        [
+          "tortilla"
+        ]
+      ],
+      "macros": {},
+      "note": "scoping: eggs MISSED FDC 172187 and made an AI stub; tortilla right"
+    },
+    {
+      "id": "es-re-02",
+      "category": "reprobe",
+      "rawText": "una taza de arroz con pollo",
+      "meansEnglish": "a cup of arroz con pollo",
+      "expectName": [
+        [
+          "arroz con pollo"
+        ],
+        [
+          "chicken"
+        ],
+        [
+          "rice"
+        ]
+      ],
+      "macros": {},
+      "note": "scoping: identity right, `una taza` unparsed -> 100 g floor"
+    },
+    {
+      "id": "es-re-03",
+      "category": "reprobe",
+      "rawText": "un vaso de leche con chocolate y 3 galletas marias",
+      "meansEnglish": "a glass of chocolate milk and 3 Marias cookies",
+      "expectName": [
+        [
+          "chocolate"
+        ],
+        [
+          "maria"
+        ]
+      ],
+      "macros": {},
+      "note": "scoping: `con` split `leche con chocolate` into two foods"
+    }
+  ]
+}
