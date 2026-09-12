@@ -244,15 +244,15 @@
     },
     {
       "id": "resolve-default-serving-five-sites",
-      "claim": "resolveDefaultServing() is called at exactly 5 sites in logging.tsx — the ONE way to pick a card's starting weight",
+      "claim": "resolveDefaultServing() is called at exactly 4 sites in logging.tsx since 41c33e8 (was 5) — the ONE way to pick a card's starting weight",
       "ownerDoc": "mobile:CLAUDE.md#logging-traps",
       "where": "mobile",
       "command": "grep -c 'resolveDefaultServing(' 'src/app/(tabs)/logging.tsx'",
       "expect": {
         "kind": "count",
-        "value": "5"
+        "value": "4"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-09-12"
     },
     {
       "id": "resolve-watcher-gate",
