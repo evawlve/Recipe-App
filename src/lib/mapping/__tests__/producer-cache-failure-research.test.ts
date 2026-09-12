@@ -240,6 +240,24 @@ beforeEach(() => {
             confidence: 0.42,
             reason: 'stub_echo',
             sortedCandidates: cands,
+            // LOG-ONLY fields (2026-09-11). The stub carries them because the
+            // mapper threads them into the mapping-analysis entry, and the
+            // rerankStage assertion below is the only receipt that plumbing has:
+            // winner-diff replays selection and writes no analysis entry, so the
+            // gate is structurally blind to every line of it.
+            rerankOutcome: {
+                winner: cands[0]?.id ?? null, winnerId: cands[0]?.id ?? null,
+                winnerScore: 0.42, winnerBaseScore: 0.42, winnerNutritionScore: 0,
+                runnerUp: cands[1]?.id ?? null, runnerUpScore: cands[1] ? 0.41 : null,
+                effectiveRunnerUp: cands[1]?.id ?? null, effectiveRunnerUpScore: cands[1] ? 0.41 : null,
+                gap: cands[1] ? 0.01 : 0, confidence: 0.42,
+                reason: 'stub_echo', rerankReason: 'stub_echo',
+                candidateCount: cands.length, scoredCount: cands.length,
+            },
+            rerankPool: cands.map(c => ({
+                foodId: c.id, score: 0.42, baseScore: 0.42, nutritionScore: 0,
+                plausibilityFloorHit: false,
+            })),
         }),
     );
     (hydrateAndSelectServing as jest.Mock).mockResolvedValue(null);
@@ -449,4 +467,24 @@ describe('Step 5b: cache winner fails hydration → full search rebill (census V
         expect(result).toBeNull();
         expect(saveValidatedMapping).not.toHaveBeenCalled();
     });
+
+    // NO TEST HERE, AND THAT IS A FINDING, NOT AN OMISSION (2026-09-11, Lane A S47).
+    // A test asserting that the mapper carries `rerankOutcome`/`rerankPool`/
+    // `rerankStage` into the mapping-analysis entry CANNOT be written under this
+    // jest config: `jest.setup.no-analysis-writes.js` pins
+    // ENABLE_MAPPING_ANALYSIS='false' in `setupFiles` precisely so no suite writes
+    // real analysis files, and the mapper captures that flag in a module-scope
+    // const at import. So `logMappingAnalysis` is called ZERO times in every
+    // suite, and an assertion on it would pass vacuously.
+    //
+    // What guards that plumbing instead: the three fields are REQUIRED (not
+    // optional) on `MappingAnalysisLog`, so the compiler names every
+    // `logMappingAnalysis()` seat that fails to supply them — which is a stronger
+    // guarantee than a test over one path, and is what caught the first cut of
+    // this change omitting them at four seats. The behavioural receipt is the
+    // post-deploy analysis entry read back off the box.
+    //
+    // Corollary worth carrying: the `jest.mock('../mapping-logger')` above, and
+    // its comment claiming the dev `.env` sets the flag true under jest, are now
+    // stale — `no-analysis-writes` already makes that impossible.
 });

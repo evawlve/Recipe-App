@@ -426,23 +426,33 @@ export async function POST(req: NextRequest) {
             quantity: qty,
             unit,
             grams: 0,
+            // THE UNRESOLVED SHAPE. Nothing was found, so no panel declared anything:
+            // fibre is NULL ("no claim"), not a 0 that reads as "0 g". The macros
+            // stay 0 — a 0 kcal / 0 g card at grams 0 is the shape every client
+            // already renders for this branch, and changing them is a separate wire
+            // change. Same `number | null` contract as the mapped branch below.
             nutrition: {
               calories: 0,
               protein: 0,
               carbs: 0,
               fat: 0,
-              fiber: 0,
-              sugar: 0,
-              sodium: 0,
+              fiber: null,
+              // NULL, not 0, for the same reason as `fiber` (#134 after #424):
+              // this item resolved to NO RECORD, so it declares nothing. A 0
+              // here is a claim about a food we never found. The four macros
+              // stay 0 because `isDegenerateNutrition()` reads them as this
+              // module's spelling of "unknown" — see resolve-payload.ts.
+              sugar: null,
+              sodium: null,
             },
             nutritionPer100g: {
               kcal100: 0,
               protein100: 0,
               carbs100: 0,
               fat100: 0,
-              fiber100: 0,
-              sugar100: 0,
-              sodium100: 0,
+              fiber100: null,
+              sugar100: null,
+              sodium100: null,
             },
             servingOptions: [],
             funnelStage: telemetry.funnelStage,
@@ -500,9 +510,31 @@ export async function POST(req: NextRequest) {
           // is the invariant; that it is currently a no-op is an accident, not a
           // guarantee. `sodium100` is GRAMS per 100 g on every branch, so `sodium`
           // here is grams too — see ResolvedNutritionPer100g in resolve-payload.ts.
-          fiber: Number(((nutritionPer100g.fiber100 ?? 0) * scale).toFixed(1)),
-          sugar: Number(((nutritionPer100g.sugar100 ?? 0) * scale).toFixed(1)),
-          sodium: Number(((nutritionPer100g.sodium100 ?? 0) * scale).toFixed(1)),
+          //
+          // NULL STAYS NULL. `fiber100` is `number | null` (ResolvedNutritionPer100g
+          // owns the rule): null means the record's panel does not DECLARE fibre.
+          // This read was `?? 0`, so every such record billed a fabricated 0 g and
+          // the client's Net carbs subtracted it — 807 of the 3,574 OFF records
+          // behind a FoodMapping row are that shape (measured 2026-09-05; the
+          // re-derive command is on the type). A declared 0 still bills 0.
+          //
+          // ALL THREE MICROS NOW TAKE THE SAME FORM (#134 finished what #424
+          // started). `sugar` and `sodium` read `?? 0` here until this change,
+          // so a record silent about either billed a fabricated 0 g — and the
+          // mobile client (#119, `700b8d1`) already reads a null at every seat,
+          // so the day this deploys the diary stops recording that zero. The
+          // `== null` test is deliberate and must not be shortened to `||`:
+          // `0 || null` is null, which would destroy every DECLARED zero — of
+          // which sugar has many (a diet soda's 0 g is a real measurement).
+          fiber: nutritionPer100g.fiber100 == null
+            ? null
+            : Number((nutritionPer100g.fiber100 * scale).toFixed(1)),
+          sugar: nutritionPer100g.sugar100 == null
+            ? null
+            : Number((nutritionPer100g.sugar100 * scale).toFixed(1)),
+          sodium: nutritionPer100g.sodium100 == null
+            ? null
+            : Number((nutritionPer100g.sodium100 * scale).toFixed(1)),
         };
 
         // Provenance is the RESOLVED RECORD's (`details.source`, derived from the foodId prefix

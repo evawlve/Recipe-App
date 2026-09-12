@@ -73,6 +73,46 @@ import {
  * `servings/bare-query-guard.ts` — a producer of three live tiers. Hence the AST
  * walk below rather than a regex: the census is the deliverable, and a census that
  * misses a producer is exactly the bug it exists to prevent.
+ *
+ * WHAT IS PINNED — NINE SETS, NOT FIVE
+ * ------------------------------------
+ * Five are the shipped predicates in `serving-ai-tiers.ts` — SERVING_AI_TIERS,
+ * REPLAY_NONDETERMINISTIC_SERVING_TIERS, SYNTHETIC_GRAMS_SERVING_TIERS,
+ * BORROWED_OR_DEFAULTED_SERVING_TIERS, FLOOR_SERVING_TIERS — pinned against
+ * EXPECTED_CLASS. Four more are UNEXPORTED module consts in
+ * `servings/bare-query-guard.ts` — CAP_TIERS, HEAD_GATED_CAP_TIERS,
+ * REPLACE_TIERS, DECLARED_LABEL_TIERS — the sets `applyOffBareQueryGuard()`
+ * routes on. They are pinned by a second source scan (`scanGuardSets()`), and
+ * never by an export: the file keeps them private on purpose. They have the
+ * same silent default as the predicates — a tier in NONE of the four is simply
+ * never guarded, and nothing goes red.
+ *
+ * Why the four earned a place (2026-09-05): `seed_count_default` is a CAP_TIERS
+ * member, and `label_count_derived` — the own-label rung PR #420 re-points
+ * events to, away from the seed table — is in NO set, so the bare-query cap
+ * stops applying to every event that moves. The gap PRE-DATES #420
+ * (`label_count_derived` was never listed), but a census that pinned these sets
+ * would have made the re-pointing name it. It is SIZED, not changed. The
+ * durable predicate (measured on the box 2026-09-05, re-checked the same day
+ * after one more event landed): 0 of the tier's trailing-30-day events satisfy
+ * the guard's first gate `isBareUnitlessQty1()` — 868 carry a digit, and the
+ * one digitless line (`two chocolate caramel rice cakes from quaker`) parses
+ * `qty: 2` from the word `two` — so CAP membership would change nothing in
+ * the window. Re-derive the window:
+ *   SELECT count(*), count(DISTINCT "rawLine"),
+ *          count(*) FILTER (WHERE "rawLine" !~ '[0-9]') AS digitless
+ *     FROM "MappingEventLog"
+ *    WHERE "servingTier" = 'label_count_derived'
+ *      AND "createdAt" > now() - interval '30 days';
+ * (`!~ '[0-9]'` OVER-counts bare lines — a word-number is digitless and not
+ * bare — so run the survivors through `parseIngredientLine()` +
+ * `isBareUnitlessQty1()` before reading the digitless count as "bare".) Of the
+ * tier's all-time digitless events (drop the interval; 18 events / 14
+ * line-record pairs, all 2026-07-19 → 07-24 bar the one above, every one a
+ * 2–43 g single piece), plain CAP membership would fire on exactly one —
+ * `sugar cookie` 43 g → the lexicon's 4 g teaspoon of SUGAR, a contained-token
+ * hijack — and correct none; HEAD_GATED would fire on none. Membership
+ * deliberately unchanged.
  */
 
 // ---------------------------------------------------------------------------
@@ -630,5 +670,193 @@ describe('the eight tiers PRs #331/#333 added, which no shipped set knew until F
             'fdc_size_unresolved',
             'fdc_unknown_unit',
         ]);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// THE GUARD'S FOUR UNEXPORTED SETS — pinned through a source scan
+// ---------------------------------------------------------------------------
+
+const GUARD_FILE = join(SRC_ROOT, 'lib', 'servings', 'bare-query-guard.ts');
+const GUARD_SET_NAMES = [
+    'CAP_TIERS',
+    'HEAD_GATED_CAP_TIERS',
+    'REPLACE_TIERS',
+    'DECLARED_LABEL_TIERS',
+] as const;
+type GuardSetName = (typeof GUARD_SET_NAMES)[number];
+
+/**
+ * Read the four `const NAME = new Set([...])` literals off the guard's source.
+ * The sets are unexported ON PURPOSE — never add `export` there to make this
+ * easier; the scan exists so the file's privacy survives — so this walks the
+ * module's top-level statements with the TypeScript AST and THROWS, never
+ * returns a partial, when a wanted set is missing, is not a `new Set([...])`
+ * over a single array literal, or carries a member that is not a string
+ * literal. A set that moves to a computed form therefore fails loudly instead
+ * of reading as empty, the same silent-shrink failure the tier scan guards.
+ */
+function scanGuardSets(): Record<GuardSetName, readonly string[]> {
+    const text = readFileSync(GUARD_FILE, 'utf8');
+    const sf = ts.createSourceFile(GUARD_FILE, text, ts.ScriptTarget.Latest, true);
+    const found = new Map<string, readonly string[]>();
+    for (const stmt of sf.statements) {
+        if (!ts.isVariableStatement(stmt)) continue;
+        for (const decl of stmt.declarationList.declarations) {
+            if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+            const name = decl.name.text;
+            if (!(GUARD_SET_NAMES as readonly string[]).includes(name)) continue;
+            const init = decl.initializer;
+            if (
+                !ts.isNewExpression(init) || !ts.isIdentifier(init.expression)
+                || init.expression.text !== 'Set'
+            ) {
+                throw new Error(`${name}: expected \`new Set([...])\`, found \`${init.getText(sf)}\``);
+            }
+            const args = init.arguments ?? [];
+            const arg = args[0];
+            if (args.length !== 1 || !arg || !ts.isArrayLiteralExpression(arg)) {
+                throw new Error(`${name}: \`new Set(...)\` must take exactly one array literal`);
+            }
+            found.set(name, Object.freeze(arg.elements.map((el) => {
+                if (!ts.isStringLiteral(el)) {
+                    throw new Error(`${name}: member \`${el.getText(sf)}\` is not a string literal`);
+                }
+                return el.text;
+            })));
+        }
+    }
+    const out: Partial<Record<GuardSetName, readonly string[]>> = {};
+    for (const name of GUARD_SET_NAMES) {
+        const members = found.get(name);
+        if (!members) {
+            throw new Error(
+                `${name}: not found as a top-level \`const ${name} = new Set([...])\` in ${GUARD_FILE}`,
+            );
+        }
+        out[name] = members;
+    }
+    return out as Record<GuardSetName, readonly string[]>;
+}
+
+/** Deliberately NOT computed at module load: a scan failure then surfaces as a
+ *  named failing assertion in the block below, not as a suite that failed to
+ *  start, so the tier census above still reports. */
+let guardSetsMemo: Record<GuardSetName, readonly string[]> | null = null;
+function guardSets(): Record<GuardSetName, readonly string[]> {
+    if (!guardSetsMemo) guardSetsMemo = scanGuardSets();
+    return guardSetsMemo;
+}
+
+/**
+ * The exact membership, read off the file 2026-09-05, sorted so a reorder in
+ * the source is not a change. DO NOT edit a row here to make a membership
+ * change pass — the change belongs in the guard, with its own measurement,
+ * and this row moves with it in the same PR. WHY each member belongs is owned
+ * by the guard's own comments above each set and is not restated.
+ */
+const EXPECTED_GUARD_SETS: Readonly<Record<GuardSetName, readonly string[]>> = Object.freeze({
+    // Real package/label machinery; may only be CAPPED, never inflated.
+    CAP_TIERS: [
+        'label_serving_default',
+        'package_count_own',
+        'package_count_sibling',
+        'package_quantity_own',
+        'package_quantity_sibling',
+        'seed_count_default',
+    ],
+    // The record's own in-band label; capped only when the lexicon category
+    // is the query's HEAD noun.
+    HEAD_GATED_CAP_TIERS: ['bare_label_serving'],
+    // Fabricated grams; a category default is strictly better either way.
+    REPLACE_TIERS: ['count_unresolved_floor', 'flat_100g_default'],
+    // The manufacturer's DECLARED serving — the only tiers the query-token
+    // rule in `capMayOverrideLabelServing()` protects.
+    DECLARED_LABEL_TIERS: ['bare_label_serving', 'label_serving_default'],
+});
+
+describe("the bare-query guard's four unexported sets", () => {
+    it('each set is found in the source and is non-empty', () => {
+        const sets = guardSets();
+        for (const name of GUARD_SET_NAMES) {
+            expect([name, sets[name].length > 0]).toEqual([name, true]);
+        }
+    });
+
+    /** A guard set naming a string no producer stamps is dead routing, and one
+     *  naming a tier the census has not classified is the gap this file exists
+     *  to close, one layer down. */
+    it('every member is a live tier and is classified in EXPECTED_CLASS', () => {
+        const sets = guardSets();
+        for (const name of GUARD_SET_NAMES) {
+            for (const t of sets[name]) {
+                expect([name, t, SCAN.tiers.has(t), t in EXPECTED_CLASS])
+                    .toEqual([name, t, true, true]);
+            }
+        }
+    });
+
+    it('carries exactly the membership the file declares', () => {
+        const sets = guardSets();
+        for (const name of GUARD_SET_NAMES) {
+            expect([name, [...sets[name]].sort()])
+                .toEqual([name, [...EXPECTED_GUARD_SETS[name]].sort()]);
+        }
+    });
+
+    /**
+     * The three ROUTING sets are consulted in sequence by
+     * `applyOffBareQueryGuard()` — CAP, then HEAD_GATED, then REPLACE — and
+     * each branch returns before the next is read, so a tier in two of them
+     * would be governed by whichever is read first, silently. Pinned disjoint.
+     */
+    it('CAP_TIERS, HEAD_GATED_CAP_TIERS and REPLACE_TIERS are pairwise disjoint', () => {
+        const sets = guardSets();
+        const routing = ['CAP_TIERS', 'HEAD_GATED_CAP_TIERS', 'REPLACE_TIERS'] as const;
+        for (let i = 0; i < routing.length; i += 1) {
+            for (let j = i + 1; j < routing.length; j += 1) {
+                const a = routing[i];
+                const b = routing[j];
+                const overlap = sets[a].filter((t) => sets[b].includes(t));
+                expect([a, b, overlap]).toEqual([a, b, []]);
+            }
+        }
+    });
+
+    /**
+     * DECLARED_LABEL_TIERS is not a routing set — it is the PROTECTION
+     * predicate `capMayOverrideLabelServing()` reads — so its members are, by
+     * design, ALSO in a cap set: each is a declared label serving a cap may
+     * touch only under the query-token rule. Both overlaps the file actually
+     * has are pinned by name; a member in BOTH cap sets or in neither would be
+     * a protection with nothing to protect. The REPLACE side is pinned empty
+     * because a fabricated floor is never a declared serving.
+     */
+    it('each DECLARED_LABEL tier sits in exactly one cap set, and none in REPLACE', () => {
+        const sets = guardSets();
+        expect(sets.CAP_TIERS).toContain('label_serving_default');
+        expect(sets.HEAD_GATED_CAP_TIERS).not.toContain('label_serving_default');
+        expect(sets.HEAD_GATED_CAP_TIERS).toContain('bare_label_serving');
+        expect(sets.CAP_TIERS).not.toContain('bare_label_serving');
+        for (const t of sets.DECLARED_LABEL_TIERS) {
+            const inCap = sets.CAP_TIERS.includes(t);
+            const inHeadGated = sets.HEAD_GATED_CAP_TIERS.includes(t);
+            expect([t, inCap !== inHeadGated]).toEqual([t, true]);
+            expect([t, sets.REPLACE_TIERS.includes(t)]).toEqual([t, false]);
+        }
+    });
+
+    /**
+     * THE SIZED GAP (header, "WHAT IS PINNED"). Recorded the way the #331/#333
+     * block records its own: a PR that lists `label_count_derived` in a guard
+     * set updates THIS assertion with its measurement rather than deleting it.
+     */
+    it('seed_count_default is capped; label_count_derived is guarded by no set', () => {
+        const sets = guardSets();
+        expect(sets.CAP_TIERS).toContain('seed_count_default');
+        expect(SCAN.tiers.has('label_count_derived')).toBe(true);
+        for (const name of GUARD_SET_NAMES) {
+            expect([name, sets[name].includes('label_count_derived')]).toEqual([name, false]);
+        }
     });
 });

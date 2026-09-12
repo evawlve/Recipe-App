@@ -1245,7 +1245,7 @@ export function hasCoreTokenMismatch(
         return false;
     }
 
-    // Check each core token - at least ONE must be present (or its synonym)
+    // Check each core token - EVERY core token must be present (or its synonym); the first miss is a mismatch
     for (const coreToken of coreTokensInQuery) {
         const synonyms = CORE_TOKEN_SYNONYMS[coreToken] || [];
         const allForms = [coreToken, ...synonyms];
@@ -2407,6 +2407,96 @@ function hasUnwantedModifier(normalizedName: string, candidateName: string): boo
 const FAT_PERCENTAGE_MODIFIERS = ['2%', '1%', 'skim', 'whole', 'half-and-half', 'half and half'];
 const LOW_FAT_MODIFIERS = ['lowfat', 'low-fat', 'low fat', 'reduced fat', 'reduced-fat', 'lite', 'light', 'nonfat', 'non-fat', 'fat free', 'fat-free', 'skim', 'part-skim', 'part skim'];
 const CALORIE_MODIFIERS = ['low calorie', 'low-calorie', 'diet', 'zero calorie', 'calorie free', 'calorie-free', 'sugar free', 'sugar-free'];
+// The candidate-side satisfiers of a CALORIE_MODIFIERS query. Deliberately WIDER than the
+// query-side list: "light"/"lite" are functionally "low calorie" on condiments and dressings,
+// and "no sugar added"/"fat free" are what frozen treats print instead of "sugar free".
+// Hoisted out of hasCriticalModifierMismatch() unchanged (2026-09-05) so the relaxed pass can
+// read the SAME lists through hasCalorieModifierViolation() below.
+const ALL_LOW_CAL_MODIFIERS = [
+    ...CALORIE_MODIFIERS,
+    'light', 'lite',  // These are equivalent to "low calorie" for condiments/dressings
+    'no sugar added', 'no added sugar',  // Equivalent to "sugar free" for frozen treats
+    'fat free', 'fat-free',  // Often used interchangeably with "sugar free" for frozen desserts
+];
+
+const MODIFIER_WORD_RE = new Map<string, RegExp>();
+
+/**
+ * Does `text` contain `modifier` as a WHOLE WORD (or whole phrase), rather than as a fragment of
+ * a longer word? `text` and `modifier` must both already be lowercase.
+ *
+ * WHY THIS EXISTS. `CALORIE_MODIFIERS` is matched against the user's query with `includes()`, and
+ * its only single-token member is `diet` — which is a prefix of the real deli brand `Dietz and
+ * Watson`. A `dietz` line therefore enters the calorie branch, and every candidate that does not
+ * itself carry a low-calorie word is then reported as a critical modifier mismatch.
+ *
+ * IT IS QUERY-SIDE ONLY, DELIBERATELY. `ALL_LOW_CAL_MODIFIERS` keeps `includes()` on the CANDIDATE
+ * side, and that asymmetry is the point: the query side decides whether the check RUNS, so a
+ * boundary there can only make it run less often. The candidate side decides whether a candidate
+ * SATISFIES the check, so a boundary there would make more candidates violate — a removal
+ * increase, the opposite direction, and it needs its own measured arm.
+ *
+ * **THE PREDICATE IS MONOTONE; THE PIPELINE IS NOT — do not call this "admit-only".** The relaxed
+ * recovery fires only when the strict pass returns EMPTY, so admitting one more candidate
+ * SUPPRESSES the retry and swaps a superset for a subset. `winner-diff.ts`'s own header names this
+ * as NON-MONOTONE #2 under "admit-only by inspection is not a safety argument — burned this project
+ * three separate times", and the gate measured it here: 2 of 12 cold seeds went `relaxed
+ * true -> false` and LOST pool (11 -> 10 and 14 -> 12) while keeping their winners. Sizing for whoever takes that on (measured
+ * 2026-09-07): 3,513 `OffFood` names contain `light` as a substring but not as a word, 514 contain
+ * `lite`, and 518 rows over 56 brands carry `diet` that way in `brandName`.
+ *
+ * ONLY HALF THE `diet`-SUBSTRING CLASS IS CLOSED HERE, AND THE OTHER HALF IS LIVE. The same
+ * `lower.includes('diet')` predicate is in `expandWithSynonyms()` in `gather-candidates.ts`, where
+ * `DIETARY_SYNONYMS['diet']` expands a `dietz` line into junk retrieval variants
+ * (`unsweetenedz and watson black forest ham`, `sugar freez and watson …`) that feed
+ * `searchFdcLocal()`. Measured 2026-09-07 by executing the sibling `buildQueryVariants()` on this
+ * tree: 8 variants, 7 junk. `gather-candidates.ts` is in `RETRIEVAL_PATHS`, so `winner-gate.sh`
+ * exits 3 on any edit there and its own blind spot (a) is exactly this — the gate freezes the
+ * gather output, so it can neither cause nor observe the retrieval half. Do not read this comment
+ * as "the class is closed".
+ *
+ * THE DEFECT IS SELF-CANCELLING ON ITS OWN WITNESS, which is why it has never been seen. Measured
+ * 2026-09-07 over 60 days AND all-time in `MappingEventLog`: exactly ONE distinct line matches
+ * `diet` as a substring but not as a word — `dietz and watson black forest ham`, 5 events — and it
+ * resolves CORRECTLY, to `off_2096383008540` "Black Forest Ham Dietz And Watson" at 56.699 g. It
+ * survives because the winner's own NAME carries `Dietz`, so the identical substring bug on the
+ * candidate side satisfies `ALL_LOW_CAL_MODIFIERS` and the violation never fires. The exposure is
+ * a `dietz` line whose correct answer does NOT spell the brand; that has zero events on record.
+ * Re-derive:
+ *   SELECT lower("rawLine"), count(*) FROM "MappingEventLog"
+ *   WHERE lower("rawLine") LIKE '%diet%' AND lower("rawLine") !~ '\\mdiet\\M' GROUP BY 1;
+ */
+function containsModifierWord(text: string, modifier: string): boolean {
+    let re = MODIFIER_WORD_RE.get(modifier);
+    if (!re) {
+        re = new RegExp(`\\b${modifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        MODIFIER_WORD_RE.set(modifier, re);
+    }
+    return re.test(text);
+}
+
+/**
+ * The CALORIE-class half of hasCriticalModifierMismatch(), as a pure predicate: true when the
+ * query carries one of CALORIE_MODIFIERS and the candidate name carries none of
+ * ALL_LOW_CAL_MODIFIERS. **The two sides use DIFFERENT matching, deliberately (2026-09-07):** the
+ * QUERY side matches whole words via containsModifierWord(), the CANDIDATE side keeps substring
+ * `includes()`. That asymmetry is the fix for `diet` matching inside `Dietz`, and its direction is
+ * the argument for it — see containsModifierWord()'s header. Both call sites still read THIS
+ * function, so they cannot disagree with each other.
+ *
+ * It is a separate export because the RELAXED admission pass applies THIS class and only this
+ * class (see the narrowing step in filterCandidatesByTokens()): the fat classes keep the relaxed
+ * pass's leniency, which was written for them. The class boundary is the module's own
+ * CALORIE_MODIFIERS list — `zero sugar`, `unsweetened` and `no sugar added` are NOT on the query
+ * side today, and widening it is a deliberate edit to that list, pinned by
+ * __tests__/relaxed-pass-keeps-calorie-modifiers.test.ts so it is never made by accident.
+ */
+export function hasCalorieModifierViolation(query: string, candidateName: string): boolean {
+    const queryLower = query.toLowerCase();
+    if (!CALORIE_MODIFIERS.some(m => containsModifierWord(queryLower, m))) return false;
+    const candLower = candidateName.toLowerCase();
+    return !ALL_LOW_CAL_MODIFIERS.some(m => candLower.includes(m));
+}
 
 /**
  * Check for CRITICAL modifier mismatches only.
@@ -2506,22 +2596,12 @@ export function hasCriticalModifierMismatch(
         }
     }
 
-    // Check calorie modifiers
-    // IMPORTANT: "light", "lite" and "low calorie" are functionally equivalent
-    // A "Light Mayonnaise" candidate DOES satisfy a "low calorie mayonnaise" query
-    // For frozen treats: "no sugar added" and "fat free" are equivalent to "sugar free"
-    const ALL_LOW_CAL_MODIFIERS = [
-        ...CALORIE_MODIFIERS,
-        'light', 'lite',  // These are equivalent to "low calorie" for condiments/dressings
-        'no sugar added', 'no added sugar',  // Equivalent to "sugar free" for frozen treats
-        'fat free', 'fat-free',  // Often used interchangeably with "sugar free" for frozen desserts
-    ];
-    const queryHasLowCal = CALORIE_MODIFIERS.some(m => queryLower.includes(m));
-    const candHasLowCal = ALL_LOW_CAL_MODIFIERS.some(m => candLower.includes(m));
-
-    if (queryHasLowCal && !candHasLowCal) {
-        // Query explicitly asks for low-calorie, candidate doesn't have it
-        // (but "light" and "lite" are acceptable substitutes)
+    // Check calorie modifiers. This is the ONE class the RELAXED pass also enforces, so it is
+    // the shared predicate hasCalorieModifierViolation() (CALORIE_MODIFIERS on the query side,
+    // ALL_LOW_CAL_MODIFIERS on the candidate side) rather than a second copy free to drift.
+    // "Light Mayonnaise" still satisfies "low calorie mayonnaise"; a frozen treat's "no sugar
+    // added" still satisfies "sugar free" — those equivalences live in ALL_LOW_CAL_MODIFIERS.
+    if (hasCalorieModifierViolation(queryLower, candLower)) {
         return true;
     }
 
@@ -2734,7 +2814,10 @@ export function filterCandidatesByTokens(
         // Check for CRITICAL nutritional modifier mismatches (Option A)
         // This catches: 2% milk → Whole Milk, low calorie soda → regular soda
         // Does NOT block minor preferences like unsweetened, organic (handled by scoring)
-        // SKIP in relaxed mode to allow "reduced fat" variants to match standard foods
+        // SKIPPED in relaxed mode so "reduced fat"-class variants can match standard foods —
+        // EXCEPT the CALORIE class, which the finished relaxed pool is narrowed by BELOW (the
+        // hasCalorieModifierViolation() step after the S3 block; its comment owns why it is a
+        // post-filter over the pool and not a flag read here).
         if (!relaxed && rawLine && hasCriticalModifierMismatch(rawLine, candidate.name, candidate.source, candidate.nutrition)) {
             if (debug) {
                 logger.info('filter.candidates.critical_modifier_mismatch', {
@@ -3084,6 +3167,62 @@ export function filterCandidatesByTokens(
             headNoun: headNounRelaxFallback,
             admitted: filtered.length,
         });
+    }
+
+    // THE RELAXED PASS KEEPS THE CALORIE-CLASS MODIFIER CHECK (2026-09-05).
+    //
+    // The relaxed pass exists to REFILL a pool the strict must-have tokens emptied, and admit()
+    // skips hasCriticalModifierMismatch() wholesale under `relaxed` so a `reduced fat` line can
+    // still land on the standard food when no reduced-fat record exists. That leniency was
+    // written for the FAT classes and silently covered the CALORIE class too. Measured on
+    // `2 tbsp ghugh's sugar free honey mustard` (winner-diff `replay --verbose --debug`, master
+    // 5411f7e, 2026-09-05): the strict pass empties (before:21 after:0 — the must-have `ghugh`
+    // is unsatisfiable, the corpus spells the brand `G hughes`), the relaxed pass re-admits
+    // twelve (before:21 after:12) INCLUDING the nine full-sugar brandless `Honey mustard` rows
+    // at 167–467 kcal/100 g that strict had just rejected for critical_modifier_mismatch, and
+    // one of them wins the rerank at 0.236 against the G Hughes sugar-free record's 0.058. A
+    // `sugar free` line billed as full-sugar honey mustard: the identity error IS the modifier.
+    // Owner: PR "lane-a/relax-pass-keeps-calorie-modifiers" (backend) and its gate receipts.
+    //
+    // WHAT MOVES, AND THE PROPERTY THAT BOUNDS IT. Only candidates violating the CALORIE class
+    // (hasCalorieModifierViolation — the module's own CALORIE_MODIFIERS / ALL_LOW_CAL_MODIFIERS
+    // boundary) leave the relaxed pool; the fat classes keep today's leniency untouched. And if
+    // removing them would leave the relaxed pool EMPTY, the pool is returned UNCHANGED — so no
+    // line that resolves today loses its pool: THE POOL CANNOT EMPTY, and everything downstream of
+    // that is MEASURED, NOT BOUNDED. An earlier draft of this line said "the only thing that can
+    // change is the CHOICE", which overstates what the code guarantees — the choice moving is
+    // exactly how a winner, a serving tier and a bill move with it, and none of those are bounded
+    // by anything in this function. What bounds them is the gate receipt, not the control flow.
+    // That is the STRONGER of the two empty-pool
+    // properties: "the strict pool is non-empty" (what PR #395 shipped and was reverted for) is
+    // not enough, because the relaxed pass is the pool on exactly these lines; S3 (#411) holds
+    // the stronger one and so does this.
+    //
+    // WHY A POST-FILTER OVER THE FINISHED POOL, not a flag admit() reads. The S3 pass above is
+    // ORDERED — brand key first, head noun only when the brand pass came back empty. A calorie
+    // check applied INSIDE admit() could empty the brand-key pass on a line master never retries
+    // and hand the head-noun retry a wider, foreign-brand pool — a second behaviour change riding
+    // on the first. Narrowing the pool S3 finished with cannot change which S3 pass ran.
+    // [reasoning from the control flow above; pinned by
+    // __tests__/relaxed-pass-keeps-calorie-modifiers.test.ts, incl. the all-violate fallback]
+    if (relaxed && rawLine && filtered.length > 0) {
+        const kept = filtered.filter(c => !hasCalorieModifierViolation(rawLine, c.name));
+        if (kept.length > 0 && kept.length < filtered.length) {
+            // Logged at WARN and unconditionally, for the same reason the S3 block above says in
+            // its own comment: the box runs at `warn` and `LOG_LEVEL` is absent from its `.env`,
+            // so an `info` line inside `if (debug)` is invisible in production twice over. This
+            // narrowing CHANGES WHICH RECORD WINS on the lines it fires on, and a behaviour
+            // change whose firing cannot be observed on the host that serves it is not
+            // instrumented at all. Cheap: it fires only when the pool actually shrank.
+            logger.warn('filter.candidates.relaxed_calorie_modifier_narrowed', {
+                normalizedName,
+                rawLine,
+                before: filtered.length,
+                after: kept.length,
+                removed: filtered.filter(c => !kept.includes(c)).slice(0, 3).map(c => c.name),
+            });
+            filtered = kept;
+        }
     }
 
     const removedCount = candidates.length - filtered.length;

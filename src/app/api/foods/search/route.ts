@@ -486,9 +486,24 @@ export async function GET(req: NextRequest) {
           protein100: c.nutrition?.protein ?? recovered?.per100.protein ?? 0,
           carbs100: c.nutrition?.carbs ?? recovered?.per100.carbs ?? 0,
           fat100: c.nutrition?.fat ?? recovered?.per100.fat ?? 0,
-          fiber100: nutrients.fiber ?? 0,
-          sugar100: nutrients.sugars ?? nutrients.sugar ?? 0,
-          sodium100: nutrients.sodium ?? 0,
+          // NULL when the record's panel does not declare fibre — the same rule as
+          // ResolvedNutritionPer100g.fiber100 (src/lib/nlp/resolve-payload.ts) on the
+          // parse lane, so one record cannot read "0 g" here and "—" there. OFF stores
+          // the undeclared case as `"fiber": null` (off_6922877745423 "Skippy Peanut
+          // Butter" is the measured row: this lane shipped it as `fiber100: 0`). The
+          // legacy lane above and /api/foods/[id] already pass a nullable `Food.fiber100`
+          // through, and `buildImpact()` takes `fiber100?: number | null`.
+          //
+          // Sugar and sodium take the same rule as of #134. This is the ONLY
+          // search lane this client can reach — all three of its call sites send
+          // `&local=true` — so a fold left here would have kept the browse list
+          // disagreeing with the parse wire about the same record. `buildImpact()`
+          // already declares `sugar100?: number | null` and `perServingFrom100()`
+          // folds a null to 0 for the arithmetic ONLY, which is right: an impact
+          // preview must add something, and it is not a nutrition claim.
+          fiber100: nutrients.fiber ?? null,
+          sugar100: nutrients.sugars ?? nutrients.sugar ?? null,
+          sodium100: nutrients.sodium ?? null,
           confidence: Math.min(1.0, Math.max(0.1, relevanceOf(c).relevance)),
           servingOptions,
           // OMITTED rather than `false` when the portion is honest, so every response
