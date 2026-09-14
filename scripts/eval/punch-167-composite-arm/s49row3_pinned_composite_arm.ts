@@ -219,6 +219,10 @@ async function doPin() {
 // ---------------------------------------------------------------- replay
 async function doReplay() {
     const pinPath = arg('--pin'); const outPath = arg('--out'); const dry = has('--dry');
+    // `--warm` (Lane A S50): replay with the cache READS on. Every write stays
+    // suppressed by the guard, so a warm arm shows what an already-cached line
+    // serves on each tree — against the live cache, whose contents drift.
+    const warm = has('--warm');
     if (!pinPath || (!outPath && !dry)) { console.error('replay needs --pin and --out (or --dry)'); process.exit(1); }
     const pin: PinFile = JSON.parse(fs.readFileSync(pinPath!, 'utf8'));
 
@@ -258,7 +262,7 @@ async function doReplay() {
             };
             if (dry) {
                 console.warn(`[${li}.${ii}] map("${it.rawText}", { brand: ${JSON.stringify(it.brand)}, ` +
-                    `normalizedForm: ${JSON.stringify(it.normalizedForm)}, skipCache: true, skipSave: true })`);
+                    `normalizedForm: ${JSON.stringify(it.normalizedForm)}, skipCache: ${!warm}, skipSave: true })`);
                 rows.push(base); continue;
             }
             try {
@@ -267,7 +271,7 @@ async function doReplay() {
                 const mapped = await mapperMod.mapIngredientWithFallback(it.rawText, {
                     brand: it.brand || undefined,
                     normalizedForm: it.normalizedForm || undefined,
-                    skipCache: true,
+                    skipCache: !warm,
                     skipSave: true,
                 });
                 const ok = !!mapped && !('status' in mapped);

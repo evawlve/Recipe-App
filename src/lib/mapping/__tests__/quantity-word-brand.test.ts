@@ -311,9 +311,11 @@ describe('the extraction differs from the inline form only by the refusal and #1
                 continue;
             }
             if (!after.applied) {
-                // The segmenter's own form already carried the brand.
+                // The segmenter's own form already carried the brand, and what the
+                // inline form built instead was a prepend.
                 noLongerFires.push(label);
                 expect([label, after.baseName]).toEqual([label, baseName]);
+                expect([label, before.baseName]).toEqual([label, `${targetBrand} ${rederived}`]);
             } else if (after.baseName !== before.baseName) {
                 // The re-derivation already carried the brand: the prepend is dropped, nothing else.
                 prependDropped.push(label);
@@ -491,13 +493,18 @@ describe('punch #167 — a brand the line already carries is not prepended on to
             .toBe('ben and jerrys cherry garcia');
         expect(preflight('and ben jerry', 'and ben jerry', "Ben & Jerry's"))
             .toMatchObject({ baseName: 'and ben jerry', declined: null });
-        // Reconstructed from Lane A S49's arm A, whose guard output on this line was
-        // `Ben Jerry's Ben & Jerry's Ice Cream`: the line had reached the guard
-        // already canonicalized, and the inline form prepended the brand to it.
-        expect(preserveDroppedBrand({
-            rawLine: 'and ben jerry', baseName: 'ice cream', targetBrand: "Ben Jerry's",
+        // The guard call behind the composite arm's `Ben Jerry's Ben & Jerry's Ice Cream`
+        // (Lane A S50 arm A log, 2026-09-14): the simplify recursion re-entered the mapper
+        // with rawLine `Ben & Jerry's Ice Cream`, the segment's normalizedForm
+        // `and ben jerry` as baseName, and the detector's `Ben Jerry's` as the brand.
+        const logged = {
+            rawLine: "Ben & Jerry's Ice Cream", baseName: 'and ben jerry', targetBrand: "Ben Jerry's",
             rederived: "Ben & Jerry's Ice Cream", parsed: null,
-        })).toEqual({ baseName: "Ben & Jerry's Ice Cream", applied: true, declined: null });
+        };
+        expect(inlineRepairBeforeExtraction(logged.baseName, logged.targetBrand, logged.rederived))
+            .toEqual({ baseName: "Ben Jerry's Ben & Jerry's Ice Cream", applied: true });
+        expect(preserveDroppedBrand(logged))
+            .toEqual({ baseName: 'and ben jerry', applied: false, declined: null });
     });
 
     it('separates the candidate rules: a contiguous fold misses the split and plural rows; the shipped predicate does not', () => {

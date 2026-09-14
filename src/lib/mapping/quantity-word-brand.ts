@@ -80,9 +80,10 @@ function dropPluralS(token: string): string {
  * weigh nutrition protein` — and the normalize model deduped the doubled brand
  * away, taking a food token (`weigh`) or the brand itself (`pad thai`) with it.
  *
- * PRESENT WHEN ANY CLAUSE HOLDS. Clauses 1 and 2 are the two guards' old tests,
- * verbatim, so neither guard reads a brand absent that it used to read present;
- * only clause 3 is new.
+ * PRESENT WHEN ANY CLAUSE HOLDS. Clause 1 is guard 1's old test verbatim; clause 2
+ * is guard 2's old test with its plural rule written as `dropPluralS()`, which is
+ * equivalent on the alphanumeric fold's `[a-z0-9]` strings. So neither guard reads
+ * a brand absent that it used to read present; only clause 3 is new.
  *   1. contiguous, case-insensitive — guard 1's old test;
  *   2. contiguous after an alphanumeric fold, plural-tolerant — guard 2's old
  *      test (`Pop-Tarts` in `pop tart`, `m&ms` in `m m's`);
@@ -109,9 +110,10 @@ function dropPluralS(token: string): string {
  * which on guard 1 would leave the retrieval query brand-blind. Guard 2 keeps
  * that first-word leniency in front of this predicate; see `repairDroppedBrand()`.
  *
- * A wider "present" can only remove a prepend, never add one. What that costs is
- * a line whose every brand word happens to appear as an ordinary word; the read
- * over the real `SegmentationCache` inputs is in the mobile report
+ * A wider "present" never adds a brand. What it can cost is a line whose every
+ * brand word happens to appear as an ordinary word (`real foods` in `best foods
+ * real mayonnaise`); the reads over the real `SegmentationCache` inputs and over
+ * the coverage corpus are in the mobile report
  * `sync-docs/reports/2026-09-14_lane-a-s50-punch-167-with-its-gate.md` §ROW 2.
  */
 export function brandAlreadyPresent(text: string | undefined, brand: string): boolean {
@@ -238,8 +240,10 @@ export type BrandPreservationOutcome = {
  *     disagreements, 0 baseName disagreements on the 161 rows it spared);
  *   - both containment checks ask `brandAlreadyPresent()` instead of a plain
  *     `.toLowerCase().includes()` (punch #167, 2026-09-14). That is a strict
- *     widening, so it can only turn a prepend into no repair (first check) or
- *     into the re-derivation as it stands (second check) — never add a brand.
+ *     widening and never adds a brand. A first-check flip returns the segmenter's
+ *     own form instead of the re-derivation (every one of the 6 such flips over
+ *     the 266 real inputs replaced a prepend); a second-check flip returns the
+ *     re-derivation without the prepend.
  */
 /**
  * WHAT A DECLINE RETURNS, AND THE ONE WAY IT DIFFERS FROM master.
