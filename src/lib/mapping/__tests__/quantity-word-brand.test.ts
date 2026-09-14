@@ -2,7 +2,7 @@ import { parseIngredientLine } from '../../parse/ingredient-line';
 import { detectBrandInQuery } from '../brand-detector';
 import { deriveMappingCacheKey } from '../cache-key';
 import { stripPartitiveOfResidue } from '../partitive-residue';
-import { brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
+import { brandAlreadyPresent, brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
 
 /**
  * `one` is a lexicon brand (the ONE protein-bar company), so the
@@ -213,41 +213,47 @@ describe('a multi-word or chain brand is never fully consumed by the quantity pa
 });
 
 /**
- * PORT NOTE (2026-08-31). The extraction must change NOTHING except the refusal.
- * PR #407 also replaced this repair's two containment checks with a
- * canonical-fold comparison; that change belongs to #407 and is deliberately NOT
- * carried here, so these tests pin the plain `.toLowerCase().includes()` form
- * that this tree ships. If someone later folds the containment check, the first
- * test below goes red — which is the point.
+ * THE EXTRACTION, THEN #167. The extraction (2026-08-31) changed nothing but the
+ * refusal. Punch #167 (2026-09-14) then replaced both containment checks' plain
+ * `.toLowerCase().includes()` with `brandAlreadyPresent()`, a strict widening.
+ * These tests replay the verbatim pre-extraction expression and pin exactly where
+ * the shipped function now differs from it, and in which direction.
  */
-describe('the extraction is behaviour-preserving apart from the refusal', () => {
-    it('still uses a PLAIN lowercase includes(), not a canonical fold', () => {
-        // A line that already spells the brand differently from the lexicon
-        // spelling fails a plain includes(), so the repair prepends the brand on
-        // top of itself. That is this tree's behaviour, measured 2026-08-31, and
-        // the port preserves it byte for byte. (Fixing it is #407's job.)
+describe('the extraction differs from the inline form only by the refusal and #167', () => {
+    it('no longer prepends a brand the re-derivation already spells differently', () => {
+        // Before #167 a plain includes() missed these spellings, so the repair
+        // prepended the brand on top of itself and wrote a doubled key:
+        // `a chick chick-fil-a fil sandwich spicy`, `coca coca-cola cola` and
+        // `cheese grilled in in-n-out n out` (measured 2026-08-31).
         const cases: Array<[string, string, string]> = [
             ['chick fil a spicy sandwich', 'spicy sandwich', 'chick-fil-a'],
             ['coca cola', 'cola', 'Coca-Cola'],
             ['grilled cheese in n out', 'grilled cheese', 'in-n-out'],
         ];
-        const keys = cases.map(([rawLine, normalizedForm, brand]) =>
-            preflight(rawLine, normalizedForm, brand).key);
-        expect(keys).toEqual([
-            'a chick chick-fil-a fil sandwich spicy',
-            'coca coca-cola cola',
-            'cheese grilled in in-n-out n out',
+        const outs = cases.map(([rawLine, normalizedForm, brand]) =>
+            preflight(rawLine, normalizedForm, brand));
+        expect(outs.map(o => o.baseName)).toEqual([
+            'chick fil a spicy sandwich',
+            'coca cola',
+            'grilled cheese in n out',
+        ]);
+        expect(outs.map(o => o.key)).toEqual([
+            'a chick fil sandwich spicy',
+            'coca cola',
+            'cheese grilled in n out',
         ]);
     });
 
     /**
      * Rows are (rawLine, normalizedForm, brand). They cover both containment
      * branches, both `rederived` branches, the fold-sensitive spellings above,
-     * the refusal, and ordinary repairs. The same replay was run over the 436
-     * real `SegmentationCache` (rawText, normalizedForm, brand) tuples on
-     * 2026-08-31 — 164 fires, 0 containment disagreements, 0 baseName
-     * disagreements on the 161 non-refused rows — but that needs the box, so the
-     * hermetic version is pinned here.
+     * the refusal, ordinary repairs, and — since #167 — the census doubling rows
+     * plus the rows that SEPARATE the candidate containment rules: a contiguous
+     * fold misses the split `Optimum Nutrition` rows, and a word test without the
+     * plural rule misses `and ben jerry`. The 2026-08-31 replay over the 436 real
+     * `SegmentationCache` tuples (164 fires, 0 containment disagreements) was a
+     * property of the plain check; the #167 population read is in the mobile
+     * report `sync-docs/reports/2026-09-14_lane-a-s50-punch-167-with-its-gate.md`.
      */
     const REPLAY: Array<[string, string, string | undefined]> = [
         ['2 scoops ghost vegan protein cinnamon roll', 'vegan protein cinnamon roll', undefined],
@@ -268,34 +274,71 @@ describe('the extraction is behaviour-preserving apart from the refusal', () => 
         ['one protein bar', 'protein bar', undefined],
         ['squirt soda', 'soda', undefined],
         ['noodles and company pad thai', 'pad thai', 'Noodles and Company'],
+        // Punch #167 (2026-09-14).
+        ['m and ms pretzel', 'pretzel', "M&M's"],
+        ['a fun size bag of m&ms', 'm&ms', "m&m's"],
+        ['noodles and company pad thai', 'pad thai', 'Noodles & Company'],
+        ['optimum weigh nutrition protein', 'protein', 'Optimum Nutrition'],
+        ['and a half of optimum weight nutrition protein', 'protein', 'Optimum Nutrition'],
+        ['optimum whey nutrition protein', 'whey protein', 'Optimum Nutrition'],
+        ['optimum nutrition weigh protein', 'weigh protein', 'optimum nutrition'],
+        ['optimum gold nutrition protein', 'protein', 'Optimum Nutrition'],
+        ['ben and jerrys cherry garcia', 'cherry garcia', "Ben & Jerry's"],
+        ['and ben jerry', 'and ben jerry', "Ben & Jerry's"],
     ];
 
-    it('agrees with the pre-extraction expression on every line the refusal spares', () => {
+    it('differs only in the widening direction, and only where the brand was already spelled', () => {
         let fires = 0;
         let refused = 0;
+        const noLongerFires: string[] = [];
+        const prependDropped: string[] = [];
         for (const [rawLine, normalizedForm, segmenterBrand] of REPLAY) {
             const parsed = parseIngredientLine(rawLine);
             const baseName = stripPartitiveOfResidue(normalizedForm);
             const targetBrand = segmenterBrand || detectBrandInQuery(rawLine).matchedBrand;
             if (!targetBrand) continue;
             const rederived = parsed?.name?.trim() || rawLine;
+            const label = `${rawLine} | ${targetBrand}`;
 
             const before = inlineRepairBeforeExtraction(baseName, targetBrand, rederived);
             const after = preserveDroppedBrand({ rawLine, baseName, targetBrand, rederived, parsed });
 
-            // The containment decision itself must be identical. `before` says
-            // "carries the brand" by not applying; `after` says it by neither
-            // applying nor declining.
-            expect([rawLine, !before.applied])
-                .toEqual([rawLine, !after.applied && after.declined === null]);
-
             if (before.applied) fires++;
             if (after.declined) { refused++; continue; }
-            expect([rawLine, after.baseName]).toEqual([rawLine, before.baseName]);
+            // A line the inline form left alone is still left alone: #167 only widens "present".
+            if (!before.applied) {
+                expect([label, after]).toEqual([label, { baseName, applied: false, declined: null }]);
+                continue;
+            }
+            if (!after.applied) {
+                // The segmenter's own form already carried the brand.
+                noLongerFires.push(label);
+                expect([label, after.baseName]).toEqual([label, baseName]);
+            } else if (after.baseName !== before.baseName) {
+                // The re-derivation already carried the brand: the prepend is dropped, nothing else.
+                prependDropped.push(label);
+                expect([label, before.baseName]).toEqual([label, `${targetBrand} ${after.baseName}`]);
+            }
         }
         // The fixture must actually exercise the repair, or this test is vacuous.
         expect(fires).toBeGreaterThanOrEqual(10);
         expect(refused).toBe(3);
+        expect(noLongerFires).toEqual([
+            "a fun size bag of m&ms | m&m's",
+            "and ben jerry | Ben & Jerry's",
+        ]);
+        expect(prependDropped).toEqual([
+            'chick fil a spicy sandwich | chick-fil-a',
+            'coca cola | Coca-Cola',
+            'grilled cheese in n out | in-n-out',
+            "m and ms pretzel | M&M's",
+            'noodles and company pad thai | Noodles & Company',
+            'optimum weigh nutrition protein | Optimum Nutrition',
+            'and a half of optimum weight nutrition protein | Optimum Nutrition',
+            'optimum whey nutrition protein | Optimum Nutrition',
+            'optimum gold nutrition protein | Optimum Nutrition',
+            "ben and jerrys cherry garcia | Ben & Jerry's",
+        ]);
     });
 
     it('differs from the pre-extraction expression ONLY by dropping the prepend', () => {
@@ -396,8 +439,107 @@ describe('repairDroppedBrand — the segmenter-path repair (refuter L2 shapes, 2
         expect(repairDroppedBrand('chick fil a spicy chicken sandwich', 'Chick-fil-A')).toBeNull();
     });
 
+    it('reads `M&M\'s` in `m and ms pretzel` as KEPT, which the alphanumeric fold alone missed (#167)', () => {
+        expect(repairDroppedBrand('m and ms pretzel', "M&M's")).toBeNull();
+    });
+
     it('returns null on an empty name and never prepends an empty brand fold', () => {
         expect(repairDroppedBrand(undefined, 'Ryse')).toBeNull();
         expect(repairDroppedBrand('peanut butter', '&')).toBe('& peanut butter');
+    });
+});
+
+/**
+ * PUNCH #167 (2026-09-14) — POSITIVE CASES. Each row asserts the baseName the
+ * repair must hand retrieval, not merely that it changed: the doubling rows of
+ * the committed 1,553-row `AiNormalizeCache` census (`M&M's`, `Noodles & Company`,
+ * `Optimum Nutrition`, and the curly-apostrophe class), the S47 adjacency arms
+ * C/D/E, and the `Ben & Jerry's` class that already worked.
+ */
+describe('punch #167 — a brand the line already carries is not prepended on top of it', () => {
+    it.each([
+        ['m and ms pretzel', 'pretzel', "M&M's", 'm and ms pretzel'],
+        ['a fun size bag of m&ms', 'm&ms', "m&m's", 'm&ms'],
+        ['noodles and company pad thai', 'pad thai', 'Noodles & Company', 'noodles and company pad thai'],
+        ['optimum weigh nutrition protein', 'protein', 'Optimum Nutrition', 'optimum weigh nutrition protein'],
+        ['and a half of optimum weight nutrition protein', 'protein', 'Optimum Nutrition', 'and a half of optimum weight nutrition protein'],
+        ['angie’s boomchickapop sweet and salty', 'boomchickapop sweet and salty', "Angie's Boomchickapop", 'angie’s boomchickapop sweet and salty'],
+        ['a serving of McDonald’s sized french fries', 'french fries', "McDonald's", 'McDonald’s sized french fries'],
+    ])('%s | %s | %s -> %s', (rawLine, normalizedForm, brand, expected) => {
+        expect(preflight(rawLine, normalizedForm, brand).baseName).toBe(expected);
+    });
+
+    it('the S47 adjacency arms: the inline form doubled C and E and not D; now none doubles', () => {
+        const arms: Array<[string, string, string, string, string]> = [
+            // [arm, rawLine, normalizedForm, brand, the inline form's baseName]
+            ['C', 'optimum whey nutrition protein', 'whey protein', 'Optimum Nutrition', 'Optimum Nutrition optimum whey nutrition protein'],
+            ['D', 'optimum nutrition weigh protein', 'weigh protein', 'optimum nutrition', 'optimum nutrition weigh protein'],
+            ['E', 'optimum gold nutrition protein', 'protein', 'Optimum Nutrition', 'Optimum Nutrition optimum gold nutrition protein'],
+        ];
+        for (const [arm, rawLine, normalizedForm, brand, inlineBaseName] of arms) {
+            const rederived = parseIngredientLine(rawLine)?.name?.trim() || rawLine;
+            expect([arm, inlineRepairBeforeExtraction(normalizedForm, brand, rederived).baseName])
+                .toEqual([arm, inlineBaseName]);
+            expect([arm, preflight(rawLine, normalizedForm, brand).baseName]).toEqual([arm, rawLine]);
+        }
+    });
+
+    it('keeps the class that already worked, in both spellings, and un-doubles the draw that did double', () => {
+        expect(preflight('ben and jerrys cherry garcia', 'cherry garcia', "Ben & Jerry's").baseName)
+            .toBe('ben and jerrys cherry garcia');
+        expect(preflight('ben and jerrys cherry garcia', 'cherry garcia', "Ben and Jerry's").baseName)
+            .toBe('ben and jerrys cherry garcia');
+        expect(preflight('and ben jerry', 'and ben jerry', "Ben & Jerry's"))
+            .toMatchObject({ baseName: 'and ben jerry', declined: null });
+        // Reconstructed from Lane A S49's arm A, whose guard output on this line was
+        // `Ben Jerry's Ben & Jerry's Ice Cream`: the line had reached the guard
+        // already canonicalized, and the inline form prepended the brand to it.
+        expect(preserveDroppedBrand({
+            rawLine: 'and ben jerry', baseName: 'ice cream', targetBrand: "Ben Jerry's",
+            rederived: "Ben & Jerry's Ice Cream", parsed: null,
+        })).toEqual({ baseName: "Ben & Jerry's Ice Cream", applied: true, declined: null });
+    });
+
+    it('separates the candidate rules: a contiguous fold misses the split and plural rows; the shipped predicate does not', () => {
+        // #407's fold (kept branch `903dd09`), which is still a contiguous includes().
+        const fold = (s: string) => s.toLowerCase().replace(/['’`]/g, '').replace(/&/g, ' and ')
+            .replace(/[-.\/]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const rows: Array<[string, string]> = [
+            ['optimum weigh nutrition protein', 'Optimum Nutrition'],
+            ['optimum whey nutrition protein', 'Optimum Nutrition'],
+            ['optimum gold nutrition protein', 'Optimum Nutrition'],
+            ['and ben jerry', "Ben & Jerry's"],
+        ];
+        for (const [text, brand] of rows) {
+            expect([text, fold(text).includes(fold(brand))]).toEqual([text, false]);
+            expect([text, brandAlreadyPresent(text, brand)]).toEqual([text, true]);
+        }
+    });
+});
+
+describe('brandAlreadyPresent — the one containment question both guards ask (#167)', () => {
+    it("keeps both guards' old tests: contiguous, and the alphanumeric fold with its plural rule", () => {
+        expect(brandAlreadyPresent('oikos triple zero vanilla', 'oikos')).toBe(true);
+        expect(brandAlreadyPresent("m m's", 'm&ms')).toBe(true);
+        expect(brandAlreadyPresent('frosted strawberry pop tart', 'Pop-Tarts')).toBe(true);
+    });
+
+    it('reads the brand word by word: `&` against `and`, curly apostrophes, order, plural', () => {
+        expect(brandAlreadyPresent('m and ms pretzel', "M&M's")).toBe(true);
+        expect(brandAlreadyPresent('angie’s boomchickapop', "Angie's Boomchickapop")).toBe(true);
+        expect(brandAlreadyPresent('optimum weigh nutrition protein', 'Optimum Nutrition')).toBe(true);
+        expect(brandAlreadyPresent('and ben jerry', "Ben & Jerry's")).toBe(true);
+    });
+
+    it('does not accept a brand of which only some words are present', () => {
+        expect(brandAlreadyPresent('optimum protein', 'Optimum Nutrition')).toBe(false);
+        expect(brandAlreadyPresent('great northern beans', 'Great Value')).toBe(false);
+        expect(brandAlreadyPresent('skippy peanut butter', 'Ryse Skippy')).toBe(false);
+    });
+
+    it('treats a missing text as absent, and a symbol-only brand by its folded word', () => {
+        expect(brandAlreadyPresent(undefined, 'Ryse')).toBe(false);
+        expect(brandAlreadyPresent('', 'Ryse')).toBe(false);
+        expect(brandAlreadyPresent('peanut butter', '&')).toBe(false);
     });
 });

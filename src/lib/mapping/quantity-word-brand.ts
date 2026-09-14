@@ -40,16 +40,12 @@ import type { ParsedIngredient } from '../parse/ingredient-line';
  */
 
 /**
- * Token fold used ONLY by the refusal predicate below, to compare a lexicon
- * brand spelling against the raw line and the parser's own field assignments.
- *
- * It is deliberately module-private and is NOT applied to the containment check
- * in `preserveDroppedBrand()`, which stays on this tree's plain
- * `.toLowerCase().includes()` — folding that check is a separate, larger
- * behaviour change (it stops the repair prepending a brand the text already
- * spells differently) that belongs to the brand-detection work, not here.
- * `brand-detector.ts` on this tree exports no canonicalizer to reuse; if one
- * ever lands, collapse this into it rather than keeping two folds.
+ * Token fold shared by the refusal predicate below and by clause 3 of
+ * `brandAlreadyPresent()`: lowercase, apostrophes (straight, curly, backtick)
+ * removed, `&` spelled `and`, hyphens, dots and slashes split into words. It
+ * stays module-private. `brand-detector.ts` on this tree exports no
+ * canonicalizer to reuse; if one ever lands, collapse this into it rather than
+ * keeping two folds.
  */
 function foldBrandTokens(value: string): string[] {
     return value
@@ -61,6 +57,80 @@ function foldBrandTokens(value: string): string[] {
         .trim()
         .split(' ')
         .filter(Boolean);
+}
+
+/**
+ * A trailing `s` after at least three word characters, dropped: `jerrys` ->
+ * `jerry`, `poptarts` -> `poptart`. The length bar is the one
+ * `repairDroppedBrand()`'s plural rule has always used.
+ */
+function dropPluralS(token: string): string {
+    return token.replace(/(?<=\w{3})s$/, '');
+}
+
+/**
+ * "IS THE BRAND ALREADY PRESENT?" — ONE ANSWER, AND BOTH GUARDS IN THIS FILE ASK
+ * IT (punch #167, 2026-09-14).
+ *
+ * Guard 1 (`preserveDroppedBrand()`) used to ask with a contiguous
+ * `.toLowerCase().includes()` and guard 2 (`repairDroppedBrand()`) with an
+ * alphanumeric fold plus a plural rule, so the same text carried a brand for one
+ * guard and lacked it for the other. Guard 1 then prepended the brand to a line
+ * that already spelled it — `M&M's m and ms pretzel`, `Optimum Nutrition optimum
+ * weigh nutrition protein` — and the normalize model deduped the doubled brand
+ * away, taking a food token (`weigh`) or the brand itself (`pad thai`) with it.
+ *
+ * PRESENT WHEN ANY CLAUSE HOLDS. Clauses 1 and 2 are the two guards' old tests,
+ * verbatim, so neither guard reads a brand absent that it used to read present;
+ * only clause 3 is new.
+ *   1. contiguous, case-insensitive — guard 1's old test;
+ *   2. contiguous after an alphanumeric fold, plural-tolerant — guard 2's old
+ *      test (`Pop-Tarts` in `pop tart`, `m&ms` in `m m's`);
+ *   3. every folded brand WORD present, in any order, plural-tolerant — `&`
+ *      against `and`, straight or curly apostrophes, and brand words a typo or a
+ *      flavour split apart.
+ *
+ * WHY WORDS, AND WHY THE PLURAL RULE. Measured 2026-09-14 over the doubling rows
+ * of the committed 1,553-row `AiNormalizeCache` census (selection:
+ * `scripts/eval/punch-167-composite-arm/s49row3_predicate.ts --set`, 11 rows /
+ * 83 serves; replay: `s50_guard1_census.ts` in the same directory): guard 1
+ * doubled all 11 before this change and none after; guard 2 doubled one
+ * (`M&M's` against `m and ms pretzel`, 24 serves) and none after. On the seven
+ * rows `s49row3_tokenizer_probe.ts` scores, a contiguous `&`/apostrophe fold
+ * (#407's kept branch `903dd09`) still doubles 3 (21 serves), and a word test
+ * without the plural rule still doubles `Ben & Jerry's` against `and ben jerry`
+ * (19). Two of the 11 census rows are the selection's own over-reads — `carls jr
+ * big carl` and `chips ahoy chewy chocolate chip cookies`, where the whole phrase
+ * is the brand and nothing was doubled [reasoning, from the rows].
+ *
+ * WHAT IT DOES NOT ACCEPT: a brand of which only some words are present —
+ * `Optimum Nutrition` in `optimum protein`, `Great Value` in `great northern
+ * beans`. A first-word test (`candidateMatchesTargetBrand()`) calls both present,
+ * which on guard 1 would leave the retrieval query brand-blind. Guard 2 keeps
+ * that first-word leniency in front of this predicate; see `repairDroppedBrand()`.
+ *
+ * A wider "present" can only remove a prepend, never add one. What that costs is
+ * a line whose every brand word happens to appear as an ordinary word; the read
+ * over the real `SegmentationCache` inputs is in the mobile report
+ * `sync-docs/reports/2026-09-14_lane-a-s50-punch-167-with-its-gate.md` §ROW 2.
+ */
+export function brandAlreadyPresent(text: string | undefined, brand: string): boolean {
+    // (1) contiguous and case-insensitive: guard 1's whole test before #167, kept verbatim.
+    if ((text ?? '').toLowerCase().includes(brand.toLowerCase())) return true;
+    if (!text) return false;
+    // (2) contiguous after an alphanumeric fold, plural-tolerant: guard 2's test before #167.
+    const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const foldedBrand = alnum(brand);
+    const foldedText = alnum(text);
+    if (foldedBrand.length > 0
+        && (foldedText.includes(foldedBrand) || foldedText.includes(dropPluralS(foldedBrand)))) {
+        return true;
+    }
+    // (3) every folded brand word present, in any order, plural-tolerant.
+    const brandWords = foldBrandTokens(brand).map(dropPluralS);
+    if (brandWords.length === 0) return false;
+    const textWords = new Set(foldBrandTokens(text).map(dropPluralS));
+    return brandWords.every(word => textWords.has(word));
 }
 
 /**
@@ -160,16 +230,16 @@ export type BrandPreservationOutcome = {
  * by a hand-written replica (project memory: a helper number must come from the
  * shipped function).
  *
- * BEHAVIOUR IS UNCHANGED FROM THE INLINE FORM IT REPLACES EXCEPT FOR THE
- * `brandWasConsumedAsQuantity()` REFUSAL. Both containment checks are the same
- * `.toLowerCase().includes()` the inline block used — deliberately, so that
- * every line the refusal does not fire on keeps its exact baseName. That
- * equivalence is pinned by `quantity-word-brand.test.ts` ("the extraction is
- * behaviour-preserving apart from the refusal"), which replays the verbatim
- * pre-extraction expression against this function over a hermetic fixture — and
- * was run over the 436 real `SegmentationCache` repair inputs on 2026-08-31:
- * 164 fires, 0 containment disagreements, 0 baseName disagreements on the 161
- * rows the refusal spared.
+ * BEHAVIOUR DIFFERS FROM THE INLINE FORM IT REPLACED IN TWO WAYS, and
+ * `quantity-word-brand.test.ts` pins both against the verbatim pre-extraction
+ * expression over a hermetic fixture:
+ *   - the `brandWasConsumedAsQuantity()` refusal (2026-08-31; over the 436 real
+ *     `SegmentationCache` repair inputs then: 164 fires, 0 containment
+ *     disagreements, 0 baseName disagreements on the 161 rows it spared);
+ *   - both containment checks ask `brandAlreadyPresent()` instead of a plain
+ *     `.toLowerCase().includes()` (punch #167, 2026-09-14). That is a strict
+ *     widening, so it can only turn a prepend into no repair (first check) or
+ *     into the re-derivation as it stands (second check) — never add a brand.
  */
 /**
  * WHAT A DECLINE RETURNS, AND THE ONE WAY IT DIFFERS FROM master.
@@ -208,16 +278,15 @@ export function preserveDroppedBrand(args: {
     parsed: ParsedIngredient | null | undefined;
 }): BrandPreservationOutcome {
     const { rawLine, baseName, targetBrand, rederived, parsed } = args;
-    const lowerBrand = targetBrand.toLowerCase();
 
-    if (baseName.toLowerCase().includes(lowerBrand)) {
+    if (brandAlreadyPresent(baseName, targetBrand)) {
         return { baseName, applied: false, declined: null };
     }
     if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) {
         return { baseName, applied: false, declined: 'brand_consumed_as_quantity' };
     }
     return {
-        baseName: rederived.toLowerCase().includes(lowerBrand)
+        baseName: brandAlreadyPresent(rederived, targetBrand)
             ? rederived
             : `${targetBrand} ${rederived}`.trim(),
         applied: true,
@@ -321,9 +390,11 @@ export function brandReassertEvidence(args: {
  *      `candidateMatchesTargetBrand()` folds apostrophes but not `&`, so the
  *      segmenter brand `m&ms` against the model's `m m's` was "dropped" and the
  *      re-assert produced the retrieval query `m&ms m m's` (branch-arm MEL,
- *      2026-09-05 20:42Z). Here a brand whose alphanumeric fold is a substring
- *      of the name's alphanumeric fold counts as KEPT. A false "kept" only
- *      suppresses a repair — today's behaviour — so this errs the safe way.
+ *      2026-09-05 20:42Z). Here a brand `brandAlreadyPresent()` reads as present
+ *      counts as KEPT — its clause 2 is this helper's former alphanumeric fold
+ *      and plural rule, and its clause 3 also reads `M&M's` in `m and ms
+ *      pretzel`, which the fold missed. A false "kept" only suppresses a repair,
+ *      so this errs the safe way.
  *   2. A multi-token brand of which the model kept the LAST token. The
  *      segmenter re-drew `Ryse Skippy` as the brand of `.75 scoop ryse skippy
  *      peanut butter`, the model returned `skippy peanut butter`, and the whole
@@ -332,18 +403,15 @@ export function brandReassertEvidence(args: {
  *      same rule `deriveMappingCacheKey()` already applies to the key.
  *
  * Returns null when the brand is judged present (no repair), else the repaired
- * name. The pure `alnum()` fold is deliberately not exported: it is a
- * containment heuristic for THIS decision, not a tokenizer.
+ * name. `candidateMatchesTargetBrand()`'s first-word test stays in front of the
+ * shared predicate on purpose: this input is the model's own output, and a brand
+ * of which the model kept only the first word (`optimum protein`) would
+ * otherwise be prepended on top of it — the doubling #167 removes from guard 1.
  */
 export function repairDroppedBrand(name: string | undefined, targetBrand: string): string | null {
     if (!name) return null;
     if (candidateMatchesTargetBrand(undefined, name, targetBrand)) return null;
-    const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const foldedBrand = alnum(targetBrand);
-    const foldedName = alnum(name);
-    if (foldedBrand.length > 0 && foldedName.includes(foldedBrand)) return null;
-    // A plural brand the model singularised (`Pop-Tarts` → `pop tart`) is kept too.
-    if (foldedBrand.endsWith('s') && foldedBrand.length > 3 && foldedName.includes(foldedBrand.slice(0, -1))) return null;
+    if (brandAlreadyPresent(name, targetBrand)) return null;
     const tokens = `${targetBrand} ${name}`.trim().split(/\s+/).filter(Boolean);
     const out: string[] = [];
     for (const t of tokens) {
