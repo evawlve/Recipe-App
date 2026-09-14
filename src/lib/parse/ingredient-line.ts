@@ -220,11 +220,15 @@ function consumePartitiveOf(tokens: string[], i: number): number {
 // is that they must see the UNIT. Once they do, startsWithUnit turns true and
 // the partitive skip already living in that branch handles the "of" for free.
 /**
- * The number words `parseQuantityTokens()` reads as quantities. Restated here
- * rather than exported from quantity.ts on purpose: this guard must fire on
- * exactly the tokens that function would consume, so the two lists being
- * separate is the bug, not the design. Kept in sync by
- * `word-number-brand.test.ts`, which asserts the intersection directly.
+ * The number words `parseQuantityTokens()` reads as quantities — the keys of its
+ * function-local `WORD_NUMBERS` map. Restated here rather than exported from
+ * quantity.ts on purpose: this guard must fire on exactly the tokens that
+ * function would consume, so the two lists being separate is the bug, not the
+ * design. `__tests__/word-number-brand.test.ts` holds the two together in both
+ * directions: it reads both literals and asserts they name the same words, that
+ * `parseQuantityTokens()` consumes every member of this set as a count, and that
+ * `matchWordNumberBrandTokens()` keeps every `WORD_NUMBERS` key out of the
+ * quantity parse when a multi-token brand opening with it is detected.
  */
 const QUANTITY_WORD_NUMBERS = new Set([
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
