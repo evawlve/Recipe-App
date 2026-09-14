@@ -1,0 +1,176 @@
+{
+  "createdAt": "2026-09-12T22:20:12.563Z",
+  "seedsPath": "/private/tmp/claude-501/-Users-diego-dev-KindaHealthyMobile/ab34bb2c-7876-4105-874d-44652fd90129/scratchpad/s49row3_seeds.txt",
+  "lines": [
+    {
+      "line": "m and ms pretzel",
+      "items": [
+        {
+          "rawText": "m and ms pretzel",
+          "normalizedForm": "pretzel",
+          "brand": "m and ms"
+        }
+      ]
+    },
+    {
+      "line": "a fun size bag of m and ms",
+      "items": [
+        {
+          "rawText": "a fun size bag of m and ms",
+          "normalizedForm": "m and ms",
+          "brand": "m and ms"
+        }
+      ]
+    },
+    {
+      "line": "noodles and company pad thai",
+      "items": [
+        {
+          "rawText": "noodles and company pad thai",
+          "normalizedForm": "pad thai",
+          "brand": "noodles and company"
+        }
+      ]
+    },
+    {
+      "line": "optimum weigh nutrition protein",
+      "items": [
+        {
+          "rawText": "optimum weigh nutrition protein",
+          "normalizedForm": "protein",
+          "brand": "Optimum Nutrition"
+        }
+      ]
+    },
+    {
+      "line": "and a half of optimum weight nutrition protein",
+      "items": [
+        {
+          "rawText": "and a half of optimum weight nutrition protein",
+          "normalizedForm": "protein",
+          "brand": "optimum weight nutrition"
+        }
+      ]
+    },
+    {
+      "line": "ben and jerrys cherry garcia",
+      "items": [
+        {
+          "rawText": "ben and jerrys cherry garcia",
+          "normalizedForm": "cherry garcia",
+          "brand": "ben and jerrys"
+        }
+      ]
+    },
+    {
+      "line": "and ben jerry",
+      "items": [
+        {
+          "rawText": "and ben jerry",
+          "normalizedForm": "and ben jerry",
+          "brand": ""
+        }
+      ]
+    },
+    {
+      "line": "angies boomchickapop sweet and salty",
+      "items": [
+        {
+          "rawText": "angies boomchickapop sweet and salty",
+          "normalizedForm": "boomchickapop sweet and salty",
+          "brand": "angies"
+        }
+      ]
+    },
+    {
+      "line": "a serving of mcdonalds sized french fries",
+      "items": [
+        {
+          "rawText": "a serving of mcdonalds sized french fries",
+          "normalizedForm": "french fries",
+          "brand": "mcdonalds"
+        }
+      ]
+    },
+    {
+      "line": "optimum whey nutrition protein",
+      "items": [
+        {
+          "rawText": "optimum whey nutrition protein",
+          "normalizedForm": "whey protein",
+          "brand": "Optimum Nutrition"
+        }
+      ]
+    },
+    {
+      "line": "optimum nutrition weigh protein",
+      "items": [
+        {
+          "rawText": "optimum nutrition weigh protein",
+          "normalizedForm": "weigh protein",
+          "brand": "optimum nutrition"
+        }
+      ]
+    },
+    {
+      "line": "optimum gold nutrition protein",
+      "items": [
+        {
+          "rawText": "optimum gold nutrition protein",
+          "normalizedForm": "protein",
+          "brand": "Optimum Nutrition"
+        }
+      ]
+    },
+    {
+      "line": ".75 scoop Ryse skippy peanut butter",
+      "items": [
+        {
+          "rawText": ".75 scoop Ryse skippy peanut butter",
+          "normalizedForm": "peanut butter",
+          "brand": "Ryse"
+        }
+      ]
+    },
+    {
+      "line": "Two chocolate caramel rice cakes from Quaker",
+      "items": [
+        {
+          "rawText": "Two chocolate caramel rice cakes",
+          "normalizedForm": "chocolate caramel rice cakes",
+          "brand": "Quaker"
+        }
+      ]
+    },
+    {
+      "line": "m and ms pretzel and a banana",
+      "items": [
+        {
+          "rawText": "m and ms pretzel",
+          "normalizedForm": "m and ms pretzel",
+          "brand": "m and ms"
+        },
+        {
+          "rawText": "a banana",
+          "normalizedForm": "banana",
+          "brand": ""
+        }
+      ]
+    },
+    {
+      "line": "ben and jerrys cherry garcia with a coffee",
+      "items": [
+        {
+          "rawText": "ben and jerrys cherry garcia",
+          "normalizedForm": "cherry garcia",
+          "brand": "Ben and Jerry's"
+        },
+        {
+          "rawText": "a coffee",
+          "normalizedForm": "coffee",
+          "brand": ""
+        }
+      ]
+    }
+  ]
+}

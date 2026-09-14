@@ -436,6 +436,30 @@
       "verified": "2026-07-30"
     },
     {
+      "id": "box-grub-timeout-is-zero",
+      "claim": "The box boots headless without stopping at a GRUB menu: the drop-in /etc/default/grub.d/99-headless.cfg, which sorts after Mint's 98_mintsysadm.cfg (GRUB_TIMEOUT=-1) and therefore wins, sets GRUB_TIMEOUT=0. A 0 here means the drop-in was removed or edited, and an unattended reboot after a power cut can wait at a menu no monitor shows. It reads the drop-in, not the GENERATED /boot/grub/grub.cfg, because that file is root-only; the owner doc records that the generated file is the one to verify by hand",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-14_the-box-survives-a-power-cut-headless.md",
+      "where": "box",
+      "command": "grep -c '^GRUB_TIMEOUT=0$' /etc/default/grub.d/99-headless.cfg",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-09-14"
+    },
+    {
+      "id": "box-runs-without-i915",
+      "claim": "The box's running kernel has the i915 driver NOT loaded (modprobe.blacklist=i915 with intel_iommu=igfx_off on the kernel command line). i915 NULL-dereferenced at ~4.6 s on 2 of 3 boots of this box, which is what made unattended power-cut recovery fail. A 1 here means the blacklist is gone and the next reboot can panic",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-14_the-box-survives-a-power-cut-headless.md",
+      "where": "box",
+      "command": "lsmod | grep -c '^i915 '",
+      "expect": {
+        "kind": "count",
+        "value": "0"
+      },
+      "verified": "2026-09-14"
+    },
+    {
       "id": "claude-md-doc-pointers-resolve",
       "claim": "Every markdown pointer cited in CLAUDE.md resolves: the sync-docs/ and plans/ forms, and the bare reports/, log/ and bare-filename forms the corpus uses interchangeably, resolved against the repo root, sync-docs/, sync-docs/reports/ and sync-docs/log/. The only pointers exempt are those the citing line's own prose marks as living in the backend repo, which a mobile-context command cannot see. Absolute pointers (beginning with /) are exempt too, because they name a host's filesystem rather than a repo doc: /home/owner/minecraft/README.md exists on the box and not on the Mac, so testing it reads red on one host and green on the other, and neither is a result. A dead pointer in the read-now tier sends the next reader nowhere",
       "ownerDoc": "mobile:CLAUDE.md#doc-rules",
