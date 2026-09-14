@@ -65,12 +65,27 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
+/**
+ * An entry the readers do not recognise — a spread (`...EXTRA`), a named value
+ * (`thirteen: BAKERS_DOZEN`) — must fail the test, never be skipped: a skipped
+ * entry leaves the reader returning the same fourteen words while the lists diverge.
+ */
+function readEntries(body: string, entry: RegExp): string[] {
+  const text = stripComments(body);
+  const words = [...text.matchAll(entry)].map((m) => m[1]);
+  const rest = text.replace(entry, '');
+  if (/[^,\s]/.test(rest)) {
+    throw new Error(`word-number-brand.test: unrecognised entry in a list literal: ${JSON.stringify(rest.trim())}`);
+  }
+  return words;
+}
+
 function mapKeysOf(body: string): string[] {
-  return [...stripComments(body).matchAll(/['"`]?([a-z]+)['"`]?\s*:\s*[\d.]+/g)].map((m) => m[1]);
+  return readEntries(body, /['"`]?([a-z]+)['"`]?\s*:\s*\d+/g);
 }
 
 function setMembersOf(body: string): string[] {
-  return [...stripComments(body).matchAll(/['"`]([a-z]+)['"`]/g)].map((m) => m[1]);
+  return readEntries(body, /['"`]([a-z]+)['"`]/g);
 }
 
 /** The keys of `WORD_NUMBERS` inside `parseQuantityTokens()`. */
@@ -98,6 +113,9 @@ describe('the number-word lists agree', () => {
     expect(mapKeysOf("\n  one: 1, 'tres': 3, \"cuatro\": 4, // 'cinco': 5\n  /* seis: 6 */ dozen: 12,\n"))
       .toEqual(['one', 'tres', 'cuatro', 'dozen']);
     expect(setMembersOf("\n  'one', \"tres\", // 'cinco'\n  'dozen',\n")).toEqual(['one', 'tres', 'dozen']);
+    expect(() => mapKeysOf('one: 1, ...EXTRA')).toThrow(/unrecognised entry/);
+    expect(() => mapKeysOf('one: 1, thirteen: BAKERS_DOZEN')).toThrow(/unrecognised entry/);
+    expect(() => setMembersOf("'one', ...MORE")).toThrow(/unrecognised entry/);
   });
 
   test('both literals name the same fourteen words', () => {
@@ -114,6 +132,9 @@ describe('the number-word lists agree', () => {
     }
   });
 
+  // Being brand-led does not protect a word the set lacks: behind the same synthetic
+  // brand, `half` is still consumed (qty 0.5, name `zzqx crisps`, measured 2026-09-14).
+  // What protects a word is membership, which is why the pin is on the set.
   test('WORD_NUMBERS -> the brand guard: every key stays in the name behind a detected brand', () => {
     for (const word of parserMapWords()) {
       const r = parseBehindSyntheticBrand(word);

@@ -27,7 +27,8 @@
  * ==========================================================================
  * STRICTLY READ-ONLY  (this is a promise, and it is enforced in code)
  * ==========================================================================
- * This script NEVER writes to FoodMapping or any other table. A Prisma `$use`
+ * This script NEVER writes to FoodMapping or any other table — within the limits
+ * `./winner-diff-write-guard.ts` lists under WHAT IT CANNOT SEE. A Prisma `$use`
  * middleware (`installWriteGuard`, built by `./winner-diff-write-guard.ts`, which
  * owns the detail) NO-OPS two classes of operation, tallying each into
  * `suppressedWrites`, which is printed:
@@ -41,14 +42,17 @@
  * `snapshot` additionally ABORTS the mapper at gather, so the save path is not
  * merely guarded — it is never reached.
  *
- * Runs made before (2) existed were NOT read-only. `getAiNormalizeCache()` reads
- * through `touchAndFetchCacheRow()` in `src/lib/mapping/validated-mapping-helpers.ts`,
- * which tries a raw `UPDATE "AiNormalizeCache" SET "useCount" = "useCount" + 1,
+ * Runs on a tree at or after `1e7213d` (2026-08-01, where the raw touch landed) and
+ * before (2) existed were NOT read-only. `getAiNormalizeCache()` reads through
+ * `touchAndFetchCacheRow()` in `src/lib/mapping/validated-mapping-helpers.ts`, which
+ * tries a raw `UPDATE "AiNormalizeCache" SET "useCount" = "useCount" + 1,
  * "lastUsedAt" = now() … RETURNING *` FIRST and falls back to `findUnique` plus
  * `aiNormalizeCache.update()` only when that statement throws. The guard matched
  * only the fallback's `update`, so those runs bumped `useCount` and `lastUsedAt` on
- * every AiNormalizeCache row they touched through the raw path. (Read from the code;
- * not measured against the database.)
+ * every AiNormalizeCache row they touched through the raw path. (Read from the code,
+ * not measured against the database; that the UPDATE arrives as action `queryRaw`
+ * was measured by Lane A S49's guard self-test.) Runs from 2026-07-26 to 2026-08-01
+ * met the model `update` path, which the guard did match.
  *
  * The guard NO-OPs rather than THROWS, and a no-oped mutating raw query returns
  * `null`, not `[]`. `null` makes `touchAndFetchCacheRow()`'s own `rows[0]` read throw

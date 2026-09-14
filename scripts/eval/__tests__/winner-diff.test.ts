@@ -2527,7 +2527,9 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
  * A fake `next` stands in for Prisma: a suppressed operation must return without
  * calling it, and everything else must reach it untouched. Raw fixtures are
  * middleware `params.args` in the shapes `rawSqlOf()` reads: a template-tag
- * `$queryRaw` as `[strings, ...values]`, a `$queryRawUnsafe(sql)` as `[sql]`.
+ * `$queryRaw` as `[strings, ...values]`, a `$queryRawUnsafe(sql)` as `[sql]` —
+ * measured on Prisma 5.18, 2026-09-14, with a SELECT-only probe
+ * (`[["SELECT 1 as one"]]` and `["SELECT 2 as two"]`).
  */
 describe('winner-diff write guard', () => {
     // touchAndFetchCacheRow()'s statement, split by the template tag around its one value.

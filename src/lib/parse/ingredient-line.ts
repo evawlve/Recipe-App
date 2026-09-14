@@ -229,6 +229,10 @@ function consumePartitiveOf(tokens: string[], i: number): number {
  * `parseQuantityTokens()` consumes every member of this set as a count, and that
  * `matchWordNumberBrandTokens()` keeps every `WORD_NUMBERS` key out of the
  * quantity parse when a multi-token brand opening with it is detected.
+ * NOT covered: `parseQuantityTokens()` also consumes `half`, `quarter` and
+ * `third` through its separate `wordFractions` map, and this set holds none of
+ * them, so a brand opening with one would still lose that word (no brand in
+ * `brand-lexicon.json` or `brand-detector.ts` does, 2026-09-14; Lane A S50 report).
  */
 const QUANTITY_WORD_NUMBERS = new Set([
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',

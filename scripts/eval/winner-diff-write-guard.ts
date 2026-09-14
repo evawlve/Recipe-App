@@ -28,8 +28,10 @@
  *
  * WHY A NO-OPED MUTATING RAW QUERY RETURNS `null`, NOT `[]`.
  * `touchAndFetchCacheRow()` reads `rows[0]` inside its own try/catch. `null` makes
- * that read throw; the catch demotes the process to the fallback for good, where
- * `findUnique` — a read — passes and `update` is suppressed by (1). A genuine cache
+ * that read throw; the catch demotes the process to the fallback for good (logging
+ * `ai_normalize_cache.raw_touch_unsupported` once per process — expected under this
+ * guard, not a driver fault), where `findUnique` — a read — passes and `update` is
+ * suppressed by (1). A genuine cache
  * HIT therefore still reaches the caller and only the usage bump is lost. `[]` would
  * read as a MISS (`rows[0] ?? null`) and send the line to the LLM, so a snapshot
  * would differ from what production serves.
@@ -41,7 +43,10 @@
  *
  * WHAT IT CANNOT SEE — a zero tally is not proof that nothing was written:
  *   - a mutating statement that does not OPEN with a `MUTATING_SQL` verb (a
- *     `WITH … UPDATE` CTE, a leading SQL comment);
+ *     `WITH … UPDATE` CTE, a leading SQL comment, `MERGE`, `COPY`, `CALL`/`DO`,
+ *     `SELECT … INTO`, `SELECT nextval()`/`setval()`) — none is reachable from the
+ *     code winner-diff runs on 2026-09-14, by a grep of `$queryRaw`/`$executeRaw`
+ *     over `src/`;
  *   - an args shape `rawSqlOf()` does not recognise: its fallback is a JSON dump the
  *     anchored `MUTATING_SQL` cannot match, so that statement PASSES;
  *   - any client other than the one it is installed on.
