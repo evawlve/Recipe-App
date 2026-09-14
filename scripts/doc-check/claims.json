@@ -460,6 +460,18 @@
       "verified": "2026-08-18"
     },
     {
+      "id": "read-now-tier-within-byte-budget",
+      "claim": "The read-now tier (CLAUDE.md + the newest 2 files in sync-docs/log/, by FILENAME order like its line-budget companion) is at most 90,000 BYTES. The line budget alone measured nothing: a markdown table cell is one line to wc -l, so CLAUDE.md grew 15 KB -> 160 KB between 2026-07-30 and 2026-09-14 (66 KB of it in 54 single-line Reading-table rows) while read-now-tier-within-budget stayed green. On 2026-09-14 CLAUDE.md became a map (531 lines / 55 KB) with the relocated detail verbatim in sync-docs/claude_md_annex.md, and the tier measured 68,094 bytes; 90,000 leaves room for the map to grow by a third and for two 150-line write-offs. If this FAILS, relocate paragraphs into their owner report or the annex per CLAUDE.md doc rule 8 - never delete a trap. Merge order: this claim must land AFTER the mobile branch that shrank CLAUDE.md, because the box's nightly reads the Mac's checked-out working tree.",
+      "ownerDoc": "mobile:CLAUDE.md#doc-rules",
+      "where": "mobile",
+      "command": "{ cat CLAUDE.md; ls -1 sync-docs/log/2026-*.md | tail -2 | xargs cat; } | wc -c",
+      "expect": {
+        "kind": "max",
+        "value": "90000"
+      },
+      "verified": "2026-09-14"
+    },
+    {
       "id": "handoff-format-retired",
       "claim": "No handoff_*.md survives at the sync-docs top level — sync-docs/log/README.md declares that format replaced by session write-offs, and the 7 that remained were archived 2026-07-30",
       "ownerDoc": "mobile:sync-docs/log/README.md",
