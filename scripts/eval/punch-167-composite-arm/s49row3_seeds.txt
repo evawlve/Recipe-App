@@ -1,0 +1,31 @@
+# s49row3_seeds.txt — seed set for the pinned composite-path arm (Lane A S49 ROW 3).
+# Every line goes through segmentTextWithAi(), so EVERY line reaches the composite
+# path (options.normalizedForm is set even for a one-item result) — which is the
+# only path on which preserveDroppedBrand() can fire.
+#
+# Group 1 — THE DOUBLING CLASS, recovered by s49row3_predicate.ts --set from the
+# committed 1,553-row AiNormalizeCache census. The census stores the POST-repair
+# baseName, so these are the tails, which are the user-side phrasings.
+m and ms pretzel
+a fun size bag of m and ms
+noodles and company pad thai
+optimum weigh nutrition protein
+and a half of optimum weight nutrition protein
+# Group 2 — the class WORKING. A fix MUST NOT break these.
+ben and jerrys cherry garcia
+and ben jerry
+# Group 3 — new rows the predicate surfaced that the S47 five-row table never listed.
+angies boomchickapop sweet and salty
+a serving of mcdonalds sized french fries
+# Group 4 — the ADJACENCY arms C/D/E of S47 §2, as typed lines. C and E must double
+# today, D must not; that asymmetry is the mechanism #167 targets.
+optimum whey nutrition protein
+optimum nutrition weigh protein
+optimum gold nutrition protein
+# Group 5 — the S40 co-brand seeds. Guard 1's payload is exactly what guard 2 reads.
+.75 scoop Ryse skippy peanut butter
+Two chocolate caramel rice cakes from Quaker
+# Group 6 — genuinely MULTI-item lines, so the per-ITEM diff key is exercised and a
+# segmentation-count change cannot hide inside a per-line comparison.
+m and ms pretzel and a banana
+ben and jerrys cherry garcia with a coffee
