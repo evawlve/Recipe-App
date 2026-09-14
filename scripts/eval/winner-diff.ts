@@ -27,19 +27,42 @@
  * ==========================================================================
  * STRICTLY READ-ONLY  (this is a promise, and it is enforced in code)
  * ==========================================================================
- * This script NEVER writes to FoodMapping or any other table. A Prisma `$use`
- * middleware (`installWriteGuard`) intercepts every mutating operation
- * (create/createMany/update/updateMany/upsert/delete/deleteMany/executeRaw/
- * executeRawUnsafe) and NO-OPS it, tallying model+action into `suppressedWrites`,
- * which is printed. Nothing here calls warm-cache, saveValidatedMapping, or any
- * repoint/evict path. `snapshot` additionally ABORTS the mapper at gather, so the
- * save path is not merely guarded — it is never reached.
+ * This script NEVER writes to FoodMapping or any other table — within the limits
+ * `./winner-diff-write-guard.ts` lists under WHAT IT CANNOT SEE. A Prisma `$use`
+ * middleware (`installWriteGuard`, built by `./winner-diff-write-guard.ts`, which
+ * owns the detail) NO-OPS two classes of operation, tallying each into
+ * `suppressedWrites`, which is printed:
+ *   1. every action in `MUTATING` — create/createMany/createManyAndReturn/update/
+ *      updateMany/upsert/delete/deleteMany/executeRaw/executeRawUnsafe;
+ *   2. every queryRaw/queryRawUnsafe whose SQL text opens with UPDATE, INSERT,
+ *      DELETE, TRUNCATE, ALTER, DROP or CREATE (`RAW_ACTIONS` + `MUTATING_SQL`, read
+ *      through `rawSqlOf()`). Prisma reports `$queryRaw` as a read action, so (1)
+ *      alone cannot see a write issued through it.
+ * Nothing here calls warm-cache, saveValidatedMapping, or any repoint/evict path.
+ * `snapshot` additionally ABORTS the mapper at gather, so the save path is not
+ * merely guarded — it is never reached.
  *
- * The guard NO-OPs rather than THROWS on purpose. `getAiNormalizeCache`
- * (validated-mapping-helpers.ts:978) bumps `useCount` with an `update` INSIDE the
- * same try/catch that returns the cached row, so a throwing guard converts a genuine
- * cache HIT into a `null` MISS and silently deletes `aiNutritionEstimate` and
- * `isBrandedQuery` from the snapshot.
+ * Runs on a tree at or after `1e7213d` (2026-08-01, where the raw touch landed) and
+ * before (2) existed were NOT read-only. `getAiNormalizeCache()` reads through
+ * `touchAndFetchCacheRow()` in `src/lib/mapping/validated-mapping-helpers.ts`, which
+ * tries a raw `UPDATE "AiNormalizeCache" SET "useCount" = "useCount" + 1,
+ * "lastUsedAt" = now() … RETURNING *` FIRST and falls back to `findUnique` plus
+ * `aiNormalizeCache.update()` only when that statement throws. The guard matched
+ * only the fallback's `update`, so those runs bumped `useCount` and `lastUsedAt` on
+ * every AiNormalizeCache row they touched through the raw path. (Read from the code,
+ * not measured against the database; that the UPDATE arrives as action `queryRaw`
+ * was measured by Lane A S49's guard self-test.) Runs from 2026-07-26 to 2026-08-01
+ * met the model `update` path, which the guard did match.
+ *
+ * The guard NO-OPs rather than THROWS, and a no-oped mutating raw query returns
+ * `null`, not `[]`. `null` makes `touchAndFetchCacheRow()`'s own `rows[0]` read throw
+ * inside its try/catch, which demotes it to the fallback: `findUnique` (a read) returns
+ * the row and only the bump is lost, so a genuine cache HIT still reaches the
+ * snapshot. `[]` would read as a MISS and send the line to the LLM — a snapshot that
+ * differs from what production serves. A THROWING guard does the same damage through
+ * the fallback's `update`: the throw escapes into `getAiNormalizeCache()`'s
+ * try/catch, the HIT becomes a `null` MISS, and `aiNutritionEstimate` and
+ * `isBrandedQuery` silently vanish from the snapshot.
  *
  * ==========================================================================
  * MODES
@@ -172,6 +195,7 @@ import {
     isSkippedHashDir,
     selectHashablePaths,
 } from './winner-diff-screens';
+import { installWriteGuard as installPrismaWriteGuard } from './winner-diff-write-guard';
 
 // ============================================================
 // 0. env — load the machine .env, then FORCE production flags
@@ -900,12 +924,10 @@ function copy_isMatchableVolumeUnit(unit: string): boolean {
 
 // ============================================================
 // 5. WRITE GUARD  (see the READ-ONLY promise in the header)
+//    The action sets, the raw-SQL inspection and the middleware live in
+//    ./winner-diff-write-guard, so __tests__/winner-diff.test.ts can pin them
+//    without constructing this file's PrismaClient.
 // ============================================================
-
-const MUTATING = new Set([
-    'create', 'createMany', 'createManyAndReturn', 'update', 'updateMany',
-    'upsert', 'delete', 'deleteMany', 'executeRaw', 'executeRawUnsafe',
-]);
 
 let suppressedWrites: Record<string, number> = {};
 let guardInstalled = false;
@@ -913,14 +935,11 @@ let guardInstalled = false;
 function installWriteGuard() {
     if (guardInstalled) return;
     guardInstalled = true;
-    prisma.$use(async (params: any, next: any) => {
-        if (MUTATING.has(params.action)) {
-            const key = `${params.model ?? 'raw'}.${params.action}`;
-            suppressedWrites[key] = (suppressedWrites[key] ?? 0) + 1;
-            // NO-OP, never throw — see the header note on getAiNormalizeCache.
-            return null;
-        }
-        return next(params);
+    // A callback rather than a captured object: the snapshot and verify loops
+    // reassign `suppressedWrites = {}` per row, so the tally must land in the
+    // binding current at the time of the suppressed call.
+    installPrismaWriteGuard(prisma, (key) => {
+        suppressedWrites[key] = (suppressedWrites[key] ?? 0) + 1;
     });
 }
 
@@ -3043,9 +3062,11 @@ TYPICAL SEQUENCE
   $RUN diff --a /tmp/wd-A.json --b /tmp/wd-B.json --screens --snapshot /tmp/wd-snap.json
 
 READ-ONLY GUARANTEE
-  A Prisma \$use middleware no-ops every create/update/upsert/delete/executeRaw and
-  tallies what it suppressed. \`snapshot\` also aborts the mapper at gather, so the
-  save path is never reached. Nothing here calls warm-cache or saveValidatedMapping.
+  A Prisma \$use middleware no-ops every create/update/upsert/delete/executeRaw, and
+  every queryRaw/queryRawUnsafe whose statement opens with UPDATE/INSERT/DELETE/
+  TRUNCATE/ALTER/DROP/CREATE, and tallies what it suppressed. \`snapshot\` also aborts
+  the mapper at gather, so the save path is never reached. Nothing here calls
+  warm-cache or saveValidatedMapping.
 `;
 
 async function main() {
@@ -3064,7 +3085,7 @@ async function main() {
 
     say(`winner-diff  mode=${mode}  repo=${REPO_ROOT}`);
     say(`env: ${ENV_FILES.join(', ')}   forced: ${Object.entries(FORCED_FLAGS).map(([k, v]) => k + '=' + v).join(' ')}`);
-    say('READ-ONLY: every DB mutation is intercepted and no-oped; nothing is written to FoodMapping.');
+    say('READ-ONLY: every mutating model action, and every raw query that opens with a mutating verb, is intercepted and no-oped; nothing is written to FoodMapping.');
 
     if (mode === 'snapshot') {
         const out = argStr('out');

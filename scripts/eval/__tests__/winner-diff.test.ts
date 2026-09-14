@@ -2,8 +2,9 @@
  * winner-diff.test.ts — the parts of the winner-diff harness that have a right and
  * a wrong answer, pinned against fixtures.
  *
- * NO DATABASE, NO NETWORK. It imports only ./winner-diff-screens, which by
- * construction touches nothing under src/lib. Importing ../winner-diff would
+ * NO DATABASE, NO NETWORK. It imports only ./winner-diff-screens and
+ * ./winner-diff-write-guard, which by construction touch nothing under src/lib
+ * (the guard is exercised against a fake `next`). Importing ../winner-diff would
  * construct a PrismaClient and force env flags at module load — that is exactly the
  * shape of untestability that let the abstention hole in run-eval.ts survive.
  *
@@ -64,6 +65,13 @@ import {
     isSkippedHashDir,
     HASHED_EXTRA_FILES,
 } from '../winner-diff-screens';
+import {
+    MUTATING,
+    MUTATING_SQL,
+    RAW_ACTIONS,
+    createWriteGuardMiddleware,
+    rawSqlOf,
+} from '../winner-diff-write-guard';
 
 // ============================================================
 // fixtures
@@ -2508,5 +2516,112 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
             expect({ t, mirror: isDeterministicSingleItemText(t) })
                 .toEqual({ t, mirror: routeSaysSingleItem(t) });
         }
+    });
+});
+
+// ============================================================
+// the write guard behind the READ-ONLY promise
+// ============================================================
+
+/**
+ * A fake `next` stands in for Prisma: a suppressed operation must return without
+ * calling it, and everything else must reach it untouched. Raw fixtures are
+ * middleware `params.args` in the shapes `rawSqlOf()` reads: a template-tag
+ * `$queryRaw` as `[strings, ...values]`, a `$queryRawUnsafe(sql)` as `[sql]` —
+ * measured on Prisma 5.18, 2026-09-14, with a SELECT-only probe
+ * (`[["SELECT 1 as one"]]` and `["SELECT 2 as two"]`).
+ */
+describe('winner-diff write guard', () => {
+    // touchAndFetchCacheRow()'s statement, split by the template tag around its one value.
+    const touchStrings = [
+        '\n                UPDATE "AiNormalizeCache"\n                SET "useCount" = "useCount" + 1, "lastUsedAt" = now()\n                WHERE "normalizedKey" = ',
+        '\n                RETURNING *',
+    ];
+
+    function harness() {
+        const tally: Record<string, number> = {};
+        const next = jest.fn(async (_params: unknown) => 'NEXT');
+        const guard = createWriteGuardMiddleware((key) => { tally[key] = (tally[key] ?? 0) + 1; });
+        return { tally, next, guard };
+    }
+
+    it('suppresses the raw AiNormalizeCache touch: null (not []), next not called, tallied', async () => {
+        const { tally, next, guard } = harness();
+        const out = await guard({ action: 'queryRaw', args: [touchStrings, 'chicken breast'] }, next);
+        expect(out).toBeNull();
+        expect(next).not.toHaveBeenCalled();
+        expect(tally).toEqual({ 'raw.queryRaw:MUTATING': 1 });
+    });
+
+    it('passes a raw SELECT through to next, through both raw actions', async () => {
+        const { tally, next, guard } = harness();
+        expect(await guard({ action: 'queryRaw', args: [['SELECT 1 as one']] }, next)).toBe('NEXT');
+        expect(await guard({ action: 'queryRawUnsafe', args: ['SELECT 2 as two'] }, next)).toBe('NEXT');
+        expect(next).toHaveBeenCalledTimes(2);
+        expect(tally).toEqual({});
+    });
+
+    it('suppresses a mutating $queryRawUnsafe', async () => {
+        const { tally, next, guard } = harness();
+        const out = await guard({ action: 'queryRawUnsafe', args: ['DELETE FROM "FoodMapping" WHERE "id" = $1', 7] }, next);
+        expect(out).toBeNull();
+        expect(next).not.toHaveBeenCalled();
+        expect(tally).toEqual({ 'raw.queryRawUnsafe:MUTATING': 1 });
+    });
+
+    it('suppresses a model update and passes a model findUnique', async () => {
+        const { tally, next, guard } = harness();
+        const where = { normalizedKey: 'chicken breast' };
+        expect(await guard({ action: 'update', model: 'AiNormalizeCache', args: { where, data: {} } }, next)).toBeNull();
+        expect(next).not.toHaveBeenCalled();
+        expect(await guard({ action: 'findUnique', model: 'AiNormalizeCache', args: { where } }, next)).toBe('NEXT');
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(tally).toEqual({ 'AiNormalizeCache.update': 1 });
+    });
+
+    it('inspects the raw read actions rather than blanket-suppressing them', () => {
+        // A blanket no-op on queryRaw would turn every raw SELECT the replay needs into null.
+        expect(RAW_ACTIONS.has('queryRaw')).toBe(true);
+        expect(RAW_ACTIONS.has('queryRawUnsafe')).toBe(true);
+        expect(MUTATING.has('queryRaw')).toBe(false);
+        expect(MUTATING.has('queryRawUnsafe')).toBe(false);
+        expect(MUTATING.has('findUnique')).toBe(false);
+    });
+
+    it('MUTATING_SQL catches lower-case and leading-whitespace statements', () => {
+        for (const sql of [
+            'update "AiNormalizeCache" set "useCount" = 1',
+            '   UPDATE "AiNormalizeCache" SET "useCount" = 1',
+            '\n\t insert into "FoodMapping" values (1)',
+            '\r\n  delete from "FoodMapping"',
+            'Truncate "FoodMapping"',
+            'alter table t add column c int',
+            'drop table t',
+            'create table t (c int)',
+        ]) {
+            expect({ sql, mutating: MUTATING_SQL.test(sql) }).toEqual({ sql, mutating: true });
+        }
+        for (const sql of ['SELECT 1', '  select * from "AiNormalizeCache"', 'updated_rows', 'SELECT "update" FROM t']) {
+            expect({ sql, mutating: MUTATING_SQL.test(sql) }).toEqual({ sql, mutating: false });
+        }
+    });
+
+    it('rawSqlOf reads every args shape it recognises', () => {
+        const opens = (args: unknown) => rawSqlOf(args).trimStart().slice(0, 8);
+        expect(opens('UPDATE t SET a = 1')).toBe('UPDATE t');
+        expect(opens(['UPDATE t SET a = $1', 1])).toBe('UPDATE t');
+        expect(opens([['UPDATE t SET a = ', ''], 1])).toBe('UPDATE t');
+        expect(opens([{ strings: ['UPDATE t SET a = ', ''], values: [1] }])).toBe('UPDATE t');
+        expect(opens([{ sql: 'UPDATE t SET a = ?' }])).toBe('UPDATE t');
+        expect(opens([{ text: 'UPDATE t SET a = $1' }])).toBe('UPDATE t');
+        expect(opens({ sql: 'UPDATE t SET a = ?' })).toBe('UPDATE t');
+        expect(opens({ strings: ['UPDATE t SET a = ', ''] })).toBe('UPDATE t');
+        expect(rawSqlOf(undefined)).toBe('');
+    });
+
+    it('an args shape rawSqlOf does not recognise FAILS OPEN — pinned so the limit stays visible', () => {
+        // The fallback is a JSON dump, which the anchored MUTATING_SQL cannot match.
+        const sql = rawSqlOf({ query: 'UPDATE t SET a = 1' });
+        expect(MUTATING_SQL.test(sql)).toBe(false);
     });
 });
