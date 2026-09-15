@@ -738,7 +738,9 @@ async function preflightIngredientLine(
     // the raw line) so the brand token survives into candidate retrieval.
     // The repair and the one case it must refuse (a count word the lexicon also
     // sells as a brand — `one`) live in `quantity-word-brand.ts`, which owns the
-    // reasoning and the measurements. Containment is unchanged here.
+    // reasoning and the measurements. So does containment: whether the brand is
+    // already present is `brandPresentForPrepend()`'s answer, `brandAlreadyPresent()`
+    // with clause 2 kept only for multi-word brands (punch #167).
     if (options.normalizedForm?.trim()) {
         const targetBrand = options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand;
         if (targetBrand) {
