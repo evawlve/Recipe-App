@@ -333,8 +333,13 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         // in the roster file. This list moves with that file on purpose: the pin is
         // the double entry that stops a membership change from being silent, which is
         // the ten-that-became-a-nine this whole instrument exists to prevent.
+        //
+        // 2026-09-15 (Lane A S51), confirmed on YMSRQ2JmMksDeDnBfWkti after the #438
+        // deploy: n-prot-02 MOVED to `rotators` (a parked retrieval tie, pinned below)
+        // and n-mq-42 JOINED `members`. The censuses that decided both live in the
+        // roster file's own entries.
         const REAL_MEMBERS = [
-            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-prod-01', 'n-prot-02',
+            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-mq-42', 'n-prod-01',
             'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55',
         ];
         expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());
@@ -424,6 +429,74 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         expect(v.newMembers).toEqual([]);
         expect(v.leftTheSet).toEqual([]);
         expect(v.rotatorsPresent).toContain('n-svd-04');
+        expect(v.ok).toBe(true);
+    });
+
+    // n-prot-02 LEFT `members` FOR `rotators` 2026-09-15, and this pin is why.
+    //
+    // `100g tofu` is a retrieval tie. Cross-build cold census (summary.noCache === true)
+    // over scripts/eval/results/, 2026-09-15: 205 present, 3 HTTP-401 TRANSPORT. Winners
+    // off_0850109005020 x31, off_9313727000026 x1 and off_5034467000056 x45 all PASS; only
+    // off_3070451041461 (x125, 44 named builds, none carrying a pass) fails, at
+    // protein100=0.9 against [5, 22]. It sat parked on that side from 2026-08-12 to
+    // 2026-09-12, then passed 3/3 on YMSRQ2JmMksDeDnBfWkti. All five of its winner
+    // transitions co-move with n-svg-03's and four with n-prot-04's.
+    //
+    // In `members` it prints LEFT THE SET whenever the tie parks on the passing side; in
+    // `departed` it records a re-roll as a fix nobody made.
+    it('keeps n-prot-02 in rotators, never in members or departed', () => {
+        const real = loadRoster();
+        expect(real).not.toBeNull();
+        const memberIds = real!.members.map(m => m.id);
+        const rotatorIds = (real!.rotators ?? []).map(r => r.id);
+        const departedIds = ((real as unknown as { departed?: Array<{ id: string }> }).departed ?? []).map(d => d.id);
+        expect(memberIds).not.toContain('n-prot-02');
+        expect(rotatorIds).toContain('n-prot-02');
+        expect(departedIds).not.toContain('n-prot-02');
+
+        // and the detector must treat it as expected, not as a new member
+        const results = [
+            ...memberIds.map(failCase),
+            failCase('n-prot-02'),
+            passCase('n-gen-01'),
+        ];
+        const v = judgeColdFailureSet(coldEvidence({}, results), real!);
+        expect(v.error).toBeUndefined();
+        expect(v.newMembers).toEqual([]);
+        expect(v.leftTheSet).toEqual([]);
+        expect(v.rotatorsPresent).toContain('n-prot-02');
+        expect(v.ok).toBe(true);
+    });
+
+    // n-svg-03 IS A ROTATOR, added 2026-09-15, and this pin is why.
+    //
+    // `1 protein bar` bills whichever `Protein bar` record wins at that record's own label
+    // serving. Cross-build cold census, 2026-09-15: 205 present, 3 HTTP-401 TRANSPORT, 4 real
+    // failures in 202 over SEVEN winners. Only off_4750001002324 (1 of 40, a 100 g fallback)
+    // and off_8681630129013 (3 of 3, 35 g against [40, 90]) ever fail. All seven of
+    // n-prot-04's winner transitions coincide with one of its own, so it re-rolls on the
+    // same axis; it has been parked on its failing side since 2026-09-15.
+    //
+    // In `members` it would print LEFT THE SET at the next re-roll.
+    it('keeps n-svg-03 in rotators, never in members', () => {
+        const real = loadRoster();
+        expect(real).not.toBeNull();
+        const memberIds = real!.members.map(m => m.id);
+        const rotatorIds = (real!.rotators ?? []).map(r => r.id);
+        expect(memberIds).not.toContain('n-svg-03');
+        expect(rotatorIds).toContain('n-svg-03');
+
+        // and the detector must treat it as expected, not as a new member
+        const results = [
+            ...memberIds.map(failCase),
+            failCase('n-svg-03'),
+            passCase('n-gen-01'),
+        ];
+        const v = judgeColdFailureSet(coldEvidence({}, results), real!);
+        expect(v.error).toBeUndefined();
+        expect(v.newMembers).toEqual([]);
+        expect(v.leftTheSet).toEqual([]);
+        expect(v.rotatorsPresent).toContain('n-svg-03');
         expect(v.ok).toBe(true);
     });
 
