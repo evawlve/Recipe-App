@@ -146,7 +146,7 @@ export function readCsv(path: string, width: number): string[][] {
     return rows;
 }
 
-export const TUPLES_CSV = '/Users/diego/.claude/jobs/f800c999/tmp/seg_tuples_s51.csv';
+export const TUPLES_CSV = require('path').join(__dirname, 's51_seg_tuples.csv');
 
 export type Tuple = { idx: number; rawText: string; normalizedForm: string; brand: string };
 
