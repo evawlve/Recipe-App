@@ -51,6 +51,20 @@
  * be correct and still move no winner on a small seed set; a gate that can only
  * see winners would report SAME and teach nothing.
  *
+ * EVERY GUARD CALL, NOT ONLY THE LAST (Lane A S51, punch #198). The mapper
+ * re-enters itself: `attemptAiSimplifyFallback()` and the dietary-strip fallback
+ * both call `mapIngredientWithFallback()` again, and the guard runs again inside
+ * the re-entry. The guard has one call site, in `mapIngredientWithFallback()`
+ * (a grep of `src/`, 2026-09-15), so more than one call for an item means the mapper
+ * re-entered [reasoning from the code]. `guardApplied` / `guardDeclined` /
+ * `guardBaseName` keep their S49 meaning, the LAST call, so the S49 and S50 jsonl
+ * files stay diffable. `guardCalls` records every call in order, with its inputs
+ * (less `parsed`) and outcome, and `guardCallCount` is its length. `--mode diff`
+ * flags any item with more than one call on either side and diffs the lists when
+ * both sides carry them. A file written before S51 has neither field: it diffs on
+ * the last-call fields alone, and the flag reads only the side that carries lists.
+ * `s51_guardcalls_selftest.ts` pins the diff over synthetic rows.
+ *
  * ==========================================================================
  * WHAT THIS CANNOT SEE  (state it, do not discover it later)
  * ==========================================================================
@@ -101,6 +115,7 @@
  *   $R <this> --mode replay  --pin pin.json --out armA.jsonl        # tree A
  *   $R <this> --mode replay  --pin pin.json --out armB.jsonl        # tree B (or same tree = noise floor)
  *   $R <this> --mode diff    --a armA.jsonl --b armB.jsonl
+ *   $R s51_guardcalls_selftest.ts                                   # the diff's own pins; no DB, no LLM
  *
  * `--dry` on replay runs everything EXCEPT the mapper call and prints the pinned
  * options each line would be given. It touches no DB and no LLM, and is the way
@@ -175,14 +190,29 @@ interface PinnedItem { rawText: string; normalizedForm: string | null; brand: st
 interface PinnedLine { line: string; items: PinnedItem[] }
 interface PinFile { createdAt: string; seedsPath: string; lines: PinnedLine[] }
 
-interface ResultRow {
+/** One call to the shipped `preserveDroppedBrand()`: its inputs (less `parsed`) and its outcome. */
+export interface GuardCall {
+    rawLine: string | null;
+    inputBaseName: string | null;
+    targetBrand: string | null;
+    rederived: string | null;
+    applied: boolean;
+    declined: string | null;
+    baseName: string;
+}
+
+export interface ResultRow {
     lineIdx: number; itemIdx: number; line: string;
     rawText: string; pinnedForm: string | null; pinnedBrand: string | null;
-    /** the guard's own output — did preserveDroppedBrand fire, and with what? */
+    /** the guard's own output — did preserveDroppedBrand fire, and with what? The LAST call only. */
     guardApplied: boolean | null; guardDeclined: string | null; guardBaseName: string | null;
     foodId: string | null; foodName: string | null; brandName: string | null;
     grams: number | null; kcal: number | null; servingTier: string | null;
     error?: string;
+    /** S51 (#198): EVERY guard call for this item, in call order. Absent from files written before S51. */
+    guardCalls?: GuardCall[];
+    /** S51 (#198): `guardCalls.length`. More than 1 means the mapper re-entered. */
+    guardCallCount?: number;
 }
 
 // ---------------------------------------------------------------- pin
@@ -229,6 +259,9 @@ async function doReplay() {
     let mapperMod: any = null, qwbMod: any = null;
     const guardSink: { applied: boolean | null; declined: string | null; baseName: string | null } =
         { applied: null, declined: null, baseName: null };
+    // S51 (#198): the sink above keeps only the LAST call, so a mapper re-entry
+    // overwrote the first. This list keeps every call for the current item, in order.
+    const guardCalls: GuardCall[] = [];
 
     if (!dry) {
         const { prisma } = require('@/lib/db');
@@ -244,6 +277,11 @@ async function doReplay() {
         qwbMod.preserveDroppedBrand = function (a: any) {
             const r = realPreserve(a);
             guardSink.applied = r.applied; guardSink.declined = r.declined; guardSink.baseName = r.baseName;
+            guardCalls.push({
+                rawLine: a?.rawLine ?? null, inputBaseName: a?.baseName ?? null,
+                targetBrand: a?.targetBrand ?? null, rederived: a?.rederived ?? null,
+                applied: r.applied, declined: r.declined, baseName: r.baseName,
+            });
             return r;
         };
     }
@@ -254,6 +292,7 @@ async function doReplay() {
         for (let ii = 0; ii < L.items.length; ii++) {
             const it = L.items[ii];
             guardSink.applied = null; guardSink.declined = null; guardSink.baseName = null;
+            guardCalls.length = 0;
             const base: ResultRow = {
                 lineIdx: li, itemIdx: ii, line: L.line, rawText: it.rawText,
                 pinnedForm: it.normalizedForm, pinnedBrand: it.brand,
@@ -291,9 +330,14 @@ async function doReplay() {
             base.guardApplied = guardSink.applied;
             base.guardDeclined = guardSink.declined;
             base.guardBaseName = guardSink.baseName;
+            // Assigned AFTER the S49 fields, so a new row's JSON opens with the old row's keys.
+            const nCalls = guardCalls.length;
+            base.guardCalls = guardCalls.slice();
+            base.guardCallCount = nCalls;
             rows.push(base);
             console.warn(`[${li}.${ii}] ${base.foodId ?? base.error}  g=${base.grams} kcal=${base.kcal}` +
-                `  guard=${base.guardApplied === null ? 'not-reached' : base.guardApplied ? `APPLIED "${base.guardBaseName}"` : `declined:${base.guardDeclined}`}`);
+                `  guard=${base.guardApplied === null ? 'not-reached' : base.guardApplied ? `APPLIED "${base.guardBaseName}"` : `declined:${base.guardDeclined}`}` +
+                (nCalls > 1 ? `  RECURSION guardCalls=${nCalls}` : ''));
         }
     }
 
@@ -309,37 +353,108 @@ async function doReplay() {
 }
 
 // ---------------------------------------------------------------- diff
+/** The last-call fields S49 diffed. Unchanged, so a pre-S51 file diffs exactly as it did. */
+const FIELDS: Array<keyof ResultRow> = ['foodId', 'grams', 'kcal', 'guardApplied', 'guardBaseName'];
+
+export interface MovedItem { key: string; rawText: string; fields: string[]; text: string }
+export interface RecursionFlag { key: string; rawText: string; a: number | null; b: number | null }
+export interface DiffReport {
+    compared: number;
+    same: number;
+    moved: MovedItem[];
+    onlyOne: string[];
+    /** S51 (#198): items with more than one guard call on either side, in key order. */
+    recursion: RecursionFlag[];
+    /** S51 (#198): rows per side that carry no `guardCalls` list, i.e. files written before S51. */
+    listsAbsent: { a: number; b: number };
+}
+
+/** A row's guard-call count, or null when the row predates the field. */
+export function guardCallCountOf(r: ResultRow | undefined): number | null {
+    if (!r) return null;
+    if (Array.isArray(r.guardCalls)) return r.guardCalls.length;
+    return typeof r.guardCallCount === 'number' ? r.guardCallCount : null;
+}
+
+function fmtCall(c: GuardCall | undefined): string {
+    if (!c) return '(no call)';
+    const outcome = c.applied ? `APPLIED "${c.baseName}"` : c.declined ? `declined:${c.declined}` : `unchanged "${c.baseName}"`;
+    return `${outcome}  [rawLine=${JSON.stringify(c.rawLine)} in=${JSON.stringify(c.inputBaseName)} brand=${JSON.stringify(c.targetBrand)}]`;
+}
+
+/** Pure: the per-item comparison `--mode diff` prints. A duplicate key keeps its LATER row, as before. */
+export function diffRows(aRows: ResultRow[], bRows: ResultRow[]): DiffReport {
+    const byKey = (rows: ResultRow[]): Map<string, ResultRow> => {
+        const m = new Map<string, ResultRow>();
+        for (const r of rows) m.set(`${r.lineIdx}.${r.itemIdx}`, r);
+        return m;
+    };
+    const A = byKey(aRows), B = byKey(bRows);
+    const keys = [...new Set([...A.keys(), ...B.keys()])].sort();
+    const report: DiffReport = {
+        compared: keys.length, same: 0, moved: [], onlyOne: [], recursion: [], listsAbsent: { a: 0, b: 0 },
+    };
+    for (const r of A.values()) if (!Array.isArray(r.guardCalls)) report.listsAbsent.a++;
+    for (const r of B.values()) if (!Array.isArray(r.guardCalls)) report.listsAbsent.b++;
+    for (const k of keys) {
+        const a = A.get(k), b = B.get(k);
+        const ca = guardCallCountOf(a), cb = guardCallCountOf(b);
+        if ((ca ?? 0) > 1 || (cb ?? 0) > 1) report.recursion.push({ key: k, rawText: (a ?? b)!.rawText, a: ca, b: cb });
+        if (!a || !b) { report.onlyOne.push(k); continue; }
+        const changed = FIELDS.filter(f => JSON.stringify(a[f]) !== JSON.stringify(b[f]));
+        const fields: string[] = changed.map(String);
+        const lines = changed.map(f => `        ${String(f)}: ${JSON.stringify(a[f])}  ->  ${JSON.stringify(b[f])}`);
+        // The lists are compared only when BOTH sides carry them; an old file against a
+        // new one is diffed on the last-call fields alone rather than read as MOVED.
+        if (Array.isArray(a.guardCalls) && Array.isArray(b.guardCalls)
+            && JSON.stringify(a.guardCalls) !== JSON.stringify(b.guardCalls)) {
+            fields.push('guardCalls');
+            lines.push(`        guardCalls: ${a.guardCalls.length} call(s)  ->  ${b.guardCalls.length} call(s)`);
+            for (let i = 0; i < Math.max(a.guardCalls.length, b.guardCalls.length); i++) {
+                const ci = a.guardCalls[i], di = b.guardCalls[i];
+                const mark = JSON.stringify(ci) === JSON.stringify(di) ? ' ' : '*';
+                lines.push(`        ${mark} #${i + 1}  ${fmtCall(ci)}`);
+                lines.push(`              ->  ${fmtCall(di)}`);
+            }
+        }
+        if (fields.length === 0) { report.same++; continue; }
+        report.moved.push({ key: k, rawText: a.rawText, fields, text: `${k}  "${a.rawText}"\n` + lines.join('\n') });
+    }
+    return report;
+}
+
+/** Pure: the lines `--mode diff` prints for a report. The four S49 summary lines are unchanged. */
+export function formatDiff(r: DiffReport): string[] {
+    const out: string[] = [];
+    out.push(`items compared : ${r.compared}`);
+    out.push(`SAME           : ${r.same}`);
+    out.push(`MOVED          : ${r.moved.length}`);
+    out.push(`ITEM-COUNT MISMATCH (one arm only): ${r.onlyOne.length}  ${r.onlyOne.join(' ')}`);
+    out.push(`GUARD RECURSION (guard calls > 1 on either arm): ${r.recursion.length}  ${r.recursion.map(f => f.key).join(' ')}`);
+    if (r.listsAbsent.a || r.listsAbsent.b) {
+        out.push(`GUARD-CALL LISTS ABSENT (arm file written before S51): A ${r.listsAbsent.a} row(s), B ${r.listsAbsent.b} row(s);` +
+            ' those rows diff on the LAST guard call only and cannot raise the recursion flag');
+    }
+    if (r.moved.length) { out.push(''); for (const m of r.moved) out.push('  ' + m.text); }
+    if (r.recursion.length) {
+        out.push('');
+        out.push('  guard ran more than once (a mapper re-entry); guardApplied / guardBaseName above are the LAST call:');
+        for (const f of r.recursion) out.push(`  ${f.key}  "${f.rawText}"  A=${f.a ?? 'n/a'} B=${f.b ?? 'n/a'}`);
+    }
+    out.push('');
+    out.push('A noise-floor run is A vs B on the SAME tree. MOVED must be 0 before any');
+    out.push('two-tree diff is readable. A non-zero floor is a finding about the ARM.');
+    return out;
+}
+
+function loadRows(p: string): ResultRow[] {
+    return fs.readFileSync(p, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l) as ResultRow);
+}
+
 function doDiff() {
     const aPath = arg('--a'); const bPath = arg('--b');
     if (!aPath || !bPath) { console.error('diff needs --a and --b'); process.exit(1); }
-    const load = (p: string): Map<string, ResultRow> => {
-        const m = new Map<string, ResultRow>();
-        for (const l of fs.readFileSync(p, 'utf8').split('\n').filter(Boolean)) {
-            const r: ResultRow = JSON.parse(l);
-            m.set(`${r.lineIdx}.${r.itemIdx}`, r);
-        }
-        return m;
-    };
-    const A = load(aPath), B = load(bPath);
-    const keys = [...new Set([...A.keys(), ...B.keys()])].sort();
-    const FIELDS: Array<keyof ResultRow> = ['foodId', 'grams', 'kcal', 'guardApplied', 'guardBaseName'];
-    let same = 0; const moved: string[] = []; const onlyOne: string[] = [];
-    for (const k of keys) {
-        const a = A.get(k), b = B.get(k);
-        if (!a || !b) { onlyOne.push(k); continue; }
-        const diffs = FIELDS.filter(f => JSON.stringify(a[f]) !== JSON.stringify(b[f]));
-        if (diffs.length === 0) { same++; continue; }
-        moved.push(`${k}  "${a.rawText}"\n` + diffs.map(f =>
-            `        ${String(f)}: ${JSON.stringify(a[f])}  ->  ${JSON.stringify(b[f])}`).join('\n'));
-    }
-    console.warn(`items compared : ${keys.length}`);
-    console.warn(`SAME           : ${same}`);
-    console.warn(`MOVED          : ${moved.length}`);
-    console.warn(`ITEM-COUNT MISMATCH (one arm only): ${onlyOne.length}  ${onlyOne.join(' ')}`);
-    if (moved.length) { console.warn(''); for (const m of moved) console.warn('  ' + m); }
-    console.warn('');
-    console.warn('A noise-floor run is A vs B on the SAME tree. MOVED must be 0 before any');
-    console.warn('two-tree diff is readable. A non-zero floor is a finding about the ARM.');
+    for (const line of formatDiff(diffRows(loadRows(aPath), loadRows(bPath)))) console.warn(line);
 }
 
 async function main() {
@@ -350,4 +465,9 @@ async function main() {
     console.error('usage: --mode pin|replay|diff   (see header)');
     process.exit(1);
 }
-main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
+
+// Run only when invoked as a script: `s51_guardcalls_selftest.ts` imports the pure
+// diff functions, and an import must not start a run (winner-diff.ts keeps the same rule).
+if (require.main === module) {
+    main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
+}
