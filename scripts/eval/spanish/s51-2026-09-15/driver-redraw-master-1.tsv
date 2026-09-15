@@ -1,0 +1,7 @@
+idx	draw	truth	corpusVerdict	status	itemCount	itemsJson	ms	line
+147	1	1	REDRAW	ok	2	[{"r":"prosciutto","n":"prosciutto","b":""},{"r":"melon","n":"melon","b":""}]	1133	prosciutto and melon
+147	2	1	REDRAW	ok	1	[{"r":"prosciutto and melon","n":"prosciutto and melon","b":""}]	1895	prosciutto and melon
+147	3	1	REDRAW	ok	1	[{"r":"prosciutto and melon","n":"prosciutto and melon","b":""}]	1633	prosciutto and melon
+12	1	4	REDRAW	ok	4	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast with butter","n":"toast","b":""},{"r":"butter","n":"butter","b":""},{"r":"a large coffee","n":"coffee","b":""}]	1741	2 eggs, a slice of toast with butter, and a large coffee
+12	2	4	REDRAW	ok	3	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast with butter","n":"toast","b":""},{"r":"a large coffee","n":"coffee","b":""}]	1188	2 eggs, a slice of toast with butter, and a large coffee
+12	3	4	REDRAW	ok	4	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast with butter","n":"toast","b":""},{"r":"butter","n":"butter","b":""},{"r":"a large coffee","n":"coffee","b":""}]	1295	2 eggs, a slice of toast with butter, and a large coffee
