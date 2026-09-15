@@ -472,6 +472,58 @@ export function isBrandLedProductName(accentStripped: string): boolean {
   return detectBrandInQuery(accentStripped).isBranded;
 }
 
+/**
+ * THE REWRITES CAN GROW THE WORD THEY REWRITE (punch #114, Lane A S51, 2026-09-15).
+ *
+ * A rewrite whose `to` contains its `from` fires again on a line that already carries
+ * the longer form: the data file's `corn syrup -> light corn syrup` turns
+ * `light corn syrup` into `light light corn syrup`, and the in-code bare-word rule
+ * `gluten -> vital wheat gluten` stacks on the data file's own entry until
+ * `vital wheat gluten` reads `vital wheat vital wheat vital wheat gluten`. The
+ * repeated-word dedupe in step 2 runs BEFORE any rewrite, so nothing ever collapsed
+ * those runs; `deriveMappingCacheKey()` folds them in the key, so only the retrieval
+ * query and the MEL field carried the repeat and no gate went red. Measured
+ * (Lane A S47/S49): 26 of the data file's 127 `synonym_rewrites` are self-growing,
+ * `DEFAULT_RULES` carries 5 more plus the `gluten` literal, and 7 of 4,102
+ * coverage-corpus seeds gain a repeated token.
+ *
+ * This collapses an ADJACENT repeated run of tokens of any length, case-insensitively,
+ * keeping the first copy, and returns the input string untouched when there is none.
+ * `normalizeIngredientName()` calls it once, after every rewrite and bare-word default
+ * and before prep-phrase removal.
+ *
+ * WHAT IT DOES NOT FIX: a self-growing rewrite that lands on a DIFFERENT qualifier.
+ * `dark corn syrup -> dark light corn syrup` and
+ * `apple pie spice seasoning -> apple pumpkin pie spice seasoning` repeat no token, so
+ * they are untouched here; S49 flagged the second as a sibling defect, not this row.
+ */
+export function collapseAdjacentRepeatedRuns(text: string): string {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  let collapsedAny = false;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let k = 1; k <= Math.floor(tokens.length / 2) && !changed; k++) {
+      for (let i = 0; i + 2 * k <= tokens.length; i++) {
+        let same = true;
+        for (let j = 0; j < k; j++) {
+          if (tokens[i + j].toLowerCase() !== tokens[i + k + j].toLowerCase()) {
+            same = false;
+            break;
+          }
+        }
+        if (same) {
+          tokens.splice(i + k, k);
+          changed = true;
+          collapsedAny = true;
+          break;
+        }
+      }
+    }
+  }
+  return collapsedAny ? tokens.join(' ') : text;
+}
+
 export function normalizeIngredientName(raw: string): NormalizationResult {
   const stripped: string[] = [];
   let working = raw;
@@ -600,6 +652,11 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
     // "ground X" (not lean) -> default to 85% lean 15% fat
     working = working.replace(/\bground\b/gi, '85% lean 15% fat ground');
   }
+
+  // A rewrite above can grow the word it rewrote (`light light corn syrup`); step 2's
+  // dedupe already ran, so collapse the runs the rewrites created. See
+  // collapseAdjacentRepeatedRuns().
+  working = collapseAdjacentRepeatedRuns(working);
 
   // Remove prep/size phrases using merged prep phrases (static + AI-learned)
   // Sort by length (longest first) to match compound patterns like "hard-boiled" before "boiled"
