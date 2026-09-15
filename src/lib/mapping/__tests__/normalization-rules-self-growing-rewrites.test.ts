@@ -58,6 +58,16 @@ describe('normalizeIngredientName — a rewrite no longer grows a word the line 
         expect(normalizeIngredientName('corn syrup').cleaned).toBe('light corn syrup');
     });
 
+    it('collapses a repeat that prep-phrase removal exposes inside a grown rewrite (refuter lens 2 on #441)', () => {
+        // master: `canned diced kidney beans` -> rewrite -> `canned diced canned kidney beans`
+        //         -> `diced` stripped -> `canned canned kidney beans`
+        expect(normalizeIngredientName('canned diced kidney beans').cleaned).toBe('canned kidney beans');
+    });
+
+    it('does not collapse `half & half`, whose symbol only the final whitespace pass removes', () => {
+        expect(normalizeIngredientName('half & half').cleaned).toBe('half half');
+    });
+
     it('never reaches a brand-led product name, which returns before every rewrite', () => {
         // `in-n-out double double` is a menu item: collapsing it would change identity. The
         // brand-led early return in normalizeIngredientName() sits above the collapse.
