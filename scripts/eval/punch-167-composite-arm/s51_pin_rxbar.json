@@ -1,0 +1,16 @@
+{
+  "createdAt": "2026-09-15T17:10:00.000Z",
+  "seedsPath": "FIXTURE-SOURCED, NOT A SEGMENTER DRAW: the item of golden case n-supp-22 in scripts/eval/golden-set.json, which run-eval.ts posts items-form and so bypasses the segmenter. Hand-set by Lane A S51 (punch #167 fix-forward): both S50 pinned draws of this line drew brand `rx`, a spelling on which master and #438 agree, so the regression's spelling had to be pinned by hand.",
+  "lines": [
+    {
+      "line": "2 rx bars",
+      "items": [
+        {
+          "rawText": "2 rx bars",
+          "normalizedForm": "protein bar",
+          "brand": "rxbar"
+        }
+      ]
+    }
+  ]
+}

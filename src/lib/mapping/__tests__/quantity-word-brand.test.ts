@@ -2,7 +2,7 @@ import { parseIngredientLine } from '../../parse/ingredient-line';
 import { detectBrandInQuery } from '../brand-detector';
 import { deriveMappingCacheKey } from '../cache-key';
 import { stripPartitiveOfResidue } from '../partitive-residue';
-import { brandAlreadyPresent, brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
+import { brandAlreadyPresent, brandPresentForPrepend, brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
 
 /**
  * `one` is a lexicon brand (the ONE protein-bar company), so the
@@ -548,5 +548,45 @@ describe('brandAlreadyPresent — the one containment question both guards ask (
         expect(brandAlreadyPresent(undefined, 'Ryse')).toBe(false);
         expect(brandAlreadyPresent('', 'Ryse')).toBe(false);
         expect(brandAlreadyPresent('peanut butter', '&')).toBe(false);
+    });
+});
+
+/**
+ * PUNCH #167 FIX-FORWARD (Lane A S51, 2026-09-15). #438 deployed with one measured
+ * regression: golden n-supp-22 posts items-form `2 rx bars` with brand `rxbar` and
+ * normalizedForm `protein bar`, clause 2 read `rxbar` inside `rxbars`, guard 1
+ * returned `rx bars` without the prepend, and retrieval went from RXBAR to "Fig Bars"
+ * (`fs_38893`, cold 3/3). Guard 1 now asks `brandPresentForPrepend()`, which skips
+ * clause 2 for a brand that folds to one word. The spelling comes from the golden
+ * FIXTURE, never a segmenter draw (both pinned S50 draws carried `rx`).
+ */
+describe('punch #167 fix-forward — a one-word brand the line spells as two words is still prepended', () => {
+    it('restores the n-supp-22 prepend through the shipped function: `rxbar rx bars`', () => {
+        const parsed = parseIngredientLine('2 rx bars');
+        expect(preserveDroppedBrand({
+            rawLine: '2 rx bars', baseName: 'protein bar', targetBrand: 'rxbar', rederived: 'rx bars', parsed,
+        })).toEqual({ baseName: 'rxbar rx bars', applied: true, declined: null });
+    });
+
+    it('guard 1 does not read a one-word brand inside a split spelling as present; guard 2 still does', () => {
+        expect(brandPresentForPrepend('rx bars', 'rxbar')).toBe(false);
+        expect(brandAlreadyPresent('rx bars', 'rxbar')).toBe(true);
+    });
+
+    it('keeps clause 2 for a brand that folds to more than one word — the input a clause-2 deletion re-doubles', () => {
+        expect(brandAlreadyPresent('ben jerry', "Ben & Jerry's")).toBe(true);
+        expect(brandPresentForPrepend('ben jerry', "Ben & Jerry's")).toBe(true);
+        expect(preflight('ben jerry', 'ben jerry', "Ben & Jerry's").baseName).toBe('ben jerry');
+    });
+
+    it("keeps clause 3 on the `&`/`and` spelling, and guard 2 keeps `m&ms` in `m m's` (PR #421)", () => {
+        expect(brandAlreadyPresent('m and ms pretzel', "M&M's")).toBe(true);
+        expect(brandPresentForPrepend('m and ms pretzel', "M&M's")).toBe(true);
+        expect(repairDroppedBrand("m m's", 'm&ms')).toBeNull();
+    });
+
+    it('still reads a one-word brand spelled contiguously (clause 1) or word for word (clause 3) as present', () => {
+        expect(brandPresentForPrepend('oikos triple zero vanilla', 'oikos')).toBe(true);
+        expect(brandPresentForPrepend('hersheys kisses', "Hershey's")).toBe(true);
     });
 });
