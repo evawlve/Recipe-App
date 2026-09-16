@@ -1,0 +1,128 @@
+{
+ "arm": "arm-s51-new",
+ "effectiveEnv": {
+  "CHEAP_AI_MODEL_PRIMARY": "openai/gpt-4o-mini",
+  "CHEAP_AI_MODEL_FALLBACK": "google/gemini-2.5-flash",
+  "OLLAMA_ENABLED": "false",
+  "OPENAI_API_KEY_blanked": true
+ },
+ "calls": 296,
+ "nulls": 1,
+ "wallMs": 464496,
+ "llmUsage": {
+  "since": "2026-09-15T16:45:00.019Z",
+  "pid": 12847,
+  "byPurpose": {
+   "normalize": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   },
+   "serving": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   },
+   "ambiguous": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   },
+   "produce": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   },
+   "parse": {
+    "responses": 296,
+    "logicalSuccesses": 296,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 296,
+    "promptTokens": 192794,
+    "completionTokens": 15926,
+    "totalTokens": 208720,
+    "costReported": 296,
+    "costUsd": 0.03808995299999999
+   },
+   "simplify": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   },
+   "nutrition": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   },
+   "cache_validate": {
+    "responses": 0,
+    "logicalSuccesses": 0,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 0,
+    "promptTokens": 0,
+    "completionTokens": 0,
+    "totalTokens": 0,
+    "costReported": 0,
+    "costUsd": 0
+   }
+  },
+  "byModel": {
+   "openai/gpt-4o-mini": {
+    "responses": 296,
+    "logicalSuccesses": 296,
+    "failures": 0,
+    "unparseableEnvelopes": 0,
+    "usageReported": 296,
+    "promptTokens": 192794,
+    "completionTokens": 15926,
+    "totalTokens": 208720,
+    "costReported": 296,
+    "costUsd": 0.03808995299999999
+   }
+  }
+ }
+}

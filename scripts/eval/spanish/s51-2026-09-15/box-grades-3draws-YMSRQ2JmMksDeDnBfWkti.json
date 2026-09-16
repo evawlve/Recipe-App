@@ -1,0 +1,2150 @@
+{
+ "_meta": {
+  "_readme": [
+   "Lane A S51 ROW 1 (a)(ii) — the 43-line Spanish corpus re-graded on the three draws probed 2026-09-15 09:38:16-09:40:51 PDT against box build YMSRQ2JmMksDeDnBfWkti (nosave=1&nocache=1&debug=1), with the 2026-09-12 baseline rubric (scripts/eval/spanish/baseline-grades-2026-09-12.json) applied as written.",
+   "Answers and 09-12 comparisons are MEASURED from box-pre-s51.json and baseline-results-2026-09-12.json. Verdicts are grader judgement under the baseline rubric; every consistentStandard entry and every reference portion (~N g) is REASONED, not measured.",
+   "axes = axes of a materially-wrong draw (the headline mix counts these); softAxes = the baseline's non-material tags (e.g. pkg-03 \"brand\", outside the four-axis set)."
+  ]
+ },
+ "es-stap-01": {
+  "rawText": "huevos",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Huevos [off_2100002978128] 60g/80kcal (bare_plural_serving; 133.3 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Huevos 133 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Huevos [off_2100002978128] 60g/80kcal (bare_plural_serving; 133.3 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Huevos 133 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Huevos [off_2100002978128] 60g/80kcal (bare_plural_serving; 133.3 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Huevos 133 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "borderline",
+   "why": "portion: plural `huevos` bills 60 g = one egg, the same weight as `dos huevos` (50 g, material); no count is stated.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-02": {
+  "rawText": "arroz",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Arroz [off_2631834000058] 50g/87kcal (bare_label_serving; 174.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Arroz 174 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Arroz [off_2631834000058] 50g/87kcal (bare_label_serving; 174.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Arroz 174 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Arroz [off_2631834000058] 50g/87kcal (bare_label_serving; 174.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Arroz 174 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "borderline",
+   "why": "panel: 174 kcal / C 40 at a 50 g label serving — the report's own \"half of dry rice\" doubtful panel, ~0.45x the bill of 50 g dry rice.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-03": {
+  "rawText": "pollo",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Pollo [off_2272940004648] 100g/98kcal (bare_label_serving; 98.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Pollo 98 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Pollo [off_2272940004648] 100g/98kcal (bare_label_serving; 98.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Pollo 98 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Pollo [off_2272940004648] 100g/98kcal (bare_label_serving; 98.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Pollo 98 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-04": {
+  "rawText": "frijoles",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "frijoles {naturas} [off_0850022820854] 100g/122.1kcal (count_unresolved_floor; 122.1 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: frijoles [naturas] 122 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "frijoles {naturas} [off_0850022820854] 100g/122.1kcal (count_unresolved_floor; 122.1 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: frijoles [naturas] 122 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "frijoles {naturas} [off_0850022820854] 100g/122.1kcal (count_unresolved_floor; 122.1 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: frijoles [naturas] 122 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-05": {
+  "rawText": "tortilla de maiz",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Tortillas de Maiz [off_0858261000037] 45g/101kcal (discrete_unit_backfill; 224.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Tortillas de Maiz 224 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Tortillas de Maiz [off_0858261000037] 45g/101kcal (discrete_unit_backfill; 224.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Tortillas de Maiz 224 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Tortillas de Maiz [off_0858261000037] 45g/101kcal (discrete_unit_backfill; 224.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Tortillas de Maiz 224 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-06": {
+  "rawText": "pan",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Pan {Mi Pan} [off_0635595012116] 56.7g/129.8kcal (bare_label_serving; 228.9 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Pan {Mi Pan} 228.9 kcal/100 g, IN band [190,340], Atwater-consistent (P7.1/C45.9/F0.9); 56.7 g is about two slices or one roll for a bare `pan`. Identity right, panel plausible. The 09-12 record (off_04516246, 375 kcal/100 g, a band miss tagged panel and waived) is no longer served."
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Pan {Mi Pan} [off_0635595012116] 56.7g/129.8kcal (bare_label_serving; 228.9 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Pan {Mi Pan} 228.9 kcal/100 g, IN band [190,340], Atwater-consistent (P7.1/C45.9/F0.9); 56.7 g is about two slices or one roll for a bare `pan`. Identity right, panel plausible. The 09-12 record (off_04516246, 375 kcal/100 g, a band miss tagged panel and waived) is no longer served."
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Pan {Mi Pan} [off_0635595012116] 56.7g/129.8kcal (bare_label_serving; 228.9 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Pan {Mi Pan} 228.9 kcal/100 g, IN band [190,340], Atwater-consistent (P7.1/C45.9/F0.9); 56.7 g is about two slices or one roll for a bare `pan`. Identity right, panel plausible. The 09-12 record (off_04516246, 375 kcal/100 g, a band miss tagged panel and waived) is no longer served."
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": false,
+   "sameGramsModal": false,
+   "drawsIdenticalTo0912": 0,
+   "verdict0912": false,
+   "axis0912": "panel"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 0 of 3 draws; modal answer on 3 of 3; modal record DIFFERS from 09-12, modal grams DIFFER from 09-12; 09-12 verdict 0 (axis panel) -> modal verdict AGREES"
+ },
+ "es-stap-07": {
+  "rawText": "leche",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Leche [off_15293937] 240g/70kcal (bare_name_sibling_serving; 29.2 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Leche 29 kcal/100g (skim-ish)"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Leche [off_15293937] 240g/70kcal (bare_name_sibling_serving; 29.2 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Leche 29 kcal/100g (skim-ish)"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Leche [off_15293937] 240g/70kcal (bare_name_sibling_serving; 29.2 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Leche 29 kcal/100g (skim-ish)"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "borderline",
+   "why": "panel: 29 kcal/100 g with P 1.7 — ~0.5-0.6x of 2% milk on every macro (the report's own doubtful panel); ~0.85x of skim on kcal.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-08": {
+  "rawText": "queso",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Queso [off_9339687266388] 30g/115.2kcal (bare_name_sibling_serving_tight; 384.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Queso 384 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Queso [off_9339687266388] 30g/115.2kcal (bare_name_sibling_serving_tight; 384.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Queso 384 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Queso [off_9339687266388] 30g/115.2kcal (bare_name_sibling_serving_tight; 384.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Queso 384 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-09": {
+  "rawText": "aguacate",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Aguacate {Hacendado} [off_8402001036965] 81.25g/129.2kcal (bare_sibling_serving; 159.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Aguacate 159 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Aguacate {Hacendado} [off_8402001036965] 81.25g/129.2kcal (bare_sibling_serving; 159.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Aguacate 159 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Aguacate {Hacendado} [off_8402001036965] 81.25g/129.2kcal (bare_sibling_serving; 159.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Aguacate 159 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-10": {
+  "rawText": "platano",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Platano Paleta {Paleteria San Marcos} [off_0890199002127] 113g/129.9kcal (bare_label_serving; 115.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Platano Paleta' [Paleteria San Marcos] is a BANANA ICE POP. Band passes at 115 by luck"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Platano Paleta {Paleteria San Marcos} [off_0890199002127] 113g/129.9kcal (bare_label_serving; 115.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Platano Paleta' [Paleteria San Marcos] is a BANANA ICE POP. Band passes at 115 by luck"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Platano Paleta {Paleteria San Marcos} [off_0890199002127] 113g/129.9kcal (bare_label_serving; 115.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Platano Paleta' [Paleteria San Marcos] is a BANANA ICE POP. Band passes at 115 by luck"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "identity"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "identity"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis identity) -> modal verdict AGREES"
+ },
+ "es-stap-11": {
+  "rawText": "manzana",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Manzana [off_0051202018324] 100g/66.7kcal (count_unresolved_floor; 66.7 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Manzana 66.7 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Manzana [off_0051202018324] 100g/66.7kcal (count_unresolved_floor; 66.7 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Manzana 66.7 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Manzana [off_0051202018324] 100g/66.7kcal (count_unresolved_floor; 66.7 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Manzana 66.7 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "borderline",
+   "why": "portion: 100 g floor for `manzana` vs a ~180 g medium apple, ~0.55x — the same magnitude as es-qty-08 (0.54x, material); hinges on a bare noun implying one apple.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-stap-12": {
+  "rawText": "avena",
+  "category": "bare_staple",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Avena [off_0708938005103] 100g/382.4kcal (count_unresolved_floor; 382.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Avena 382 kcal/100g (dry)"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Avena [off_0708938005103] 100g/382.4kcal (count_unresolved_floor; 382.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Avena 382 kcal/100g (dry)"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Avena [off_0708938005103] 100g/382.4kcal (count_unresolved_floor; 382.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Avena 382 kcal/100g (dry)"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "flip",
+   "why": "portion: 100 g of DRY oats (382 kcal) on count_unresolved_floor vs a ~40 g serving, ~2.5x — the same fabricated-100 g shape graded material on es-dish-05. Named by the 09-12 report.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-qty-01": {
+  "rawText": "una taza de arroz",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Rice [off_7611637323474] 150g/582kcal (bare_sibling_serving; 388.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion",
+     "identity",
+     "panel"
+    ],
+    "softAxes": [],
+    "reason": "'Rice' off_7611637323474 at 388 kcal/100 g with C 10.0 / F 24.0 — FAILS the corpus's own carbs100 band [20,85] and is not a rice panel (macros sum to ~288 kcal against a declared 388). 150 g bills 582 kcal vs ~205 for a cooked cup, ~2.8x. Same line-level verdict and axes as 09-12 (portion+identity, kept for parity), plus panel because the band now fails, which is how the baseline tagged a band miss (es-stap-06). A different WRONG record from 09-12's dry rice (off_5099874096689, 352 kcal, 528 kcal billed)."
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Rice [off_7611637323474] 150g/582kcal (bare_sibling_serving; 388.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion",
+     "identity",
+     "panel"
+    ],
+    "softAxes": [],
+    "reason": "'Rice' off_7611637323474 at 388 kcal/100 g with C 10.0 / F 24.0 — FAILS the corpus's own carbs100 band [20,85] and is not a rice panel (macros sum to ~288 kcal against a declared 388). 150 g bills 582 kcal vs ~205 for a cooked cup, ~2.8x. Same line-level verdict and axes as 09-12 (portion+identity, kept for parity), plus panel because the band now fails, which is how the baseline tagged a band miss (es-stap-06). A different WRONG record from 09-12's dry rice (off_5099874096689, 352 kcal, 528 kcal billed)."
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Rice [off_7611637323474] 150g/582kcal (bare_sibling_serving; 388.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion",
+     "identity",
+     "panel"
+    ],
+    "softAxes": [],
+    "reason": "'Rice' off_7611637323474 at 388 kcal/100 g with C 10.0 / F 24.0 — FAILS the corpus's own carbs100 band [20,85] and is not a rice panel (macros sum to ~288 kcal against a declared 388). 150 g bills 582 kcal vs ~205 for a cooked cup, ~2.8x. Same line-level verdict and axes as 09-12 (portion+identity, kept for parity), plus panel because the band now fails, which is how the baseline tagged a band miss (es-stap-06). A different WRONG record from 09-12's dry rice (off_5099874096689, 352 kcal, 528 kcal billed)."
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "identity",
+   "portion",
+   "panel"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": false,
+   "sameGramsModal": false,
+   "drawsIdenticalTo0912": 0,
+   "verdict0912": true,
+   "axis0912": "portion+identity"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 0 of 3 draws; modal answer on 3 of 3; modal record DIFFERS from 09-12, modal grams DIFFER from 09-12; 09-12 verdict 1 (axis portion+identity) -> modal verdict AGREES"
+ },
+ "es-qty-02": {
+  "rawText": "medio aguacate",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Avocado [fs_5387] 100g/160kcal (fs_default_serving; 160.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "portion"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `medio` unparsed -> fs_default_serving 100 g; lands plausibly for a large half. SOFT"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Avocado [fs_5387] 100g/160kcal (fs_default_serving; 160.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "portion"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `medio` unparsed -> fs_default_serving 100 g; lands plausibly for a large half. SOFT"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Avocado [fs_5387] 100g/160kcal (fs_default_serving; 160.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "portion"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `medio` unparsed -> fs_default_serving 100 g; lands plausibly for a large half. SOFT"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis portion) -> modal verdict AGREES"
+ },
+ "es-qty-03": {
+  "rawText": "dos piezas de pan",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Bread [fs_3422] 26g/69kcal (fs_default_serving; 265.4 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 26 g = ONE slice; two slices ~52-60 g. HALF the bill"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Bread [fs_3422] 26g/69kcal (fs_default_serving; 265.4 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 26 g = ONE slice; two slices ~52-60 g. HALF the bill"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Bread [fs_3422] 26g/69kcal (fs_default_serving; 265.4 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 26 g = ONE slice; two slices ~52-60 g. HALF the bill"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "portion"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis portion) -> modal verdict AGREES"
+ },
+ "es-qty-04": {
+  "rawText": "un vaso de leche",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Milk {a2 Milk Company} [off_9335390000028] 250g/113kcal (bare_label_serving; 45.2 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 250 g glass, via the record's own label not the parser"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Milk {a2 Milk Company} [off_9335390000028] 250g/113kcal (bare_label_serving; 45.2 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 250 g glass, via the record's own label not the parser"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Milk {a2 Milk Company} [off_9335390000028] 250g/113kcal (bare_label_serving; 45.2 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 250 g glass, via the record's own label not the parser"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-qty-05": {
+  "rawText": "una cucharada de aceite de oliva",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "aceite de oliva [off_0725821100608] 15g/120kcal (bare_label_serving; 800.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 15 g tbsp, via the record's own label not the parser"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "aceite de oliva [off_0725821100608] 15g/120kcal (bare_label_serving; 800.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 15 g tbsp, via the record's own label not the parser"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "aceite de oliva [off_0725821100608] 15g/120kcal (bare_label_serving; 800.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 15 g tbsp, via the record's own label not the parser"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-qty-06": {
+  "rawText": "100 g de pollo",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Pollo [off_8436581967784] 100g/100kcal (weight_unit; 100.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: CONTROL: `100 g de` parses, weight_unit, 100 g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Pollo [off_8436581967784] 100g/100kcal (weight_unit; 100.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: CONTROL: `100 g de` parses, weight_unit, 100 g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Pollo [off_8436581967784] 100g/100kcal (weight_unit; 100.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: CONTROL: `100 g de` parses, weight_unit, 100 g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-qty-07": {
+  "rawText": "media manzana",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Apples [fs_35718] 138g/72kcal (fs_default_serving; 52.2 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `media` unparsed -> 138 g = a WHOLE large apple; half ~91 g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Apples [fs_35718] 138g/72kcal (fs_default_serving; 52.2 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `media` unparsed -> 138 g = a WHOLE large apple; half ~91 g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Apples [fs_35718] 138g/72kcal (fs_default_serving; 52.2 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `media` unparsed -> 138 g = a WHOLE large apple; half ~91 g"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "portion"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis portion) -> modal verdict AGREES"
+ },
+ "es-qty-08": {
+  "rawText": "tres rebanadas de pan integral",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Wheat bread pan integral [off_0811371132166] 45g/109.8kcal (bare_label_serving; 244.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `tres` unparsed -> 45 g ~ 1.5 slices; three ~84 g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Wheat bread pan integral [off_0811371132166] 45g/109.8kcal (bare_label_serving; 244.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `tres` unparsed -> 45 g ~ 1.5 slices; three ~84 g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Wheat bread pan integral [off_0811371132166] 45g/109.8kcal (bare_label_serving; 244.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `tres` unparsed -> 45 g ~ 1.5 slices; three ~84 g"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "portion"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis portion) -> modal verdict AGREES"
+ },
+ "es-qty-09": {
+  "rawText": "dos huevos",
+  "category": "quantity",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Egg [fs_3092] 50g/74kcal (fs_default_serving; 148.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 50 g = ONE egg; two ~100 g. HALF the bill"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Egg [fs_3092] 50g/74kcal (fs_default_serving; 148.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 50 g = ONE egg; two ~100 g. HALF the bill"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Egg [fs_3092] 50g/74kcal (fs_default_serving; 148.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 50 g = ONE egg; two ~100 g. HALF the bill"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "portion"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis portion) -> modal verdict AGREES"
+ },
+ "es-comp-01": {
+  "rawText": "arroz con frijoles",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Arroz con leche [off_0850546006000] 85g/142.8kcal (bare_plural_serving; 168.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item, and it is 'Arroz con leche' — RICE PUDDING. `frijoles` became `leche`"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Arroz con leche [off_0850546006000] 85g/142.8kcal (bare_plural_serving; 168.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item, and it is 'Arroz con leche' — RICE PUDDING. `frijoles` became `leche`"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Arroz con leche [off_0850546006000] 85g/142.8kcal (bare_plural_serving; 168.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item, and it is 'Arroz con leche' — RICE PUDDING. `frijoles` became `leche`"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "identity",
+   "segmentation"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "segmentation+identity"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis segmentation+identity) -> modal verdict AGREES"
+ },
+ "es-comp-02": {
+  "rawText": "huevos con jamon",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Mona de Pascua bañada con huevo sorpresa [off_8436554810567] 100g/420kcal (count_unresolved_floor; 420.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: 'Mona de Pascua banada con huevo sorpresa' — an EASTER CAKE, 420 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Mona de Pascua bañada con huevo sorpresa [off_8436554810567] 100g/420kcal (count_unresolved_floor; 420.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: 'Mona de Pascua banada con huevo sorpresa' — an EASTER CAKE, 420 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Mona de Pascua bañada con huevo sorpresa [off_8436554810567] 100g/420kcal (count_unresolved_floor; 420.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: 'Mona de Pascua banada con huevo sorpresa' — an EASTER CAKE, 420 kcal/100g"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "identity",
+   "segmentation"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "segmentation+identity"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis segmentation+identity) -> modal verdict AGREES"
+ },
+ "es-comp-03": {
+  "rawText": "cafe con leche",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "cafe con leche [off_0074471213337] 235.5g/1108.2kcal (bare_sibling_serving; 470.6 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "panel"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: identity right ('cafe con leche') but 470 kcal/100g bills 1108 kcal for a coffee — ~10x"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "cafe con leche [off_0074471213337] 235.5g/1108.2kcal (bare_sibling_serving; 470.6 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "panel"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: identity right ('cafe con leche') but 470 kcal/100g bills 1108 kcal for a coffee — ~10x"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "cafe con leche [off_0074471213337] 235.5g/1108.2kcal (bare_sibling_serving; 470.6 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "panel"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: identity right ('cafe con leche') but 470 kcal/100g bills 1108 kcal for a coffee — ~10x"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "panel"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "panel"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis panel) -> modal verdict AGREES"
+ },
+ "es-comp-04": {
+  "rawText": "pan con mantequilla",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Pan con salvado [off_2360036003641] 50g/79.5kcal (bare_label_serving; 159.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: 'Pan con salvado' — bread with BRAN. `mantequilla` became `salvado`"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Pan con salvado [off_2360036003641] 50g/79.5kcal (bare_label_serving; 159.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: 'Pan con salvado' — bread with BRAN. `mantequilla` became `salvado`"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Pan con salvado [off_2360036003641] 50g/79.5kcal (bare_label_serving; 159.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation",
+     "identity"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: 'Pan con salvado' — bread with BRAN. `mantequilla` became `salvado`"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "identity",
+   "segmentation"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "segmentation+identity"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis segmentation+identity) -> modal verdict AGREES"
+ },
+ "es-comp-05": {
+  "rawText": "pollo y arroz",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Arroz con pollo [off_0774756209450] 100g/120kcal (count_unresolved_floor; 120.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: two foods collapsed into the dish record 'Arroz con pollo'"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Arroz con pollo [off_0774756209450] 100g/120kcal (count_unresolved_floor; 120.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: two foods collapsed into the dish record 'Arroz con pollo'"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Arroz con pollo [off_0774756209450] 100g/120kcal (count_unresolved_floor; 120.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: two foods collapsed into the dish record 'Arroz con pollo'"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "segmentation"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "segmentation"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis segmentation) -> modal verdict AGREES"
+ },
+ "es-comp-06": {
+  "rawText": "una manzana y un platano",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Manzana [off_0051202018324] 100g/66.7kcal (count_unresolved_floor; 66.7 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: the BANANA VANISHED with no marker. Bills only the apple"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Manzana [off_0051202018324] 100g/66.7kcal (count_unresolved_floor; 66.7 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: the BANANA VANISHED with no marker. Bills only the apple"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Manzana [off_0051202018324] 100g/66.7kcal (count_unresolved_floor; 66.7 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "segmentation"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item: the BANANA VANISHED with no marker. Bills only the apple"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "segmentation"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "segmentation"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis segmentation) -> modal verdict AGREES"
+ },
+ "es-comp-07": {
+  "rawText": "leche con chocolate",
+  "category": "composite",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Leche con chocolate {Trumoo} [off_0041900072834] 236g/180kcal (bare_label_serving; 76.3 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item, correct: 'Leche con chocolate' [Trumoo] 236 g / 180 kcal. One food, kept as one"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Leche con chocolate {Trumoo} [off_0041900072834] 236g/180kcal (bare_label_serving; 76.3 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item, correct: 'Leche con chocolate' [Trumoo] 236 g / 180 kcal. One food, kept as one"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Leche con chocolate {Trumoo} [off_0041900072834] 236g/180kcal (bare_label_serving; 76.3 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: ONE item, correct: 'Leche con chocolate' [Trumoo] 236 g / 180 kcal. One food, kept as one"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-pkg-01": {
+  "rawText": "galletas marias gamesa",
+  "category": "packaged",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Galletas Marias {Gamesa} [fs_71193430] 30g/120kcal (fs_default_serving; 400.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Galletas Marias [Gamesa]"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Galletas Marias {Gamesa} [fs_71193430] 30g/120kcal (fs_default_serving; 400.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Galletas Marias [Gamesa]"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Galletas Marias {Gamesa} [fs_71193430] 30g/120kcal (fs_default_serving; 400.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Galletas Marias [Gamesa]"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-pkg-02": {
+  "rawText": "pan blanco bimbo",
+  "category": "packaged",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Pan Blanco {Bimbo} [off_0074323090949] 55g/137.5kcal (bare_sibling_serving; 250.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Pan Blanco [Bimbo]"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Pan Blanco {Bimbo} [off_0074323090949] 55g/137.5kcal (bare_sibling_serving; 250.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Pan Blanco [Bimbo]"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Pan Blanco {Bimbo} [off_0074323090949] 55g/137.5kcal (bare_sibling_serving; 250.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Pan Blanco [Bimbo]"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-pkg-03": {
+  "rawText": "jugo de mango jumex",
+  "category": "packaged",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Jugo de mango [off_0015878209035] 100g/45.7kcal (count_unresolved_floor; 45.7 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "brand"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Jugo de mango' brandless — Jumex not matched, but the food is right"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Jugo de mango [off_0015878209035] 100g/45.7kcal (count_unresolved_floor; 45.7 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "brand"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Jugo de mango' brandless — Jumex not matched, but the food is right"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Jugo de mango [off_0015878209035] 100g/45.7kcal (count_unresolved_floor; 45.7 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "brand"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Jugo de mango' brandless — Jumex not matched, but the food is right"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "brand"
+  },
+  "consistentStandard": {
+   "call": "borderline",
+   "why": "portion: 100 g floor for a juice (a Jumex can/bottle is 250-473 ml), ~0.2-0.4x; hinges on whether a bare noun implies a serving.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis brand) -> modal verdict AGREES"
+ },
+ "es-pkg-04": {
+  "rawText": "sabritas originales",
+  "category": "packaged",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Original Sabritas {Sabritas} [off_7500478024827] 29.0335g/156.8kcal (bare_sibling_serving; 540.1 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Original Sabritas [Sabritas] 540 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Original Sabritas {Sabritas} [off_7500478024827] 29.0335g/156.8kcal (bare_sibling_serving; 540.1 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Original Sabritas [Sabritas] 540 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Original Sabritas {Sabritas} [off_7500478024827] 29.0335g/156.8kcal (bare_sibling_serving; 540.1 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Original Sabritas [Sabritas] 540 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-pkg-05": {
+  "rawText": "takis fuego",
+  "category": "packaged",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Takis Fuego {Takis} [off_0757528052911] 80g/420kcal (bare_label_serving; 525.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Takis Fuego [Takis] 525 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Takis Fuego {Takis} [off_0757528052911] 80g/420kcal (bare_label_serving; 525.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Takis Fuego [Takis] 525 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Takis Fuego {Takis} [off_0757528052911] 80g/420kcal (bare_label_serving; 525.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Takis Fuego [Takis] 525 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-pkg-06": {
+  "rawText": "una coca cola de lata",
+  "category": "packaged",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Coca cola [off_0067000011382] 355g/140kcal (bare_category_default; 39.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Coca cola 355 g = a can, 39.4 kcal/100g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Coca cola [off_0067000011382] 355g/140kcal (bare_category_default; 39.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Coca cola 355 g = a can, 39.4 kcal/100g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Coca cola [off_0067000011382] 355g/140kcal (bare_category_default; 39.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Coca cola 355 g = a can, 39.4 kcal/100g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-dish-01": {
+  "rawText": "arroz con pollo",
+  "category": "dish",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Arroz con pollo [off_0774756209450] 100g/120kcal (count_unresolved_floor; 120.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Arroz con pollo' ONE item — `con` did NOT split the dish name"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Arroz con pollo [off_0774756209450] 100g/120kcal (count_unresolved_floor; 120.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Arroz con pollo' ONE item — `con` did NOT split the dish name"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Arroz con pollo [off_0774756209450] 100g/120kcal (count_unresolved_floor; 120.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Arroz con pollo' ONE item — `con` did NOT split the dish name"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "flip",
+   "why": "portion: 100 g on count_unresolved_floor for a plate of arroz con pollo (~250-350 g), ~0.3-0.4x — the shape graded material on es-dish-05 pozole. NOT named by the 09-12 report.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-dish-02": {
+  "rawText": "chilaquiles verdes",
+  "category": "dish",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Chilaquiles Verdes [off_77673015] 300g/330kcal (label_serving_default; 110.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Chilaquiles Verdes 300 g / 330 kcal"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Chilaquiles Verdes [off_77673015] 300g/330kcal (label_serving_default; 110.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Chilaquiles Verdes 300 g / 330 kcal"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Chilaquiles Verdes [off_77673015] 300g/330kcal (label_serving_default; 110.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: Chilaquiles Verdes 300 g / 330 kcal"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-dish-03": {
+  "rawText": "dos tamales de pollo",
+  "category": "dish",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Tamales De Pollo {Mi Tienda} [fs_32829601] 57g/115kcal (fs_label_count; 201.8 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 57 g = ONE tamal; two ~114 g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Tamales De Pollo {Mi Tienda} [fs_32829601] 57g/115kcal (fs_label_count; 201.8 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 57 g = ONE tamal; two ~114 g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Tamales De Pollo {Mi Tienda} [fs_32829601] 57g/115kcal (fs_label_count; 201.8 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: `dos` unparsed -> 57 g = ONE tamal; two ~114 g"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "portion"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis portion) -> modal verdict AGREES"
+ },
+ "es-dish-04": {
+  "rawText": "enchiladas de queso",
+  "category": "dish",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Tres queso street enchiladas [off_0024812500053] 354g/580.6kcal (bare_label_serving; 164.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Tres queso street enchiladas' 354 g"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Tres queso street enchiladas [off_0024812500053] 354g/580.6kcal (bare_label_serving; 164.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Tres queso street enchiladas' 354 g"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Tres queso street enchiladas [off_0024812500053] 354g/580.6kcal (bare_label_serving; 164.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Tres queso street enchiladas' 354 g"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": null,
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-dish-05": {
+  "rawText": "pozole rojo",
+  "category": "dish",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Pozole Rojo {La Costeña} [off_7501017003648] 100g/87kcal (bare_label_serving; 87.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: count_unresolved_floor 100 g; a bowl of pozole is ~400 g — a QUARTER of the bill"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Pozole Rojo {La Costeña} [off_7501017003648] 100g/87kcal (bare_label_serving; 87.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: count_unresolved_floor 100 g; a bowl of pozole is ~400 g — a QUARTER of the bill"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Pozole Rojo {La Costeña} [off_7501017003648] 100g/87kcal (bare_label_serving; 87.0 kcal/100g)",
+    "wrong": true,
+    "axes": [
+     "portion"
+    ],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: count_unresolved_floor 100 g; a bowl of pozole is ~400 g — a QUARTER of the bill"
+   }
+  ],
+  "modalWrong": true,
+  "modalAxes": [
+   "portion"
+  ],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": true,
+   "axis0912": "portion"
+  },
+  "consistentStandard": null,
+  "note": "verdict WRONG on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 1 (axis portion) -> modal verdict AGREES"
+ },
+ "es-dish-06": {
+  "rawText": "huevos rancheros",
+  "category": "dish",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Huevos Rancheros [fs_3136] 118g/140kcal (fs_default_serving; 118.6 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Huevos Rancheros' ONE item — not split"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Huevos Rancheros [fs_3136] 118g/140kcal (fs_default_serving; 118.6 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Huevos Rancheros' ONE item — not split"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Huevos Rancheros [fs_3136] 118g/140kcal (fs_default_serving; 118.6 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: 'Huevos Rancheros' ONE item — not split"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "-"
+  },
+  "consistentStandard": {
+   "call": "borderline",
+   "why": "portion: 118 g / 140 kcal for a plate of huevos rancheros (typically 2 eggs + tortillas, ~250+ g); hinges on the FatSecret default serving being one egg.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis -) -> modal verdict AGREES"
+ },
+ "es-re-01": {
+  "rawText": "2 huevos revueltos con una tortilla de maiz",
+  "category": "reprobe",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 2,
+    "answer": "Huevos Revueltos [cmtw4vmqz00u8d4dq1bi0wqpg] 300g/456kcal (None; 152.0 kcal/100g) + Tortillas de Maiz [off_0858261000037] 45g/101kcal (discrete_unit_backfill; 224.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "identity"
+    ],
+    "reason": "eggs -> the pre-existing AI stub `Huevos Revueltos` (cmtw4vmqz00u8d4dq1bi0wqpg) at 300 g / 456 kcal; tortilla right (45 g). Graded 0 as the baseline would: its grade recorded 09-11's 300 g as a DRAW of the same stub and still scored the line 0. SOFT, reasoned: ~2.1-2.4x the ~125-140 g of two scrambled eggs."
+   },
+   {
+    "draw": 2,
+    "nItems": 2,
+    "answer": "Huevos Revueltos [cmtw4vmqz00u8d4dq1bi0wqpg] 200g/304kcal (None; 152.0 kcal/100g) + Tortillas de Maiz [off_0858261000037] 45g/101kcal (discrete_unit_backfill; 224.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "identity"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: reproduces scoping: eggs -> the PRE-EXISTING AI stub; tortilla right. NEW: the stub's grams are a DRAW — 200 g today vs 300 g on 09-11"
+   },
+   {
+    "draw": 3,
+    "nItems": 2,
+    "answer": "Huevos Revueltos [cmtw4vmqz00u8d4dq1bi0wqpg] 300g/456kcal (None; 152.0 kcal/100g) + Tortillas de Maiz [off_0858261000037] 45g/101kcal (discrete_unit_backfill; 224.4 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "identity"
+    ],
+    "reason": "eggs -> the pre-existing AI stub `Huevos Revueltos` (cmtw4vmqz00u8d4dq1bi0wqpg) at 300 g / 456 kcal; tortilla right (45 g). Graded 0 as the baseline would: its grade recorded 09-11's 300 g as a DRAW of the same stub and still scored the line 0. SOFT, reasoned: ~2.1-2.4x the ~125-140 g of two scrambled eggs."
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": false,
+   "drawsIdenticalTo0912": 1,
+   "verdict0912": false,
+   "axis0912": "identity"
+  },
+  "consistentStandard": {
+   "call": "flip",
+   "why": "portion: the stub bills 300 g / 456 kcal on 2 of 3 draws (~2.1-2.4x two scrambled eggs), 200 g on 1 (~1.4-1.6x); `dos huevos` at 2x under is material and `media manzana` at 1.52x over is material. Named by the 09-12 report.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 1 of 3 draws; modal answer on 2 of 3; modal record same as 09-12, modal grams DIFFER from 09-12; 09-12 verdict 0 (axis identity) -> modal verdict AGREES"
+ },
+ "es-re-02": {
+  "rawText": "una taza de arroz con pollo",
+  "category": "reprobe",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 1,
+    "answer": "Arroz Con Pollo {Zomera} [off_0753141506732] 100g/185kcal (label_serving_default; 185.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "portion"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: reproduces scoping exactly: identity right, `una taza` unparsed -> 100 g floor"
+   },
+   {
+    "draw": 2,
+    "nItems": 1,
+    "answer": "Arroz Con Pollo {Zomera} [off_0753141506732] 100g/185kcal (label_serving_default; 185.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "portion"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: reproduces scoping exactly: identity right, `una taza` unparsed -> 100 g floor"
+   },
+   {
+    "draw": 3,
+    "nItems": 1,
+    "answer": "Arroz Con Pollo {Zomera} [off_0753141506732] 100g/185kcal (label_serving_default; 185.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "portion"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: reproduces scoping exactly: identity right, `una taza` unparsed -> 100 g floor"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 3,
+   "verdict0912": false,
+   "axis0912": "portion"
+  },
+  "consistentStandard": {
+   "call": "flip",
+   "why": "portion: `una taza` unparsed -> 100 g for a cup of arroz con pollo (~200-240 g), ~0.4-0.5x — the exact unparsed-Spanish-quantity half-bill shape graded material on es-qty-03/-09. NOT named by the 09-12 report.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 3 of 3 draws; modal answer on 3 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis portion) -> modal verdict AGREES"
+ },
+ "es-re-03": {
+  "rawText": "un vaso de leche con chocolate y 3 galletas marias",
+  "category": "reprobe",
+  "draws": [
+   {
+    "draw": 1,
+    "nItems": 3,
+    "answer": "Leche [off_15293937] 240g/70kcal (bare_name_sibling_serving; 29.2 kcal/100g) + Chocolate [off_0076740102137] 32.35g/161.8kcal (bare_sibling_serving; 500.2 kcal/100g) + Galletas Marias {Gamesa} [fs_71193430] 18g/72kcal (fs_label_count; 400.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "segmentation"
+    ],
+    "reason": "THREE items: Leche 240 g / 70 kcal + Chocolate [off_0076740102137] 32.35 g / 161.8 kcal (500 kcal/100 g, a chocolate BAR) + Galletas Marias 18 g (3 cookies, right). This is the 09-11 scoping shape (`leche con chocolate` split into milk + chocolate); the baseline grade called the 2-vs-3 difference a segmentation DRAW and scored 0, so graded 0 as the baseline would."
+   },
+   {
+    "draw": 2,
+    "nItems": 2,
+    "answer": "Chocolate con Leche [off_4806530910231] 32.35g/140.2kcal (bare_sibling_serving; 433.4 kcal/100g) + Galletas Marias {Gamesa} [fs_71193430] 18g/72kcal (fs_label_count; 400.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "segmentation"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: reproduces the SPLIT but with TWO items today vs THREE on 09-11 — a segmentation DRAW"
+   },
+   {
+    "draw": 3,
+    "nItems": 2,
+    "answer": "Chocolate con Leche [off_4806530910231] 32.35g/140.2kcal (bare_sibling_serving; 433.4 kcal/100g) + Galletas Marias {Gamesa} [fs_71193430] 18g/72kcal (fs_label_count; 400.0 kcal/100g)",
+    "wrong": false,
+    "axes": [],
+    "softAxes": [
+     "segmentation"
+    ],
+    "reason": "Same record and grams as the 09-12 single draw -> baseline grade applied: reproduces the SPLIT but with TWO items today vs THREE on 09-11 — a segmentation DRAW"
+   }
+  ],
+  "modalWrong": false,
+  "modalAxes": [],
+  "agree09_12": true,
+  "vs09_12": {
+   "sameRecordModal": true,
+   "sameGramsModal": true,
+   "drawsIdenticalTo0912": 2,
+   "verdict0912": false,
+   "axis0912": "segmentation"
+  },
+  "consistentStandard": {
+   "call": "flip",
+   "why": "identity(+portion): a milk-chocolate BAR at 32 g for a glass (draws 2,3), or milk + a chocolate bar (draw 1, the split the corpus's es-comp-07 note calls \"the identity error\") — the same shape as es-comp-01 -> rice pudding, which is material. Named by the 09-12 report.",
+   "label": "REASONED"
+  },
+  "note": "verdict ok on 3 of 3 draws; answer identical to 09-12 (foodId+grams) on 2 of 3 draws; modal answer on 2 of 3; modal record same as 09-12, modal grams same as 09-12; 09-12 verdict 0 (axis segmentation) -> modal verdict AGREES"
+ }
+}

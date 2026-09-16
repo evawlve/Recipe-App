@@ -333,8 +333,13 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         // in the roster file. This list moves with that file on purpose: the pin is
         // the double entry that stops a membership change from being silent, which is
         // the ten-that-became-a-nine this whole instrument exists to prevent.
+        //
+        // 2026-09-15 (Lane A S51), confirmed on YMSRQ2JmMksDeDnBfWkti after the #438
+        // deploy: n-prot-02 LEFT for `departed` as UNATTRIBUTED (pinned below) and
+        // n-mq-42 JOINED `members`. The censuses behind both live in the roster
+        // file's own entries.
         const REAL_MEMBERS = [
-            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-prod-01', 'n-prot-02',
+            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-mq-42', 'n-prod-01',
             'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55',
         ];
         expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());
@@ -424,6 +429,77 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         expect(v.newMembers).toEqual([]);
         expect(v.leftTheSet).toEqual([]);
         expect(v.rotatorsPresent).toContain('n-svd-04');
+        expect(v.ok).toBe(true);
+    });
+
+    // n-prot-02 LEFT `members` FOR `departed` 2026-09-15, UNATTRIBUTED, and this pin is why.
+    //
+    // `100g tofu` passed 3/3 on off_5034467000056 on YMSRQ2JmMksDeDnBfWkti after 125 cold
+    // failures on off_3070451041461 (2026-08-12 to 2026-09-12, 44 named builds, none carrying
+    // a pass). No PR claims the change. The census is re-roll-shaped but not a proven tie:
+    // its winner changes fell between consecutive cold runs that moved 25 to 157 nlp winners
+    // at once, against a median of 1 per pair.
+    //
+    // `departed`, not `rotators`, because it is the louder choice: if the case parks on
+    // off_3070451041461 again the detector must print NEW MEMBER, not "rotator failing".
+    it('records n-prot-02 in departed and in neither members nor rotators, so a new failure reads NEW MEMBER', () => {
+        const real = loadRoster();
+        expect(real).not.toBeNull();
+        const memberIds = real!.members.map(m => m.id);
+        const rotatorIds = (real!.rotators ?? []).map(r => r.id);
+        const departedIds = ((real as unknown as { departed?: Array<{ id: string }> }).departed ?? []).map(d => d.id);
+        expect(memberIds).not.toContain('n-prot-02');
+        expect(rotatorIds).not.toContain('n-prot-02');
+        expect(departedIds).toContain('n-prot-02');
+
+        // passing is the expected state: nothing left the set, nothing is new
+        const passing = judgeColdFailureSet(
+            coldEvidence({}, [...memberIds.map(failCase), passCase('n-prot-02'), passCase('n-gen-01')]),
+            real!,
+        );
+        expect(passing.error).toBeUndefined();
+        expect(passing.ok).toBe(true);
+
+        // parked on the failing record again: LOUD, never excused as a rotator
+        const failing = judgeColdFailureSet(
+            coldEvidence({}, [...memberIds.map(failCase), failCase('n-prot-02'), passCase('n-gen-01')]),
+            real!,
+        );
+        expect(failing.error).toBeUndefined();
+        expect(failing.newMembers.map(n => n.id)).toEqual(['n-prot-02']);
+        expect(failing.rotatorsPresent).not.toContain('n-prot-02');
+        expect(failing.ok).toBe(false);
+    });
+
+    // n-svg-03 IS A ROTATOR, added 2026-09-15, and this pin is why.
+    //
+    // `1 protein bar` bills whichever `Protein bar` record wins at that record's own label
+    // serving. Cross-build cold census, 2026-09-15: 205 present, 3 HTTP-401 TRANSPORT, 4 real
+    // failures in 202 over SEVEN winners, only TWO of which ever failed: off_4750001002324
+    // (1 of 40, a 100 g fallback in a degraded 44-failure run) and off_8681630129013 (3 of 3,
+    // 35 g against [40, 90]). Several winners of which only some fail is the mechanism-(2)
+    // shape; what moves the winner is not isolated. On its failing side since 2026-09-15.
+    //
+    // In `members` it would print LEFT THE SET whenever the winner moves back.
+    it('keeps n-svg-03 in rotators, never in members', () => {
+        const real = loadRoster();
+        expect(real).not.toBeNull();
+        const memberIds = real!.members.map(m => m.id);
+        const rotatorIds = (real!.rotators ?? []).map(r => r.id);
+        expect(memberIds).not.toContain('n-svg-03');
+        expect(rotatorIds).toContain('n-svg-03');
+
+        // and the detector must treat it as expected, not as a new member
+        const results = [
+            ...memberIds.map(failCase),
+            failCase('n-svg-03'),
+            passCase('n-gen-01'),
+        ];
+        const v = judgeColdFailureSet(coldEvidence({}, results), real!);
+        expect(v.error).toBeUndefined();
+        expect(v.newMembers).toEqual([]);
+        expect(v.leftTheSet).toEqual([]);
+        expect(v.rotatorsPresent).toContain('n-svg-03');
         expect(v.ok).toBe(true);
     });
 

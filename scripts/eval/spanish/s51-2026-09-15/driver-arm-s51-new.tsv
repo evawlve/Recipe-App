@@ -1,0 +1,297 @@
+idx	draw	truth	corpusVerdict	status	itemCount	itemsJson	ms	line
+0	1	3	AGREE	ok	3	[{"r":"2 eggs","n":"eggs","b":""},{"r":"1 banana","n":"banana","b":""},{"r":"black coffee","n":"black coffee","b":""}]	2346	- 2 eggs - 1 banana - black coffee
+0	2	3	AGREE	ok	3	[{"r":"2 eggs","n":"eggs","b":""},{"r":"1 banana","n":"banana","b":""},{"r":"black coffee","n":"black coffee","b":""}]	1950	- 2 eggs - 1 banana - black coffee
+0	3	3	AGREE	ok	3	[{"r":"2 eggs","n":"eggs","b":""},{"r":"1 banana","n":"banana","b":""},{"r":"black coffee","n":"black coffee","b":""}]	2389	- 2 eggs - 1 banana - black coffee
+2	1	3	AGREE	ok	3	[{"r":"1 cup oatmeal","n":"oatmeal","b":""},{"r":"tbsp of peanut butter","n":"peanut butter","b":""},{"r":"half a banana","n":"banana","b":""}]	2373	1 cup oatmeal with a tbsp of peanut butter and half a banana
+2	2	3	AGREE	ok	3	[{"r":"1 cup oatmeal","n":"oatmeal","b":""},{"r":"a tbsp of peanut butter","n":"peanut butter","b":""},{"r":"half a banana","n":"banana","b":""}]	1563	1 cup oatmeal with a tbsp of peanut butter and half a banana
+2	3	3	AGREE	ok	3	[{"r":"1 cup oatmeal","n":"oatmeal","b":""},{"r":"1 tbsp of peanut butter","n":"peanut butter","b":""},{"r":"half a banana","n":"banana","b":""}]	1227	1 cup oatmeal with a tbsp of peanut butter and half a banana
+3	1	2	AGREE	ok	2	[{"r":"1 quest bar","n":"quest bar","b":"Quest"},{"r":"a fairlife chocolate milk","n":"chocolate milk","b":"Fairlife"}]	1391	1 quest bar and a fairlife chocolate milk
+3	2	2	AGREE	ok	2	[{"r":"1 quest bar","n":"quest bar","b":"Quest"},{"r":"a fairlife chocolate milk","n":"chocolate milk","b":"Fairlife"}]	1237	1 quest bar and a fairlife chocolate milk
+3	3	2	AGREE	ok	2	[{"r":"1 quest bar","n":"quest bar","b":"Quest"},{"r":"a fairlife chocolate milk","n":"chocolate milk","b":"Fairlife"}]	2947	1 quest bar and a fairlife chocolate milk
+4	1	1	AGREE	ok	1	[{"r":"1 quest protein bar birthday cake flavor","n":"protein bar birthday cake flavor","b":"Quest"}]	1754	1 quest protein bar birthday cake flavor
+5	1	1	AGREE	ok	1	[{"r":"1 scoop optimum nutrition cookies and cream","n":"cookies and cream","b":"optimum nutrition"}]	1016	1 scoop optimum nutrition cookies and cream
+6	1	1	AGREE	ok	1	[{"r":"1 scoop ryse protein cinnamon toast crunch","n":"protein cinnamon toast crunch","b":"ryse"}]	1202	1 scoop ryse protein cinnamon toast crunch
+7	1	3	AGREE	ok	3	[{"r":"1) chicken breast","n":"chicken breast","b":""},{"r":"2) white rice","n":"white rice","b":""},{"r":"3) broccoli","n":"broccoli","b":""}]	3642	1) chicken breast 2) white rice 3) broccoli
+7	2	3	AGREE	ok	3	[{"r":"chicken breast","n":"chicken breast","b":""},{"r":"white rice","n":"white rice","b":""},{"r":"broccoli","n":"broccoli","b":""}]	1398	1) chicken breast 2) white rice 3) broccoli
+7	3	3	AGREE	ok	3	[{"r":"chicken breast","n":"chicken breast","b":""},{"r":"white rice","n":"white rice","b":""},{"r":"broccoli","n":"broccoli","b":""}]	1258	1) chicken breast 2) white rice 3) broccoli
+8	1	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of cheddar cheese","n":"cheddar cheese","b":""}]	2167	2 eggs and a slice of cheddar cheese
+8	2	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of cheddar cheese","n":"cheddar cheese","b":""}]	990	2 eggs and a slice of cheddar cheese
+8	3	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of cheddar cheese","n":"cheddar cheese","b":""}]	2136	2 eggs and a slice of cheddar cheese
+9	1	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast","n":"toast","b":""}]	1041	2 eggs and a slice of toast
+9	2	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast","n":"toast","b":""}]	938	2 eggs and a slice of toast
+9	3	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast","n":"slice of toast","b":""}]	1010	2 eggs and a slice of toast
+10	1	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of whole wheat toast","n":"whole wheat toast","b":""}]	2176	2 eggs and a slice of whole wheat toast
+10	2	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of whole wheat toast","n":"whole wheat toast","b":""}]	1379	2 eggs and a slice of whole wheat toast
+10	3	2	AGREE	ok	2	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of whole wheat toast","n":"whole wheat toast","b":""}]	1170	2 eggs and a slice of whole wheat toast
+12	1	4	UNDER_SPLIT	ok	4	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast","n":"toast","b":""},{"r":"butter","n":"butter","b":""},{"r":"a large coffee","n":"coffee","b":""}]	2595	2 eggs, a slice of toast with butter, and a large coffee
+12	2	4	UNDER_SPLIT	ok	4	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast","n":"toast","b":""},{"r":"butter","n":"butter","b":""},{"r":"a large coffee","n":"coffee","b":""}]	1344	2 eggs, a slice of toast with butter, and a large coffee
+12	3	4	UNDER_SPLIT	ok	3	[{"r":"2 eggs","n":"eggs","b":""},{"r":"a slice of toast with butter","n":"toast","b":""},{"r":"a large coffee","n":"coffee","b":""}]	1319	2 eggs, a slice of toast with butter, and a large coffee
+13	1	3	AGREE	ok	3	[{"r":"2 pancakes","n":"pancakes","b":""},{"r":"a fried egg","n":"fried egg","b":""},{"r":"orange juice","n":"orange juice","b":""}]	2085	2 pancakes + a fried egg + orange juice
+13	2	3	AGREE	ok	3	[{"r":"2 pancakes","n":"pancakes","b":""},{"r":"a fried egg","n":"fried egg","b":""},{"r":"orange juice","n":"orange juice","b":""}]	1210	2 pancakes + a fried egg + orange juice
+13	3	3	AGREE	ok	3	[{"r":"2 pancakes","n":"pancakes","b":""},{"r":"a fried egg","n":"fried egg","b":""},{"r":"orange juice","n":"orange juice","b":""}]	3646	2 pancakes + a fried egg + orange juice
+14	1	2	AGREE	ok	2	[{"r":"2 scoops ghost vegan protein","n":"vegan protein","b":"ghost"},{"r":"a banana","n":"banana","b":""}]	1495	2 scoops ghost vegan protein and a banana
+14	2	2	AGREE	ok	2	[{"r":"2 scoops ghost vegan protein","n":"vegan protein","b":"ghost"},{"r":"a banana","n":"banana","b":""}]	1880	2 scoops ghost vegan protein and a banana
+14	3	2	AGREE	ok	2	[{"r":"2 scoops ghost vegan protein","n":"vegan protein","b":"ghost"},{"r":"a banana","n":"banana","b":""}]	1681	2 scoops ghost vegan protein and a banana
+15	1	1	AGREE	ok	1	[{"r":"2 scoops ghost vegan protein cinnamon roll","n":"vegan protein cinnamon roll","b":"ghost"}]	1561	2 scoops ghost vegan protein cinnamon roll
+16	1	2	AGREE	ok	2	[{"r":"2 scrambled eggs","n":"scrambled eggs","b":""},{"r":"a slice of whole wheat toast","n":"whole wheat toast","b":""}]	1710	2 scrambled eggs and a slice of whole wheat toast for breakfast
+16	2	2	AGREE	ok	2	[{"r":"2 scrambled eggs","n":"scrambled eggs","b":""},{"r":"a slice of whole wheat toast","n":"whole wheat toast","b":""}]	1860	2 scrambled eggs and a slice of whole wheat toast for breakfast
+16	3	2	AGREE	ok	2	[{"r":"2 scrambled eggs","n":"scrambled eggs","b":""},{"r":"a slice of whole wheat toast","n":"whole wheat toast","b":""}]	1381	2 scrambled eggs and a slice of whole wheat toast for breakfast
+17	1	2	AGREE	ok	2	[{"r":"2 slices of pizza","n":"pizza","b":""},{"r":"a side salad","n":"salad","b":""}]	2146	2 slices of pizza and a side salad
+17	2	2	AGREE	ok	2	[{"r":"2 slices of pizza","n":"pizza","b":""},{"r":"a side salad","n":"side salad","b":""}]	937	2 slices of pizza and a side salad
+17	3	2	AGREE	ok	2	[{"r":"2 slices of pizza","n":"pizza","b":""},{"r":"a side salad","n":"side salad","b":""}]	1771	2 slices of pizza and a side salad
+18	1	1	AGREE	ok	1	[{"r":"2 tbsp ghugh's sugar free honey mustard","n":"honey mustard","b":"ghugh's"}]	1175	2 tbsp ghugh's sugar free honey mustard
+19	1	9	OVER_SPLIT	ok	10	[{"r":"2 tbsp peanut butter","n":"peanut butter","b":""},{"r":"1 tbsp honey","n":"honey","b":""},{"r":"1 cup whole milk","n":"whole milk","b":""},{"r":"1 tbsp butter","n":"butter","b":""},{"r":"2 tbsp heavy cream","n":"heavy cream","b":""},{"r":"1 tsp cinnamon","n":"cinnamon","b":""},{"r":"1 cup greek yogurt","n":"greek yogurt","b":""},{"r":"1 tbsp mayonnaise","n":"mayonnaise","b":""},{"r":"1 slice sourdough bread","n":"sourdough bread","b":""},{"r":"1 medium banana","n":"banana","b":""}]	7489	2 tbsp peanut butter, 1 tbsp honey, 1 cup whole milk, 1 tbsp butter, 2 tbsp heavy cream, 1 tsp cinnamon, 1 cup greek yogurt, 1 tbsp mayonnaise, 1 slice sourdough bread, 1 medium banana
+19	2	9	OVER_SPLIT	null	0	[]	8004	2 tbsp peanut butter, 1 tbsp honey, 1 cup whole milk, 1 tbsp butter, 2 tbsp heavy cream, 1 tsp cinnamon, 1 cup greek yogurt, 1 tbsp mayonnaise, 1 slice sourdough bread, 1 medium banana
+19	3	9	OVER_SPLIT	ok	10	[{"r":"2 tbsp peanut butter","n":"peanut butter","b":""},{"r":"1 tbsp honey","n":"honey","b":""},{"r":"1 cup whole milk","n":"whole milk","b":""},{"r":"1 tbsp butter","n":"butter","b":""},{"r":"2 tbsp heavy cream","n":"heavy cream","b":""},{"r":"1 tsp cinnamon","n":"cinnamon","b":""},{"r":"1 cup greek yogurt","n":"greek yogurt","b":""},{"r":"1 tbsp mayonnaise","n":"mayonnaise","b":""},{"r":"1 slice sourdough bread","n":"sourdough bread","b":""},{"r":"1 medium banana","n":"banana","b":""}]	3076	2 tbsp peanut butter, 1 tbsp honey, 1 cup whole milk, 1 tbsp butter, 2 tbsp heavy cream, 1 tsp cinnamon, 1 cup greek yogurt, 1 tbsp mayonnaise, 1 slice sourdough bread, 1 medium banana
+20	1	3	AGREE	ok	3	[{"r":"3 egg whites","n":"egg whites","b":""},{"r":"2 slices turkey bacon","n":"turkey bacon","b":""},{"r":"toast","n":"toast","b":""}]	2444	3 egg whites, 2 slices turkey bacon, and toast
+20	2	3	AGREE	ok	3	[{"r":"3 egg whites","n":"egg whites","b":""},{"r":"2 slices turkey bacon","n":"turkey bacon","b":""},{"r":"toast","n":"toast","b":""}]	1448	3 egg whites, 2 slices turkey bacon, and toast
+20	3	3	AGREE	ok	3	[{"r":"3 egg whites","n":"egg whites","b":""},{"r":"2 slices turkey bacon","n":"turkey bacon","b":""},{"r":"toast","n":"toast","b":""}]	1253	3 egg whites, 2 slices turkey bacon, and toast
+21	1	3	AGREE	ok	3	[{"r":"3 eggs","n":"eggs","b":""},{"r":"2 slices of bacon","n":"bacon","b":""},{"r":"a piece of toast","n":"toast","b":""}]	1074	3 eggs 2 slices of bacon and a piece of toast
+21	2	3	AGREE	ok	3	[{"r":"3 eggs","n":"eggs","b":""},{"r":"2 slices of bacon","n":"bacon","b":""},{"r":"a piece of toast","n":"toast","b":""}]	2408	3 eggs 2 slices of bacon and a piece of toast
+21	3	3	AGREE	ok	3	[{"r":"3 eggs","n":"eggs","b":""},{"r":"2 slices of bacon","n":"bacon","b":""},{"r":"a piece of toast","n":"toast","b":""}]	2333	3 eggs 2 slices of bacon and a piece of toast
+22	1	3	AGREE	ok	3	[{"r":"8oz sirloin steak","n":"sirloin steak","b":""},{"r":"baked potato","n":"baked potato","b":""},{"r":"side salad","n":"side salad","b":""}]	1889	8oz sirloin steak baked potato and side salad
+22	2	3	AGREE	ok	3	[{"r":"8oz sirloin steak","n":"sirloin steak","b":""},{"r":"baked potato","n":"baked potato","b":""},{"r":"side salad","n":"side salad","b":""}]	1510	8oz sirloin steak baked potato and side salad
+22	3	3	AGREE	ok	3	[{"r":"8oz sirloin steak","n":"sirloin steak","b":""},{"r":"baked potato","n":"baked potato","b":""},{"r":"side salad","n":"side salad","b":""}]	1704	8oz sirloin steak baked potato and side salad
+23	1	2	AGREE	ok	2	[{"r":"a bowl of cereal","n":"cereal","b":""},{"r":"milk","n":"milk","b":""}]	3268	a bowl of cereal with milk
+23	2	2	AGREE	ok	2	[{"r":"a bowl of cereal","n":"cereal","b":""},{"r":"milk","n":"milk","b":""}]	1139	a bowl of cereal with milk
+23	3	2	AGREE	ok	2	[{"r":"a bowl of cereal","n":"cereal","b":""},{"r":"milk","n":"milk","b":""}]	1413	a bowl of cereal with milk
+24	1	3	AGREE	ok	3	[{"r":"a bowl of cereal","n":"cereal","b":""},{"r":"milk","n":"milk","b":""},{"r":"a banana","n":"banana","b":""}]	1711	a bowl of cereal with milk and a banana
+24	2	3	AGREE	ok	3	[{"r":"a bowl of cereal","n":"cereal","b":""},{"r":"with milk","n":"milk","b":""},{"r":"a banana","n":"banana","b":""}]	1294	a bowl of cereal with milk and a banana
+24	3	3	AGREE	ok	3	[{"r":"a bowl of cereal","n":"cereal","b":""},{"r":"milk","n":"milk","b":""},{"r":"a banana","n":"banana","b":""}]	1359	a bowl of cereal with milk and a banana
+25	1	1	AGREE	ok	1	[{"r":"a bowl of my roommates leftover pad see ew","n":"pad see ew","b":""}]	1744	a bowl of my roommates leftover pad see ew
+26	1	3	AGREE	ok	3	[{"r":"a bowl of oatmeal","n":"oatmeal","b":""},{"r":"blueberries","n":"blueberries","b":""},{"r":"honey","n":"honey","b":""}]	1390	a bowl of oatmeal with blueberries and honey
+26	2	3	AGREE	ok	3	[{"r":"a bowl of oatmeal","n":"oatmeal","b":""},{"r":"blueberries","n":"blueberries","b":""},{"r":"honey","n":"honey","b":""}]	1144	a bowl of oatmeal with blueberries and honey
+26	3	3	AGREE	ok	3	[{"r":"a bowl of oatmeal","n":"oatmeal","b":""},{"r":"blueberries","n":"blueberries","b":""},{"r":"honey","n":"honey","b":""}]	1321	a bowl of oatmeal with blueberries and honey
+27	1	1	AGREE	ok	1	[{"r":"a fun size bag of m&ms","n":"m&ms","b":"m&ms"}]	774	a fun size bag of m&ms
+28	1	6	AGREE	ok	6	[{"r":"a jersey mikes giant club sub","n":"giant club sub","b":"jersey mikes"},{"r":"12 oz coke","n":"coke","b":""},{"r":"1 tbsp olive oil","n":"olive oil","b":""},{"r":"half an avocado","n":"avocado","b":""},{"r":"3 slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"siggis skyr","n":"skyr","b":"siggis"}]	3505	a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, half an avocado, 3 slices of pepperoni pizza, siggis skyr
+28	2	6	AGREE	ok	6	[{"r":"a jersey mikes giant club sub","n":"giant club sub","b":"jersey mikes"},{"r":"12 oz coke","n":"coke","b":""},{"r":"1 tbsp olive oil","n":"olive oil","b":""},{"r":"half an avocado","n":"avocado","b":""},{"r":"3 slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"siggis skyr","n":"skyr","b":"siggis"}]	2971	a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, half an avocado, 3 slices of pepperoni pizza, siggis skyr
+28	3	6	AGREE	ok	6	[{"r":"a jersey mikes giant club sub","n":"giant club sub","b":"jersey mikes"},{"r":"12 oz coke","n":"coke","b":""},{"r":"1 tbsp olive oil","n":"olive oil","b":""},{"r":"half an avocado","n":"avocado","b":""},{"r":"3 slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"siggis skyr","n":"skyr","b":"siggis"}]	1997	a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, half an avocado, 3 slices of pepperoni pizza, siggis skyr
+29	1	9	AGREE	ok	9	[{"r":"a jersey mikes giant club sub","n":"giant club sub","b":"jersey mikes"},{"r":"12 oz coke","n":"coke","b":""},{"r":"1 tbsp olive oil","n":"olive oil","b":""},{"r":"half an avocado","n":"avocado","b":""},{"r":"3 slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"siggis skyr","n":"skyr","b":"siggis"},{"r":"2 tsp sugar","n":"sugar","b":""},{"r":"1 cup rice","n":"rice","b":""},{"r":"8 oz chicken breast","n":"chicken breast","b":""}]	2923	a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, half an avocado, 3 slices of pepperoni pizza, siggis skyr, 2 tsp sugar, 1 cup rice, 8 oz chicken breast
+29	2	9	AGREE	ok	9	[{"r":"a jersey mikes giant club sub","n":"giant club sub","b":"jersey mikes"},{"r":"12 oz coke","n":"coke","b":"coke"},{"r":"1 tbsp olive oil","n":"olive oil","b":""},{"r":"half an avocado","n":"avocado","b":""},{"r":"3 slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"siggis skyr","n":"skyr","b":"siggis"},{"r":"2 tsp sugar","n":"sugar","b":""},{"r":"1 cup rice","n":"rice","b":""},{"r":"8 oz chicken breast","n":"chicken breast","b":""}]	2931	a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, half an avocado, 3 slices of pepperoni pizza, siggis skyr, 2 tsp sugar, 1 cup rice, 8 oz chicken breast
+29	3	9	AGREE	ok	9	[{"r":"a jersey mikes giant club sub","n":"giant club sub","b":"jersey mikes"},{"r":"12 oz coke","n":"coke","b":"coke"},{"r":"1 tbsp olive oil","n":"olive oil","b":""},{"r":"half an avocado","n":"avocado","b":""},{"r":"3 slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"siggis skyr","n":"skyr","b":"siggis"},{"r":"2 tsp sugar","n":"sugar","b":""},{"r":"1 cup rice","n":"rice","b":""},{"r":"8 oz chicken breast","n":"chicken breast","b":""}]	2584	a jersey mikes giant club sub, 12 oz coke, 1 tbsp olive oil, half an avocado, 3 slices of pepperoni pizza, siggis skyr, 2 tsp sugar, 1 cup rice, 8 oz chicken breast
+30	1	1	AGREE	ok	1	[{"r":"alani nu pre workout hawaiian shaved ice","n":"pre workout hawaiian shaved ice","b":"Alani Nu"}]	2170	alani nu pre workout hawaiian shaved ice
+31	1	1	AGREE	ok	1	[{"r":"amy's brown rice and vegetables bowl","n":"brown rice and vegetables bowl","b":"amy's"}]	1515	amy's brown rice and vegetables bowl
+32	1	1	AGREE	ok	1	[{"r":"amy's kitchen bean and cheese burrito","n":"bean and cheese burrito","b":"amy's kitchen"}]	981	amy's kitchen bean and cheese burrito
+33	1	1	AGREE	ok	1	[{"r":"amy's kitchen mac and cheese","n":"mac and cheese","b":"amy's kitchen"}]	688	amy's kitchen mac and cheese
+42	1	1	AGREE	ok	1	[{"r":"angies boomchickapop sweet and salty","n":"boomchickapop sweet and salty","b":"angies"}]	991	angies boomchickapop sweet and salty
+43	1	1	AGREE	ok	1	[{"r":"annie's shells and cheddar","n":"shells and cheddar","b":"annie's"}]	1605	annie's shells and cheddar
+44	1	1	AGREE	ok	1	[{"r":"annie's white cheddar mac and cheese","n":"white cheddar mac and cheese","b":"Annie's"}]	1767	annie's white cheddar mac and cheese
+45	1	2	AGREE	ok	2	[{"r":"bacon","n":"bacon","b":""},{"r":"eggs","n":"eggs","b":""}]	1028	bacon and eggs
+45	2	2	AGREE	ok	2	[{"r":"bacon","n":"bacon","b":""},{"r":"eggs","n":"eggs","b":""}]	1118	bacon and eggs
+45	3	2	AGREE	ok	2	[{"r":"bacon","n":"bacon","b":""},{"r":"eggs","n":"eggs","b":""}]	965	bacon and eggs
+46	1	1	AGREE	ok	1	[{"r":"bacon egg and cheese bagel","n":"bacon egg and cheese bagel","b":""}]	855	bacon egg and cheese bagel
+47	1	1	AGREE	ok	1	[{"r":"bacon egg and cheese sandwich","n":"bacon egg and cheese sandwich","b":""}]	828	bacon egg and cheese sandwich
+49	1	1	AGREE	ok	1	[{"r":"barilla protein plus pasta","n":"protein plus pasta","b":"barilla"}]	819	barilla protein plus pasta
+50	1	1	AGREE	ok	1	[{"r":"ben and jerry's","n":"ben and jerry's","b":"Ben & Jerry's"}]	837	ben and jerry's
+51	1	1	AGREE	ok	1	[{"r":"ben and jerrys","n":"ben and jerrys","b":"Ben & Jerry's"}]	901	ben and jerrys
+52	1	1	AGREE	ok	1	[{"r":"ben and jerrys cherry garcia","n":"cherry garcia","b":"Ben & Jerry's"}]	1718	ben and jerrys cherry garcia
+53	1	1	AGREE	ok	1	[{"r":"ben and jerrys half baked","n":"half baked","b":"Ben and Jerry's"}]	1868	ben and jerrys half baked
+54	1	3	AGREE	ok	3	[{"r":"big mac","n":"big mac","b":""},{"r":"medium fries","n":"fries","b":""},{"r":"a coke","n":"coke","b":""}]	1709	big mac and medium fries with a coke
+54	2	3	AGREE	ok	3	[{"r":"big mac","n":"big mac","b":""},{"r":"medium fries","n":"fries","b":""},{"r":"a coke","n":"coke","b":""}]	1143	big mac and medium fries with a coke
+54	3	3	AGREE	ok	3	[{"r":"big mac","n":"big mac","b":""},{"r":"medium fries","n":"fries","b":""},{"r":"a coke","n":"coke","b":""}]	1330	big mac and medium fries with a coke
+55	1	1	AGREE	ok	1	[{"r":"biscuits and gravy","n":"biscuits and gravy","b":""}]	905	biscuits and gravy
+56	1	1	OVER_SPLIT	ok	2	[{"r":"black coffee","n":"black coffee","b":""},{"r":"sugar","n":"sugar","b":""}]	1924	black coffee with sugar
+56	2	1	OVER_SPLIT	ok	2	[{"r":"black coffee","n":"black coffee","b":""},{"r":"sugar","n":"sugar","b":""}]	1852	black coffee with sugar
+56	3	1	OVER_SPLIT	ok	2	[{"r":"black coffee","n":"black coffee","b":""},{"r":"sugar","n":"sugar","b":""}]	1715	black coffee with sugar
+57	1	1	AGREE	ok	1	[{"r":"boar's head deluxe oven roasted turkey breast","n":"turkey breast","b":"Boar's Head"}]	1688	boar's head deluxe oven roasted turkey breast
+58	1	1	AGREE	ok	1	[{"r":"bojangles mashed potatoes with gravy","n":"mashed potatoes with gravy","b":"bojangles"}]	1523	bojangles mashed potatoes with gravy
+59	1	2	AGREE	ok	2	[{"r":"3 eggs","n":"eggs","b":""},{"r":"toast","n":"toast","b":""}]	2778	breakfast: 3 eggs and toast
+59	2	2	AGREE	ok	2	[{"r":"3 eggs","n":"eggs","b":""},{"r":"toast","n":"toast","b":""}]	1192	breakfast: 3 eggs and toast
+59	3	2	AGREE	ok	2	[{"r":"3 eggs","n":"eggs","b":""},{"r":"toast","n":"toast","b":""}]	1425	breakfast: 3 eggs and toast
+60	1	1	AGREE	ok	1	[{"r":"bumble bee chunk light tuna in water","n":"chunk light tuna in water","b":"bumble bee"}]	1652	bumble bee chunk light tuna in water
+61	1	1	AGREE	ok	1	[{"r":"cape cod sea salt and vinegar","n":"sea salt and vinegar","b":"Cape Cod"}]	1234	cape cod sea salt and vinegar
+62	1	1	OVER_SPLIT	ok	1	[{"r":"cheesecake factory bang bang chicken and shrimp","n":"cheesecake factory bang bang chicken and shrimp","b":""}]	1316	cheesecake factory bang bang chicken and shrimp
+62	2	1	OVER_SPLIT	ok	1	[{"r":"cheesecake factory bang bang chicken and shrimp","n":"cheesecake factory bang bang chicken and shrimp","b":""}]	1647	cheesecake factory bang bang chicken and shrimp
+62	3	1	OVER_SPLIT	ok	1	[{"r":"cheesecake factory bang bang chicken and shrimp","n":"cheesecake factory bang bang chicken and shrimp","b":""}]	1941	cheesecake factory bang bang chicken and shrimp
+63	1	1	AGREE	ok	1	[{"r":"chicken and waffles","n":"chicken and waffles","b":""}]	1416	chicken and waffles
+64	1	3	AGREE	ok	3	[{"r":"chicken breast 200g","n":"chicken breast","b":""},{"r":"150g white rice","n":"white rice","b":""},{"r":"1 cup broccoli","n":"broccoli","b":""}]	1241	chicken breast 200g, 150g white rice, 1 cup broccoli
+64	2	3	AGREE	ok	3	[{"r":"chicken breast 200g","n":"chicken breast","b":""},{"r":"150g white rice","n":"white rice","b":""},{"r":"1 cup broccoli","n":"broccoli","b":""}]	1791	chicken breast 200g, 150g white rice, 1 cup broccoli
+64	3	3	AGREE	ok	3	[{"r":"chicken breast 200g","n":"chicken breast","b":""},{"r":"150g white rice","n":"white rice","b":""},{"r":"1 cup broccoli","n":"broccoli","b":""}]	1780	chicken breast 200g, 150g white rice, 1 cup broccoli
+65	1	1	AGREE	ok	1	[{"r":"chicken of the sea chunk light tuna","n":"chunk light tuna","b":"chicken of the sea"}]	1712	chicken of the sea chunk light tuna
+66	1	1	AGREE	ok	1	[{"r":"chicken of the sea solid white albacore tuna","n":"solid white albacore tuna","b":"chicken of the sea"}]	1124	chicken of the sea solid white albacore tuna
+67	1	2	AGREE	ok	2	[{"r":"chicken","n":"chicken","b":""},{"r":"brown rice","n":"brown rice","b":""}]	1194	chicken with brown rice
+67	2	2	AGREE	ok	2	[{"r":"chicken","n":"chicken","b":""},{"r":"brown rice","n":"brown rice","b":""}]	1933	chicken with brown rice
+67	3	2	AGREE	ok	2	[{"r":"chicken","n":"chicken","b":""},{"r":"brown rice","n":"brown rice","b":""}]	1568	chicken with brown rice
+68	1	2	AGREE	ok	2	[{"r":"chiken brest","n":"chiken brest","b":""},{"r":"brocolli","n":"brocolli","b":""}]	1207	chiken brest and brocolli
+68	2	2	AGREE	ok	2	[{"r":"chiken brest","n":"chiken brest","b":""},{"r":"brocolli","n":"brocolli","b":""}]	999	chiken brest and brocolli
+68	3	2	AGREE	ok	2	[{"r":"chiken brest","n":"chiken brest","b":""},{"r":"brocolli","n":"brocolli","b":""}]	2496	chiken brest and brocolli
+69	1	2	AGREE	ok	2	[{"r":"chipotle chicken burrito","n":"chipotle chicken burrito","b":""},{"r":"2 eggs","n":"eggs","b":""}]	1258	chipotle chicken burrito and 2 eggs
+69	2	2	AGREE	ok	2	[{"r":"chipotle chicken burrito","n":"chipotle chicken burrito","b":""},{"r":"2 eggs","n":"eggs","b":""}]	1315	chipotle chicken burrito and 2 eggs
+69	3	2	AGREE	ok	2	[{"r":"chipotle chicken burrito","n":"chipotle chicken burrito","b":""},{"r":"2 eggs","n":"eggs","b":""}]	1101	chipotle chicken burrito and 2 eggs
+70	1	3	AGREE	ok	3	[{"r":"chipotle chicken burrito","n":"chipotle chicken burrito","b":""},{"r":"3 oreos","n":"oreos","b":""},{"r":"32 oz gatorade","n":"gatorade","b":""}]	1458	chipotle chicken burrito, 3 oreos and 32 oz gatorade
+70	2	3	AGREE	ok	3	[{"r":"chipotle chicken burrito","n":"chipotle chicken burrito","b":"Chipotle"},{"r":"3 oreos","n":"oreos","b":"Oreo"},{"r":"32 oz gatorade","n":"gatorade","b":"Gatorade"}]	1439	chipotle chicken burrito, 3 oreos and 32 oz gatorade
+70	3	3	AGREE	ok	3	[{"r":"chipotle chicken burrito","n":"chipotle chicken burrito","b":"Chipotle"},{"r":"3 oreos","n":"oreos","b":"Oreo"},{"r":"32 oz gatorade","n":"gatorade","b":"Gatorade"}]	1442	chipotle chicken burrito, 3 oreos and 32 oz gatorade
+71	1	1	AGREE	ok	1	[{"r":"chive and onion cream cheese","n":"chive and onion cream cheese","b":""}]	1524	chive and onion cream cheese
+72	1	3	AGREE	ok	3	[{"r":"coffee","n":"coffee","b":""},{"r":"cream","n":"cream","b":""},{"r":"sugar","n":"sugar","b":""}]	2231	coffee with cream and sugar
+72	2	3	AGREE	ok	3	[{"r":"coffee","n":"coffee","b":""},{"r":"cream","n":"cream","b":""},{"r":"sugar","n":"sugar","b":""}]	1359	coffee with cream and sugar
+72	3	3	AGREE	ok	3	[{"r":"coffee","n":"coffee","b":""},{"r":"cream","n":"cream","b":""},{"r":"sugar","n":"sugar","b":""}]	1334	coffee with cream and sugar
+73	1	2	UNDER_SPLIT	ok	2	[{"r":"coffee","n":"coffee","b":""},{"r":"milk","n":"milk","b":""}]	1488	coffee with milk
+73	2	2	UNDER_SPLIT	ok	2	[{"r":"coffee","n":"coffee","b":""},{"r":"milk","n":"milk","b":""}]	1734	coffee with milk
+73	3	2	UNDER_SPLIT	ok	2	[{"r":"coffee","n":"coffee","b":""},{"r":"milk","n":"milk","b":""}]	1063	coffee with milk
+74	1	1	AGREE	ok	1	[{"r":"cracker barrel mac and cheese","n":"mac and cheese","b":"cracker barrel"}]	2004	cracker barrel mac and cheese
+75	1	1	AGREE	ok	1	[{"r":"dave and busters bourbon bacon burger","n":"bourbon bacon burger","b":"dave and busters"}]	1870	dave and busters bourbon bacon burger
+76	1	1	AGREE	ok	1	[{"r":"dave's killer bread 21 whole grains and seeds","n":"dave's killer bread 21 whole grains and seeds","b":"dave's killer bread"}]	920	dave's killer bread 21 whole grains and seeds
+77	1	1	AGREE	ok	1	[{"r":"dave's killer bread white bread done right","n":"white bread done right","b":"dave's killer bread"}]	1018	dave's killer bread white bread done right
+78	1	1	AGREE	ok	1	[{"r":"david protein bar chocolate chip cookie dough","n":"protein bar chocolate chip cookie dough","b":"david"}]	1533	david protein bar chocolate chip cookie dough
+79	1	1	AGREE	ok	1	[{"r":"devour buffalo chicken mac and cheese","n":"buffalo chicken mac and cheese","b":"devour"}]	938	devour buffalo chicken mac and cheese
+80	1	1	AGREE	ok	1	[{"r":"dietz and watson black forest ham","n":"black forest ham","b":"dietz and watson"}]	871	dietz and watson black forest ham
+81	1	1	AGREE	ok	1	[{"r":"el monterey beef and bean burrito","n":"beef and bean burrito","b":"el monterey"}]	1429	el monterey beef and bean burrito
+82	1	1	AGREE	ok	1	[{"r":"firehouse subs smokehouse beef and cheddar brisket","n":"smokehouse beef and cheddar brisket","b":"Firehouse Subs"}]	910	firehouse subs smokehouse beef and cheddar brisket
+83	1	2	AGREE	ok	2	[{"r":"grandmas homemade zucchini fritters","n":"zucchini fritters","b":""},{"r":"tzatziki","n":"tzatziki","b":""}]	1830	grandmas homemade zucchini fritters with tzatziki
+83	2	2	AGREE	ok	2	[{"r":"grandmas homemade zucchini fritters","n":"zucchini fritters","b":""},{"r":"tzatziki","n":"tzatziki","b":""}]	2181	grandmas homemade zucchini fritters with tzatziki
+83	3	2	AGREE	ok	2	[{"r":"grandmas homemade zucchini fritters","n":"zucchini fritters","b":""},{"r":"tzatziki","n":"tzatziki","b":""}]	1137	grandmas homemade zucchini fritters with tzatziki
+84	1	2	AGREE	ok	2	[{"r":"granola greek","n":"granola greek","b":""},{"r":"yogurt","n":"yogurt","b":""}]	1158	granola greek with yogurt
+84	2	2	AGREE	ok	2	[{"r":"granola greek","n":"granola greek","b":""},{"r":"yogurt","n":"yogurt","b":""}]	1840	granola greek with yogurt
+84	3	2	AGREE	ok	2	[{"r":"granola greek","n":"granola greek","b":""},{"r":"yogurt","n":"yogurt","b":""}]	1835	granola greek with yogurt
+85	1	2	UNDER_SPLIT	ok	2	[{"r":"granola with almonds","n":"granola","b":""},{"r":"almonds","n":"almonds","b":""}]	985	granola with almonds
+85	2	2	UNDER_SPLIT	ok	2	[{"r":"granola","n":"granola","b":""},{"r":"almonds","n":"almonds","b":""}]	1839	granola with almonds
+85	3	2	UNDER_SPLIT	ok	2	[{"r":"granola","n":"granola","b":""},{"r":"almonds","n":"almonds","b":""}]	1120	granola with almonds
+86	1	2	UNDER_SPLIT	ok	2	[{"r":"granola","n":"granola","b":""},{"r":"yogurt","n":"yogurt","b":""}]	1601	granola with yogurt
+86	2	2	UNDER_SPLIT	ok	2	[{"r":"granola","n":"granola","b":""},{"r":"yogurt","n":"yogurt","b":""}]	960	granola with yogurt
+86	3	2	UNDER_SPLIT	ok	2	[{"r":"granola","n":"granola","b":""},{"r":"yogurt","n":"yogurt","b":""}]	1209	granola with yogurt
+87	1	4	UNDER_SPLIT	ok	4	[{"r":"greek yogurt","n":"greek yogurt","b":""},{"r":"granola","n":"granola","b":""},{"r":"honey","n":"honey","b":""},{"r":"strawberries","n":"strawberries","b":""}]	2432	greek yogurt with granola, honey and strawberries
+87	2	4	UNDER_SPLIT	ok	4	[{"r":"greek yogurt","n":"greek yogurt","b":""},{"r":"granola","n":"granola","b":""},{"r":"honey","n":"honey","b":""},{"r":"strawberries","n":"strawberries","b":""}]	1386	greek yogurt with granola, honey and strawberries
+87	3	4	UNDER_SPLIT	ok	4	[{"r":"greek yogurt","n":"greek yogurt","b":""},{"r":"granola","n":"granola","b":""},{"r":"honey","n":"honey","b":""},{"r":"strawberries","n":"strawberries","b":""}]	2012	greek yogurt with granola, honey and strawberries
+88	1	3	AGREE	ok	3	[{"r":"grilled chicken breast","n":"grilled chicken breast","b":""},{"r":"white rice","n":"white rice","b":""},{"r":"broccoli","n":"broccoli","b":""}]	1133	grilled chicken breast with white rice and broccoli
+88	2	3	AGREE	ok	3	[{"r":"grilled chicken breast","n":"grilled chicken breast","b":""},{"r":"white rice","n":"white rice","b":""},{"r":"broccoli","n":"broccoli","b":""}]	2145	grilled chicken breast with white rice and broccoli
+88	3	3	AGREE	ok	3	[{"r":"grilled chicken breast","n":"grilled chicken breast","b":""},{"r":"white rice","n":"white rice","b":""},{"r":"broccoli","n":"broccoli","b":""}]	1610	grilled chicken breast with white rice and broccoli
+89	1	2	AGREE	ok	2	[{"r":"grilled chicken salad","n":"grilled chicken salad","b":""},{"r":"a tablespoon of olive oil","n":"olive oil","b":""}]	1156	grilled chicken salad with a tablespoon of olive oil for lunch
+89	2	2	AGREE	ok	2	[{"r":"grilled chicken salad","n":"grilled chicken salad","b":""},{"r":"1 tablespoon of olive oil","n":"olive oil","b":""}]	2156	grilled chicken salad with a tablespoon of olive oil for lunch
+89	3	2	AGREE	ok	2	[{"r":"grilled chicken salad","n":"grilled chicken salad","b":""},{"r":"1 tablespoon of olive oil","n":"olive oil","b":""}]	993	grilled chicken salad with a tablespoon of olive oil for lunch
+90	1	3	AGREE	ok	3	[{"r":"grilled chicken","n":"grilled chicken","b":""},{"r":"brown rice","n":"brown rice","b":""},{"r":"steamed broccoli","n":"steamed broccoli","b":""}]	1945	grilled chicken with brown rice and steamed broccoli
+90	2	3	AGREE	ok	3	[{"r":"grilled chicken","n":"grilled chicken","b":""},{"r":"brown rice","n":"brown rice","b":""},{"r":"steamed broccoli","n":"steamed broccoli","b":""}]	1253	grilled chicken with brown rice and steamed broccoli
+90	3	3	AGREE	ok	3	[{"r":"grilled chicken","n":"grilled chicken","b":""},{"r":"brown rice","n":"brown rice","b":""},{"r":"steamed broccoli","n":"steamed broccoli","b":""}]	1786	grilled chicken with brown rice and steamed broccoli
+91	1	2	AGREE	ok	2	[{"r":"grilled salmon","n":"grilled salmon","b":""},{"r":"asparagus","n":"asparagus","b":""}]	1428	grilled salmon and asparagus for dinner
+91	2	2	AGREE	ok	2	[{"r":"grilled salmon","n":"grilled salmon","b":""},{"r":"asparagus","n":"asparagus","b":""}]	1103	grilled salmon and asparagus for dinner
+91	3	2	AGREE	ok	2	[{"r":"grilled salmon","n":"grilled salmon","b":""},{"r":"asparagus","n":"asparagus","b":""}]	2246	grilled salmon and asparagus for dinner
+92	1	1	AGREE	ok	1	[{"r":"half and half","n":"half and half","b":""}]	814	half and half
+93	1	1	AGREE	ok	1	[{"r":"half and half creamer","n":"half and half creamer","b":""}]	889	half and half creamer
+94	1	1	AGREE	ok	1	[{"r":"healthy choice chicken and rice soup","n":"chicken and rice soup","b":"healthy choice"}]	1014	healthy choice chicken and rice soup
+95	1	1	AGREE	ok	1	[{"r":"hillshire farm ultra thin oven roasted turkey","n":"oven roasted turkey","b":"Hillshire Farm"}]	1140	hillshire farm ultra thin oven roasted turkey
+96	1	1	AGREE	ok	1	[{"r":"hummus and pretzels snack pack","n":"hummus and pretzels snack pack","b":""}]	1007	hummus and pretzels snack pack
+97	1	1	AGREE	ok	1	[{"r":"i can't believe it's not butter spread","n":"butter spread","b":"I Can't Believe It's Not Butter"}]	1359	i can't believe it's not butter spread
+98	1	2	AGREE	ok	2	[{"r":"chicken caesar salad","n":"chicken caesar salad","b":""},{"r":"diet coke","n":"diet coke","b":"Coca-Cola"}]	2022	i had a chicken caesar salad and a diet coke
+98	2	2	AGREE	ok	2	[{"r":"a chicken caesar salad","n":"chicken caesar salad","b":""},{"r":"a diet coke","n":"diet coke","b":"diet coke"}]	1813	i had a chicken caesar salad and a diet coke
+98	3	2	AGREE	ok	2	[{"r":"a chicken caesar salad","n":"chicken caesar salad","b":""},{"r":"a diet coke","n":"coke","b":"diet"}]	992	i had a chicken caesar salad and a diet coke
+99	1	1	AGREE	ok	1	[{"r":"jack in the box bacon ultimate cheeseburger","n":"bacon ultimate cheeseburger","b":"jack in the box"}]	992	jack in the box bacon ultimate cheeseburger
+100	1	1	AGREE	ok	1	[{"r":"johnsonville beddar with cheddar smoked sausage","n":"beddar with cheddar smoked sausage","b":"johnsonville"}]	1641	johnsonville beddar with cheddar smoked sausage
+101	1	1	AGREE	ok	1	[{"r":"kettle brand sea salt and vinegar chips","n":"sea salt and vinegar chips","b":"kettle brand"}]	1285	kettle brand sea salt and vinegar chips
+102	1	1	AGREE	ok	1	[{"r":"kfc mac and cheese","n":"mac and cheese","b":"kfc"}]	2019	kfc mac and cheese
+103	1	1	AGREE	ok	1	[{"r":"kikkoman teriyaki marinade and sauce","n":"teriyaki marinade and sauce","b":"kikkoman"}]	1475	kikkoman teriyaki marinade and sauce
+104	1	1	AGREE	ok	1	[{"r":"kind bar dark chocolate nuts and sea salt","n":"kind bar dark chocolate nuts and sea salt","b":"Kind"}]	1251	kind bar dark chocolate nuts and sea salt
+105	1	1	AGREE	ok	1	[{"r":"kraft deluxe macaroni and cheese","n":"macaroni and cheese","b":"kraft"}]	2273	kraft deluxe macaroni and cheese
+106	1	1	AGREE	ok	1	[{"r":"kraft macaroni and cheese","n":"macaroni and cheese","b":"kraft"}]	1189	kraft macaroni and cheese
+107	1	1	AGREE	ok	2	[{"r":"kraft mayo with olive oil","n":"mayo with olive oil","b":"kraft"},{"r":"olive oil","n":"olive oil","b":""}]	1034	kraft mayo with olive oil
+108	1	1	AGREE	ok	1	[{"r":"lean cuisine spaghetti with meat sauce","n":"spaghetti with meat sauce","b":"lean cuisine"}]	1491	lean cuisine spaghetti with meat sauce
+109	1	1	AGREE	ok	1	[{"r":"lenny and larrys protein puffs","n":"protein puffs","b":"lenny and larrys"}]	1595	lenny and larrys protein puffs
+110	1	1	AGREE	ok	1	[{"r":"m and ms milk chocolate","n":"milk chocolate","b":"M&M's"}]	1600	m and ms milk chocolate
+111	1	1	AGREE	ok	1	[{"r":"m and ms peanut butter","n":"peanut butter","b":"m and ms"}]	1303	m and ms peanut butter
+112	1	1	AGREE	ok	1	[{"r":"m and ms pretzel","n":"pretzel","b":"m and ms"}]	926	m and ms pretzel
+113	1	1	AGREE	ok	1	[{"r":"m&ms peanut","n":"peanut","b":"m&ms"}]	794	m&ms peanut
+114	1	1	AGREE	ok	1	[{"r":"mac and cheese","n":"mac and cheese","b":""}]	1530	mac and cheese
+115	1	1	AGREE	ok	1	[{"r":"mac and cheese box","n":"mac and cheese box","b":""}]	1114	mac and cheese box
+116	1	1	AGREE	ok	1	[{"r":"mcdonalds bacon egg and cheese biscuit","n":"bacon egg and cheese biscuit","b":"mcdonalds"}]	2018	mcdonalds bacon egg and cheese biscuit
+117	1	1	AGREE	ok	1	[{"r":"mcdonalds sausage mcmuffin with egg","n":"mcdonalds sausage mcmuffin with egg","b":"mcdonalds"}]	1633	mcdonalds sausage mcmuffin with egg
+118	1	1	AGREE	ok	1	[{"r":"muscletech nitro tech cookies and cream","n":"cookies and cream","b":"muscletech"}]	1043	muscletech nitro tech cookies and cream
+119	1	1	AGREE	ok	1	[{"r":"nature valley oats n honey crunchy granola bar","n":"granola bar","b":"Nature Valley"}]	1597	nature valley oats n honey crunchy granola bar
+120	1	1	AGREE	ok	1	[{"r":"nature valley protein chewy bar peanut butter dark chocolate","n":"protein chewy bar peanut butter dark chocolate","b":"nature valley"}]	1951	nature valley protein chewy bar peanut butter dark chocolate
+121	1	1	AGREE	ok	1	[{"r":"nature valley trail mix fruit and nut","n":"trail mix fruit and nut","b":"nature valley"}]	881	nature valley trail mix fruit and nut
+122	1	1	OVER_SPLIT	ok	1	[{"r":"noodles and company buttered noodles","n":"buttered noodles","b":"noodles and company"}]	1434	noodles and company buttered noodles
+122	2	1	OVER_SPLIT	ok	1	[{"r":"noodles and company buttered noodles","n":"buttered noodles","b":"noodles and company"}]	1285	noodles and company buttered noodles
+122	3	1	OVER_SPLIT	ok	1	[{"r":"noodles and company buttered noodles","n":"buttered noodles","b":"noodles and company"}]	1079	noodles and company buttered noodles
+123	1	1	AGREE	ok	1	[{"r":"noodles and company mac and cheese","n":"mac and cheese","b":"noodles and company"}]	1742	noodles and company mac and cheese
+124	1	1	AGREE	ok	1	[{"r":"noodles and company pad thai","n":"pad thai","b":"noodles and company"}]	893	noodles and company pad thai
+125	1	1	OVER_SPLIT	ok	1	[{"r":"noodles and company zucchini noodles","n":"zucchini noodles","b":"noodles and company"}]	1028	noodles and company zucchini noodles
+125	2	1	OVER_SPLIT	ok	1	[{"r":"noodles and company zucchini noodles","n":"zucchini noodles","b":"noodles and company"}]	930	noodles and company zucchini noodles
+125	3	1	OVER_SPLIT	ok	1	[{"r":"noodles and company zucchini noodles","n":"zucchini noodles","b":"noodles and company"}]	3417	noodles and company zucchini noodles
+126	1	2	AGREE	ok	2	[{"r":"oatmeal","n":"oatmeal","b":""},{"r":"2 tbsp peanut butter","n":"peanut butter","b":""}]	1428	oatmeal with 2 tbsp peanut butter
+126	2	2	AGREE	ok	2	[{"r":"oatmeal","n":"oatmeal","b":""},{"r":"2 tbsp peanut butter","n":"peanut butter","b":""}]	2105	oatmeal with 2 tbsp peanut butter
+126	3	2	AGREE	ok	2	[{"r":"oatmeal","n":"oatmeal","b":""},{"r":"2 tbsp peanut butter","n":"peanut butter","b":""}]	1935	oatmeal with 2 tbsp peanut butter
+127	1	4	AGREE	ok	4	[{"r":"oatmeal","n":"oatmeal","b":""},{"r":"peanut butter","n":"peanut butter","b":""},{"r":"honey","n":"honey","b":""},{"r":"sliced banana","n":"sliced banana","b":""}]	1500	oatmeal with peanut butter honey and sliced banana
+127	2	4	AGREE	ok	4	[{"r":"oatmeal","n":"oatmeal","b":""},{"r":"peanut butter","n":"peanut butter","b":""},{"r":"honey","n":"honey","b":""},{"r":"sliced banana","n":"sliced banana","b":""}]	1445	oatmeal with peanut butter honey and sliced banana
+127	3	4	AGREE	ok	4	[{"r":"oatmeal","n":"oatmeal","b":""},{"r":"peanut butter","n":"peanut butter","b":""},{"r":"honey","n":"honey","b":""},{"r":"sliced banana","n":"sliced banana","b":""}]	1581	oatmeal with peanut butter honey and sliced banana
+128	1	2	AGREE	ok	2	[{"r":"okra","n":"okra","b":""},{"r":"tomatoes","n":"tomatoes","b":""}]	1533	okra and tomatoes
+128	2	2	AGREE	ok	2	[{"r":"okra","n":"okra","b":""},{"r":"tomatoes","n":"tomatoes","b":""}]	2290	okra and tomatoes
+128	3	2	AGREE	ok	2	[{"r":"okra","n":"okra","b":""},{"r":"tomatoes","n":"tomatoes","b":""}]	1006	okra and tomatoes
+129	1	1	AGREE	ok	1	[{"r":"optimum nutrition cookies and cream","n":"cookies and cream","b":"optimum nutrition"}]	889	optimum nutrition cookies and cream
+130	1	1	AGREE	ok	1	[{"r":"optimum nutrition gold standard whey banana cream","n":"whey banana cream","b":"Optimum Nutrition"}]	877	optimum nutrition gold standard whey banana cream
+131	1	1	AGREE	ok	1	[{"r":"optimum nutrition gold standard whey cookies and cream","n":"whey cookies and cream","b":"Optimum Nutrition"}]	2079	optimum nutrition gold standard whey cookies and cream
+132	1	1	AGREE	ok	1	[{"r":"optimum nutrition gold standard whey double rich chocolate","n":"whey double rich chocolate","b":"Optimum Nutrition"}]	1668	optimum nutrition gold standard whey double rich chocolate
+133	1	1	AGREE	ok	1	[{"r":"optimum nutrition gold standard whey vanilla ice cream","n":"whey vanilla ice cream","b":"Optimum Nutrition"}]	2189	optimum nutrition gold standard whey vanilla ice cream
+134	1	1	AGREE	ok	1	[{"r":"optimum nutrition protein bar double rich chocolate","n":"protein bar double rich chocolate","b":"Optimum Nutrition"}]	2309	optimum nutrition protein bar double rich chocolate
+135	1	1	AGREE	ok	1	[{"r":"ore ida extra crispy fast food fries","n":"extra crispy fast food fries","b":"ore ida"}]	1479	ore ida extra crispy fast food fries
+136	1	1	AGREE	ok	1	[{"r":"oscar mayer deli fresh oven roasted turkey breast","n":"oven roasted turkey breast","b":"oscar mayer"}]	861	oscar mayer deli fresh oven roasted turkey breast
+137	1	2	AGREE	ok	2	[{"r":"overnight oats","n":"overnight oats","b":""},{"r":"peanut butter","n":"peanut butter","b":""}]	1050	overnight oats with peanut butter
+137	2	2	AGREE	ok	2	[{"r":"overnight oats","n":"overnight oats","b":""},{"r":"peanut butter","n":"peanut butter","b":""}]	1088	overnight oats with peanut butter
+137	3	2	AGREE	ok	2	[{"r":"overnight oats","n":"overnight oats","b":""},{"r":"peanut butter","n":"peanut butter","b":""}]	1047	overnight oats with peanut butter
+138	1	1	AGREE	ok	1	[{"r":"peanut butter and jelly","n":"peanut butter and jelly","b":""}]	1098	peanut butter and jelly
+139	1	1	AGREE	ok	1	[{"r":"peanut butter and jelly sandwich","n":"peanut butter and jelly sandwich","b":""}]	1594	peanut butter and jelly sandwich
+140	1	5	UNDER_SPLIT	ok	4	[{"r":"peanut butter toast","n":"peanut butter toast","b":""},{"r":"banana slices","n":"banana slices","b":""},{"r":"coffee","n":"coffee","b":""},{"r":"milk","n":"milk","b":""}]	1501	peanut butter toast banana slices and a coffee with milk
+140	2	5	UNDER_SPLIT	ok	3	[{"r":"peanut butter toast","n":"peanut butter toast","b":""},{"r":"banana slices","n":"banana slices","b":""},{"r":"coffee with milk","n":"coffee","b":""}]	1249	peanut butter toast banana slices and a coffee with milk
+140	3	5	UNDER_SPLIT	ok	3	[{"r":"peanut butter toast","n":"peanut butter toast","b":""},{"r":"banana slices","n":"banana slices","b":""},{"r":"coffee with milk","n":"coffee","b":""}]	1314	peanut butter toast banana slices and a coffee with milk
+141	1	1	AGREE	ok	1	[{"r":"perdue short cuts grilled chicken breast strips","n":"grilled chicken breast strips","b":"perdue"}]	883	perdue short cuts grilled chicken breast strips
+142	1	1	AGREE	ok	1	[{"r":"perdue simply smart organic grilled chicken breast","n":"grilled chicken breast","b":"Perdue"}]	922	perdue simply smart organic grilled chicken breast
+143	1	1	AGREE	ok	1	[{"r":"planters trail mix nut and chocolate","n":"trail mix nut and chocolate","b":"planters"}]	1523	planters trail mix nut and chocolate
+144	1	1	AGREE	ok	1	[{"r":"popeyes mac and cheese","n":"mac and cheese","b":"popeyes"}]	929	popeyes mac and cheese
+145	1	1	AGREE	ok	1	[{"r":"popeyes mashed potatoes with cajun gravy","n":"mashed potatoes with cajun gravy","b":"popeyes"}]	1000	popeyes mashed potatoes with cajun gravy
+146	1	1	AGREE	ok	1	[{"r":"premier protein shake cookies and cream","n":"protein shake cookies and cream","b":"premier"}]	996	premier protein shake cookies and cream
+147	1	1	AGREE	ok	2	[{"r":"prosciutto","n":"prosciutto","b":""},{"r":"melon","n":"melon","b":""}]	4686	prosciutto and melon
+148	1	2	OVER_SPLIT	ok	3	[{"r":"protein shake","n":"protein shake","b":""},{"r":"banana","n":"banana","b":""},{"r":"2 rice cakes","n":"rice cakes","b":""}]	1409	protein shake banana 2 rice cakes
+148	2	2	OVER_SPLIT	ok	3	[{"r":"protein shake","n":"protein shake","b":""},{"r":"banana","n":"banana","b":""},{"r":"2 rice cakes","n":"rice cakes","b":""}]	1034	protein shake banana 2 rice cakes
+148	3	2	OVER_SPLIT	ok	3	[{"r":"protein shake","n":"protein shake","b":""},{"r":"banana","n":"banana","b":""},{"r":"2 rice cakes","n":"rice cakes","b":""}]	1069	protein shake banana 2 rice cakes
+149	1	3	AGREE	ok	3	[{"r":"2 scoops of ryse skippy protein powder","n":"protein powder","b":"ryse"},{"r":"1 cup of silk unsweetened vanilla almond milk","n":"almond milk","b":"silk"},{"r":"half a banana","n":"banana","b":""}]	1407	protein shake that has 2 scoops of ryse skippy protein powder, 1 cup of silk unsweetened vanilla almond milk, and half a banana
+149	2	3	AGREE	ok	3	[{"r":"2 scoops of ryse skippy protein powder","n":"protein powder","b":"ryse"},{"r":"1 cup of silk unsweetened vanilla almond milk","n":"almond milk","b":"silk"},{"r":"half a banana","n":"banana","b":""}]	2057	protein shake that has 2 scoops of ryse skippy protein powder, 1 cup of silk unsweetened vanilla almond milk, and half a banana
+149	3	3	AGREE	ok	3	[{"r":"2 scoops of ryse skippy protein powder","n":"protein powder","b":"ryse"},{"r":"1 cup of silk unsweetened vanilla almond milk","n":"almond milk","b":"silk"},{"r":"half a banana","n":"banana","b":""}]	2503	protein shake that has 2 scoops of ryse skippy protein powder, 1 cup of silk unsweetened vanilla almond milk, and half a banana
+150	1	1	AGREE	ok	1	[{"r":"quaker weight control oatmeal maple brown sugar","n":"oatmeal maple brown sugar","b":"quaker"}]	1535	quaker weight control oatmeal maple brown sugar
+151	1	1	AGREE	ok	1	[{"r":"quest cookies and cream protein bar","n":"cookies and cream protein bar","b":"quest"}]	1909	quest cookies and cream protein bar
+152	1	1	AGREE	ok	1	[{"r":"quest protein powder cookies and cream","n":"protein powder cookies and cream","b":"quest"}]	1028	quest protein powder cookies and cream
+153	1	2	AGREE	ok	2	[{"r":"rice","n":"rice","b":""},{"r":"beans","n":"beans","b":""}]	737	rice and beans
+153	2	2	AGREE	ok	2	[{"r":"rice","n":"rice","b":""},{"r":"beans","n":"beans","b":""}]	998	rice and beans
+153	3	2	AGREE	ok	2	[{"r":"rice","n":"rice","b":""},{"r":"beans","n":"beans","b":""}]	1308	rice and beans
+154	1	1	AGREE	ok	1	[{"r":"s&w pinto beans","n":"pinto beans","b":"s&w"}]	991	s&w pinto beans
+155	1	2	AGREE	ok	2	[{"r":"salad","n":"salad","b":""},{"r":"chicken","n":"chicken","b":""}]	1520	salad with chicken
+155	2	2	AGREE	ok	2	[{"r":"salad","n":"salad","b":""},{"r":"chicken","n":"chicken","b":""}]	2054	salad with chicken
+155	3	2	AGREE	ok	2	[{"r":"salad","n":"salad","b":""},{"r":"chicken","n":"chicken","b":""}]	1349	salad with chicken
+156	1	3	AGREE	ok	3	[{"r":"salmon 6oz","n":"salmon","b":""},{"r":"quinoa 1 cup","n":"quinoa","b":""},{"r":"asparagus","n":"asparagus","b":""}]	1755	salmon 6oz with quinoa 1 cup and asparagus
+156	2	3	AGREE	ok	3	[{"r":"salmon 6oz","n":"salmon","b":""},{"r":"quinoa 1 cup","n":"quinoa","b":""},{"r":"asparagus","n":"asparagus","b":""}]	1432	salmon 6oz with quinoa 1 cup and asparagus
+156	3	3	AGREE	ok	3	[{"r":"salmon 6oz","n":"salmon","b":""},{"r":"quinoa 1 cup","n":"quinoa","b":""},{"r":"asparagus","n":"asparagus","b":""}]	1936	salmon 6oz with quinoa 1 cup and asparagus
+157	1	1	AGREE	ok	1	[{"r":"salt and pepper shrimp","n":"salt and pepper shrimp","b":""}]	1217	salt and pepper shrimp
+158	1	1	AGREE	ok	1	[{"r":"sausage egg and cheese biscuit","n":"sausage egg and cheese biscuit","b":""}]	862	sausage egg and cheese biscuit
+159	1	1	AGREE	ok	1	[{"r":"sausage gravy and biscuits","n":"sausage gravy and biscuits","b":""}]	803	sausage gravy and biscuits
+160	1	1	AGREE	ok	1	[{"r":"shrimp and grits","n":"shrimp and grits","b":""}]	783	shrimp and grits
+161	1	1	OVER_SPLIT	ok	1	[{"r":"slim chickens mac and cheese","n":"mac and cheese","b":"slim chickens"}]	1066	slim chickens mac and cheese
+161	2	1	OVER_SPLIT	ok	1	[{"r":"slim chickens mac and cheese","n":"mac and cheese","b":"slim chickens"}]	1563	slim chickens mac and cheese
+161	3	1	OVER_SPLIT	ok	1	[{"r":"slim chickens mac and cheese","n":"mac and cheese","b":"slim chickens"}]	856	slim chickens mac and cheese
+162	1	1	AGREE	ok	1	[{"r":"spaghetti and meatballs","n":"spaghetti and meatballs","b":""}]	985	spaghetti and meatballs
+163	1	1	AGREE	ok	1	[{"r":"starbucks iced brown sugar oatmilk shaken espresso","n":"iced brown sugar oatmilk shaken espresso","b":"starbucks"}]	2108	starbucks iced brown sugar oatmilk shaken espresso
+164	1	1	AGREE	ok	1	[{"r":"starkist solid white albacore tuna in water","n":"solid white albacore tuna in water","b":"starkist"}]	1661	starkist solid white albacore tuna in water
+165	1	2	UNDER_SPLIT	ok	2	[{"r":"toast","n":"toast","b":""},{"r":"butter","n":"butter","b":""}]	1090	toast with butter
+165	2	2	UNDER_SPLIT	ok	2	[{"r":"toast","n":"toast","b":""},{"r":"butter","n":"butter","b":""}]	1987	toast with butter
+165	3	2	UNDER_SPLIT	ok	2	[{"r":"toast","n":"toast","b":""},{"r":"butter","n":"butter","b":""}]	1630	toast with butter
+166	1	2	UNDER_SPLIT	ok	2	[{"r":"toast","n":"toast","b":""},{"r":"peanut butter","n":"peanut butter","b":""}]	2127	toast with peanut butter
+166	2	2	UNDER_SPLIT	ok	2	[{"r":"toast","n":"toast","b":""},{"r":"peanut butter","n":"peanut butter","b":""}]	1015	toast with peanut butter
+166	3	2	UNDER_SPLIT	ok	2	[{"r":"toast","n":"toast","b":""},{"r":"peanut butter","n":"peanut butter","b":""}]	929	toast with peanut butter
+167	1	1	AGREE	ok	1	[{"r":"trader joes dark chocolate peanut butter cups","n":"dark chocolate peanut butter cups","b":"trader joes"}]	1172	trader joes dark chocolate peanut butter cups
+168	1	1	AGREE	ok	2	[{"r":"trail mix","n":"trail mix","b":""},{"r":"chocolate","n":"chocolate","b":""}]	1047	trail mix with chocolate
+169	1	2	AGREE	ok	2	[{"r":"turkey sandwich","n":"turkey sandwich","b":""},{"r":"a bag of doritos","n":"doritos","b":"Doritos"}]	1014	turkey sandwich and a bag of doritos
+169	2	2	AGREE	ok	2	[{"r":"turkey sandwich","n":"turkey sandwich","b":""},{"r":"a bag of doritos","n":"doritos","b":"doritos"}]	1589	turkey sandwich and a bag of doritos
+169	3	2	AGREE	ok	2	[{"r":"turkey sandwich","n":"turkey sandwich","b":""},{"r":"a bag of doritos","n":"doritos","b":"Doritos"}]	2040	turkey sandwich and a bag of doritos
+170	1	1	AGREE	ok	1	[{"r":"twisted tea half and half","n":"twisted tea half and half","b":"twisted tea"}]	3300	twisted tea half and half
+171	1	3	UNDER_SPLIT	ok	3	[{"r":"two eggs","n":"eggs","b":""},{"r":"a bagel","n":"bagel","b":""},{"r":"with cream cheese","n":"cream cheese","b":""}]	1114	two eggs and a bagel with cream cheese
+171	2	3	UNDER_SPLIT	ok	3	[{"r":"two eggs","n":"eggs","b":""},{"r":"a bagel","n":"bagel","b":""},{"r":"cream cheese","n":"cream cheese","b":""}]	1145	two eggs and a bagel with cream cheese
+171	3	3	UNDER_SPLIT	ok	3	[{"r":"two eggs","n":"eggs","b":""},{"r":"a bagel","n":"bagel","b":""},{"r":"cream cheese","n":"cream cheese","b":""}]	1159	two eggs and a bagel with cream cheese
+172	1	2	AGREE	ok	2	[{"r":"two slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"a side salad","n":"side salad","b":""}]	1962	two slices of pepperoni pizza and a side salad
+172	2	2	AGREE	ok	2	[{"r":"two slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"a side salad","n":"side salad","b":""}]	2009	two slices of pepperoni pizza and a side salad
+172	3	2	AGREE	ok	2	[{"r":"two slices of pepperoni pizza","n":"pepperoni pizza","b":""},{"r":"a side salad","n":"side salad","b":""}]	1777	two slices of pepperoni pizza and a side salad
+173	1	3	AGREE	ok	3	[{"r":"two waffles","n":"waffles","b":""},{"r":"syrup","n":"syrup","b":""},{"r":"a side of sausage","n":"sausage","b":""}]	1110	two waffles with syrup and a side of sausage
+173	2	3	AGREE	ok	3	[{"r":"two waffles","n":"waffles","b":""},{"r":"syrup","n":"syrup","b":""},{"r":"a side of sausage","n":"sausage","b":""}]	1161	two waffles with syrup and a side of sausage
+173	3	3	AGREE	ok	3	[{"r":"two waffles","n":"waffles","b":""},{"r":"syrup","n":"syrup","b":""},{"r":"a side of sausage","n":"sausage","b":""}]	1126	two waffles with syrup and a side of sausage
+174	1	1	AGREE	ok	1	[{"r":"tyson fully cooked grilled chicken breast fillets","n":"grilled chicken breast fillets","b":"tyson"}]	833	tyson fully cooked grilled chicken breast fillets
+175	1	1	AGREE	ok	1	[{"r":"tyson grilled and ready chicken breast strips","n":"grilled and ready chicken breast strips","b":"tyson"}]	876	tyson grilled and ready chicken breast strips
+176	1	1	AGREE	ok	1	[{"r":"uncrustables peanut butter and jelly","n":"peanut butter and jelly","b":"Uncrustables"}]	1676	uncrustables peanut butter and jelly
+177	1	1	AGREE	ok	1	[{"r":"vega protein and greens chocolate","n":"protein and greens chocolate","b":"Vega"}]	1632	vega protein and greens chocolate
+178	1	1	AGREE	ok	1	[{"r":"velveeta shells and cheese","n":"shells and cheese","b":"velveeta"}]	1038	velveeta shells and cheese
+179	1	1	AGREE	ok	1	[{"r":"wonderful pistachios roasted and salted","n":"pistachios roasted and salted","b":"wonderful"}]	1921	wonderful pistachios roasted and salted
+180	1	1	OVER_SPLIT	ok	2	[{"r":"yogurt parfait","n":"yogurt parfait","b":""},{"r":"granola","n":"granola","b":""}]	1247	yogurt parfait with granola
+180	2	1	OVER_SPLIT	ok	2	[{"r":"yogurt parfait","n":"yogurt parfait","b":""},{"r":"granola","n":"granola","b":""}]	1087	yogurt parfait with granola
+180	3	1	OVER_SPLIT	ok	2	[{"r":"yogurt parfait","n":"yogurt parfait","b":""},{"r":"granola","n":"granola","b":""}]	1779	yogurt parfait with granola

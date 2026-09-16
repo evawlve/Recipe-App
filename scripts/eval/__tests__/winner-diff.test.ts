@@ -66,10 +66,15 @@ import {
     HASHED_EXTRA_FILES,
 } from '../winner-diff-screens';
 import {
+    GuardParams,
     MUTATING,
     MUTATING_SQL,
     RAW_ACTIONS,
+    WRITE_GUARD_SELF_TEST_KEY,
+    WriteGuardMiddleware,
+    assertWriteGuardIntercepts,
     createWriteGuardMiddleware,
+    installWriteGuard,
     rawSqlOf,
 } from '../winner-diff-write-guard';
 
@@ -2623,5 +2628,93 @@ describe('winner-diff write guard', () => {
         // The fallback is a JSON dump, which the anchored MUTATING_SQL cannot match.
         const sql = rawSqlOf({ query: 'UPDATE t SET a = 1' });
         expect(MUTATING_SQL.test(sql)).toBe(false);
+    });
+});
+
+// ============================================================
+// the startup self-test (punch #199): winner-diff refuses to run unless the guard intercepts
+// ============================================================
+
+/**
+ * A stand-in client. `$use` chains middleware in registration order; a tagged
+ * `$queryRaw` arrives as the measured Prisma 5.18 shape `[strings, ...values]`,
+ * i.e. `[["UPDATE …"]]` for a statement with no values; `db` records whatever got
+ * past every middleware to the "database".
+ */
+function fakeRawClient() {
+    const middlewares: WriteGuardMiddleware[] = [];
+    const db = jest.fn(async (_params: GuardParams): Promise<unknown> => []);
+    const run = (i: number, params: GuardParams): Promise<unknown> =>
+        i < middlewares.length ? middlewares[i](params, (p: GuardParams) => run(i + 1, p)) : db(params);
+    return {
+        db,
+        $use(middleware: WriteGuardMiddleware): void { middlewares.push(middleware); },
+        $queryRaw(query: TemplateStringsArray, ...values: unknown[]): Promise<unknown> {
+            return run(0, { action: 'queryRaw', args: [query, ...values] });
+        },
+    };
+}
+
+describe('assertWriteGuardIntercepts — the startup self-test winner-diff runs after installing the guard', () => {
+    function tallied() {
+        const tally: Record<string, number> = {};
+        const onSuppress = (key: string) => { tally[key] = (tally[key] ?? 0) + 1; };
+        return { tally, onSuppress, read: () => tally[WRITE_GUARD_SELF_TEST_KEY] ?? 0 };
+    }
+
+    it('passes when the installed guard intercepts: tally +1, and the statement never reaches the database', async () => {
+        const client = fakeRawClient();
+        const t = tallied();
+        installWriteGuard(client, t.onSuppress);
+        await expect(assertWriteGuardIntercepts(client, t.read)).resolves.toBeUndefined();
+        expect(t.tally).toEqual({ 'raw.queryRaw:MUTATING': 1 });
+        expect(client.db).not.toHaveBeenCalled();
+    });
+
+    it('sends a provably no-op mutating statement, in the args shape the guard reads', async () => {
+        // No guard at all, so the statement reaches the fake database and can be read.
+        const client = fakeRawClient();
+        await expect(assertWriteGuardIntercepts(client, () => 0)).rejects.toThrow(/refusing to run/);
+        expect(client.db).toHaveBeenCalledTimes(1);
+        const params = client.db.mock.calls[0][0];
+        expect(params.action).toBe('queryRaw');
+        expect(JSON.parse(JSON.stringify(params.args))).toEqual([['UPDATE "AiNormalizeCache" SET "useCount" = "useCount" WHERE false']]);
+        const sql = rawSqlOf(params.args);
+        expect(MUTATING_SQL.test(sql)).toBe(true);
+        expect(sql).toMatch(/\bWHERE false$/);
+    });
+
+    it('refuses when a guard lets the statement through: the tally does not rise', async () => {
+        const client = fakeRawClient();
+        const t = tallied();
+        client.$use(async (params, next) => next(params));
+        await expect(assertWriteGuardIntercepts(client, t.read)).rejects.toThrow(
+            /WRITE GUARD SELF-TEST FAILED, refusing to run[\s\S]*tally by 0, not by exactly 1 \(the statement returned an array of 0 row\(s\)\)/,
+        );
+        expect(client.db).toHaveBeenCalledTimes(1);
+        expect(t.tally).toEqual({});
+    });
+
+    it('refuses when the guard sits on a DIFFERENT client from the one the statement goes through', async () => {
+        const guarded = fakeRawClient();
+        const tested = fakeRawClient();
+        const t = tallied();
+        installWriteGuard(guarded, t.onSuppress);
+        await expect(assertWriteGuardIntercepts(tested, t.read)).rejects.toThrow(/tally by 0/);
+        expect(tested.db).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses when the tally rises by more than one', async () => {
+        const client = fakeRawClient();
+        const t = tallied();
+        installWriteGuard(client, (key) => { t.onSuppress(key); t.onSuppress(key); });
+        await expect(assertWriteGuardIntercepts(client, t.read)).rejects.toThrow(/tally by 2, not by exactly 1/);
+        expect(client.db).not.toHaveBeenCalled();
+    });
+
+    it('a statement that throws is not an interception: refuses, and quotes the error', async () => {
+        const client = fakeRawClient();
+        client.db.mockRejectedValueOnce(new Error('connection refused'));
+        await expect(assertWriteGuardIntercepts(client, () => 0)).rejects.toThrow(/tally by 0[\s\S]*threw: connection refused/);
     });
 });

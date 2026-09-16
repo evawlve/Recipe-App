@@ -42,6 +42,16 @@
  * `snapshot` additionally ABORTS the mapper at gather, so the save path is not
  * merely guarded — it is never reached.
  *
+ * STARTUP SELF-TEST (punch #199). Right after the guard is first installed, and
+ * before any mapper call, `installWriteGuard()` sends one no-op statement through
+ * it (`UPDATE "AiNormalizeCache" SET "useCount" = "useCount" WHERE false`, via
+ * `assertWriteGuardIntercepts()`). It REFUSES to run (FATAL, exit 1) unless the
+ * `raw.queryRaw:MUTATING` tally rose by exactly one. On a pass it prints
+ * `write guard self-test: PASS` and takes its own suppression back out of the tally.
+ * The modes that install the guard are snapshot, replay, noise-floor and verify;
+ * diff, counterfactual, transcript and hashes never do. What the self-test does and
+ * does not prove: `./winner-diff-write-guard.ts`.
+ *
  * Runs on a tree at or after `1e7213d` (2026-08-01, where the raw touch landed) and
  * before (2) existed were NOT read-only. `getAiNormalizeCache()` reads through
  * `touchAndFetchCacheRow()` in `src/lib/mapping/validated-mapping-helpers.ts`, which
@@ -195,7 +205,11 @@ import {
     isSkippedHashDir,
     selectHashablePaths,
 } from './winner-diff-screens';
-import { installWriteGuard as installPrismaWriteGuard } from './winner-diff-write-guard';
+import {
+    WRITE_GUARD_SELF_TEST_KEY,
+    assertWriteGuardIntercepts,
+    installWriteGuard as installPrismaWriteGuard,
+} from './winner-diff-write-guard';
 
 // ============================================================
 // 0. env — load the machine .env, then FORCE production flags
@@ -932,7 +946,7 @@ function copy_isMatchableVolumeUnit(unit: string): boolean {
 let suppressedWrites: Record<string, number> = {};
 let guardInstalled = false;
 
-function installWriteGuard() {
+async function installWriteGuard(): Promise<void> {
     if (guardInstalled) return;
     guardInstalled = true;
     // A callback rather than a captured object: the snapshot and verify loops
@@ -941,6 +955,17 @@ function installWriteGuard() {
     installPrismaWriteGuard(prisma, (key) => {
         suppressedWrites[key] = (suppressedWrites[key] ?? 0) + 1;
     });
+    // Punch #199: prove the guard intercepts a raw write on THIS client before any
+    // mapper call. It throws unless the raw-mutating tally rose by exactly one, and
+    // main()'s catch then prints FATAL and exits 1. It sits inside the latch, so it
+    // runs once per process, at the first install, whichever mode got there.
+    await assertWriteGuardIntercepts(prisma, () => suppressedWrites[WRITE_GUARD_SELF_TEST_KEY] ?? 0);
+    // The self-test's own suppression is not a mapper write: take it back out, so no
+    // printed or recorded tally changes.
+    const left = (suppressedWrites[WRITE_GUARD_SELF_TEST_KEY] ?? 0) - 1;
+    if (left > 0) suppressedWrites[WRITE_GUARD_SELF_TEST_KEY] = left;
+    else delete suppressedWrites[WRITE_GUARD_SELF_TEST_KEY];
+    say('write guard self-test: PASS (a no-op UPDATE sent through $queryRaw was intercepted and tallied once)');
 }
 
 function totalSuppressed(entries: Array<{ suppressedWrites: Record<string, number> }>): Record<string, number> {
@@ -1104,7 +1129,7 @@ function resolveAiEstimate(sink: AiSink): Pick<SnapshotEntry, 'aiCanonicalBase' 
 }
 
 async function runSnapshot(pop: PopulationLine[], outPath: string, population: string, debug: boolean, resume: boolean) {
-    installWriteGuard();
+    await installWriteGuard();
 
     const ndjsonPath = outPath + '.ndjson';
     const done = new Set<string>();
@@ -2089,7 +2114,7 @@ async function buildReplay(
         say('');
     }
 
-    installWriteGuard();
+    await installWriteGuard();
     muzzle(true);
     const enriched = await preEnrichAiGenerated(snap.entries);
     const rows: ReplayRow[] = [];
@@ -2591,7 +2616,7 @@ async function runVerify(pop: PopulationLine[], variant: SelectionVariant, debug
         process.exitCode = 2;
         return;
     }
-    installWriteGuard();
+    await installWriteGuard();
 
     const sink = { capture: null as GatherCapture | null };
     const aiSink: AiSink = { llm: null, cache: null };
@@ -3067,6 +3092,10 @@ READ-ONLY GUARANTEE
   TRUNCATE/ALTER/DROP/CREATE, and tallies what it suppressed. \`snapshot\` also aborts
   the mapper at gather, so the save path is never reached. Nothing here calls
   warm-cache or saveValidatedMapping.
+  Startup self-test (snapshot, replay, noise-floor, verify): before any mapper call,
+  one no-op \$queryRaw UPDATE ... WHERE false goes through the guard, and the run
+  REFUSES (exit 1) unless the guard tallied it exactly once. A pass prints
+  "write guard self-test: PASS".
 `;
 
 async function main() {
