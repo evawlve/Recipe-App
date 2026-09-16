@@ -1,0 +1,178 @@
+# s51_replay_results.txt — Lane A S51 ROW 0(c), steps 2-4, tree 9d97675 on lane-a/s51-167-clause2, 2026-09-15 09:45:59 PDT
+
+=== STEP 2 — clause classifier ===
+tuples 602 · with segmenter brand 238 · captured guard calls 266
+SELF-CHECK: replica c1||c2||c3 == shipped brandAlreadyPresent on 1008/1008 pairs
+
+clause combination counts (bits c1c2c3; "cls" = class members):
+set                         | 000   | 001   | 010   | 011   | 100   | 101   | 110   | 111   | total | cls
+A (normalizedForm, brand)   | 217   |   3   |   2   |   1   |   0   |   0   |   0   |  15   |   238 | 0
+B (rawText, brand)          |   5   |   7   |   1   |   5   |   0   |   0   |   0   | 220   |   238 | 0
+C (baseName, targetBrand)   | 225   |   3   |   2   |   1   |   0   |   0   |   0   |  35   |   266 | 0
+D (rederived, targetBrand)  |  12   |   7   |   1   |   5   |   0   |   0   |   0   | 241   |   266 | 0
+
+CLASS MEMBERS (one-word folded brand, clause 2 only), every one:
+  (none)
+
+`&`-vs-`and` pairs (brand has `&`, text has the word `and`) — expected multi-word folds held by clause 3, NOT class:
+  B (rawText, brand) · #227 "and ben jerry" · text "and ben jerry" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 011 · class false
+  A (normalizedForm, brand) · #270 "ben and jerry's" · text "ben and jerry's" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  B (rawText, brand) · #270 "ben and jerry's" · text "ben and jerry's" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  A (normalizedForm, brand) · #271 "ben and jerrys" · text "ben and jerrys" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  B (rawText, brand) · #271 "ben and jerrys" · text "ben and jerrys" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  B (rawText, brand) · #272 "ben and jerrys cherry garcia" · text "ben and jerrys cherry garcia" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  B (rawText, brand) · #273 "ben and jerrys half baked" · text "ben and jerrys half baked" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  A (normalizedForm, brand) · #418 "m and ms pretzel" · text "m and ms pretzel" · brand "M&M's" · fold 3 words · c1c2c3 001 · class false
+  B (rawText, brand) · #418 "m and ms pretzel" · text "m and ms pretzel" · brand "M&M's" · fold 3 words · c1c2c3 001 · class false
+  D (rederived, targetBrand) · #227 "and ben jerry" · text "and ben jerry" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 011 · class false
+  C (baseName, targetBrand) · #270 "ben and jerry's" · text "ben and jerry's" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  D (rederived, targetBrand) · #270 "ben and jerry's" · text "ben and jerry's" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  C (baseName, targetBrand) · #271 "ben and jerrys" · text "ben and jerrys" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  D (rederived, targetBrand) · #271 "ben and jerrys" · text "ben and jerrys" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  D (rederived, targetBrand) · #272 "ben and jerrys cherry garcia" · text "ben and jerrys cherry garcia" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  D (rederived, targetBrand) · #273 "ben and jerrys half baked" · text "ben and jerrys half baked" · brand "Ben & Jerry's" · fold 3 words · c1c2c3 001 · class false
+  C (baseName, targetBrand) · #418 "m and ms pretzel" · text "m and ms pretzel" · brand "M&M's" · fold 3 words · c1c2c3 001 · class false
+  D (rederived, targetBrand) · #418 "m and ms pretzel" · text "m and ms pretzel" · brand "M&M's" · fold 3 words · c1c2c3 001 · class false
+  -> 18 pairs, 0 class members
+
+@/lib/db module loaded in this process: true (no query is issued by this script either way)
+{"model":"Xenova/bge-small-en-v1.5","loadMs":78,"level":"info","msg":"embedding.model_loaded","ts":"2026-09-15T16:45:59.895Z"}
+[exit 0]
+
+=== STEP 3 — candidate replay over the captured guard-1 inputs ===
+captured guard-1 calls: 266 (distinct args 266)
+SELF-CHECK (i)   shipped preserveDroppedBrand on round-tripped args == captured: 266/266
+SELF-CHECK (ii)  replica + shipped brandAlreadyPresent == captured:            266/266
+SELF-CHECK (iii) replica + clause replicas c1||c2||c3 == captured:             266/266
+
+outcome counts per arm (captured inputs only | fixture):
+  PRE438   applied 224 · not applied 35 · declined 7   | fixture APPLIED "rxbar rx bars"
+  SHIPPED  applied 218 · not applied 41 · declined 7   | fixture APPLIED "rx bars"
+  C1       applied 220 · not applied 39 · declined 7   | fixture APPLIED "rxbar rx bars"
+  C2       applied 218 · not applied 41 · declined 7   | fixture APPLIED "rxbar rx bars"
+fixture verification (SHIPPED "rx bars", C1 and C2 "rxbar rx bars"): PASS
+
+PRE438 vs SHIPPED: 13 captured inputs differ (+ fixture differs)
+  #227 "and ben jerry" [nf "ben jerry"]
+      brand "Ben & Jerry's" · baseName "ben jerry" c1c2c3=010 · rederived "and ben jerry" c1c2c3=011
+      SHIPPED kept "ben jerry"  ->  PRE438 APPLIED "Ben & Jerry's and ben jerry"
+  #229 "and cooky creme frosted pop-tart" [nf "cooky creme frosted pop-tart"]
+      brand "Pop-Tarts" · baseName "cooky creme frosted pop-tart" c1c2c3=011 · rederived "and cooky creme frosted pop-tart" c1c2c3=011
+      SHIPPED kept "cooky creme frosted pop-tart"  ->  PRE438 APPLIED "Pop-Tarts and cooky creme frosted pop-tart"
+  #230 "angies boomchickapop sweet and salty" [nf "boomchickapop sweet and salty"]
+      brand "Angie's Boomchickapop" · baseName "boomchickapop sweet and salty" c1c2c3=000 · rederived "angies boomchickapop sweet and salty" c1c2c3=011
+      SHIPPED APPLIED "angies boomchickapop sweet and salty"  ->  PRE438 APPLIED "Angie's Boomchickapop angies boomchickapop sweet and salty"
+  #240 "a scoop and a half of optimum weight nutrition protein" [nf "weight nutrition protein"]
+      brand "Optimum Nutrition" · baseName "weight nutrition protein" c1c2c3=000 · rederived "optimum weight nutrition protein" c1c2c3=001
+      SHIPPED APPLIED "optimum weight nutrition protein"  ->  PRE438 APPLIED "Optimum Nutrition optimum weight nutrition protein"
+  #270 "ben and jerry's" [nf "ben and jerry's"]
+      brand "Ben & Jerry's" · baseName "ben and jerry's" c1c2c3=001 · rederived "ben and jerry's" c1c2c3=001
+      SHIPPED kept "ben and jerry's"  ->  PRE438 APPLIED "Ben & Jerry's ben and jerry's"
+  #271 "ben and jerrys" [nf "ben and jerrys"]
+      brand "Ben & Jerry's" · baseName "ben and jerrys" c1c2c3=001 · rederived "ben and jerrys" c1c2c3=001
+      SHIPPED kept "ben and jerrys"  ->  PRE438 APPLIED "Ben & Jerry's ben and jerrys"
+  #272 "ben and jerrys cherry garcia" [nf "cherry garcia"]
+      brand "Ben & Jerry's" · baseName "cherry garcia" c1c2c3=000 · rederived "ben and jerrys cherry garcia" c1c2c3=001
+      SHIPPED APPLIED "ben and jerrys cherry garcia"  ->  PRE438 APPLIED "Ben & Jerry's ben and jerrys cherry garcia"
+  #273 "ben and jerrys half baked" [nf "half baked"]
+      brand "Ben & Jerry's" · baseName "half baked" c1c2c3=000 · rederived "ben and jerrys half baked" c1c2c3=001
+      SHIPPED APPLIED "ben and jerrys half baked"  ->  PRE438 APPLIED "Ben & Jerry's ben and jerrys half baked"
+  #275 "ben jerry" [nf "ben jerry"]
+      brand "Ben & Jerry's" · baseName "ben jerry" c1c2c3=010 · rederived "ben jerry" c1c2c3=010
+      SHIPPED kept "ben jerry"  ->  PRE438 APPLIED "Ben & Jerry's ben jerry"
+  #377 "half a serving of McDonald’s medium sized french fries" [nf "french fries"]
+      brand "McDonald's" · baseName "french fries" c1c2c3=000 · rederived "a serving of McDonald’s sized french fries" c1c2c3=011
+      SHIPPED APPLIED "a serving of McDonald’s sized french fries"  ->  PRE438 APPLIED "McDonald's a serving of McDonald’s sized french fries"
+  #418 "m and ms pretzel" [nf "m and ms pretzel"]
+      brand "M&M's" · baseName "m and ms pretzel" c1c2c3=001 · rederived "m and ms pretzel" c1c2c3=001
+      SHIPPED kept "m and ms pretzel"  ->  PRE438 APPLIED "M&M's m and ms pretzel"
+  #463 "One scoop of optimum weigh nutrition protein" [nf "whey protein"]
+      brand "Optimum Nutrition" · baseName "whey protein" c1c2c3=000 · rederived "optimum weigh nutrition protein" c1c2c3=001
+      SHIPPED APPLIED "optimum weigh nutrition protein"  ->  PRE438 APPLIED "Optimum Nutrition optimum weigh nutrition protein"
+  #534 "siggis skyr" [nf "skyr"]
+      brand "Siggi's" · baseName "skyr" c1c2c3=000 · rederived "siggis skyr" c1c2c3=011
+      SHIPPED APPLIED "siggis skyr"  ->  PRE438 APPLIED "Siggi's siggis skyr"
+  FIXTURE n-supp-22 "2 rx bars"
+      brand "rxbar" · baseName "protein bar" c1c2c3=000 · rederived "rx bars" c1c2c3=010
+      SHIPPED APPLIED "rx bars"  ->  PRE438 APPLIED "rxbar rx bars"
+
+C1 vs SHIPPED: 2 captured inputs differ (+ fixture differs)
+  OTHER (check-1 text non-class)#227 "and ben jerry" [nf "ben jerry"]
+      brand "Ben & Jerry's" · baseName "ben jerry" c1c2c3=010 · rederived "and ben jerry" c1c2c3=011
+      SHIPPED kept "ben jerry"  ->  C1 APPLIED "and ben jerry"
+  RE-DOUBLES                #275 "ben jerry" [nf "ben jerry"]
+      brand "Ben & Jerry's" · baseName "ben jerry" c1c2c3=010 · rederived "ben jerry" c1c2c3=010
+      SHIPPED kept "ben jerry"  ->  C1 APPLIED "Ben & Jerry's ben jerry"
+  RESTORES-CLASS            FIXTURE n-supp-22 "2 rx bars"
+      brand "rxbar" · baseName "protein bar" c1c2c3=000 · rederived "rx bars" c1c2c3=010
+      SHIPPED APPLIED "rx bars"  ->  C1 APPLIED "rxbar rx bars"
+  C1 marks over captured inputs: {"OTHER (check-1 text non-class)":1,"RE-DOUBLES":1}
+
+C2 vs SHIPPED: 0 captured inputs differ (+ fixture differs)
+  RESTORES-CLASS            FIXTURE n-supp-22 "2 rx bars"
+      brand "rxbar" · baseName "protein bar" c1c2c3=000 · rederived "rx bars" c1c2c3=010
+      SHIPPED APPLIED "rx bars"  ->  C2 APPLIED "rxbar rx bars"
+  C2 marks over captured inputs: {}
+{"model":"Xenova/bge-small-en-v1.5","loadMs":80,"level":"info","msg":"embedding.model_loaded","ts":"2026-09-15T16:46:00.495Z"}
+[exit 0]
+
+=== STEP 4a — s50_guard1_census.ts UNCHANGED (summary lines) ===
+[exit 0]
+doubling rows selected: 11 rows, 83 serves
+guard 1 (preserveDroppedBrand) still doubles: 0 rows, 0 serves
+guard 2 (repairDroppedBrand)  still doubles: 0 rows, 0 serves
+
+[exit 0]
+=== STEP 4 — the 1,553-row census under the candidates ===
+appendix: /Users/diego/dev/KindaHealthyMobile/sync-docs/reports/2026-09-11_lane-a-s47-appendix-scratchpad-salvage.md
+doubling rows selected: 11 rows, 83 serves
+SELF-CHECK: SHIPPED-arm replicas == direct shipped guard calls on 11/11 rows
+
+arm           | guard 1 rows / serves | guard 2 rows / serves
+SHIPPED       |    0 / 0              |    0 / 0
+guard 1 (preserveDroppedBrand) still doubles: 0 rows, 0 serves   [SHIPPED replica, compare with s50_guard1_census.ts]
+guard 2 (repairDroppedBrand)  still doubles: 0 rows, 0 serves   [SHIPPED replica, compare with s50_guard1_census.ts]
+PRE438 (ref)  |   11 / 83             |    1 / 24
+      1	g1 DBL	g2 ok	Noodles & Company | noodles and company pad thai  (fold 3w, c1c2c3 001)
+      2	g1 DBL	g2 ok	m&m's | a fun size bag of m&ms  (fold 3w, c1c2c3 011)
+      1	g1 DBL	g2 ok	carls | jr big carl  (fold 1w, c1c2c3 011)
+      19	g1 DBL	g2 ok	Ben & Jerry's | ben and jerrys cherry garcia  (fold 3w, c1c2c3 001)
+      19	g1 DBL	g2 ok	Ben & Jerry's | and ben jerry  (fold 3w, c1c2c3 011)
+      1	g1 DBL	g2 ok	Optimum Nutrition | optimum weigh nutrition protein  (fold 2w, c1c2c3 001)
+      7	g1 DBL	g2 ok	Angie's Boomchickapop | angies boomchickapop sweet and salty  (fold 2w, c1c2c3 011)
+      24	g1 DBL	g2 DBL	M&M's | m and ms pretzel  (fold 3w, c1c2c3 001)
+      1	g1 DBL	g2 ok	Optimum Nutrition | and a half of optimum weight nutrition protein  (fold 2w, c1c2c3 001)
+      7	g1 DBL	g2 ok	McDonald's | a serving of McDonald’s sized french fries  (fold 1w, c1c2c3 011)
+      1	g1 DBL	g2 ok	chips | ahoy chewy chocolate chip cookies  (fold 1w, c1c2c3 011)
+C1            |    0 / 0              |    0 / 0
+C2            |    0 / 0              |    0 / 0
+C2-SHARED     |    0 / 0              |    0 / 0
+
+=== the four unit inputs, every predicate, both scopes ===
+scope g1 = preserveDroppedBrand replica (rawLine=baseName=rederived=text, parsed null) · scope g2 = repairDroppedBrand replica
+("m m's", "m&ms")  c1c2c3=010  fold 3w  · shipped repairDroppedBrand -> null
+    PRE438   present=false · g1 APPLIED "m&ms m m's" · g2 "m&ms m m's"
+    SHIPPED  present=true · g1 kept "m m's" · g2 null
+    C1       present=false · g1 APPLIED "m&ms m m's" · g2 "m&ms m m's"
+    C2       present=true · g1 kept "m m's" · g2 null
+("ben jerry", "Ben & Jerry's")  c1c2c3=010  fold 3w  · shipped repairDroppedBrand -> null
+    PRE438   present=false · g1 APPLIED "Ben & Jerry's ben jerry" · g2 null
+    SHIPPED  present=true · g1 kept "ben jerry" · g2 null
+    C1       present=false · g1 APPLIED "Ben & Jerry's ben jerry" · g2 null
+    C2       present=true · g1 kept "ben jerry" · g2 null
+("m and ms pretzel", "M&M's")  c1c2c3=001  fold 3w  · shipped repairDroppedBrand -> null
+    PRE438   present=false · g1 APPLIED "M&M's m and ms pretzel" · g2 "M&M's m and ms pretzel"
+    SHIPPED  present=true · g1 kept "m and ms pretzel" · g2 null
+    C1       present=true · g1 kept "m and ms pretzel" · g2 null
+    C2       present=true · g1 kept "m and ms pretzel" · g2 null
+("rx bars", "rxbar")  c1c2c3=010  fold 1w  · shipped repairDroppedBrand -> null
+    PRE438   present=false · g1 APPLIED "rxbar rx bars" · g2 "rxbar rx bars"
+    SHIPPED  present=true · g1 kept "rx bars" · g2 null
+    C1       present=false · g1 APPLIED "rxbar rx bars" · g2 "rxbar rx bars"
+    C2       present=false · g1 APPLIED "rxbar rx bars" · g2 "rxbar rx bars"
+PR #421 pin repairDroppedBrand("m m's", 'm&ms'): shipped null · C2-SHARED null -> PASS (null)
+{"model":"Xenova/bge-small-en-v1.5","loadMs":79,"level":"info","msg":"embedding.model_loaded","ts":"2026-09-15T16:46:01.646Z"}
+
+=== STEP 4 cross-check: unchanged script vs SHIPPED replica summary numbers ===
+unchanged: g1 [0 rows, 0 serves] g2 [0 rows, 0 serves] · replica: g1 [0 rows, 0 serves] g2 [0 rows, 0 serves]
+CROSS-CHECK PASS
