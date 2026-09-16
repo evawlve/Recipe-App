@@ -69,8 +69,10 @@ function dropPluralS(token: string): string {
 }
 
 /**
- * "IS THE BRAND ALREADY PRESENT?" — ONE ANSWER, AND BOTH GUARDS IN THIS FILE ASK
- * IT (punch #167, 2026-09-14).
+ * "IS THE BRAND ALREADY PRESENT?" — ONE SET OF CLAUSES FOR BOTH GUARDS IN THIS FILE
+ * (punch #167, 2026-09-14). Guard 2 asks this function; since the S51 fix-forward
+ * guard 1 asks `brandPresentForPrepend()`, the same clauses with clause 2 kept only
+ * for a brand that folds to more than one word.
  *
  * Guard 1 (`preserveDroppedBrand()`) used to ask with a contiguous
  * `.toLowerCase().includes()` and guard 2 (`repairDroppedBrand()`) with an
@@ -117,14 +119,75 @@ function dropPluralS(token: string): string {
  * `sync-docs/reports/2026-09-14_lane-a-s50-punch-167-with-its-gate.md` §ROW 2.
  */
 export function brandAlreadyPresent(text: string | undefined, brand: string): boolean {
+    return brandPresentByClauses(text, brand, true);
+}
+
+/**
+ * GUARD 1'S QUESTION: CLAUSE 2 ONLY FOR A BRAND THAT FOLDS TO MORE THAN ONE WORD
+ * (punch #167 fix-forward, Lane A S51, 2026-09-15).
+ *
+ * `preserveDroppedBrand()` asks this, `repairDroppedBrand()` keeps asking
+ * `brandAlreadyPresent()`. The one difference is clause 2 on a ONE-WORD brand.
+ *
+ * WHAT #167 BROKE. Clause 2's alphanumeric contiguity finds a one-word brand
+ * inside a line that spells it as two words: `brandAlreadyPresent('rx bars',
+ * 'rxbar')` is true. On guard 1 that drops a prepend retrieval needed. The golden
+ * line `2 rx bars` (n-supp-22; items-form brand `rxbar`, normalizedForm `protein
+ * bar`) recorded MEL `normalizedForm` `rxbar rx bars` -> RXBAR `off_0193908001672`
+ * in the 2026-09-12 PDT cold runs and `rx bars` -> "Fig Bars" `fs_38893` after
+ * #167's deploy (2026-09-14 PDT), and failed all three restarted cold golden runs
+ * there. The line carries `rx` and `bars` but never the token `rxbar`, so the
+ * prepend is the only brand token retrieval gets [reasoning]: a doubled-looking
+ * brand can be load-bearing. The class is a ONE-WORD brand that only clause 2
+ * reads as present; on it this predicate reads exactly as guard 1 did before #167
+ * (clause 1 only). A one-word brand clause 3 reads (`hershey s kisses` for
+ * `Hershey's`) stays present.
+ *
+ * WHY NOT DROP CLAUSE 2 FOR EVERY BRAND. Measured 2026-09-15 over the 266 guard-1
+ * inputs the shipped mapper builds from the 602 distinct `SegmentationCache`
+ * tuples (captured under the composite arm's write guard, replayed pure;
+ * `scripts/eval/punch-167-composite-arm/s51_*`): no input is a member of this
+ * class, and this predicate changes 0 of the 266 outcomes against
+ * `brandAlreadyPresent()`. Dropping clause 2 for every brand changes 2 and
+ * re-doubles 1 — `Ben & Jerry's` on `ben jerry`, which only clause 2 reads
+ * (`benjerrys` -> `benjerry`). The committed 1,553-row census reads guard 1 0/0
+ * and guard 2 0/0 either way.
+ *
+ * WHAT THE CLASS ALSO HOLDS, AND WHAT "0 MEMBERS" DOES NOT COVER (refuter lenses on
+ * backend #439, 2026-09-15). The 0 is over CACHED segmenter draws. A draw that names a
+ * one-word brand the line spells as two words would now prepend where the record is
+ * keyed on the two words (`sunchips` on `sun chips harvest cheddar`, `realgood` on
+ * `real good chicken tenders`), moving the line to an empty key; MEL history holds no
+ * such draw, and the only recorded prepend of this shape is the golden `rxbar`. And
+ * skipping clause 2 for a one-word brand also ends its substring reads of an absent
+ * brand (`vans` in `vanilla`, `ken's` in `heineken`) — one of which had been hiding the
+ * `one` count-word misfire: `one bacon egg and cheese sandwich` (brand `one`, no unit)
+ * prepends again, as it did before #167. That shape reached guard 1 in 0 of the 266
+ * captured inputs.
+ *
+ * WHY GUARD 2 KEEPS CLAUSE 2 FOR ONE-WORD BRANDS. Its input is the model's own
+ * output, where a prepend is the doubling itself (PR #421's `m&ms` against
+ * `m m's` must stay kept), and nothing measured asks it to change.
+ */
+export function brandPresentForPrepend(text: string | undefined, brand: string): boolean {
+    return brandPresentByClauses(text, brand, false);
+}
+
+function brandPresentByClauses(
+    text: string | undefined,
+    brand: string,
+    clause2ForOneWordBrands: boolean,
+): boolean {
     // (1) contiguous and case-insensitive: guard 1's whole test before #167, kept verbatim.
     if ((text ?? '').toLowerCase().includes(brand.toLowerCase())) return true;
     if (!text) return false;
     // (2) contiguous after an alphanumeric fold, plural-tolerant: guard 2's test before #167.
+    //     Guard 1 skips it for a one-word brand; see brandPresentForPrepend().
     const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const foldedBrand = alnum(brand);
     const foldedText = alnum(text);
-    if (foldedBrand.length > 0
+    if ((clause2ForOneWordBrands || foldBrandTokens(brand).length > 1)
+        && foldedBrand.length > 0
         && (foldedText.includes(foldedBrand) || foldedText.includes(dropPluralS(foldedBrand)))) {
         return true;
     }
@@ -238,9 +301,10 @@ export type BrandPreservationOutcome = {
  *   - the `brandWasConsumedAsQuantity()` refusal (2026-08-31; over the 436 real
  *     `SegmentationCache` repair inputs then: 164 fires, 0 containment
  *     disagreements, 0 baseName disagreements on the 161 rows it spared);
- *   - both containment checks ask `brandAlreadyPresent()` instead of a plain
- *     `.toLowerCase().includes()` (punch #167, 2026-09-14). That is a strict
- *     widening and never adds a brand. A first-check flip returns the segmenter's
+ *   - both containment checks ask `brandPresentForPrepend()` instead of a plain
+ *     `.toLowerCase().includes()` (punch #167, 2026-09-14; clause 2 narrowed to
+ *     multi-word brands 2026-09-15). That is a strict widening of the old contiguous
+ *     test and never adds a brand. A first-check flip returns the segmenter's
  *     own form instead of the re-derivation (every one of the 6 such flips over
  *     the 266 real inputs replaced a prepend); a second-check flip returns the
  *     re-derivation without the prepend.
@@ -283,14 +347,14 @@ export function preserveDroppedBrand(args: {
 }): BrandPreservationOutcome {
     const { rawLine, baseName, targetBrand, rederived, parsed } = args;
 
-    if (brandAlreadyPresent(baseName, targetBrand)) {
+    if (brandPresentForPrepend(baseName, targetBrand)) {
         return { baseName, applied: false, declined: null };
     }
     if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) {
         return { baseName, applied: false, declined: 'brand_consumed_as_quantity' };
     }
     return {
-        baseName: brandAlreadyPresent(rederived, targetBrand)
+        baseName: brandPresentForPrepend(rederived, targetBrand)
             ? rederived
             : `${targetBrand} ${rederived}`.trim(),
         applied: true,
