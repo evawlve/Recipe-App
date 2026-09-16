@@ -472,6 +472,79 @@ export function isBrandLedProductName(accentStripped: string): boolean {
   return detectBrandInQuery(accentStripped).isBranded;
 }
 
+/**
+ * THE REWRITES CAN GROW THE WORD THEY REWRITE (punch #114, Lane A S51, 2026-09-15).
+ *
+ * A rewrite whose `to` contains its `from` fires again on a line that already carries
+ * the longer form: the data file's `corn syrup -> light corn syrup` turns
+ * `light corn syrup` into `light light corn syrup`, and the in-code bare-word rule
+ * `gluten -> vital wheat gluten` stacks on the data file's own entry until
+ * `vital wheat gluten` reads `vital wheat vital wheat vital wheat gluten`. The
+ * repeated-word dedupe in step 2 runs BEFORE any rewrite, so nothing ever collapsed
+ * those runs. `deriveMappingCacheKey()` folds them in the FoodMapping key, so no gate
+ * went red; the retrieval query, the MEL `normalizedForm` and the AiNormalizeCache key
+ * (`computeNormalizedKey()` lowercases `cleaned` without sorting) carried the repeat.
+ * Measured 2026-09-15 (Lane A S51, `scripts/eval/punch-114-rewrite-replay/`): 26 of the
+ * data file's 127 `synonym_rewrites` are self-growing (`DEFAULT_RULES`' own five never run
+ * while the data file parses — `readRulesFile()` replaces the defaults outright), the
+ * in-code `gluten` default grows too, and 6 of the 4,102 coverage-corpus seeds gained a
+ * repeated token. Over the 6,744 distinct arguments the shipped mapper handed this
+ * function (602 SegmentationCache tuples, 8,141 MEL rawLines), exactly 15 move, each a
+ * collapsed run.
+ *
+ * This collapses an ADJACENT repeated run of tokens of any length, case-insensitively,
+ * keeping the first copy, and returns the input string untouched when there is none (a
+ * collapse re-joins the tokens with single spaces). `normalizeIngredientName()` calls it
+ * once, after every rewrite, bare-word default and prep/size-phrase removal and before
+ * `collapseSpaces()` — so a repeat a stripped prep phrase exposes is collapsed too, and
+ * `half & half` (whose `&` only `collapseSpaces()` removes) is never one run. It also
+ * collapses runs a rule whose `to` lacks its `from` creates (`ground hamburger`,
+ * `matcha green tea powder`); none occurs in the captured population.
+ *
+ * THE CACHE KEYS IT MOVES. The FoodMapping key does not move (0 of 7,181 distinct inputs;
+ * refuter lens 1 on backend #441). The AiNormalizeCache key moves for all 15
+ * (`rolled rolled oats` -> `rolled oats`), and 8 of the new keys are keys other lines
+ * already derive, so from here on those lines share one stored model answer. Read-only on
+ * 2026-09-15, over the 15 old keys and their collapsed forms in any namespace: 4 rows
+ * exist, and none sits under a new key at the current `RULES_VERSION` (5) — the two under
+ * a new key are version 3 and read as a miss — so no line is served another line's
+ * answer today.
+ *
+ * WHAT IT DOES NOT FIX: a self-growing rewrite that lands on a DIFFERENT qualifier.
+ * `dark corn syrup -> dark light corn syrup` and
+ * `apple pie spice seasoning -> apple pumpkin pie spice seasoning` repeat no token, so
+ * they are untouched here; S49 flagged the second as a sibling defect, not this row. Nor
+ * does it touch growth that is not adjacent (`extract vanilla` -> `extract vanilla extract`)
+ * or the data file's unguarded `gluten` rule (`gluten free bread` ->
+ * `vital wheat gluten free bread`, on master too).
+ */
+export function collapseAdjacentRepeatedRuns(text: string): string {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  let collapsedAny = false;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let k = 1; k <= Math.floor(tokens.length / 2) && !changed; k++) {
+      for (let i = 0; i + 2 * k <= tokens.length; i++) {
+        let same = true;
+        for (let j = 0; j < k; j++) {
+          if (tokens[i + j].toLowerCase() !== tokens[i + k + j].toLowerCase()) {
+            same = false;
+            break;
+          }
+        }
+        if (same) {
+          tokens.splice(i + k, k);
+          changed = true;
+          collapsedAny = true;
+          break;
+        }
+      }
+    }
+  }
+  return collapsedAny ? tokens.join(' ') : text;
+}
+
 export function normalizeIngredientName(raw: string): NormalizationResult {
   const stripped: string[] = [];
   let working = raw;
@@ -687,6 +760,13 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
   if (/^ground$/i.test(working.trim())) {
     working = '';
   }
+
+  // A rewrite above can grow the word it rewrote (`light light corn syrup`), and a prep
+  // phrase stripped out of a grown rewrite can expose one (`canned diced kidney beans`);
+  // step 2's dedupe already ran, so collapse those runs here. It must stay ABOVE
+  // collapseSpaces(), which turns `&` into a space and would make `half & half` one run.
+  // See collapseAdjacentRepeatedRuns().
+  working = collapseAdjacentRepeatedRuns(working);
 
   // Collapse whitespace
   const cleaned = collapseSpaces(working);
