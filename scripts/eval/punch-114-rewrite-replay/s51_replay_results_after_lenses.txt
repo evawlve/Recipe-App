@@ -1,0 +1,164 @@
+== TREES
+A {"kind":"tree","cwd":"/Users/diego/.claude/jobs/f800c999/tmp/wt/master","resolved":"/Users/diego/.claude/jobs/f800c999/tmp/wt/master/src/lib/mapping/normalization-rules.ts","rulesSha256":"5466e62c143cf8b492c1d7af89ae282e93d475ac58eae66b5b8c38ea67466131","srcSha256":"48177ac6dad530f709ee9bcdce6aca9639bb12569cc13556ed569701c527093e","hasCollapseExport":false,"dataRewrites":127}
+B {"kind":"tree","cwd":"/Users/diego/.claude/jobs/f800c999/tmp/wt/r2","resolved":"/Users/diego/.claude/jobs/f800c999/tmp/wt/r2/src/lib/mapping/normalization-rules.ts","rulesSha256":"5466e62c143cf8b492c1d7af89ae282e93d475ac58eae66b5b8c38ea67466131","srcSha256":"47a31cf4b72f2202f87b936f9d556f5954943f5a732524b4aa817742be797bda","hasCollapseExport":true,"dataRewrites":127}
+data file identical across trees: true
+
+== SELF-GROWING REWRITES (tree A; predicate: from !== to and to contains from)
+data 26 (distinct pairs 24) · DEFAULT_RULES 5 of 75 · in-code 1
+  [data #3] pie spice -> pumpkin pie spice
+  [data #10] liquid aminos -> bragg liquid aminos
+  [data #12] oats -> rolled oats
+  [data #18] mostaccioli -> mostaccioli pasta
+  [data #25] red curry paste -> thai red curry paste
+  [data #40] gluten -> vital wheat gluten
+  [data #41] apple pie spice -> apple pie spice seasoning
+  [data #64] kidney beans -> canned kidney beans
+  [data #65] light red kidney beans -> canned light red kidney beans
+  [data #66] dark red kidney beans -> canned dark red kidney beans
+  [data #70] salad seasoning -> salad seasoning blend
+  [data #76] light red kidney beans -> canned light red kidney beans
+  [data #77] kidney beans -> canned kidney beans
+  [data #78] cannellini beans -> canned cannellini beans
+  [data #83] rice vinegar -> plain rice vinegar
+  [data #84] cooking spray -> non-stick cooking spray
+  [data #90] corn syrup -> light corn syrup
+  [data #92] chili powder -> chili powder spice
+  [data #93] onion powder -> onion powder spice
+  [data #94] garlic powder -> garlic powder spice
+  [data #99] fennel -> fennel seed
+  [data #105] crushed red pepper -> crushed red pepper flakes
+  [data #112] whey protein isolate -> whey protein isolate powder
+  [data #113] balsamic vinaigrette -> balsamic vinaigrette dressing
+  [data #118] lasagna -> lasagna noodles
+  [data #126] peppers in adobo sauce -> chipotle peppers in adobo sauce
+  [default #8] mostaccioli -> mostaccioli pasta
+  [default #16] red curry paste -> thai red curry paste
+  [default #58] apple pie spice -> apple pie spice blend
+  [default #59] pie spice -> pumpkin pie spice
+  [default #60] lasagna -> lasagna noodles
+  [in-code] gluten -> vital wheat gluten
+
+== CAPTURED ARGUMENTS
+captured distinct args 6744; tree A replay reproduces the in-mapper capture (cleaned+nounOnly) on 6744/6744
+args whose cleaned differs: 15; nounOnly differs: 15; stripped differs: 0
+movers by class: COLLAPSED-RUN 15, OTHER 0
+  COLLAPSED-RUN "bulb fennel seed"  cleaned: "bulb fennel seed seed" -> "bulb fennel seed"  nounOnly: "bulb fennel seed seed" -> "bulb fennel seed"  | contains {data:fennel}  | prov composite=0 solo=1 (events 1)
+  COLLAPSED-RUN "canned kidney beans"  cleaned: "canned canned canned kidney beans" -> "canned kidney beans"  nounOnly: "canned canned canned kidney beans" -> "canned kidney beans"  | contains {data:kidney beans, data:kidney beans}  | prov composite=0 solo=1 (events 1)
+  COLLAPSED-RUN "chili powder spice"  cleaned: "chili powder spice spice" -> "chili powder spice"  nounOnly: "chili powder spice spice" -> "chili powder spice"  | contains {data:chili powder}  | prov composite=0 solo=1 (events 1)
+  COLLAPSED-RUN "dry rolled oats"  cleaned: "dry rolled rolled oats" -> "dry rolled oats"  nounOnly: "dry rolled rolled oats" -> "dry rolled oats"  | contains {data:oats}  | prov composite=0 solo=1 (events 111)
+  COLLAPSED-RUN "garlic powder spice"  cleaned: "garlic powder spice spice" -> "garlic powder spice"  nounOnly: "garlic powder spice spice" -> "garlic powder spice"  | contains {data:garlic powder}  | prov composite=0 solo=1 (events 2)
+  COLLAPSED-RUN "instant rolled oats"  cleaned: "instant rolled rolled oats" -> "instant rolled oats"  nounOnly: "instant rolled rolled oats" -> "instant rolled oats"  | contains {data:oats}  | prov composite=0 solo=1 (events 23)
+  COLLAPSED-RUN "kidney beans"  cleaned: "canned canned kidney beans" -> "canned kidney beans"  nounOnly: "canned canned kidney beans" -> "canned kidney beans"  | contains {data:kidney beans, data:kidney beans}  | prov composite=0 solo=1 (events 111)
+  COLLAPSED-RUN "lasagna noodles"  cleaned: "lasagna noodles noodles" -> "lasagna noodles"  nounOnly: "lasagna noodles noodles" -> "lasagna noodles"  | contains {data:lasagna, default:lasagna}  | prov composite=0 solo=1 (events 2)
+  COLLAPSED-RUN "light corn syrup"  cleaned: "light light corn syrup" -> "light corn syrup"  nounOnly: "light light corn syrup" -> "light corn syrup"  | contains {data:corn syrup}  | prov composite=0 solo=1 (events 181)
+  COLLAPSED-RUN "onion powder spice"  cleaned: "onion powder spice spice" -> "onion powder spice"  nounOnly: "onion powder spice spice" -> "onion powder spice"  | contains {data:onion powder}  | prov composite=0 solo=1 (events 1)
+  COLLAPSED-RUN "plain rice vinegar"  cleaned: "plain plain rice vinegar" -> "plain rice vinegar"  nounOnly: "plain plain rice vinegar" -> "plain rice vinegar"  | contains {data:rice vinegar}  | prov composite=0 solo=2 (events 3)
+  COLLAPSED-RUN "pumpkin pie spice"  cleaned: "pumpkin pumpkin pie spice" -> "pumpkin pie spice"  nounOnly: "pumpkin pumpkin pie spice" -> "pumpkin pie spice"  | contains {data:pie spice, default:pie spice}  | prov composite=0 solo=1 (events 1)
+  COLLAPSED-RUN "rolled oats"  cleaned: "rolled rolled oats" -> "rolled oats"  nounOnly: "rolled rolled oats" -> "rolled oats"  | contains {data:oats}  | prov composite=1 solo=4 (events 709)
+  COLLAPSED-RUN "rolled rolled oats"  cleaned: "rolled rolled oats" -> "rolled oats"  nounOnly: "rolled rolled oats" -> "rolled oats"  | contains {data:oats} | INPUT ALREADY REPEATS  | prov composite=0 solo=1 (events 53)
+  COLLAPSED-RUN "vital wheat gluten"  cleaned: "vital wheat vital wheat vital wheat gluten" -> "vital wheat gluten"  nounOnly: "vital wheat vital wheat vital wheat gluten" -> "vital wheat gluten"  | contains {data:gluten, in-code:gluten}  | prov composite=0 solo=1 (events 3)
+master cleaned has an adjacent repeated run: 26 of 6744
+  ...of which the branch does NOT move (11):
+    "bonefish grill bang bang shrimp" => "bonefish grill bang bang shrimp" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "cake cake kodiak mix pancake power" => "cake cake kodiak mix pancake power" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "cheesecake factory bang bang chicken" => "cheesecake factory bang bang chicken" [brand-led] [input already adj-repeats]  prov composite=1 solo=1
+    "cheesecake factory bang bang chicken and shrimp" => "cheesecake factory bang bang chicken and shrimp" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "chick-fil-a chick-fil-a sauce" => "chick-fil-a chick-fil-a sauce" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "hooters hooters sauce" => "hooters hooters sauce" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "ihop 2 x 2 x 2" => "ihop 2 x 2 x 2" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "in-n-out double double" => "in-n-out double double" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "m&m" => "m m" [brand-led]  prov composite=0 solo=1
+    "nandos peri peri chicken" => "nandos peri peri chicken" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+    "tim hortons double double" => "tim hortons double double" [brand-led] [input already adj-repeats]  prov composite=0 solo=1
+
+== REFUTER: inert dedupe, or inputs that never carry a self-growing rewrite?
+args containing a self-growing from (word-boundary, case-insensitive): any 64 · data 64 · DEFAULT_RULES 11 · in-code gluten 1
+  ...of which master cleaned carries an adjacent repeated run: 15
+  ...of which the branch moves cleaned: 15
+movers that contain no self-growing from: 0
+mover count 15 == contains-and-repeats-on-master 15
+contains a from but master does NOT repeat (49):
+  a family size lasagna => a family size lasagna noodles  {data:lasagna, default:lasagna}
+  balsamic vinaigrette => balsamic vinaigrette dressing  {data:balsamic vinaigrette}
+  bob's red mill old fashioned rolled oats => bob's red mill old fashioned rolled oats  [brand-led]  {data:oats}
+  cannellini beans => canned cannellini beans  {data:cannellini beans}
+  canyon bakehouse gluten free bread => canyon bakehouse vital wheat gluten free bread  {data:gluten}
+  chili powder => chili powder spice  {data:chili powder}
+  cooked oats => cooked rolled oats  {data:oats}
+  cooking spray => non-stick cooking spray  {data:cooking spray}
+  fennel => fennel seed  {data:fennel}
+  fennel bulb => fennel seed bulb  {data:fennel}
+  flour gluten-free vital wheat => flour vital wheat gluten-free vital wheat  {data:gluten}
+  garlic powder => garlic powder spice  {data:garlic powder}
+  gluten free bread => vital wheat gluten free bread  {data:gluten}
+  honey bunches of oats => honey bunches of rolled oats  {data:oats}
+  honey bunches of oats almond => honey bunches of rolled oats almond  {data:oats}
+  isopure whey protein isolate => isopure whey protein isolate  [brand-led]  {data:whey protein isolate}
+  lasagna => lasagna noodles  {data:lasagna, default:lasagna}
+  lasagna noodle stouffer => lasagna noodles noodle stouffer  {data:lasagna, default:lasagna}
+  maggianos moms lasagna => maggianos moms lasagna noodles  {data:lasagna, default:lasagna}
+  marzetti simply dressed balsamic vinaigrette => marzetti simply dressed balsamic vinaigrette  [brand-led]  {data:balsamic vinaigrette}
+  matcha overnight oats jar => matcha overnight rolled oats jar  {data:oats}
+  millville honey nut toasted oats => millville honey nut toasted oats  [brand-led]  {data:oats}
+  nature valley oats and honey => nature valley oats and honey  [brand-led]  {data:oats}
+  nature valley oats and honey bar => nature valley oats and honey bar  [brand-led]  {data:oats}
+  nature valley oats n honey crunchy granola bar => nature valley oats n honey crunchy granola bar  [brand-led]  {data:oats}
+  nature valley oats n honey granola => nature valley oats n honey granola  [brand-led]  {data:oats}
+  oats => rolled oats  {data:oats}
+  oats dry => rolled oats dry  {data:oats}
+  oats with 30 g peanut butter => rolled oats with 30 g peanut butter  {data:oats}
+  olive garden lasagna => olive garden lasagna  [brand-led]  {data:lasagna, default:lasagna}
+  olive garden lasagna classico => olive garden lasagna classico  [brand-led]  {data:lasagna, default:lasagna}
+  onion powder => onion powder spice  {data:onion powder}
+  overnight oats => overnight rolled oats  {data:oats}
+  overnight oats with peanut butter => overnight rolled oats with peanut butter  {data:oats}
+  pam cooking spray => pam cooking spray  [brand-led]  {data:cooking spray}
+  pam original cooking spray => pam original cooking spray  [brand-led]  {data:cooking spray}
+  post honey bunches of oats rolled => post honey bunches of oats rolled  [brand-led]  {data:oats}
+  quaker oats => quaker oats  [brand-led]  {data:oats}
+  quaker oats maple brown sugar => quaker oats maple brown sugar  [brand-led]  {data:oats}
+  quaker oats old fashioned => quaker oats old fashioned  [brand-led]  {data:oats}
+  quaker old fashioned oats => quaker old fashioned oats  [brand-led]  {data:oats}
+  quaker simply granola oats honey almonds => quaker simply granola oats honey almonds  [brand-led]  {data:oats}
+  red curry paste => thai red curry paste  {data:red curry paste, default:red curry paste}
+  rice vinegar => plain rice vinegar  {data:rice vinegar}
+  steel cut oats => steel cut rolled oats  {data:oats}
+  stouffer's lasagna => stouffer's lasagna  [brand-led]  {data:lasagna, default:lasagna}
+  stouffers lasagna => stouffers lasagna  [brand-led]  {data:lasagna, default:lasagna}
+  transparent labs whey protein isolate => transparent labs whey protein isolate  [brand-led]  {data:whey protein isolate}
+  whey protein isolate => whey protein isolate powder  {data:whey protein isolate}
+
+== EXPLICIT STRINGS (both trees)
+  "dark corn syrup"            in-population=false brandLed=false  master "dark light corn syrup" / nounOnly "dark light corn syrup"  ->  branch "dark light corn syrup" / nounOnly "dark light corn syrup"  SAME
+  "apple pie spice seasoning"  in-population=false brandLed=false  master "apple pumpkin pie spice seasoning" / nounOnly "apple pumpkin pie spice seasoning"  ->  branch "apple pumpkin pie spice seasoning" / nounOnly "apple pumpkin pie spice seasoning"  SAME
+  "vital wheat gluten"         in-population=true brandLed=false  master "vital wheat vital wheat vital wheat gluten" / nounOnly "vital wheat vital wheat vital wheat gluten"  ->  branch "vital wheat gluten" / nounOnly "vital wheat gluten"  MOVED
+  "light corn syrup"           in-population=true brandLed=false  master "light light corn syrup" / nounOnly "light light corn syrup"  ->  branch "light corn syrup" / nounOnly "light corn syrup"  MOVED
+  "corn syrup"                 in-population=false brandLed=false  master "light corn syrup" / nounOnly "light corn syrup"  ->  branch "light corn syrup" / nounOnly "light corn syrup"  SAME
+  "gluten"                     in-population=false brandLed=false  master "vital wheat vital wheat gluten" / nounOnly "vital wheat vital wheat gluten"  ->  branch "vital wheat gluten" / nounOnly "vital wheat gluten"  MOVED
+  "wheat gluten"               in-population=false brandLed=false  master "wheat vital wheat vital wheat gluten" / nounOnly "wheat vital wheat vital wheat gluten"  ->  branch "wheat vital wheat gluten" / nounOnly "wheat vital wheat gluten"  MOVED
+  "vital wheat gluten flour"   in-population=false brandLed=false  master "vital wheat vital wheat vital wheat gluten flour" / nounOnly "vital wheat vital wheat vital wheat gluten flour"  ->  branch "vital wheat gluten flour" / nounOnly "vital wheat gluten flour"  MOVED
+  "gluten free bread"          in-population=true brandLed=false  master "vital wheat gluten free bread" / nounOnly "vital wheat gluten free bread"  ->  branch "vital wheat gluten free bread" / nounOnly "vital wheat gluten free bread"  SAME
+  "mahi mahi"                  in-population=true brandLed=false  master "mahi" / nounOnly "mahi"  ->  branch "mahi" / nounOnly "mahi"  SAME
+  "bang bang shrimp"           in-population=false brandLed=true  master "bang bang shrimp" / nounOnly "bang bang shrimp"  ->  branch "bang bang shrimp" / nounOnly "bang bang shrimp"  SAME
+  "half and half"              in-population=true brandLed=false  master "half and half" / nounOnly "half and half"  ->  branch "half and half" / nounOnly "half and half"  SAME
+
+== S47 CORPUS PREDICATE (scripts/eval/coverage-corpus-2026-08-08.tsv, column 3)
+  [direct seed] master: adjacent-repeat 14 · any-repeat 76 · gained-a-repeat (dup count up vs input) 6 · gained-adjacent 6  of 4102
+      adjacent: ["rolled oats => rolled rolled oats","tim hortons double double => tim hortons double double [brand-led] [input already adj-repeats]","in-n-out double double => in-n-out double double [brand-led] [input already adj-repeats]","chick-fil-a chick-fil-a sauce => chick-fil-a chick-fil-a sauce [brand-led] [input already adj-repeats]","hooters hooters sauce => hooters hooters sauce [brand-led] [input already adj-repeats]","nandos peri peri chicken => nandos peri peri chicken [brand-led] [input already adj-repeats]","lasagna noodles => lasagna noodles noodles","kidney beans => canned canned kidney beans","canned kidney beans => canned canned canned kidney beans","cheesecake factory bang bang chicken and shrimp => cheesecake factory bang bang chicken and shrimp [brand-led] [input already adj-repeats]","ihop 2 x 2 x 2 => ihop 2 x 2 x 2 [brand-led] [input already adj-repeats]","bonefish grill bang bang shrimp => bonefish grill bang bang shrimp [brand-led] [input already adj-repeats]","vital wheat gluten => vital wheat vital wheat vital wheat gluten","light corn syrup => light light corn syrup"]
+      gained  : ["rolled oats => rolled rolled oats","lasagna noodles => lasagna noodles noodles","kidney beans => canned canned kidney beans","canned kidney beans => canned canned canned kidney beans","vital wheat gluten => vital wheat vital wheat vital wheat gluten","light corn syrup => light light corn syrup"]
+  [direct seed] branch: adjacent-repeat 8 · any-repeat 70 · gained-a-repeat (dup count up vs input) 0 · gained-adjacent 0  of 4102
+      adjacent: ["tim hortons double double => tim hortons double double [brand-led] [input already adj-repeats]","in-n-out double double => in-n-out double double [brand-led] [input already adj-repeats]","chick-fil-a chick-fil-a sauce => chick-fil-a chick-fil-a sauce [brand-led] [input already adj-repeats]","hooters hooters sauce => hooters hooters sauce [brand-led] [input already adj-repeats]","nandos peri peri chicken => nandos peri peri chicken [brand-led] [input already adj-repeats]","cheesecake factory bang bang chicken and shrimp => cheesecake factory bang bang chicken and shrimp [brand-led] [input already adj-repeats]","ihop 2 x 2 x 2 => ihop 2 x 2 x 2 [brand-led] [input already adj-repeats]","bonefish grill bang bang shrimp => bonefish grill bang bang shrimp [brand-led] [input already adj-repeats]"]
+      gained  : []
+  [parseIngredientLine -> normalize (S47 walk)] master: adjacent-repeat 14 · any-repeat 73 · gained-a-repeat (dup count up vs input) 6 · gained-adjacent 6  of 4102
+      adjacent: ["rolled oats => rolled rolled oats","tim hortons double double => tim hortons double double [brand-led] [input already adj-repeats]","in-n-out double double => in-n-out double double [brand-led] [input already adj-repeats]","chick-fil-a chick-fil-a sauce => chick-fil-a chick-fil-a sauce [brand-led] [input already adj-repeats]","hooters hooters sauce => hooters hooters sauce [brand-led] [input already adj-repeats]","nandos peri peri chicken => nandos peri peri chicken [brand-led] [input already adj-repeats]","lasagna noodles => lasagna noodles noodles","kidney beans => canned canned kidney beans","canned kidney beans => canned canned kidney beans","cheesecake factory bang bang chicken and shrimp => cheesecake factory bang bang chicken and shrimp [brand-led] [input already adj-repeats]","ihop 2 x 2 x 2 => ihop 2 x 2 x 2 [brand-led] [input already adj-repeats]","bonefish grill bang bang shrimp => bonefish grill bang bang shrimp [brand-led] [input already adj-repeats]","vital wheat gluten => vital wheat vital wheat vital wheat gluten","light corn syrup => light light corn syrup"]
+      gained  : ["rolled oats => rolled rolled oats","lasagna noodles => lasagna noodles noodles","kidney beans => canned canned kidney beans","canned kidney beans => canned canned kidney beans","vital wheat gluten => vital wheat vital wheat vital wheat gluten","light corn syrup => light light corn syrup"]
+  [parseIngredientLine -> normalize (S47 walk)] branch: adjacent-repeat 8 · any-repeat 67 · gained-a-repeat (dup count up vs input) 0 · gained-adjacent 0  of 4102
+      adjacent: ["tim hortons double double => tim hortons double double [brand-led] [input already adj-repeats]","in-n-out double double => in-n-out double double [brand-led] [input already adj-repeats]","chick-fil-a chick-fil-a sauce => chick-fil-a chick-fil-a sauce [brand-led] [input already adj-repeats]","hooters hooters sauce => hooters hooters sauce [brand-led] [input already adj-repeats]","nandos peri peri chicken => nandos peri peri chicken [brand-led] [input already adj-repeats]","cheesecake factory bang bang chicken and shrimp => cheesecake factory bang bang chicken and shrimp [brand-led] [input already adj-repeats]","ihop 2 x 2 x 2 => ihop 2 x 2 x 2 [brand-led] [input already adj-repeats]","bonefish grill bang bang shrimp => bonefish grill bang bang shrimp [brand-led] [input already adj-repeats]"]
+      gained  : []
+  corpus seeds whose output moves (direct or parsed walk): 6
+    "rolled oats"  direct "rolled rolled oats" -> "rolled oats"  parsed "rolled rolled oats" -> "rolled oats"  COLLAPSED-RUN
+    "lasagna noodles"  direct "lasagna noodles noodles" -> "lasagna noodles"  parsed "lasagna noodles noodles" -> "lasagna noodles"  COLLAPSED-RUN
+    "kidney beans"  direct "canned canned kidney beans" -> "canned kidney beans"  parsed "canned canned kidney beans" -> "canned kidney beans"  COLLAPSED-RUN
+    "canned kidney beans"  direct "canned canned canned kidney beans" -> "canned kidney beans"  parsed "canned canned kidney beans" -> "canned kidney beans"  COLLAPSED-RUN
+    "vital wheat gluten"  direct "vital wheat vital wheat vital wheat gluten" -> "vital wheat gluten"  parsed "vital wheat vital wheat vital wheat gluten" -> "vital wheat gluten"  COLLAPSED-RUN
+    "light corn syrup"  direct "light light corn syrup" -> "light corn syrup"  parsed "light light corn syrup" -> "light corn syrup"  COLLAPSED-RUN
