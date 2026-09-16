@@ -41,6 +41,36 @@
  * `null`: the HIT becomes a MISS and `aiNutritionEstimate`/`isBrandedQuery` vanish
  * from the snapshot.
  *
+ * THE STARTUP SELF-TEST (punch #199). `assertWriteGuardIntercepts()` sends ONE
+ * statement through the client's `$queryRaw`: `UPDATE "AiNormalizeCache" SET
+ * "useCount" = "useCount" WHERE false`. It matches no row, and on a row it did match
+ * it would write a column's own value back. The helper throws unless the caller's
+ * tally of `raw.queryRaw:MUTATING` rose by EXACTLY one across that call.
+ * `winner-diff.ts` runs it once, inside its once-only `installWriteGuard()` latch, so
+ * every mode that installs the guard refuses to start without it. What it proves:
+ *   - the raw inspection is live on the client the statement is sent through, for the
+ *     args shape a tagged `$queryRaw` arrives in on the installed Prisma. A Prisma
+ *     upgrade that moves the SQL text out of `rawSqlOf()`'s reach, or stops running
+ *     `$use` middleware for `$queryRaw`, reads a rise of 0 and refuses. A tally that
+ *     counts one suppression twice reads 2 and refuses too.
+ * What it does not prove:
+ *   - that the guard sits on the client the MAPPER uses. `winner-diff.ts` sends the
+ *     statement through the same `prisma` object it installed the guard on, so at
+ *     runtime a guard on the wrong client cannot fail it. Only the unit test's
+ *     two-client case refuses on that shape, and it tests this helper, not
+ *     winner-diff's wiring;
+ *   - that the middleware withheld `next`. A middleware that tallies AND passes the
+ *     statement on passes the self-test. `createWriteGuardMiddleware()` returns before
+ *     `next`, and `__tests__/winner-diff.test.ts` pins that;
+ *   - anything about half (1), which is keyed on the action name and never reads SQL.
+ * Measured by the PR's refuter lens, 2026-09-15, with the real Prisma 5.18 client
+ * pointed at a dead `127.0.0.1:1`:
+ *   - WITH the guard the self-test PASSED, with tally `{"raw.queryRaw:MUTATING":1}` and
+ *     no connection attempted, so the statement never executed;
+ *   - WITHOUT the guard it REFUSED: the statement reached the engine and failed
+ *     "Can't reach database server";
+ *   - the args shape was `[["UPDATE \"AiNormalizeCache\" SET \"useCount\" = \"useCount\" WHERE false"]]`.
+ *
  * WHAT IT CANNOT SEE — a zero tally is not proof that nothing was written:
  *   - a mutating statement that does not OPEN with a `MUTATING_SQL` verb (a
  *     `WITH … UPDATE` CTE, a leading SQL comment, `MERGE`, `COPY`, `CALL`/`DO`,
@@ -135,4 +165,42 @@ export function installWriteGuard(
     onSuppress: SuppressTally,
 ): void {
     prisma.$use(createWriteGuardMiddleware(onSuppress));
+}
+
+/** The tally key a suppressed tagged `$queryRaw` lands under: the one the self-test reads. */
+export const WRITE_GUARD_SELF_TEST_KEY = 'raw.queryRaw:MUTATING';
+
+/** The client surface the self-test needs: a tagged `$queryRaw`. */
+export interface RawQueryClient {
+    $queryRaw(query: TemplateStringsArray, ...values: unknown[]): PromiseLike<unknown>;
+}
+
+/**
+ * The startup self-test (see the header). Resolves when `readTally()` rose by exactly
+ * one across one no-op mutating `$queryRaw`; otherwise throws a message that says the
+ * run is refused and why. A statement that throws (e.g. it reached a database that
+ * refused it) is not an interception: the tally decides, and the error is quoted.
+ */
+export async function assertWriteGuardIntercepts(prisma: RawQueryClient, readTally: () => number): Promise<void> {
+    const before = readTally();
+    let outcome: string;
+    try {
+        // A no-op by construction: WHERE false matches no row.
+        const result = await prisma.$queryRaw`UPDATE "AiNormalizeCache" SET "useCount" = "useCount" WHERE false`;
+        outcome = `returned ${Array.isArray(result) ? `an array of ${result.length} row(s)` : String(result)}`;
+    } catch (err) {
+        outcome = `threw: ${err instanceof Error ? err.message : String(err)}`;
+    }
+    const rose = readTally() - before;
+    if (rose !== 1) {
+        throw new Error(
+            'WRITE GUARD SELF-TEST FAILED, refusing to run: a no-op UPDATE sent through $queryRaw moved the ' +
+            `${WRITE_GUARD_SELF_TEST_KEY} tally by ${rose}, not by exactly 1 (the statement ${outcome}). ` +
+            'The guard is not intercepting raw writes on the client this statement went through, so the ' +
+            'READ-ONLY promise does not hold. Suspects: this Prisma no longer runs $use middleware for a ' +
+            'tagged $queryRaw, it passes one in an args shape rawSqlOf() does not read, or the tally callback ' +
+            'counts a suppression other than once. (This check cannot tell whether the guard sits on the ' +
+            'client the mapper uses; see the header.)',
+        );
+    }
 }

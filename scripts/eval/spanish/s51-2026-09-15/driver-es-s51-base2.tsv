@@ -1,0 +1,130 @@
+idx	draw	truth	corpusVerdict	status	itemCount	itemsJson	ms	line
+1	1	1	ES	ok	1	[{"r":"huevos","n":"huevos","b":""}]	1434	huevos
+1	2	1	ES	ok	1	[{"r":"huevos","n":"huevos","b":""}]	1769	huevos
+1	3	1	ES	ok	1	[{"r":"huevos","n":"huevos","b":""}]	875	huevos
+2	1	1	ES	ok	1	[{"r":"arroz","n":"arroz","b":""}]	762	arroz
+2	2	1	ES	ok	1	[{"r":"arroz","n":"arroz","b":""}]	6182	arroz
+2	3	1	ES	ok	1	[{"r":"arroz","n":"arroz","b":""}]	786	arroz
+3	1	1	ES	ok	1	[{"r":"pollo","n":"pollo","b":""}]	860	pollo
+3	2	1	ES	ok	1	[{"r":"pollo","n":"pollo","b":""}]	1633	pollo
+3	3	1	ES	ok	1	[{"r":"pollo","n":"pollo","b":""}]	1573	pollo
+4	1	1	ES	ok	1	[{"r":"frijoles","n":"frijoles","b":""}]	843	frijoles
+4	2	1	ES	ok	1	[{"r":"frijoles","n":"frijoles","b":""}]	1762	frijoles
+4	3	1	ES	ok	1	[{"r":"frijoles","n":"frijoles","b":""}]	1797	frijoles
+5	1	1	ES	ok	1	[{"r":"tortilla de maiz","n":"tortilla de maiz","b":""}]	1939	tortilla de maiz
+5	2	1	ES	ok	1	[{"r":"tortilla de maiz","n":"tortilla de maiz","b":""}]	987	tortilla de maiz
+5	3	1	ES	ok	1	[{"r":"tortilla de maiz","n":"tortilla de maiz","b":""}]	1231	tortilla de maiz
+6	1	1	ES	ok	1	[{"r":"pan","n":"pan","b":""}]	762	pan
+6	2	1	ES	ok	1	[{"r":"pan","n":"pan","b":""}]	1406	pan
+6	3	1	ES	ok	1	[{"r":"pan","n":"pan","b":""}]	1371	pan
+7	1	1	ES	ok	1	[{"r":"leche","n":"leche","b":""}]	2205	leche
+7	2	1	ES	ok	1	[{"r":"leche","n":"leche","b":""}]	730	leche
+7	3	1	ES	ok	1	[{"r":"leche","n":"leche","b":""}]	814	leche
+8	1	1	ES	ok	1	[{"r":"queso","n":"queso","b":""}]	909	queso
+8	2	1	ES	ok	1	[{"r":"queso","n":"queso","b":""}]	839	queso
+8	3	1	ES	ok	1	[{"r":"queso","n":"queso","b":""}]	1271	queso
+9	1	1	ES	ok	1	[{"r":"aguacate","n":"aguacate","b":""}]	1795	aguacate
+9	2	1	ES	ok	1	[{"r":"aguacate","n":"aguacate","b":""}]	1668	aguacate
+9	3	1	ES	ok	1	[{"r":"aguacate","n":"aguacate","b":""}]	1318	aguacate
+10	1	1	ES	ok	1	[{"r":"platano","n":"platano","b":""}]	974	platano
+10	2	1	ES	ok	1	[{"r":"platano","n":"platano","b":""}]	740	platano
+10	3	1	ES	ok	1	[{"r":"platano","n":"platano","b":""}]	804	platano
+11	1	1	ES	ok	1	[{"r":"manzana","n":"manzana","b":""}]	1822	manzana
+11	2	1	ES	ok	1	[{"r":"manzana","n":"manzana","b":""}]	760	manzana
+11	3	1	ES	ok	1	[{"r":"manzana","n":"manzana","b":""}]	6167	manzana
+12	1	1	ES	ok	1	[{"r":"avena","n":"avena","b":""}]	889	avena
+12	2	1	ES	ok	1	[{"r":"avena","n":"avena","b":""}]	784	avena
+12	3	1	ES	ok	1	[{"r":"avena","n":"avena","b":""}]	719	avena
+13	1	1	ES	ok	1	[{"r":"una taza de arroz","n":"arroz","b":""}]	732	una taza de arroz
+13	2	1	ES	ok	1	[{"r":"una taza de arroz","n":"arroz","b":""}]	1551	una taza de arroz
+13	3	1	ES	ok	1	[{"r":"una taza de arroz","n":"arroz","b":""}]	1674	una taza de arroz
+14	1	1	ES	ok	1	[{"r":"medio aguacate","n":"aguacate","b":""}]	1680	medio aguacate
+14	2	1	ES	ok	1	[{"r":"medio aguacate","n":"aguacate","b":""}]	2777	medio aguacate
+14	3	1	ES	ok	1	[{"r":"medio aguacate","n":"aguacate","b":""}]	2048	medio aguacate
+15	1	1	ES	ok	1	[{"r":"dos piezas de pan","n":"pan","b":""}]	1053	dos piezas de pan
+15	2	1	ES	ok	1	[{"r":"dos piezas de pan","n":"pan","b":""}]	755	dos piezas de pan
+15	3	1	ES	ok	1	[{"r":"dos piezas de pan","n":"pan","b":""}]	739	dos piezas de pan
+16	1	1	ES	ok	1	[{"r":"un vaso de leche","n":"leche","b":""}]	864	un vaso de leche
+16	2	1	ES	ok	1	[{"r":"un vaso de leche","n":"leche","b":""}]	774	un vaso de leche
+16	3	1	ES	ok	1	[{"r":"un vaso de leche","n":"leche","b":""}]	816	un vaso de leche
+17	1	1	ES	ok	1	[{"r":"una cucharada de aceite de oliva","n":"aceite de oliva","b":""}]	775	una cucharada de aceite de oliva
+17	2	1	ES	ok	1	[{"r":"una cucharada de aceite de oliva","n":"aceite de oliva","b":""}]	1506	una cucharada de aceite de oliva
+17	3	1	ES	ok	1	[{"r":"una cucharada de aceite de oliva","n":"aceite de oliva","b":""}]	799	una cucharada de aceite de oliva
+18	1	1	ES	ok	1	[{"r":"100 g de pollo","n":"pollo","b":""}]	1713	100 g de pollo
+18	2	1	ES	ok	1	[{"r":"100 g de pollo","n":"pollo","b":""}]	816	100 g de pollo
+18	3	1	ES	ok	1	[{"r":"100 g de pollo","n":"pollo","b":""}]	1330	100 g de pollo
+19	1	1	ES	ok	1	[{"r":"media manzana","n":"manzana","b":""}]	1417	media manzana
+19	2	1	ES	ok	1	[{"r":"media manzana","n":"manzana","b":""}]	1714	media manzana
+19	3	1	ES	ok	1	[{"r":"media manzana","n":"manzana","b":""}]	1038	media manzana
+20	1	1	ES	ok	1	[{"r":"tres rebanadas de pan integral","n":"pan integral","b":""}]	1547	tres rebanadas de pan integral
+20	2	1	ES	ok	1	[{"r":"tres rebanadas de pan integral","n":"pan integral","b":""}]	901	tres rebanadas de pan integral
+20	3	1	ES	ok	1	[{"r":"tres rebanadas de pan integral","n":"pan integral","b":""}]	1743	tres rebanadas de pan integral
+21	1	1	ES	ok	1	[{"r":"dos huevos","n":"huevos","b":""}]	1016	dos huevos
+21	2	1	ES	ok	1	[{"r":"dos huevos","n":"huevos","b":""}]	1942	dos huevos
+21	3	1	ES	ok	1	[{"r":"dos huevos","n":"huevos","b":""}]	1059	dos huevos
+22	1	2	ES	ok	1	[{"r":"arroz con frijoles","n":"arroz con frijoles","b":""}]	1106	arroz con frijoles
+22	2	2	ES	ok	1	[{"r":"arroz con frijoles","n":"arroz con frijoles","b":""}]	921	arroz con frijoles
+22	3	2	ES	ok	1	[{"r":"arroz con frijoles","n":"arroz con frijoles","b":""}]	1258	arroz con frijoles
+23	1	2	ES	ok	1	[{"r":"huevos con jamon","n":"huevos con jamon","b":""}]	868	huevos con jamon
+23	2	2	ES	ok	1	[{"r":"huevos con jamon","n":"huevos con jamon","b":""}]	1384	huevos con jamon
+23	3	2	ES	ok	2	[{"r":"huevos","n":"huevos","b":""},{"r":"jamon","n":"jamon","b":""}]	959	huevos con jamon
+24	1	1	ES	ok	1	[{"r":"cafe con leche","n":"cafe con leche","b":""}]	791	cafe con leche
+24	2	1	ES	ok	1	[{"r":"cafe con leche","n":"cafe con leche","b":""}]	1421	cafe con leche
+24	3	1	ES	ok	1	[{"r":"cafe con leche","n":"cafe con leche","b":""}]	1596	cafe con leche
+25	1	2	ES	ok	1	[{"r":"pan con mantequilla","n":"pan con mantequilla","b":""}]	858	pan con mantequilla
+25	2	2	ES	ok	1	[{"r":"pan con mantequilla","n":"pan con mantequilla","b":""}]	1568	pan con mantequilla
+25	3	2	ES	ok	1	[{"r":"pan con mantequilla","n":"pan con mantequilla","b":""}]	767	pan con mantequilla
+26	1	2	ES	ok	2	[{"r":"pollo","n":"pollo","b":""},{"r":"arroz","n":"arroz","b":""}]	1813	pollo y arroz
+26	2	2	ES	ok	2	[{"r":"pollo","n":"pollo","b":""},{"r":"arroz","n":"arroz","b":""}]	6370	pollo y arroz
+26	3	2	ES	ok	2	[{"r":"pollo","n":"pollo","b":""},{"r":"arroz","n":"arroz","b":""}]	1529	pollo y arroz
+27	1	2	ES	ok	2	[{"r":"una manzana","n":"manzana","b":""},{"r":"un platano","n":"platano","b":""}]	1189	una manzana y un platano
+27	2	2	ES	ok	2	[{"r":"una manzana","n":"manzana","b":""},{"r":"un platano","n":"platano","b":""}]	1780	una manzana y un platano
+27	3	2	ES	ok	2	[{"r":"una manzana","n":"manzana","b":""},{"r":"un platano","n":"platano","b":""}]	1202	una manzana y un platano
+28	1	1	ES	ok	1	[{"r":"leche con chocolate","n":"leche con chocolate","b":""}]	2116	leche con chocolate
+28	2	1	ES	ok	1	[{"r":"leche con chocolate","n":"leche con chocolate","b":""}]	1655	leche con chocolate
+28	3	1	ES	ok	1	[{"r":"leche con chocolate","n":"leche con chocolate","b":""}]	1603	leche con chocolate
+29	1	1	ES	ok	1	[{"r":"galletas marias","n":"galletas marias","b":"Gamesa"}]	1541	galletas marias gamesa
+29	2	1	ES	ok	1	[{"r":"galletas marias gamesa","n":"galletas marias","b":"Gamesa"}]	773	galletas marias gamesa
+29	3	1	ES	ok	1	[{"r":"galletas marias gamesa","n":"galletas marias","b":"gamesa"}]	953	galletas marias gamesa
+30	1	1	ES	ok	1	[{"r":"pan blanco bimbo","n":"pan blanco","b":"bimbo"}]	1773	pan blanco bimbo
+30	2	1	ES	ok	1	[{"r":"pan blanco bimbo","n":"pan blanco","b":"Bimbo"}]	1461	pan blanco bimbo
+30	3	1	ES	ok	1	[{"r":"pan blanco bimbo","n":"pan blanco","b":"bimbo"}]	1198	pan blanco bimbo
+31	1	1	ES	ok	1	[{"r":"jugo de mango jumex","n":"jugo de mango","b":"jumex"}]	1167	jugo de mango jumex
+31	2	1	ES	ok	1	[{"r":"jugo de mango jumex","n":"jugo de mango","b":"jumex"}]	2410	jugo de mango jumex
+31	3	1	ES	ok	1	[{"r":"jugo de mango jumex","n":"jugo de mango","b":"jumex"}]	767	jugo de mango jumex
+32	1	1	ES	ok	1	[{"r":"sabritas originales","n":"sabritas originales","b":"sabritas"}]	1652	sabritas originales
+32	2	1	ES	ok	1	[{"r":"sabritas originales","n":"sabritas originales","b":"sabritas"}]	1143	sabritas originales
+32	3	1	ES	ok	1	[{"r":"sabritas originales","n":"sabritas originales","b":"sabritas"}]	1503	sabritas originales
+33	1	1	ES	ok	1	[{"r":"takis fuego","n":"takis fuego","b":"Takis"}]	1045	takis fuego
+33	2	1	ES	ok	1	[{"r":"takis fuego","n":"takis fuego","b":""}]	856	takis fuego
+33	3	1	ES	ok	1	[{"r":"takis fuego","n":"takis fuego","b":""}]	1293	takis fuego
+34	1	1	ES	ok	1	[{"r":"una coca cola de lata","n":"coca cola","b":"Coca-Cola"}]	1676	una coca cola de lata
+34	2	1	ES	ok	1	[{"r":"una coca cola de lata","n":"coca cola","b":"Coca-Cola"}]	1074	una coca cola de lata
+34	3	1	ES	ok	1	[{"r":"una coca cola de lata","n":"coca cola","b":"Coca-Cola"}]	1198	una coca cola de lata
+35	1	1	ES	ok	1	[{"r":"arroz con pollo","n":"arroz con pollo","b":""}]	1157	arroz con pollo
+35	2	1	ES	ok	1	[{"r":"arroz con pollo","n":"arroz con pollo","b":""}]	1371	arroz con pollo
+35	3	1	ES	ok	1	[{"r":"arroz con pollo","n":"arroz con pollo","b":""}]	818	arroz con pollo
+36	1	1	ES	ok	1	[{"r":"chilaquiles verdes","n":"chilaquiles verdes","b":""}]	1641	chilaquiles verdes
+36	2	1	ES	ok	1	[{"r":"chilaquiles verdes","n":"chilaquiles verdes","b":""}]	786	chilaquiles verdes
+36	3	1	ES	ok	1	[{"r":"chilaquiles verdes","n":"chilaquiles verdes","b":""}]	849	chilaquiles verdes
+37	1	1	ES	ok	1	[{"r":"dos tamales de pollo","n":"tamales de pollo","b":""}]	1331	dos tamales de pollo
+37	2	1	ES	ok	1	[{"r":"dos tamales de pollo","n":"tamales de pollo","b":""}]	1526	dos tamales de pollo
+37	3	1	ES	ok	1	[{"r":"dos tamales de pollo","n":"tamales de pollo","b":""}]	1430	dos tamales de pollo
+38	1	1	ES	ok	1	[{"r":"enchiladas de queso","n":"enchiladas de queso","b":""}]	821	enchiladas de queso
+38	2	1	ES	ok	1	[{"r":"enchiladas de queso","n":"enchiladas de queso","b":""}]	3049	enchiladas de queso
+38	3	1	ES	ok	1	[{"r":"enchiladas de queso","n":"enchiladas de queso","b":""}]	1549	enchiladas de queso
+39	1	1	ES	ok	1	[{"r":"pozole rojo","n":"pozole rojo","b":""}]	798	pozole rojo
+39	2	1	ES	ok	1	[{"r":"pozole rojo","n":"pozole rojo","b":""}]	1319	pozole rojo
+39	3	1	ES	ok	1	[{"r":"pozole rojo","n":"pozole rojo","b":""}]	909	pozole rojo
+40	1	1	ES	ok	1	[{"r":"huevos rancheros","n":"huevos rancheros","b":""}]	913	huevos rancheros
+40	2	1	ES	ok	1	[{"r":"huevos rancheros","n":"huevos rancheros","b":""}]	1117	huevos rancheros
+40	3	1	ES	ok	1	[{"r":"huevos rancheros","n":"huevos rancheros","b":""}]	913	huevos rancheros
+41	1	2	ES	ok	2	[{"r":"2 huevos revueltos","n":"huevos revueltos","b":""},{"r":"una tortilla de maiz","n":"tortilla de maiz","b":""}]	1227	2 huevos revueltos con una tortilla de maiz
+41	2	2	ES	ok	2	[{"r":"2 huevos revueltos","n":"huevos revueltos","b":""},{"r":"una tortilla de maiz","n":"tortilla de maiz","b":""}]	2522	2 huevos revueltos con una tortilla de maiz
+41	3	2	ES	ok	2	[{"r":"2 huevos revueltos","n":"huevos revueltos","b":""},{"r":"una tortilla de maiz","n":"tortilla de maiz","b":""}]	978	2 huevos revueltos con una tortilla de maiz
+42	1	1	ES	ok	2	[{"r":"una taza de arroz","n":"arroz","b":""},{"r":"pollo","n":"pollo","b":""}]	1278	una taza de arroz con pollo
+42	2	1	ES	ok	2	[{"r":"una taza de arroz","n":"arroz","b":""},{"r":"pollo","n":"pollo","b":""}]	866	una taza de arroz con pollo
+42	3	1	ES	ok	2	[{"r":"una taza de arroz","n":"arroz","b":""},{"r":"pollo","n":"pollo","b":""}]	1223	una taza de arroz con pollo
+43	1	2	ES	ok	2	[{"r":"un vaso de leche con chocolate","n":"leche con chocolate","b":""},{"r":"3 galletas marias","n":"galletas marias","b":""}]	1280	un vaso de leche con chocolate y 3 galletas marias
+43	2	2	ES	ok	3	[{"r":"un vaso de leche","n":"leche","b":""},{"r":"con chocolate","n":"chocolate","b":""},{"r":"3 galletas marias","n":"galletas marias","b":""}]	2123	un vaso de leche con chocolate y 3 galletas marias
+43	3	2	ES	ok	2	[{"r":"un vaso de leche con chocolate","n":"leche con chocolate","b":""},{"r":"3 galletas marias","n":"galletas marias","b":""}]	1676	un vaso de leche con chocolate y 3 galletas marias
