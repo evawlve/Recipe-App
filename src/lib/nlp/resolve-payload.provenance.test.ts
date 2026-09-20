@@ -143,9 +143,22 @@ describe('resolveFoodDetails — an fs_ record the lane holds but never persiste
     peek.mockReturnValue(HIT);
     const details = await resolveFoodDetails('fs_71193430');
     expect(details.source).toBe('fatsecret');
-    expect(details.name).toBe('Galletas Marias');
-    expect(details.brandName).toBe('Gamesa');
     expect(peek).toHaveBeenCalledWith('71193430');
+  });
+
+  test('takes NOTHING but the source — the barcode route\'s `if (resolved.name)` gate stays shut', async () => {
+    // `src/app/api/foods/barcode/route.ts` reads an empty name as "matched no row" and
+    // falls through to Open Food Facts. Filling `name` here would make that gate pass on
+    // this branch and ship FatSecret's badge over the all-zero `nutritionPer100g`
+    // INITIALIZER, shadowing a healthy OFF answer — over-attribution, and the regression
+    // that route's own anti-shadow test was written to close. Provenance was the defect;
+    // identity was not.
+    peek.mockReturnValue(HIT);
+    const details = await resolveFoodDetails('fs_71193430');
+    expect(details.name).toBe('');
+    expect(details.brandName).toBeNull();
+    expect(details.servingOptions).toEqual([]);
+    expect(details.nutritionPer100g.kcal100).toBe(0);
   });
 
   test('keeps the floor when the lane has nothing either — fs_404404 is unchanged', async () => {
@@ -170,7 +183,7 @@ describe('resolveFoodDetails — an fs_ record the lane holds but never persiste
     expect(peek).not.toHaveBeenCalled();
   });
 
-  test('a hit with no brand claims fatsecret and a null brand, never an invented one', async () => {
+  test('a hit with no brand still claims fatsecret — the claim is about the SOURCE, not the name', async () => {
     peek.mockReturnValue({ ...HIT, brandName: undefined });
     const details = await resolveFoodDetails('fs_71193430');
     expect(details.source).toBe('fatsecret');
