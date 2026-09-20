@@ -423,6 +423,41 @@ export function __resetDeferredFatSecretHitsForTests(): void {
 }
 
 /**
+ * READ a deferred hit without persisting it, deleting it, or touching FatSecret.
+ *
+ * WHY THIS EXISTS (punch #210, Lane A S52). `resolveFoodDetails()` decides the wire's
+ * PROVENANCE by reading `FatSecretFood` — and with `FATSECRET_PERSIST_RUNNERS_UP` at its
+ * default 0 the parent row is written only by `ensureFatSecretParentPersisted()`, which
+ * `saveValidatedMapping()` calls and which every save gate above it returns before. So a
+ * FatSecret winner whose save was REJECTED resolves against a row that does not exist and
+ * ships `source: 'ai_estimated'` — FatSecret's licensed badge withheld from FatSecret's own
+ * data, which the attribution rules call a defect in the same breath as the reverse.
+ * Measured read-only 2026-09-20 over `MappingEventLog` `noCache = false` with an `fs_`
+ * winner: 9,258 events, of which **170 (64 distinct fsIds) have no parent row at all** and
+ * 161 more (130 fsIds) have one created AFTER the event; 44 events / 6 fsIds in the last 14
+ * days. Re-derive with the LEFT JOIN in
+ * `KindaHealthyMobile:sync-docs/reports/2026-09-20_lane-a-s52-the-produce-floor-picks-the-milk.md`
+ * § ROW 3.
+ *
+ * WHY A PEEK AND NOT `ensureFatSecretParentPersisted()`. That function is the WRITE path: it
+ * deletes the entry and persists it, and on a miss it refetches the record from FatSecret —
+ * one API call per unresolved id, on a request that has already decided not to save. This is
+ * a Map read and nothing else, so it is safe on a `nosave=1` request, which must persist
+ * nothing.
+ *
+ * WHAT IT CANNOT DO. The map is in-process, FIFO-capped at `DEFERRED_HITS_MAX` and empty
+ * after any restart, so it answers only for a request whose own lane search ran in this
+ * process — which is exactly the save-rejected and nosave classes, and is NOT a general
+ * repair. A cache hit, a later user override, or any request that never searched the lane
+ * reads `undefined` here and keeps today's behaviour. That is deliberate: an id nothing
+ * upstream knows about must stay unattributed.
+ */
+export function peekDeferredFatSecretHit(fsId: string): FatSecretFoodSummary | undefined {
+    if (!fsId) return undefined;
+    return deferredHitsByFsId.get(fsId);
+}
+
+/**
  * Guarantee that `fsId`'s FatSecretFood parent row exists before a child row references it.
  *
  * Four cases, in order, cheapest first:

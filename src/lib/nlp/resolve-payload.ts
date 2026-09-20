@@ -3,6 +3,7 @@ import { deriveServingOptions } from '../units/servings';
 import { extractCacheNutrients, buildServingOptionsForCacheFood } from '../mapping/cache-search';
 import { recoverMacroOnlyServing, flattenPersistedServings } from '../mapping/fs-serving-macros';
 import { portionProvenanceForTier, type PortionProvenance } from '../mapping/serving-ai-tiers';
+import { peekDeferredFatSecretHit } from '../mapping/fatsecret-lane';
 
 export function getServingType(label: string): 'weight' | 'volume' | 'count' {
   const normalized = label.toLowerCase().trim();
@@ -485,6 +486,45 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         densityGml: null,
         categoryId: null
       });
+    } else {
+      // NO PARENT ROW, BUT THE LANE STILL HAS THE RECORD (punch #210, Lane A S52).
+      //
+      // The `findUnique` above is this function's ONLY evidence that an `fs_` id is a
+      // FatSecret record, and the parent row is written by
+      // `ensureFatSecretParentPersisted()` — which `saveValidatedMapping()` calls and which
+      // EVERY save gate above it returns before (brand_mismatch, core_token_mismatch,
+      // zero_macros, the implausible_macros branches, serving_downgrade, cross_source_margin;
+      // only `persist_failed_fk` sits below it), and which `skipSave` skips outright. So a
+      // FatSecret winner whose save was rejected, and every `nosave=1` request including
+      // every cold golden run, falls through to the `let source = 'ai_estimated'` initializer
+      // and ships a real FatSecret record with the licensed badge withheld. §Attribution
+      // calls under-attribution a defect in the same breath as over-attribution, and this is
+      // under-attribution: 170 organic events over 64 distinct fsIds carry no parent row at
+      // all (measured 2026-09-20; 44 events / 6 fsIds in the last 14 days).
+      //
+      // THE PEEK IS NOT A PERSIST. `peekDeferredFatSecretHit()` reads the lane's in-process
+      // map and nothing else — no write, no delete, no FatSecret call — so it is safe on the
+      // `nosave=1` path, which must persist nothing. It answers only when this process's own
+      // lane search produced the hit, which is exactly the save-rejected and nosave classes.
+      //
+      // AND IT KEEPS THE FLOOR WHERE THE FLOOR BELONGS. An id no lane in this process ever
+      // saw — a stale `fs_` in an old cache row, a typo, `fs_404404` — reads `undefined` and
+      // stays `ai_estimated`, which is the behaviour
+      // `resolve-payload.provenance.test.ts` pins and which this must not break. "The record
+      // is gone" and "the record is known upstream and we chose not to store it" are
+      // different states, and this is the only thing in the function that can tell them apart.
+      //
+      // The panel is deliberately NOT taken from the hit. `nutritionPer100g` on this path is
+      // re-derived by the parse route from the line's own billed macros
+      // (`per100gFromBilledMacros`), and the barcode route's own lookup supplies it; reading
+      // a second panel here would give one record two ways to be billed. Identity and
+      // provenance are what was missing.
+      const deferred = peekDeferredFatSecretHit(fsId);
+      if (deferred) {
+        name = deferred.name;
+        brandName = deferred.brandName ?? null;
+        source = 'fatsecret';
+      }
     }
   } else {
     // AI generated food details lookup
