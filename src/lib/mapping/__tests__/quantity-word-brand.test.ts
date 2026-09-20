@@ -617,3 +617,160 @@ describe('punch #167 fix-forward — a one-word brand the line spells as two wor
         })).toEqual({ baseName: 'SunChips sun chips harvest cheddar', applied: true, declined: null });
     });
 });
+
+describe('punch #196 — an applied repair carries the segmenter-only tokens on its end', () => {
+    /**
+     * THE PAYLOAD HALF OF #167. An applied repair hands retrieval the PARSER's
+     * re-derivation and discards the segmenter's `normalizedForm`, so a correction only
+     * the segmenter made is thrown away with it.
+     *
+     * Every input below is a REAL one, copied verbatim from the committed 602-tuple
+     * capture `scripts/eval/punch-167-composite-arm/s51_guard_capture.jsonl` (the shipped
+     * mapper's own arguments over every distinct `SegmentationCache` segment tuple, Lane A
+     * S51, 2026-09-15; 266 reach guard 1 and 218 apply). Re-derive the whole table with
+     * `s52_union_replay.ts` beside the capture: on this tree it must read exactly 2 changed
+     * and 264 identical, and on master 0 changed.
+     */
+
+    it('carries `bar` back onto the Quest line — one of the two members', () => {
+        // capture #262. The segmenter wrote `cooky cream protein bar`; the re-derivation
+        // dropped `bar`, the product form.
+        const parsed = parseIngredientLine('bar cooky cream protein quest');
+        expect(preserveDroppedBrand({
+            rawLine: 'bar cooky cream protein quest', baseName: 'cooky cream protein bar',
+            targetBrand: 'Quest', rederived: 'cooky cream protein quest', parsed,
+        })).toEqual({ baseName: 'cooky cream protein quest bar', applied: true, declined: null });
+    });
+
+    it('carries `whey` back onto the Optimum line, and leaves the typo `weigh` where it is', () => {
+        // capture #463. The union ADDS; it does not repair. `weigh` is what the user typed
+        // and the parser kept, `whey` is what the segmenter corrected it to, and retrieval
+        // now gets both.
+        const parsed = parseIngredientLine('One scoop of optimum weigh nutrition protein');
+        expect(preserveDroppedBrand({
+            rawLine: 'One scoop of optimum weigh nutrition protein', baseName: 'whey protein',
+            targetBrand: 'Optimum Nutrition', rederived: 'optimum weigh nutrition protein', parsed,
+        })).toEqual({
+            baseName: 'optimum weigh nutrition protein whey', applied: true, declined: null,
+        });
+    });
+
+    it('APPENDS, never prepends: the leading tokens are exactly what master produced', () => {
+        // `deriveMustHaveTokens()` reads its slots off the FRONT (`coreTokens.slice(0, 2)`),
+        // so a prepend would change admission on every one of the 218 applied inputs.
+        // A mutant that prepends the carried tokens reds both members above and this pin.
+        const parsed = parseIngredientLine('bar cooky cream protein quest');
+        const out = preserveDroppedBrand({
+            rawLine: 'bar cooky cream protein quest', baseName: 'cooky cream protein bar',
+            targetBrand: 'Quest', rederived: 'cooky cream protein quest', parsed,
+        }).baseName;
+        expect(out.startsWith('cooky cream protein quest')).toBe(true);
+        expect(out.split(/\s+/)[0]).toBe('cooky');
+    });
+
+    it('leaves a GAINER byte-identical — the 47 inputs that refute "prefer the segmenter form"', () => {
+        // capture: `optimum nutrition gold standard whey banana cream`. The segmenter form
+        // is the SHORTER one here (`whey banana cream`), so preferring it would truncate
+        // `gold standard` — the 667-serve key. The union adds nothing, because every
+        // segmenter token is already in the payload.
+        const parsed = parseIngredientLine('optimum nutrition gold standard whey banana cream');
+        expect(preserveDroppedBrand({
+            rawLine: 'optimum nutrition gold standard whey banana cream',
+            baseName: 'whey banana cream', targetBrand: 'Optimum Nutrition',
+            rederived: 'optimum nutrition gold standard whey banana cream', parsed,
+        })).toEqual({
+            baseName: 'optimum nutrition gold standard whey banana cream',
+            applied: true, declined: null,
+        });
+    });
+
+    it('leaves a second gainer byte-identical — the Silk line', () => {
+        const parsed = parseIngredientLine('1 1/2 cups silk unsweetened almond milk');
+        expect(preserveDroppedBrand({
+            rawLine: '1 1/2 cups silk unsweetened almond milk', baseName: 'almond milk',
+            targetBrand: 'silk', rederived: 'silk unsweetened almond milk', parsed,
+        })).toEqual({ baseName: 'silk unsweetened almond milk', applied: true, declined: null });
+    });
+
+    it('leaves a PREPENDING applied input byte-identical — the brand is added, nothing else is', () => {
+        const parsed = parseIngredientLine('100g brown instant maple oat');
+        expect(preserveDroppedBrand({
+            rawLine: '100g brown instant maple oat', baseName: 'brown instant maple oat',
+            targetBrand: 'Quaker', rederived: 'brown instant maple oat', parsed,
+        })).toEqual({ baseName: 'Quaker brown instant maple oat', applied: true, declined: null });
+    });
+
+    it('never touches a DECLINE — `brand_consumed_as_quantity` returns baseName untouched', () => {
+        // capture: the `one` count-word misfire. A declined line must not gain a token; the
+        // refusal's premise is that the block had no business firing at all.
+        const parsed = parseIngredientLine('one and a half cups of unsweetened almond milk');
+        expect(preserveDroppedBrand({
+            rawLine: 'one and a half cups of unsweetened almond milk',
+            baseName: 'unsweetened almond milk', targetBrand: 'one',
+            rederived: 'unsweetened almond milk', parsed,
+        })).toEqual({
+            baseName: 'unsweetened almond milk', applied: false,
+            declined: 'brand_consumed_as_quantity',
+        });
+    });
+
+    it('never touches a brand-already-present decline either', () => {
+        const parsed = parseIngredientLine('0.4 bell pepper');
+        expect(preserveDroppedBrand({
+            rawLine: '0.4 bell pepper', baseName: 'bell pepper', targetBrand: 'bell',
+            rederived: 'bell pepper', parsed,
+        })).toEqual({ baseName: 'bell pepper', applied: false, declined: null });
+    });
+
+    it('excludes the brand tokens, so #167 doubling cannot come back through the carry', () => {
+        // The segmenter form carries ONE word of the two-word brand — not enough for any
+        // containment clause, so the repair applies; the re-derivation carries both, so the
+        // payload is the re-derivation. `nutrition` must not be carried on top of it.
+        const parsed = parseIngredientLine('optimum nutrition gold standard whey protein');
+        const out = preserveDroppedBrand({
+            rawLine: 'optimum nutrition gold standard whey protein',
+            baseName: 'nutrition gold standard whey', targetBrand: 'Optimum Nutrition',
+            rederived: 'optimum nutrition protein', parsed,
+        });
+        expect(out).toEqual({
+            baseName: 'optimum nutrition protein gold standard whey', applied: true, declined: null,
+        });
+        expect(out.baseName.toLowerCase().split(/\s+/).filter(t => t === 'nutrition')).toHaveLength(1);
+    });
+
+    it('REFUSES the carry on the prepend branch — n-supp-22 stays byte-identical', () => {
+        // `2 rx bars` is the #167 fix-forward's own golden line. Carrying here appended
+        // `protein` and moved it to off_0193908005342 (110 g / 459.8 kcal) on 4 of 4 pinned
+        // composite-arm runs, cold and warm, against off_0193908001672 (104 g / 359.8 kcal)
+        // with a zero same-tree floor. The carry rides the no-prepend branch only.
+        const parsed = parseIngredientLine('2 rx bars');
+        expect(preserveDroppedBrand({
+            rawLine: '2 rx bars', baseName: 'protein bar', targetBrand: 'rxbar',
+            rederived: 'rx bars', parsed,
+        })).toEqual({ baseName: 'rxbar rx bars', applied: true, declined: null });
+    });
+
+    it('REFUSES the carry on the prepend branch even when the segmenter had real tokens', () => {
+        const parsed = parseIngredientLine('100g brown instant maple oat');
+        expect(preserveDroppedBrand({
+            rawLine: '100g brown instant maple oat', baseName: 'brown instant maple oat steel cut',
+            targetBrand: 'Quaker', rederived: 'brown instant maple oat', parsed,
+        })).toEqual({ baseName: 'Quaker brown instant maple oat', applied: true, declined: null });
+    });
+
+    it('does not grow a repeated run — a token carried twice is carried once', () => {
+        const parsed = parseIngredientLine('2 quest bars');
+        expect(preserveDroppedBrand({
+            rawLine: '2 quest bars', baseName: 'bar chocolate bar', targetBrand: 'Quest',
+            rederived: 'quest chocolate', parsed,
+        }).baseName).toBe('quest chocolate bar');
+    });
+
+    it('is plural-tolerant, so `bar` is not carried alongside `bars`', () => {
+        const parsed = parseIngredientLine('2 quest bars');
+        expect(preserveDroppedBrand({
+            rawLine: '2 quest bars', baseName: 'protein bar', targetBrand: 'Quest',
+            rederived: 'quest bars', parsed,
+        }).baseName).toBe('quest bars protein');
+    });
+});
