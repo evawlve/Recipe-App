@@ -15,15 +15,16 @@
     },
     {
       "id": "attribution-importers-two",
-      "claim": "Exactly two API routes import the attribution chokepoint (foods/search and foods/[id]); parse deliberately does not",
+      "claim": "Exactly three API routes import the attribution chokepoint (foods/search, foods/[id] and foods/barcode); parse deliberately does not",
       "ownerDoc": "mobile:CLAUDE.md#attribution",
       "where": "backend",
-      "command": "grep -rl 'lib/attribution' src/app/api | wc -l",
+      "command": "grep -rl 'lib/attribution' src/app/api --include=route.ts | wc -l",
       "expect": {
         "kind": "count",
-        "value": "2"
+        "value": "3"
       },
-      "verified": "2026-07-30"
+      "note": "Counts IMPORTERS, not emitters — read it as 'three routes import it', never as 'three routes emit a source'. foods/barcode joined 2026-09-21: it was the fourth emitter and the only unguarded one. The id still says 'two' because renaming a claim id loses its history; the claim text is what to read. `--include=route.ts` was added the same day and is load-bearing: without it any TEST file importing the module moves the count, which would make a green claim depend on test-file layout rather than on route code.",
+      "verified": "2026-09-21"
     },
     {
       "id": "parse-owns-whitelist",
@@ -1997,6 +1998,57 @@
       "command": "find /home/owner/backups -maxdepth 1 -name 'mealspire-*.dump' -mtime -2 | wc -l",
       "expect": {
         "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "rev5-seat-flag-ships-false",
+      "claim": "The Magic Log Rev-5 seat flag ships OFF — REV5_SEAT_ENABLED is declared false in src/lib/magic-flow-timing.ts",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-20_s44-lane-e-rev5-motion-build.md",
+      "where": "mobile",
+      "command": "grep -c 'REV5_SEAT_ENABLED = false' src/lib/magic-flow-timing.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "note": "Rev-5 is HELD behind Diego's own design pass, so the flag shipping false is the held state itself, not a detail. Greps the literal declaration, so flipping the default to true reds this claim rather than the flag's mere existence.",
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "parse-attempt-settlers-three",
+      "claim": "Exactly three non-test modules settle a parse attempt by calling endParseAttempt",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-20_s44-lane-e-rev5-motion-build.md",
+      "where": "mobile",
+      "command": "grep -rln 'endParseAttempt' src | grep -v __tests__ | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "3"
+      },
+      "note": "A settler count, not a call count: a fourth module learning to end an attempt is the shape that strands the timing state, and it is invisible to jest because each settler is individually correct.",
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "sparkle-pop-has-one-reader",
+      "claim": "SPARKLE_POP_MS has exactly one non-test reader outside its own owning module",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-21_lane-e-s45-the-pop-lands-and-the-log-remembers.md",
+      "where": "mobile",
+      "command": "grep -rln SPARKLE_POP_MS src | grep -v __tests__ | grep -v magic-flow-timing.ts | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "note": "The NARROW _MS form is load-bearing. The broad `SPARKLE_POP` spelling reads 2 on the same tree (measured 2026-09-21), so a claim written against it would have been wrong the day it was registered — it also matches sibling identifiers sharing the prefix.",
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "recent-magic-logs-flag-ships-false",
+      "claim": "The recent-magic-logs feature flag ships OFF — RECENT_MAGIC_LOGS_ENABLED is declared false in src/stores/recent-magic-logs-store.ts",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-21_lane-e-s45-the-pop-lands-and-the-log-remembers.md",
+      "where": "mobile",
+      "command": "grep -c 'RECENT_MAGIC_LOGS_ENABLED = false' src/stores/recent-magic-logs-store.ts",
+      "expect": {
+        "kind": "count",
         "value": "1"
       },
       "verified": "2026-09-21"

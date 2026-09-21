@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { toClientSource } from '@/lib/attribution';
 import { authenticateRequest } from '@/lib/auth/request-auth';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import {
@@ -202,7 +203,41 @@ export async function GET(req: NextRequest) {
         id: foodId,
         name: details.name,
         brand: details.brandName,
-        source: details.source,
+        // THE CHOKEPOINT. Until this line the route emitted `details.source` raw — it
+        // imported neither `toClientSource()` nor a whitelist of its own, making it the
+        // fourth `source` emitter and the only one with no guard (the other three:
+        // `foods/search` and `foods/[id]` via `toClientSource()`, `nlp/parse` via its own
+        // `STANDARD_SOURCES`). Attribution is a legal boundary in BOTH directions, so an
+        // unguarded emitter is a defect whether or not it is currently emitting a wrong
+        // value.
+        //
+        // It was safe only by the PRODUCER's discipline, and that discipline is not
+        // compiler-enforced. `resolveFoodDetails()` builds `source` as a plain
+        // `let source = 'ai_estimated'` — inferred `string` — and launders it at the
+        // return with `source as 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated'`.
+        // MEASURED 2026-09-21, not reasoned: adding a fifth assignment
+        // (`source = 'fatsecret-cache-PROBE'`) to that function typechecks CLEAN — 0 errors
+        // under this repo's own tsconfig, against a 0-error control on the same tree. So a
+        // new branch there reaches the licensed badge unfiltered and no gate sees it.
+        //
+        // WHY THE `?? 'ai_estimated'` FLOOR, and not a bare `toClientSource()` returning
+        // `null`. `BarcodeLookupResponse.source` is typed NON-NULLABLE in the wire contract
+        // (`plans/v1/api-contract.md`, "API Response Types": the four-value union, with the
+        // note "it is never null"), so `null` here is a contract violation, not a quieter
+        // claim. The playbook settles the general rule — "pick the floor that makes no
+        // claim WITHIN the constraint the field actually has" (§14) — and `ai_estimated` is
+        // the only non-badging member of that union, which is exactly the floor
+        // `/api/nlp/parse` already uses for the same field shape.
+        //
+        // BYTE-NEUTRAL TODAY on every branch: the four values `resolveFoodDetails()` can
+        // return are all `ALIASES` identities, so each round-trips to itself. What changes
+        // is only what a FUTURE fifth value does — it floors instead of shipping. And
+        // `toClientSource()` is strictly stronger than copying `STANDARD_SOURCES` here: it
+        // also folds the legitimate alias spellings (`usda` → `fdc`, `off` →
+        // `openfoodfacts`, `ai_generated` → `ai_estimated`), which an `includes()` test
+        // would floor to `ai_estimated` and so silently DROP a true FDC or OFF credit; and
+        // its null-prototype lookup rejects `constructor` / `__proto__`.
+        source: toClientSource(details.source) ?? 'ai_estimated',
         nutritionPer100g: details.nutritionPer100g,
         servingOptions: details.servingOptions,
         // TRUE when resolveFoodDetails recovered this record's nutrition from a
