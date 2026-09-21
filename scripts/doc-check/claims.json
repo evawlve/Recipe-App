@@ -23,7 +23,7 @@
         "kind": "count",
         "value": "3"
       },
-      "note": "Counts IMPORTERS, not emitters — read it as 'three routes import it', never as 'three routes emit a source'. foods/barcode joined 2026-09-21: it was the fourth emitter and the only unguarded one. The id still says 'two' because renaming a claim id loses its history; the claim text is what to read. `--include=route.ts` was added the same day and is load-bearing: without it any TEST file importing the module moves the count, which would make a green claim depend on test-file layout rather than on route code. Merge order: the `backend` cwd is the Mac's Syncthing'd working tree, so until that checkout pulls `master` after this PR merges, the nightly verifies the PRE-merge shape and reports green without having seen the change.",
+      "note": "Counts IMPORTERS, not emitters — read it as 'three routes import it', never as 'three routes emit a source'. foods/barcode joined 2026-09-21: it was the fourth emitter and the only unguarded one. The id still says 'two' because renaming a claim id loses its history; the claim text is what to read. `--include=route.ts` was added the same day and is load-bearing: without it any TEST file importing the module moves the count, which would make a green claim depend on test-file layout rather than on route code. Merge order, measured 2026-09-21 on the box rather than reasoned, because two lenses disagreed about it: the `backend` cwd is the Mac's Syncthing'd working tree, and this entry and the route change travel in the SAME commit, so the nightly is self-consistent in both states — pre-pull it reads expect 2 / measured 2, post-pull expect 3 / measured 3, green either way. It verifies the pre-merge shape without having seen the change, which is a blind spot, not a red. The ONLY mixed state is the ~80 s Syncthing delivery window, and the deploy recipe's hash-compare-to-0-mismatches already closes that.",
       "verified": "2026-09-21"
     },
     {
@@ -2000,6 +2000,19 @@
         "kind": "min",
         "value": "1"
       },
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "api-source-emitting-routes-nine",
+      "claim": "Exactly nine API routes emit a `source:` field. A tenth must be classified as provenance-or-not before it ships.",
+      "ownerDoc": "mobile:CLAUDE.md#attribution",
+      "where": "backend",
+      "command": "grep -rln '^ *source:' src/app/api --include=route.ts | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "9"
+      },
+      "note": "A TRIPWIRE, not a correctness claim — registered 2026-09-21 because nothing in this registry could see the class that punch #241 fixed: `attribution-importers-two` counts IMPORTERS, so a route emitting `source` with no guard is invisible to it, which is exactly how foods/barcode stayed unguarded. The nine, classified by reading each emission (not by the grep, which only claims text): FOUR are client-facing provenance and all guarded — foods/search, foods/[id], foods/barcode via toClientSource(), nlp/parse via its own STANDARD_SOURCES. THREE write a DB enum that is not a provider claim at all — recipes ('USER'), recipes/[id]/tags/accept ('AUTO_CONFIDENT'), foods/quick-create ('community'). TWO are raw passthroughs of the unconstrained legacy Food.source column to ADMIN/DEBUG responses — admin/food-stats and debug/foods — which are not the badge path and not a licensing hazard today, but are unguarded emissions and should be looked at if either ever gains a consumer. If this reads 10, classify the new one before assuming it is safe.",
       "verified": "2026-09-21"
     },
     {

@@ -215,10 +215,24 @@ export async function GET(req: NextRequest) {
         // compiler-enforced. `resolveFoodDetails()` builds `source` as a plain
         // `let source = 'ai_estimated'` — inferred `string` — and launders it at the
         // return with `source as 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated'`.
-        // MEASURED 2026-09-21, not reasoned: adding a fifth assignment
+        // MEASURED 2026-09-21, not reasoned: adding an assignment of an unlisted value
         // (`source = 'fatsecret-cache-PROBE'`) to that function typechecks CLEAN — 0 errors
         // under this repo's own tsconfig, against a 0-error control on the same tree. So a
         // new branch there reaches the licensed badge unfiltered and no gate sees it.
+        // (That function already carries FIVE assignment statements over the initializer
+        // for FOUR distinct values — `fatsecret` is assigned twice, the second time by
+        // backend #443's deferred-hit recovery — so the probe was the sixth statement, not
+        // the fifth. The count of statements is not the claim; the count of VALUES is.)
+        //
+        // ONE RESIDUAL, recorded so it is not re-litigated as a defect. The floor is
+        // right for THIS field, but the value travels on into a field with a DIFFERENT
+        // constraint: mobile `toDbSource()` maps it into `food_log_items.source`, which is
+        // NULLABLE with a four-value CHECK. There `null` is the honest floor, and playbook
+        // §14 says so explicitly — so for a future fifth provider value this route would
+        // turn a silent "no claim" into a positive AI-origin claim one layer downstream.
+        // Blast radius today is ZERO (byte-neutral, measured), and widening
+        // `BarcodeLookupResponse.source` to nullable is a cross-repo wire change, not this
+        // row's. Named here rather than discovered later.
         //
         // WHY THE `?? 'ai_estimated'` FLOOR, and not a bare `toClientSource()` returning
         // `null`. `BarcodeLookupResponse.source` is typed NON-NULLABLE in the wire contract

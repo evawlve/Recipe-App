@@ -55,6 +55,11 @@ const { resolveFoodDetails } = require('@/lib/nlp/resolve-payload');
  * The real `resolveFoodDetails` return shape, fields and all: the four-macro panel with
  * the three NULLABLE declared-nutrient slots, and `portionEstimated` /
  * `portionProvenance` OMITTED rather than false/null. Only `source` varies per test.
+ *
+ * `servingOptions[].type` is NOT optional decoration — the shipped resolver maps every
+ * option through `getServingType(o.label)`, so `type` is always present on a real return.
+ * A fixture with a shape the real function cannot produce is the trap `route.test.ts`'s
+ * own header records, and omitting it here would have pinned an impossible payload.
  */
 const resolved = (rawSource: unknown) => ({
   name: 'Original Potato Crisps',
@@ -64,7 +69,7 @@ const resolved = (rawSource: unknown) => ({
     kcal100: 536, protein100: 3.57, carbs100: 60.71, fat100: 32.14,
     fiber100: 3.6, sugar100: 0, sodium100: 0.536,
   },
-  servingOptions: [{ label: '16 crisps', grams: 28, isDefault: true }],
+  servingOptions: [{ label: '16 crisps', grams: 28, type: 'count', isDefault: true }],
 });
 
 const call = () =>
@@ -172,7 +177,9 @@ describe('/api/foods/barcode attribution chokepoint', () => {
       kcal100: 536, protein100: 3.57, carbs100: 60.71, fat100: 32.14,
       fiber100: 3.6, sugar100: 0, sodium100: 0.536,
     });
-    expect(body.servingOptions).toEqual([{ label: '16 crisps', grams: 28, isDefault: true }]);
+    expect(body.servingOptions).toEqual([
+      { label: '16 crisps', grams: 28, type: 'count', isDefault: true },
+    ]);
     // Omitted-not-false, the #314 convention, unchanged by this row.
     expect('portionEstimated' in body).toBe(false);
     expect('portionProvenance' in body).toBe(false);
