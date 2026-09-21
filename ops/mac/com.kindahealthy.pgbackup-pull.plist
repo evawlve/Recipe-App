@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Off-box copy of the box's nightly mealspire dump — punch #233, Lane A S53 (2026-09-21).
+
+  Install (Mac only; this file is inert on the box and the Windows PC):
+    cp ops/mac/com.kindahealthy.pgbackup-pull.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kindahealthy.pgbackup-pull.plist
+  Run it by hand:
+    launchctl kickstart -k gui/$(id -u)/com.kindahealthy.pgbackup-pull
+
+  06:15 is chosen from measurement, not habit: pg-backup.timer fires at 05:30 with up to 600 s of
+  randomised delay (so as late as 05:40) and the dump itself took 217 s on 2026-09-21, landing by
+  about 05:44 in the worst case.
+
+  RunAtLoad is false on purpose. This is a nightly pull of a 1.4 GB file, not something that should
+  fire on every login or every `launchctl bootstrap`.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kindahealthy.pgbackup-pull</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/diego/dev/Recipe-App/ops/mac/pgbackup-pull.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>15</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/diego/backups/mealspire/pgbackup-pull.launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/diego/backups/mealspire/pgbackup-pull.launchd.log</string>
+</dict>
+</plist>

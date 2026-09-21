@@ -1,0 +1,18 @@
+# Nightly pg_dump of the box's mealspire database — punch #233, Lane A S53 (2026-09-21).
+# Install: cp ops/systemd/pg-backup.{service,timer} ~/.config/systemd/user/ && \
+#          systemctl --user daemon-reload && systemctl --user enable --now pg-backup.timer
+#
+# DELIBERATE DIVERGENCE from the other four ops units: there is no StandardOutput=append here, so the
+# run history lands in the journal and `journalctl --user -u pg-backup` reads as that history. The
+# script also appends every line to /home/owner/backups/pg-backup.log, which survives a volatile
+# journal and sits beside the dumps, outside every Syncthing folder.
+[Unit]
+Description=Nightly pg_dump of the mealspire database to /home/owner/backups (punch #233)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/bin/bash %h/Recipe-App/ops/systemd/pg-backup.sh
+TimeoutStartSec=3600

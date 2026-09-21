@@ -1,0 +1,14 @@
+# 05:30 is load-bearing, not a preference. 04:30 is flywheel-sweep, which may run to 04:40 on its own
+# RandomizedDelaySec=600, and no job may straddle it (CLAUDE.md §State digest); 04:50 is doc-check;
+# and 00:00-03:59 is the band Lane A's deploy windows use. 05:30 is clear of all three, and the Mac's
+# off-box pull runs at 06:15, after this timer's own randomised delay plus the measured dump time.
+[Unit]
+Description=Nightly mealspire pg_dump
+
+[Timer]
+OnCalendar=*-*-* 05:30
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
