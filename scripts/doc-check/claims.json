@@ -23,7 +23,7 @@
         "kind": "count",
         "value": "3"
       },
-      "note": "Counts IMPORTERS, not emitters — read it as 'three routes import it', never as 'three routes emit a source'. foods/barcode joined 2026-09-21: it was the fourth emitter and the only unguarded one. The id still says 'two' because renaming a claim id loses its history; the claim text is what to read. `--include=route.ts` was added the same day and is load-bearing: without it any TEST file importing the module moves the count, which would make a green claim depend on test-file layout rather than on route code.",
+      "note": "Counts IMPORTERS, not emitters — read it as 'three routes import it', never as 'three routes emit a source'. foods/barcode joined 2026-09-21: it was the fourth emitter and the only unguarded one. The id still says 'two' because renaming a claim id loses its history; the claim text is what to read. `--include=route.ts` was added the same day and is load-bearing: without it any TEST file importing the module moves the count, which would make a green claim depend on test-file layout rather than on route code. Merge order: the `backend` cwd is the Mac's Syncthing'd working tree, so until that checkout pulls `master` after this PR merges, the nightly verifies the PRE-merge shape and reports green without having seen the change.",
       "verified": "2026-09-21"
     },
     {
@@ -2005,7 +2005,7 @@
     {
       "id": "rev5-seat-flag-ships-false",
       "claim": "The Magic Log Rev-5 seat flag ships OFF — REV5_SEAT_ENABLED is declared false in src/lib/magic-flow-timing.ts",
-      "ownerDoc": "mobile:sync-docs/reports/2026-09-20_s44-lane-e-rev5-motion-build.md",
+      "ownerDoc": "mobile:sync-docs/magic_log_ux_animation_spec.md",
       "where": "mobile",
       "command": "grep -c 'REV5_SEAT_ENABLED = false' src/lib/magic-flow-timing.ts",
       "expect": {
@@ -2018,14 +2018,14 @@
     {
       "id": "parse-attempt-settlers-three",
       "claim": "Exactly three non-test modules settle a parse attempt by calling endParseAttempt",
-      "ownerDoc": "mobile:sync-docs/reports/2026-09-20_s44-lane-e-rev5-motion-build.md",
+      "ownerDoc": "mobile:src/stores/parse-attempt-store.ts",
       "where": "mobile",
       "command": "grep -rln 'endParseAttempt' src | grep -v __tests__ | wc -l",
       "expect": {
         "kind": "count",
         "value": "3"
       },
-      "note": "A settler count, not a call count: a fourth module learning to end an attempt is the shape that strands the timing state, and it is invisible to jest because each settler is individually correct.",
+      "note": "A settler count, not a call count. The store's own header states the three and prints this grep. Reasoned, not measured: a fourth module learning to end an attempt is the shape that would strand the timing state, and jest would likely not see it because each settler is individually correct.",
       "verified": "2026-09-21"
     },
     {
@@ -2044,7 +2044,7 @@
     {
       "id": "recent-magic-logs-flag-ships-false",
       "claim": "The recent-magic-logs feature flag ships OFF — RECENT_MAGIC_LOGS_ENABLED is declared false in src/stores/recent-magic-logs-store.ts",
-      "ownerDoc": "mobile:sync-docs/reports/2026-09-21_lane-e-s45-the-pop-lands-and-the-log-remembers.md",
+      "ownerDoc": "mobile:sync-docs/magic_log_ux_animation_spec.md",
       "where": "mobile",
       "command": "grep -c 'RECENT_MAGIC_LOGS_ENABLED = false' src/stores/recent-magic-logs-store.ts",
       "expect": {
