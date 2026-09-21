@@ -270,3 +270,62 @@ describe('at the default cap of 0', () => {
     }
   });
 });
+
+/**
+ * PUNCH #210 — the peek's LIFECYCLE, against the REAL lane.
+ *
+ * `resolve-payload.provenance.test.ts` pins the CALL SITE, and it mocks this module away to
+ * do it — so every one of those pins would still pass if `peekDeferredFatSecretHit` were
+ * deleted from here outright (a jest module factory is never checked against the real
+ * module's exports). These three pin the FUNCTION, and they are what the provenance suite
+ * cannot see: that the peek reads without writing, and that it and
+ * `ensureFatSecretParentPersisted()` are COMPLEMENTARY — the map holds the hit exactly when
+ * the database does not, so the two branches of `resolveFoodDetails()`'s `fs_` lookup can
+ * never both answer.
+ */
+describe('peekDeferredFatSecretHit — reads the deferred map without consuming it', () => {
+  test('a deferred hit is readable, and reading it writes NOTHING', async () => {
+    await lane.searchFatSecretLane('protein bar', undefined, fakeClient(hits()) as any);
+    await lane.awaitPendingFatSecretPersist('fs1');
+    const writesBefore = db.fatSecretFood.upsert.mock.calls.length;
+
+    // fs6 is past the cap, so it was deferred and never persisted.
+    expect(persistedIds()).not.toContain('fs6');
+    const hit = lane.peekDeferredFatSecretHit('fs6');
+    expect(hit).toBeDefined();
+    expect(hit!.id).toBe('fs6');
+    expect(hit!.name).toBe('Food 6');
+
+    // The nosave promise, pinned: a peek is a Map read and nothing else.
+    expect(db.fatSecretFood.upsert.mock.calls).toHaveLength(writesBefore);
+    // And it does not consume the entry — a second read still answers.
+    expect(lane.peekDeferredFatSecretHit('fs6')?.id).toBe('fs6');
+  });
+
+  test('THE COMPLEMENTARITY: once the parent is persisted, the peek stops answering', async () => {
+    // This is the property `resolveFoodDetails()` relies on. `ensureFatSecretParentPersisted()`
+    // DELETES the entry as it writes the row, so after a save the DB branch answers and the
+    // peek branch is unreachable for that id. If this pin ever goes red, the two branches can
+    // both fire and the provenance decision stops being single-valued.
+    await lane.searchFatSecretLane('protein bar', undefined, fakeClient(hits()) as any);
+    await lane.awaitPendingFatSecretPersist('fs1');
+    expect(lane.peekDeferredFatSecretHit('fs6')).toBeDefined();
+
+    await lane.ensureFatSecretParentPersisted('fs6');
+
+    expect(persistedIds()).toContain('fs6');
+    expect(lane.peekDeferredFatSecretHit('fs6')).toBeUndefined();
+  });
+
+  test('an id no lane search ever saw reads undefined — the attribution floor stays put', async () => {
+    // The `fs_404404` case of `resolve-payload.provenance.test.ts`, from the other side: a
+    // record nothing upstream knows about must stay unattributed.
+    expect(lane.peekDeferredFatSecretHit('fs404404')).toBeUndefined();
+    expect(lane.peekDeferredFatSecretHit('')).toBeUndefined();
+
+    await lane.searchFatSecretLane('protein bar', undefined, fakeClient(hits()) as any);
+    expect(lane.peekDeferredFatSecretHit('fs6')).toBeDefined();
+    lane.__resetDeferredFatSecretHitsForTests();
+    expect(lane.peekDeferredFatSecretHit('fs6')).toBeUndefined();
+  });
+});

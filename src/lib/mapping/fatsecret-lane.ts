@@ -423,6 +423,77 @@ export function __resetDeferredFatSecretHitsForTests(): void {
 }
 
 /**
+ * READ a deferred hit without persisting it, deleting it, or touching FatSecret.
+ *
+ * WHY THIS EXISTS (punch #210, Lane A S52). `resolveFoodDetails()` decides the wire's
+ * PROVENANCE by reading `FatSecretFood` — and with `FATSECRET_PERSIST_RUNNERS_UP` at its
+ * default 0 the parent row is written only by `ensureFatSecretParentPersisted()`, which
+ * `saveValidatedMapping()` calls and which every save gate above it returns before —
+ * `brand_mismatch`, `bare_category_takeover`, `core_token_mismatch`, `zero_macros`, the
+ * `implausible_macros` branches, `serving_downgrade`, `cross_source_margin`; only
+ * `persist_failed_fk` sits below it, and `under_gate` never reaches the function at all. So a
+ * FatSecret winner whose save was REJECTED resolves against a row that does not exist and
+ * ships `source: 'ai_estimated'` — FatSecret's licensed badge withheld from FatSecret's own
+ * data, which the attribution rules call a defect in the same breath as the reverse.
+ * THE POPULATION, AND WHAT IT IS NOT. Measured read-only 2026-09-20, `MappingEventLog` LEFT
+ * JOINed to `FatSecretFood` on the fsId parsed out of the foodId — re-derive with:
+ *   SELECT count(*), count(DISTINCT m.fsid) FROM (
+ *     SELECT substring("foodId" from 4) AS fsid, "createdAt", "funnelStage", "noCache"
+ *     FROM "MappingEventLog" WHERE "foodId" LIKE 'fs\_%') m
+ *   LEFT JOIN "FatSecretFood" f ON f."fsId" = m.fsid WHERE f."fsId" IS NULL;
+ * **2,061 events over 126 distinct fsIds carry no parent row** — 170 / 64 on the
+ * `noCache = false` arm and 1,891 / 71 on the `noCache = true` arm.
+ *
+ * **`noCache = false` IS NOT "A USER", and the first cut of this comment said so wrongly.** The
+ * 04:30 nightly sweep's warm arm writes that flag too. Of the 170: **58 are three golden-set
+ * cases the sweep replays** (`baking soda` / `n-syn-03`, `papa johns chicken wings` / `n-k2-01`,
+ * `chipotle chicken burrito bowl` / `n-mq-42`), 56 sit in PDT hour 04, and 63 fall on the
+ * 2026-08-08/09 warm-campaign days; in the last 14 days 34 of 44 are those three seeds and the
+ * rest are named probe lines. So this is an attribution defect **our own instruments hit every
+ * day** — roughly 23.6 events/day across both arms — not one a user is known to have seen.
+ * **108** of the 170 are unambiguous (`save_rejected` 78 + `under_gate` 30; every one of those
+ * gates returns above the persist). The other **62** read `funnelStage='saved'`, which does NOT
+ * mean a row was written: `markFunnel(telemetry, 'saved')` fires BEFORE the `if (!skipSave)`
+ * guard, so a suppressed request records it too.
+ *
+ * WHY A PEEK AND NOT `ensureFatSecretParentPersisted()`. Not for API egress — measured, that
+ * argument is worth about zero: on exactly these requests the map HITS, which is that function's
+ * case 2, and case 2 persists from memory without calling FatSecret at all. The real reason is
+ * the write itself. 1,891 of the 2,061 no-parent events are `nosave=1` eval traffic, and backend
+ * #351's contract is that a suppressed request persists nothing it computed beyond
+ * `MappingEventLog` and the `usedCount`/`hitCount` bumps. Taking that path would have added a
+ * persisted table to the nosave surface — narrower than P6's documented mirror exemption allows —
+ * and would have made the measurement a mutation. This is a Map read and nothing else.
+ *
+ * WHAT IT HOLDS — AND IT IS WIDER THAN "THIS REQUEST'S OWN WINNERS". The map is process
+ * scope, not request scope. With the cap at 0 `rememberDeferredHits()` takes `hits.slice(0)`,
+ * i.e. ALL EIGHT hits of EVERY lane search, losers included, keeping the most recent
+ * `DEFERRED_HITS_MAX`. So a peek can legitimately answer for an fsId that a DIFFERENT
+ * request — another user's — searched moments earlier, and `resolveFoodDetails()` is
+ * therefore non-deterministic for one foodId: cold process says `ai_estimated`, warm says
+ * `fatsecret`, and a restart resets it. That is sound for the question being asked (the
+ * catalogue is FatSecret's either way, and a hit is proof FatSecret served that record to
+ * this process), but it must not be read as request-scoped, and a before/after count of
+ * `source` values is arm-dependent rather than a measurement.
+ *
+ * AND IT HAS NO STALENESS POLICY. Entries leave only by FIFO eviction; nothing expires them.
+ * The persisted store this substitutes for DOES have one (`FATSECRET_CACHE_MAX_AGE_MINUTES`,
+ * default 720), so on a low-FatSecret-traffic process a peek can answer from a days-old
+ * entry. It is used for PROVENANCE only — never for a panel, a serving or a weight — so the
+ * worst a stale entry can assert is that FatSecret supplied a record it did in fact supply.
+ * Read anything else out of it and that reasoning stops holding.
+ *
+ * WHAT IT CANNOT DO. Empty after any restart, so the branch is inert until traffic warms it,
+ * and a cache hit never searches the lane and so never fills it. An id no lane in this
+ * process ever saw reads `undefined` and keeps today's behaviour. That is deliberate: an id
+ * nothing upstream knows about must stay unattributed.
+ */
+export function peekDeferredFatSecretHit(fsId: string): FatSecretFoodSummary | undefined {
+    if (!fsId) return undefined;
+    return deferredHitsByFsId.get(fsId);
+}
+
+/**
  * Guarantee that `fsId`'s FatSecretFood parent row exists before a child row references it.
  *
  * Four cases, in order, cheapest first:

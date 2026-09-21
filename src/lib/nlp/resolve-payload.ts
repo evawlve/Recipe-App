@@ -485,6 +485,71 @@ export async function resolveFoodDetails(foodId: string, matchedServingDescripti
         densityGml: null,
         categoryId: null
       });
+    } else {
+      // NO PARENT ROW, BUT THE LANE STILL HAS THE RECORD (punch #210, Lane A S52).
+      //
+      // The `findUnique` above is this function's ONLY evidence that an `fs_` id is a
+      // FatSecret record, and the parent row is written by
+      // `ensureFatSecretParentPersisted()` — which `saveValidatedMapping()` calls and which
+      // EVERY save gate above it returns before (brand_mismatch, bare_category_takeover,
+      // core_token_mismatch, zero_macros, the implausible_macros branches, serving_downgrade,
+      // cross_source_margin; only `persist_failed_fk` sits below it, and `under_gate` never
+      // reaches the function at all), and which `skipSave` skips outright. So a FatSecret
+      // winner whose save was rejected, and every `nosave=1` request including every cold
+      // golden run, falls through to the `let source = 'ai_estimated'` initializer and ships a
+      // real FatSecret record with the licensed badge withheld. §Attribution calls
+      // under-attribution a defect in the same breath as over-attribution, and this is
+      // under-attribution: **2,061 events over 126 distinct fsIds** carry no parent row
+      // (measured 2026-09-20 — 170/64 on the `noCache=false` arm, 1,891/71 on `noCache=true`).
+      // `peekDeferredFatSecretHit()` owns the breakdown, including the caveat that
+      // `noCache=false` is NOT "a user": most of that arm is the 04:30 sweep replaying three
+      // golden cases.
+      //
+      // THE PEEK IS NOT A PERSIST. `peekDeferredFatSecretHit()` reads the lane's in-process
+      // map and nothing else — no write, no delete, no FatSecret call — so it is safe on the
+      // `nosave=1` path, which must persist nothing. It answers only when this process's own
+      // lane search produced the hit, which is exactly the save-rejected and nosave classes.
+      //
+      // AND IT KEEPS THE FLOOR WHERE THE FLOOR BELONGS. An id no lane in this process ever
+      // saw — a stale `fs_` in an old cache row, a typo, `fs_404404` — reads `undefined` and
+      // stays `ai_estimated`, which is the behaviour
+      // `resolve-payload.provenance.test.ts` pins and which this must not break. "The record
+      // is gone" and "the record is known upstream and we chose not to store it" are
+      // different states, and this is the only thing in the function that can tell them apart.
+      //
+      // ONLY `source`. NOT `name`, NOT `brandName`, NOT the panel — and the reason is a
+      // measured near-miss, not taste (refuter lens 1 on this PR, with an executable replay).
+      //
+      // `src/app/api/foods/barcode/route.ts` decides whether FatSecret answered at all by
+      // reading `if (resolved.name)`, and its own comment calls an empty name "the unambiguous
+      // 'matched no row'". Setting `name` here makes that gate pass on exactly the branch that
+      // used to leave it `''` — so the route would return 200 carrying FatSecret's identity,
+      // FatSecret's badge and this function's all-zero `nutritionPer100g` INITIALIZER, with no
+      // `portionEstimated` to say the numbers are not the record's, and it would shadow a
+      // healthy Open Food Facts answer that the route would otherwise have fallen through to.
+      // That is OVER-attribution — §Attribution defines `source` as a claim about who supplied
+      // that row's NUTRITION, and FatSecret did not supply a 0 kcal panel — and it would
+      // re-open the regression `barcode/route.ts`'s own anti-shadow test was written to close.
+      //
+      // Assigning `source` alone leaves `name` empty, so the barcode route is byte-unchanged:
+      // its gate still reads false, it still falls through to Open Food Facts, and this branch
+      // reaches the wire only through `/api/nlp/parse`, which takes identity from `mapped.*`
+      // and provenance from `details.source`. Provenance was the whole defect.
+      //
+      // The panel is not taken from the hit either: the parse route already re-derives it from
+      // the line's own billed macros (`per100gFromBilledMacros`), and a second panel here would
+      // give one record two ways to be billed.
+      //
+      // The import is LAZY on purpose. A static one would put the FatSecret lane, its client,
+      // `mapping/config.ts` and the logger into the module graph of every importer of this
+      // file — including `/api/foods/[id]/serving`, which imports `getServingType` and nothing
+      // else and has no business loading the lane. Inside the branch it is loaded only on the
+      // path that needs it, and the module is already resident whenever that path is reachable,
+      // since only a lane search can have filled the map.
+      const { peekDeferredFatSecretHit } = await import('../mapping/fatsecret-lane');
+      if (peekDeferredFatSecretHit(fsId)) {
+        source = 'fatsecret';
+      }
     }
   } else {
     // AI generated food details lookup
