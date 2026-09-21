@@ -1976,6 +1976,30 @@
         "value": "0@0@14"
       },
       "verified": "2026-09-08"
+    },
+    {
+      "id": "pg-backup-timer-enabled",
+      "claim": "The box's nightly database backup timer is installed and enabled (punch #233). If this goes red the box has no backup again.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-21_lane-a-s53-the-box-gets-a-backup.md",
+      "where": "box",
+      "command": "systemctl --user is-enabled pg-backup.timer",
+      "expect": {
+        "kind": "equals",
+        "value": "enabled"
+      },
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "pg-backup-dump-is-fresh",
+      "claim": "At least one mealspire dump in /home/owner/backups is under 2 days old. Catches a timer that is enabled but failing, which is-enabled cannot see.",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-21_lane-a-s53-the-box-gets-a-backup.md",
+      "where": "box",
+      "command": "find /home/owner/backups -maxdepth 1 -name 'mealspire-*.dump' -mtime -2 | wc -l",
+      "expect": {
+        "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-09-21"
     }
   ]
 }
