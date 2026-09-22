@@ -28,11 +28,12 @@
 # hibernated at 1 % battery the evening before; launchd fired the missed 06:15 run on the 08:16 AC
 # wake, both ssh reads answered, scp began, and the Mac went back to 'Low Power Sleep' at 1 % 70 s
 # later, cutting the transfer mid-file. So:
-#   - each transfer runs under `caffeinate -i`, which holds off IDLE sleep for its duration (the AC
-#     idle timer here is `sleep 1` minute per `pmset -g custom`);
+#   - the whole run holds `caffeinate -i -w $$`, which holds off IDLE sleep until the script exits —
+#     pre-flight gaps and backoffs included (the AC idle timer here is `sleep 1` minute per
+#     `pmset -g custom`);
 #   - a cut transfer is retried up to 3 times, each a FRESH scp connection after a 30 s / 60 s
-#     backoff, with the .part discarded between attempts; ServerAlive options make a dead session
-#     fail in about a minute instead of hanging;
+#     backoff, with the .part discarded between attempts; the two ssh reads (list, sha256) are retried
+#     the same way; ServerAlive options make a dead session fail in about a minute instead of hanging;
 #   - LOW-BATTERY SLEEP AND A CLOSED LID ARE NOT PREVENTABLE by any assertion. A laptop asleep at
 #     06:15 misses the run and launchd fires it on the next wake; that is acceptable and deliberate,
 #     because the box's own 7 nightly copies are the primary.
@@ -47,8 +48,10 @@
 # either repo or any Syncthing folder does. Every rclone output line passes through redact(), which
 # replaces the two key values with <redacted> before anything is echoed or logged. The bucket NAME is
 # not a secret and does appear in the log. rclone is called by ABSOLUTE path: launchd agents get
-# PATH /usr/bin:/bin:/usr/sbin:/sbin, which lacks /opt/homebrew/bin. An off-site failure never
-# touches a local copy (it runs after local retention) and exits 3, distinct from a pull failure (1).
+# PATH /usr/bin:/bin:/usr/sbin:/sbin, which lacks /opt/homebrew/bin. The env file is sourced with
+# stderr discarded (a malformed line would echo the key) and xtrace forced off. An off-site failure
+# (upload, sha1, a failed hard-delete) never touches a local copy (it runs after local retention) and
+# exits 3, distinct from a pull failure (1). The newest dump is chosen by NAME on both ends.
 
 set -u
 
@@ -79,6 +82,24 @@ log() {
 
 mkdir -p "$DEST" || { echo "pgbackup-pull: FAILED cannot create $DEST"; exit 1; }
 
+# One idle assertion for the WHOLE run, released when this script exits — so the pre-flight gaps, the
+# backoffs and the sha reads are held too, not only the transfers.
+caffeinate -i -w $$ &
+
+# A read from the box, retried like the transfer: up to TRANSFER_TRIES fresh ssh connections.
+ssh_read() {
+  local out t
+  for ((t = 1; t <= TRANSFER_TRIES; t++)); do
+    out=$(ssh "${SSH_OPTS[@]}" "$BOX_USER@$BOX" "$1" 2>/dev/null)
+    if [ -n "$out" ]; then
+      echo "$out"
+      return 0
+    fi
+    [ "$t" -lt "$TRANSFER_TRIES" ] && sleep "${BACKOFF[$((t - 1))]}"
+  done
+  return 1
+}
+
 # --- Pre-flight: wait, bounded, for the box over the tailnet; the LAN IP only as a fallback. -------
 BOX=""
 WAIT_START=$(date +%s)
@@ -99,16 +120,18 @@ if [ -z "$BOX" ]; then
 fi
 log "preflight: $BOX answered after ${WAITED}s"
 
-NEWEST=$(ssh "${SSH_OPTS[@]}" "$BOX_USER@$BOX" "ls -1t $SRC_DIR/mealspire-*.dump 2>/dev/null | head -1" 2>/dev/null)
+# Newest by NAME (the names are date-stamped), the same order the remote prune keeps by — so a touched
+# mtime can never make this run upload a name that the prune then hard-deletes.
+NEWEST=$(ssh_read "ls -1 $SRC_DIR/mealspire-*.dump 2>/dev/null | sort | tail -1")
 if [ -z "${NEWEST:-}" ]; then
-  log "FAILED no dump listed on $BOX — box unreachable, Tailscale down, or pg-backup has not run"
+  log "FAILED cause=tailnet down — no dump listed on $BOX after $TRANSFER_TRIES tries (or pg-backup has not run)"
   exit 1
 fi
 BASE=$(basename "$NEWEST")
 
-REMOTE_SHA=$(ssh "${SSH_OPTS[@]}" "$BOX_USER@$BOX" "sha256sum $NEWEST" 2>/dev/null | awk '{print $1}')
+REMOTE_SHA=$(ssh_read "sha256sum $NEWEST" | awk '{print $1}')
 if [ -z "${REMOTE_SHA:-}" ]; then
-  log "FAILED could not read the box's sha256 for $BASE"
+  log "FAILED cause=tailnet down — could not read the box's sha256 for $BASE after $TRANSFER_TRIES tries"
   exit 1
 fi
 
@@ -167,6 +190,7 @@ fi
 
 # --- The off-site copy. Runs in a subshell so the key never reaches this shell's environment. -------
 (
+  { set +x; } 2>/dev/null   # a hand run under `bash -x` must not trace the key exports below
   if [ ! -x "$RCLONE" ]; then
     log "offsite FAILED rclone not installed at $RCLONE"
     exit 3
@@ -176,8 +200,9 @@ fi
     exit 3
   fi
   set -a
+  # stderr to /dev/null: a malformed line would otherwise be echoed, key and all, into the launchd log.
   # shellcheck disable=SC1090
-  . "$B2_ENV"
+  . "$B2_ENV" 2>/dev/null || { set +a; log "offsite FAILED cannot parse $B2_ENV"; exit 3; }
   set +a
   if [ -z "${B2_KEY_ID:-}" ] || [ -z "${B2_APP_KEY:-}" ] || [ -z "${B2_BUCKET:-}" ]; then
     log "offsite FAILED $B2_ENV is missing B2_KEY_ID, B2_APP_KEY or B2_BUCKET"
@@ -220,6 +245,7 @@ fi
 
   # Prune the remote to the newest REMOTE_KEEP by name (the names sort by date), hard-deleting.
   remote_stale=$("$RCLONE" lsf "$REMOTE/" --include 'mealspire-*.dump' 2>/dev/null | sort -r | tail -n +$((REMOTE_KEEP + 1)))
+  PRUNE_FAILED=0
   if [ -n "$remote_stale" ]; then
     while IFS= read -r f; do
       [ -n "$f" ] || continue
@@ -227,6 +253,7 @@ fi
         log "offsite hard-deleted $f"
       else
         log "offsite FAILED could not hard-delete $f"
+        PRUNE_FAILED=1
       fi
     done <<<"$remote_stale"
   fi
@@ -237,5 +264,6 @@ fi
   if [ "$VERSIONS" -gt "$REMOTE_KEEP" ]; then
     log "offsite WARN $VERSIONS versions exceed the cap of $REMOTE_KEEP — an old version of a re-uploaded name is billing"
   fi
+  [ "$PRUNE_FAILED" = 0 ] || exit 3
 )
 exit $?
