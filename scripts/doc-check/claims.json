@@ -1987,7 +1987,7 @@
         "kind": "min",
         "value": "1"
       },
-      "note": "devmachine, not box: the credentials exist only on the Mac (/Users/diego/dev/Secrets/b2.env, mode 600, outside every repo and Syncthing folder) and rclone is Homebrew's, called by absolute path. The box's nightly (`--where backend,box,mobile`) SKIPS this claim and prints it as skipped — it is checked only by a Mac run. Absolute paths throughout because the checker's devmachine cwd is the MOBILE repo. The command prints only a line count; both stderr streams go to /dev/null so no key can reach the checker's output. Reads 0 (red) when the env file, rclone or the bucket is unreachable — fail-closed.",
+      "note": "devmachine, not box: the credentials exist only on the Mac (/Users/diego/dev/Secrets/b2.env, mode 600, outside every repo and Syncthing folder) and rclone is Homebrew's, called by absolute path. The box's nightly (`--where backend,box,mobile`) SKIPS this claim and prints it as skipped — it is checked only by a Mac run. Absolute paths throughout because the checker's devmachine cwd is the MOBILE repo. The command prints only a line count; both stderr streams go to /dev/null so no key can reach the checker's output. Reads 0 when rclone or the bucket is unreachable, and prints no integer at all when the env file is missing (a POSIX-mode `.` of a missing file exits the shell) — red either way, fail-closed.",
       "verified": "2026-09-22"
     },
     {
