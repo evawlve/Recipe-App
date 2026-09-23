@@ -2855,10 +2855,11 @@ export async function buildOffResult(
     // billed its own 113.4 g bag (607 kcal), `one serving of Doritos nachos` the
     // brand's median 142.5 g package (680 kcal), while the same session's
     // `One serving of Takis` — whose record HAS a label serving — billed 30 g.
-    // The best deterministic answer for a missing label serving is the same
-    // one the bare path already uses for bare `cheetos`: the same-brand median
-    // LABEL serving (borrowSiblingLabelServing(), called unchanged — this is not
-    // DNB-9's re-key). Its own tier string, because MappingEventLog.servingTier
+    // The best deterministic answer for a missing label serving is the one the
+    // bare path already gives a bare branded line without one
+    // (`bare_sibling_serving`): the same-brand median LABEL serving
+    // (borrowSiblingLabelServing() — this is not DNB-9's re-key; it adds only
+    // p25/p75 to the same scan). Its own tier string, because MappingEventLog.servingTier
     // is the only post-deploy instrument and a borrow must stay separable from
     // the rungs it displaces. Two refusals, both measured 2026-09-23 by the
     // design lens, and either one leaves everything below byte-for-byte
