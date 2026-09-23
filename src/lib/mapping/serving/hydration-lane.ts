@@ -2842,8 +2842,33 @@ export async function buildOffResult(
         const tok = (hydrated.foodName || '').trim().split(/\s+/)[0] ?? '';
         return tok.length >= 4 ? tok : null;
     })();
+    // "one serving of <snack>" on a SKU with NO label serving (#270, Lane A
+    // S56, 2026-09-23). The user named a SERVING, and the package rungs below
+    // answer a serving with the PACKAGE: `One serving of flaming hot Cheetos`
+    // billed its own 113.4 g bag (607 kcal), `one serving of Doritos nachos` the
+    // brand's median 142.5 g package (680 kcal), while the same session's
+    // `One serving of Takis` — whose record HAS a label serving — billed 30 g.
+    // The best deterministic answer for a missing label serving is the same
+    // one the bare path already uses for bare `cheetos`: the same-brand median
+    // LABEL serving (borrowSiblingLabelServing(), called unchanged — this is not
+    // DNB-9's re-key). Its own tier string, because MappingEventLog.servingTier
+    // is the only post-deploy instrument and a borrow must stay separable from
+    // the package rungs it displaces. When the brand has <3 in-band siblings
+    // the borrow returns null and everything below is byte-for-byte unchanged.
+    // Displaces ONLY package_quantity_own|sibling on these four unit words
+    // (3 events / 3 lines all-time, measured 2026-09-23); a SKU that HAS a label
+    // serving never reaches this (label_serving_package_unit answers first),
+    // and the bare-query guard never runs on a line with a unit.
+    const SERVING_WORD_UNITS = new Set(['serving', 'servings', 'portion', 'portions']);
+    const servingWordSibling = (
+        unit && SERVING_WORD_UNITS.has(unit)
+        && !(hydrated.servingGrams && hydrated.servingGrams > 0)
+        && brandForBorrow
+    ) ? await borrowSiblingLabelServing(brandForBorrow, candidate.id.replace(/^off_/, ''))
+        : null;
     let packageFallbackGrams: number | null = null;
-    if (unit && PACKAGE_LIKE_UNITS.has(unit) && !(hydrated.servingGrams && hydrated.servingGrams > 0)) {
+    if (unit && PACKAGE_LIKE_UNITS.has(unit) && !(hydrated.servingGrams && hydrated.servingGrams > 0)
+        && servingWordSibling == null) {
         packageFallbackGrams = packageGrams
             ?? await borrowSiblingPackageGrams(brandForBorrow);
     }
@@ -2900,6 +2925,19 @@ export async function buildOffResult(
         grams = qty * hydrated.servingGrams;
         servingDescription = `${qty} ${unit} (${hydrated.servingGrams}g each)`;
         servingTier = 'label_serving_package_unit';
+    } else if (unit && servingWordSibling != null) {
+        // #270 — see servingWordSibling above: a serving-word unit on a SKU with
+        // no label serving bills the brand's median label serving, not a package.
+        grams = qty * servingWordSibling.grams;
+        servingDescription = `${qty} ${unit} (~${servingWordSibling.grams.toFixed(0)}g each, brand median)`;
+        servingTier = 'serving_unit_sibling_label';
+        logger.info('off.build_result.serving_unit_sibling_label', {
+            foodId: candidate.id,
+            unit,
+            brand: brandForBorrow,
+            grams: servingWordSibling.grams,
+            samples: servingWordSibling.samples,
+        });
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && packageFallbackGrams != null) {
         // Package-like unit with NO label serving ("1 bottle gatorade" on a
         // SKU without servingGrams): the SKU's own net quantity — or the
