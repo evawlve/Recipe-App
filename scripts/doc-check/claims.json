@@ -2043,16 +2043,16 @@
     },
     {
       "id": "parse-attempt-settlers-three",
-      "claim": "Exactly three non-test modules settle a parse attempt by calling endParseAttempt",
+      "claim": "Exactly four non-test modules settle a parse attempt by calling endParseAttempt",
       "ownerDoc": "mobile:src/stores/parse-attempt-store.ts",
       "where": "mobile",
       "command": "grep -rln 'endParseAttempt' src | grep -v __tests__ | wc -l",
       "expect": {
         "kind": "count",
-        "value": "3"
+        "value": "4"
       },
-      "note": "A settler count, not a call count. The store's own header states the three and prints this grep. Reasoned, not measured: a fourth module learning to end an attempt is the shape that would strand the timing state, and jest would likely not see it because each settler is individually correct.",
-      "verified": "2026-09-21"
+      "note": "A settler count, not a call count. Four since mobile 2871f83 (Lane E's logging.tsx seat, PR #37): the store, magic-recap-live.tsx, magic-reading-breath.tsx and logging.tsx; the store's own header still names three (stale prose, a mobile product file). DEPENDENCY: `where: mobile` reads the box mirror of the SHARED mobile checkout's working tree, not origin/main. That tree sat at 38194d7 (reads 3) when this was re-dated, so this claim reads FALSE on the box nightly until someone runs `git pull --ff-only` in /Users/diego/dev/KindaHealthyMobile (Lane B S54's FIRST CHECK), then true. Measured 2026-09-23: origin/main 4, shared checkout 3. Reasoned, not measured: a module learning to end an attempt without the id guard is the shape that would strand the timing state, and jest would likely not see it because each settler is individually correct.",
+      "verified": "2026-09-23"
     },
     {
       "id": "sparkle-pop-has-one-reader",
