@@ -105,7 +105,7 @@ beforeEach(() => {
 describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
     it('bills the brand median label serving, not the own package, for "1 serving" with no label serving', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({}));
-        labelSiblingRows = [{ med: 28, n: 256 }];
+        labelSiblingRows = [{ med: 28, n: 256, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('Cheetos Flaming Hot'), parsed(1, 'serving'), 0.9, 'One serving of flaming hot Cheetos'
@@ -119,7 +119,7 @@ describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
 
     it('multiplies by the quantity ("2 servings")', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({}));
-        labelSiblingRows = [{ med: 28, n: 256 }];
+        labelSiblingRows = [{ med: 28, n: 256, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('Cheetos Flaming Hot'), parsed(2, 'servings'), 0.9, '2 servings of flaming hot cheetos'
@@ -131,7 +131,7 @@ describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
 
     it('covers "portion" too', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({}));
-        labelSiblingRows = [{ med: 28, n: 256 }];
+        labelSiblingRows = [{ med: 28, n: 256, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('Cheetos Flaming Hot'), parsed(1, 'portion'), 0.9, 'a portion of flaming hot cheetos'
@@ -143,7 +143,7 @@ describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
 
     it('keeps today\'s package tier when the brand has fewer than 3 in-band siblings', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({}));
-        labelSiblingRows = [{ med: 28, n: 2 }];
+        labelSiblingRows = [{ med: 28, n: 2, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('Cheetos Flaming Hot'), parsed(1, 'serving'), 0.9, 'One serving of flaming hot Cheetos'
@@ -153,12 +153,44 @@ describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
         expect(result?.grams).toBeCloseTo(113.4, 1);
     });
 
+    it('refuses a brandless record — never the first-token pseudo-brand (design lens, `sweet kale salad`)', async () => {
+        // `off_0888048000677` "Sweet kale salad": brandName NULL, no servingGrams, no package.
+        // brandForBorrow would be 'Sweet', and "brandName" ILIKE 'Sweet' is a candy line (median 30 g).
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodId: 'off_0888048000677', foodName: 'Sweet kale salad', brandName: null,
+            packageQuantity: null, packageQuantityUnit: null,
+        }));
+        labelSiblingRows = [{ med: 30, n: 3, p25: 27, p75: 31 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Sweet kale salad'), parsed(1, 'serving', 'sweet kale salad'), 0.9, '1 serving sweet kale salad'
+        );
+
+        expect(result?.servingTier).not.toBe('serving_unit_sibling_label');
+        expect(sqlSeen.some((s) => s.includes('"servingGrams" BETWEEN'))).toBe(false);
+    });
+
+    it('refuses a brand whose label servings are not near-constant (Knorr p25 10 / p75 240)', async () => {
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodId: 'off_8714100273920', foodName: 'Noodles with chicken', brandName: 'Knorr',
+            packageQuantity: 36, packageQuantityUnit: 'g',
+        }));
+        labelSiblingRows = [{ med: 60, n: 277, p25: 10, p75: 240 }];
+
+        const result = await buildOffResult(
+            makeCandidate('Noodles with chicken'), parsed(1.5, 'servings', 'noodles with chicken'), 0.9, '1.5 servings of Noodles with chicken'
+        );
+
+        expect(result?.servingTier).toBe('package_quantity_own');
+        expect(result?.grams).toBe(54);
+    });
+
     it('never reaches the borrow when the SKU has its own label serving (the Takis control)', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
             foodId: 'off_5018297013158', foodName: 'takis', brandName: 'Takis',
             servingGrams: 30, servingDescription: '1 portion (30 g)', packageQuantity: null, packageQuantityUnit: null,
         }));
-        labelSiblingRows = [{ med: 28, n: 88 }];
+        labelSiblingRows = [{ med: 28, n: 88, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('takis'), parsed(1, 'serving', 'takis'), 0.9, 'One serving of Takis'
@@ -171,7 +203,7 @@ describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
 
     it('leaves a non-serving package unit ("1 bag") on the package tier', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({}));
-        labelSiblingRows = [{ med: 28, n: 256 }];
+        labelSiblingRows = [{ med: 28, n: 256, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('Cheetos Flaming Hot'), parsed(1, 'bag'), 0.9, '1 bag of flaming hot cheetos'
@@ -183,7 +215,7 @@ describe('buildOffResult — serving_unit_sibling_label (#270)', () => {
 
     it('leaves a weight unit alone ("100 g")', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({}));
-        labelSiblingRows = [{ med: 28, n: 256 }];
+        labelSiblingRows = [{ med: 28, n: 256, p25: 28, p75: 30 }];
 
         const result = await buildOffResult(
             makeCandidate('Cheetos Flaming Hot'), parsed(100, 'g'), 0.9, '100 g of cheetos'
