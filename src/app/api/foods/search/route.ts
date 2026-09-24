@@ -18,6 +18,9 @@ export const runtime = 'nodejs';
  */
 
 
+/** The longest `s` this route will search for. Not exported: a route module may only export its handlers and config. */
+const MAX_SEARCH_QUERY_CHARS = 200;
+
 export async function GET(req: NextRequest) {
   // Sentry disabled
   // Sentry.setTag('endpoint', 'foods-search');
@@ -62,6 +65,15 @@ export async function GET(req: NextRequest) {
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json({ error: 'Search query must be at least 2 characters' }, { status: 400 });
+    }
+    // The ceiling beside the floor (review M2's input bound, 2026-09-24): a query is a food
+    // name, and everything past MAX_SEARCH_QUERY_CHARS is only cost — retrieval, trigram and
+    // ranking work on a string no person typed.
+    if (query.trim().length > MAX_SEARCH_QUERY_CHARS) {
+      return NextResponse.json(
+        { error: `Search query must be at most ${MAX_SEARCH_QUERY_CHARS} characters` },
+        { status: 400 },
+      );
     }
 
     const q = query.trim();
