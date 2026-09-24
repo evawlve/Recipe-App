@@ -138,10 +138,9 @@ export async function POST(req: NextRequest) {
     const requiredEnv = ['DATABASE_URL'];
     const missingEnv = requiredEnv.filter(name => !process.env[name]);
     if (missingEnv.length > 0) {
+      // The names go to the log, never to the caller (review L7): the body is a fixed string.
       console.error('NLP Parse API Error: Missing environment variables:', missingEnv);
-      return NextResponse.json({
-        error: `Configuration error: missing environment variables: ${missingEnv.join(', ')}`
-      }, { status: 500 });
+      return NextResponse.json({ error: 'Configuration error' }, { status: 500 });
     }
 
     // INPUT BOUNDS (review H1), cheapest first and all of them before any paid work.
