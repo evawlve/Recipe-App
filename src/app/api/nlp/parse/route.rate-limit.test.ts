@@ -1,13 +1,15 @@
 /**
- * /api/nlp/parse — the per-user rate limit, both halves.
+ * /api/nlp/parse — the per-user rate limit: RESERVE, then REFUND (review H2, 2026-09-24).
  *
- * COUNT (preamble): `>= perMinute` / `>= perDay` NlpRequestLog rows in the window is
- * a 429, limits read from the env per request and failing closed to 10 / 100.
- * CHARGE (end of runParse): one NlpRequestLog row, written AFTER the mapper and ONLY
- * when the request did paid work — a request whose every line came from the
- * FoodMapping cache or the zero-calorie fast path, with no AI segmentation call, is
- * free. What is pinned here is the wiring: which requests are counted, which are
- * charged, in what order, and that neither a 429, a 400 nor a 500 is ever billed.
+ * RESERVE (after the body is validated and bounded, before any paid work): one transaction
+ * locks the user, counts — `>= perMinute` / `>= perDay` NlpRequestLog rows in the window is
+ * a 429, limits read from the env per request and failing closed to 10 / 100 — and writes
+ * this request's row only when both are under.
+ * REFUND (where the run ends, on both wires): that row is deleted when the request did no
+ * paid work — every line from the FoodMapping cache or the zero-calorie fast path, with no
+ * AI segmentation call — or when the mapper threw. What is pinned here is the wiring:
+ * which requests are counted, which are reserved and refunded, in what order, and that
+ * neither a 429, a 400 nor a 500 is ever billed net.
  *
  * Harness: route.debug-echo.test.ts's mocks, driven through a JWT caller.
  */
@@ -254,20 +256,23 @@ describe('/api/nlp/parse rate limit', () => {
   // ------------------------------------------------------------------
   // CHARGE half — what is billed.
   // ------------------------------------------------------------------
-  test('every line a cache hit → 200, counted (the limit still applies) but NOT charged', async () => {
+  test('every line a cache hit → 200, counted and reserved (the limit still applies), then refunded: net 0', async () => {
     stubMapper('cache_hit');
     counts(9, 50);
     const res = await POST(jwtRequest({ items: ['some cereal', 'a banana'] }));
     expect(res.status).toBe(200);
     expect(prisma.nlpRequestLog.count).toHaveBeenCalledTimes(2);
-    expect(prisma.nlpRequestLog.create).not.toHaveBeenCalled();
+    expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
+    expect(prisma.nlpRequestLog.delete).toHaveBeenCalledTimes(1);
+    expect(prisma.nlpRequestLog.delete).toHaveBeenCalledWith({ where: { id: 'reserved-1' } });
   });
 
-  test('every line the zero-calorie fast path → not charged', async () => {
+  test('every line the zero-calorie fast path → reserved, then refunded: net 0', async () => {
     stubMapper('fast_path');
     const res = await POST(jwtRequest({ items: ['water', 'ice'] }));
     expect(res.status).toBe(200);
-    expect(prisma.nlpRequestLog.create).not.toHaveBeenCalled();
+    expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
+    expect(prisma.nlpRequestLog.delete).toHaveBeenCalledWith({ where: { id: 'reserved-1' } });
   });
 
   test('one cache hit beside one fresh save → charged exactly once', async () => {
@@ -305,32 +310,40 @@ describe('/api/nlp/parse rate limit', () => {
     expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
   });
 
-  test('the mapper throwing → 500 and nothing is charged', async () => {
+  test('the mapper throwing → 500; reserved, then refunded: net 0', async () => {
     mapIngredientWithFallback.mockRejectedValue(new Error('mapper down'));
     const res = await POST(jwtRequest({ items: ['some cereal'] }));
     expect(res.status).toBe(500);
-    expect(prisma.nlpRequestLog.create).not.toHaveBeenCalled();
+    expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
+    expect(prisma.nlpRequestLog.delete).toHaveBeenCalledTimes(1);
+    expect(prisma.nlpRequestLog.delete).toHaveBeenCalledWith({ where: { id: 'reserved-1' } });
   });
 
-  test('a 400 (no text, no items) is not charged', async () => {
+  test('a 400 (no text, no items) never reserves: no transaction, no row', async () => {
     const res = await POST(jwtRequest({}));
     expect(res.status).toBe(400);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.nlpRequestLog.create).not.toHaveBeenCalled();
   });
 
-  test('the charge failing → still 200 (fail open)', async () => {
+  test('the reservation write failing → still 200 (fail open), and nothing to refund', async () => {
     prisma.nlpRequestLog.create.mockRejectedValue(new Error('db down'));
     const res = await POST(jwtRequest({ items: ['some cereal'] }));
     expect(res.status).toBe(200);
     expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(1);
+    expect(mapIngredientWithFallback).toHaveBeenCalledTimes(1);
+    expect(prisma.nlpRequestLog.delete).not.toHaveBeenCalled();
   });
 
-  test('the charge is written AFTER the mapper ran, not before', async () => {
+  test('the reservation is written BEFORE the mapper runs; a refund comes AFTER it', async () => {
+    stubMapper('cache_hit');
     const res = await POST(jwtRequest({ items: ['some cereal'] }));
     expect(res.status).toBe(200);
     const mapperOrder = mapIngredientWithFallback.mock.invocationCallOrder[0];
-    const chargeOrder = prisma.nlpRequestLog.create.mock.invocationCallOrder[0];
-    expect(chargeOrder).toBeGreaterThan(mapperOrder);
+    const reserveOrder = prisma.nlpRequestLog.create.mock.invocationCallOrder[0];
+    const refundOrder = prisma.nlpRequestLog.delete.mock.invocationCallOrder[0];
+    expect(reserveOrder).toBeLessThan(mapperOrder);
+    expect(refundOrder).toBeGreaterThan(mapperOrder);
   });
 
   // ------------------------------------------------------------------
