@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { matchesDevApiKey } from '@/lib/auth/request-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -16,35 +17,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Not available during build" }, { status: 503 });
     }
 
+    // KEY-ONLY (review M3, 2026-09-24), like its sibling foods/[id]/serving. This route
+    // used to fall back to any web cookie session with `isAdmin = true; // TODO`, so every
+    // signed-in web user was "admin". The key check is the shared one — constant-time, and
+    // fails closed on an unset or empty DEV_API_KEY. No cookie path, no user lookup.
+    if (!matchesDevApiKey(req)) {
+      return NextResponse.json({
+        error: 'Unauthorized',
+        hint: 'Use x-api-key header or api_key query param with dev key'
+      }, { status: 401 });
+    }
+
     // Import only when not in build mode
     const { prisma } = await import('@/lib/db');
-    const { getCurrentUser } = await import('@/lib/auth');
-
-    // Check for API key in headers or query params
-    const apiKey = req.headers.get('x-api-key') || req.nextUrl.searchParams.get('api_key');
-    const devApiKey = process.env.DEV_API_KEY;
-    
-    // Allow API key bypass for development (fails closed: unset/empty DEV_API_KEY grants nothing)
-    if (devApiKey && apiKey === devApiKey) {
-      console.log('Admin access granted via API key');
-    } else {
-      // Fallback to user authentication
-      const user = await getCurrentUser();
-      if (!user?.id) {
-        return NextResponse.json({ 
-          error: 'Unauthorized', 
-          hint: 'Use x-api-key header or api_key query param with dev key'
-        }, { status: 401 });
-      }
-
-      // Check if user is admin (you can implement your own admin logic)
-      // For now, just check if user exists
-      const isAdmin = true; // TODO: Implement proper admin check
-
-      if (!isAdmin) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
 
     // Get basic stats first
     const totalFoods = await prisma.food.count();
