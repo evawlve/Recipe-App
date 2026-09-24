@@ -191,15 +191,15 @@ export async function POST(req: NextRequest) {
       try {
         const reservation = await prisma.$transaction(async (tx) => {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${reserveUserId}::text))`;
+          // Sequential, not Promise.all: an interactive transaction runs on ONE connection,
+          // so parallel queries inside it would only queue, and minute-first keeps the order.
           const now = Date.now();
-          const [recentRequests, dailyRequests] = await Promise.all([
-            tx.nlpRequestLog.count({
-              where: { userId: reserveUserId, createdAt: { gte: new Date(now - 60 * 1000) } },
-            }),
-            tx.nlpRequestLog.count({
-              where: { userId: reserveUserId, createdAt: { gte: new Date(now - 24 * 60 * 60 * 1000) } },
-            }),
-          ]);
+          const recentRequests = await tx.nlpRequestLog.count({
+            where: { userId: reserveUserId, createdAt: { gte: new Date(now - 60 * 1000) } },
+          });
+          const dailyRequests = await tx.nlpRequestLog.count({
+            where: { userId: reserveUserId, createdAt: { gte: new Date(now - 24 * 60 * 60 * 1000) } },
+          });
           if (recentRequests >= perMinute) return { over: 'minute' as const };
           if (dailyRequests >= perDay) return { over: 'day' as const };
           const row = await tx.nlpRequestLog.create({ data: { userId: reserveUserId } });
