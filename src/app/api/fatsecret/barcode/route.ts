@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { lookupFatSecretBarcode } from '@/lib/mapping/barcode';
 import { FATSECRET_ENABLED } from '@/lib/mapping/config';
 import { logger } from '@/lib/logger';
+import { authenticateRequest } from '@/lib/auth/request-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,8 +14,17 @@ export const runtime = 'nodejs';
  * 
  * Returns food data with servings and macros, or 404 if not found.
  * Returns 503 if FatSecret is disabled.
+ *
+ * Needs the dev key or a Supabase bearer (the same chokepoint as /api/foods/barcode).
+ * Every call spends FatSecret API quota; it was anonymous until the 2026-09-24
+ * security review. No in-repo client calls this route.
  */
 export async function GET(req: NextRequest) {
+  const auth = await authenticateRequest(req, { accept: ['key', 'bearer'] });
+  if (!auth.via) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   if (!FATSECRET_ENABLED) {
     return NextResponse.json(
       { error: 'FatSecret barcode lookup is disabled' },
@@ -50,7 +60,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(
-      { error: 'Internal server error', message: (error as Error).message },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
