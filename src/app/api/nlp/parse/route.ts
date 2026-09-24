@@ -16,6 +16,11 @@ import { authenticateRequest } from '@/lib/auth/request-auth';
 // per-request env read and the "did this request do paid work?" predicate.
 import { readParseLimits, isFreeParseRequest } from '@/lib/nlp/parse-rate-limit';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
+// Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
+import {
+  MAX_PARSE_BODY_BYTES, contentLengthTooLarge, readBodyTextWithin, checkParseBounds,
+  capSegmentedItems, PARSE_TOO_LARGE_MESSAGE,
+} from '@/lib/nlp/parse-bounds';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -148,6 +153,30 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
+    // INPUT BOUNDS (review H1), cheapest first and all of them before any paid work.
+    // `content-length` refuses an honest oversized body before a byte is read; the bounded
+    // read refuses one sent without the header (chunked) at the same cap, so parsing costs
+    // at most MAX_PARSE_BODY_BYTES of memory. Then the existing 400, then the char/item
+    // bounds. They apply to EVERY caller, the dev key included — see parse-bounds.ts.
+    if (contentLengthTooLarge(req.headers.get('content-length'))) {
+      return NextResponse.json({ error: PARSE_TOO_LARGE_MESSAGE }, { status: 413 });
+    }
+    const rawBody = await readBodyTextWithin(req.body, MAX_PARSE_BODY_BYTES);
+    if (rawBody === null) {
+      return NextResponse.json({ error: PARSE_TOO_LARGE_MESSAGE }, { status: 413 });
+    }
+    // JSON.parse throws on a malformed or empty body exactly as `req.json()` did, into the
+    // handler's own 500 branch — unchanged behaviour.
+    const body = JSON.parse(rawBody);
+    const { text, items: inputItems } = body;
+    if ((!text || typeof text !== 'string') && (!inputItems || !Array.isArray(inputItems))) {
+      return NextResponse.json({ error: 'Either "text" (string) or "items" (array) field is required' }, { status: 400 });
+    }
+    const tooLarge = checkParseBounds(body);
+    if (tooLarge) {
+      return NextResponse.json({ error: tooLarge.error }, { status: tooLarge.status });
+    }
+
     const { segmentTextWithAi } = await import('@/lib/nlp/ai-segmenter');
     const { canonicalizeSegLine } = await import('@/lib/nlp/seg-line-key');
     const { lookupSegmentationCache, writeSegmentationCache } = await import('@/lib/nlp/segmentation-cache');
@@ -160,12 +189,6 @@ export async function POST(req: NextRequest) {
     } = await import('@/lib/nlp/resolve-payload');
     const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
     const { logger } = await import('@/lib/logger');
-
-    const body = await req.json();
-    const { text, items: inputItems } = body;
-    if ((!text || typeof text !== 'string') && (!inputItems || !Array.isArray(inputItems))) {
-      return NextResponse.json({ error: 'Either "text" (string) or "items" (array) field is required' }, { status: 400 });
-    }
 
     // Cold-run flag for cache audits (Phase 0 flywheel): bypasses BOTH
     // FoodMapping cache layers so cold-vs-warm parity runs measure the full
@@ -291,23 +314,37 @@ export async function POST(req: NextRequest) {
         const lineKey = canonicalizeSegLine(text);
         const cachedSegments = noCache ? null : await lookupSegmentationCache(lineKey);
 
+        // THE SEGMENTED CAP (review H1): a 1,000-char line can still split into fifty
+        // items, and each is a concurrent mapper run. Every split is sliced to
+        // MAX_SEGMENTED_ITEMS — the AI answer BEFORE it is written to SegmentationCache and
+        // before the `segments` frame (else both would carry the unbounded answer), the
+        // heuristic fallback, and a cache row written before this cap existed.
+        const capSplit = <T,>(split: T[], from: string): T[] => {
+          const { items: kept, dropped } = capSegmentedItems(split);
+          if (dropped > 0) {
+            console.warn(`[nlp-parse] ${from} split capped: ${split.length} items -> ${kept.length}`);
+          }
+          return kept;
+        };
+
         if (cachedSegments) {
           segCacheHit = true;
-          items = cachedSegments;
+          items = capSplit(cachedSegments, 'segmentation-cache');
           console.log(`[nlp-parse] segmentation cache HIT (${cachedSegments.length} items) — LLM skipped`);
         } else {
           segCacheHit = false;
           const aiItems = await segmentTextWithAi(text);
           if (aiItems) {
-            items = aiItems;
+            const cappedAi = capSplit(aiItems, 'ai');
+            items = cappedAi;
             if (!noCache) {
               // Write-through (fail-open inside; a few ms before mapping starts).
-              await writeSegmentationCache(lineKey, aiItems);
+              await writeSegmentationCache(lineKey, cappedAi);
             }
           } else {
             // LLM failed/timed out/returned nothing usable — degraded split,
             // deliberately NOT cached.
-            items = forceSegmentText(text);
+            items = capSplit(forceSegmentText(text), 'heuristic');
           }
         }
       }
