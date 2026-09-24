@@ -10,6 +10,8 @@
  * sends (pinned by route.rate-limit.test.ts) cannot be sent once the status has left.
  * (5) The rate-limit CHARGE still fires for a bearer caller, exactly as often as on the
  * one-shot path. (6) Without the flag nothing changed: the body is still a bare array.
+ * (7) The `segments` frame names the split that ran (`segmenter`), set per branch — and
+ * the field rides the frame only: the one-shot body gains no key.
  *
  * Harness: route.debug-echo.test.ts's mocks (supabase, prisma, structured client, mapper,
  * resolve-payload). Item-form input (`items: [...]`) is used so no segmentation LLM call
@@ -47,6 +49,17 @@ jest.mock('@/lib/db', () => {
 
 jest.mock('@/lib/ai/structured-client', () => ({
   callStructuredLlm: jest.fn(),
+}));
+
+// The segmenter seams, so the `segmenter` pins can drive each branch; the item-form and
+// short-line tests above them never reach either module.
+jest.mock('@/lib/nlp/segmentation-cache', () => ({
+  lookupSegmentationCache: jest.fn(),
+  writeSegmentationCache: jest.fn(),
+}));
+
+jest.mock('@/lib/nlp/ai-segmenter', () => ({
+  segmentTextWithAi: jest.fn(),
 }));
 
 jest.mock('@/lib/mapping/map-ingredient-with-fallback', () => ({
@@ -252,6 +265,89 @@ describe('/api/nlp/parse ?stream=1', () => {
     const frames = await readFrames(res);
     expect(frames[frames.length - 1].type).toBe('done');
     expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(oneShotCharges);
+  });
+
+  describe('the `segments` frame names the split that ran', () => {
+    const { lookupSegmentationCache, writeSegmentationCache } = require('@/lib/nlp/segmentation-cache');
+    const { segmentTextWithAi } = require('@/lib/nlp/ai-segmenter');
+    // Two separators and 8 words: never `singleItemFromText()`'s.
+    const MULTI = 'two eggs and toast with butter for breakfast today';
+    const SPLIT = [
+      { rawText: 'two eggs', mealType: 'breakfast' },
+      { rawText: 'toast with butter', mealType: 'breakfast' },
+    ];
+
+    async function segmentsFrame(req: NextRequest) {
+      const frames = await readFrames(await POST(req));
+      expect(frames[0].type).toBe('segments');
+      return frames[0] as Extract<ParseStreamFrame, { type: 'segments' }>;
+    }
+
+    beforeEach(() => {
+      lookupSegmentationCache.mockResolvedValue(null);
+      writeSegmentationCache.mockResolvedValue(undefined);
+      segmentTextWithAi.mockResolvedValue(null);
+    });
+
+    test('item-form input → items, and no segmenter seam is touched', async () => {
+      const frame = await segmentsFrame(devRequest({ items: LINES }, '?stream=1'));
+      expect(frame.segmenter).toBe('items');
+      expect(lookupSegmentationCache).not.toHaveBeenCalled();
+      expect(segmentTextWithAi).not.toHaveBeenCalled();
+    });
+
+    test('a short line → single, answered by singleItemFromText() alone', async () => {
+      const frame = await segmentsFrame(devRequest({ text: '2 eggs' }, '?stream=1'));
+      expect(frame.segmenter).toBe('single');
+      expect(lookupSegmentationCache).not.toHaveBeenCalled();
+      expect(segmentTextWithAi).not.toHaveBeenCalled();
+    });
+
+    test('a SegmentationCache hit → cache, and the model is not called', async () => {
+      lookupSegmentationCache.mockResolvedValue(SPLIT);
+      const frame = await segmentsFrame(devRequest({ text: MULTI }, '?stream=1'));
+      expect(frame.segmenter).toBe('cache');
+      expect(frame.items.map((i) => i.rawText)).toEqual(['two eggs', 'toast with butter']);
+      expect(segmentTextWithAi).not.toHaveBeenCalled();
+    });
+
+    test('a cache miss → ai, and the model split is dealt', async () => {
+      segmentTextWithAi.mockResolvedValue(SPLIT);
+      const frame = await segmentsFrame(devRequest({ text: MULTI }, '?stream=1'));
+      expect(frame.segmenter).toBe('ai');
+      expect(segmentTextWithAi).toHaveBeenCalledTimes(1);
+      expect(frame.items).toHaveLength(2);
+    });
+
+    test('the model fails and the heuristic splits → still ai (the model was called)', async () => {
+      segmentTextWithAi.mockResolvedValue(null);
+      const frame = await segmentsFrame(devRequest({ text: MULTI }, '?stream=1'));
+      expect(frame.segmenter).toBe('ai');
+      expect(segmentTextWithAi).toHaveBeenCalledTimes(1);
+      expect(frame.items.length).toBeGreaterThan(0);
+    });
+
+    test('nocache=1 skips the cache read → ai', async () => {
+      lookupSegmentationCache.mockResolvedValue(SPLIT);
+      segmentTextWithAi.mockResolvedValue(SPLIT);
+      const frame = await segmentsFrame(devRequest({ text: MULTI }, '?stream=1&nocache=1'));
+      expect(frame.segmenter).toBe('ai');
+      expect(lookupSegmentationCache).not.toHaveBeenCalled();
+    });
+
+    test('the one-shot body gains no key: a bare array whose elements are the streamed items', async () => {
+      segmentTextWithAi.mockResolvedValue(SPLIT);
+      const body = await (await POST(devRequest({ text: MULTI }))).json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(JSON.stringify(body)).not.toContain('segmenter');
+
+      const frames = await readFrames(await POST(devRequest({ text: MULTI }, '?stream=1')));
+      const items = frames.filter((f): f is Extract<ParseStreamFrame, { type: 'item' }> => f.type === 'item');
+      expect(items).toHaveLength(body.length);
+      for (const frame of items) {
+        expect(Object.keys(body[frame.index]).sort()).toEqual(Object.keys(frame.item as object).sort());
+      }
+    });
   });
 
   test('a 400 is still a 400 with the flag — nothing streams before validation', async () => {

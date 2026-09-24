@@ -11,7 +11,7 @@
 import { decodeSseFrames, encodeSseFrame, type ParseStreamFrame } from '../parse-stream';
 
 const FRAMES: ParseStreamFrame[] = [
-  { type: 'segments', items: [{ index: 0, rawText: '2 eggs', mealType: 'breakfast' }, { index: 1, rawText: 'toast with butter', mealType: 'breakfast' }] },
+  { type: 'segments', segmenter: 'ai', items: [{ index: 0, rawText: '2 eggs', mealType: 'breakfast' }, { index: 1, rawText: 'toast with butter', mealType: 'breakfast' }] },
   { type: 'item', index: 1, item: { rawText: 'toast with butter', foodName: 'Toast', grams: 30, note: 'line\nbreak "quoted"' } },
   { type: 'item', index: 0, item: { rawText: '2 eggs', foodName: 'Egg', grams: 100 } },
   { type: 'done', count: 2, receipt: null },
