@@ -55,8 +55,10 @@ export type ParseStreamSegment = {
  *   single — `singleItemFromText()` answered alone (short line, no separator); no split ran.
  *   cache  — a `SegmentationCache` hit served the split; no model call.
  *   ai     — the AI segmenter was CALLED. Includes its heuristic fallback when the model
- *            fails or times out: the wait was paid either way, which is what a client
- *            timing its UI on this field needs to know.
+ *            fails or times out, so it does NOT promise a model split, nor a long wait
+ *            (a provider chain that fails fast reads `ai` too). What it does promise is
+ *            the one fact a client's short-line predicate can be checked against: the
+ *            line was not `single`.
  */
 export type ParseStreamSegmenter = 'items' | 'single' | 'cache' | 'ai';
 
