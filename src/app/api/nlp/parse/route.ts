@@ -13,8 +13,14 @@ import { encodeSseFrame, PARSE_STREAM_HEADERS, type ParseStreamSink } from '@/li
 // src/lib/supabase/admin.ts; the dev-key path never builds it at all.
 import { authenticateRequest } from '@/lib/auth/request-auth';
 // Pure (its only import is a type), so static is free. Owns the limit defaults, the
-// per-request env read and the "did this request do paid work?" predicate.
-import { readParseLimits, isFreeParseRequest } from '@/lib/nlp/parse-rate-limit';
+// per-request env read, the "did this request do paid work?" predicate, and the
+// process-local in-flight cap and reservation-error breaker.
+import {
+  readParseLimits, isFreeParseRequest,
+  acquireInflight, releaseInflight,
+  recordReservationFailure, recordReservationSuccess, reservationFailsClosed,
+  isReservationTimeout, RESERVATION_TX_MAX_WAIT_MS, RESERVATION_TX_TIMEOUT_MS,
+} from '@/lib/nlp/parse-rate-limit';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
 import {
@@ -98,47 +104,31 @@ export async function POST(req: NextRequest) {
     isDevBypass = true;
   }
 
-  // Rate limiting — the COUNT half (skipped for dev/test bypass users). Limits come from
-  // the env on every request (edit + restart, no rebuild) and fail closed to 10/min ·
-  // 100/day. The CHARGE half is at the end of runParse(): a request is billed only once
-  // it has done paid work — see isFreeParseRequest() in src/lib/nlp/parse-rate-limit.ts.
-  if (!isDevBypass && userId) {
-    try {
-      const { perMinute, perDay } = readParseLimits();
-      const now = new Date();
-      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-      // Perform parallel count queries using Prisma
-      const [recentRequests, dailyRequests] = await Promise.all([
-        prisma.nlpRequestLog.count({
-          where: {
-            userId,
-            createdAt: { gte: oneMinuteAgo }
-          }
-        }),
-        prisma.nlpRequestLog.count({
-          where: {
-            userId,
-            createdAt: { gte: oneDayAgo }
-          }
-        })
-      ]);
-
-      if (recentRequests >= perMinute) {
-        return NextResponse.json({
-          error: 'Too many requests. Please wait a minute before making another food log attempt.'
-        }, { status: 429 });
+  // THE LIMITER'S PER-REQUEST STATE (review H2). The reservation itself runs further down,
+  // after the body is validated and bounded — a refused body never reserves and so never
+  // refunds. `settle()` is the ONE way a run gives back what it took: the reserved
+  // NlpRequestLog row (refunded when the run did no paid work or threw) and the in-flight
+  // slot. Idempotent, and it never throws, because it is called from every place a run can
+  // end — on the one-shot wire the callback, its `finally` and the outer `catch`; on the
+  // stream wire the producer's `then` / `catch`, which run AFTER this handler has returned.
+  // Never from a handler-level `finally`: on `?stream=1` that runs before the mapper starts.
+  let reservedId: string | null = null;
+  let inflightHeld = false;
+  let settled = false;
+  async function settle(refund: boolean): Promise<void> {
+    if (settled) return;
+    settled = true;
+    if (refund && reservedId) {
+      try {
+        await prisma.nlpRequestLog.delete({ where: { id: reservedId } });
+      } catch (dbErr) {
+        // Swallowed: the user has paid one slot for a request that should have been free.
+        console.error('NLP Parse Rate Limiter refund failed:', dbErr);
       }
-
-      if (dailyRequests >= perDay) {
-        return NextResponse.json({
-          error: `Daily NLP log limit reached (${perDay} logs). Please try again tomorrow!`
-        }, { status: 429 });
-      }
-    } catch (dbErr) {
-      console.error('NLP Parse Rate Limiter DB Error:', dbErr);
-      // Fail open in case of DB tracking error to avoid blocking active users
+    }
+    if (inflightHeld && userId) {
+      inflightHeld = false;
+      releaseInflight(userId);
     }
   }
 
@@ -175,6 +165,75 @@ export async function POST(req: NextRequest) {
     const tooLarge = checkParseBounds(body);
     if (tooLarge) {
       return NextResponse.json({ error: tooLarge.error }, { status: tooLarge.status });
+    }
+
+    // RATE LIMIT — RESERVE (review H2; skipped for the dev key and the email allowlist, so
+    // the bounds above are the only cap those callers get). In order:
+    //  1. the in-flight cap, before any DB call: a third concurrent run is refused here;
+    //  2. one transaction that locks this user, counts both windows, and writes this
+    //     request's row only when both are under the limit — so N parallel requests can no
+    //     longer all read the same count and all do paid work;
+    //  3. DB errors: an isolated one fails open, a run of them fails closed (503); a
+    //     transaction timeout (P2028) means the user's own reservations are queued behind
+    //     the lock, i.e. they are at the cap — a 429, not an error.
+    // Limits come from the env on every request (edit + restart, no rebuild) and fail closed
+    // to 10/min · 100/day. The refund is `settle()`, where each run ends.
+    if (!isDevBypass && userId) {
+      if (!acquireInflight(userId)) {
+        return NextResponse.json({
+          error: 'You already have food logs being processed. Please wait for them to finish.'
+        }, { status: 429 });
+      }
+      inflightHeld = true;
+
+      const { perMinute, perDay } = readParseLimits();
+      const reserveUserId = userId;
+      try {
+        const reservation = await prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${reserveUserId}::text))`;
+          const now = Date.now();
+          const [recentRequests, dailyRequests] = await Promise.all([
+            tx.nlpRequestLog.count({
+              where: { userId: reserveUserId, createdAt: { gte: new Date(now - 60 * 1000) } },
+            }),
+            tx.nlpRequestLog.count({
+              where: { userId: reserveUserId, createdAt: { gte: new Date(now - 24 * 60 * 60 * 1000) } },
+            }),
+          ]);
+          if (recentRequests >= perMinute) return { over: 'minute' as const };
+          if (dailyRequests >= perDay) return { over: 'day' as const };
+          const row = await tx.nlpRequestLog.create({ data: { userId: reserveUserId } });
+          return { reservedId: row.id };
+        }, { maxWait: RESERVATION_TX_MAX_WAIT_MS, timeout: RESERVATION_TX_TIMEOUT_MS });
+        recordReservationSuccess();
+
+        if ('over' in reservation) {
+          await settle(false);
+          return NextResponse.json({
+            error: reservation.over === 'minute'
+              ? 'Too many requests. Please wait a minute before making another food log attempt.'
+              : `Daily NLP log limit reached (${perDay} logs). Please try again tomorrow!`
+          }, { status: 429 });
+        }
+        reservedId = reservation.reservedId;
+      } catch (dbErr) {
+        if (isReservationTimeout(dbErr)) {
+          await settle(false);
+          return NextResponse.json({
+            error: 'Too many requests. Please wait a minute before making another food log attempt.'
+          }, { status: 429 });
+        }
+        const failures = recordReservationFailure();
+        console.error('NLP Parse Rate Limiter DB Error:', dbErr);
+        if (reservationFailsClosed(failures)) {
+          await settle(false);
+          return NextResponse.json({
+            error: 'Food logging is temporarily unavailable. Please try again in a moment.'
+          }, { status: 503 });
+        }
+        // Fail open: an isolated tracking error must not block an active user. Nothing was
+        // reserved, so this request is not charged either.
+      }
     }
 
     const { segmentTextWithAi } = await import('@/lib/nlp/ai-segmenter');
@@ -259,13 +318,15 @@ export async function POST(req: NextRequest) {
     // handler's own 500 branch, and the policy must be off by the time it is. That needs
     // the `return await` below — a bare `return promise` inside a try block hands the
     // rejection straight past the catch, and did until 2026-08-21 (pinned by
-    // route.rate-limit.test.ts: a mapper throw is a 500 and is never charged).
+    // route.rate-limit.test.ts: a mapper throw is a 500 and its reservation is refunded).
     // `emit` is the stream sink (null on the one-shot path). It receives `segments` once
     // the split is known and one `item` per line as it resolves; `done`/`error` are the
     // caller's, because only the caller knows whether the run completed.
     async function runParse(emit: ParseStreamSink | null): Promise<{
       parsedItems: unknown[];
       receipt: ReturnType<typeof currentWriteReceipt>;
+      /** true = no paid work (isFreeParseRequest): the reservation is refunded. */
+      free: boolean;
     }> {
       let items: Array<{ rawText: string; mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks'; brand?: string; normalizedForm?: string }> = [];
 
@@ -688,21 +749,12 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Rate limiting — the CHARGE half (the COUNT half is in the preamble). A bearer
-      // caller is billed one NlpRequestLog row per request that did PAID work: unless every
-      // line was served from FoodMapping or the zero-calorie fast path AND the split needed
-      // no AI segmentation call. A cache hit costs nothing and is not charged, so re-logging
-      // yesterday's breakfast does not spend today's allowance. Charged HERE, after the
-      // mapper, so a 400/500 is never billed. Fail open: a failed write must not fail a
-      // request that already succeeded.
-      if (!isDevBypass && userId &&
-          !isFreeParseRequest({ funnelStages: parsedItems.map(p => p.funnelStage), segCacheHit })) {
-        try {
-          await prisma.nlpRequestLog.create({ data: { userId } });
-        } catch (dbErr) {
-          console.error('NLP Parse Rate Limiter DB Error:', dbErr);
-        }
-      }
+      // Rate limiting — did this request do PAID work? The reservation was written before
+      // the mapper ran; `settle()` refunds it at the wire's end when every line was served
+      // from FoodMapping or the zero-calorie fast path AND the split needed no AI
+      // segmentation call. So a cache hit costs nothing net, and re-logging yesterday's
+      // breakfast does not spend today's allowance.
+      const free = isFreeParseRequest({ funnelStages: parsedItems.map(p => p.funnelStage), segCacheHit });
 
       // The receipt is read ONCE, here, after Promise.all: every per-item scope shares
       // this request's counters and refusal list by reference, so this single read sees
@@ -716,18 +768,26 @@ export async function POST(req: NextRequest) {
       // globalThis instance in write-policy.ts exists to prevent. Zero consultations next
       // to an AI serving tier on the same response is a structural RED.
       const receipt = noSave ? currentWriteReceipt() : null;
-      return { parsedItems, receipt };
+      return { parsedItems, receipt, free };
     }
 
     const policy: WritePolicyOptions = { suppress: noSave ? ['aiServing', 'segmentationCache'] : [] };
 
     if (!wantStream) {
-      return await runWithWritePolicy(policy, async () => {
-        const { parsedItems, receipt } = await runParse(null);
-        const response = NextResponse.json(parsedItems);
-        if (receipt) response.headers.set('X-Write-Receipt', JSON.stringify(receipt));
-        return response;
-      });
+      // ONE-SHOT WIRE: the run ends inside this callback, so this is where it settles —
+      // refund when free, keep the reservation when paid. A throw settles as a refund in
+      // the `finally` (and again, idempotently, in the outer `catch`).
+      try {
+        return await runWithWritePolicy(policy, async () => {
+          const { parsedItems, receipt, free } = await runParse(null);
+          await settle(free);
+          const response = NextResponse.json(parsedItems);
+          if (receipt) response.headers.set('X-Write-Receipt', JSON.stringify(receipt));
+          return response;
+        });
+      } finally {
+        await settle(true);
+      }
     }
 
     // ============================================================
@@ -751,11 +811,17 @@ export async function POST(req: NextRequest) {
           const send: ParseStreamSink = (frame) => {
             try { controller.enqueue(encoder.encode(encodeSseFrame(frame))); } catch { /* client gone */ }
           };
+          // STREAM WIRE: this handler returned long ago, so the run settles HERE — refund
+          // when free (after `done` has left) or when it threw — and only then closes.
           runParse(send)
-            .then(({ parsedItems, receipt }) => send({ type: 'done', count: parsedItems.length, receipt }))
-            .catch((error: unknown) => {
+            .then(async ({ parsedItems, receipt, free }) => {
+              send({ type: 'done', count: parsedItems.length, receipt });
+              await settle(free);
+            })
+            .catch(async (error: unknown) => {
               console.error('NLP Parse stream error:', error);
               send({ type: 'error', message: 'Internal server error' });
+              await settle(true);
             })
             .finally(() => { try { controller.close(); } catch { /* already closed */ } });
         },
@@ -764,6 +830,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('NLP Parse error:', error);
+    // Anything that threw after the reservation and before a wire took the run over
+    // (and the one-shot run itself, already settled by its `finally`): refund, release.
+    await settle(true);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

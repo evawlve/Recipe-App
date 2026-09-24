@@ -156,7 +156,7 @@ describe('/api/nlp/parse input bounds', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    if (typeof _resetInflightForTests === 'function') _resetInflightForTests();
+    _resetInflightForTests();
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
