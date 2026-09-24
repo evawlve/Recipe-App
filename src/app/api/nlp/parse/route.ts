@@ -91,16 +91,17 @@ export async function POST(req: NextRequest) {
   const userId = auth.userId;
   const userEmail = auth.email;
 
-  // Check if user email qualifies for the dev/test bypass. Exact matches and the review
-  // domain ONLY — the 'test'/'dev' substring checks were removed 2026-08-20: any real
-  // user whose address contained either substring skipped rate limiting. Deliberately
-  // INLINE in this route, not in the helper: doc-check claim
+  // Check if user email qualifies for the dev/test bypass. The review domain ONLY — the
+  // 'test'/'dev' substring checks were removed 2026-08-20: any real user whose address
+  // contained either substring skipped rate limiting. The one exact-address entry, an
+  // unreceivable RFC 2606 example.com address, was removed 2026-09-24 (review H3): anyone
+  // could register it while Supabase's "Confirm email" is OFF, and Diego's own bypass is
+  // the dev key. `userEmail` is null unless GoTrue confirmed the address (request-auth.ts)
+  // — which, with that setting OFF, it does at signup, so this suffix rule is only as
+  // strong as the console setting. Deliberately INLINE in this route, not in the helper: doc-check claim
   // `dev-bypass-email-substring-removed` greps THIS file for substring checks and would
   // pass vacuously if the allowlist lived anywhere else.
-  if (userEmail && (
-    userEmail.endsWith('@google.com') ||
-    userEmail === 'diego@example.com'
-  )) {
+  if (userEmail && userEmail.endsWith('@google.com')) {
     isDevBypass = true;
   }
 

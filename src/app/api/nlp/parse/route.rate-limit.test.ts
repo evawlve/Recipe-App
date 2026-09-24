@@ -91,7 +91,7 @@ const DETAILS = {
 };
 
 const MINUTE_MSG = 'Too many requests. Please wait a minute before making another food log attempt.';
-const USER = { id: 'user-1', email: 'someone@example.org' };
+const USER = { id: 'user-1', email: 'someone@example.org', email_confirmed_at: '2026-01-01T00:00:00Z' };
 
 function jwtRequest(body: object, query = '', token = 'real-user-token'): NextRequest {
   return new NextRequest(`http://localhost:3000/api/nlp/parse${query}`, {
@@ -349,12 +349,37 @@ describe('/api/nlp/parse rate limit', () => {
   // ------------------------------------------------------------------
   // Exemptions and the 401 legs.
   // ------------------------------------------------------------------
-  test('an allowlisted email (diego@example.com) is neither counted nor charged', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'diego-id', email: 'diego@example.com' } }, error: null });
+  test('diego@example.com is NO LONGER allowlisted (H3): counted and reserved like anyone', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'diego-id', email: 'diego@example.com', email_confirmed_at: '2026-01-01T00:00:00Z' } },
+      error: null,
+    });
+    const res = await POST(jwtRequest({ items: ['some cereal'] }));
+    expect(res.status).toBe(200);
+    expect(prisma.nlpRequestLog.count).toHaveBeenCalledTimes(2);
+    expect(prisma.nlpRequestLog.create).toHaveBeenCalledWith({ data: { userId: 'diego-id' } });
+  });
+
+  test('a CONFIRMED @google.com bearer (the review path) is neither counted nor reserved', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'g-1', email: 'reviewer@google.com', email_confirmed_at: '2026-01-01T00:00:00Z' } },
+      error: null,
+    });
     const res = await POST(jwtRequest({ items: ['some cereal'] }));
     expect(res.status).toBe(200);
     expect(prisma.nlpRequestLog.count).not.toHaveBeenCalled();
     expect(prisma.nlpRequestLog.create).not.toHaveBeenCalled();
+  });
+
+  test('an UNCONFIRMED x@google.com bearer (email_confirmed_at null) is counted and reserved', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'g-2', email: 'x@google.com', email_confirmed_at: null } },
+      error: null,
+    });
+    const res = await POST(jwtRequest({ items: ['some cereal'] }));
+    expect(res.status).toBe(200);
+    expect(prisma.nlpRequestLog.count).toHaveBeenCalledTimes(2);
+    expect(prisma.nlpRequestLog.create).toHaveBeenCalledWith({ data: { userId: 'g-2' } });
   });
 
   test('the dev key is neither counted nor charged', async () => {

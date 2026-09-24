@@ -80,8 +80,10 @@ const DETAILS = {
   servingOptions: [{ label: '1 serving (26 g)', grams: 26, isDefault: true }],
 };
 
-const TESTER = { id: 'tester-1', email: 'sitting@kindahealthy.com' };
-const STRANGER = { id: 'user-2', email: 'someone@example.org' };
+// Both CONFIRMED: request-auth.ts returns a bearer's email only when GoTrue stamped
+// `email_confirmed_at` (H3), and NOSAVE_TESTER_EMAILS keys on that email.
+const TESTER = { id: 'tester-1', email: 'sitting@kindahealthy.com', email_confirmed_at: '2026-01-01T00:00:00Z' };
+const STRANGER = { id: 'user-2', email: 'someone@example.org', email_confirmed_at: '2026-01-01T00:00:00Z' };
 
 function jwtRequest(body: object, query = ''): NextRequest {
   return new NextRequest(`http://localhost:3000/api/nlp/parse${query}`, {
