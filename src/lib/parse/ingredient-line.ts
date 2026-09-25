@@ -292,6 +292,47 @@ function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
   return next.kind === 'mass' || next.kind === 'volume' || next.kind === 'count';
 }
 
+// A leading mass/volume word that OPENS A FOOD NAME rather than measuring one:
+// `pound cake`, `cup noodles`. The line has no quantity and no article, so the
+// word sits at mergedTokens[0], and until this guard every one of the three
+// consumption sites below took it as the unit: `pound cake slice` parsed to
+// qty 1, unit lb, name `cake` and billed a pound (453.6 g) of whatever `cake`
+// resolved to; `cup noodles` came back as a cup of `noodles`.
+//
+// Four conditions, all required:
+//   - the leading word is a MASS or VOLUME unit word. Count words are left alone
+//     on purpose: `squirt`, `scoop`, `slice` lead real portions ("squirt soda"
+//     is a control, not a target), and the anatomy count words already have
+//     their own brand-led guard (leadingIsBrandedAnatomy).
+//   - NO ARTICLE preceded it. leadingArticlePrecedesUnit() shifts `a`/`an` off
+//     mergedTokens before this is read, so the caller passes what that strip
+//     decided: "an ounce of cheese" and "a cup and a half of teriyaki chicken"
+//     are measures, and after the shift they look article-less.
+//   - a follower EXISTS and is not the partitive `of` ("cup of egg whites",
+//     "pinch of salt" are measures, and consumePartitiveOf owns that reading).
+//   - the follower is a WORD and not a connector. `cup and a half of rice` is
+//     read by the same-unit continuation branch as 1.5 cups, and `cup, packed,
+//     brown sugar` / `cup (8 oz) milk` by the comma and parenthesis paths — none
+//     of those opens a food name, and each parses correctly today.
+//
+// KNOWN COST, accepted and pinned (leading-measure-is-name.test.ts): a digitless,
+// article-less measure line with no `of` now keeps the word in the name —
+// `pound ground beef`, `ounce cheese`. 0 of the 6,980-line organic census reads
+// that way (Lane A S58); the census's five digitless article-less mass/volume-led
+// lines are `pound cake`, `pound cake slice`, `cup noodles` (fixed) and
+// `cup of egg whites`, `pinch of salt` (unchanged, the `of` exemption).
+// Owner: mobile plans/v1/alpha-punch-list.md row #307.
+const LEADING_MEASURE_CONNECTORS = new Set(['and', '&', '+', 'plus']);
+function leadingMeasureWordIsName(mergedTokens: string[], hadLeadingArticle: boolean): boolean {
+  if (hadLeadingArticle) return false;
+  if (mergedTokens.length < 2) return false;           // bare "pound" keeps the unit-as-name reading
+  const lead = normalizeUnitToken(mergedTokens[0]);
+  if (lead.kind !== 'mass' && lead.kind !== 'volume') return false;
+  const next = mergedTokens[1].toLowerCase();
+  if (next === 'of' || LEADING_MEASURE_CONNECTORS.has(next)) return false;
+  return /^\p{L}/u.test(next);                         // not `(`, `,`, a digit or a symbol
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
@@ -514,7 +555,10 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).
   // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
   // remove the token rather than advance `i`, so those reads see the unit.
-  if (leadingArticlePrecedesUnit(mergedTokens)) {
+  // Captured before the shift: leadingMeasureWordIsName() must know an article
+  // stood here, and after the shift the line no longer shows it.
+  const hadLeadingArticle = leadingArticlePrecedesUnit(mergedTokens);
+  if (hadLeadingArticle) {
     mergedTokens.shift();
   }
 
@@ -601,8 +645,17 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     PRODUCE_ANATOMY_UNITS.has(mergedTokens[0].toLowerCase()) &&
     mergedTokens[1].toLowerCase() !== 'of';
 
+  // #307. A leading mass/volume word that opens a food name (`pound cake`,
+  // `cup noodles`) — see leadingMeasureWordIsName above. Same decide-once /
+  // honour-at-all-three-sites contract as leadingIsBrandedAnatomy: startsWithUnit
+  // here, the `mass || volume` branch (whose own guard `!startsWithUnit || i > 0`
+  // lets a declined startsWithUnit straight through), and the after-parentheses
+  // `!unit` site. Guarding only the first two leaves `pound cake slice` -> `cake`.
+  const leadingMeasureIsName = leadingMeasureWordIsName(mergedTokens, hadLeadingArticle);
+
   let startsWithUnit = false;
-  if (mergedTokens.length > 0 && !wholeIsIdentity && !eggIsAdjectival && !leadingIsBrandedAnatomy) {
+  if (mergedTokens.length > 0 && !wholeIsIdentity && !eggIsAdjectival && !leadingIsBrandedAnatomy
+      && !leadingMeasureIsName) {
     const firstToken = mergedTokens[0];
     const firstNormalized = normalizeUnitToken(firstToken);
     if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count') {
@@ -725,8 +778,9 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       // both leave the partitive at `i`.
       i = consumePartitiveOf(mergedTokens, i);
     } else if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume') {
-      // Only process if we didn't already handle it as a starting unit
-      if (!startsWithUnit || i > 0) {
+      // Only process if we didn't already handle it as a starting unit, and not
+      // when the leading word is the food's own first word (#307, second site).
+      if ((!startsWithUnit || i > 0) && !(i === 0 && leadingMeasureIsName)) {
         unit = firstNormalized.unit;
         rawUnit = firstToken;
         // Only consume the unit token if it's not the last token (to preserve compound names)
@@ -881,7 +935,8 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
       if (!POSSIBLE_UNIT_HINTS.includes(lowerToken)
           && !(lowerToken === 'whole' && wholeIsIdentity)
           && !((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)
-          && !(i === 0 && leadingIsBrandedAnatomy)) {
+          && !(i === 0 && leadingIsBrandedAnatomy)
+          && !(i === 0 && leadingMeasureIsName)) {   // #307, third site
         unit = afterParenNormalized.unit;
         rawUnit = afterParenToken;
         i++; // Consume the unit
