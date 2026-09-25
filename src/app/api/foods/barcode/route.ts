@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { toClientSource } from '@/lib/attribution';
 import { authenticateRequest } from '@/lib/auth/request-auth';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 import {
@@ -10,6 +11,9 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
+
+/** Digits only, 6-14 (UPC-E through GTIN-14). Not exported: a route module may only export its handlers and config. */
+const BARCODE_CODE_PATTERN = /^\d{6,14}$/;
 
 export async function GET(req: NextRequest) {
   // Skip execution during build time
@@ -69,6 +73,14 @@ export async function GET(req: NextRequest) {
 
       if (!code || !code.trim()) {
         return NextResponse.json({ error: 'code query parameter is required' }, { status: 400 });
+      }
+      // A barcode is 6-14 digits (review M2's input bound, 2026-09-24) — refused BEFORE any
+      // upstream call, so a random string no longer costs a FatSecret and an OFF lookup.
+      // Wider than what the app sends: the scanner reads only ean13/ean8/upc_a/upc_e
+      // (`barcodeTypes` in mobile src/app/scan.tsx) and `isPlausibleBarcode()` in mobile
+      // src/lib/barcode-hit.ts already floors the code at /^\d{8,14}$/.
+      if (!BARCODE_CODE_PATTERN.test(code.trim())) {
+        return NextResponse.json({ error: 'code must be 6 to 14 digits' }, { status: 400 });
       }
 
       const trimmedCode = code.trim();
@@ -202,7 +214,55 @@ export async function GET(req: NextRequest) {
         id: foodId,
         name: details.name,
         brand: details.brandName,
-        source: details.source,
+        // THE CHOKEPOINT. Until this line the route emitted `details.source` raw — it
+        // imported neither `toClientSource()` nor a whitelist of its own, making it the
+        // fourth `source` emitter and the only one with no guard (the other three:
+        // `foods/search` and `foods/[id]` via `toClientSource()`, `nlp/parse` via its own
+        // `STANDARD_SOURCES`). Attribution is a legal boundary in BOTH directions, so an
+        // unguarded emitter is a defect whether or not it is currently emitting a wrong
+        // value.
+        //
+        // It was safe only by the PRODUCER's discipline, and that discipline is not
+        // compiler-enforced. `resolveFoodDetails()` builds `source` as a plain
+        // `let source = 'ai_estimated'` — inferred `string` — and launders it at the
+        // return with `source as 'fatsecret' | 'fdc' | 'openfoodfacts' | 'ai_estimated'`.
+        // MEASURED 2026-09-21, not reasoned: adding an assignment of an unlisted value
+        // (`source = 'fatsecret-cache-PROBE'`) to that function typechecks CLEAN — 0 errors
+        // under this repo's own tsconfig, against a 0-error control on the same tree. So a
+        // new branch there reaches the licensed badge unfiltered and no gate sees it.
+        // (That function already carries FIVE assignment statements over the initializer
+        // for FOUR distinct values — `fatsecret` is assigned twice, the second time by
+        // backend #443's deferred-hit recovery — so the probe was the sixth statement, not
+        // the fifth. The count of statements is not the claim; the count of VALUES is.)
+        //
+        // ONE RESIDUAL, recorded so it is not re-litigated as a defect. The floor is
+        // right for THIS field, but the value travels on into a field with a DIFFERENT
+        // constraint: mobile `toDbSource()` maps it into `food_log_items.source`, which is
+        // NULLABLE with a four-value CHECK. There `null` is the honest floor, and playbook
+        // §14 says so explicitly — so for a future fifth provider value this route would
+        // turn a silent "no claim" into a positive AI-origin claim one layer downstream.
+        // Blast radius today is ZERO (byte-neutral, measured), and widening
+        // `BarcodeLookupResponse.source` to nullable is a cross-repo wire change, not this
+        // row's. Named here rather than discovered later.
+        //
+        // WHY THE `?? 'ai_estimated'` FLOOR, and not a bare `toClientSource()` returning
+        // `null`. `BarcodeLookupResponse.source` is typed NON-NULLABLE in the wire contract
+        // (`plans/v1/api-contract.md`, "API Response Types": the four-value union, with the
+        // note "it is never null"), so `null` here is a contract violation, not a quieter
+        // claim. The playbook settles the general rule — "pick the floor that makes no
+        // claim WITHIN the constraint the field actually has" (§14) — and `ai_estimated` is
+        // the only non-badging member of that union, which is exactly the floor
+        // `/api/nlp/parse` already uses for the same field shape.
+        //
+        // BYTE-NEUTRAL TODAY on every branch: the four values `resolveFoodDetails()` can
+        // return are all `ALIASES` identities, so each round-trips to itself. What changes
+        // is only what a FUTURE fifth value does — it floors instead of shipping. And
+        // `toClientSource()` is strictly stronger than copying `STANDARD_SOURCES` here: it
+        // also folds the legitimate alias spellings (`usda` → `fdc`, `off` →
+        // `openfoodfacts`, `ai_generated` → `ai_estimated`), which an `includes()` test
+        // would floor to `ai_estimated` and so silently DROP a true FDC or OFF credit; and
+        // its null-prototype lookup rejects `constructor` / `__proto__`.
+        source: toClientSource(details.source) ?? 'ai_estimated',
         nutritionPer100g: details.nutritionPer100g,
         servingOptions: details.servingOptions,
         // TRUE when resolveFoodDetails recovered this record's nutrition from a

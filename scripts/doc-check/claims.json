@@ -15,15 +15,16 @@
     },
     {
       "id": "attribution-importers-two",
-      "claim": "Exactly two API routes import the attribution chokepoint (foods/search and foods/[id]); parse deliberately does not",
+      "claim": "Exactly three API routes import the attribution chokepoint (foods/search, foods/[id] and foods/barcode); parse deliberately does not",
       "ownerDoc": "mobile:CLAUDE.md#attribution",
       "where": "backend",
-      "command": "grep -rl 'lib/attribution' src/app/api | wc -l",
+      "command": "grep -rl 'lib/attribution' src/app/api --include=route.ts | wc -l",
       "expect": {
         "kind": "count",
-        "value": "2"
+        "value": "3"
       },
-      "verified": "2026-07-30"
+      "note": "Counts IMPORTERS, not emitters — read it as 'three routes import it', never as 'three routes emit a source'. foods/barcode joined 2026-09-21: it was the fourth emitter and the only unguarded one. The id still says 'two' because renaming a claim id loses its history; the claim text is what to read. `--include=route.ts` was added the same day and is load-bearing: without it any TEST file importing the module moves the count, which would make a green claim depend on test-file layout rather than on route code. Merge order, measured 2026-09-21 on the box rather than reasoned, because two lenses disagreed about it: the `backend` cwd is the Mac's Syncthing'd working tree, and this entry and the route change travel in the SAME commit, so the nightly is self-consistent in both states — pre-pull it reads expect 2 / measured 2, post-pull expect 3 / measured 3, green either way. It verifies the pre-merge shape without having seen the change, which is a blind spot, not a red. The ONLY mixed state is the ~80 s Syncthing delivery window, and the deploy recipe's hash-compare-to-0-mismatches already closes that.",
+      "verified": "2026-09-21"
     },
     {
       "id": "parse-owns-whitelist",
@@ -99,7 +100,7 @@
     },
     {
       "id": "dev-bypass-email-substring-removed",
-      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the exact allowlist (endsWith @google.com, diego@example.com; the shared google_test_user@kindahealthy.com account LEFT it in #369, H3, 2026-08-23 — it is a normal rate-limited user whose nosave=1 rides NOSAVE_TESTER_EMAILS instead). This claim pins the substring checks ABSENT.",
+      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the `endsWith @google.com` rule — and since backend #453 (deployed 2026-09-25, build rdKf5s88XTYnoLfWGkpcF) only on a CONFIRMED email: `authenticateRequest()` returns the bearer's `email` only when `email_confirmed_at` is set, and #453 dropped the `diego@example.com` entry. The shared google_test_user@kindahealthy.com account LEFT the allowlist in #369, H3, 2026-08-23 — it is a normal rate-limited user whose nosave=1 rides NOSAVE_TESTER_EMAILS instead. This claim pins the substring checks ABSENT.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
       "command": "grep -rlE \"includes\\('(test|dev)'\\)\" src/app/api/nlp/parse --include=route.ts | wc -l",
@@ -107,11 +108,11 @@
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-23"
+      "verified": "2026-09-25"
     },
     {
       "id": "nosave-tester-allowlist-wired",
-      "claim": "nosave=1 on /api/nlp/parse is honoured for isDevBypass callers OR a bearer account listed in NOSAVE_TESTER_EMAILS (exact, case-insensitive, fail-closed when unset) — and for nothing else: the tester gets the request-scoped write policy only, never the rate-limit bypass, noCache or the debug echo. Shipped 2026-08-23 (plan 11 §4, after H3 #369 made the shared sitting account a normal user). If this reads 0 the allowlist is unwired and every device sitting under EXPO_PUBLIC_SUPPRESS_MAPPING_WRITES=1 warms the production cache.",
+      "claim": "nosave=1 on /api/nlp/parse is honoured for isDevBypass callers OR a bearer account listed in NOSAVE_TESTER_EMAILS (exact, case-insensitive, fail-closed when unset) — and for nothing else: the tester gets the request-scoped write policy only, never the rate-limit bypass, noCache or the debug echo. Shipped 2026-08-23 (plan 11 §4, after H3 #369 made the shared sitting account a normal user). Since backend #453 (deployed 2026-09-25, build rdKf5s88XTYnoLfWGkpcF) the bearer's email is honoured only when `email_confirmed_at` is set, so a NEW tester account that has not confirmed its address gets `email: null` and its nosave=1 is silently ignored — its sitting WRITES rows. The shared sitting account is confirmed (stamp 2026-06-26, read from a GoTrue password grant 2026-09-24; its bearer nosave=1 parse returned an X-Write-Receipt on the new build 2026-09-25). If this reads 0 the allowlist is unwired and every device sitting under EXPO_PUBLIC_SUPPRESS_MAPPING_WRITES=1 warms the production cache.",
       "ownerDoc": "mobile:plans/v1/api-contract.md",
       "where": "backend",
       "command": "grep -c 'isNoSaveTester(userEmail)' src/app/api/nlp/parse/route.ts",
@@ -119,7 +120,7 @@
         "kind": "count",
         "value": "1"
       },
-      "verified": "2026-08-23"
+      "verified": "2026-09-25"
     },
     {
       "id": "coverage-read-grades-by-mapper-key",
@@ -1549,7 +1550,7 @@
     },
     {
       "id": "dev-api-key-no-fallback-sites",
-      "claim": "Zero production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`: the fallback literals (dev-key-123 on admin/food-stats + ok, adminAPI_dev_key_bypass on the other five) were removed 2026-08-20, so an UNSET or EMPTY DEV_API_KEY fails CLOSED — the request is refused rather than authorized by a committed string. The 5-vs-7 split this entry used to carry is retired with the fallbacks; the 5 'key-only routes with zero bearer references' count in CLAUDE.md is a separate fact and still correct. If this claim FAILS a fallback literal came back and the #23 rotation surface must be re-sized before anything is rotated.",
+      "claim": "Zero production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`: the fallback literals (dev-key-123 on admin/food-stats + ok, adminAPI_dev_key_bypass on the other five) were removed 2026-08-20, so an UNSET or EMPTY DEV_API_KEY fails CLOSED — the request is refused rather than authorized by a committed string. The 5-vs-7 split this entry used to carry is retired with the fallbacks. The CLAUDE.md #23 bullet's key-reader count is a separate fact: since backend #453 (2026-09-25) `admin/food-stats` checks the key through `matchesDevApiKey()` (constant-time, no cookie path), so the key readers are `grep -rlE \"process.env.DEV_API_KEY|matchesDevApiKey\" src/app/api --include=route.ts | wc -l` → 3 — `admin/food-stats` and `foods/[id]/serving` key-only, `foods/map` key-or-cookie. If this claim FAILS a fallback literal came back and the #23 rotation surface must be re-sized before anything is rotated (the box key was rotated 2026-09-24).",
       "ownerDoc": "mobile:CLAUDE.md#state-digest",
       "where": "backend",
       "command": "grep -rl 'process.env.DEV_API_KEY ||' src/app/api --include=route.ts | wc -l",
@@ -1557,7 +1558,7 @@
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-20"
+      "verified": "2026-09-25"
     },
     {
       "id": "off-delta-timer-armed-on-box",
@@ -1780,7 +1781,7 @@
     },
     {
       "id": "parse-cache-hit-not-charged",
-      "claim": "/api/nlp/parse charges a bearer caller's rate-limit allowance only for requests that did paid work: the NlpRequestLog row is written at the end of runParse() behind isFreeParseRequest() (every line cache_hit/fast_path AND no AI segmentation call), never in the preamble. A user re-logging yesterday's breakfast spends nothing (#371).",
+      "claim": "/api/nlp/parse charges a bearer caller's rate-limit allowance only for requests that did paid work. Since backend #453 (deployed 2026-09-25, build rdKf5s88XTYnoLfWGkpcF) the NlpRequestLog row is RESERVED before the mapper, under a per-user `pg_advisory_xact_lock`, and REFUNDED (deleted) when runParse() ends with isFreeParseRequest() true (every line cache_hit/fast_path AND no AI segmentation call), or when the mapper throws; before #453 it was written at the end of runParse(). A user re-logging yesterday's breakfast spends nothing, net (#371, #453). Measured on the new build 2026-09-25: five parallel bearer parses → 2 ran and kept their rows, 3 answered 429 (in-flight) with no row.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
       "command": "grep -c 'isFreeParseRequest' src/app/api/nlp/parse/route.ts",
@@ -1788,7 +1789,7 @@
         "kind": "min",
         "value": "1"
       },
-      "verified": "2026-08-21"
+      "verified": "2026-09-25"
     },
     {
       "id": "parse-limits-documented",
@@ -2010,6 +2011,70 @@
       "command": "find /home/owner/backups -maxdepth 1 -name 'mealspire-*.dump' -mtime -2 | wc -l",
       "expect": {
         "kind": "min",
+        "value": "1"
+      },
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "api-source-emitting-routes-nine",
+      "claim": "Exactly nine API routes emit a `source:` field. A tenth must be classified as provenance-or-not before it ships.",
+      "ownerDoc": "mobile:CLAUDE.md#attribution",
+      "where": "backend",
+      "command": "grep -rln '^ *source:' src/app/api --include=route.ts | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "9"
+      },
+      "note": "A TRIPWIRE, not a correctness claim — registered 2026-09-21 because nothing in this registry could see the class that punch #241 fixed: `attribution-importers-two` counts IMPORTERS, so a route emitting `source` with no guard is invisible to it, which is exactly how foods/barcode stayed unguarded. The nine, classified by reading each emission (not by the grep, which only claims text): FOUR are client-facing provenance and all guarded — foods/search, foods/[id], foods/barcode via toClientSource(), nlp/parse via its own STANDARD_SOURCES. THREE write a DB enum that is not a provider claim at all — recipes ('USER'), recipes/[id]/tags/accept ('AUTO_CONFIDENT'), foods/quick-create ('community'). TWO are raw passthroughs of the unconstrained legacy Food.source column to ADMIN/DEBUG responses — admin/food-stats and debug/foods — which are not the badge path and not a licensing hazard today, but are unguarded emissions and should be looked at if either ever gains a consumer. If this reads 10, classify the new one before assuming it is safe.",
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "rev5-seat-flag-ships-false",
+      "claim": "The Magic Log Rev-5 seat flag ships OFF — REV5_SEAT_ENABLED is declared false in src/lib/magic-flow-timing.ts",
+      "ownerDoc": "mobile:sync-docs/magic_log_ux_animation_spec.md",
+      "where": "mobile",
+      "command": "grep -c 'REV5_SEAT_ENABLED = false' src/lib/magic-flow-timing.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "note": "Rev-5 is HELD behind Diego's own design pass, so the flag shipping false is the held state itself, not a detail. Greps the literal declaration, so flipping the default to true reds this claim rather than the flag's mere existence.",
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "parse-attempt-settlers-three",
+      "claim": "Exactly four non-test modules settle a parse attempt by calling endParseAttempt",
+      "ownerDoc": "mobile:src/stores/parse-attempt-store.ts",
+      "where": "mobile",
+      "command": "grep -rln 'endParseAttempt' src | grep -v __tests__ | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "4"
+      },
+      "note": "A settler count, not a call count. Four since mobile 2871f83 (Lane E's logging.tsx seat, PR #37): the store, magic-recap-live.tsx, magic-reading-breath.tsx and logging.tsx; the store's own header still names three (stale prose, a mobile product file). DEPENDENCY: `where: mobile` reads the SHARED mobile checkout's working tree, not origin/main — on the box its Syncthing mirror, on the Mac the checkout itself (mobileRoot() in run-doc-check.ts, unless DOC_CHECK_MOBILE_ROOT is set). That tree sat at 38194d7 (reads 3) when this was re-dated, so this claim reads FALSE on the box nightly and on a Mac run until someone runs `git pull --ff-only` in /Users/diego/dev/KindaHealthyMobile (Lane B S54's FIRST CHECK), then true. Measured 2026-09-23: origin/main 4, shared checkout 3. Reasoned, not measured: a module learning to end an attempt without the id guard is the shape that would strand the timing state, and jest would likely not see it because each settler is individually correct.",
+      "verified": "2026-09-23"
+    },
+    {
+      "id": "sparkle-pop-has-one-reader",
+      "claim": "SPARKLE_POP_MS has exactly one non-test reader outside its own owning module",
+      "ownerDoc": "mobile:sync-docs/reports/2026-09-21_lane-e-s45-the-pop-lands-and-the-log-remembers.md",
+      "where": "mobile",
+      "command": "grep -rln SPARKLE_POP_MS src | grep -v __tests__ | grep -v magic-flow-timing.ts | wc -l",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "note": "The NARROW _MS form is load-bearing. The broad `SPARKLE_POP` spelling reads 2 on the same tree (measured 2026-09-21), so a claim written against it would have been wrong the day it was registered — it also matches sibling identifiers sharing the prefix.",
+      "verified": "2026-09-21"
+    },
+    {
+      "id": "recent-magic-logs-flag-ships-false",
+      "claim": "The recent-magic-logs feature flag ships OFF — RECENT_MAGIC_LOGS_ENABLED is declared false in src/stores/recent-magic-logs-store.ts",
+      "ownerDoc": "mobile:sync-docs/magic_log_ux_animation_spec.md",
+      "where": "mobile",
+      "command": "grep -c 'RECENT_MAGIC_LOGS_ENABLED = false' src/stores/recent-magic-logs-store.ts",
+      "expect": {
+        "kind": "count",
         "value": "1"
       },
       "verified": "2026-09-21"

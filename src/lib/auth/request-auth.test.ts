@@ -33,7 +33,7 @@ function req(headers: Record<string, string> = {}, url = 'http://localhost:3000/
   return new NextRequest(url, { method: 'GET', headers });
 }
 
-const USER = { id: 'user-123', email: 'someone@example.org' };
+const USER = { id: 'user-123', email: 'someone@example.org', email_confirmed_at: '2026-01-01T00:00:00Z' };
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -182,6 +182,31 @@ describe('bearer path', () => {
     const out = await authenticateRequest(req({ Authorization: 'Bearer tok' }), { accept: ['key'] });
     expect(out).toEqual({ via: null, reason: 'missing_credentials' });
     expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  // H3 (2026-09-24): an address GoTrue has not confirmed is not an identity claim. With
+  // "Confirm email" OFF, GoTrue stamps the field at signup, so this bites only once the
+  // setting is ON — defence in depth. The user id is returned either way.
+  test('email_confirmed_at set → the email is returned', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'g1', email: 'x@google.com', email_confirmed_at: '2026-09-24T10:00:00Z' } }, error: null,
+    });
+    const out = await authenticateRequest(req({ authorization: 'Bearer tok' }), { accept: ['bearer'] });
+    expect(out).toEqual({ via: 'bearer', userId: 'g1', email: 'x@google.com' });
+  });
+
+  test('email_confirmed_at null → email null (the user is still authenticated)', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'g2', email: 'x@google.com', email_confirmed_at: null } }, error: null,
+    });
+    const out = await authenticateRequest(req({ authorization: 'Bearer tok' }), { accept: ['bearer'] });
+    expect(out).toEqual({ via: 'bearer', userId: 'g2', email: null });
+  });
+
+  test('email_confirmed_at absent → email null', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'g3', email: 'x@google.com' } }, error: null });
+    const out = await authenticateRequest(req({ authorization: 'Bearer tok' }), { accept: ['bearer'] });
+    expect(out).toEqual({ via: 'bearer', userId: 'g3', email: null });
   });
 
   test('an empty email on the Supabase user is null on the wire', async () => {

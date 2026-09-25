@@ -163,12 +163,13 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     fdc_volume_ai: 'NONDETERMINISTIC',
     ai_generated_serving: 'NONDETERMINISTIC',
 
-    // ============= BORROWED_OR_DEFAULTED — shipped set, 17 members ==============
+    // ============= BORROWED_OR_DEFAULTED — shipped set, 18 members ==============
     // Same deal: mirrors BORROWED_OR_DEFAULTED_SERVING_TIERS, pinned both ways.
     // That file's own comments own WHY each is a member; not restated here.
     bare_sibling_serving: 'BORROWED_OR_DEFAULTED',
     package_count_sibling: 'BORROWED_OR_DEFAULTED',
     package_quantity_sibling: 'BORROWED_OR_DEFAULTED',
+    serving_unit_sibling_label: 'BORROWED_OR_DEFAULTED',
     bare_name_sibling_serving: 'BORROWED_OR_DEFAULTED',
     bare_name_sibling_serving_tight: 'BORROWED_OR_DEFAULTED',
     bare_name_sibling_serving_plural: 'BORROWED_OR_DEFAULTED',
@@ -520,8 +521,8 @@ describe('the census — every live tier is explicitly accounted for', () => {
         // (punch #66). The scan found the new string on its own and this
         // assertion is what forced it to be classified — which is the whole
         // reason the census exists.
-        expect(LIVE_TIERS).toHaveLength(54);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(54);
+        expect(LIVE_TIERS).toHaveLength(55);
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(55);
     });
 });
 

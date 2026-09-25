@@ -102,7 +102,7 @@ describe('/api/foods/barcode nosave=1', () => {
     offUpsert.mockResolvedValue({});
     offServingUpsert.mockResolvedValue({});
     getOffProductByBarcode.mockResolvedValue(liveProduct);
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: TESTER } }, error: null });
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: TESTER, email_confirmed_at: '2026-01-01T00:00:00Z' } }, error: null });
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
   });
 
@@ -147,7 +147,7 @@ describe('/api/foods/barcode nosave=1', () => {
   });
 
   test('a signed-in user who is NOT a listed tester cannot suppress — fail closed', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2', email: 'friend@example.com' } }, error: null });
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2', email: 'friend@example.com', email_confirmed_at: '2026-01-01T00:00:00Z' } }, error: null });
 
     const res = await call(`code=${BARCODE}&nosave=1`, { authorization: 'Bearer friend-jwt' });
 

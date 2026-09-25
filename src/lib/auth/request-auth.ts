@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { getSupabaseAuthClient } from '@/lib/supabase/admin';
+import { safeEqualSecret } from './safe-equal';
 
 /**
  * ONE way for an API route to answer "who is calling?".
@@ -12,7 +13,13 @@ import { getSupabaseAuthClient } from '@/lib/supabase/admin';
  *           `DEV_API_KEY` authorizes nothing — there is deliberately no fallback
  *           literal here or anywhere (doc-check claim `dev-api-key-no-fallback-sites`).
  *   bearer  `Authorization: Bearer <supabase jwt>`, validated by one GoTrue round
- *           trip (`auth.getUser(jwt)`). The mobile client's path.
+ *           trip (`auth.getUser(jwt)`). The mobile client's path. `email` is returned
+ *           ONLY when GoTrue stamped `email_confirmed_at` — an unconfirmed address is not
+ *           an identity claim, and two allowlists key on it (the parse route's dev bypass,
+ *           NOSAVE_TESTER_EMAILS). DEFENCE IN DEPTH, not a fix (review H3, 2026-09-24):
+ *           with Supabase's "Confirm email" OFF — the alpha setting — GoTrue autoconfirms,
+ *           stamping `email_confirmed_at` at signup, so this changes nothing until that
+ *           setting is turned ON. The user id is unaffected either way.
  *   cookie  the web app's Supabase session cookie, read through `getCurrentUser()`.
  *           Loaded DYNAMICALLY, because `@/lib/auth` pulls in `next/headers` and
  *           Prisma — a route that never accepts cookies must not pay for them.
@@ -58,13 +65,14 @@ export function readDevApiKey(req: NextRequest): string | null {
 }
 
 /**
- * True only when BOTH sides are non-empty and equal. `!!expected` is the fail-closed
- * half: with `DEV_API_KEY` unset or '' nothing matches, the retired literals included.
+ * True only when BOTH sides are non-empty and equal, compared in constant time by
+ * `safeEqualSecret()`, whose empty-side refusal is the fail-closed half: with
+ * `DEV_API_KEY` unset or '' nothing matches, the retired literals included.
  */
 export function matchesDevApiKey(req: NextRequest): boolean {
   const expected = process.env.DEV_API_KEY;
   const presented = readDevApiKey(req);
-  return !!expected && !!presented && presented === expected;
+  return safeEqualSecret(presented, expected);
 }
 
 /**
@@ -98,7 +106,8 @@ export async function authenticateRequest(
       const { data, error } = await client.auth.getUser(token);
       const user = data?.user;
       if (error || !user) return { via: null, reason: 'invalid_bearer' };
-      return { via: 'bearer', userId: user.id, email: user.email || null };
+      const email = user.email && user.email_confirmed_at ? user.email : null;
+      return { via: 'bearer', userId: user.id, email };
     } catch (err) {
       console.warn('[request-auth] bearer validation threw:', err);
       return { via: null, reason: 'auth_unavailable' };

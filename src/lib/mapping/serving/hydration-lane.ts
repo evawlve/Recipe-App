@@ -2412,17 +2412,24 @@ async function borrowSiblingPackageGrams(
  * label data. Band-restricted to single-serving scale and excludes exact-100g
  * rows (the per-100g placeholder would otherwise dominate many brands).
  * Requires >=3 in-band siblings so a bogus pair can't set the median.
+ *
+ * `p25`/`p75` ride the same scan (added for #270's `serving_unit_sibling_label`,
+ * which refuses a brand whose label servings are NOT near-constant — Knorr's
+ * bouillon cubes and prepared soups read p25 10 g / p75 240 g, measured
+ * 2026-09-23). The bare caller ignores them; its answer is unchanged.
  */
 async function borrowSiblingLabelServing(
     brandName: string | null | undefined,
     selfBarcode: string,
-): Promise<{ grams: number; samples: number } | null> {
+): Promise<{ grams: number; samples: number; p25?: number; p75?: number } | null> {
     const brand = brandName?.trim();
     if (!brand || brand.length < 2) return null;
     try {
         const { prisma } = await import('../../db');
-        const rows = await prisma.$queryRaw<Array<{ med: number | null; n: number }>>`
+        const rows = await prisma.$queryRaw<Array<{ med: number | null; n: number; p25?: number | null; p75?: number | null }>>`
             SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY "servingGrams") AS med,
+                   percentile_cont(0.25) WITHIN GROUP (ORDER BY "servingGrams") AS p25,
+                   percentile_cont(0.75) WITHIN GROUP (ORDER BY "servingGrams") AS p75,
                    count(*)::int AS n
             FROM "OffFood"
             WHERE "brandName" ILIKE ${brand}
@@ -2431,7 +2438,7 @@ async function borrowSiblingLabelServing(
               AND "servingGrams" <> 100`;
         const row = rows[0];
         if (!row?.med || row.n < 3) return null;
-        return { grams: row.med, samples: row.n };
+        return { grams: row.med, samples: row.n, p25: row.p25 ?? undefined, p75: row.p75 ?? undefined };
     } catch {
         return null;
     }
@@ -2842,8 +2849,50 @@ export async function buildOffResult(
         const tok = (hydrated.foodName || '').trim().split(/\s+/)[0] ?? '';
         return tok.length >= 4 ? tok : null;
     })();
+    // "one serving of <snack>" on a SKU with NO label serving (#270, Lane A
+    // S56, 2026-09-23). The user named a SERVING, and the package rungs below
+    // answer a serving with the PACKAGE: `One serving of flaming hot Cheetos`
+    // billed its own 113.4 g bag (607 kcal), `one serving of Doritos nachos` the
+    // brand's median 142.5 g package (680 kcal), while the same session's
+    // `One serving of Takis` — whose record HAS a label serving — billed 30 g.
+    // The best deterministic answer for a missing label serving is the one the
+    // bare path already gives a bare branded line without one
+    // (`bare_sibling_serving`): the same-brand median LABEL serving
+    // (borrowSiblingLabelServing() — this is not DNB-9's re-key; it adds only
+    // p25/p75 to the same scan). Its own tier string, because MappingEventLog.servingTier
+    // is the only post-deploy instrument and a borrow must stay separable from
+    // the rungs it displaces. Two refusals, both measured 2026-09-23 by the
+    // design lens, and either one leaves everything below byte-for-byte
+    // unchanged:
+    //  - the record's OWN brandName only, never brandForBorrow's first-token
+    //    fallback: `1 serving sweet kale salad` (brandless) would otherwise
+    //    borrow the candy brand "Sweet" (median 30 g) — 47,338 brandless OFF
+    //    rows without a label serving have such a first token;
+    //  - a near-constant line only (p75/p25 <= SERVING_SIBLING_MAX_SPREAD):
+    //    Knorr reads p25 10 g / p75 240 g (cubes vs soups), so its median is
+    //    noise; Cheetos 28/30 and Doritos 28/42.5 pass.
+    // What it displaces on a serving-word line (a SKU with a label serving never
+    // reaches it — label_serving_package_unit answers first — and the bare-query
+    // guard never runs on a line with a unit): package_quantity_own|sibling, then
+    // the count branch, then flat_100g_default. All-time MappingEventLog on such
+    // lines with a real brand: 3 events, of which the rung takes 2 (Cheetos,
+    // Doritos) and refuses Knorr's `1.5 servings of Noodles with chicken`.
+    const SERVING_WORD_UNITS = new Set(['serving', 'servings', 'portion', 'portions']);
+    const SERVING_SIBLING_MAX_SPREAD = 2;
+    const servingWordBorrow = (
+        unit && SERVING_WORD_UNITS.has(unit)
+        && !(hydrated.servingGrams && hydrated.servingGrams > 0)
+        && hydrated.brandName
+    ) ? await borrowSiblingLabelServing(hydrated.brandName, candidate.id.replace(/^off_/, ''))
+        : null;
+    const servingWordSibling = (
+        servingWordBorrow
+        && servingWordBorrow.p25 != null && servingWordBorrow.p75 != null && servingWordBorrow.p25 > 0
+        && servingWordBorrow.p75 / servingWordBorrow.p25 <= SERVING_SIBLING_MAX_SPREAD
+    ) ? servingWordBorrow : null;
     let packageFallbackGrams: number | null = null;
-    if (unit && PACKAGE_LIKE_UNITS.has(unit) && !(hydrated.servingGrams && hydrated.servingGrams > 0)) {
+    if (unit && PACKAGE_LIKE_UNITS.has(unit) && !(hydrated.servingGrams && hydrated.servingGrams > 0)
+        && servingWordSibling == null) {
         packageFallbackGrams = packageGrams
             ?? await borrowSiblingPackageGrams(brandForBorrow);
     }
@@ -2900,6 +2949,21 @@ export async function buildOffResult(
         grams = qty * hydrated.servingGrams;
         servingDescription = `${qty} ${unit} (${hydrated.servingGrams}g each)`;
         servingTier = 'label_serving_package_unit';
+    } else if (unit && servingWordSibling != null) {
+        // #270 — see servingWordSibling above: a serving-word unit on a SKU with
+        // no label serving bills the brand's median label serving, not a package.
+        grams = qty * servingWordSibling.grams;
+        servingDescription = `${qty} ${unit} (~${servingWordSibling.grams.toFixed(0)}g each, brand median)`;
+        servingTier = 'serving_unit_sibling_label';
+        logger.info('off.build_result.serving_unit_sibling_label', {
+            foodId: candidate.id,
+            unit,
+            brand: hydrated.brandName,
+            grams: servingWordSibling.grams,
+            samples: servingWordSibling.samples,
+            p25: servingWordSibling.p25,
+            p75: servingWordSibling.p75,
+        });
     } else if (unit && PACKAGE_LIKE_UNITS.has(unit) && packageFallbackGrams != null) {
         // Package-like unit with NO label serving ("1 bottle gatorade" on a
         // SKU without servingGrams): the SKU's own net quantity — or the
