@@ -15,6 +15,9 @@ export async function GET() {
     await prisma.$queryRaw`select 1`;
     return Response.json({ ok: true });
   } catch (e: any) {
-    return Response.json({ ok: false, error: e?.message ?? 'db' }, { status: 500 });
+    // Anonymous route: a Prisma connection error names the DB host and port, so the
+    // detail goes to the server log only (2026-09-24 security review).
+    console.error('[health] db ping failed:', e?.message ?? e);
+    return Response.json({ ok: false, error: 'db' }, { status: 500 });
   }
 }
