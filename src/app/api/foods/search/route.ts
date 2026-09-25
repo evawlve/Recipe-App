@@ -390,6 +390,7 @@ export async function GET(req: NextRequest) {
       const { isSyntheticGramsTier, portionProvenanceForTier } = await import('@/lib/mapping/serving-ai-tiers');
 
       const { dedupeCandidates } = await import('@/lib/search/dedupe-candidates');
+      const { displayServingLabel } = await import('@/lib/units/serving-display-label');
       const beforeDedupe = sortedCandidates.length;
       sortedCandidates = dedupeCandidates(sortedCandidates);
       if (sortedCandidates.length < beforeDedupe) {
@@ -459,8 +460,12 @@ export async function GET(req: NextRequest) {
 
         if (servingOptions.length === 0) {
           if (raw.servingSize) {
+            // The DISPLAY label only: `raw` itself is untouched, and the mapper reads
+            // `rawData.servingSize` directly. An OFF string whose unit position is a
+            // second bare number (`4 4.0 (112 g)`) ships as `1 serving (112 g)` —
+            // punch #298; displayServingLabel() owns the shape and the population.
             servingOptions.push({
-              label: raw.servingSize,
+              label: displayServingLabel(raw.servingSize),
               grams: raw.servingGrams ?? 100
             });
           } else {
