@@ -335,9 +335,13 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         // the ten-that-became-a-nine this whole instrument exists to prevent.
         //
         // 2026-09-15 (Lane A S51), confirmed on YMSRQ2JmMksDeDnBfWkti after the #438
-        // deploy: n-prot-02 LEFT for `departed` as UNATTRIBUTED (pinned below) and
-        // n-mq-42 JOINED `members`. The censuses behind both live in the roster
-        // file's own entries.
+        // deploy: n-prot-02 LEFT for `departed` as UNATTRIBUTED and n-mq-42 JOINED
+        // `members`. The censuses behind both live in the roster file's own entries.
+        //
+        // 2026-09-21 (Lane A S54): n-prot-02 RETURNED and is now ALSO a rotator, with
+        // its `departed` entry attributed to the Typesense container restarts (pinned
+        // below). It stays OUT of this list either way — the return is a documented
+        // re-roll, not a membership change, and membership is what this list pins.
         const REAL_MEMBERS = [
             'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-mq-42', 'n-prod-01',
             'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55',
@@ -432,27 +436,48 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         expect(v.ok).toBe(true);
     });
 
-    // n-prot-02 LEFT `members` FOR `departed` 2026-09-15, UNATTRIBUTED, and this pin is why.
+    // n-prot-02 IS NOW IN BOTH `rotators` AND `departed`, added 2026-09-21, and this pin is why.
     //
-    // `100g tofu` passed 3/3 on off_5034467000056 on YMSRQ2JmMksDeDnBfWkti after 125 cold
-    // failures on off_3070451041461 (2026-08-12 to 2026-09-12, 44 named builds, none carrying
-    // a pass). No PR claims the change. The census is re-roll-shaped but not a proven tie:
-    // its winner changes fell between consecutive cold runs that moved 25 to 157 nlp winners
-    // at once, against a median of 1 per pair.
+    // THE SIGNAL THIS PIN USED TO CARRY HAS FIRED AND IS SPENT. It left `members` for
+    // `departed` on 2026-09-15 as UNATTRIBUTED, and this test asserted the opposite of what
+    // it asserts now — that a return must print NEW MEMBER rather than be quietly absorbed as
+    // a rotator. That was the louder choice on purpose, it was S51's, and it worked: the case
+    // returned on all three post-deploy cold runs of 2026-09-21 and read NEW MEMBER ×3, which
+    // is what bought the triage below. Re-arming it would now mean printing NEW MEMBER every
+    // time a mechanism we have measured re-rolls.
     //
-    // `departed`, not `rotators`, because it is the louder choice: if the case parks on
-    // off_3070451041461 again the detector must print NEW MEMBER, not "rotator failing".
-    it('records n-prot-02 in departed and in neither members nor rotators, so a new failure reads NEW MEMBER', () => {
+    // THE MEASUREMENT, 2026-09-21 (Lane A S54). `100g tofu` is an EXACT two-way rerank tie at
+    // 1.1186666666666667 (rerankReason exact_match) and what moves the winner is POOL
+    // MEMBERSHIP, not score: on the failing side off_3070451041461 and off_5034467000056 are
+    // both in the 10-slot window; on the passing side off_3070451041461 is ABSENT and
+    // off_9313727000026 holds its slot at the same score. The two never co-occur. Both sides
+    // are predicted by the LAST line of the scored.sort() comparator in simpleRerank(),
+    // `a.candidate.id.localeCompare(b.candidate.id)` — not by T2, which cannot order three
+    // brandless OFF rows (brandTieRank() returns 0 for each, and computeOffTwinRoles() assigns
+    // no role because the GS1 prefixes differ).
+    //
+    // THE DEPLOY AXIS IS EXONERATED, which is what makes this a rotator rather than a
+    // regression: a two-arm local replay built f3e30a6 and fcff50d and ran each three times
+    // with a fresh process. All EIGHT runs failed identically, byte-for-byte across arms. And
+    // f3e30a6 IS the commit the box served as jVUxf38-p9jltRLfVpA_j when this case PASSED 3/3
+    // on 2026-09-16 — so the same source that passed then fails now, and the code is a
+    // constant across the transition. The only other event in the gap is the
+    // mealspire-typesense container restart at 2026-09-18T17:49:30Z.
+    //
+    // BOTH ENTRIES ARE DELIBERATE: `departed` is the record of the exit and now carries its
+    // attribution; `rotators` is the live classification after the return. The checker reads
+    // `rotators` ids and ignores `departed`.
+    it('records n-prot-02 in BOTH rotators and departed, so a return reads as a documented rotator', () => {
         const real = loadRoster();
         expect(real).not.toBeNull();
         const memberIds = real!.members.map(m => m.id);
         const rotatorIds = (real!.rotators ?? []).map(r => r.id);
         const departedIds = ((real as unknown as { departed?: Array<{ id: string }> }).departed ?? []).map(d => d.id);
         expect(memberIds).not.toContain('n-prot-02');
-        expect(rotatorIds).not.toContain('n-prot-02');
+        expect(rotatorIds).toContain('n-prot-02');
         expect(departedIds).toContain('n-prot-02');
 
-        // passing is the expected state: nothing left the set, nothing is new
+        // passing is still a clean state: nothing left the set, nothing is new
         const passing = judgeColdFailureSet(
             coldEvidence({}, [...memberIds.map(failCase), passCase('n-prot-02'), passCase('n-gen-01')]),
             real!,
@@ -460,15 +485,23 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         expect(passing.error).toBeUndefined();
         expect(passing.ok).toBe(true);
 
-        // parked on the failing record again: LOUD, never excused as a rotator
+        // parked on the failing record again: a DOCUMENTED rotator, not a new member
         const failing = judgeColdFailureSet(
             coldEvidence({}, [...memberIds.map(failCase), failCase('n-prot-02'), passCase('n-gen-01')]),
             real!,
         );
         expect(failing.error).toBeUndefined();
-        expect(failing.newMembers.map(n => n.id)).toEqual(['n-prot-02']);
-        expect(failing.rotatorsPresent).not.toContain('n-prot-02');
-        expect(failing.ok).toBe(false);
+        expect(failing.newMembers.map(n => n.id)).not.toContain('n-prot-02');
+        expect(failing.rotatorsPresent).toContain('n-prot-02');
+        expect(failing.ok).toBe(true);
+
+        // The attribution is the whole reason this moved out of `departed`-only: the entry
+        // must no longer read UNATTRIBUTED, or the roster claims less than it knows.
+        const departed = ((real as unknown as { departed?: Array<{ id: string; fixedBy?: string }> }).departed ?? [])
+            .find(entry => entry.id === 'n-prot-02');
+        expect(departed?.fixedBy).toBeDefined();
+        expect(departed!.fixedBy).not.toMatch(/^UNATTRIBUTED/);
+        expect(departed!.fixedBy).toMatch(/TYPESENSE CONTAINER RESTARTS/);
     });
 
     // n-svg-03 IS A ROTATOR, added 2026-09-15, and this pin is why.
