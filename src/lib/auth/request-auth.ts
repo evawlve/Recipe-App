@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { getSupabaseAuthClient } from '@/lib/supabase/admin';
+import { safeEqualSecret } from './safe-equal';
 
 /**
  * ONE way for an API route to answer "who is calling?".
@@ -58,13 +59,14 @@ export function readDevApiKey(req: NextRequest): string | null {
 }
 
 /**
- * True only when BOTH sides are non-empty and equal. `!!expected` is the fail-closed
- * half: with `DEV_API_KEY` unset or '' nothing matches, the retired literals included.
+ * True only when BOTH sides are non-empty and equal, compared in constant time by
+ * `safeEqualSecret()`, whose empty-side refusal is the fail-closed half: with
+ * `DEV_API_KEY` unset or '' nothing matches, the retired literals included.
  */
 export function matchesDevApiKey(req: NextRequest): boolean {
   const expected = process.env.DEV_API_KEY;
   const presented = readDevApiKey(req);
-  return !!expected && !!presented && presented === expected;
+  return safeEqualSecret(presented, expected);
 }
 
 /**
