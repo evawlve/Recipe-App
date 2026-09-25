@@ -2709,7 +2709,8 @@ export function filterCandidatesByTokens(
     const isSupplementQuery = SUPPLEMENT_QUERY_RE.test(modifierCheckSource);
 
     // Extract must-have tokens
-    let mustHaveTokens = deriveMustHaveTokens(normalizedName);
+    const derivation: { coreTokens?: string[] } = {};
+    let mustHaveTokens = deriveMustHaveTokens(normalizedName, derivation);
 
     // Is this a line whose final must-have slot keepAFoodToken() may have RE-AIMED onto a
     // head noun (K2)? The tolerant head-noun match in the loop below exists ONLY for that
@@ -3149,6 +3150,58 @@ export function filterCandidatesByTokens(
 
     let filtered = admit();
 
+    // #308 — FULL-COVERAGE PREFERENCE on a long generic line, strict pass only.
+    //
+    // A generic line's must-have tokens are its first two core tokens, so on a long dish name they
+    // are the modifiers and the dish is never required: `new york cheese pizza` -> ['new','york']
+    // admits every "New York …" record, and `New York Muenster Cheese` won the line (Lane A S58).
+    //
+    // The rule: on a NON-brand-detected line with >= 4 core tokens, if any admitted candidate
+    // carries EVERY core token, keep only those. If none does, the pool is exactly what it was.
+    //
+    // Why every core token, and not "append the head noun" (this PR's v1, RED on Lane A S59's two
+    // cold gates). v1 required the LAST core token, and three things broke it:
+    //   - the last token is often not the food: `greek yogurt vanilla extract nonfat`, `chicago dog
+    //     hot portillo style` (a token-SORTED replay form), `grilled chicken meal prep`, `una coca
+    //     cola de lata`. Full coverage never asks which token is the head, and is order-free, so a
+    //     sorted form reads the same as its natural spelling.
+    //   - on a brand-led line the detector misses (`jimmy johns turkey sub`, `mccanns steel cut
+    //     rolled oats`), a record carrying the head but NOT the brand words displaced the brand's own
+    //     record. Full coverage requires the brand words too, so such a record never qualifies.
+    //   - v1 changed deriveMustHaveTokens() itself, so a strict pool with no head-bearing record
+    //     EMPTIED, and the relaxed retry then required the head alone (`extract` -> Vanilla
+    //     Extract; three right answers -> no winner). Here the preference is a narrowing WITHIN the
+    //     shipped admitted set that yields to it when empty, and the relaxed pass is untouched, so
+    //     this can never turn a non-empty pool into an empty one.
+    //
+    // So: covered ⊆ filtered by construction (more tokens under the same every() predicate), a
+    // winner can change only on a line where some admitted record names the whole query and the
+    // shipped winner did not, and every other line is byte-identical. Why >= 4: at 3 the first two
+    // slots already cover two thirds of the name, and `grilled chicken breast` is pinned as a
+    // non-brand line that must not move (possessive-brand-token-filter.test.ts).
+    //
+    // The tolerant compound / near-spelling match stays scoped to `headNounReAimable`
+    // (brand-detected lines), which is exactly where this does not run.
+    const coverageTokens = derivation.coreTokens;
+    if (!relaxed && !headNounReAimable && coverageTokens !== undefined
+        && coverageTokens.length >= GENERIC_FULL_COVERAGE_MIN_CORE && filtered.length > 1) {
+        const shippedTokens = mustHaveTokens;
+        mustHaveTokens = coverageTokens;
+        const covered = admit();
+        mustHaveTokens = shippedTokens;
+        if (covered.length > 0 && covered.length < filtered.length) {
+            if (debug) {
+                logger.info('filter.candidates.full_coverage_preferred', {
+                    normalizedName,
+                    coverageTokens,
+                    before: filtered.length,
+                    after: covered.length,
+                });
+            }
+            filtered = covered;
+        }
+    }
+
     // The S3 second pass. ORDERED, never merged: it runs only on a pool the brand key emptied, so
     // it can turn zero candidates into some and can never displace one the brand key admitted.
     // Note it is slightly WIDER than the pre-K2 head relax it restores, because `headNounReAimable`
@@ -3251,7 +3304,15 @@ export function filterCandidatesByTokens(
 // Token Derivation
 // ============================================================
 
-export function deriveMustHaveTokens(normalizedName: string): string[] {
+/** Core-token count at which filterCandidatesByTokens() prefers full-coverage records (#308). */
+const GENERIC_FULL_COVERAGE_MIN_CORE = 4;
+
+/**
+ * `out.coreTokens` is set ONLY when the derivation reaches the positional core-token path (not the
+ * specialty, British-term or `&`/`and` early returns) — it is the full core list the first two
+ * slots were taken from. The returned tokens are unaffected by passing `out`.
+ */
+export function deriveMustHaveTokens(normalizedName: string, out?: { coreTokens?: string[] }): string[] {
     const tokens = normalizedName
         .toLowerCase()
         .split(/[^\w]+/)
@@ -3372,6 +3433,7 @@ export function deriveMustHaveTokens(normalizedName: string): string[] {
     // e.g. "low fat popcorn" → coreTokens=["popcorn"] ("low" is now a MODIFIER) → requires "popcorn"
     // e.g. "almond flour" → coreTokens=["almond","flour"] → requires both to be present
     if (coreTokens.length >= 1) {
+        if (out) out.coreTokens = coreTokens;
         return keepAFoodToken(coreTokens.slice(0, 2), coreTokens, normalizedName);
     }
 
@@ -3455,7 +3517,7 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
     if (selected.length === 0) return selected;
 
     const detection = detectBrandInQuery(normalizedName);
-    if (!detection.isBranded || !detection.matchedBrand) return keepGenericHeadNoun(selected, allCore);
+    if (!detection.isBranded || !detection.matchedBrand) return selected;
 
     const brandTokens = new Set(
         foldApostrophes(detection.matchedBrand.toLowerCase()).split(/[^\w]+/).filter(Boolean)
@@ -3506,47 +3568,4 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
     const brandSlot = selected.find(isBrandToken) ?? selected[0];
     if (brandSlot === head) return [head];
     return [brandSlot, head];
-}
-
-/**
- * #308 — K2's head-noun slot, extended to a NON-brand line, as narrowly as the code allows.
- *
- * A generic line's two slots are its first two core tokens, so on a long dish name they are
- * the MODIFIERS and the dish is never required:
- *
- *     new york cheese pizza -> ['new','york']
- *
- * which admits every "New York …" record, and a synthetic `simpleRerank` puts `New York
- * Muenster Cheese` at 0.482 over the pizzas' 0.400 (Lane A S58, mobile punch row #308).
- *
- * THE RULE: on a line with >= 4 core tokens whose head noun (the LAST core token, K2's
- * definition) is not already required, APPEND it: `['new','york','pizza']`.
- *
- * Why >= 4. `grilled chicken breast` (3 core tokens) is the same shape — its head `breast` is
- * not required — and is pinned at ['grilled','chicken'] in possessive-brand-token-filter.test.ts
- * as a non-brand query that "must not move at all". So the rule starts where the two positional
- * slots cover at most HALF of the name; 3-token lines are left as they were, unfixed.
- *
- * Why APPEND rather than re-aim the second slot (K2's `[slot0, head]`). Appending only ever
- * adds a requirement, so on the strict pass the admitted set is a SUBSET of the shipped one: a
- * winner can change only on a line whose shipped winner lacks the head noun, which is exactly
- * the class Lane A gates. Re-aiming would also DROP `york` and newly admit `new … pizza`
- * records the shipped filter deleted — collateral outside that class.
- *
- * The relaxed pass (strict pool empty) already requires "the very last non-modifier token (the
- * primary noun)" by its own comment, i.e. the last must-have token. On these lines that is now
- * the head noun rather than the second modifier — `pizza`, not `york` — which is what that pass
- * says it wants. Lines under 4 core tokens relax exactly as before.
- *
- * NOT extended: the tolerant compound / near-spelling head match in filterCandidatesByTokens()
- * stays scoped to `headNounReAimable` (brand-detected lines). Its ungated form admitted
- * `Chipsy tzatziki` for `5 tzatziki chips`; a generic head noun here is matched word-bounded,
- * with the plural and synonym rescues only.
- */
-const GENERIC_HEAD_NOUN_MIN_CORE = 4;
-function keepGenericHeadNoun(selected: string[], allCore: string[]): string[] {
-    if (allCore.length < GENERIC_HEAD_NOUN_MIN_CORE) return selected;
-    const head = allCore[allCore.length - 1];
-    if (selected.includes(head)) return selected;
-    return [...selected, head];
 }
