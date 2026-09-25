@@ -43,8 +43,20 @@
  * carries a `/`) and a quantity-plus-measure (`1 4 oz (112 g)`, `4 1 piece
  * (112 g)` — a unit word follows the second number). Those still say something
  * a reader can use and pass through unchanged.
+ *
+ * THE PARENTHETICAL MUST BE A PLAIN `g` OR `ml` WEIGHT (or absent). Anything
+ * else — `2 2 (2 slices, 56 g)`, `15 1 (15 fl oz)`, `0.25 1 (0.25 cup)` — passes
+ * through unchanged, because the mobile pick reads the label's LEADING number:
+ * `search-pick.ts` matches a typed unit word INTO the label and, when the label
+ * states the same amount the user typed, bills one serving (#254). Dropping the
+ * leading `2` from `2 2 (2 slices, 56 g)` would turn "2 slices" into 2 × 56 g.
+ * A `g`/`ml` parenthetical carries no count word a user types, so the rewrite
+ * cannot reach that rule. Measured 2026-09-24 over the 1,382 rows above: 1,311
+ * `g` + 54 `ml` parentheticals are rewritten; 8 `oz`, 1 `cup` and 6 whose
+ * parenthetical is not a single weight stay as they are.
  */
-const NUMERIC_UNIT_LABEL_RE = /^\s*\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s*(\(.*\))?\s*$/;
+const NUMERIC_UNIT_LABEL_RE =
+  /^\s*\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s*(\(\s*\d+(?:\.\d+)?\s*(?:g|ml)\s*\))?\s*$/i;
 
 export function displayServingLabel(label: string): string {
   const m = label.match(NUMERIC_UNIT_LABEL_RE);
