@@ -3455,7 +3455,7 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
     if (selected.length === 0) return selected;
 
     const detection = detectBrandInQuery(normalizedName);
-    if (!detection.isBranded || !detection.matchedBrand) return selected;
+    if (!detection.isBranded || !detection.matchedBrand) return keepGenericHeadNoun(selected, allCore);
 
     const brandTokens = new Set(
         foldApostrophes(detection.matchedBrand.toLowerCase()).split(/[^\w]+/).filter(Boolean)
@@ -3506,4 +3506,49 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
     const brandSlot = selected.find(isBrandToken) ?? selected[0];
     if (brandSlot === head) return [head];
     return [brandSlot, head];
+}
+
+/**
+ * #308 — K2's head-noun slot, extended to a NON-brand line, as narrowly as the code allows.
+ *
+ * A generic line's two slots are its first two core tokens, so on a long dish name they are
+ * the MODIFIERS and the dish is never required:
+ *
+ *     new york cheese pizza -> ['new','york']
+ *
+ * which admits every "New York …" record, and a synthetic `simpleRerank` puts `New York
+ * Muenster Cheese` at 0.482 over the pizzas' 0.400 (Lane A S58, mobile punch row #308).
+ *
+ * THE RULE: on a line with >= 4 core tokens whose head noun (the LAST core token, K2's
+ * definition) is not already required, APPEND it: `['new','york','pizza']`.
+ *
+ * Why >= 4. `grilled chicken breast` (3 core tokens) is the same shape — its head `breast` is
+ * not required — and is pinned at ['grilled','chicken'] in possessive-brand-token-filter.test.ts
+ * as a non-brand query that "must not move at all". 3-token names are also where the head is
+ * most often a word the record spells as a separate field or omits (`chicken caesar salad`
+ * records named "Caesar Salad with Chicken" keep the head; "Chicken Caesar" wraps do not), so
+ * the rule starts where the two positional slots cover at most HALF of the name.
+ *
+ * Why APPEND rather than re-aim the second slot (K2's `[slot0, head]`). Appending only ever
+ * adds a requirement, so on the strict pass the admitted set is a SUBSET of the shipped one: a
+ * winner can change only on a line whose shipped winner lacks the head noun, which is exactly
+ * the class Lane A gates. Re-aiming would also DROP `york` and newly admit `new … pizza`
+ * records the shipped filter deleted — collateral outside that class.
+ *
+ * The relaxed pass (strict pool empty) already requires "the very last non-modifier token (the
+ * primary noun)" by its own comment, i.e. the last must-have token. On these lines that is now
+ * the head noun rather than the second modifier — `pizza`, not `york` — which is what that pass
+ * says it wants. Lines under 4 core tokens relax exactly as before.
+ *
+ * NOT extended: the tolerant compound / near-spelling head match in filterCandidatesByTokens()
+ * stays scoped to `headNounReAimable` (brand-detected lines). Its ungated form admitted
+ * `Chipsy tzatziki` for `5 tzatziki chips`; a generic head noun here is matched word-bounded,
+ * with the plural and synonym rescues only.
+ */
+const GENERIC_HEAD_NOUN_MIN_CORE = 4;
+function keepGenericHeadNoun(selected: string[], allCore: string[]): string[] {
+    if (allCore.length < GENERIC_HEAD_NOUN_MIN_CORE) return selected;
+    const head = allCore[allCore.length - 1];
+    if (selected.includes(head)) return selected;
+    return [...selected, head];
 }

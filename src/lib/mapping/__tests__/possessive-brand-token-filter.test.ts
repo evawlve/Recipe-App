@@ -224,3 +224,68 @@ describe('the fold is additive — nothing that passes today may fail now', () =
         ).toHaveLength(1);
     });
 });
+
+describe('#308 — the head-noun slot on a NON-brand line (keepGenericHeadNoun)', () => {
+    // Production hands the mapper the POST-PARSE name: `new york cheese pizza slice` parses to
+    // name `new york cheese pizza` (hint `slice`), which is the string pinned here. The shipped
+    // slots were ['new','york'], which admit every "New York …" record — `New York Muenster
+    // Cheese` won the line (Lane A S58, mobile punch row #308).
+    it('requires the dish on a >= 4-core-token line by APPENDING the head noun', () => {
+        expect(deriveMustHaveTokens('new york cheese pizza')).toEqual(['new', 'york', 'pizza']);
+        expect(deriveMustHaveTokens('grilled chicken caesar salad')).toEqual(['grilled', 'chicken', 'salad']);
+    });
+
+    it('deletes the cheese records and keeps the pizzas', () => {
+        const pool = [
+            cand('New York Muenster Cheese'),
+            cand('New York Style Cheese Pizza'),
+            cand('Cheese Pizza, New York Style'),
+            cand('New York Cheddar Cheese'),
+            cand('Pizza, cheese, regular crust'),
+            cand('New York Cheesecake'),
+        ];
+        expect(names(filterCandidatesByTokens(pool, 'new york cheese pizza'))).toEqual([
+            'Cheese Pizza, New York Style',
+            'New York Style Cheese Pizza',
+        ]);
+    });
+
+    it('relaxes to the head noun, as the relaxed pass says it should', () => {
+        // Relaxed runs only on a pool the strict pass emptied, and requires the LAST must-have
+        // token — which was `york` and is now `pizza`.
+        const pool = [cand('New York Muenster Cheese'), cand('Pizza, cheese, regular crust')];
+        expect(names(filterCandidatesByTokens(pool, 'new york cheese pizza', { relaxed: true }))).toEqual([
+            'Pizza, cheese, regular crust',
+        ]);
+    });
+
+    it('BOUNDARY: a 3-core-token line does not move', () => {
+        // `grilled chicken breast` is pinned in 'the mechanism' above as a non-brand query that
+        // must not move; these are the same shape.
+        expect(deriveMustHaveTokens('chicken caesar salad')).toEqual(['chicken', 'caesar']);
+        expect(deriveMustHaveTokens('buffalo chicken pizza')).toEqual(['buffalo', 'chicken']);
+        // `strip` is in MODIFIER_TOKENS, so this has three core tokens, not four.
+        expect(deriveMustHaveTokens('new york strip steak')).toEqual(['new', 'york']);
+    });
+
+    it('BOUNDARY: one- and two-token lines do not move', () => {
+        expect(deriveMustHaveTokens('pizza')).toEqual(['pizza']);
+        expect(deriveMustHaveTokens('cheese pizza')).toEqual(['cheese', 'pizza']);
+        expect(deriveMustHaveTokens('tzatziki chips')).toEqual(['tzatziki', 'chips']);
+    });
+
+    it('does not touch a brand-detected line — K2 still owns those', () => {
+        expect(deriveMustHaveTokens('trader joes scandinavian swimmers')).toEqual(['trader', 'swimmers']);
+        expect(deriveMustHaveTokens('costco mini croissants')).toEqual(['costco', 'croissants']);
+        expect(deriveMustHaveTokens('kirkland signature')).toEqual(['kirkland', 'signature']);
+        expect(deriveMustHaveTokens('sams club members mark chicken')).toEqual(['sams', 'chicken']);
+    });
+
+    it('does not widen the tolerant head-noun match to generic lines', () => {
+        // `headNounReAimable` stays brand-only: a generic head noun is matched word-bounded
+        // (plus the plural/synonym rescues), so a compound that merely ENDS in it is not admitted.
+        expect(
+            filterCandidatesByTokens([cand('New York Minipizza')], 'new york cheese pizza').filtered,
+        ).toHaveLength(0);
+    });
+});
