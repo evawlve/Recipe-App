@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { runWithWritePolicy, currentWriteReceipt, type WritePolicyOptions } from '@/lib/write-policy';
 // The `?stream=1` frame contract (types, SSE encoder, headers). Pure — its only import
 // is a type — so static is free, like write-policy above.
-import { encodeSseFrame, PARSE_STREAM_HEADERS, type ParseStreamSink } from '@/lib/nlp/parse-stream';
+import { encodeSseFrame, PARSE_STREAM_HEADERS, type ParseStreamSegmenter, type ParseStreamSink } from '@/lib/nlp/parse-stream';
 // The other static import. It replaces the module-scope `createClient(url || '', key || '')`
 // this route used to build at import time — which threw in any process without the
 // Supabase env. The client is now built lazily, on the first bearer, in
@@ -250,6 +250,8 @@ export async function POST(req: NextRequest) {
       // SegmentationCache, false = AI segmentation ran, null = this request
       // never reached AI segmentation (item-form input / single-item fast path).
       let segCacheHit: boolean | null = null;
+      // Which split ran, for the stream's `segments` frame (`ParseStreamSegmenter`).
+      let segmenter: ParseStreamSegmenter = 'items';
 
       if (inputItems && Array.isArray(inputItems)) {
         items = inputItems.map(item => {
@@ -270,6 +272,7 @@ export async function POST(req: NextRequest) {
         // Short text with no separators is one food item — the LLM split would
         // return it unchanged after ~1-5s. Skip straight to mapping.
         items = [singleItemFromText(text)!];
+        segmenter = 'single';
       } else {
         // AI-first segmentation (prompt/model/schema live in
         // src/lib/nlp/ai-segmenter.ts, versioned by SEG_PARSER_VERSION): the
@@ -293,10 +296,12 @@ export async function POST(req: NextRequest) {
 
         if (cachedSegments) {
           segCacheHit = true;
+          segmenter = 'cache';
           items = cachedSegments;
           console.log(`[nlp-parse] segmentation cache HIT (${cachedSegments.length} items) — LLM skipped`);
         } else {
           segCacheHit = false;
+          segmenter = 'ai';
           const aiItems = await segmentTextWithAi(text);
           if (aiItems) {
             items = aiItems;
@@ -318,6 +323,7 @@ export async function POST(req: NextRequest) {
       // this many skeleton cards, titled with the user's own words.
       emit?.({
         type: 'segments',
+        segmenter,
         items: items.map((it, index) => ({ index, rawText: it.rawText, mealType: it.mealType })),
       });
 

@@ -10,8 +10,9 @@
  *
  * FRAMES, in order, as Server-Sent Events (`event: <type>` + `data: <json>`):
  *   segments  — ONCE, as soon as the split is known: one `{index, rawText, mealType}` per
- *               line. The client deals in `items.length` skeleton cards titled with the
- *               user's own words. Never emitted before segmentation finishes, because the
+ *               line, plus the frame-level `segmenter` naming WHICH split produced them
+ *               (`ParseStreamSegmenter` below). The client deals in `items.length` skeleton
+ *               cards titled with the user's own words. Never emitted before segmentation finishes, because the
  *               count is unknown until then; a client-side heuristic pre-split is REFUSED
  *               (the AI split disagrees with heuristics on `X with Y` toppings and chain
  *               names containing `and`, so pre-dealt cards would re-shuffle).
@@ -47,8 +48,22 @@ export type ParseStreamSegment = {
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
 };
 
+/**
+ * Which split produced the `segments` frame — set in the branch that ran, never inferred
+ * from `segCacheHit` (which is `null` on BOTH the item-form and the short-line path):
+ *   items  — the caller sent `items[]`; nothing was segmented.
+ *   single — `singleItemFromText()` answered alone (short line, no separator); no split ran.
+ *   cache  — a `SegmentationCache` hit served the split; no model call.
+ *   ai     — the AI segmenter was CALLED. Includes its heuristic fallback when the model
+ *            fails or times out, so it does NOT promise a model split, nor a long wait
+ *            (a provider chain that fails fast reads `ai` too). What it does promise is
+ *            the one fact a client's short-line predicate can be checked against: the
+ *            line was not `single`.
+ */
+export type ParseStreamSegmenter = 'items' | 'single' | 'cache' | 'ai';
+
 export type ParseStreamFrame =
-  | { type: 'segments'; items: ParseStreamSegment[] }
+  | { type: 'segments'; segmenter: ParseStreamSegmenter; items: ParseStreamSegment[] }
   | { type: 'item'; index: number; item: unknown }
   | { type: 'done'; count: number; receipt: WriteReceipt | null }
   | { type: 'error'; message: string };
