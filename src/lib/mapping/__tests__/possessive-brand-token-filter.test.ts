@@ -224,3 +224,86 @@ describe('the fold is additive — nothing that passes today may fail now', () =
         ).toHaveLength(1);
     });
 });
+
+describe('#308 — full-coverage preference on a long NON-brand line (filterCandidatesByTokens)', () => {
+    // Production hands the mapper the POST-PARSE name: `new york cheese pizza slice` parses to
+    // name `new york cheese pizza` (hint `slice`). Its must-have slots are ['new','york'], which
+    // admit every "New York …" record — `New York Muenster Cheese` won the line (Lane A S58).
+    // v2: deriveMustHaveTokens() is untouched; the strict pass prefers records carrying EVERY core
+    // token on a >= 4-core-token non-brand line, and yields to the shipped pool when none does.
+    const nyPool = () => [
+        cand('New York Muenster Cheese'),
+        cand('New York Style Cheese Pizza'),
+        cand('Cheese Pizza, New York Style'),
+        cand('New York Cheddar Cheese'),
+        cand('Pizza, cheese, regular crust'),
+        cand('New York Cheesecake'),
+    ];
+
+    it('leaves deriveMustHaveTokens() exactly as shipped', () => {
+        expect(deriveMustHaveTokens('new york cheese pizza')).toEqual(['new', 'york']);
+        expect(deriveMustHaveTokens('grilled chicken caesar salad')).toEqual(['grilled', 'chicken']);
+    });
+
+    it('keeps the pizzas and deletes the cheese records', () => {
+        expect(names(filterCandidatesByTokens(nyPool(), 'new york cheese pizza'))).toEqual([
+            'Cheese Pizza, New York Style',
+            'New York Style Cheese Pizza',
+        ]);
+    });
+
+    it('is order-free, so a token-sorted replay form reads like its natural spelling', () => {
+        expect(names(filterCandidatesByTokens(nyPool(), 'cheese new pizza york'))).toEqual([
+            'Cheese Pizza, New York Style',
+            'New York Style Cheese Pizza',
+        ]);
+    });
+
+    it('yields to the shipped pool when no record names the whole query — it never empties one', () => {
+        // v1 required the last token `extract`, emptied this pool, and the relaxed retry then
+        // won Vanilla Extract (Lane A S59 gate 2).
+        const pool = [cand('Greek Nonfat Vanilla Yogurt'), cand('Greek Yogurt Plain'), cand('Pure Vanilla Extract')];
+        expect(names(filterCandidatesByTokens(pool, 'greek yogurt vanilla extract nonfat'))).toEqual([
+            'Greek Nonfat Vanilla Yogurt',
+            'Greek Yogurt Plain',
+        ]);
+    });
+
+    it('does not let a head-bearing record that lacks the other words displace the rest', () => {
+        // The brand-led-but-undetected shape (`jimmy johns turkey sub` lost Jimmy John's under v1):
+        // `Italian Sub` carries the head but not `turkey`, so it is not a full-coverage record, no
+        // record is, and the pool is the shipped one.
+        const pool = [cand('Turkey Tom', "Jimmy John's"), cand('Italian Sub', "Jimmy John's")];
+        expect(names(filterCandidatesByTokens(pool, 'jimmy johns turkey sub'))).toEqual(['Italian Sub', 'Turkey Tom']);
+    });
+
+    it('leaves the relaxed pass exactly as shipped', () => {
+        // Relaxed keeps its shipped key — the last must-have token, `york` here.
+        expect(names(filterCandidatesByTokens(nyPool(), 'new york cheese pizza', { relaxed: true }))).toEqual([
+            'Cheese Pizza, New York Style',
+            'New York Cheddar Cheese',
+            'New York Cheesecake',
+            'New York Muenster Cheese',
+            'New York Style Cheese Pizza',
+        ]);
+    });
+
+    it('BOUNDARY: a 3-core-token line does not move', () => {
+        const pool = [cand('Grilled Chicken'), cand('Grilled Chicken Breast')];
+        expect(names(filterCandidatesByTokens(pool, 'grilled chicken breast'))).toEqual([
+            'Grilled Chicken',
+            'Grilled Chicken Breast',
+        ]);
+    });
+
+    it('does not touch a brand-detected line — K2 still owns those', () => {
+        expect(deriveMustHaveTokens('trader joes scandinavian swimmers')).toEqual(['trader', 'swimmers']);
+        expect(deriveMustHaveTokens('costco mini croissants')).toEqual(['costco', 'croissants']);
+        expect(deriveMustHaveTokens('kirkland signature')).toEqual(['kirkland', 'signature']);
+        expect(deriveMustHaveTokens('sams club members mark chicken')).toEqual(['sams', 'chicken']);
+        // The preference does not run on a brand-detected line: 4 core tokens, one record carries
+        // all of them, and the K2-admitted `Breadsticks` still survives.
+        const pool = [cand('Breadsticks', 'Pizza Hut'), cand('Cheese Sticks', 'Pizza Hut')];
+        expect(names(filterCandidatesByTokens(pool, 'pizza hut cheese sticks'))).toEqual(['Breadsticks', 'Cheese Sticks']);
+    });
+});
