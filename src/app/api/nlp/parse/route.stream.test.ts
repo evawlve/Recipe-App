@@ -27,18 +27,25 @@ jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({ auth: { getUser: (...a: unknown[]) => mockGetUser(...a) } })),
 }));
 
-jest.mock('@/lib/db', () => ({
-  prisma: {
-    nlpRequestLog: { count: jest.fn(), create: jest.fn() },
-    mappingEventLog: { createMany: jest.fn() },
-    segmentationCache: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      upsert: jest.fn(),
-      deleteMany: jest.fn(),
+// `$transaction` (the reservation's interactive form) hands the callback a `tx` that shares
+// `nlpRequestLog`'s mocks, so the count/create assertions below read the same functions.
+jest.mock('@/lib/db', () => {
+  const nlpRequestLog = { count: jest.fn(), create: jest.fn(), delete: jest.fn() };
+  return {
+    prisma: {
+      nlpRequestLog,
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ nlpRequestLog, $executeRaw: jest.fn(async () => 0) })),
+      mappingEventLog: { createMany: jest.fn() },
+      segmentationCache: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        upsert: jest.fn(),
+        deleteMany: jest.fn(),
+      },
     },
-  },
-}));
+  };
+});
 
 jest.mock('@/lib/ai/structured-client', () => ({
   callStructuredLlm: jest.fn(),

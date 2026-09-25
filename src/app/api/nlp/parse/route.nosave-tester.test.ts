@@ -22,18 +22,25 @@ jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(() => ({ auth: { getUser: (...a: unknown[]) => mockGetUser(...a) } })),
 }));
 
-jest.mock('@/lib/db', () => ({
-  prisma: {
-    nlpRequestLog: { count: jest.fn(), create: jest.fn() },
-    mappingEventLog: { createMany: jest.fn() },
-    segmentationCache: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      upsert: jest.fn(),
-      deleteMany: jest.fn(),
+// `$transaction` (the reservation's interactive form) hands the callback a `tx` that shares
+// `nlpRequestLog`'s mocks, so the count/create assertions below read the same functions.
+jest.mock('@/lib/db', () => {
+  const nlpRequestLog = { count: jest.fn(), create: jest.fn(), delete: jest.fn() };
+  return {
+    prisma: {
+      nlpRequestLog,
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ nlpRequestLog, $executeRaw: jest.fn(async () => 0) })),
+      mappingEventLog: { createMany: jest.fn() },
+      segmentationCache: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        upsert: jest.fn(),
+        deleteMany: jest.fn(),
+      },
     },
-  },
-}));
+  };
+});
 
 jest.mock('@/lib/ai/structured-client', () => ({
   callStructuredLlm: jest.fn(),
@@ -73,8 +80,10 @@ const DETAILS = {
   servingOptions: [{ label: '1 serving (26 g)', grams: 26, isDefault: true }],
 };
 
-const TESTER = { id: 'tester-1', email: 'sitting@kindahealthy.com' };
-const STRANGER = { id: 'user-2', email: 'someone@example.org' };
+// Both CONFIRMED: request-auth.ts returns a bearer's email only when GoTrue stamped
+// `email_confirmed_at` (H3), and NOSAVE_TESTER_EMAILS keys on that email.
+const TESTER = { id: 'tester-1', email: 'sitting@kindahealthy.com', email_confirmed_at: '2026-01-01T00:00:00Z' };
+const STRANGER = { id: 'user-2', email: 'someone@example.org', email_confirmed_at: '2026-01-01T00:00:00Z' };
 
 function jwtRequest(body: object, query = ''): NextRequest {
   return new NextRequest(`http://localhost:3000/api/nlp/parse${query}`, {

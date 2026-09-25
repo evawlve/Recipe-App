@@ -12,6 +12,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
+/** Digits only, 6-14 (UPC-E through GTIN-14). Not exported: a route module may only export its handlers and config. */
+const BARCODE_CODE_PATTERN = /^\d{6,14}$/;
+
 export async function GET(req: NextRequest) {
   // Skip execution during build time
   if (process.env.NEXT_PHASE === 'phase-production-build' ||
@@ -70,6 +73,14 @@ export async function GET(req: NextRequest) {
 
       if (!code || !code.trim()) {
         return NextResponse.json({ error: 'code query parameter is required' }, { status: 400 });
+      }
+      // A barcode is 6-14 digits (review M2's input bound, 2026-09-24) — refused BEFORE any
+      // upstream call, so a random string no longer costs a FatSecret and an OFF lookup.
+      // Wider than what the app sends: the scanner reads only ean13/ean8/upc_a/upc_e
+      // (`barcodeTypes` in mobile src/app/scan.tsx) and `isPlausibleBarcode()` in mobile
+      // src/lib/barcode-hit.ts already floors the code at /^\d{8,14}$/.
+      if (!BARCODE_CODE_PATTERN.test(code.trim())) {
+        return NextResponse.json({ error: 'code must be 6 to 14 digits' }, { status: 400 });
       }
 
       const trimmedCode = code.trim();
