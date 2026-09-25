@@ -100,7 +100,7 @@
     },
     {
       "id": "dev-bypass-email-substring-removed",
-      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the exact allowlist (endsWith @google.com, diego@example.com; the shared google_test_user@kindahealthy.com account LEFT it in #369, H3, 2026-08-23 — it is a normal rate-limited user whose nosave=1 rides NOSAVE_TESTER_EMAILS instead). This claim pins the substring checks ABSENT.",
+      "claim": "Item #23 second trap CLOSED 2026-08-20 (PR #362): the parse-route email bypass no longer substring-matches test/dev — isDevBypass keeps only the `endsWith @google.com` rule — and since backend #453 (deployed 2026-09-25, build rdKf5s88XTYnoLfWGkpcF) only on a CONFIRMED email: `authenticateRequest()` returns the bearer's `email` only when `email_confirmed_at` is set, and #453 dropped the `diego@example.com` entry. The shared google_test_user@kindahealthy.com account LEFT the allowlist in #369, H3, 2026-08-23 — it is a normal rate-limited user whose nosave=1 rides NOSAVE_TESTER_EMAILS instead. This claim pins the substring checks ABSENT.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
       "command": "grep -rlE \"includes\\('(test|dev)'\\)\" src/app/api/nlp/parse --include=route.ts | wc -l",
@@ -108,11 +108,11 @@
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-23"
+      "verified": "2026-09-25"
     },
     {
       "id": "nosave-tester-allowlist-wired",
-      "claim": "nosave=1 on /api/nlp/parse is honoured for isDevBypass callers OR a bearer account listed in NOSAVE_TESTER_EMAILS (exact, case-insensitive, fail-closed when unset) — and for nothing else: the tester gets the request-scoped write policy only, never the rate-limit bypass, noCache or the debug echo. Shipped 2026-08-23 (plan 11 §4, after H3 #369 made the shared sitting account a normal user). If this reads 0 the allowlist is unwired and every device sitting under EXPO_PUBLIC_SUPPRESS_MAPPING_WRITES=1 warms the production cache.",
+      "claim": "nosave=1 on /api/nlp/parse is honoured for isDevBypass callers OR a bearer account listed in NOSAVE_TESTER_EMAILS (exact, case-insensitive, fail-closed when unset) — and for nothing else: the tester gets the request-scoped write policy only, never the rate-limit bypass, noCache or the debug echo. Shipped 2026-08-23 (plan 11 §4, after H3 #369 made the shared sitting account a normal user). Since backend #453 (deployed 2026-09-25, build rdKf5s88XTYnoLfWGkpcF) the bearer's email is honoured only when `email_confirmed_at` is set, so a NEW tester account that has not confirmed its address gets `email: null` and its nosave=1 is silently ignored — its sitting WRITES rows. The shared sitting account is confirmed (stamp 2026-06-26, read from a GoTrue password grant 2026-09-24; its bearer nosave=1 parse returned an X-Write-Receipt on the new build 2026-09-25). If this reads 0 the allowlist is unwired and every device sitting under EXPO_PUBLIC_SUPPRESS_MAPPING_WRITES=1 warms the production cache.",
       "ownerDoc": "mobile:plans/v1/api-contract.md",
       "where": "backend",
       "command": "grep -c 'isNoSaveTester(userEmail)' src/app/api/nlp/parse/route.ts",
@@ -120,7 +120,7 @@
         "kind": "count",
         "value": "1"
       },
-      "verified": "2026-08-23"
+      "verified": "2026-09-25"
     },
     {
       "id": "coverage-read-grades-by-mapper-key",
@@ -1550,7 +1550,7 @@
     },
     {
       "id": "dev-api-key-no-fallback-sites",
-      "claim": "Zero production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`: the fallback literals (dev-key-123 on admin/food-stats + ok, adminAPI_dev_key_bypass on the other five) were removed 2026-08-20, so an UNSET or EMPTY DEV_API_KEY fails CLOSED — the request is refused rather than authorized by a committed string. The 5-vs-7 split this entry used to carry is retired with the fallbacks; the 5 'key-only routes with zero bearer references' count in CLAUDE.md is a separate fact and still correct. If this claim FAILS a fallback literal came back and the #23 rotation surface must be re-sized before anything is rotated.",
+      "claim": "Zero production API route files read the admin key as `process.env.DEV_API_KEY || '<literal>'`: the fallback literals (dev-key-123 on admin/food-stats + ok, adminAPI_dev_key_bypass on the other five) were removed 2026-08-20, so an UNSET or EMPTY DEV_API_KEY fails CLOSED — the request is refused rather than authorized by a committed string. The 5-vs-7 split this entry used to carry is retired with the fallbacks. The CLAUDE.md #23 bullet's key-reader count is a separate fact: since backend #453 (2026-09-25) `admin/food-stats` checks the key through `matchesDevApiKey()` (constant-time, no cookie path), so the key readers are `grep -rlE \"process.env.DEV_API_KEY|matchesDevApiKey\" src/app/api --include=route.ts | wc -l` → 3 — `admin/food-stats` and `foods/[id]/serving` key-only, `foods/map` key-or-cookie. If this claim FAILS a fallback literal came back and the #23 rotation surface must be re-sized before anything is rotated (the box key was rotated 2026-09-24).",
       "ownerDoc": "mobile:CLAUDE.md#state-digest",
       "where": "backend",
       "command": "grep -rl 'process.env.DEV_API_KEY ||' src/app/api --include=route.ts | wc -l",
@@ -1558,7 +1558,7 @@
         "kind": "count",
         "value": "0"
       },
-      "verified": "2026-08-20"
+      "verified": "2026-09-25"
     },
     {
       "id": "off-delta-timer-armed-on-box",
@@ -1781,7 +1781,7 @@
     },
     {
       "id": "parse-cache-hit-not-charged",
-      "claim": "/api/nlp/parse charges a bearer caller's rate-limit allowance only for requests that did paid work: the NlpRequestLog row is written at the end of runParse() behind isFreeParseRequest() (every line cache_hit/fast_path AND no AI segmentation call), never in the preamble. A user re-logging yesterday's breakfast spends nothing (#371).",
+      "claim": "/api/nlp/parse charges a bearer caller's rate-limit allowance only for requests that did paid work. Since backend #453 (deployed 2026-09-25, build rdKf5s88XTYnoLfWGkpcF) the NlpRequestLog row is RESERVED before the mapper, under a per-user `pg_advisory_xact_lock`, and REFUNDED (deleted) when runParse() ends with isFreeParseRequest() true (every line cache_hit/fast_path AND no AI segmentation call), or when the mapper throws; before #453 it was written at the end of runParse(). A user re-logging yesterday's breakfast spends nothing, net (#371, #453). Measured on the new build 2026-09-25: five parallel bearer parses → 2 ran and kept their rows, 3 answered 429 (in-flight) with no row.",
       "ownerDoc": "mobile:sync-docs/sprint_execution_progress.md",
       "where": "backend",
       "command": "grep -c 'isFreeParseRequest' src/app/api/nlp/parse/route.ts",
@@ -1789,7 +1789,7 @@
         "kind": "min",
         "value": "1"
       },
-      "verified": "2026-08-21"
+      "verified": "2026-09-25"
     },
     {
       "id": "parse-limits-documented",
