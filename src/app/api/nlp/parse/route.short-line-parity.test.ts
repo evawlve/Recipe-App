@@ -97,7 +97,7 @@ function parseRequest(body: object): NextRequest {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': 'adminAPI_dev_key_bypass', // dev bypass: skips Supabase auth + rate limiting
+      'x-api-key': 'test-dev-key-short-line', // dev bypass: skips Supabase auth + rate limiting
     },
     body: JSON.stringify(body),
   });
@@ -109,7 +109,7 @@ describe('/api/nlp/parse short-line fast path — parity with mobile SHORT_LINE_
 
   beforeAll(() => {
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/test';
-    process.env.DEV_API_KEY = 'adminAPI_dev_key_bypass';
+    process.env.DEV_API_KEY = 'test-dev-key-short-line';
     delete process.env.MAPPING_EVENT_LOG_ENABLED;
   });
 
