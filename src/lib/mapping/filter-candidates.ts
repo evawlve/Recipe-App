@@ -3524,10 +3524,8 @@ function keepAFoodToken(selected: string[], allCore: string[], normalizedName: s
  *
  * Why >= 4. `grilled chicken breast` (3 core tokens) is the same shape — its head `breast` is
  * not required — and is pinned at ['grilled','chicken'] in possessive-brand-token-filter.test.ts
- * as a non-brand query that "must not move at all". 3-token names are also where the head is
- * most often a word the record spells as a separate field or omits (`chicken caesar salad`
- * records named "Caesar Salad with Chicken" keep the head; "Chicken Caesar" wraps do not), so
- * the rule starts where the two positional slots cover at most HALF of the name.
+ * as a non-brand query that "must not move at all". So the rule starts where the two positional
+ * slots cover at most HALF of the name; 3-token lines are left as they were, unfixed.
  *
  * Why APPEND rather than re-aim the second slot (K2's `[slot0, head]`). Appending only ever
  * adds a requirement, so on the strict pass the admitted set is a SUBSET of the shipped one: a
