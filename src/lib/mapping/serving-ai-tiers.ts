@@ -446,6 +446,11 @@ export const BORROWED_OR_DEFAULTED_SERVING_TIERS: readonly string[] = Object.fre
         // Same borrow function, reached from the package-like-unit branch
         // ("1 bottle gatorade") on the same own-vs-sibling fork.
         'package_quantity_sibling',
+        // borrowSiblingLabelServing() again — the SAME brand-median label-serving
+        // borrow as `bare_sibling_serving`, reached from a SET serving-word unit
+        // ("one serving of flaming hot cheetos") on a SKU with no label serving of
+        // its own (#270, 2026-09-23). Another product's label by construction.
+        'serving_unit_sibling_label',
         // borrowNameSiblingLabelServing() — the brandless twin: the median declared
         // serving of OTHER OFF rows sharing this row's NAME. Three tiers, one rung,
         // splitting on direction and request shape (its own producer comment in
