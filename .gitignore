@@ -162,3 +162,14 @@ snapshots/
 # Syncthing simple-versioning store (keep=5, since 2026-08-13): local history of replaced files,
 # never content — it surfaced as an untracked dir in the main checkout on 2026-08-23.
 .stversions/
+
+# Consolidation S49 (2026-09-27): root-level scratch output never belongs in the tree,
+# and the Google OAuth client file stays local (it was tracked in a PUBLIC repo).
+client-secret.json
+/tmp-*
+/tmp_*
+/debug*
+/test-*.txt
+/test_*.txt
+/*-output.txt
+/*_output.txt
