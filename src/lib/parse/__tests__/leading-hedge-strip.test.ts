@@ -55,14 +55,13 @@ describe('leading hedge before a quantity is stripped (tripwires — RED on the 
     expect(r.qualifiers).toBeUndefined();
   });
 
-  test('"approximately half a cup of rice" -> qty 0.5, parity with "half a cup of rice"', () => {
-    // The fraction grammar does NOT read "half a cup" as 0.5 cup on either tree
-    // (parseQuantityTokens consumes "half"; the article "a" then blocks the
-    // unit), so unit is not asserted here — only that the hedge no longer
-    // hides the quantity. Documented limitation, not owned by this strip.
+  test('"approximately half a cup of rice" -> 0.5 cup rice, parity with "half a cup of rice"', () => {
+    // normalizeFractionalMeasure() reads "half a cup" as 0.5 cup, and it looks
+    // past a leading hedge, so the hedged and un-hedged lines still agree.
     const r = expectParity('approximately half a cup of rice', 'half a cup of rice');
     expect(r.qty).toBe(0.5);
-    expect(r.name.toLowerCase()).not.toContain('approximately');
+    expect(r.unit).toBe('cup');
+    expect(r.name).toBe('rice');
   });
 
   test('"like 3 eggs" -> like + number strips: qty 3, unit egg', () => {
