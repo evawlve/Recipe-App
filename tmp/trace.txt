@@ -1,5 +1,0 @@
-{
-  "cleaned": "1 4 oz vanilla extract protein powder",
-  "nounOnly": "1 4 oz vanilla extract protein powder",
-  "stripped": []
-}
