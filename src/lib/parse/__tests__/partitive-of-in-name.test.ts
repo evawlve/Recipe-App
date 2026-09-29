@@ -128,10 +128,10 @@ describe('negative controls — byte-identical to the pre-fix tree', () => {
     expect(parsed('hearts of palm')).toEqual({ qty: 1, unit: null, name: 'hearts of palm' });
   });
 
-  test('"half a cup of rice": article at [1], not [0] — documented limitation, untouched', () => {
-    // leading-hedge-strip.test.ts already owns this as an unfixed shape. The
-    // article strip is positional (mergedTokens[0] only) so it never sees this.
-    expect(parsed('half a cup of rice')).toEqual({ qty: 0.5, unit: null, name: 'a cup of rice' });
+  test('"half a cup of rice": article at [1] — normalizeFractionalMeasure owns it, and the "of" still goes', () => {
+    // fractional-measure.test.ts owns the shape; this pins only that the partitive
+    // skip still applies once the unit is found one slot later.
+    expect(parsed('half a cup of rice')).toEqual({ qty: 0.5, unit: 'cup', name: 'rice' });
   });
 
   test('the article strip is unit-gated: a non-unit after the article is left alone', () => {

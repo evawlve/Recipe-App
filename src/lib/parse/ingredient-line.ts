@@ -212,7 +212,7 @@ function consumePartitiveOf(tokens: string[], i: number): number {
 // portion. That keeps "a couple of eggs" (couple is not a unit — quantity.ts
 // owns that line and reads it as 2) and every food merely containing the word.
 // Deliberately NOT global: "half a cup of rice" puts the article at [1], and
-// that shape is a separate documented limitation (see leading-hedge-strip.test.ts).
+// that shape has its own one-slot-later rule (normalizeFractionalMeasure below).
 //
 // Unlike the hedge strip this REMOVES the token rather than advancing `i`: the
 // three decide-once reads below (wholeIsIdentity, eggIsAdjectival,
@@ -290,6 +290,53 @@ function leadingArticlePrecedesUnit(mergedTokens: string[]): boolean {
   if (!LEADING_ARTICLES.has(mergedTokens[0].toLowerCase())) return false;
   const next = normalizeUnitToken(mergedTokens[1]);
   return next.kind === 'mass' || next.kind === 'volume' || next.kind === 'count';
+}
+
+// A spoken fraction of a measure: "half a cup of rice", "a half cup of egg
+// whites", "one half cup of milk", "maybe half a cup of rice". parseQuantityTokens()
+// reads `half` through its wordFractions map, and then the stray article (or the
+// leading `a`/`one`) sits between the fraction and the unit, so the unit is never
+// found. The name came back as "a cup of rice" and that string reached the cache
+// key: "half a cup of milk" resolved a different Milk record at 50 g, and "a half
+// cup of egg whites" resolved Cream (Half & Half) at 242 g.
+//
+// Same POSITIONAL + OWNER-GATED discipline as leadingArticlePrecedesUnit, one
+// slot later: the fraction sits at [0], or at [1] behind a leading hedge, and the
+// token after the stray word must be a measure the unit table recognises. The
+// three shapes collapse to the plain "half cup of rice", which already parses as
+// 0.5 cup. The fraction is lowercased in the collapsed form because
+// parseQuantityTokens() matches wordFractions case-sensitively, and dictation
+// capitalises the first word ("Half a cup of raw spinach" parsed as 1 cup).
+//
+// Two exclusions, both load-bearing:
+//   - SIZE WORDS are count units in the table but not measures: "half a medium
+//     onion" keeps its reading (qty 0.5, name "a onion"), which bills half of a
+//     medium onion today.
+//   - A NON-MEASURE after the stray word: "half a banana", "half an avocado",
+//     "a third of a large pizza" are untouched.
+// Lives here, not in quantity.ts: parseQuantityTokens() also parses FatSecret
+// serving descriptions (see LEADING_HEDGES above), which must not change.
+// Owner: mobile sync-docs/reports/2026-09-28_lane-a-s61-half-a-cup-reads-its-unit.md, ROW 2.
+const WORD_FRACTIONS = new Set(['half', 'quarter', 'third']);
+const SIZE_WORDS = new Set(['small', 'medium', 'large', 'whole']);
+function isMeasureToken(token: string | undefined): boolean {
+  if (!token || SIZE_WORDS.has(token.toLowerCase())) return false;
+  const u = normalizeUnitToken(token);
+  return u.kind === 'mass' || u.kind === 'volume' || u.kind === 'count';
+}
+function normalizeFractionalMeasure(mergedTokens: string[]): void {
+  const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
+  const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
+  // "a half cup", "one half cup", and "a half a cup" (which then falls to the next rule)
+  if ((LEADING_ARTICLES.has(at(0)) || at(0) === 'one') && WORD_FRACTIONS.has(at(1)) &&
+      (isMeasureToken(mergedTokens[f + 2]) ||
+       (LEADING_ARTICLES.has(at(2)) && isMeasureToken(mergedTokens[f + 3])))) {
+    mergedTokens.splice(f, 2, at(1));
+  }
+  // "half a cup" ("quarter of a cup" is not this shape: [1] is `of`, not an article)
+  if (WORD_FRACTIONS.has(at(0)) && LEADING_ARTICLES.has(at(1)) && isMeasureToken(mergedTokens[f + 2])) {
+    mergedTokens.splice(f, 2, at(0));
+  }
 }
 
 // A leading mass/volume word that OPENS A FOOD NAME rather than measuring one:
@@ -551,6 +598,10 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
 
   if (mergedTokens.length === 0) return null;
+
+  // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
+  // first so the article strip and the decide-once reads below see "half cup".
+  normalizeFractionalMeasure(mergedTokens);
 
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).
   // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
