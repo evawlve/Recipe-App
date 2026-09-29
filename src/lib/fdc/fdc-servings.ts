@@ -18,8 +18,13 @@ import { logger } from '../logger';
 export interface FdcServingOption {
     /** Human-readable label like "1 medium", "1 cup, chopped" */
     label: string;
-    /** Weight in grams */
+    /** Weight in grams of the WHOLE portion — `amount` units, not one */
     grams: number;
+    /**
+     * How many units the portion weighs: FDC's `amount`. `Candies, HEATH BITES`
+     * declares `15 pieces` = 39 g, so `grams` is 39 and `amount` is 15.
+     */
+    amount: number;
     /** FDC ID of the source food */
     fdcId: number;
     /** Optional qualifiers like ["raw"], ["cooked"] */
@@ -188,6 +193,7 @@ export async function fetchFdcServingOptions(
             servings.push({
                 label,
                 grams: gramWeight,
+                amount,
                 fdcId: preferredFood.fdcId,
                 qualifiers: parsed.qualifiers.length > 0 ? parsed.qualifiers : undefined,
                 unit: parsed.unit,
@@ -266,6 +272,13 @@ export function matchFdcServing(
 /**
  * Try to get FDC serving weight for a given canonical base and unit.
  * Combines fetchFdcServingOptions and matchFdcServing.
+ *
+ * Returns the weight of ONE requested unit. An FDC portion weighs `amount`
+ * units, and this returned the whole portion: `nine pieces of s'mores
+ * drizzilicious` matched `Candies, HEATH BITES` "15 pieces" = 39 g and billed
+ * 39 g a piece (351 g / 2,004 kcal) where the label says 2.6 g. The only
+ * consumer, estimateAmbiguousServing(), asks for exactly one unit.
+ * Owner: mobile sync-docs/reports/2026-09-28_lane-a-s61-half-a-cup-reads-its-unit.md, ROW 3.
  * 
  * @param canonicalBase - The canonical ingredient base
  * @param requestedUnit - The unit to look up
@@ -282,7 +295,7 @@ export async function getFdcServingWeight(
 
     if (match) {
         return {
-            grams: match.grams,
+            grams: match.amount > 0 ? match.grams / match.amount : match.grams,
             label: match.label,
             source: 'fdc',
         };
