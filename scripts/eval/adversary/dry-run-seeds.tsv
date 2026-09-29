@@ -1,0 +1,17 @@
+# Mode G acceptance seed list (Lane A S63, pm109): line <TAB> foods named <TAB> expected verdict <TAB> expected axis.
+# The expectations are for the REPORT only; nothing here reaches the judge's prompt. Sources:
+#   the french toast   Lane A S61 ROW E: cold picks OFF 0076800006696 "french toast" [Dneedos Bagels], 700 g / 1,901 kcal
+#   the ranch          Lane A S62 finding 5: records named bare "Ranch"/"Light ranch" bill 15 g, likely ~30 g
+#   the spinach        Lane A S61 finding 3: 60 g on volume_unit, true ~15 g — an OVER-bill
+#   half and half      Lane A S62 finding 3: undiagnosed; parses as 0.5 of "and half" and may still serve right
+#   the s'mores        a NEGATIVE control since #461 (23.4 g on uttAaRkc31GfMo3L0d9fT, Lane A S62)
+10 pieces of Drizzliscious French toast	1	BAD	identity
+2 tbsp light ranch	1	BAD	portion
+half a cup of spinach	1	BAD	portion
+half and half	1	UNSURE
+nine pieces of s'mores drizzilicious	1	OK
+a slice of toast	1	OK
+two eggs and a slice of toast	2
+dos huevos revueltos con una tortilla de maiz	2
+one scoop of ascent vanilla whey protein	1
+a cup and a half of teriyaki chicken	1

@@ -967,33 +967,62 @@ export function llmUserPrompt(r: ScreenRow): string {
 
 export interface LlmConfig { model: string; baseUrl: string; apiKey: string; concurrency: number }
 
+/** One reply from an OpenAI-compatible `/chat/completions` endpoint. `ok: false` carries no content. */
+export interface ChatCompletion {
+    ok: boolean;
+    status: number;
+    content: string;
+    /** The provider's `usage` block (OpenRouter: prompt_tokens, completion_tokens, ...), or null. */
+    usage: Record<string, unknown> | null;
+}
+
+/**
+ * The single direct OpenRouter/OpenAI POST: temperature 0, a JSON-object reply, one
+ * system and one user message. callLlm() is its first caller; the hard-case loop's
+ * `--judge openrouter` arm (scripts/eval/adversary/judge.ts) is the second, which is why
+ * it takes the prompts and the token budget as arguments instead of a ScreenRow. It
+ * does NOT retry and does NOT parse the reply — each caller owns both, because a
+ * failed or unreadable reply means something different to each of them. A thrown
+ * network error propagates.
+ */
+export async function postChatCompletion(
+    cfg: Pick<LlmConfig, 'model' | 'baseUrl' | 'apiKey'>,
+    system: string,
+    user: string,
+    maxTokens: number,
+): Promise<ChatCompletion> {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiKey}` },
+        body: JSON.stringify({
+            model: cfg.model,
+            temperature: 0,
+            max_tokens: maxTokens,
+            response_format: { type: 'json_object' },
+            messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: user },
+            ],
+        }),
+    });
+    if (!res.ok) return { ok: false, status: res.status, content: '', usage: null };
+    const j = await res.json() as { choices?: { message?: { content?: string } }[]; usage?: Record<string, unknown> };
+    return { ok: true, status: res.status, content: j?.choices?.[0]?.message?.content ?? '', usage: j?.usage ?? null };
+}
+
 export async function callLlm(r: ScreenRow, cfg: LlmConfig): Promise<LlmVerdict> {
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
-            const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiKey}` },
-                body: JSON.stringify({
-                    model: cfg.model,
-                    temperature: 0,
-                    // 200 was enough for gpt-4o-mini and ONLY for gpt-4o-mini. A
-                    // reasoning model spends its thinking inside the same completion
-                    // budget: claude-sonnet-5 burns ~57 reasoning tokens before the
-                    // JSON and truncated 16 of 81 rows mid-object ("Unexpected end of
-                    // JSON input"). `--model` invites exactly that swap, so the budget
-                    // has to fit a reasoning model rather than the cheapest one. Costs
-                    // nothing when unused — billing is on tokens emitted, not reserved.
-                    max_tokens: 700,
-                    response_format: { type: 'json_object' },
-                    messages: [
-                        { role: 'system', content: LLM_SYSTEM },
-                        { role: 'user', content: llmUserPrompt(r) },
-                    ],
-                }),
-            });
+            // 200 max_tokens was enough for gpt-4o-mini and ONLY for gpt-4o-mini. A
+            // reasoning model spends its thinking inside the same completion
+            // budget: claude-sonnet-5 burns ~57 reasoning tokens before the
+            // JSON and truncated 16 of 81 rows mid-object ("Unexpected end of
+            // JSON input"). `--model` invites exactly that swap, so the budget
+            // has to fit a reasoning model rather than the cheapest one. Costs
+            // nothing when unused — billing is on tokens emitted, not reserved.
+            const res = await postChatCompletion(cfg, LLM_SYSTEM, llmUserPrompt(r), 700);
             if (!res.ok) { await new Promise(s => setTimeout(s, 800 * (attempt + 1))); continue; }
-            const j = await res.json() as { choices?: { message?: { content?: string } }[] };
-            const txt = j?.choices?.[0]?.message?.content ?? '';
+            const txt = res.content;
             const parsed = JSON.parse(txt.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim());
             // An UNRECOGNISED verdict string is a reply we could not read, not an
             // approval. The old form was `=== 'REJECT' ? ... : === 'UNSURE' ? ... :

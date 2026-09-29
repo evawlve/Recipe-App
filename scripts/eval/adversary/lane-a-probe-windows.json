@@ -1,0 +1,14 @@
+{
+  "_what": "Lane A sessions' keyed warm probes, which land in MappingEventLog as noCache=false exactly like organic traffic. Mode O drops every noCache=false event inside one of these PDT windows (filters.ts, reason lane-a-probe). Each window is copied from the session's own bracket table, which attributes every noCache=false row it names; a window is only listed when that table says the rows in it were the session's.",
+  "_howToAdd": "Append a window when a Lane A write-off's bracket attributes noCache=false probes by time. Mode G probes do NOT go here: they are in logs/adversary-probed.tsv, written by the loop itself.",
+  "_sessionsWithNone": "S52 (2026-09-20, noCache=false +0), S56 (09-23, +0), S57 (09-24, the one +1 was an alpha user's line at 11:04:04, not a probe).",
+  "windows": [
+    { "session": "Lane A S58", "startPt": "2026-09-25 00:07:27", "endPt": "2026-09-25 00:43:26", "source": "log/2026-09-25_0050_a_the-key-turns-and-the-window-lands-five.md: MEL noCache=false +13 (all mine)" },
+    { "session": "Lane A S59", "startPt": "2026-09-25 12:44:08", "endPt": "2026-09-25 12:44:08", "source": "reports/2026-09-25_lane-a-s59-…md bracket: my warm probes 12:44:08, 12:54:14, 13:16:49/50 x3" },
+    { "session": "Lane A S59", "startPt": "2026-09-25 12:54:14", "endPt": "2026-09-25 12:54:14", "source": "same row" },
+    { "session": "Lane A S59", "startPt": "2026-09-25 13:16:49", "endPt": "2026-09-25 13:16:50", "source": "same row" },
+    { "session": "Lane A S60", "startPt": "2026-09-27 21:02:36", "endPt": "2026-09-27 21:02:42", "source": "reports/2026-09-27_lane-a-s60-…md bracket: my 13 warm probes, 21:02:36–21:02:42" },
+    { "session": "Lane A S61", "startPt": "2026-09-28 11:31:40", "endPt": "2026-09-28 11:31:42", "source": "reports/2026-09-28_lane-a-s61-…md bracket: my 2 warm deploy probes (11:31:40, 11:31:42)" },
+    { "session": "Lane A S62", "startPt": "2026-09-28 17:53:39", "endPt": "2026-09-28 17:55:19", "source": "reports/2026-09-28_lane-a-s62-…md bracket: my 7 warm probes, 17:53:39–17:55:19" }
+  ]
+}

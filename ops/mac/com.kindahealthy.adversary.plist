@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The hard-case loop's nightly Mode O screen — Lane A S63 (pm109, 2026-09-29), on Diego's 2026-09-28
+  "build it". Script: ops/mac/adversary.sh. Code: scripts/eval/adversary/.
+
+  Install (Mac only; this file is inert on the box and the Windows PC):
+    cp ops/mac/com.kindahealthy.adversary.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kindahealthy.adversary.plist
+  Run it by hand (this is also the proof that the CLI finds its keychain login under launchd):
+    launchctl kickstart -k gui/$(id -u)/com.kindahealthy.adversary
+  Pause it for a Lane A window without unloading it: touch ~/.adversary-hold (rm it after).
+
+  08:30 local, chosen for three reasons:
+    - clear of the 06:15 pgbackup pull (com.kindahealthy.pgbackup-pull), which can run a 1.4 GB scp
+      and a B2 upload for tens of minutes; a Mac asleep through BOTH still fires both on wake together,
+      which is harmless (one reads a dump, the other runs one SELECT);
+    - never the 04:xx PDT flywheel hour from any US time zone (08:30 Eastern is 05:30 Pacific); the
+      script refuses 04 PDT anyway, because the Mac travels;
+    - it covers the whole previous day's eating, and the report is waiting when Diego starts his.
+
+  RunAtLoad is false on purpose: a bootstrap should not start a judge run.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kindahealthy.adversary</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/diego/dev/Recipe-App/ops/mac/adversary.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>8</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/diego/.adversary/adversary.launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/diego/.adversary/adversary.launchd.log</string>
+</dict>
+</plist>
