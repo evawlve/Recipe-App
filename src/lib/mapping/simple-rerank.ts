@@ -11,6 +11,7 @@ import { detectGrainCookingContext } from './filter-candidates';
 import { assessRankTimePlausibility } from './macro-plausibility';
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { normalizeNameKey } from '../search/dedupe-candidates';
+import { applyBrandSpellingRepair, findBrandSpellingRepair, type BrandSpellingRepair } from './brand-spelling-repair';
 
 export interface RerankCandidate {
     id: string;
@@ -158,6 +159,11 @@ export interface RerankOutcome {
     candidateCount: number;
     /** Candidates the reranker scored. 0 on the short-circuit paths. */
     scoredCount: number;
+    /** LOG-ONLY (2026-10-01, Lane A S64). The brand-spelling repair applied
+     *  before scoring (brand-spelling-repair.ts): the user's token, the pool
+     *  brand it was read as, and the record that anchored it. Null when none
+     *  fired; absent on the short-circuit paths and on older log entries. */
+    brandSpelling?: BrandSpellingRepair | null;
 }
 
 // ============================================================
@@ -2040,6 +2046,21 @@ export function simpleRerank(
         };
     }
 
+    // A brand the user spelled one or two letters off (`ryze` for Ryse,
+    // `Drizzliscious` for Drizzilicious): retrieval found that brand's records,
+    // and the scoring below credits a brand only by exact spelling. When exactly
+    // one pool brand licenses it, score the line as if the user had spelled the
+    // brand that way. Rules and measurements: brand-spelling-repair.ts.
+    const brandSpelling = findBrandSpellingRepair(query, candidates);
+    if (brandSpelling) {
+        query = applyBrandSpellingRepair(query, brandSpelling);
+        if (rawLine) rawLine = applyBrandSpellingRepair(rawLine, brandSpelling);
+        if (!targetBrand?.trim() || targetBrand.trim().toLowerCase() === brandSpelling.from) {
+            targetBrand = brandSpelling.to;
+        }
+        logger.info('simple_rerank.brand_spelling_repaired', { ...brandSpelling, query, targetBrand });
+    }
+
     // Step 4: Extract modifier constraints from the raw line (or query)
     const constraints = extractModifierConstraints(rawLine || query);
 
@@ -2600,6 +2621,7 @@ export function simpleRerank(
         rerankReason: reason,
         candidateCount: candidates.length,
         scoredCount: scored.length,
+        brandSpelling,
     });
 
     // MINIMUM CONFIDENCE THRESHOLD (Jan 2026)
