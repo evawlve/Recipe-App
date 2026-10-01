@@ -34,6 +34,7 @@
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import { postChatCompletion } from '../correctness-screen';
+import { withOneRetry } from './retry';
 
 export type JudgeArm = 'claude-cli' | 'openrouter';
 export type VerdictWord = 'OK' | 'BAD' | 'UNSURE';
@@ -87,6 +88,8 @@ export interface JudgeConfig {
     maxCalls: number;
     budgetPerCallUsd: number;
     timeoutMs: number;
+    /** Pause before the one retry of a killed `claude -p` call (retry.ts). Unset = RETRY_PAUSE_MS. */
+    retryPauseMs?: number;
     /** The CLI's `--effort` (low|medium|high|xhigh|max). Unset = the CLI's per-model default, which differs by model. */
     effort?: string;
     openrouter?: { baseUrl: string; apiKey: string };
@@ -272,13 +275,16 @@ export async function callModel(
         // generator reply ended `error_max_turns` under 1 and succeeded with
         // `num_turns: 3` — the model spends an extra structured-output turn on long
         // replies. The per-call dollar cap still bounds it.
-        const res = spawnSync(cfg.claudeBin, claudeArgs(cfg.model, systemPromptFile, schema, cfg.budgetPerCallUsd, cfg.effort, purpose === 'generate' ? 3 : 1), {
+        // A call killed mid-flight (spawnSync's timeout, which can expire across a sleep) is
+        // retried ONCE, the same rule as the box's psql (retry.ts). The retry is the same call:
+        // it counts once against --max-calls.
+        const { result: res, retried } = withOneRetry(() => spawnSync(cfg.claudeBin, claudeArgs(cfg.model, systemPromptFile, schema, cfg.budgetPerCallUsd, cfg.effort, purpose === 'generate' ? 3 : 1), {
             cwd: cfg.cwd, input: prompt, encoding: 'utf8', timeout: cfg.timeoutMs, maxBuffer: 32 * 1024 * 1024,
-        });
+        }), cfg.retryPauseMs);
         if (res.error || (res.status !== 0 && !res.stdout)) {
             return {
                 structured: null,
-                call: { ...emptyCall(cfg, purpose, rows), durationMs: Date.now() - t0, error: `claude exited ${res.status ?? 'null'}${res.error ? ` (${res.error.message})` : ''}: ${(res.stderr ?? '').slice(0, 160)}` },
+                call: { ...emptyCall(cfg, purpose, rows), durationMs: Date.now() - t0, error: `claude exited ${res.status ?? 'null'}${retried ? ' after one retry' : ''}${res.error ? ` (${res.error.message})` : ''}: ${(res.stderr ?? '').slice(0, 160)}` },
             };
         }
         return readCliResult(res.stdout, cfg.model, purpose, rows);

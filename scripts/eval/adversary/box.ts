@@ -22,6 +22,7 @@
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import type { MelEvent } from './filters';
+import { RETRY_PAUSE_MS, withOneRetry, type SpawnOutcome } from './retry';
 
 export const BOX_HOST = 'dhl32-opt-5060';
 export const BOX_BASE = `http://${BOX_HOST}:3000`;
@@ -29,11 +30,20 @@ const SSH = '/usr/bin/ssh';
 const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=4'];
 const PSQL = `docker exec -i -e PGOPTIONS='-c default_transaction_read_only=on' mealspire-db psql -U postgres -d mealspire -At -v ON_ERROR_STOP=1`;
 
-/** Run one read-only statement that yields a single JSON value; null → []. */
-export function psqlJson<T>(sql: string): T {
+function runPsql(sql: string): SpawnOutcome {
     const r = spawnSync(SSH, [...SSH_OPTS, `owner@${BOX_HOST}`, PSQL], { input: sql, encoding: 'utf8', timeout: 120_000, maxBuffer: 64 * 1024 * 1024 });
+    return { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '', error: r.error };
+}
+
+/**
+ * Run one read-only statement that yields a single JSON value; null → []. A transient ssh
+ * failure (retry.ts: killed by the timeout, or ssh's 255 "timed out") is retried ONCE after
+ * a pause, and the error then says so.
+ */
+export function psqlJson<T>(sql: string, run: (sql: string) => SpawnOutcome = runPsql, pauseMs = RETRY_PAUSE_MS): T {
+    const { result: r, retried } = withOneRetry(() => run(sql), pauseMs);
     if (r.error || r.status !== 0) {
-        throw new Error(`box psql failed (exit ${r.status ?? 'null'}): ${(r.stderr || r.error?.message || '').trim().slice(0, 300)}`);
+        throw new Error(`box psql failed${retried ? ' after one retry' : ''} (exit ${r.status ?? 'null'}): ${(r.stderr || r.error?.message || '').trim().slice(0, 300)}`);
     }
     const out = r.stdout.trim();
     return (out ? JSON.parse(out) : []) as T;
