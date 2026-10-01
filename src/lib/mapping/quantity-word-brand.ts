@@ -291,6 +291,78 @@ export type BrandPreservationOutcome = {
 };
 
 /**
+ * THE PAYLOAD HALF OF #167 (punch #196, Lane A S52): the tokens the segmenter had
+ * and the re-derivation does not, carried onto the end of the payload.
+ *
+ * An APPLIED repair hands retrieval `parsed.name` (or `preProcessLine`), not the
+ * segmenter's `normalizedForm`, so a correction only the segmenter made is thrown
+ * away with it. Measured over the 602 distinct `SegmentationCache` tuples of the
+ * committed capture (`s51_guard_capture.jsonl`, 266 guard-1 inputs, 218 applied):
+ * exactly **2 of 218** applied inputs lose a segmenter token —
+ * `bar cooky cream protein quest` loses `bar`, and
+ * `One scoop of optimum weigh nutrition protein` loses `whey` and keeps the typo
+ * `weigh`. Re-derive with `s52_union_replay.ts` beside the capture.
+ *
+ * WHY A UNION AND NOT THE SEGMENTER'S FORM. "Prefer `normalizedForm`" is refuted by
+ * count on the same capture: 48 of the 218 applied inputs GAIN a token the segmenter
+ * form lacks, among them `optimum nutrition gold standard whey extreme milk chocolate`
+ * (the segmenter form lacks `gold standard`, a 667-serve key),
+ * `perdue simply smart organic grilled chicken breast` and `silk unsweetened almond
+ * milk`. Preferring the segmenter's form truncates every one of them. The union
+ * changes exactly the 2 and leaves 216 byte-identical.
+ *
+ * WHY APPEND, NEVER PREPEND, AND WHAT APPENDING STILL COSTS. `deriveMustHaveTokens()`
+ * reads its slots off the FRONT (`coreTokens.slice(0, 2)`), so appending cannot
+ * displace a token that is already required. It is NOT free, though:
+ * `keepAFoodToken()` spends the food slot on the LAST non-brand core token of every
+ * brand-detected line, so a carried token lands in the head-noun slot. On the two
+ * members that is the point — `protein` gives way to `bar` and to `whey` — but it is
+ * the reason this ships behind the pinned composite arm rather than on the count
+ * alone: the head noun is a hard `every()` at admission, and a head noun no record
+ * spells empties the pool. Prepending would have moved BOTH slots.
+ *
+ * WHY ONLY THE NO-PREPEND BRANCH, AND HOW THAT BOUND WAS FOUND. `preserveDroppedBrand()`
+ * applies in two shapes. When the brand SURVIVED into the re-derivation the payload IS
+ * the re-derivation, and the only thing the segmenter had that it lacks is food tokens —
+ * the pure #196 case, and both real members are here. When the brand had to be
+ * PREPENDED the payload is a synthesized string, and the segmenter form is the very
+ * thing whose brand-blindness triggered the prepend; carrying its generic product words
+ * on top stacks two repairs on one line. The carry is therefore refused on that branch.
+ *
+ * THAT BOUND WAS CHOSEN AFTER A GATE READING, AND THE CAPTURE CANNOT TEST IT. Carrying on
+ * BOTH branches moved golden case `n-supp-22` off its record on 4 of 4 pinned-arm runs,
+ * cold and warm, with a ZERO same-tree noise floor on both trees: `2 rx bars` (items-form
+ * brand `rxbar`, segmenter form `protein bar`) became `rxbar rx bars protein` and resolved
+ * RXBAR `off_0193908005342` 110 g / 459.8 kcal instead of `off_0193908001672` 104 g /
+ * 359.8 kcal — undoing the #167 fix-forward S51 had just shipped. The `s51_guard_capture`
+ * arm offers NO evidence either way, because both of its members sit on the no-prepend
+ * branch and read identically under both shapes (266 inputs, 2 changed, under either).
+ * So the bound's whole evidential base is that one golden line plus the reason above.
+ * Widen it only with a measurement, and re-run `s51_pin_rxbar.json` on the arm if you do.
+ *
+ * Brand tokens are excluded because the payload already carries the brand, by
+ * prepend or by containment, and a repeat would only re-double what #167 removed.
+ * The fold is `foldBrandTokens()` plus `dropPluralS()` — the same pair clause 3 of
+ * the containment predicate uses — so `M&M's`/`m and ms` compare as one spelling and
+ * `bar` is not carried alongside `bars`. Comparison is folded; what is APPENDED is the
+ * segmenter's own spelling. Duplicates within the carried set are dropped, so the
+ * result cannot grow a repeated run.
+ */
+function segmenterOnlyTokens(segmenterForm: string, payload: string, targetBrand: string): string[] {
+    const inPayload = new Set(foldBrandTokens(payload).map(dropPluralS));
+    const brandTokens = new Set(foldBrandTokens(targetBrand).map(dropPluralS));
+    const carried: string[] = [];
+    const seen = new Set<string>();
+    for (const token of foldBrandTokens(segmenterForm)) {
+        const key = dropPluralS(token);
+        if (inPayload.has(key) || brandTokens.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        carried.push(token);
+    }
+    return carried;
+}
+
+/**
  * The repair itself, extracted so it can be pinned by a test rather than only
  * by a hand-written replica (project memory: a helper number must come from the
  * shipped function).
@@ -308,6 +380,10 @@ export type BrandPreservationOutcome = {
  *     own form instead of the re-derivation (every one of the 6 such flips over
  *     the 266 real inputs replaced a prepend); a second-check flip returns the
  *     re-derivation without the prepend.
+ *
+ * And since punch #196 (Lane A S52) an APPLIED result carries the segmenter-only
+ * tokens on its end — `segmenterOnlyTokens()` above owns the shape, the count and
+ * why it appends rather than prepends. The two refusal paths are untouched.
  */
 /**
  * WHAT A DECLINE RETURNS, AND THE ONE WAY IT DIFFERS FROM master.
@@ -353,10 +429,14 @@ export function preserveDroppedBrand(args: {
     if (brandWasConsumedAsQuantity(rawLine, targetBrand, parsed)) {
         return { baseName, applied: false, declined: 'brand_consumed_as_quantity' };
     }
+    // The carry rides the NO-PREPEND branch only; `segmenterOnlyTokens()` says why.
+    const brandSurvivedRederivation = brandPresentForPrepend(rederived, targetBrand);
+    if (!brandSurvivedRederivation) {
+        return { baseName: `${targetBrand} ${rederived}`.trim(), applied: true, declined: null };
+    }
+    const carried = segmenterOnlyTokens(baseName, rederived, targetBrand);
     return {
-        baseName: brandPresentForPrepend(rederived, targetBrand)
-            ? rederived
-            : `${targetBrand} ${rederived}`.trim(),
+        baseName: carried.length > 0 ? `${rederived} ${carried.join(' ')}` : rederived,
         applied: true,
         declined: null,
     };
