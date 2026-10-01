@@ -26,14 +26,24 @@
  *      and Quest. The records they retrieve carry the word itself;
  *   2. it is not itself a lexicon brand (detectBrandInQuery()), so a real brand the
  *      user typed is never re-spelled into a neighbour (`kind` / `kinder`);
- *   3. it sits within retrieval's own typo budget of a brand token of a candidate IN
+ *   3. it sits within retrieval's own typo budget of the brand of a candidate IN
  *      THIS POOL: 1 edit from 4 letters, 2 from 7 (Typesense's min_len_1typo /
  *      min_len_2typo defaults), the same first letter, Damerau distance (a
- *      transposition is one edit);
- *   4. that brand token is a lexicon brand — the spelling the brand detector would
- *      have recognised had the user typed it;
+ *      transposition is one edit) — and neither spelling is a prefix of the other,
+ *      because a changed ending is inflection, not a typo (`cooky` / Cook);
+ *   4. that brand is ONE WORD and a lexicon brand — the spelling the brand detector
+ *      would have recognised had the user typed it. A word inside a longer brand
+ *      does not anchor (`Roca` is not Villa Roma Sausage Company, `queso` is not
+ *      Quest Protein Chips);
  *   5. exactly ONE such brand is in the pool. Two near brands is ambiguity, and the
  *      line is left alone.
+ *
+ * FIRING POPULATION (measured 2026-10-01, the shipped function over the box's
+ * mapping-analysis corpus: 390 files, 9,356 distinct (query, top-5 pool) decisions,
+ * a LOWER bound because the corpus keeps 5 records of a 10-30 record pool). Before
+ * clauses 3's prefix rule and 4's one-word rule: 10 fires, 7 true (`ryze` x4,
+ * `drizzilicous`, `Drizzliscious`, `nutzo` -> Nuttzo) and 3 false (`queso` -> Quest,
+ * `Roca` -> Roma, `cooky` -> Cook). With them: the 7 true, 0 false.
  * When it fires, simpleRerank() rewrites the token in its query and raw line, and
  * names the repaired brand as targetBrand when the caller named none or named the
  * misspelling (the segmenter's `brand` field carries the user's spelling: `Ryze`).
@@ -105,13 +115,15 @@ export function findBrandSpellingRepair(
         if (detectBrandInQuery(token).isBranded) continue;                 // 2. a real brand the user typed
         const anchors = new Map<string, string>();
         for (const c of candidates) {
-            for (const b of words(c.brandName)) {
-                if (b === token || b[0] !== token[0] || b.length < MIN_LEN_1_TYPO) continue;
-                if (Math.abs(b.length - token.length) > budget) continue;
-                if (damerauLevenshtein(token, b) > budget) continue;      // 3. within the typo budget
-                if (!detectBrandInQuery(b).isBranded) continue;           // 4. a lexicon brand
-                if (!anchors.has(b)) anchors.set(b, c.id);
-            }
+            const brandWords = words(c.brandName);
+            if (brandWords.length !== 1) continue;                         // 4. a one-word brand
+            const b = brandWords[0];
+            if (b === token || b[0] !== token[0] || b.length < MIN_LEN_1_TYPO) continue;
+            if (b.startsWith(token) || token.startsWith(b)) continue;      // 3. an ending is not a typo
+            if (Math.abs(b.length - token.length) > budget) continue;
+            if (damerauLevenshtein(token, b) > budget) continue;          // 3. within the typo budget
+            if (!detectBrandInQuery(b).isBranded) continue;               // 4. a lexicon brand
+            if (!anchors.has(b)) anchors.set(b, c.id);
         }
         if (anchors.size === 1) {                                          // 5. exactly one
             const [[to, anchorId]] = [...anchors];

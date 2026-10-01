@@ -63,6 +63,19 @@ describe('the rule', () => {
         expect(findBrandSpellingRepair('dneedo french toast', TOAST_POOL)).toBeNull(); // Dneedos is not in the lexicon
     });
 
+    it('3. a changed ending is inflection, not a typo (cooky / Cook)', () => {
+        expect(findBrandSpellingRepair('and cooky creme frosted pop-tart', [c('a', 'Creme fraiche', 'Cook')])).toBeNull();
+    });
+
+    it('4. a word inside a longer brand never anchors (the corpus\'s two false fires)', () => {
+        expect(findBrandSpellingRepair('restaurant chips and queso', [c('a', 'Sour Cream and Onion', 'Quest Protein Chips')])).toBeNull();
+        expect(findBrandSpellingRepair('12.7 ounces of Roca chicken tenders', [c('a', 'Ground Chicken', 'Villa Roma Sausage Company')])).toBeNull();
+    });
+
+    it('fires on the corpus\'s other true misspelling (nutzo / Nuttzo)', () => {
+        expect(findBrandSpellingRepair('nutzo seven nut butter', [c('w', 'Seven and Seven'), c('a', 'Crunchy seven nut & seed butter', 'Nuttzo')])?.to).toBe('nuttzo');
+    });
+
     it('5. leaves the line alone when two lexicon brands are near (kellogs, kelloggs)', () => {
         expect(findBrandSpellingRepair('kelloggz cereal', [
             c('a', 'Corn Flakes', 'Kelloggs'), c('b', 'Rice Krispies', 'Kellogs'),
