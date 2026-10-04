@@ -48,7 +48,6 @@ function loadLogger(env: { LOG_LEVEL?: string; NODE_ENV?: string }) {
         if (env.NODE_ENV === undefined) delete (process.env as Record<string, unknown>).NODE_ENV;
         else (process.env as Record<string, unknown>).NODE_ENV = env.NODE_ENV;
 
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         mod = require(LOGGER_PATH);
 
         if (prevLevel === undefined) delete process.env.LOG_LEVEL;

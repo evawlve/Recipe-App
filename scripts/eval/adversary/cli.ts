@@ -141,7 +141,6 @@ function judgeConfig(): JudgeConfig {
     };
     if (cfg.effort && !['low', 'medium', 'high', 'xhigh', 'max'].includes(cfg.effort)) throw new FlagError(`--effort must be low|medium|high|xhigh|max, got ${cfg.effort}`);
     if (arm === 'openrouter') {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('dotenv').config({ path: path.join(REPO, '.env') });
         const apiKey = process.env.OPENROUTER_API_KEY;
         if (!apiKey) throw new FlagError('--judge openrouter needs OPENROUTER_API_KEY (backend .env)');
@@ -185,7 +184,6 @@ function loadScriptStrings(): Set<string> {
         const rows = fs.readFileSync(path.join(REPO, 'scripts', 'eval', f), 'utf8').split('\n').slice(1);
         for (const r of rows) add(r.split('\t')[2]);
     }
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { assembleSeeds } = require('../warm-cache') as { assembleSeeds: () => string[] };
     for (const s of assembleSeeds()) add(s);
     return out;
@@ -203,7 +201,6 @@ let parser: ((l: string) => ParsedLine | null) | null = null;
 function parseLine(line: string): ParsedLine | null {
     if (!parser) {
         if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'postgresql://adversary:unused@127.0.0.1:1/unused';
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const m = require('../../../src/lib/parse/ingredient-line') as { parseIngredientLine: (l: string) => ParsedLine | null };
         parser = m.parseIngredientLine;
     }
@@ -544,7 +541,6 @@ async function generate(): Promise<number> {
 async function calibrate(): Promise<number> {
     const cfg0 = judgeConfig();
     preflightJudge(cfg0);
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const screen = require('../correctness-screen') as typeof import('../correctness-screen');
     const fixture = JSON.parse(fs.readFileSync(path.join(REPO, 'scripts', 'eval', '__tests__', 'fixtures', 'correctness-screen-batch01.json'), 'utf8')) as {
         rows: { verdict: 'GOOD' | 'SUSPECT' | 'BAD'; axes: string[]; row: import('../correctness-screen').ScreenRow }[];

@@ -830,9 +830,7 @@ const countLabelMod = require('../../src/lib/mapping/count-label');
 const plausibilityMod = require('../../src/lib/mapping/macro-plausibility');
 const aiNormalizeMod = require('../../src/lib/mapping/ai-normalize');
 const vmHelpersMod = require('../../src/lib/mapping/validated-mapping-helpers');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { createAiNutritionBudget } = require('../../src/lib/mapping/ai-nutrition-backfill');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
 
 // Everything below is IMPORTED FROM THE REAL MODULES, never reimplemented. A probe
@@ -842,7 +840,6 @@ const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = req
 // that it could be: no imports of its own, structural `{ source }` typing rather
 // than `UnifiedCandidate`. Requiring it here pulls in nothing from `config.ts`
 // (which snapshots flags and warms ONNX — playbook section 4).
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { buildRerankPool, rerankPoolRemainder, RERANK_POOL_LIMIT } = require('../../src/lib/mapping/rerank-pool');
 const { confidenceGate, assessConfidence } = gatherMod;
 /**

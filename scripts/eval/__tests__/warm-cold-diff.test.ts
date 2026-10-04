@@ -769,7 +769,6 @@ describe('population builders account for every line they were given', () => {
     });
 
     it('the REAL golden set yields the pinned 285 nlp cases with nothing unaccounted for', () => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const real = require('../golden-set.json');
         const p = goldenPopulation(real);
         expect(p.lines.length + p.skips.length).toBe(real.nlp.length);

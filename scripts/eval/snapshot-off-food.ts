@@ -706,7 +706,6 @@ export function parseCliArgs(argv: string[], env: NodeJS.ProcessEnv): { config: 
 async function main(): Promise<void> {
     // Load .env for DATABASE_URL identity fallback only; never printed.
     try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('dotenv').config({ quiet: true });
     } catch { /* dotenv is optional here; flags/env still work */ }
 
