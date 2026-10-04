@@ -56,7 +56,6 @@ if (!rawUrl) { console.error('DATABASE_URL not found in env or .env files'); pro
 // Pin to a single connection so TEMP tables persist across queries.
 const dbUrl = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'connection_limit=1';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient({ datasources: { db: { url: dbUrl } } });
 
