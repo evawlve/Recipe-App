@@ -1,6 +1,6 @@
 # cloud-23 — the account-deletion web page (backend half of mobile punch #332)
 
-**Date:** 2026-10-04 · **Base:** `a2c7b764` (`master`) · **Branch:** `cloud/account-delete-page` · **PR:** left open for a Mac session or Diego.
+**Date:** 2026-10-04 · **Base:** `a2c7b764` (`master`) · **Branch:** `cloud/account-delete-page` · **PR:** [#465](https://github.com/evawlve/Recipe-App/pull/465), left open for a Mac session or Diego.
 
 Google Play requires an app with account creation to offer an in-app deletion path *and* a web link where a user can request deletion (declared in the Data safety form). The backend already served `DELETE /api/account/delete`; the web had cookie auth and a `/privacy` page offering an email-request path only. This PR adds the self-serve page. The mobile half (the in-app path, Apple 5.1.1(v)) is a separate, later brief, and no mobile code calls the route yet.
 
