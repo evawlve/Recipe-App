@@ -1,4 +1,4 @@
-import { hasDecisiveBrandContext, candidateMatchesTargetBrand } from './simple-rerank';
+import { hasDecisiveBrandContext, candidateMatchesTargetBrand, BRAND_PRODUCT_CONTEXT_TOKENS } from './simple-rerank';
 import { detectBrandInQuery } from './brand-detector';
 import type { ParsedIngredient } from '../parse/ingredient-line';
 
@@ -66,6 +66,16 @@ function foldBrandTokens(value: string): string[] {
  */
 function dropPluralS(token: string): string {
     return token.replace(/(?<=\w{3})s$/, '');
+}
+
+/**
+ * Does any token of the line name a product form (`bar`, `protein`, `shake`, …)?
+ * The token view is `hasDecisiveBrandContext()`'s own, so clause 3 of
+ * `brandWasConsumedAsQuantity()` asks the same thing clause 4 asks, without the
+ * adjacency requirement.
+ */
+function namesProductForm(text: string): boolean {
+    return text.toLowerCase().split(/[\s,()[\]{}]+/).some(t => BRAND_PRODUCT_CONTEXT_TOKENS.has(t));
 }
 
 /**
@@ -217,9 +227,30 @@ function brandPresentByClauses(
  *     Squirt is a real soda brand; without this clause the repair is refused and
  *     the brand is lost. The parser assigned that token the UNIT role, which is
  *     a different claim from the quantity role.
- *  3. A REAL MEASURE WORD FOLLOWS. `one birthday cake protein bar` and `one
- *     birthday cake bar` both parse with `unit: null`; without this clause the
- *     genuine ONE brand is stripped off both.
+ *  3. A REAL MEASURE WORD FOLLOWS, OR THE LINE NAMES NO PRODUCT FORM AT ALL.
+ *     `one birthday cake protein bar` and `one birthday cake bar` both parse
+ *     with `unit: null`; without this clause the genuine ONE brand is stripped
+ *     off both. Until punch #324 (2026-10-05) the clause was `unit` alone, so
+ *     EVERY no-unit count line kept the brand: `one caramel rice cake` became
+ *     `one caramel rice cake` in the retrieval query and resolved a ONE Birthday
+ *     Cake bar (`under_gate`, never cached, so it recurred). Now a no-unit line
+ *     falls through to clause 4 only when BOTH hold:
+ *       - the count is all the parser took: `parsed.name` is the rest of the
+ *         line, token for token. `splenda` parses with no unit to name
+ *         `sucralose sweetener` — the parser REWROTE the brand, it did not
+ *         count it, so clause 1 holds and this keeps the brand;
+ *       - no token of the line is a BRAND_PRODUCT_CONTEXT token (`bar`,
+ *         `protein`, `shake`, …) — the non-adjacent form of clause 4's test,
+ *         because `one birthday cake bar` puts the product word four tokens
+ *         from the brand.
+ *     MEASURED 2026-10-05 over all 727 distinct
+ *     `SegmentationCache` tuples, guard inputs captured from the SHIPPED mapper
+ *     (`s51_guard_capture.ts`): 324 reach guard 1, 255 apply, and exactly FOUR
+ *     applied inputs reach this clause with no unit — `one caramel rice cake`,
+ *     `one chocolate rice cake`, `One chicken breast`, `One hamburger bun`, none
+ *     naming a product form. All four now decline; the other 320 are
+ *     byte-identical. The 602-tuple S51 capture holds none of the four (they
+ *     were segmented after 09-15) and reads 266/266 identical.
  *  4. THE BRAND IS NOT DECISIVE. `one bar birthday cake` parses `unit: 'bar'`,
  *     so clauses 1-3 all hold, but `bar` is a BRAND_PRODUCT_CONTEXT token and
  *     the brand IS decisive — this is the line behind the 242-serve pin.
@@ -274,8 +305,14 @@ export function brandWasConsumedAsQuantity(
     // (2) consumed as the QUANTITY, not as the unit.
     if (brandTokens.some(t => unitTokens.has(t))) return false;
 
-    // (3) a real measure word follows the count.
-    if (!parsed?.unit) return false;
+    // (3) a real measure word follows the count — or, with no unit, the count is
+    //     ALL the parser took (the rest of the line survives into parsed.name
+    //     verbatim) and nothing in the line names a product form (punch #324).
+    if (!parsed?.unit) {
+        const rest = rawTokens.slice(brandTokens.length).join(' ');
+        const countOnly = rest.length > 0 && rest === foldBrandTokens(parsed?.name ?? '').join(' ');
+        if (!countOnly || namesProductForm(rawLine)) return false;
+    }
 
     // (4) and the line gives the brand no decisive product context.
     return !hasDecisiveBrandContext(rawLine, targetBrand);

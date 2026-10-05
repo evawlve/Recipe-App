@@ -2,6 +2,7 @@ import { parseIngredientLine } from '../../parse/ingredient-line';
 import { detectBrandInQuery } from '../brand-detector';
 import { deriveMappingCacheKey } from '../cache-key';
 import { stripPartitiveOfResidue } from '../partitive-residue';
+import { hasDecisiveBrandContext } from '../simple-rerank';
 import { brandAlreadyPresent, brandPresentForPrepend, brandWasConsumedAsQuantity, preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from '../quantity-word-brand';
 
 /**
@@ -152,6 +153,66 @@ describe('the genuine ONE-bar keys are untouched', () => {
         expect(parseIngredientLine(rawLine)?.unit).toBeNull();
         expect(preflight(rawLine, normalizedForm).declined).toBeNull();
         expect(preflight(rawLine, normalizedForm).baseName.toLowerCase()).toContain('one');
+    });
+});
+
+/**
+ * Punch #324 (2026-10-05). Clause 3 used to be `parsed.unit` alone, so a no-unit
+ * count line kept the ONE brand and the repair prepended it: `one caramel rice
+ * cake` resolved a ONE Birthday Cake bar on the composite path. These four are
+ * EVERY applied guard input that reached clause 3 with no unit, over all 727
+ * distinct `SegmentationCache` tuples captured from the shipped mapper on
+ * 2026-10-05 (`s51_guard_capture.ts`); the segmenter named no brand on any of
+ * them, so the target is the detector's `one`.
+ */
+describe('punch #324 — a no-unit count line that names no product form is a count', () => {
+    it.each([
+        ['one caramel rice cake', 'caramel rice cake'],
+        ['one chocolate rice cake', 'chocolate rice cake'],
+        ['One chicken breast', 'chicken breast'],
+        ['One hamburger bun', 'hamburger bun'],
+    ])('`%s` keeps the segmenter form and no ONE prepend', (rawLine, normalizedForm) => {
+        const parsed = parseIngredientLine(rawLine);
+        expect(parsed?.unit).toBeNull();
+        expect(detectBrandInQuery(rawLine).matchedBrand.toLowerCase()).toBe('one');
+        expect(brandWasConsumedAsQuantity(rawLine, detectBrandInQuery(rawLine).matchedBrand, parsed))
+            .toBe(true);
+        const out = preflight(rawLine, normalizedForm);
+        expect(out.declined).toBe('brand_consumed_as_quantity');
+        expect(out.baseName).toBe(normalizedForm);
+        expect(out.key.split(' ')).not.toContain('one');
+    });
+
+    it('keeps the brand when a product form appears anywhere in the line, not only beside it', () => {
+        // `bar` sits four tokens from `one`: clause 4's adjacency test is false,
+        // so clause 3 is the one that keeps it.
+        const rawLine = 'one birthday cake bar';
+        expect(hasDecisiveBrandContext(rawLine, 'one')).toBe(false);
+        expect(brandWasConsumedAsQuantity(rawLine, 'one', parseIngredientLine(rawLine))).toBe(false);
+    });
+
+    it('reads a bare `one birthday cake` as a count — the cost, named', () => {
+        // No product form, no unit: the line could be one cake or one ONE bar,
+        // and the guard now reads it as a cake. Not in the captured population.
+        const out = preflight('one birthday cake', 'birthday cake');
+        expect(out.declined).toBe('brand_consumed_as_quantity');
+        expect(out.baseName).toBe('birthday cake');
+    });
+
+    it('refuses guard 2 the same way when a segmenter names `One` on such a line', () => {
+        expect(brandReassertEvidence({
+            rawLine: 'one caramel rice cake',
+            targetBrand: 'One',
+            segmenterBrand: 'One',
+            parsed: parseIngredientLine('one caramel rice cake'),
+        })).toBeNull();
+        // ...and still grants it on a product-form line.
+        expect(brandReassertEvidence({
+            rawLine: 'one birthday cake bar',
+            targetBrand: 'One',
+            segmenterBrand: 'One',
+            parsed: parseIngredientLine('one birthday cake bar'),
+        })).toBe('segmenter_named');
     });
 });
 
