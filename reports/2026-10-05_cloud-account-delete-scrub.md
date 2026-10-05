@@ -125,4 +125,4 @@ Deploy per CLAUDE.md §Server Ops: `git fetch` + `git merge --ff-only`, `npm run
 
 ## 8. Push and PR
 
-`origin/master` re-fetched immediately before the push: __MASTER_AT_PUSH__. Branch `cloud/account-delete-scrub`, one PR against `master`, left OPEN: __PR_URL__. Required checks `build` and `Vercel` run on the PR; this session does not merge.
+`origin/master` re-fetched immediately before the push: still `b5b2b94`, no merge needed. Branch `cloud/account-delete-scrub`, one PR against `master`, left OPEN: **PR #473** (`https://github.com/evawlve/Recipe-App/pull/473`). Required checks `build` and `Vercel` run on the PR; this session does not merge.
