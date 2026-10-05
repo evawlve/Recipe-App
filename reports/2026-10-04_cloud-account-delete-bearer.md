@@ -1,6 +1,6 @@
 # `/api/account/delete` takes the app's bearer and fails honestly (2026-10-05)
 
-Written by cloud session cloud-26. Branch `cloud/account-delete-bearer` in `evawlve/Recipe-App`, one PR against `master`, left OPEN for a Mac session or Diego. This is the backend half of mobile punch #332 (ruled 2026-10-04: a web page plus an in-app **Delete account** on Profile, both confirming by typing DELETE). cloud-23 (PR #465, open) built the web page and recorded two findings it was told not to fix; this PR fixes the route.
+Written by cloud session cloud-26. Branch `cloud/account-delete-bearer` in `evawlve/Recipe-App`, one PR against `master` — **#471** — left OPEN for a Mac session or Diego. This is the backend half of mobile punch #332 (ruled 2026-10-04: a web page plus an in-app **Delete account** on Profile, both confirming by typing DELETE). cloud-23 (PR #465, open) built the web page and recorded two findings it was told not to fix; this PR fixes the route.
 
 - **Tree.** `evawlve/Recipe-App` `origin/master` at `2a9f5ce` (the #467 merge, `lint:ci --max-warnings 447`). Re-fetched before the push: see §6.
 - **Labels.** "Measured" means a command run in this checkout on 2026-10-05 (Node v22.22.0, npm 10.9.4, after `npm ci`). "Not run" means the step needs the box, the database or Supabase, and this session had none of them. No live API was called.
@@ -107,4 +107,4 @@ Expect 2 or 3. A 1 means the service-role key is missing and every deletion will
 
 ## 6. Push and PR
 
-`origin/master` re-fetched immediately before the push: still `2a9f5ce`, no merge needed. Branch `cloud/account-delete-bearer`, one PR against `master`, left OPEN (PR number recorded in the follow-up commit on this branch). Required checks `build` and `Vercel` run on the PR; this session does not merge.
+`origin/master` re-fetched immediately before the push: still `2a9f5ce`, no merge needed. Branch `cloud/account-delete-bearer`, one PR against `master`, left OPEN: **PR #471** (`https://github.com/evawlve/Recipe-App/pull/471`). Required checks `build` and `Vercel` run on the PR; this session does not merge.
