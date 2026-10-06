@@ -1,0 +1,49 @@
+{
+  "createdAt": "2026-10-05T20:00:00.000Z",
+  "seedsPath": "CACHE-SOURCED, NOT A SEGMENTER DRAW (lines 1-3): the segments exactly as `SegmentationCache` stores them for the three organic requests that carry punch #324's four inputs (read-only SELECT, Lane A S65, 2026-10-05), `mealType` dropped. Line 4 is FIXTURE-SOURCED: hand-set controls for the shapes clause 3 must keep — the genuine ONE bar lines from quantity-word-brand.test.ts (n-brand-02's `one bar birthday cake`, `one birthday cake bar`, `one protein bar`), the parser-REWRITE brand `splenda`, and a unit-bearing count.",
+  "lines": [
+    {
+      "line": "one serving of takis two rice cakes one caramel rice cake one chocolate rice cake one fairlife elite core power",
+      "items": [
+        { "rawText": "One serving of Takis", "normalizedForm": "Takis", "brand": "Takis" },
+        { "rawText": "two rice cakes", "normalizedForm": "rice cakes", "brand": "" },
+        { "rawText": "one caramel rice cake", "normalizedForm": "caramel rice cake", "brand": "" },
+        { "rawText": "one chocolate rice cake", "normalizedForm": "chocolate rice cake", "brand": "" },
+        { "rawText": "one fairlife elite core power", "normalizedForm": "elite core power", "brand": "Fairlife" }
+      ]
+    },
+    {
+      "line": "13.5 ounces of real good chicken tenders four slices of inked keto white keto bread, half a cup of sugar-free maple syrup one hamburger bun half a cup of egg whites one egg 3 tablespoons of sugar-free creamer",
+      "items": [
+        { "rawText": "13.5 ounces of Real good chicken tenders", "normalizedForm": "chicken tenders", "brand": "Real good" },
+        { "rawText": "four slices of inked keto white keto bread", "normalizedForm": "keto white keto bread", "brand": "inked" },
+        { "rawText": "Half a cup of sugar-free maple syrup", "normalizedForm": "sugar-free maple syrup", "brand": "" },
+        { "rawText": "One hamburger bun", "normalizedForm": "hamburger bun", "brand": "" },
+        { "rawText": "half a cup of egg whites", "normalizedForm": "egg whites", "brand": "" },
+        { "rawText": "one egg", "normalizedForm": "egg", "brand": "" },
+        { "rawText": "3 tablespoons of sugar-free creamer", "normalizedForm": "sugar-free creamer", "brand": "" }
+      ]
+    },
+    {
+      "line": "want to have a mixed green salad onions little bit of cheese one chicken breast half an avocado and some dressing",
+      "items": [
+        { "rawText": "mixed green salad", "normalizedForm": "mixed green salad", "brand": "" },
+        { "rawText": "Onions", "normalizedForm": "Onions", "brand": "" },
+        { "rawText": "little bit of cheese", "normalizedForm": "cheese", "brand": "" },
+        { "rawText": "One chicken breast", "normalizedForm": "chicken breast", "brand": "" },
+        { "rawText": "half an avocado", "normalizedForm": "avocado", "brand": "" },
+        { "rawText": "some dressing", "normalizedForm": "dressing", "brand": "" }
+      ]
+    },
+    {
+      "line": "S65 hand-set controls (not a real request)",
+      "items": [
+        { "rawText": "one bar birthday cake", "normalizedForm": "birthday cake", "brand": "" },
+        { "rawText": "one birthday cake bar", "normalizedForm": "birthday cake bar", "brand": "" },
+        { "rawText": "one protein bar", "normalizedForm": "protein bar", "brand": "" },
+        { "rawText": "splenda", "normalizedForm": "sweetener", "brand": "" },
+        { "rawText": "one slice of Swiss cheese", "normalizedForm": "Swiss cheese", "brand": "" }
+      ]
+    }
+  ]
+}
