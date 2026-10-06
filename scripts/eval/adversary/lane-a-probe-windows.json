@@ -9,6 +9,7 @@
     { "session": "Lane A S59", "startPt": "2026-09-25 13:16:49", "endPt": "2026-09-25 13:16:50", "source": "same row" },
     { "session": "Lane A S60", "startPt": "2026-09-27 21:02:36", "endPt": "2026-09-27 21:02:42", "source": "reports/2026-09-27_lane-a-s60-…md bracket: my 13 warm probes, 21:02:36–21:02:42" },
     { "session": "Lane A S61", "startPt": "2026-09-28 11:31:40", "endPt": "2026-09-28 11:31:42", "source": "reports/2026-09-28_lane-a-s61-…md bracket: my 2 warm deploy probes (11:31:40, 11:31:42)" },
-    { "session": "Lane A S62", "startPt": "2026-09-28 17:53:39", "endPt": "2026-09-28 17:55:19", "source": "reports/2026-09-28_lane-a-s62-…md bracket: my 7 warm probes, 17:53:39–17:55:19" }
+    { "session": "Lane A S62", "startPt": "2026-09-28 17:53:39", "endPt": "2026-09-28 17:55:19", "source": "reports/2026-09-28_lane-a-s62-…md bracket: my 7 warm probes, 17:53:39–17:55:19" },
+    { "session": "Lane A S64", "startPt": "2026-10-01 10:46:44", "endPt": "2026-10-01 10:47:39", "source": "reports/2026-10-01_lane-a-s64-…md bracket: my 27 keyed nosave=1 probes, MEL noCache=false +38 (10:46:45.613–10:47:38.358), nothing else landed" }
   ]
 }

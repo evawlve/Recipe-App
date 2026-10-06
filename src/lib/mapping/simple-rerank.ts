@@ -1498,7 +1498,7 @@ function computeNutritionScore(
  * make the brand reading unambiguous ("ghost protein", "built bar") as opposed
  * to coincidental English usage ("ghost pepper", "one apple").
  */
-const BRAND_PRODUCT_CONTEXT_TOKENS = new Set([
+export const BRAND_PRODUCT_CONTEXT_TOKENS: ReadonlySet<string> = new Set([
     'protein', 'whey', 'isolate', 'casein', 'powder', 'shake', 'bar', 'bars',
     'energy', 'drink', 'preworkout', 'pre-workout', 'bcaa', 'aminos',
     'creatine', 'gamer', 'greens', 'electrolytes', 'hydration',

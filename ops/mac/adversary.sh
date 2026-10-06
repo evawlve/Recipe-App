@@ -24,13 +24,21 @@
 #     checked here, not trusted to the plist;
 #   - ~/.adversary-hold exists (a Lane A window holds the box; create it BEFORE a MEL quiet-window
 #     check, remove it after the all-clear);
+#   - the Mac is on battery, or in a dark wake (below);
 #   - the tailnet name does not answer (HTTP /api/ok and ssh);
 #   - `claude auth status` does not read a logged-in claude.ai account.
 # A skipped night loses nothing: cli.ts `--since-state` starts the next run where the last good run
-# ended (capped at 7 days back).
+# ended (capped at 7 days back). A skip does not retry the same day: launchd fires a missed 08:30
+# once, on the next wake, and the next chance is the next 08:30.
 #
 # SLEEP. The whole run holds `caffeinate -i -w $$` (idle sleep only; a closed lid or low battery
-# still wins, and launchd then fires the run on the next wake).
+# still wins). That is not enough in a DARK WAKE on battery (measured 2026-09-30, Lane A S64): the
+# run began at 08:32:17 in a DarkWake at 66% battery, the Mac slept again 5 s later with the
+# assertion held, the run froze ~14 minutes, and spawnSync's 120 s timeout expired across the sleep
+# and killed the second psql (`exit null`). So a run that STARTS on battery (`pmset -g batt`) or in
+# a dark wake (IOPMrootDomain's "System Capabilities" without the graphics bit, 0x2) skips with one
+# line. A sleep that begins mid-run (a lid closed) is the second guard's: box.ts and judge.ts retry
+# a killed child ONCE (scripts/eval/adversary/retry.ts).
 #
 # LAUNCHD GIVES NO PATH, so node, ts-node and claude are absolute paths, and HOME is set explicitly.
 # THE CLI'S LOGIN NEEDS USER AND PATH (measured 2026-09-29): the claude.ai credential is a keychain
@@ -75,11 +83,29 @@ stop() {
   exit "$code"
 }
 
+# From a failed run's output, the line that names the failure: the last line that starts with
+# `<Something>Error:` or `REFUSED:` (cli.ts prints a FlagError as REFUSED), else the last non-blank line.
+error_line() {
+  awk '/^[[:space:]]*([A-Za-z]*Error|REFUSED):/ { e = $0 } NF { l = $0 } END { sub(/^[[:space:]]+/, "", e); print (e != "" ? e : l) }'
+}
+
 # One idle assertion for the whole run, released when this script exits.
 caffeinate -i -w $$ &
 
 [ "$(TZ=America/Los_Angeles date +%H)" = "04" ] && stop "SKIPPED: 04:xx PDT is the flywheel sweep's hour" 1
 [ -e "$HOLD" ] && stop "SKIPPED: $HOLD exists — a Lane A window holds the box" 1
+POWER=$(pmset -g batt 2>/dev/null | head -1)
+case "$POWER" in
+  *"'AC Power'"*) ;;
+  *) stop "SKIPPED: on battery (${POWER:-pmset -g batt unreadable}) — a battery dark wake froze the 09-30 run" 1 ;;
+esac
+# kIOPMSystemCapabilityGraphics = 0x2: a full wake carries it (15 = CPU|graphics|audio|network); a
+# dark wake does not. Unreadable is treated as a dark wake, so the skip fails closed and says so.
+CAPS=$(ioreg -n IOPMrootDomain -r -d1 2>/dev/null | awk -F'= ' '/"System Capabilities"/ {print $2; exit}')
+case "$CAPS" in
+  '' | *[!0-9]*) stop "SKIPPED: cannot read IOPMrootDomain System Capabilities (got '${CAPS}') — treated as a dark wake" 1 ;;
+esac
+[ $((CAPS & 2)) -eq 0 ] && stop "SKIPPED: dark wake (System Capabilities=$CAPS, no graphics bit) — the 09-30 run froze in one" 1
 curl -s -m 10 "http://$BOX:3000/api/ok" 2>/dev/null | grep -q '"buildId"' \
   || stop "FAILED cause=tailnet down — http://$BOX:3000/api/ok did not answer" 1
 ssh -o BatchMode=yes -o ConnectTimeout=15 "owner@$BOX" true 2>/dev/null \
@@ -94,6 +120,8 @@ RC=$?
 printf '%s\n' "$OUT" >>"$LOG"
 case "$RC" in
   0 | 1) log "ok rc=$RC — $(printf '%s\n' "$OUT" | tail -1)" ;;
-  *) stop "FAILED cause=observe exited $RC — $(printf '%s\n' "$OUT" | grep -v '^[[:space:]]*$' | tail -1 | cut -c1-300)" 1 ;;
+  # The line that names the failure, not the stack's last frame (the 09-30 line read
+  # `at processTicksAndRejections …`): the last `Error:`/`REFUSED:` line, else the last non-blank one.
+  *) stop "FAILED cause=observe exited $RC — $(printf '%s\n' "$OUT" | error_line | cut -c1-300)" 1 ;;
 esac
 exit 0
