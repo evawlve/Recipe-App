@@ -74,6 +74,16 @@
       "errored": false,
       "itemCount": 1
     },
+    "n-mq-42": {
+      "_note": "Hand-transcribed 2026-10-07 from the observed block of the newest cold receipts scripts/eval/results/eval-2026-09-21T11-59-15-020Z / 12-03-18-213Z / 12-07-13-792Z.json (build GeaszkKFEI0D1BkSWDX41, 3 of 3 identical); no cold run since. Refresh with `npm run eval:golden -- --nocache --write-baseline --only nlp --grep n-mq-42`.",
+      "foodId": "fs_137908742",
+      "foodName": "Chipotle Chicken Burrito Bowl",
+      "grams": 255,
+      "kcal100": 133.33,
+      "abstained": false,
+      "errored": false,
+      "itemCount": 1
+    },
     "n-prose-01": {
       "foodId": "fs_33793",
       "foodName": "Egg White",
