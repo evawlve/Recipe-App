@@ -25,7 +25,7 @@ jest.mock('@supabase/supabase-js', () => ({
 // `$transaction` (the reservation's interactive form) hands the callback a `tx` that shares
 // `nlpRequestLog`'s mocks, so the count/create assertions below read the same functions.
 jest.mock('@/lib/db', () => {
-  const nlpRequestLog = { count: jest.fn(), create: jest.fn(), delete: jest.fn() };
+  const nlpRequestLog = { count: jest.fn(), create: jest.fn(), delete: jest.fn(), deleteMany: jest.fn(async () => ({ count: 0 })) };
   return {
     prisma: {
       nlpRequestLog,
