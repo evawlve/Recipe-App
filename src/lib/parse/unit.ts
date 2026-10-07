@@ -144,11 +144,28 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     return { kind: 'volume', unit: smallVolumeUnits[token] };
   }
 
-  // Multipliers
+  // Multipliers.
+  //
+  // `media` / `medio` are the Spanish `half` and are mirrored here from
+  // SPANISH_WORD_FRACTIONS in quantity.ts, which owns the list and the reasons
+  // for it. Both tables carry `half` today, and a word in one but not the other
+  // is read as a quantity in one position and a unit in the other -- the same
+  // shape as the WORD_NUMBERS / QUANTITY_WORD_NUMBERS split that
+  // ingredient-line.ts's own header calls "the bug, not the design".
+  //
+  // Deliberately NOT added: the Spanish CONTAINER words (`taza`, `vaso`,
+  // `cucharada`). Measured 2026-09-12 on the Spanish corpus, each would move a
+  // line that is currently RIGHT: `una taza de arroz` already lands about a cup
+  // and over-bills only because the record is dry rice, while `un vaso de
+  // leche` (250 g) and `una cucharada de aceite de oliva` (15 g) take the
+  // record's own label serving and land correctly by luck. Owner (mobile repo):
+  // sync-docs/reports/2026-09-12_spanish-eval-corpus-baseline.md.
   const multipliers: Record<string, number> = {
     'half': 0.5,
     'quarter': 0.25,
     'third': 1 / 3,
+    'media': 0.5,
+    'medio': 0.5,
     '½': 0.5,
     '¼': 0.25,
     '⅓': 1 / 3
