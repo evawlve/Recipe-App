@@ -342,8 +342,11 @@ describe('IO: loadRoster / readColdRunEvidence surface absence rather than inven
         // its `departed` entry attributed to the Typesense container restarts (pinned
         // below). It stays OUT of this list either way — the return is a documented
         // re-roll, not a membership change, and membership is what this list pins.
+        //
+        // 2026-10-07: n-mq-42 LEFT for `departed` UNFIXED — flagged knownIssue on Diego's
+        // call, so it moved to the other (excused) population; it still fails cold.
         const REAL_MEMBERS = [
-            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-mq-42', 'n-prod-01',
+            'n-cook-03', 'n-mod-02', 'n-mq-41', 'n-prod-01',
             'n-serv-21', 'n-serv-39', 'n-serv-45', 'n-serv-55',
         ];
         expect(real!.members.map(m => m.id).sort()).toEqual([...REAL_MEMBERS].sort());
