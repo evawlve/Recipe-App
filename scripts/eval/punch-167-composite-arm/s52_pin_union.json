@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-09-20T15:30:00.000Z",
+  "seedsPath": "CACHE-SOURCED, NOT A FRESH SEGMENTER DRAW: the two (rawText, normalizedForm, brand) tuples that punch #196's union payload changes, lifted verbatim from rows 264 and 465 of scripts/eval/punch-167-composite-arm/s51_seg_tuples.csv (the committed dump of SELECT DISTINCT s->>'rawText', s->>'normalizedForm', s->>'brand' FROM \"SegmentationCache\", jsonb_array_elements(\"segmentsJson\") s, Lane A S51, 2026-09-15). Hand-set by Lane A S52 because `--mode pin` would call segmentTextWithAi() and draw a NEW split, which is the one input this arm exists to hold constant. `bar cooky cream protein quest` is token-sorted in the cache and is reproduced here exactly as stored; do not tidy it.",
+  "lines": [
+    {
+      "line": "bar cooky cream protein quest",
+      "items": [
+        {
+          "rawText": "bar cooky cream protein quest",
+          "normalizedForm": "cooky cream protein bar",
+          "brand": "Quest"
+        }
+      ]
+    },
+    {
+      "line": "One scoop of optimum weigh nutrition protein",
+      "items": [
+        {
+          "rawText": "One scoop of optimum weigh nutrition protein",
+          "normalizedForm": "whey protein",
+          "brand": "Optimum Nutrition"
+        }
+      ]
+    }
+  ]
+}
