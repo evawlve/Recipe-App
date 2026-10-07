@@ -31,7 +31,7 @@ jest.mock('@supabase/supabase-js', () => ({
 
 jest.mock('@/lib/db', () => ({
   prisma: {
-    nlpRequestLog: { count: jest.fn(), create: jest.fn() },
+    nlpRequestLog: { count: jest.fn(), create: jest.fn(), deleteMany: jest.fn(async () => ({ count: 0 })) },
     mappingEventLog: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
   },
 }));

@@ -29,7 +29,7 @@ jest.mock('@supabase/supabase-js', () => ({
 // after another. The `tx` it hands over shares `nlpRequestLog`'s mocks, and its
 // `$executeRaw` (the lock) is a no-op.
 jest.mock('@/lib/db', () => {
-  const nlpRequestLog = { count: jest.fn(), create: jest.fn(), delete: jest.fn() };
+  const nlpRequestLog = { count: jest.fn(), create: jest.fn(), delete: jest.fn(), deleteMany: jest.fn(async () => ({ count: 0 })) };
   const executeRaw = jest.fn(async () => 0);
   let chain: Promise<unknown> = Promise.resolve();
   const $transaction = jest.fn((fn: (tx: unknown) => Promise<unknown>) => {
@@ -117,7 +117,7 @@ describe('/api/nlp/parse rate limit', () => {
   const { mapIngredientWithFallback } = require('@/lib/mapping/map-ingredient-with-fallback');
   const { resolveFoodDetails } = require('@/lib/nlp/resolve-payload');
   const { callStructuredLlm } = require('@/lib/ai/structured-client');
-  const { _resetInflightForTests } = require('@/lib/nlp/parse-rate-limit');
+  const { _resetInflightForTests, _resetPruneForTests, inflightCount } = require('@/lib/nlp/parse-rate-limit');
 
   /** `count` is awaited minute-first then day (Promise.all order), so Once-chain in that order. */
   function counts(minute: number, day: number) {
@@ -152,6 +152,7 @@ describe('/api/nlp/parse rate limit', () => {
     jest.clearAllMocks();
     // The in-flight map and the reservation-error breaker are module state.
     _resetInflightForTests();
+    _resetPruneForTests(); // the request-log prune throttle is module state too
     delete process.env.NLP_PARSE_LIMIT_PER_MINUTE;
     delete process.env.NLP_PARSE_LIMIT_PER_DAY;
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -161,6 +162,7 @@ describe('/api/nlp/parse rate limit', () => {
     prisma.nlpRequestLog.count.mockResolvedValue(0);
     prisma.nlpRequestLog.create.mockResolvedValue({ id: 'reserved-1' });
     prisma.nlpRequestLog.delete.mockResolvedValue({});
+    prisma.nlpRequestLog.deleteMany.mockResolvedValue({ count: 0 });
     prisma.segmentationCache.findUnique.mockResolvedValue(null);
     prisma.segmentationCache.upsert.mockResolvedValue({});
     resolveFoodDetails.mockResolvedValue(DETAILS);
@@ -415,6 +417,55 @@ describe('/api/nlp/parse rate limit', () => {
     expect(await res.json()).toEqual({ error: 'Unauthorized: Missing or invalid token' });
     expect(mockGetUser).not.toHaveBeenCalled();
   });
+
+  // ------------------------------------------------------------------
+  // RETENTION (S68) — the prune runs once a row was reserved, outside the transaction, and
+  // can never fail a parse. A missing `deleteMany` mock would throw a TypeError the route's
+  // catch swallows, so the happy path also pins that `console.warn` stayed silent.
+  // ------------------------------------------------------------------
+  test('a reservation prunes once: deleteMany with `lt` = now − 48 h, and the warn stays silent', async () => {
+    const before = Date.now();
+    const res = await POST(jwtRequest({ items: ['some cereal'] }));
+    const after = Date.now();
+    expect(res.status).toBe(200);
+    expect(prisma.nlpRequestLog.deleteMany).toHaveBeenCalledTimes(1);
+    const { where } = prisma.nlpRequestLog.deleteMany.mock.calls[0][0];
+    const cutoff = (where.createdAt.lt as Date).getTime();
+    expect(cutoff).toBeGreaterThanOrEqual(before - 48 * 60 * 60 * 1000);
+    expect(cutoff).toBeLessThanOrEqual(after - 48 * 60 * 60 * 1000);
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  test('a second reservation inside the throttle makes no second delete', async () => {
+    await POST(jwtRequest({ items: ['some cereal'] }));
+    await POST(jwtRequest({ items: ['some cereal'] }));
+    expect(prisma.nlpRequestLog.create).toHaveBeenCalledTimes(2);
+    expect(prisma.nlpRequestLog.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  test('a rejected prune still answers the parse, warns once, and neither refunds nor leaks the slot', async () => {
+    prisma.nlpRequestLog.deleteMany.mockRejectedValueOnce(new Error('prune down'));
+    const res = await POST(jwtRequest({ items: ['some cereal'] }));
+    expect(res.status).toBe(200);
+    expect((await res.json())[0]).toEqual(expect.objectContaining({ foodId: 'off_0042400265177' }));
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith('[nlp-parse] request-log prune failed', expect.any(Error));
+    expect(prisma.nlpRequestLog.delete).not.toHaveBeenCalled();
+    expect(inflightCount('user-1')).toBe(0);
+  });
+
+  test('over the limit → 429 and NO prune (a 429 reserved nothing)', async () => {
+    counts(10, 50);
+    const res = await POST(jwtRequest({ items: ['some cereal'] }));
+    expect(res.status).toBe(429);
+    expect(prisma.nlpRequestLog.deleteMany).not.toHaveBeenCalled();
+  });
+
+  test('the dev key is not rate limited and so does not prune', async () => {
+    const res = await POST(devRequest({ items: ['some cereal'] }));
+    expect(res.status).toBe(200);
+    expect(prisma.nlpRequestLog.deleteMany).not.toHaveBeenCalled();
+  });
 });
 
 // ======================================================================
@@ -453,7 +504,7 @@ describe('/api/nlp/parse rate limit — reserve then refund', () => {
   const { prisma } = require('@/lib/db');
   const { mapIngredientWithFallback } = require('@/lib/mapping/map-ingredient-with-fallback');
   const { resolveFoodDetails } = require('@/lib/nlp/resolve-payload');
-  const { _resetInflightForTests } = require('@/lib/nlp/parse-rate-limit');
+  const { _resetInflightForTests, _resetPruneForTests } = require('@/lib/nlp/parse-rate-limit');
 
   let rows = 0;
   let nextId = 0;
@@ -488,6 +539,7 @@ describe('/api/nlp/parse rate limit — reserve then refund', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     _resetInflightForTests();
+    _resetPruneForTests(); // the request-log prune throttle is module state too
     delete process.env.NLP_PARSE_LIMIT_PER_MINUTE;
     delete process.env.NLP_PARSE_LIMIT_PER_DAY;
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
