@@ -257,27 +257,27 @@
     },
     {
       "id": "resolve-watcher-gate",
-      "claim": "The resolve watcher is gated on status==='loading' && !item.foodId — mapped items must be constructed as 'success'",
+      "claim": "The resolve watcher is gated on status==='loading' && !item.foodId — mapped items must be constructed as 'success' (the watcher lives in useMagicLogHost() since R1d; the file set is the Magic Log's three homes, and a missing host file fails closed)",
       "ownerDoc": "mobile:CLAUDE.md#logging-traps",
       "where": "mobile",
-      "command": "grep -c \"status === 'loading' && !item.foodId\" 'src/app/(tabs)/logging.tsx'",
+      "command": "test -f src/components/food-log/magic-log-host.tsx && cat 'src/app/(tabs)/logging.tsx' src/components/food-log/magic-log-surface.tsx src/components/food-log/magic-log-host.tsx | grep -c \"status === 'loading' && !item.foodId\"",
       "expect": {
         "kind": "count",
         "value": "1"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-10-08"
     },
     {
       "id": "parsed-to-staged-wired",
-      "claim": "handleParse routes mapper output through stagedItemsFromParsed (src/lib/parsed-to-staged.ts) — never spreads a parse item onto a card",
+      "claim": "The Magic parse (runMagicParse() since R1b) routes mapper output through stagedItemsFromParsed (src/lib/parsed-to-staged.ts) — never spreads a parse item onto a card; counts CALLS (the trailing paren), so an import line does not satisfy it",
       "ownerDoc": "mobile:plans/v1/api-contract.md",
       "where": "mobile",
-      "command": "grep -c 'stagedItemsFromParsed' 'src/app/(tabs)/logging.tsx'",
+      "command": "test -f src/components/food-log/magic-log-host.tsx && cat 'src/app/(tabs)/logging.tsx' src/components/food-log/magic-log-surface.tsx src/components/food-log/magic-log-host.tsx | grep -c 'stagedItemsFromParsed('",
       "expect": {
         "kind": "min",
         "value": "1"
       },
-      "verified": "2026-07-30"
+      "verified": "2026-10-08"
     },
     {
       "id": "api-key-item23-open-mobile",
@@ -2078,6 +2078,18 @@
         "value": "1"
       },
       "verified": "2026-09-21"
+    },
+    {
+      "id": "one-log-screen-flag-ships-false",
+      "claim": "The ONE log screen flag ships OFF — ONE_LOG_SCREEN_ENABLED is declared false in src/lib/one-log-screen-flag.ts (punch #353; flips only after the R5 sitting, on Diego's word)",
+      "ownerDoc": "mobile:sync-docs/reports/2026-10-07_s63-the-one-log-screen-and-the-lanes-run-without-diego.md",
+      "where": "mobile",
+      "command": "grep -c 'ONE_LOG_SCREEN_ENABLED = false' src/lib/one-log-screen-flag.ts",
+      "expect": {
+        "kind": "count",
+        "value": "1"
+      },
+      "verified": "2026-10-08"
     }
   ]
 }
