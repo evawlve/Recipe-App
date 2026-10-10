@@ -2080,16 +2080,16 @@
       "verified": "2026-09-21"
     },
     {
-      "id": "one-log-screen-flag-ships-false",
-      "claim": "The ONE log screen flag ships OFF — ONE_LOG_SCREEN_ENABLED is declared false in src/lib/one-log-screen-flag.ts (punch #353; flips only after the R5 sitting, on Diego's word)",
-      "ownerDoc": "mobile:sync-docs/reports/2026-10-07_s63-the-one-log-screen-and-the-lanes-run-without-diego.md",
+      "id": "one-log-screen-flag-ships-true",
+      "claim": "The ONE log screen flag ships ON — ONE_LOG_SCREEN_ENABLED is declared true in src/lib/one-log-screen-flag.ts (punch #353; flipped by R6, PR 171, on Diego's word 2026-10-09 after the R5 sitting)",
+      "ownerDoc": "mobile:sync-docs/reports/2026-10-10_lane-b-s95-the-one-log-screen-ships.md",
       "where": "mobile",
-      "command": "grep -c 'ONE_LOG_SCREEN_ENABLED = false' src/lib/one-log-screen-flag.ts",
+      "command": "grep -c 'ONE_LOG_SCREEN_ENABLED = true' src/lib/one-log-screen-flag.ts",
       "expect": {
         "kind": "count",
         "value": "1"
       },
-      "verified": "2026-10-08"
+      "verified": "2026-10-10"
     }
   ]
 }
