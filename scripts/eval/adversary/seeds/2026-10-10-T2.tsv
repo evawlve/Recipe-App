@@ -1,0 +1,83 @@
+# C68 (S92) Mode G seeds, 2026-10-10, theme T2. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (';' per item, '-' none; the CLI ignores col 5)
+# run 2
+olive garden house salad with a serving of italian dressing and a bowl of minestrone	3			olive garden;olive garden;olive garden
+olive garden chicken alfredo, two breadsticks and a glass of iced tea	3			olive garden;olive garden;olive garden
+half a panera broccoli cheddar soup in a bread bowl and a chocolate chip cookie	2			panera;panera
+half a serving of panera mac and cheese with a cup of tomato soup	2			panera;panera
+cracker barrel pancakes with a side of bacon and two scrambled eggs	3			cracker barrel;cracker barrel;cracker barrel
+two cracker barrel buttermilk pancakes and half an order of hashbrown casserole	2			cracker barrel;cracker barrel
+a quarter of a cracker barrel chicken pot pie and a side of mac n cheese	2			cracker barrel;cracker barrel
+a portillos hot dog with half an order of cheese fries and a chocolate cake shake	3			portillo's;portillo's;portillo's
+one portillos italian beef sandwich and a small fries	2			portillo's;portillo's
+half a serving of panda express orange chicken, a serving of fried rice and two cream cheese rangoons	3			panda express;panda express;panda express
+a panda express beijing beef with a quarter serving of chow mein and a serving of mixed veggies	3			panda express;panda express;panda express
+panda express honey walnut shrimp with half a serving of white rice	2			panda express;panda express
+three quarters of a chipotle chicken burrito and a side of queso	2			chipotle;chipotle
+a chipotle barbacoa bowl with a side of chips and half a serving of guacamole	3			chipotle;chipotle;chipotle
+chipotle sofritas burrito bowl and a side of tortilla chips	2			chipotle;chipotle
+chipotle chicken quesadilla with a side of fajita veggies and sour cream	3			chipotle;chipotle;chipotle
+popeyes two piece spicy chicken with half a serving of cajun rice and a biscuit	3			popeyes;popeyes;popeyes
+a popeyes classic chicken sandwich with a side of coleslaw	2			popeyes;popeyes
+chick-fil-a chicken biscuit and a side of hash browns	2			chick-fil-a;chick-fil-a
+half a chick-fil-a cobb salad and four chick-fil-a nuggets	2			chick-fil-a;chick-fil-a
+a chick-fil-a large lemonade and a 12 count nuggets	2			chick-fil-a;chick-fil-a
+a chick fil a spicy chicken sandwich and a celsius peach	2			chick-fil-a;celsius
+taco bell cantina chicken bowl and two soft tacos	2			taco bell;taco bell
+taco bell nachos bellgrande and half a chalupa supreme	2			taco bell;taco bell
+two mcdonalds hamburgers with a small fries and a vanilla cone	3			mcdonald's;mcdonald's;mcdonald's
+a mcdonalds quarter pounder with cheese and half an order of large fries	2			mcdonald's;mcdonald's
+mcdonalds hotcakes and sausage with a hash brown and a small orange juice	3			mcdonald's;mcdonald's;mcdonald's
+starbucks grande pumpkin spice latte with oat milk and a cheese danish	2			starbucks;starbucks
+a starbucks tall flat white and half a blueberry muffin	2			starbucks;starbucks
+starbucks protein box and a grande iced matcha latte	2			starbucks;starbucks
+wingstop 8 classic wings atomic with a side of veggie sticks and blue cheese	3			wingstop;wingstop;wingstop
+half an order of wingstop louisiana voodoo fries and 5 boneless wings hickory smoked bbq	2			wingstop;wingstop
+in-n-out double double protein style and a small chocolate shake	2			in-n-out;in-n-out
+half an in-n-out cheeseburger and a side of fries well done	2			in-n-out;in-n-out
+raising canes four fingers with texas toast and a large sweet tea	3			raising cane's;raising cane's;raising cane's
+cava greens and grains bowl with half a serving of crazy feta and a pita on the side	3			cava;cava;cava
+a cava chicken and rice bowl and a lemon herb tea	2			cava;cava
+half a real good foods chicken enchilada bowl and a cup of white rice	2			real good;-
+two oikos pro yogurts and a handful of almonds	2			oikos;-
+a fairlife nutrition plan shake and three chocolate rice cakes	2			fairlife;-
+# run 8
+half a serving of panda express orange chicken with a third of a serving of chow mein	2			panda express;panda express
+a quarter serving of panda express fried rice and a full serving of kung pao chicken	2			panda express;panda express
+panda express beijing beef, half a serving of super greens and a serving of chow mein	3			panda express;panda express;panda express
+half a serving of panda express honey walnut shrimp and a serving of white rice	2			panda express;panda express
+half a chipotle steak burrito bowl and a side of queso blanco	2			chipotle;chipotle
+a third of a chipotle carnitas burrito with a side of sour cream	2			chipotle;chipotle
+chick-fil-a 12 count nuggets with half an order of waffle fries and a side of chick-fil-a sauce	3			chick-fil-a;chick-fil-a;chick-fil-a
+half a chick-fil-a chicken sandwich and a medium waffle fries	2			chick-fil-a;chick-fil-a
+taco bell bean burrito and half an order of nacho fries	2			taco bell;taco bell
+half a mcdonalds big mac and a small fries	2			mcdonald's;mcdonald's
+a mcdonalds mcchicken with half an order of medium fries	2			mcdonald's;mcdonald's
+starbucks tall caramel macchiato and half a butter croissant	2			starbucks;starbucks
+a starbucks grande cold brew and a slice of lemon loaf	2			starbucks;starbucks
+in-n-out double double with half an order of fries	2			in-n-out;in-n-out
+half an in-n-out cheeseburger and a chocolate shake	2			in-n-out;in-n-out
+popeyes chicken sandwich with half a biscuit	2			popeyes;popeyes
+wingstop 8 lemon pepper wings and half an order of fries	2			wingstop;wingstop
+raising canes 4 fingers with half an order of crinkle fries	2			raising cane's;raising cane's
+cava chicken pita and half a serving of pita chips	2			cava;cava
+half a cava harissa avocado bowl with a side of spicy hummus	2			cava;cava
+one quest protein bar and a granny smith apple	2			quest;-
+a cup of fairlife 2% milk with two scrambled eggs	2			fairlife;-
+a kodiak protein pancake cup and a hard boiled egg	2			kodiak;-
+a glass of silk vanilla almond milk and a handful of walnuts	2			silk;-
+an oikos triple zero vanilla yogurt and half a cup of raspberries	2			oikos;-
+a slice of real good chicken crust pizza and a side salad	2			real good;-
+two david protein bars and an orange	2			david;-
+a premier protein shake and a slice of whole wheat toast	2			premier protein;-
+a chobani greek yogurt and a tablespoon of honey	2			chobani;-
+a clif bar and a cup of green tea	2			clif;-
+an rxbar and a cup of strawberries	2			rxbar;-
+a slice of dave's killer bread with half an avocado	2			dave's killer bread;-
+a thomas bagel thin with a fried egg and a slice of cheddar	3			thomas';-;-
+a muscle milk shake and two boiled eggs	2			muscle milk;-
+a lacroix and a turkey sandwich	2			lacroix;-
+a kind bar and a cup of grapes	2			kind;-
+a sargento string cheese and ten almonds	2			sargento;-
+an egglife wrap with two scrambled eggs and salsa	3			egglife;-;-
+a fairlife core power shake with a banana and a spoon of peanut butter	3			fairlife;-;-
+a siggi's yogurt and a handful of blueberries	2			siggi's;-
