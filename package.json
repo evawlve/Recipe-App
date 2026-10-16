@@ -9,7 +9,7 @@
         "start": "next start",
         "postinstall": "prisma generate",
         "lint": "node scripts/lint.js",
-        "lint:ci": "eslint . --max-warnings 700",
+        "lint:ci": "eslint . --max-warnings 447",
         "typecheck": "tsc --noEmit",
         "doc-check": "ts-node --project tsconfig.scripts.json --transpile-only scripts/doc-check/run-doc-check.ts",
         "prisma:generate": "prisma generate",

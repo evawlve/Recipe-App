@@ -31,7 +31,6 @@ type WritePolicy = typeof WritePolicyModule;
 /** A fresh module instance. Two of these share one ALS only if it is on `globalThis`. */
 function freshModuleInstance(): WritePolicy {
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('./write-policy') as WritePolicy;
 }
 

@@ -3229,20 +3229,27 @@ export async function buildOffResult(
         // (airheads 85.78g pack class). Exception: an own ml-band package is
         // a discrete retail beverage ("gatorade" bottle) — drink-the-unit
         // semantics keep the package answer.
-        // Plural bare requests may borrow ONLY on a real brand (snickers,
-        // airheads): the name-token pseudo-brand ("Almonds" → brand 'almonds')
-        // could match junk OFF brands for generic produce plurals.
+        // The record's OWN brandName only, never brandForBorrow's first-token
+        // pseudo-brand — the rule #270's serving-word rung already applies
+        // (#351, Lane A S67). A first token is not a brand line: 'Protein
+        // Shake' borrowed the 13 `Protein`-branded SKUs' 46 g, 'Sunflower seed
+        // kernels' a 355 g drink median, 'Cornbread mix' 355 g. Replayed over
+        // all 408 lines this rung has ever answered (winner-gate, frozen pool,
+        // serving stage, 2026-10-06): 50 brandless lines move — 24 better,
+        // 14 unchanged (the DNB-9 flagships `chomps beef stick` 32 g and
+        // `celsius` 355 g land on package_count_sibling at the same grams),
+        // 12 worse, every one of those a defect of the rung it falls to
+        // (whole-package and garbage-label bills), not of this refusal.
         // Dose-anchored categories skip the borrow too: Ghost's 32.5g
         // two-scoop sibling median must not outrank the 1-scoop pre-workout
         // default (n-serv-43) — the package tiers + category CAP handle it.
         if (
             grams == null && bareRequest && !doseAnchored
-            && (!barePluralRequest || hydrated.brandName != null)
-            && bareLabelGrams == null && brandForBorrow
+            && bareLabelGrams == null && hydrated.brandName
             && !(hydrated.packageQuantityUnit === 'ml' && packageGrams != null)
         ) {
             const sibling = await borrowSiblingLabelServing(
-                brandForBorrow, candidate.id.replace(/^off_/, '')
+                hydrated.brandName, candidate.id.replace(/^off_/, '')
             );
             if (sibling != null) {
                 grams = sibling.grams;
@@ -3250,7 +3257,7 @@ export async function buildOffResult(
                 servingTier = 'bare_sibling_serving';
                 logger.info('off.build_result.bare_sibling_serving', {
                     foodId: candidate.id,
-                    brand: brandForBorrow,
+                    brand: hydrated.brandName,
                     grams: sibling.grams,
                     samples: sibling.samples,
                 });

@@ -9,7 +9,6 @@ async function main() {
   let processed = 0;
   
   // simple pagination
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const recipes: { id: string }[] = await prisma.recipe.findMany({
       take: PAGE,

@@ -1,0 +1,42 @@
+# C68 (S92) Mode G seeds, 2026-10-10, theme T5. line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands (';' per item, '-' none; the CLI ignores col 5)
+# run 5
+a diet cherry coke and two slices of digiorno pepperoni pizza	2			coca-cola;digiorno
+a sugar free jello cup and a string cheese	2			jell-o;-
+light cream cheese on a plain bagel and a black coffee	3			-;-;-
+two cups of light popcorn and a diet pepsi	2			-;pepsi
+starbucks sugar free vanilla latte grande and a plain bagel	2			starbucks;starbucks
+media orden de pollo a la naranja de panda express y la mitad de una orden de arroz frito	2			panda express;panda express
+un plato de chilaquiles verdes con dos huevos estrellados y frijoles refritos	3			-;-;-
+una taza de caldo de res con una tortilla de maíz	2			-;-
+dos tacos de carne asada y un vaso de horchata	2			-;-
+medio burrito de pollo de chipotle con una orden de guacamole	2			chipotle;chipotle
+un café con leche y una concha	2			-;-
+tres tortillas de harina la banderita con huevo revuelto	2			la banderita;-
+un tazón de arroz con frijoles y medio aguacate	3			-;-;-
+una coca cola de dieta y dos rebanadas de pizza de pepperoni	2			coca-cola;-
+un sándwich de pollo picante de chick fil a con papas waffle	2			chick-fil-a;chick-fil-a
+dos piezas de pollo de popeyes con puré de papa y un bisquet	3			popeyes;popeyes;popeyes
+un yogurt griego sin grasa con media taza de fresas	2			-;-
+un licuado con una medida de proteína ascent de vainilla y un plátano	2			ascent;-
+tres quesadillas de queso con crema y salsa verde	3			-;-;-
+un pan dulce y un vaso de leche descremada	2			-;-
+una orden de enchiladas rojas con arroz y frijoles	3			-;-;-
+dos tamales de puerco y un champurrado	2			-;-
+un big mac de mcdonalds con papas medianas	2			mcdonald's;mcdonald's
+una taza de avena con canela y una cucharada de miel	2			-;-
+medio pan de elote y un café americano	2			-;-
+una botella de agua de jamaica y una torta de jamón	2			-;-
+dos huevos con chorizo y una tortilla de maíz	2			-;-
+una rebanada de pastel tres leches y un café	2			-;-
+un pozole rojo con dos tostadas	2			-;-
+un frappuccino de caramelo grande de starbucks y un croissant	2			starbucks;starbucks
+una barra de proteína david y una manzana	2			david;-
+dos rebanadas de pan bimbo con crema de cacahuate	2			bimbo;-
+un vaso de leche fairlife de chocolate y un plátano	2			fairlife;-
+una ensalada césar y una pechuga de pollo a la parrilla	2			-;-
+un plato de menudo y dos tortillas de harina	2			-;-
+una dona glaseada de krispy kreme y un café con leche	2			krispy kreme;-
+tres tacos al pastor con piña y un jarrito de tamarindo	2			-;jarritos
+un tazón de cereal raisin bran con leche de almendra sin azúcar	2			-;-
+una sopa de fideo y un vaso de agua de horchata	2			-;-
+un bolillo y una porción de queso fresco	2			-;-
