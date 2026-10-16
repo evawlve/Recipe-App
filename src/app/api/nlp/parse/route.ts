@@ -20,6 +20,7 @@ import {
   acquireInflight, releaseInflight,
   recordReservationFailure, recordReservationSuccess, reservationFailsClosed,
   isReservationTimeout, RESERVATION_TX_MAX_WAIT_MS, RESERVATION_TX_TIMEOUT_MS,
+  pruneRequestLog,
 } from '@/lib/nlp/parse-rate-limit';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
@@ -216,6 +217,15 @@ export async function POST(req: NextRequest) {
           }, { status: 429 });
         }
         reservedId = reservation.reservedId;
+
+        // Retention (S68): a row was reserved and the transaction has committed, so the prune
+        // runs OUTSIDE it and the advisory lock. Throttled per process; a failure here never
+        // fails a parse, never refunds, never touches `inflight`.
+        try {
+          await pruneRequestLog(prisma);
+        } catch (err) {
+          console.warn('[nlp-parse] request-log prune failed', err);
+        }
       } catch (dbErr) {
         if (isReservationTimeout(dbErr)) {
           await settle(false);

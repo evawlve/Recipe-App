@@ -36,9 +36,7 @@ for (const f of ['.env', '.env.local']) {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { prisma } = require('../../src/lib/db');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const logger = require('../../src/lib/logger').logger;
 
 const MUTATING = new Set([
@@ -58,13 +56,9 @@ logger.info = (msg: string, meta?: any) => {
     return realInfo(msg, meta);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { mapIngredientWithFallback } = require('../../src/lib/mapping/map-ingredient-with-fallback');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getBareQueryDefault } = require('../../src/lib/ai/ambiguous-serving-estimator');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { createAiNutritionBudget } = require('../../src/lib/mapping/ai-nutrition-backfill');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { AI_NUTRITION_MAX_PER_BATCH, AI_NUTRITION_HYDRATION_MAX_PER_BATCH } = require('../../src/lib/mapping/config');
 
 async function main() {

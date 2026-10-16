@@ -36,7 +36,7 @@ jest.mock('@supabase/supabase-js', () => ({
 
 jest.mock('@/lib/db', () => ({
   prisma: {
-    nlpRequestLog: { count: jest.fn(), create: jest.fn() },
+    nlpRequestLog: { count: jest.fn(), create: jest.fn(), deleteMany: jest.fn(async () => ({ count: 0 })) },
     mappingEventLog: { createMany: jest.fn() },
     segmentationCache: {
       findUnique: jest.fn(),
@@ -114,12 +114,10 @@ function devRequest(body: object, query = ''): NextRequest {
 }
 
 describe('/api/nlp/parse nosave=1 refuses AI-serving writes', () => {
-  /* eslint-disable @typescript-eslint/no-var-requires */
   const { prisma } = require('@/lib/db');
   const { mapIngredientWithFallback } = require('@/lib/mapping/map-ingredient-with-fallback');
   const { resolveFoodDetails } = require('@/lib/nlp/resolve-payload');
   const { requestAiServing } = require('@/lib/ai/serving-estimator');
-  /* eslint-enable @typescript-eslint/no-var-requires */
 
   /** What the real writer handed back to its caller on the last request. */
   let writerReturn: { success: boolean; reason?: string; grams?: number; servingLabel?: string } | null = null;
@@ -150,7 +148,6 @@ describe('/api/nlp/parse nosave=1 refuses AI-serving writes', () => {
     // insertFdcAiServing() and bills the grams that writer returns, exactly as
     // buildFdcResult()'s volume branch does.
     mapIngredientWithFallback.mockImplementation(async (_line: string, opts: { telemetry?: { cacheHit?: string | null } }) => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { insertFdcAiServing } = require('@/lib/usda/fdc-ai-backfill');
       const ai = await insertFdcAiServing(747997, 'volume', { targetUnit: 'cup' });
       writerReturn = ai;

@@ -1171,9 +1171,7 @@ export interface PrismaLike {
 function openPrisma(): PrismaLike {
     // Required lazily so the unit tests never construct a client, and so a --rows
     // replay needs no DATABASE_URL at all.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('dotenv/config');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PrismaClient } = require('@prisma/client');
     return new PrismaClient() as PrismaLike;
 }
@@ -1223,7 +1221,6 @@ export function bareUnitlessRequest(
     seed: string | undefined,
     key: string,
 ): { parsed: ParsedIngredient | null; rawLine: string } {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { parseIngredientLine } =
         require('../../src/lib/parse/ingredient-line') as typeof import('../../src/lib/parse/ingredient-line');
     const rawLine = (seed ?? '').trim() || (key ?? '').trim();
@@ -1261,7 +1258,6 @@ export function bareUnitlessRequest(
 export async function resolveRealServings(rows: ScreenRow[], concurrency = 8): Promise<void> {
     // Required lazily: this module builds a Prisma client and pulls in the whole
     // mapper at import time, which unit tests must never do.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { hydrateAndSelectServing } = require('../../src/lib/mapping/map-ingredient-with-fallback');
     let next = 0;
     const worker = async (): Promise<void> => {
@@ -1402,7 +1398,6 @@ export function attribute(
 /** Load canonicalizeCacheKey without letting its prisma import take the run down. */
 function loadCanonicalizer(): ((s: string) => string) | null {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         return require('../../src/lib/mapping/normalization-rules').canonicalizeCacheKey as (s: string) => string;
     } catch {
         return null;
@@ -1522,7 +1517,6 @@ async function main(): Promise<number> {
 
     let llmCfg: LlmConfig | null = null;
     if (useLlm) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('dotenv/config');
         const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY;
         // FAIL CLOSED. The prototype degraded silently to Tier D here, and a silent

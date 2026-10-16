@@ -726,9 +726,7 @@ export function loadRealProbes(opts: { fatsecret: boolean }): ProbeSet {
         // FatSecretFood rows.
         process.env.FATSECRET_RETRIEVAL_ENABLED = 'false';
     }
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const retrievalMod = require('../debug-retrieval-probe') as typeof import('../debug-retrieval-probe');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const filterMod = require('../filter-trace-probe') as typeof import('../filter-trace-probe');
     return {
         retrieval: (q: string) => retrievalMod.probeRetrieval(q, { skipFatSecretLaneCall: !opts.fatsecret }),

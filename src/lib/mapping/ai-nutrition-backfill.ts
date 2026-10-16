@@ -8,7 +8,7 @@
  * Features:
  * - Atwater equation validation (protein*4 + carbs*4 + fat*9 ≈ reported calories)
  * - Sanity bounds on all macro values
- * - Caching via AiGeneratedFood table (normalized ingredient name as key)
+ * - Caching via AiGeneratedFood table (case-folded ingredient name as key)
  * - Serving estimation for common units (cup, tbsp, packet, etc.)
  * - Base food context passing from failed candidates
  * 
@@ -310,14 +310,65 @@ function validateNutrition(data: Record<string, unknown>): ValidationResult {
 // Cache Operations
 // ============================================================
 
+type AiFoodRow = NonNullable<Awaited<ReturnType<typeof prisma.aiGeneratedFood.findUnique>>>;
+
 /**
- * Check if we have cached AI nutrition data for this ingredient.
+ * The cache key for an AI-nutrition row: trimmed, lower-cased, whitespace
+ * collapsed. `AiGeneratedFood.ingredientName` is @unique and case-sensitive, so
+ * the same food reached the cache under two casings (mapper `normalizedName`
+ * vs the record's display case) and produced case-only duplicate rows.
+ */
+export function aiNutritionKey(name: string): string {
+    return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Find the reusable AI row for a folded key. Raw tagged-template SQL (values are
+ * parameterised) rather than Prisma `mode: 'insensitive'`, which may compile to
+ * an unescaped ILIKE where `2% milk` would be a wildcard.
+ *
+ * ATTRIBUTION BOUNDARY: import rows (`fatsecret-live-import`) and `fs_`-id seed
+ * shells are NOT AI estimates and must never be returned as one. Both measured
+ * 0 rows on the box 2026-10-16, so these exclusions are guards, inert today.
+ */
+async function findReusableRow(key: string): Promise<AiFoodRow | null> {
+    const rows = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "AiGeneratedFood"
+        WHERE lower("ingredientName") = ${key}
+          AND "aiModel" <> 'fatsecret-live-import'
+          AND id NOT LIKE 'fs\\_%'
+        ORDER BY "useCount" DESC, "createdAt" ASC
+        LIMIT 1`;
+    return rows[0] ? prisma.aiGeneratedFood.findUnique({ where: { id: rows[0].id } }) : null;
+}
+
+function rowToCachedResult(row: AiFoodRow): AiNutritionResult {
+    return {
+        status: 'success',
+        foodId: row.id,
+        displayName: row.displayName,
+        caloriesPer100g: row.caloriesPer100g,
+        proteinPer100g: row.proteinPer100g,
+        carbsPer100g: row.carbsPer100g,
+        fatPer100g: row.fatPer100g,
+        fiberPer100g: row.fiberPer100g ?? 0,
+        sugarPer100g: row.sugarPer100g ?? 0,
+        sodiumMgPer100g: row.sodiumMgPer100g ?? 0,
+        saturatedFatPer100g: row.saturatedFatPer100g ?? 0,
+        cholesterolMgPer100g: row.cholesterolMgPer100g ?? 0,
+        confidence: row.aiConfidence,
+        notes: row.aiNotes ?? '',
+        model: row.aiModel,
+        cached: true,
+    };
+}
+
+/**
+ * Check if we have cached AI nutrition data for this ingredient (case-folded).
  */
 export async function getCachedAiNutrition(normalizedName: string): Promise<AiNutritionResult | null> {
     try {
-        const cached = await prisma.aiGeneratedFood.findUnique({
-            where: { ingredientName: normalizedName },
-        });
+        const cached = await findReusableRow(aiNutritionKey(normalizedName));
 
         if (!cached) return null;
 
@@ -327,24 +378,7 @@ export async function getCachedAiNutrition(normalizedName: string): Promise<AiNu
             data: { useCount: { increment: 1 } },
         }).catch(() => { /* ignore */ });
 
-        return {
-            status: 'success',
-            foodId: cached.id,
-            displayName: cached.displayName,
-            caloriesPer100g: cached.caloriesPer100g,
-            proteinPer100g: cached.proteinPer100g,
-            carbsPer100g: cached.carbsPer100g,
-            fatPer100g: cached.fatPer100g,
-            fiberPer100g: cached.fiberPer100g ?? 0,
-            sugarPer100g: cached.sugarPer100g ?? 0,
-            sodiumMgPer100g: cached.sodiumMgPer100g ?? 0,
-            saturatedFatPer100g: cached.saturatedFatPer100g ?? 0,
-            cholesterolMgPer100g: cached.cholesterolMgPer100g ?? 0,
-            confidence: cached.aiConfidence,
-            notes: cached.aiNotes ?? '',
-            model: cached.aiModel,
-            cached: true,
-        };
+        return rowToCachedResult(cached);
     } catch (err) {
         logger.warn('ai_nutrition.cache_lookup_failed', { normalizedName, error: (err as Error).message });
         return null;
@@ -360,11 +394,15 @@ async function saveAiNutrition(
     data: Record<string, unknown>,
     model: string,
     baseFoodContext?: BaseFoodContext,
-): Promise<string> {
-    const record = await prisma.aiGeneratedFood.upsert({
-        where: { ingredientName: normalizedName },
-        create: {
-            ingredientName: normalizedName,
+): Promise<{ foodId: string; reused?: AiFoodRow }> {
+    const key = aiNutritionKey(normalizedName);
+    // CREATE only, never upsert: an upsert UPDATE branch overwrote nutrition AND
+    // aiModel of whatever row held the key (including an attributed one).
+    let record: { id: string };
+    try {
+        record = await prisma.aiGeneratedFood.create({
+        data: {
+            ingredientName: key,
             rawLine: rawLine ?? null,
             displayName: data.displayName as string,
             caloriesPer100g: data.caloriesPer100g as number,
@@ -382,24 +420,15 @@ async function saveAiNutrition(
             baseFoodName: baseFoodContext?.name ?? null,
             baseFoodSource: baseFoodContext?.source ?? null,
         },
-        update: {
-            displayName: data.displayName as string,
-            caloriesPer100g: data.caloriesPer100g as number,
-            proteinPer100g: data.proteinPer100g as number,
-            carbsPer100g: data.carbsPer100g as number,
-            fatPer100g: data.fatPer100g as number,
-            fiberPer100g: data.fiberPer100g as number,
-            sugarPer100g: data.sugarPer100g as number,
-            sodiumMgPer100g: data.sodiumMgPer100g as number,
-            saturatedFatPer100g: data.saturatedFatPer100g as number,
-            cholesterolMgPer100g: data.cholesterolMgPer100g as number,
-            aiConfidence: data.confidence as number,
-            aiModel: model,
-            aiNotes: (data.notes as string) || null,
-            baseFoodName: baseFoodContext?.name ?? null,
-            baseFoodSource: baseFoodContext?.source ?? null,
-        },
-    });
+        });
+    } catch (err) {
+        if ((err as { code?: string }).code !== 'P2002') throw err;
+        // Lost a race (or a differently-cased row holds the key): reuse THAT row's
+        // numbers and write no servings for it.
+        const existing = await findReusableRow(key);
+        if (existing) return { foodId: existing.id, reused: existing };
+        throw new Error('ai_nutrition_key_held_by_attributed_row');
+    }
 
     // Save serving estimates if provided
     const servingEntries: Array<{ label: string; grams: number; volumeMl: number | null }> = [];
@@ -441,7 +470,7 @@ async function saveAiNutrition(
         });
     }
 
-    return record.id;
+    return { foodId: record.id };
 }
 
 // ============================================================
@@ -495,8 +524,8 @@ export async function requestAiNutrition(
         return { status: 'error', reason: 'ai_nutrition_backfill_disabled' };
     }
 
-    // Cache FIRST, budget second. An exact-match hit costs one indexed unique
-    // lookup and no LLM call, so refusing it can only destroy nutrition for
+    // Cache FIRST, budget second. A case-folded hit costs one raw lower() scan
+    // (251 rows, 2026-10-16) and no LLM call, so refusing it can only destroy nutrition for
     // free: that ordering is what slid golden case n-cook-06 ("1 cup cooked
     // oats") from kcal100=361 to 0 after a warm run had exhausted the old
     // process-lifetime cap. A budget bounds SPEND; it must never bound reads.
@@ -561,13 +590,18 @@ export async function requestAiNutrition(
 
     // Save to database
     try {
-        const foodId = await saveAiNutrition(
+        const saved = await saveAiNutrition(
             normalizedName,
             options.rawLine,
             data,
             result.model,
             options.baseFoodContext,
         );
+        if (saved.reused) {
+            logger.info('ai_nutrition.save_reused_existing_row', { normalizedName, foodId: saved.foodId });
+            return rowToCachedResult(saved.reused);
+        }
+        const foodId = saved.foodId;
 
         logger.info('ai_nutrition.success', {
             normalizedName,
