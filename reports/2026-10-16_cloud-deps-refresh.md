@@ -88,7 +88,7 @@ Read from the registry tarballs (`npm pack`, extracted outside the checkout):
 
 ## 4. CI and merge order
 
-CI read with the GitHub tool on each pushed merge head (see §1 column). Anything not read final here: `CI: not read — consolidation runs gh pr checks <n>`. BUILD_NOTE_PLACEHOLDER
+CI read with the GitHub tool on each pushed merge head (see §1 column). All required results (`build` + `Vercel` on all three heads) were read green; nothing was left unread, so no `CI: not read` line applies.
 
 **Merge order.** Any master merge (one of these three, cloud-33's `cloud/lint-script` PR, a C69 PR) makes the others BEHIND again; the next one takes `git merge origin/master` and ROW 1's rules (lockfile-only conflict fallback, `npm install --package-lock-only --ignore-scripts && git diff --exit-code package-lock.json`, the name-only MUST-NOT test, gates). Measured here: 466 ⊕ 468 ⊕ 469 merge without a textual conflict in sequence. cloud-33's `lint` script line is ~90 lines from the dependency lines, so no textual conflict is expected there either.
 
