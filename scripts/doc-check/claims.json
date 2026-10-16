@@ -208,15 +208,15 @@
     },
     {
       "id": "tsc-baseline-30-total-0-src",
-      "claim": "Mobile `npx tsc --noEmit` exits non-zero on exactly 31 pre-existing errors, 0 of them under src/ — all backend probe scripts Syncthing'd or committed into sync-docs/, swept in by tsconfig.json's `include: **/*.ts`. The count is a BASELINE, not a target: it moves whenever a session commits a probe script under sync-docs/, which is legitimate. 30 -> 31 on 2026-08-28 when Lane A S26 committed sync-docs/a26i-census-2026-08-28/replay-meal-guard.ts. What the claim actually guards is the SECOND number: 0 errors under src/, so a red here that moves `s` is your change and a red that moves only `t` is a new probe script.",
+      "claim": "Mobile `npx tsc --noEmit` reads 0 errors (exit 0) since evawlve/KindaHealthyMobile#249 excluded `sync-docs/**` in tsconfig.json, so backend probe scripts under sync-docs/ (tracked or gitignored) are no longer swept in. The FIRST number is no longer a moving baseline: any error at all is now new. What the claim still guards is the SECOND number: 0 errors under src/.",
       "ownerDoc": "mobile:CLAUDE.md#ci",
       "where": "devmachine",
-      "command": "npx tsc --noEmit 2>&1 | awk '/error TS/{t++} /^src\\// {s++} END{print t\":\"s+0}'",
+      "command": "npx tsc --noEmit --pretty false 2>&1 | awk '/error TS/{t++} /^src\\// {s++} END{print t+0\":\"s+0}'",
       "expect": {
         "kind": "equals",
-        "value": "31:0"
+        "value": "0:0"
       },
-      "verified": "2026-08-28",
+      "verified": "2026-10-16",
       "timeoutMs": 300000
     },
     {
