@@ -11,6 +11,7 @@
  */
 
 const mockCallStructuredLlm = jest.fn();
+const mockQueryRaw = jest.fn();
 const mockAiGeneratedFoodFindUnique = jest.fn();
 const mockAiGeneratedFoodUpdate = jest.fn();
 
@@ -20,10 +21,11 @@ jest.mock('../../ai/structured-client', () => ({
 
 jest.mock('../../db', () => ({
     prisma: {
+        $queryRaw: (...args: unknown[]) => mockQueryRaw(...args),
         aiGeneratedFood: {
             findUnique: (...args: unknown[]) => mockAiGeneratedFoodFindUnique(...args),
             update: (...args: unknown[]) => mockAiGeneratedFoodUpdate(...args),
-            upsert: jest.fn().mockResolvedValue({ id: 'ai-1' }),
+            create: jest.fn().mockResolvedValue({ id: 'ai-1' }),
         },
         aiGeneratedServing: { upsert: jest.fn().mockResolvedValue({}) },
     },
@@ -54,6 +56,7 @@ const CACHED_ROW = {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockQueryRaw.mockResolvedValue([]);
     mockAiGeneratedFoodFindUnique.mockResolvedValue(null);
     mockAiGeneratedFoodUpdate.mockResolvedValue({});
     mockCallStructuredLlm.mockResolvedValue({
@@ -75,6 +78,7 @@ describe('cache lookup sits ABOVE the budget check', () => {
         // Dies if the budget check is moved back above getCachedAiNutrition():
         // the call then returns {status:'error', reason:'nutrition_budget_exhausted'}
         // and the first assertion fails.
+        mockQueryRaw.mockResolvedValue([{ id: CACHED_ROW.id }]);
         mockAiGeneratedFoodFindUnique.mockResolvedValue(CACHED_ROW);
         const budget: AiNutritionBudget = { remaining: 0, spent: 20 };
 
