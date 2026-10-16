@@ -169,9 +169,7 @@ export interface PrismaLike {
 
 export function openPrisma(): PrismaLike {
     // Required lazily so --emit-doc and the unit tests never construct a client.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('dotenv/config');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PrismaClient } = require('@prisma/client');
     return new PrismaClient() as PrismaLike;
 }

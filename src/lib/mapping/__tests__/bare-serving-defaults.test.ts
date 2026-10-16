@@ -279,6 +279,55 @@ describe('step (3) — same-brand sibling median for placeholder/garbage labels'
         expect(result?.grams).toBe(14);
     });
 
+    // #351 (Lane A S67): the bare borrow keys on the record's OWN brandName only.
+    // Both stubs dispatch the package query separately — it also says
+    // `"brandName" ILIKE`, so the shared dispatcher would hand it the label rows.
+    function dispatchSiblings(label: unknown[], pkg: unknown[], name: unknown[]) {
+        mockedQueryRaw.mockImplementation((strings: TemplateStringsArray) => {
+            const sql = Array.isArray(strings) ? strings.join('?') : String(strings);
+            observedSql.push(sql);
+            if (sql.includes('"packageQuantity"')) return Promise.resolve(pkg);
+            if (sql.includes('"brandName" ILIKE')) return Promise.resolve(label);
+            if (sql.includes('lower(name) =')) return Promise.resolve(name);
+            return Promise.resolve([]);
+        });
+    }
+
+    it("never borrows on a first-token pseudo-brand ('Protein Shake' ≠ the 46 g `Protein` line)", async () => {
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Protein Shake',
+            brandName: null,
+            servingGrams: null,
+        }));
+        dispatchSiblings([{ med: 46, n: 13, p25: 30, p75: 242 }], [], [{ med: 325, n: 5, p25: 320, p75: 330 }]);
+
+        const result = await buildOffResult(
+            makeCandidate('Protein Shake'), bareParsed('protein shake'), 0.9, 'protein shake'
+        );
+
+        expect(result?.servingTier).not.toBe('bare_sibling_serving');
+        expect(result?.servingTier).toBe('bare_name_sibling_serving');
+        expect(result?.grams).toBe(325);
+        // The brand-keyed LABEL scan is not even issued for a brandless record.
+        expect(observedSql.some(s => s.includes('"brandName" ILIKE') && s.includes('"servingGrams"'))).toBe(false);
+    });
+
+    it("a brandless DNB-9 flagship keeps its grams through the package rung ('chomps beef stick' ~32 g)", async () => {
+        (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
+            foodName: 'Chomps original beef stick',
+            brandName: null,
+            servingGrams: null,
+        }));
+        dispatchSiblings([{ med: 32, n: 76, p25: 32, p75: 32 }], [{ unit: 'g', med: 32.3, n: 40 }], []);
+
+        const result = await buildOffResult(
+            makeCandidate('Chomps original beef stick'), bareParsed('chomps beef stick'), 0.9, 'chomps beef stick'
+        );
+
+        expect(result?.servingTier).toBe('package_count_sibling');
+        expect(result?.grams).toBe(32.3);
+    });
+
     it('digit lines never take the bare path ("1 gatorade" keeps the package bill)', async () => {
         (hydrateOffCandidate as jest.Mock).mockResolvedValue(makeHydrated({
             foodName: 'Gatorade Thirst Quencher',

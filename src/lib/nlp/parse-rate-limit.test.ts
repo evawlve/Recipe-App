@@ -2,8 +2,12 @@ import {
   FREE_FUNNEL_STAGES,
   NLP_PARSE_LIMIT_PER_DAY_DEFAULT,
   NLP_PARSE_LIMIT_PER_MINUTE_DEFAULT,
+  REQUEST_LOG_PRUNE_MIN_INTERVAL_MS,
+  REQUEST_LOG_RETENTION_MS,
+  _resetPruneForTests,
   isFreeParseRequest,
   parseLimitEnv,
+  pruneRequestLog,
   readParseLimits,
 } from './parse-rate-limit';
 
@@ -84,5 +88,45 @@ describe('isFreeParseRequest', () => {
 
   test('an AI segmentation call (segCacheHit === false) is charged even when every line was cached', () => {
     expect(isFreeParseRequest({ funnelStages: ['cache_hit', 'cache_hit'], segCacheHit: false })).toBe(false);
+  });
+});
+
+describe('pruneRequestLog', () => {
+  const T0 = Date.UTC(2026, 9, 7, 12, 0, 0);
+  const clientWith = (impl: () => Promise<{ count: number }>) => {
+    const deleteMany = jest.fn(impl);
+    return { client: { nlpRequestLog: { deleteMany } }, deleteMany };
+  };
+
+  beforeEach(() => _resetPruneForTests());
+
+  test('the bounds: 48 h retention keeps every row the 24 h window reads; 10 min between prunes', () => {
+    expect(REQUEST_LOG_RETENTION_MS).toBe(48 * 60 * 60 * 1000);
+    expect(REQUEST_LOG_PRUNE_MIN_INTERVAL_MS).toBe(10 * 60 * 1000);
+  });
+
+  test('deletes rows older than exactly now − 48 h and returns the count', async () => {
+    const { client, deleteMany } = clientWith(async () => ({ count: 236 }));
+    await expect(pruneRequestLog(client, T0)).resolves.toBe(236);
+    expect(deleteMany).toHaveBeenCalledTimes(1);
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: { createdAt: { lt: new Date(T0 - 48 * 60 * 60 * 1000) } },
+    });
+  });
+
+  test('a second call inside 10 minutes makes NO query; one after 10 minutes does', async () => {
+    const { client, deleteMany } = clientWith(async () => ({ count: 3 }));
+    await pruneRequestLog(client, T0);
+    await expect(pruneRequestLog(client, T0 + 10 * 60 * 1000 - 1)).resolves.toBe(0);
+    expect(deleteMany).toHaveBeenCalledTimes(1);
+    await expect(pruneRequestLog(client, T0 + 10 * 60 * 1000)).resolves.toBe(3);
+    expect(deleteMany).toHaveBeenCalledTimes(2);
+  });
+
+  test('a rejected deleteMany rejects the helper, and is NOT retried inside the interval', async () => {
+    const { client, deleteMany } = clientWith(async () => { throw new Error('db down'); });
+    await expect(pruneRequestLog(client, T0)).rejects.toThrow('db down');
+    await expect(pruneRequestLog(client, T0 + 1000)).resolves.toBe(0);
+    expect(deleteMany).toHaveBeenCalledTimes(1);
   });
 });

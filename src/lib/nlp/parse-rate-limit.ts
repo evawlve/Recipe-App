@@ -148,6 +148,44 @@ export function isReservationTimeout(err: unknown): boolean {
 export const RESERVATION_TX_MAX_WAIT_MS = 2000;
 export const RESERVATION_TX_TIMEOUT_MS = 5000;
 
+// ============================================================
+// Request-log retention. The limiter reads the last 60 s and 24 h of NlpRequestLog and
+// nothing older, yet nothing ever deleted a row (S66, 2026-10-06: 236 of 238 production
+// rows were older than a day). That also leaves the account-delete race's orphan — a row
+// whose refund timed out, or whose user was deleted mid-flight — alive forever; with this
+// bound it lives <= REQUEST_LOG_RETENTION_MS. The per-day window is 24 h, so 48 h keeps
+// every row the limiter can read, with a day of margin.
+//
+// Called by the route AFTER a row was reserved, OUTSIDE the reservation transaction and
+// the advisory lock: a global delete inside N users' serialised transactions would queue
+// every reservation behind the same row locks. Throttled per process, and `lastPruneAt`
+// is set BEFORE the query so a failing database is not retried on every request. A
+// rejected delete rejects this helper; the route swallows it (a prune never fails a parse).
+// ============================================================
+
+export const REQUEST_LOG_RETENTION_MS = 48 * 60 * 60 * 1000;
+export const REQUEST_LOG_PRUNE_MIN_INTERVAL_MS = 10 * 60 * 1000;
+
+let lastPruneAt = 0;
+
+/** Delete NlpRequestLog rows older than the retention bound; returns the count deleted (0 when throttled). */
+export async function pruneRequestLog(
+  client: { nlpRequestLog: { deleteMany: Function } },
+  now: number = Date.now(),
+): Promise<number> {
+  if (now - lastPruneAt < REQUEST_LOG_PRUNE_MIN_INTERVAL_MS) return 0;
+  lastPruneAt = now;
+  const result = await client.nlpRequestLog.deleteMany({
+    where: { createdAt: { lt: new Date(now - REQUEST_LOG_RETENTION_MS) } },
+  });
+  return result.count;
+}
+
+/** Tests only: clear the prune throttle. */
+export function _resetPruneForTests(): void {
+  lastPruneAt = 0;
+}
+
 /** Tests only: clear the in-flight map and the breaker. */
 export function _resetInflightForTests(): void {
   inflightByUser.clear();

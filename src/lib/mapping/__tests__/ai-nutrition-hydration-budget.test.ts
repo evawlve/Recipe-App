@@ -193,6 +193,7 @@ describe('cache lookup still sits ABOVE the cap on the hydration pool too', () =
         // nutrition_budget_exhausted and buildOffResult returns null.
         const actual = jest.requireActual('../ai-nutrition-backfill');
         mockRequestAiNutrition.mockImplementation(actual.requestAiNutrition);
+        (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ id: 'ai-cached' }]);
         (prisma.aiGeneratedFood.findUnique as jest.Mock).mockResolvedValue({
             id: 'ai-cached', displayName: 'Mystery Bar',
             caloriesPer100g: 400, proteinPer100g: 20, carbsPer100g: 40, fatPer100g: 15,

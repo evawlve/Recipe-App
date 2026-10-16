@@ -470,7 +470,6 @@ describe('plausibility guard: an impossible repair is REFUSED and COUNTED', () =
 describe('fail-closed: a total query failure exits non-zero and prints no clean summary', () => {
     const boom: RowStream = async function* () {
         throw new Error('P1001: Can\'t reach database server at 192.168.1.133:5432');
-        // eslint-disable-next-line no-unreachable
         yield [];
     };
 
