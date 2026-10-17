@@ -212,26 +212,46 @@ export function parseQuantityTokens(tokens: string[]): { qty: number; consumed: 
     return { qty: wordFractions[tokens[0]], consumed: 1 };
   }
 
-  // Handle "one and a half" pattern
-  if (tokens.length >= 4 &&
-    tokens[0] === 'one' &&
-    tokens[1] === 'and' &&
-    tokens[2] === 'a' &&
-    tokens[3] === 'half') {
-    return { qty: 1.5, consumed: 4 };
-  }
-
-  // Handle "1 and 1/2" pattern
-  if (tokens.length >= 3 &&
-    tokens[0] === '1' &&
-    tokens[1] === 'and' &&
-    tokens[2] === '1/2') {
-    return { qty: 1.5, consumed: 3 };
+  // Handle "<N> and [a|one] <fraction>": "2 and a half", "one and a half",
+  // "3 and a quarter", "1 and 1/2", "2 and 2/3", "1 and three quarters".
+  // N is a whole number in digits or one..twelve (a LOCAL map: "dozen" and
+  // "couple" are not whole counts here, and "a"/"an" is never N).
+  // The fraction is half / quarter / third / "three quarters" or a proper
+  // "n/d" token (numerator < denominator). Words compare lowercased.
+  {
+    const AND_FRACTION_WHOLES: Record<string, number> = {
+      one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+      nine: 9, ten: 10, eleven: 11, twelve: 12,
+    };
+    const lower = tokens.map((t) => t.toLowerCase());
+    const whole = /^\d+$/.test(tokens[0])
+      ? Number(tokens[0])
+      : AND_FRACTION_WHOLES[lower[0]];
+    if (whole !== undefined && lower[1] === 'and') {
+      let j = 2;
+      if (lower[j] === 'a' || lower[j] === 'one') j += 1;
+      let frac: number | undefined;
+      let fracTokens = 1;
+      const f = lower[j];
+      if (f === 'half') frac = 0.5;
+      else if (f === 'quarter') frac = 0.25;
+      else if (f === 'third') frac = 1 / 3;
+      else if (f === 'three' && lower[j + 1] === 'quarters') {
+        frac = 0.75;
+        fracTokens = 2;
+      } else if (f !== undefined) {
+        const m = /^(\d+)\/(\d+)$/.exec(f);
+        if (m && Number(m[1]) < Number(m[2])) frac = Number(m[1]) / Number(m[2]);
+      }
+      if (frac !== undefined) {
+        return { qty: whole + frac, consumed: j + fracTokens };
+      }
+    }
   }
 
   // Handle word-number quantities: "two eggs" -> 2, "a dozen eggs" -> 12,
-  // "a couple of eggs" -> 2. Deliberately placed AFTER the "one and a half" /
-  // "1 and 1/2" blocks above so those still match the literal "one"/"a" tokens.
+  // "a couple of eggs" -> 2. Deliberately placed AFTER the "<N> and [a|one] <fraction>"
+  // block above so that block still sees the literal "one"/"a" tokens.
   // "a"/"an" is NOT a number on its own (bare "a bagel" already defaults to
   // qty 1); it only counts here as the article in "a dozen"/"a couple".
   const WORD_NUMBERS: Record<string, number> = {
