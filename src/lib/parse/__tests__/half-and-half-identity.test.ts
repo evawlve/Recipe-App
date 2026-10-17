@@ -13,6 +13,7 @@
  * f5bfe7c4 before the edit), and a KNOWN GAP pinned at its actual parse.
  */
 import { parseIngredientLine } from '../ingredient-line';
+import { getBareQueryDefault } from '../../ai/ambiguous-serving-estimator';
 
 describe('half and half is the name, not a quantity (S202 row HH)', () => {
   // [line, qty, multiplier, name]; unit is always null.
@@ -79,5 +80,28 @@ describe('half and half is the name, not a quantity (S202 row HH)', () => {
     expect(parsed!.qty).toBe(qty);
     expect(parsed!.unit).toBeNull();
     expect(parsed!.name).toBe(name);
+  });
+});
+
+// The bare-query default: half-and-half's US label serving (2 tbsp, 30 g),
+// anchored to the WHOLE name. Lines marked base were measured at f5bfe7c4.
+describe('getBareQueryDefault: half and half (S202 row HH)', () => {
+  it.each(['half and half', 'Half & Half', 'half and half creamer', 'half n half'])(
+    '%j bills 2 tbsp (30 g)',
+    (name) => {
+      expect(getBareQueryDefault(name)).toEqual({ grams: 30, description: '2 tbsp (standard bare query serving)' });
+    },
+  );
+
+  it.each<[string, { grams: number; description: string } | null]>([
+    ['twisted tea half and half', null],
+    ['half and half iced tea', { grams: 355, description: '1 can (standard bare query serving)' }],
+    ['organic valley half and half', null],
+    ['cream cheese', { grams: 28, description: '1 oz (standard bare query serving)' }],
+    ['ice cream', null],
+    ['heavy cream', null],
+    ['milk', { grams: 240, description: '1 cup (standard bare query serving)' }],
+  ])('%j is identical to base', (name, expected) => {
+    expect(getBareQueryDefault(name)).toEqual(expected);
   });
 });
