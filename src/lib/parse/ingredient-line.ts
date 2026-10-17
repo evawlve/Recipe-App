@@ -2,6 +2,7 @@ import { parseQuantityTokens } from './quantity';
 import { normalizeUnitToken, convertUnit } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
+import { resolveLoosePourMeasures } from './loose-measures';
 import { isDigitBrandToken, matchDigitBrandTokens } from '../mapping/digit-brands';
 import { detectBrandInQuery } from '../mapping/brand-detector';
 import { isIdentityWholePhrase } from '../mapping/normalization-rules';
@@ -384,7 +385,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolvePackageMultipliers(line);
+  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(line));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();

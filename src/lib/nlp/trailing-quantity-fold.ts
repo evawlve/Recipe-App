@@ -26,6 +26,7 @@
  */
 
 import { parseIngredientLine } from '@/lib/parse/ingredient-line';
+import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
   kind: 'segment' | 'gap';
@@ -221,7 +222,9 @@ function isValidTarget(item: Item): boolean {
   if (toks.some(x => QTY_WORDS.has(x))) return false;
   try {
     const parsed = parseIngredientLine(item.rawText);
-    if (parsed && parsed.unit) return false;
+    // A leading pour (`a swig of soda`) parses to a floz unit that is the parser's canonicalisation,
+    // not a quantity the user stated, so it stays a valid target.
+    if (parsed && parsed.unit && !splitLeadingPour(item.rawText)) return false;
   } catch {
     return false;
   }
@@ -229,6 +232,13 @@ function isValidTarget(item: Item): boolean {
 }
 
 function rewrite(item: Item, clause: Clause): string {
+  const pour = splitLeadingPour(item.rawText);
+  if (pour) {
+    // The stated clause unit wins; with none, keep the pour word so the parser canonicalises it.
+    return clause.unit
+      ? `${formatValue(clause.value)} ${clause.unit} of ${pour.rest}`
+      : `${formatValue(clause.value)} ${pour.word} of ${pour.rest}`;
+  }
   const food = item.rawText.replace(/^\s*(a|an|the|some)\s+/i, '').trim();
   return clause.unit
     ? `${formatValue(clause.value)} ${clause.unit} of ${food}`

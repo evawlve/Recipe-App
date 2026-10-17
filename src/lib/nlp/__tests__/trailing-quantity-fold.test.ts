@@ -7,6 +7,7 @@
  */
 
 import { foldTrailingQuantityClauses } from '../trailing-quantity-fold';
+import { parseIngredientLine } from '@/lib/parse/ingredient-line';
 
 type In = { rawText: string; normalizedForm?: string; brand?: string };
 const it = (r: string, n = '', b = ''): In => ({ rawText: r, normalizedForm: n, brand: b });
@@ -240,5 +241,24 @@ describe('mechanics', () => {
 
   test('an empty split returns an empty split', () => {
     expect(foldTrailingQuantityClauses('anything', [])).toEqual({ items: [], folds: [] });
+  });
+});
+
+describe('S202 row 5 - a pour target keeps its trailing quantity', () => {
+  test('a swig of soda + maybe three folds to 3 swig, which parses to 4.5 floz', () => {
+    const r = fold('a swig of soda, maybe three', [it('a swig of soda'), it('maybe three')]);
+    expect(raws(r.items)).toEqual(['3 swig of soda']);
+    const p = parseIngredientLine('3 swig of soda');
+    expect([p?.qty, p?.unit, p?.name]).toEqual([4.5, 'floz', 'soda']);
+  });
+
+  test('a stated clause unit wins over the pour word', () => {
+    const r = fold('a splash of milk, maybe a cup', [it('a splash of milk'), it('maybe a cup')]);
+    expect(raws(r.items)).toEqual(['1 cup of milk']);
+  });
+
+  test('a non-pour unit target is still rejected (unchanged from base)', () => {
+    const r = fold('a cup of rice, maybe two', [it('a cup of rice'), it('maybe two')]);
+    expect(raws(r.items)).toEqual(['a cup of rice', 'maybe two']);
   });
 });
