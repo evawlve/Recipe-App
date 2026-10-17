@@ -5,19 +5,23 @@
  *
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
  *     scripts/eval/_trailing-qty-replay.ts --in <driver.tsv> --out <folded.tsv> \
- *     [--pin-out <pin.json> [--folded]] 2> fires.txt
+ *     [--pin-out <pin.json> [--folded]] [--pass trailing-qty|negated|both] 2> fires.txt
  *
  * Input columns (tab-separated, no csv quoting):
  *   idx draw truth corpusVerdict status itemCount itemsJson ms line
  * itemsJson is [{"r":rawText,"n":normalizedForm,"b":brand}]. status=ok rows are folded with
  * lineKey = canonicalizeSegLine(line); other rows pass through. stderr gets one
  * `FIRE <idx>.<draw> <kind> "<before>" -> "<after>"` per fold, then the totals.
+ * --pass (absent = trailing-qty, output byte-identical to before): `negated` applies
+ * dropNegatedParts(); `both` = drop then fold, as the route does. Only when --pass is given do FIRE
+ * lines carry the pass name (`FIRE[negated] ...`, `FIRE[trailing-qty] ...`).
  * --pin-out writes the S49 PinFile {createdAt, seedsPath, lines:[{line, items}]}; items are the
  * UNFOLDED split, or the folded one with --folded.
  */
 
 import * as fs from 'fs';
 import { foldTrailingQuantityClauses } from '../../src/lib/nlp/trailing-quantity-fold';
+import { dropNegatedParts } from '../../src/lib/nlp/negated-part-drop';
 import { canonicalizeSegLine } from '../../src/lib/nlp/seg-line-key';
 
 type Row = { r: string; n: string; b: string };
@@ -31,9 +35,16 @@ function main(): void {
   const inPath = arg('--in');
   const outPath = arg('--out');
   const pinOut = arg('--pin-out');
+  const pass = arg('--pass');
+  if (pass !== undefined && !['trailing-qty', 'negated', 'both'].includes(pass)) {
+    console.error('--pass must be trailing-qty|negated|both');
+    process.exit(2);
+  }
+  const doNeg = pass === 'negated' || pass === 'both';
+  const doFold = pass === undefined || pass === 'trailing-qty' || pass === 'both';
   const useFolded = process.argv.includes('--folded');
   if (!inPath || !outPath) {
-    console.error('usage: --in <driver.tsv> --out <tsv> [--pin-out <json> [--folded]]');
+    console.error('usage: --in <driver.tsv> --out <tsv> [--pin-out <json> [--folded]] [--pass trailing-qty|negated|both]');
     process.exit(2);
   }
   const lines = fs.readFileSync(inPath, 'utf8').split('\n').filter(l => l.length > 0);
@@ -53,18 +64,29 @@ function main(): void {
     rows++;
     if (status !== 'ok') { out.push(raw); continue; }
     const parsed: Row[] = JSON.parse(itemsJson);
-    const res = foldTrailingQuantityClauses(
-      canonicalizeSegLine(line),
-      parsed.map(p => ({ rawText: p.r, normalizedForm: p.n, brand: p.b })),
-    );
-    if (res.folds.length > 0) {
-      rowsFired++;
-      for (const f of res.folds) {
+    const lineKey = canonicalizeSegLine(line);
+    let cur = parsed.map(p => ({ rawText: p.r, normalizedForm: p.n, brand: p.b }));
+    let fired = false;
+    if (doNeg) {
+      const np = dropNegatedParts(lineKey, cur);
+      cur = np.items;
+      for (const d of np.drops) {
+        fired = true;
         fires++;
-        console.error(`FIRE ${idx}.${draw} ${f.kind} "${f.before}" -> "${f.after}"`);
+        console.error(`FIRE[negated] ${idx}.${draw} ${d.kind} "${d.rawText}"`);
       }
     }
-    const folded: Row[] = res.items.map(i => ({ r: i.rawText, n: i.normalizedForm ?? '', b: i.brand ?? '' }));
+    if (doFold) {
+      const res = foldTrailingQuantityClauses(lineKey, cur);
+      cur = res.items;
+      for (const f of res.folds) {
+        fired = true;
+        fires++;
+        console.error(`FIRE${pass === undefined ? '' : '[trailing-qty]'} ${idx}.${draw} ${f.kind} "${f.before}" -> "${f.after}"`);
+      }
+    }
+    if (fired) rowsFired++;
+    const folded: Row[] = cur.map(i => ({ r: i.rawText, n: i.normalizedForm ?? '', b: i.brand ?? '' }));
     out.push([idx, draw, truth, verdict, status, String(folded.length), JSON.stringify(folded), ms, line].join('\t'));
     if (pinOut) {
       const items = useFolded ? folded : parsed;
