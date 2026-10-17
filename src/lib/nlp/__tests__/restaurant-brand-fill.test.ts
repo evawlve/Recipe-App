@@ -4,10 +4,12 @@ type It = { rawText: string; brand?: string };
 const it = (rawText: string, brand = ''): It => ({ rawText, brand });
 
 describe('restaurant-brand-fill', () => {
-  test('the list is the 33 sim entries plus four, and not cracker barrel', () => {
-    expect(RESTAURANT_CHAINS).toHaveLength(37);
+  test('the list is the 33 sim entries plus four, minus the four grocery-chain spellings', () => {
+    expect(RESTAURANT_CHAINS).toHaveLength(33);
     expect(RESTAURANT_CHAINS).toEqual(expect.arrayContaining(["raising cane's", 'in-n-out', "portillo's", 'cava']));
-    expect(RESTAURANT_CHAINS).not.toContain('cracker barrel');
+    for (const grocery of ['cracker barrel', 'starbucks', 'dunkin', "dunkin'", 'panera']) {
+      expect(RESTAURANT_CHAINS).not.toContain(grocery);
+    }
   });
 
   test('fills later unbranded items with item 1 brand as typed', () => {
@@ -44,21 +46,24 @@ describe('restaurant-brand-fill', () => {
 
   test.each([
     ['raising canes'], ['Raising Cane’s'], ['In-N-Out Burger'], ['portillos'], ['CAVA'],
-    ['mcdonalds'], ['Domino’s'], ['chick fil a'], ["Wendy's"], ['starbucks'],
+    ['mcdonalds'], ['Domino’s'], ['chick fil a'], ["Wendy's"],
   ])('%s is a chain', (b) => {
     expect(isRestaurantChain(b)).toBe(true);
   });
 
-  test.each([['banquet'], ['lean cuisine'], ['cracker barrel'], ['']])('%j is not a chain', (b) => {
+  // Chains that also sell grocery products are not listed (Diego, 2026-10-16): a fill would lend a
+  // grocery item's brand to the next food.
+  test.each([
+    ['banquet'], ['lean cuisine'], ['cracker barrel'], ['starbucks'], ['Starbucks'], ['dunkin'], ["Dunkin'"],
+    ['panera'], [''],
+  ])('%j is not a chain', (b) => {
     expect(isRestaurantChain(b)).toBe(false);
   });
 
-  // ACCEPTED behaviour (design r2 named risk): a grocery product named after a chain is tagged with
-  // the chain brand on item 1, so later unbranded items inherit it. Pinned, not fixed.
-  test('collision shape (accepted): starbucks doubleshot + a banana -> banana gets starbucks', () => {
+  test('grocery-collision shape: starbucks doubleshot + a banana -> the banana keeps no brand', () => {
     const r = fillRestaurantBrand([it('starbucks doubleshot', 'starbucks'), it('a banana')]);
-    expect(r.fills).toBe(1);
-    expect(r.items[1].brand).toBe('starbucks');
+    expect(r.fills).toBe(0);
+    expect(r.items[1].brand ?? '').toBe('');
   });
 
   test('a one-item list is returned unchanged', () => {

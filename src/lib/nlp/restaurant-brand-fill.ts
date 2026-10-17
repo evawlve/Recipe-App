@@ -11,14 +11,17 @@
  * A fifth brand list - the parse route's own, read by nothing else. It is deliberately NOT
  * `filter-candidates.ts`'s list, which also drives `queryTargetsCandidateBrand()`.
  * `cracker barrel` is NOT listed: Cracker Barrel cheese is a grocery brand, and a fill would give an
- * apple logged beside it the restaurant's brand.
+ * apple logged beside it the restaurant's brand. For the same reason `starbucks`, `dunkin` and `panera`
+ * are NOT listed (Diego, 2026-10-16): each also sells packaged grocery products (`starbucks doubleshot`),
+ * and a fill turned the banana logged beside one into Starbucks banana bread. Dropping them costs carry
+ * (364 -> 337 of 387 on the round-1 draws); a wrong food is worse than a missing brand.
  */
 
 export const RESTAURANT_CHAINS: readonly string[] = [
   'pizza hut', 'dominos', "domino's", 'mcdonald', "mcdonald's", 'burger king', 'wendy', "wendy's",
   'taco bell', 'subway', 'chick-fil-a', 'chick fil a', 'popeyes', "popeye's", 'kfc', 'panda express',
-  'chipotle', 'olive garden', 'applebee', "applebee's", "chili's", 'outback', 'panera', 'starbucks',
-  'dunkin', "dunkin'", 'jack in the box', 'arby', "arby's", 'sonic', 'freshii', 'wingstop', 'five guys',
+  'chipotle', 'olive garden', 'applebee', "applebee's", "chili's", 'outback',
+  'jack in the box', 'arby', "arby's", 'sonic', 'freshii', 'wingstop', 'five guys',
   "raising cane's", 'in-n-out', "portillo's", 'cava',
 ];
 
