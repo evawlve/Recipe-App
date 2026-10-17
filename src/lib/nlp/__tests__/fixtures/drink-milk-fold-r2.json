@@ -1,0 +1,3248 @@
+[
+ {
+  "src": "drink-base#0.1",
+  "line": "a matcha latte with almond milk",
+  "input": [
+   {
+    "rawText": "a matcha latte",
+    "normalizedForm": "matcha latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a matcha latte with almond milk",
+    "normalizedForm": "matcha latte almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a matcha latte with almond milk\" ~ matcha latte almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#0.2",
+  "line": "a matcha latte with almond milk",
+  "input": [
+   {
+    "rawText": "a matcha latte",
+    "normalizedForm": "matcha latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a matcha latte with almond milk",
+    "normalizedForm": "matcha latte almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a matcha latte with almond milk\" ~ matcha latte almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#0.3",
+  "line": "a matcha latte with almond milk",
+  "input": [
+   {
+    "rawText": "a matcha latte",
+    "normalizedForm": "matcha latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a matcha latte with almond milk",
+    "normalizedForm": "matcha latte almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a matcha latte with almond milk\" ~ matcha latte almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#1.1",
+  "line": "an iced latte with oat milk and vanilla syrup",
+  "input": [
+   {
+    "rawText": "iced latte",
+    "normalizedForm": "iced latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "iced latte with oat milk",
+    "normalizedForm": "iced latte oat milk"
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"iced latte with oat milk\" ~ iced latte oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#1.2",
+  "line": "an iced latte with oat milk and vanilla syrup",
+  "input": [
+   {
+    "rawText": "iced latte",
+    "normalizedForm": "iced latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "iced latte with oat milk",
+    "normalizedForm": "iced latte oat milk"
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"iced latte with oat milk\" ~ iced latte oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#1.3",
+  "line": "an iced latte with oat milk and vanilla syrup",
+  "input": [
+   {
+    "rawText": "iced latte",
+    "normalizedForm": "iced latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "iced latte with oat milk",
+    "normalizedForm": "iced latte oat milk"
+   },
+   {
+    "rawText": "vanilla syrup",
+    "normalizedForm": "vanilla syrup"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"iced latte with oat milk\" ~ iced latte oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#2.1",
+  "line": "a cappuccino w/ skim milk",
+  "input": [
+   {
+    "rawText": "a cappuccino w/ skim milk",
+    "normalizedForm": "cappuccino w/ skim milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cappuccino w/ skim milk",
+    "normalizedForm": "cappuccino w/ skim milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#2.2",
+  "line": "a cappuccino w/ skim milk",
+  "input": [
+   {
+    "rawText": "a cappuccino w/ skim milk",
+    "normalizedForm": "cappuccino"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cappuccino w/ skim milk",
+    "normalizedForm": "cappuccino"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#2.3",
+  "line": "a cappuccino w/ skim milk",
+  "input": [
+   {
+    "rawText": "a cappuccino w/ skim milk",
+    "normalizedForm": "cappuccino w/ skim milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cappuccino w/ skim milk",
+    "normalizedForm": "cappuccino w/ skim milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#3.1",
+  "line": "a chai latte made with oat milk",
+  "input": [
+   {
+    "rawText": "chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chai latte made with oat milk",
+    "normalizedForm": "chai latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"chai latte made with oat milk\" ~ chai latte oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#3.2",
+  "line": "a chai latte made with oat milk",
+  "input": [
+   {
+    "rawText": "chai latte made with oat milk",
+    "normalizedForm": "chai latte made with oat milk"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chai latte made with oat milk",
+    "normalizedForm": "chai latte made with oat milk"
+   }
+  ],
+  "folds": [
+   "dup \"oat milk\""
+  ]
+ },
+ {
+  "src": "drink-base#3.3",
+  "line": "a chai latte made with oat milk",
+  "input": [
+   {
+    "rawText": "chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chai latte made with oat milk",
+    "normalizedForm": "chai latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"chai latte made with oat milk\" ~ chai latte oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#4.1",
+  "line": "a flat white with oat milk",
+  "input": [
+   {
+    "rawText": "a flat white",
+    "normalizedForm": "flat white"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a flat white with oat milk",
+    "normalizedForm": "flat white oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a flat white with oat milk\" ~ flat white oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#4.2",
+  "line": "a flat white with oat milk",
+  "input": [
+   {
+    "rawText": "a flat white",
+    "normalizedForm": "flat white"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a flat white with oat milk",
+    "normalizedForm": "flat white oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a flat white with oat milk\" ~ flat white oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#4.3",
+  "line": "a flat white with oat milk",
+  "input": [
+   {
+    "rawText": "a flat white",
+    "normalizedForm": "flat white"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a flat white with oat milk",
+    "normalizedForm": "flat white oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a flat white with oat milk\" ~ flat white oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#5.1",
+  "line": "a mocha with almond milk and whipped cream",
+  "input": [
+   {
+    "rawText": "mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "mocha with almond milk",
+    "normalizedForm": "mocha almond milk"
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"mocha with almond milk\" ~ mocha almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#5.2",
+  "line": "a mocha with almond milk and whipped cream",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mocha with almond milk",
+    "normalizedForm": "mocha almond milk"
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a mocha with almond milk\" ~ mocha almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#5.3",
+  "line": "a mocha with almond milk and whipped cream",
+  "input": [
+   {
+    "rawText": "mocha with almond milk",
+    "normalizedForm": "mocha with almond milk"
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "mocha with almond milk",
+    "normalizedForm": "mocha with almond milk"
+   },
+   {
+    "rawText": "whipped cream",
+    "normalizedForm": "whipped cream"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#6.1",
+  "line": "a large oat milk latte",
+  "input": [
+   {
+    "rawText": "a large oat milk latte",
+    "normalizedForm": "oat milk latte"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a large oat milk latte",
+    "normalizedForm": "oat milk latte"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#6.2",
+  "line": "a large oat milk latte",
+  "input": [
+   {
+    "rawText": "a large oat milk latte",
+    "normalizedForm": "oat milk latte"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a large oat milk latte",
+    "normalizedForm": "oat milk latte"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#6.3",
+  "line": "a large oat milk latte",
+  "input": [
+   {
+    "rawText": "a large oat milk latte",
+    "normalizedForm": "oat milk latte"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a large oat milk latte",
+    "normalizedForm": "oat milk latte"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#7.1",
+  "line": "a cortado with whole milk",
+  "input": [
+   {
+    "rawText": "a cortado",
+    "normalizedForm": "cortado"
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cortado with whole milk",
+    "normalizedForm": "cortado"
+   }
+  ],
+  "folds": [
+   "fold \"whole milk\" into \"a cortado with whole milk\" ~ cortado"
+  ]
+ },
+ {
+  "src": "drink-base#7.2",
+  "line": "a cortado with whole milk",
+  "input": [
+   {
+    "rawText": "a cortado",
+    "normalizedForm": "cortado"
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cortado with whole milk",
+    "normalizedForm": "cortado"
+   }
+  ],
+  "folds": [
+   "fold \"whole milk\" into \"a cortado with whole milk\" ~ cortado"
+  ]
+ },
+ {
+  "src": "drink-base#7.3",
+  "line": "a cortado with whole milk",
+  "input": [
+   {
+    "rawText": "a cortado",
+    "normalizedForm": "cortado"
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cortado with whole milk",
+    "normalizedForm": "cortado"
+   }
+  ],
+  "folds": [
+   "fold \"whole milk\" into \"a cortado with whole milk\" ~ cortado"
+  ]
+ },
+ {
+  "src": "drink-base#8.1",
+  "line": "a london fog with oat milk",
+  "input": [
+   {
+    "rawText": "a london fog",
+    "normalizedForm": "london fog"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a london fog with oat milk",
+    "normalizedForm": "london fog oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a london fog with oat milk\" ~ london fog oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#8.2",
+  "line": "a london fog with oat milk",
+  "input": [
+   {
+    "rawText": "a london fog",
+    "normalizedForm": "london fog"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a london fog with oat milk",
+    "normalizedForm": "london fog oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a london fog with oat milk\" ~ london fog oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#8.3",
+  "line": "a london fog with oat milk",
+  "input": [
+   {
+    "rawText": "a london fog",
+    "normalizedForm": "london fog"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a london fog with oat milk",
+    "normalizedForm": "london fog oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a london fog with oat milk\" ~ london fog oat milk"
+  ]
+ },
+ {
+  "src": "drink-base#9.1",
+  "line": "an iced chai latte with almond milk and an extra shot",
+  "input": [
+   {
+    "rawText": "an iced chai latte",
+    "normalizedForm": "iced chai latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "an extra shot",
+    "normalizedForm": "extra shot"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "an iced chai latte with almond milk",
+    "normalizedForm": "iced chai latte almond milk"
+   },
+   {
+    "rawText": "an extra shot",
+    "normalizedForm": "extra shot"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"an iced chai latte with almond milk\" ~ iced chai latte almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#9.2",
+  "line": "an iced chai latte with almond milk and an extra shot",
+  "input": [
+   {
+    "rawText": "an iced chai latte",
+    "normalizedForm": "iced chai latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "an extra shot",
+    "normalizedForm": "extra shot"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "an iced chai latte with almond milk",
+    "normalizedForm": "iced chai latte almond milk"
+   },
+   {
+    "rawText": "an extra shot",
+    "normalizedForm": "extra shot"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"an iced chai latte with almond milk\" ~ iced chai latte almond milk"
+  ]
+ },
+ {
+  "src": "drink-base#9.3",
+  "line": "an iced chai latte with almond milk and an extra shot",
+  "input": [
+   {
+    "rawText": "iced chai latte with almond milk",
+    "normalizedForm": "iced chai latte with almond milk"
+   },
+   {
+    "rawText": "extra shot",
+    "normalizedForm": "extra shot"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "iced chai latte with almond milk",
+    "normalizedForm": "iced chai latte with almond milk"
+   },
+   {
+    "rawText": "extra shot",
+    "normalizedForm": "extra shot"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#10.1",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#10.2",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#10.3",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#11.1",
+  "line": "coffee with cream and sugar",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#11.2",
+  "line": "coffee with cream and sugar",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#11.3",
+  "line": "coffee with cream and sugar",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   },
+   {
+    "rawText": "sugar",
+    "normalizedForm": "sugar"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#12.1",
+  "line": "cold brew with oat milk",
+  "input": [
+   {
+    "rawText": "cold brew",
+    "normalizedForm": "cold brew"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "cold brew",
+    "normalizedForm": "cold brew"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#12.2",
+  "line": "cold brew with oat milk",
+  "input": [
+   {
+    "rawText": "cold brew",
+    "normalizedForm": "cold brew"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "cold brew",
+    "normalizedForm": "cold brew"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#12.3",
+  "line": "cold brew with oat milk",
+  "input": [
+   {
+    "rawText": "cold brew",
+    "normalizedForm": "cold brew"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "cold brew",
+    "normalizedForm": "cold brew"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#13.1",
+  "line": "black tea with milk",
+  "input": [
+   {
+    "rawText": "black tea",
+    "normalizedForm": "black tea"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "black tea",
+    "normalizedForm": "black tea"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#13.2",
+  "line": "black tea with milk",
+  "input": [
+   {
+    "rawText": "black tea",
+    "normalizedForm": "black tea"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "black tea",
+    "normalizedForm": "black tea"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#13.3",
+  "line": "black tea with milk",
+  "input": [
+   {
+    "rawText": "black tea",
+    "normalizedForm": "black tea"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "black tea",
+    "normalizedForm": "black tea"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#14.1",
+  "line": "a chai latte and a glass of milk",
+  "input": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#14.2",
+  "line": "a chai latte and a glass of milk",
+  "input": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#14.3",
+  "line": "a chai latte and a glass of milk",
+  "input": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#15.1",
+  "line": "cereal with almond milk",
+  "input": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#15.2",
+  "line": "cereal with almond milk",
+  "input": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#15.3",
+  "line": "cereal with almond milk",
+  "input": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#16.1",
+  "line": "oatmeal with milk",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#16.2",
+  "line": "oatmeal with milk",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#16.3",
+  "line": "oatmeal with milk",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#17.1",
+  "line": "an americano with a splash of milk",
+  "input": [
+   {
+    "rawText": "americano",
+    "normalizedForm": "americano"
+   },
+   {
+    "rawText": "splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "americano",
+    "normalizedForm": "americano"
+   },
+   {
+    "rawText": "splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#17.2",
+  "line": "an americano with a splash of milk",
+  "input": [
+   {
+    "rawText": "an americano",
+    "normalizedForm": "americano"
+   },
+   {
+    "rawText": "a splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "an americano",
+    "normalizedForm": "americano"
+   },
+   {
+    "rawText": "a splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#17.3",
+  "line": "an americano with a splash of milk",
+  "input": [
+   {
+    "rawText": "americano",
+    "normalizedForm": "americano"
+   },
+   {
+    "rawText": "splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "americano",
+    "normalizedForm": "americano"
+   },
+   {
+    "rawText": "splash of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#18.1",
+  "line": "a latte and a banana",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#18.2",
+  "line": "a latte and a banana",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#18.3",
+  "line": "a latte and a banana",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#19.1",
+  "line": "a smoothie with almond milk",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#19.2",
+  "line": "a smoothie with almond milk",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "drink-base#19.3",
+  "line": "a smoothie with almond milk",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and milk for the kids",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "milk for the kids",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "milk for the kids",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte and milk for the kids",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "milk for the kids",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "milk for the kids",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a mocha with milk on the side",
+  "input": [
+   {
+    "rawText": "mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "milk on the side",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "milk on the side",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a mocha with milk on the side",
+  "input": [
+   {
+    "rawText": "a mocha with milk on the side",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mocha with milk on the side",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with a side of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a side of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a side of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with a side of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "side of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "side of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte with a side of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a side of milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a side of milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and 8 oz of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "8 oz of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "8 oz of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte and 8 oz of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "8 oz of milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "8 oz of milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a chai latte and 1 cup of whole milk",
+  "input": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "1 cup of whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "1 cup of whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a chai latte and 1 cup of whole milk",
+  "input": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "1 cup of whole milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "1 cup of whole milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and half a glass of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "half a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "half a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and 2 cups of oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "2 cups of oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "2 cups of oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and 12 oz skim milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "12 oz skim milk",
+    "normalizedForm": "skim milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "12 oz skim milk",
+    "normalizedForm": "skim milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte and 12 oz skim milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "12 oz skim milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "12 oz skim milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and some almond milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "some almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "some almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and a milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and a vanilla milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a vanilla milk",
+    "normalizedForm": "vanilla milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a vanilla milk",
+    "normalizedForm": "vanilla milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and 2 milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "2 milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "2 milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and chocolate milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "chocolate milk",
+    "normalizedForm": "chocolate milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "chocolate milk",
+    "normalizedForm": "chocolate milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a mocha and strawberry milk",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "strawberry milk",
+    "normalizedForm": "strawberry milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "strawberry milk",
+    "normalizedForm": "strawberry milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with oat milk and a glass of whole milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "a glass of whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte oat milk"
+   },
+   {
+    "rawText": "a glass of whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte with oat milk and a glass of whole milk",
+  "input": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a glass of whole milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a glass of whole milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with a glass of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte with a glass of milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a cappuccino and a glass of milk",
+  "input": [
+   {
+    "rawText": "a cappuccino",
+    "normalizedForm": "cappuccino"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a cappuccino",
+    "normalizedForm": "cappuccino"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a slice of latte cake and milk",
+  "input": [
+   {
+    "rawText": "a slice of latte cake",
+    "normalizedForm": "latte cake"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a slice of latte cake",
+    "normalizedForm": "latte cake"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "coffee with pumpkin spice latte creamer",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "pumpkin spice latte creamer",
+    "normalizedForm": "pumpkin spice latte creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "pumpkin spice latte creamer",
+    "normalizedForm": "pumpkin spice latte creamer"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with pumpkin spice creamer",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "pumpkin spice creamer",
+    "normalizedForm": "pumpkin spice creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with pumpkin spice creamer",
+    "normalizedForm": "latte"
+   }
+  ],
+  "folds": [
+   "fold \"pumpkin spice creamer\" into \"a latte with pumpkin spice creamer\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a caramel macchiato with caramel creamer",
+  "input": [
+   {
+    "rawText": "a caramel macchiato",
+    "normalizedForm": "caramel macchiato"
+   },
+   {
+    "rawText": "caramel creamer",
+    "normalizedForm": "caramel creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a caramel macchiato with caramel creamer",
+    "normalizedForm": "caramel macchiato"
+   }
+  ],
+  "folds": [
+   "fold \"caramel creamer\" into \"a caramel macchiato with caramel creamer\" ~ caramel macchiato"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a macchiato with caramel creamer",
+  "input": [
+   {
+    "rawText": "a macchiato",
+    "normalizedForm": "macchiato"
+   },
+   {
+    "rawText": "caramel creamer",
+    "normalizedForm": "caramel creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a macchiato with caramel creamer",
+    "normalizedForm": "macchiato"
+   }
+  ],
+  "folds": [
+   "fold \"caramel creamer\" into \"a macchiato with caramel creamer\" ~ macchiato"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with french vanilla creamer",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "french vanilla creamer",
+    "normalizedForm": "french vanilla creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with french vanilla creamer",
+    "normalizedForm": "latte"
+   }
+  ],
+  "folds": [
+   "fold \"french vanilla creamer\" into \"a latte with french vanilla creamer\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with creamer",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "creamer",
+    "normalizedForm": "creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with creamer",
+    "normalizedForm": "latte"
+   }
+  ],
+  "folds": [
+   "fold \"creamer\" into \"a latte with creamer\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with cream",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "cream",
+    "normalizedForm": "cream"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with cream",
+    "normalizedForm": "latte"
+   }
+  ],
+  "folds": [
+   "fold \"cream\" into \"a latte with cream\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a mocha with half and half",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "half and half",
+    "normalizedForm": "half and half"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mocha with half and half",
+    "normalizedForm": "mocha"
+   }
+  ],
+  "folds": [
+   "fold \"half and half\" into \"a mocha with half and half\" ~ mocha"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "mocha almond fudge ice cream and milk",
+  "input": [
+   {
+    "rawText": "mocha almond fudge ice cream",
+    "normalizedForm": "mocha almond fudge ice cream"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "mocha almond fudge ice cream",
+    "normalizedForm": "mocha almond fudge ice cream"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a mocha with ice cream",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "starbucks caramel macchiato with almond milk",
+  "input": [
+   {
+    "rawText": "starbucks caramel macchiato",
+    "normalizedForm": "caramel macchiato"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "starbucks caramel macchiato with almond milk",
+    "normalizedForm": "caramel macchiato almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"starbucks caramel macchiato with almond milk\" ~ caramel macchiato almond milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "starbucks caramel macchiato with almond milk and a banana",
+  "input": [
+   {
+    "rawText": "starbucks caramel macchiato",
+    "normalizedForm": "caramel macchiato"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "starbucks caramel macchiato with almond milk",
+    "normalizedForm": "caramel macchiato almond milk"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"starbucks caramel macchiato with almond milk\" ~ caramel macchiato almond milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "an iced coffee latte with oat milk",
+  "input": [
+   {
+    "rawText": "an iced coffee latte",
+    "normalizedForm": "iced coffee latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "an iced coffee latte with oat milk",
+    "normalizedForm": "iced coffee latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"an iced coffee latte with oat milk\" ~ iced coffee latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with extra oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "extra oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "extra oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with extra oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with a splash of oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a splash of oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "a splash of oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with a splash of oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "splash of oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "splash of oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv#HEUR",
+  "line": "a latte with a splash of oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a splash of oat milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a splash of oat milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte w/ oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte w/ oat milk",
+    "normalizedForm": "latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte w/ oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte w/oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte w/ oat milk",
+    "normalizedForm": "latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte w/ oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte, oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte (with oat milk)",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte - oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte made with oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte made with oat milk",
+    "normalizedForm": "latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte made with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with 2% milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "2% milk",
+    "normalizedForm": "2% milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with 2% milk",
+    "normalizedForm": "latte 2 milk"
+   }
+  ],
+  "folds": [
+   "fold \"2% milk\" into \"a latte with 2% milk\" ~ latte 2 milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with silk almond milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "silk almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "silk almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with oat milk, two of them",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "two of them",
+    "normalizedForm": "two of them"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte oat milk"
+   },
+   {
+    "rawText": "two of them",
+    "normalizedForm": "two of them"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "two lattes with oat milk",
+  "input": [
+   {
+    "rawText": "two lattes",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "two lattes with oat milk",
+    "normalizedForm": "latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"two lattes with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with almond milk and almond milk for my cereal",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "almond milk for my cereal",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with almond milk",
+    "normalizedForm": "latte almond milk"
+   },
+   {
+    "rawText": "almond milk for my cereal",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a latte with almond milk\" ~ latte almond milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with almond milk and a bowl of cereal with almond milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "a bowl of cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with almond milk",
+    "normalizedForm": "latte almond milk"
+   },
+   {
+    "rawText": "a bowl of cereal",
+    "normalizedForm": "cereal"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a latte with almond milk\" ~ latte almond milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with my coffee creamer",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "my coffee creamer",
+    "normalizedForm": "coffee creamer"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with my coffee creamer",
+    "normalizedForm": "latte"
+   }
+  ],
+  "folds": [
+   "fold \"my coffee creamer\" into \"a latte with my coffee creamer\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a homemade smoothie made with almond milk and a latte with oat milk",
+  "input": [
+   {
+    "rawText": "a homemade smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a homemade smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a breakfast sandwich with a latte and almond milk",
+  "input": [
+   {
+    "rawText": "a breakfast sandwich",
+    "normalizedForm": "breakfast sandwich"
+   },
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a breakfast sandwich",
+    "normalizedForm": "breakfast sandwich"
+   },
+   {
+    "rawText": "a latte and almond milk",
+    "normalizedForm": "latte almond milk"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a latte and almond milk\" ~ latte almond milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with oat milk and honey",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "honey",
+    "normalizedForm": "honey"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte oat milk"
+   },
+   {
+    "rawText": "honey",
+    "normalizedForm": "honey"
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte with whole milk, actually oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "folds": [
+   "fold \"whole milk\" into \"a latte with whole milk\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a mocha with almond milk and a mocha with whole milk",
+  "input": [
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mocha with almond milk",
+    "normalizedForm": "mocha almond milk"
+   },
+   {
+    "rawText": "a mocha with whole milk",
+    "normalizedForm": "mocha"
+   }
+  ],
+  "folds": [
+   "fold \"almond milk\" into \"a mocha with almond milk\" ~ mocha almond milk",
+   "fold \"whole milk\" into \"a mocha with whole milk\" ~ mocha"
+  ]
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a hot chocolate with almond milk",
+  "input": [
+   {
+    "rawText": "a hot chocolate",
+    "normalizedForm": "hot chocolate"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a hot chocolate",
+    "normalizedForm": "hot chocolate"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ },
+ {
+  "src": "cases.tsv",
+  "line": "a latte and milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte and milk",
+    "normalizedForm": "latte"
+   }
+  ],
+  "folds": [
+   "fold \"milk\" into \"a latte and milk\" ~ latte"
+  ]
+ },
+ {
+  "src": "cases2.tsv#HEUR",
+  "line": "a latte and oat milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte and oat milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": [
+   "fold \"oat milk\" into \"a latte and oat milk\" ~ "
+  ]
+ },
+ {
+  "src": "cases2.tsv#HEUR",
+  "line": "an iced latte and whole milk",
+  "input": [
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "an iced latte and whole milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": [
+   "fold \"whole milk\" into \"an iced latte and whole milk\" ~ "
+  ]
+ },
+ {
+  "src": "cases2.tsv#HEUR",
+  "line": "2 lattes and skim milk",
+  "input": [
+   {
+    "rawText": "2 lattes",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "skim milk",
+    "normalizedForm": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 lattes and skim milk",
+    "normalizedForm": ""
+   }
+  ],
+  "folds": [
+   "fold \"skim milk\" into \"2 lattes and skim milk\" ~ "
+  ]
+ },
+ {
+  "src": "cases2.tsv",
+  "line": "a latte, and almond milk",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "folds": []
+ }
+]

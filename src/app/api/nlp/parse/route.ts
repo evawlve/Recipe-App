@@ -253,6 +253,7 @@ export async function POST(req: NextRequest) {
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
     const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
+    const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
     const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
@@ -449,6 +450,13 @@ export async function POST(req: NextRequest) {
         items = dp.items;
         if (dp.drops.length > 0) {
           logger.info('nlp_parse.dish_part_drop', { count: dp.drops.length });
+        }
+        // A milk named after a latte-type drink ("a matcha latte with almond milk") is the drink's variant, not a
+        // second billed item; after the dish drop, before the trailing-quantity fold. The cache keeps the unfolded split.
+        const dm = foldDrinkMilk(lineKey, items);
+        items = dm.items;
+        if (dm.folds.length > 0) {
+          logger.info('nlp_parse.drink_milk_fold', { count: dm.folds.length });
         }
         const tq = foldTrailingQuantityClauses(lineKey, items);
         items = tq.items;
