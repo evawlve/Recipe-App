@@ -250,6 +250,8 @@ export async function POST(req: NextRequest) {
     const { canonicalizeSegLine } = await import('@/lib/nlp/seg-line-key');
     const { lookupSegmentationCache, writeSegmentationCache } = await import('@/lib/nlp/segmentation-cache');
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
+    const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
+    const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const {
@@ -422,6 +424,29 @@ export async function POST(req: NextRequest) {
             // deliberately NOT cached.
             items = capSplit(forceSegmentText(text), 'heuristic');
           }
+        }
+
+        // A quantity written AFTER its food ("tuna salad, maybe a cup") folds onto that
+        // item. Runs on every split, keyed by lineKey, AFTER the cache write above: the
+        // cache keeps the unfolded LLM split, so no prompt edit or version bump is needed.
+        // A negated / removed / excluded part ("no bun", "i took off the bacon") is dropped BEFORE
+        // the fold: fold-first can rewrite a negated part into a billed one ("no bun, two of them"
+        // -> "2 no bun"). The cache write above keeps the undropped split.
+        const np = dropNegatedParts(lineKey, items);
+        items = np.items;
+        if (np.drops.length > 0) {
+          logger.info('nlp_parse.negated_part_drop', {
+            count: np.drops.length,
+            kinds: np.drops.map(d => d.kind),
+          });
+        }
+        const tq = foldTrailingQuantityClauses(lineKey, items);
+        items = tq.items;
+        if (tq.folds.length > 0) {
+          logger.info('nlp_parse.trailing_quantity_fold', {
+            count: tq.folds.length,
+            kinds: tq.folds.map(f => f.kind),
+          });
         }
       }
       // Per-line telemetry rows (MappingEventLog), written in one createMany

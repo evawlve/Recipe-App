@@ -1981,6 +1981,18 @@ function shortCircuitOutcome(
     };
 }
 
+// Word-level query/name tokens for the brand macro-consensus pass. tokenize()
+// stems, so wings/wing and cookies/cookie match.
+function consensusQueryTokens(query: string, targetBrand: string): string[] {
+    const brand = new Set(tokenize(targetBrand));
+    return [...new Set(tokenize(query))]
+        .filter(t => t.length > 2 && !brand.has(t) && !VARIANT_STOPWORDS.has(t));
+}
+function consensusNameTokens(name: string, targetBrand: string): Set<string> {
+    const brand = new Set(tokenize(targetBrand));
+    return new Set(tokenize(name).filter(t => t.length > 2 && !brand.has(t) && !VARIANT_STOPWORDS.has(t)));
+}
+
 export function simpleRerank(
     query: string,
     candidates: RerankCandidate[],
@@ -2292,6 +2304,35 @@ export function simpleRerank(
             const kcalOutliers = outliersOf(
                 siblings.map(s => s.candidate.nutrition!.kcal),
                 CONSENSUS_MIN_KCAL_MEDIAN, CONSENSUS_KCAL_OUTLIER_DEV);
+            const proteinVals = siblings.map(s => s.candidate.nutrition!.protein ?? 0);
+            const kcalVals = siblings.map(s => s.candidate.nutrition!.kcal);
+            const agreeIdx = (values: number[]): number[] => {
+                const med = median(values);
+                if (med <= 0) return [];
+                return values.map((v, i) => [v, i] as const)
+                    .filter(([v]) => Math.abs(v - med) / med <= CONSENSUS_AGREE_TOLERANCE)
+                    .map(([, i]) => i);
+            };
+            const qT = consensusQueryTokens(query, targetBrand!);
+            const nameT = siblings.map(s => new Set(tokenize(s.candidate.name)));
+            // Exempt a flagged outlier only when the agreeing majority is
+            // demonstrably a DIFFERENT named variant: the outlier names a query
+            // token no majority record names, AND every majority record names a
+            // token that neither the query nor the outlier names.
+            const qSet = new Set(tokenize(query));
+            const exemptDifferentVariant = (flagged: Set<number>, values: number[]): void => {
+                const ag = agreeIdx(values);
+                if (ag.length === 0) return;
+                for (const i of [...flagged]) {
+                    const own = qT.filter(t => nameT[i].has(t));
+                    const outlierNamesUnshared = own.some(t => ag.every(j => !nameT[j].has(t)));
+                    const majorityIsOtherVariant = ag.every(j => [...consensusNameTokens(siblings[j].candidate.name, targetBrand!)]
+                        .some(t => !qSet.has(t) && !nameT[i].has(t)));
+                    if (outlierNamesUnshared && majorityIsOtherVariant) flagged.delete(i);
+                }
+            };
+            exemptDifferentVariant(proteinOutliers, proteinVals);
+            exemptDifferentVariant(kcalOutliers, kcalVals);
             siblings.forEach((s, i) => {
                 if (proteinOutliers.has(i) || kcalOutliers.has(i)) {
                     s.score -= WEIGHTS.CONSENSUS_OUTLIER_PENALTY;
