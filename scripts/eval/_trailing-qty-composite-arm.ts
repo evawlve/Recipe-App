@@ -10,6 +10,8 @@
  * no-op, and assertWriteGuardIntercepts() refuses to run unless a no-op UPDATE through $queryRaw
  * moves the tally by exactly one. Both run BEFORE the mapper is loaded.
  *
+ * --warm reads the cache and records telemetry.cacheHit / cacheEscape / normalizedForm per row.
+ *
  * Usage (a worktree, env from the shell, ts-node - never tsx):
  *   set -a; . ./.env; set +a
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
@@ -34,8 +36,10 @@ async function main(): Promise<void> {
   const pinPath = arg('--pin');
   const outPath = arg('--out');
   const dry = process.argv.includes('--dry');
+  // --warm: skipCache false, so the mapper reads (and reports) the cache. Every write stays guarded.
+  const warm = process.argv.includes('--warm');
   if (!pinPath || (!outPath && !dry)) {
-    console.error('usage: --pin <pin.json> --out <rows.jsonl> [--dry]');
+    console.error('usage: --pin <pin.json> --out <rows.jsonl> [--dry] [--warm]');
     process.exit(2);
   }
   const pin: PinFile = JSON.parse(fs.readFileSync(pinPath, 'utf8'));
@@ -54,16 +58,19 @@ async function main(): Promise<void> {
     const L = pin.lines[li];
     for (let ii = 0; ii < L.items.length; ii++) {
       const it = L.items[ii];
+      const telemetry: Record<string, any> = {};
       const options = {
         brand: it.brand || undefined,
         normalizedForm: it.normalizedForm || undefined,
-        skipCache: true,
+        skipCache: !warm,
         skipSave: true,
+        telemetry,
       };
       const row: Record<string, unknown> = {
         lineIdx: li, itemIdx: ii, line: L.line, rawText: it.rawText,
         pinnedForm: it.normalizedForm, pinnedBrand: it.brand,
         foodId: null, foodName: null, brandName: null, grams: null, kcal: null, servingTier: null,
+        cacheHit: null, cacheEscape: null, normalizedForm: null,
       };
       if (dry) {
         console.warn(`[${li}.${ii}] map(${JSON.stringify(it.rawText)}, ${JSON.stringify(options)})`);
@@ -85,6 +92,9 @@ async function main(): Promise<void> {
       } catch (e) {
         row.error = e instanceof Error ? e.message : String(e);
       }
+      row.cacheHit = telemetry.cacheHit ?? null;
+      row.cacheEscape = telemetry.cacheEscape ?? null;
+      row.normalizedForm = telemetry.normalizedForm ?? null;
       rows.push(JSON.stringify(row));
     }
   }

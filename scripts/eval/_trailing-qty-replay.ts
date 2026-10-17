@@ -5,7 +5,7 @@
  *
  *   npx ts-node --project tsconfig.scripts.json --transpile-only -r tsconfig-paths/register \
  *     scripts/eval/_trailing-qty-replay.ts --in <driver.tsv> --out <folded.tsv> \
- *     [--pin-out <pin.json> [--folded]] [--pass trailing-qty|negated|both] 2> fires.txt
+ *     [--pin-out <pin.json> [--folded]] [--pass trailing-qty|negated|both|fill|all] 2> fires.txt
  *
  * Input columns (tab-separated, no csv quoting):
  *   idx draw truth corpusVerdict status itemCount itemsJson ms line
@@ -13,8 +13,10 @@
  * lineKey = canonicalizeSegLine(line); other rows pass through. stderr gets one
  * `FIRE <idx>.<draw> <kind> "<before>" -> "<after>"` per fold, then the totals.
  * --pass (absent = trailing-qty, output byte-identical to before): `negated` applies
- * dropNegatedParts(); `both` = drop then fold, as the route does. Only when --pass is given do FIRE
- * lines carry the pass name (`FIRE[negated] ...`, `FIRE[trailing-qty] ...`).
+ * dropNegatedParts(); `both` = drop then fold, as the route does; `fill` applies fillRestaurantBrand()
+ * alone (stderr `FIRE[fill] <idx>.<draw> "<item1 brand>" -> <n> items` per fired row, and the totals
+ * line `rows=<n> fills=<f> rowsFired=<r>`); `all` = drop -> fold -> fill. Only when --pass is given do
+ * FIRE lines carry the pass name (`FIRE[negated] ...`, `FIRE[trailing-qty] ...`).
  * --pin-out writes the S49 PinFile {createdAt, seedsPath, lines:[{line, items}]}; items are the
  * UNFOLDED split, or the folded one with --folded.
  */
@@ -22,6 +24,7 @@
 import * as fs from 'fs';
 import { foldTrailingQuantityClauses } from '../../src/lib/nlp/trailing-quantity-fold';
 import { dropNegatedParts } from '../../src/lib/nlp/negated-part-drop';
+import { fillRestaurantBrand } from '../../src/lib/nlp/restaurant-brand-fill';
 import { canonicalizeSegLine } from '../../src/lib/nlp/seg-line-key';
 
 type Row = { r: string; n: string; b: string };
@@ -36,15 +39,16 @@ function main(): void {
   const outPath = arg('--out');
   const pinOut = arg('--pin-out');
   const pass = arg('--pass');
-  if (pass !== undefined && !['trailing-qty', 'negated', 'both'].includes(pass)) {
-    console.error('--pass must be trailing-qty|negated|both');
+  if (pass !== undefined && !['trailing-qty', 'negated', 'both', 'fill', 'all'].includes(pass)) {
+    console.error('--pass must be trailing-qty|negated|both|fill|all');
     process.exit(2);
   }
-  const doNeg = pass === 'negated' || pass === 'both';
-  const doFold = pass === undefined || pass === 'trailing-qty' || pass === 'both';
+  const doNeg = pass === 'negated' || pass === 'both' || pass === 'all';
+  const doFold = pass === undefined || pass === 'trailing-qty' || pass === 'both' || pass === 'all';
+  const doFill = pass === 'fill' || pass === 'all';
   const useFolded = process.argv.includes('--folded');
   if (!inPath || !outPath) {
-    console.error('usage: --in <driver.tsv> --out <tsv> [--pin-out <json> [--folded]] [--pass trailing-qty|negated|both]');
+    console.error('usage: --in <driver.tsv> --out <tsv> [--pin-out <json> [--folded]] [--pass trailing-qty|negated|both|fill|all]');
     process.exit(2);
   }
   const lines = fs.readFileSync(inPath, 'utf8').split('\n').filter(l => l.length > 0);
@@ -55,6 +59,7 @@ function main(): void {
   let rows = 0;
   let fires = 0;
   let rowsFired = 0;
+  let fills = 0;
 
   for (const raw of lines.slice(1)) {
     const c = raw.split('\t');
@@ -85,6 +90,17 @@ function main(): void {
         console.error(`FIRE${pass === undefined ? '' : '[trailing-qty]'} ${idx}.${draw} ${f.kind} "${f.before}" -> "${f.after}"`);
       }
     }
+    if (doFill) {
+      const item1Brand = cur[0]?.brand ?? '';
+      const bf = fillRestaurantBrand(cur);
+      cur = bf.items;
+      if (bf.fills > 0) {
+        fired = true;
+        fires++;
+        fills += bf.fills;
+        console.error(`FIRE[fill] ${idx}.${draw} "${item1Brand}" -> ${cur.length} items`);
+      }
+    }
     if (fired) rowsFired++;
     const folded: Row[] = cur.map(i => ({ r: i.rawText, n: i.normalizedForm ?? '', b: i.brand ?? '' }));
     out.push([idx, draw, truth, verdict, status, String(folded.length), JSON.stringify(folded), ms, line].join('\t'));
@@ -104,7 +120,8 @@ function main(): void {
       JSON.stringify({ createdAt: new Date().toISOString(), seedsPath: inPath, lines: pinLines }, null, 2) + '\n',
     );
   }
-  console.error(`rows=${rows} fires=${fires} rowsFired=${rowsFired}`);
+  if (pass === 'fill') console.error(`rows=${rows} fills=${fills} rowsFired=${rowsFired}`);
+  else console.error(`rows=${rows} fires=${fires} rowsFired=${rowsFired}`);
 }
 
 main();
