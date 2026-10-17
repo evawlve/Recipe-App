@@ -252,6 +252,7 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
+    const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
     const {
@@ -447,6 +448,14 @@ export async function POST(req: NextRequest) {
             count: tq.folds.length,
             kinds: tq.folds.map(f => f.kind),
           });
+        }
+        // A restaurant's brand on item 1 fills the later unbranded dishes. After the drop and the fold:
+        // the drop's guards skip a BRANDED item, so fill-first would bill "no pickles" under the chain.
+        // The cache write above keeps the unfilled split.
+        const bf = fillRestaurantBrand(items);
+        items = bf.items;
+        if (bf.fills > 0) {
+          logger.info('nlp_parse.restaurant_brand_fill', { count: bf.fills });
         }
       }
       // Per-line telemetry rows (MappingEventLog), written in one createMany
