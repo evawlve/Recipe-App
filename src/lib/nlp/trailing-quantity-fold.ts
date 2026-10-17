@@ -89,7 +89,7 @@ function isGrammarWord(tok: string): boolean {
 }
 
 /** Lowercase words; `.!?` and all punctuation dropped except `/` and `.` inside numbers and `'` inside words. */
-function words(s: string): string[] {
+export function words(s: string): string[] {
   return s
     .toLowerCase()
     .replace(/[‘’]/g, "'")
@@ -101,9 +101,9 @@ function words(s: string): string[] {
     .filter(Boolean);
 }
 
-interface Tok { w: string; piece: number }
+export interface Tok { w: string; piece: number }
 
-function tokenizeWithPieces(s: string): Tok[] {
+export function tokenizeWithPieces(s: string): Tok[] {
   const out: Tok[] = [];
   s.split(/[,;]/).forEach((piece, p) => {
     for (const w of words(piece)) out.push({ w, piece: p });
@@ -111,7 +111,7 @@ function tokenizeWithPieces(s: string): Tok[] {
   return out;
 }
 
-function sameWord(x: string, y: string): boolean {
+export function sameWord(x: string, y: string): boolean {
   return x === y || x + 's' === y || y + 's' === x || x + 'es' === y || y + 'es' === x;
 }
 
