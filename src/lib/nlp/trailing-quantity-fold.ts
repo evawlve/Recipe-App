@@ -44,7 +44,7 @@ interface Item {
   brand?: string;
 }
 
-interface Clause {
+export interface Clause {
   value: number;
   unit: string | null;
   food: string[];
@@ -124,7 +124,7 @@ function parseNumeric(w: string): number | null {
 }
 
 /** Parses a whole token list as a clause, or returns null. */
-function parseClause(t: string[]): Clause | null {
+export function parseClause(t: string[]): Clause | null {
   const n = t.length;
   let i = 0;
   while (i < n && LEAD.has(t[i])) i++;
