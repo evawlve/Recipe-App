@@ -28,10 +28,11 @@ const MOVED: Row[] = [
   { line: "2 and a half", parse: null },
 ];
 
-// Byte-identical to base. The four lines flagged below are unchanged by F1 --
-// a pre-existing defect, not an endorsement: "half and half" (name "and half"),
-// "2 eggs and a half bagel", "2 slices of toast and half an avocado" and
-// "3 eggs and 2 strips of bacon".
+// Byte-identical to base. The three lines flagged below are unchanged by F1 --
+// a pre-existing defect, not an endorsement: "2 eggs and a half bagel",
+// "2 slices of toast and half an avocado" and "3 eggs and 2 strips of bacon".
+// A leading "half and half" is the food's name (halfAndHalfCursor() in
+// ingredient-line.ts): qty 1, the three words kept in the name.
 const UNCHANGED: Row[] = [
   { line: "one and a half cups milk", qty: 1.5, unit: "cup", name: "milk" },
   { line: "one and a half cups of unsweetened almond milk", qty: 1.5, unit: "cup", name: "unsweetened almond milk" },
@@ -42,7 +43,7 @@ const UNCHANGED: Row[] = [
   { line: "2.5 tbsp nutella", qty: 2.5, unit: "tbsp", name: "nutella" },
   { line: "a cup and a half of rice", qty: 1.5, unit: "cup", name: "rice" },
   { line: "a scoop and a half of whey protein", qty: 1.5, unit: "scoop", name: "whey protein" },
-  { line: "half and half", qty: 0.5, unit: null, name: "and half" },
+  { line: "half and half", qty: 1, unit: null, name: "half and half" },
   { line: "2 tbsp half and half", qty: 2, unit: "tbsp", name: "half and half" },
   { line: "half a cup of rice", qty: 0.5, unit: "cup", name: "rice" },
   { line: "2 eggs and a half bagel", qty: 2.5, unit: "egg", name: "bagel" },

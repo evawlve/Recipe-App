@@ -402,6 +402,14 @@ export function getBareQueryDefault(foodName: string): { grams: number, descript
         return { grams: 355, description: "1 can (standard bare query serving)" };
     }
 
+    // Half-and-half: 2 tbsp (30 g), its US label serving. Anchored to the WHOLE
+    // name (optionally + creamer/cream/milk), so drinks that merely contain the
+    // phrase (`twisted tea half and half`, `half and half iced tea`) are not
+    // creamer and keep their earlier result. S202 row HH.
+    if (/^\s*half\s*(?:and|&|n|'n'?|n'|’n’)\s*half(?:\s+(?:creamer|cream|milk))?\s*$/.test(nameStr)) {
+        return { grams: 30, description: "2 tbsp (standard bare query serving)" };
+    }
+
     // Deliberately ABSENT categories — do not add: yogurt, bars, eggs, produce,
     // whole-meat cuts. Their label/hydrated servings (or the 100g floor) are the
     // better answer; a category default here would override real label data.
