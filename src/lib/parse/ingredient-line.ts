@@ -381,6 +381,42 @@ function leadingMeasureWordIsName(mergedTokens: string[], hadLeadingArticle: boo
   return /^\p{L}/u.test(next);                         // not `(`, `,`, a digit or a symbol
 }
 
+// `half and half` (the dairy) is a FOOD NAME, not "half" of something. Every
+// consumption site below reads `half` as a quantity, a fraction or a 0.5
+// multiplier, so a bare "half and half" parsed as qty 0.5 / name "and half"
+// ("Half and Half" as qty 1 x 0.5), and the line billed 0.5 x the 100 g floor.
+//
+// Decided ONCE, here, on the same contract as wholeIsIdentity /
+// leadingMeasureWordIsName, and honoured at every site that would otherwise
+// consume `half`: the predicate is read at the line's QUANTITY CURSOR k — 0, or
+// 1 when tokens[0] is a leading hedge (`about half and half`) or a quantity
+// token (`2 half and half`, `1/2 half and half`, `one half and half`), whose
+// quantity is kept as parsed. At k the three words stay in the name verbatim.
+// The article and hedge strips need no guard of their own: they read only
+// tokens[0], which is the hedge/quantity or `half` itself, never a thing they
+// consume here. Mid-line and already-quantified-by-a-unit lines (`2 tbsp half
+// and half`, `half a cup of half and half`) never match: positional by
+// construction. KNOWN GAP (design r2): a TRAILING quantity (`half and half 2
+// tbsp`) parses as qty 1 with the tail in the name. Not quantity.ts (a HELD PR
+// edits it). Owner: S202 row HH, design r2 (mobile sync-docs write-off).
+const HALF_AND_HALF_CONNECTORS = new Set(['and', '&', 'n', "'n", "'n'", "n'", '’n’']);
+function isHalfAndHalfAt(tokens: string[], k: number): boolean {
+  if (k < 0 || tokens.length < k + 3) return false;
+  return tokens[k].toLowerCase() === 'half'
+    && HALF_AND_HALF_CONNECTORS.has(tokens[k + 1].toLowerCase())
+    && tokens[k + 2].toLowerCase() === 'half';
+}
+/** The cursor k at which `half and half` opens the name (0 or 1), or -1. */
+function halfAndHalfCursor(tokens: string[]): number {
+  if (isHalfAndHalfAt(tokens, 0)) return 0;
+  if (tokens.length === 0) return -1;
+  const lead = tokens[0].toLowerCase();
+  const leadIsQuantity = LEADING_HEDGES.has(lead)
+    || /^[\d¼-¾⅐-⅞]/.test(lead)
+    || QUANTITY_WORD_NUMBERS.has(lead);
+  return leadIsQuantity && isHalfAndHalfAt(tokens, 1) ? 1 : -1;
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
@@ -602,7 +638,8 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Spoken fraction of a measure (see normalizeFractionalMeasure above). Runs
   // first so the article strip and the decide-once reads below see "half cup".
-  normalizeFractionalMeasure(mergedTokens);
+  const hhCursor = halfAndHalfCursor(mergedTokens);   // S202 row HH, decided once
+  if (hhCursor < 0) normalizeFractionalMeasure(mergedTokens);
 
   // Positional leading-article strip (see leadingArticlePrecedesUnit above).
   // Must run BEFORE the decide-once reads of mergedTokens[0] below, and must
@@ -707,7 +744,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   let startsWithUnit = false;
   if (mergedTokens.length > 0 && !wholeIsIdentity && !eggIsAdjectival && !leadingIsBrandedAnatomy
-      && !leadingMeasureIsName) {
+      && !leadingMeasureIsName && hhCursor !== 0) {
     const firstToken = mergedTokens[0];
     const firstNormalized = normalizeUnitToken(firstToken);
     if (firstNormalized.kind === 'mass' || firstNormalized.kind === 'volume' || firstNormalized.kind === 'count') {
@@ -742,7 +779,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
 
   // Parse quantity (if not starting with a unit, or with a brand whose own
   // first token looks like a quantity)
-  if (!startsWithUnit && !startsWithDigitBrand && !startsWithWordNumberBrand) {
+  if (!startsWithUnit && !startsWithDigitBrand && !startsWithWordNumberBrand && i !== hhCursor) {
     const qtyResult = parseQuantityTokens(mergedTokens.slice(i));
     if (qtyResult) {
       qty = qtyResult.qty;
@@ -794,7 +831,7 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
     i++; // Skip parentheses
   }
 
-  if (i < mergedTokens.length && multiplier === 1) {
+  if (i < mergedTokens.length && multiplier === 1 && i !== hhCursor) {
     const firstToken = mergedTokens[i];
     const firstNormalized = normalizeUnitToken(firstToken);
 
@@ -988,7 +1025,8 @@ export function parseIngredientLine(line: string): ParsedIngredient | null {
           && !(lowerToken === 'whole' && wholeIsIdentity)
           && !((lowerToken === 'egg' || lowerToken === 'eggs') && eggIsAdjectival)
           && !(i === 0 && leadingIsBrandedAnatomy)
-          && !(i === 0 && leadingMeasureIsName)) {   // #307, third site
+          && !(i === 0 && leadingMeasureIsName)   // #307, third site
+          && i !== hhCursor) {   // S202 row HH
         unit = afterParenNormalized.unit;
         rawUnit = afterParenToken;
         i++; // Consume the unit
