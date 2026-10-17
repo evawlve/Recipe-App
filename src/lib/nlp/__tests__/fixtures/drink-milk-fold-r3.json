@@ -14,12 +14,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a matcha latte with almond milk",
-    "normalizedForm": "matcha latte almond milk"
+    "rawText": "a matcha latte",
+    "normalizedForm": "matcha latte"
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a matcha latte with almond milk\" ~ matcha latte almond milk"
+   "fold \"almond milk\" into \"a matcha latte\""
   ]
  },
  {
@@ -37,12 +37,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a matcha latte with almond milk",
-    "normalizedForm": "matcha latte almond milk"
+    "rawText": "a matcha latte",
+    "normalizedForm": "matcha latte"
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a matcha latte with almond milk\" ~ matcha latte almond milk"
+   "fold \"almond milk\" into \"a matcha latte\""
   ]
  },
  {
@@ -60,12 +60,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a matcha latte with almond milk",
-    "normalizedForm": "matcha latte almond milk"
+    "rawText": "a matcha latte",
+    "normalizedForm": "matcha latte"
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a matcha latte with almond milk\" ~ matcha latte almond milk"
+   "fold \"almond milk\" into \"a matcha latte\""
   ]
  },
  {
@@ -87,8 +87,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "iced latte with oat milk",
-    "normalizedForm": "iced latte oat milk"
+    "rawText": "iced latte",
+    "normalizedForm": "iced latte"
    },
    {
     "rawText": "vanilla syrup",
@@ -96,7 +96,7 @@
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"iced latte with oat milk\" ~ iced latte oat milk"
+   "fold \"oat milk\" into \"iced latte\""
   ]
  },
  {
@@ -118,8 +118,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "iced latte with oat milk",
-    "normalizedForm": "iced latte oat milk"
+    "rawText": "iced latte",
+    "normalizedForm": "iced latte"
    },
    {
     "rawText": "vanilla syrup",
@@ -127,7 +127,7 @@
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"iced latte with oat milk\" ~ iced latte oat milk"
+   "fold \"oat milk\" into \"iced latte\""
   ]
  },
  {
@@ -149,8 +149,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "iced latte with oat milk",
-    "normalizedForm": "iced latte oat milk"
+    "rawText": "iced latte",
+    "normalizedForm": "iced latte"
    },
    {
     "rawText": "vanilla syrup",
@@ -158,7 +158,7 @@
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"iced latte with oat milk\" ~ iced latte oat milk"
+   "fold \"oat milk\" into \"iced latte\""
   ]
  },
  {
@@ -227,12 +227,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "chai latte made with oat milk",
-    "normalizedForm": "chai latte oat milk"
+    "rawText": "chai latte",
+    "normalizedForm": "chai latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"chai latte made with oat milk\" ~ chai latte oat milk"
+   "fold \"oat milk\" into \"chai latte\""
   ]
  },
  {
@@ -273,12 +273,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "chai latte made with oat milk",
-    "normalizedForm": "chai latte oat milk"
+    "rawText": "chai latte",
+    "normalizedForm": "chai latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"chai latte made with oat milk\" ~ chai latte oat milk"
+   "fold \"oat milk\" into \"chai latte\""
   ]
  },
  {
@@ -296,12 +296,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a flat white with oat milk",
-    "normalizedForm": "flat white oat milk"
+    "rawText": "a flat white",
+    "normalizedForm": "flat white"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a flat white with oat milk\" ~ flat white oat milk"
+   "fold \"oat milk\" into \"a flat white\""
   ]
  },
  {
@@ -319,12 +319,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a flat white with oat milk",
-    "normalizedForm": "flat white oat milk"
+    "rawText": "a flat white",
+    "normalizedForm": "flat white"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a flat white with oat milk\" ~ flat white oat milk"
+   "fold \"oat milk\" into \"a flat white\""
   ]
  },
  {
@@ -342,12 +342,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a flat white with oat milk",
-    "normalizedForm": "flat white oat milk"
+    "rawText": "a flat white",
+    "normalizedForm": "flat white"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a flat white with oat milk\" ~ flat white oat milk"
+   "fold \"oat milk\" into \"a flat white\""
   ]
  },
  {
@@ -369,8 +369,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "mocha with almond milk",
-    "normalizedForm": "mocha almond milk"
+    "rawText": "mocha",
+    "normalizedForm": "mocha"
    },
    {
     "rawText": "whipped cream",
@@ -378,7 +378,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"mocha with almond milk\" ~ mocha almond milk"
+   "fold \"almond milk\" into \"mocha\""
   ]
  },
  {
@@ -400,8 +400,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "a mocha with almond milk",
-    "normalizedForm": "mocha almond milk"
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
    },
    {
     "rawText": "whipped cream",
@@ -409,7 +409,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a mocha with almond milk\" ~ mocha almond milk"
+   "fold \"almond milk\" into \"a mocha\""
   ]
  },
  {
@@ -503,12 +503,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a cortado with whole milk",
+    "rawText": "a cortado",
     "normalizedForm": "cortado"
    }
   ],
   "folds": [
-   "fold \"whole milk\" into \"a cortado with whole milk\" ~ cortado"
+   "fold \"whole milk\" into \"a cortado\""
   ]
  },
  {
@@ -526,12 +526,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a cortado with whole milk",
+    "rawText": "a cortado",
     "normalizedForm": "cortado"
    }
   ],
   "folds": [
-   "fold \"whole milk\" into \"a cortado with whole milk\" ~ cortado"
+   "fold \"whole milk\" into \"a cortado\""
   ]
  },
  {
@@ -549,12 +549,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a cortado with whole milk",
+    "rawText": "a cortado",
     "normalizedForm": "cortado"
    }
   ],
   "folds": [
-   "fold \"whole milk\" into \"a cortado with whole milk\" ~ cortado"
+   "fold \"whole milk\" into \"a cortado\""
   ]
  },
  {
@@ -572,12 +572,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a london fog with oat milk",
-    "normalizedForm": "london fog oat milk"
+    "rawText": "a london fog",
+    "normalizedForm": "london fog"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a london fog with oat milk\" ~ london fog oat milk"
+   "fold \"oat milk\" into \"a london fog\""
   ]
  },
  {
@@ -595,12 +595,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a london fog with oat milk",
-    "normalizedForm": "london fog oat milk"
+    "rawText": "a london fog",
+    "normalizedForm": "london fog"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a london fog with oat milk\" ~ london fog oat milk"
+   "fold \"oat milk\" into \"a london fog\""
   ]
  },
  {
@@ -618,12 +618,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a london fog with oat milk",
-    "normalizedForm": "london fog oat milk"
+    "rawText": "a london fog",
+    "normalizedForm": "london fog"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a london fog with oat milk\" ~ london fog oat milk"
+   "fold \"oat milk\" into \"a london fog\""
   ]
  },
  {
@@ -645,8 +645,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "an iced chai latte with almond milk",
-    "normalizedForm": "iced chai latte almond milk"
+    "rawText": "an iced chai latte",
+    "normalizedForm": "iced chai latte"
    },
    {
     "rawText": "an extra shot",
@@ -654,7 +654,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"an iced chai latte with almond milk\" ~ iced chai latte almond milk"
+   "fold \"almond milk\" into \"an iced chai latte\""
   ]
  },
  {
@@ -676,8 +676,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "an iced chai latte with almond milk",
-    "normalizedForm": "iced chai latte almond milk"
+    "rawText": "an iced chai latte",
+    "normalizedForm": "iced chai latte"
    },
    {
     "rawText": "an extra shot",
@@ -685,7 +685,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"an iced chai latte with almond milk\" ~ iced chai latte almond milk"
+   "fold \"almond milk\" into \"an iced chai latte\""
   ]
  },
  {
@@ -2023,8 +2023,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    },
    {
     "rawText": "a glass of whole milk",
@@ -2032,7 +2032,7 @@
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2200,12 +2200,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with pumpkin spice creamer",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"pumpkin spice creamer\" into \"a latte with pumpkin spice creamer\" ~ latte"
+   "fold \"pumpkin spice creamer\" into \"a latte\""
   ]
  },
  {
@@ -2223,12 +2223,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a caramel macchiato with caramel creamer",
+    "rawText": "a caramel macchiato",
     "normalizedForm": "caramel macchiato"
    }
   ],
   "folds": [
-   "fold \"caramel creamer\" into \"a caramel macchiato with caramel creamer\" ~ caramel macchiato"
+   "fold \"caramel creamer\" into \"a caramel macchiato\""
   ]
  },
  {
@@ -2246,12 +2246,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a macchiato with caramel creamer",
+    "rawText": "a macchiato",
     "normalizedForm": "macchiato"
    }
   ],
   "folds": [
-   "fold \"caramel creamer\" into \"a macchiato with caramel creamer\" ~ macchiato"
+   "fold \"caramel creamer\" into \"a macchiato\""
   ]
  },
  {
@@ -2269,12 +2269,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with french vanilla creamer",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"french vanilla creamer\" into \"a latte with french vanilla creamer\" ~ latte"
+   "fold \"french vanilla creamer\" into \"a latte\""
   ]
  },
  {
@@ -2292,12 +2292,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with creamer",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"creamer\" into \"a latte with creamer\" ~ latte"
+   "fold \"creamer\" into \"a latte\""
   ]
  },
  {
@@ -2315,12 +2315,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with cream",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"cream\" into \"a latte with cream\" ~ latte"
+   "fold \"cream\" into \"a latte\""
   ]
  },
  {
@@ -2338,12 +2338,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a mocha with half and half",
+    "rawText": "a mocha",
     "normalizedForm": "mocha"
    }
   ],
   "folds": [
-   "fold \"half and half\" into \"a mocha with half and half\" ~ mocha"
+   "fold \"half and half\" into \"a mocha\""
   ]
  },
  {
@@ -2411,12 +2411,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "starbucks caramel macchiato with almond milk",
-    "normalizedForm": "caramel macchiato almond milk"
+    "rawText": "starbucks caramel macchiato",
+    "normalizedForm": "caramel macchiato"
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"starbucks caramel macchiato with almond milk\" ~ caramel macchiato almond milk"
+   "fold \"almond milk\" into \"starbucks caramel macchiato\""
   ]
  },
  {
@@ -2438,8 +2438,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "starbucks caramel macchiato with almond milk",
-    "normalizedForm": "caramel macchiato almond milk"
+    "rawText": "starbucks caramel macchiato",
+    "normalizedForm": "caramel macchiato"
    },
    {
     "rawText": "a banana",
@@ -2447,7 +2447,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"starbucks caramel macchiato with almond milk\" ~ caramel macchiato almond milk"
+   "fold \"almond milk\" into \"starbucks caramel macchiato\""
   ]
  },
  {
@@ -2465,12 +2465,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "an iced coffee latte with oat milk",
-    "normalizedForm": "iced coffee latte oat milk"
+    "rawText": "an iced coffee latte",
+    "normalizedForm": "iced coffee latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"an iced coffee latte with oat milk\" ~ iced coffee latte oat milk"
+   "fold \"oat milk\" into \"an iced coffee latte\""
   ]
  },
  {
@@ -2613,12 +2613,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte w/ oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte w/ oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2636,12 +2636,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte w/ oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte w/ oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2684,12 +2684,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2732,12 +2732,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte made with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte made with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2755,12 +2755,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with 2% milk",
-    "normalizedForm": "latte 2 milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"2% milk\" into \"a latte with 2% milk\" ~ latte 2 milk"
+   "fold \"2% milk\" into \"a latte\""
   ]
  },
  {
@@ -2807,8 +2807,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    },
    {
     "rawText": "two of them",
@@ -2816,7 +2816,7 @@
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2834,12 +2834,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "two lattes with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "two lattes",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"two lattes with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"two lattes\""
   ]
  },
  {
@@ -2861,8 +2861,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with almond milk",
-    "normalizedForm": "latte almond milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    },
    {
     "rawText": "almond milk for my cereal",
@@ -2870,7 +2870,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a latte with almond milk\" ~ latte almond milk"
+   "fold \"almond milk\" into \"a latte\""
   ]
  },
  {
@@ -2896,8 +2896,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with almond milk",
-    "normalizedForm": "latte almond milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    },
    {
     "rawText": "a bowl of cereal",
@@ -2909,7 +2909,7 @@
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a latte with almond milk\" ~ latte almond milk"
+   "fold \"almond milk\" into \"a latte\""
   ]
  },
  {
@@ -2927,12 +2927,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with my coffee creamer",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"my coffee creamer\" into \"a latte with my coffee creamer\" ~ latte"
+   "fold \"my coffee creamer\" into \"a latte\""
   ]
  },
  {
@@ -2966,12 +2966,12 @@
     "normalizedForm": "almond milk"
    },
    {
-    "rawText": "a latte with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -2997,12 +2997,12 @@
     "normalizedForm": "breakfast sandwich"
    },
    {
-    "rawText": "a latte and almond milk",
-    "normalizedForm": "latte almond milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a latte and almond milk\" ~ latte almond milk"
+   "fold \"almond milk\" into \"a latte\""
   ]
  },
  {
@@ -3024,8 +3024,8 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with oat milk",
-    "normalizedForm": "latte oat milk"
+    "rawText": "a latte",
+    "normalizedForm": "latte"
    },
    {
     "rawText": "honey",
@@ -3033,7 +3033,7 @@
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte with oat milk\" ~ latte oat milk"
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -3055,7 +3055,7 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte with whole milk",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    },
    {
@@ -3064,7 +3064,7 @@
    }
   ],
   "folds": [
-   "fold \"whole milk\" into \"a latte with whole milk\" ~ latte"
+   "fold \"whole milk\" into \"a latte\""
   ]
  },
  {
@@ -3090,17 +3090,17 @@
   ],
   "expectItems": [
    {
-    "rawText": "a mocha with almond milk",
-    "normalizedForm": "mocha almond milk"
+    "rawText": "a mocha",
+    "normalizedForm": "mocha"
    },
    {
-    "rawText": "a mocha with whole milk",
+    "rawText": "a mocha",
     "normalizedForm": "mocha"
    }
   ],
   "folds": [
-   "fold \"almond milk\" into \"a mocha with almond milk\" ~ mocha almond milk",
-   "fold \"whole milk\" into \"a mocha with whole milk\" ~ mocha"
+   "fold \"almond milk\" into \"a mocha\"",
+   "fold \"whole milk\" into \"a mocha\""
   ]
  },
  {
@@ -3143,12 +3143,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte and milk",
+    "rawText": "a latte",
     "normalizedForm": "latte"
    }
   ],
   "folds": [
-   "fold \"milk\" into \"a latte and milk\" ~ latte"
+   "fold \"milk\" into \"a latte\""
   ]
  },
  {
@@ -3166,12 +3166,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "a latte and oat milk",
+    "rawText": "a latte",
     "normalizedForm": ""
    }
   ],
   "folds": [
-   "fold \"oat milk\" into \"a latte and oat milk\" ~ "
+   "fold \"oat milk\" into \"a latte\""
   ]
  },
  {
@@ -3189,12 +3189,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "an iced latte and whole milk",
+    "rawText": "an iced latte",
     "normalizedForm": ""
    }
   ],
   "folds": [
-   "fold \"whole milk\" into \"an iced latte and whole milk\" ~ "
+   "fold \"whole milk\" into \"an iced latte\""
   ]
  },
  {
@@ -3212,12 +3212,12 @@
   ],
   "expectItems": [
    {
-    "rawText": "2 lattes and skim milk",
+    "rawText": "2 lattes",
     "normalizedForm": ""
    }
   ],
   "folds": [
-   "fold \"skim milk\" into \"2 lattes and skim milk\" ~ "
+   "fold \"skim milk\" into \"2 lattes\""
   ]
  },
  {

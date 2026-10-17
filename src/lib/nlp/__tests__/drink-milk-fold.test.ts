@@ -1,12 +1,12 @@
 /**
- * drink-milk-fold - S202 row 3, 8(e) (seat C69), Diego's Option A (2026-10-17). Every case of the r2 fixture
- * (fixtures/drink-milk-fold-r2.json, a copy of snapshots/s202/row3/expected-drink-r2.json: 129 cases, 52
+ * drink-milk-fold - S202 row 3, 8(e) (seat C69), Diego's Option A (2026-10-17). Every case of the r3 fixture
+ * (fixtures/drink-milk-fold-r3.json, a copy of snapshots/s202/row3/expected-drink-r3.json: 129 cases, 52
  * folding) is run through the shipped function; `src` names where the input came from.
  */
 
 import { foldDrinkMilk } from '../drink-milk-fold';
 import { canonicalizeSegLine } from '../seg-line-key';
-import fixture from './fixtures/drink-milk-fold-r2.json';
+import fixture from './fixtures/drink-milk-fold-r3.json';
 
 type It = { rawText: string; normalizedForm?: string; brand?: string };
 interface Case {
@@ -17,7 +17,7 @@ interface Case {
 }
 const CASES = fixture as Case[];
 
-describe('foldDrinkMilk - r2 fixture', () => {
+describe('foldDrinkMilk - r3 fixture', () => {
   test('the fixture is the cut it claims to be: 129 cases, 52 folding', () => {
     expect(CASES).toHaveLength(129);
     expect(CASES.filter(c => c.expectItems.length < c.input.length)).toHaveLength(52);
@@ -47,13 +47,9 @@ describe('foldDrinkMilk - purity', () => {
     expect(items).toEqual(before);
   });
 
-  test('a brand on the drink survives the fold', () => {
+  test('drop only: the drink (brand included) is passed through unchanged', () => {
     const r = foldDrinkMilk(canonicalizeSegLine(line), input());
-    expect(r.items).toEqual([
-      { rawText: 'a matcha latte with almond milk', normalizedForm: 'matcha latte almond milk', brand: 'Starbucks' },
-    ]);
-    expect(r.folds).toEqual([
-      { index: 1, rawText: 'almond milk', drink: 'a matcha latte with almond milk', kind: 'fold' },
-    ]);
+    expect(r.items).toEqual([{ rawText: 'a matcha latte', normalizedForm: 'matcha latte', brand: 'Starbucks' }]);
+    expect(r.folds).toEqual([{ index: 1, rawText: 'almond milk', drink: 'a matcha latte', kind: 'fold' }]);
   });
 });

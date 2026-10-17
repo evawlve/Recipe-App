@@ -125,7 +125,7 @@ describe('/api/nlp/parse drink milk fold', () => {
     expect(response.status).toBe(200);
     expect(callStructuredLlm).not.toHaveBeenCalled();
     expect(mapIngredientWithFallback).toHaveBeenCalledTimes(1);
-    expect(aiCalls()).toEqual(['a matcha latte with almond milk']);
+    expect(aiCalls()).toEqual(['a matcha latte']);
   });
 
   test('fresh LLM: same reading, and the cache upsert carries the UNFOLDED split', async () => {
@@ -133,7 +133,7 @@ describe('/api/nlp/parse drink milk fold', () => {
     const response = await POST(parseRequest({ text: LATTE.text }));
     expect(response.status).toBe(200);
     expect(mapIngredientWithFallback).toHaveBeenCalledTimes(1);
-    expect(aiCalls()).toEqual(['a matcha latte with almond milk']);
+    expect(aiCalls()).toEqual(['a matcha latte']);
     expect(prisma.segmentationCache.upsert).toHaveBeenCalledTimes(1);
     expect(prisma.segmentationCache.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -143,10 +143,10 @@ describe('/api/nlp/parse drink milk fold', () => {
     );
   });
 
-  test('the folded item carries the milk in its normalizedForm', async () => {
+  test('the drink is passed through unchanged', async () => {
     llmReturns(LATTE.split);
     await POST(parseRequest({ text: LATTE.text }));
-    expect(mapperNormalized()).toContain('matcha latte almond milk');
+    expect(mapperNormalized()).toEqual(['matcha latte']);
   });
 
   test('one logger line per folding request: event and count only - no user text', async () => {

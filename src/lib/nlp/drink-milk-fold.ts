@@ -17,14 +17,15 @@
  * - Gap: in the same comma piece of the line, exactly `with`, `w`, `made with`, or `and` (`and` only when
  *   the milk carries no measure). A milk with no span in the line whose words already sit inside the
  *   drink's rawText (`... made with oat milk`) is a duplicate and is dropped with no rewrite.
- * - Rewrite: the drink's rawText becomes `<drink> <gap> <milk>` (the user's own words). Only a NON-default
- *   milk (oat, almond, skim ...) is appended to the drink's normalizedForm, and never to an empty one;
- *   plain / whole milk, cream, creamer and half and half append nothing.
+ * - Drop only: the milk item is removed and the drink item is left EXACTLY as the segmenter emitted it
+ *   (rawText and normalizedForm untouched). The seat's composite arm refuted the rewrite: a rewritten rawText
+ *   moved the serving onto corrupt powder panels (Matcha Latte 431 -> 953 kcal, London Fog 584 -> 1,120) and a
+ *   milk appended to normalizedForm moved retrieval to worse records on 3 of 8 lines.
  *
  * PASS ORDER. Runs AFTER dropDishParts and BEFORE foldTrailingQuantityClauses (drop, dish, drink, fold,
  * fill). The SegmentationCache keeps the unfolded split.
  *
- * Pure; never mutates its input; every other field of a rewritten item (brand) is preserved.
+ * Pure; never mutates its input; surviving items are returned as the same objects, untouched.
  */
 
 import { words, tokenizeWithPieces } from './trailing-quantity-fold';
@@ -34,7 +35,7 @@ export interface DrinkMilkFold {
   index: number;
   /** The milk item's rawText. */
   rawText: string;
-  /** The drink item's NEW rawText. */
+  /** The drink item's (unchanged) rawText. */
   drink: string;
   kind: 'fold' | 'duplicate';
 }
@@ -57,10 +58,6 @@ const DRINK2 = new Set(['flat white', 'london fog']);
 const MILK_MODS = new Set([
   'almond', 'oat', 'skim', 'whole', 'soy', 'coconut', 'percent', 'low', 'fat', 'nonfat', 'lactose', 'free',
   'cashew', 'macadamia', 'pea', 'reduced', 'vanilla', 'unsweetened',
-]);
-const APPEND_MODS = new Set([
-  'almond', 'oat', 'skim', 'soy', 'coconut', 'nonfat', 'lactose', 'cashew', 'macadamia', 'pea', 'low', 'fat',
-  'free', '2',
 ]);
 const MEASURE_LEADS = ['a', 'an', 'one', 'two', 'some', 'glass', 'cup', 'splash'];
 
@@ -118,7 +115,6 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
     if (sp) cur = sp.end;
   }
 
-  const out = items.map(x => ({ ...x }));
   const drop = new Set<number>();
   const folds: DrinkMilkFold[] = [];
 
@@ -133,7 +129,7 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
       // duplicate: the milk's words already sit inside the drink's own rawText
       if (findSpan(words(items[d].rawText), mw, 0)) {
         drop.add(j);
-        folds.push({ index: j, rawText: items[j].rawText, drink: out[d].rawText, kind: 'duplicate' });
+        folds.push({ index: j, rawText: items[j].rawText, drink: items[d].rawText, kind: 'duplicate' });
       }
       continue;
     }
@@ -146,14 +142,10 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
       MEASURE_LEADS.includes(jLead) && !milkWords({ rawText: items[j].rawText.replace(/^\s*(a|an|some)\s+/i, '') });
     if (!(gap === 'with' || gap === 'w' || gap === 'made with' || (gap === 'and' && !measured))) continue;
 
-    // append ONLY a non-default milk, and only to a real normalizedForm
-    const nf = out[d].normalizedForm;
-    const variant = mw[mw.length - 1] === 'milk' && mw.length > 1 && mw.slice(0, -1).every(x => APPEND_MODS.has(x));
-    if (nf && variant && !mw.every(x => words(nf).includes(x))) out[d].normalizedForm = `${nf} ${mw.join(' ')}`.trim();
-    out[d].rawText = `${items[d].rawText} ${gap === 'w' ? 'w/' : gap} ${items[j].rawText}`;
+    // DROP ONLY: the drink item is left exactly as the segmenter emitted it.
     drop.add(j);
-    folds.push({ index: j, rawText: items[j].rawText, drink: out[d].rawText, kind: 'fold' });
+    folds.push({ index: j, rawText: items[j].rawText, drink: items[d].rawText, kind: 'fold' });
   }
 
-  return { items: out.filter((_, i) => !drop.has(i)), folds };
+  return { items: items.filter((_, i) => !drop.has(i)), folds };
 }
