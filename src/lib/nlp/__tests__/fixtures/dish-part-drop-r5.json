@@ -1,0 +1,6007 @@
+[
+ {
+  "src": "dish-base.tsv#0.1",
+  "line": "a burrito bowl i made with brown rice, black beans, chicken and salsa",
+  "input": [
+   {
+    "rawText": "burrito bowl",
+    "normalizedForm": "burrito bowl",
+    "brand": ""
+   },
+   {
+    "rawText": "brown rice",
+    "normalizedForm": "brown rice",
+    "brand": ""
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "burrito bowl"
+  ],
+  "dropped": [
+   "brown rice",
+   "black beans",
+   "chicken",
+   "salsa"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#0.2",
+  "line": "a burrito bowl i made with brown rice, black beans, chicken and salsa",
+  "input": [
+   {
+    "rawText": "a burrito bowl",
+    "normalizedForm": "burrito bowl",
+    "brand": ""
+   },
+   {
+    "rawText": "brown rice",
+    "normalizedForm": "brown rice",
+    "brand": ""
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito bowl"
+  ],
+  "dropped": [
+   "brown rice",
+   "black beans",
+   "chicken",
+   "salsa"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#0.3",
+  "line": "a burrito bowl i made with brown rice, black beans, chicken and salsa",
+  "input": [
+   {
+    "rawText": "a burrito bowl",
+    "normalizedForm": "burrito bowl",
+    "brand": ""
+   },
+   {
+    "rawText": "brown rice",
+    "normalizedForm": "brown rice",
+    "brand": ""
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a burrito bowl"
+  ],
+  "dropped": [
+   "brown rice",
+   "black beans",
+   "chicken",
+   "salsa"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#1.1",
+  "line": "a homemade breakfast sandwich with a fried egg, sausage patty and american cheese on an english muffin",
+  "input": [
+   {
+    "rawText": "a breakfast sandwich",
+    "normalizedForm": "breakfast sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a fried egg",
+    "normalizedForm": "fried egg",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage patty",
+    "normalizedForm": "sausage patty",
+    "brand": ""
+   },
+   {
+    "rawText": "american cheese",
+    "normalizedForm": "american cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "english muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a breakfast sandwich"
+  ],
+  "dropped": [
+   "a fried egg",
+   "sausage patty",
+   "american cheese",
+   "an english muffin"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#1.2",
+  "line": "a homemade breakfast sandwich with a fried egg, sausage patty and american cheese on an english muffin",
+  "input": [
+   {
+    "rawText": "homemade breakfast sandwich",
+    "normalizedForm": "breakfast sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "fried egg",
+    "normalizedForm": "fried egg",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage patty",
+    "normalizedForm": "sausage patty",
+    "brand": ""
+   },
+   {
+    "rawText": "american cheese",
+    "normalizedForm": "american cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "english muffin",
+    "normalizedForm": "english muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade breakfast sandwich"
+  ],
+  "dropped": [
+   "fried egg",
+   "sausage patty",
+   "american cheese",
+   "english muffin"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#1.3",
+  "line": "a homemade breakfast sandwich with a fried egg, sausage patty and american cheese on an english muffin",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "breakfast sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a fried egg",
+    "normalizedForm": "fried egg",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage patty",
+    "normalizedForm": "sausage patty",
+    "brand": ""
+   },
+   {
+    "rawText": "american cheese",
+    "normalizedForm": "american cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "english muffin",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich"
+  ],
+  "dropped": [
+   "a fried egg",
+   "sausage patty",
+   "american cheese",
+   "an english muffin"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#2.1",
+  "line": "a homemade burger on a brioche bun with lettuce, tomato and a slice of cheddar",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a brioche bun",
+    "normalizedForm": "brioche bun",
+    "brand": ""
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce",
+    "brand": ""
+   },
+   {
+    "rawText": "tomato",
+    "normalizedForm": "tomato",
+    "brand": ""
+   },
+   {
+    "rawText": "a slice of cheddar",
+    "normalizedForm": "cheddar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger"
+  ],
+  "dropped": [
+   "a brioche bun",
+   "lettuce",
+   "tomato",
+   "a slice of cheddar"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#2.2",
+  "line": "a homemade burger on a brioche bun with lettuce, tomato and a slice of cheddar",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": ""
+   },
+   {
+    "rawText": "brioche bun",
+    "normalizedForm": "brioche bun",
+    "brand": ""
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce",
+    "brand": ""
+   },
+   {
+    "rawText": "tomato",
+    "normalizedForm": "tomato",
+    "brand": ""
+   },
+   {
+    "rawText": "a slice of cheddar",
+    "normalizedForm": "cheddar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger"
+  ],
+  "dropped": [
+   "brioche bun",
+   "lettuce",
+   "tomato",
+   "a slice of cheddar"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#2.3",
+  "line": "a homemade burger on a brioche bun with lettuce, tomato and a slice of cheddar",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": ""
+   },
+   {
+    "rawText": "a brioche bun",
+    "normalizedForm": "brioche bun",
+    "brand": ""
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce",
+    "brand": ""
+   },
+   {
+    "rawText": "tomato",
+    "normalizedForm": "tomato",
+    "brand": ""
+   },
+   {
+    "rawText": "a slice of cheddar",
+    "normalizedForm": "cheddar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger"
+  ],
+  "dropped": [
+   "a brioche bun",
+   "lettuce",
+   "tomato",
+   "a slice of cheddar"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#3.1",
+  "line": "a homemade pizza with pepperoni and mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "two slices"
+  ],
+  "dropped": [
+   "pepperoni",
+   "mushrooms"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#3.2",
+  "line": "a homemade pizza with pepperoni and mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza"
+  ],
+  "dropped": [
+   "pepperoni",
+   "mushrooms"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#3.3",
+  "line": "a homemade pizza with pepperoni and mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza"
+  ],
+  "dropped": [
+   "pepperoni",
+   "mushrooms"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#4.1",
+  "line": "a protein pancake made with one scoop of whey, an egg and half a banana",
+  "input": [
+   {
+    "rawText": "a protein pancake",
+    "normalizedForm": "protein pancake",
+    "brand": ""
+   },
+   {
+    "rawText": "one scoop of whey",
+    "normalizedForm": "whey",
+    "brand": ""
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "half a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a protein pancake",
+   "an egg",
+   "half a banana"
+  ],
+  "dropped": [
+   "one scoop of whey"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#4.2",
+  "line": "a protein pancake made with one scoop of whey, an egg and half a banana",
+  "input": [
+   {
+    "rawText": "a protein pancake made with one scoop of whey",
+    "normalizedForm": "protein pancake",
+    "brand": ""
+   },
+   {
+    "rawText": "one scoop of whey",
+    "normalizedForm": "whey",
+    "brand": ""
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "half a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a protein pancake made with one scoop of whey",
+   "one scoop of whey",
+   "an egg",
+   "half a banana"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#4.3",
+  "line": "a protein pancake made with one scoop of whey, an egg and half a banana",
+  "input": [
+   {
+    "rawText": "a protein pancake",
+    "normalizedForm": "protein pancake",
+    "brand": ""
+   },
+   {
+    "rawText": "one scoop of whey",
+    "normalizedForm": "whey",
+    "brand": ""
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   },
+   {
+    "rawText": "half a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a protein pancake",
+   "an egg",
+   "half a banana"
+  ],
+  "dropped": [
+   "one scoop of whey"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#5.1",
+  "line": "homemade fried rice with two eggs, peas and carrots",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas",
+    "brand": ""
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice"
+  ],
+  "dropped": [
+   "two eggs",
+   "peas",
+   "carrots"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#5.2",
+  "line": "homemade fried rice with two eggs, peas and carrots",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas",
+    "brand": ""
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice"
+  ],
+  "dropped": [
+   "two eggs",
+   "peas",
+   "carrots"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#5.3",
+  "line": "homemade fried rice with two eggs, peas and carrots",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas",
+    "brand": ""
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice"
+  ],
+  "dropped": [
+   "two eggs",
+   "peas",
+   "carrots"
+  ]
+ },
+ {
+  "src": "dish-base.tsv#6.1",
+  "line": "a bowl of oatmeal made with milk, topped with walnuts and brown sugar",
+  "input": [
+   {
+    "rawText": "a bowl of oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "walnuts",
+    "normalizedForm": "walnuts",
+    "brand": ""
+   },
+   {
+    "rawText": "brown sugar",
+    "normalizedForm": "brown sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of oatmeal",
+   "milk",
+   "walnuts",
+   "brown sugar"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#6.2",
+  "line": "a bowl of oatmeal made with milk, topped with walnuts and brown sugar",
+  "input": [
+   {
+    "rawText": "a bowl of oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "walnuts",
+    "normalizedForm": "walnuts",
+    "brand": ""
+   },
+   {
+    "rawText": "brown sugar",
+    "normalizedForm": "brown sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of oatmeal",
+   "milk",
+   "walnuts",
+   "brown sugar"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#6.3",
+  "line": "a bowl of oatmeal made with milk, topped with walnuts and brown sugar",
+  "input": [
+   {
+    "rawText": "a bowl of oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   },
+   {
+    "rawText": "walnuts",
+    "normalizedForm": "walnuts",
+    "brand": ""
+   },
+   {
+    "rawText": "brown sugar",
+    "normalizedForm": "brown sugar",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of oatmeal",
+   "milk",
+   "walnuts",
+   "brown sugar"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#7.1",
+  "line": "a bowl of homemade beef stew with a dinner roll",
+  "input": [
+   {
+    "rawText": "a bowl of homemade beef stew",
+    "normalizedForm": "homemade beef stew",
+    "brand": ""
+   },
+   {
+    "rawText": "a dinner roll",
+    "normalizedForm": "dinner roll",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade beef stew",
+   "a dinner roll"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#7.2",
+  "line": "a bowl of homemade beef stew with a dinner roll",
+  "input": [
+   {
+    "rawText": "a bowl of homemade beef stew",
+    "normalizedForm": "homemade beef stew",
+    "brand": ""
+   },
+   {
+    "rawText": "a dinner roll",
+    "normalizedForm": "dinner roll",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade beef stew",
+   "a dinner roll"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#7.3",
+  "line": "a bowl of homemade beef stew with a dinner roll",
+  "input": [
+   {
+    "rawText": "a bowl of homemade beef stew",
+    "normalizedForm": "beef stew",
+    "brand": ""
+   },
+   {
+    "rawText": "a dinner roll",
+    "normalizedForm": "dinner roll",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade beef stew",
+   "a dinner roll"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#8.1",
+  "line": "a bowl of homemade chili with a spoonful of sour cream on top",
+  "input": [
+   {
+    "rawText": "a bowl of homemade chili",
+    "normalizedForm": "homemade chili",
+    "brand": ""
+   },
+   {
+    "rawText": "a spoonful of sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade chili",
+   "a spoonful of sour cream"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#8.2",
+  "line": "a bowl of homemade chili with a spoonful of sour cream on top",
+  "input": [
+   {
+    "rawText": "a bowl of homemade chili",
+    "normalizedForm": "homemade chili",
+    "brand": ""
+   },
+   {
+    "rawText": "a spoonful of sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade chili",
+   "a spoonful of sour cream"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#8.3",
+  "line": "a bowl of homemade chili with a spoonful of sour cream on top",
+  "input": [
+   {
+    "rawText": "a bowl of homemade chili",
+    "normalizedForm": "homemade chili",
+    "brand": ""
+   },
+   {
+    "rawText": "a spoonful of sour cream",
+    "normalizedForm": "sour cream",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade chili",
+   "a spoonful of sour cream"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#9.1",
+  "line": "homemade guacamole with tortilla chips",
+  "input": [
+   {
+    "rawText": "homemade guacamole",
+    "normalizedForm": "guacamole",
+    "brand": ""
+   },
+   {
+    "rawText": "tortilla chips",
+    "normalizedForm": "tortilla chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade guacamole",
+   "tortilla chips"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#9.2",
+  "line": "homemade guacamole with tortilla chips",
+  "input": [
+   {
+    "rawText": "homemade guacamole",
+    "normalizedForm": "guacamole",
+    "brand": ""
+   },
+   {
+    "rawText": "tortilla chips",
+    "normalizedForm": "tortilla chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade guacamole",
+   "tortilla chips"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#9.3",
+  "line": "homemade guacamole with tortilla chips",
+  "input": [
+   {
+    "rawText": "homemade guacamole",
+    "normalizedForm": "guacamole",
+    "brand": ""
+   },
+   {
+    "rawText": "tortilla chips",
+    "normalizedForm": "tortilla chips",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade guacamole",
+   "tortilla chips"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#10.1",
+  "line": "tonight i made mustard greens with a little turkey breast",
+  "input": [
+   {
+    "rawText": "mustard greens",
+    "normalizedForm": "mustard greens",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey breast",
+    "normalizedForm": "turkey breast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "mustard greens",
+   "turkey breast"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#10.2",
+  "line": "tonight i made mustard greens with a little turkey breast",
+  "input": [
+   {
+    "rawText": "mustard greens",
+    "normalizedForm": "mustard greens",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey breast",
+    "normalizedForm": "turkey breast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "mustard greens",
+   "turkey breast"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#10.3",
+  "line": "tonight i made mustard greens with a little turkey breast",
+  "input": [
+   {
+    "rawText": "mustard greens",
+    "normalizedForm": "mustard greens",
+    "brand": ""
+   },
+   {
+    "rawText": "turkey breast",
+    "normalizedForm": "turkey breast",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "mustard greens",
+   "turkey breast"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#11.1",
+  "line": "homemade chicken noodle soup, about two cups",
+  "input": [
+   {
+    "rawText": "homemade chicken noodle soup",
+    "normalizedForm": "chicken noodle soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade chicken noodle soup"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#11.2",
+  "line": "homemade chicken noodle soup, about two cups",
+  "input": [
+   {
+    "rawText": "homemade chicken noodle soup",
+    "normalizedForm": "chicken noodle soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade chicken noodle soup"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#11.3",
+  "line": "homemade chicken noodle soup, about two cups",
+  "input": [
+   {
+    "rawText": "homemade chicken noodle soup",
+    "normalizedForm": "chicken noodle soup",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade chicken noodle soup"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#12.1",
+  "line": "i made a pot of chili with two pounds of ground beef and had one bowl",
+  "input": [
+   {
+    "rawText": "two pounds of ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   },
+   {
+    "rawText": "one bowl of chili",
+    "normalizedForm": "chili",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two pounds of ground beef",
+   "one bowl of chili"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#12.2",
+  "line": "i made a pot of chili with two pounds of ground beef and had one bowl",
+  "input": [
+   {
+    "rawText": "two pounds of ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   },
+   {
+    "rawText": "a pot of chili",
+    "normalizedForm": "chili",
+    "brand": ""
+   },
+   {
+    "rawText": "one bowl",
+    "normalizedForm": "bowl",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two pounds of ground beef",
+   "a pot of chili",
+   "one bowl"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#12.3",
+  "line": "i made a pot of chili with two pounds of ground beef and had one bowl",
+  "input": [
+   {
+    "rawText": "two pounds of ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   },
+   {
+    "rawText": "one bowl of chili",
+    "normalizedForm": "chili",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "two pounds of ground beef",
+   "one bowl of chili"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#13.1",
+  "line": "a grilled cheese with two slices of american cheese on sourdough",
+  "input": [
+   {
+    "rawText": "a grilled cheese",
+    "normalizedForm": "grilled cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices of american cheese",
+    "normalizedForm": "american cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "on sourdough",
+    "normalizedForm": "sourdough",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a grilled cheese",
+   "two slices of american cheese",
+   "on sourdough"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#13.2",
+  "line": "a grilled cheese with two slices of american cheese on sourdough",
+  "input": [
+   {
+    "rawText": "a grilled cheese",
+    "normalizedForm": "grilled cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices of american cheese",
+    "normalizedForm": "american cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "on sourdough",
+    "normalizedForm": "sourdough",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a grilled cheese",
+   "two slices of american cheese",
+   "on sourdough"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#13.3",
+  "line": "a grilled cheese with two slices of american cheese on sourdough",
+  "input": [
+   {
+    "rawText": "a grilled cheese",
+    "normalizedForm": "grilled cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices of american cheese",
+    "normalizedForm": "american cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "sourdough",
+    "normalizedForm": "sourdough",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a grilled cheese",
+   "two slices of american cheese",
+   "sourdough"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#14.1",
+  "line": "a ham and cheese omelette with three eggs",
+  "input": [
+   {
+    "rawText": "a ham and cheese omelette",
+    "normalizedForm": "ham and cheese omelette",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham and cheese omelette",
+   "three eggs"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#14.2",
+  "line": "a ham and cheese omelette with three eggs",
+  "input": [
+   {
+    "rawText": "a ham and cheese omelette",
+    "normalizedForm": "ham and cheese omelette",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham and cheese omelette",
+   "three eggs"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#14.3",
+  "line": "a ham and cheese omelette with three eggs",
+  "input": [
+   {
+    "rawText": "a ham and cheese omelette",
+    "normalizedForm": "ham and cheese omelette",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a ham and cheese omelette",
+   "three eggs"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#15.1",
+  "line": "a blt with three strips of bacon",
+  "input": [
+   {
+    "rawText": "a blt",
+    "normalizedForm": "blt",
+    "brand": ""
+   },
+   {
+    "rawText": "three strips of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a blt",
+   "three strips of bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#15.2",
+  "line": "a blt with three strips of bacon",
+  "input": [
+   {
+    "rawText": "a blt",
+    "normalizedForm": "blt",
+    "brand": ""
+   },
+   {
+    "rawText": "three strips of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a blt",
+   "three strips of bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#15.3",
+  "line": "a blt with three strips of bacon",
+  "input": [
+   {
+    "rawText": "a blt",
+    "normalizedForm": "blt",
+    "brand": ""
+   },
+   {
+    "rawText": "three strips of bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a blt",
+   "three strips of bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#16.1",
+  "line": "a turkey sandwich on sourdough with two slices of swiss, lettuce and mayo",
+  "input": [
+   {
+    "rawText": "a turkey sandwich on sourdough",
+    "normalizedForm": "turkey sandwich on sourdough",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices of swiss",
+    "normalizedForm": "swiss",
+    "brand": ""
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce",
+    "brand": ""
+   },
+   {
+    "rawText": "mayo",
+    "normalizedForm": "mayo",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich on sourdough",
+   "two slices of swiss",
+   "lettuce",
+   "mayo"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#16.2",
+  "line": "a turkey sandwich on sourdough with two slices of swiss, lettuce and mayo",
+  "input": [
+   {
+    "rawText": "a turkey sandwich on sourdough",
+    "normalizedForm": "turkey sandwich on sourdough",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices of swiss",
+    "normalizedForm": "swiss",
+    "brand": ""
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce",
+    "brand": ""
+   },
+   {
+    "rawText": "mayo",
+    "normalizedForm": "mayo",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich on sourdough",
+   "two slices of swiss",
+   "lettuce",
+   "mayo"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#16.3",
+  "line": "a turkey sandwich on sourdough with two slices of swiss, lettuce and mayo",
+  "input": [
+   {
+    "rawText": "a turkey sandwich on sourdough",
+    "normalizedForm": "turkey sandwich on sourdough",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices of swiss",
+    "normalizedForm": "swiss",
+    "brand": ""
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce",
+    "brand": ""
+   },
+   {
+    "rawText": "mayo",
+    "normalizedForm": "mayo",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich on sourdough",
+   "two slices of swiss",
+   "lettuce",
+   "mayo"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#17.1",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#17.2",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee with milk",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee with milk",
+   "milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#17.3",
+  "line": "coffee with milk",
+  "input": [
+   {
+    "rawText": "coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "coffee",
+   "milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#18.1",
+  "line": "toast with peanut butter",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "peanut butter"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#18.2",
+  "line": "toast with peanut butter",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "peanut butter"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#18.3",
+  "line": "toast with peanut butter",
+  "input": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "peanut butter",
+    "normalizedForm": "peanut butter",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "toast",
+   "peanut butter"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#19.1",
+  "line": "granola with yogurt",
+  "input": [
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola",
+    "brand": ""
+   },
+   {
+    "rawText": "yogurt",
+    "normalizedForm": "yogurt",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "granola",
+   "yogurt"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#19.2",
+  "line": "granola with yogurt",
+  "input": [
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola",
+    "brand": ""
+   },
+   {
+    "rawText": "yogurt",
+    "normalizedForm": "yogurt",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "granola",
+   "yogurt"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#19.3",
+  "line": "granola with yogurt",
+  "input": [
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola",
+    "brand": ""
+   },
+   {
+    "rawText": "yogurt",
+    "normalizedForm": "yogurt",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "granola",
+   "yogurt"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#20.1",
+  "line": "a chicken caesar salad made at home with parmesan and croutons",
+  "input": [
+   {
+    "rawText": "a chicken caesar salad",
+    "normalizedForm": "chicken caesar salad",
+    "brand": ""
+   },
+   {
+    "rawText": "parmesan",
+    "normalizedForm": "parmesan",
+    "brand": ""
+   },
+   {
+    "rawText": "croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a chicken caesar salad",
+   "parmesan",
+   "croutons"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#20.2",
+  "line": "a chicken caesar salad made at home with parmesan and croutons",
+  "input": [
+   {
+    "rawText": "a chicken caesar salad",
+    "normalizedForm": "chicken caesar salad",
+    "brand": ""
+   },
+   {
+    "rawText": "parmesan",
+    "normalizedForm": "parmesan",
+    "brand": ""
+   },
+   {
+    "rawText": "croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a chicken caesar salad",
+   "parmesan",
+   "croutons"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#20.3",
+  "line": "a chicken caesar salad made at home with parmesan and croutons",
+  "input": [
+   {
+    "rawText": "a chicken caesar salad",
+    "normalizedForm": "chicken caesar salad",
+    "brand": ""
+   },
+   {
+    "rawText": "parmesan",
+    "normalizedForm": "parmesan",
+    "brand": ""
+   },
+   {
+    "rawText": "croutons",
+    "normalizedForm": "croutons",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a chicken caesar salad",
+   "parmesan",
+   "croutons"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#21.1",
+  "line": "homemade mac and cheese with a side of broccoli",
+  "input": [
+   {
+    "rawText": "homemade mac and cheese",
+    "normalizedForm": "mac and cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "broccoli",
+    "normalizedForm": "broccoli",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade mac and cheese",
+   "broccoli"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#21.2",
+  "line": "homemade mac and cheese with a side of broccoli",
+  "input": [
+   {
+    "rawText": "homemade mac and cheese",
+    "normalizedForm": "mac and cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "broccoli",
+    "normalizedForm": "broccoli",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade mac and cheese",
+   "broccoli"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#21.3",
+  "line": "homemade mac and cheese with a side of broccoli",
+  "input": [
+   {
+    "rawText": "homemade mac and cheese",
+    "normalizedForm": "mac and cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "a side of broccoli",
+    "normalizedForm": "broccoli",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "homemade mac and cheese",
+   "a side of broccoli"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#22.1",
+  "line": "i made tacos with ground beef, cheese and salsa",
+  "input": [
+   {
+    "rawText": "ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ground beef",
+   "cheese",
+   "salsa"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#22.2",
+  "line": "i made tacos with ground beef, cheese and salsa",
+  "input": [
+   {
+    "rawText": "ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ground beef",
+   "cheese",
+   "salsa"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#22.3",
+  "line": "i made tacos with ground beef, cheese and salsa",
+  "input": [
+   {
+    "rawText": "ground beef",
+    "normalizedForm": "ground beef",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "ground beef",
+   "cheese",
+   "salsa"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#23.1",
+  "line": "a homemade smoothie made with a banana, spinach and almond milk",
+  "input": [
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a banana",
+   "spinach",
+   "almond milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#23.2",
+  "line": "a homemade smoothie made with a banana, spinach and almond milk",
+  "input": [
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a banana",
+   "spinach",
+   "almond milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "dish-base.tsv#23.3",
+  "line": "a homemade smoothie made with a banana, spinach and almond milk",
+  "input": [
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach",
+    "brand": ""
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk",
+    "brand": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a banana",
+   "spinach",
+   "almond milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade potato salad, about half a cup, with a grilled hot dog",
+  "input": [
+   {
+    "rawText": "homemade potato salad",
+    "normalizedForm": "potato salad"
+   },
+   {
+    "rawText": "a grilled hot dog",
+    "normalizedForm": "grilled hot dog"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade potato salad",
+   "a grilled hot dog"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade potato salad, about half a cup, with a grilled hot dog",
+  "input": [
+   {
+    "rawText": "homemade potato salad",
+    "normalizedForm": "potato salad"
+   },
+   {
+    "rawText": "about half a cup",
+    "normalizedForm": "half cup"
+   },
+   {
+    "rawText": "a grilled hot dog",
+    "normalizedForm": "grilled hot dog"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade potato salad",
+   "about half a cup",
+   "a grilled hot dog"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade pizza with pepperoni and a salad with ranch",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad"
+   },
+   {
+    "rawText": "ranch",
+    "normalizedForm": "ranch"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "a salad",
+   "ranch"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "i made a burger with fries and a coke",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "fries",
+   "a coke"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade tacos with rice and beans",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "rice",
+   "beans"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade bagel with cream cheese",
+  "input": [
+   {
+    "rawText": "a homemade bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade bagel",
+   "cream cheese"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade turkey sandwich with chips and an apple",
+  "input": [
+   {
+    "rawText": "a homemade turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade turkey sandwich",
+   "chips",
+   "an apple"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "i made a smoothie with banana and spinach and a turkey sandwich",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach"
+   },
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "banana",
+   "spinach",
+   "a turkey sandwich"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a smoothie made with banana and spinach and a turkey sandwich",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach"
+   },
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a turkey sandwich"
+  ],
+  "dropped": [
+   "banana",
+   "spinach"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade pizza on friday night and a side salad",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a side salad",
+    "normalizedForm": "side salad"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "a side salad"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "i had a homemade sandwich on the go and an apple",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an apple"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "on monday i made a burger with cheese",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "i made pasta for dinner, i made it with ground turkey and marinara",
+  "input": [
+   {
+    "rawText": "pasta",
+    "normalizedForm": "pasta"
+   },
+   {
+    "rawText": "ground turkey",
+    "normalizedForm": "ground turkey"
+   },
+   {
+    "rawText": "marinara",
+    "normalizedForm": "marinara"
+   }
+  ],
+  "expectRawTexts": [
+   "pasta",
+   "ground turkey",
+   "marinara"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade pizza made with love and a beer",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "a beer"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade burger with no bun",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "bun",
+    "normalizedForm": "bun"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger"
+  ],
+  "dropped": [
+   "bun"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade pizza without cheese",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "cheese"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade burger with no bun, with cheese and onions",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger"
+  ],
+  "dropped": [
+   "no bun",
+   "cheese",
+   "onions"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade omelette made with three eggs",
+  "input": [
+   {
+    "rawText": "a homemade omelette",
+    "normalizedForm": "omelette"
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade omelette"
+  ],
+  "dropped": [
+   "three eggs"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "french toast made with two slices of brioche, with powdered sugar",
+  "input": [
+   {
+    "rawText": "french toast",
+    "normalizedForm": "french toast"
+   },
+   {
+    "rawText": "two slices of brioche",
+    "normalizedForm": "brioche"
+   },
+   {
+    "rawText": "powdered sugar",
+    "normalizedForm": "powdered sugar"
+   }
+  ],
+  "expectRawTexts": [
+   "french toast",
+   "powdered sugar"
+  ],
+  "dropped": [
+   "two slices of brioche"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "egg fried rice made with one egg and a cup of leftover rice",
+  "input": [
+   {
+    "rawText": "egg fried rice",
+    "normalizedForm": "egg fried rice"
+   },
+   {
+    "rawText": "one egg",
+    "normalizedForm": "egg"
+   },
+   {
+    "rawText": "a cup of leftover rice",
+    "normalizedForm": "leftover rice"
+   }
+  ],
+  "expectRawTexts": [
+   "egg fried rice",
+   "a cup of leftover rice"
+  ],
+  "dropped": [
+   "one egg"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade smash burger with two thin patties and american cheese on a potato bun",
+  "input": [
+   {
+    "rawText": "a homemade smash burger",
+    "normalizedForm": "smash burger"
+   },
+   {
+    "rawText": "two thin patties",
+    "normalizedForm": "patties"
+   },
+   {
+    "rawText": "american cheese",
+    "normalizedForm": "american cheese"
+   },
+   {
+    "rawText": "a potato bun",
+    "normalizedForm": "potato bun"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade smash burger"
+  ],
+  "dropped": [
+   "two thin patties",
+   "american cheese",
+   "a potato bun"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "two homemade beef tacos with lettuce, cheese and sour cream",
+  "input": [
+   {
+    "rawText": "two homemade beef tacos",
+    "normalizedForm": "beef tacos"
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "sour cream",
+    "normalizedForm": "sour cream"
+   }
+  ],
+  "expectRawTexts": [
+   "two homemade beef tacos"
+  ],
+  "dropped": [
+   "lettuce",
+   "cheese",
+   "sour cream"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a chai latte made with oat milk",
+  "input": [
+   {
+    "rawText": "a chai latte",
+    "normalizedForm": "chai latte"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a chai latte",
+   "oat milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade egg sandwich with cheese, and an egg on the side",
+  "input": [
+   {
+    "rawText": "a homemade egg sandwich",
+    "normalizedForm": "egg sandwich"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade egg sandwich",
+   "egg"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade chicken wrap with a side of chicken",
+  "input": [
+   {
+    "rawText": "a homemade chicken wrap",
+    "normalizedForm": "chicken wrap"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade chicken wrap",
+   "chicken"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade burrito with chicken and rice, two burritos",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "burrito"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "two burritos",
+    "normalizedForm": "burritos"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "two burritos"
+  ],
+  "dropped": [
+   "chicken",
+   "rice"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade fried rice with two eggs, peas and carrots, about two cups",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas"
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots"
+   },
+   {
+    "rawText": "about two cups",
+    "normalizedForm": "two cups"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "about two cups"
+  ],
+  "dropped": [
+   "two eggs",
+   "peas",
+   "carrots"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade fried rice with two eggs, peas and carrots, about two cups",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas"
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice"
+  ],
+  "dropped": [
+   "two eggs",
+   "peas",
+   "carrots"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade pizza with pepperoni, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "two slices"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a bowl of rice i made with chicken and broccoli",
+  "input": [
+   {
+    "rawText": "a bowl of rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "broccoli",
+    "normalizedForm": "broccoli"
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of rice",
+   "chicken",
+   "broccoli"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "homemade rice with black beans",
+  "input": [
+   {
+    "rawText": "homemade rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade rice",
+   "black beans"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a bowl of homemade chili with a spoonful of sour cream on top",
+  "input": [
+   {
+    "rawText": "a bowl of homemade chili",
+    "normalizedForm": ""
+   },
+   {
+    "rawText": "a spoonful of sour cream on top",
+    "normalizedForm": ""
+   }
+  ],
+  "expectRawTexts": [
+   "a bowl of homemade chili",
+   "a spoonful of sour cream on top"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "i made a salad with grilled chicken, feta and two tbsp balsamic vinaigrette",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad"
+   },
+   {
+    "rawText": "grilled chicken",
+    "normalizedForm": "grilled chicken"
+   },
+   {
+    "rawText": "feta",
+    "normalizedForm": "feta"
+   },
+   {
+    "rawText": "two tbsp balsamic vinaigrette",
+    "normalizedForm": "balsamic vinaigrette"
+   }
+  ],
+  "expectRawTexts": [
+   "a salad",
+   "grilled chicken",
+   "feta",
+   "two tbsp balsamic vinaigrette"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed.tsv",
+  "line": "a homemade sub from subway with turkey",
+  "input": [
+   {
+    "rawText": "a homemade sub",
+    "normalizedForm": "sub"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sub",
+   "turkey"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed2.tsv",
+  "line": "salmon i made with rice and asparagus",
+  "input": [
+   {
+    "rawText": "salmon",
+    "normalizedForm": "salmon"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "asparagus",
+    "normalizedForm": "asparagus"
+   }
+  ],
+  "expectRawTexts": [
+   "salmon",
+   "rice",
+   "asparagus"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed2.tsv",
+  "line": "chicken i made with rice and broccoli",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "broccoli",
+    "normalizedForm": "broccoli"
+   }
+  ],
+  "expectRawTexts": [
+   "chicken",
+   "rice",
+   "broccoli"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed2.tsv",
+  "line": "a homemade burger with a side of fries",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "fries"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute/constructed2.tsv",
+  "line": "a homemade burger with cheese and fries on the side",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "fries"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute/constructed2.tsv",
+  "line": "homemade tacos with ground beef and cheese, three tacos",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "ground beef",
+    "normalizedForm": "ground beef"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "three tacos"
+  ],
+  "dropped": [
+   "ground beef",
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute/constructed2.tsv",
+  "line": "a homemade pita with hummus",
+  "input": [
+   {
+    "rawText": "a homemade pita",
+    "normalizedForm": "pita"
+   },
+   {
+    "rawText": "hummus",
+    "normalizedForm": "hummus"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pita",
+   "hummus"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "i made a burger with cheese, an apple",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple"
+   }
+  ],
+  "expectRawTexts": [
+   "a burger",
+   "an apple"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade sandwich with ham, an orange",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "ham",
+    "normalizedForm": "ham"
+   },
+   {
+    "rawText": "an orange",
+    "normalizedForm": "orange"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an orange"
+  ],
+  "dropped": [
+   "ham"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade pizza with pepperoni & a pear",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "a pear",
+    "normalizedForm": "pear"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza",
+   "a pear"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade sandwich with an apple",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "an apple",
+    "normalizedForm": "apple"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "an apple"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "i made a turkey sandwich with a banana",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a banana"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pancakes with bacon and eggs",
+  "input": [
+   {
+    "rawText": "homemade pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pancakes",
+   "bacon",
+   "eggs"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pancakes with two eggs and bacon",
+  "input": [
+   {
+    "rawText": "homemade pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pancakes",
+   "two eggs",
+   "bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade french toast with bacon",
+  "input": [
+   {
+    "rawText": "homemade french toast",
+    "normalizedForm": "french toast"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade french toast",
+   "bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade omelette with hash browns",
+  "input": [
+   {
+    "rawText": "a homemade omelette",
+    "normalizedForm": "omelette"
+   },
+   {
+    "rawText": "hash browns",
+    "normalizedForm": "hash browns"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade omelette",
+   "hash browns"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with onion rings",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "onion rings",
+    "normalizedForm": "onion rings"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "onion rings"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with coleslaw and corn",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "coleslaw",
+    "normalizedForm": "coleslaw"
+   },
+   {
+    "rawText": "corn",
+    "normalizedForm": "corn"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "coleslaw",
+   "corn"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade sandwich with grapes",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "grapes",
+    "normalizedForm": "grapes"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "grapes"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade sandwich with pretzels and a pickle",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "pretzels",
+    "normalizedForm": "pretzels"
+   },
+   {
+    "rawText": "a pickle",
+    "normalizedForm": "pickle"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "pretzels",
+   "a pickle"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pizza with pepperoni and wings",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "wings"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pizza with pepperoni and ice cream for dessert",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "ice cream"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pizza with garlic knots",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "garlic knots",
+    "normalizedForm": "garlic knots"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "garlic knots"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade smoothie with a muffin",
+  "input": [
+   {
+    "rawText": "a homemade smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade smoothie",
+   "a muffin"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade smoothie with a protein bar",
+  "input": [
+   {
+    "rawText": "a homemade smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "a protein bar",
+    "normalizedForm": "protein bar"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade smoothie",
+   "a protein bar"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pancakes with a glass of milk",
+  "input": [
+   {
+    "rawText": "homemade pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pancakes",
+   "a glass of milk"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "i made a breakfast burrito with tater tots",
+  "input": [
+   {
+    "rawText": "a breakfast burrito",
+    "normalizedForm": "breakfast burrito"
+   },
+   {
+    "rawText": "tater tots",
+    "normalizedForm": "tater tots"
+   }
+  ],
+  "expectRawTexts": [
+   "a breakfast burrito",
+   "tater tots"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade tacos with elote and horchata",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "elote",
+    "normalizedForm": "elote"
+   },
+   {
+    "rawText": "horchata",
+    "normalizedForm": "horchata"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "elote",
+   "horchata"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "i made a sub with turkey and a yogurt",
+  "input": [
+   {
+    "rawText": "a sub",
+    "normalizedForm": "sub"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "a yogurt",
+    "normalizedForm": "yogurt"
+   }
+  ],
+  "expectRawTexts": [
+   "a sub",
+   "a yogurt"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade quesadillas with guacamole and a mango",
+  "input": [
+   {
+    "rawText": "homemade quesadillas",
+    "normalizedForm": "quesadillas"
+   },
+   {
+    "rawText": "guacamole",
+    "normalizedForm": "guacamole"
+   },
+   {
+    "rawText": "a mango",
+    "normalizedForm": "mango"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade quesadillas",
+   "a mango"
+  ],
+  "dropped": [
+   "guacamole"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a smoothie made with banana and peanut butter toast",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "peanut butter toast",
+    "normalizedForm": "peanut butter toast"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "peanut butter toast"
+  ],
+  "dropped": [
+   "banana"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a smoothie made with banana, two eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "two eggs"
+  ],
+  "dropped": [
+   "banana"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "pancakes made with oat flour and blueberries plus bacon",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "oat flour",
+    "normalizedForm": "oat flour"
+   },
+   {
+    "rawText": "blueberries",
+    "normalizedForm": "blueberries"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "pancakes",
+   "bacon"
+  ],
+  "dropped": [
+   "oat flour",
+   "blueberries"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger on a bun with cheese and grilled corn",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "a bun",
+    "normalizedForm": "bun"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "grilled corn",
+    "normalizedForm": "grilled corn"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "grilled corn"
+  ],
+  "dropped": [
+   "a bun",
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade wrap with chicken and hummus and an iced tea",
+  "input": [
+   {
+    "rawText": "a homemade wrap",
+    "normalizedForm": "wrap"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "hummus",
+    "normalizedForm": "hummus"
+   },
+   {
+    "rawText": "an iced tea",
+    "normalizedForm": "iced tea"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade wrap",
+   "hummus",
+   "an iced tea"
+  ],
+  "dropped": [
+   "chicken"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade burgers with sweet potato wedges",
+  "input": [
+   {
+    "rawText": "homemade burgers",
+    "normalizedForm": "burgers"
+   },
+   {
+    "rawText": "sweet potato wedges",
+    "normalizedForm": "sweet potato wedges"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade burgers",
+   "sweet potato wedges"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pizza with pepperoni and a homemade burger with cheese",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "a homemade burger",
+   "cheese"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "i made a grilled cheese with tomato soup",
+  "input": [
+   {
+    "rawText": "a grilled cheese",
+    "normalizedForm": "grilled cheese"
+   },
+   {
+    "rawText": "tomato soup",
+    "normalizedForm": "tomato soup"
+   }
+  ],
+  "expectRawTexts": [
+   "a grilled cheese",
+   "tomato soup"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade melt with chips",
+  "input": [
+   {
+    "rawText": "homemade melt",
+    "normalizedForm": "melt"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade melt",
+   "chips"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade tuna melt with a cup of tomato soup",
+  "input": [
+   {
+    "rawText": "a homemade tuna melt",
+    "normalizedForm": "tuna melt"
+   },
+   {
+    "rawText": "a cup of tomato soup",
+    "normalizedForm": "tomato soup"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade tuna melt",
+   "a cup of tomato soup"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade potato salad, about half a cup, with a grilled hot dog",
+  "input": [
+   {
+    "rawText": "homemade potato salad",
+    "normalizedForm": "potato salad"
+   },
+   {
+    "rawText": "a grilled hot dog",
+    "normalizedForm": "grilled hot dog"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade potato salad",
+   "a grilled hot dog"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with a side of onion rings",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "onion rings",
+    "normalizedForm": "onion rings"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "onion rings"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with cheese and onion rings on the side",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "onion rings",
+    "normalizedForm": "onion rings"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "onion rings"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with cheese and grapes on the side",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "grapes",
+    "normalizedForm": "grapes"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "grapes"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with cheese, onion rings on the side",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "onion rings",
+    "normalizedForm": "onion rings"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "onion rings"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade pizza on friday night with a pear",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "a pear",
+    "normalizedForm": "pear"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "a pear"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "salmon i made with rice and asparagus",
+  "input": [
+   {
+    "rawText": "salmon",
+    "normalizedForm": "salmon"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "asparagus",
+    "normalizedForm": "asparagus"
+   }
+  ],
+  "expectRawTexts": [
+   "salmon",
+   "rice",
+   "asparagus"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade bagel with cream cheese",
+  "input": [
+   {
+    "rawText": "a homemade bagel",
+    "normalizedForm": "bagel"
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade bagel",
+   "cream cheese"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade bagel sandwich with cream cheese",
+  "input": [
+   {
+    "rawText": "a homemade bagel sandwich",
+    "normalizedForm": "bagel sandwich"
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade bagel sandwich",
+   "cream cheese"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade rice with black beans",
+  "input": [
+   {
+    "rawText": "homemade rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade rice",
+   "black beans"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade chicken wrap with a side of chicken",
+  "input": [
+   {
+    "rawText": "a homemade chicken wrap",
+    "normalizedForm": "chicken wrap"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade chicken wrap",
+   "chicken"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "homemade tacos with ground beef and cheese, three tacos",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "ground beef",
+    "normalizedForm": "ground beef"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "three tacos"
+  ],
+  "dropped": [
+   "ground beef",
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute2/attack.tsv",
+  "line": "a homemade burger with fries",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "fries"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade omelette with bacon and toast",
+  "input": [
+   {
+    "rawText": "a homemade omelette",
+    "normalizedForm": "omelette"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade omelette",
+   "bacon",
+   "toast"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade omelette with sausage links and hash browns",
+  "input": [
+   {
+    "rawText": "a homemade omelette",
+    "normalizedForm": "omelette"
+   },
+   {
+    "rawText": "sausage links",
+    "normalizedForm": "sausage links"
+   },
+   {
+    "rawText": "hash browns",
+    "normalizedForm": "hash browns"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade omelette",
+   "sausage links",
+   "hash browns"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade omelette with a side of bacon",
+  "input": [
+   {
+    "rawText": "a homemade omelette",
+    "normalizedForm": "omelette"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade omelette",
+   "bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade fried rice with orange chicken",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "orange chicken",
+    "normalizedForm": "orange chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "orange chicken"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade fried rice with sweet and sour pork",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "sweet and sour pork",
+    "normalizedForm": "sweet and sour pork"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "sweet and sour pork"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade fried rice with an egg roll and beef and broccoli",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "an egg roll",
+    "normalizedForm": "egg roll"
+   },
+   {
+    "rawText": "beef and broccoli",
+    "normalizedForm": "beef and broccoli"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "an egg roll",
+   "beef and broccoli"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade tacos with chips and salsa",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "chips",
+   "salsa"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade quesadillas with chips and guac",
+  "input": [
+   {
+    "rawText": "homemade quesadillas",
+    "normalizedForm": "quesadillas"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "guac",
+    "normalizedForm": "guac"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade quesadillas",
+   "chips",
+   "guac"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade burrito bowl with chicken and chips and salsa",
+  "input": [
+   {
+    "rawText": "a homemade burrito bowl",
+    "normalizedForm": "burrito bowl"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito bowl",
+   "chips",
+   "salsa"
+  ],
+  "dropped": [
+   "chicken"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "i made a turkey sandwich with mustard and a hard boiled egg",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "mustard",
+    "normalizedForm": "mustard"
+   },
+   {
+    "rawText": "a hard boiled egg",
+    "normalizedForm": "hard boiled egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "a hard boiled egg"
+  ],
+  "dropped": [
+   "mustard"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "i made a turkey sandwich with mustard and two hard boiled eggs",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "mustard",
+    "normalizedForm": "mustard"
+   },
+   {
+    "rawText": "two hard boiled eggs",
+    "normalizedForm": "hard boiled eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a turkey sandwich",
+   "two hard boiled eggs"
+  ],
+  "dropped": [
+   "mustard"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade sandwich with turkey and a can of tuna",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "a can of tuna",
+    "normalizedForm": "tuna"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "a can of tuna"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade wrap with hummus and a piece of salmon",
+  "input": [
+   {
+    "rawText": "a homemade wrap",
+    "normalizedForm": "wrap"
+   },
+   {
+    "rawText": "hummus",
+    "normalizedForm": "hummus"
+   },
+   {
+    "rawText": "a piece of salmon",
+    "normalizedForm": "salmon"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade wrap",
+   "hummus",
+   "a piece of salmon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade burger with cheese and a fried egg",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "a fried egg",
+    "normalizedForm": "fried egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "a fried egg"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade pizza with pepperoni and a chicken breast",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "a chicken breast",
+    "normalizedForm": "chicken breast"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "a chicken breast"
+  ],
+  "dropped": [
+   "pepperoni"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade pizza with pepperoni and grilled chicken",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "grilled chicken",
+    "normalizedForm": "grilled chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza"
+  ],
+  "dropped": [
+   "pepperoni",
+   "grilled chicken"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a smoothie made with banana and spinach and two hard boiled eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "spinach",
+    "normalizedForm": "spinach"
+   },
+   {
+    "rawText": "two hard boiled eggs",
+    "normalizedForm": "hard boiled eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "two hard boiled eggs"
+  ],
+  "dropped": [
+   "banana",
+   "spinach"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a smoothie made with almond milk and berries and a yogurt",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "berries",
+    "normalizedForm": "berries"
+   },
+   {
+    "rawText": "a yogurt",
+    "normalizedForm": "yogurt"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a yogurt"
+  ],
+  "dropped": [
+   "almond milk",
+   "berries"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade pancakes made with oat milk and a glass of milk",
+  "input": [
+   {
+    "rawText": "homemade pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "a glass of milk",
+    "normalizedForm": "milk"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pancakes",
+   "a glass of milk"
+  ],
+  "dropped": [
+   "oat milk"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "french toast made with brioche, and scrambled eggs",
+  "input": [
+   {
+    "rawText": "french toast",
+    "normalizedForm": "french toast"
+   },
+   {
+    "rawText": "brioche",
+    "normalizedForm": "brioche"
+   },
+   {
+    "rawText": "scrambled eggs",
+    "normalizedForm": "scrambled eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "french toast",
+   "scrambled eggs"
+  ],
+  "dropped": [
+   "brioche"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "french toast made with brioche, scrambled eggs",
+  "input": [
+   {
+    "rawText": "french toast",
+    "normalizedForm": "french toast"
+   },
+   {
+    "rawText": "brioche",
+    "normalizedForm": "brioche"
+   },
+   {
+    "rawText": "scrambled eggs",
+    "normalizedForm": "scrambled eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "french toast",
+   "scrambled eggs"
+  ],
+  "dropped": [
+   "brioche"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a smoothie made with yogurt and a banana",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "yogurt",
+    "normalizedForm": "yogurt"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a banana"
+  ],
+  "dropped": [
+   "yogurt"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "pancakes made with flour and eggs and a side of bacon",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "flour",
+    "normalizedForm": "flour"
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "pancakes",
+   "bacon"
+  ],
+  "dropped": [
+   "flour",
+   "eggs"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade acai bowl with granola and a banana",
+  "input": [
+   {
+    "rawText": "a homemade acai bowl",
+    "normalizedForm": "acai bowl"
+   },
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade acai bowl",
+   "a banana"
+  ],
+  "dropped": [
+   "granola"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade poke bowl with tuna and a seaweed salad",
+  "input": [
+   {
+    "rawText": "a homemade poke bowl",
+    "normalizedForm": "poke bowl"
+   },
+   {
+    "rawText": "tuna",
+    "normalizedForm": "tuna"
+   },
+   {
+    "rawText": "a seaweed salad",
+    "normalizedForm": "seaweed salad"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade poke bowl",
+   "a seaweed salad"
+  ],
+  "dropped": [
+   "tuna"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade ice cream sandwich with a banana",
+  "input": [
+   {
+    "rawText": "a homemade ice cream sandwich",
+    "normalizedForm": "ice cream sandwich"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade ice cream sandwich",
+   "a banana"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade ice cream sandwiches made with chocolate cookies and vanilla ice cream",
+  "input": [
+   {
+    "rawText": "homemade ice cream sandwiches",
+    "normalizedForm": "ice cream sandwiches"
+   },
+   {
+    "rawText": "chocolate cookies",
+    "normalizedForm": "chocolate cookies"
+   },
+   {
+    "rawText": "vanilla ice cream",
+    "normalizedForm": "vanilla ice cream"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade ice cream sandwiches",
+   "chocolate cookies",
+   "vanilla ice cream"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade taco salad with chicken and a side of rice",
+  "input": [
+   {
+    "rawText": "a homemade taco salad",
+    "normalizedForm": "taco salad"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade taco salad",
+   "chicken",
+   "rice"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade pizza rolls with ranch and a chicken salad",
+  "input": [
+   {
+    "rawText": "homemade pizza rolls",
+    "normalizedForm": "pizza rolls"
+   },
+   {
+    "rawText": "ranch",
+    "normalizedForm": "ranch"
+   },
+   {
+    "rawText": "a chicken salad",
+    "normalizedForm": "chicken salad"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza rolls",
+   "ranch",
+   "a chicken salad"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade burger patties with onion and a bun",
+  "input": [
+   {
+    "rawText": "homemade burger patties",
+    "normalizedForm": "burger patties"
+   },
+   {
+    "rawText": "onion",
+    "normalizedForm": "onion"
+   },
+   {
+    "rawText": "a bun",
+    "normalizedForm": "bun"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade burger patties",
+   "onion",
+   "a bun"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade sandwich bread with butter and ham",
+  "input": [
+   {
+    "rawText": "homemade sandwich bread",
+    "normalizedForm": "sandwich bread"
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter"
+   },
+   {
+    "rawText": "ham",
+    "normalizedForm": "ham"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade sandwich bread",
+   "butter",
+   "ham"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "i made a hot dog bun with mustard and a hot dog",
+  "input": [
+   {
+    "rawText": "a hot dog bun",
+    "normalizedForm": "hot dog bun"
+   },
+   {
+    "rawText": "mustard",
+    "normalizedForm": "mustard"
+   },
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog"
+   }
+  ],
+  "expectRawTexts": [
+   "a hot dog bun",
+   "mustard",
+   "a hot dog"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade breakfast burrito with a coffee and bacon",
+  "input": [
+   {
+    "rawText": "a homemade breakfast burrito",
+    "normalizedForm": "breakfast burrito"
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast burrito",
+   "a coffee",
+   "bacon"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade chicken sandwich with a side salad and a pickle",
+  "input": [
+   {
+    "rawText": "a homemade chicken sandwich",
+    "normalizedForm": "chicken sandwich"
+   },
+   {
+    "rawText": "a side salad",
+    "normalizedForm": "side salad"
+   },
+   {
+    "rawText": "a pickle",
+    "normalizedForm": "pickle"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade chicken sandwich",
+   "a side salad",
+   "a pickle"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "i made a sandwich with turkey, egg",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich"
+  ],
+  "dropped": [
+   "turkey",
+   "egg"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "i made a sandwich with turkey, an egg",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "egg"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade burger with fries and a coke",
+  "input": [
+   {
+    "rawText": "a homemade burger with fries",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries"
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger with fries",
+   "fries",
+   "a coke"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "a homemade sandwich with chips",
+  "input": [
+   {
+    "rawText": "a homemade sandwich with chips",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich with chips",
+   "chips"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade tacos with beef, rice and beans",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "beef",
+    "normalizedForm": "beef"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "rice",
+   "beans"
+  ],
+  "dropped": [
+   "beef"
+  ]
+ },
+ {
+  "src": "refute3/attack.tsv",
+  "line": "homemade burritos with beef, rice and beans",
+  "input": [
+   {
+    "rawText": "homemade burritos",
+    "normalizedForm": "burritos"
+   },
+   {
+    "rawText": "beef",
+    "normalizedForm": "beef"
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice"
+   },
+   {
+    "rawText": "beans",
+    "normalizedForm": "beans"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade burritos"
+  ],
+  "dropped": [
+   "beef",
+   "rice",
+   "beans"
+  ]
+ },
+ {
+  "src": "refute3/attack2.tsv",
+  "line": "i made a sandwich with turkey, an egg",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "an egg",
+    "normalizedForm": "egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "an egg"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute3/attack2.tsv",
+  "line": "i made a sandwich with turkey, two hard boiled eggs",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "hard boiled eggs",
+    "normalizedForm": "hard boiled eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "hard boiled eggs"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute3/attack2.tsv",
+  "line": "i made a sandwich with turkey, two hard boiled eggs",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "two hard boiled eggs",
+    "normalizedForm": "hard boiled eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a sandwich",
+   "two hard boiled eggs"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with banana & two eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "two eggs"
+  ],
+  "dropped": [
+   "banana"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade sandwich with turkey & a can of tuna",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "a can of tuna",
+    "normalizedForm": "tuna"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich",
+   "a can of tuna"
+  ],
+  "dropped": [
+   "turkey"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with banana and milk, then two eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "two eggs"
+  ],
+  "dropped": [
+   "banana",
+   "milk"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with banana and milk and then two eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "milk",
+    "normalizedForm": "milk"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "two eggs"
+  ],
+  "dropped": [
+   "banana",
+   "milk"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with banana, also two eggs",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "two eggs"
+  ],
+  "dropped": [
+   "banana"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger with cheese along with two eggs",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "two eggs"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger with cheese as well as a fried egg",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "a fried egg",
+    "normalizedForm": "fried egg"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "a fried egg"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade fried rice with fried chicken",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "fried chicken",
+    "normalizedForm": "fried chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "fried chicken"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade fried rice with crispy pork",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "crispy pork",
+    "normalizedForm": "crispy pork"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "crispy pork"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "pancakes made with flour and fried eggs",
+  "input": [
+   {
+    "rawText": "pancakes",
+    "normalizedForm": "pancakes"
+   },
+   {
+    "rawText": "flour",
+    "normalizedForm": "flour"
+   },
+   {
+    "rawText": "fried eggs",
+    "normalizedForm": "fried eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "pancakes",
+   "fried eggs"
+  ],
+  "dropped": [
+   "flour"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "french toast made with brioche and fried eggs",
+  "input": [
+   {
+    "rawText": "french toast",
+    "normalizedForm": "french toast"
+   },
+   {
+    "rawText": "brioche",
+    "normalizedForm": "brioche"
+   },
+   {
+    "rawText": "fried eggs",
+    "normalizedForm": "fried eggs"
+   }
+  ],
+  "expectRawTexts": [
+   "french toast",
+   "fried eggs"
+  ],
+  "dropped": [
+   "brioche"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with oat milk and a scoop of yogurt",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk"
+   },
+   {
+    "rawText": "a scoop of yogurt",
+    "normalizedForm": "yogurt"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie"
+  ],
+  "dropped": [
+   "oat milk",
+   "a scoop of yogurt"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade burrito with chicken and a scoop of beans",
+  "input": [
+   {
+    "rawText": "homemade burrito",
+    "normalizedForm": "burrito"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "a scoop of beans",
+    "normalizedForm": "beans"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade burrito"
+  ],
+  "dropped": [
+   "chicken",
+   "a scoop of beans"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade sandwich with turkey and a slice of ham",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "a slice of ham",
+    "normalizedForm": "ham"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich"
+  ],
+  "dropped": [
+   "turkey",
+   "a slice of ham"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade sandwich with turkey and a handful of chicken",
+  "input": [
+   {
+    "rawText": "a homemade sandwich",
+    "normalizedForm": "sandwich"
+   },
+   {
+    "rawText": "turkey",
+    "normalizedForm": "turkey"
+   },
+   {
+    "rawText": "a handful of chicken",
+    "normalizedForm": "chicken"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade sandwich"
+  ],
+  "dropped": [
+   "turkey",
+   "a handful of chicken"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger with cheese and a sausage",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "a sausage",
+    "normalizedForm": "sausage"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "a sausage"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger with cheese and sausage links",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "sausage links",
+    "normalizedForm": "sausage links"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "sausage links"
+  ],
+  "dropped": [
+   "cheese"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger with cheese and sausage patties",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "sausage patties",
+    "normalizedForm": "sausage patties"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger"
+  ],
+  "dropped": [
+   "cheese",
+   "sausage patties"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade breakfast sandwich with egg and cheese and potato bread",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "breakfast sandwich"
+   },
+   {
+    "rawText": "egg",
+    "normalizedForm": "egg"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "potato bread",
+    "normalizedForm": "potato bread"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich"
+  ],
+  "dropped": [
+   "egg",
+   "cheese",
+   "potato bread"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with almond milk and almond butter",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   },
+   {
+    "rawText": "almond butter",
+    "normalizedForm": "almond butter"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "almond butter"
+  ],
+  "dropped": [
+   "almond milk"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade tacos with corn tortillas and corn",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "corn tortillas",
+    "normalizedForm": "corn tortillas"
+   },
+   {
+    "rawText": "corn",
+    "normalizedForm": "corn"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "corn"
+  ],
+  "dropped": [
+   "corn tortillas"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger bowl with beef and cheese",
+  "input": [
+   {
+    "rawText": "a homemade burger bowl",
+    "normalizedForm": "burger bowl"
+   },
+   {
+    "rawText": "beef",
+    "normalizedForm": "beef"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger bowl",
+   "beef",
+   "cheese"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade pizza rolls with pepperoni",
+  "input": [
+   {
+    "rawText": "homemade pizza rolls",
+    "normalizedForm": "pizza rolls"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza rolls",
+   "pepperoni"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade taco salad with beef and cheese",
+  "input": [
+   {
+    "rawText": "a homemade taco salad",
+    "normalizedForm": "taco salad"
+   },
+   {
+    "rawText": "beef",
+    "normalizedForm": "beef"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade taco salad",
+   "beef",
+   "cheese"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade breakfast burrito bowl with eggs and bacon",
+  "input": [
+   {
+    "rawText": "a homemade breakfast burrito bowl",
+    "normalizedForm": "breakfast burrito bowl"
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast burrito bowl"
+  ],
+  "dropped": [
+   "eggs",
+   "bacon"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade smoothie bowl made with banana and granola",
+  "input": [
+   {
+    "rawText": "a homemade smoothie bowl",
+    "normalizedForm": "smoothie bowl"
+   },
+   {
+    "rawText": "banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "granola",
+    "normalizedForm": "granola"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade smoothie bowl",
+   "banana",
+   "granola"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade hot dog with mustard and onions",
+  "input": [
+   {
+    "rawText": "a homemade hot dog",
+    "normalizedForm": "hot dog"
+   },
+   {
+    "rawText": "mustard",
+    "normalizedForm": "mustard"
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade hot dog",
+   "mustard",
+   "onions"
+  ],
+  "dropped": []
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade pizza burger with mozzarella and a side salad",
+  "input": [
+   {
+    "rawText": "a homemade pizza burger",
+    "normalizedForm": "pizza burger"
+   },
+   {
+    "rawText": "mozzarella",
+    "normalizedForm": "mozzarella"
+   },
+   {
+    "rawText": "a side salad",
+    "normalizedForm": "side salad"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade pizza burger",
+   "a side salad"
+  ],
+  "dropped": [
+   "mozzarella"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burrito with chicken, cilantro lime rice, black beans, cheese and salsa",
+  "input": [
+   {
+    "rawText": "a homemade burrito",
+    "normalizedForm": "burrito"
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken"
+   },
+   {
+    "rawText": "cilantro lime rice",
+    "normalizedForm": "cilantro lime rice"
+   },
+   {
+    "rawText": "black beans",
+    "normalizedForm": "black beans"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "salsa",
+    "normalizedForm": "salsa"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burrito",
+   "cilantro lime rice"
+  ],
+  "dropped": [
+   "chicken",
+   "black beans",
+   "cheese",
+   "salsa"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade fried rice with leftover chicken, peas and carrots",
+  "input": [
+   {
+    "rawText": "homemade fried rice",
+    "normalizedForm": "fried rice"
+   },
+   {
+    "rawText": "leftover chicken",
+    "normalizedForm": "leftover chicken"
+   },
+   {
+    "rawText": "peas",
+    "normalizedForm": "peas"
+   },
+   {
+    "rawText": "carrots",
+    "normalizedForm": "carrots"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade fried rice",
+   "leftover chicken"
+  ],
+  "dropped": [
+   "peas",
+   "carrots"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade pizza with italian sausage and mushrooms",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "italian sausage",
+    "normalizedForm": "italian sausage"
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza",
+   "italian sausage"
+  ],
+  "dropped": [
+   "mushrooms"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade tacos with carne asada, onions and cilantro",
+  "input": [
+   {
+    "rawText": "homemade tacos",
+    "normalizedForm": "tacos"
+   },
+   {
+    "rawText": "carne asada",
+    "normalizedForm": "carne asada"
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions"
+   },
+   {
+    "rawText": "cilantro",
+    "normalizedForm": "cilantro"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade tacos",
+   "carne asada",
+   "cilantro"
+  ],
+  "dropped": [
+   "onions"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade burger with bbq sauce, lettuce and tomato",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "burger"
+   },
+   {
+    "rawText": "bbq sauce",
+    "normalizedForm": "bbq sauce"
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce"
+   },
+   {
+    "rawText": "tomato",
+    "normalizedForm": "tomato"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade burger",
+   "bbq sauce"
+  ],
+  "dropped": [
+   "lettuce",
+   "tomato"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade breakfast sandwich with an over easy egg, bacon and cheese on an english muffin",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "breakfast sandwich"
+   },
+   {
+    "rawText": "an over easy egg",
+    "normalizedForm": "egg"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "english muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich"
+  ],
+  "dropped": [
+   "an over easy egg",
+   "bacon",
+   "cheese",
+   "an english muffin"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade breakfast sandwich with an over easy egg, bacon and cheese on an english muffin",
+  "input": [
+   {
+    "rawText": "a homemade breakfast sandwich",
+    "normalizedForm": "breakfast sandwich"
+   },
+   {
+    "rawText": "an over easy egg",
+    "normalizedForm": "over easy egg"
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon"
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese"
+   },
+   {
+    "rawText": "an english muffin",
+    "normalizedForm": "english muffin"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade breakfast sandwich",
+   "an over easy egg"
+  ],
+  "dropped": [
+   "bacon",
+   "cheese",
+   "an english muffin"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade chicken quesadillas with shredded rotisserie chicken and pepper jack",
+  "input": [
+   {
+    "rawText": "homemade chicken quesadillas",
+    "normalizedForm": "chicken quesadillas"
+   },
+   {
+    "rawText": "shredded rotisserie chicken",
+    "normalizedForm": "rotisserie chicken"
+   },
+   {
+    "rawText": "pepper jack",
+    "normalizedForm": "pepper jack"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade chicken quesadillas",
+   "shredded rotisserie chicken"
+  ],
+  "dropped": [
+   "pepper jack"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a homemade turkey sandwich with lettuce, tomato and a slice of provolone on whole wheat bread",
+  "input": [
+   {
+    "rawText": "a homemade turkey sandwich",
+    "normalizedForm": "turkey sandwich"
+   },
+   {
+    "rawText": "lettuce",
+    "normalizedForm": "lettuce"
+   },
+   {
+    "rawText": "tomato",
+    "normalizedForm": "tomato"
+   },
+   {
+    "rawText": "a slice of provolone",
+    "normalizedForm": "provolone"
+   },
+   {
+    "rawText": "whole wheat bread",
+    "normalizedForm": "whole wheat bread"
+   }
+  ],
+  "expectRawTexts": [
+   "a homemade turkey sandwich",
+   "whole wheat bread"
+  ],
+  "dropped": [
+   "lettuce",
+   "tomato",
+   "a slice of provolone"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "homemade pizza with pepperoni, green peppers and onions",
+  "input": [
+   {
+    "rawText": "homemade pizza",
+    "normalizedForm": "pizza"
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni"
+   },
+   {
+    "rawText": "green peppers",
+    "normalizedForm": "green peppers"
+   },
+   {
+    "rawText": "onions",
+    "normalizedForm": "onions"
+   }
+  ],
+  "expectRawTexts": [
+   "homemade pizza"
+  ],
+  "dropped": [
+   "pepperoni",
+   "green peppers",
+   "onions"
+  ]
+ },
+ {
+  "src": "refute4/attack.tsv",
+  "line": "a smoothie made with a banana, a cup of spinach and almond milk",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie"
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana"
+   },
+   {
+    "rawText": "a cup of spinach",
+    "normalizedForm": "spinach"
+   },
+   {
+    "rawText": "almond milk",
+    "normalizedForm": "almond milk"
+   }
+  ],
+  "expectRawTexts": [
+   "a smoothie",
+   "a cup of spinach",
+   "almond milk"
+  ],
+  "dropped": [
+   "a banana"
+  ]
+ }
+]

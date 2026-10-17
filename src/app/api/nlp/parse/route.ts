@@ -252,6 +252,7 @@ export async function POST(req: NextRequest) {
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
     const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
+    const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
     const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
@@ -433,6 +434,9 @@ export async function POST(req: NextRequest) {
         // A negated / removed / excluded part ("no bun", "i took off the bacon") is dropped BEFORE
         // the fold: fold-first can rewrite a negated part into a billed one ("no bun, two of them"
         // -> "2 no bun"). The cache write above keeps the undropped split.
+        // A homemade dish named with its parts ("a burrito bowl i made with rice, beans and chicken") bills the dish
+        // only; that pass runs after the negated drop and BEFORE the fold: "a homemade pizza with pepperoni and
+        // mushrooms, two slices" -> the fold can only attach "two slices" once the parts are gone.
         const np = dropNegatedParts(lineKey, items);
         items = np.items;
         if (np.drops.length > 0) {
@@ -440,6 +444,11 @@ export async function POST(req: NextRequest) {
             count: np.drops.length,
             kinds: np.drops.map(d => d.kind),
           });
+        }
+        const dp = dropDishParts(lineKey, items);
+        items = dp.items;
+        if (dp.drops.length > 0) {
+          logger.info('nlp_parse.dish_part_drop', { count: dp.drops.length });
         }
         const tq = foldTrailingQuantityClauses(lineKey, items);
         items = tq.items;
