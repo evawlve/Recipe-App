@@ -1,0 +1,4623 @@
+[
+ {
+  "src": "corr-base#0.1",
+  "line": "a large pizza but i only had two slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "large pizza",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [but i only had,i only had] -> \"2 slices of pizza\""
+  ]
+ },
+ {
+  "src": "corr-base#0.2",
+  "line": "a large pizza but i only had two slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "large pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "large pizza",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [but i only had,i only had] -> \"2 slices of pizza\""
+  ]
+ },
+ {
+  "src": "corr-base#0.3",
+  "line": "a large pizza but i only had two slices",
+  "input": [
+   {
+    "rawText": "a large pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "slices",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [but i only had,i only had] -> \"2 slices of pizza\""
+  ]
+ },
+ {
+  "src": "corr-base#1.1",
+  "line": "four pancakes, wait no, three pancakes",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [wait no] -> \"3 pancakes\""
+  ]
+ },
+ {
+  "src": "corr-base#1.2",
+  "line": "four pancakes, wait no, three pancakes",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [wait no] -> \"3 pancakes\""
+  ]
+ },
+ {
+  "src": "corr-base#1.3",
+  "line": "four pancakes, wait no, three pancakes",
+  "input": [
+   {
+    "rawText": "four pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "three pancakes",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 pancakes",
+    "normalizedForm": "pancakes",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [wait no] -> \"3 pancakes\""
+  ]
+ },
+ {
+  "src": "corr-base#2.1",
+  "line": "a bagel with cream cheese, actually make that butter",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": null
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"cream cheese\""
+  ]
+ },
+ {
+  "src": "corr-base#2.2",
+  "line": "a bagel with cream cheese, actually make that butter",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": null
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"cream cheese\""
+  ]
+ },
+ {
+  "src": "corr-base#2.3",
+  "line": "a bagel with cream cheese, actually make that butter",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "cream cheese",
+    "normalizedForm": "cream cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": null
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"cream cheese\""
+  ]
+ },
+ {
+  "src": "corr-base#3.1",
+  "line": "two tacos, scratch that, three tacos",
+  "input": [
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [scratch that] -> \"3 tacos\""
+  ]
+ },
+ {
+  "src": "corr-base#3.2",
+  "line": "two tacos, scratch that, three tacos",
+  "input": [
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [scratch that] -> \"3 tacos\""
+  ]
+ },
+ {
+  "src": "corr-base#3.3",
+  "line": "two tacos, scratch that, three tacos",
+  "input": [
+   {
+    "rawText": "two tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   },
+   {
+    "rawText": "three tacos",
+    "normalizedForm": "tacos",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 tacos",
+    "normalizedForm": "tacos",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [scratch that] -> \"3 tacos\""
+  ]
+ },
+ {
+  "src": "corr-base#4.1",
+  "line": "half a cup of rice, no, a full cup",
+  "input": [
+   {
+    "rawText": "half a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a full cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "1 cup of rice",
+    "normalizedForm": "rice",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [<no>] -> \"1 cup of rice\""
+  ]
+ },
+ {
+  "src": "corr-base#4.2",
+  "line": "half a cup of rice, no, a full cup",
+  "input": [
+   {
+    "rawText": "half a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a full cup",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "1 cup of rice",
+    "normalizedForm": "rice",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [<no>] -> \"1 cup of rice\""
+  ]
+ },
+ {
+  "src": "corr-base#4.3",
+  "line": "half a cup of rice, no, a full cup",
+  "input": [
+   {
+    "rawText": "half a cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a full cup of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "1 cup of rice",
+    "normalizedForm": "rice",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [<no>] -> \"1 cup of rice\""
+  ]
+ },
+ {
+  "src": "corr-base#5.1",
+  "line": "an 8 oz steak, well actually more like 6 oz",
+  "input": [
+   {
+    "rawText": "8 oz steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   },
+   {
+    "rawText": "6 oz",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "6 oz of steak",
+    "normalizedForm": "steak",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [well actually,actually,more like] -> \"6 oz of steak\""
+  ]
+ },
+ {
+  "src": "corr-base#5.2",
+  "line": "an 8 oz steak, well actually more like 6 oz",
+  "input": [
+   {
+    "rawText": "an 8 oz steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   },
+   {
+    "rawText": "6 oz",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "6 oz of steak",
+    "normalizedForm": "steak",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [well actually,actually,more like] -> \"6 oz of steak\""
+  ]
+ },
+ {
+  "src": "corr-base#5.3",
+  "line": "an 8 oz steak, well actually more like 6 oz",
+  "input": [
+   {
+    "rawText": "an 8 oz steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   },
+   {
+    "rawText": "6 oz",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "6 oz of steak",
+    "normalizedForm": "steak",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [well actually,actually,more like] -> \"6 oz of steak\""
+  ]
+ },
+ {
+  "src": "corr-base#6.1",
+  "line": "a sandwich on wheat, sorry, on rye",
+  "input": [
+   {
+    "rawText": "a sandwich on wheat",
+    "normalizedForm": "sandwich on wheat",
+    "brand": ""
+   },
+   {
+    "rawText": "on rye",
+    "normalizedForm": "rye",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a sandwich on rye",
+    "normalizedForm": "sandwich on rye",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [sorry] -> \"a sandwich on rye\""
+  ]
+ },
+ {
+  "src": "corr-base#6.2",
+  "line": "a sandwich on wheat, sorry, on rye",
+  "input": [
+   {
+    "rawText": "a sandwich on wheat",
+    "normalizedForm": "sandwich on wheat",
+    "brand": ""
+   },
+   {
+    "rawText": "on rye",
+    "normalizedForm": "rye",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a sandwich on rye",
+    "normalizedForm": "sandwich on rye",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [sorry] -> \"a sandwich on rye\""
+  ]
+ },
+ {
+  "src": "corr-base#6.3",
+  "line": "a sandwich on wheat, sorry, on rye",
+  "input": [
+   {
+    "rawText": "a sandwich on wheat",
+    "normalizedForm": "sandwich on wheat",
+    "brand": ""
+   },
+   {
+    "rawText": "on rye",
+    "normalizedForm": "rye",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a sandwich on rye",
+    "normalizedForm": "sandwich on rye",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [sorry] -> \"a sandwich on rye\""
+  ]
+ },
+ {
+  "src": "corr-base#7.1",
+  "line": "two eggs, i mean three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [i mean] -> \"3 eggs\""
+  ]
+ },
+ {
+  "src": "corr-base#7.2",
+  "line": "two eggs, i mean three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [i mean] -> \"3 eggs\""
+  ]
+ },
+ {
+  "src": "corr-base#7.3",
+  "line": "two eggs, i mean three eggs",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [i mean] -> \"3 eggs\""
+  ]
+ },
+ {
+  "src": "corr-base#8.1",
+  "line": "a latte with whole milk, actually oat milk",
+  "input": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [actually] -> \"a latte with oat milk\""
+  ]
+ },
+ {
+  "src": "corr-base#8.2",
+  "line": "a latte with whole milk, actually oat milk",
+  "input": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "whole milk",
+    "normalizedForm": "whole milk",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte",
+    "brand": null
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip j span null",
+   "restate-replace [actually] drop \"whole milk\""
+  ]
+ },
+ {
+  "src": "corr-base#8.3",
+  "line": "a latte with whole milk, actually oat milk",
+  "input": [
+   {
+    "rawText": "a latte with whole milk",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte with oat milk",
+    "normalizedForm": "latte",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [actually] -> \"a latte with oat milk\""
+  ]
+ },
+ {
+  "src": "corr-base#9.1",
+  "line": "a slice of pizza, no wait, two slices",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [no wait] -> \"2 slices of pizza\""
+  ]
+ },
+ {
+  "src": "corr-base#9.2",
+  "line": "a slice of pizza, no wait, two slices",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [no wait] -> \"2 slices of pizza\""
+  ]
+ },
+ {
+  "src": "corr-base#9.3",
+  "line": "a slice of pizza, no wait, two slices",
+  "input": [
+   {
+    "rawText": "a slice of pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "pizza",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 slices of pizza",
+    "normalizedForm": "pizza",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [no wait] -> \"2 slices of pizza\""
+  ]
+ },
+ {
+  "src": "corr-base#10.1",
+  "line": "chicken and rice, actually make it chicken and quinoa",
+  "input": [
+   {
+    "rawText": "chicken and rice",
+    "normalizedForm": "chicken and rice",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken and quinoa",
+    "normalizedForm": "chicken and quinoa",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken and quinoa",
+    "normalizedForm": "chicken and quinoa",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [make it,actually] drop \"chicken and rice\""
+  ]
+ },
+ {
+  "src": "corr-base#10.2",
+  "line": "chicken and rice, actually make it chicken and quinoa",
+  "input": [
+   {
+    "rawText": "chicken and rice",
+    "normalizedForm": "chicken and rice",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken and quinoa",
+    "normalizedForm": "chicken and quinoa",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken and quinoa",
+    "normalizedForm": "chicken and quinoa",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [make it,actually] drop \"chicken and rice\""
+  ]
+ },
+ {
+  "src": "corr-base#10.3",
+  "line": "chicken and rice, actually make it chicken and quinoa",
+  "input": [
+   {
+    "rawText": "chicken and rice",
+    "normalizedForm": "chicken and rice",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken and quinoa",
+    "normalizedForm": "chicken and quinoa",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken and quinoa",
+    "normalizedForm": "chicken and quinoa",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [make it,actually] drop \"chicken and rice\""
+  ]
+ },
+ {
+  "src": "corr-base#11.1",
+  "line": "a coffee and a muffin, no muffin actually",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#11.2",
+  "line": "a coffee and a muffin, no muffin actually",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#11.3",
+  "line": "a coffee and a muffin, no muffin actually",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   },
+   {
+    "rawText": "a muffin",
+    "normalizedForm": "muffin",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#12.1",
+  "line": "two eggs and toast, three eggs actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "trailing [actually] drop \"two eggs\""
+  ]
+ },
+ {
+  "src": "corr-base#12.2",
+  "line": "two eggs and toast, three eggs actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "trailing [actually] drop \"two eggs\""
+  ]
+ },
+ {
+  "src": "corr-base#12.3",
+  "line": "two eggs and toast, three eggs actually",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "three eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "trailing [actually] drop \"two eggs\""
+  ]
+ },
+ {
+  "src": "corr-base#13.1",
+  "line": "a burger, fries, and a coke",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": "Coke"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": "Coke"
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#13.2",
+  "line": "a burger, fries, and a coke",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#13.3",
+  "line": "a burger, fries, and a coke",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": "Coca-Cola"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": "Coca-Cola"
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#14.1",
+  "line": "eggs and toast, then later a banana",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#14.2",
+  "line": "eggs and toast, then later a banana",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "corr-base#14.3",
+  "line": "eggs and toast, then later a banana",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#0.0",
+  "line": "i actually had two eggs and toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#1.0",
+  "line": "eggs and toast, sorry, also a coffee",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [sorry] residue=also"
+  ]
+ },
+ {
+  "src": "fp-cases#1.1",
+  "line": "eggs and toast, sorry, also a coffee",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "also a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "also a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip addition [sorry]"
+  ]
+ },
+ {
+  "src": "fp-cases#2.0",
+  "line": "eggs, actually also toast",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [actually] residue=also"
+  ]
+ },
+ {
+  "src": "fp-cases#2.1",
+  "line": "eggs, actually also toast",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "also toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "also toast",
+    "normalizedForm": "toast",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip addition [actually]"
+  ]
+ },
+ {
+  "src": "fp-cases#3.0",
+  "line": "a latte, more like a big one",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "a big one",
+    "normalizedForm": "big one",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": null
+   },
+   {
+    "rawText": "a big one",
+    "normalizedForm": "big one",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [more like]"
+  ]
+ },
+ {
+  "src": "fp-cases#4.0",
+  "line": "chicken and rather a lot of rice",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "a lot of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": null
+   },
+   {
+    "rawText": "a lot of rice",
+    "normalizedForm": "rice",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#4.1",
+  "line": "chicken and rather a lot of rice",
+  "input": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rather a lot of rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": null
+   },
+   {
+    "rawText": "rather a lot of rice",
+    "normalizedForm": "rice",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#5.0",
+  "line": "grilled chicken with rice rather than fries",
+  "input": [
+   {
+    "rawText": "grilled chicken",
+    "normalizedForm": "grilled chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "grilled chicken",
+    "normalizedForm": "grilled chicken",
+    "brand": null
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#6.0",
+  "line": "a burger, i mean it was huge, and fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [i mean] residue=it was huge"
+  ]
+ },
+ {
+  "src": "fp-cases#7.0",
+  "line": "i mean it was a big salad and fries",
+  "input": [
+   {
+    "rawText": "a big salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a big salad",
+    "normalizedForm": "salad",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#8.0",
+  "line": "a whiskey, make it a double",
+  "input": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": ""
+   },
+   {
+    "rawText": "a double",
+    "normalizedForm": "double",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": null
+   },
+   {
+    "rawText": "a double",
+    "normalizedForm": "double",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [make it]"
+  ]
+ },
+ {
+  "src": "fp-cases#8.1",
+  "line": "a whiskey, make it a double",
+  "input": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": ""
+   },
+   {
+    "rawText": "make it a double",
+    "normalizedForm": "double whiskey",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": null
+   },
+   {
+    "rawText": "make it a double",
+    "normalizedForm": "double whiskey",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [make it@j]"
+  ]
+ },
+ {
+  "src": "fp-cases#9.0",
+  "line": "toast with butter, sorry, with jam too",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "with jam too",
+    "normalizedForm": "jam",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "with jam too",
+    "normalizedForm": "jam",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip addition [sorry]"
+  ]
+ },
+ {
+  "src": "fp-cases#9.1",
+  "line": "toast with butter, sorry, with jam too",
+  "input": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "toast with butter",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "jam",
+    "normalizedForm": "jam",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [sorry] residue=with"
+  ]
+ },
+ {
+  "src": "fp-cases#10.0",
+  "line": "a smoothie, sorry i forgot, a banana",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": null
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [sorry] residue=i forgot"
+  ]
+ },
+ {
+  "src": "fp-cases#11.0",
+  "line": "a coke and fries, actually make that a diet coke",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a diet coke",
+    "normalizedForm": "diet coke",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   },
+   {
+    "rawText": "a diet coke",
+    "normalizedForm": "diet coke",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [make that,actually] drop \"a coke\""
+  ]
+ },
+ {
+  "src": "fp-cases#12.0",
+  "line": "a bagel, actually make that two",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 bagel",
+    "normalizedForm": "bagel",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [make that,actually] -> \"2 bagel\""
+  ]
+ },
+ {
+  "src": "fp-cases#12.1",
+  "line": "a bagel, actually make that two",
+  "input": [
+   {
+    "rawText": "a bagel",
+    "normalizedForm": "bagel",
+    "brand": ""
+   },
+   {
+    "rawText": "make that two",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 bagel",
+    "normalizedForm": "bagel",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [actually,make that@j] -> \"2 bagel\""
+  ]
+ },
+ {
+  "src": "fp-cases#12.2",
+  "line": "a bagel, actually make that two",
+  "input": [
+   {
+    "rawText": "two bagels",
+    "normalizedForm": "bagels",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "two bagels",
+    "normalizedForm": "bagels",
+    "brand": null
+   }
+  ],
+  "notes": []
+ },
+ {
+  "src": "fp-cases#13.0",
+  "line": "a coffee, actually two",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [actually] -> \"2 coffee\""
+  ]
+ },
+ {
+  "src": "fp-cases#14.0",
+  "line": "oatmeal, actually pretty good, and a banana",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": null
+   },
+   {
+    "rawText": "a banana",
+    "normalizedForm": "banana",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [actually] residue=pretty good"
+  ]
+ },
+ {
+  "src": "fp-cases#15.0",
+  "line": "a salad, sorry, a big one",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "a big one",
+    "normalizedForm": "big one",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": null
+   },
+   {
+    "rawText": "a big one",
+    "normalizedForm": "big one",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [sorry]"
+  ]
+ },
+ {
+  "src": "fp-cases#16.0",
+  "line": "pancakes with syrup, actually with butter too",
+  "input": [
+   {
+    "rawText": "pancakes with syrup",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "pancakes with syrup",
+    "normalizedForm": "pancakes",
+    "brand": null
+   },
+   {
+    "rawText": "butter",
+    "normalizedForm": "butter",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [actually] residue=with"
+  ]
+ },
+ {
+  "src": "fp-cases#16.1",
+  "line": "pancakes with syrup, actually with butter too",
+  "input": [
+   {
+    "rawText": "pancakes with syrup",
+    "normalizedForm": "pancakes",
+    "brand": ""
+   },
+   {
+    "rawText": "with butter too",
+    "normalizedForm": "butter",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "pancakes with syrup",
+    "normalizedForm": "pancakes",
+    "brand": null
+   },
+   {
+    "rawText": "with butter too",
+    "normalizedForm": "butter",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip addition [actually]"
+  ]
+ },
+ {
+  "src": "fp-cases#17.0",
+  "line": "a sandwich, i mean a sub, and chips",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "a sub",
+    "normalizedForm": "sub",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": null
+   },
+   {
+    "rawText": "a sub",
+    "normalizedForm": "sub",
+    "brand": null
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: weak marker [i mean]"
+  ]
+ },
+ {
+  "src": "fp-cases#18.0",
+  "line": "rice, actually brown rice",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "brown rice",
+    "normalizedForm": "brown rice",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "brown rice",
+    "normalizedForm": "brown rice",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [actually] drop \"rice\""
+  ]
+ },
+ {
+  "src": "fp-cases#19.0",
+  "line": "two eggs and toast, no, three",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip qonly target not alone"
+  ]
+ },
+ {
+  "src": "fp-cases#20.0",
+  "line": "scrambled eggs, wait no, two eggs",
+  "input": [
+   {
+    "rawText": "scrambled eggs",
+    "normalizedForm": "scrambled eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 scrambled eggs",
+    "normalizedForm": "scrambled eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [wait no] -> \"2 scrambled eggs\""
+  ]
+ },
+ {
+  "src": "fp-cases#21.0",
+  "line": "a burger, no fries, actually fries",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [actually] drop \"no fries\""
+  ]
+ },
+ {
+  "src": "fp-cases#22.0",
+  "line": "a burger, actually no bun",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip negated j (row 3's)"
+  ]
+ },
+ {
+  "src": "fp-cases#23.0",
+  "line": "a burger with no bun, sorry, no cheese",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "no cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": null
+   },
+   {
+    "rawText": "no cheese",
+    "normalizedForm": "cheese",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip negated j (row 3's)"
+  ]
+ },
+ {
+  "src": "fp-cases#24.0",
+  "line": "hard boiled eggs, two of them, actually three",
+  "input": [
+   {
+    "rawText": "hard boiled eggs",
+    "normalizedForm": "hard boiled eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two of them",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "hard boiled eggs",
+    "normalizedForm": "hard boiled eggs",
+    "brand": null
+   },
+   {
+    "rawText": "3 of them",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually] -> \"3 of them\""
+  ]
+ },
+ {
+  "src": "fp-cases#25.0",
+  "line": "a big mac, scratch that, a quarter pounder, and fries",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a quarter pounder",
+    "normalizedForm": "quarter pounder",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [scratch that] drop \"a big mac\""
+  ]
+ },
+ {
+  "src": "fp-cases#26.0",
+  "line": "a chick-fil-a sandwich, actually make it nuggets, and a lemonade",
+  "input": [
+   {
+    "rawText": "a chick-fil-a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": "Chick-fil-A"
+   },
+   {
+    "rawText": "nuggets",
+    "normalizedForm": "nuggets",
+    "brand": ""
+   },
+   {
+    "rawText": "a lemonade",
+    "normalizedForm": "lemonade",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chick-fil-a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": "Chick-fil-A"
+   },
+   {
+    "rawText": "nuggets",
+    "normalizedForm": "nuggets",
+    "brand": null
+   },
+   {
+    "rawText": "a lemonade",
+    "normalizedForm": "lemonade",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "fp-cases#27.0",
+  "line": "a coffee, actually make it two",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [make it,actually] -> \"2 coffee\""
+  ]
+ },
+ {
+  "src": "fp-cases#27.1",
+  "line": "a coffee, actually make it two",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "make it two",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [actually,make it@j] -> \"2 coffee\""
+  ]
+ },
+ {
+  "src": "new-cases#0.0",
+  "line": "a homemade burger with cheese, actually make that swiss",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss cheese",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": null
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss cheese",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"cheese\""
+  ]
+ },
+ {
+  "src": "new-cases#0.1",
+  "line": "a homemade burger with cheese, actually make that swiss",
+  "input": [
+   {
+    "rawText": "a homemade burger with cheese",
+    "normalizedForm": "homemade burger with cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss cheese",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a homemade burger with swiss",
+    "normalizedForm": "homemade burger with swiss",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [make that,actually] -> \"a homemade burger with swiss\""
+  ]
+ },
+ {
+  "src": "new-cases#0.2",
+  "line": "a homemade burger with cheese, actually make that swiss",
+  "input": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": ""
+   },
+   {
+    "rawText": "cheese",
+    "normalizedForm": "cheese",
+    "brand": ""
+   },
+   {
+    "rawText": "make that swiss",
+    "normalizedForm": "swiss cheese",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a homemade burger",
+    "normalizedForm": "homemade burger",
+    "brand": null
+   },
+   {
+    "rawText": "swiss",
+    "normalizedForm": "swiss cheese",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [actually,make that@j] drop \"cheese\""
+  ]
+ },
+ {
+  "src": "new-cases#1.0",
+  "line": "a burger, no bun, actually with a bun",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "with a bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": null
+   },
+   {
+    "rawText": "with a bun",
+    "normalizedForm": "bun",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: weak marker [actually]"
+  ]
+ },
+ {
+  "src": "new-cases#1.1",
+  "line": "a burger, no bun, actually with a bun",
+  "input": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   },
+   {
+    "rawText": "a bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger",
+    "normalizedForm": "burger",
+    "brand": null
+   },
+   {
+    "rawText": "no bun",
+    "normalizedForm": "bun",
+    "brand": null
+   },
+   {
+    "rawText": "a bun",
+    "normalizedForm": "bun",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip impure-gap [actually] residue=with"
+  ]
+ },
+ {
+  "src": "new-cases#2.0",
+  "line": "a burger with no bun, actually with a bun",
+  "input": [
+   {
+    "rawText": "a burger with no bun",
+    "normalizedForm": "burger",
+    "brand": ""
+   },
+   {
+    "rawText": "with a bun",
+    "normalizedForm": "bun",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burger with a bun",
+    "normalizedForm": "burger",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "part [actually] -> \"a burger with a bun\""
+  ]
+ },
+ {
+  "src": "new-cases#3.0",
+  "line": "a big mac, scratch that, a mcchicken, and fries",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "a mcchicken",
+    "normalizedForm": "mcchicken",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mcchicken",
+    "normalizedForm": "mcchicken",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [scratch that] drop \"a big mac\""
+  ]
+ },
+ {
+  "src": "new-cases#3.1",
+  "line": "a big mac, scratch that, a mcchicken, and fries",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "a mcchicken",
+    "normalizedForm": "mcchicken",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a mcchicken",
+    "normalizedForm": "mcchicken",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [scratch that] drop \"a big mac\""
+  ]
+ },
+ {
+  "src": "new-cases#4.0",
+  "line": "a big mac, scratch that, a whopper, and fries",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "a whopper",
+    "normalizedForm": "whopper",
+    "brand": ""
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a whopper",
+    "normalizedForm": "whopper",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [scratch that] drop \"a big mac\""
+  ]
+ },
+ {
+  "src": "new-cases#4.1",
+  "line": "a big mac, scratch that, a whopper, and fries",
+  "input": [
+   {
+    "rawText": "a big mac",
+    "normalizedForm": "big mac",
+    "brand": "McDonald's"
+   },
+   {
+    "rawText": "a whopper",
+    "normalizedForm": "whopper",
+    "brand": "Burger King"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a whopper",
+    "normalizedForm": "whopper",
+    "brand": "Burger King"
+   },
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [scratch that] drop \"a big mac\""
+  ]
+ },
+ {
+  "src": "new-cases#5.0",
+  "line": "a coke, actually make that a pepsi",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": "Coca-Cola"
+   },
+   {
+    "rawText": "a pepsi",
+    "normalizedForm": "pepsi",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a pepsi",
+    "normalizedForm": "pepsi",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"a coke\""
+  ]
+ },
+ {
+  "src": "new-cases#5.1",
+  "line": "a coke, actually make that a pepsi",
+  "input": [
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": "Coca-Cola"
+   },
+   {
+    "rawText": "a pepsi",
+    "normalizedForm": "pepsi",
+    "brand": "Pepsi"
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a pepsi",
+    "normalizedForm": "pepsi",
+    "brand": "Pepsi"
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"a coke\""
+  ]
+ },
+ {
+  "src": "new-cases#6.0",
+  "line": "a chobani yogurt, scratch that, a greek yogurt",
+  "input": [
+   {
+    "rawText": "a chobani yogurt",
+    "normalizedForm": "yogurt",
+    "brand": "Chobani"
+   },
+   {
+    "rawText": "a greek yogurt",
+    "normalizedForm": "greek yogurt",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a greek yogurt",
+    "normalizedForm": "greek yogurt",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [scratch that] drop \"a chobani yogurt\""
+  ]
+ },
+ {
+  "src": "new-cases#7.0",
+  "line": "a coffee, make it a large",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a large",
+    "normalizedForm": "large",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   },
+   {
+    "rawText": "a large",
+    "normalizedForm": "large",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [make it]"
+  ]
+ },
+ {
+  "src": "new-cases#7.1",
+  "line": "a coffee, make it a large",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "make it a large",
+    "normalizedForm": "large coffee",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   },
+   {
+    "rawText": "make it a large",
+    "normalizedForm": "large coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [make it@j]"
+  ]
+ },
+ {
+  "src": "new-cases#7.2",
+  "line": "a coffee, make it a large",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "large coffee",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a large coffee",
+    "normalizedForm": "large coffee",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [make it] drop \"a coffee\""
+  ]
+ },
+ {
+  "src": "new-cases#8.0",
+  "line": "a latte, actually make it an iced one",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "an iced one",
+    "normalizedForm": "iced one",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": null
+   },
+   {
+    "rawText": "an iced one",
+    "normalizedForm": "iced one",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [make it,actually]"
+  ]
+ },
+ {
+  "src": "new-cases#8.1",
+  "line": "a latte, actually make it an iced one",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "make it an iced one",
+    "normalizedForm": "iced latte",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": null
+   },
+   {
+    "rawText": "make it an iced one",
+    "normalizedForm": "iced latte",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [actually,make it@j]"
+  ]
+ },
+ {
+  "src": "new-cases#8.2",
+  "line": "a latte, actually make it an iced one",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": "iced latte",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "an iced latte",
+    "normalizedForm": "iced latte",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [make it,actually] drop \"a latte\""
+  ]
+ },
+ {
+  "src": "new-cases#9.0",
+  "line": "two eggs, actually make it one",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "one",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "1 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [make it,actually] -> \"1 eggs\""
+  ]
+ },
+ {
+  "src": "new-cases#9.1",
+  "line": "two eggs, actually make it one",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "make it one",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "1 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [actually,make it@j] -> \"1 eggs\""
+  ]
+ },
+ {
+  "src": "new-cases#9.2",
+  "line": "two eggs, actually make it one",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "one egg",
+    "normalizedForm": "egg",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "1 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-qty [make it,actually] -> \"1 eggs\""
+  ]
+ },
+ {
+  "src": "new-cases#10.0",
+  "line": "chicken nuggets, maybe six, actually eight",
+  "input": [
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": ""
+   },
+   {
+    "rawText": "six",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eight",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": null
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually] -> \"8\""
+  ]
+ },
+ {
+  "src": "new-cases#10.1",
+  "line": "chicken nuggets, maybe six, actually eight",
+  "input": [
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": ""
+   },
+   {
+    "rawText": "maybe six",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "actually eight",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": null
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually@j] -> \"8\""
+  ]
+ },
+ {
+  "src": "new-cases#10.2",
+  "line": "chicken nuggets, maybe six, actually eight",
+  "input": [
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": ""
+   },
+   {
+    "rawText": "maybe six",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "eight",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "chicken nuggets",
+    "normalizedForm": "chicken nuggets",
+    "brand": null
+   },
+   {
+    "rawText": "8",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually] -> \"8\""
+  ]
+ },
+ {
+  "src": "new-cases#11.0",
+  "line": "wings, a dozen, no wait ten",
+  "input": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "a dozen",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "ten",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": null
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [no wait] -> \"10\""
+  ]
+ },
+ {
+  "src": "new-cases#11.1",
+  "line": "wings, a dozen, no wait ten",
+  "input": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "a dozen",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "no wait ten",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": null
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [no wait@j] -> \"10\""
+  ]
+ },
+ {
+  "src": "new-cases#12.0",
+  "line": "eggs, a couple of them, no, three",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "a couple of them",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "3 of them",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [<no>] -> \"3 of them\""
+  ]
+ },
+ {
+  "src": "new-cases#13.0",
+  "line": "rice, a cup and a half, actually two cups",
+  "input": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "a cup and a half",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two cups",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": null
+   },
+   {
+    "rawText": "2 cups",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually] -> \"2 cups\""
+  ]
+ },
+ {
+  "src": "new-cases#14.0",
+  "line": "steak, about 8 oz, actually 6",
+  "input": [
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   },
+   {
+    "rawText": "about 8 oz",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "6",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": null
+   },
+   {
+    "rawText": "6 oz",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually] -> \"6 oz\""
+  ]
+ },
+ {
+  "src": "new-cases#15.0",
+  "line": "pizza, two slices, scratch that, three slices",
+  "input": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "three slices",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "pizza",
+    "normalizedForm": "pizza",
+    "brand": null
+   },
+   {
+    "rawText": "3 slices",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [scratch that] -> \"3 slices\""
+  ]
+ },
+ {
+  "src": "new-cases#16.0",
+  "line": "eggs, two of them, no wait three of them",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "two of them",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "three of them",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "3 of them",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [no wait] -> \"3 of them\""
+  ]
+ },
+ {
+  "src": "new-cases#17.0",
+  "line": "a turkey sandwich, actually make that ham",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "ham",
+    "normalizedForm": "ham",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": null
+   },
+   {
+    "rawText": "ham",
+    "normalizedForm": "ham",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#17.1",
+  "line": "a turkey sandwich, actually make that ham",
+  "input": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "ham",
+    "normalizedForm": "ham sandwich",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a turkey sandwich",
+    "normalizedForm": "turkey sandwich",
+    "brand": null
+   },
+   {
+    "rawText": "ham",
+    "normalizedForm": "ham sandwich",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#18.0",
+  "line": "oatmeal with blueberries, actually make that strawberries",
+  "input": [
+   {
+    "rawText": "oatmeal with blueberries",
+    "normalizedForm": "oatmeal with blueberries",
+    "brand": ""
+   },
+   {
+    "rawText": "strawberries",
+    "normalizedForm": "strawberries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "oatmeal with blueberries",
+    "normalizedForm": "oatmeal with blueberries",
+    "brand": null
+   },
+   {
+    "rawText": "strawberries",
+    "normalizedForm": "strawberries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: t is a dish with a part phrase"
+  ]
+ },
+ {
+  "src": "new-cases#18.1",
+  "line": "oatmeal with blueberries, actually make that strawberries",
+  "input": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": ""
+   },
+   {
+    "rawText": "blueberries",
+    "normalizedForm": "blueberries",
+    "brand": ""
+   },
+   {
+    "rawText": "strawberries",
+    "normalizedForm": "strawberries",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "oatmeal",
+    "normalizedForm": "oatmeal",
+    "brand": null
+   },
+   {
+    "rawText": "strawberries",
+    "normalizedForm": "strawberries",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that,actually] drop \"blueberries\""
+  ]
+ },
+ {
+  "src": "new-cases#19.0",
+  "line": "a vanilla latte, actually make it caramel",
+  "input": [
+   {
+    "rawText": "a vanilla latte",
+    "normalizedForm": "vanilla latte",
+    "brand": ""
+   },
+   {
+    "rawText": "caramel",
+    "normalizedForm": "caramel",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a vanilla latte",
+    "normalizedForm": "vanilla latte",
+    "brand": null
+   },
+   {
+    "rawText": "caramel",
+    "normalizedForm": "caramel",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#19.1",
+  "line": "a vanilla latte, actually make it caramel",
+  "input": [
+   {
+    "rawText": "a vanilla latte",
+    "normalizedForm": "vanilla latte",
+    "brand": ""
+   },
+   {
+    "rawText": "caramel",
+    "normalizedForm": "caramel latte",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a vanilla latte",
+    "normalizedForm": "vanilla latte",
+    "brand": null
+   },
+   {
+    "rawText": "caramel",
+    "normalizedForm": "caramel latte",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#20.0",
+  "line": "a latte, make it decaf",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "decaf",
+    "normalizedForm": "decaf latte",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": null
+   },
+   {
+    "rawText": "decaf",
+    "normalizedForm": "decaf latte",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#20.1",
+  "line": "a latte, make it decaf",
+  "input": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": ""
+   },
+   {
+    "rawText": "decaf",
+    "normalizedForm": "decaf",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a latte",
+    "normalizedForm": "latte",
+    "brand": null
+   },
+   {
+    "rawText": "decaf",
+    "normalizedForm": "decaf",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#21.0",
+  "line": "a chicken burrito, scratch that, steak",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak burrito",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": null
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak burrito",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#21.1",
+  "line": "a chicken burrito, scratch that, steak",
+  "input": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a chicken burrito",
+    "normalizedForm": "chicken burrito",
+    "brand": null
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: bare j vs determiner-led t"
+  ]
+ },
+ {
+  "src": "new-cases#22.0",
+  "line": "a homemade pizza with pepperoni, no wait, mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": ""
+   },
+   {
+    "rawText": "pepperoni",
+    "normalizedForm": "pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a homemade pizza",
+    "normalizedForm": "homemade pizza",
+    "brand": null
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": null
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [no wait] drop \"pepperoni\""
+  ]
+ },
+ {
+  "src": "new-cases#22.1",
+  "line": "a homemade pizza with pepperoni, no wait, mushrooms, two slices",
+  "input": [
+   {
+    "rawText": "a homemade pizza with pepperoni",
+    "normalizedForm": "homemade pizza with pepperoni",
+    "brand": ""
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": ""
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a homemade pizza with pepperoni",
+    "normalizedForm": "homemade pizza with pepperoni",
+    "brand": null
+   },
+   {
+    "rawText": "mushrooms",
+    "normalizedForm": "mushrooms",
+    "brand": null
+   },
+   {
+    "rawText": "two slices",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: t is a dish with a part phrase"
+  ]
+ },
+ {
+  "src": "new-cases#23.0",
+  "line": "a burrito bowl i made with rice and chicken, actually steak",
+  "input": [
+   {
+    "rawText": "a burrito bowl",
+    "normalizedForm": "burrito bowl",
+    "brand": ""
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burrito bowl",
+    "normalizedForm": "burrito bowl",
+    "brand": null
+   },
+   {
+    "rawText": "rice",
+    "normalizedForm": "rice",
+    "brand": null
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": null
+   },
+   {
+    "rawText": "steak",
+    "normalizedForm": "steak",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: weak marker [actually]"
+  ]
+ },
+ {
+  "src": "new-cases#24.0",
+  "line": "eggs and bacon, no wait, eggs and sausage",
+  "input": [
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon",
+    "brand": ""
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "sausage",
+    "normalizedForm": "sausage",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "bacon",
+    "normalizedForm": "bacon",
+    "brand": null
+   },
+   {
+    "rawText": "eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "sausage",
+    "normalizedForm": "sausage",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "restate-replace [no wait] drop \"eggs\""
+  ]
+ },
+ {
+  "src": "new-cases#25.0",
+  "line": "a beer, no wait, two of them",
+  "input": [
+   {
+    "rawText": "a beer",
+    "normalizedForm": "beer",
+    "brand": ""
+   },
+   {
+    "rawText": "two of them",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 beer",
+    "normalizedForm": "beer",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [no wait] -> \"2 beer\""
+  ]
+ },
+ {
+  "src": "new-cases#26.0",
+  "line": "fries, a large, no wait a medium",
+  "input": [
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": ""
+   },
+   {
+    "rawText": "a large",
+    "normalizedForm": "large",
+    "brand": ""
+   },
+   {
+    "rawText": "a medium",
+    "normalizedForm": "medium",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "fries",
+    "normalizedForm": "fries",
+    "brand": null
+   },
+   {
+    "rawText": "a large",
+    "normalizedForm": "large",
+    "brand": null
+   },
+   {
+    "rawText": "a medium",
+    "normalizedForm": "medium",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [no wait]"
+  ]
+ },
+ {
+  "src": "new-cases#27.0",
+  "line": "a whiskey, make it another",
+  "input": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": ""
+   },
+   {
+    "rawText": "another",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": null
+   },
+   {
+    "rawText": "another",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip addition [make it]"
+  ]
+ },
+ {
+  "src": "new-cases#27.1",
+  "line": "a whiskey, make it another",
+  "input": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": ""
+   },
+   {
+    "rawText": "make it another",
+    "normalizedForm": "whiskey",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a whiskey",
+    "normalizedForm": "whiskey",
+    "brand": null
+   },
+   {
+    "rawText": "make it another",
+    "normalizedForm": "whiskey",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip addition [make it@j]"
+  ]
+ },
+ {
+  "src": "new-cases#28.0",
+  "line": "a chipotle bowl, scratch that, a burrito, and chips",
+  "input": [
+   {
+    "rawText": "a chipotle bowl",
+    "normalizedForm": "bowl",
+    "brand": "Chipotle"
+   },
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a burrito",
+    "normalizedForm": "burrito",
+    "brand": "Chipotle"
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [scratch that] drop \"a chipotle bowl\""
+  ]
+ },
+ {
+  "src": "new-cases#29.0",
+  "line": "a bowl of cereal, no wait, two bowls",
+  "input": [
+   {
+    "rawText": "a bowl of cereal",
+    "normalizedForm": "cereal",
+    "brand": ""
+   },
+   {
+    "rawText": "two bowls",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "2 bowls of cereal",
+    "normalizedForm": "cereal",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [no wait] -> \"2 bowls of cereal\""
+  ]
+ },
+ {
+  "src": "new-cases#30.0",
+  "line": "ice cream, a scoop, wait no, two scoops",
+  "input": [
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": ""
+   },
+   {
+    "rawText": "a scoop",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "two scoops",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "ice cream",
+    "normalizedForm": "ice cream",
+    "brand": null
+   },
+   {
+    "rawText": "2 scoops",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [wait no] -> \"2 scoops\""
+  ]
+ },
+ {
+  "src": "new-cases#31.0",
+  "line": "a sandwich and chips, actually no chips",
+  "input": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": ""
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   },
+   {
+    "rawText": "no chips",
+    "normalizedForm": "chips",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a sandwich",
+    "normalizedForm": "sandwich",
+    "brand": null
+   },
+   {
+    "rawText": "chips",
+    "normalizedForm": "chips",
+    "brand": null
+   },
+   {
+    "rawText": "no chips",
+    "normalizedForm": "chips",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip negated j (row 3's)"
+  ]
+ },
+ {
+  "src": "new-cases#32.0",
+  "line": "two eggs, scratch that, three, with toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "toast",
+    "normalizedForm": "toast",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [scratch that] -> \"3 eggs\""
+  ]
+ },
+ {
+  "src": "new-cases#32.1",
+  "line": "two eggs, scratch that, three, with toast",
+  "input": [
+   {
+    "rawText": "two eggs",
+    "normalizedForm": "eggs",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "with toast",
+    "normalizedForm": "toast",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 eggs",
+    "normalizedForm": "eggs",
+    "brand": null
+   },
+   {
+    "rawText": "with toast",
+    "normalizedForm": "toast",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [scratch that] -> \"3 eggs\""
+  ]
+ },
+ {
+  "src": "new-cases#33.0",
+  "line": "a salad with chicken, make that shrimp, and a coke",
+  "input": [
+   {
+    "rawText": "a salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "shrimp",
+    "normalizedForm": "shrimp",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a salad with chicken",
+    "normalizedForm": "salad with chicken",
+    "brand": null
+   },
+   {
+    "rawText": "shrimp",
+    "normalizedForm": "shrimp",
+    "brand": null
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip swap: t is a dish with a part phrase"
+  ]
+ },
+ {
+  "src": "new-cases#33.1",
+  "line": "a salad with chicken, make that shrimp, and a coke",
+  "input": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": ""
+   },
+   {
+    "rawText": "chicken",
+    "normalizedForm": "chicken",
+    "brand": ""
+   },
+   {
+    "rawText": "shrimp",
+    "normalizedForm": "shrimp",
+    "brand": ""
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a salad",
+    "normalizedForm": "salad",
+    "brand": null
+   },
+   {
+    "rawText": "shrimp",
+    "normalizedForm": "shrimp",
+    "brand": null
+   },
+   {
+    "rawText": "a coke",
+    "normalizedForm": "coke",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [make that] drop \"chicken\""
+  ]
+ },
+ {
+  "src": "new-cases#34.0",
+  "line": "a coffee, make it a double, with oat milk",
+  "input": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": ""
+   },
+   {
+    "rawText": "a double",
+    "normalizedForm": "double",
+    "brand": ""
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a coffee",
+    "normalizedForm": "coffee",
+    "brand": null
+   },
+   {
+    "rawText": "a double",
+    "normalizedForm": "double",
+    "brand": null
+   },
+   {
+    "rawText": "oat milk",
+    "normalizedForm": "oat milk",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "skip size-word j [make it]"
+  ]
+ },
+ {
+  "src": "new-cases#35.0",
+  "line": "a smoothie, no wait, a protein shake, about 16 oz",
+  "input": [
+   {
+    "rawText": "a smoothie",
+    "normalizedForm": "smoothie",
+    "brand": ""
+   },
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": ""
+   },
+   {
+    "rawText": "about 16 oz",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "a protein shake",
+    "normalizedForm": "protein shake",
+    "brand": null
+   },
+   {
+    "rawText": "about 16 oz",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "SWAP [no wait] drop \"a smoothie\""
+  ]
+ },
+ {
+  "src": "new-cases#36.0",
+  "line": "a hot dog, no, two, no wait, three",
+  "input": [
+   {
+    "rawText": "a hot dog",
+    "normalizedForm": "hot dog",
+    "brand": ""
+   },
+   {
+    "rawText": "two",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "three",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "3 hot dog",
+    "normalizedForm": "hot dog",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty [<no>] -> \"2 hot dog\"",
+   "qty [no wait] -> \"3 hot dog\""
+  ]
+ },
+ {
+  "src": "new-cases#37.0",
+  "line": "wings, like 6, actually 10",
+  "input": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": ""
+   },
+   {
+    "rawText": "like 6",
+    "normalizedForm": "",
+    "brand": ""
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "",
+    "brand": ""
+   }
+  ],
+  "expectItems": [
+   {
+    "rawText": "wings",
+    "normalizedForm": "wings",
+    "brand": null
+   },
+   {
+    "rawText": "10",
+    "normalizedForm": "",
+    "brand": null
+   }
+  ],
+  "notes": [
+   "qty-on-qty [actually] -> \"10\""
+  ]
+ }
+]

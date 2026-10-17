@@ -251,6 +251,7 @@ export async function POST(req: NextRequest) {
     const { lookupSegmentationCache, writeSegmentationCache } = await import('@/lib/nlp/segmentation-cache');
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
+    const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
     const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
     const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
@@ -438,6 +439,17 @@ export async function POST(req: NextRequest) {
         // A homemade dish named with its parts ("a burrito bowl i made with rice, beans and chicken") bills the dish
         // only; that pass runs after the negated drop and BEFORE the fold: "a homemade pizza with pepperoni and
         // mushrooms, two slices" -> the fold can only attach "two slices" once the parts are gone.
+        // A spoken self-correction ("four pancakes, wait no, three pancakes") bills the corrected value only. It runs FIRST:
+        // a corrected quantity must exist before the fold reads it, and a restated item must be gone before the dish and
+        // drink passes count parts. The cache write above keeps the uncorrected split.
+        const sc = resolveSelfCorrections(lineKey, items);
+        items = sc.items;
+        if (sc.corrections.length > 0) {
+          logger.info('nlp_parse.self_correction', {
+            count: sc.corrections.length,
+            kinds: sc.corrections.map(c => c.kind),
+          });
+        }
         const np = dropNegatedParts(lineKey, items);
         items = np.items;
         if (np.drops.length > 0) {
