@@ -7,6 +7,8 @@
  * correction word replaces the previous item ONLY after `make that` / `make it` / `scratch that` / `wait no` /
  * `no wait` / a lone `no` comma piece. A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
  * quantity, restates the same food or swaps a part, but never swaps one food for another.
+ * The weak markers also include `no i mean`, `oh wait i mean`, `wait i mean`, `oh wait`, `i meant` and `correction`:
+ * `no i mean` left the `no` as an impure gap word (so both values billed), and `correction` was absent.
  *
  * KINDS (each correction names the ORIGINAL index of the item it acted on).
  * - qty: a quantity-only item after the marker ("a bagel, actually make that two") rewrites the previous item's
@@ -66,6 +68,7 @@ const PREPS = new Set(['on', 'with', 'in']);
 const STRONG = [
   'wait no', 'no wait', 'scratch that', 'make that', 'make it', 'i mean', 'well actually', 'actually', 'sorry',
   'more like', 'but i only had', 'i only had',
+  'no i mean', 'oh wait i mean', 'wait i mean', 'oh wait', 'i meant', 'correction',
 ].map(m => m.split(' '));
 const SWAP_OK = new Set(['wait no', 'no wait', 'scratch that', 'make that', 'make it', '<no>']);
 const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more']);

@@ -63,3 +63,37 @@ describe('resolveSelfCorrections - r3 fixture', () => {
     expect(out.corrections).toEqual([]);
   });
 });
+
+describe('resolveSelfCorrections - no i mean / correction markers', () => {
+  const nf = (r: string) => r.replace(/^(a|an|two|three)\s+/, '');
+  const run = (line: string, raws: string[]) =>
+    resolveSelfCorrections(canonicalizeSegLine(line), raws.map(r => ({ rawText: r, normalizedForm: nf(r) }))).items.map(
+      x => x.rawText,
+    );
+
+  test.each([
+    ['a pound of pasta, no i mean a cup of pasta', ['a pound of pasta', 'a cup of pasta'], ['1 cup of pasta']],
+    ['a cup of rice, correction, a cup and a half', ['a cup of rice', 'a cup and a half'], ['1.5 cup of rice']],
+    ['two eggs, no i mean three eggs', ['two eggs', 'three eggs'], ['3 eggs']],
+    ['three tacos, oh wait i mean two tacos', ['three tacos', 'two tacos'], ['2 tacos']],
+    ['a latte, correction, a large latte', ['a latte', 'a large latte'], ['a large latte']],
+    ['a smoothie, correction, two smoothies', ['a smoothie', 'two smoothies'], ['2 smoothie']],
+  ])('corrects: %s', (line, raws, want) => {
+    expect(run(line, raws)).toEqual(want);
+  });
+
+  test.each([
+    ['a coffee, oh wait, also a muffin', ['a coffee', 'also a muffin']],
+    ['a coffee, oh wait, also a muffin', ['a coffee', 'a muffin']],
+    ['a burger, oh wait and fries', ['a burger', 'fries']],
+    ['eggs, oh wait, i forgot the toast', ['eggs', 'toast']],
+    ['oatmeal, i meant to say with berries', ['oatmeal', 'berries']],
+    ['a salad, correction: plus a soda', ['a salad', 'a soda']],
+    ['two eggs, correction, and toast', ['two eggs', 'toast']],
+    ['a sandwich, oh wait i mean a wrap', ['a sandwich', 'a wrap']],
+    ['pizza, i meant pasta', ['pizza', 'pasta']],
+    ['i had two eggs, no i mean toast and eggs', ['two eggs', 'toast and eggs']],
+  ])('unchanged: %s', (line, raws) => {
+    expect(run(line, raws)).toEqual(raws);
+  });
+});
