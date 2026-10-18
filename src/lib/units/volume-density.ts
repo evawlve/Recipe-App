@@ -240,6 +240,41 @@ const BEVERAGE_RE = new RegExp([
 ].join(''), 'i');
 
 /**
+ * POURABLE DAIRY AND COLA BRAND NAMES — the third slice of "foods that pour"
+ * (route 5, 2026-10-17). Neither LIQUID_RE nor BEVERAGE_RE reaches `half and
+ * half`, `heavy / whipping / light cream` or a cola brand name, so they billed
+ * the dry 0.5 g/ml: `a tablespoon of half and half` 7.5 g, `1 cup of coke` 120 g
+ * (live, x12). They pour at ~1 g/ml like the rest of the class.
+ *
+ * THE MEASUREMENT. Over the 4,102-seed coverage corpus 23 move, ALL solid ->
+ * beverage; over the 2,094 distinct candidate names of the record-side census
+ * 69 move, 0 false. The "Zero Sugar" names go 204 -> 240 g/cup (the base read
+ * the sugar density), not x2.
+ *
+ * WHY THE LAST SLOT. Like BEVERAGE_RE this is checked after liquid and paste,
+ * so only `solid` -> `beverage` can move and NO NUMBER moves (the module
+ * header's rule): the beverage class bills exactly what `liquid` bills.
+ *
+ * WHY `creamer` IS ABSENT. Powdered creamers carry the same name as liquid
+ * ones: `Cofee creamer` is 500 kcal/100 g, and billing it at 1 g/ml took it
+ * 600 -> 1200 kcal in the r0 cut.
+ *
+ * WHY `single` / `double` cream ARE ABSENT. `Double Cream Brie` and `Double
+ * Cream Gouda` are cheeses.
+ *
+ * THE EXCLUDE LIST blocks the made-up false positives the tokens would
+ * otherwise sweep in: Coke Glazed Ham, Dr Pepper Ribs, Sprite Gummies, Heavy
+ * Cream Biscuits, Half and Half Pizza (and ice cream, pie, cake, powdered).
+ *
+ * PRE-EXISTING TRAPS THE CENSUS SURFACED, NOT FIXED HERE: "...Powdered Coffee
+ * Creamer" already bills 1 g/ml through BEVERAGE_RE's `coffee`; "Ultra
+ * Pasteurized" reads PASTE (the `paste` substring); "Coke Float" reads the oats
+ * density (`oat` in "Float").
+ */
+const POUR_EXTRA_RE = /\bhalf[\s-]*(?:and|&|n'?|'n'?)[\s-]*half\b|\b(?:heavy|whipping|light|table)\s+cream\b|\b(?:coke|pepsi|sprite|dr\.?\s*pepper|mountain dew|fanta|7\s*up)\b/i;
+const POUR_EXTRA_EXCLUDE_RE = /\b(?:powder(?:ed)?|ice cream|whipped|float|cheese|pie|cake|cookies?|bars?|glazed?|wings?|ribs?|pulled|pork|chicken|ham|gumm(?:y|ies)|candy|biscuits?|pizza|flavou?r(?:ed)?|bundt)\b/i;
+
+/**
  * Dense pastes and spreads, ~1 g/ml rather than the dry-goods default.
  * Verbatim from the OFF path — this is the list that made `2 tbsp peanut
  * butter` bill ~32 g instead of 15 g.
@@ -290,7 +325,7 @@ export function resolveVolumeGrams(...names: Array<string | null | undefined>): 
     // be a `solid`. That ordering is the whole blast-radius argument for B1b —
     // see BEVERAGE_RE. `Port Wine Cheese Spread` is the case it protects: it
     // carries a beverage token and is a spread.
-    const isBeverage = !isLiquid && !isPaste && BEVERAGE_RE.test(name);
+    const isBeverage = !isLiquid && !isPaste && (BEVERAGE_RE.test(name) || (POUR_EXTRA_RE.test(name) && !POUR_EXTRA_EXCLUDE_RE.test(name)));
     /** Pours at ~1 g/ml, by either vocabulary. */
     const isPourable = isLiquid || isBeverage;
 
