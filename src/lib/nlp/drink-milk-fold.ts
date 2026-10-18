@@ -22,6 +22,9 @@
  *   moved the serving onto corrupt powder panels (Matcha Latte 431 -> 953 kcal, London Fog 584 -> 1,120) and a
  *   milk appended to normalizedForm moved retrieval to worse records on 3 of 8 lines.
  *
+ * - Second use (S202 cloud-35 F7): an `and` milk followed by `for|in|into` (or `with` + a possessive) + a non-meal, non-time
+ *   word (`for my cereal`, `for the baby`) is a second use of the milk, so it is KEPT; with no such evidence it still folds.
+ *
  * PASS ORDER. Runs AFTER dropDishParts and BEFORE foldTrailingQuantityClauses (drop, dish, drink, fold,
  * fill). The SegmentationCache keeps the unfolded split.
  *
@@ -60,6 +63,9 @@ const MILK_MODS = new Set([
   'cashew', 'macadamia', 'pea', 'reduced', 'vanilla', 'unsweetened',
 ]);
 const MEASURE_LEADS = ['a', 'an', 'one', 'two', 'some', 'glass', 'cup', 'splash'];
+const MEAL_WORDS = new Set(['breakfast', 'brunch', 'lunch', 'dinner', 'supper', 'snack', 'snacks', 'dessert']);
+const USE_DET = new Set(['my', 'the', 'a', 'his', 'her', 'their', 'our', 'your', 'some']);
+const NOT_A_USE = new Set([...MEAL_WORDS, 'morning', 'today', 'tonight', 'afternoon', 'evening', 'later', 'now', 'here', 'go', 'side']);
 
 function isMilkDrink(it: Item): boolean {
   const all = words(it.normalizedForm || it.rawText);
@@ -141,6 +147,20 @@ export function foldDrinkMilk<T extends Item>(lineKey: string, items: T[]): { it
     const measured =
       MEASURE_LEADS.includes(jLead) && !milkWords({ rawText: items[j].rawText.replace(/^\s*(a|an|some)\s+/i, '') });
     if (!(gap === 'with' || gap === 'w' || gap === 'made with' || (gap === 'and' && !measured))) continue;
+    // S202 (cloud-35 F7): an `and` milk is KEPT only on positive second-use evidence after it:
+    // `for|in|into` (+ optional possessive/article) + a non-meal/time word, or `with` + a possessive + a non-meal word.
+    if (gap === 'and') {
+      const nx = ptoks[sj.end];
+      if (nx && nx.piece === ptoks[sj.start].piece) {
+        let q = sj.end + 1;
+        const poss = USE_DET.has(ptoks[q]?.w ?? '') && ptoks[q]?.piece === nx.piece;
+        if (poss) q++;
+        const obj = ptoks[q]?.piece === nx.piece ? ptoks[q]?.w : undefined;
+        const use = (['for', 'in', 'into'].includes(nx.w) && !!obj && !NOT_A_USE.has(obj))
+          || (nx.w === 'with' && poss && !!obj && !NOT_A_USE.has(obj));
+        if (use) continue;
+      }
+    }
 
     // DROP ONLY: the drink item is left exactly as the segmenter emitted it.
     drop.add(j);
