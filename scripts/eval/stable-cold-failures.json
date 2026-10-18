@@ -8,7 +8,7 @@
   "displayName": "stable cold failures",
   "measuredOn": "COLD (run-eval.ts --nocache)",
   "ownerDoc": "mobile:sync-docs/reports/2026-08-18_plan-4-three-arms-and-two-deploys.md",
-  "writtenAt": "2026-08-19T21:20:00.000Z",
+  "writtenAt": "2026-10-18T16:08:01.120Z",
   "confirmedAgainst": {
     "buildId": "YMSRQ2JmMksDeDnBfWkti",
     "date": "2026-09-15",
@@ -62,12 +62,6 @@
       "category": "serving_unit",
       "cause": "SERVING",
       "reason": "Bare 'pepper jack' bills 2.5 g against an [18, 40] band. The winner off_0858815007307's ONLY serving label is the degenerate '100 g (100 g)' placeholder, which is billed and then CAPPED 100 -> 2.5 g by the spice lexicon matching the contained 'pepper' token: label_serving_default sits in plain CAP_TIERS, while the head-gate fix protects only bare_label_serving. NOTE: the golden-set note's premise of a 'genuine 28 g slice label' is FALSE for this particular winner."
-    },
-    {
-      "id": "n-mq-41",
-      "category": "match_quality",
-      "cause": "PICK",
-      "reason": "The documented #18 brand-bearing chain regression: 'noodles and company pad thai' bills a brandless retail dry-noodle record (off_4099100064773, 127.5 g via bare_name_sibling_serving) instead of fs_81276 [Noodles & Company]. fs_81276 now carries NULL per-100g calories and a gramless serving, which plausibly handicaps it at admission/scoring. The 2026-07-25 warm recovery was a pure cache eviction, not a retrieval fix, which is exactly why the case is still red cold."
     },
     {
       "id": "n-cook-03",
@@ -191,6 +185,14 @@
       "leftOn": "2026-10-07",
       "fixedBy": "NOT FIXED — RECLASSIFIED to knownIssue on Diego's call (default (a), mobile sync-docs/reports/2026-10-07_s60-four-words-and-the-next-briefs.md §Needs Diego 1, taken in reports/2026-10-07_s61-wave-one-lands-the-defaults-and-wave-two.md §2). It still fails every cold run on fs_137908742 at 255 g / 340 kcal; it left because a knownIssue case is the OTHER population (claim stable-cold-failure-set-is-data checks the disjointness), and its watch is now knownIssueDrift against known-issue-baseline-cold.json.",
       "previousReason": "JOINED 2026-09-15 (Lane A S51) ON ONE BUILD'S EVIDENCE -- re-census it at the next build before treating it as settled. The HARD control for the composite->component class (its golden-set note: it must keep passing while n-mq-38..41 are fixed): 'chipotle chicken burrito bowl' now resolves fs_137908742 \"Chipotle Chicken Burrito Bowl\" at 255 g / 340 kcal, tier fs_default_serving, against total.calories [400, 1000] (grams [250, 600] holds). CROSS-BUILD COLD CENSUS over scripts/eval/results/eval-*.json (summary.noCache === true), 2026-09-15: present in 205 cold runs, 3 of them HTTP-401 TRANSPORT rows on JVSJtRRqnjbw23d9sIIjF. off_0793618109820 \"Chipotle Chicken Burrito Bowl\" at 350 g / 605.5 kcal PASSED 199 of 199 over 66 named builds (2026-08-02 to 2026-09-12T14:41Z); fs_137908742 FAILS 3 of 3 on YMSRQ2JmMksDeDnBfWkti with no within-build split, and ALSO fails the WARM nightly eval-2026-09-15T11-35-42-028Z, whose two real failures are this case and n-prose-10 (65 g). One failing winner and no pass on its failing build is the member shape, and the gate needs it rostered. CAVEAT: that census shape -- 199 of 199 on one record, then a NEW record failing 3 of 3 in the same 2026-09-12/09-15 gap -- is also n-supp-22's, and n-supp-22 is a code regression (#438), so the shape alone does not separate drift from code. S50 found MappingEventLog normalizedForm identical before and after #438 and master's src returning the same record on an identical draw. READ-ONLY DB READ, 2026-09-15T17:23Z: FatSecretFood has 0 rows with fsId '137908742', so the winning record is not persisted -- consistent with observed.source reading ai_estimated on both arms while n-supp-22's fs_38893 reads fatsecret. FoodMapping has no row pointing at fsId '137908742' and exactly one pointing at offBarcode '0793618109820': key 'bowl burrito chicken chipotle', source openfoodfacts, usedCount 442, created 2026-07-24 15:16:18. The 2026-09-15 warm nightly nonetheless resolved fs_137908742, so it did not serve that row; why is not settled by this read. Warm arm (summary.noCache !== true): off_0793618109820 passes 120 of 120, fs_137908742 fails 1 of 1. Re-derive: python3 -c \"import json,glob,collections;C=collections.Counter();[C.update([((r.get('observed') or {}).get('foodId'),r.get('pass'))]) for f in glob.glob('scripts/eval/results/eval-*.json') for d in [json.load(open(f))] if (d.get('summary') or {}).get('noCache') is not True for r in (d.get('results') or []) if r.get('id')=='n-mq-42'];print(dict(C))\""
+    },
+    {
+      "id": "n-mq-41",
+      "category": "match_quality",
+      "cause": "PICK",
+      "leftOn": "2026-10-18",
+      "fixedBy": "PR 505 (S202 route 9: full coverage reaches the specialty and `&`/`and` compound branches of deriveMustHaveTokens()). MEASURED same-snapshot, --variant gate-backstop, one pool replayed on 8e9c54e1 (live before) and e6132026 (master): the strict token filter's admitted set narrows 23 → 2 and the winner moves off_4099100064773 'Pad Thai Noodles' (brandless dry noodles, 127.5 g) → fs_81276 'Pad Thai (Small)' [Noodles & Company] (260 g) — the record this case names. Left the set on MGR's 2026-10-18 two-arm cold golden (base 8e9c54e1 vs branch e6132026, exit 0, 'n-mq-41 FIXED'); deployed as RINU1mNcWLNU04B0LYEfB. Artefacts: snapshots/s202/row-mq41/.",
+      "previousReason": "The documented #18 brand-bearing chain regression: 'noodles and company pad thai' bills a brandless retail dry-noodle record (off_4099100064773, 127.5 g via bare_name_sibling_serving) instead of fs_81276 [Noodles & Company]. fs_81276 now carries NULL per-100g calories and a gramless serving, which plausibly handicaps it at admission/scoring. The 2026-07-25 warm recovery was a pure cache eviction, not a retrieval fix, which is exactly why the case is still red cold."
     }
   ],
   "_membershipMethodBlindSpot": "THE MEMBERSHIP TEST IS BLIND TO MECHANISM (2). Membership is measured as the exact INTERSECTION over three RESTARTED cold runs on ONE build. That distinguishes a per-request draw (mechanism 1) from a stable failure, because a draw re-rolls between restarts. It CANNOT distinguish a retrieval tie that re-rolls only on a Typesense rebuild (mechanism 2): within one build such a tie is parked on one side, so three restarted runs agree 3/3 and the case looks exactly like a stable member. n-prot-04 was proposed as member #10 twice on that evidence -- 2026-08-11 (§10u, correctly adjudicated a rotator) and 2026-09-04 (Lane A S37, 3/3 on the live build). The test that settles mechanism 2 is a CROSS-BUILD census of scripts/eval/results/eval-*.json, not more runs on one build. Re-derive for any candidate: count the runs where the case failed, and group them by observed.foodId -- a tie shows several winners of which only some fail."
