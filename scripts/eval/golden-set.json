@@ -7908,6 +7908,174 @@
         551
       ],
       "notes": "A8 row 5 ride-along (2026-08-26, Lane A) — count-units report §7 A. Two unit vocabularies had drifted apart: 24 of the 80 AMBIGUOUS_UNITS members were unknown to normalizeUnitToken(), and getDefaultCountServing()'s last-word lookup never singularized, so it resolved only the plural forms a seed happened to enumerate by hand. `chicken wings` was enumerated and worked; `buffalo wings`, `hot wings`, `boneless wings` and bare `wings` returned null and fell to the 100 g-per-piece default. The singular fallback is scoped to COUNT_NOUN_UNITS because unscoped it collided across foods (`potato skins` -> the chicken-skin seed, `tic tac mints` -> the mint HERB seed at 30 g). Owner: KindaHealthyMobile sync-docs/reports/2026-08-26_a8-row-5-the-product-name-survives-the-parser.md. Pre-fix cold on TvP5v2f_NE14Xmztp92nS: off_0041500001319 \"Buffalo wings\", 1008 g / 1683.4 kcal — 84 g per wing, the no-serving default. On UDkzJe8x192NZ7w5Kj8TH: the same record at 408 g / 681.4 kcal, i.e. 12 x the 34 g `chicken wing` seed. Band is 408 +/-35%; the identity is unchanged and deliberately unasserted, because this case exists to pin the PORTION. Sibling `3 chicken wings` is NOT a regression target: it resolved 102 g on BOTH builds, because `chicken wings` is one of the plurals the seed enumerated by hand. expectName is carried only to keep the corpus invariant that every case names a right answer; it is NOT this case's discriminator and passes on both arms — the record is identical either side and only the PORTION moves."
+    },
+    {
+      "id": "n-r3-01",
+      "category": "identity_descriptor",
+      "text": "homemade fried rice",
+      "expectName": [
+        [
+          "fried rice"
+        ]
+      ],
+      "forbidName": [
+        [
+          "pasta"
+        ],
+        [
+          "noodle"
+        ]
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 499: `homemade` was a brand-lexicon entry AND a required token, so `homemade fried rice` resolved to 'homemade made without egg cooked pasta'. Seat cross-snapshot: → FRIED RICE."
+    },
+    {
+      "id": "n-r3-02",
+      "category": "self_correction",
+      "text": "a pound of pasta, no i mean a cup of pasta",
+      "expectName": [
+        [
+          "pasta"
+        ]
+      ],
+      "grams": [
+        90,
+        260
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 501: `no i mean` is a STRONG correction marker; before it the line billed 454 g + 106 g. items[0] is the corrected item (1 cup), so the gram band fails if the pound is billed first."
+    },
+    {
+      "id": "n-r3-03",
+      "category": "self_correction",
+      "text": "a cup of rice, correction, a cup and a half",
+      "expectName": [
+        [
+          "rice"
+        ]
+      ],
+      "grams": [
+        180,
+        340
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 501: `correction` is a STRONG marker; before it the line billed 164 g + a generic 'Cup' 180 g. Expected: one item, 1.5 cups of rice."
+    },
+    {
+      "id": "n-r3-04",
+      "category": "prepared_drink",
+      "text": "a latte",
+      "expectName": [
+        [
+          "latte"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          20,
+          120
+        ]
+      },
+      "grams": [
+        200,
+        400
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PRs 502+503: a powder panel (Latte 385 kcal/100 g) won at rank time, and a drink panel then billed its 100 g floor. 502 sorts > 150 kcal/100 g records below for a drink-head query (rank time only); 503 bills a bare prepared drink on a drink panel as a 240 g cup. Seat: Latte 26 kcal/100 g, 240 g."
+    },
+    {
+      "id": "n-r3-05",
+      "category": "prepared_drink",
+      "text": "a matcha latte",
+      "expectName": [
+        [
+          "matcha"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          20,
+          120
+        ]
+      },
+      "grams": [
+        200,
+        480
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 502: Matcha Latte 397 kcal/100 g (a powder panel) at 100 g → Matcha Latte (Tall) 50 kcal/100 g, 340 g. The rerank query can be an LLM canonical that dropped `latte`, so 502 also reads the raw line."
+    },
+    {
+      "id": "n-r3-06",
+      "category": "volume_density",
+      "text": "a tablespoon of half and half",
+      "expectName": [
+        [
+          "half"
+        ]
+      ],
+      "grams": [
+        12,
+        18
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 504: `Half and half` matched no pourable vocabulary and billed the dry 0.5 g/ml (7.5 g/tbsp). → 15 g."
+    },
+    {
+      "id": "n-r3-07",
+      "category": "volume_density",
+      "text": "1 cup of coke",
+      "expectName": [
+        [
+          "coke"
+        ],
+        [
+          "cola"
+        ]
+      ],
+      "grams": [
+        220,
+        260
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 504: cola brand names billed the dry 0.5 g/ml (1 cup = 120 g, 12 live events). → 240 g."
+    },
+    {
+      "id": "n-r3-08",
+      "category": "compound_head",
+      "text": "oat milk latte",
+      "expectName": [
+        [
+          "latte"
+        ]
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 505: the SPECIALTY branch of deriveMustHaveTokens() required only `oat`, so plain Oat Milk won. Full coverage now reaches that branch → Oat Milk Latte."
+    },
+    {
+      "id": "n-r3-09",
+      "category": "compound_head",
+      "text": "a coconut milk latte",
+      "expectName": [
+        [
+          "latte"
+        ]
+      ],
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 505: → a coconut-milk latte record instead of plain Coconut Milk 80 g (C68 run 10 flag)."
+    },
+    {
+      "id": "n-r3-10",
+      "category": "identity_dish",
+      "text": "a serving of lasagna",
+      "expectName": [
+        [
+          "lasagna"
+        ]
+      ],
+      "forbidName": [
+        [
+          "noodle"
+        ]
+      ],
+      "macros": {
+        "kcal100": [
+          90,
+          250
+        ]
+      },
+      "notes": "S202 round 3 golden pin (2026-10-18, seat C69; MGR route 21). Merge only AFTER the deploy that ships it is proven, so the morning cold golden gates the fix, not the case. NOT knownIssue. PR 506: a synonym rewrite renamed every lasagna line `lasagna noodles` before retrieval (50 g of dry pasta, 360 kcal/100 g). → prepared Lasagna 167 kcal/100 g. REQUIRES Diego's scp + restart of the box rules file before it can pass."
     }
   ]
 }
