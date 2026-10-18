@@ -42,7 +42,7 @@ export const COUNT_NOUN_UNITS = new Set(Object.keys(COUNT_NOUN_SINGULAR));
 
 // S202 (route 25): units a quantity HEDGE (`-ish`) or an abbreviating period may trail. ONE list, also read by
 // ingredient-line.ts's stripQuantityHedges().
-export const HEDGEABLE_UNIT_SOURCE = 'g|gr|gms?|grams?|oz|ounces?|lbs?|pounds?|kg|ml|cups?|tbsp|tsp';
+export const HEDGEABLE_UNIT_SOURCE = 'g|gr|gms?|grams?|oz|ounces?|lbs?|pounds?|kgs?|kilos?|ml|cups?|tbsp|tsp';
 const HEDGED_UNIT_RE = new RegExp(`^(${HEDGEABLE_UNIT_SOURCE})(?:[-\\s]?ish|\\.)$`);
 
 export function normalizeUnitToken(tok: string): NormalizedUnit {
@@ -55,7 +55,9 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'gms': 'g', 'gm': 'g', 'grm': 'g', 'grms': 'g', 'gr': 'g', 'grs': 'g', 'gramos': 'g', 'gramo': 'g',
     'oz': 'oz', 'ounce': 'oz', 'ounces': 'oz',
     'lb': 'lb', 'lbs': 'lb', 'pound': 'lb', 'pounds': 'lb',
-    'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg'
+    'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
+    // S202 (route 37): `a kilo` / `half a kilo` / Spanish `kilogramo`. Exact tokens only.
+    'kilo': 'kg', 'kilos': 'kg', 'kgs': 'kg', 'kilogramo': 'kg', 'kilogramos': 'kg'
   };
 
   if (massUnits[token]) {

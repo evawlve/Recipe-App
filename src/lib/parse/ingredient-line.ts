@@ -72,7 +72,7 @@ function resolvePackageMultipliers(line: string): string {
   //
   // Each guard alone is insufficient: (a) alone still corrupts "100g cans of tuna";
   // (b) alone still corrupts "2 15 oz canned tomatoes". Keep both.
-  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)(?:\s*[-x×*(]\s*|\s+)(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)\b/gi;
+  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)(?:\s*[-x×*(]\s*|\s+)(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kgs|kilo|kilos|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)\b/gi;
 
   return line.replace(packageRegex, (match, qty1Str, qty2Str, unit) => {
     const qty1 = parseFraction(qty1Str);
