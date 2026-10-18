@@ -60,6 +60,7 @@ import {
     AI_NUTRITION_HYDRATION_MAX_PER_REQUEST, MAPPING_ANALYSIS_TOP_N,
 } from './config';
 import { detectBrandInQuery } from './brand-detector';
+import { stripHomemadeDescriptor } from './homemade-descriptor';
 import { preserveDroppedBrand, brandReassertEvidence, repairDroppedBrand } from './quantity-word-brand';
 import { assessSubThresholdAdmission, RERANK_DECLINED_CONFIDENCE } from './sub-threshold-admission';
 import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-plausibility';
@@ -947,6 +948,22 @@ async function preflightIngredientLine(
             restored: modifierRepair.added,
         });
         baseName = modifierRepair.restored;
+    }
+
+    // S202 row 7(1a): `homemade` is a descriptor, not a brand or identity token (runs last so the
+    // retrieval query and the cache key move together to the bare dish).
+    const homemade = stripHomemadeDescriptor(
+        baseName,
+        rawLine,
+        options.brand?.trim() || detectBrandInQuery(rawLine).matchedBrand,
+    );
+    if (homemade.stripped) {
+        logger.info('mapping.homemade_descriptor_stripped', {
+            rawLine,
+            before: baseName,
+            after: homemade.baseName,
+        });
+        baseName = homemade.baseName;
     }
 
     return { done: false, parsed, baseName };
