@@ -97,3 +97,33 @@ describe('resolveSelfCorrections - no i mean / correction markers', () => {
     expect(run(line, raws)).toEqual(raws);
   });
 });
+
+describe('an addition is not a correction (S202 cloud-35 F3/F4)', () => {
+  const nf = (r: string) => r.replace(/^(a|an|the|two|three|four)\s+/, '');
+  const run = (line: string, raws: string[]) =>
+    resolveSelfCorrections(canonicalizeSegLine(line), raws.map(r => ({ rawText: r, normalizedForm: nf(r) }))).items.map(
+      x => x.rawText,
+    );
+
+  test.each([
+    ['a turkey sandwich, sorry, a ham sandwich too', ['a turkey sandwich', 'a ham sandwich']],
+    ['a turkey sandwich, actually a ham sandwich as well', ['a turkey sandwich', 'a ham sandwich']],
+    ['a turkey sandwich, wait no, a ham sandwich too', ['a turkey sandwich', 'a ham sandwich']],
+    ['a beef taco and 2 chicken tacos, sorry', ['a beef taco', '2 chicken tacos']],
+  ])('both billed: %s', (line, raws) => {
+    expect(run(line, raws)).toEqual(raws);
+  });
+
+  test.each([
+    ['two eggs, actually three eggs with extra cheese', ['two eggs', 'three eggs', 'extra cheese'], ['3 eggs', 'extra cheese']],
+    ['four pancakes, wait no, three pancakes and more syrup', ['four pancakes', 'three pancakes', 'more syrup'], ['3 pancakes', 'more syrup']],
+    ['four pancakes, wait no, three pancakes and some more syrup', ['four pancakes', 'three pancakes', 'syrup'], ['3 pancakes', 'syrup']],
+    ['two eggs and three eggs, sorry', ['two eggs', 'three eggs'], ['three eggs']],
+    ['two eggs and toast, three eggs actually', ['two eggs', 'toast', 'three eggs'], ['toast', 'three eggs']],
+    ['a turkey sandwich, make that a ham sandwich', ['a turkey sandwich', 'a ham sandwich'], ['a ham sandwich']],
+    ['a chicken burrito, i mean a steak burrito', ['a chicken burrito', 'a steak burrito'], ['a steak burrito']],
+    ['a turkey sandwich, sorry, a ham sandwich', ['a turkey sandwich', 'a ham sandwich'], ['a ham sandwich']],
+  ])('still corrected: %s', (line, raws, want) => {
+    expect(run(line, raws)).toEqual(want);
+  });
+});
