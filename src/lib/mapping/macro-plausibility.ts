@@ -576,6 +576,47 @@ const FLOOR_GRADE_CATEGORY_PREFIXES = [
     'category:lean_cut_protein_below_floor',
 ];
 
+// Prepared-drink panel (S202): an OFF / FatSecret record for a prepared drink (`matcha latte`, `london fog`) sometimes carries the
+// DRY MIX's panel (397 / 467 kcal/100g). A prepared milk + espresso/tea drink tops out near ~100 kcal/100g, so a record far above
+// PREPARED_DRINK_MAX_KCAL is the powder's panel, not the drink's.
+// RANK-TIME ONLY, by design: a `category:` reason in assessMacroPlausibility() would also refuse the cache save and take Step 3d's
+// x0.3 penalty (refute r2 F1/F2), so the reason lives in assessRankTimePlausibility() alone and only demotes through the floor-hit partition.
+// HEAD rule: it fires only when the drink word is the query's HEAD noun (refute r2 F4: `mocha almonds`, creamers, `matcha latte powder`
+// are not drinks), never as an anywhere-in-query pattern.
+// headLine: simpleRerank()'s query can be an LLM canonical that dropped `latte` (`a matcha latte` -> `matcha`), so the raw line is also read.
+const PREPARED_DRINK_MAX_KCAL = 150;
+const PREPARED_DRINK_HEADS = new Set(['latte', 'cappuccino', 'cortado', 'macchiato', 'mocha', 'frappe', 'frappuccino']);
+const PREPARED_DRINK_TWO_WORD_HEADS = new Set(['flat white', 'london fog']);
+// The head is the last word before the first `with` / `and` / `plus` / `&` / comma: `latte with vanilla syrup` is a latte,
+// `mocha almonds` and `pumpkin spice latte creamer` are not drinks, `matcha latte powder` asks for the powder.
+const CLAUSE_BREAK = /\s(?:with|and|plus|&|\+)\s|\sw\/|,/;
+// Trailing words that never name the drink: size, temperature, milk, decaf, units, a count (`latte grande`, `latte 16 oz`, `cappuccino x2`).
+const TRAILING_NON_HEAD = new Set(['small', 'medium', 'large', 'tall', 'grande', 'venti', 'trenta', 'short', 'regular', 'kids', 'iced', 'hot', 'decaf', 'skim', 'nonfat', 'whole', 'dry', 'wet', 'oz', 'ounce', 'ounces', 'fl', 'ml', 'x']);
+function singularHead(w: string, heads: Set<string>): string {
+    if (w.endsWith('es') && heads.has(w.slice(0, -2))) return w.slice(0, -2);
+    if (w.endsWith('s') && heads.has(w.slice(0, -1))) return w.slice(0, -1);
+    return w;
+}
+function preparedDrinkHead(queryName: string): boolean {
+    const clause = (queryName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(CLAUSE_BREAK)[0];
+    const words = clause.split(/[^a-z]+/).filter(Boolean);
+    while (words.length > 1 && TRAILING_NON_HEAD.has(words[words.length - 1])) words.pop();
+    if (words.length === 0 || words.includes('instant')) return false; // `instant latte` names the powder
+    const last = words[words.length - 1];
+    if (PREPARED_DRINK_HEADS.has(singularHead(last, PREPARED_DRINK_HEADS))) return true;
+    if (words.length < 2) return false;
+    const lastTwo = `${words[words.length - 2]} ${last.endsWith('s') ? last.slice(0, -1) : last}`;
+    return PREPARED_DRINK_TWO_WORD_HEADS.has(lastTwo) || PREPARED_DRINK_TWO_WORD_HEADS.has(`${words[words.length - 2]} ${last}`);
+}
+function preparedDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    if (!Number.isFinite(kcal) || kcal <= PREPARED_DRINK_MAX_KCAL) return null;
+    return preparedDrinkHead(queryName) || (headLine != null && preparedDrinkHead(headLine))
+        ? `rank:prepared_drink_kcal_${round1(kcal)}_over_${PREPARED_DRINK_MAX_KCAL}`
+        : null;
+}
+
 /**
  * Rank-time plausibility: composes assessMacroPlausibility with the SAME
  * deterministic floors as the save-time gate (collectDeterministicFloorReasons
@@ -590,7 +631,9 @@ const FLOOR_GRADE_CATEGORY_PREFIXES = [
 export function assessRankTimePlausibility(
     queryName: string,
     candidateName: string,
-    macrosPer100g?: MacroPlausibilityInput | null
+    macrosPer100g?: MacroPlausibilityInput | null,
+    /** S202: the raw line, read ONLY by the prepared-drink head rule (the rerank query can be an LLM canonical that dropped `latte`). */
+    headLine?: string
 ): RankTimePlausibilityResult {
     const base = assessMacroPlausibility(queryName, candidateName, macrosPer100g);
 
@@ -599,10 +642,12 @@ export function assessRankTimePlausibility(
     }
 
     const floorReasons = collectDeterministicFloorReasons(queryName, candidateName, macrosPer100g);
-    const reasons = [...base.reasons, ...floorReasons];
+    const drinkReason = preparedDrinkReason(queryName, macrosPer100g, headLine);
+    const reasons = [...base.reasons, ...floorReasons, ...(drinkReason ? [drinkReason] : [])];
 
     const floorHit =
         floorReasons.length > 0 ||
+        drinkReason != null ||
         base.reasons.some((r) => FLOOR_GRADE_CATEGORY_PREFIXES.some((p) => r.startsWith(p)));
     const softPenalty = reasons.some((r) => r.startsWith('atwater:'));
 
