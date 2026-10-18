@@ -1,5 +1,5 @@
 import { parseQuantityTokens } from './quantity';
-import { normalizeUnitToken, convertUnit } from './unit';
+import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
 import { resolveLoosePourMeasures } from './loose-measures';
@@ -72,7 +72,7 @@ function resolvePackageMultipliers(line: string): string {
   //
   // Each guard alone is insufficient: (a) alone still corrupts "100g cans of tuna";
   // (b) alone still corrupts "2 15 oz canned tomatoes". Keep both.
-  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)(?:\s*[-x×*(]\s*|\s+)(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)\b/gi;
+  const packageRegex = /\b(\d+(?:\s+(?:and\s+)?\d+\/\d+|\/\d+|\.\d+)?)(?:\s*[-x×*(]\s*|\s+)(\d+(?:\/\d+|\.\d+)?)\s*-?(oz|ounce|ounces|g|gram|grams|ml|milliliter|milliliters|floz|fl\s*oz|fluid\s*oz|fluid\s*ounces?|lb|lbs|pound|pounds|kg|kgs|kilo|kilos|kilogram|kilograms)\b(?:\s*\))?\s*(?:cans|can|packages|package|containers|container|pouches|pouch|boxes|box|bags|bag|bottles|bottle|packets|packet|envelopes|envelope|sachets|sachet|jars|jar|tubs|tub|cartons|carton)\b/gi;
 
   return line.replace(packageRegex, (match, qty1Str, qty2Str, unit) => {
     const qty1 = parseFraction(qty1Str);
@@ -417,11 +417,36 @@ function halfAndHalfCursor(tokens: string[]): number {
   return leadIsQuantity && isHalfAndHalfAt(tokens, 1) ? 1 : -1;
 }
 
+// S202 (route 25): a quantity HEDGE never changes the quantity or the unit. A tilde RANGE (`2~3 eggs`) becomes the dash range the
+// parser already reads (refute r1 F1: stripping it concatenated `2~3` into 23); a leading `~` and an `-ish` on a number or a known unit go.
+const HEDGED_NUMBER_UNIT_RE = new RegExp(`(\\d)\\s*(${HEDGEABLE_UNIT_SOURCE})[-\\s]?ish\\b`, 'gi');
+// S202 (route 37): a leading approximator before an ARTICLE-led measure (`roughly a pound of strawberries`,
+// `about a cup of rice`) goes, so the line parses as its un-hedged form. leadingHedgePrecedesQuantity() handles a digit or word
+// number. Gated on an explicit unit list followed by `of`, a comma, `(` or the end (refute A1-A3): `like a pound cake`,
+// `about a cup or two of rice`, `like a second helping` and `about a dozen eggs` stay as they were.
+const LEADING_HEDGE_ARTICLE_RE = new RegExp(
+  '^(\\s*)(?:about|around|roughly|approximately|approx|nearly|almost|like|maybe)\\s+(?=(?:a|an)\\s+' +
+    `(?:${HEDGEABLE_UNIT_SOURCE}|tablespoons?|teaspoons?|pints?|quarts?|gallons?|liters?|litres?)` +
+    '(?:\\s+of\\b|\\s*[,(]|\\s*$))',
+  'i',
+);
+function stripHedgeBeforeArticleMeasure(line: string): string {
+  const m = LEADING_HEDGE_ARTICLE_RE.exec(line);
+  return m ? m[1] + line.slice(m[0].length) : line;
+}
+function stripQuantityHedges(line: string): string {
+  return stripHedgeBeforeArticleMeasure(line)
+    .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
+    .replace(/~\s*(?=\d)/g, '')
+    .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
+    .replace(/(\d)-ish\b/gi, '$1');
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(line));
+  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(line)));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();

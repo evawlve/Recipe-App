@@ -8,11 +8,12 @@
  * once or loop while the parse reads (punch #278, Lane E S48).
  *
  * SHORT_LINE_FIXTURES below is a VERBATIM COPY of the table of the same name in mobile
- * `src/components/food-log/__tests__/meal-slot-row-nudge.test.tsx` (26 rows,
+ * `src/components/food-log/__tests__/meal-slot-row-nudge.test.tsx` (30 rows,
  * `[name, text, short]`). The backend cannot import the mobile repo, so the two tables MUST
  * CHANGE TOGETHER: a change to either rule, or to either table, lands in both repos in the
  * same session. `short` is the mobile fixture's claim that `singleItemFromText()` returns
- * non-null for `text`.
+ * non-null for `text`. S202 (cloud-35 F9) added the pour rule (a leading `<count> <pour> of X` onto/into a second
+ * food is NOT short, so the segmenter splits it); mobile `isShortLine()` must port it (C66's twin, same day).
  *
  * `singleItemFromText()` is module-private and a Next route module may export only handlers
  * and config, so this drives POST and reads the observable the function controls: the fast
@@ -89,6 +90,10 @@ const SHORT_LINE_FIXTURES: [name: string, text: string, short: boolean][] = [
   ['an `at dinner` suffix', 'a b c d e f at dinner', true],
   ['an `as breakfast` suffix', 'a b c d e f as breakfast', true],
   ['a suffix MID-line is not a suffix — it is anchored at the end', 'a b c d e for lunch f', false],
+  ['a pour ONTO a second food is two foods', 'a splash of syrup on pancakes', false],
+  ['… with a meal suffix', 'a splash of syrup on pancakes for breakfast', false],
+  ['a pour into a pronoun is one food', 'a splash of milk in it', true],
+  ['a pour on top is one food', 'a splash of syrup on top', true],
 ];
 // ---------------------------------------------------------------------------------------------
 
@@ -133,8 +138,8 @@ describe('/api/nlp/parse short-line fast path — parity with mobile SHORT_LINE_
     jest.restoreAllMocks();
   });
 
-  it('carries all 26 rows of the mobile table', () => {
-    expect(SHORT_LINE_FIXTURES).toHaveLength(26);
+  it('carries all 30 rows of the mobile table', () => {
+    expect(SHORT_LINE_FIXTURES).toHaveLength(30);
   });
 
   it.each(SHORT_LINE_FIXTURES)('%s', async (_name, text, short) => {

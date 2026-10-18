@@ -56,6 +56,19 @@ function singular(word: string): string {
   return w.endsWith('s') ? w.slice(0, -1) : w;
 }
 
+// S202 (cloud-35 F9): a pour ONTO or INTO another food names two foods
+// (`a splash of syrup on pancakes`, `a splash of rum in my coke`). The object is a bare or
+// possessive noun; an article-led object (`in a glass`, `in the morning`, `on the side`) and a
+// pronoun / `top` object are not a second food.
+const POUR_VEHICLE_RX =
+  /\s(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?!(?:a|an|the|top|it|them|there|this|that)\b)\p{L}/iu;
+
+/** A leading pour whose rest pours it onto / into a second food. */
+export function isPourOntoSecondFood(text: string): boolean {
+  const m = POUR_RX.exec(text);
+  return !!m && POUR_VEHICLE_RX.test(text.slice(m[0].length));
+}
+
 function splitWithLead(text: string): LeadingPour | null {
   const m = POUR_RX.exec(text);
   if (!m) return null;
@@ -77,4 +90,40 @@ export function resolveLoosePourMeasures(line: string): string {
   const s = splitWithLead(line);
   if (!s) return line;
   return `${s.lead}${fmt(s.count * LOOSE_POUR_FLOZ[s.word])} floz of ${s.rest}`;
+}
+
+// S202 (cloud-35 F9): refute MAJOR 1 - after the segmenter splits a pour onto/into a second food, put the
+// line's own `<count> <pour> of` back on the liquid item when a draw lost it (`[syrup] [pancakes]`,
+// `[splash of syrup] [pancakes]`), and drop a leading preposition a draw left on the second food (`on eggs`).
+// Runs on every split (cache hit or fresh); the SegmentationCache keeps the segmenter's own split.
+const LEADING_PREP_RX = /^\s*(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?=\S)/i;
+export function restoreLeadingPour<T extends { rawText: string }>(lineKey: string, items: T[]): { items: T[]; restored: number } {
+  const m = POUR_RX.exec(lineKey);
+  if (!m || items.length < 2) return { items, restored: 0 };
+  const rest = lineKey.slice(m[0].length);
+  const v = /\s(?:on|onto|over|in|into)\s/i.exec(' ' + rest);
+  if (!v) return { items, restored: 0 };
+  const liquid = rest.slice(0, Math.max(0, v.index - 1)).trim().toLowerCase();
+  if (!liquid) return { items, restored: 0 };
+  const word = m[3].toLowerCase();
+  const bare = (t: string): string => t.trim().toLowerCase().replace(/^(?:a|an|the|some)\s+/, '');
+  let restored = 0;
+  let pourDone = false;
+  const out = items.map(it => {
+    const b = bare(it.rawText);
+    if (!pourDone && (b === liquid || b === `${word} of ${liquid}`)) {
+      pourDone = true;
+      const rawText = `${m[0].trim()} ${liquid}`;
+      if (rawText === it.rawText.trim()) return it;
+      restored++;
+      return { ...it, rawText };
+    }
+    if (!pourDone && splitLeadingPour(it.rawText)) pourDone = true;
+    if (LEADING_PREP_RX.test(it.rawText)) {
+      restored++;
+      return { ...it, rawText: it.rawText.replace(LEADING_PREP_RX, '') };
+    }
+    return it;
+  });
+  return { items: restored ? out : items, restored };
 }

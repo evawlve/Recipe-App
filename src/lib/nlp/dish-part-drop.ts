@@ -15,6 +15,8 @@
  * bill: a named filling (`cilantro lime rice`), a separate food (`a coke`), a side. A determiner- or
  * number-led later item ends the list (it is a new food), as does a side-like item (chips, soup, a drink).
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
+ * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
+ * words after an item, and a clause word right after from/since/over, never count.
  *
  * PASS ORDER. Runs AFTER dropNegatedParts and BEFORE foldTrailingQuantityClauses (drop, dish, fold, fill):
  * with the parts gone the fold can attach `two slices` to the dish. The SegmentationCache keeps the
@@ -96,6 +98,14 @@ const BREAD = new Set([
   'croissant', 'ciabatta', 'brioche', 'pita', 'wheat', 'white', 'crust', 'naan', 'biscuit',
 ]);
 const DET = new Set(['a', 'an', 'the', 'some', 'my']);
+// S202 (cloud-35 F1): words that open a NEW clause - a time step or a meal. NOT was / had / ate
+// (`with what i had left: rice and beans` is still the dish's own list).
+const CLAUSE = new Set([
+  'then', 'later', 'after', 'afterwards', 'afterward', 'followed', 'breakfast', 'lunch', 'dinner', 'brunch', 'snack',
+  'supper', 'dessert', 'tonight', 'yesterday', 'morning',
+]);
+// A clause word right after one of these is a part's provenance (`chicken from dinner`), not a new clause.
+const PROVENANCE = new Set(['from', 'since', 'over']);
 const LEAD_STOP = new Set(['a', 'an', 'the', 'some', 'my', 'one', 'two', 'three', 'four', 'five', 'six', 'half']);
 const MODS = new Set([
   'grilled', 'shredded', 'diced', 'sliced', 'chopped', 'fried', 'crispy', 'fresh', 'roasted', 'sauteed', 'melted',
@@ -212,6 +222,12 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
         continue;
       }
       if (js.start < m) continue;
+      // S202 (cloud-35 F1): a clause word in the GAP before this item (since the previous
+      // item's span, or the marker) ends the list - `…, then for dinner salmon`, `… cheese. later steak`. Words AFTER an item
+      // never count, so a trailing meal tag (`… cheese and salsa for breakfast`) keeps base behaviour.
+      let gs = m;
+      for (let k = d; k < j; k++) if (spans[k] && spans[k]!.end > gs) gs = spans[k]!.end;
+      if (toks.slice(gs, js.start).some((w, i) => CLAUSE.has(w) && !PROVENANCE.has(toks[gs + i - 1]))) break;
       // A new comma piece whose FIRST lineKey token (after an optional `and`) is a determiner/number ends the list.
       if (ptoks[js.start] && ptoks[m] && ptoks[js.start].piece > ptoks[m].piece) {
         let f = ptoks.findIndex(t => t.piece === ptoks[js.start].piece);
