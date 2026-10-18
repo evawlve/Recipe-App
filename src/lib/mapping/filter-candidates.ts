@@ -2709,7 +2709,7 @@ export function filterCandidatesByTokens(
     const isSupplementQuery = SUPPLEMENT_QUERY_RE.test(modifierCheckSource);
 
     // Extract must-have tokens
-    const derivation: { coreTokens?: string[] } = {};
+    const derivation: { coreTokens?: string[]; narrowBranch?: boolean } = {};
     let mustHaveTokens = deriveMustHaveTokens(normalizedName, derivation);
 
     // Is this a line whose final must-have slot keepAFoodToken() may have RE-AIMED onto a
@@ -3182,13 +3182,39 @@ export function filterCandidatesByTokens(
     //
     // The tolerant compound / near-spelling match stays scoped to `headNounReAimable`
     // (brand-detected lines), which is exactly where this does not run.
+    //
+    // The SPECIALTY (`coconut milk`, `almond flour`, ...) and `&`/`and` COMPOUND branches now
+    // participate too (S202, route 9). They require ONE token, so the head of the phrase was never
+    // required: `coconut milk latte` -> ['coconut'] admitted plain Coconut Milk, and `cheese and
+    // tomato omelet` -> ['cheese'] admitted a ham-and-cheese panini. Those branches mark
+    // `derivation.narrowBranch` and expose their core tokens. Differences from the generic branch:
+    //   - threshold 3, not 4: with a single required token, three core tokens already leave a
+    //     head beyond the phrase that nothing demands (the generic branch requires two).
+    //   - a SUBSET filter, not a second admit() with more tokens. admit() matches spelling exactly,
+    //     so `ham and cheese omelette` dropped every `Omelet` record (refute F2/F8). The coverage
+    //     test (`coversEveryToken()`) is singular/plural tolerant and spelling-folded
+    //     (omelette/omelet), and covered is a subset of the admitted pool by construction.
+    //   - function words and pure qualifiers are stripped from the coverage tokens
+    //     (`narrowBranchCoverageTokens()`): `iced coffee with almond milk` otherwise required the
+    //     word `with` and narrowed onto a Mocha record (refute F1).
+    //   - a lone covering record is kept only if it adds at most
+    //     NARROW_BRANCH_SINGLE_RECORD_MAX_EXTRA content words beyond the query: the only record
+    //     covering `cheese and tomato omelet` was an omelet with chili, cheese, tomatoes and beans
+    //     (refute F4), a worse answer than the pool it would have replaced.
+    // The required token is unchanged, so the narrowing still yields when nothing covers the line.
     const coverageTokens = derivation.coreTokens;
     if (!relaxed && !headNounReAimable && coverageTokens !== undefined
-        && coverageTokens.length >= GENERIC_FULL_COVERAGE_MIN_CORE && filtered.length > 1) {
-        const shippedTokens = mustHaveTokens;
-        mustHaveTokens = coverageTokens;
-        const covered = admit();
-        mustHaveTokens = shippedTokens;
+        && coverageTokens.length >= (derivation.narrowBranch ? NARROW_BRANCH_FULL_COVERAGE_MIN_CORE : GENERIC_FULL_COVERAGE_MIN_CORE) && filtered.length > 1) {
+        let covered: UnifiedCandidate[];
+        if (derivation.narrowBranch) {
+            const scored = filtered.map(c => ({ c, ...coversEveryToken(c, coverageTokens) })).filter(x => x.covers);
+            covered = scored.length === 1 && scored[0].extra > NARROW_BRANCH_SINGLE_RECORD_MAX_EXTRA ? [] : scored.map(x => x.c);
+        } else {
+            const shippedTokens = mustHaveTokens;
+            mustHaveTokens = coverageTokens;
+            covered = admit();
+            mustHaveTokens = shippedTokens;
+        }
         if (covered.length > 0 && covered.length < filtered.length) {
             if (debug) {
                 logger.info('filter.candidates.full_coverage_preferred', {
@@ -3306,13 +3332,43 @@ export function filterCandidatesByTokens(
 
 /** Core-token count at which filterCandidatesByTokens() prefers full-coverage records (#308). */
 const GENERIC_FULL_COVERAGE_MIN_CORE = 4;
+/** Core-token count at which the specialty / compound branches (one required token) prefer full coverage. */
+const NARROW_BRANCH_FULL_COVERAGE_MIN_CORE = 3;
+// Function words and pure qualifiers never become a coverage token (`iced coffee WITH almond milk`).
+const COVERAGE_FUNCTION_WORDS = new Set(['and', 'with', 'for', 'the', 'of', 'in', 'on', 'or', 'plus', 'my', 'some', 'free', 'sugar', 'light', 'lite', 'low', 'fat', 'unsweetened', 'sweetened', 'organic']);
+function narrowBranchCoverageTokens(tokens: string[]): string[] {
+    return tokens.filter(t => !COVERAGE_FUNCTION_WORDS.has(t));
+}
+// The narrow-branch coverage test is a SUBSET filter over the admitted pool (covered is a subset of filtered by construction),
+// singular/plural tolerant and spelling-folded, so `omelette` covers `Omelet` records.
+const COVERAGE_SPELLING_FOLD: Record<string, string> = { omelette: 'omelet', creme: 'cream', doughnut: 'donut', yoghurt: 'yogurt', chilli: 'chili', catsup: 'ketchup', bbq: 'barbecue', 'n': 'and' };
+function coverageForm(t: string): string {
+    const f = COVERAGE_SPELLING_FOLD[t] ?? t;
+    if (f.length > 4 && f.endsWith('ies')) return `${f.slice(0, -3)}y`;
+    if (f.length > 4 && /(ches|shes|oes|xes)$/.test(f)) return f.slice(0, -2);
+    if (f.length > 3 && f.endsWith('s') && !f.endsWith('ss')) return f.slice(0, -1);
+    return f;
+}
+function coversEveryToken(candidate: UnifiedCandidate, coverage: string[]): { covers: boolean; extra: number } {
+    const words = `${candidate.name} ${candidate.brandName ?? ''}`.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(coverageForm);
+    const have = new Set(words);
+    const want = coverage.map(coverageForm);
+    const covers = want.every(t => have.has(t));
+    const extra = [...have].filter(w => w.length > 2 && !want.includes(w) && !COVERAGE_FUNCTION_WORDS.has(w) && !/^\d/.test(w) && !['small', 'medium', 'large', 'regular', 'serving', 'piece'].includes(w)).length;
+    return { covers, extra };
+}
+// A ONE-record narrowing is kept only when that record adds at most this many content words beyond the query (the lone covering record
+// for `cheese and tomato omelet` was "Egg Omelet or Scrambled Egg with Chili, Cheese, Tomatoes and Beans").
+const NARROW_BRANCH_SINGLE_RECORD_MAX_EXTRA = 2;
 
 /**
- * `out.coreTokens` is set ONLY when the derivation reaches the positional core-token path (not the
- * specialty, British-term or `&`/`and` early returns) — it is the full core list the first two
- * slots were taken from. The returned tokens are unaffected by passing `out`.
+ * `out.coreTokens` is set on the positional core-token path (the full core list the first two
+ * slots were taken from) and, with `out.narrowBranch = true`, on the SPECIALTY and `&`/`and`
+ * COMPOUND early returns (the stripped token list of the whole phrase, whose head those branches
+ * never required). The British-term early return sets neither. The returned tokens are
+ * unaffected by passing `out`.
  */
-export function deriveMustHaveTokens(normalizedName: string, out?: { coreTokens?: string[] }): string[] {
+export function deriveMustHaveTokens(normalizedName: string, out?: { coreTokens?: string[]; narrowBranch?: boolean }): string[] {
     const tokens = normalizedName
         .toLowerCase()
         .split(/[^\w]+/)
@@ -3336,6 +3392,9 @@ export function deriveMustHaveTokens(normalizedName: string, out?: { coreTokens?
 
         const distinctiveTokens = tokens.filter(t => !qualifiers.has(t));
         if (distinctiveTokens.length > 0) {
+            // Expose the full token list so the full-coverage preference can narrow
+            // `coconut milk latte` to a record naming the latte; the required token is unchanged.
+            if (out) { out.coreTokens = narrowBranchCoverageTokens(distinctiveTokens); out.narrowBranch = true; }
             // Return just the first distinctive token (e.g., "coconut" from "unsweetened coconut milk")
             return distinctiveTokens.slice(0, 1);
         }
@@ -3421,6 +3480,11 @@ export function deriveMustHaveTokens(normalizedName: string, out?: { coreTokens?
                 t.length > 2 && !STOP_WORDS.has(t) && !MODIFIER_TOKENS.has(t)
             );
             if (firstPartTokens.length > 0) {
+                // Same exposure for the compound branch (`cheese and tomato omelet`).
+                if (out) {
+                    out.coreTokens = narrowBranchCoverageTokens(tokens.filter(t => !MODIFIER_TOKENS.has(t)));
+                    out.narrowBranch = true;
+                }
                 return firstPartTokens.slice(0, 1);  // Just require first component's core token
             }
         }
