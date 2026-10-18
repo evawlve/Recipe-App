@@ -597,17 +597,25 @@ function singularHead(w: string, heads: Set<string>): string {
     if (w.endsWith('s') && heads.has(w.slice(0, -1))) return w.slice(0, -1);
     return w;
 }
-function preparedDrinkHead(queryName: string): boolean {
+/** The prepared-drink head word of a query (`latte`, `flat white`, …), or null. Shared with the bare-drink serving rule (bare-query-guard.ts). */
+export function preparedDrinkHeadWord(queryName: string): string | null {
     const clause = (queryName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(CLAUSE_BREAK)[0];
     const words = clause.split(/[^a-z]+/).filter(Boolean);
     while (words.length > 1 && TRAILING_NON_HEAD.has(words[words.length - 1])) words.pop();
-    if (words.length === 0 || words.includes('instant')) return false; // `instant latte` names the powder
+    if (words.length === 0 || words.includes('instant')) return null; // `instant latte` names the powder
     const last = words[words.length - 1];
-    if (PREPARED_DRINK_HEADS.has(singularHead(last, PREPARED_DRINK_HEADS))) return true;
-    if (words.length < 2) return false;
+    const one = singularHead(last, PREPARED_DRINK_HEADS);
+    if (PREPARED_DRINK_HEADS.has(one)) return one;
+    if (words.length < 2) return null;
     const lastTwo = `${words[words.length - 2]} ${last.endsWith('s') ? last.slice(0, -1) : last}`;
-    return PREPARED_DRINK_TWO_WORD_HEADS.has(lastTwo) || PREPARED_DRINK_TWO_WORD_HEADS.has(`${words[words.length - 2]} ${last}`);
+    if (PREPARED_DRINK_TWO_WORD_HEADS.has(lastTwo)) return lastTwo;
+    const raw2 = `${words[words.length - 2]} ${last}`;
+    return PREPARED_DRINK_TWO_WORD_HEADS.has(raw2) ? raw2 : null;
 }
+function preparedDrinkHead(queryName: string): boolean {
+    return preparedDrinkHeadWord(queryName) != null;
+}
+export { PREPARED_DRINK_MAX_KCAL };
 function preparedDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
     const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
     const kcal = raw == null ? NaN : Number(raw);
