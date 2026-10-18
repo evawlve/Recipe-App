@@ -32,6 +32,9 @@
  * the trailing-quantity fold reads it, and a restated item must be gone before the dish and drink passes count
  * parts. The SegmentationCache keeps the uncorrected split.
  *
+ * An addition is not a correction: an ADD word or `as well` the segmenter stripped out of j (`a ham sandwich too`) still
+ * keeps j, and in the trailing block two items joined by `and` in one comma piece are two foods.
+ *
  * Pure; never mutates its input (items are copied before any write).
  */
 
@@ -226,6 +229,18 @@ export function resolveSelfCorrections<T extends Item>(
     const residue = gap.filter((_, k) => !covered.has(k)).map(t => t.w).filter(w => !FILLER.has(w));
     if (residue.length) continue;
     if (gap.some((t, q) => ADD.has(t.w) && !covered.has(q)) || jw.some(w => ADD.has(w))) continue;
+    // S202 (cloud-35 F3): an addition word the segmenter left OUT of j (`a ham sandwich too`,
+    // `... as well`) still makes j an addition.
+    if (spans[j]) {
+      const pj = toks[spans[j]!.start].piece;
+      // S202 (cloud-35 F3): only j's OWN stripped tail - stop at the next item's span or the first joiner.
+      let stop = toks.length;
+      for (let q = j + 1; q < n; q++) if (spans[q]) { stop = spans[q]!.start; break; }
+      for (let q = spans[j]!.end; q < stop; q++) if (['and', 'with', 'or'].includes(toks[q].w)) { stop = q; break; }
+      const after = toks.slice(spans[j]!.end, stop).filter(t => t.piece === pj).map(t => t.w);
+      const asWell = after.some((w, x) => w === 'as' && after[x + 1] === 'well' && after[x + 2] !== 'as');
+      if (after.some(w => ADD.has(w)) || asWell) continue;
+    }
     if (gap.some(t => t.w === 'and')) continue;
     if (NEGSTART.some(p => p.every((w, k) => jw[k] === w))) continue;
     if (found.every(f => f === 'rather')) continue;
@@ -352,6 +367,18 @@ export function resolveSelfCorrections<T extends Item>(
         if (removed.has(k)) continue;
         const hk = headOf(cur(k));
         if (hl && hk && sameWord(hl, hk) && cl) {
+          // S202 (cloud-35 F3): the main loop's `and` guard — two items joined by `and` in one comma piece
+          // are two foods (`a beef taco and 2 chicken tacos, sorry`), not a reading and its correction.
+          const sk = spans[k];
+          const onePiece = !!sk && toks[sk.start].piece === toks[sl.start].piece;
+          // S202 (cloud-35 F3): only an `and` joining k and L directly (no live item between) over two DIFFERENT foods;
+          // a null span keeps base, and the same food at a new quantity is still a correction (`two eggs and three eggs, sorry`).
+          let between = false;
+          for (let q = k + 1; q < L; q++) if (!removed.has(q)) between = true;
+          const fk = words(foodMinusQty(cur(k).rawText));
+          const fl = words(foodMinusQty(items[L].rawText));
+          const sameFood = fk.length === fl.length && fk.every((w, x) => sameWord(w, fl[x]));
+          if (sk && onePiece && !between && !sameFood && toks.slice(sk.end, sl.start).some(t => t.w === 'and')) break;
           removed.add(k);
           note('trailing', k, cur(k).rawText, '');
           break;
