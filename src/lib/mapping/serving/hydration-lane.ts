@@ -36,6 +36,7 @@ import { AI_NUTRITION_BACKFILL_ENABLED, AI_NUTRITION_HYDRATION_MAX_PER_REQUEST }
 import { hydrateOffCandidate } from '../../openfoodfacts/hydrate';
 import {
     applyOffBareQueryGuard,
+    bareDrinkCupOverride,
     isBareUnitlessQty1,
     usableBareLabelServing,
     isBarePluralRequest,
@@ -3462,6 +3463,29 @@ export async function buildOffResult(
                 p75: nameSib.p75,
             });
         }
+    }
+
+    // Bare prepared drink -> a 240 g cup (S202, companion to PR 502). PR 502 puts a bare
+    // `latte` on a drink panel, but the record's own serving is often a sachet or the
+    // 100 g floor, which bills a cup of coffee as 14 g. This rung sits AFTER rung (E)
+    // (which has no upper bound) so it is raise-only against every rung above it. It
+    // lives here, not in applyOffBareQueryGuard(), because buildFatSecretResult() also
+    // calls that guard and this rule must be OFF-only by structure.
+    const drinkCup = bareDrinkCupOverride({
+        grams,
+        parsed,
+        rawLine,
+        queryName: parsed?.name || '',
+        foodName: hydrated.foodName,
+        kcalPer100g: hydrated.nutrientsPer100g?.['calories'] ?? null,
+    });
+    if (drinkCup) {
+        logger.info('off.build_result.bare_prepared_drink_cup', { foodId: candidate.id, previousTier: servingTier, previousGrams: grams, grams: drinkCup.grams });
+        grams = drinkCup.grams;
+        servingDescription = drinkCup.servingDescription;
+        // Literal, not `drinkCup.servingTier`: the tier census scan resolves literals and
+        // would otherwise list a new indirect pass-through it has no allowlist entry for.
+        servingTier = 'bare_prepared_drink_cup';
     }
 
     const factor = grams / 100;

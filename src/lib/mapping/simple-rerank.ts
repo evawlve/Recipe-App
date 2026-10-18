@@ -2148,7 +2148,7 @@ export function simpleRerank(
         if (isDenylistedOffRecord(c.id)) return true;
         // No per-100g nutrition → nothing to assess → not flagged.
         if (!c.nutrition?.per100g) return false;
-        return assessRankTimePlausibility(query, c.name, c.nutrition).floorHit;
+        return assessRankTimePlausibility(query, c.name, c.nutrition, rawLine).floorHit;
     };
 
     // Same-brand variant precision (restaurant/QSR fix, Jul 2026): honor the

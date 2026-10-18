@@ -44,6 +44,7 @@
 import type { ParsedIngredient } from '../parse/ingredient-line';
 import { getBareQueryDefault, maskAdvertisedAbsence } from '../ai/ambiguous-serving-estimator';
 import { discretePieceFloor, singularizeUnit } from '../mapping/count-label';
+import { PREPARED_DRINK_MAX_KCAL, preparedDrinkHeadWord } from '../mapping/macro-plausibility';
 
 /**
  * Tiers whose grams come from real package/label machinery and can only be
@@ -498,4 +499,47 @@ function buildOverride(grams: number): BareQueryGuardOverride {
         servingTier: 'bare_category_default',
         servingDescription: `1 serving (~${grams}g)`,
     };
+}
+
+// Bare prepared drink = a CUP (S202, companion to PR 502).
+// Mechanism: PR 502 resolves a bare `latte` to a drink panel, but that record's own
+// serving is a sachet or the 100 g floor, so a cup of coffee bills as ~14 g.
+// Placement: a SEPARATE function called by buildOffResult() AFTER rung (E), just
+// before the nutrient factor. (E) has no upper bound, so only a rung after it is
+// raise-only against every other rung (refute r1 F3). It is NOT in
+// applyOffBareQueryGuard() because buildFatSecretResult() calls that, and this rule
+// must be OFF-only by structure, not by an omitted field.
+// Guards: the RECORD's own head must be a prepared-drink word, and yogurt / creamer /
+// ice cream / gelato / frozen (NON_DRINK_WORDS) are rejected on either name, so
+// `coffee creamer (mocha)`, `oat milk for latte` and `greek yogurt mocha` stay put
+// (refute r1 F4). kcal must be in (0, PREPARED_DRINK_MAX_KCAL].
+// 240 g: 1 cup, matching the liquids lexicon and FatSecret's own default; a tall is
+// ~355 g, so 240 never over-bills a small.
+// cortado / macchiato are excluded from the head set: small or ambiguous espresso drinks.
+const BARE_DRINK_CUP_GRAMS = 240;
+const BARE_DRINK_CUP_HEADS = new Set(['latte', 'cappuccino', 'mocha', 'frappe', 'frappuccino', 'flat white', 'london fog']);
+const NON_DRINK_WORDS = /\b(yogh?urts?|creamers?|ice cream|gelato|frozen)\b/i;
+
+export interface BareDrinkCupInput {
+    grams: number;
+    parsed: ParsedIngredient | null;
+    rawLine: string;
+    queryName: string;
+    foodName: string;
+    kcalPer100g: number | null;
+}
+
+export function bareDrinkCupOverride(input: BareDrinkCupInput): BareQueryGuardOverride | null {
+    if (process.env.OFF_BARE_SERVING_GUARD === '0') return null;
+    const { grams, parsed, rawLine, queryName, foodName, kcalPer100g } = input;
+    if (!isBareUnitlessQty1(parsed, rawLine)) return null;
+    if (!(grams < BARE_DRINK_CUP_GRAMS)) return null;
+    const kcal = kcalPer100g == null ? NaN : Number(kcalPer100g);
+    if (!Number.isFinite(kcal) || kcal <= 0 || kcal > PREPARED_DRINK_MAX_KCAL) return null;
+    const head = preparedDrinkHeadWord(queryName) ?? preparedDrinkHeadWord(rawLine);
+    if (!head || !BARE_DRINK_CUP_HEADS.has(head)) return null;
+    // The RECORD must be a drink too: its own head is a prepared-drink word (`Latte`, `Hot Macchiato …`), never `Coconut Milk` or a creamer.
+    if (preparedDrinkHeadWord(foodName) == null) return null;
+    if (NON_DRINK_WORDS.test(`${rawLine} ${foodName}`)) return null;
+    return { grams: BARE_DRINK_CUP_GRAMS, servingTier: 'bare_prepared_drink_cup', servingDescription: `1 cup (~${BARE_DRINK_CUP_GRAMS}g)` };
 }

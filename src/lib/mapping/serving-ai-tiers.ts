@@ -480,6 +480,13 @@ export const BORROWED_OR_DEFAULTED_SERVING_TIERS: readonly string[] = Object.fre
         // DISCRETE_PIECE_FLOOR_GRAMS map. The guard's REPLACE path only, and only
         // when the category lexicon had nothing.
         'bare_discrete_floor',
+        // bareDrinkCupOverride() in servings/bare-query-guard.ts: a hardcoded 240 g
+        // (1 cup) for a bare prepared drink (latte, cappuccino, mocha, flat white,
+        // london fog, frappe) on a drink-shaped OFF record whose own serving was a
+        // sachet or the 100 g floor. buildOffResult() calls it after every other
+        // rung and it only ever RAISES grams (< 240). Borrowed: the cup is a
+        // constant, not the record's own measurement.
+        'bare_prepared_drink_cup',
         // The density lexicon. Both buildOffResult() and buildFdcResult() stamp this
         // name on their `!volumeResolved` fallback: grams = qty x a per-unit ml
         // constant x a NAME-inferred category density (resolveVolumeGrams() in

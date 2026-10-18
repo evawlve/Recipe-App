@@ -177,6 +177,7 @@ const EXPECTED_CLASS: Readonly<Record<string, TierClass>> = Object.freeze({
     bare_category_default: 'BORROWED_OR_DEFAULTED',
     bare_query_default: 'BORROWED_OR_DEFAULTED',
     bare_discrete_floor: 'BORROWED_OR_DEFAULTED',
+    bare_prepared_drink_cup: 'BORROWED_OR_DEFAULTED',
     volume_unit: 'BORROWED_OR_DEFAULTED',
     // buildOffResult()'s own-label volume read (punch #66). Classified here and
     // NOT as OWN: it bills `qty x unitMl x (servingGrams / declaredMl)`, and that
@@ -521,8 +522,9 @@ describe('the census — every live tier is explicitly accounted for', () => {
         // (punch #66). The scan found the new string on its own and this
         // assertion is what forced it to be classified — which is the whole
         // reason the census exists.
-        expect(LIVE_TIERS).toHaveLength(55);
-        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(55);
+        // 55 -> 56 on 2026-10-18: buildOffResult() gained bare_prepared_drink_cup (S202)
+        expect(LIVE_TIERS).toHaveLength(56);
+        expect(Object.keys(EXPECTED_CLASS)).toHaveLength(56);
     });
 });
 
