@@ -1,5 +1,5 @@
 import { parseQuantityTokens } from './quantity';
-import { normalizeUnitToken, convertUnit } from './unit';
+import { normalizeUnitToken, convertUnit, HEDGEABLE_UNIT_SOURCE } from './unit';
 import { extractQualifiers, extractQualifiersFromParentheses } from './qualifiers';
 import { extractUnitHint } from './unit-hint';
 import { resolveLoosePourMeasures } from './loose-measures';
@@ -417,11 +417,22 @@ function halfAndHalfCursor(tokens: string[]): number {
   return leadIsQuantity && isHalfAndHalfAt(tokens, 1) ? 1 : -1;
 }
 
+// S202 (route 25): a quantity HEDGE never changes the quantity or the unit. A tilde RANGE (`2~3 eggs`) becomes the dash range the
+// parser already reads (refute r1 F1: stripping it concatenated `2~3` into 23); a leading `~` and an `-ish` on a number or a known unit go.
+const HEDGED_NUMBER_UNIT_RE = new RegExp(`(\\d)\\s*(${HEDGEABLE_UNIT_SOURCE})[-\\s]?ish\\b`, 'gi');
+function stripQuantityHedges(line: string): string {
+  return line
+    .replace(/(\d)\s*~\s*(?=\d)/g, '$1-')
+    .replace(/~\s*(?=\d)/g, '')
+    .replace(HEDGED_NUMBER_UNIT_RE, '$1 $2')
+    .replace(/(\d)-ish\b/gi, '$1');
+}
+
 export function parseIngredientLine(line: string): ParsedIngredient | null {
   if (!line || line.trim().length === 0) return null;
 
   // Pre-process package multipliers (e.g. "1/2 (12 oz) package" -> "6 oz")
-  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(line));
+  const processedLine = resolveLoosePourMeasures(resolvePackageMultipliers(stripQuantityHedges(line)));
 
   // Handle non-ingredient noise: separators, emojis, etc.
   const trimmed = processedLine.trim();
