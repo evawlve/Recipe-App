@@ -26,6 +26,7 @@
  */
 
 import { parseIngredientLine } from '@/lib/parse/ingredient-line';
+import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
   kind: 'segment' | 'gap';
@@ -43,7 +44,7 @@ interface Item {
   brand?: string;
 }
 
-interface Clause {
+export interface Clause {
   value: number;
   unit: string | null;
   food: string[];
@@ -123,7 +124,7 @@ function parseNumeric(w: string): number | null {
 }
 
 /** Parses a whole token list as a clause, or returns null. */
-function parseClause(t: string[]): Clause | null {
+export function parseClause(t: string[]): Clause | null {
   const n = t.length;
   let i = 0;
   while (i < n && LEAD.has(t[i])) i++;
@@ -221,7 +222,9 @@ function isValidTarget(item: Item): boolean {
   if (toks.some(x => QTY_WORDS.has(x))) return false;
   try {
     const parsed = parseIngredientLine(item.rawText);
-    if (parsed && parsed.unit) return false;
+    // A leading pour (`a swig of soda`) parses to a floz unit that is the parser's canonicalisation,
+    // not a quantity the user stated, so it stays a valid target.
+    if (parsed && parsed.unit && !splitLeadingPour(item.rawText)) return false;
   } catch {
     return false;
   }
@@ -229,6 +232,13 @@ function isValidTarget(item: Item): boolean {
 }
 
 function rewrite(item: Item, clause: Clause): string {
+  const pour = splitLeadingPour(item.rawText);
+  if (pour) {
+    // The stated clause unit wins; with none, keep the pour word so the parser canonicalises it.
+    return clause.unit
+      ? `${formatValue(clause.value)} ${clause.unit} of ${pour.rest}`
+      : `${formatValue(clause.value)} ${pour.word} of ${pour.rest}`;
+  }
   const food = item.rawText.replace(/^\s*(a|an|the|some)\s+/i, '').trim();
   return clause.unit
     ? `${formatValue(clause.value)} ${clause.unit} of ${food}`

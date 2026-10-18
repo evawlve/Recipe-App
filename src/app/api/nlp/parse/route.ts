@@ -251,7 +251,10 @@ export async function POST(req: NextRequest) {
     const { lookupSegmentationCache, writeSegmentationCache } = await import('@/lib/nlp/segmentation-cache');
     const { forceSegmentText } = await import('@/lib/nlp/heuristic-segmenter');
     const { foldTrailingQuantityClauses } = await import('@/lib/nlp/trailing-quantity-fold');
+    const { resolveSelfCorrections } = await import('@/lib/nlp/self-correction');
     const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
+    const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
+    const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
     const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
@@ -433,6 +436,20 @@ export async function POST(req: NextRequest) {
         // A negated / removed / excluded part ("no bun", "i took off the bacon") is dropped BEFORE
         // the fold: fold-first can rewrite a negated part into a billed one ("no bun, two of them"
         // -> "2 no bun"). The cache write above keeps the undropped split.
+        // A homemade dish named with its parts ("a burrito bowl i made with rice, beans and chicken") bills the dish
+        // only; that pass runs after the negated drop and BEFORE the fold: "a homemade pizza with pepperoni and
+        // mushrooms, two slices" -> the fold can only attach "two slices" once the parts are gone.
+        // A spoken self-correction ("four pancakes, wait no, three pancakes") bills the corrected value only. It runs FIRST:
+        // a corrected quantity must exist before the fold reads it, and a restated item must be gone before the dish and
+        // drink passes count parts. The cache write above keeps the uncorrected split.
+        const sc = resolveSelfCorrections(lineKey, items);
+        items = sc.items;
+        if (sc.corrections.length > 0) {
+          logger.info('nlp_parse.self_correction', {
+            count: sc.corrections.length,
+            kinds: sc.corrections.map(c => c.kind),
+          });
+        }
         const np = dropNegatedParts(lineKey, items);
         items = np.items;
         if (np.drops.length > 0) {
@@ -440,6 +457,18 @@ export async function POST(req: NextRequest) {
             count: np.drops.length,
             kinds: np.drops.map(d => d.kind),
           });
+        }
+        const dp = dropDishParts(lineKey, items);
+        items = dp.items;
+        if (dp.drops.length > 0) {
+          logger.info('nlp_parse.dish_part_drop', { count: dp.drops.length });
+        }
+        // A milk named after a latte-type drink ("a matcha latte with almond milk") is the drink's variant, not a
+        // second billed item; after the dish drop, before the trailing-quantity fold. The cache keeps the unfolded split.
+        const dm = foldDrinkMilk(lineKey, items);
+        items = dm.items;
+        if (dm.folds.length > 0) {
+          logger.info('nlp_parse.drink_milk_fold', { count: dm.folds.length });
         }
         const tq = foldTrailingQuantityClauses(lineKey, items);
         items = tq.items;
