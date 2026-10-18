@@ -53,3 +53,35 @@ describe('foldDrinkMilk - purity', () => {
     expect(r.folds).toEqual([{ index: 1, rawText: 'almond milk', drink: 'a matcha latte', kind: 'fold' }]);
   });
 });
+
+describe('an `and` milk with a second use is kept (S202 cloud-35 F7)', () => {
+  const run = (line: string, parts: string[]): string[] => {
+    const items: It[] = parts.map(p => ({ rawText: p, normalizedForm: p.replace(/^(a|an|the|two)\s+/i, '') }));
+    return foldDrinkMilk(canonicalizeSegLine(line), items).items.map(x => x.rawText);
+  };
+
+  test.each([
+    ['an oat milk latte and oat milk for my cereal', ['an oat milk latte', 'oat milk', 'cereal']],
+    ['a latte and milk for the baby', ['a latte', 'milk', 'the baby']],
+    ['two lattes and milk for the kids', ['two lattes', 'milk']],
+    ['a latte and oat milk in my cereal', ['a latte', 'oat milk', 'cereal']],
+    ['a latte and oat milk with my cereal', ['a latte', 'oat milk', 'cereal']],
+  ])('KEPT: %s', (line, parts) => {
+    expect(run(line, parts)).toEqual(parts);
+  });
+
+  test.each([
+    ['a latte and oat milk for breakfast'],
+    ['a latte and oat milk at lunch'],
+    ['a latte and oat milk please'],
+    ['a latte and oat milk for my breakfast'],
+    ['a latte and oat milk this morning'],
+  ])('FOLDED: %s', line => {
+    expect(run(line, ['a latte', 'oat milk'])).toEqual(['a latte']);
+  });
+
+  test('FOLDED: a following item still folds the milk', () => {
+    expect(run('a latte and oat milk and a muffin', ['a latte', 'oat milk', 'a muffin'])).toEqual(['a latte', 'a muffin']);
+    expect(run('a flat white and oat milk', ['a flat white', 'oat milk'])).toEqual(['a flat white']);
+  });
+});
