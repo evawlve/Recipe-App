@@ -64,3 +64,62 @@ describe('dropDishParts - contract', () => {
     expect(r.drops).toEqual([]);
   });
 });
+
+describe('a new clause ends the part list (S202 cloud-35 F1)', () => {
+  const run = (line: string, raws: string[]) => {
+    const items = raws.map(r => ({ rawText: r, normalizedForm: r.replace(/^(a|an|the) /, '') }));
+    return dropDishParts(canonicalizeSegLine(line), items).items.map(x => x.rawText);
+  };
+  const f1Line = 'homemade breakfast burrito with eggs and cheese, then for dinner salmon with spinach';
+  const f1Items = ['homemade breakfast burrito', 'eggs', 'cheese', 'salmon', 'spinach'];
+
+  test.each([
+    [f1Line, f1Items, ['homemade breakfast burrito', 'salmon', 'spinach']],
+    [
+      'a homemade burrito with chicken and rice, and later steak with rice and beans',
+      ['a homemade burrito', 'chicken', 'rice', 'steak', 'rice', 'beans'],
+      ['a homemade burrito', 'steak', 'rice', 'beans'],
+    ],
+    [
+      'a homemade pizza with pepperoni, and for lunch tuna with crackers',
+      ['a homemade pizza', 'pepperoni', 'tuna', 'crackers'],
+      ['a homemade pizza', 'tuna', 'crackers'],
+    ],
+    [
+      'homemade breakfast burrito with eggs and cheese. then for dinner salmon with spinach',
+      f1Items,
+      ['homemade breakfast burrito', 'salmon', 'spinach'],
+    ],
+  ])('restored: %s', (line, raws, want) => {
+    expect(run(line, raws)).toEqual(want);
+  });
+
+  test.each([
+    // F2: a trailing meal tag covers the whole line (Needs Diego), so base behaviour is kept.
+    [
+      'a homemade pizza with pepperoni, and bacon and eggs for breakfast',
+      ['a homemade pizza', 'pepperoni', 'bacon', 'eggs'],
+      ['a homemade pizza'],
+    ],
+    // Words AFTER an item never count.
+    [
+      'a homemade burrito with eggs, cheese and salsa for breakfast',
+      ['a homemade burrito', 'eggs', 'cheese', 'salsa'],
+      ['a homemade burrito'],
+    ],
+    // `had` is not a clause word (refute M1).
+    [
+      'a homemade burrito with what i had left: rice and beans',
+      ['a homemade burrito', 'rice', 'beans'],
+      ['a homemade burrito'],
+    ],
+    // A clause word after from/since/over is provenance, not a new clause.
+    [
+      'a homemade burrito with chicken from dinner, rice and beans',
+      ['a homemade burrito', 'chicken', 'rice', 'beans'],
+      ['a homemade burrito'],
+    ],
+  ])('kept as base: %s', (line, raws, want) => {
+    expect(run(line, raws)).toEqual(want);
+  });
+});
