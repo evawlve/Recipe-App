@@ -71,7 +71,6 @@ const DEFAULT_RULES: NormalizationRules = {
     'roughly',
     'trimmed',
     'halves',
-    'mashed',
     'grated',
     'shredded',
     'crushed',
@@ -129,6 +128,8 @@ const DEFAULT_RULES: NormalizationRules = {
     // - breaded, battered (adds carbs/calories)
     // - candied, glazed, caramelized (adds sugar)
     // - creamed, buttered (adds fat/calories)
+    // - mashed (S202: a mashed dish is not the raw vegetable - `mashed potatoes` ~97 kcal/100 g vs raw; stripping it collapsed
+    //   `mashed potatoes` onto the `potatoes` key and leaked a `mashed potatoes` AiNormalizeCache answer onto that raw key)
   ],
   size_phrases: [
     '[0-9]+\\s*(inch|inches|in|cm|centimeter|centimeters)\\b',
