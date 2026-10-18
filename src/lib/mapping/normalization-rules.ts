@@ -219,7 +219,9 @@ const DEFAULT_RULES: NormalizationRules = {
     // e.g. "gluten" → "Gluten Free (Oreo)", "apple pie spice" → "apple chips"
     { from: 'apple pie spice', to: 'apple pie spice blend' },
     { from: 'pie spice', to: 'pumpkin pie spice' },
-    { from: 'lasagna', to: 'lasagna noodles' },
+    // S202: bare `lasagna` is no longer rewritten to `lasagna noodles`. A food-log `lasagna` is the dish;
+    // the rule was a recipe-era guard from fix 75's `4.5 oz lasagna`, and the recipe path is dormant
+    // (Recipe 0 / Ingredient 0 rows, 2026-10-18). `lasagna noodles` / `lasagna sheets` keep their own words.
     { from: 'ground thyme', to: 'dried thyme powder' },
     { from: 'spice blend mustard', to: 'mustard powder' },
     { from: 'lean hamburger', to: 'lean ground beef' },
