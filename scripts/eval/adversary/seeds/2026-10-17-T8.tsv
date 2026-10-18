@@ -1,0 +1,85 @@
+# run 2
+# C68 S179 · 2026-10-17 · T8 · run 2 (warm) · 10 repro (run 1) + 30 new · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+breakfast, lunch and dinner were all leftover lasagna, one square each	1			-
+dinner was a bowl of progresso minestrone and some crackers	2			progresso;-
+dinner was a slice of real good chicken crust pizza, just the one	1			real good
+for lunch me and my coworker split a large cheese pizza, i had three slices	1			-
+honestly i didn't eat much, just a cheese stick and some grapes	2			-;-
+i put about 45 ml of low sodium soy sauce on my stir fry at dinner	2			-;-
+while studying i went through a whole sleeve of saltine crackers	1			-
+with lunch i had a bottle of san pellegrino	1			san pellegrino
+i was going to have cereal but ended up eating two waffles	1			-
+for lunch i ate about 2 cups of chicken and rice soup at around 12:30	1			-
+i made a pot of chili with two pounds of ground beef and had one bowl	1			-
+baked a loaf of banana bread with three bananas and ate one slice	1			-
+made a dozen oatmeal cookies and ate two	1			-
+a slice of homemade lasagna, about a 3 inch square	1			-
+shakshuka with two eggs and a piece of pita	2			-;-
+a bowl of jambalaya with sausage and shrimp	1			-
+three cheese enchiladas with red sauce and a scoop of refried beans	2			-;-
+a cup of pasta salad with italian dressing, olives and salami	1			-
+egg fried rice made with one egg and a cup of leftover rice	1			-
+a plate of chicken alfredo, about two cups	1			-
+a bowl of homemade mac and cheese with breadcrumbs on top	1			-
+two homemade beef tacos with lettuce, cheese and sour cream	1			-
+a tuna noodle casserole, one serving out of a 9x13 pan	1			-
+half a homemade chicken pot pie, the small 6 inch kind	1			-
+a plate of nachos with ground beef, cheese, jalapenos and sour cream	1			-
+a sloppy joe on a hamburger bun with a pickle on the side	2			-;-
+a bowl of chicken tortilla soup topped with avocado and crushed tortilla chips	1			-
+a stuffed bell pepper with rice and ground turkey	1			-
+a bowl of beef and broccoli over white rice, maybe a cup of rice	2			-;-
+homemade potato salad, about half a cup, with a grilled hot dog	2			-;-
+two deviled eggs	1			-
+a slice of homemade apple pie with a scoop of vanilla ice cream	2			-;-
+a piece of cornbread with a pat of butter	2			-;-
+a plate of chicken parmesan over spaghetti	2			-;-
+a bowl of white bean and kale soup, about 300 ml	1			-
+a slice of quiche lorraine, an eighth of the pie	1			-
+french toast made with two slices of brioche, with powdered sugar	1			-
+a bowl of congee with a century egg and scallions	1			-
+a homemade smash burger with two thin patties and american cheese on a potato bun	1			-
+a plate of fettuccine with clam sauce and garlic bread on the side	2			-;-
+
+# run 9
+# C68 S179 · 2026-10-17 · T8 · run 9 (warm; = the unsent run-8 seeds, run 8 refused by the hold; first run on build C6hCd…) · 12 repro (run 7) + 28 new · line<TAB>foods<TAB>expect<TAB>axis<TAB>expectBrands
+as an appetizer we had mozzarella sticks, then i had lasagna	2			-;-
+at the potluck i had a scoop of baked ziti and some caesar salad	2			-;-
+during my shift i had a cup of soup and half a sandwich	2			-;-
+elevenses was a scone with clotted cream	2			-;-
+for the kids' dinner and mine, spaghetti with meat sauce	1			-
+for the main course, prime rib and mashed potatoes	2			-;-
+linner was a big plate of nachos	1			-
+meal 3 of the day was a steak salad	1			-
+post workout meal was grilled chicken and sweet potato	2			-;-
+right before bed, two graham crackers	1			-
+the meal prep container had rice, broccoli and teriyaki chicken	3			-;-;-
+tonight's leftovers: half a rotisserie chicken	1			-
+a plate with 4 oz chicken, half a cup of rice and a cup of green beans	3			-;-;-
+a bowl of 150 g greek yogurt, 30 g granola and 50 g raspberries	3			-;-;-
+a sandwich with 2 oz turkey, one slice of provolone and mustard on wheat	1			-
+a tortilla with 2 scrambled eggs, salsa and a bit of cheddar	1			-
+2 rice cakes topped with 1 tbsp peanut butter each	2			-;-
+a homemade poke bowl with salmon, rice, edamame and avocado	1			-
+chicken curry with naan	2			-;-
+a bowl of bibimbap with a fried egg	1			-
+pierogi, about six, with sour cream	2			-;-
+a falafel wrap with tahini	1			-
+a plate of arroz con pollo	1			-
+homemade chicken soup with matzo balls, two balls	1			-
+a beef and bean chili dog	1			-
+a pita pocket stuffed with chicken shawarma and tzatziki	1			-
+a bowl of lentil dal with basmati rice	2			-;-
+a pork chop with applesauce and roasted carrots	3			-;-;-
+three meatballs in marinara on a hoagie roll	1			-
+a baked potato stuffed with broccoli and cheddar	1			-
+a tofu scramble with peppers and onions	1			-
+gnocchi with brown butter and sage	1			-
+a croque monsieur	1			-
+a bowl of minestrone i made with a slice of garlic bread	2			-;-
+a chicken pesto panini	1			-
+polenta with mushrooms and parmesan	1			-
+a cheese and tomato omelet made with two eggs	1			-
+a burger patty over a side salad	2			-;-
+a slice of meatloaf with a ketchup glaze	1			-
+a bowl of fried rice with shrimp and peas	1			-
