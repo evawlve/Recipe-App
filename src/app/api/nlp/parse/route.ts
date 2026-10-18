@@ -23,6 +23,7 @@ import {
   pruneRequestLog,
 } from '@/lib/nlp/parse-rate-limit';
 import { isNoSaveTester } from '@/lib/nlp/nosave-testers';
+import { isPourOntoSecondFood, restoreLeadingPour } from '@/lib/parse/loose-measures';
 // Pure (no imports), so static is free. The per-request input bounds and their 413 copy.
 import {
   MAX_PARSE_BODY_BYTES, contentLengthTooLarge, readBodyTextWithin, checkParseBounds,
@@ -63,6 +64,8 @@ function singleItemFromText(text: string): ParsedInputItem | null {
   }
 
   if (rawText.length === 0 || MULTI_ITEM_SIGNALS.test(rawText)) return null;
+  // S202 (cloud-35 F9): `a splash of syrup on pancakes` is two foods — let the segmenter split it.
+  if (isPourOntoSecondFood(rawText)) return null;
   if (rawText.split(/\s+/).length > 6) return null;
 
   return { rawText, mealType, brand: '', normalizedForm: '' };
@@ -442,6 +445,10 @@ export async function POST(req: NextRequest) {
         // A spoken self-correction ("four pancakes, wait no, three pancakes") bills the corrected value only. It runs FIRST:
         // a corrected quantity must exist before the fold reads it, and a restated item must be gone before the dish and
         // drink passes count parts. The cache write above keeps the uncorrected split.
+        // S202 (cloud-35 F9): a pour onto/into a second food keeps its measure on the liquid.
+        const lp = restoreLeadingPour(lineKey, items);
+        items = lp.items;
+        if (lp.restored > 0) logger.info('nlp_parse.leading_pour_restore', { count: lp.restored });
         const sc = resolveSelfCorrections(lineKey, items);
         items = sc.items;
         if (sc.corrections.length > 0) {

@@ -691,6 +691,11 @@ describe('parseGoldenSet', () => {
  * `text`-shaped, so a blanket skip would have hidden them a second time.
  */
 describe('isDeterministicSingleItemText (mirror of route.ts singleItemFromText)', () => {
+    it('mirrors the S202 F9 pour rule: a pour onto a second food is not a single item', () => {
+        expect(isDeterministicSingleItemText('a splash of syrup on pancakes')).toBe(false);
+        expect(isDeterministicSingleItemText('a splash of milk')).toBe(true);
+    });
+
     it('accepts the short separator-free lines the route maps WITHOUT the segmenter', () => {
         expect(isDeterministicSingleItemText('7up')).toBe(true);
         expect(isDeterministicSingleItemText('2 7up')).toBe(true);
@@ -2473,7 +2478,7 @@ describe('the parse route rule that winner-diff-screens transcribes', () => {
     }
 
     /** Re-pin ONLY after reconciling isDeterministicSingleItemText with the route. */
-    const PINNED_ROUTE_RULE_HASH = '80719c0439bca3d4';
+    const PINNED_ROUTE_RULE_HASH = '4e7069e734967f65';
 
     it('has not drifted from the transcription in winner-diff-screens.ts', () => {
         const actual = createHash('sha256').update(routeRuleSource()).digest('hex').slice(0, 16);

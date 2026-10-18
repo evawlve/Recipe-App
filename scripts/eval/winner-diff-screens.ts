@@ -28,6 +28,8 @@
  */
 
 import { matchesAlt, textOf } from './assertions';
+// Relative, not '@/': loose-measures.ts has no imports, so this file stays I/O-free.
+import { isPourOntoSecondFood } from '../../src/lib/parse/loose-measures';
 
 // ============================================================
 // 1. Wire types — shared with winner-diff.ts, kept here so tests need no runner
@@ -1031,6 +1033,9 @@ const MULTI_ITEM_SIGNALS_RE = /[,;\n+&]|\b(?:and|with|plus)\b/i;
  * `text` case unevaluable would be as dishonest in the other direction as the
  * silent pass this file exists to remove.
  *
+ * The route's S202 F9 pour rule (a pour onto a second food is not a single item) is mirrored by calling the same
+ * pure predicate, not a transcription.
+ *
  * IF THE ROUTE'S RULE CHANGES, THIS MUST CHANGE WITH IT — and that is now enforced
  * rather than requested. `__tests__/winner-diff.test.ts` hashes the route's own source
  * region (both regexes plus the function) against a pinned value, so an edit there goes
@@ -1048,6 +1053,7 @@ export function isDeterministicSingleItemText(text: string): boolean {
     const mealMatch = trimmed.match(MEAL_SUFFIX_RE);
     if (mealMatch) rawText = trimmed.slice(0, mealMatch.index).trim();
     if (rawText.length === 0 || MULTI_ITEM_SIGNALS_RE.test(rawText)) return false;
+    if (isPourOntoSecondFood(rawText)) return false;
     if (rawText.split(/\s+/).length > 6) return false;
     return true;
 }
