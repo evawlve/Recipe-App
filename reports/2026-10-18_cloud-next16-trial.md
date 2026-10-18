@@ -172,7 +172,7 @@ Read with the GitHub MCP tool (`pull_request_read`) on head `a56d23cf` (the last
 | check | conclusion |
 |---|---|
 | **Vercel** (required) | **success** — "Deployment has completed" (16:29:42Z). Vercel ran the package `build` script, i.e. `next build --webpack`; the 250 MB function limit held. |
-| **build** (required) | in progress when this report was committed (run 39145178237, started 16:28:51Z); its conclusion is added in a follow-up commit |
+| **build** (required) | **success** — job 117727454761 (run 39145178237), node 20: `prisma:generate` + `lint:ci` + `typecheck` + `test:ci` + `next build --webpack`. No `next/font` flake re-run was needed. |
 | Danger | success — "All green. Yay." |
 | size | success |
 | Vercel Preview Comments | success |
