@@ -67,7 +67,7 @@ import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-pla
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, stripPartitiveOfResidue, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
-import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers, PROMPT_EXAMPLE_ECHO_REASON } from './llm-output-guards';
+import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers, PROMPT_EXAMPLE_ECHO_REASON, isPromptExampleEcho } from './llm-output-guards';
 import { isBarePluralRequest } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
 import { buildFatSecretResult } from './build-fatsecret-result';
@@ -1772,6 +1772,13 @@ export async function mapIngredientWithFallback(
                 // score identically but have vastly different calorie profiles.
                 // FIX: Use baseName instead of rawLine to hit the cache for quantity variations!
                 const cachedNormalize = await getAiNormalizeCache(baseName);
+                if (cachedNormalize && isPromptExampleEcho(baseName, cachedNormalize.normalizedName)) {
+                    // Second read seat (C70): a poisoned row replayed here bypasses
+                    // aiNormalizeIngredient(), so it gets the same unresolved return.
+                    logger.info('mapping.llm_prompt_example_echo', { rawLine: trimmed, baseName });
+                    markFunnel(telemetry, 'no_match', 'prompt_example_echo');
+                    return null;
+                }
                 if (cachedNormalize?.nutritionEstimate) {
                     aiNutritionEstimate = cachedNormalize.nutritionEstimate;
                     // Same repair as the live path: AiNormalizeCache is 86.5%

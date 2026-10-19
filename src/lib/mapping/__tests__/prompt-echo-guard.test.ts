@@ -83,6 +83,8 @@ jest.mock('../../ai/structured-client', () => {
 import { isPromptExampleEcho, PROMPT_EXAMPLE_IDENTITIES } from '../llm-output-guards';
 import { mapIngredientWithFallback } from '../map-ingredient-with-fallback';
 import { requestAiNutrition } from '../ai-nutrition-backfill';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const actualNormalize = (jest.requireMock('../ai-normalize') as {
     __actualNormalize: (raw: string, cleaned?: string) => Promise<any>;
@@ -234,9 +236,49 @@ describe('mapIngredientWithFallback() on an echo', () => {
         expect(mockAiSimplify).toHaveBeenCalled();
     });
 
+    it('gate-skip replay: a cached echo row -> unresolved, no AI calls', async () => {
+        mockShouldNormalize.mockReturnValue({ shouldCallLlm: false, reason: 'test', confidence: 0.9 });
+        mockGetCache.mockResolvedValue({
+            normalizedName: BERRY, canonicalBase: 'strawberries', synonyms: [], prepPhrases: [], sizePhrases: [],
+            isBranded: false, isMultiIngredient: false,
+            nutritionEstimate: { caloriesPer100g: 32, proteinPer100g: 0.7, carbsPer100g: 7.7, fatPer100g: 0.3, confidence: 0.95 },
+        });
+        const telemetry = {} as any;
+        const r = await mapIngredientWithFallback('scoops', { telemetry });
+        expect(r).toBeNull();
+        expect(mockAiNormalize).not.toHaveBeenCalled();
+        expect(mockAiSimplify).not.toHaveBeenCalled();
+        expect(requestAiNutrition).not.toHaveBeenCalled();
+        expect(telemetry.dropReason).toContain('prompt_example_echo');
+    });
+
+    it('gate-skip replay: a cached real row (fresas) -> unchanged path', async () => {
+        mockShouldNormalize.mockReturnValue({ shouldCallLlm: false, reason: 'test', confidence: 0.9 });
+        mockGetCache.mockResolvedValue({
+            normalizedName: 'fresas', canonicalBase: 'strawberries', synonyms: [], prepPhrases: [], sizePhrases: [],
+            isBranded: false, isMultiIngredient: false,
+            nutritionEstimate: { caloriesPer100g: 32, proteinPer100g: 0.7, carbsPer100g: 7.7, fatPer100g: 0.3, confidence: 0.95 },
+        });
+        await mapIngredientWithFallback('fresas');
+        expect(mockAiSimplify).toHaveBeenCalled();
+    });
+
     it('an ordinary normalize error (not an echo) still falls through to simplify', async () => {
         mockAiNormalize.mockResolvedValue({ status: 'error', reason: 'test' });
         await mapIngredientWithFallback('a bacon butty');
         expect(mockAiSimplify).toHaveBeenCalled();
+    });
+});
+
+describe('PROMPT_EXAMPLE_IDENTITIES cannot drift from the prompts', () => {
+    const read = (f: string) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8').toLowerCase();
+    it('every identity appears verbatim in the ai-normalize.ts or ai-simplify.ts prompt text', () => {
+        const text = read('ai-normalize.ts') + read('ai-simplify.ts');
+        for (const id of PROMPT_EXAMPLE_IDENTITIES) expect(text).toContain(id);
+    });
+    it('each prompt file carries its own example', () => {
+        expect(read('ai-normalize.ts')).toContain(COLBY);
+        expect(read('ai-normalize.ts')).toContain(BERRY);
+        expect(read('ai-simplify.ts')).toContain(COLBY);
     });
 });
