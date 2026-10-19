@@ -19,6 +19,30 @@
  * guard (the target has no quantity of its own, shares a head noun with the clause, or is
  * alone in its comma piece) exists to keep `two cookies` after `a turkey sandwich` apart.
  *
+ * PARTIAL EAT (S240, MGR route 4, default taken). The segmenter also DROPS a partial-eat clause
+ * (`a sandwich, i gave half to my friend` -> [a sandwich]) and the item bills in full. MGR's five
+ * phrases scale the item they follow: `gave half` / `shared half` x1/2, `left most` x1/4, `left some`
+ * x3/4, `ate the top only` x1/2 (leads i/we/and/but/then/so/just/also skipped). The target must read
+ * `a|an|one X` with no stated amount, and the scaled text (`1/2 sandwich`) must parse to the SAME unit
+ * at exactly factor x the original quantity, else nothing fires. A clause that names a food must
+ * covers() the owner; a clause naming none fires only on a ONE-item line. Fold kind `partial`.
+ * Named misses: phrases outside the table, multi-item lines with an unnamed clause, a clause the
+ * segmenter emits as its own item, stated-amount targets (`two slices of pizza, i gave half away`),
+ * short comma-less lines (fast path).
+ *
+ * STOCK (S240, MGR reserve R1+R3). A consumption clause after a STOCK item - one that states its own amount and so
+ * fails isValidTarget() - bills what was consumed, not the stock. Two shapes: scaleStock() (a pure fraction scales the
+ * stock: `a 2 lb bag of baby carrots, i ate about a quarter` -> 0.5 lb) and replaceStock() (a consumed COUNT replaces
+ * it: `1 doz eggs for the week, ate 2` -> `2 eggs`). scaleStock() fires only for STOCK_UNITS (measures and single
+ * containers, not pack / case / carton / dozen / size words), and the scaled text must parse to the SAME unit at exactly
+ * f x the original qty; never an addition (`and a half`). replaceStock() guards: a user-subject consumption verb
+ * (ate / had / drank / eaten / finished), a COUNT stock for a unitless count (never a size or weight stock), the count
+ * capped by a known stock count, normalizedForm free of digits / units / containers, the result parsing back to the
+ * count, and `left` / `remaining` / `over` leftovers refused. The fraction words (quarter / third / fourth, three
+ * quarters, two thirds) parse only under the opt-in `parseClause(t, { fractions: true })`, as a PURE fraction; no other
+ * caller passes it, so self-correction is byte-unchanged. Fold kind `stock`. Named misses: food-named counts
+ * (`ate 20 chips` in some shapes), `the kids ate 4`, word-number stocks (`two bags`), size stocks.
+ *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
  * case/punctuation variant that shares its key. Pure; imports only parseIngredientLine;
@@ -29,7 +53,7 @@ import { parseIngredientLine } from '@/lib/parse/ingredient-line';
 import { splitLeadingPour } from '@/lib/parse/loose-measures';
 
 export interface TrailingQuantityFold {
-  kind: 'segment' | 'gap';
+  kind: 'segment' | 'gap' | 'partial' | 'stock';
   /** Index of the folded-into item in the ORIGINAL input array. */
   targetIndex: number;
   /** The clause text (a segment's rawText, or the gap piece's tokens). */
@@ -48,6 +72,8 @@ export interface Clause {
   value: number;
   unit: string | null;
   food: string[];
+  /** S240 R3: set when the value came from a fraction WORD (quarter / third / fourth) read under `fractions`. */
+  fractionWord?: string;
 }
 
 const LEAD = new Set([
@@ -66,6 +92,7 @@ const UNITS = new Set([
 const TAILOF_WORDS = new Set(['them', 'those', 'these', 'it', 'that']);
 const TAIL_SINGLE = new Set(['too', 'total', 'ish', 'worth']);
 const NEGATION = new Set(['no', 'not', 'nope', 'wait', 'sorry', 'actually', 'scratch', 'that', 'instead']);
+const FRACTION_WORDS: Record<string, number> = { quarter: 0.25, fourth: 0.25, third: 1 / 3 };
 const QTY_WORDS = new Set([...Object.keys(NUM_WORDS), 'half', 'couple', 'dozen', 'few', 'several']);
 const HEAD_STOP = new Set(['with', 'and', 'in', 'on', 'over', 'topped', 'plus']);
 const FOOD_BAD_START = new Set(['and', 'or', 'with', 'plus', 'then', 'but', 'of']);
@@ -124,7 +151,12 @@ function parseNumeric(w: string): number | null {
 }
 
 /** Parses a whole token list as a clause, or returns null. */
-export function parseClause(t: string[]): Clause | null {
+/**
+ * `opts.fractions` (S240, MGR reserve R3; only the fold's stock path passes it): also read `a|one quarter|fourth|third`,
+ * `three quarters|fourths`, `two thirds` - as a PURE fraction only (nothing after it but `of it|them|that|this`), never with a
+ * unit or a food, so `a quarter pounder` / `a third glass` stay what they were. Every other caller (self-correction) is unchanged.
+ */
+export function parseClause(t: string[], opts: { fractions?: boolean } = {}): Clause | null {
   const n = t.length;
   let i = 0;
   while (i < n && LEAD.has(t[i])) i++;
@@ -134,6 +166,19 @@ export function parseClause(t: string[]): Clause | null {
   let half = false;
   const w = t[i];
   const numeric = parseNumeric(w);
+  if (opts.fractions) {
+    let fv: number | undefined;
+    let fw: string | undefined;
+    let k = i;
+    if ((w === 'a' || w === 'one') && FRACTION_WORDS[t[i + 1]] !== undefined) { fv = FRACTION_WORDS[t[i + 1]]; fw = t[i + 1]; k = i + 2; }
+    else if (w === 'three' && (t[i + 1] === 'quarters' || t[i + 1] === 'fourths')) { fv = 0.75; fw = t[i + 1]; k = i + 2; }
+    else if (w === 'two' && t[i + 1] === 'thirds') { fv = 2 / 3; fw = 'thirds'; k = i + 2; }
+    if (fv !== undefined) {
+      const rest = t.slice(k);
+      const pure = rest.length === 0 || (rest.length === 2 && rest[0] === 'of' && TAILOF_WORDS.has(rest[1]));
+      return pure ? { value: fv, unit: null, food: [], fractionWord: fw } : null;
+    }
+  }
   if (numeric !== null) { value = numeric; i++; }
   else if (NUM_WORDS[w] !== undefined) { value = NUM_WORDS[w]; i++; }
   else if (w === 'half') { value = 0.5; half = true; i++; }
@@ -193,8 +238,9 @@ export function parseClause(t: string[]): Clause | null {
 }
 
 function formatValue(v: number): string {
-  return v === 0.5 ? '1/2' : String(v);
+  return FRACTION_TEXT.find(([x]) => Math.abs(x - v) < 1e-9)?.[1] ?? String(v);
 }
+const FRACTION_TEXT: Array<[number, string]> = [[0.5, '1/2'], [0.25, '1/4'], [0.75, '3/4'], [1 / 3, '1/3'], [2 / 3, '2/3']];
 
 function headOf(item: Item): string | null {
   const src = item.normalizedForm && item.normalizedForm.trim()
@@ -245,6 +291,163 @@ function rewrite(item: Item, clause: Clause): string {
     : `${formatValue(clause.value)} ${food}`;
 }
 
+// S240 (MGR route 4, 2026-10-19; default taken, organic 0): a PARTIAL-EAT clause the segmenter drops
+// (`a sandwich, i gave half to my friend`) scales the ONE item it follows instead of vanishing. MGR's table only:
+// gave half, shared half x1/2; left most x1/4; ate the top only x1/2; left some x3/4.
+const PE_LEAD = new Set(['i', 'we', 'and', 'but', 'then', 'so', 'just', 'also']);
+const PE_STOP = new Set(['to', 'with', 'for', 'away', 'because', 'cause', 'since', 'and', 'but', 'so', 'in', 'on', 'at']);
+const PE_IT = new Set(['it', 'that', 'them', 'this']);
+
+export interface PartialEat {
+  factor: number;
+  /** A food the clause names (`gave half the sandwich`), [] when it names none. */
+  food: string[];
+}
+
+function foodAfter(rest: string[]): string[] | null {
+  let k = 0;
+  if (rest[k] === 'of') k++;
+  if (PE_IT.has(rest[k] ?? '')) return [];
+  if (rest[k] === 'the' || rest[k] === 'my') k++;
+  const food: string[] = [];
+  for (; k < rest.length && !PE_STOP.has(rest[k]); k++) food.push(rest[k]);
+  return food.length > 3 ? null : food;
+}
+
+/** A dropped partial-eat clause and its factor, or null. MGR's five phrases, nothing else. */
+export function parsePartialEat(group: string[]): PartialEat | null {
+  let g = group;
+  while (g.length && PE_LEAD.has(g[0])) g = g.slice(1);
+  const at = (k: number) => g[k] ?? '';
+  let factor: number;
+  let rest: string[];
+  if ((at(0) === 'gave' || at(0) === 'shared') && at(1) === 'half') { factor = 0.5; rest = g.slice(2); }
+  else if (at(0) === 'left' && at(1) === 'most') { factor = 0.25; rest = g.slice(2); }
+  else if (at(0) === 'left' && at(1) === 'some') { factor = 0.75; rest = g.slice(2); }
+  else if (at(0) === 'ate' && at(1) === 'the' && at(2) === 'top' && at(3) === 'only') { factor = 0.5; rest = g.slice(4); }
+  else return null;
+  // `shared half and half` is the creamer, not a half.
+  if (rest[0] === 'and' && rest[1] === 'half') return null;
+  const food = foodAfter(rest);
+  return food === null ? null : { factor, food };
+}
+
+const PE_FRAC: Record<number, string> = { 0.25: '1/4', 0.5: '1/2', 0.75: '3/4' };
+
+/**
+ * `a|an|one X` scaled by `factor`, or null. Null when X states an amount of its own (`a dozen wings`, `a 12 oz
+ * steak`, `a couple of tacos`), when the target is not article-led (`chips` - a bare plural would leave its serving
+ * rung), and when the scaled text does not parse to the SAME unit at exactly factor x the original quantity
+ * (`a glass of wine` parses unitless, `3/4 glass of wine` parses a glass).
+ */
+function scaleByFactor(item: Item, factor: number): string | null {
+  const raw = item.rawText.trim();
+  const m = /^(?:a|an|one)\s+(.+)$/i.exec(raw);
+  if (!m) return null;
+  if (/\d/.test(m[1]) || words(m[1]).some(x => QTY_WORDS.has(x))) return null;
+  const scaled = `${PE_FRAC[factor]} ${m[1]}`;
+  try {
+    const before = parseIngredientLine(raw);
+    const after = parseIngredientLine(scaled);
+    if (!before || !after) return null;
+    if ((before.unit ?? null) !== (after.unit ?? null)) return null;
+    if (Math.abs(after.qty * after.multiplier - factor * before.qty * before.multiplier) > 1e-9) return null;
+  } catch {
+    return null;
+  }
+  return scaled;
+}
+
+// S240 (MGR reserve R3): the units a fraction of a STOCK item may scale - measures and single containers. NOT pack / case /
+// carton / dozen (`a 6 pack of beer` bills one serving; `3 pack` would be three packs) and NOT size words (large / medium).
+const STOCK_UNITS = new Set([
+  'oz', 'lb', 'g', 'kg', 'ml', 'l', 'liter', 'cup', 'pint', 'quart', 'gallon', 'tbsp', 'tsp', 'bag', 'can', 'bottle', 'box',
+  'jar', 'container', 'tub', 'bowl', 'plate',
+]);
+const ORDINAL_CUE = new Set(['first', 'second', 'another', 'again', 'next']);
+
+/**
+ * S240 (MGR reserve R3): a PURE fraction clause (`ate half`, `about a quarter`) over a STOCK item that states its own amount
+ * (`a bag of chips`, `a pint of ice cream`, `a 2 lb bag of baby carrots`) scales that amount: `a|an|one <unit> of X` ->
+ * `<frac> <unit> of X`; `[a] <n> <unit> ...` -> `<n*f> <unit> ...`. The scaled text must parse to the SAME unit, in STOCK_UNITS,
+ * at exactly f x the original qty (`a 12 inch sub`, `a 6 pack of beer` never scale). Else null.
+ */
+function scaleStock(item: Item, f: number): string | null {
+  const raw = item.rawText.trim();
+  let scaled: string | null = null;
+  let orig = raw;
+  const art = /^(?:a|an|one)\s+(.+)$/i.exec(raw);
+  const num = /^(?:(?:a|an|one)\s+)?(\d+(?:\.\d+)?)\s+(.+)$/i.exec(raw);
+  if (num) {
+    orig = `${num[1]} ${num[2]}`;
+    const v = Number(num[1]) * f;
+    scaled = `${Number.isInteger(v) ? v : Math.round(v * 1000) / 1000} ${num[2]}`;
+  } else if (art && !words(art[1]).some(x => QTY_WORDS.has(x))) {
+    scaled = `${formatValue(f)} ${art[1]}`;
+  }
+  if (!scaled) return null;
+  try {
+    const before = parseIngredientLine(orig);
+    const after = parseIngredientLine(scaled);
+    if (!before || !after || !before.unit || before.unit !== after.unit || !STOCK_UNITS.has(before.unit)) return null;
+    if (Math.abs(after.qty * after.multiplier - f * before.qty * before.multiplier) > 1e-6) return null;
+  } catch {
+    return null;
+  }
+  return scaled;
+}
+
+const isPureFraction = (c: Clause): boolean => c.value < 1 && c.unit === null && c.food.length === 0;
+
+// S240 (MGR reserve R1): `1 doz eggs for the week, ate 2` - a COUNT the user says THEY consumed, after a STOCK item that
+// states its own amount, is what they ate; the stock is not. Read only in the stock paths below (LEAD is unchanged).
+const CONSUME = new Set(['ate', 'had', 'drank', 'eaten', 'finished']);
+const SUBJECT_OK = new Set(['i', 'we', 'and', 'then', 'so', 'just', 'only', 'also']);
+// A unitless count re-counts only a COUNT stock - never a size or a weight/volume stock (`a large pizza, had 3`).
+const COUNT_STOCK = new Set(['dozen', 'doz', 'pack', 'box', 'bag', 'carton', 'case', 'sleeve', 'package', 'tray', 'packet']);
+const STOCK_FORM_BAD = new Set([...COUNT_STOCK, ...STOCK_UNITS, 'large', 'medium', 'small', 'half', 'whole']);
+
+/** The clause tokens with a user-subject consumption lead stripped (`i ate 2` -> `2`), or null when no such lead. */
+function consumedTokens(t: string[]): string[] | null {
+  let i = 0;
+  while (i < t.length && SUBJECT_OK.has(t[i])) i++;
+  if (!CONSUME.has(t[i] ?? '')) return null;
+  return t.slice(i + 1);
+}
+
+/** The stock item replaced by the consumed count (`2 eggs`, `3 slices of pizza`), or null. */
+function replaceStock(item: Item, c: Clause): string | null {
+  if (!(c.value >= 1 && Number.isInteger(c.value) && c.food.length === 0)) return null;
+  const food = (item.normalizedForm ?? '').trim();
+  const fw = words(food);
+  if (!food || /\d/.test(food) || fw.some(x => STOCK_FORM_BAD.has(x) || QTY_WORDS.has(x) || isUnit(x))) return null;
+  const rw = words(item.rawText);
+  let stockCount: number | null = null;
+  try {
+    const p = parseIngredientLine(item.rawText.replace(/^\s*(a|an|one)\s+/i, '1 '));
+    if (p && !p.unit) stockCount = p.qty * p.multiplier;
+  } catch { /* no cap */ }
+  if (!c.unit) {
+    // a unitless count needs a COUNT stock
+    if (!rw.some(x => COUNT_STOCK.has(x)) && !(stockCount !== null && stockCount > 1)) return null;
+  } else if (['large', 'medium', 'small'].includes(c.unit)) {
+    return null;
+  }
+  if (rw.includes('dozen') || rw.includes('doz')) stockCount = 12 * (stockCount && stockCount > 1 && stockCount < 12 ? stockCount : 1);
+  const m = /(\d+)\s*pack\b/.exec(item.rawText.toLowerCase());
+  if (m) stockCount = Number(m[1]);
+  if (stockCount !== null && stockCount > 1 && c.value > stockCount) return null;
+  const out = c.unit ? `${c.value} ${c.unit} of ${food}` : `${c.value} ${food}`;
+  try {
+    const q = parseIngredientLine(out);
+    if (!q || Math.abs(q.qty * q.multiplier - c.value) > 1e-9) return null;
+  } catch {
+    return null;
+  }
+  return out;
+}
+
+
 export function foldTrailingQuantityClauses<T extends Item>(
   lineKey: string,
   items: T[],
@@ -291,7 +494,12 @@ export function foldTrailingQuantityClauses<T extends Item>(
   // Segment fold (shapes A, B).
   for (let j = 1; j < n; j++) {
     if (removed.has(j) || folded.has(j)) continue;
-    const clause = parseClause(words(items[j].rawText));
+    const jt = words(items[j].rawText);
+    const jc = consumedTokens(jt);
+    const plain = parseClause(jt) ?? parseClause(jt, { fractions: true });
+    const clause = plain ?? (jc && n === 2 ? parseClause(jc) ?? parseClause(jc, { fractions: true }) : null);
+    // A clause read only after stripping a consumption verb (`drank 2`) is for the STOCK path alone.
+    const viaConsume = !plain;
     if (!clause) continue;
     let t = -1;
     if (clause.food.length === 0) {
@@ -303,7 +511,31 @@ export function foldTrailingQuantityClauses<T extends Item>(
       }
     }
     if (t < 0 || removed.has(t) || folded.has(t)) continue;
-    if (!isValidTarget(items[t])) continue;
+    if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
+    if (!isValidTarget(items[t])) {
+      // S240 R3: a pure fraction over a STOCK item, on a two-item line (the stock and the clause) only; never an ADDITION
+      // (`a cup of rice, and a half` is 1.5 cups).
+      const jw0 = words(items[j].rawText)[0];
+      const additive = jw0 === 'and' || jw0 === 'plus' || (spans[j] && ['and', 'plus'].includes(toks[spans[j]!.start - 1]?.w ?? ''));
+      let st = isPureFraction(clause) && n === 2 && !additive ? scaleStock(items[t], clause.value) : null;
+      if (st === null && n === 2) {
+        // S240 R1: a consumed count, its verb in the segment or the two line tokens before it (`… , ate 2` -> [`2`]).
+        const own = consumedTokens(words(items[j].rawText));
+        const pre = spans[j] ? toks.slice(Math.max(0, spans[j]!.start - 3), spans[j]!.start).map(x => x.w) : [];
+        const lineVerb = pre.length > 0 && CONSUME.has(pre[pre.length - 1]) && (pre.length < 2 || SUBJECT_OK.has(pre[pre.length - 2]) || toks[spans[j]!.start - 2]?.piece !== toks[spans[j]!.start - 1]?.piece);
+        // `had 2 left` / `2 remaining` is what is LEFT, not what was eaten.
+        const after = spans[j] ? toks[spans[j]!.end]?.w : undefined;
+        const leftover = after === 'left' || after === 'remaining' || after === 'over';
+        const cc = leftover ? null : own ? parseClause(own) : lineVerb ? clause : null;
+        if (cc) st = replaceStock(items[t], cc);
+      }
+      if (st === null) continue;
+      folds.push({ kind: 'stock', targetIndex: t, clause: items[j].rawText, before: items[t].rawText, after: st });
+      folded.set(t, st);
+      removed.add(j);
+      continue;
+    }
+    if (clause.fractionWord || viaConsume) continue;
     if (clause.food.length === 0 && !aloneInPiece(t, j)) continue;
     const after = rewrite(items[t], clause);
     folds.push({ kind: 'segment', targetIndex: t, clause: items[j].rawText, before: items[t].rawText, after });
@@ -314,7 +546,7 @@ export function foldTrailingQuantityClauses<T extends Item>(
   // Gap fold (shape C).
   for (let t = 0; t < n; t++) {
     const sp = spans[t];
-    if (!sp || removed.has(t) || folded.has(t) || !isValidTarget(items[t])) continue;
+    if (!sp || removed.has(t) || folded.has(t)) continue;
     let end: number;
     if (t === n - 1) end = toks.length;
     else if (spans[t + 1]) end = spans[t + 1]!.start;
@@ -331,8 +563,34 @@ export function foldTrailingQuantityClauses<T extends Item>(
       return true;
     });
     if (!first) continue;
-    const clause = parseClause(first);
+    const pe = parsePartialEat(first);
+    if (pe) {
+      // A clause that names no food belongs to a ONE-item line only (`a muffin, a coffee, ate the top only` is ambiguous).
+      if (pe.food.length > 0 ? !covers(items[t], pe.food) : n !== 1) continue;
+      const scaled = scaleByFactor(items[t], pe.factor);
+      if (scaled === null) continue;
+      folds.push({ kind: 'partial', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after: scaled });
+      folded.set(t, scaled);
+      continue;
+    }
+    const clause = parseClause(first) ?? parseClause(first, { fractions: true });
     if (!clause) continue;
+    if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
+    if (!isValidTarget(items[t])) {
+      // S240 R3: a pure fraction over a STOCK item, on a one-item line only; never an ADDITION (`and a half`).
+      let st = isPureFraction(clause) && n === 1 && first[0] !== 'and' && first[0] !== 'plus' ? scaleStock(items[t], clause.value) : null;
+      if (st === null && n === 1) {
+        const own = consumedTokens(first);
+        const cc = own ? parseClause(own) ?? parseClause(own, { fractions: true }) : null;
+        if (cc && isPureFraction(cc)) st = scaleStock(items[t], cc.value);
+        else if (cc) st = replaceStock(items[t], cc);
+      }
+      if (st === null) continue;
+      folds.push({ kind: 'stock', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after: st });
+      folded.set(t, st);
+      continue;
+    }
+    if (clause.fractionWord) continue;
     if (clause.food.length === 0 ? !aloneInPiece(t) : !covers(items[t], clause.food)) continue;
     const after = rewrite(items[t], clause);
     folds.push({ kind: 'gap', targetIndex: t, clause: first.join(' '), before: items[t].rawText, after });
