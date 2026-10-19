@@ -404,9 +404,14 @@ function rewriteStackOfPancakes(mergedTokens: string[]): void {
   const noun = mergedTokens[nounAt]?.toLowerCase();
   const first = f + 3 + size;
   if ((noun !== 'pancakes' && noun !== 'pancake') || nounAt < first) return;
-  for (let k = first; k < nounAt; k++) {
+  // A STATED count wins over the stack default: "a stack of three buttermilk
+  // pancakes" drops the stack prefix and keeps "three" (its twin bills 3 pieces).
+  const stated = parseQuantityTokens(mergedTokens.slice(first, nounAt));
+  const modsFrom = first + (stated ? stated.consumed : 0);
+  for (let k = modsFrom; k < nounAt; k++) {
     if (!PANCAKE_STACK_MODS.has(mergedTokens[k].toLowerCase())) return;
   }
+  if (stated) { mergedTokens.splice(f, 3 + size); return; }
   mergedTokens.splice(f, 3 + size, PANCAKE_STACK_COUNTS.get(size ? at(1) : '')!);
 }
 
