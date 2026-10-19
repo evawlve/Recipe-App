@@ -5,12 +5,15 @@
  * segmenter emits the first reading AND the correction as separate items, so the line bills both (seven
  * pancakes). Diego's ruling (the narrowed cut, 2026-10-17): the correction wins, but a DIFFERENT food after a
  * correction word replaces the previous item ONLY after `make that` / `make it` / `scratch that` / `wait no` /
- * `no wait` / a lone `no` comma piece. A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
+ * `no wait` / a lone `no` comma piece (a `no` that is not alone in its comma piece and not before an article/
+ * number-led item is `<no?>`, a weak marker (S240)). A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
  * quantity, restates the same food or swaps a part, but never swaps one food for another.
  * The weak markers also include `no i mean`, `oh wait i mean`, `wait i mean`, `oh wait`, `i meant` and `correction`:
  * `no i mean` left the `no` as an impure gap word (so both values billed), and `correction` was absent.
  * `ok fine` / `okay fine` and a lone `wait` comma piece (any punctuation around it) are weak too: they correct a
- * quantity or restate the food, never swap one food for another.
+ * quantity or restate the food, never swap one food for another. The hesitation interjections (er, um, uh, hmm, oops,
+ * whoops, nope, okay, ok ...) are a QUANTITY-ONLY tier - qty / qty-on-qty / restate-qty only, never a swap, part,
+ * replace or trailing (S240, MGR 17:14Z).
  *
  * KINDS (each correction names the ORIGINAL index of the item it acted on).
  * - qty: a quantity-only item after the marker ("a bagel, actually make that two") rewrites the previous item's
@@ -79,7 +82,15 @@ const STRONG = [
   'no i mean', 'oh wait i mean', 'wait i mean', 'oh wait', 'i meant', 'correction',
   // S240 (C68 S238 run 3, post-deploy 1): `a pint of ice cream, ok fine half a pint` - weak (never a food swap).
   'ok fine', 'okay fine',
+  // S240 (MGR 17:14Z, C68 run 5): a spoken-hesitation / self-repair interjection is a WEAK marker (`two slices of toast, er, one
+  // slice`, `three cookies, okay four`, `200 g of chicken, oops 250 g`, `three tacos, whoops, two tacos`): it corrects a quantity or
+  // restates the same food, never swaps foods (not in SWAP_OK). `oh` and `well` stay plain filler.
+  'er', 'erm', 'um', 'umm', 'uh', 'uhh', 'hmm', 'oops', 'whoops', 'nope', 'okay', 'ok',
 ].map(m => m.split(' '));
+// S240 (MGR 17:14Z, refute-r1): the interjections are a QUANTITY-ONLY tier. Alone they fire qty / qty-on-qty / restate-qty only, and
+// only when nothing else follows the correction in its comma piece; never restate-replace, part or trailing (`a turkey sandwich, um,
+// a ham sandwich` and `two eggs, toast, three eggs, ok` keep every food).
+const QTY_ONLY = new Set(['er', 'erm', 'um', 'umm', 'uh', 'uhh', 'hmm', 'oops', 'whoops', 'nope', 'okay', 'ok']);
 const SWAP_OK = new Set(['wait no', 'no wait', 'scratch that', 'make that', 'make it', '<no>']);
 // S240: an ordinal is an addition (`a beer, wait, a second beer` is two beers).
 const ADD = new Set(['also', 'too', 'plus', 'another', 'extra', 'forgot', 'again', 'more', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
@@ -88,6 +99,7 @@ const SIZE_J = new Set([
   'venti', 'tall',
 ]);
 const NEGSTART = [['no'], ['without'], ['minus'], ['except'], ['hold', 'the'], ['skip', 'the']];
+const NO_LEADS = new Set(['a', 'an', 'the', 'one', 'two', 'three', 'four', 'five', 'six', 'half', 'some', 'my']);
 const FILLER = new Set(['and', 'oh', 'um', 'uh', 'ok', 'okay', 'well']);
 
 const fmt = (v: number): string => (v === 0.5 ? '1/2' : String(v));
@@ -147,7 +159,11 @@ function foodMinusQty(raw: string): string {
 const rewriteQ = (c: Clause, food: string): string =>
   c.unit ? `${fmt(c.value)} ${c.unit} of ${food}` : `${fmt(c.value)} ${food}`;
 
-function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Set<number> } {
+// S240 (refute of MGR 17:14Z b): `<no>` (a SWAP marker) is a comma piece that is exactly `no` IN THE LINE, or a `no` before an article-
+// or number-led item (`a coffee no a latte`); any other `no` in the gap is `<no?>`, a WEAK marker (corrects a quantity or restates the
+// same food, never swaps: `six eggs no seven eggs` still corrects). Reading only the gap's own tokens made `pizza, no anchovies` /
+// `ramen no egg` (the negated part split off bare) a `<no>` swap that dropped the pizza / ramen. `<wait>` keeps the gap reading.
+function markersIn(gap: Tok[], list: string[][], pieceLen?: Map<number, number>, jLead?: string): { found: string[]; covered: Set<number> } {
   const found: string[] = [];
   const covered = new Set<number>();
   for (const m of list) {
@@ -166,8 +182,9 @@ function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Se
     byPiece.set(t.piece, a);
   });
   for (const [, ks] of byPiece) {
+    const noIsMarker = !pieceLen || pieceLen.get(gap[ks[0]].piece) === 1 || (jLead !== undefined && (/^\d/.test(jLead) || NO_LEADS.has(jLead)));
     if (ks.length === 1 && gap[ks[0]].w === 'no') {
-      found.push('<no>');
+      found.push(noIsMarker ? '<no>' : '<no?>');
       covered.add(ks[0]);
     }
     // S240 (C68 S238 run 3): a comma piece that is exactly `wait` (`three slices of bacon, wait, four`) - weak: it corrects a
@@ -189,6 +206,8 @@ export function resolveSelfCorrections<T extends Item>(
   const n = items.length;
   if (n < 2) return { items, corrections };
   const toks = tokenizeWithPieces(lineKey);
+  const pieceLen = new Map<number, number>();
+  for (const t of toks) pieceLen.set(t.piece, (pieceLen.get(t.piece) ?? 0) + 1);
   const spans = spansOf(toks, items);
   const removed = new Set<number>();
   const rew = new Map<number, T>();
@@ -229,7 +248,7 @@ export function resolveSelfCorrections<T extends Item>(
     const gap = toks.slice(gs, ge);
     // a marker the segmenter KEPT at the start of j's rawText counts too
     const lead = jw.map(w => ({ w, piece: -1 }));
-    const mkGap = markersIn(gap, STRONG);
+    const mkGap = markersIn(gap, STRONG, pieceLen, jw[0]);
     const mkLead = markersIn(lead.slice(0, 3), STRONG);
     let found = mkGap.found.slice();
     const covered = mkGap.covered;
@@ -271,6 +290,15 @@ export function resolveSelfCorrections<T extends Item>(
     if (NEGSTART.some(p => p.every((w, k) => jw[k] === w))) continue;
     if (found.every(f => f === 'rather')) continue;
     const cj = parseClause(jw);
+    const qtyOnly = found.every(f => QTY_ONLY.has(f.replace('@j', '')));
+    if (qtyOnly) {
+      const pc = toks[ge] ? toks[ge].piece : -1;
+      let nx = toks.length;
+      for (let q = j + 1; q < n; q++) if (spans[q] && spans[q]!.start >= ge) { nx = spans[q]!.start; break; }
+      const rest: string[] = [];
+      for (let q = ge; q < nx && toks[q].piece === pc && toks[q].w !== 'and'; q++) rest.push(toks[q].w);
+      if (!rest.every(w => jw.includes(w))) continue;
+    }
     const hj = headOf(J);
     const hjRaw = headOf({ rawText: J.rawText });
     if (((hj && SIZE_J.has(hj)) || (hjRaw && SIZE_J.has(hjRaw))) && !(cj && cj.food.length === 0)) continue;
@@ -328,6 +356,7 @@ export function resolveSelfCorrections<T extends Item>(
         rew.set(k, { ...K, rawText: nr });
         removed.add(j);
       } else {
+        if (qtyOnly) continue;
         note('restate-replace', k, K.rawText, J.rawText);
         removed.add(k);
         if (J.rawText !== items[j].rawText) items[j] = { ...items[j], rawText: J.rawText };
@@ -337,6 +366,7 @@ export function resolveSelfCorrections<T extends Item>(
     }
 
     // 3. part substitution: j's head noun (or j's preposition) inside an earlier item's modifier phrase
+    if (qtyOnly) continue;
     let done = false;
     for (let q = j - 1; q >= 0 && !done; q--) {
       if (removed.has(q)) continue;
@@ -390,7 +420,7 @@ export function resolveSelfCorrections<T extends Item>(
     const tail = toks.slice(sl.end);
     const mk = markersIn(tail, STRONG);
     // S240: an addition word in the last item (`two eggs, two more eggs, wait`) is not a correction.
-    if (mk.found.length && tail.length === mk.covered.size && !words(items[L].rawText).some(w => ADD.has(w))) {
+    if (mk.found.length && !mk.found.every(f => QTY_ONLY.has(f)) && tail.length === mk.covered.size && !words(items[L].rawText).some(w => ADD.has(w))) {
       const hl = headOf(items[L]);
       const cl = parseClause(words(items[L].rawText));
       for (let k = L - 1; k >= 0; k--) {
