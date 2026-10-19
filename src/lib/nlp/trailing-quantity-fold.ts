@@ -42,6 +42,9 @@
  * quarters, two thirds) parse only under the opt-in `parseClause(t, { fractions: true })`, as a PURE fraction; no other
  * caller passes it, so self-correction is byte-unchanged. Fold kind `stock`. Named misses: food-named counts
  * (`ate 20 chips` in some shapes), `the kids ate 4`, word-number stocks (`two bags`), size stocks.
+ * A COUNT-stock container right before `of` (bag / pack / box / case / tray / sleeve / ...) states the stock even where the
+ * parser reads no unit (`a family size bag of chips`, `a pack of gum`); a consumed whole count re-counts its food (`3 chips`),
+ * in the gap and the segment shape, and a clause naming the stock's own food (`ate 3 chips`) counts too (S240, cloud-38 D5).
  *
  * DOSE (S240, MGR 16:36Z). The segmenter emits the food-less dose of a protein shake (`two scoops`, `2 scoops`, or
  * `two scoops in milk`) as its own item and the mapper invents a food for `scoops` (a phantom strawberry record). Only a
@@ -438,6 +441,19 @@ function consumedTokens(t: string[]): string[] | null {
 }
 
 /** The stock item replaced by the consumed count (`2 eggs`, `3 slices of pizza`), or null. */
+function stockBeforeOf(item: Item): boolean {
+  const w = words(item.rawText);
+  return w.some((x, k) => w[k + 1] === 'of' && (COUNT_STOCK.has(x) || COUNT_STOCK.has(x.replace(/e?s$/, ''))));
+}
+
+/** S240 (cloud-38 D5): a consumed whole count over a COUNT stock; the clause names no food, or the stock's own food (`ate 3 chips`). */
+function countStock(item: Item, c: Clause | null): string | null {
+  if (!c || isPureFraction(c)) return null;
+  if (c.food.length === 0) return replaceStock(item, c);
+  if (!covers(item, c.food)) return null;
+  return replaceStock(item, { ...c, food: [] });
+}
+
 function replaceStock(item: Item, c: Clause): string | null {
   if (!(c.value >= 1 && Number.isInteger(c.value) && c.food.length === 0)) return null;
   const food = (item.normalizedForm ?? '').trim();
@@ -577,6 +593,21 @@ export function foldTrailingQuantityClauses<T extends Item>(
     }
     if (t < 0 || removed.has(t) || folded.has(t)) continue;
     if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
+    // S240 (cloud-38 D5): the SEGMENT shape (`a family size bag of chips` + [`3`] / [`ate 3`] / [`3 chips`]).
+    if (n === 2 && isValidTarget(W[t]) && stockBeforeOf(W[t])) {
+      const own = consumedTokens(words(W[j].rawText));
+      const pre = spans[j] ? toks.slice(Math.max(0, spans[j]!.start - 3), spans[j]!.start).map(x => x.w) : [];
+      const lineVerb = pre.length > 0 && CONSUME.has(pre[pre.length - 1]) && (pre.length < 2 || SUBJECT_OK.has(pre[pre.length - 2]) || toks[spans[j]!.start - 2]?.piece !== toks[spans[j]!.start - 1]?.piece);
+      const nx = spans[j] ? toks[spans[j]!.end]?.w : undefined;
+      const leftover = nx === 'left' || nx === 'remaining' || nx === 'over';
+      const st = leftover ? null : own ? countStock(W[t], parseClause(own)) : lineVerb ? countStock(W[t], plain) : null;
+      if (st !== null) {
+        folds.push({ kind: 'stock', targetIndex: t, clause: W[j].rawText, before: W[t].rawText, after: st });
+        folded.set(t, st);
+        removed.add(j);
+        continue;
+      }
+    }
     if (!isValidTarget(W[t])) {
       // S240 R3: a pure fraction over a STOCK item, on a two-item line (the stock and the clause) only; never an ADDITION
       // (`a cup of rice, and a half` is 1.5 cups).
@@ -641,6 +672,18 @@ export function foldTrailingQuantityClauses<T extends Item>(
     const clause = parseClause(first) ?? parseClause(first, { fractions: true });
     if (!clause) continue;
     if (clause.fractionWord && toks.some(x => ORDINAL_CUE.has(x.w))) continue;
+    // S240 (cloud-38 D5): a COUNT-stock container before `of` behind a size phrase the parser reads no unit for (`a family size
+    // bag of chips`, `a variety pack of chips`) still states the stock; a consumed whole count re-counts its food (`3 chips`),
+    // never the bags. Fractions (`ate half`) and every other container (`a big bowl of soup, had 2`) keep today's fold.
+    if ((n === 1 || (isValidTarget(W[t]) && aloneInPiece(t))) && stockBeforeOf(W[t])) {
+      const own = consumedTokens(first);
+      const st = own ? countStock(W[t], parseClause(own)) : null;
+      if (st !== null) {
+        folds.push({ kind: 'stock', targetIndex: t, clause: first.join(' '), before: W[t].rawText, after: st });
+        folded.set(t, st);
+        continue;
+      }
+    }
     if (!isValidTarget(W[t])) {
       // S240 R3: a pure fraction over a STOCK item, on a one-item line only; never an ADDITION (`and a half`).
       let st = isPureFraction(clause) && n === 1 && first[0] !== 'and' && first[0] !== 'plus' ? scaleStock(W[t], clause.value) : null;
