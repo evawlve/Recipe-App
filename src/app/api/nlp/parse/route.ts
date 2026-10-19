@@ -258,6 +258,7 @@ export async function POST(req: NextRequest) {
     const { dropNegatedParts } = await import('@/lib/nlp/negated-part-drop');
     const { dropDishParts } = await import('@/lib/nlp/dish-part-drop');
     const { foldDrinkMilk } = await import('@/lib/nlp/drink-milk-fold');
+    const { dropSegmenterEchoes } = await import('@/lib/nlp/segmenter-echo-drop');
     const { fillRestaurantBrand } = await import('@/lib/nlp/restaurant-brand-fill');
     const { parseIngredientLine } = await import('@/lib/parse/ingredient-line');
     const { mapIngredientWithFallback } = await import('@/lib/mapping/map-ingredient-with-fallback');
@@ -476,6 +477,13 @@ export async function POST(req: NextRequest) {
         items = dm.items;
         if (dm.folds.length > 0) {
           logger.info('nlp_parse.drink_milk_fold', { count: dm.folds.length });
+        }
+        // A `with` part the host's own name already holds ("salad with chicken" + "chicken") is billed twice; dropped
+        // before the trailing-quantity fold so a following "2 cups" still joins the host. The cache keeps the undropped split.
+        const se = dropSegmenterEchoes(lineKey, items);
+        items = se.items;
+        if (se.echoes.length > 0) {
+          logger.info('nlp_parse.segmenter_echo_drop', { count: se.echoes.length });
         }
         const tq = foldTrailingQuantityClauses(lineKey, items);
         items = tq.items;
