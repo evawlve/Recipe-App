@@ -17,6 +17,8 @@
  *   - When in doubt, don't flag.
  */
 
+import { detectBrandInQuery } from './brand-detector';
+
 export interface MacroPlausibilityInput {
     kcal?: number | null;
     calories?: number | null;
@@ -598,10 +600,15 @@ function singularHead(w: string, heads: Set<string>): string {
     return w;
 }
 /** The prepared-drink head word of a query (`latte`, `flat white`, …), or null. Shared with the bare-drink serving rule (bare-query-guard.ts). */
-export function preparedDrinkHeadWord(queryName: string): string | null {
+// Head-clause words: first clause before with/and/plus/&/+/w//comma, trailing non-head words popped. Shared by the prepared-drink and brewed-tea rules.
+function headClauseWords(queryName: string): string[] {
     const clause = (queryName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(CLAUSE_BREAK)[0];
     const words = clause.split(/[^a-z]+/).filter(Boolean);
     while (words.length > 1 && TRAILING_NON_HEAD.has(words[words.length - 1])) words.pop();
+    return words;
+}
+export function preparedDrinkHeadWord(queryName: string): string | null {
+    const words = headClauseWords(queryName);
     if (words.length === 0 || words.includes('instant')) return null; // `instant latte` names the powder
     const last = words[words.length - 1];
     const one = singularHead(last, PREPARED_DRINK_HEADS);
@@ -623,6 +630,51 @@ function preparedDrinkReason(queryName: string, macrosPer100g?: MacroPlausibilit
     return preparedDrinkHead(queryName) || (headLine != null && preparedDrinkHead(headLine))
         ? `rank:prepared_drink_kcal_${round1(kcal)}_over_${PREPARED_DRINK_MAX_KCAL}`
         : null;
+}
+
+// Brewed-tea panel (S239 / C70): a plain brewed-tea query (`tea`, `a cup of tea`, `my tea`) can resolve to an OFF record named just
+// "Tea" that carries a sweetened or dry panel (100 / 250 / 629 kcal/100g). Unsweetened brewed tea sits at 0-6 kcal/100g, Tea with Milk
+// 9.7, Tea with Milk and Sugar 16.9, and FatSecret "Tea Presweetened with Sugar" 20 (kept: the rule is `> 20`). Anything above is a
+// sweetened RTD, a syrup or a dry panel, which a plain tea line does not ask for.
+// RANK-TIME ONLY, same shape as the prepared-drink rule: the reason lives in assessRankTimePlausibility() alone and demotes through the
+// floor-hit partition; the save gate, Step 3d and assessMacroPlausibility() are untouched.
+// The HEAD is read from queryName ONLY, never headLine (refute M1): headLine `tea w/ honey (1 tsp)` for the item `honey` would turn
+// every real honey panel into a floor-hit. Exemption words are scanned over the WHOLE queryName and headLine (refute M2) so a sweet or
+// milky line (`tea, sweetened`, `hot tea with 2 sugars`) keeps its sweet record; a branded query (`peace tea`, `gold peak tea`) is
+// skipped by detectBrandInQuery, not a hand-written brand list (refute M3).
+// ACCEPTED cold winner: `a cup of tea` -> off_0049000070507 "Tea" [Peace Tea] 5.95 kcal/100g, a bottled unsweetened tea standing in
+// for brewed tea (identity is lateral, calories are right).
+const BREWED_TEA_MAX_KCAL = 20;
+const BREWED_TEA_EXEMPT_PATTERN = new RegExp(
+    `\\b(?:${[
+        'sweet', 'sweetened', 'sweetener', 'iced', 'ice', 'bubble', 'boba', 'thai', 'chai', 'milk', 'matcha', 'instant', 'lemon', 'peach',
+        'raspberry', 'honey', 'sugar', 'sugars', 'syrup', 'masala', 'kashmiri', 'butter', 'cream', 'kombucha', 'hard', 'afternoon', 'high',
+        'latte', 'fog', 'long', 'island',
+    ].join('|')})\\b`
+);
+// Every word BEFORE the head `tea` must be a known brewed-tea modifier: an unknown word (a brand such as `peace`, `gold peak`, `twisted`,
+// `honest`, or `kombucha`) means the line is not a plain brewed-tea ask. brand-lexicon.json misses some tea brands, so this is the
+// mechanism; the detectBrandInQuery skip stays as belt and braces.
+const BREWED_TEA_MODS = new Set([
+    'a', 'an', 'the', 'my', 'some', 'one', 'cup', 'cups', 'mug', 'mugs', 'of', 'pot', 'hot', 'warm', 'plain', 'black', 'green', 'white',
+    'oolong', 'herbal', 'chamomile', 'camomile', 'mint', 'peppermint', 'spearmint', 'earl', 'grey', 'gray', 'english', 'breakfast', 'irish',
+    'scottish', 'jasmine', 'decaf', 'decaffeinated', 'rooibos', 'hibiscus', 'ginger', 'lemongrass', 'loose', 'leaf', 'brewed', 'builders',
+    'regular', 'normal', 'strong', 'weak', 'fresh', 'tulsi', 'darjeeling', 'assam', 'ceylon', 'sencha', 'genmaicha', 'hojicha', 'pu', 'erh',
+    'puerh', 'barley', 'yerba',
+]);
+function brewedTeaReason(queryName: string, macrosPer100g?: MacroPlausibilityInput | null, headLine?: string): string | null {
+    const raw = macrosPer100g?.kcal ?? macrosPer100g?.calories ?? null;
+    const kcal = raw == null ? NaN : Number(raw);
+    if (!Number.isFinite(kcal) || kcal <= BREWED_TEA_MAX_KCAL) return null;
+    const words = headClauseWords(queryName);
+    const last = words[words.length - 1];
+    if (last !== 'tea' && last !== 'teas') return null;
+    if (!words.slice(0, -1).every((w) => BREWED_TEA_MODS.has(w))) return null;
+    const lowered = [queryName, headLine].map((t) => (t || '').toLowerCase());
+    if (lowered.some((t) => BREWED_TEA_EXEMPT_PATTERN.test(t))) return null;
+    if (detectBrandInQuery(queryName).isBranded) return null;
+    if (headLine != null && detectBrandInQuery(headLine).isBranded) return null;
+    return `rank:brewed_tea_kcal_${round1(kcal)}_over_${BREWED_TEA_MAX_KCAL}`;
 }
 
 /**
@@ -651,11 +703,13 @@ export function assessRankTimePlausibility(
 
     const floorReasons = collectDeterministicFloorReasons(queryName, candidateName, macrosPer100g);
     const drinkReason = preparedDrinkReason(queryName, macrosPer100g, headLine);
-    const reasons = [...base.reasons, ...floorReasons, ...(drinkReason ? [drinkReason] : [])];
+    const teaReason = brewedTeaReason(queryName, macrosPer100g, headLine);
+    const reasons = [...base.reasons, ...floorReasons, ...(drinkReason ? [drinkReason] : []), ...(teaReason ? [teaReason] : [])];
 
     const floorHit =
         floorReasons.length > 0 ||
         drinkReason != null ||
+        teaReason != null ||
         base.reasons.some((r) => FLOOR_GRADE_CATEGORY_PREFIXES.some((p) => r.startsWith(p)));
     const softPenalty = reasons.some((r) => r.startsWith('atwater:'));
 
