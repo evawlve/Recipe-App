@@ -1,0 +1,425 @@
+{
+ "about": "S240 C69 rowSolo: stripSoloRemoval() cases; expectHead null = the line stays as typed",
+ "cases": [
+  {
+   "src": "seed",
+   "line": "a cobb salad without the egg",
+   "expectHead": "a cobb salad"
+  },
+  {
+   "src": "seed",
+   "line": "a grilled chicken sandwich without mayo",
+   "expectHead": "a grilled chicken sandwich"
+  },
+  {
+   "src": "seed",
+   "line": "a turkey club minus the bacon",
+   "expectHead": "a turkey club"
+  },
+  {
+   "src": "seed",
+   "line": "a burrito without beans",
+   "expectHead": "a burrito"
+  },
+  {
+   "src": "seed",
+   "line": "a cheeseburger without cheese",
+   "expectHead": "a cheeseburger"
+  },
+  {
+   "src": "seed",
+   "line": "a waffle without syrup",
+   "expectHead": "a waffle"
+  },
+  {
+   "src": "seed",
+   "line": "eggs benedict minus the hollandaise",
+   "expectHead": "eggs benedict"
+  },
+  {
+   "src": "seed",
+   "line": "a hot dog without the bun",
+   "expectHead": "a hot dog"
+  },
+  {
+   "src": "seed",
+   "line": "a turkey sub without mayo",
+   "expectHead": "a turkey sub"
+  },
+  {
+   "src": "seed",
+   "line": "oatmeal without the brown sugar",
+   "expectHead": "oatmeal"
+  },
+  {
+   "src": "seed",
+   "line": "a coke without sugar",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "coffee without sugar",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "beer without alcohol",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "eggs without yolks",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "milk without lactose",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "chili without meat",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "chicken without skin",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "a coke without added sugar",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "tea without the sugar",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "one without a bun",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "without sugar",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "coffee without",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "coffee without sugar 16 oz",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "a burger without a bun",
+   "expectHead": "a burger"
+  },
+  {
+   "src": "seed",
+   "line": "a burger without onions or pickles",
+   "expectHead": "a burger"
+  },
+  {
+   "src": "seed",
+   "line": "a burger minus two patties",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "rice minus a spoonful",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "a pizza without cheese",
+   "expectHead": "a pizza"
+  },
+  {
+   "src": "seed",
+   "line": "chili without beans",
+   "expectHead": "chili"
+  },
+  {
+   "src": "seed",
+   "line": "a salad without dressing",
+   "expectHead": "a salad"
+  },
+  {
+   "src": "seed",
+   "line": "pancakes without the syrup",
+   "expectHead": "pancakes"
+  },
+  {
+   "src": "seed",
+   "line": "a bagel without cream cheese",
+   "expectHead": "a bagel"
+  },
+  {
+   "src": "seed",
+   "line": "a big mac without the special sauce",
+   "expectHead": "a big mac"
+  },
+  {
+   "src": "seed",
+   "line": "a burger without the bun please",
+   "expectHead": "a burger"
+  },
+  {
+   "src": "seed",
+   "line": "no cow protein bar",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "trader joes hold the cone",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "2 eggs without the yolk",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "toast without butter",
+   "expectHead": "toast"
+  },
+  {
+   "src": "seed",
+   "line": "a latte without foam",
+   "expectHead": "a latte"
+  },
+  {
+   "src": "seed",
+   "line": "a smoothie without banana",
+   "expectHead": "a smoothie"
+  },
+  {
+   "src": "seed",
+   "line": "a salad without dressing, croutons",
+   "expectHead": "a salad"
+  },
+  {
+   "src": "seed",
+   "line": "fries minus salt",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "a burger without onions or salt",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "a burger without a or",
+   "expectHead": null
+  },
+  {
+   "src": "seed",
+   "line": "soup without one",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burrito without beans w/ rice",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burger without bun w/ fries",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "burger without bun w/fries",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "coffee without cream w/ oat milk",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burger without the bun twice",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a latte without foam grande",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a latte without foam venti",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "coffee without cream lg",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burrito without beans big",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "tacos without cheese seven",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "wings without sauce dozen",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "coffee without cream cup",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "tea without milk mug",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "rice without butter bowl",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "oatmeal without milk serving",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burger without the bun again",
+   "expectHead": null
+  },
+  {
+   "src": "refute-r1",
+   "line": "salad without croutons",
+   "expectHead": "salad"
+  },
+  {
+   "src": "refute-r1",
+   "line": "pistachios without salt added",
+   "expectHead": "pistachios"
+  },
+  {
+   "src": "refute-r1",
+   "line": "homemade made without egg pasta",
+   "expectHead": "homemade made"
+  },
+  {
+   "src": "refute-r1",
+   "line": "coffee without cream",
+   "expectHead": "coffee"
+  },
+  {
+   "src": "refute-r1",
+   "line": "coffee without milk",
+   "expectHead": "coffee"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a latte without milk",
+   "expectHead": "a latte"
+  },
+  {
+   "src": "refute-r1",
+   "line": "cereal without milk",
+   "expectHead": "cereal"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a sandwich without bread",
+   "expectHead": "a sandwich"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burrito without the tortilla",
+   "expectHead": "a burrito"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a pizza without crust",
+   "expectHead": "a pizza"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a cone without ice cream",
+   "expectHead": "a cone"
+  },
+  {
+   "src": "refute-r1",
+   "line": "mayo without eggs",
+   "expectHead": "mayo"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a chicken thigh without bones",
+   "expectHead": "a chicken thigh"
+  },
+  {
+   "src": "refute-r1",
+   "line": "eggs fried without oil",
+   "expectHead": "eggs fried"
+  },
+  {
+   "src": "refute-r1",
+   "line": "popcorn without butter",
+   "expectHead": "popcorn"
+  },
+  {
+   "src": "refute-r1",
+   "line": "i went without lunch",
+   "expectHead": "i went"
+  },
+  {
+   "src": "refute-r1",
+   "line": "dinner without dessert",
+   "expectHead": "dinner"
+  },
+  {
+   "src": "refute-r1",
+   "line": "my usual without cheese",
+   "expectHead": "my usual"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a large one without cheese",
+   "expectHead": "a large one"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burger no without the bun",
+   "expectHead": "a burger no"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a cobb salad without the egg for lunch",
+   "expectHead": "a cobb salad"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a cobb salad for lunch without the egg",
+   "expectHead": "a cobb salad for lunch"
+  },
+  {
+   "src": "refute-r1",
+   "line": "a burger without onion or bun",
+   "expectHead": "a burger"
+  }
+ ]
+}
