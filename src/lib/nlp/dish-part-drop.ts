@@ -14,6 +14,8 @@
  * class (a filling, a protein, a bread, a sauce, ... per class table). Anything else stays and keeps its
  * bill: a named filling (`cilantro lime rice`), a separate food (`a coke`), a side. A determiner- or
  * number-led later item ends the list (it is a new food), as does a side-like item (chips, soup, a drink).
+ * An AMOUNT of a known part (a number or fraction, or a/an before a unit or fraction word; never a container like bowl / side / can) continues
+ * the list instead (S240, MGR 18:44Z, Option A's letter), unless an additive word (also / along with / as well as / plus) sits in the gap or it restates an earlier kept item.
  * A quantity-only clause (`two slices`) is never a part - the fold attaches it afterwards.
  * A clause word (then / later / a meal name) in the gap BEFORE an item ends the list - a new clause, not a part (S202 cloud-35 F1);
  * words after an item, and a clause word right after from/since/over, never count.
@@ -120,6 +122,9 @@ const MODS = new Set([
 ]);
 const MEASURE_LEAD =
   /^(a|an|one|two|three)?\s*(slices?|strips?|dollops?|drizzles?|sprinkles?|spoonfuls?|pinch(es)?|dash(es)?|handful|scoops?|tbsp|tsp|tablespoons?|teaspoons?)\s+of\s+/i;
+// S240 (MGR 18:44Z, Option A's letter): an AMOUNT before a part (`2 eggs`, `a quarter cup of cheese`, `half a cup of rice`).
+const AMOUNT_LEAD =
+  /^(?:(?:about|maybe|like|around)\s+)?(?:a|an|one|two|three|four|five|six|half|quarter|some|\d+(?:[./]\d+)?)(?:\s+(?:a|an|quarter|half|third|couple|few))?(?:\s+(?:of\s+)?(?:cups?|c|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|grams?|g|lbs?|pounds?|slices?|strips?|pieces?|handfuls?|scoops?|dollops?|spoonfuls?|pinch(?:es)?|dash(?:es)?|cans?|cloves?|bunch(?:es)?|stalks?|leaves|links?|patties|patty))?(?:\s+of)?\s+/i;
 const COOK = new Set(['fried', 'crispy', 'roasted', 'grilled', 'smoked', 'pulled']);
 const COOK_OK = new Set<DishClass>(['handheld', 'burrito', 'pizza', 'bowl']);
 const SIDEISH = new Set([
@@ -161,6 +166,7 @@ function isPart(it: Item, cls: DishClass): boolean {
   const raw = it.rawText
     .trim()
     .replace(MEASURE_LEAD, '')
+    .replace(AMOUNT_LEAD, '')
     .replace(/^\s*(a|an|the|some|one|two|three|four|five|six|\d+(\.\d+)?)\s+/i, '');
   const w = words(it.normalizedForm && it.normalizedForm.trim() ? it.normalizedForm : raw);
   if (!w.length || w.length > 3) return false;
@@ -171,6 +177,18 @@ function isPart(it: Item, cls: DishClass): boolean {
   if (w.length === 2 && COOK.has(w[0]) && !COOK_OK.has(cls)) return false;
   if (cls === 'blend' && (last === 'egg' || last === 'eggs') && w.length > 1) return false;
   return w.length === 1 || (w.length === 2 && (MODS.has(w[0]) || COOK.has(w[0])));
+}
+
+/** An item that is an amount of a known part (`2 eggs`, `a quarter cup of cheese`) - a part of the dish, not a new food. */
+// A bare a/an/some is a DETERMINER, not an amount: a determiner-led new food still bills. An amount is a number or fraction, or a/an
+// before a fraction or unit word; a container (bowl, plate, side, bag, order, serving, can, glass) is never a part's amount.
+const AMOUNT_NUM =
+  /^(?:(?:about|maybe|like|around)\s+)?(?:one|two|three|four|five|six|half|quarter|\d+(?:[./]\d+)?|(?:a|an)\s+(?=(?:quarter|half|third|couple|few|cups?|c|tbsp|tsp|tablespoons?|teaspoons?|oz|ounces?|grams?|g|lbs?|pounds?|slices?|strips?|pieces?|handfuls?|scoops?|dollops?|spoonfuls?|pinch(?:es)?|dash(?:es)?|cans?|cloves?|bunch(?:es)?|stalks?|leaves|links?|patties|patty)\b))\b/i;
+const ADDITIVE = new Set(['also', 'along', 'plus', 'additionally']);
+const CONTAINER = /\b(cans?|bowls?|plates?|sides?|bags?|orders?|servings?|box(?:es)?|platters?|glass(?:es)?)\b/i;
+function amountPart(it: Item, cls: DishClass): boolean {
+  const r = it.rawText.trim();
+  return AMOUNT_NUM.test(r) && !CONTAINER.test(r) && isPart(it, cls);
 }
 
 export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { items: T[]; drops: DishPartDrop[] } {
@@ -218,6 +236,7 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
     if (kind === 'with' && MADE_ONLY.has(dc.cls)) continue;
     const dropIdx: number[] = [];
     let seen = 0;
+    const okPiece = new Set<number>();
     for (let j = d + 1; j < items.length; j++) {
       const js = spans[j];
       const jt = items[j].rawText.trim();
@@ -246,16 +265,29 @@ export function dropDishParts<T extends Item>(lineKey: string, items: T[]): { it
         if (!inProv && CLAUSE.has(w)) { clause = true; break; }
       }
       if (clause) break;
+      // S240 (MGR 18:44Z): an amount part continues the list, except after an ADDITIVE word in the gap (`also`, `along with`,
+      // `as well as`, `plus`: a new food, s202 refute-r4 pins) or when it RESTATES an earlier KEPT item's head (`scrambled eggs,
+      // cheese, two eggs`: that item's quantity, left for the trailing-quantity fold).
+      const additive = g.some(w => ADDITIVE.has(w)) || g.join(' ').includes('as well as');
+      const lastw = (it: Item) => { const w = words(it.normalizedForm || it.rawText); return (w[w.length - 1] ?? '').replace(/e?s$/, ''); };
+      const restates =
+        items.slice(d + 1, j).some((it, i) => spans[d + 1 + i] && !dropIdx.includes(d + 1 + i) && lastw(it) === lastw(items[j]));
+      const amt = (it: Item) => !additive && !restates && amountPart(it, dc.cls);
       // A new comma piece whose FIRST lineKey token (after an optional `and`) is a determiner/number ends the list.
       if (ptoks[js.start] && ptoks[m] && ptoks[js.start].piece > ptoks[m].piece) {
         let f = ptoks.findIndex(t => t.piece === ptoks[js.start].piece);
         if (f >= 0 && toks[f] === 'and') f++;
-        if (f >= 0 && (LEAD_STOP.has(toks[f]) || /^\d/.test(toks[f] ?? ''))) break;
+        if (f >= 0 && (LEAD_STOP.has(toks[f]) || /^\d/.test(toks[f] ?? ''))) {
+          // The piece's lead belongs to its FIRST item: once that item is an amount part, a later item in the same piece is not
+          // ended by the leader's number (`two eggs and peas`).
+          const pc = ptoks[js.start].piece;
+          if (!okPiece.has(pc)) { if (amt(items[j])) okPiece.add(pc); else break; }
+        }
       }
       // ANY later item whose lineKey span starts with a determiner/number ENDS the list, joiner-independent -
       // except the first item after the marker, a part MEASURE (`a slice of cheddar`) and an item right after `on`.
       const detLed = LEAD_STOP.has(toks[js.start]) || /^\d/.test(toks[js.start] ?? '');
-      if (detLed && seen > 0 && toks[js.start - 1] !== 'on' && !MEASURE_LEAD.test(toks.slice(js.start, js.end).join(' '))) break;
+      if (detLed && seen > 0 && toks[js.start - 1] !== 'on' && !MEASURE_LEAD.test(toks.slice(js.start, js.end).join(' ')) && !amt(items[j])) break;
       seen++;
       const hs = dc.head.replace(/e?s$/, '');
       if (jw.some(x => x.replace(/e?s$/, '') === hs)) continue;
