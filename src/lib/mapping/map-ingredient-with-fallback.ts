@@ -67,7 +67,7 @@ import { assessMacroPlausibility, assessRankTimePlausibility } from './macro-pla
 import { isDenylistedOffRecord } from './corrupt-denylist';
 import { isCorruptExclusionEnabled } from './corrupt-mark';
 import { deriveMappingCacheKey, deriveCacheKeyName, isMalformedCacheKey, stripPartitiveOfResidue, IDENTITY_UNIT_HINTS, type BrandKeyInput } from './cache-key';
-import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers } from './llm-output-guards';
+import { stripIntroducedFoodTokens, resolveIsBrandedQuery, restoreNutritionModifiers, PROMPT_EXAMPLE_ECHO_REASON, isPromptExampleEcho } from './llm-output-guards';
 import { isBarePluralRequest } from '../servings/bare-query-guard';
 import type { CachedMappedIngredient } from './validated-mapping-helpers';
 import { buildFatSecretResult } from './build-fatsecret-result';
@@ -1588,6 +1588,15 @@ export async function mapIngredientWithFallback(
 
                 // FIX: Pass baseName instead of rawLine so the LLM output is cached by the normalized quantity-free string
                 const aiHint = await aiNormalizeIngredient(rewriteRegionalDishWords(baseName), normalizedName);
+                if (aiHint.status === 'error' && aiHint.reason === PROMPT_EXAMPLE_ECHO_REASON) {
+                    // The model gave back one of its own prompt examples: the line names no
+                    // food. Return the unresolved result BEFORE retrieval can win junk and
+                    // before the dietary, simplify and AI-nutrition fallbacks can mint it
+                    // (C70). Not retried; the finally below releases the in-flight lock.
+                    logger.info('mapping.llm_prompt_example_echo', { rawLine: trimmed, baseName });
+                    markFunnel(telemetry, 'no_match', 'prompt_example_echo');
+                    return null;
+                }
                 if (aiHint.status === 'success') {
                     // The model's output is otherwise taken on trust here. Strip
                     // any food-REPLACING token it introduced that the user never
@@ -1763,6 +1772,13 @@ export async function mapIngredientWithFallback(
                 // score identically but have vastly different calorie profiles.
                 // FIX: Use baseName instead of rawLine to hit the cache for quantity variations!
                 const cachedNormalize = await getAiNormalizeCache(baseName);
+                if (cachedNormalize && isPromptExampleEcho(baseName, cachedNormalize.normalizedName)) {
+                    // Second read seat (C70): a poisoned row replayed here bypasses
+                    // aiNormalizeIngredient(), so it gets the same unresolved return.
+                    logger.info('mapping.llm_prompt_example_echo', { rawLine: trimmed, baseName });
+                    markFunnel(telemetry, 'no_match', 'prompt_example_echo');
+                    return null;
+                }
                 if (cachedNormalize?.nutritionEstimate) {
                     aiNutritionEstimate = cachedNormalize.nutritionEstimate;
                     // Same repair as the live path: AiNormalizeCache is 86.5%
