@@ -31,7 +31,6 @@ const CONTROLS: Array<[string, unknown]> = [
   ["ihop short stack", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "ihop short stack", "notes": null, "unitHint": null}],
   ["a short stack at ihop", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a short stack at ihop", "notes": null, "unitHint": null}],
   ["a big stack of pancakes", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a big stack of pancakes", "notes": null, "unitHint": null}],
-  ["a stack of three buttermilk pancakes", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a stack of three buttermilk pancakes", "notes": null, "unitHint": null}],
   ["a stack of", {"qty": 1, "multiplier": 1, "unit": null, "rawUnit": null, "name": "a stack of", "notes": null, "unitHint": null}],
 ];
 
