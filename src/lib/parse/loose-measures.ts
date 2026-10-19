@@ -16,9 +16,18 @@
  * untouched. Known gaps: a non-leading pour (`had a swig of soda`), hedged pours (`half a splash`),
  * `one and a half swigs`, `a light drizzle of honey`, and a drizzle with no count.
  *
+ * TWO JOBS, ONE FILE (C70 S239). POUR_RX is the LIQUID-ONLY class: it feeds the fl-oz rewrite
+ * (resolveLoosePourMeasures / splitLeadingPour) and nothing else may widen it, because a sprinkle of
+ * parmesan or a pat of butter is not fluid ounces (LOOSE_POUR_FLOZ has no entry for those words).
+ * TOPPING_RX is the ROUTING class: POUR_RX's shape with the third group widened by solid topping
+ * measures (spoonful, sprinkle, dollop, pat, smear, dash, pinch, dab, knob, squirt, squeeze, swirl;
+ * NOT scoop - a main-food measure - and not handful). It feeds only isPourOntoSecondFood() (skip the
+ * single-item shortcut so the second food survives) and restoreLeadingPour() (put the measure back on
+ * the topping after a split). The restored segment bills as the standalone line does today.
+ *
  * Mobile parity: SHORT_LINE_POUR_RX in the mobile repo's src/lib/magic-flow-timing.ts mirrors this
- * regex for a cosmetic chip animation; it lags until the device day (MGR 2026-10-19) - the mismatch
- * is cosmetic only.
+ * regex for a cosmetic chip animation; it lags until the device day (MGR 2026-10-19), and by the
+ * TOPPING_RX words besides - the mismatch is cosmetic only.
  */
 
 export const LOOSE_POUR_FLOZ: Record<string, number> = { swig: 1.5, gulp: 1, sip: 0.5, splash: 0.5, drizzle: 0.5 };
@@ -31,6 +40,16 @@ const POUR_RX = new RegExp(
   '^(\\s*)' +
     '(a|one|two|three|four|five|six|seven|eight|nine|ten|\\d+ \\d+/\\d+|\\d+/\\d+|\\d+(?:\\.\\d+)?)' +
     '\\s+(swigs?|gulps?|sips?|splash(?:es)?|drizzles?)\\s+of\\s+(?=[\\p{L}\\d])',
+  'iu',
+);
+
+// ROUTING class (see the header): the pour words plus solid topping measures. Never used for the fl-oz rewrite.
+const TOPPING_RX = new RegExp(
+  '^(\\s*)' +
+    '(a|one|two|three|four|five|six|seven|eight|nine|ten|\\d+ \\d+/\\d+|\\d+/\\d+|\\d+(?:\\.\\d+)?)' +
+    '\\s+(swigs?|gulps?|sips?|splash(?:es)?|drizzles?|' +
+    'spoonfuls?|teaspoonfuls?|tablespoonfuls?|sprinkles?|dollops?|pats?|smears?|dash(?:es)?|pinch(?:es)?|' +
+    'dabs?|knobs?|squirts?|squeezes?|swirls?)\\s+of\\s+(?=[\\p{L}\\d])',
   'iu',
 );
 
@@ -65,11 +84,11 @@ function singular(word: string): string {
 // possessive noun; an article-led object (`in a glass`, `in the morning`, `on the side`) and a
 // pronoun / `top` object are not a second food.
 const POUR_VEHICLE_RX =
-  /\s(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?!(?:a|an|the|top|it|them|there|this|that)\b)\p{L}/iu;
+  /\s(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?!(?:a|an|the|top|it|them|there|this|that|pan|pot|skillet|wok|bowl|cup|mug|glass|plate|jar|blender|total|cooking|everything|both)\b)\p{L}/iu;
 
 /** A leading pour whose rest pours it onto / into a second food. */
 export function isPourOntoSecondFood(text: string): boolean {
-  const m = POUR_RX.exec(text);
+  const m = TOPPING_RX.exec(text);
   return !!m && POUR_VEHICLE_RX.test(text.slice(m[0].length));
 }
 
@@ -102,7 +121,7 @@ export function resolveLoosePourMeasures(line: string): string {
 // Runs on every split (cache hit or fresh); the SegmentationCache keeps the segmenter's own split.
 const LEADING_PREP_RX = /^\s*(?:on|onto|over|in|into)\s+(?:(?:my|your|his|her|our|their)\s+)?(?=\S)/i;
 export function restoreLeadingPour<T extends { rawText: string }>(lineKey: string, items: T[]): { items: T[]; restored: number } {
-  const m = POUR_RX.exec(lineKey);
+  const m = TOPPING_RX.exec(lineKey);
   if (!m || items.length < 2) return { items, restored: 0 };
   const rest = lineKey.slice(m[0].length);
   const v = /\s(?:on|onto|over|in|into)\s/i.exec(' ' + rest);
@@ -111,6 +130,9 @@ export function restoreLeadingPour<T extends { rawText: string }>(lineKey: strin
   if (!liquid) return { items, restored: 0 };
   const word = m[3].toLowerCase();
   const bare = (t: string): string => t.trim().toLowerCase().replace(/^(?:a|an|the|some)\s+/, '');
+  // The line's own second food: the text after the vehicle word, bare (articles / possessives dropped).
+  const objectBare = ((' ' + rest).slice(v.index + v[0].length))
+    .trim().toLowerCase().replace(/^(?:(?:my|your|his|her|our|their|a|an|the|some)\s+)+/, '');
   let restored = 0;
   let pourDone = false;
   const out = items.map(it => {
@@ -122,10 +144,16 @@ export function restoreLeadingPour<T extends { rawText: string }>(lineKey: strin
       restored++;
       return { ...it, rawText };
     }
-    if (!pourDone && splitLeadingPour(it.rawText)) pourDone = true;
+    if (!pourDone && TOPPING_RX.test(it.rawText)) pourDone = true;
+    // M3 (C70 refute): strip a leading preposition only when what is left IS the line's own second food,
+    // so `in n out burger` / `on the border queso` items are never touched.
     if (LEADING_PREP_RX.test(it.rawText)) {
-      restored++;
-      return { ...it, rawText: it.rawText.replace(LEADING_PREP_RX, '') };
+      const stripped = it.rawText.replace(LEADING_PREP_RX, '');
+      const strippedBare = stripped.trim().toLowerCase().replace(/^(?:(?:my|your|his|her|our|their|a|an|the|some)\s+)+/, '');
+      if (objectBare && strippedBare === objectBare) {
+        restored++;
+        return { ...it, rawText: stripped };
+      }
     }
     return it;
   });
