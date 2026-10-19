@@ -1,0 +1,145 @@
+/**
+ * Count tags: resolveCountTag() in count-tag.ts (header owns the mechanism and the guards).
+ *
+ * TARGETS deep-equal their numeric twin's WHOLE parse. CONTROLS pin the master parse, hard-coded
+ * from master 081a3aef BEFORE the edit (the design's 13 controls, the refute's 12 regression lines
+ * and the collision set). FN_CONTROLS pin resolveCountTag(line) === line: function-level, so they
+ * stay valid whichever sibling parse PR lands first. KNOWN MISSES are pinned as unchanged.
+ */
+
+import { parseIngredientLine } from '../ingredient-line';
+import { resolveCountTag } from '../count-tag';
+
+const TARGETS: Array<[string, string]> = [
+  ['toast x2', '2 toast'],
+  ['avo toast x2', '2 avo toast'],
+  ['hb egg x2', '2 hb egg'],
+  ['choc chip cookie x3', '3 choc chip cookie'],
+  ['turkey burger x2', '2 turkey burger'],
+  ['expresso x2', '2 expresso'],
+  ['toast ×2', '2 toast'],
+  ['chicken (x2 thighs)', '2 chicken thighs'],
+  ['eggs (x2)', '2 eggs'],
+  ['toast x2 w/ butter', '2 toast w/ butter'],
+  ['2x string cheese', '2 string cheese'],
+  ['2x scrambled eggs', '2 scrambled eggs'],
+  ['3x chocolate bar', '3 chocolate bar'],
+  ['PB banana toast x1', '1 PB banana toast'],
+];
+
+/** Master parses (081a3aef), unchanged by the edit. */
+const CONTROLS: Array<[string, unknown]> = [
+  ["2 x 200g chicken", {"qty":2,"multiplier":200,"unit":"g","rawUnit":"g","name":"chicken","notes":null,"unitHint":null}],
+  ["2x200g chicken", {"qty":2,"multiplier":200,"unit":"g","rawUnit":"g","name":"chicken","notes":null,"unitHint":null}],
+  ["2 x 15 oz cans tomatoes", {"qty":30,"multiplier":1,"unit":"oz","rawUnit":"oz","name":"tomatoes","notes":null,"unitHint":null}],
+  ["5x5 workout bar", {"qty":5,"multiplier":5,"unit":null,"rawUnit":null,"name":"workout bar","notes":null,"unitHint":null}],
+  ["ihop 2 x 2 x 2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"ihop 2 x 2 x 2","notes":null,"unitHint":null}],
+  ["3 eggs x2", {"qty":3,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
+  ["chicken x 12 oz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"chicken x 12 oz","notes":null,"unitHint":null}],
+  ["x2 eggs", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"x2 eggs","notes":null,"unitHint":null}],
+  ["eggs (2)", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"eggs 2","notes":null,"unitHint":null}],
+  ["xbox", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"xbox","notes":null,"unitHint":null}],
+  ["oj 12oz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"oj 12 oz","notes":null,"unitHint":null}],
+  ["toast x0", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x0","notes":null,"unitHint":null}],
+  ["2 eggs", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"eggs","notes":null,"unitHint":null}],
+  ["⅓ bagel x2", {"qty":0.3333333333333333,"multiplier":1,"unit":null,"rawUnit":null,"name":"bagel x2","notes":null,"unitHint":null}],
+  ["⅛ pizza x2", {"qty":0.125,"multiplier":1,"unit":null,"rawUnit":null,"name":"pizza x2","notes":null,"unitHint":null}],
+  ["couple eggs x2", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
+  ["dozen eggs x2", {"qty":12,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
+  ["third bagel x2", {"qty":0.3333333333333333,"multiplier":1,"unit":null,"rawUnit":null,"name":"bagel x2","notes":null,"unitHint":null}],
+  ["quarter bagel x2", {"qty":0.25,"multiplier":1,"unit":null,"rawUnit":null,"name":"bagel x2","notes":null,"unitHint":null}],
+  ["quarter pounder x2", {"qty":0.25,"multiplier":1,"unit":null,"rawUnit":null,"name":"pounder x2","notes":null,"unitHint":null}],
+  ["about 2 eggs x2", {"qty":2,"multiplier":1,"unit":"egg","rawUnit":"eggs","name":"x2","notes":null,"unitHint":null}],
+  ["the last 2 slices of pizza x2", {"qty":2,"multiplier":1,"unit":"slice","rawUnit":"slices","name":"pizza x2","notes":null,"unitHint":null}],
+  ["the last 2 slices x2", {"qty":2,"multiplier":1,"unit":"slice","rawUnit":"slices","name":"x2","notes":null,"unitHint":null}],
+  ["at least 2 wings x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"at least 2 wings x2","notes":null,"unitHint":null}],
+  ["upwards of 3 beers x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"upwards of 3 beers x2","notes":null,"unitHint":null}],
+  ["at least a dozen wings x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"at least a dozen wings x2","notes":null,"unitHint":null}],
+  ["9x13 pan", {"qty":9,"multiplier":13,"unit":null,"rawUnit":null,"name":"pan","notes":null,"unitHint":null}],
+  ["9 x 13 pan", {"qty":9,"multiplier":13,"unit":null,"rawUnit":null,"name":"pan","notes":null,"unitHint":null}],
+  ["2 x 4", null],
+  ["2x4", null],
+  ["x2 cups", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"x2 cups","notes":null,"unitHint":null}],
+  ["2xl shirt", {"qty":2,"multiplier":1,"unit":null,"rawUnit":null,"name":"shirt","notes":null,"qualifiers":["xl"],"unitHint":null}],
+  ["xo sauce", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"xo sauce","notes":null,"unitHint":null}],
+  ["x2o water", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"x2o water","notes":null,"unitHint":null}],
+  ["a bagel x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"a bagel x2","notes":null,"unitHint":null}],
+  ["a short stack x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"a stack x2","notes":null,"qualifiers":["short"],"unitHint":null}],
+  ["toast x2 cups", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x2 cups","notes":null,"unitHint":null}],
+  ["chicken x2 12 oz", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"chicken x2 12 oz","notes":null,"unitHint":null}],
+  ["eggs x2 and toast x2", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"eggs x2 and toast x2","notes":null,"unitHint":null}],
+  ["toast x2.5", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x2.5","notes":null,"unitHint":null}],
+  ["toast x100", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"toast x100","notes":null,"unitHint":null}],
+  ["eggs (2x)", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"eggs 2 x","notes":null,"unitHint":null}],
+  ["red bull 2x", {"qty":1,"multiplier":1,"unit":null,"rawUnit":null,"name":"red bull 2 x","notes":null,"unitHint":null}],
+];
+
+/** resolveCountTag(line) must return the line untouched. */
+const FN_CONTROLS: string[] = [
+  "⅓ bagel x2",
+  "⅛ pizza x2",
+  "couple eggs x2",
+  "dozen eggs x2",
+  "third bagel x2",
+  "quarter bagel x2",
+  "quarter pounder x2",
+  "about 2 eggs x2",
+  "the last 2 slices of pizza x2",
+  "the last 2 slices x2",
+  "at least 2 wings x2",
+  "upwards of 3 beers x2",
+  "at least a dozen wings x2",
+  "chicken x2 12 oz",
+  "eggs x2 and toast x2",
+  "toast x2 cups",
+  "toast x2.5",
+  "toast x100",
+  "eggs (2x)",
+  "red bull 2x",
+  "9x13 pan",
+  "2xl shirt",
+  "xo sauce",
+  "x2o water",
+  "a short stack x2",
+  "xbox",
+  "x2 cups",
+  "a bagel x2",
+];
+
+describe('count tag reads as a leading count', () => {
+  it.each(TARGETS)('%s parses exactly as its twin %s', (target, twin) => {
+    const t = parseIngredientLine(target);
+    expect(t).not.toBeNull();
+    expect(t).toEqual(parseIngredientLine(twin));
+  });
+
+  it('a tag reads the count the name used to carry', () => {
+    expect(parseIngredientLine('toast x2')).toMatchObject({ qty: 2, name: 'toast' });
+    expect(parseIngredientLine('chicken (x2 thighs)')).toMatchObject({ qty: 2 });
+  });
+
+  it.each(CONTROLS)('control %s keeps its master parse', (line, expected) => {
+    expect(parseIngredientLine(line)).toEqual(expected);
+  });
+
+  it.each(FN_CONTROLS)('resolveCountTag declines %s', (line) => {
+    expect(resolveCountTag(line)).toBe(line);
+  });
+
+  it('collisions: x inside words and dimensions decline', () => {
+    for (const line of ['xbox', '9x13 pan', '2 x 4', 'x2 cups', 'xo sauce', '2xl shirt']) {
+      expect(resolveCountTag(line)).toBe(line);
+    }
+  });
+
+  it('accepted: x2 daily counts 2, and 2x protein only drops the stray x', () => {
+    expect(parseIngredientLine('toast x2 daily')).toMatchObject({ qty: 2, name: 'toast daily' });
+    expect(parseIngredientLine('2x protein')).toMatchObject({ qty: 2, name: 'protein' });
+  });
+
+  it('known misses stay unchanged: (2x), trailing 2x, punctuation after the tag', () => {
+    for (const line of ['eggs (2x)', 'red bull 2x', 'tacos x3!', 'a bagel x2']) {
+      expect(resolveCountTag(line)).toBe(line);
+    }
+  });
+});
