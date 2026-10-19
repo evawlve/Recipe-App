@@ -476,6 +476,64 @@ export function isBrandLedProductName(accentStripped: string): boolean {
 }
 
 /**
+ * C70 row 4 (2026-10-19): regional (UK/AU) dish words -> their American form, so retrieval,
+ * the cache keys AND the LLM stages (map-ingredient-with-fallback.ts hands its LLM calls the
+ * rewritten text) all see the word the corpus is indexed under.
+ *
+ * Pure, whole-token, case-insensitive, idempotent (no output token is itself an input token).
+ * The table is EXACTLY these entries; `biscuit(s)`, toastie, fry up / full english, chips,
+ * crisps, squash, rocket and jacket potato are deliberately NOT here (held for Diego).
+ * Every guard below exists because a real corpus line would otherwise be rewritten wrongly
+ * (refute m2/m3): `cuppa noodles`, `parma ham`, `chip butty`.
+ *
+ * Two other British->American tables exist and cannot serve this row: BRITISH_TO_AMERICAN in
+ * ai-synonym-generator.ts (EXACT bare lines only, a frozen input) and the one in
+ * gather-candidates.ts (substring side-queries; leaves query and cache key on the regional word).
+ */
+const REGIONAL_WORD = /\b(butty|butties|sarnie|sarnies|cuppas?|bickies|biccies|bikkies|bicky|biccy|bikkie|parmy|parmi|parma)\b/gi;
+
+export function rewriteRegionalDishWords(text: string): string {
+  return text.replace(REGIONAL_WORD, (match: string, word: string, offset: number, whole: string) => {
+    const w = word.toLowerCase();
+    const before = whole.slice(0, offset).match(/([a-z]+)\W*$/i)?.[1]?.toLowerCase() ?? null;
+    const afterStr = whole.slice(offset + match.length);
+    const after = afterStr.match(/^[\s-]+([a-z]+)/i)?.[1]?.toLowerCase() ?? null;
+    switch (w) {
+      case 'butty':
+      case 'butties':
+      case 'sarnie':
+      case 'sarnies': {
+        if (before === 'chip' || before === 'chips') return match;
+        return w === 'butties' || w === 'sarnies' ? 'sandwiches' : 'sandwich';
+      }
+      case 'cuppa':
+      case 'cuppas': {
+        const atEnd = /^\W*$/.test(afterStr);
+        if (!(atEnd || after === 'tea' || after === 'with' || after === 'and')) return match;
+        return w === 'cuppas' ? 'teas' : 'tea';
+      }
+      case 'bickies':
+      case 'biccies':
+      case 'bikkies':
+        return 'cookies';
+      case 'bicky':
+      case 'biccy':
+      case 'bikkie':
+        return 'cookie';
+      case 'parmy':
+      case 'parmi':
+        return 'parmigiana';
+      default: {
+        // parma
+        if (before !== 'chicken' && before !== 'veal' && before !== 'eggplant') return match;
+        if (after === 'ham') return match;
+        return 'parmigiana';
+      }
+    }
+  });
+}
+
+/**
  * THE REWRITES CAN GROW THE WORD THEY REWRITE (punch #114, Lane A S51, 2026-09-15).
  *
  * A rewrite whose `to` contains its `from` fires again on a line that already carries
@@ -607,6 +665,9 @@ export function normalizeIngredientName(raw: string): NormalizationResult {
       working = working.replace(re, rewrite.to);
     }
   }
+
+  // C70 row 4: regional (UK/AU) dish words -> American form. See rewriteRegionalDishWords().
+  working = rewriteRegionalDishWords(working);
 
   // ============================================================
   // CONTEXT-AWARE BARE-WORD REWRITES

@@ -10,7 +10,7 @@
 
 import { parseIngredientLine, type ParsedIngredient } from '../parse/ingredient-line';
 import { IDENTITY_QUALIFIERS } from '../parse/qualifiers';
-import { normalizeIngredientName } from './normalization-rules';
+import { normalizeIngredientName, rewriteRegionalDishWords } from './normalization-rules';
 import { gatherCandidates, confidenceGate, assessConfidence, type UnifiedCandidate, type GatherOptions } from './gather-candidates';
 import { funnelReason, type FunnelStage, type FunnelSink } from './funnel';
 import {
@@ -1581,7 +1581,7 @@ export async function mapIngredientWithFallback(
                 });
 
                 // FIX: Pass baseName instead of rawLine so the LLM output is cached by the normalized quantity-free string
-                const aiHint = await aiNormalizeIngredient(baseName, normalizedName);
+                const aiHint = await aiNormalizeIngredient(rewriteRegionalDishWords(baseName), normalizedName);
                 if (aiHint.status === 'success') {
                     // The model's output is otherwise taken on trust here. Strip
                     // any food-REPLACING token it introduced that the user never
@@ -3137,7 +3137,7 @@ async function attemptAiSimplifyFallback(params: {
     const { aiSimplifyIngredient } = await import('./ai-simplify');
 
     try {
-        const result = await aiSimplifyIngredient(trimmed, brandDetection.matchedBrand ?? undefined);
+        const result = await aiSimplifyIngredient(rewriteRegionalDishWords(trimmed), brandDetection.matchedBrand ?? undefined);
 
         if (result && result.simplified && result.simplified !== normalizedName) {
             logger.info('mapping.fallback_simplification', { original: trimmed, simplified: result.simplified });
