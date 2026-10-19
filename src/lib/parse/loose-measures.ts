@@ -1,5 +1,5 @@
 /**
- * loose-measures.ts - "a swig / gulp / sip / splash of X" is a fluid-ounce measure.
+ * loose-measures.ts - "a swig / gulp / sip / splash / drizzle of X" is a fluid-ounce measure.
  *
  * S202 design (row 5 = 8(g), design r2). The pour words are not units in normalizeUnitToken(), so
  * `a swig of soda` kept the whole phrase as the name (qty 1, no unit) and `2 swigs of soda` became
@@ -8,16 +8,20 @@
  * `<n> floz of <food>`, a unit every downstream volume table already knows, so no new unit word
  * reaches serving code.
  *
- * The four amounts are CONVENTIONS, not measurements: swig 1.5 fl oz, gulp 1 fl oz, sip 0.5 fl oz,
- * splash 0.5 fl oz.
+ * The five amounts are CONVENTIONS, not measurements: swig 1.5 fl oz, gulp 1 fl oz, sip 0.5 fl oz,
+ * splash 0.5 fl oz, drizzle 0.5 fl oz (about 1 tbsp).
  *
  * POSITIONAL: only at the line start, only with a count, the partitive `of`, and a letter or digit
  * after it. `a v8 splash`, `big gulp`, `splash of milk`, `a swig sugar cookie` and `a splash` stay
  * untouched. Known gaps: a non-leading pour (`had a swig of soda`), hedged pours (`half a splash`),
- * `one and a half swigs`.
+ * `one and a half swigs`, `a light drizzle of honey`, and a drizzle with no count.
+ *
+ * Mobile parity: SHORT_LINE_POUR_RX in the mobile repo's src/lib/magic-flow-timing.ts mirrors this
+ * regex for a cosmetic chip animation; it lags until the device day (MGR 2026-10-19) - the mismatch
+ * is cosmetic only.
  */
 
-export const LOOSE_POUR_FLOZ: Record<string, number> = { swig: 1.5, gulp: 1, sip: 0.5, splash: 0.5 };
+export const LOOSE_POUR_FLOZ: Record<string, number> = { swig: 1.5, gulp: 1, sip: 0.5, splash: 0.5, drizzle: 0.5 };
 
 const WORD_COUNTS: Record<string, number> = {
   a: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
@@ -26,7 +30,7 @@ const WORD_COUNTS: Record<string, number> = {
 const POUR_RX = new RegExp(
   '^(\\s*)' +
     '(a|one|two|three|four|five|six|seven|eight|nine|ten|\\d+ \\d+/\\d+|\\d+/\\d+|\\d+(?:\\.\\d+)?)' +
-    '\\s+(swigs?|gulps?|sips?|splash(?:es)?)\\s+of\\s+(?=[\\p{L}\\d])',
+    '\\s+(swigs?|gulps?|sips?|splash(?:es)?|drizzles?)\\s+of\\s+(?=[\\p{L}\\d])',
   'iu',
 );
 
