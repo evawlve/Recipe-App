@@ -26,7 +26,8 @@
  *
  * GUARDS. The gap between the two items must be a pure marker gap (no leftover words, no addition word such as
  * also / too / plus / another / extra / forgot / again / more / second / third / fourth / 2nd / 3rd / 4th, no `and`;
- * the trailing kind also skips a last item that holds an addition word); a negated j ("no pickles") is left to
+ * the trailing kind also skips a last item that holds an addition word; an ADD word in j's tail is not an addition when
+ * it is `more` next to `or`, `extra` + a modifier, or a pre-nominal ADD word right before the next item - S240, cloud-36 C10); a negated j ("no pickles") is left to
  * the negated-part drop (row 3); a size-word j ("make it a double") is never a replacer unless quantity-only;
  * a dish that carries an on / with / in phrase is never swapped away; a determiner-led earlier item needs a
  * determiner-led (or branded) correction; the earlier item's brand carries to the correction only for a
@@ -248,9 +249,21 @@ export function resolveSelfCorrections<T extends Item>(
       const pj = toks[spans[j]!.start].piece;
       // S202 (cloud-35 F3): only j's OWN stripped tail - stop at the next item's span or the first joiner.
       let stop = toks.length;
-      for (let q = j + 1; q < n; q++) if (spans[q]) { stop = spans[q]!.start; break; }
+      let next = -1;
+      for (let q = j + 1; q < n; q++) if (spans[q]) { stop = next = spans[q]!.start; break; }
       for (let q = spans[j]!.end; q < stop; q++) if (['and', 'with', 'or'].includes(toks[q].w)) { stop = q; break; }
-      const after = toks.slice(spans[j]!.end, stop).filter(t => t.piece === pj).map(t => t.w);
+      // S240 (cloud-36 C10): the shipped window; an ADD word is NOT an addition in three shapes only, read on the raw tokens.
+      const idx: number[] = [];
+      for (let q = spans[j]!.end; q < stop; q++) if (toks[q].piece === pj) idx.push(q);
+      const PRENOM = new Set(['plus', 'extra', 'more', 'another', 'second', 'third', 'fourth', '2nd', '3rd', '4th']);
+      const notAdd = (q: number): boolean => {
+        const w = toks[q].w, nx = toks[q + 1], pv = toks[q - 1];
+        if (w === 'more' && ((nx && nx.piece === pj && nx.w === 'or') || (pv && pv.w === 'or'))) return true; // more or less / or more
+        if (w === 'extra' && nx && nx.piece === pj && q + 1 !== next && !ADD.has(nx.w) && !['and', 'with', 'or'].includes(nx.w)) return true; // extra large
+        if (PRENOM.has(w) && q + 1 === next && nx.piece === pj) return true; // plus|extra|more|another <next item>
+        return false;
+      };
+      const after = idx.filter(q => !(ADD.has(toks[q].w) && notAdd(q))).map(q => toks[q].w);
       const asWell = after.some((w, x) => w === 'as' && after[x + 1] === 'well' && after[x + 2] !== 'as');
       if (after.some(w => ADD.has(w)) || asWell) continue;
     }
