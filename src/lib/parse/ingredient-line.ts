@@ -398,6 +398,12 @@ function rewriteStackOfPancakes(mergedTokens: string[]): void {
   const f = mergedTokens.length > 0 && LEADING_HEDGES.has(mergedTokens[0].toLowerCase()) ? 1 : 0;
   const at = (k: number) => mergedTokens[f + k]?.toLowerCase() ?? '';
   if (!(LEADING_ARTICLES.has(at(0)) || at(0) === 'one')) return;
+  // The diner idiom: the WHOLE line `a short stack` / `a full stack` (sized, end-anchored, no `of`) is pancakes.
+  // A bare `a stack` (no size word) stays as is: ambiguous. Must run before the qualifier strip eats `short`.
+  if (mergedTokens.length === f + 3 && at(2) === 'stack' && PANCAKE_STACK_COUNTS.has(at(1)) && at(1) !== '') {
+    mergedTokens.splice(f, 3, PANCAKE_STACK_COUNTS.get(at(1))!, 'pancakes');
+    return;
+  }
   const size = PANCAKE_STACK_COUNTS.has(at(1)) && at(1) !== '' ? 1 : 0;
   if (at(1 + size) !== 'stack' || at(2 + size) !== 'of') return;
   const nounAt = mergedTokens.length - 1;
