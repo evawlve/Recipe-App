@@ -57,7 +57,9 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'lb': 'lb', 'lbs': 'lb', 'pound': 'lb', 'pounds': 'lb',
     'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
     // S202 (route 37): `a kilo` / `half a kilo` / Spanish `kilogramo`. Exact tokens only.
-    'kilo': 'kg', 'kilos': 'kg', 'kgs': 'kg', 'kilogramo': 'kg', 'kilogramos': 'kg'
+    'kilo': 'kg', 'kilos': 'kg', 'kgs': 'kg', 'kilogramo': 'kg', 'kilogramos': 'kg',
+    // British spellings (C70 S239): exact tokens only.
+    'gramme': 'g', 'grammes': 'g', 'kilogramme': 'kg', 'kilogrammes': 'kg'
   };
 
   if (massUnits[token]) {
@@ -72,6 +74,7 @@ export function normalizeUnitToken(tok: string): NormalizedUnit {
     'ml': 'ml', 'milliliter': 'ml', 'milliliters': 'ml',
     'floz': 'floz', 'fl oz': 'floz', 'fluid ounce': 'floz', 'fluid ounces': 'floz',
     'l': 'l', 'liter': 'l', 'liters': 'l',
+    'litre': 'l', 'litres': 'l', 'millilitre': 'ml', 'millilitres': 'ml',
     'pint': 'pint', 'pints': 'pint',
     'quart': 'quart', 'quarts': 'quart',
     'gallon': 'gallon', 'gallons': 'gallon'
