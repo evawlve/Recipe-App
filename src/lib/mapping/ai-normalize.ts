@@ -5,6 +5,43 @@ import {
 import { getAiNormalizeCache, saveAiNormalizeCache } from './validated-mapping-helpers';
 import { callStructuredLlm } from '../ai/structured-client';
 import { isPromptExampleEcho, PROMPT_EXAMPLE_ECHO_REASON } from './llm-output-guards';
+import { logger } from '../logger';
+
+// Overall deadline on the normalize LLM call (C70, S239, 2026-10-19). callStructuredLlm()
+// bounds each ATTEMPT, but walks retries and a provider-fallback chain with no overall bound:
+// one call cost ~54 s of a 2026-10-19 line during an OpenRouter incident. On expiry this
+// returns the same { status: 'error' } shape an all-providers-failed call returns, so every
+// caller continues exactly as on that path (no hint; no cache write). The race wraps ONLY the
+// callStructuredLlm() promise, armed after the cache read, so a cache hit never arms a timer.
+// The losing call cannot be aborted without touching structured-client.ts: it runs to the end
+// of its chain and its answer is dropped unread, so nothing is saved after the deadline.
+// Known risks (refute §8 item 3; follow-up owner MGR, in structured-client.ts):
+//  - An expired call still QUEUED in the normalize semaphore is not dequeued: it later takes a
+//    slot, runs a full provider chain for nobody, and bills. The degraded window outlasts an
+//    incident by the drain time of those queued orphans (one chain length only at alpha volume).
+//  - Caller back-pressure is lost: arrivals are no longer throttled by completions.
+//  - A line that hits the deadline is hint-less, and the winner retrieval then finds can still
+//    be saved to FoodMapping and outlive the incident, exactly as on the all-fail path.
+//  - The mapping-summary "Normalize: N" count (and /api/ok logicalSuccesses) includes late
+//    answers that were dropped.
+export const AI_NORMALIZE_DEADLINE_MS = 10_000;
+// Distinct from PROMPT_EXAMPLE_ECHO_REASON on purpose: that is the one error reason a caller acts on.
+export const AI_NORMALIZE_DEADLINE_REASON = 'normalize_deadline_exceeded';
+
+/** Resolve to the call's result, or to null once AI_NORMALIZE_DEADLINE_MS has passed. Always clears its timer. */
+async function withNormalizeDeadline<T>(call: Promise<T>): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      call,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), AI_NORMALIZE_DEADLINE_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 // Prompt-example echo guard (C70): the model sometimes answers a no-food line with
 // an example's name from SYSTEM_PROMPT. aiNormalizeIngredient() refuses that answer,
@@ -207,12 +244,17 @@ export async function aiNormalizeIngredient(
     .join('\n');
 
   try {
-    const result = await callStructuredLlm({
+    const result = await withNormalizeDeadline(callStructuredLlm({
       schema: RESPONSE_SCHEMA,
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
       purpose: 'normalize',
-    });
+    }));
+
+    if (result === null) {
+      logger.warn('ai_normalize.deadline_exceeded', { rawLine, deadlineMs: AI_NORMALIZE_DEADLINE_MS });
+      return { status: 'error', reason: AI_NORMALIZE_DEADLINE_REASON };
+    }
 
     if (result.status === 'error') {
       return { status: 'error', reason: result.error ?? 'unknown error' };
