@@ -55,6 +55,8 @@
  * servings, a plain shake), a host that already states a quantity, a host that is itself a `with` part (`a protein shake
  * with milk with 2 scoops`), a dose naming a food. Fold kind `dose`. Named miss: `... in milk, 1 cup` leaves `1 cup`
  * (the milk shares the shake's comma piece).
+ * A self-correction that runs first can rewrite or restate the dose; the dose is then the item right after the host's `with`, and a
+ * corrected-away `<count> scoop(s)` may sit in the gap (S240, cloud-38 D3).
  *
  * NO prompt edit, NO version bump: the SegmentationCache stores the UNFOLDED split; the fold
  * reads `lineKey` (canonicalizeSegLine(text)) so one cached split folds one way for every
@@ -525,9 +527,23 @@ export function foldTrailingQuantityClauses<T extends Item>(
     const h = j - 1;
     const sh = spans[h];
     const sj = spans[j];
-    if (!sh || !sj || removed.has(h) || folded.has(h)) continue;
-    const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
-    if (gapW.length !== 1 || gapW[0] !== 'with') continue;
+    if (!sh || removed.has(h) || folded.has(h)) continue;
+    if (toks[sh.end]?.w !== 'with') continue;
+    // S240 (cloud-38 D3): a self-correction runs first and can rewrite the dose to text the line never had (`two scoops, ok,
+    // three scoops` -> `3 scoops`, no span), or keep a restated dose whose gap still holds the corrected-away one (`with 2 scoops,
+    // sorry, 3 scoops in milk`). Either way the dose is the item right after the host's `with`.
+    if (sj) {
+      const gapW = toks.slice(sh.end, sj.start).map(x => x.w);
+      if (gapW.length !== 1) {
+        // The corrected-away clause is the WHOLE rest of the host's `with` piece (`half a scoop`, `2 big scoops`), a scoop of powder at most.
+        const wp = toks[sh.end].piece;
+        const priorW = toks.slice(sh.end + 1, sj.start).filter(x => x.piece === wp).map(x => x.w);
+        const pIn = priorW.indexOf('in');
+        const prior = parseClause(pIn > 0 ? priorW.slice(0, pIn) : priorW);
+        if (!prior || prior.food.some(x => !PROTEIN_WORDS.has(x) && x !== 'powder') || !prior.unit || prior.unit.replace(/s$/, '') !== 'scoop') continue;
+        if (toks[sj.start - 1]?.piece === wp) continue; // the restated dose must start a later piece than the corrected one
+      }
+    }
     if (toks[sh.start - 1]?.w === 'with' || toks[sh.start - 2]?.w === 'with') continue;
     const hw = words(`${items[h].normalizedForm ?? ''} ${items[h].rawText}`);
     if (!hw.some(x => PROTEIN_WORDS.has(x)) || !hw.some(x => x === 'shake' || x === 'shakes')) continue;
