@@ -5,7 +5,8 @@
  * segmenter emits the first reading AND the correction as separate items, so the line bills both (seven
  * pancakes). Diego's ruling (the narrowed cut, 2026-10-17): the correction wins, but a DIFFERENT food after a
  * correction word replaces the previous item ONLY after `make that` / `make it` / `scratch that` / `wait no` /
- * `no wait` / a lone `no` comma piece. A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
+ * `no wait` / a lone `no` comma piece (a `no` that is not alone in its comma piece and not before an article/
+ * number-led item is `<no?>`, a weak marker (S240)). A weaker word (`actually`, `sorry`, `i mean`, `more like`) corrects a
  * quantity, restates the same food or swaps a part, but never swaps one food for another.
  * The weak markers also include `no i mean`, `oh wait i mean`, `wait i mean`, `oh wait`, `i meant` and `correction`:
  * `no i mean` left the `no` as an impure gap word (so both values billed), and `correction` was absent.
@@ -98,6 +99,7 @@ const SIZE_J = new Set([
   'venti', 'tall',
 ]);
 const NEGSTART = [['no'], ['without'], ['minus'], ['except'], ['hold', 'the'], ['skip', 'the']];
+const NO_LEADS = new Set(['a', 'an', 'the', 'one', 'two', 'three', 'four', 'five', 'six', 'half', 'some', 'my']);
 const FILLER = new Set(['and', 'oh', 'um', 'uh', 'ok', 'okay', 'well']);
 
 const fmt = (v: number): string => (v === 0.5 ? '1/2' : String(v));
@@ -157,7 +159,11 @@ function foodMinusQty(raw: string): string {
 const rewriteQ = (c: Clause, food: string): string =>
   c.unit ? `${fmt(c.value)} ${c.unit} of ${food}` : `${fmt(c.value)} ${food}`;
 
-function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Set<number> } {
+// S240 (refute of MGR 17:14Z b): `<no>` (a SWAP marker) is a comma piece that is exactly `no` IN THE LINE, or a `no` before an article-
+// or number-led item (`a coffee no a latte`); any other `no` in the gap is `<no?>`, a WEAK marker (corrects a quantity or restates the
+// same food, never swaps: `six eggs no seven eggs` still corrects). Reading only the gap's own tokens made `pizza, no anchovies` /
+// `ramen no egg` (the negated part split off bare) a `<no>` swap that dropped the pizza / ramen. `<wait>` keeps the gap reading.
+function markersIn(gap: Tok[], list: string[][], pieceLen?: Map<number, number>, jLead?: string): { found: string[]; covered: Set<number> } {
   const found: string[] = [];
   const covered = new Set<number>();
   for (const m of list) {
@@ -176,8 +182,9 @@ function markersIn(gap: Tok[], list: string[][]): { found: string[]; covered: Se
     byPiece.set(t.piece, a);
   });
   for (const [, ks] of byPiece) {
+    const noIsMarker = !pieceLen || pieceLen.get(gap[ks[0]].piece) === 1 || (jLead !== undefined && (/^\d/.test(jLead) || NO_LEADS.has(jLead)));
     if (ks.length === 1 && gap[ks[0]].w === 'no') {
-      found.push('<no>');
+      found.push(noIsMarker ? '<no>' : '<no?>');
       covered.add(ks[0]);
     }
     // S240 (C68 S238 run 3): a comma piece that is exactly `wait` (`three slices of bacon, wait, four`) - weak: it corrects a
@@ -199,6 +206,8 @@ export function resolveSelfCorrections<T extends Item>(
   const n = items.length;
   if (n < 2) return { items, corrections };
   const toks = tokenizeWithPieces(lineKey);
+  const pieceLen = new Map<number, number>();
+  for (const t of toks) pieceLen.set(t.piece, (pieceLen.get(t.piece) ?? 0) + 1);
   const spans = spansOf(toks, items);
   const removed = new Set<number>();
   const rew = new Map<number, T>();
@@ -239,7 +248,7 @@ export function resolveSelfCorrections<T extends Item>(
     const gap = toks.slice(gs, ge);
     // a marker the segmenter KEPT at the start of j's rawText counts too
     const lead = jw.map(w => ({ w, piece: -1 }));
-    const mkGap = markersIn(gap, STRONG);
+    const mkGap = markersIn(gap, STRONG, pieceLen, jw[0]);
     const mkLead = markersIn(lead.slice(0, 3), STRONG);
     let found = mkGap.found.slice();
     const covered = mkGap.covered;
